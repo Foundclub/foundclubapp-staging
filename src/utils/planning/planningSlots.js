@@ -36,6 +36,26 @@ const buildTimeLabel = (item) => {
   return start || end || '';
 };
 
+const buildWindowFromTimes = (startAt, endTime) => {
+  if (!startAt || !endTime) return null;
+
+  const [hours, minutes] = String(endTime || '')
+    .split(':')
+    .slice(0, 2)
+    .map((value) => Number.parseInt(value, 10));
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null;
+  }
+
+  const resolvedEnd = new Date(startAt);
+  resolvedEnd.setHours(hours, minutes, 0, 0);
+  if (resolvedEnd.getTime() <= startAt.getTime()) {
+    resolvedEnd.setDate(resolvedEnd.getDate() + 1);
+  }
+  return resolvedEnd;
+};
+
 const normalizeMatchContext = (matchContext) => {
   if (!matchContext || typeof matchContext !== 'object') return null;
 
@@ -205,6 +225,55 @@ export const getPlanningItemDate = (item) => {
 
   const date = toDeviceDateFromParisInstant(rawDate);
   return date && !Number.isNaN(date.getTime()) ? date : null;
+};
+
+export const getPlanningItemWindow = (item) => {
+  const startAt = getPlanningItemDate(item);
+  if (!startAt) return null;
+
+  let endAt = item?.endAt ? toDeviceDateFromParisInstant(item.endAt) : null;
+  if (!endAt || Number.isNaN(endAt.getTime())) {
+    endAt = buildWindowFromTimes(startAt, item?.endTime);
+  }
+
+  if (!endAt || Number.isNaN(endAt.getTime())) {
+    endAt = new Date(startAt.getTime() + (90 * 60 * 1000));
+  }
+
+  return {
+    endAt,
+    startAt,
+  };
+};
+
+export const getPlanningPeakOccupancy = (items = []) => {
+  const markers = [];
+
+  items.forEach((item) => {
+    const window = getPlanningItemWindow(item);
+    if (!window?.startAt || !window?.endAt) return;
+
+    markers.push({ delta: 1, time: window.startAt.getTime() });
+    markers.push({ delta: -1, time: window.endAt.getTime() });
+  });
+
+  markers.sort((left, right) => {
+    if (left.time !== right.time) return left.time - right.time;
+    return left.delta - right.delta;
+  });
+
+  let current = 0;
+  let maxConcurrent = 0;
+
+  markers.forEach((marker) => {
+    current += marker.delta;
+    maxConcurrent = Math.max(maxConcurrent, current);
+  });
+
+  return {
+    itemCount: Math.floor(markers.length / 2),
+    maxConcurrent,
+  };
 };
 
 export const getPlanningItemSecondaryLabel = (item) => {

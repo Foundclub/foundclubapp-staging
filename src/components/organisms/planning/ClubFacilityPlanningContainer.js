@@ -22,6 +22,7 @@ import { getClubSharedPlanning } from '@/services/multisportClub/multisportClubS
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
   getPlanningDefaultDate,
+  getPlanningPeakOccupancy,
   getPlanningRange,
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
@@ -52,7 +53,10 @@ function ClubFacilityPlanningContainer({
   const navigation = useNavigation();
   const { t } = useTranslation();
   const {
-    Colors, Fonts, Spaces,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
   } = useTheme();
   const { canManageTeam, USER_ROLES, userData } = useAuth();
   const [selectedFacilityId, setSelectedFacilityId] = useState(null); // null = All
@@ -132,6 +136,33 @@ function ClubFacilityPlanningContainer({
 
   const displayedEvents = planningScope === 'shared' ? sharedEvents : filteredClubEvents;
   const displayedFacilities = planningScope === 'shared' ? sharedFacilities : clubFacilities;
+  const selectedFacility = useMemo(
+    () => displayedFacilities.find((facility) => getFacilityId(facility) === selectedFacilityId) || null,
+    [displayedFacilities, selectedFacilityId],
+  );
+
+  const facilityPlanningSummary = useMemo(() => {
+    if (!selectedFacility || !selectedFacilityId) return null;
+
+    const facilityEvents = displayedEvents.filter(
+      (event) => getFacilityId(event?.facility) === selectedFacilityId,
+    );
+    const occupancy = getPlanningPeakOccupancy(facilityEvents);
+    const maxSlots = Math.max(1, Number(selectedFacility?.maxSlots || 1));
+    const peakConcurrent = occupancy.maxConcurrent;
+    const remainingAtPeak = Math.max(0, maxSlots - peakConcurrent);
+    const allowOverflowRequests = selectedFacility?.allowOverflowRequests !== false;
+
+    return {
+      allowOverflowRequests,
+      eventCount: occupancy.itemCount,
+      facilityColor: resolveFacilityPlanningColor(selectedFacility) || Colors.primary500,
+      maxSlots,
+      peakConcurrent,
+      reachedCapacity: peakConcurrent >= maxSlots,
+      remainingAtPeak,
+    };
+  }, [Colors.primary500, displayedEvents, selectedFacility, selectedFacilityId]);
 
   useEffect(() => {
     if (!hasSharedScope && planningScope === 'shared') {
@@ -171,14 +202,14 @@ function ClubFacilityPlanningContainer({
   };
 
   const handleOpenFullscreen = () => {
-    const selectedFacility = displayedFacilities.find(
+    const activeFacility = displayedFacilities.find(
       (facility) => getFacilityId(facility) === selectedFacilityId,
     );
     let selectedFacilityLabel = null;
-    if (selectedFacility) {
-      selectedFacilityLabel = selectedFacility?.isShared
-        ? `${selectedFacility.name} - MS`
-        : selectedFacility.name;
+    if (activeFacility) {
+      selectedFacilityLabel = activeFacility?.isShared
+        ? `${activeFacility.name} - MS`
+        : activeFacility.name;
     }
     const fullscreenContextLabel = planningScope === 'shared'
       ? t('planning.fullscreen.clubShared', 'Planning partage')
@@ -191,9 +222,41 @@ function ClubFacilityPlanningContainer({
       contextLabel: fullscreenContextLabel,
       date: currentDate.toISOString(),
       facilityId: selectedFacilityId,
+      facilityMeta: activeFacility
+        ? {
+          allowOverflowRequests: activeFacility?.allowOverflowRequests !== false,
+          maxSlots: Number(activeFacility?.maxSlots || 1),
+          name: activeFacility?.name || null,
+          planningColor: resolveFacilityPlanningColor(activeFacility) || Colors.primary500,
+        }
+        : null,
       sourceType: planningScope === 'shared' ? 'clubShared' : 'club',
     });
   };
+
+  const facilitySummaryMessage = useMemo(() => {
+    if (!facilityPlanningSummary) return '';
+
+    if (facilityPlanningSummary.reachedCapacity) {
+      if (facilityPlanningSummary.allowOverflowRequests) {
+        return t(
+          'facilityList.planning.capacityReachedOverflow',
+          'La capacite a deja ete atteinte sur cette periode. Les depassements restent possibles via validation dirigeant.',
+        );
+      }
+
+      return t(
+        'facilityList.planning.capacityReachedStrict',
+        'La capacite a deja ete atteinte sur cette periode. Aucun depassement n\'est autorise.',
+      );
+    }
+
+    return t(
+      'facilityList.planning.capacityAvailable',
+      '{{count}} slot(s) restaient disponibles au pic de charge.',
+      { count: facilityPlanningSummary.remainingAtPeak },
+    );
+  }, [facilityPlanningSummary, t]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -290,6 +353,81 @@ function ClubFacilityPlanningContainer({
           })}
         </ScrollView>
       </View>
+
+      {facilityPlanningSummary ? (
+        <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16]]}>
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              Spaces.gap[12],
+              {
+                backgroundColor: 'rgba(4, 31, 44, 0.88)',
+                borderColor: `${facilityPlanningSummary.facilityColor}66`,
+              },
+            ]}
+          >
+            <View style={[Spaces.gap[4]]}>
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {t('facilityList.planning.capacityTitle', 'Capacite installation')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {selectedFacility?.name || t('facilityList.planning.selectedFacility', 'Installation selectionnee')}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {[
+                `${facilityPlanningSummary.maxSlots} slot${facilityPlanningSummary.maxSlots > 1 ? 's' : ''}`,
+                `Pic ${facilityPlanningSummary.peakConcurrent}/${facilityPlanningSummary.maxSlots}`,
+                `${facilityPlanningSummary.eventCount} evenement${facilityPlanningSummary.eventCount > 1 ? 's' : ''}`,
+                facilityPlanningSummary.allowOverflowRequests
+                  ? t('facilityList.planning.overflowAllowed', 'Exception possible')
+                  : t('facilityList.planning.overflowBlocked', 'Capacite stricte'),
+              ].map((label, index) => (
+                <View
+                  key={`${label}-${index + 1}`}
+                  style={[
+                    ApplicationStyle.borderRadius100,
+                    ApplicationStyle.borderWidth1,
+                    Spaces.paddingHorizontal[10],
+                    Spaces.paddingVertical[6],
+                    {
+                      backgroundColor: index === 1
+                        ? `${facilityPlanningSummary.facilityColor}22`
+                        : 'rgba(255,255,255,0.05)',
+                      borderColor: index === 1
+                        ? `${facilityPlanningSummary.facilityColor}66`
+                        : `${Colors.primary500}33`,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      Fonts.p4Bold,
+                      index === 1 ? { color: facilityPlanningSummary.facilityColor } : Fonts.primary100,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            <Text
+              style={[
+                Fonts.p3,
+                facilityPlanningSummary.reachedCapacity
+                  ? Fonts.warning500
+                  : Fonts.neutral200,
+              ]}
+            >
+              {facilitySummaryMessage}
+            </Text>
+          </View>
+        </View>
+      ) : null}
 
       {/* Planning View */}
       {isLoadingPlanning ? (

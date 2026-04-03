@@ -99,6 +99,14 @@ function SearchMap({
     onSelectItem?.(itemId);
   };
 
+  const handleClearSelection = () => {
+    if (selectedItemId === undefined) {
+      setInternalSelectedItemId('');
+    }
+    setFocusMode('results');
+    onSelectItem?.('');
+  };
+
   const handleLocateMe = async () => {
     const coordinates = await requestCurrentSearchMapLocation();
     if (!coordinates) return;
@@ -115,7 +123,7 @@ function SearchMap({
   };
 
   return (
-    <View style={{ height, marginTop: topMargin, position: 'relative' }}>
+    <View style={{ height, position: 'relative' }}>
       {renderMap({
         command: mapCommand,
         focusMode,
@@ -135,7 +143,7 @@ function SearchMap({
         style={{
           left: 0,
           paddingHorizontal: 12,
-          paddingTop: 12,
+          paddingTop: topMargin + 12,
           position: 'absolute',
           right: 0,
           top: 0,
@@ -144,7 +152,10 @@ function SearchMap({
         <SearchMapHud
           geolocatableCount={items.length}
           onLocateMe={handleLocateMe}
-          onRecenter={() => setFocusMode('results')}
+          onRecenter={() => {
+            setFocusMode('results');
+            issueCommand('focus_results');
+          }}
           onZoomIn={() => issueCommand('zoom_in')}
           onZoomOut={() => issueCommand('zoom_out')}
           scope={scope}
@@ -156,6 +167,7 @@ function SearchMap({
         <SearchMapPreviewCard
           bottomOffset={previewBottomOffset}
           item={selectedItem}
+          onDismiss={handleClearSelection}
           onOpen={(item) => onOpenItem?.(item)}
           onShowList={() => onShowList?.()}
           scope={scope}

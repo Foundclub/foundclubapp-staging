@@ -33,8 +33,13 @@
  * @property {{
  *   pagination: SearchPagination,
  *   queryNormalized: string,
- *   elapsedMs: number,
- *   debug?: Record<string, any>
+  *   elapsedMs: number,
+ *   debug?: Record<string, any>,
+ *   maxRenderableResults?: number,
+ *   queryBounds?: { north: number, south: number, east: number, west: number },
+ *   queryMode?: 'map' | 'list',
+ *   totalInBounds?: number,
+ *   truncated?: boolean
  * }} meta
  */
 

@@ -36,37 +36,55 @@ function SearchMapHud({
   } = useTheme();
 
   const overlayOpacity = disabled ? 0.46 : 1;
-  const geolocatableLabel = `${geolocatableCount} affichable${
-    geolocatableCount > 1 ? 's' : ''
-  } sur la carte`;
+  const safeAvailableCount = Number.isFinite(totalCount) && totalCount > 0
+    ? totalCount
+    : geolocatableCount;
+  const isPartialDataset = safeAvailableCount > geolocatableCount;
+  const resultLabel = getSearchMapResultLabel(scope, safeAvailableCount);
+  const titleLabel = `${safeAvailableCount} ${resultLabel}`;
+  let geolocatableLabel = 'Aucun repere';
+  if (scope === 'clubs' && geolocatableCount > 0 && isPartialDataset) {
+    geolocatableLabel = 'Zoomez pour tout voir';
+  } else if (geolocatableCount > 0 && isPartialDataset) {
+    geolocatableLabel = `${geolocatableCount} visibles`;
+  } else if (geolocatableCount > 0) {
+    geolocatableLabel = 'Touchez un repere';
+  }
 
-  const miniFabStyle = [
+  const zoomGroupStyle = [
     ApplicationStyle.shadow200,
     {
       alignItems: 'center',
-      backgroundColor: 'rgba(5, 28, 42, 0.94)',
+      backgroundColor: 'rgba(5, 28, 42, 0.82)',
       borderColor: `${Colors.primary500}40`,
       borderRadius: 999,
       borderWidth: 1,
-      height: 44,
+      flexDirection: 'row',
       justifyContent: 'center',
-      width: 44,
+      padding: 4,
     },
   ];
+
+  const zoomButtonStyle = {
+    alignItems: 'center',
+    height: 38,
+    justifyContent: 'center',
+    width: 40,
+  };
 
   const pillStyle = [
     ApplicationStyle.shadow200,
     {
       alignItems: 'center',
-      backgroundColor: 'rgba(5, 28, 42, 0.94)',
+      backgroundColor: 'rgba(5, 28, 42, 0.82)',
       borderColor: `${Colors.primary500}40`,
       borderRadius: 999,
       borderWidth: 1,
       justifyContent: 'center',
-      minHeight: 44,
-      minWidth: 122,
+      minHeight: 46,
+      minWidth: 124,
       paddingHorizontal: 15,
-      paddingVertical: 10,
+      paddingVertical: 9,
     },
   ];
 
@@ -83,18 +101,18 @@ function SearchMapHud({
         style={[
           ApplicationStyle.shadow200,
           {
-            backgroundColor: 'rgba(5, 28, 42, 0.94)',
+            backgroundColor: 'rgba(5, 28, 42, 0.82)',
             borderColor: 'rgba(255,255,255,0.08)',
             borderRadius: 20,
             borderWidth: 1,
-            maxWidth: '64%',
-            paddingHorizontal: 14,
-            paddingVertical: 11,
+            maxWidth: '52%',
+            paddingHorizontal: 11,
+            paddingVertical: 9,
           },
         ]}
       >
         <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-          {`${totalCount} ${getSearchMapResultLabel(scope, totalCount)}`}
+          {titleLabel}
         </Text>
         <Text style={[Fonts.p4, Fonts.neutral200, Spaces.marginTop[4]]}>
           {geolocatableLabel}
@@ -102,21 +120,29 @@ function SearchMapHud({
       </View>
 
       <View style={[Alignments.column, Spaces.gap[10], { opacity: overlayOpacity }]}>
-        <View style={[Alignments.row, Spaces.gap[10]]}>
+        <View style={zoomGroupStyle}>
           <TouchableOpacity
             activeOpacity={0.85}
             disabled={disabled}
             onPress={onZoomIn}
-            style={miniFabStyle}
+            style={zoomButtonStyle}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>+</Text>
           </TouchableOpacity>
+
+          <View
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.08)',
+              height: 22,
+              width: 1,
+            }}
+          />
 
           <TouchableOpacity
             activeOpacity={0.85}
             disabled={disabled}
             onPress={onZoomOut}
-            style={miniFabStyle}
+            style={zoomButtonStyle}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>-</Text>
           </TouchableOpacity>

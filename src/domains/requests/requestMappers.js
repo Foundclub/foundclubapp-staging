@@ -264,6 +264,9 @@ export const mapFacilityOverrideRequestToHubItem = (request = {}) => {
   const requester = request?.requestedBy || {};
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
+  const eventEntity = request?.event || {};
+  const eventId = normalizeString(eventEntity?.documentId || eventEntity?.id);
+  const eventName = normalizeString(eventEntity?.name || eventEntity?.type?.name) || 'Evenement';
   const facilityName = normalizeString(request?.facility?.name) || 'Installation';
   const teamName = normalizeString(request?.team?.name) || 'Equipe';
   const overlapCount = Number(request?.overlapCount || 0);
@@ -276,10 +279,13 @@ export const mapFacilityOverrideRequestToHubItem = (request = {}) => {
     id: `installation:${requestId}`,
     meta: {
       clubId: normalizeString(request?.club?.documentId),
+      eventId,
+      eventName,
       facilityName,
       maxSlots,
       overlapCount,
       raw: request,
+      reason: normalizeString(request?.reason),
       requesterAvatarUrl,
       requesterId: normalizeString(requester?.documentId),
       requesterName,

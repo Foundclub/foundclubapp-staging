@@ -4,6 +4,7 @@ import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import {
   searchClubs,
+  searchClubsMap,
   searchEvents,
   searchProfiles,
   searchRecruitment,
@@ -48,6 +49,25 @@ export const useSearchClubs = (params = {}, options = {}) => useInfiniteQuery({
   getNextPageParam,
   queryFn: ({ pageParam = 1, signal }) => searchClubs({ ...params, page: pageParam }, { signal }),
   queryKey: buildNormalizedQueryKey(['search', 'clubs'], params),
+  staleTime: 30_000,
+  ...options,
+});
+
+/**
+ * @param {Record<string, any>} params
+ * @param {any} [options]
+ */
+export const useSearchClubsMap = (params = {}, options = {}) => useInfiniteQuery({
+  enabled: options.enabled ?? (
+    Number.isFinite(Number(params?.north))
+    && Number.isFinite(Number(params?.south))
+    && Number.isFinite(Number(params?.east))
+    && Number.isFinite(Number(params?.west))
+    && Number.isFinite(Number(params?.zoom))
+  ),
+  getNextPageParam,
+  queryFn: ({ pageParam = 1, signal }) => searchClubsMap({ ...params, page: pageParam }, { signal }),
+  queryKey: buildNormalizedQueryKey(['search', 'clubs', 'map'], params),
   staleTime: 30_000,
   ...options,
 });

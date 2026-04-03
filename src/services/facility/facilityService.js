@@ -186,7 +186,15 @@ const getOccupancy = async (facilityId, { end, excludeEventId, start }) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching facility occupancy:', error);
+    const errorDetails = typeof error === 'string'
+      ? { message: error }
+      : {
+        details: error?.details || null,
+        message: error?.message || error?.error?.message || 'Unknown occupancy error',
+        name: error?.name || null,
+        status: error?.status || error?.error?.status || null,
+      };
+    console.error('Error fetching facility occupancy:', errorDetails);
     throw error;
   }
 };

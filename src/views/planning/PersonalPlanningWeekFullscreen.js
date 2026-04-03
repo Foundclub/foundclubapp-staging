@@ -47,6 +47,7 @@ import {
 } from '@/utils/device/orientation';
 import {
   getPlanningDefaultDate,
+  getPlanningPeakOccupancy,
   getPlanningRange,
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
@@ -132,6 +133,7 @@ function PlanningWeekFullscreen() {
   const { t } = useTranslation();
   const {
     Alignments,
+    ApplicationStyle,
     Colors,
     Fonts,
     Images,
@@ -144,6 +146,7 @@ function PlanningWeekFullscreen() {
   const contextLabel = route?.params?.contextLabel || null;
   const contextDetailLabel = route?.params?.contextDetailLabel || null;
   const facilityId = route?.params?.facilityId || null;
+  const facilityMeta = route?.params?.facilityMeta || null;
   const sectionId = route?.params?.sectionId || null;
 
   const [currentDate, setCurrentDate] = useState(getInitialDate(route?.params?.date));
@@ -184,6 +187,24 @@ function PlanningWeekFullscreen() {
 
   const events = normalizePlanningItems(data?.data || []);
   const hasEvents = events.length > 0;
+  const facilityPlanningSummary = useMemo(() => {
+    if (!facilityId || !facilityMeta) return null;
+
+    const occupancy = getPlanningPeakOccupancy(events);
+    const maxSlots = Math.max(1, Number(facilityMeta?.maxSlots || 1));
+    const peakConcurrent = occupancy.maxConcurrent;
+    const remainingAtPeak = Math.max(0, maxSlots - peakConcurrent);
+
+    return {
+      allowOverflowRequests: facilityMeta?.allowOverflowRequests !== false,
+      eventCount: occupancy.itemCount,
+      facilityColor: facilityMeta?.planningColor || Colors.primary500,
+      maxSlots,
+      peakConcurrent,
+      reachedCapacity: peakConcurrent >= maxSlots,
+      remainingAtPeak,
+    };
+  }, [Colors.primary500, events, facilityId, facilityMeta]);
   const weekLabel = useMemo(() => {
     const fromDate = parseISO(planningRange.from);
     const toDate = parseISO(planningRange.to);
@@ -217,6 +238,29 @@ function PlanningWeekFullscreen() {
     () => isSameWeek(currentDate, getPlanningDefaultDate(), { weekStartsOn: 1 }),
     [currentDate],
   );
+  const facilitySummaryMessage = useMemo(() => {
+    if (!facilityPlanningSummary) return '';
+
+    if (facilityPlanningSummary.reachedCapacity) {
+      if (facilityPlanningSummary.allowOverflowRequests) {
+        return t(
+          'facilityList.planning.capacityReachedOverflow',
+          'La capacite a deja ete atteinte sur cette periode. Les depassements restent possibles via validation dirigeant.',
+        );
+      }
+
+      return t(
+        'facilityList.planning.capacityReachedStrict',
+        'La capacite a deja ete atteinte sur cette periode. Aucun depassement n\'est autorise.',
+      );
+    }
+
+    return t(
+      'facilityList.planning.capacityAvailable',
+      '{{count}} slot(s) restaient disponibles au pic de charge.',
+      { count: facilityPlanningSummary.remainingAtPeak },
+    );
+  }, [facilityPlanningSummary, t]);
 
   const handleClose = useCallback(() => {
     navigation.goBack();
@@ -242,12 +286,111 @@ function PlanningWeekFullscreen() {
   const handleBackToCurrentWeek = useCallback(() => {
     setCurrentDate(getPlanningDefaultDate());
   }, []);
+  const planningContent = useMemo(() => {
+    if (isLoading || isFetching) {
+      return <Loader />;
+    }
+
+    if (error) {
+      return (
+        <View
+          style={{
+            alignItems: 'center',
+            alignSelf: 'center',
+            backgroundColor: 'rgba(10, 23, 34, 0.84)',
+            borderColor: 'rgba(255,255,255,0.08)',
+            borderRadius: 24,
+            borderWidth: 1,
+            justifyContent: 'center',
+            maxWidth: 520,
+            padding: 24,
+            width: '100%',
+          }}
+        >
+          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[8]]}>
+            Impossible de charger le planning
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
+            Le planning de cette semaine n’a pas pu etre recupere. Reessayez ou changez de semaine.
+          </Text>
+          <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+        </View>
+      );
+    }
+
+    if (!hasEvents) {
+      return (
+        <View
+          style={{
+            alignItems: 'center',
+            alignSelf: 'center',
+            backgroundColor: 'rgba(10, 23, 34, 0.84)',
+            borderColor: 'rgba(255,255,255,0.08)',
+            borderRadius: 24,
+            borderWidth: 1,
+            justifyContent: 'center',
+            maxWidth: 520,
+            padding: 24,
+            width: '100%',
+          }}
+        >
+          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[8]]}>
+            Aucun creneau cette semaine
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
+            Changez de semaine pour explorer le planning ou revenez a la semaine actuelle.
+          </Text>
+          <View style={[Alignments.row, Spaces.gap[12]]}>
+            {!isCurrentWeek ? (
+              <Button onPress={handleBackToCurrentWeek} title="Aujourd’hui" variant="Secondary" />
+            ) : null}
+            <Button onPress={handleNextWeek} title="Semaine suivante" variant="Primary" />
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <PlanningWeekTimelineView
+        compactFullscreen
+        currentDate={currentDate}
+        events={events}
+        mode="week"
+        onDateChange={setCurrentDate}
+        onEventPress={handleEventPress}
+        scrollEnabled
+        showHeader={false}
+        showUntimedSection={false}
+      />
+    );
+  }, [
+    Alignments.row,
+    Fonts.h4Bold,
+    Fonts.neutral00,
+    Fonts.neutral100,
+    Fonts.p2,
+    Fonts.textCenter,
+    Spaces.gap,
+    Spaces.marginBottom,
+    currentDate,
+    error,
+    events,
+    handleBackToCurrentWeek,
+    handleEventPress,
+    handleNextWeek,
+    hasEvents,
+    isCurrentWeek,
+    isFetching,
+    isLoading,
+    refetch,
+    setCurrentDate,
+  ]);
 
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentWidth="wide"
       contentContainerStyle={[{ paddingBottom: Math.max(insets.bottom, 8) }]}
+      contentWidth="wide"
       responsivePadding
       style={[{ paddingHorizontal: 8 }]}
       withHeaderPadding={false}
@@ -374,78 +517,82 @@ function PlanningWeekFullscreen() {
                 paddingHorizontal: 10,
               }}
             >
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Aujourd'hui</Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Aujourd’hui</Text>
             </TouchableOpacity>
           ) : null}
         </View>
 
+        {facilityPlanningSummary ? (
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[12],
+              Spaces.marginBottom[8],
+              Spaces.gap[10],
+              {
+                backgroundColor: 'rgba(4, 31, 44, 0.88)',
+                borderColor: `${facilityPlanningSummary.facilityColor}66`,
+              },
+            ]}
+          >
+            <View>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('facilityList.planning.capacityTitle', 'Capacite installation')}
+              </Text>
+              <Text style={[Fonts.p4, Fonts.neutral200]}>
+                {facilityMeta?.name || t('facilityList.planning.selectedFacility', 'Installation selectionnee')}
+              </Text>
+            </View>
+
+            <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+              {[
+                `${facilityPlanningSummary.maxSlots} slot${facilityPlanningSummary.maxSlots > 1 ? 's' : ''}`,
+                `Pic ${facilityPlanningSummary.peakConcurrent}/${facilityPlanningSummary.maxSlots}`,
+                `${facilityPlanningSummary.eventCount} evenement${facilityPlanningSummary.eventCount > 1 ? 's' : ''}`,
+              ].map((label, index) => (
+                <View
+                  key={`${label}-${index + 1}`}
+                  style={[
+                    ApplicationStyle.borderRadius100,
+                    ApplicationStyle.borderWidth1,
+                    Spaces.paddingHorizontal[10],
+                    Spaces.paddingVertical[6],
+                    {
+                      backgroundColor: index === 1
+                        ? `${facilityPlanningSummary.facilityColor}22`
+                        : 'rgba(255,255,255,0.05)',
+                      borderColor: index === 1
+                        ? `${facilityPlanningSummary.facilityColor}66`
+                        : `${Colors.primary500}33`,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      Fonts.p4Bold,
+                      index === 1 ? { color: facilityPlanningSummary.facilityColor } : Fonts.primary100,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            <Text
+              style={[
+                Fonts.p4,
+                facilityPlanningSummary.reachedCapacity ? Fonts.warning500 : Fonts.neutral200,
+              ]}
+            >
+              {facilitySummaryMessage}
+            </Text>
+          </View>
+        ) : null}
+
         <View style={{ flex: 1 }}>
-          {isLoading || isFetching ? (
-            <Loader />
-          ) : error ? (
-            <View
-              style={{
-                alignSelf: 'center',
-                alignItems: 'center',
-                backgroundColor: 'rgba(10, 23, 34, 0.84)',
-                borderColor: 'rgba(255,255,255,0.08)',
-                borderRadius: 24,
-                borderWidth: 1,
-                justifyContent: 'center',
-                maxWidth: 520,
-                padding: 24,
-                width: '100%',
-              }}
-            >
-              <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[8]]}>
-                Impossible de charger le planning
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
-                Le planning de cette semaine n'a pas pu être récupéré. Réessayez ou changez de semaine.
-              </Text>
-              <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
-            </View>
-          ) : !hasEvents ? (
-            <View
-              style={{
-                alignSelf: 'center',
-                alignItems: 'center',
-                backgroundColor: 'rgba(10, 23, 34, 0.84)',
-                borderColor: 'rgba(255,255,255,0.08)',
-                borderRadius: 24,
-                borderWidth: 1,
-                justifyContent: 'center',
-                maxWidth: 520,
-                padding: 24,
-                width: '100%',
-              }}
-            >
-              <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[8]]}>
-                Aucun créneau cette semaine
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
-                Changez de semaine pour explorer le planning ou revenez à la semaine actuelle.
-              </Text>
-              <View style={[Alignments.row, Spaces.gap[12]]}>
-                {!isCurrentWeek ? (
-                  <Button onPress={handleBackToCurrentWeek} title="Aujourd'hui" variant="Secondary" />
-                ) : null}
-                <Button onPress={handleNextWeek} title="Semaine suivante" variant="Primary" />
-              </View>
-            </View>
-          ) : (
-            <PlanningWeekTimelineView
-              compactFullscreen
-              currentDate={currentDate}
-              events={events}
-              mode="week"
-              onDateChange={setCurrentDate}
-              onEventPress={handleEventPress}
-              scrollEnabled
-              showHeader={false}
-              showUntimedSection={false}
-            />
-          )}
+          {planningContent}
         </View>
       </View>
     </ScreenContainer>

@@ -183,6 +183,14 @@ function CMPlanningContent({ cmId, navigation, showTopHeader = false }) {
       contextLabel: t('planning.fullscreen.cm', 'Planning omnisport'),
       date: currentDate.toISOString(),
       facilityId: selectedFacilityId,
+      facilityMeta: selectedFacility
+        ? {
+          allowOverflowRequests: selectedFacility?.allowOverflowRequests !== false,
+          maxSlots: Number(selectedFacility?.maxSlots || 1),
+          name: selectedFacility?.name || null,
+          planningColor: resolveFacilityPlanningColor(selectedFacility) || Colors.primary500,
+        }
+        : null,
       sectionId: selectedSectionId,
       sourceType: 'cm',
     });

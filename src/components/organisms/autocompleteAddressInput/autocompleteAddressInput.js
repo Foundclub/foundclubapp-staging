@@ -15,6 +15,10 @@ import { useGetPlaces } from '@/services/places/placesQueries';
  * @property {string} [postcode]
  * @property {string} [provider]
  * @property {string | null} [providerId]
+ * @property {number} [lat]
+ * @property {number} [lng]
+ * @property {{ north: number, south: number, east: number, west: number } | null} [bbox]
+ * @property {string} [type]
  */
 
 /**
@@ -27,6 +31,7 @@ import { useGetPlaces } from '@/services/places/placesQueries';
  * @param {string} [props.placeholder] - The placeholder of the input.
  * @param {string} [props.error] - The error of the input.
  * @param {boolean} [props.disabled] - Disable state.
+ * @param {boolean} [props.lightMode] - Remove the default underline input chrome.
  * @param {number} [props.minChars] - Minimum query length before fetching.
  * @param {string} [props.type] - Optional BAN type hint.
  * @param {import('react-native').ViewStyle | import('react-native').ViewStyle[]} [props.wrapperStyle]
@@ -38,6 +43,7 @@ function AutocompleteAddressInput({
   disabled = false,
   error,
   label,
+  lightMode = false,
   minChars = 3,
   onSelect,
   placeholder,
@@ -80,10 +86,47 @@ function AutocompleteAddressInput({
     type,
   });
 
+  const extractBoundingBox = useCallback((place) => {
+    const rawBbox = place?.bbox || place?.properties?.bbox || place?.properties?.boundingbox;
+    if (Array.isArray(rawBbox) && rawBbox.length >= 4) {
+      const [westRaw, southRaw, eastRaw, northRaw] = rawBbox;
+      const west = Number(westRaw);
+      const south = Number(southRaw);
+      const east = Number(eastRaw);
+      const north = Number(northRaw);
+      if ([north, south, east, west].every((value) => Number.isFinite(value))) {
+        return {
+          east,
+          north,
+          south,
+          west,
+        };
+      }
+    }
+
+    if (rawBbox && typeof rawBbox === 'object') {
+      const north = Number(rawBbox.north ?? rawBbox.maxLat ?? rawBbox[3]);
+      const south = Number(rawBbox.south ?? rawBbox.minLat ?? rawBbox[1]);
+      const east = Number(rawBbox.east ?? rawBbox.maxLon ?? rawBbox.maxLng ?? rawBbox[2]);
+      const west = Number(rawBbox.west ?? rawBbox.minLon ?? rawBbox.minLng ?? rawBbox[0]);
+      if ([north, south, east, west].every((value) => Number.isFinite(value))) {
+        return {
+          east,
+          north,
+          south,
+          west,
+        };
+      }
+    }
+
+    return null;
+  }, []);
+
   const placesOptions = useMemo(() => {
     if (!Array.isArray(places) || places.length === 0) return [];
     return places
-      .map(({ geometry, properties }) => {
+      .map((place) => {
+        const { geometry, properties } = place || {};
         const coordinates = geometry?.coordinates || [];
         const [lng, lat] = coordinates;
         const hasValidCoordinates = Number.isFinite(lng) && Number.isFinite(lat);
@@ -92,20 +135,24 @@ function AutocompleteAddressInput({
 
         /** @type {Option} */
         const option = {
+          bbox: extractBoundingBox(place),
           city: properties?.city || '',
           context: properties?.context || '',
           label: postcode && !rawLabel.includes(postcode)
             ? `${rawLabel} (${postcode})`
             : rawLabel,
+          lat: hasValidCoordinates ? lat : undefined,
+          lng: hasValidCoordinates ? lng : undefined,
           postcode: postcode || '',
           provider: 'ban',
           providerId: properties?.id || null,
+          type: properties?.type || properties?.source || '',
           value: hasValidCoordinates ? `${lng}|${lat}` : '',
         };
         return option;
       })
       .filter((option) => option.label && option.value);
-  }, [places]);
+  }, [extractBoundingBox, places]);
 
   const selectedAddress = setAddress ? address : uncontrolledAddress;
 
@@ -129,6 +176,7 @@ function AutocompleteAddressInput({
       isLoading={isLoading}
       isSearchable
       label={label || ''}
+      lightMode={lightMode}
       options={placesOptions}
       placeholder={placeholder}
       ref={selectRef}

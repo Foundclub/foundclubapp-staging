@@ -20,20 +20,22 @@ const getInitial = (value) => {
  * @param {string[]} entries
  * @returns {string[]}
  */
-const compactEntries = (entries = []) => entries.filter(Boolean).slice(0, 3);
+const compactEntries = (entries = []) => entries.filter(Boolean).slice(0, 2);
 
 /**
  * @param {object} props
  * @param {import('@/utils/searchMap').SearchMapItem | null | undefined} props.item
  * @param {number} [props.bottomOffset]
+ * @param {() => void} [props.onDismiss]
  * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} props.onOpen
- * @param {() => void} props.onShowList
+ * @param {() => void} [props.onShowList]
  * @param {'events' | 'clubs' | 'reservations'} props.scope
  * @returns {import('react').ReactElement | null}
  */
 function SearchMapPreviewCard({
   bottomOffset = 12,
   item,
+  onDismiss,
   onOpen,
   onShowList,
   scope,
@@ -54,15 +56,17 @@ function SearchMapPreviewCard({
     scope === 'reservations' ? item.priceLabel : '',
     item.distanceLabel,
   ]);
+  const secondaryActionLabel = onDismiss ? 'Masquer' : 'Voir la liste';
+  const handleSecondaryAction = onDismiss || onShowList;
 
   return (
     <View
       pointerEvents="box-none"
       style={{
         bottom: bottomOffset,
-        left: 14,
+        left: 16,
         position: 'absolute',
-        right: 14,
+        right: 16,
       }}
     >
       <View
@@ -70,15 +74,19 @@ function SearchMapPreviewCard({
           ApplicationStyle.shadow200,
           ApplicationStyle.borderRadius24,
           {
-            backgroundColor: 'rgba(5, 28, 42, 0.98)',
+            backgroundColor: 'rgba(5, 28, 42, 0.94)',
             borderColor: `${Colors.primary500}30`,
             borderWidth: 1,
             overflow: 'hidden',
           },
         ]}
       >
-        <View style={[Spaces.padding[16], Spaces.gap[16], { paddingTop: 18 }]}>
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[14]]}>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => onOpen(item)}
+          style={[Spaces.paddingHorizontal[12], Spaces.paddingBottom[10], Spaces.paddingTop[12], Spaces.gap[10]]}
+        >
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[10]]}>
             {item.imageUrl ? (
               <Image
                 source={{ uri: item.imageUrl }}
@@ -110,9 +118,9 @@ function SearchMapPreviewCard({
               </View>
             )}
 
-            <View style={[Alignments.grow1, Spaces.gap[6]]}>
+            <View style={[Alignments.grow1, Spaces.gap[4]]}>
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+                <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
                   {item.title}
                 </Text>
                 {item.badge ? (
@@ -123,8 +131,8 @@ function SearchMapPreviewCard({
                       borderRadius: 999,
                       borderWidth: 1,
                       maxWidth: '42%',
-                      paddingHorizontal: 10,
-                      paddingVertical: 5,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
                     }}
                   >
                     <Text numberOfLines={1} style={[Fonts.p4Bold, Fonts.primary500]}>
@@ -135,7 +143,7 @@ function SearchMapPreviewCard({
               </View>
 
               {item.subtitle ? (
-                <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
+                <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral200]}>
                   {item.subtitle}
                 </Text>
               ) : null}
@@ -150,8 +158,8 @@ function SearchMapPreviewCard({
                         borderColor: 'rgba(255,255,255,0.08)',
                         borderRadius: 999,
                         borderWidth: 1,
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
                       }}
                     >
                       <Text style={[Fonts.p4, Fonts.neutral200]}>
@@ -163,20 +171,20 @@ function SearchMapPreviewCard({
               ) : null}
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <View
           style={[
             Alignments.row,
             Spaces.gap[10],
-            Spaces.paddingHorizontal[16],
-            Spaces.paddingBottom[16],
-            { paddingTop: 2 },
+            Spaces.paddingHorizontal[12],
+            Spaces.paddingBottom[12],
+            { paddingTop: 0 },
           ]}
         >
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={onShowList}
+            onPress={handleSecondaryAction}
             style={[
               ApplicationStyle.borderRadius16,
               {
@@ -186,13 +194,13 @@ function SearchMapPreviewCard({
                 borderWidth: 1,
                 flex: 1,
                 justifyContent: 'center',
-                minHeight: 48,
-                paddingHorizontal: 14,
+                minHeight: 44,
+                paddingHorizontal: 12,
               },
             ]}
           >
             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-              Voir la liste
+              {secondaryActionLabel}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -208,8 +216,8 @@ function SearchMapPreviewCard({
                 borderWidth: 1,
                 flex: 1.08,
                 justifyContent: 'center',
-                minHeight: 48,
-                paddingHorizontal: 14,
+                minHeight: 44,
+                paddingHorizontal: 12,
               },
             ]}
           >

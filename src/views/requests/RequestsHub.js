@@ -6,8 +6,10 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
+  Modal,
   RefreshControl,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -18,6 +20,7 @@ import {
 } from '@/domains/requests/requestMappers';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedItem';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -89,6 +92,8 @@ function RequestsHub({ navigation, route }) {
   const queryClient = useQueryClient();
 
   const [activeFilter, setActiveFilter] = useState(() => normalizeFilter(route?.params?.initialFilter));
+  const [installationRefusalItem, setInstallationRefusalItem] = useState(null);
+  const [installationRefusalReason, setInstallationRefusalReason] = useState('');
   const [processingItemId, setProcessingItemId] = useState('');
 
   useEffect(() => {
@@ -151,6 +156,11 @@ function RequestsHub({ navigation, route }) {
     ]);
   }, [context, queryClient]);
 
+  const closeInstallationRefusalModal = useCallback(() => {
+    setInstallationRefusalItem(null);
+    setInstallationRefusalReason('');
+  }, []);
+
   const handleClubAssignPrompt = useCallback((item) => {
     const trainerName = item?.meta?.requesterName || t('common.user', 'Utilisateur');
     const trainerId = item?.meta?.requesterId;
@@ -194,7 +204,7 @@ function RequestsHub({ navigation, route }) {
     );
   }, [clubId, navigation, t]);
 
-  const runItemAction = useCallback(async (item, actionPosition) => {
+  const runItemAction = useCallback(async (item, actionPosition, overrideReason = '') => {
     const itemId = item?.id;
     if (!itemId) return;
     const action = actionPosition === 'primary' ? item?.actions?.primary : item?.actions?.secondary;
@@ -238,6 +248,12 @@ function RequestsHub({ navigation, route }) {
           },
         ],
       );
+      return;
+    }
+
+    if (action === 'reject' && item?.type === 'installation' && actionPosition === 'secondary') {
+      setInstallationRefusalItem(item);
+      setInstallationRefusalReason(item?.meta?.reason || '');
       return;
     }
 
@@ -291,15 +307,19 @@ function RequestsHub({ navigation, route }) {
         if (action === 'reject') {
           await refuseFacilityOverrideRequest(
             requestId,
-            t(
+            overrideReason
+            || t(
               'requestsHub.installation.defaultRefusalReason',
-              'Créneau complet, dépassement refusé par le dirigeant.',
+              'Creneau complet, depassement refuse par le dirigeant.',
             ),
           );
         }
       }
 
       await invalidateRequests();
+      if (item?.type === 'installation' && action === 'reject') {
+        closeInstallationRefusalModal();
+      }
     } catch (actionError) {
       Alert.alert(
         t('common.error', 'Erreur'),
@@ -308,7 +328,7 @@ function RequestsHub({ navigation, route }) {
     } finally {
       setProcessingItemId('');
     }
-  }, [handleClubAssignPrompt, invalidateRequests, t]);
+  }, [closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequests, t]);
 
   const handlePrimaryPress = useCallback((item) => {
     runItemAction(item, 'primary');
@@ -317,6 +337,24 @@ function RequestsHub({ navigation, route }) {
   const handleSecondaryPress = useCallback((item) => {
     runItemAction(item, 'secondary');
   }, [runItemAction]);
+
+  const handleInstallationRefusalConfirm = useCallback(() => {
+    if (!installationRefusalItem) return;
+
+    const trimmedReason = installationRefusalReason.trim();
+    if (!trimmedReason) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t(
+          'requestsHub.installation.refusalReasonRequired',
+          'Ajoute un motif pour refuser cette demande d installation.',
+        ),
+      );
+      return;
+    }
+
+    runItemAction(installationRefusalItem, 'secondary-confirmed', trimmedReason);
+  }, [installationRefusalItem, installationRefusalReason, runItemAction, t]);
 
   const handleRequesterPress = useCallback((item) => {
     const requesterId = String(item?.meta?.requesterId || '').trim();
@@ -332,6 +370,16 @@ function RequestsHub({ navigation, route }) {
       screen: RouteNames.UserDetails,
     });
   }, [navigation, userData?.documentId]);
+
+  const handleEventPress = useCallback((item) => {
+    const eventId = String(item?.meta?.eventId || '').trim();
+    if (!eventId) return;
+
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId },
+      screen: RouteNames.EventDetails,
+    });
+  }, [navigation]);
 
   const filterChips = useMemo(() => ([
     { key: 'all', label: t('requestsHub.filters.all', 'Toutes') },
@@ -371,6 +419,90 @@ function RequestsHub({ navigation, route }) {
       bgImage="bg2"
       contentContainerStyle={[Alignments.fill]}
     >
+      <Modal
+        animationType="fade"
+        onRequestClose={closeInstallationRefusalModal}
+        transparent
+        visible={Boolean(installationRefusalItem)}
+      >
+        <View
+          style={[
+            Alignments.fill,
+            Alignments.justifyCenter,
+            Spaces.padding[24],
+            { backgroundColor: 'rgba(0, 0, 0, 0.55)' },
+          ]}
+        >
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary700,
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[20],
+              Spaces.gap[16],
+              {
+                borderColor: `${Colors.warning500}66`,
+              },
+            ]}
+          >
+            <View style={[Spaces.gap[6]]}>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {t('requestsHub.installation.refusalModalTitle', 'Refuser la demande')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'requestsHub.installation.refusalModalDescription',
+                  'Explique pourquoi cette exception installation est refusee.',
+                )}
+              </Text>
+            </View>
+
+            <TextInput
+              multiline
+              onChangeText={setInstallationRefusalReason}
+              placeholder={t(
+                'requestsHub.installation.refusalModalPlaceholder',
+                'Exemple: capacite deja atteinte pour ce creneau.',
+              )}
+              placeholderTextColor={Colors.neutral400}
+              style={[
+                ApplicationStyle.borderRadius16,
+                ApplicationStyle.borderWidth1,
+                Fonts.p2,
+                Fonts.neutral00,
+                Spaces.padding[16],
+                {
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  borderColor: `${Colors.primary500}44`,
+                  minHeight: 110,
+                  textAlignVertical: 'top',
+                },
+              ]}
+              value={installationRefusalReason}
+            />
+
+            <View style={[Alignments.row, Spaces.gap[12]]}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  disabled={Boolean(processingItemId)}
+                  onPress={closeInstallationRefusalModal}
+                  title={t('common.actions.cancel', 'Annuler')}
+                  variant="Secondary"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button
+                  disabled={Boolean(processingItemId)}
+                  onPress={handleInstallationRefusalConfirm}
+                  title={t('common.reject', 'Refuser')}
+                  variant="Primary"
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <WithDataWrapper
         error={requestsQuery?.error?.message}
         isLoading={requestsQuery.isLoading}
@@ -473,6 +605,7 @@ function RequestsHub({ navigation, route }) {
             <RequestFeedItem
               isBusy={processingItemId === item.id}
               item={item}
+              onEventPress={handleEventPress}
               onPrimaryPress={handlePrimaryPress}
               onRequesterPress={handleRequesterPress}
               onSecondaryPress={handleSecondaryPress}

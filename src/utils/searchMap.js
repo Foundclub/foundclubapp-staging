@@ -14,6 +14,20 @@ const toFiniteNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const hasUsableCoordinates = (latitude, longitude) => {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return false;
+  }
+
+  // `0,0` is used in legacy event payloads as a placeholder when the address
+  // label exists but no real coordinates were resolved. Treat it as missing.
+  if (Math.abs(latitude) < 0.000001 && Math.abs(longitude) < 0.000001) {
+    return false;
+  }
+
+  return true;
+};
+
 const extractCoordinatesFromObject = (value) => {
   if (!value || typeof value !== 'object') {
     return null;
@@ -44,7 +58,7 @@ const extractCoordinatesFromObject = (value) => {
     ?? value.geometry?.coordinates?.[0],
   );
 
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+  if (!hasUsableCoordinates(latitude, longitude)) {
     return null;
   }
 
@@ -64,8 +78,7 @@ const getCoordinatesFromCandidates = (candidates = []) => candidates.reduce((fou
   const normalizedLocation = normalizeLocationInput(candidate);
   if (
     normalizedLocation
-    && Number.isFinite(normalizedLocation.lat)
-    && Number.isFinite(normalizedLocation.lng)
+    && hasUsableCoordinates(normalizedLocation.lat, normalizedLocation.lng)
   ) {
     return {
       lat: normalizedLocation.lat,

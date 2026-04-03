@@ -414,7 +414,7 @@ const AutocompleteSelect = forwardRef(
                   {displayValue}
                 </Text>
               ) : (
-                <Text style={[Fonts.p1, Fonts.neutral500]}>
+                <Text style={[Fonts.p1, props.lightMode ? Fonts.neutral200 : Fonts.neutral500]}>
                   {props.placeholder}
                 </Text>
               )}

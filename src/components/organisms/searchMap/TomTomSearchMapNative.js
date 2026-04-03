@@ -33,6 +33,7 @@ import {
 import { requestCurrentSearchMapLocation } from '@/platform/maps/searchMapGeolocation';
 import { getTomTomApiKey } from '@/platform/maps/searchMapProvider';
 import {
+  buildSearchMapCommandScript,
   buildSearchMapRuntimeHtml,
   buildSearchMapSyncScript,
   buildTomTomProbeUrl,
@@ -54,16 +55,68 @@ const CRITICAL_ERROR_REASONS = new Set([
   SEARCH_MAP_ERROR_REASONS.runtimeError,
   SEARCH_MAP_ERROR_REASONS.webViewError,
 ]);
+const DEV_DIAGNOSTIC_LIMIT = 6;
+const DEV_DIAGNOSTIC_LOG_STAGES = new Set([
+  'command_applied',
+  'focus_results_single',
+  'focus_selected',
+  'tile_error',
+]);
+
+const sanitizeDiagnosticUrl = (value) => String(value || '').replace(/key=([^&]+)/, 'key=***');
+const logDevDiagnostic = (message, payload) => {
+  if (!__DEV__) {
+    return;
+  }
+
+  console.log(`[search-map-tomtom] ${message}`, payload);
+};
+
+const areRegionsEquivalent = (left, right) => {
+  if (!left && !right) return true;
+  if (!left || !right) return false;
+
+  const leftZoom = Number.isFinite(Number(left.zoom)) ? Number(left.zoom) : undefined;
+  const rightZoom = Number.isFinite(Number(right.zoom)) ? Number(right.zoom) : undefined;
+  const compareOptional = (key, epsilon = 0.0001) => {
+    const leftValue = Number(left?.[key]);
+    const rightValue = Number(right?.[key]);
+    if (!Number.isFinite(leftValue) && !Number.isFinite(rightValue)) {
+      return true;
+    }
+    if (!Number.isFinite(leftValue) || !Number.isFinite(rightValue)) {
+      return false;
+    }
+    return Math.abs(leftValue - rightValue) < epsilon;
+  };
+
+  return (
+    Math.abs(Number(left.lat) - Number(right.lat)) < 0.0001
+    && Math.abs(Number(left.lng) - Number(right.lng)) < 0.0001
+    && compareOptional('north')
+    && compareOptional('south')
+    && compareOptional('east')
+    && compareOptional('west')
+    && compareOptional('latitudeDelta')
+    && compareOptional('longitudeDelta')
+    && (
+      leftZoom === rightZoom
+      || (
+        leftZoom !== undefined
+        && rightZoom !== undefined
+        && Math.abs(leftZoom - rightZoom) < 0.1
+      )
+    )
+  );
+};
 
 const buildRuntimeState = (
-  command,
   focusMode,
   items,
   regionHint,
   selectedItemId,
   userLocation,
 ) => ({
-  command,
   focusMode,
   items,
   regionHint,
@@ -76,11 +129,31 @@ const buildRuntimeState = (
  * @param {number} [props.height]
  * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
  * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} [props.onOpenItem]
- * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
+ * @param {(region: {
+ *  lat: number;
+ *  lng: number;
+ *  zoom?: number;
+ *  north?: number;
+ *  south?: number;
+ *  east?: number;
+ *  west?: number;
+ *  latitudeDelta?: number;
+ *  longitudeDelta?: number;
+ * }) => void} [props.onRegionChangeComplete]
  * @param {(itemId: string) => void} [props.onSelectItem]
  * @param {() => void} [props.onShowList]
  * @param {number} [props.previewBottomOffset]
- * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
+ * @param {{
+ *  lat: number;
+ *  lng: number;
+ *  zoom?: number;
+ *  north?: number;
+ *  south?: number;
+ *  east?: number;
+ *  west?: number;
+ *  latitudeDelta?: number;
+ *  longitudeDelta?: number;
+ * } | null} [props.regionHint]
  * @param {string} [props.selectedItemId]
  * @param {'events' | 'clubs' | 'reservations'} [props.scope]
  * @param {number} [props.topMargin]
@@ -116,12 +189,12 @@ function TomTomSearchMapNative({
     /** @type {'results' | 'selected' | 'user' | 'region'} */ ('results'),
   );
   const [internalSelectedItemId, setInternalSelectedItemId] = useState('');
-  const [mapCommand, setMapCommand] = useState(null);
   const [mapErrorReason, setMapErrorReason] = useState('');
   const [mapRenderKey, setMapRenderKey] = useState(0);
   const [mapStatus, setMapStatus] = useState(
     /** @type {'loading' | 'ready' | 'error'} */ ('loading'),
   );
+  const [diagnosticTrail, setDiagnosticTrail] = useState([]);
   const [userLocation, setUserLocation] = useState(
     /** @type {{ lat: number; lng: number } | null} */ (null),
   );
@@ -145,26 +218,29 @@ function TomTomSearchMapNative({
   const areControlsDisabled = !isMapReady;
   const runtimeState = useMemo(
     () => buildRuntimeState(
-      mapCommand,
       focusMode,
       items,
       focusedRegion,
       activeSelectedItemId,
       userLocation,
     ),
-    [activeSelectedItemId, focusMode, focusedRegion, items, mapCommand, userLocation],
+    [activeSelectedItemId, focusMode, focusedRegion, items, userLocation],
   );
-  const htmlSource = useMemo(
-    () => buildSearchMapRuntimeHtml({
-      initialState: runtimeState,
+  const bootstrapHtmlRef = useRef({ html: '', mapId: '' });
+  if (bootstrapHtmlRef.current.mapId !== mapId) {
+    bootstrapHtmlRef.current = {
+      html: buildSearchMapRuntimeHtml({
+        initialState: runtimeState,
+        mapId,
+        markerColor,
+        tileAttribution: TOMTOM_TILE_PROVIDER.attribution,
+        tileProbeUrl: buildTomTomProbeUrl(tomTomApiKey || 'missing-key'),
+        tileUrl: buildTomTomTileUrl(tomTomApiKey || 'missing-key'),
+      }),
       mapId,
-      markerColor,
-      tileAttribution: TOMTOM_TILE_PROVIDER.attribution,
-      tileProbeUrl: buildTomTomProbeUrl(tomTomApiKey || 'missing-key'),
-      tileUrl: buildTomTomTileUrl(tomTomApiKey || 'missing-key'),
-    }),
-    [mapId, markerColor, runtimeState, tomTomApiKey],
-  );
+    };
+  }
+  const htmlSource = bootstrapHtmlRef.current.html;
   const logContext = useMemo(
     () => ({
       geolocatableCount: items.length,
@@ -184,13 +260,20 @@ function TomTomSearchMapNative({
       return;
     }
 
-    setFocusedRegion(regionHint);
-    setFocusMode('region');
-  }, [regionHint]);
+    setFocusedRegion((current) => (
+      areRegionsEquivalent(current, regionHint) ? current : regionHint
+    ));
+    setFocusMode((current) => (
+      areRegionsEquivalent(focusedRegion, regionHint) && current === 'region'
+        ? current
+        : 'region'
+    ));
+  }, [focusedRegion, regionHint]);
 
   useEffect(() => {
     mapLoadStartedAtRef.current = Date.now();
     setWebViewLoaded(false);
+    setDiagnosticTrail([]);
     setMapStatus(tomTomApiKey ? 'loading' : 'error');
     setMapErrorReason(tomTomApiKey ? '' : 'missing_api_key');
     searchMapLogger.info('map cycle started', {
@@ -198,6 +281,52 @@ function TomTomSearchMapNative({
       retryCycle: mapRenderKey,
     });
   }, [logContext, mapRenderKey, tomTomApiKey]);
+
+  useEffect(() => {
+    if (!__DEV__ || !tomTomApiKey) {
+      return undefined;
+    }
+
+    let isCancelled = false;
+    const probeUrl = buildTomTomProbeUrl(tomTomApiKey);
+
+    const runPreflight = async () => {
+      try {
+        logDevDiagnostic('tomtom native preflight started', {
+          ...logContext,
+          url: sanitizeDiagnosticUrl(probeUrl),
+        });
+
+        const response = await fetch(probeUrl, { method: 'GET' });
+        if (isCancelled) {
+          return;
+        }
+
+        logDevDiagnostic('tomtom native preflight result', {
+          ...logContext,
+          ok: response.ok,
+          status: response.status,
+          url: sanitizeDiagnosticUrl(probeUrl),
+        });
+      } catch (error) {
+        if (isCancelled) {
+          return;
+        }
+
+        searchMapLogger.warn('tomtom native preflight failed', {
+          ...logContext,
+          message: error?.message,
+          stack: error?.stack,
+          url: sanitizeDiagnosticUrl(probeUrl),
+        });
+      }
+    };
+
+    runPreflight();
+    return () => {
+      isCancelled = true;
+    };
+  }, [logContext, tomTomApiKey]);
 
   useEffect(() => {
     if (selectedItemId !== undefined) {
@@ -255,17 +384,56 @@ function TomTomSearchMapNative({
     onSelectItem?.(itemId);
   }, [logContext, onSelectItem, selectedItemId]);
 
+  const handleMarkerOpen = useCallback((itemId) => {
+    const targetItem = items.find((item) => item.id === itemId);
+    if (!targetItem) {
+      return;
+    }
+
+    searchMapLogger.info('map marker opened', {
+      ...logContext,
+      itemId,
+    });
+    onOpenItem?.(targetItem);
+  }, [items, logContext, onOpenItem]);
+
+  const handleClearSelection = useCallback(() => {
+    if (selectedItemId === undefined) {
+      setInternalSelectedItemId('');
+    }
+
+    setFocusMode('results');
+    onSelectItem?.('');
+  }, [onSelectItem, selectedItemId]);
+
   const handleRetryMap = useCallback(() => {
     setFocusMode('results');
     setMapRenderKey((current) => current + 1);
   }, []);
 
   const issueCommand = useCallback((type) => {
-    setMapCommand({
+    const nextCommand = {
       id: `${type}-${Date.now()}`,
       type,
+    };
+
+    logDevDiagnostic('tomtom command queued', {
+      ...logContext,
+      type,
     });
-  }, []);
+
+    if (!webViewLoaded || !webViewRef.current) {
+      searchMapLogger.warn('tomtom command skipped because webview is not ready', {
+        ...logContext,
+        type,
+      });
+      return;
+    }
+
+    webViewRef.current.injectJavaScript(
+      buildSearchMapCommandScript(mapId, nextCommand),
+    );
+  }, [logContext, mapId, webViewLoaded]);
 
   const requestUserLocation = useCallback(async () => {
     if (areControlsDisabled) {
@@ -294,17 +462,84 @@ function TomTomSearchMapNative({
     }
 
     switch (bridgeMessage.type) {
+      case SEARCH_MAP_BRIDGE_TYPES.MAP_DIAGNOSTIC: {
+        const payload = bridgeMessage.payload || {};
+        const nextDiagnostic = {
+          centerLat: Number.isFinite(Number(payload.centerLat))
+            ? Number(payload.centerLat)
+            : undefined,
+          centerLng: Number.isFinite(Number(payload.centerLng))
+            ? Number(payload.centerLng)
+            : undefined,
+          firstItemLat: Number.isFinite(Number(payload.firstItemLat))
+            ? Number(payload.firstItemLat)
+            : undefined,
+          firstItemLng: Number.isFinite(Number(payload.firstItemLng))
+            ? Number(payload.firstItemLng)
+            : undefined,
+          lat: Number.isFinite(Number(payload.lat)) ? Number(payload.lat) : undefined,
+          lng: Number.isFinite(Number(payload.lng)) ? Number(payload.lng) : undefined,
+          message: String(payload.message || ''),
+          phase: String(payload.phase || ''),
+          readyTileCount: Number.isFinite(Number(payload.readyTileCount))
+            ? Number(payload.readyTileCount)
+            : undefined,
+          selectedItemId: String(payload.selectedItemId || ''),
+          stack: String(payload.stack || ''),
+          stage: String(payload.stage || ''),
+          status: String(payload.status || ''),
+          url: sanitizeDiagnosticUrl(payload.url || payload.tileUrl || ''),
+          yOffset: Number.isFinite(Number(payload.yOffset))
+            ? Number(payload.yOffset)
+            : undefined,
+          zoom: Number.isFinite(Number(payload.zoom)) ? Number(payload.zoom) : undefined,
+        };
+
+        setDiagnosticTrail((current) => (
+          [...current, nextDiagnostic].slice(-DEV_DIAGNOSTIC_LIMIT)
+        ));
+
+        if (__DEV__ && DEV_DIAGNOSTIC_LOG_STAGES.has(nextDiagnostic.stage)) {
+          logDevDiagnostic(
+            `tomtom map diagnostic stage=${nextDiagnostic.stage || ''} `
+            + `phase=${nextDiagnostic.phase || ''} `
+            + `status=${nextDiagnostic.status || ''} `
+            + `message=${nextDiagnostic.message || ''} `
+            + `url=${nextDiagnostic.url || ''}`,
+            {
+              centerLat: nextDiagnostic.centerLat,
+              centerLng: nextDiagnostic.centerLng,
+              firstItemLat: nextDiagnostic.firstItemLat,
+              firstItemLng: nextDiagnostic.firstItemLng,
+              lat: nextDiagnostic.lat,
+              ...logContext,
+              lng: nextDiagnostic.lng,
+              readyTileCount: nextDiagnostic.readyTileCount,
+              selectedItemId: nextDiagnostic.selectedItemId,
+              stack: nextDiagnostic.stack,
+              yOffset: nextDiagnostic.yOffset,
+              zoom: nextDiagnostic.zoom,
+            },
+          );
+        }
+        break;
+      }
       case SEARCH_MAP_BRIDGE_TYPES.MAP_ERROR: {
         const payload = bridgeMessage.payload || {};
         const nextReason = String(payload.reason || SEARCH_MAP_ERROR_REASONS.tileError);
         searchMapLogger.warn(
           `tomtom map error reason=${nextReason} `
+          + `phase=${String(payload.phase || '')} `
           + `status=${String(payload.status || '')} `
           + `message=${String(payload.message || '')} `
+          + `filename=${String(payload.filename || '')} `
+          + `line=${String(payload.lineno || '')} `
+          + `column=${String(payload.colno || '')} `
           + `url=${String(payload.url || '')}`,
           {
             ...logContext,
             elapsedMs: Date.now() - mapLoadStartedAtRef.current,
+            stack: payload.stack,
           },
         );
 
@@ -328,6 +563,11 @@ function TomTomSearchMapNative({
           onRegionChangeComplete?.(bridgeMessage.payload);
         }
         break;
+      case SEARCH_MAP_BRIDGE_TYPES.MARKER_OPEN:
+        if (bridgeMessage.payload?.itemId) {
+          handleMarkerOpen(String(bridgeMessage.payload.itemId));
+        }
+        break;
       case SEARCH_MAP_BRIDGE_TYPES.MARKER_SELECT:
         if (bridgeMessage.payload?.itemId) {
           handleMarkerSelect(String(bridgeMessage.payload.itemId));
@@ -337,7 +577,9 @@ function TomTomSearchMapNative({
       default:
         break;
     }
-  }, [handleMarkerSelect, logContext, mapId, mapStatus, onRegionChangeComplete]);
+  }, [handleMarkerOpen, handleMarkerSelect, logContext, mapId, mapStatus, onRegionChangeComplete]);
+
+  const latestDiagnostic = diagnosticTrail[diagnosticTrail.length - 1] || null;
 
   return (
     <View
@@ -346,7 +588,6 @@ function TomTomSearchMapNative({
         {
           backgroundColor: Colors.primary900,
           height,
-          marginTop: topMargin,
         },
       ]}
     >
@@ -373,13 +614,16 @@ function TomTomSearchMapNative({
 
       <View
         pointerEvents="box-none"
-        style={[styles.overlay, { paddingHorizontal: 14, paddingTop: 14 }]}
+        style={[styles.overlay, { paddingHorizontal: 14, paddingTop: topMargin + 14 }]}
       >
         <SearchMapHud
           disabled={areControlsDisabled}
           geolocatableCount={items.length}
           onLocateMe={requestUserLocation}
-          onRecenter={() => setFocusMode('results')}
+          onRecenter={() => {
+            setFocusMode('results');
+            issueCommand('focus_results');
+          }}
           onZoomIn={() => issueCommand('zoom_in')}
           onZoomOut={() => issueCommand('zoom_out')}
           scope={scope}
@@ -406,6 +650,11 @@ function TomTomSearchMapNative({
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
               {loadingCopy.body}
             </Text>
+            {__DEV__ && latestDiagnostic?.stage ? (
+              <Text style={[Fonts.p4, Fonts.neutral200, Fonts.textCenter]}>
+                {`Diagnostic: ${latestDiagnostic.stage}`}
+              </Text>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -428,6 +677,13 @@ function TomTomSearchMapNative({
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
               {getSearchMapProviderErrorMessage(mapErrorReason)}
             </Text>
+            {__DEV__ && latestDiagnostic ? (
+              <Text style={[Fonts.p4, Fonts.neutral200, Fonts.textCenter]}>
+                {`Diagnostic: ${latestDiagnostic.stage || latestDiagnostic.phase || mapErrorReason}${
+                  latestDiagnostic.status ? ` (${latestDiagnostic.status})` : ''
+                }`}
+              </Text>
+            ) : null}
             <View
               style={[
                 Alignments.row,
@@ -488,10 +744,19 @@ function TomTomSearchMapNative({
         </View>
       ) : null}
 
+      {isMapReady && items.length > 0 && !selectedItem ? (
+        <View pointerEvents="none" style={styles.selectionHint}>
+          <Text style={[Fonts.p4Bold, Fonts.neutral00, Fonts.textCenter]}>
+            Touchez un repere pour voir la fiche
+          </Text>
+        </View>
+      ) : null}
+
       {isMapReady ? (
         <SearchMapPreviewCard
           bottomOffset={previewBottomOffset}
           item={selectedItem}
+          onDismiss={handleClearSelection}
           onOpen={(item) => {
             searchMapLogger.info('map detail opened', {
               ...logContext,
@@ -539,6 +804,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
+  },
+  selectionHint: {
+    backgroundColor: 'rgba(6, 24, 34, 0.84)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    borderWidth: 1,
+    bottom: 26,
+    left: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    position: 'absolute',
+    right: 18,
   },
   statusActionButton: {
     alignItems: 'center',

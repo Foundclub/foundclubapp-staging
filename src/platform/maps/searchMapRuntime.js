@@ -28,9 +28,11 @@ const safeJson = (value) => JSON.stringify(value)
 
 export const SEARCH_MAP_BRIDGE_TYPES = Object.freeze({
   FIT_RESULTS_DONE: 'FIT_RESULTS_DONE',
+  MAP_DIAGNOSTIC: 'MAP_DIAGNOSTIC',
   MAP_ERROR: 'MAP_ERROR',
   MAP_READY: 'MAP_READY',
   MAP_REGION_CHANGE: 'MAP_REGION_CHANGE',
+  MARKER_OPEN: 'MARKER_OPEN',
   MARKER_SELECT: 'MARKER_SELECT',
   SYNC_STATE: 'SYNC_STATE',
 });
@@ -68,6 +70,31 @@ export const buildSearchMapSyncScript = (mapId, payload) => {
       } else {
         window.dispatchEvent(new MessageEvent('message', {
           data: ${safeJson(buildSearchMapHostMessage(mapId, payload))}
+        }));
+      }
+    })();
+    true;
+  `;
+};
+
+export const buildSearchMapCommandScript = (mapId, command) => {
+  const encodedCommand = encodeURIComponent(JSON.stringify(command));
+  return `
+    (function() {
+      var nextCommand = JSON.parse(decodeURIComponent('${encodedCommand}'));
+      if (
+        window.__FOUNDCLUB_SEARCH_MAP__
+        && typeof window.__FOUNDCLUB_SEARCH_MAP__.dispatchCommand === 'function'
+      ) {
+        window.__FOUNDCLUB_SEARCH_MAP__.dispatchCommand(nextCommand);
+      } else if (
+        window.__FOUNDCLUB_SEARCH_MAP__
+        && typeof window.__FOUNDCLUB_SEARCH_MAP__.syncState === 'function'
+      ) {
+        window.__FOUNDCLUB_SEARCH_MAP__.syncState({ command: nextCommand });
+      } else {
+        window.dispatchEvent(new MessageEvent('message', {
+          data: ${safeJson(buildSearchMapHostMessage(mapId, { command }))}
         }));
       }
     })();
@@ -159,7 +186,22 @@ export const buildSearchMapRuntimeHtml = ({
         border-radius: 999px;
         display: flex;
         justify-content: center;
-        transition: transform .15s ease;
+        transition: opacity .16s ease, transform .16s ease;
+      }
+
+      @keyframes fcMarkerPulse {
+        0% {
+          opacity: .92;
+          transform: scale(.92);
+        }
+        70% {
+          opacity: 0;
+          transform: scale(1.12);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(1.14);
+        }
       }
 
       .fc-provider-badge {
@@ -196,8 +238,10 @@ export const buildSearchMapRuntimeHtml = ({
         var hasSentError = false;
         var hasSentReady = false;
         var isApplyingFocus = false;
+        var isWaitingForFocusedTiles = true;
         var lastClusterSignature = '';
         var lastItemsSignature = '';
+        var lastAppliedFocusSignature = '';
         var lastRenderedZoom = null;
         var lastSelectedItemId = '';
         var map = null;
@@ -206,6 +250,12 @@ export const buildSearchMapRuntimeHtml = ({
         var lastHandledCommandId = '';
         var readyTileCount = 0;
         var tileErrorCount = 0;
+        var firstRenderedItemsCount = null;
+
+        var sanitizeUrl = function (value) {
+          if (!value) return '';
+          return String(value).replace(/key=([^&]+)/, 'key=***');
+        };
 
         var postBridgeMessage = function (type, payload) {
           var message = {
@@ -225,6 +275,37 @@ export const buildSearchMapRuntimeHtml = ({
           }
         };
 
+        var postDiagnostic = function (stage, payload) {
+          postBridgeMessage('MAP_DIAGNOSTIC', Object.assign({
+            stage: stage,
+          }, payload || {}));
+        };
+
+        var buildRuntimeErrorPayload = function (phase, error, extra) {
+          var payload = Object.assign({
+            message: error && error.message ? error.message : 'runtime_error',
+            name: error && error.name ? error.name : '',
+            phase: phase || '',
+            reason: 'runtime_error',
+            stack: error && error.stack ? String(error.stack) : '',
+          }, extra || {});
+
+          if (payload.url) {
+            payload.url = sanitizeUrl(payload.url);
+          }
+
+          return payload;
+        };
+
+        var runSafely = function (phase, callback, extra) {
+          try {
+            return callback();
+          } catch (error) {
+            reportMapError(buildRuntimeErrorPayload(phase, error, extra));
+            return null;
+          }
+        };
+
         var reportMapError = function (payload) {
           if (hasSentReady) return;
           if (hasSentError || hasSentReady) return;
@@ -233,9 +314,18 @@ export const buildSearchMapRuntimeHtml = ({
         };
 
         var markMapReady = function () {
+          if (isWaitingForFocusedTiles) return;
           if (hasSentReady) return;
+          var center = map ? map.getCenter() : null;
           hasSentReady = true;
           hasSentError = false;
+          postDiagnostic('map_ready', {
+            centerLat: center ? center.lat : undefined,
+            centerLng: center ? center.lng : undefined,
+            readyTileCount: readyTileCount,
+            tileErrorCount: tileErrorCount,
+            zoom: map ? map.getZoom() : undefined,
+          });
           postBridgeMessage('MAP_READY');
         };
 
@@ -250,58 +340,126 @@ export const buildSearchMapRuntimeHtml = ({
         var probeTileAvailability = function () {
           if (!TILE_PROBE_URL || typeof window.fetch !== 'function') return;
 
+          postDiagnostic('probe_start', {
+            url: sanitizeUrl(TILE_PROBE_URL),
+          });
+
           window.fetch(TILE_PROBE_URL, { method: 'GET' })
             .then(function (response) {
               if (response.ok || hasSentReady || hasSentError) {
+                postDiagnostic('probe_ok', {
+                  status: response.status,
+                  url: sanitizeUrl(TILE_PROBE_URL),
+                });
                 return;
               }
 
+              postDiagnostic('probe_failed', {
+                status: response.status,
+                url: sanitizeUrl(TILE_PROBE_URL),
+              });
               reportMapError({
                 message: 'tile_probe_failed',
                 reason: classifyProbeStatus(response.status),
                 status: response.status,
-                url: TILE_PROBE_URL,
+                url: sanitizeUrl(TILE_PROBE_URL),
               });
             })
             .catch(function (error) {
               if (hasSentReady || hasSentError) {
                 return;
               }
-              // Let the loading timeout handle transient probe/network failures.
+              postDiagnostic('probe_network_error', buildRuntimeErrorPayload(
+                'tile_probe',
+                error,
+                { url: sanitizeUrl(TILE_PROBE_URL) }
+              ));
             });
         };
 
-        var createMarkerIcon = function (isSelected) {
-          var markerSize = isSelected ? 22 : 18;
+        var createMarkerIcon = function (entry, isSelected, showSequenceLabel) {
+          var isEventMarker = entry && entry.item && entry.item.type === 'events';
+          var markerSize = isSelected
+            ? (isEventMarker ? 38 : 34)
+            : (isEventMarker ? 31 : 27);
+          var haloSize = markerSize + (isEventMarker ? 18 : 14);
           var borderSize = isSelected ? 3 : 2;
-          var innerBackground = isSelected ? '#ffffff' : 'rgba(5, 28, 42, 0.96)';
+          var markerLabel = showSequenceLabel && entry && Number.isFinite(entry.order)
+            ? String(entry.order)
+            : '';
+          var backgroundColor = isSelected ? '#ffffff' : MARKER_COLOR;
+          var borderColor = isSelected ? MARKER_COLOR : 'rgba(255,255,255,0.86)';
+          var haloColor = isSelected
+            ? 'rgba(1, 179, 244, 0.36)'
+            : (isEventMarker ? 'rgba(1, 179, 244, 0.24)' : 'rgba(255, 215, 0, 0.22)');
+          var shadow = isSelected
+            ? '0 16px 30px rgba(0,0,0,0.34)'
+            : '0 12px 24px rgba(0,0,0,0.28)';
+          var contentHtml = markerLabel
+            ? '<span style="' +
+                'color:' + (isSelected ? '#061822' : (isEventMarker ? '#ffffff' : '#061822')) + ';' +
+                'font:700 13px/1 -apple-system, BlinkMacSystemFont, \\"Segoe UI\\", sans-serif;' +
+              '">' + markerLabel + '</span>'
+            : '<span style="' +
+                'background:' + (isSelected ? MARKER_COLOR : '#ffffff') + ';' +
+                'border-radius:999px;' +
+                'display:block;' +
+                'height:' + (isSelected ? 10 : 8) + 'px;' +
+                'width:' + (isSelected ? 10 : 8) + 'px;' +
+              '"></span>';
+          var offset = (haloSize - markerSize) / 2;
 
           return window.L.divIcon({
             className: '',
             html: '<span class="fc-marker" style="' +
-              'background:' + (isSelected ? MARKER_COLOR : MARKER_COLOR + 'CC') + ';' +
-              'border:' + borderSize + 'px solid ' + (isSelected ? '#ffffff' : 'rgba(255,255,255,0.72)') + ';' +
-              'height:' + markerSize + 'px;' +
-              'transform:' + (isSelected ? 'scale(1.08)' : 'scale(1)') + ';' +
-              'width:' + markerSize + 'px;' +
+              'height:' + haloSize + 'px;' +
+              'position:relative;' +
+              'width:' + haloSize + 'px;' +
             '">' +
-              '<span style="background:' + innerBackground + ';border-radius:999px;display:block;height:8px;width:8px;"></span>' +
+              '<span style="' +
+                'animation:' + (isSelected ? 'fcMarkerPulse 1.9s ease-out infinite' : 'none') + ';' +
+                'background:' + haloColor + ';' +
+                'border-radius:999px;' +
+                'display:block;' +
+                'height:' + haloSize + 'px;' +
+                'left:0;' +
+                'position:absolute;' +
+                'top:0;' +
+                'width:' + haloSize + 'px;' +
+              '"></span>' +
+              '<span style="' +
+                'align-items:center;' +
+                'background:' + backgroundColor + ';' +
+                'border:' + borderSize + 'px solid ' + borderColor + ';' +
+                'border-radius:999px;' +
+                'box-shadow:' + shadow + ';' +
+                'display:flex;' +
+                'height:' + markerSize + 'px;' +
+                'justify-content:center;' +
+                'left:' + offset + 'px;' +
+                'position:absolute;' +
+                'top:' + offset + 'px;' +
+                'transform:' + (isSelected ? 'scale(1.06)' : 'scale(1)') + ';' +
+                'width:' + markerSize + 'px;' +
+              '">' +
+                contentHtml +
+              '</span>' +
             '</span>',
-            iconAnchor: [markerSize / 2, markerSize / 2],
-            iconSize: [markerSize, markerSize],
+            iconAnchor: [haloSize / 2, haloSize / 2],
+            iconSize: [haloSize, haloSize],
           });
         };
 
         var createClusterIcon = function (count) {
-          var clusterSize = count >= 10 ? 34 : 30;
+          var clusterSize = count >= 10 ? 40 : 36;
           return window.L.divIcon({
             className: '',
             html: '<span class="fc-marker" style="' +
               'background:' + MARKER_COLOR + ';' +
-              'border:2px solid rgba(255,255,255,0.82);' +
-              'box-shadow:0 10px 18px rgba(0,0,0,0.24);' +
+              'border:3px solid rgba(255,255,255,0.84);' +
+              'box-shadow:0 0 0 6px rgba(255,255,255,0.14), 0 14px 24px rgba(0,0,0,0.28);' +
               'color:#061822;' +
-              'font:700 11px/1 -apple-system, BlinkMacSystemFont, \\"Segoe UI\\", sans-serif;' +
+              'font:700 12px/1 -apple-system, BlinkMacSystemFont, \\"Segoe UI\\", sans-serif;' +
               'height:' + clusterSize + 'px;' +
               'width:' + clusterSize + 'px;' +
             '">' +
@@ -329,20 +487,27 @@ export const buildSearchMapRuntimeHtml = ({
 
         var buildRenderableEntries = function (items) {
           var precision = getClusterPrecision();
-          if (!precision || items.length < 12) {
-            return items.map(function (item) {
+          var indexedItems = items.map(function (item, index) {
+            return Object.assign({
+              __fcOrder: index + 1,
+            }, item);
+          });
+
+          if (!precision || indexedItems.length < 12) {
+            return indexedItems.map(function (item) {
               return {
                 isCluster: false,
                 item: item,
                 key: item.id,
                 lat: item.lat,
                 lng: item.lng,
+                order: item.__fcOrder,
               };
             });
           }
 
           var groups = {};
-          items.forEach(function (item) {
+          indexedItems.forEach(function (item) {
             var key = item.lat.toFixed(precision) + ':' + item.lng.toFixed(precision);
             groups[key] = groups[key] || [];
             groups[key].push(item);
@@ -358,6 +523,7 @@ export const buildSearchMapRuntimeHtml = ({
                 key: single.id,
                 lat: single.lat,
                 lng: single.lng,
+                order: single.__fcOrder,
               };
             }
 
@@ -386,20 +552,43 @@ export const buildSearchMapRuntimeHtml = ({
         };
 
         var setFocusedView = function (lat, lng, zoom, yOffset) {
-          var safeZoom = Number.isFinite(zoom) ? zoom : map.getZoom();
-          var nextCenter = window.L.latLng(lat, lng);
-          if (Number.isFinite(yOffset) && yOffset !== 0) {
-            nextCenter = map.unproject(
-              map.project(nextCenter, safeZoom).add(window.L.point(0, yOffset)),
-              safeZoom
-            );
-          }
-          isApplyingFocus = true;
-          map.setView(nextCenter, safeZoom);
+          runSafely('set_focused_view', function () {
+            var safeZoom = Number.isFinite(zoom) ? zoom : map.getZoom();
+            var nextCenter = window.L.latLng(lat, lng);
+            if (Number.isFinite(yOffset) && yOffset !== 0) {
+              try {
+                nextCenter = map.unproject(
+                  map.project(nextCenter, safeZoom).add(window.L.point(0, yOffset)),
+                  safeZoom
+                );
+              } catch (error) {
+                postDiagnostic('focus_offset_fallback', buildRuntimeErrorPayload(
+                  'focus_offset',
+                  error,
+                  {
+                    lat: lat,
+                    lng: lng,
+                    yOffset: yOffset,
+                    zoom: safeZoom,
+                  }
+                ));
+              }
+            }
+            isApplyingFocus = true;
+            map.setView(nextCenter, safeZoom);
+          }, {
+            lat: lat,
+            lng: lng,
+            yOffset: yOffset,
+            zoom: zoom,
+          });
         };
 
         var fitToResults = function () {
           var items = Array.isArray(currentState.items) ? currentState.items : [];
+          postDiagnostic('focus_results', {
+            itemsCount: items.length,
+          });
 
           if (!items.length) {
             setFocusedView(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng, 6, 0);
@@ -408,7 +597,13 @@ export const buildSearchMapRuntimeHtml = ({
           }
 
           if (items.length === 1) {
-            setFocusedView(items[0].lat, items[0].lng, 13, 88);
+            postDiagnostic('focus_results_single', {
+              lat: items[0].lat,
+              lng: items[0].lng,
+              zoom: 12,
+              yOffset: 0,
+            });
+            setFocusedView(items[0].lat, items[0].lng, 12, 0);
             postBridgeMessage('FIT_RESULTS_DONE', { reason: 'single' });
             return;
           }
@@ -434,7 +629,16 @@ export const buildSearchMapRuntimeHtml = ({
             return;
           }
 
-          setFocusedView(selectedMarker.getLatLng().lat, selectedMarker.getLatLng().lng, 13, 98);
+          var selectedLatLng = selectedMarker.getLatLng();
+
+          postDiagnostic('focus_selected', {
+            lat: selectedLatLng.lat,
+            lng: selectedLatLng.lng,
+            selectedItemId: currentState.selectedItemId,
+            zoom: 12,
+            yOffset: 0,
+          });
+          setFocusedView(selectedLatLng.lat, selectedLatLng.lng, 12, 0);
           postBridgeMessage('FIT_RESULTS_DONE', { reason: 'selected' });
         };
 
@@ -444,6 +648,10 @@ export const buildSearchMapRuntimeHtml = ({
             return;
           }
 
+          postDiagnostic('focus_user', {
+            lat: currentState.userLocation.lat,
+            lng: currentState.userLocation.lng,
+          });
           setFocusedView(currentState.userLocation.lat, currentState.userLocation.lng, 14, 88);
           postBridgeMessage('FIT_RESULTS_DONE', { reason: 'user' });
         };
@@ -454,6 +662,39 @@ export const buildSearchMapRuntimeHtml = ({
             return;
           }
 
+          if (
+            isFinite(currentState.regionHint.north)
+            && isFinite(currentState.regionHint.south)
+            && isFinite(currentState.regionHint.east)
+            && isFinite(currentState.regionHint.west)
+          ) {
+            var hintedBounds = window.L.latLngBounds(
+              [currentState.regionHint.south, currentState.regionHint.west],
+              [currentState.regionHint.north, currentState.regionHint.east]
+            );
+
+            postDiagnostic('focus_region_bounds', {
+              east: currentState.regionHint.east,
+              north: currentState.regionHint.north,
+              south: currentState.regionHint.south,
+              west: currentState.regionHint.west,
+              zoom: currentState.regionHint.zoom,
+            });
+
+            map.fitBounds(hintedBounds, {
+              maxZoom: isFinite(currentState.regionHint.zoom) ? currentState.regionHint.zoom : 13,
+              paddingBottomRight: [48, 208],
+              paddingTopLeft: [48, 132],
+            });
+            postBridgeMessage('FIT_RESULTS_DONE', { reason: 'region' });
+            return;
+          }
+
+          postDiagnostic('focus_region', {
+            lat: currentState.regionHint.lat,
+            lng: currentState.regionHint.lng,
+            zoom: currentState.regionHint.zoom,
+          });
           setFocusedView(
             currentState.regionHint.lat,
             currentState.regionHint.lng,
@@ -466,9 +707,20 @@ export const buildSearchMapRuntimeHtml = ({
         var emitRegionChange = function () {
           if (!map) return;
           var center = map.getCenter();
+          var bounds = typeof map.getBounds === 'function' ? map.getBounds() : null;
+          var north = bounds && typeof bounds.getNorth === 'function' ? bounds.getNorth() : undefined;
+          var south = bounds && typeof bounds.getSouth === 'function' ? bounds.getSouth() : undefined;
+          var east = bounds && typeof bounds.getEast === 'function' ? bounds.getEast() : undefined;
+          var west = bounds && typeof bounds.getWest === 'function' ? bounds.getWest() : undefined;
           postBridgeMessage('MAP_REGION_CHANGE', {
+            east: east,
             lat: center.lat,
+            latitudeDelta: isFinite(north) && isFinite(south) ? Math.abs(north - south) : undefined,
             lng: center.lng,
+            longitudeDelta: isFinite(east) && isFinite(west) ? Math.abs(east - west) : undefined,
+            north: north,
+            south: south,
+            west: west,
             zoom: map.getZoom(),
           });
         };
@@ -485,13 +737,53 @@ export const buildSearchMapRuntimeHtml = ({
           lastHandledCommandId = currentState.command.id;
 
           if (currentState.command.type === 'zoom_in') {
+            postDiagnostic('command_applied', {
+              type: currentState.command.type,
+              zoomBefore: map.getZoom(),
+            });
             map.zoomIn();
             return;
           }
 
           if (currentState.command.type === 'zoom_out') {
+            postDiagnostic('command_applied', {
+              type: currentState.command.type,
+              zoomBefore: map.getZoom(),
+            });
             map.zoomOut();
+            return;
           }
+
+          if (currentState.command.type === 'focus_results') {
+            postDiagnostic('command_applied', {
+              type: currentState.command.type,
+              zoomBefore: map.getZoom(),
+            });
+            fitToResults();
+          }
+        };
+
+        var buildFocusSignature = function () {
+          var items = Array.isArray(currentState.items) ? currentState.items : [];
+          var regionHint = currentState.regionHint || null;
+          var userLocation = currentState.userLocation || null;
+          return [
+            currentState.focusMode || 'results',
+            currentState.selectedItemId || '',
+            items.map(function (item) {
+              return item.id + ':' + item.lat.toFixed(5) + ':' + item.lng.toFixed(5);
+            }).join('|'),
+            regionHint ? [
+              regionHint.lat,
+              regionHint.lng,
+              regionHint.zoom || '',
+              regionHint.north || '',
+              regionHint.south || '',
+              regionHint.east || '',
+              regionHint.west || '',
+            ].join(':') : '',
+            userLocation ? [userLocation.lat, userLocation.lng].join(':') : '',
+          ].join('||');
         };
 
         var applyFocus = function () {
@@ -516,56 +808,87 @@ export const buildSearchMapRuntimeHtml = ({
         };
 
         var renderMarkers = function () {
-          var items = Array.isArray(currentState.items) ? currentState.items : [];
-          var itemsSignature = buildItemsSignature(items);
-          var renderableEntries = buildRenderableEntries(items);
-          var clusterSignature = renderableEntries.map(function (entry) {
-            return entry.key + ':' + entry.lat.toFixed(5) + ':' + entry.lng.toFixed(5) + ':' + (entry.count || 1);
-          }).join('|');
+          return runSafely('render_markers', function () {
+            var items = Array.isArray(currentState.items) ? currentState.items : [];
+            var itemsSignature = buildItemsSignature(items);
+            var renderableEntries = buildRenderableEntries(items);
+            var clusterSignature = renderableEntries.map(function (entry) {
+              return entry.key + ':' + entry.lat.toFixed(5) + ':' + entry.lng.toFixed(5) + ':' + (entry.count || 1);
+            }).join('|');
 
-          if (
-            itemsSignature === lastItemsSignature
-            && clusterSignature === lastClusterSignature
-            && lastRenderedZoom === map.getZoom()
-            && currentState.selectedItemId !== lastSelectedItemId
-          ) {
-            Object.keys(markersById).forEach(function (markerKey) {
-              var marker = markersById[markerKey];
-              if (!marker || marker.__fcCluster) return;
-              marker.setIcon(createMarkerIcon(markerKey === currentState.selectedItemId));
+            if (firstRenderedItemsCount !== items.length) {
+              firstRenderedItemsCount = items.length;
+              postDiagnostic('markers_render', {
+                itemsCount: items.length,
+                zoom: map.getZoom(),
+              });
+            }
+
+            var showSequenceLabel = items.length <= 9;
+
+            if (
+              itemsSignature === lastItemsSignature
+              && clusterSignature === lastClusterSignature
+              && lastRenderedZoom === map.getZoom()
+              && currentState.selectedItemId !== lastSelectedItemId
+            ) {
+              Object.keys(markersById).forEach(function (markerKey) {
+                var marker = markersById[markerKey];
+                if (!marker || marker.__fcCluster) return;
+                marker.setIcon(createMarkerIcon(
+                  marker.__fcEntry,
+                  markerKey === currentState.selectedItemId,
+                  showSequenceLabel
+                ));
+              });
+              lastSelectedItemId = currentState.selectedItemId;
+              return;
+            }
+
+            clearMarkers();
+
+            renderableEntries.forEach(function (entry) {
+              var marker = window.L.marker([entry.lat, entry.lng], {
+                icon: entry.isCluster
+                  ? createClusterIcon(entry.count)
+                  : createMarkerIcon(
+                    entry,
+                    entry.item.id === currentState.selectedItemId,
+                    showSequenceLabel
+                  ),
+              });
+
+              marker.__fcCluster = Boolean(entry.isCluster);
+              marker.__fcEntry = entry;
+
+              marker.on('click', function () {
+                runSafely('marker_click', function () {
+                  if (entry.isCluster) {
+                    map.setView([entry.lat, entry.lng], Math.min(map.getZoom() + 2, 16));
+                    return;
+                  }
+
+                  if (currentState.selectedItemId === entry.item.id) {
+                    postBridgeMessage('MARKER_OPEN', { itemId: entry.item.id });
+                    return;
+                  }
+
+                  postBridgeMessage('MARKER_SELECT', { itemId: entry.item.id });
+                }, {
+                  itemId: entry.item && entry.item.id ? entry.item.id : '',
+                  isCluster: Boolean(entry.isCluster),
+                });
+              });
+
+              marker.addTo(markerLayer);
+              markersById[entry.key] = marker;
             });
+
+            lastItemsSignature = itemsSignature;
+            lastClusterSignature = clusterSignature;
+            lastRenderedZoom = map.getZoom();
             lastSelectedItemId = currentState.selectedItemId;
-            return;
-          }
-
-          clearMarkers();
-
-          renderableEntries.forEach(function (entry) {
-            var marker = window.L.marker([entry.lat, entry.lng], {
-              icon: entry.isCluster
-                ? createClusterIcon(entry.count)
-                : createMarkerIcon(entry.item.id === currentState.selectedItemId),
-            });
-
-            marker.__fcCluster = Boolean(entry.isCluster);
-
-            marker.on('click', function () {
-              if (entry.isCluster) {
-                map.setView([entry.lat, entry.lng], Math.min(map.getZoom() + 2, 16));
-                return;
-              }
-
-              postBridgeMessage('MARKER_SELECT', { itemId: entry.item.id });
-            });
-
-            marker.addTo(markerLayer);
-            markersById[entry.key] = marker;
           });
-
-          lastItemsSignature = itemsSignature;
-          lastClusterSignature = clusterSignature;
-          lastRenderedZoom = map.getZoom();
-          lastSelectedItemId = currentState.selectedItemId;
         };
 
         var ensureMap = function () {
@@ -573,10 +896,20 @@ export const buildSearchMapRuntimeHtml = ({
             return Boolean(map);
           }
 
-          map = window.L.map('map', {
-            attributionControl: false,
-            zoomControl: false,
+          postDiagnostic('leaflet_ready', {
+            version: window.L && window.L.version ? window.L.version : '',
           });
+
+          map = runSafely('create_map', function () {
+            return window.L.map('map', {
+              attributionControl: false,
+              zoomControl: false,
+            });
+          });
+          if (!map) {
+            return false;
+          }
+          postDiagnostic('map_created');
 
           markerLayer = window.L.layerGroup().addTo(map);
 
@@ -585,9 +918,17 @@ export const buildSearchMapRuntimeHtml = ({
             subdomains: ${safeJson(TOMTOM_TILE_SUBDOMAINS)},
             tileSize: 256,
           });
+          postDiagnostic('tile_layer_created', {
+            tileUrl: sanitizeUrl(TILE_URL),
+          });
 
           tileLayer.on('tileload', function () {
             readyTileCount += 1;
+            if (readyTileCount === 1) {
+              postDiagnostic('first_tile_load', {
+                tileUrl: sanitizeUrl(TILE_URL),
+              });
+            }
             markMapReady();
           });
 
@@ -599,11 +940,15 @@ export const buildSearchMapRuntimeHtml = ({
 
           tileLayer.on('tileerror', function (event) {
             tileErrorCount += 1;
+            postDiagnostic('tile_error', {
+              count: tileErrorCount,
+              url: sanitizeUrl(event && event.tile && event.tile.src ? event.tile.src : ''),
+            });
             if (tileErrorCount >= 3) {
               reportMapError({
                 message: event && event.error && event.error.message ? event.error.message : 'tile_error',
                 reason: 'tiles_unavailable',
-                url: event && event.tile && event.tile.src ? event.tile.src : '',
+                url: sanitizeUrl(event && event.tile && event.tile.src ? event.tile.src : ''),
               });
             }
           });
@@ -611,21 +956,34 @@ export const buildSearchMapRuntimeHtml = ({
           probeTileAvailability();
           tileLayer.addTo(map);
           map.on('moveend', function () {
-            if (isApplyingFocus) {
-              isApplyingFocus = false;
-              return;
-            }
-            emitRegionChange();
+            runSafely('moveend', function () {
+              if (isApplyingFocus) {
+                isApplyingFocus = false;
+                return;
+              }
+              emitRegionChange();
+            });
           });
           map.on('zoomend', function () {
-            renderMarkers();
+            runSafely('zoomend', function () {
+              renderMarkers();
+            });
           });
           map.whenReady(function () {
             window.setTimeout(function () {
-              map.invalidateSize();
-              applyFocus();
-              renderMarkers();
-              emitRegionChange();
+              runSafely('when_ready', function () {
+                map.invalidateSize();
+                readyTileCount = 0;
+                postDiagnostic('focus_bootstrap_start', {
+                  focusMode: currentState.focusMode || 'results',
+                  itemsCount: Array.isArray(currentState.items) ? currentState.items.length : 0,
+                });
+                applyFocus();
+                lastAppliedFocusSignature = buildFocusSignature();
+                isWaitingForFocusedTiles = false;
+                renderMarkers();
+                emitRegionChange();
+              });
             }, 60);
           });
 
@@ -633,49 +991,92 @@ export const buildSearchMapRuntimeHtml = ({
         };
 
         var syncState = function (nextState) {
-          currentState = Object.assign({}, currentState, nextState || {});
+          runSafely('sync_state', function () {
+            currentState = Object.assign({}, currentState, nextState || {});
+            var items = Array.isArray(currentState.items) ? currentState.items : [];
+            var firstItem = items[0] || null;
+            postDiagnostic('sync_state', {
+              focusMode: currentState.focusMode || 'results',
+              firstItemLat: firstItem && isFinite(firstItem.lat) ? firstItem.lat : undefined,
+              firstItemLng: firstItem && isFinite(firstItem.lng) ? firstItem.lng : undefined,
+              hasRegionHint: Boolean(currentState.regionHint),
+              itemsCount: items.length,
+              selectedItemId: currentState.selectedItemId || '',
+            });
 
-          if (!ensureMap()) {
-            reportMapError({ reason: 'leaflet_unavailable' });
-            return;
-          }
+            if (!ensureMap()) {
+              reportMapError({ reason: 'leaflet_unavailable' });
+              return;
+            }
 
-          renderMarkers();
-          applyFocus();
-          applyCommand();
+            var nextFocusSignature = buildFocusSignature();
+            renderMarkers();
+            if (nextFocusSignature !== lastAppliedFocusSignature) {
+              applyFocus();
+              lastAppliedFocusSignature = nextFocusSignature;
+            }
+            applyCommand();
+          });
+        };
+
+        var dispatchCommand = function (nextCommand) {
+          runSafely('dispatch_command', function () {
+            if (!nextCommand || !nextCommand.id) {
+              return;
+            }
+
+            currentState = Object.assign({}, currentState, {
+              command: nextCommand,
+            });
+            applyCommand();
+          });
         };
 
         window.__FOUNDCLUB_SEARCH_MAP__ = {
+          dispatchCommand: dispatchCommand,
           syncState: syncState,
         };
 
         window.addEventListener('message', function (event) {
-          var data = event.data;
-          if (typeof data === 'string') {
-            try {
-              data = JSON.parse(data);
-            } catch (error) {
+          runSafely('host_message', function () {
+            var data = event.data;
+            if (typeof data === 'string') {
+              try {
+                data = JSON.parse(data);
+              } catch (error) {
+                return;
+              }
+            }
+
+            if (
+              !data
+              || data.source !== HOST_SOURCE
+              || data.mapId !== MAP_ID
+              || data.type !== 'SYNC_STATE'
+            ) {
               return;
             }
-          }
 
-          if (
-            !data
-            || data.source !== HOST_SOURCE
-            || data.mapId !== MAP_ID
-            || data.type !== 'SYNC_STATE'
-          ) {
-            return;
-          }
-
-          syncState(data.payload || {});
+            syncState(data.payload || {});
+          });
         });
 
         window.addEventListener('error', function (event) {
           reportMapError({
+            colno: event && event.colno ? event.colno : undefined,
+            filename: event && event.filename ? String(event.filename) : '',
+            lineno: event && event.lineno ? event.lineno : undefined,
             message: event && event.message ? event.message : 'runtime_error',
             reason: 'runtime_error',
+            stack: event && event.error && event.error.stack ? String(event.error.stack) : '',
           });
+        });
+
+        window.addEventListener('unhandledrejection', function (event) {
+          reportMapError(buildRuntimeErrorPayload(
+            'unhandled_rejection',
+            event && event.reason ? event.reason : null,
+          ));
         });
 
         if (!ensureMap()) {
@@ -683,6 +1084,7 @@ export const buildSearchMapRuntimeHtml = ({
           return;
         }
 
+        postDiagnostic('runtime_boot');
         syncState(currentState);
       })();
     </script>

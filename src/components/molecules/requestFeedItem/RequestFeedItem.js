@@ -6,6 +6,35 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
+const formatWindowLabel = (startValue, endValue) => {
+  const startDate = startValue ? new Date(startValue) : null;
+  const endDate = endValue ? new Date(endValue) : null;
+  if (!startDate || Number.isNaN(startDate.getTime())) return '';
+
+  const dateLabel = startDate.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    weekday: 'short',
+  });
+
+  const startTimeLabel = startDate.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const endTimeLabel = endDate && !Number.isNaN(endDate.getTime())
+    ? endDate.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    : '';
+
+  if (endTimeLabel) {
+    return `${dateLabel} - ${startTimeLabel} a ${endTimeLabel}`;
+  }
+
+  return `${dateLabel} - ${startTimeLabel}`;
+};
+
 const getTypeLabel = (type, t) => {
   switch (type) {
     case 'club':
@@ -23,9 +52,12 @@ const getTypeLabel = (type, t) => {
   }
 };
 
-const getActionLabel = (action, t) => {
+const getActionLabel = (action, item, t) => {
   switch (action) {
     case 'accept':
+      if (item?.type === 'installation') {
+        return t('requestsHub.actions.approveOverflow', 'Autoriser');
+      }
       return t('common.accept', 'Accepter');
     case 'reject':
       return t('common.reject', 'Refuser');
@@ -40,6 +72,7 @@ const getActionLabel = (action, t) => {
  * @param {{
  *  item: import('@/domains/requests/requestMappers').RequestHubItem;
  *  isBusy?: boolean;
+ *  onEventPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
  *  onPrimaryPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
  *  onRequesterPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
  *  onSecondaryPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
@@ -48,6 +81,7 @@ const getActionLabel = (action, t) => {
 function RequestFeedItem({
   isBusy = false,
   item,
+  onEventPress,
   onPrimaryPress,
   onRequesterPress,
   onSecondaryPress,
@@ -65,10 +99,17 @@ function RequestFeedItem({
   const requesterName = item?.meta?.requesterName || t('common.user', 'Utilisateur');
   const featuredScopeLabel = item?.meta?.scopeLabel || '';
   const sourceTeamName = item?.meta?.sourceTeamName || '';
+  const isInstallationRequest = item?.type === 'installation';
   const isMembershipRequest = item?.type === 'team' || item?.type === 'club';
   const isEventParticipationRequest = item?.type === 'event'
     && Boolean(requesterId || requesterName || requesterAvatarUrl);
+  const canOpenEvent = Boolean(item?.meta?.eventId && onEventPress);
   const canOpenRequesterProfile = Boolean(requesterId && onRequesterPress);
+  const installationWindowLabel = formatWindowLabel(
+    item?.meta?.windowStart,
+    item?.meta?.windowEnd,
+  );
+  const occupancyRatioLabel = `${Number(item?.meta?.overlapCount || 0)}/${Number(item?.meta?.maxSlots || 1)} slots occupes`;
   const renderRequesterWrapper = (children) => {
     const wrapperStyle = [Alignments.row, Alignments.alignCenter, Spaces.gap[12]];
 
@@ -138,7 +179,77 @@ function RequestFeedItem({
         </Text>
       </View>
     );
+  } else if (isInstallationRequest) {
+    bodyContent = (
+      <View style={[Spaces.gap[12]]}>
+        <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+          {[item?.meta?.facilityName, item?.meta?.teamName, installationWindowLabel]
+            .filter(Boolean)
+            .map((label) => (
+              <View
+                key={label}
+                style={[
+                  ApplicationStyle.borderRadius100,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.paddingHorizontal[10],
+                  Spaces.paddingVertical[6],
+                  {
+                    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                    borderColor: `${Colors.primary500}44`,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                  {label}
+                </Text>
+              </View>
+            ))}
+        </View>
+
+        <View
+          style={[
+            ApplicationStyle.borderRadius16,
+            ApplicationStyle.borderWidth1,
+            Spaces.padding[12],
+            Spaces.gap[6],
+            {
+              backgroundColor: 'rgba(245, 158, 11, 0.12)',
+              borderColor: `${Colors.warning500}66`,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.warning500]}>
+            {occupancyRatioLabel}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral100]}>
+            {t(
+              'requestsHub.installation.summary',
+              "Une equipe supplementaire demande ce creneau sur l'installation.",
+            )}
+          </Text>
+        </View>
+
+        {item?.meta?.eventName ? (
+          <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
+            {t('requestsHub.installation.eventLabel', 'Evenement')}
+            :
+            {' '}
+            {item.meta.eventName}
+          </Text>
+        ) : null}
+      </View>
+    );
   }
+
+  const cardSurfaceStyle = isInstallationRequest
+    ? {
+      backgroundColor: 'rgba(10, 37, 49, 0.96)',
+      borderColor: `${Colors.warning500}55`,
+    }
+    : {
+      backgroundColor: ApplicationStyle.backgroundColor.primary700.backgroundColor,
+      borderColor: `${Colors.primary500}55`,
+    };
 
   return (
     <View
@@ -148,9 +259,7 @@ function RequestFeedItem({
         ApplicationStyle.borderWidth1,
         Spaces.padding[16],
         Spaces.gap[12],
-        {
-          borderColor: `${Colors.primary500}55`,
-        },
+        cardSurfaceStyle,
       ]}
     >
       <View
@@ -168,16 +277,21 @@ function RequestFeedItem({
           <View
             style={[
               ApplicationStyle.borderRadius12,
-              ApplicationStyle.backgroundColor.primary900,
               ApplicationStyle.borderWidth1,
               Spaces.paddingHorizontal[8],
               Spaces.paddingVertical[4],
-              {
-                borderColor: `${Colors.primary500}66`,
-              },
+              isInstallationRequest
+                ? {
+                  backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                  borderColor: `${Colors.warning500}66`,
+                }
+                : {
+                  backgroundColor: ApplicationStyle.backgroundColor.primary900.backgroundColor,
+                  borderColor: `${Colors.primary500}66`,
+                },
             ]}
           >
-            <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+            <Text style={[Fonts.p4Bold, isInstallationRequest ? Fonts.warning500 : Fonts.primary500]}>
               {getTypeLabel(item?.type, t)}
             </Text>
           </View>
@@ -223,6 +337,18 @@ function RequestFeedItem({
         </View>
       ) : null}
 
+      {canOpenEvent ? (
+        <View>
+          <Button
+            disabled={isBusy}
+            onPress={() => onEventPress && onEventPress(item)}
+            size="small"
+            title={t('requestsHub.actions.viewEvent', "Voir l'evenement")}
+            variant="Secondary"
+          />
+        </View>
+      ) : null}
+
       <View style={[Alignments.row, Spaces.gap[12]]}>
         {item?.actions?.secondary ? (
           <View style={{ flex: 1 }}>
@@ -231,7 +357,7 @@ function RequestFeedItem({
               icon="close"
               isOption
               onPress={() => onSecondaryPress && onSecondaryPress(item)}
-              title={getActionLabel(item?.actions?.secondary, t)}
+              title={getActionLabel(item?.actions?.secondary, item, t)}
               variant="Secondary"
             />
           </View>
@@ -242,7 +368,7 @@ function RequestFeedItem({
             icon={item?.actions?.primary === 'validate' ? 'check' : 'check'}
             isOption
             onPress={() => onPrimaryPress && onPrimaryPress(item)}
-            title={getActionLabel(item?.actions?.primary, t)}
+            title={getActionLabel(item?.actions?.primary, item, t)}
             variant="Primary"
           />
         </View>

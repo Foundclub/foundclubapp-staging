@@ -186,17 +186,18 @@ export const createEventPayload = (event) => {
 
   // Safely handle location data
   const splittedLocation = event.location?.value?.split('|');
+  const parsedLat = splittedLocation?.length === 2 ? parseFloat(splittedLocation[1]) : null;
+  const parsedLng = splittedLocation?.length === 2 ? parseFloat(splittedLocation[0]) : null;
+  const hasResolvedCoordinates = Number.isFinite(parsedLat)
+    && Number.isFinite(parsedLng)
+    && (Math.abs(parsedLat) > 0.000001 || Math.abs(parsedLng) > 0.000001);
   const formattedData = {
     ...event,
     date: formatDateTimeToSend(event.date, effectiveStartTime),
-    location: splittedLocation?.length === 2 ? {
-      lat: parseFloat(splittedLocation[1]) || 0,
-      lng: parseFloat(splittedLocation[0]) || 0,
-    } : (event.location?.label ? {
-      label: event.location.label, // Use label if available, fallback to 0,0
-      lat: 0,
-      lng: 0,
-    } : undefined),
+    location: hasResolvedCoordinates ? {
+      lat: parsedLat,
+      lng: parsedLng,
+    } : undefined,
     locationDetails: event.location?.label ? JSON.stringify({ address: event.location.label }) : null,
     // Format startTime and endTime for Strapi (HH:mm:ss.SSS)
     endTime: formatTimeForStrapi(event.endTime),

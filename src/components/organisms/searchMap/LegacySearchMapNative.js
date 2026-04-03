@@ -18,12 +18,12 @@ import { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import useTheme from '@/theme/themeContext';
 
 import SearchMapPreviewCard from '@/components/molecules/searchMapPreviewCard/SearchMapPreviewCard';
+import SearchMapHud from '@/components/organisms/searchMap/SearchMapHud';
 
 import { createLogger } from '@/utils/logger/logger';
 import {
   buildSearchMapRegion,
   getSearchMapEmptyMessage,
-  getSearchMapResultLabel,
 } from '@/utils/searchMap';
 
 import { requestCurrentSearchMapLocation } from '@/platform/maps/searchMapGeolocation';
@@ -49,6 +49,22 @@ const scaleRegionDeltas = (region, factor) => ({
   longitudeDelta: Math.max(0.002, region.longitudeDelta * factor),
 });
 
+const buildRegionBounds = (region) => ({
+  east: region.longitude + (region.longitudeDelta / 2),
+  north: region.latitude + (region.latitudeDelta / 2),
+  south: region.latitude - (region.latitudeDelta / 2),
+  west: region.longitude - (region.longitudeDelta / 2),
+});
+
+const estimateZoomFromRegion = (region) => {
+  const longitudeDelta = Number(region?.longitudeDelta);
+  if (!Number.isFinite(longitudeDelta) || longitudeDelta <= 0) {
+    return undefined;
+  }
+
+  return Math.max(1, Math.min(20, Math.round(Math.log2(360 / longitudeDelta))));
+};
+
 /**
  * @param {object} props
  * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
@@ -56,7 +72,28 @@ const scaleRegionDeltas = (region, factor) => ({
  * @param {() => void} [props.onShowList]
  * @param {(itemId: string) => void} [props.onSelectItem]
  * @param {() => void} [props.onLocateMe]
- * @param {(region: { lat: number; lng: number; latitudeDelta?: number; longitudeDelta?: number }) => void} [props.onRegionChangeComplete]
+ * @param {(region: {
+ *  lat: number;
+ *  lng: number;
+ *  latitudeDelta?: number;
+ *  longitudeDelta?: number;
+ *  north?: number;
+ *  south?: number;
+ *  east?: number;
+ *  west?: number;
+ *  zoom?: number;
+ * }) => void} [props.onRegionChangeComplete]
+ * @param {{
+ *  lat: number;
+ *  lng: number;
+ *  zoom?: number;
+ *  north?: number;
+ *  south?: number;
+ *  east?: number;
+ *  west?: number;
+ *  latitudeDelta?: number;
+ *  longitudeDelta?: number;
+ * } | null} [props.regionHint]
  * @param {'events' | 'clubs' | 'reservations'} [props.scope]
  * @param {string} [props.selectedItemId]
  * @param {number} [props.height]
@@ -74,6 +111,7 @@ function LegacySearchMapNative({
   onSelectItem,
   onShowList,
   previewBottomOffset = 12,
+  regionHint = null,
   scope = 'events',
   selectedItemId,
   topMargin = 12,
@@ -105,7 +143,6 @@ function LegacySearchMapNative({
     [activeSelectedItemId, items],
   );
   const totalResults = Number.isFinite(totalCount) && totalCount > 0 ? totalCount : items.length;
-  const geolocatableLabel = `${items.length} affichable${items.length > 1 ? 's' : ''} sur la carte`;
   const logContext = useMemo(() => ({
     geolocatableCount: items.length,
     scope,
@@ -190,17 +227,75 @@ function LegacySearchMapNative({
     }
 
     const timer = setTimeout(() => {
+      if (regionHint && Number.isFinite(regionHint.lat) && Number.isFinite(regionHint.lng)) {
+        return;
+      }
       fitToResults(false);
     }, 40);
 
     return () => clearTimeout(timer);
-  }, [fitToResults, mapStatus]);
+  }, [fitToResults, mapStatus, regionHint]);
+
+  useEffect(() => {
+    if (
+      mapStatus !== 'ready'
+      || !regionHint
+      || !Number.isFinite(regionHint.lat)
+      || !Number.isFinite(regionHint.lng)
+    ) {
+      return;
+    }
+
+    if (
+      Number.isFinite(regionHint.north)
+      && Number.isFinite(regionHint.south)
+      && Number.isFinite(regionHint.east)
+      && Number.isFinite(regionHint.west)
+    ) {
+      const nextRegion = {
+        latitude: regionHint.lat,
+        latitudeDelta: Number.isFinite(regionHint.latitudeDelta)
+          ? regionHint.latitudeDelta
+          : Math.max(Math.abs(regionHint.north - regionHint.south), 0.02),
+        longitude: regionHint.lng,
+        longitudeDelta: Number.isFinite(regionHint.longitudeDelta)
+          ? regionHint.longitudeDelta
+          : Math.max(Math.abs(regionHint.east - regionHint.west), 0.02),
+      };
+
+      setRegion(nextRegion);
+      mapRef.current?.fitToCoordinates([
+        { latitude: regionHint.north, longitude: regionHint.west },
+        { latitude: regionHint.south, longitude: regionHint.east },
+      ], {
+        animated: true,
+        edgePadding: {
+          bottom: 130,
+          left: 56,
+          right: 56,
+          top: 84,
+        },
+      });
+      return;
+    }
+
+    const nextRegion = buildFocusedRegion(regionHint.lat, regionHint.lng);
+    setRegion(nextRegion);
+    mapRef.current?.animateToRegion(nextRegion, 280);
+  }, [mapStatus, regionHint]);
 
   const handleMarkerSelect = useCallback((item) => {
     if (selectedItemId === undefined) {
       setInternalSelectedItemId(item.id);
     }
     onSelectItem?.(item.id);
+  }, [onSelectItem, selectedItemId]);
+
+  const handleClearSelection = useCallback(() => {
+    if (selectedItemId === undefined) {
+      setInternalSelectedItemId('');
+    }
+    onSelectItem?.('');
   }, [onSelectItem, selectedItemId]);
 
   const handleMapReady = useCallback(() => {
@@ -260,7 +355,7 @@ function LegacySearchMapNative({
   }, [isLocatePending]);
 
   return (
-    <View style={[styles.container, { backgroundColor: Colors.primary900, height, marginTop: topMargin }]}>
+    <View style={[styles.container, { backgroundColor: Colors.primary900, height }]}>
       <ClusteredMapView
         clusterColor={markerColor}
         initialRegion={region}
@@ -269,11 +364,14 @@ function LegacySearchMapNative({
         onMapReady={handleMapReady}
         onRegionChangeComplete={(nextRegion) => {
           setRegion(nextRegion);
+          const nextBounds = buildRegionBounds(nextRegion);
           onRegionChangeComplete?.({
+            ...nextBounds,
             lat: nextRegion.latitude,
             latitudeDelta: nextRegion.latitudeDelta,
             lng: nextRegion.longitude,
             longitudeDelta: nextRegion.longitudeDelta,
+            zoom: estimateZoomFromRegion(nextRegion),
           });
         }}
         onUserLocationChange={handleUserLocationChange}
@@ -316,95 +414,19 @@ function LegacySearchMapNative({
 
       <View
         pointerEvents="box-none"
-        style={[styles.overlay, { paddingHorizontal: 12, paddingTop: 12 }]}
+        style={[styles.overlay, { paddingHorizontal: 12, paddingTop: topMargin + 12 }]}
       >
         <View style={[Alignments.row, Alignments.alignStart, Alignments.justifySpaceBetween]}>
-          <View
-            style={[
-              ApplicationStyle.shadow200,
-              {
-                backgroundColor: 'rgba(6, 24, 34, 0.84)',
-                borderColor: 'rgba(255,255,255,0.1)',
-                borderRadius: 18,
-                borderWidth: 1,
-                maxWidth: '72%',
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-              },
-            ]}
-          >
-            <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-              {`${totalResults} ${getSearchMapResultLabel(scope, totalResults)}`}
-            </Text>
-            <Text style={[Fonts.p4, Fonts.neutral200]}>
-              {geolocatableLabel}
-            </Text>
-          </View>
-
-          <View style={[Alignments.column, { gap: 10, opacity: areControlsDisabled ? 0.45 : 1 }]}>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              disabled={areControlsDisabled}
-              onPress={() => handleZoom(0.65)}
-              style={[
-                styles.controlButton,
-                styles.zoomControlButton,
-                {
-                  backgroundColor: 'rgba(6, 24, 34, 0.9)',
-                  borderColor: `${Colors.primary500}33`,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>+</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              disabled={areControlsDisabled}
-              onPress={() => handleZoom(1.45)}
-              style={[
-                styles.controlButton,
-                styles.zoomControlButton,
-                {
-                  backgroundColor: 'rgba(6, 24, 34, 0.9)',
-                  borderColor: `${Colors.primary500}33`,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>-</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              disabled={areControlsDisabled}
-              onPress={() => fitToResults(true)}
-              style={[
-                styles.controlButton,
-                {
-                  backgroundColor: 'rgba(6, 24, 34, 0.9)',
-                  borderColor: `${Colors.primary500}33`,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                Recentrer
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              disabled={areControlsDisabled}
-              onPress={requestUserLocation}
-              style={[
-                styles.controlButton,
-                {
-                  backgroundColor: 'rgba(6, 24, 34, 0.9)',
-                  borderColor: `${Colors.primary500}33`,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                Me localiser
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <SearchMapHud
+            disabled={areControlsDisabled}
+            geolocatableCount={items.length}
+            onLocateMe={requestUserLocation}
+            onRecenter={() => fitToResults(true)}
+            onZoomIn={() => handleZoom(0.65)}
+            onZoomOut={() => handleZoom(1.45)}
+            scope={scope}
+            totalCount={totalResults}
+          />
         </View>
       </View>
 
@@ -505,6 +527,7 @@ function LegacySearchMapNative({
         <SearchMapPreviewCard
           bottomOffset={previewBottomOffset}
           item={selectedItem}
+          onDismiss={handleClearSelection}
           onOpen={(item) => onOpenItem?.(item)}
           onShowList={() => onShowList?.()}
           scope={scope}
@@ -521,16 +544,6 @@ const styles = StyleSheet.create({
     minHeight: 360,
     overflow: 'hidden',
     position: 'relative',
-  },
-  controlButton: {
-    alignItems: 'center',
-    borderRadius: 999,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 40,
-    minWidth: 108,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
   },
   emptyState: {
     alignItems: 'center',
@@ -599,10 +612,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
-  },
-  zoomControlButton: {
-    minWidth: 52,
-    paddingHorizontal: 10,
   },
 });
 

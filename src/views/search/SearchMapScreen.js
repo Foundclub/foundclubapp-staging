@@ -7,10 +7,13 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -24,6 +27,7 @@ import usePlaces from '@/domains/places/usePlaces';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
+import GlassSurface from '@/components/atoms/glassSurface/GlassSurface';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import SearchMap from '@/components/organisms/searchMap/SearchMap';
@@ -31,13 +35,10 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import {
-  useGetClubs,
-} from '@/services/club/clubQueries';
 import { useGetEvents } from '@/services/event/eventQueries';
 import { useGetReservations } from '@/services/reservation/reservationQueries';
 import {
-  useSearchClubs,
+  useSearchClubsMap,
   useSearchEvents,
   useSearchReservations,
 } from '@/services/search/searchQueries';
@@ -47,11 +48,7 @@ import { createLogger } from '@/utils/logger/logger';
 import { toSearchMapItems } from '@/utils/searchMap';
 
 import {
-  getSearchMapActiveFiltersSummary,
-  getSearchMapAddressHint,
   getSearchMapSearchAreaLabel,
-  getSearchMapSubtitle,
-  getSearchMapTitle,
   getSearchMapUpdatingResultsCopy,
 } from '@/platform/maps/searchMapCopy';
 import { navigateToSearchMapDetail } from '@/platform/maps/searchMapDetailNavigation';
@@ -76,11 +73,73 @@ const humanize = (value) => String(value || '')
   .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 const parseAddressCoordinates = (address) => {
+  const lat = Number.parseFloat(String(address?.lat ?? ''));
+  const lng = Number.parseFloat(String(address?.lng ?? address?.lon ?? ''));
+
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return { lat, lng };
+  }
+
   if (!address?.value || typeof address.value !== 'string') return null;
   const [lngRaw, latRaw] = address.value.split('|');
-  const lat = Number.parseFloat(latRaw);
-  const lng = Number.parseFloat(lngRaw);
-  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  const parsedLat = Number.parseFloat(latRaw);
+  const parsedLng = Number.parseFloat(lngRaw);
+  return Number.isFinite(parsedLat) && Number.isFinite(parsedLng)
+    ? { lat: parsedLat, lng: parsedLng }
+    : null;
+};
+
+const parseAddressBbox = (address) => {
+  const safeBbox = address?.bbox;
+  if (!safeBbox || typeof safeBbox !== 'object') {
+    return null;
+  }
+
+  const north = Number.parseFloat(String(safeBbox.north ?? ''));
+  const south = Number.parseFloat(String(safeBbox.south ?? ''));
+  const east = Number.parseFloat(String(safeBbox.east ?? ''));
+  const west = Number.parseFloat(String(safeBbox.west ?? ''));
+
+  if ([north, south, east, west].every((value) => Number.isFinite(value))) {
+    return {
+      east,
+      north,
+      south,
+      west,
+    };
+  }
+
+  return null;
+};
+
+const getAddressZoomHeuristic = (address) => {
+  const type = String(address?.type || '').trim().toLowerCase();
+  if (type === 'housenumber') return 16;
+  if (type === 'street') return 14;
+  return 11;
+};
+
+const toRegionHintFromAddress = (address) => {
+  const coordinates = parseAddressCoordinates(address);
+  if (!coordinates) {
+    return null;
+  }
+
+  const bbox = parseAddressBbox(address);
+  if (bbox) {
+    return {
+      ...bbox,
+      lat: coordinates.lat,
+      lng: coordinates.lng,
+      zoom: getAddressZoomHeuristic(address),
+    };
+  }
+
+  return {
+    lat: coordinates.lat,
+    lng: coordinates.lng,
+    zoom: getAddressZoomHeuristic(address),
+  };
 };
 
 const parseFilterCoordinates = (filters) => {
@@ -92,6 +151,102 @@ const parseFilterCoordinates = (filters) => {
     : null;
 };
 
+const resolvePreferredRegion = (filters, fallbackRegion = null) => {
+  const directRegion = parseFilterCoordinates(filters);
+  if (directRegion) {
+    return directRegion;
+  }
+
+  const addressRegion = toRegionHintFromAddress(filters?.city);
+  if (addressRegion) {
+    return addressRegion;
+  }
+
+  return fallbackRegion;
+};
+
+const areRegionsEquivalent = (left, right) => {
+  if (!left && !right) return true;
+  if (!left || !right) return false;
+
+  const leftZoom = Number.isFinite(Number(left.zoom)) ? Number(left.zoom) : undefined;
+  const rightZoom = Number.isFinite(Number(right.zoom)) ? Number(right.zoom) : undefined;
+  const compareOptional = (key, epsilon = 0.0001) => {
+    const leftValue = Number(left?.[key]);
+    const rightValue = Number(right?.[key]);
+    if (!Number.isFinite(leftValue) && !Number.isFinite(rightValue)) {
+      return true;
+    }
+    if (!Number.isFinite(leftValue) || !Number.isFinite(rightValue)) {
+      return false;
+    }
+    return Math.abs(leftValue - rightValue) < epsilon;
+  };
+
+  return (
+    Math.abs(Number(left.lat) - Number(right.lat)) < 0.0001
+    && Math.abs(Number(left.lng) - Number(right.lng)) < 0.0001
+    && compareOptional('north')
+    && compareOptional('south')
+    && compareOptional('east')
+    && compareOptional('west')
+    && compareOptional('latitudeDelta')
+    && compareOptional('longitudeDelta')
+    && (
+      leftZoom === rightZoom
+      || (
+        leftZoom !== undefined
+        && rightZoom !== undefined
+        && Math.abs(leftZoom - rightZoom) < 0.1
+      )
+    )
+  );
+};
+
+const hasFiniteViewportBounds = (viewport) => (
+  Number.isFinite(Number(viewport?.north))
+  && Number.isFinite(Number(viewport?.south))
+  && Number.isFinite(Number(viewport?.east))
+  && Number.isFinite(Number(viewport?.west))
+);
+
+const resolveViewportZoom = (viewport) => {
+  const explicitZoom = Number(viewport?.zoom);
+  if (Number.isFinite(explicitZoom)) {
+    return explicitZoom;
+  }
+
+  const longitudeDelta = Number(viewport?.longitudeDelta);
+  if (Number.isFinite(longitudeDelta) && longitudeDelta > 0) {
+    return Math.max(1, Math.min(20, Math.round(Math.log2(360 / longitudeDelta))));
+  }
+
+  return 11;
+};
+
+const areViewportsEquivalent = (left, right) => {
+  if (!left && !right) return true;
+  if (!left || !right) return false;
+
+  const compare = (key, epsilon = 0.0005) => (
+    Math.abs(Number(left?.[key]) - Number(right?.[key])) < epsilon
+  );
+
+  return (
+    compare('lat')
+    && compare('lng')
+    && compare('north')
+    && compare('south')
+    && compare('east')
+    && compare('west')
+    && (
+      !Number.isFinite(Number(left?.zoom))
+      || !Number.isFinite(Number(right?.zoom))
+      || Math.abs(Number(left.zoom) - Number(right.zoom)) < 0.1
+    )
+  );
+};
+
 const hasMeaningfulMove = (nextRegion, appliedCenter) => (
   !!nextRegion
   && !!appliedCenter
@@ -99,6 +254,12 @@ const hasMeaningfulMove = (nextRegion, appliedCenter) => (
     Math.abs(nextRegion.lat - appliedCenter.lat) >= MOVE_THRESHOLD
     || Math.abs(nextRegion.lng - appliedCenter.lng) >= MOVE_THRESHOLD
   )
+);
+
+const hasMeaningfulViewportMove = (nextViewport, executedViewport) => (
+  !!nextViewport
+  && !!executedViewport
+  && !areViewportsEquivalent(nextViewport, executedViewport)
 );
 
 const formatDateChip = (value, prefix) => {
@@ -119,6 +280,49 @@ const getFilterActionType = (isClubScope, isReservationScope) => {
 
   return 'SET_EVENT_FILTERS';
 };
+
+const buildClubMapViewportQuery = (filters, viewport, view = 'map') => {
+  if (!viewport || !hasFiniteViewportBounds(viewport)) {
+    return null;
+  }
+
+  const q = typeof filters?.name === 'string' ? filters.name.trim() : '';
+
+  return {
+    activity: filters?.activity,
+    centerLat: viewport.lat,
+    centerLon: viewport.lng,
+    east: viewport.east,
+    includeMultisport: true,
+    north: viewport.north,
+    pageSize: view === 'map' ? 1500 : 30,
+    q: q.length >= 2 ? q : undefined,
+    south: viewport.south,
+    view,
+    west: viewport.west,
+    zoom: resolveViewportZoom(viewport),
+  };
+};
+
+const buildClubMapFilterSignature = (filters) => JSON.stringify({
+  activity: Array.isArray(filters?.activity)
+    ? filters.activity.map((item) => (
+      item?.value
+      || item?.documentId
+      || item?.id
+      || String(item || '')
+    ))
+    : (
+      filters?.activity?.value
+      || filters?.activity?.documentId
+      || filters?.activity?.id
+      || filters?.activity
+      || null
+    ),
+  q: typeof filters?.name === 'string' && filters.name.trim().length >= 2
+    ? filters.name.trim()
+    : '',
+});
 
 const getActiveQueryItems = (
   isSmartSearchEnabled,
@@ -152,6 +356,16 @@ const getActiveQueryLoadingState = (
   isSmartSearchEnabled ? searchedQuery.isLoading : regularQuery.isLoading
 );
 
+const getActiveQueryTotalCount = (
+  isSmartSearchEnabled,
+  regularQuery,
+  searchedQuery,
+) => {
+  const activeQuery = isSmartSearchEnabled ? searchedQuery : regularQuery;
+  const total = Number(activeQuery?.data?.pages?.[0]?.meta?.pagination?.total);
+  return Number.isFinite(total) && total > 0 ? total : 0;
+};
+
 const getUnavailableMessage = (scope) => {
   if (scope === 'clubs') {
     return 'Impossible de mettre à jour les clubs pour le moment.';
@@ -162,6 +376,18 @@ const getUnavailableMessage = (scope) => {
   }
 
   return 'Impossible de mettre à jour les événements pour le moment.';
+};
+
+const getMapHeading = (scope) => {
+  if (scope === 'clubs') {
+    return 'Clubs';
+  }
+
+  if (scope === 'reservations') {
+    return 'Reservations';
+  }
+
+  return 'Evenements';
 };
 
 const buildChips = (scope, filters) => {
@@ -230,6 +456,7 @@ function SearchMapScreen({ navigation, route }) {
     ApplicationStyle,
     Colors,
     Fonts,
+    Images,
     Spaces,
   } = useTheme();
   const { userData } = useAuth();
@@ -241,9 +468,13 @@ function SearchMapScreen({ navigation, route }) {
     searchMapSessions,
   }, appDispatch] = useAppContext();
 
-  const [chromeHeight, setChromeHeight] = useState(0);
+  const [topOverlayHeight, setTopOverlayHeight] = useState(156);
   const [addressSelection, setAddressSelection] = useState(undefined);
   const [appliedCenter, setAppliedCenter] = useState(null);
+  const [currentViewport, setCurrentViewport] = useState(null);
+  const [executedViewport, setExecutedViewport] = useState(null);
+  const [executedClubMapQuery, setExecutedClubMapQuery] = useState(null);
+  const [clubMapLastResultMeta, setClubMapLastResultMeta] = useState(null);
   const [pendingRegion, setPendingRegion] = useState(null);
   const [showSearchThisArea, setShowSearchThisArea] = useState(false);
   const [isSubmittingRegionSearch, setIsSubmittingRegionSearch] = useState(false);
@@ -260,10 +491,22 @@ function SearchMapScreen({ navigation, route }) {
   }, [clubFilters, eventFilters, isClubScope, isReservationScope, reservationFilters]);
 
   const persistedSession = searchMapSessions?.[scope] || {};
+  const initialViewportRegion = resolvePreferredRegion(
+    activeFilters,
+    persistedSession?.region || null,
+  );
+  const hydratedScopeRef = useRef(null);
+  const isBootstrappingClubViewportRef = useRef(false);
+  const shouldAutoSubmitViewportRef = useRef(false);
+  const clubMapFilterSignatureRef = useRef(null);
+  const persistedRegionTimeoutRef = useRef(null);
+  const lastPersistedRegionRef = useRef(initialViewportRegion);
   const [selectedMapItemId, setSelectedMapItemId] = useState(
     persistedSession?.selectedItemId || '',
   );
-  const [regionHint, setRegionHint] = useState(persistedSession?.region || null);
+  const [regionHint, setRegionHint] = useState(initialViewportRegion);
+  const persistedExecutedViewport = persistedSession?.executedViewport || null;
+  const persistedLastResultMeta = persistedSession?.lastResultMeta || null;
 
   const persistSessionState = useCallback((state) => {
     appDispatch({
@@ -280,22 +523,139 @@ function SearchMapScreen({ navigation, route }) {
   }, [appDispatch, isClubScope, isReservationScope]);
 
   useEffect(() => {
+    if (hydratedScopeRef.current === scope) {
+      return;
+    }
+
+    const restoredViewport = isClubScope
+      && persistedExecutedViewport
+      && hasFiniteViewportBounds(persistedExecutedViewport)
+      ? persistedExecutedViewport
+      : null;
+    const nextRestoredRegion = resolvePreferredRegion(
+      activeFilters,
+      persistedSession?.region || null,
+    );
+
+    setAddressSelection(activeFilters?.city || undefined);
+    setAppliedCenter(nextRestoredRegion);
+    setCurrentViewport(restoredViewport);
+    setExecutedViewport(restoredViewport);
+    setExecutedClubMapQuery(
+      restoredViewport
+        ? buildClubMapViewportQuery(activeFilters, restoredViewport, 'map')
+        : null,
+    );
+    setClubMapLastResultMeta(isClubScope ? persistedLastResultMeta : null);
+    setPendingRegion(null);
+    setRegionHint(nextRestoredRegion);
     setSelectedMapItemId(persistedSession?.selectedItemId || '');
-    setRegionHint(persistedSession?.region || null);
-  }, [persistedSession?.region, persistedSession?.selectedItemId]);
+    setShowSearchThisArea(false);
+    isBootstrappingClubViewportRef.current = isClubScope && !restoredViewport;
+    shouldAutoSubmitViewportRef.current = false;
+    clubMapFilterSignatureRef.current = buildClubMapFilterSignature(activeFilters);
+    hydratedScopeRef.current = scope;
+    lastPersistedRegionRef.current = nextRestoredRegion;
+  }, [
+    activeFilters,
+    isClubScope,
+    persistedExecutedViewport,
+    persistedLastResultMeta,
+    persistedSession?.region,
+    persistedSession?.selectedItemId,
+    scope,
+  ]);
 
   useEffect(() => {
     setAddressSelection(activeFilters?.city || undefined);
-    const directRegion = parseFilterCoordinates(activeFilters);
-    const addressRegion = parseAddressCoordinates(activeFilters?.city);
-    const nextRegion = directRegion
-      || (addressRegion ? { ...addressRegion, zoom: 12 } : persistedSession?.region || null);
+    const nextRegion = resolvePreferredRegion(activeFilters, null);
 
-    setAppliedCenter(nextRegion);
-    setRegionHint(nextRegion);
+    if (nextRegion) {
+      setAppliedCenter((current) => (
+        areRegionsEquivalent(current, nextRegion) ? current : nextRegion
+      ));
+      setRegionHint((current) => (
+        areRegionsEquivalent(current, nextRegion) ? current : nextRegion
+      ));
+    }
     setPendingRegion(null);
     setShowSearchThisArea(false);
-  }, [activeFilters, persistedSession?.region]);
+  }, [activeFilters]);
+
+  useEffect(() => () => {
+    if (persistedRegionTimeoutRef.current) {
+      clearTimeout(persistedRegionTimeoutRef.current);
+    }
+  }, []);
+
+  const persistViewportRegion = useCallback((nextRegion) => {
+    if (!nextRegion || !Number.isFinite(nextRegion.lat) || !Number.isFinite(nextRegion.lng)) {
+      return;
+    }
+
+    if (persistedRegionTimeoutRef.current) {
+      clearTimeout(persistedRegionTimeoutRef.current);
+    }
+
+    persistedRegionTimeoutRef.current = setTimeout(() => {
+      if (areRegionsEquivalent(lastPersistedRegionRef.current, nextRegion)) {
+        persistedRegionTimeoutRef.current = null;
+        return;
+      }
+
+      persistSessionState({ region: nextRegion });
+      lastPersistedRegionRef.current = nextRegion;
+      persistedRegionTimeoutRef.current = null;
+    }, 180);
+  }, [persistSessionState]);
+
+  const executeClubViewportSearch = useCallback((viewport, view = 'map') => {
+    if (!isClubScope || !viewport || !hasFiniteViewportBounds(viewport)) {
+      return;
+    }
+
+    const normalizedViewport = {
+      east: Number(viewport.east),
+      lat: Number(viewport.lat),
+      latitudeDelta: Number.isFinite(Number(viewport.latitudeDelta))
+        ? Number(viewport.latitudeDelta)
+        : undefined,
+      lng: Number(viewport.lng),
+      longitudeDelta: Number.isFinite(Number(viewport.longitudeDelta))
+        ? Number(viewport.longitudeDelta)
+        : undefined,
+      north: Number(viewport.north),
+      south: Number(viewport.south),
+      west: Number(viewport.west),
+      zoom: resolveViewportZoom(viewport),
+    };
+    const nextQuery = buildClubMapViewportQuery(activeFilters, normalizedViewport, view);
+    if (!nextQuery) {
+      return;
+    }
+
+    const nextRegion = {
+      lat: normalizedViewport.lat,
+      lng: normalizedViewport.lng,
+      zoom: normalizedViewport.zoom,
+    };
+
+    setAppliedCenter(nextRegion);
+    setCurrentViewport(normalizedViewport);
+    setExecutedViewport(normalizedViewport);
+    setExecutedClubMapQuery(nextQuery);
+    setSelectedMapItemId('');
+    setPendingRegion(null);
+    setShowSearchThisArea(false);
+    setIsSubmittingRegionSearch(true);
+    persistSessionState({
+      executedClubMapQuery: nextQuery,
+      executedViewport: normalizedViewport,
+      region: nextRegion,
+      selectedItemId: '',
+    });
+    lastPersistedRegionRef.current = nextRegion;
+  }, [activeFilters, isClubScope, persistSessionState]);
 
   const eventConfig = useMemo(() => ({
     ...(eventFilters || {}),
@@ -303,11 +663,6 @@ function SearchMapScreen({ navigation, route }) {
     pageSize: 15,
     sessionStatus: 'open',
   }), [eventFilters]);
-
-  const clubConfig = useMemo(() => ({
-    ...(clubFilters || {}),
-    pageSize: 30,
-  }), [clubFilters]);
 
   const reservationConfig = useMemo(() => {
     const nextConfig = {
@@ -323,15 +678,11 @@ function SearchMapScreen({ navigation, route }) {
   const activeEventSearchText = typeof eventConfig?.q === 'string'
     ? eventConfig.q.trim()
     : '';
-  const activeClubSearchText = typeof clubConfig?.name === 'string'
-    ? clubConfig.name.trim()
-    : '';
   const activeReservationSearchText = typeof reservationConfig?.q === 'string'
     ? reservationConfig.q.trim()
     : '';
 
   const isEventSmartSearchEnabled = activeEventSearchText.length >= 2;
-  const isClubSmartSearchEnabled = activeClubSearchText.length >= 2;
   const isReservationSmartSearchEnabled = activeReservationSearchText.length >= 2;
 
   const eventQuery = useGetEvents(eventConfig, {
@@ -357,18 +708,8 @@ function SearchMapScreen({ navigation, route }) {
     enabled: !isClubScope && !isReservationScope && isEventSmartSearchEnabled,
   });
 
-  const clubQuery = useGetClubs(clubConfig, {
-    enabled: isClubScope && !isClubSmartSearchEnabled,
-  });
-  const searchedClubQuery = useSearchClubs({
-    activity: clubConfig?.activity,
-    lat: clubConfig?.lat,
-    lon: clubConfig?.lon,
-    pageSize: clubConfig?.pageSize || 30,
-    q: activeClubSearchText,
-    radius: clubConfig?.radius,
-  }, {
-    enabled: isClubScope && isClubSmartSearchEnabled,
+  const clubMapQuery = useSearchClubsMap(executedClubMapQuery || {}, {
+    enabled: isClubScope && Boolean(executedClubMapQuery),
   });
 
   const reservationQuery = useGetReservations(reservationConfig, {
@@ -402,12 +743,11 @@ function SearchMapScreen({ navigation, route }) {
   );
 
   const clubItems = useMemo(
-    () => getActiveQueryItems(
-      isClubSmartSearchEnabled,
-      clubQuery,
-      searchedClubQuery,
-    ),
-    [clubQuery, isClubSmartSearchEnabled, searchedClubQuery],
+    () => clubMapQuery.data?.pages?.reduce(
+      (acc, page) => acc.concat(mapSearchPayload(page)),
+      [],
+    ) || [],
+    [clubMapQuery.data?.pages],
   );
 
   const reservationItems = useMemo(
@@ -426,18 +766,38 @@ function SearchMapScreen({ navigation, route }) {
     items = reservationItems;
   }
   const mapItems = useMemo(() => toSearchMapItems(items, scope), [items, scope]);
-  const totalCount = items.length;
+  let totalCount = getActiveQueryTotalCount(
+    isEventSmartSearchEnabled,
+    eventQuery,
+    searchedEventQuery,
+  );
+  if (isClubScope) {
+    const clubTotalInBounds = Number(clubMapQuery?.data?.pages?.[0]?.meta?.totalInBounds);
+    const clubPagedTotal = Number(clubMapQuery?.data?.pages?.[0]?.meta?.pagination?.total);
+    if (Number.isFinite(clubTotalInBounds) && clubTotalInBounds > 0) {
+      totalCount = clubTotalInBounds;
+    } else if (Number.isFinite(clubPagedTotal) && clubPagedTotal > 0) {
+      totalCount = clubPagedTotal;
+    } else {
+      totalCount = 0;
+    }
+  } else if (isReservationScope) {
+    totalCount = getActiveQueryTotalCount(
+      isReservationSmartSearchEnabled,
+      reservationQuery,
+      searchedReservationQuery,
+    );
+  }
+  if (!totalCount) {
+    totalCount = items.length;
+  }
   let activeError = getActiveQueryError(
     isEventSmartSearchEnabled,
     eventQuery,
     searchedEventQuery,
   );
   if (isClubScope) {
-    activeError = getActiveQueryError(
-      isClubSmartSearchEnabled,
-      clubQuery,
-      searchedClubQuery,
-    );
+    activeError = clubMapQuery.error;
   } else if (isReservationScope) {
     activeError = getActiveQueryError(
       isReservationSmartSearchEnabled,
@@ -452,11 +812,7 @@ function SearchMapScreen({ navigation, route }) {
     searchedEventQuery,
   );
   if (isClubScope) {
-    isLoading = getActiveQueryLoadingState(
-      isClubSmartSearchEnabled,
-      clubQuery,
-      searchedClubQuery,
-    );
+    isLoading = clubMapQuery.isLoading || clubMapQuery.isFetching;
   } else if (isReservationScope) {
     isLoading = getActiveQueryLoadingState(
       isReservationSmartSearchEnabled,
@@ -479,6 +835,52 @@ function SearchMapScreen({ navigation, route }) {
       setIsSubmittingRegionSearch(false);
     }
   }, [isLoading]);
+
+  useEffect(() => {
+    if (!isClubScope) {
+      return;
+    }
+
+    const nextMeta = clubMapQuery.data?.pages?.[0]?.meta || null;
+    setClubMapLastResultMeta(nextMeta);
+    persistSessionState({ lastResultMeta: nextMeta });
+  }, [clubMapQuery.data?.pages, isClubScope, persistSessionState]);
+
+  useEffect(() => {
+    if (!isClubScope) {
+      clubMapFilterSignatureRef.current = null;
+      return;
+    }
+
+    const nextSignature = buildClubMapFilterSignature(activeFilters);
+    if (clubMapFilterSignatureRef.current === null) {
+      clubMapFilterSignatureRef.current = nextSignature;
+      return;
+    }
+
+    if (clubMapFilterSignatureRef.current === nextSignature) {
+      return;
+    }
+
+    clubMapFilterSignatureRef.current = nextSignature;
+
+    if (shouldAutoSubmitViewportRef.current) {
+      return;
+    }
+
+    const viewport = currentViewport || executedViewport;
+    if (!viewport || !hasFiniteViewportBounds(viewport)) {
+      return;
+    }
+
+    executeClubViewportSearch(viewport, 'map');
+  }, [
+    activeFilters,
+    currentViewport,
+    executeClubViewportSearch,
+    executedViewport,
+    isClubScope,
+  ]);
 
   useEffect(() => {
     if (mapItems.length !== 1) {
@@ -506,11 +908,9 @@ function SearchMapScreen({ navigation, route }) {
     const refetchOnFocus = async () => {
       try {
         if (isClubScope) {
-          await (
-            isClubSmartSearchEnabled
-              ? searchedClubQuery.refetch()
-              : clubQuery.refetch()
-          );
+          if (executedClubMapQuery) {
+            await clubMapQuery.refetch();
+          }
           return;
         }
 
@@ -544,17 +944,16 @@ function SearchMapScreen({ navigation, route }) {
       isCancelled = true;
     };
   }, [
-    clubQuery,
+    clubMapQuery,
+    executedClubMapQuery,
     eventQuery,
     isClubScope,
-    isClubSmartSearchEnabled,
     isEventSmartSearchEnabled,
     isReservationScope,
     isReservationSmartSearchEnabled,
     mapItems.length,
     reservationQuery,
     scope,
-    searchedClubQuery,
     searchedEventQuery,
     searchedReservationQuery,
     totalCount,
@@ -572,6 +971,41 @@ function SearchMapScreen({ navigation, route }) {
     }
     return navigation.navigate(RouteNames.SearchEvents);
   }, [isClubScope, isReservationScope, navigation]);
+
+  const handleShowList = useCallback(() => {
+    if (!isClubScope) {
+      handleCloseMap();
+      return;
+    }
+
+    const viewport = currentViewport || executedViewport;
+    const nextListQuery = buildClubMapViewportQuery(activeFilters, viewport, 'list');
+
+    if (viewport && nextListQuery) {
+      persistSessionState({
+        executedClubMapQuery: nextListQuery,
+        executedViewport: viewport,
+        lastResultMeta: clubMapLastResultMeta,
+        region: {
+          lat: viewport.lat,
+          lng: viewport.lng,
+          zoom: viewport.zoom,
+        },
+        selectedItemId: selectedMapItemId || '',
+      });
+    }
+
+    handleCloseMap();
+  }, [
+    activeFilters,
+    clubMapLastResultMeta,
+    currentViewport,
+    executedViewport,
+    handleCloseMap,
+    isClubScope,
+    persistSessionState,
+    selectedMapItemId,
+  ]);
 
   const handleOpenFilters = useCallback(() => {
     logger.info('search map filters opened', { scope });
@@ -592,6 +1026,32 @@ function SearchMapScreen({ navigation, route }) {
     setAddressSelection(nextAddress);
     const coordinates = parseAddressCoordinates(nextAddress);
     if (!coordinates) {
+      return;
+    }
+
+    if (isClubScope) {
+      const nextRegion = toRegionHintFromAddress(nextAddress) || {
+        lat: coordinates.lat,
+        lng: coordinates.lng,
+        zoom: getAddressZoomHeuristic(nextAddress),
+      };
+
+      dispatchFilters({
+        ...activeFilters,
+        city: nextAddress,
+      });
+
+      setSelectedMapItemId('');
+      setRegionHint(nextRegion);
+      setAppliedCenter(nextRegion);
+      setPendingRegion(null);
+      setShowSearchThisArea(false);
+      persistSessionState({
+        region: nextRegion,
+        selectedItemId: '',
+      });
+      lastPersistedRegionRef.current = nextRegion;
+      shouldAutoSubmitViewportRef.current = true;
       return;
     }
 
@@ -626,10 +1086,12 @@ function SearchMapScreen({ navigation, route }) {
       region: nextRegion,
       selectedItemId: '',
     });
+    lastPersistedRegionRef.current = nextRegion;
   }, [
     activeFilters,
     dispatchFilters,
     getGeohashForPointAndRadius,
+    isClubScope,
     persistSessionState,
   ]);
 
@@ -638,10 +1100,59 @@ function SearchMapScreen({ navigation, route }) {
       return;
     }
 
-    persistSessionState({
-      region: nextRegion,
-      selectedItemId: selectedMapItemId,
-    });
+    persistViewportRegion(nextRegion);
+
+    if (isClubScope) {
+      if (!hasFiniteViewportBounds(nextRegion)) {
+        return;
+      }
+
+      const nextViewport = {
+        east: Number(nextRegion.east),
+        lat: Number(nextRegion.lat),
+        latitudeDelta: Number.isFinite(Number(nextRegion.latitudeDelta))
+          ? Number(nextRegion.latitudeDelta)
+          : undefined,
+        lng: Number(nextRegion.lng),
+        longitudeDelta: Number.isFinite(Number(nextRegion.longitudeDelta))
+          ? Number(nextRegion.longitudeDelta)
+          : undefined,
+        north: Number(nextRegion.north),
+        south: Number(nextRegion.south),
+        west: Number(nextRegion.west),
+        zoom: resolveViewportZoom(nextRegion),
+      };
+
+      setCurrentViewport(nextViewport);
+
+      if (shouldAutoSubmitViewportRef.current) {
+        shouldAutoSubmitViewportRef.current = false;
+        executeClubViewportSearch(nextViewport, 'map');
+        return;
+      }
+
+      if (isBootstrappingClubViewportRef.current && !executedViewport) {
+        isBootstrappingClubViewportRef.current = false;
+        executeClubViewportSearch(nextViewport, 'map');
+        return;
+      }
+
+      if (!executedViewport) {
+        setPendingRegion(null);
+        setShowSearchThisArea(false);
+        return;
+      }
+
+      if (hasMeaningfulViewportMove(nextViewport, executedViewport)) {
+        setPendingRegion(nextViewport);
+        setShowSearchThisArea(true);
+        return;
+      }
+
+      setPendingRegion(null);
+      setShowSearchThisArea(false);
+      return;
+    }
 
     if (!hasMeaningfulMove(nextRegion, appliedCenter)) {
       setPendingRegion(null);
@@ -651,10 +1162,21 @@ function SearchMapScreen({ navigation, route }) {
 
     setPendingRegion(nextRegion);
     setShowSearchThisArea(true);
-  }, [appliedCenter, persistSessionState, selectedMapItemId]);
+  }, [
+    appliedCenter,
+    executeClubViewportSearch,
+    executedViewport,
+    isClubScope,
+    persistViewportRegion,
+  ]);
 
   const handleSearchThisArea = useCallback(() => {
     if (!pendingRegion) {
+      return;
+    }
+
+    if (isClubScope) {
+      executeClubViewportSearch(pendingRegion, 'map');
       return;
     }
 
@@ -688,10 +1210,13 @@ function SearchMapScreen({ navigation, route }) {
       region: nextRegion,
       selectedItemId: '',
     });
+    lastPersistedRegionRef.current = nextRegion;
   }, [
     activeFilters,
     dispatchFilters,
+    executeClubViewportSearch,
     getGeohashForPointAndRadius,
+    isClubScope,
     pendingRegion,
     persistSessionState,
   ]);
@@ -717,15 +1242,11 @@ function SearchMapScreen({ navigation, route }) {
   }, [persistSessionState]);
 
   const filterChips = useMemo(() => buildChips(scope, activeFilters), [activeFilters, scope]);
-  const visibleFilterChips = useMemo(() => filterChips.slice(0, 4), [filterChips]);
-  const hiddenFilterChipCount = Math.max(0, filterChips.length - visibleFilterChips.length);
-  const title = t(`search.map.title.${scope}`, getSearchMapTitle(scope));
-  const subtitle = t(`search.map.subtitle.${scope}`, getSearchMapSubtitle(scope));
-  const activeFiltersSummary = getSearchMapActiveFiltersSummary(
-    filterChips.length,
-    mapItems.length,
-  );
-  const mapHeight = Math.max(440, viewportHeight - chromeHeight - insets.bottom - 20);
+  const hasActiveFilters = filterChips.length > 0;
+  const title = t(`search.map.heading.${scope}`, getMapHeading(scope));
+  const mapHeight = Math.max(480, viewportHeight - insets.top - insets.bottom - 24);
+  const overlayStackTop = topOverlayHeight + 12;
+  const searchAreaTop = overlayStackTop + 2;
 
   return (
     <ScreenContainer
@@ -733,152 +1254,162 @@ function SearchMapScreen({ navigation, route }) {
       contentContainerStyle={[
         Alignments.fill,
         styles.screenContent,
-        { paddingBottom: insets.bottom + 12 },
+        { paddingBottom: insets.bottom + 8 },
       ]}
-      style={[styles.screenRoot, { paddingTop: insets.top + 12 }]}
+      style={[styles.screenRoot, { paddingTop: insets.top + 8 }]}
       withHeaderPadding={false}
     >
-      <View
-        onLayout={(event) => setChromeHeight(event.nativeEvent.layout.height)}
-        style={[styles.topSheet, ApplicationStyle.shadow200, Spaces.gap[18], Spaces.marginBottom[16]]}
-      >
-        <View
-          style={[
-            Alignments.row,
-            Alignments.alignStart,
-            Alignments.justifySpaceBetween,
-            Spaces.gap[16],
-          ]}
-        >
-          <View
-            style={[
-              Alignments.row,
-              Alignments.alignStart,
-              Spaces.gap[14],
-              styles.headerMain,
-            ]}
-          >
-            <HeaderBackButton onPress={handleCloseMap} withDefaultMargin={false} />
-            <View style={[Spaces.gap[6], Alignments.grow1]}>
-              <Text numberOfLines={2} style={[Fonts.h3Bold, Fonts.neutral00]}>
-                {title}
-              </Text>
-              <Text style={[Fonts.p4, Fonts.neutral200]}>
-                {subtitle}
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={handleCloseMap}
-            style={[styles.headerAction, ApplicationStyle.shadow200, {
-              borderColor: `${Colors.primary500}4D`,
-            }]}
-          >
-            <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-              Voir la liste
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={[Spaces.gap[8]]}>
-          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-            Rechercher une adresse
-          </Text>
-          <Text style={[Fonts.p4, Fonts.neutral200]}>
-            {getSearchMapAddressHint()}
-          </Text>
-          <AutocompleteAddressInput
-            address={addressSelection}
-            label=""
-            placeholder={t('search.map.addressPlaceholder', 'Tapez une adresse ou une ville')}
-            setAddress={handleAddressSelect}
-            wrapperStyle={{ marginBottom: 0 }}
+      <View style={styles.mapStage}>
+        <View style={[styles.mapFrame, { paddingBottom: insets.bottom + 8 }]}>
+          <SearchMap
+            height={mapHeight}
+            items={mapItems}
+            onOpenItem={handleOpenItem}
+            onRegionChangeComplete={handleRegionChangeComplete}
+            onSelectItem={handleSelectMapItem}
+            onShowList={handleShowList}
+            previewBottomOffset={insets.bottom + 12}
+            regionHint={regionHint}
+            scope={scope}
+            selectedItemId={selectedMapItemId}
+            topMargin={overlayStackTop}
+            totalCount={totalCount}
           />
         </View>
 
-        <View style={[Spaces.gap[12]]}>
-          <View
-            style={[
-              Alignments.row,
-              Alignments.alignStart,
-              Alignments.justifySpaceBetween,
-              Spaces.gap[12],
-            ]}
-          >
-            <View style={[Spaces.gap[6], Alignments.grow1]}>
-              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                {t('search.map.activeFilters', 'Filtres actifs')}
-              </Text>
-              <Text style={[Fonts.p4, Fonts.neutral200]}>
-                {filterChips.length > 0
-                  ? activeFiltersSummary
-                  : t('search.map.noFilters', 'Aucun filtre supplémentaire actif')}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={handleOpenFilters}
-              style={[styles.secondaryPill, {
-                borderColor: `${Colors.primary500}44`,
-              }]}
+        <View
+          onLayout={(event) => setTopOverlayHeight(event.nativeEvent.layout.height)}
+          pointerEvents="box-none"
+          style={styles.topOverlayHost}
+        >
+          <View style={styles.topOverlayStack}>
+            <GlassSurface
+              blurAmount={18}
+              borderColor="rgba(255,255,255,0.08)"
+              borderRadius={24}
+              fallbackColor="rgba(7, 22, 33, 0.76)"
+              style={ApplicationStyle.shadow200}
+              tintColor="rgba(7, 26, 37, 0.24)"
+              topHighlightColor="rgba(255,255,255,0.04)"
+              topHighlightHeight={1}
             >
-              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                Modifier
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.headerSurface}>
+                <View
+                  style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
+                    Spaces.gap[12],
+                  ]}
+                >
+                  <View
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Spaces.gap[12],
+                      styles.headerMain,
+                    ]}
+                  >
+                    <HeaderBackButton
+                      onPress={handleCloseMap}
+                      style={styles.backButton}
+                      withDefaultMargin={false}
+                    />
+                    <Text numberOfLines={1} style={[Fonts.h3Bold, Fonts.neutral00, styles.headerTitle]}>
+                      {title}
+                    </Text>
+                  </View>
 
-          {visibleFilterChips.length > 0 ? (
-            <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
-              {visibleFilterChips.map((chip) => (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={handleCloseMap}
+                    style={[styles.headerAction, {
+                      borderColor: `${Colors.primary500}36`,
+                    }]}
+                  >
+                    <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+                      Liste
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </GlassSurface>
+
+            <GlassSurface
+              blurAmount={16}
+              borderColor="rgba(255,255,255,0.07)"
+              borderRadius={22}
+              fallbackColor="rgba(7, 22, 33, 0.72)"
+              style={ApplicationStyle.shadow200}
+              tintColor="rgba(7, 26, 37, 0.22)"
+              topHighlightColor="rgba(255,255,255,0.03)"
+              topHighlightHeight={1}
+            >
+              <View style={styles.searchSurface}>
+                <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[10]]}>
+                  <View style={styles.searchIconBadge}>
+                    <Image
+                      source={Images.search}
+                      style={styles.searchIcon}
+                    />
+                  </View>
+                  <View style={styles.searchSlot}>
+                    <AutocompleteAddressInput
+                      address={addressSelection}
+                      label=""
+                      lightMode
+                      placeholder={t('search.map.addressPlaceholder', 'Tapez une adresse ou une ville')}
+                      setAddress={handleAddressSelect}
+                      wrapperStyle={styles.searchInputWrapper}
+                    />
+                  </View>
+                </View>
+              </View>
+            </GlassSurface>
+
+            <ScrollView
+              contentContainerStyle={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+            >
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleOpenFilters}
+                style={[styles.filterActionChip, ApplicationStyle.shadow200, {
+                  borderColor: `${Colors.primary500}40`,
+                }]}
+              >
+                <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                  <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+                    Filtres
+                  </Text>
+                  {hasActiveFilters ? (
+                    <View style={styles.filterCountBadge}>
+                      <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                        {filterChips.length}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              </TouchableOpacity>
+
+              {hasActiveFilters ? filterChips.map((chip) => (
                 <View
                   key={chip}
-                  style={[styles.filterChip, {
-                    borderColor: `${Colors.primary500}2E`,
+                  style={[styles.filterChip, ApplicationStyle.shadow200, {
+                    borderColor: 'rgba(255,255,255,0.1)',
                   }]}
                 >
-                  <Text style={[Fonts.p4, Fonts.neutral00]}>
+                  <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral00]}>
                     {chip}
                   </Text>
                 </View>
-              ))}
-
-              {hiddenFilterChipCount > 0 ? (
-                <View
-                  style={[styles.filterChip, styles.filterChipMuted, {
-                    borderColor: 'rgba(255,255,255,0.12)',
-                  }]}
-                >
-                  <Text style={[Fonts.p4Bold, Fonts.neutral200]}>
-                    {`+${hiddenFilterChipCount}`}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          ) : null}
+              )) : null}
+            </ScrollView>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.mapStage}>
-        <SearchMap
-          height={mapHeight}
-          items={mapItems}
-          onOpenItem={handleOpenItem}
-          onRegionChangeComplete={handleRegionChangeComplete}
-          onSelectItem={handleSelectMapItem}
-          onShowList={handleCloseMap}
-          previewBottomOffset={insets.bottom + 18}
-          regionHint={regionHint}
-          scope={scope}
-          selectedItemId={selectedMapItemId}
-          topMargin={0}
-          totalCount={totalCount}
-        />
-
-        <View pointerEvents="box-none" style={styles.mapTopBannerHost}>
+        <View pointerEvents="box-none" style={[styles.mapTopBannerHost, { top: searchAreaTop }]}>
           {showSearchThisArea ? (
             <TouchableOpacity
               activeOpacity={0.9}
@@ -934,40 +1465,75 @@ function SearchMapScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    backgroundColor: 'rgba(8, 31, 44, 0.44)',
+    padding: 8,
+  },
   errorBanner: {
     backgroundColor: 'rgba(32, 14, 17, 0.94)',
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    marginTop: 12,
     maxWidth: 364,
     paddingHorizontal: 16,
     paddingVertical: 14,
     width: '100%',
   },
-  filterChip: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  filterChipMuted: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  headerAction: {
+  filterActionChip: {
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(8, 31, 44, 0.96)',
+    backgroundColor: 'rgba(8, 31, 44, 0.68)',
     borderRadius: 999,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 46,
-    minWidth: 120,
-    paddingHorizontal: 18,
+    minHeight: 38,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  filterChip: {
+    backgroundColor: 'rgba(8, 31, 44, 0.52)',
+    borderRadius: 999,
+    borderWidth: 1,
+    maxWidth: 180,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  filterChipMuted: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  filterCountBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(1, 179, 244, 0.14)',
+    borderColor: 'rgba(1, 179, 244, 0.22)',
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minWidth: 22,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  headerAction: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(8, 31, 44, 0.4)',
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    minWidth: 92,
+    paddingHorizontal: 14,
   },
   headerMain: {
     flex: 1,
     minWidth: 0,
+  },
+  headerSurface: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  headerTitle: {
+    flex: 1,
+  },
+  mapFrame: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
   mapStage: {
     flex: 1,
@@ -975,36 +1541,56 @@ const styles = StyleSheet.create({
   },
   mapTopBannerHost: {
     alignItems: 'center',
-    left: 0,
-    paddingHorizontal: 18,
+    left: 16,
     position: 'absolute',
-    right: 0,
-    top: 14,
+    right: 16,
   },
   primaryFloatingAction: {
     alignItems: 'center',
     borderRadius: 999,
     justifyContent: 'center',
-    minHeight: 46,
+    minHeight: 48,
     paddingHorizontal: 18,
     paddingVertical: 10,
   },
   screenContent: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 0,
   },
   screenRoot: {
     paddingHorizontal: 0,
   },
-  secondaryPill: {
+  searchIcon: {
+    height: 18,
+    tintColor: 'rgba(255,255,255,0.78)',
+    width: 18,
+  },
+  searchIconBadge: {
     alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
     borderWidth: 1,
+    height: 40,
     justifyContent: 'center',
-    minHeight: 42,
-    minWidth: 112,
-    paddingHorizontal: 14,
+    width: 40,
+  },
+  searchInputWrapper: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    marginBottom: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 4,
+  },
+  searchSlot: {
+    flex: 1,
+    marginTop: 0,
+  },
+  searchSurface: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   statusPill: {
     backgroundColor: 'rgba(6, 24, 34, 0.9)',
@@ -1015,13 +1601,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  topSheet: {
-    backgroundColor: 'rgba(6, 24, 34, 0.92)',
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 30,
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
+  topOverlayHost: {
+    left: 16,
+    position: 'absolute',
+    right: 16,
+    top: 0,
+  },
+  topOverlayStack: {
+    gap: 10,
   },
 });
 

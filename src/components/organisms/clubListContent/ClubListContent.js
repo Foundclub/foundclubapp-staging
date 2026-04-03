@@ -2,7 +2,11 @@ import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import {
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
@@ -17,7 +21,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetClubs } from '@/services/club/clubQueries';
-import { useSearchClubs } from '@/services/search/searchQueries';
+import { useSearchClubs, useSearchClubsMap } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
 import SearchComponent from '../searchComponent/searchComponent';
@@ -25,6 +29,36 @@ import SearchComponent from '../searchComponent/searchComponent';
 function ClubsListSeparator() {
   return <View style={{ height: 12 }} />;
 }
+
+const hasFiniteViewportBounds = (viewport) => (
+  Number.isFinite(Number(viewport?.north))
+  && Number.isFinite(Number(viewport?.south))
+  && Number.isFinite(Number(viewport?.east))
+  && Number.isFinite(Number(viewport?.west))
+);
+
+const buildViewportListQuery = (viewport, filters = {}) => {
+  if (!viewport || !hasFiniteViewportBounds(viewport)) {
+    return null;
+  }
+
+  const q = typeof filters?.name === 'string' ? filters.name.trim() : '';
+
+  return {
+    activity: filters?.activity,
+    centerLat: viewport.lat,
+    centerLon: viewport.lng,
+    east: viewport.east,
+    includeMultisport: true,
+    north: viewport.north,
+    pageSize: 30,
+    q: q.length >= 2 ? q : undefined,
+    south: viewport.south,
+    view: 'list',
+    west: viewport.west,
+    zoom: viewport.zoom,
+  };
+};
 
 /**
  * Club list element to inject on home page or a dedicate one
@@ -34,15 +68,23 @@ function ClubsListSeparator() {
 function ClubListContent({ enableMapMode = false }) {
   // hooks
   const {
-    Alignments, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
-  const [{ clubFilters }, appDispatch] = useAppContext();
+  const [{ clubFilters, searchMapSessions }, appDispatch] = useAppContext();
   const { getClubFiltersNumber } = useClub();
+  const viewportSession = searchMapSessions?.clubs || {};
+  const viewportRegion = viewportSession?.executedViewport || null;
+  const isViewportListMode = viewportSession?.executedClubMapQuery?.view === 'list'
+    && hasFiniteViewportBounds(viewportRegion);
+  const viewportListParams = useMemo(
+    () => (isViewportListMode ? buildViewportListQuery(viewportRegion, clubFilters || {}) : null),
+    [clubFilters, isViewportListMode, viewportRegion],
+  );
   const activeSearchText = useMemo(
     () => (typeof clubFilters?.name === 'string' ? clubFilters.name.trim() : ''),
     [clubFilters?.name],
   );
-  const isSmartSearchEnabled = activeSearchText.length >= 2;
+  const isSmartSearchEnabled = !isViewportListMode && activeSearchText.length >= 2;
   const {
     data: clubPages,
     error,
@@ -54,7 +96,7 @@ function ClubListContent({ enableMapMode = false }) {
   } = useGetClubs(Object.assign(clubFilters || {}, {
     pageSize: 30,
   }), {
-    enabled: !isSmartSearchEnabled,
+    enabled: !isViewportListMode && !isSmartSearchEnabled,
   });
   const {
     data: smartClubPages,
@@ -72,7 +114,18 @@ function ClubListContent({ enableMapMode = false }) {
     q: activeSearchText,
     radius: clubFilters?.radius,
   }, {
-    enabled: isSmartSearchEnabled,
+    enabled: !isViewportListMode && isSmartSearchEnabled,
+  });
+  const {
+    data: viewportClubPages,
+    error: viewportError,
+    fetchNextPage: fetchViewportNextPage,
+    hasNextPage: hasViewportNextPage,
+    isFetchingNextPage: isFetchingViewportNextPage,
+    isLoading: isViewportLoading,
+    refetch: refetchViewport,
+  } = useSearchClubsMap(viewportListParams || {}, {
+    enabled: isViewportListMode && Boolean(viewportListParams),
   });
   const navigation = useNavigation();
   const { t } = useTranslation();
@@ -90,14 +143,61 @@ function ClubListContent({ enableMapMode = false }) {
       return acc.concat(items);
     }, [])
     || [], [smartClubPages]);
-  const displayedClubs = isSmartSearchEnabled ? smartClubs : clubs;
-  const activeError = isSmartSearchEnabled ? smartError : error;
-  const activeIsLoading = isSmartSearchEnabled ? isSmartLoading : isLoading;
-  const activeIsFetchingNext = isSmartSearchEnabled ? isFetchingSmartNextPage : isFetchingNextPage;
+  const viewportClubs = useMemo(() => viewportClubPages?.pages
+    ?.reduce((/** @type {Club[]} */ acc, page) => {
+      const items = mapSearchPayload(page);
+      return acc.concat(items);
+    }, [])
+    || [], [viewportClubPages]);
+  let displayedClubs = clubs;
+  if (isViewportListMode) {
+    displayedClubs = viewportClubs;
+  } else if (isSmartSearchEnabled) {
+    displayedClubs = smartClubs;
+  }
+
+  let activeError = error;
+  if (isViewportListMode) {
+    activeError = viewportError;
+  } else if (isSmartSearchEnabled) {
+    activeError = smartError;
+  }
+
+  let activeIsLoading = isLoading;
+  if (isViewportListMode) {
+    activeIsLoading = isViewportLoading;
+  } else if (isSmartSearchEnabled) {
+    activeIsLoading = isSmartLoading;
+  }
+
+  let activeIsFetchingNext = isFetchingNextPage;
+  if (isViewportListMode) {
+    activeIsFetchingNext = isFetchingViewportNextPage;
+  } else if (isSmartSearchEnabled) {
+    activeIsFetchingNext = isFetchingSmartNextPage;
+  }
+  let refreshHandler = refetch;
+  if (isViewportListMode) {
+    refreshHandler = refetchViewport;
+  } else if (isSmartSearchEnabled) {
+    refreshHandler = refetchSmart;
+  }
   const shouldShowMapToggle = enableMapMode && displayedClubs.length > 0;
+  const viewportMeta = viewportClubPages?.pages?.[0]?.meta || null;
+  const viewportTotalInBounds = Number(viewportMeta?.totalInBounds);
+  const viewportDisplayCount = Number.isFinite(viewportTotalInBounds) && viewportTotalInBounds > 0
+    ? viewportTotalInBounds
+    : displayedClubs.length;
+  const isViewportTruncated = Boolean(viewportMeta?.truncated);
 
   // handlers
   const handleEndReached = useCallback(() => {
+    if (isViewportListMode) {
+      if (hasViewportNextPage && !isFetchingViewportNextPage) {
+        fetchViewportNextPage();
+      }
+      return;
+    }
     if (isSmartSearchEnabled) {
       if (hasSmartNextPage && !isFetchingSmartNextPage) {
         fetchSmartNextPage();
@@ -109,11 +209,15 @@ function ClubListContent({ enableMapMode = false }) {
     }
   }, [
     fetchNextPage,
+    fetchViewportNextPage,
     fetchSmartNextPage,
     hasNextPage,
+    hasViewportNextPage,
     hasSmartNextPage,
     isFetchingNextPage,
+    isFetchingViewportNextPage,
     isFetchingSmartNextPage,
+    isViewportListMode,
     isSmartSearchEnabled,
   ]);
 
@@ -164,6 +268,20 @@ function ClubListContent({ enableMapMode = false }) {
       });
     }
   }, [navigation]);
+
+  const handleExitViewportMode = useCallback(() => {
+    appDispatch({
+      payload: {
+        scope: 'clubs',
+        state: {
+          executedClubMapQuery: null,
+          executedViewport: null,
+          lastResultMeta: null,
+        },
+      },
+      type: 'SET_SEARCH_MAP_SESSION_STATE',
+    });
+  }, [appDispatch]);
 
   /**
    * Render the club item
@@ -231,6 +349,56 @@ function ClubListContent({ enableMapMode = false }) {
           />
         </View>
       </View>
+      {isViewportListMode ? (
+        <View
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Alignments.justifySpaceBetween,
+            ApplicationStyle.shadow200,
+            {
+              backgroundColor: 'rgba(6, 24, 34, 0.9)',
+              borderColor: `${Colors.primary500}26`,
+              borderRadius: 18,
+              borderWidth: 1,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+            },
+          ]}
+        >
+          <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
+            <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+              {`${viewportDisplayCount}${isViewportTruncated ? '+' : ''} clubs dans la zone visible`}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral200]}>
+              {isViewportTruncated
+                ? 'Zoomez sur la carte pour charger tout le catalogue local.'
+                : 'La liste suit la zone actuellement choisie sur la carte.'}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleExitViewportMode}
+            style={[
+              ApplicationStyle.borderRadius16,
+              {
+                alignItems: 'center',
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                borderColor: 'rgba(255,255,255,0.12)',
+                borderWidth: 1,
+                justifyContent: 'center',
+                minHeight: 40,
+                paddingHorizontal: 12,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+              Quitter
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       <WithDataWrapper
         error={activeError?.message}
         isLoading={activeIsLoading && !activeIsFetchingNext}
@@ -253,7 +421,7 @@ function ClubListContent({ enableMapMode = false }) {
           ) : null}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
-          onRefresh={isSmartSearchEnabled ? refetchSmart : refetch}
+          onRefresh={refreshHandler}
           refreshing={activeIsLoading && !activeIsFetchingNext}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
