@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   Image,
   Text,
@@ -26,6 +27,7 @@ const compactEntries = (entries = []) => entries.filter(Boolean).slice(0, 2);
  * @param {object} props
  * @param {import('@/utils/searchMap').SearchMapItem | null | undefined} props.item
  * @param {number} [props.bottomOffset]
+ * @param {(height: number) => void} [props.onHeightChange]
  * @param {() => void} [props.onDismiss]
  * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} props.onOpen
  * @param {() => void} [props.onShowList]
@@ -36,6 +38,7 @@ function SearchMapPreviewCard({
   bottomOffset = 12,
   item,
   onDismiss,
+  onHeightChange,
   onOpen,
   onShowList,
   scope,
@@ -47,6 +50,12 @@ function SearchMapPreviewCard({
     Fonts,
     Spaces,
   } = useTheme();
+
+  useEffect(() => {
+    if (!item) {
+      onHeightChange?.(0);
+    }
+  }, [item, onHeightChange]);
 
   if (!item) return null;
 
@@ -61,6 +70,9 @@ function SearchMapPreviewCard({
 
   return (
     <View
+      onLayout={(event) => {
+        onHeightChange?.(event?.nativeEvent?.layout?.height || 0);
+      }}
       pointerEvents="box-none"
       style={{
         bottom: bottomOffset,

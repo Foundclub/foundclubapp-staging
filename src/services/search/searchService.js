@@ -69,17 +69,16 @@ const sanitizeOptionalBaseParams = (params = {}) => {
   const q = toStringOrUndefined(params.q);
   const page = Number(params.page) || 1;
   const pageSize = Math.max(1, Math.min(MAX_PAGE_SIZE, Number(params.pageSize) || DEFAULT_PAGE_SIZE));
-  const sort = ['date', 'distance', 'relevance'].includes(params.sort) ? params.sort : 'relevance';
 
   /** @type {Record<string, any>} */
   const requestParams = {
     page,
     pageSize,
-    sort,
   };
 
   if (q && q.length >= MIN_QUERY_LENGTH) {
     requestParams.q = q;
+    requestParams.sort = ['date', 'distance', 'relevance'].includes(params.sort) ? params.sort : 'relevance';
   }
 
   if (params.lat !== undefined) requestParams.lat = params.lat;
@@ -89,7 +88,7 @@ const sanitizeOptionalBaseParams = (params = {}) => {
   return requestParams;
 };
 
-const sanitizeClubMapBounds = (params = {}) => {
+const sanitizeMapBounds = (params = {}) => {
   const north = Number(params.north);
   const south = Number(params.south);
   const east = Number(params.east);
@@ -196,6 +195,72 @@ export const searchEvents = async (params = {}, options = {}) => {
 };
 
 /**
+ * @param {({
+ *  north?: number;
+ *  south?: number;
+ *  east?: number;
+ *  west?: number;
+ *  zoom?: number;
+ *  centerLat?: number;
+ *  centerLon?: number;
+ *  q?: string;
+ *  page?: number;
+ *  pageSize?: number;
+ *  activity?: string | string[];
+ *  category?: string | string[];
+ *  club?: string | { value?: string };
+ *  level?: string | string[];
+ *  teamIds?: string[];
+ *  type?: string | string[];
+ *  excludeType?: string;
+ *  sessionStatus?: string;
+ *  startDateAfter?: string;
+ *  startDateBefore?: string;
+ *  view?: 'map' | 'list';
+ *  debug?: boolean;
+ * })} params
+ * @param options
+ * @returns {Promise<import('@/domains/search/types').SearchResponse>}
+ */
+export const searchEventsMap = async (params = {}, options = {}) => {
+  const bounds = sanitizeMapBounds(params);
+  if (!bounds) {
+    return emptyResponse(params.q, params.page, params.pageSize);
+  }
+
+  const baseParams = sanitizeOptionalBaseParams(params);
+  const view = params.view === 'list' ? 'list' : 'map';
+  const maxPageSize = view === 'map' ? 500 : MAX_PAGE_SIZE;
+  const defaultPageSize = view === 'map' ? 500 : DEFAULT_PAGE_SIZE;
+  const page = Number(params.page) || 1;
+  const pageSize = Math.max(1, Math.min(maxPageSize, Number(params.pageSize) || defaultPageSize));
+
+  return requestSearch('/search/events/map', {
+    ...baseParams,
+    activity: normalizeActivity(params.activity),
+    category: normalizeCategoryOrLevel(params.category),
+    centerLat: bounds.centerLat,
+    centerLon: bounds.centerLon,
+    club: extractDocumentId(params.club),
+    east: bounds.east,
+    excludeType: toStringOrUndefined(params.excludeType),
+    north: bounds.north,
+    page,
+    pageSize,
+    q: baseParams.q,
+    sessionStatus: toStringOrUndefined(params.sessionStatus),
+    south: bounds.south,
+    startDateAfter: toStringOrUndefined(params.startDateAfter),
+    startDateBefore: toStringOrUndefined(params.startDateBefore),
+    teamIds: normalizeArrayIds(params.teamIds),
+    type: normalizeArrayIds(params.type),
+    view,
+    west: bounds.west,
+    zoom: bounds.zoom,
+  }, options);
+};
+
+/**
  * @param {{
  *  q?: string;
  *  page?: number;
@@ -240,7 +305,7 @@ export const searchClubs = async (params = {}, options = {}) => {
  * @returns {Promise<import('@/domains/search/types').SearchResponse>}
  */
 export const searchClubsMap = async (params = {}, options = {}) => {
-  const bounds = sanitizeClubMapBounds(params);
+  const bounds = sanitizeMapBounds(params);
   if (!bounds) {
     return emptyResponse(params.q, params.page, params.pageSize);
   }

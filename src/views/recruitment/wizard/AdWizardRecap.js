@@ -454,7 +454,7 @@ function AdWizardRecap({ navigation }) {
               <Text style={[Fonts.p2, Fonts.neutral100]}>
                 {completedQuickOverviewCount}
                 {' '}
-                / 4 informations cl\u00E9s pr\u00EAtes \u00E0 publier
+                / 4 informations clés prêtes à publier
               </Text>
             </View>
             <View

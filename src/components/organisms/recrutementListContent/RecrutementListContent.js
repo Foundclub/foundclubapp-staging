@@ -711,7 +711,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
             Mes annonces
           </Text>
           <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 4 }]}>
-            Consultez et g\u00E9rez les annonces publi\u00E9es pour vos \u00E9quipes.
+            Consultez et gérez les annonces publiées pour vos équipes.
           </Text>
         </View>
         {renderAudienceTypeTabs()}
@@ -729,7 +729,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
           ]}
         >
           <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
-            + Cr\u00E9er une annonce
+            + Créer une annonce
           </Text>
         </TouchableOpacity>
         <View style={[Spaces.marginTop[14]]}>
@@ -996,10 +996,10 @@ function RecrutementListContent({ initialTab, timestamp }) {
           <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-                Compl\u00E9ter mon profil
+                Compléter mon profil
               </Text>
               <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 8 }]}>
-                Sport, section, cat\u00E9gorie, niveau.
+                Sport, section, catégorie, niveau.
               </Text>
             </View>
             <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>

@@ -517,7 +517,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
         <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[8], { backgroundColor: cardSurfaceColor }]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Chargement du retour post-match</Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
-            Nous r\u00E9cup\u00E9rons ton questionnaire et le score officiel du match.
+            Nous récupérons ton questionnaire et le score officiel du match.
           </Text>
         </View>
       </ScreenContainer>

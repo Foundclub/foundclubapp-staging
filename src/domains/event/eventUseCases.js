@@ -39,6 +39,14 @@ export const VALIDATION_MODE_OPTIONS = [
   },
 ];
 
+export const normalizeEventTypeLabel = (value = '') => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim();
+
+export const isStageEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('stage');
+
 /**
  * Format a date string to send
  * @param {string | undefined} dateString - The date string to format
@@ -176,6 +184,31 @@ const formatTimeForStrapi = (timeString) => {
   return `${timeString}:00.000`;
 };
 
+const buildLocationPayload = (location) => {
+  const parsedLat = Number.isFinite(location?.lat)
+    ? Number(location.lat)
+    : Number.parseFloat(String(location?.value?.split?.('|')?.[1] || ''));
+  const parsedLng = Number.isFinite(location?.lng)
+    ? Number(location.lng)
+    : Number.parseFloat(String(location?.value?.split?.('|')?.[0] || ''));
+  const hasResolvedCoordinates = Number.isFinite(parsedLat)
+    && Number.isFinite(parsedLng)
+    && (Math.abs(parsedLat) > 0.000001 || Math.abs(parsedLng) > 0.000001);
+
+  return {
+    location: hasResolvedCoordinates ? {
+      lat: parsedLat,
+      lng: parsedLng,
+    } : undefined,
+    locationDetails: location?.label ? JSON.stringify({ address: location.label }) : null,
+  };
+};
+
+const formatStageDate = (value) => {
+  if (!value) return '';
+  return format(new Date(value), 'yyyy-MM-dd');
+};
+
 /**
  * Create the event payload for the API from the event form data
  * @param {FCEventForm} event
@@ -183,22 +216,12 @@ const formatTimeForStrapi = (timeString) => {
  */
 export const createEventPayload = (event) => {
   const effectiveStartTime = event.startTime || event.time;
-
-  // Safely handle location data
-  const splittedLocation = event.location?.value?.split('|');
-  const parsedLat = splittedLocation?.length === 2 ? parseFloat(splittedLocation[1]) : null;
-  const parsedLng = splittedLocation?.length === 2 ? parseFloat(splittedLocation[0]) : null;
-  const hasResolvedCoordinates = Number.isFinite(parsedLat)
-    && Number.isFinite(parsedLng)
-    && (Math.abs(parsedLat) > 0.000001 || Math.abs(parsedLng) > 0.000001);
+  const locationPayload = buildLocationPayload(event.location);
   const formattedData = {
     ...event,
     date: formatDateTimeToSend(event.date, effectiveStartTime),
-    location: hasResolvedCoordinates ? {
-      lat: parsedLat,
-      lng: parsedLng,
-    } : undefined,
-    locationDetails: event.location?.label ? JSON.stringify({ address: event.location.label }) : null,
+    location: locationPayload.location,
+    locationDetails: locationPayload.locationDetails,
     // Format startTime and endTime for Strapi (HH:mm:ss.SSS)
     endTime: formatTimeForStrapi(event.endTime),
     startTime: formatTimeForStrapi(effectiveStartTime),
@@ -224,12 +247,62 @@ export const createEventPayload = (event) => {
   return formattedData;
 };
 
+export const createStageEventPayload = (event) => {
+  const stageSchedule = Array.isArray(event?.stageSchedule) ? event.stageSchedule : [];
+  const activeDays = stageSchedule.filter((entry) => entry?.isActive !== false);
+
+  if (!activeDays.length) {
+    return createEventPayload(event);
+  }
+
+  const sortedDays = [...activeDays].sort((left, right) => (
+    String(left?.date || '').localeCompare(String(right?.date || ''))
+  ));
+  const firstDay = sortedDays[0];
+  const lastDay = sortedDays[sortedDays.length - 1];
+  const firstDate = format(new Date(firstDay.date), 'dd/MM/yyyy');
+  const lastEndDateIso = formatDateTimeToSend(format(new Date(lastDay.date), 'dd/MM/yyyy'), lastDay.endTime);
+  const basePayload = createEventPayload({
+    ...event,
+    date: firstDate,
+    endTime: event.stageDefaultEndTime || firstDay.endTime,
+    isRecurrent: false,
+    startTime: event.stageDefaultStartTime || firstDay.startTime,
+  });
+
+  return {
+    ...basePayload,
+    endDate: lastEndDateIso,
+    eventFormat: 'stage_parent',
+    stageDefaultEndTime: formatTimeForStrapi(event.stageDefaultEndTime || firstDay.endTime),
+    stageDefaultStartTime: formatTimeForStrapi(event.stageDefaultStartTime || firstDay.startTime),
+    stageEndDate: formatStageDate(event.stageEndDate || lastDay.date),
+    stageSchedule: stageSchedule.map((entry) => {
+      const dayLocationPayload = buildLocationPayload(entry?.location);
+      return {
+        date: formatStageDate(entry?.date),
+        endTime: formatTimeForStrapi(entry?.endTime),
+        facility: entry?.facilityId || entry?.facility?.documentId || entry?.facility || null,
+        isActive: entry?.isActive !== false,
+        location: dayLocationPayload.location,
+        locationDetails: dayLocationPayload.locationDetails,
+        startTime: formatTimeForStrapi(entry?.startTime),
+      };
+    }),
+    stageStartDate: formatStageDate(event.stageStartDate || firstDay.date),
+  };
+};
+
 /**
  * Create the event payload for the API from the event form data for reccurent events
  * @param {FCEventForm} event
  * @returns {FCEventForm[]}
  */
 export const createReccurrentEventPayload = (event) => {
+  if (isStageEventType(event?.type?.name || event?.typeName || '')) {
+    return [createStageEventPayload(event)];
+  }
+
   if (event.isRecurrent && event.recurrenceStartDate && event.recurrenceEndDate) {
     const startDate = getDateFromDateInput(event.recurrenceStartDate) || new Date();
     const endDate = getDateFromDateInput(event.recurrenceEndDate) || new Date();
@@ -239,40 +312,6 @@ export const createReccurrentEventPayload = (event) => {
 
     const events = [];
     const currentDate = new Date(startDate); // Start from the recurrence start date
-
-    // Helper to get day index (0=Sunday, 1=Monday, etc.)
-    const getDayIndex = (date) => date.getDay();
-
-    // Helper to set day of week for a given date
-    const setDayOfWeek = (date, dayIndex) => {
-      const result = new Date(date);
-      const currentDay = result.getDay();
-      const distance = (dayIndex + 7 - currentDay) % 7;
-      // If the target day is today or in the future within the same week, add distance
-      // But we want to set the day relative to the START of the week block?
-      // Actually, the requirement is: "Semaine 1 : Crée les events Lundi et Mercredi."
-      // So we should align currentDate to the start of the week (e.g. Monday) and then add days.
-      // Let's assume Monday is start of week for simplicity in calculation, or just use date-fns if available.
-      // Since we don't have date-fns startOfWeek imported, let's do it manually or rely on the current date being the anchor.
-
-      // Better approach:
-      // 1. Iterate by weeks (interval).
-      // 2. For each week, iterate through recurrenceDays.
-      // 3. Construct the date for that day in that week.
-
-      // To do this correctly, we need to know the "Monday" of the current week block.
-      const day = result.getDay();
-      const diff = result.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-      const monday = new Date(result.setDate(diff));
-
-      // Now add (dayIndex - 1) days to monday (since Monday is 1)
-      // If dayIndex is 0 (Sunday), it's Monday + 6.
-      const targetDayOffset = dayIndex === 0 ? 6 : dayIndex - 1;
-      const targetDate = new Date(monday);
-      targetDate.setDate(monday.getDate() + targetDayOffset);
-      return targetDate;
-    };
-
     // Parse recurrence days (ensure they are numbers)
     const recurrenceDays = (event.recurrenceDays || []).map(Number);
     const interval = event.recurrenceInterval || 1;

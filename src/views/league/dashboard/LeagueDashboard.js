@@ -567,7 +567,7 @@ function LeagueDashboard() {
           demande
           {dashboardPendingRequestsCount > 1 ? 's' : ''}
           {' '}
-          attendent votre r\u00E9ponse
+          attendent votre réponse
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 16 }]}>
           Ouvrez les demandes de votre squad pour accepter ou refuser les joueurs en attente.

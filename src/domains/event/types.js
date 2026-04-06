@@ -25,6 +25,20 @@
  * @property {string[]} [teamIds] - Team IDs filter
  * @property {any} [composition] - Tactical composition payload
  * @property {Array<{position: string, quantity: number}>} [detectionSlots] - Optional detection slots
+ * @property {'single' | 'stage_parent' | 'stage_day'} [eventFormat]
+ * @property {Date | string} [stageStartDate]
+ * @property {Date | string} [stageEndDate]
+ * @property {Date | string} [stageDefaultStartTime]
+ * @property {Date | string} [stageDefaultEndTime]
+ * @property {Array<{
+ *   date?: Date | string,
+ *   endTime?: Date | string,
+ *   facility?: any,
+ *   facilityId?: string,
+ *   isActive?: boolean,
+ *   location?: { value?: string, label?: string, lat?: number, lng?: number },
+ *   startTime?: Date | string,
+ * }>} [stageSchedule]
  */
 
 /**
@@ -57,6 +71,14 @@
  * @property {Team[]} [invitedTeams] - Invited opponent teams
  * @property {any[]} [recruitmentAds] - Recruitment ads linked to this event
  * @property {any} [reservation] - Reservation object if applicable
+ * @property {'single' | 'stage_parent' | 'stage_day'} [eventFormat]
+ * @property {FCEvent} [parentEvent]
+ * @property {FCEvent[]} [childStageEvents]
+ * @property {string} [stageStartDate]
+ * @property {string} [stageEndDate]
+ * @property {string} [stageDefaultStartTime]
+ * @property {string} [stageDefaultEndTime]
+ * @property {any[]} [stageSchedule]
  */
 
 /**

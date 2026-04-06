@@ -14,6 +14,14 @@ const createDefaultTimeRange = () => {
   return { end, start };
 };
 
+const normalizeTypeLabel = (value = '') => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
+
+const isStageTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('stage');
+
 const createInitialState = () => {
   const { end, start } = createDefaultTimeRange();
   return {
@@ -37,6 +45,11 @@ const createInitialState = () => {
     recurrenceInterval: 1,
     recurrenceStartDate: null,
     reservationMode: 'FULL_GROUP',
+    stageDefaultEndTime: end,
+    stageDefaultStartTime: start,
+    stageEndDate: start,
+    stageSchedule: [],
+    stageStartDate: start,
     startTime: start,
     // Step 5: Participants
     capacity: null,
@@ -56,8 +69,8 @@ const createInitialState = () => {
 };
 
 const canUseWizardStorage = () => (
-  typeof globalThis !== 'undefined'
-  && typeof globalThis.sessionStorage !== 'undefined'
+  typeof window !== 'undefined'
+  && typeof window.sessionStorage !== 'undefined'
 );
 
 const loadPersistedState = () => {
@@ -68,7 +81,7 @@ const loadPersistedState = () => {
   }
 
   try {
-    const raw = globalThis.sessionStorage.getItem(EVENT_WIZARD_STORAGE_KEY);
+    const raw = window.sessionStorage.getItem(EVENT_WIZARD_STORAGE_KEY);
     if (!raw) return initialState;
 
     const parsed = JSON.parse(raw);
@@ -112,6 +125,11 @@ function eventWizardReducer(state, action) {
       return { ...state, ...action.payload };
     case 'SET_PARTICIPANTS':
       return { ...state, ...action.payload };
+    case 'SET_STAGE_PROGRAM':
+      return {
+        ...state,
+        ...action.payload,
+      };
     case 'SET_TEAM':
       return {
         ...state,
@@ -119,8 +137,36 @@ function eventWizardReducer(state, action) {
         invitedTeams: [],
         team: action.payload,
       };
-    case 'SET_TYPE':
-      return { ...state, detectionSlots: [], type: action.payload };
+    case 'SET_TYPE': {
+      const isStage = isStageTypeName(action.payload?.name);
+      const nextState = {
+        ...state,
+        detectionSlots: [],
+        type: action.payload,
+      };
+
+      if (!isStage) {
+        return {
+          ...nextState,
+          stageSchedule: [],
+        };
+      }
+
+      return {
+        ...nextState,
+        isRecurrent: false,
+        recurrenceDays: [],
+        recurrenceEndDate: null,
+        recurrenceFrequency: 'week',
+        recurrenceInterval: 1,
+        recurrenceStartDate: null,
+        stageDefaultEndTime: state.stageDefaultEndTime || state.endTime,
+        stageDefaultStartTime: state.stageDefaultStartTime || state.startTime,
+        stageEndDate: state.stageEndDate || state.date,
+        stageSchedule: Array.isArray(state.stageSchedule) ? state.stageSchedule : [],
+        stageStartDate: state.stageStartDate || state.date,
+      };
+    }
     case 'SET_VALIDATION_MODE':
       return { ...state, validationMode: action.payload };
     default:
@@ -140,7 +186,7 @@ export function EventWizardProvider({ children }) {
     if (!canUseWizardStorage()) return;
 
     try {
-      globalThis.sessionStorage.setItem(
+      window.sessionStorage.setItem(
         EVENT_WIZARD_STORAGE_KEY,
         JSON.stringify(state),
       );

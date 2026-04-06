@@ -65,10 +65,28 @@ const estimateZoomFromRegion = (region) => {
   return Math.max(1, Math.min(20, Math.round(Math.log2(360 / longitudeDelta))));
 };
 
-const resolveOverlayInsets = (overlayInsets, previewBottomOffset) => ({
-  bottom: Math.max(130, Number(overlayInsets?.bottom) || (previewBottomOffset + 120)),
-  left: Math.max(40, Number(overlayInsets?.left) || 56),
-  right: Math.max(40, Number(overlayInsets?.right) || 56),
+const resolveOverlayInsets = (
+  overlayInsets,
+  previewBottomOffset,
+  previewHeight,
+  controlsWidth,
+  summaryWidth,
+) => ({
+  bottom: Math.max(
+    130,
+    Number(overlayInsets?.bottom) || 0,
+    previewBottomOffset + (previewHeight > 0 ? previewHeight + 18 : 44),
+  ),
+  left: Math.max(
+    40,
+    Number(overlayInsets?.left) || 0,
+    summaryWidth > 0 ? Math.min(summaryWidth + 24, 204) : 0,
+  ),
+  right: Math.max(
+    40,
+    Number(overlayInsets?.right) || 0,
+    controlsWidth > 0 ? controlsWidth + 24 : 0,
+  ),
   top: Math.max(72, Number(overlayInsets?.top) || 84),
 });
 
@@ -146,6 +164,9 @@ function LegacySearchMapNative({
   const [mapStatus, setMapStatus] = useState('loading');
   const [region, setRegion] = useState(FALLBACK_REGION);
   const [showsUserLocation, setShowsUserLocation] = useState(false);
+  const [hudControlsWidth, setHudControlsWidth] = useState(0);
+  const [hudSummaryWidth, setHudSummaryWidth] = useState(0);
+  const [previewCardHeight, setPreviewCardHeight] = useState(0);
 
   const isClubScope = scope === 'clubs';
   const markerColor = isClubScope ? Colors.warning500 : Colors.primary500;
@@ -157,9 +178,16 @@ function LegacySearchMapNative({
     () => items.find((item) => item.id === activeSelectedItemId) || null,
     [activeSelectedItemId, items],
   );
+  const visibleMarkerCount = items.length;
   const resolvedOverlayInsets = useMemo(
-    () => resolveOverlayInsets(overlayInsets, previewBottomOffset),
-    [overlayInsets, previewBottomOffset],
+    () => resolveOverlayInsets(
+      overlayInsets,
+      previewBottomOffset,
+      previewCardHeight,
+      hudControlsWidth,
+      hudSummaryWidth,
+    ),
+    [hudControlsWidth, hudSummaryWidth, overlayInsets, previewBottomOffset, previewCardHeight],
   );
   const totalResults = Number.isFinite(totalCount) && totalCount > 0 ? totalCount : items.length;
   const logContext = useMemo(() => ({
@@ -448,14 +476,47 @@ function LegacySearchMapNative({
             disabled={areControlsDisabled}
             geolocatableCount={items.length}
             isLoadingResults={isLoadingResults}
+            onControlsWidthChange={setHudControlsWidth}
             onLocateMe={requestUserLocation}
             onRecenter={() => {
               if (
-                isClubScope
+                scope !== 'reservations'
                 && regionHint
                 && Number.isFinite(regionHint.lat)
                 && Number.isFinite(regionHint.lng)
               ) {
+                if (
+                  Number.isFinite(regionHint.north)
+                  && Number.isFinite(regionHint.south)
+                  && Number.isFinite(regionHint.east)
+                  && Number.isFinite(regionHint.west)
+                ) {
+                  const nextRegion = {
+                    latitude: regionHint.lat,
+                    latitudeDelta: Number.isFinite(regionHint.latitudeDelta)
+                      ? regionHint.latitudeDelta
+                      : Math.max(Math.abs(regionHint.north - regionHint.south), 0.02),
+                    longitude: regionHint.lng,
+                    longitudeDelta: Number.isFinite(regionHint.longitudeDelta)
+                      ? regionHint.longitudeDelta
+                      : Math.max(Math.abs(regionHint.east - regionHint.west), 0.02),
+                  };
+                  setRegion(nextRegion);
+                  mapRef.current?.fitToCoordinates([
+                    { latitude: regionHint.north, longitude: regionHint.west },
+                    { latitude: regionHint.south, longitude: regionHint.east },
+                  ], {
+                    animated: true,
+                    edgePadding: {
+                      bottom: resolvedOverlayInsets.bottom,
+                      left: resolvedOverlayInsets.left,
+                      right: resolvedOverlayInsets.right,
+                      top: resolvedOverlayInsets.top,
+                    },
+                  });
+                  return;
+                }
+
                 const nextRegion = buildFocusedRegion(regionHint.lat, regionHint.lng);
                 setRegion(nextRegion);
                 mapRef.current?.animateToRegion(nextRegion, 280);
@@ -463,6 +524,7 @@ function LegacySearchMapNative({
               }
               fitToResults(true);
             }}
+            onSummaryWidthChange={setHudSummaryWidth}
             onZoomIn={() => handleZoom(0.65)}
             onZoomOut={() => handleZoom(1.45)}
             renderStats={{
@@ -476,6 +538,20 @@ function LegacySearchMapNative({
           />
         </View>
       </View>
+
+      {isMapReady && items.length > 0 && visibleMarkerCount > 0 && !selectedItem ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.selectionHint,
+            { bottom: Math.max(24, previewBottomOffset + previewCardHeight + 10) },
+          ]}
+        >
+          <Text style={[Fonts.p4Bold, Fonts.neutral00, Fonts.textCenter]}>
+            Touchez un repere pour voir la fiche
+          </Text>
+        </View>
+      ) : null}
 
       {mapStatus === 'loading' ? (
         <View style={styles.statusOverlay}>
@@ -575,6 +651,7 @@ function LegacySearchMapNative({
           bottomOffset={previewBottomOffset}
           item={selectedItem}
           onDismiss={handleClearSelection}
+          onHeightChange={setPreviewCardHeight}
           onOpen={(item) => onOpenItem?.(item)}
           onShowList={() => onShowList?.()}
           scope={scope}
@@ -628,6 +705,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
+  },
+  selectionHint: {
+    backgroundColor: 'rgba(6, 24, 34, 0.84)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    borderWidth: 1,
+    left: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    position: 'absolute',
+    right: 18,
   },
   statusActionButton: {
     alignItems: 'center',

@@ -1267,7 +1267,7 @@ function MatchCenterScreen() {
                 >
                   {swordsIcon}
                   {' '}
-                  Duel confirm\u00E9
+                  Duel confirmé
                 </Text>
                 <Text style={[Fonts.h2, {
                   color: Colors.neutral00,
@@ -1275,7 +1275,7 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  \u00C9quipe adverse
+                  Équipe adverse
                 </Text>
                 <Text style={[Fonts.p2, { color: Colors.primary500, marginBottom: 8 }]}>
                   {sportLabel}
@@ -1350,7 +1350,7 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  Cr\u00E9neau phare
+                  Créneau phare
                 </Text>
                 <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>{recurringDayLabel}</Text>
                 <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
@@ -1370,7 +1370,7 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  Cr\u00E9neaux en commun
+                  Créneaux en commun
                 </Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
                   {commonSlotsSummary.slice(0, 6).map((slotLabel) => (
@@ -1414,7 +1414,7 @@ function MatchCenterScreen() {
                 Prochaine etape
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral00, lineHeight: 22 }]}>
-                Le match correspond \u00E0 vos crit\u00E8res. Ouvrez le chat pour verrouiller le terrain, l&apos;horaire et le protocole de rencontre.
+                Le match correspond à vos critères. Ouvrez le chat pour verrouiller le terrain, l&apos;horaire et le protocole de rencontre.
               </Text>
             </View>
           </View>
@@ -2527,7 +2527,7 @@ function MatchCenterScreen() {
           }}
           >
             <Text style={[Fonts.p2, { color: Colors.neutral300, flex: 1 }]}>
-              Vos disponibilit\u00E9s (
+              Vos disponibilités (
               {selectedSlotIds.length}
               /
               {squadSlots.length || 0}

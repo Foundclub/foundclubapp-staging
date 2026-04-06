@@ -132,6 +132,7 @@ export const RouteNames = /** @type {const} */ ({
   EventWizardLogistics: 'EventWizardLogistics',
   EventWizardParticipants: 'EventWizardParticipants',
   EventWizardRecap: 'EventWizardRecap',
+  EventWizardStageProgram: 'EventWizardStageProgram',
   EventWizardTeam: 'EventWizardTeam',
   EventWizardType: 'EventWizardType',
   EventWizardValidationMode: 'EventWizardValidationMode',

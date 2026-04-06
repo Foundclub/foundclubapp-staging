@@ -122,6 +122,7 @@ const getStaffDisplayName = (user) => {
 const resolveAttendanceBadge = ({
   allowLiveLate = false,
   attendance,
+  colors,
   eventStartAt,
   nowMs,
   statusKind = 'participating',
@@ -144,8 +145,9 @@ const resolveAttendanceBadge = ({
 
   if (normalizedAttendanceStatus === 'no_show') {
     return {
-      backgroundColor: 'rgba(239, 68, 68, 0.13)',
-      textColor: 'rgb(252, 165, 165)',
+      backgroundColor: `${colors.error500}18`,
+      borderColor: `${colors.error500}36`,
+      textColor: colors.error500,
       title: 'Non pointe',
       value: null,
     };
@@ -153,8 +155,9 @@ const resolveAttendanceBadge = ({
 
   if (statusKind === 'missing' || normalizedRsvpStatus === 'missing') {
     return {
-      backgroundColor: 'rgba(239, 68, 68, 0.13)',
-      textColor: 'rgb(252, 165, 165)',
+      backgroundColor: `${colors.error500}18`,
+      borderColor: `${colors.error500}36`,
+      textColor: colors.error500,
       title: 'Absent',
       value: null,
     };
@@ -162,8 +165,9 @@ const resolveAttendanceBadge = ({
 
   if (statusKind === 'not_answered' || normalizedRsvpStatus === 'not_answered') {
     return {
-      backgroundColor: 'rgba(51, 65, 85, 0.4)',
-      textColor: 'rgb(203, 213, 225)',
+      backgroundColor: `${colors.neutral300}12`,
+      borderColor: `${colors.neutral300}24`,
+      textColor: colors.neutral200,
       title: 'Sans reponse',
       value: null,
     };
@@ -172,16 +176,18 @@ const resolveAttendanceBadge = ({
   if (hasArrived) {
     if (lateMinutes > 0) {
       return {
-        backgroundColor: 'rgba(245, 158, 11, 0.13)',
-        textColor: 'rgb(251, 191, 36)',
+        backgroundColor: `${colors.warning500}18`,
+        borderColor: `${colors.warning500}36`,
+        textColor: colors.warning500,
         title: 'Arrive',
         value: `+${lateMinutes} min`,
       };
     }
 
     return {
-      backgroundColor: 'rgba(22, 163, 74, 0.13)',
-      textColor: 'rgb(74, 222, 128)',
+      backgroundColor: `${colors.success500}18`,
+      borderColor: `${colors.success500}36`,
+      textColor: colors.success500,
       title: 'Arrive',
       value: null,
     };
@@ -189,8 +195,9 @@ const resolveAttendanceBadge = ({
 
   if (normalizedAttendanceStatus === 'declared_late' || declaredLateMinutes > 0) {
     return {
-      backgroundColor: 'rgba(249, 115, 22, 0.13)',
-      textColor: 'rgb(253, 186, 116)',
+      backgroundColor: `${colors.warning500}18`,
+      borderColor: `${colors.warning500}36`,
+      textColor: colors.warning500,
       title: 'Retard annonce',
       value: `+${declaredLateMinutes} min`,
     };
@@ -198,16 +205,18 @@ const resolveAttendanceBadge = ({
 
   if (runningLateMinutes > 0) {
     return {
-      backgroundColor: 'rgba(245, 158, 11, 0.13)',
-      textColor: 'rgb(251, 191, 36)',
+      backgroundColor: `${colors.warning500}18`,
+      borderColor: `${colors.warning500}36`,
+      textColor: colors.warning500,
       title: 'En attente',
       value: `+${runningLateMinutes} min`,
     };
   }
 
   return {
-    backgroundColor: 'rgba(51, 65, 85, 0.4)',
-    textColor: 'rgb(203, 213, 225)',
+    backgroundColor: `${colors.neutral300}12`,
+    borderColor: `${colors.neutral300}24`,
+    textColor: colors.neutral200,
     title: 'En attente',
     value: null,
   };
@@ -595,11 +604,12 @@ function ParticipantItem({
   styles,
 }) {
   const {
-    Alignments, ApplicationStyle, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = styles;
   const badge = resolveAttendanceBadge({
     allowLiveLate,
     attendance,
+    colors: Colors,
     eventStartAt,
     nowMs,
     statusKind,
@@ -639,18 +649,23 @@ function ParticipantItem({
         </View>
         <View
           style={[
-            Spaces.paddingHorizontal[10],
-            Spaces.paddingVertical[4],
-            ApplicationStyle.borderRadius12,
+            ApplicationStyle.borderRadius16,
             Alignments.alignCenter,
-            { backgroundColor: badge.backgroundColor },
+            {
+              backgroundColor: badge.backgroundColor,
+              borderColor: badge.borderColor,
+              borderWidth: 1,
+              minWidth: badge.value ? 132 : 96,
+              paddingHorizontal: badge.value ? 14 : 12,
+              paddingVertical: badge.value ? 8 : 6,
+            },
           ]}
         >
-          <Text style={[Fonts.p4, { color: badge.textColor }]}>
+          <Text style={[Fonts.p4, { color: badge.textColor, textAlign: 'center' }]}>
             {badge.title}
           </Text>
           {badge.value ? (
-            <Text style={[Fonts.p4Bold, { color: badge.textColor }]}>
+            <Text style={[Fonts.p4Bold, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}>
               {badge.value}
             </Text>
           ) : null}

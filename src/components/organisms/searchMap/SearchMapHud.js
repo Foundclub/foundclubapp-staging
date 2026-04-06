@@ -10,6 +10,8 @@ import { getSearchMapResultLabel } from '@/utils/searchMap';
  * @param {boolean} [props.disabled]
  * @param {number} [props.geolocatableCount]
  * @param {boolean} [props.isLoadingResults]
+ * @param {(width: number) => void} [props.onControlsWidthChange]
+ * @param {(width: number) => void} [props.onSummaryWidthChange]
  * @param {() => void} [props.onLocateMe]
  * @param {() => void} [props.onRecenter]
  * @param {() => void} [props.onZoomIn]
@@ -24,8 +26,10 @@ function SearchMapHud({
   disabled = false,
   geolocatableCount = 0,
   isLoadingResults = false,
+  onControlsWidthChange,
   onLocateMe,
   onRecenter,
+  onSummaryWidthChange,
   onZoomIn,
   onZoomOut,
   renderStats = null,
@@ -119,6 +123,9 @@ function SearchMapHud({
       ]}
     >
       <View
+        onLayout={(event) => {
+          onSummaryWidthChange?.(event?.nativeEvent?.layout?.width || 0);
+        }}
         style={[
           ApplicationStyle.shadow200,
           {
@@ -140,7 +147,12 @@ function SearchMapHud({
         </Text>
       </View>
 
-      <View style={[Alignments.column, Spaces.gap[10], { opacity: overlayOpacity }]}>
+      <View
+        onLayout={(event) => {
+          onControlsWidthChange?.(event?.nativeEvent?.layout?.width || 0);
+        }}
+        style={[Alignments.column, Spaces.gap[10], { opacity: overlayOpacity }]}
+      >
         <View style={zoomGroupStyle}>
           <TouchableOpacity
             activeOpacity={0.85}

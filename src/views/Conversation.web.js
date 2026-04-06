@@ -1429,7 +1429,7 @@ function Conversation({ navigation, route }) {
                   }}
                   type="button"
                 >
-                  R\u00E9essayer
+                  Réessayer
                 </button>
               </div>
             ) : null}

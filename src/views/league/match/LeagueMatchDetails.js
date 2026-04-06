@@ -1329,7 +1329,7 @@ function LeagueMatchDetails({ navigation, route }) {
                       Conversation en preparation
                     </Text>
                     <Text style={[Fonts.p4, { color: leagueCardTextColor, textAlign: 'center' }]}>
-                      La conversation avec l&apos;adversaire arrive bient\u00F4t. R\u00E9essayez dans quelques secondes ou poursuivez depuis cette fiche match.
+                      La conversation avec l&apos;adversaire arrive bientôt. Réessayez dans quelques secondes ou poursuivez depuis cette fiche match.
                     </Text>
                     <View style={{ gap: 10, marginTop: 14, width: '100%' }}>
                       <Button
@@ -1874,7 +1874,7 @@ function LeagueMatchDetails({ navigation, route }) {
                 ) : null}
                 {isScoreLockedByTime ? (
                   <Text style={[Fonts.p3, { color: leagueCardTextColor, marginBottom: 12 }]}>
-                    Le score sera disponible apres l&apos;heure de d\u00E9but du match (+1 min).
+                    Le score sera disponible apres l&apos;heure de début du match (+1 min).
                   </Text>
                 ) : null}
                 {canManageVenue ? (
@@ -2047,7 +2047,7 @@ function LeagueMatchDetails({ navigation, route }) {
             </View>
 
             <LeagueCard>
-              <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>\u00C9quipe concernee</Text>
+              <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>Équipe concernée</Text>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 6 }]}>
                 {myTeam?.name || 'Mon \u00E9quipe'}
               </Text>

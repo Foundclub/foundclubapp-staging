@@ -21,6 +21,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import client from '@/services/client';
+
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
 import {
   formatNotificationRelativeTime,
@@ -60,6 +62,16 @@ const groupNotificationsByDate = (/** @type {NotificationItem[]} */ notification
 
   return groups;
 };
+
+const getNotificationPayload = (/** @type {NotificationItem} */ notification) => ({
+  ...(notification.data || {}),
+  createdAt: notification.createdAt,
+  notificationBody: notification.body,
+  notificationId: notification.documentId || notification.id,
+  notificationKind: notification?.data?.type,
+  notificationTitle: notification.title,
+  type: notification.type,
+});
 
 /**
  *
@@ -141,6 +153,45 @@ function NotificationList() {
     return normalizedType === NOTIFICATION_TYPES.PARTICIPATION_REQUEST && status === 'declined';
   }, []);
 
+  const isRsvpReminderNotification = useCallback((/** @type {NotificationItem} */ notification) => {
+    const normalizedType = normalizeNotificationType(
+      notification?.type || notification?.data?.type || notification?.data?.notificationKind || '',
+    );
+    return normalizedType === NOTIFICATION_TYPES.EVENT_REMINDER;
+  }, []);
+
+  const sendRsvpFromNotification = useCallback(async (
+    /** @type {NotificationItem} */ notification,
+    /** @type {'present' | 'absent'} */ answer,
+  ) => {
+    const payload = getNotificationPayload(notification);
+    const eventId = String(payload?.eventId || '').trim();
+    if (!eventId) {
+      showActionError("Impossible de retrouver l'evenement associe a cette notification.");
+      return;
+    }
+
+    try {
+      await client.post(`/events/${eventId}/rsvp`, {
+        answer,
+        notificationId: payload.notificationId,
+        source: 'in_app',
+      });
+      await markAsRead(String(notification.documentId || notification.id || ''));
+      refreshNotifications();
+
+      const successMessage = answer === 'present'
+        ? 'Presence enregistree.'
+        : 'Absence enregistree.';
+
+      if (Platform.OS === 'android' && ToastAndroid?.show) {
+        ToastAndroid.show(successMessage, ToastAndroid.SHORT);
+      }
+    } catch (error) {
+      showActionError("Impossible d'enregistrer votre reponse.", error);
+    }
+  }, [markAsRead, refreshNotifications]);
+
   const handlePressNotification = useCallback(async (/** @type {NotificationItem} */ notification) => {
     try {
       await markAsRead(String(notification.documentId || notification.id || ''));
@@ -148,15 +199,7 @@ function NotificationList() {
       showActionError('Impossible de marquer la notification comme lue.', error);
     }
 
-    const payload = {
-      ...(notification.data || {}),
-      createdAt: notification.createdAt,
-      notificationBody: notification.body,
-      notificationId: notification.documentId || notification.id,
-      notificationKind: notification?.data?.type,
-      notificationTitle: notification.title,
-      type: notification.type,
-    };
+    const payload = getNotificationPayload(notification);
     const destination = resolveNotificationDestination(payload);
 
     if (destination?.route) {
@@ -249,6 +292,7 @@ function NotificationList() {
     const notification = item.data;
     const icon = getNotificationIcon(notification.type);
     const isDeclinedParticipation = isDeclinedParticipationNotification(notification);
+    const isRsvpReminder = isRsvpReminderNotification(notification);
 
     return (
       <Animated.View entering={FadeInDown.delay(index * 30).duration(200)}>
@@ -258,92 +302,134 @@ function NotificationList() {
           renderLeftActions={() => !notification.read && renderLeftActions(notification)}
           renderRightActions={() => renderRightActions(notification)}
         >
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => handlePressNotification(notification)}
+          <View
             style={[
               Spaces.padding[16],
               Spaces.marginBottom[12],
               {
-                alignItems: 'flex-start',
                 backgroundColor: notification.read
                   ? 'rgba(255, 255, 255, 0.03)'
                   : 'rgba(1, 179, 244, 0.12)',
                 borderLeftColor: Colors.primary500,
                 borderLeftWidth: notification.read ? 0 : 4,
                 borderRadius: 12,
-                flexDirection: 'row',
               },
             ]}
           >
-            <View
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => handlePressNotification(notification)}
               style={{
-                alignItems: 'center',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: 20,
-                height: 40,
-                justifyContent: 'center',
-                marginRight: 12,
-                width: 40,
+                alignItems: 'flex-start',
+                flexDirection: 'row',
               }}
             >
-              <Text style={{ fontSize: 18 }}>{icon}</Text>
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    notification.read ? Fonts.p2 : Fonts.p2Bold,
-                    { color: Colors.neutral00, flex: 1 },
-                  ]}
-                >
-                  {notification.title}
-                </Text>
-                <Text style={[Fonts.p3, { color: Colors.neutral300, marginLeft: 8 }]}>
-                  {formatNotificationRelativeTime(notification.createdAt || new Date())}
-                </Text>
-              </View>
-              <Text
-                numberOfLines={2}
-                style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 18 }]}
-              >
-                {notification.body}
-              </Text>
-              {isDeclinedParticipation ? (
-                <Text
-                  style={[
-                    Fonts.p3Bold,
-                    {
-                      color: Colors.error500 || '#EF4444',
-                      marginTop: 8,
-                    },
-                  ]}
-                >
-                  {t('notifications.labels.participationDeclined')}
-                </Text>
-              ) : null}
-            </View>
-
-            {!notification.read ? (
               <View
                 style={{
-                  backgroundColor: Colors.primary500,
-                  borderRadius: 4,
-                  height: 8,
-                  position: 'absolute',
-                  right: 16,
-                  top: 16,
-                  width: 8,
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: 20,
+                  height: 40,
+                  justifyContent: 'center',
+                  marginRight: 12,
+                  width: 40,
                 }}
-              />
+              >
+                <Text style={{ fontSize: 18 }}>{icon}</Text>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      notification.read ? Fonts.p2 : Fonts.p2Bold,
+                      { color: Colors.neutral00, flex: 1 },
+                    ]}
+                  >
+                    {notification.title}
+                  </Text>
+                  <Text style={[Fonts.p3, { color: Colors.neutral300, marginLeft: 8 }]}>
+                    {formatNotificationRelativeTime(notification.createdAt || new Date())}
+                  </Text>
+                </View>
+                <Text
+                  numberOfLines={2}
+                  style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 18 }]}
+                >
+                  {notification.body}
+                </Text>
+                {isDeclinedParticipation ? (
+                  <Text
+                    style={[
+                      Fonts.p3Bold,
+                      {
+                        color: Colors.error500 || '#EF4444',
+                        marginTop: 8,
+                      },
+                    ]}
+                  >
+                    {t('notifications.labels.participationDeclined')}
+                  </Text>
+                ) : null}
+              </View>
+
+              {!notification.read ? (
+                <View
+                  style={{
+                    backgroundColor: Colors.primary500,
+                    borderRadius: 4,
+                    height: 8,
+                    position: 'absolute',
+                    right: 0,
+                    top: 0,
+                    width: 8,
+                  }}
+                />
+              ) : null}
+            </TouchableOpacity>
+
+            {isRsvpReminder ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  gap: 10,
+                  marginTop: 12,
+                }}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => sendRsvpFromNotification(notification, 'present')}
+                  style={{
+                    backgroundColor: Colors.primary500,
+                    borderRadius: 999,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>Je participe</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => sendRsvpFromNotification(notification, 'absent')}
+                  style={{
+                    backgroundColor: 'transparent',
+                    borderColor: Colors.neutral300,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>Je suis absent</Text>
+                </TouchableOpacity>
+              </View>
             ) : null}
-          </TouchableOpacity>
+          </View>
         </Swipeable>
       </Animated.View>
     );
-  }, [Colors, Fonts, Spaces, handlePressNotification, isDeclinedParticipationNotification, renderRightActions, renderLeftActions, t]);
+  }, [Colors, Fonts, Spaces, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {

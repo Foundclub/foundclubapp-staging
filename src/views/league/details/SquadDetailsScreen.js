@@ -1385,7 +1385,7 @@ function SquadDetailsScreen({ navigation, route }) {
                   demande
                   {pendingRequestsCount > 1 ? 's' : ''}
                   {' '}
-                  attendent votre r\u00E9ponse. Ouvrez la file pour accepter ou refuser rapidement.
+                  attendent votre réponse. Ouvrez la file pour accepter ou refuser rapidement.
                 </Text>
               </View>
               <View
@@ -1881,9 +1881,9 @@ function SquadDetailsScreen({ navigation, route }) {
                   padding: 14,
                 }}
                 >
-                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Bilan comp\u00E9tition</Text>
+                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Bilan compétition</Text>
                   <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 10 }]}>
-                    Cet espace suit d\u00E9j\u00E0 les resultats League, votre classement et votre historique. Les statistiques post-match d\u00E9taill\u00E9es pour le padel ne sont pas encore actives dans cette V1.
+                    Cet espace suit déjà les resultats League, votre classement et votre historique. Les statistiques post-match détaillées pour le padel ne sont pas encore actives dans cette V1.
                   </Text>
                   <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
                     <View style={{
@@ -2011,7 +2011,7 @@ function SquadDetailsScreen({ navigation, route }) {
 
                   {leaguePendingMatches.length ? (
                     <View style={[Spaces.gap[10]]}>
-                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>R\u00E9ponses joueur en attente de validation \u00E9quipe</Text>
+                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>Réponses joueur en attente de validation équipe</Text>
                       {leaguePendingMatches.map((pendingMatch, index) => (
                         <TouchableOpacity
                           activeOpacity={0.9}
@@ -2218,7 +2218,7 @@ function SquadDetailsScreen({ navigation, route }) {
             }}
             >
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
-                <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>Prochain cr\u00E9neau</Text>
+                <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>Prochain créneau</Text>
                 <View style={{
                   backgroundColor: `${Colors.primary500}14`,
                   borderColor: `${Colors.primary500}36`,

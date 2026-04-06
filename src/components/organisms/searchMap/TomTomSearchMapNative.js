@@ -132,6 +132,31 @@ const buildRuntimeState = (
   userLocation,
 });
 
+const resolveMeasuredOverlayInsets = (
+  overlayInsets,
+  controlsWidth,
+  previewBottomOffset,
+  previewHeight,
+  summaryWidth,
+) => ({
+  bottom: Math.max(
+    132,
+    Number(overlayInsets?.bottom) || 0,
+    previewBottomOffset + (previewHeight > 0 ? previewHeight + 18 : 44),
+  ),
+  left: Math.max(
+    24,
+    Number(overlayInsets?.left) || 0,
+    summaryWidth > 0 ? Math.min(summaryWidth + 24, 204) : 0,
+  ),
+  right: Math.max(
+    24,
+    Number(overlayInsets?.right) || 0,
+    controlsWidth > 0 ? controlsWidth + 24 : 0,
+  ),
+  top: Math.max(72, Number(overlayInsets?.top) || 0),
+});
+
 /**
  * @param {object} props
  * @param {number} [props.height]
@@ -150,6 +175,7 @@ const buildRuntimeState = (
  *  longitudeDelta?: number;
  * }) => void} [props.onRegionChangeComplete]
  * @param {(itemId: string) => void} [props.onSelectItem]
+ * @param {'camera' | 'highlight-only'} [props.selectionFocusBehavior]
  * @param {() => void} [props.onShowList]
  * @param {(stats: { renderableCount?: number, markerCount?: number, clusterCount?: number }) => void} [props.onRenderStats]
  * @param {{ top?: number, right?: number, bottom?: number, left?: number } | null} [props.overlayInsets]
@@ -186,6 +212,7 @@ function TomTomSearchMapNative({
   regionHint = null,
   scope = 'events',
   selectedItemId,
+  selectionFocusBehavior = 'camera',
   topMargin = 12,
   totalCount = 0,
   truncated = false,
@@ -217,6 +244,9 @@ function TomTomSearchMapNative({
   );
   const [webViewLoaded, setWebViewLoaded] = useState(false);
   const [focusedRegion, setFocusedRegion] = useState(regionHint);
+  const [hudControlsWidth, setHudControlsWidth] = useState(0);
+  const [hudSummaryWidth, setHudSummaryWidth] = useState(0);
+  const [previewCardHeight, setPreviewCardHeight] = useState(0);
 
   const mapId = useMemo(
     () => `search-map-${scope}-${mapRenderKey}`,
@@ -231,18 +261,32 @@ function TomTomSearchMapNative({
   const totalResults = Number.isFinite(totalCount) && totalCount > 0
     ? totalCount
     : items.length;
+  const visibleMarkerCount = Math.max(
+    0,
+    Number(renderStats?.markerCount || 0) + Number(renderStats?.clusterCount || 0),
+  );
+  const resolvedOverlayInsets = useMemo(
+    () => resolveMeasuredOverlayInsets(
+      overlayInsets,
+      hudControlsWidth,
+      previewBottomOffset,
+      previewCardHeight,
+      hudSummaryWidth,
+    ),
+    [hudControlsWidth, hudSummaryWidth, overlayInsets, previewBottomOffset, previewCardHeight],
+  );
   const isMapReady = mapStatus === 'ready';
   const areControlsDisabled = !isMapReady;
   const runtimeState = useMemo(
     () => buildRuntimeState(
       focusMode,
       items,
-      overlayInsets,
+      resolvedOverlayInsets,
       focusedRegion,
       activeSelectedItemId,
       userLocation,
     ),
-    [activeSelectedItemId, focusMode, focusedRegion, items, overlayInsets, userLocation],
+    [activeSelectedItemId, focusMode, focusedRegion, items, resolvedOverlayInsets, userLocation],
   );
   const bootstrapHtmlRef = useRef({ html: '', mapId: '' });
   if (bootstrapHtmlRef.current.mapId !== mapId) {
@@ -360,7 +404,15 @@ function TomTomSearchMapNative({
     if (selectedItemId !== undefined) {
       setFocusMode((current) => {
         if (selectedItemId) {
-          return 'selected';
+          if (selectionFocusBehavior !== 'highlight-only') {
+            return 'selected';
+          }
+
+          if (current === 'user') {
+            return current;
+          }
+
+          return hasValidRegionHint(regionHint) ? 'region' : 'results';
         }
 
         if (current === 'user') {
@@ -380,7 +432,7 @@ function TomTomSearchMapNative({
       setInternalSelectedItemId('');
       setFocusMode(hasValidRegionHint(regionHint) ? 'region' : 'results');
     }
-  }, [internalSelectedItemId, items, regionHint, selectedItemId]);
+  }, [internalSelectedItemId, items, regionHint, selectedItemId, selectionFocusBehavior]);
 
   useEffect(() => {
     if (!webViewLoaded || !tomTomApiKey) {
@@ -418,13 +470,27 @@ function TomTomSearchMapNative({
       setInternalSelectedItemId(itemId);
     }
 
-    setFocusMode('selected');
+    setFocusMode((current) => {
+      if (selectionFocusBehavior !== 'highlight-only') {
+        return 'selected';
+      }
+
+      if (current === 'user') {
+        return current;
+      }
+
+      if (hasValidRegionHint(focusedRegion)) {
+        return 'region';
+      }
+
+      return current === 'selected' ? 'results' : current;
+    });
     searchMapLogger.info('map marker selected', {
       ...logContext,
       itemId,
     });
     onSelectItem?.(itemId);
-  }, [logContext, onSelectItem, selectedItemId]);
+  }, [focusedRegion, logContext, onSelectItem, selectedItemId, selectionFocusBehavior]);
 
   const handleMarkerOpen = useCallback((itemId) => {
     const targetItem = items.find((item) => item.id === itemId);
@@ -665,12 +731,14 @@ function TomTomSearchMapNative({
           disabled={areControlsDisabled}
           geolocatableCount={items.length}
           isLoadingResults={isLoadingResults}
+          onControlsWidthChange={setHudControlsWidth}
           onLocateMe={requestUserLocation}
           onRecenter={() => {
-            const shouldFocusRegion = scope === 'clubs' && hasValidRegionHint(focusedRegion);
+            const shouldFocusRegion = scope !== 'reservations' && hasValidRegionHint(focusedRegion);
             setFocusMode(shouldFocusRegion ? 'region' : 'results');
             issueCommand(shouldFocusRegion ? 'focus_region' : 'focus_results');
           }}
+          onSummaryWidthChange={setHudSummaryWidth}
           onZoomIn={() => issueCommand('zoom_in')}
           onZoomOut={() => issueCommand('zoom_out')}
           renderStats={renderStats}
@@ -793,8 +861,11 @@ function TomTomSearchMapNative({
         </View>
       ) : null}
 
-      {isMapReady && items.length > 0 && !selectedItem ? (
-        <View pointerEvents="none" style={styles.selectionHint}>
+      {isMapReady && items.length > 0 && visibleMarkerCount > 0 && !selectedItem ? (
+        <View
+          pointerEvents="none"
+          style={[styles.selectionHint, { bottom: Math.max(24, previewBottomOffset + previewCardHeight + 10) }]}
+        >
           <Text style={[Fonts.p4Bold, Fonts.neutral00, Fonts.textCenter]}>
             Touchez un repere pour voir la fiche
           </Text>
@@ -806,6 +877,7 @@ function TomTomSearchMapNative({
           bottomOffset={previewBottomOffset}
           item={selectedItem}
           onDismiss={handleClearSelection}
+          onHeightChange={setPreviewCardHeight}
           onOpen={(item) => {
             searchMapLogger.info('map detail opened', {
               ...logContext,

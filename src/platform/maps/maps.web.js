@@ -44,6 +44,7 @@ const MAP_LOAD_TIMEOUT_MS = 6500;
  * @param {any[]} [props.items]
  * @param {string} [props.markerColor]
  * @param {string} [props.message]
+ * @param {(itemId: string) => void} [props.onOpenItem]
  * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
  * @param {(stats: { renderableCount?: number; markerCount?: number; clusterCount?: number }) => void} [props.onRenderStats]
  * @param {(itemId: string) => void} [props.onSelectItem]
@@ -64,6 +65,7 @@ function SearchMapIframeRuntime({
   items = [],
   markerColor = '#01b3f4',
   message = 'Carte indisponible.',
+  onOpenItem,
   onRegionChangeComplete,
   onRenderStats,
   onSelectItem,
@@ -162,6 +164,11 @@ function SearchMapIframeRuntime({
             onRenderStats?.(bridgeMessage.payload);
           }
           break;
+        case SEARCH_MAP_BRIDGE_TYPES.MARKER_OPEN:
+          if (bridgeMessage.payload?.itemId) {
+            onOpenItem?.(bridgeMessage.payload.itemId);
+          }
+          break;
         case SEARCH_MAP_BRIDGE_TYPES.MARKER_SELECT:
           if (bridgeMessage.payload?.itemId) {
             onSelectItem?.(bridgeMessage.payload.itemId);
@@ -175,7 +182,7 @@ function SearchMapIframeRuntime({
 
     window.addEventListener('message', handleWindowMessage);
     return () => window.removeEventListener('message', handleWindowMessage);
-  }, [mapId, onRegionChangeComplete, onRenderStats, onSelectItem]);
+  }, [mapId, onOpenItem, onRegionChangeComplete, onRenderStats, onSelectItem]);
 
   return (
     <View
@@ -323,6 +330,7 @@ function SearchMapIframeRuntime({
  * @param {number} [props.height]
  * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
  * @param {string} [props.message]
+ * @param {(itemId: string) => void} [props.onOpenItem]
  * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
  * @param {(stats: { renderableCount?: number; markerCount?: number; clusterCount?: number }) => void} [props.onRenderStats]
  * @param {(itemId: string) => void} [props.onSelectItem]
@@ -340,6 +348,7 @@ export const renderMap = ({
   height = 240,
   items = [],
   message = 'Carte web indisponible.',
+  onOpenItem,
   onRegionChangeComplete,
   onRenderStats,
   onSelectItem,
@@ -365,6 +374,7 @@ export const renderMap = ({
         items={items}
         markerColor={markerColor}
         message={message}
+        onOpenItem={onOpenItem}
         onRegionChangeComplete={onRegionChangeComplete}
         onRenderStats={onRenderStats}
         onSelectItem={onSelectItem}
@@ -388,6 +398,7 @@ export const renderMap = ({
       items={items}
       markerColor={markerColor}
       message={message}
+      onOpenItem={onOpenItem}
       onRegionChangeComplete={onRegionChangeComplete}
       onRenderStats={onRenderStats}
       onSelectItem={onSelectItem}

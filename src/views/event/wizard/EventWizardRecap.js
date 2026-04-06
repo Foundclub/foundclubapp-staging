@@ -22,7 +22,11 @@ import { RouteNames } from '@/navigation/routeNames';
 import { createEventsSequentially, rollbackEventsByCancel } from '@/services/event/eventService';
 
 import { useEventWizard } from './EventWizardContext';
-import { getEventWizardRecapStepIndex, getEventWizardStepCount } from './eventWizardDetectionUtils';
+import {
+  getEventWizardRecapStepIndex,
+  getEventWizardStepCount,
+  isStageEventType,
+} from './eventWizardDetectionUtils';
 
 const getErrorCode = (error) => (
   error?.response?.data?.error?.details?.code
@@ -58,6 +62,28 @@ const buildWizardFormData = (wizardState) => {
       : '',
     reservationMode: wizardState.reservationMode || 'FULL_GROUP',
     sessionStatus: wizardState.sessionStatus || 'open',
+    stageDefaultEndTime: wizardState.stageDefaultEndTime
+      ? format(new Date(wizardState.stageDefaultEndTime), 'HH:mm')
+      : '',
+    stageDefaultStartTime: wizardState.stageDefaultStartTime
+      ? format(new Date(wizardState.stageDefaultStartTime), 'HH:mm')
+      : '',
+    stageEndDate: wizardState.stageEndDate
+      ? format(new Date(wizardState.stageEndDate), 'yyyy-MM-dd')
+      : '',
+    stageSchedule: Array.isArray(wizardState.stageSchedule)
+      ? wizardState.stageSchedule.map((day) => ({
+        date: day?.date ? format(new Date(day.date), 'yyyy-MM-dd') : '',
+        endTime: day?.endTime ? format(new Date(day.endTime), 'HH:mm') : '',
+        facilityId: day?.facilityId || null,
+        isActive: day?.isActive !== false,
+        location: day?.location || null,
+        startTime: day?.startTime ? format(new Date(day.startTime), 'HH:mm') : '',
+      }))
+      : [],
+    stageStartDate: wizardState.stageStartDate
+      ? format(new Date(wizardState.stageStartDate), 'yyyy-MM-dd')
+      : '',
     startTime: format(start, 'HH:mm'),
     team: wizardState.team?.documentId,
     totalPlayers: wizardState.totalPlayers ?? null,
@@ -81,7 +107,7 @@ function EventWizardRecap({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const { dispatch, state } = useEventWizard();
-  const { createReccurrentEventPayload } = useEvent();
+  const { createReccurrentEventPayload, createStageEventPayload } = useEvent();
   const queryClient = useQueryClient();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,12 +122,15 @@ function EventWizardRecap({ navigation }) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .includes('reservation');
+  const isStage = isStageEventType(state.type?.name);
 
   const wizardFormData = useMemo(() => buildWizardFormData(state), [state]);
 
   const plannedPayloads = useMemo(
-    () => createReccurrentEventPayload(wizardFormData),
-    [createReccurrentEventPayload, wizardFormData],
+    () => (isStage
+      ? [createStageEventPayload(wizardFormData)]
+      : createReccurrentEventPayload(wizardFormData)),
+    [createReccurrentEventPayload, createStageEventPayload, isStage, wizardFormData],
   );
 
   const recurrencePreviewCount = plannedPayloads.length;
@@ -151,10 +180,29 @@ function EventWizardRecap({ navigation }) {
   const invitedCount = state.invitedTeams?.length || 0;
   const detectionSlots = Array.isArray(state.detectionSlots) ? state.detectionSlots : [];
   const detectionSlotsTotal = detectionSlots.reduce((sum, slot) => sum + Number(slot?.quantity || 0), 0);
+  const stageSchedule = Array.isArray(state.stageSchedule) ? state.stageSchedule : [];
+  const activeStageDays = stageSchedule.filter((day) => day?.isActive !== false);
+  const stageHasVariableHours = activeStageDays.some((day) => (
+    day?.startTime && day?.endTime
+      ? (
+        format(new Date(day.startTime), 'HH:mm') !== format(new Date(state.stageDefaultStartTime || day.startTime), 'HH:mm')
+        || format(new Date(day.endTime), 'HH:mm') !== format(new Date(state.stageDefaultEndTime || day.endTime), 'HH:mm')
+      )
+      : false
+  ));
+  const stagePeriodValue = isStage && state.stageStartDate && state.stageEndDate
+    ? `${format(new Date(state.stageStartDate), 'dd/MM/yyyy')} - ${format(new Date(state.stageEndDate), 'dd/MM/yyyy')}`
+    : dateValue;
+  let stageHoursValue = timeValue;
+  if (isStage) {
+    stageHoursValue = stageHasVariableHours
+      ? t('eventWizard.stage.variableHours', 'Horaires variables')
+      : `${format(new Date(state.stageDefaultStartTime || state.startTime), 'HH:mm')} - ${format(new Date(state.stageDefaultEndTime || state.endTime), 'HH:mm')}`;
+  }
   const hasType = Boolean(state.type?.name);
   const hasTeam = Boolean(state.team?.name);
-  const hasDate = Boolean(state.date);
-  const hasTime = Boolean(state.startTime && state.endTime);
+  const hasDate = Boolean(isStage ? state.stageStartDate && state.stageEndDate : state.date);
+  const hasTime = Boolean(isStage ? state.stageDefaultStartTime && state.stageDefaultEndTime : state.startTime && state.endTime);
   const hasLocation = Boolean(state.location || state.facility);
   const quickOverviewItems = [
     {
@@ -170,7 +218,7 @@ function EventWizardRecap({ navigation }) {
     {
       complete: hasDate && hasTime,
       label: t('eventWizard.recap.sections.logistics'),
-      value: hasDate && hasTime ? `${dateValue} - ${timeValue}` : recapNotSet,
+      value: hasDate && hasTime ? `${stagePeriodValue} - ${stageHoursValue}` : recapNotSet,
     },
     {
       complete: hasLocation,
@@ -250,6 +298,14 @@ function EventWizardRecap({ navigation }) {
       const { created, failed } = await runCreateBatch(plannedPayloads);
       if (failed.length === 0) {
         await finalizeSuccess(created);
+        return;
+      }
+
+      if (created.length === 0) {
+        Alert.alert(
+          t('common.error', 'Erreur'),
+          getFailureSummary(failed),
+        );
         return;
       }
 
@@ -436,40 +492,98 @@ function EventWizardRecap({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.team')}</Text>
                 <Text style={[Fonts.p2, hasTeam ? Fonts.neutral00 : Fonts.gold500]}>{teamValue}</Text>
               </View>
-              <View style={[Spaces.gap[4]]}>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t('eventWizard.recap.invitedTeamsTitle', 'Équipes invitees')}
-                </Text>
-                <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {t('eventWizard.recap.invitesCount', { count: invitedCount })}
-                </Text>
-              </View>
+              {!isStage ? (
+                <View style={[Spaces.gap[4]]}>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t('eventWizard.recap.invitedTeamsTitle', 'Équipes invitees')}
+                  </Text>
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>
+                    {t('eventWizard.recap.invitesCount', { count: invitedCount })}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </View>
 
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>
-                {t('eventWizard.recap.whenWhereTitle', 'Quand et lieu')}
+                {isStage
+                  ? t('eventWizard.stage.recapProgramTitle', 'Programme du stage')
+                  : t('eventWizard.recap.whenWhereTitle', 'Quand et lieu')}
               </Text>
-              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardLogistics)}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate(
+                  isStage ? RouteNames.EventWizardStageProgram : RouteNames.EventWizardLogistics,
+                )}
+              >
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={[Spaces.gap[8]]}>
               <View style={[Spaces.gap[4]]}>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.dateLabel', 'Date')}</Text>
-                <Text style={[Fonts.p2, hasDate ? Fonts.neutral00 : Fonts.gold500]}>{dateValue}</Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {isStage
+                    ? t('eventWizard.stage.periodTitle', 'Periode')
+                    : t('eventWizard.recap.dateLabel', 'Date')}
+                </Text>
+                <Text style={[Fonts.p2, hasDate ? Fonts.neutral00 : Fonts.gold500]}>
+                  {isStage ? stagePeriodValue : dateValue}
+                </Text>
               </View>
               <View style={[Spaces.gap[4]]}>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.timeLabel', 'Horaire')}</Text>
-                <Text style={[Fonts.p1Bold, hasTime ? Fonts.primary500 : Fonts.gold500]}>{timeValue}</Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {isStage
+                    ? t('eventWizard.stage.defaultHoursTitle', 'Horaires par defaut')
+                    : t('eventWizard.recap.timeLabel', 'Horaire')}
+                </Text>
+                <Text style={[Fonts.p1Bold, hasTime ? Fonts.primary500 : Fonts.gold500]}>
+                  {isStage ? stageHoursValue : timeValue}
+                </Text>
               </View>
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.location')}</Text>
                 <Text style={[Fonts.p2, hasLocation ? Fonts.neutral00 : Fonts.gold500]}>{locationValue}</Text>
               </View>
+              {isStage ? (
+                <View style={[Spaces.gap[8], Spaces.marginTop[8]]}>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t('eventWizard.stage.daysTitle', 'Jours du stage')}
+                  </Text>
+                  {activeStageDays.map((day) => (
+                    <View
+                      key={`stage-day-${String(day?.date || '')}`}
+                      style={[
+                        ApplicationStyle.card,
+                        Alignments.row,
+                        Alignments.justifySpaceBetween,
+                        Alignments.alignCenter,
+                        Spaces.paddingHorizontal[12],
+                        Spaces.paddingVertical[10],
+                        {
+                          backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                          borderColor: 'rgba(1, 179, 244, 0.20)',
+                        },
+                      ]}
+                    >
+                      <View style={[Spaces.gap[4], { flex: 1 }]}>
+                        <Text style={[Fonts.p2Bold, Fonts.neutral100]}>
+                          {format(new Date(day.date), 'EEEE d MMM', { locale: fr })}
+                        </Text>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>
+                          {`${format(new Date(day.startTime), 'HH:mm')} - ${format(new Date(day.endTime), 'HH:mm')}`}
+                        </Text>
+                      </View>
+                      {day?.facilityId || day?.location ? (
+                        <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                          {t('eventWizard.stage.customizedLabel', 'Personnalise')}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              ) : null}
               {state.isRecurrent ? (
                 <Text style={[Fonts.p3Bold, Fonts.gold500]}>
                   {t('eventWizard.recap.recurrenceCount', { count: recurrencePreviewCount })}

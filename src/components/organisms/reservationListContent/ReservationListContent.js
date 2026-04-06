@@ -378,7 +378,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
 
       <View>
         <Text style={[Fonts.p1, { color: Colors.neutral00, marginBottom: 8 }]}>
-          R\u00e9servations \u00e0 partir de
+          Réservations à partir de
         </Text>
         <DateSlider
           onDateSelected={handleDateSelected}
@@ -388,7 +388,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
 
       <View>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
-          Filtrer par activit\u00e9
+          Filtrer par activité
         </Text>
         <ScrollView
           contentContainerStyle={{ gap: 8 }}

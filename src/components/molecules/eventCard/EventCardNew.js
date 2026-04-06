@@ -89,6 +89,31 @@ const formatEventDateLabel = (value) => {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 };
 
+const formatCompactEventDateLabel = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const formatted = format(date, 'EEE dd MMM', { locale: fr });
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+};
+
+const formatStagePeriodLabel = (startValue, endValue) => {
+  if (!startValue) return '';
+
+  const startDate = new Date(startValue);
+  if (Number.isNaN(startDate.getTime())) return '';
+
+  if (!endValue) return formatEventDateLabel(startDate);
+
+  const endDate = new Date(endValue);
+  if (Number.isNaN(endDate.getTime())) return formatEventDateLabel(startDate);
+
+  if (format(startDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
+    return formatEventDateLabel(startDate);
+  }
+
+  return `${formatCompactEventDateLabel(startDate)} - ${formatCompactEventDateLabel(endDate)}`;
+};
+
 const resolveTeamFocusedPrimaryTitle = ({
   clubName,
   eventTitle,
@@ -206,6 +231,7 @@ function EventCardNew({
   const typeName = item?.type?.name || '';
   const isReservation = typeName.toLowerCase().includes('réservation') || typeName.toLowerCase().includes('reservation');
   const isMatchEvent = typeName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('match');
+  const isStageParentEvent = String(item?.eventFormat || '').toLowerCase() === 'stage_parent';
   const isShareMode = mode === 'share';
   const isTeamFocusedCard = displayProfile === 'teamFocused' && !isShareMode && !isReservation;
   const backgroundImage = getBackgroundImage(typeName, Images);
@@ -320,6 +346,9 @@ function EventCardNew({
     isTeamFocusedCard && styles.detailTextSecondary,
     { flex: 0, textAlign: 'right' },
   ];
+  const dateLabel = isStageParentEvent
+    ? formatStagePeriodLabel(item?.stageStartDate || item?.date, item?.stageEndDate)
+    : formatEventDateLabel(item?.date);
 
   return (
 
@@ -387,7 +416,7 @@ function EventCardNew({
               <View style={styles.dateMetaGroup}>
                 <Image source={Images.calendar} style={styles.dateMetaIcon} />
                 <Text numberOfLines={1} style={styles.dateText}>
-                  {formatEventDateLabel(item.date)}
+                  {dateLabel}
                 </Text>
               </View>
               <View style={styles.dateMetaGroupRight}>
@@ -891,3 +920,4 @@ const styles = StyleSheet.create({
 });
 
 export default EventCardNew;
+

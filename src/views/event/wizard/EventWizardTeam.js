@@ -20,7 +20,7 @@ import { useGetTeams } from '@/services/team/teamQueries';
 import { sortTeamsForDisplay } from '@/utils/teamSort';
 
 import { useEventWizard } from './EventWizardContext';
-import { getEventWizardStepCount } from './eventWizardDetectionUtils';
+import { getEventWizardStepCount, isStageEventType } from './eventWizardDetectionUtils';
 
 /**
  *
@@ -100,7 +100,11 @@ function EventWizardTeam({ navigation }) {
 
   const handleSelectTeam = (team) => {
     dispatch({ payload: team, type: 'SET_TEAM' });
-    navigation.navigate(RouteNames.EventWizardInvites);
+    navigation.navigate(
+      isStageEventType(state?.type?.name)
+        ? RouteNames.EventWizardStageProgram
+        : RouteNames.EventWizardInvites,
+    );
   };
 
   const renderTeamCard = (team) => (

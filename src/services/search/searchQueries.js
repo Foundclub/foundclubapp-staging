@@ -6,6 +6,7 @@ import {
   searchClubs,
   searchClubsMap,
   searchEvents,
+  searchEventsMap,
   searchProfiles,
   searchRecruitment,
   searchReservations,
@@ -36,6 +37,29 @@ export const useSearchEvents = (params = {}, options = {}) => useInfiniteQuery({
   getNextPageParam,
   queryFn: ({ pageParam = 1, signal }) => searchEvents({ ...params, page: pageParam }, { signal }),
   queryKey: buildNormalizedQueryKey(['search', 'events'], params),
+  staleTime: 30_000,
+  ...options,
+});
+
+/**
+ * @param {Record<string, any>} params
+ * @param {any} [options]
+ */
+export const useSearchEventsMap = (params = {}, options = {}) => useInfiniteQuery({
+  enabled: options.enabled ?? (
+    Number.isFinite(Number(params?.north))
+    && Number.isFinite(Number(params?.south))
+    && Number.isFinite(Number(params?.east))
+    && Number.isFinite(Number(params?.west))
+    && Number.isFinite(Number(params?.zoom))
+  ),
+  getNextPageParam,
+  placeholderData: options.placeholderData ?? ((previousData) => previousData),
+  queryFn: ({ pageParam = 1, signal }) => searchEventsMap({ ...params, page: pageParam }, { signal }),
+  queryKey: buildNormalizedQueryKey(['search', 'events', 'map'], params),
+  refetchOnMount: options.refetchOnMount ?? false,
+  refetchOnReconnect: options.refetchOnReconnect ?? false,
+  retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
 });

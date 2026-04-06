@@ -598,7 +598,7 @@ function SquadSearchScreen() {
               }}
             >
               <Text style={[Fonts.p3Bold, { color: Colors.gold500, textDecorationLine: 'underline' }]}>
-                R\u00E9essayer
+                Réessayer
               </Text>
             </TouchableOpacity>
           </View>

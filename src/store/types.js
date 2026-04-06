@@ -18,13 +18,24 @@
  * @property {{ type?: string } | null} [pendingNotification] - Notification waiting for navigation readiness.
  * @property {{ events?: boolean, clubs?: boolean, reservations?: boolean }} [searchMapModes] - Session-only map/list mode per search tab.
  * @property {{
- *   events?: { region?: { lat: number, lng: number, zoom?: number }, selectedItemId?: string },
+ *   events?: {
+ *     addressSelection?: { label?: string, value?: string, lat?: number | string, lng?: number | string, lon?: number | string, bbox?: Record<string, any> },
+ *     region?: { lat: number, lng: number, zoom?: number },
+ *     selectedItemId?: string,
+ *     searchedViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
+ *     visibleViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
+ *     executedViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
+ *     executedQuery?: Record<string, any> | null,
+ *     lastResultMeta?: Record<string, any> | null,
+ *     lastRenderStats?: { renderableCount?: number, markerCount?: number, clusterCount?: number } | null
+ *   },
  *   clubs?: {
  *     region?: { lat: number, lng: number, zoom?: number },
  *     selectedItemId?: string,
  *     searchedViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
  *     visibleViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
  *     executedViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
+ *     executedQuery?: Record<string, any> | null,
  *     executedClubMapQuery?: Record<string, any> | null,
  *     lastResultMeta?: Record<string, any> | null,
  *     lastRenderStats?: { renderableCount?: number, markerCount?: number, clusterCount?: number } | null

@@ -87,6 +87,32 @@ const normalizeEventTypeLabel = (value = '') => String(value || '')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
 
+const getActiveParticipationRequests = (event) => (
+  Array.isArray(event?.participationRequests)
+    ? event.participationRequests.filter((request) => request?.isActive !== false)
+    : []
+);
+
+const getStageDayStatusSummary = (stageDay) => {
+  const requests = getActiveParticipationRequests(stageDay);
+  return requests.reduce((summary, request) => {
+    const status = String(request?.participationStatus || '').toLowerCase();
+    if (status === 'accepted') return { ...summary, present: summary.present + 1 };
+    if (status === 'missing' || status === 'declined') {
+      return { ...summary, absent: summary.absent + 1 };
+    }
+    if (status === 'pending') return { ...summary, pending: summary.pending + 1 };
+    return summary;
+  }, { absent: 0, pending: 0, present: 0 });
+};
+
+const getFeaturedScopeStatusLabel = (status) => {
+  if (status === 'pending') return 'Demande en attente';
+  if (status === 'approved') return 'DÃ©jÃ  Ã  la une';
+  if (status === 'rejected') return 'RefusÃ©e, vous pouvez redemander';
+  return 'Disponible';
+};
+
 /**
  * @param {User | null | undefined} user
  * @returns {string | null}
@@ -177,6 +203,7 @@ function EventDetails({ navigation, route }) {
   });
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
+  const [stageDetailsTab, setStageDetailsTab] = useState('overview');
   const [isMatchActionsOpen, setIsMatchActionsOpen] = useState(true);
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
   const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
@@ -202,6 +229,36 @@ function EventDetails({ navigation, route }) {
     data: event, error, isLoading, refetch,
   } = useGetEvent(eventId || '');
   const externalMatchDisplay = useMemo(() => resolveExternalMatchDisplay(event), [event]);
+  const isStageParentEvent = String(event?.eventFormat || '').toLowerCase() === 'stage_parent';
+  const isStageDayEvent = String(event?.eventFormat || '').toLowerCase() === 'stage_day';
+  const stageChildDays = useMemo(
+    () => (Array.isArray(event?.childStageEvents) ? [...event.childStageEvents] : [])
+      .sort((left, right) => new Date(left?.date || 0) - new Date(right?.date || 0)),
+    [event?.childStageEvents],
+  );
+  const stagePeriodSummary = useMemo(() => {
+    if (!isStageParentEvent || !event?.stageStartDate || !event?.stageEndDate) return '';
+    const start = new Date(event.stageStartDate);
+    const end = new Date(event.stageEndDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
+    return `${start.toLocaleDateString('fr-FR')} - ${end.toLocaleDateString('fr-FR')}`;
+  }, [event?.stageEndDate, event?.stageStartDate, isStageParentEvent]);
+  const stageHoursSummary = useMemo(() => {
+    if (!isStageParentEvent) return '';
+    const defaultStart = String(event?.stageDefaultStartTime || '').slice(0, 5);
+    const defaultEnd = String(event?.stageDefaultEndTime || '').slice(0, 5);
+    const activeDays = stageChildDays.filter((day) => day?.isActive !== false);
+    const hasVariableHours = activeDays.some((day) => (
+      String(day?.startTime || '').slice(0, 5) !== defaultStart
+      || String(day?.endTime || '').slice(0, 5) !== defaultEnd
+    ));
+    if (hasVariableHours) return 'Horaires variables';
+    if (defaultStart && defaultEnd) return `${defaultStart} - ${defaultEnd}`;
+    return '';
+  }, [event?.stageDefaultEndTime, event?.stageDefaultStartTime, isStageParentEvent, stageChildDays]);
+  useEffect(() => {
+    setStageDetailsTab('overview');
+  }, [event?.documentId]);
   const eventDescriptionText = useMemo(() => {
     const rawDescription = event?.description;
     let resolvedDescription = '';
@@ -501,8 +558,10 @@ function EventDetails({ navigation, route }) {
       return {
         accentColor: Colors.error500 || 'rgb(248, 113, 113)',
         badgeBackgroundColor: `${Colors.error500 || 'rgb(248, 113, 113)'}22`,
+        badgeBorderColor: `${Colors.error500 || 'rgb(248, 113, 113)'}38`,
         badgeLabel: 'Absence enregistree',
         badgeTextColor: Colors.error500 || 'rgb(248, 113, 113)',
+        badgeValue: null,
         description: "L'evenement est termine et aucune arrivee n'a ete confirmee. Un coach doit corriger le pointage si besoin.",
         hasArrived: false,
         primaryAction: null,
@@ -519,8 +578,10 @@ function EventDetails({ navigation, route }) {
         return {
           accentColor: Colors.success500 || 'rgb(34, 197, 94)',
           badgeBackgroundColor: `${Colors.success500 || 'rgb(34, 197, 94)'}22`,
+          badgeBorderColor: `${Colors.success500 || 'rgb(34, 197, 94)'}38`,
           badgeLabel: 'Arrive',
           badgeTextColor: Colors.success500 || 'rgb(34, 197, 94)',
+          badgeValue: null,
           description: `${earlyMinutes} min avant le debut de l'evenement.`,
           hasArrived: true,
           primaryAction: null,
@@ -538,8 +599,10 @@ function EventDetails({ navigation, route }) {
         return {
           accentColor: Colors.warning500 || 'rgb(245, 158, 11)',
           badgeBackgroundColor: `${Colors.warning500 || 'rgb(245, 158, 11)'}22`,
-          badgeLabel: `Arrive +${lateMinutes} min`,
+          badgeBorderColor: `${Colors.warning500 || 'rgb(245, 158, 11)'}38`,
+          badgeLabel: 'Arrive',
           badgeTextColor: Colors.warning500 || 'rgb(245, 158, 11)',
+          badgeValue: `+${lateMinutes} min`,
           description: 'Votre arrivee reelle a bien ete enregistree.',
           hasArrived: true,
           primaryAction: null,
@@ -550,8 +613,10 @@ function EventDetails({ navigation, route }) {
       return {
         accentColor: Colors.success500 || 'rgb(34, 197, 94)',
         badgeBackgroundColor: `${Colors.success500 || 'rgb(34, 197, 94)'}22`,
+        badgeBorderColor: `${Colors.success500 || 'rgb(34, 197, 94)'}38`,
         badgeLabel: 'Arrive',
         badgeTextColor: Colors.success500 || 'rgb(34, 197, 94)',
+        badgeValue: null,
         description: 'Vous etes signale present a l\'heure.',
         hasArrived: true,
         primaryAction: null,
@@ -564,8 +629,10 @@ function EventDetails({ navigation, route }) {
       return {
         accentColor: Colors.warning500 || 'rgb(245, 158, 11)',
         badgeBackgroundColor: `${Colors.warning500 || 'rgb(245, 158, 11)'}22`,
+        badgeBorderColor: `${Colors.warning500 || 'rgb(245, 158, 11)'}38`,
         badgeLabel: 'Retard annonce',
         badgeTextColor: Colors.warning500 || 'rgb(245, 158, 11)',
+        badgeValue: `+${declaredLateMinutes} min`,
         description: `Retard signale : +${declaredLateMinutes} min. Confirmez votre arrivee une fois sur place.`,
         hasArrived: false,
         primaryAction: {
@@ -585,8 +652,10 @@ function EventDetails({ navigation, route }) {
       return {
         accentColor: Colors.primary500,
         badgeBackgroundColor: `${Colors.primary500}22`,
+        badgeBorderColor: `${Colors.primary500}38`,
         badgeLabel: 'Aucun signalement',
         badgeTextColor: Colors.primary500,
+        badgeValue: null,
         description: `Il vous reste ${minutesLeft} min pour signaler votre arrivee ou votre retard.`,
         hasArrived: false,
         primaryAction: {
@@ -604,8 +673,10 @@ function EventDetails({ navigation, route }) {
     return {
       accentColor: Colors.error500 || 'rgb(248, 113, 113)',
       badgeBackgroundColor: `${Colors.error500 || 'rgb(248, 113, 113)'}22`,
-      badgeLabel: liveLateMinutes > 0 ? `En attente +${liveLateMinutes} min` : 'En attente',
+      badgeBorderColor: `${Colors.error500 || 'rgb(248, 113, 113)'}38`,
+      badgeLabel: 'En attente',
       badgeTextColor: Colors.error500 || 'rgb(248, 113, 113)',
+      badgeValue: liveLateMinutes > 0 ? `+${liveLateMinutes} min` : null,
       description: 'Le debut est passe. Signalez votre retard ou confirmez votre arrivee.',
       hasArrived: false,
       primaryAction: {
@@ -1179,6 +1250,14 @@ function EventDetails({ navigation, route }) {
   }, [navigation]);
 
   const handleJoinEvent = useCallback(() => {
+    if (isStageDayEvent) {
+      const parentEventId = event?.parentEvent?.documentId;
+      if (parentEventId) {
+        navigation.navigate(RouteNames.EventDetails, { eventId: parentEventId });
+        return;
+      }
+    }
+
     if (detectionSlots.length > 0) {
       setIsJoinModalVisible(false);
       setIsDetectionSlotPickerVisible(true);
@@ -1186,10 +1265,18 @@ function EventDetails({ navigation, route }) {
     }
 
     setIsJoinModalVisible(true);
-  }, [detectionSlots.length]);
+  }, [detectionSlots.length, event?.parentEvent?.documentId, isStageDayEvent, navigation]);
 
   const handleParticipateToEvent = (/** @type {any} */ eventToJoin) => {
     if (!eventToJoin?.documentId || !userData?.documentId) return;
+
+    if (isStageDayEvent) {
+      const parentEventId = event?.parentEvent?.documentId;
+      if (parentEventId) {
+        navigation.navigate(RouteNames.EventDetails, { eventId: parentEventId });
+      }
+      return;
+    }
 
     if (detectionSlots.length > 0) {
       setIsJoinModalVisible(false);
@@ -2309,16 +2396,25 @@ function EventDetails({ navigation, route }) {
         <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title={'Mettre \u00e0 la une'} variant="Secondary" />
       </View>
     ) : null;
-    const pendingFeaturedActionNode = hasPendingFeaturedScope ? (
-      <View style={{ marginTop: 12, opacity: 0.7 }}>
-        <Button disabled icon="clock" title="Demande en attente" variant="Secondary" />
-      </View>
-    ) : hasApprovedFeaturedScope && canManageFeatured ? (
-      <View style={{ marginTop: 12, opacity: 0.8 }}>
-        <Button disabled icon="check" title="Déjà à la une" variant="Secondary" />
-      </View>
-    ) : null;
+    const pendingFeaturedActionNode = (() => {
+      if (hasPendingFeaturedScope) {
+        return (
+          <View style={{ marginTop: 12, opacity: 0.7 }}>
+            <Button disabled icon="clock" title="Demande en attente" variant="Secondary" />
+          </View>
+        );
+      }
 
+      if (hasApprovedFeaturedScope && canManageFeatured) {
+        return (
+          <View style={{ marginTop: 12, opacity: 0.8 }}>
+            <Button disabled icon="check" title="Déjà à la une" variant="Secondary" />
+          </View>
+        );
+      }
+
+      return null;
+    })();
     const actionButtonsNode = (
       <View>
         {canEdit ? (
@@ -2568,99 +2664,284 @@ function EventDetails({ navigation, route }) {
       >
         <WithDataWrapper error={error?.message} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
           <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
+          <View style={[Spaces.gap[24]]}>
 
-          {eventDescriptionText ? (
-            <View style={[Spaces.gap[16]]}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('eventDetails.fields.description')}</Text>
-              <Text style={[Fonts.p1, Fonts.primary100]}>{eventDescriptionText}</Text>
-            </View>
-          ) : null}
+            {isStageParentEvent ? (
+              <View style={[Spaces.gap[16]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stage</Text>
+                <View
+                  style={[
+                    ApplicationStyle.backgroundColor.primary900,
+                    ApplicationStyle.borderRadius24,
+                    ApplicationStyle.borderWidth1,
+                    Spaces.padding[16],
+                    Spaces.gap[16],
+                    {
+                      borderColor: `${Colors.primary500}55`,
+                    },
+                  ]}
+                >
+                  <View style={[Alignments.row, Spaces.gap[8]]}>
+                    {[
+                      { key: 'overview', label: 'Vue generale' },
+                      { key: 'days', label: 'Jours' },
+                    ].map((tab) => {
+                      const selected = stageDetailsTab === tab.key;
+                      return (
+                        <TouchableOpacity
+                          key={tab.key}
+                          onPress={() => setStageDetailsTab(tab.key)}
+                          style={[
+                            ApplicationStyle.borderRadius100,
+                            Spaces.paddingHorizontal[14],
+                            Spaces.paddingVertical[10],
+                            {
+                              backgroundColor: selected ? `${Colors.primary500}22` : 'rgba(255,255,255,0.05)',
+                              borderColor: selected ? Colors.primary500 : `${Colors.primary500}40`,
+                              borderWidth: 1,
+                            },
+                          ]}
+                        >
+                          <Text style={[Fonts.p3Bold, selected ? Fonts.primary500 : Fonts.neutral200]}>
+                            {tab.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
 
-          {canSelfMarkArrival && selfAttendanceStatus ? (
-            <View style={[Spaces.gap[12]]}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Statut d&apos;arrivee</Text>
-              <View
+                  {stageDetailsTab === 'overview' ? (
+                    <View style={[Spaces.gap[10]]}>
+                      <View style={[Spaces.gap[4]]}>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>Periode</Text>
+                        <Text style={[Fonts.p2, Fonts.neutral00]}>{stagePeriodSummary || 'Non renseignee'}</Text>
+                      </View>
+                      <View style={[Spaces.gap[4]]}>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>Horaires</Text>
+                        <Text style={[Fonts.p2, Fonts.primary500]}>{stageHoursSummary || 'Variables'}</Text>
+                      </View>
+                      <View style={[Spaces.gap[4]]}>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>Lieu principal</Text>
+                        <Text style={[Fonts.p2, Fonts.neutral100]}>
+                          {event?.facility?.name || event?.locationDetails || 'A definir'}
+                        </Text>
+                      </View>
+                      <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                        <View
+                          style={[
+                            ApplicationStyle.card,
+                            Spaces.paddingHorizontal[12],
+                            Spaces.paddingVertical[8],
+                            {
+                              backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                              borderColor: 'rgba(1, 179, 244, 0.20)',
+                            },
+                          ]}
+                        >
+                          <Text style={[Fonts.p3Bold, Fonts.primary500]}>{`${stageChildDays.length} jour(s)`}</Text>
+                        </View>
+                        <View
+                          style={[
+                            ApplicationStyle.card,
+                            Spaces.paddingHorizontal[12],
+                            Spaces.paddingVertical[8],
+                            {
+                              backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                              borderColor: 'rgba(1, 179, 244, 0.20)',
+                            },
+                          ]}
+                        >
+                          <Text style={[Fonts.p3Bold, Fonts.primary500]}>{`${event?.participations?.length || 0} inscrit(s)`}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={[Spaces.gap[10]]}>
+                      {stageChildDays.map((stageDay) => {
+                        const summary = getStageDayStatusSummary(stageDay);
+                        return (
+                          <TouchableOpacity
+                            key={stageDay?.documentId || stageDay?.date}
+                            onPress={() => navigation.navigate(RouteNames.EventDetails, {
+                              eventId: stageDay?.documentId,
+                            })}
+                            style={[
+                              ApplicationStyle.card,
+                              Spaces.padding[14],
+                              Spaces.gap[8],
+                              {
+                                backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                                borderColor: 'rgba(1, 179, 244, 0.20)',
+                              },
+                            ]}
+                          >
+                            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                                  {new Date(stageDay?.date).toLocaleDateString('fr-FR', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    weekday: 'long',
+                                  })}
+                                </Text>
+                                <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
+                                  {`${String(stageDay?.startTime || '').slice(0, 5)} - ${String(stageDay?.endTime || '').slice(0, 5)}`}
+                                </Text>
+                              </View>
+                              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Voir</Text>
+                            </View>
+                            <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                              <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.present} presents`}</Text>
+                              <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.absent} absents`}</Text>
+                              <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.pending} sans reponse`}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                      {stageChildDays.length === 0 ? (
+                        <Text style={[Fonts.p2, Fonts.neutral200]}>
+                          Aucune journee de stage n&apos;est encore disponible.
+                        </Text>
+                      ) : null}
+                    </View>
+                  )}
+                </View>
+              </View>
+            ) : null}
+
+            {isStageDayEvent && event?.parentEvent?.documentId ? (
+              <TouchableOpacity
+                onPress={() => navigation.navigate(RouteNames.EventDetails, {
+                  eventId: event.parentEvent.documentId,
+                })}
                 style={[
                   ApplicationStyle.backgroundColor.primary900,
                   ApplicationStyle.borderRadius24,
                   ApplicationStyle.borderWidth1,
                   Spaces.padding[16],
-                  Spaces.gap[12],
+                  Spaces.gap[6],
                   {
-                    borderColor: selfAttendanceStatus.accentColor,
+                    borderColor: `${Colors.primary500}55`,
                   },
                 ]}
               >
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral200]}>Presence evenement</Text>
-                    <Text style={[Fonts.p2, Fonts.neutral100, Spaces.marginTop[4]]}>
-                      {selfAttendanceStatus.description}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      Spaces.paddingHorizontal[12],
-                      Spaces.paddingVertical[6],
-                      {
-                        backgroundColor: selfAttendanceStatus.badgeBackgroundColor,
-                        borderRadius: 999,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p4Bold, { color: selfAttendanceStatus.badgeTextColor }]}>
-                      {selfAttendanceStatus.badgeLabel}
-                    </Text>
-                  </View>
-                </View>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Journee de stage</Text>
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  Cette journee depend du stage principal.
+                </Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Voir le stage</Text>
+              </TouchableOpacity>
+            ) : null}
 
-                {!selfAttendanceStatus.hasArrived ? (
-                  <View style={[Spaces.gap[8]]}>
-                    {renderSelfAttendanceActionButton(selfAttendanceStatus.primaryAction, 'Primary')}
-                    {selfAttendanceStatus.secondaryAction ? (
-                      renderSelfAttendanceActionButton(selfAttendanceStatus.secondaryAction, 'SecondaryLight')
-                    ) : null}
-                  </View>
-                ) : null}
+            {eventDescriptionText ? (
+              <View style={[Spaces.gap[16]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('eventDetails.fields.description')}</Text>
+                <Text style={[Fonts.p1, Fonts.primary100]}>{eventDescriptionText}</Text>
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          {detectionSlots.length > 0 ? (
-            <EventDetectionSlots
+            {canSelfMarkArrival && selfAttendanceStatus ? (
+              <View style={[Spaces.gap[12]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Statut d&apos;arrivee</Text>
+                <View
+                  style={[
+                    ApplicationStyle.backgroundColor.primary900,
+                    ApplicationStyle.borderRadius24,
+                    ApplicationStyle.borderWidth1,
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                    {
+                      borderColor: selfAttendanceStatus.accentColor,
+                    },
+                  ]}
+                >
+                  <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>Presence evenement</Text>
+                      <Text style={[Fonts.p2, Fonts.neutral100, Spaces.marginTop[4]]}>
+                        {selfAttendanceStatus.description}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        {
+                          backgroundColor: selfAttendanceStatus.badgeBackgroundColor,
+                          borderColor: selfAttendanceStatus.badgeBorderColor,
+                          borderRadius: 18,
+                          borderWidth: 1,
+                          minWidth: selfAttendanceStatus.badgeValue ? 136 : 104,
+                          paddingHorizontal: selfAttendanceStatus.badgeValue ? 14 : 12,
+                          paddingVertical: selfAttendanceStatus.badgeValue ? 9 : 7,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4, { color: selfAttendanceStatus.badgeTextColor, textAlign: 'center' }]}>
+                        {selfAttendanceStatus.badgeLabel}
+                      </Text>
+                      {selfAttendanceStatus.badgeValue ? (
+                        <Text
+                          style={[
+                            Fonts.p4Bold,
+                            {
+                              color: selfAttendanceStatus.badgeTextColor,
+                              marginTop: 2,
+                              textAlign: 'center',
+                            },
+                          ]}
+                        >
+                          {selfAttendanceStatus.badgeValue}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  {!selfAttendanceStatus.hasArrived ? (
+                    <View style={[Spaces.gap[8]]}>
+                      {renderSelfAttendanceActionButton(selfAttendanceStatus.primaryAction, 'Primary')}
+                      {selfAttendanceStatus.secondaryAction ? (
+                        renderSelfAttendanceActionButton(selfAttendanceStatus.secondaryAction, 'SecondaryLight')
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+
+            {detectionSlots.length > 0 ? (
+              <EventDetectionSlots
+                canEdit={canEdit}
+                currentUserHasGenericParticipation={Boolean((hasAcceptedRequest || hasPendingRequest) && !currentUserDetectionParticipation)}
+                currentUserSlotId={currentUserDetectionParticipation?.recruitmentAd?.documentId || ''}
+                currentUserSlotStatus={String(currentUserDetectionParticipation?.participationStatus || '').toLowerCase()}
+                isApplyingSlotId={applyToDetectionSlotMutation.isPending ? (applyToDetectionSlotMutation.variables || '') : ''}
+                onApply={handleApplyToDetectionSlot}
+                onOpenSlot={handleOpenDetectionSlot}
+                slots={detectionSlots}
+              />
+            ) : null}
+
+            <EventParticipants
+              attendanceByUserId={attendanceByUserId}
+              canApprovePendingRequests={canApprovePendingRequests}
               canEdit={canEdit}
-              currentUserHasGenericParticipation={Boolean((hasAcceptedRequest || hasPendingRequest) && !currentUserDetectionParticipation)}
-              currentUserSlotId={currentUserDetectionParticipation?.recruitmentAd?.documentId || ''}
-              currentUserSlotStatus={String(currentUserDetectionParticipation?.participationStatus || '').toLowerCase()}
-              isApplyingSlotId={applyToDetectionSlotMutation.isPending ? (applyToDetectionSlotMutation.variables || '') : ''}
-              onApply={handleApplyToDetectionSlot}
-              onOpenSlot={handleOpenDetectionSlot}
-              slots={detectionSlots}
+              event={event}
+              eventStartAt={eventStartAt}
+              externalParticipationSection={externalParticipationSection}
+              handleExportParticipants={handleExportParticipants}
+              handleRemindPlayers={handleRemindPlayers}
+              handleShare={() => setIsShareModalVisible(true)}
+              handleUpdateParticipation={handleUpdateParticipation}
+              handleUserPress={handleUserPress}
+              nowMs={serverNowMs}
+              onCoachEditLate={handleCoachEditLate}
+              onCoachMarkArrival={handleCoachMarkArrival}
+              participantsSummary={participantsSummary}
+              participationsByStatus={participationsByStatus}
+              pendingParticipations={pendingParticipations}
+              teamParticipationSections={teamParticipationSections}
             />
-          ) : null}
 
-          <EventParticipants
-            attendanceByUserId={attendanceByUserId}
-            canApprovePendingRequests={canApprovePendingRequests}
-            canEdit={canEdit}
-            event={event}
-            eventStartAt={eventStartAt}
-            externalParticipationSection={externalParticipationSection}
-            handleExportParticipants={handleExportParticipants}
-            handleRemindPlayers={handleRemindPlayers}
-            handleShare={() => setIsShareModalVisible(true)}
-            handleUpdateParticipation={handleUpdateParticipation}
-            handleUserPress={handleUserPress}
-            nowMs={serverNowMs}
-            onCoachEditLate={handleCoachEditLate}
-            onCoachMarkArrival={handleCoachMarkArrival}
-            participantsSummary={participantsSummary}
-            participationsByStatus={participationsByStatus}
-            pendingParticipations={pendingParticipations}
-            teamParticipationSections={teamParticipationSections}
-          />
-
-          {isMatchEvent
+            {isMatchEvent
           && compositionTeamId
           && isTeamMember
           && isMatchFinished
@@ -2687,391 +2968,392 @@ function EventDetails({ navigation, route }) {
                 </Text>
               </View>
             </View>
-            ) : null}
+              ) : null}
 
-          {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
-            <View style={[Spaces.gap[12]]}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mes stats</Text>
-              <View
-                style={[
-                  ApplicationStyle.backgroundColor.primary900,
-                  ApplicationStyle.borderRadius24,
-                  ApplicationStyle.borderColor.primary500,
-                  ApplicationStyle.borderWidth1,
-                  Spaces.padding[16],
-                  Spaces.gap[12],
-                ]}
-              >
-                <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel</Text>
-                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                      {myMatchResponse?.selfRating ? `${myMatchResponse.selfRating}/10` : 'A completer'}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      Spaces.paddingHorizontal[10],
-                      Spaces.paddingVertical[6],
-                      {
-                        backgroundColor: myMatchResponseStatusMeta.backgroundColor,
-                        borderColor: myMatchResponseStatusMeta.borderColor,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p4Bold, { color: myMatchResponseStatusMeta.textColor }]}>
-                      {myMatchResponseStatusMeta.label}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {myMatchResponseSummary}
-                </Text>
-
-                {myMatchResponse?.teamRating ? (
-                  <View
-                    style={[
-                      ApplicationStyle.backgroundColor.primary700,
-                      ApplicationStyle.borderRadius16,
-                      Spaces.padding[12],
-                    ]}
-                  >
-                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                      {`Le match de l equipe : ${myMatchResponse.teamRating}/10`}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {myMatchResponse?.selfComment ? (
-                  <View
-                    style={[
-                      ApplicationStyle.backgroundColor.primary700,
-                      ApplicationStyle.borderRadius16,
-                      Spaces.padding[12],
-                    ]}
-                  >
-                    <Text numberOfLines={3} style={[Fonts.p4, Fonts.neutral100]}>
-                      {myMatchResponse.selfComment}
-                    </Text>
-                  </View>
-                ) : null}
-
-                <Button
-                  disabled={isMyMatchResponseFetching}
-                  onPress={openMyMatchResponse}
-                  size="sm"
-                  title={myMatchResponseButtonTitle}
-                  variant="Secondary"
-                />
-              </View>
-            </View>
-          ) : null}
-
-          {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
-            <View style={[Spaces.gap[12]]}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mon retour coach</Text>
-              <View
-                style={[
-                  ApplicationStyle.backgroundColor.primary900,
-                  ApplicationStyle.borderRadius24,
-                  ApplicationStyle.borderColor.primary500,
-                  ApplicationStyle.borderWidth1,
-                  Spaces.padding[16],
-                  Spaces.gap[12],
-                  isCoachFeedbackHighlighted
-                    ? {
-                      borderColor: Colors.primary200,
-                      borderWidth: 2,
-                    }
-                    : null,
-                ]}
-              >
-                <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel du coach</Text>
-                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                      {myCoachReview?.rating != null ? `${myCoachReview.rating}/10` : 'En attente'}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      Spaces.paddingHorizontal[10],
-                      Spaces.paddingVertical[6],
-                      {
-                        backgroundColor: hasMyCoachReview ? `${Colors.success500}18` : `${Colors.primary500}18`,
-                        borderColor: hasMyCoachReview ? `${Colors.success500}55` : `${Colors.primary500}40`,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p4Bold, hasMyCoachReview ? Fonts.success500 : Fonts.primary100]}>
-                      {hasMyCoachReview ? 'Disponible' : 'Pas encore partage'}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {hasMyCoachReview
-                    ? 'Le coach a publie un retour individuel pour ton match.'
-                    : "Le coach n'a pas encore laisse d'avis individuel pour ce match."}
-                </Text>
-
-                {myCoachReview?.comment ? (
-                  <View
-                    style={[
-                      ApplicationStyle.backgroundColor.primary700,
-                      ApplicationStyle.borderRadius16,
-                      Spaces.padding[12],
-                    ]}
-                  >
-                    <Text style={[Fonts.p4, Fonts.neutral100]}>
-                      {myCoachReview.comment}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            </View>
-          ) : null}
-
-          {isMatchEvent && compositionTeamId && canViewMatchStats ? (
-            <View style={[Spaces.gap[12]]}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats du match</Text>
-              <View
-                style={[
-                  ApplicationStyle.backgroundColor.primary900,
-                  ApplicationStyle.borderRadius24,
-                  ApplicationStyle.borderColor.primary500,
-                  ApplicationStyle.borderWidth1,
-                  Spaces.padding[16],
-                  Spaces.gap[12],
-                ]}
-              >
-                <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>Suivi post-match</Text>
-                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{matchStatsScoreLabel}</Text>
-                  </View>
-                  <View
-                    style={[
-                      Spaces.paddingHorizontal[10],
-                      Spaces.paddingVertical[6],
-                      {
-                        backgroundColor: matchStatsStatusMeta.backgroundColor,
-                        borderColor: matchStatsStatusMeta.borderColor,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p4Bold, { color: matchStatsStatusMeta.textColor }]}>
-                      {matchStatsStatusMeta.label}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {matchStatsSummaryText}
-                </Text>
-
-                {matchStatsReport?.collectiveRating || playerCollectiveRating?.average != null ? (
-                  <View style={[Alignments.row, Spaces.gap[12]]}>
-                    {matchStatsReport?.collectiveRating ? (
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius16,
-                          Spaces.padding[12],
-                          Spaces.gap[4],
-                          { flex: 1 },
-                        ]}
-                      >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Note coach</Text>
-                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{`${matchStatsReport.collectiveRating}/10`}</Text>
-                      </View>
-                    ) : null}
-                    {playerCollectiveRating?.average != null ? (
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius16,
-                          Spaces.padding[12],
-                          Spaces.gap[4],
-                          { flex: 1 },
-                        ]}
-                      >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Ressenti joueurs</Text>
-                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{`${playerCollectiveRating.average}/10`}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                ) : null}
-
-                {matchStatsReport?.collectiveComment ? (
-                  <View
-                    style={[
-                      ApplicationStyle.backgroundColor.primary700,
-                      ApplicationStyle.borderRadius16,
-                      Spaces.padding[12],
-                    ]}
-                  >
-                    <Text numberOfLines={3} style={[Fonts.p4, Fonts.neutral100]}>
-                      {matchStatsReport.collectiveComment}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {(matchStatsReport?.responseEligibleCount || matchStatsReport?.responseCompletionCount || playerCollectiveRating?.count) ? (
-                  <View
-                    style={[
-                      ApplicationStyle.backgroundColor.primary700,
-                      ApplicationStyle.borderRadius16,
-                      Spaces.padding[12],
-                      Spaces.gap[4],
-                    ]}
-                  >
-                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                      {`${matchStatsReport?.responseCompletionCount ?? playerCollectiveRating?.count ?? 0}/${matchStatsReport?.responseEligibleCount ?? playerCollectiveRating?.eligibleCount ?? 0} joueurs ont repondu`}
-                    </Text>
-                    {playerCollectiveRating?.count ? (
-                      <Text style={[Fonts.p4, Fonts.neutral100]}>
-                        {`${playerCollectiveRating.count} note${playerCollectiveRating.count > 1 ? 's' : ''} collective${playerCollectiveRating.count > 1 ? 's' : ''} prise${playerCollectiveRating.count > 1 ? 's' : ''} en compte`}
-                      </Text>
-                    ) : null}
-                  </View>
-                ) : null}
-
-                {matchStatsReport ? (
-                  <View style={[Alignments.row, Spaces.gap[12]]}>
-                    <View
-                      style={[
-                        ApplicationStyle.backgroundColor.primary700,
-                        ApplicationStyle.borderRadius16,
-                        Spaces.padding[12],
-                        { flex: 1 },
-                      ]}
-                    >
-                      <Text style={[Fonts.p4, Fonts.neutral300]}>Version</Text>
-                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                        {`v${Number(matchStatsReport?.version || 1)}`}
+            {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
+              <View style={[Spaces.gap[12]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mes stats</Text>
+                <View
+                  style={[
+                    ApplicationStyle.backgroundColor.primary900,
+                    ApplicationStyle.borderRadius24,
+                    ApplicationStyle.borderColor.primary500,
+                    ApplicationStyle.borderWidth1,
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                  ]}
+                >
+                  <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel</Text>
+                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                        {myMatchResponse?.selfRating ? `${myMatchResponse.selfRating}/10` : 'A completer'}
                       </Text>
                     </View>
                     <View
                       style={[
-                        ApplicationStyle.backgroundColor.primary700,
-                        ApplicationStyle.borderRadius16,
-                        Spaces.padding[12],
-                        { flex: 2 },
-                      ]}
-                    >
-                      <Text style={[Fonts.p4, Fonts.neutral300]}>Publication</Text>
-                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                        {matchStatsReport?.finalizedAt
-                          ? new Date(matchStatsReport.finalizedAt).toLocaleString('fr-FR')
-                          : '-'}
-                      </Text>
-                    </View>
-                  </View>
-                ) : null}
-
-                {isMatchStatsReviewRequired ? (
-                  <View
-                    style={[
-                      ApplicationStyle.borderRadius16,
-                      Spaces.padding[12],
-                      {
-                        backgroundColor: `${Colors.warning500}14`,
-                        borderColor: `${Colors.warning500}45`,
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p4, Fonts.warning500]}>
-                      Le score officiel a change apres la premiere publication. Une mise a jour est requise.
-                    </Text>
-                  </View>
-                ) : null}
-
-                <Button
-                  disabled={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
-                  onPress={openMatchStatsEditor}
-                  size="sm"
-                  title={matchStatsCardButtonTitle}
-                  variant="Secondary"
-                />
-              </View>
-            </View>
-          ) : null}
-
-          {isMatchEvent && isTeamMember ? (
-            <View style={[Spaces.gap[12]]}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Convocation</Text>
-              {convocationPublished ? (
-                <View style={[Spaces.gap[8]]}>
-                  <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    Publie le
-                    {' '}
-                    {convocationPublished?.publishedAt
-                      ? new Date(convocationPublished.publishedAt).toLocaleString('fr-FR')
-                      : '-'}
-                  </Text>
-                  {convocationPlayers.map((player) => (
-                    <View
-                      key={player.rowKey}
-                      style={[
+                        Spaces.paddingHorizontal[10],
+                        Spaces.paddingVertical[6],
                         {
-                          alignItems: 'center',
-                          backgroundColor: Colors.neutral800,
-                          borderColor: player.convoked ? Colors.primary500 : Colors.neutral700,
-                          borderRadius: 12,
+                          backgroundColor: myMatchResponseStatusMeta.backgroundColor,
+                          borderColor: myMatchResponseStatusMeta.borderColor,
+                          borderRadius: 999,
                           borderWidth: 1,
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          paddingHorizontal: 12,
-                          paddingVertical: 10,
                         },
                       ]}
                     >
-                      <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
-                        {player.label}
+                      <Text style={[Fonts.p4Bold, { color: myMatchResponseStatusMeta.textColor }]}>
+                        {myMatchResponseStatusMeta.label}
                       </Text>
-                      <Text
+                    </View>
+                  </View>
+
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>
+                    {myMatchResponseSummary}
+                  </Text>
+
+                  {myMatchResponse?.teamRating ? (
+                    <View
+                      style={[
+                        ApplicationStyle.backgroundColor.primary700,
+                        ApplicationStyle.borderRadius16,
+                        Spaces.padding[12],
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                        {`Le match de l equipe : ${myMatchResponse.teamRating}/10`}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {myMatchResponse?.selfComment ? (
+                    <View
+                      style={[
+                        ApplicationStyle.backgroundColor.primary700,
+                        ApplicationStyle.borderRadius16,
+                        Spaces.padding[12],
+                      ]}
+                    >
+                      <Text numberOfLines={3} style={[Fonts.p4, Fonts.neutral100]}>
+                        {myMatchResponse.selfComment}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <Button
+                    disabled={isMyMatchResponseFetching}
+                    onPress={openMyMatchResponse}
+                    size="sm"
+                    title={myMatchResponseButtonTitle}
+                    variant="Secondary"
+                  />
+                </View>
+              </View>
+            ) : null}
+
+            {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
+              <View style={[Spaces.gap[12]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mon retour coach</Text>
+                <View
+                  style={[
+                    ApplicationStyle.backgroundColor.primary900,
+                    ApplicationStyle.borderRadius24,
+                    ApplicationStyle.borderColor.primary500,
+                    ApplicationStyle.borderWidth1,
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                    isCoachFeedbackHighlighted
+                      ? {
+                        borderColor: Colors.primary200,
+                        borderWidth: 2,
+                      }
+                      : null,
+                  ]}
+                >
+                  <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel du coach</Text>
+                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                        {myCoachReview?.rating != null ? `${myCoachReview.rating}/10` : 'En attente'}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        Spaces.paddingHorizontal[10],
+                        Spaces.paddingVertical[6],
+                        {
+                          backgroundColor: hasMyCoachReview ? `${Colors.success500}18` : `${Colors.primary500}18`,
+                          borderColor: hasMyCoachReview ? `${Colors.success500}55` : `${Colors.primary500}40`,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, hasMyCoachReview ? Fonts.success500 : Fonts.primary100]}>
+                        {hasMyCoachReview ? 'Disponible' : 'Pas encore partage'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>
+                    {hasMyCoachReview
+                      ? 'Le coach a publie un retour individuel pour ton match.'
+                      : "Le coach n'a pas encore laisse d'avis individuel pour ce match."}
+                  </Text>
+
+                  {myCoachReview?.comment ? (
+                    <View
+                      style={[
+                        ApplicationStyle.backgroundColor.primary700,
+                        ApplicationStyle.borderRadius16,
+                        Spaces.padding[12],
+                      ]}
+                    >
+                      <Text style={[Fonts.p4, Fonts.neutral100]}>
+                        {myCoachReview.comment}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+
+            {isMatchEvent && compositionTeamId && canViewMatchStats ? (
+              <View style={[Spaces.gap[12]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats du match</Text>
+                <View
+                  style={[
+                    ApplicationStyle.backgroundColor.primary900,
+                    ApplicationStyle.borderRadius24,
+                    ApplicationStyle.borderColor.primary500,
+                    ApplicationStyle.borderWidth1,
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                  ]}
+                >
+                  <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.p4Bold, Fonts.primary500]}>Suivi post-match</Text>
+                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{matchStatsScoreLabel}</Text>
+                    </View>
+                    <View
+                      style={[
+                        Spaces.paddingHorizontal[10],
+                        Spaces.paddingVertical[6],
+                        {
+                          backgroundColor: matchStatsStatusMeta.backgroundColor,
+                          borderColor: matchStatsStatusMeta.borderColor,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: matchStatsStatusMeta.textColor }]}>
+                        {matchStatsStatusMeta.label}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>
+                    {matchStatsSummaryText}
+                  </Text>
+
+                  {matchStatsReport?.collectiveRating || playerCollectiveRating?.average != null ? (
+                    <View style={[Alignments.row, Spaces.gap[12]]}>
+                      {matchStatsReport?.collectiveRating ? (
+                        <View
+                          style={[
+                            ApplicationStyle.backgroundColor.primary700,
+                            ApplicationStyle.borderRadius16,
+                            Spaces.padding[12],
+                            Spaces.gap[4],
+                            { flex: 1 },
+                          ]}
+                        >
+                          <Text style={[Fonts.p4Bold, Fonts.primary100]}>Note coach</Text>
+                          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{`${matchStatsReport.collectiveRating}/10`}</Text>
+                        </View>
+                      ) : null}
+                      {playerCollectiveRating?.average != null ? (
+                        <View
+                          style={[
+                            ApplicationStyle.backgroundColor.primary700,
+                            ApplicationStyle.borderRadius16,
+                            Spaces.padding[12],
+                            Spaces.gap[4],
+                            { flex: 1 },
+                          ]}
+                        >
+                          <Text style={[Fonts.p4Bold, Fonts.primary100]}>Ressenti joueurs</Text>
+                          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{`${playerCollectiveRating.average}/10`}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+
+                  {matchStatsReport?.collectiveComment ? (
+                    <View
+                      style={[
+                        ApplicationStyle.backgroundColor.primary700,
+                        ApplicationStyle.borderRadius16,
+                        Spaces.padding[12],
+                      ]}
+                    >
+                      <Text numberOfLines={3} style={[Fonts.p4, Fonts.neutral100]}>
+                        {matchStatsReport.collectiveComment}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {(matchStatsReport?.responseEligibleCount || matchStatsReport?.responseCompletionCount || playerCollectiveRating?.count) ? (
+                    <View
+                      style={[
+                        ApplicationStyle.backgroundColor.primary700,
+                        ApplicationStyle.borderRadius16,
+                        Spaces.padding[12],
+                        Spaces.gap[4],
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                        {`${matchStatsReport?.responseCompletionCount ?? playerCollectiveRating?.count ?? 0}/${matchStatsReport?.responseEligibleCount ?? playerCollectiveRating?.eligibleCount ?? 0} joueurs ont repondu`}
+                      </Text>
+                      {playerCollectiveRating?.count ? (
+                        <Text style={[Fonts.p4, Fonts.neutral100]}>
+                          {`${playerCollectiveRating.count} note${playerCollectiveRating.count > 1 ? 's' : ''} collective${playerCollectiveRating.count > 1 ? 's' : ''} prise${playerCollectiveRating.count > 1 ? 's' : ''} en compte`}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
+
+                  {matchStatsReport ? (
+                    <View style={[Alignments.row, Spaces.gap[12]]}>
+                      <View
                         style={[
-                          Fonts.p3,
+                          ApplicationStyle.backgroundColor.primary700,
+                          ApplicationStyle.borderRadius16,
+                          Spaces.padding[12],
+                          { flex: 1 },
+                        ]}
+                      >
+                        <Text style={[Fonts.p4, Fonts.neutral300]}>Version</Text>
+                        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                          {`v${Number(matchStatsReport?.version || 1)}`}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          ApplicationStyle.backgroundColor.primary700,
+                          ApplicationStyle.borderRadius16,
+                          Spaces.padding[12],
+                          { flex: 2 },
+                        ]}
+                      >
+                        <Text style={[Fonts.p4, Fonts.neutral300]}>Publication</Text>
+                        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                          {matchStatsReport?.finalizedAt
+                            ? new Date(matchStatsReport.finalizedAt).toLocaleString('fr-FR')
+                            : '-'}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {isMatchStatsReviewRequired ? (
+                    <View
+                      style={[
+                        ApplicationStyle.borderRadius16,
+                        Spaces.padding[12],
+                        {
+                          backgroundColor: `${Colors.warning500}14`,
+                          borderColor: `${Colors.warning500}45`,
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4, Fonts.warning500]}>
+                        Le score officiel a change apres la premiere publication. Une mise a jour est requise.
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <Button
+                    disabled={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
+                    onPress={openMatchStatsEditor}
+                    size="sm"
+                    title={matchStatsCardButtonTitle}
+                    variant="Secondary"
+                  />
+                </View>
+              </View>
+            ) : null}
+
+            {isMatchEvent && isTeamMember ? (
+              <View style={[Spaces.gap[12]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Convocation</Text>
+                {convocationPublished ? (
+                  <View style={[Spaces.gap[8]]}>
+                    <Text style={[Fonts.p2, Fonts.neutral300]}>
+                      Publie le
+                      {' '}
+                      {convocationPublished?.publishedAt
+                        ? new Date(convocationPublished.publishedAt).toLocaleString('fr-FR')
+                        : '-'}
+                    </Text>
+                    {convocationPlayers.map((player) => (
+                      <View
+                        key={player.rowKey}
+                        style={[
                           {
-                            color: player.convoked ? Colors.primary500 : Colors.neutral300,
-                            fontWeight: '700',
+                            alignItems: 'center',
+                            backgroundColor: Colors.neutral800,
+                            borderColor: player.convoked ? Colors.primary500 : Colors.neutral700,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            paddingHorizontal: 12,
+                            paddingVertical: 10,
                           },
                         ]}
                       >
-                        {player.convoked ? 'Convoque' : 'Non convoque'}
-                      </Text>
-                    </View>
-                  ))}
-                  {Array.isArray(convocationPublished?.placements) && convocationPublished.placements.length > 0 ? (
-                    <Button
-                      onPress={() => openCompositionBoard(convocationPublished, {
-                        canEdit: false,
-                        editorSource: 'published',
-                        editorSourceLabel: getCompositionSourceLabel('published'),
-                        players: convocationSnapshotPlayers,
-                        readOnly: true,
-                      })}
-                      title="Voir la composition"
-                      variant="Secondary"
-                    />
-                  ) : null}
-                </View>
-              ) : (
-                <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  Aucune convocation publiee pour le moment.
-                </Text>
-              )}
-            </View>
-          ) : null}
+                        <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
+                          {player.label}
+                        </Text>
+                        <Text
+                          style={[
+                            Fonts.p3,
+                            {
+                              color: player.convoked ? Colors.primary500 : Colors.neutral300,
+                              fontWeight: '700',
+                            },
+                          ]}
+                        >
+                          {player.convoked ? 'Convoque' : 'Non convoque'}
+                        </Text>
+                      </View>
+                    ))}
+                    {Array.isArray(convocationPublished?.placements) && convocationPublished.placements.length > 0 ? (
+                      <Button
+                        onPress={() => openCompositionBoard(convocationPublished, {
+                          canEdit: false,
+                          editorSource: 'published',
+                          editorSourceLabel: getCompositionSourceLabel('published'),
+                          players: convocationSnapshotPlayers,
+                          readOnly: true,
+                        })}
+                        title="Voir la composition"
+                        variant="Secondary"
+                      />
+                    ) : null}
+                  </View>
+                ) : (
+                  <Text style={[Fonts.p2, Fonts.neutral300]}>
+                    Aucune convocation publiee pour le moment.
+                  </Text>
+                )}
+              </View>
+            ) : null}
+          </View>
         </WithDataWrapper>
       </ScrollView>
 
@@ -3081,8 +3363,8 @@ function EventDetails({ navigation, route }) {
             <View style={[Alignments.row, Spaces.gap[16]]}>
               <Button
                 icon="check"
-                isOption
                 isLoading={approveFeaturedRequestMutation.isPending}
+                isOption
                 onPress={() => approveFeaturedRequestMutation.mutate(pendingFeaturedApproval.requestId)}
                 style={{ flex: 1 }}
                 title={`Valider ${pendingFeaturedApproval.scopeLabel.toLowerCase()}`}
@@ -3090,8 +3372,8 @@ function EventDetails({ navigation, route }) {
               />
               <Button
                 icon="close"
-                isOption
                 isLoading={rejectFeaturedRequestMutation.isPending}
+                isOption
                 onPress={handleRejectFeaturedApproval}
                 style={{ flex: 1 }}
                 title="Refuser"
@@ -3290,22 +3572,15 @@ function EventDetails({ navigation, route }) {
           <TouchableOpacity activeOpacity={1} style={[ApplicationStyle.backgroundColor.primary700, { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }]}>
             <View style={[Spaces.gap[16]]}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                Mettre à la une
+                Mettre a la une
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Choisissez où vous souhaitez mettre cet événement en avant.
+                Choisissez ou vous souhaitez mettre cet evenement en avant.
               </Text>
-
               {featuredScopeOptions.map((option) => {
                 const isDisabled = option.status === 'pending' || option.status === 'approved';
                 const isSelected = Boolean(selectedFeaturedScopes[option.kind]);
-                const statusLabel = option.status === 'pending'
-                  ? 'Demande en attente'
-                  : option.status === 'approved'
-                    ? 'Déjà à la une'
-                    : option.status === 'rejected'
-                      ? 'Refusée, vous pouvez redemander'
-                      : 'Disponible';
+                const statusLabel = getFeaturedScopeStatusLabel(option.status);
 
                 return (
                   <View

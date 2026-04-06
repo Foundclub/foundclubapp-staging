@@ -16,6 +16,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardParticipantsStepIndex,
   getEventWizardStepCount,
   shouldExplainDetectionSlotsDisabled,
   shouldShowDetectionSlotsStep,
@@ -149,7 +150,7 @@ function EventWizardParticipants({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(projectedState)}
-      stepIndex={7}
+      stepIndex={getEventWizardParticipantsStepIndex(projectedState)}
       subtitle={t(
         'eventWizard.steps.participants.subtitle',
         'Choisis une capacité max, ou laisse l événement en accès illimité.',

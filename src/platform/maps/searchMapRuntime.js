@@ -564,6 +564,19 @@ export const buildSearchMapRuntimeHtml = ({
           });
         };
 
+        var buildFallbackRenderableEntries = function (items) {
+          return items.slice(0, 60).map(function (item, index) {
+            return {
+              isCluster: false,
+              item: item,
+              key: item.id || ('fallback-' + index),
+              lat: item.lat,
+              lng: item.lng,
+              order: index + 1,
+            };
+          });
+        };
+
         var clearMarkers = function () {
           if (!markerLayer) return;
           markerLayer.clearLayers();
@@ -858,6 +871,13 @@ export const buildSearchMapRuntimeHtml = ({
             var items = Array.isArray(currentState.items) ? currentState.items : [];
             var itemsSignature = buildItemsSignature(items);
             var renderableEntries = buildRenderableEntries(items);
+            if (!renderableEntries.length && items.length) {
+              postDiagnostic('render_fallback_unclustered', {
+                itemsCount: items.length,
+                zoom: map.getZoom(),
+              });
+              renderableEntries = buildFallbackRenderableEntries(items);
+            }
             var markerCount = renderableEntries.filter(function (entry) { return !entry.isCluster; }).length;
             var clusterCount = renderableEntries.filter(function (entry) { return entry.isCluster; }).length;
             var renderStatsSignature = [

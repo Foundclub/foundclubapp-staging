@@ -10,7 +10,10 @@ import FacilitySelector from '@/components/organisms/facilitySelector/FacilitySe
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
-import { getEventWizardStepCount } from './eventWizardDetectionUtils';
+import {
+  getEventWizardLocationStepIndex,
+  getEventWizardStepCount,
+} from './eventWizardDetectionUtils';
 
 const buildDateTimeIso = (baseDate, timeValue) => {
   if (!baseDate || !timeValue) return null;
@@ -75,7 +78,7 @@ function EventWizardLocation({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(state)}
-      stepIndex={5}
+      stepIndex={getEventWizardLocationStepIndex(state)}
       subtitle={t('eventWizard.steps.location.subtitle')}
       title={t('eventWizard.steps.location.title')}
     >

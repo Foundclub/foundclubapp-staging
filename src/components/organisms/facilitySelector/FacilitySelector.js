@@ -196,8 +196,8 @@ function FacilitySelector({
   );
   const isSaturated = Boolean(occupancySummary?.saturated);
   const canRequestOverflow = Boolean(occupancySummary?.canRequestOverflow);
-  let occupancyCardBackground = 'rgba(1, 179, 244, 0.08)';
-  let occupancyCardBorder = `${Colors.primary500}55`;
+  let occupancyCardBackground = cardSurfaceStyle.backgroundColor;
+  let occupancyCardBorder = cardSurfaceStyle.borderColor;
   let occupancyTone = Fonts.primary200;
   let occupancyMessage = t(
     'eventWizard.steps.location.overflowAvailable',
@@ -446,9 +446,9 @@ function FacilitySelector({
           {selectedFacility && occupancyWindow?.start && occupancyWindow?.end ? (
             <View
               style={[
-                ApplicationStyle.borderRadius16,
-                Spaces.padding[14],
-                Spaces.gap[8],
+                ApplicationStyle.card,
+                Spaces.padding[16],
+                Spaces.gap[12],
                 {
                   backgroundColor: occupancyCardBackground,
                   borderColor: occupancyCardBorder,

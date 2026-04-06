@@ -73,10 +73,13 @@ function ClubListContent({ enableMapMode = false }) {
   const [{ clubFilters, searchMapSessions }, appDispatch] = useAppContext();
   const { getClubFiltersNumber } = useClub();
   const viewportSession = searchMapSessions?.clubs || {};
+  const viewportExecutedQuery = viewportSession?.executedQuery
+    || viewportSession?.executedClubMapQuery
+    || null;
   const viewportRegion = viewportSession?.searchedViewport
     || viewportSession?.executedViewport
     || null;
-  const isViewportListMode = viewportSession?.executedClubMapQuery?.view === 'list'
+  const isViewportListMode = viewportExecutedQuery?.view === 'list'
     && hasFiniteViewportBounds(viewportRegion);
   const viewportListParams = useMemo(
     () => (isViewportListMode ? buildViewportListQuery(viewportRegion, clubFilters || {}) : null),
@@ -277,6 +280,7 @@ function ClubListContent({ enableMapMode = false }) {
         scope: 'clubs',
         state: {
           executedClubMapQuery: null,
+          executedQuery: null,
           executedViewport: null,
           lastResultMeta: null,
           searchedViewport: null,
