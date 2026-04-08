@@ -56,6 +56,11 @@ import {
   useGetEventMyMatchResponse,
 } from '@/services/matchStats/matchStatsQueries';
 import { applyToRecruitmentAd } from '@/services/recruitment/recruitmentService';
+import {
+  createCustomTournamentTeam,
+  registerClubTeamToTournament,
+  reviewTournamentTeamRegistration,
+} from '@/services/tournamentTeam/tournamentTeamService';
 
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
 
@@ -196,11 +201,14 @@ function EventDetails({ navigation, route }) {
   const [isRefuseModalVisible, setIsRefuseModalVisible] = useState(false);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [isFeaturedModalVisible, setIsFeaturedModalVisible] = useState(false);
+  const [isTournamentCreateModalVisible, setIsTournamentCreateModalVisible] = useState(false);
+  const [isTournamentRegisterModalVisible, setIsTournamentRegisterModalVisible] = useState(false);
   const [selectedFeaturedScopes, setSelectedFeaturedScopes] = useState({
     CM: false,
     PUBLIC: false,
     SECTION: false,
   });
+  const [tournamentTeamNameDraft, setTournamentTeamNameDraft] = useState('');
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
   const [stageDetailsTab, setStageDetailsTab] = useState('overview');
@@ -256,6 +264,58 @@ function EventDetails({ navigation, route }) {
     if (defaultStart && defaultEnd) return `${defaultStart} - ${defaultEnd}`;
     return '';
   }, [event?.stageDefaultEndTime, event?.stageDefaultStartTime, isStageParentEvent, stageChildDays]);
+  const isTournamentEvent = normalizeEventTypeLabel(event?.type?.name).includes('tournoi');
+  const tournamentTeams = useMemo(
+    () => (Array.isArray(event?.tournamentTeams) ? [...event.tournamentTeams] : [])
+      .sort((left, right) => String(left?.name || '').localeCompare(String(right?.name || ''))),
+    [event?.tournamentTeams],
+  );
+  const currentUserTournamentTeam = useMemo(() => {
+    const currentUserId = userData?.documentId;
+    if (!currentUserId) return null;
+
+    return tournamentTeams.find((team) => (
+      Array.isArray(team?.members)
+      && team.members.some((member) => (
+        member?.user?.documentId === currentUserId
+        && !['declined', 'removed'].includes(String(member?.responseStatus || '').toLowerCase())
+      ))
+    )) || null;
+  }, [tournamentTeams, userData?.documentId]);
+  const managedTournamentTeam = useMemo(() => {
+    const currentUserId = userData?.documentId;
+    if (!currentUserId) return null;
+
+    return tournamentTeams.find((team) => (
+      team?.captainUser?.documentId === currentUserId
+      || (team?.adminUsers || []).some((adminUser) => adminUser?.documentId === currentUserId)
+    )) || null;
+  }, [tournamentTeams, userData?.documentId]);
+  const registeredTournamentSourceTeamIds = useMemo(
+    () => new Set(
+      tournamentTeams
+        .map((team) => team?.sourceTeam?.documentId)
+        .filter(Boolean),
+    ),
+    [tournamentTeams],
+  );
+  const availableTournamentSourceTeams = useMemo(
+    () => (userData?.trainedTeams || [])
+      .filter((team) => team?.documentId && !registeredTournamentSourceTeamIds.has(team.documentId)),
+    [registeredTournamentSourceTeamIds, userData?.trainedTeams],
+  );
+  const canCreateCustomTournamentTeam = Boolean(
+    isTournamentEvent
+    && !isStageDayEvent
+    && event?.tournamentConfig?.allowCustomTeams !== false
+    && userData?.documentId
+    && !currentUserTournamentTeam,
+  );
+  const canRegisterTournamentSourceTeam = Boolean(
+    isTournamentEvent
+    && !isStageDayEvent
+    && availableTournamentSourceTeams.length > 0,
+  );
   useEffect(() => {
     setStageDetailsTab('overview');
   }, [event?.documentId]);
@@ -479,6 +539,39 @@ function EventDetails({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['requestsHub'] });
       queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+      refetch();
+    },
+  });
+  const registerTournamentTeamMutation = useMutation({
+    mutationFn: ({ sourceTeamId }) => registerClubTeamToTournament(eventId, sourceTeamId),
+    onError: (mutationError) => {
+      Alert.alert('Erreur', mutationError?.message || 'Impossible d inscrire cette equipe au tournoi.');
+    },
+    onSuccess: () => {
+      setIsTournamentRegisterModalVisible(false);
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      refetch();
+    },
+  });
+  const createTournamentTeamMutation = useMutation({
+    mutationFn: ({ name }) => createCustomTournamentTeam(eventId, { name }),
+    onError: (mutationError) => {
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de creer cette equipe de tournoi.');
+    },
+    onSuccess: () => {
+      setIsTournamentCreateModalVisible(false);
+      setTournamentTeamNameDraft('');
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      refetch();
+    },
+  });
+  const reviewTournamentTeamMutation = useMutation({
+    mutationFn: ({ status, teamDocumentId }) => reviewTournamentTeamRegistration(teamDocumentId, status),
+    onError: (mutationError) => {
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre a jour cette inscription.');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       refetch();
     },
   });
@@ -1201,6 +1294,28 @@ function EventDetails({ navigation, route }) {
       screen: RouteNames.EventEdit,
     });
   }, [eventId, navigation]);
+
+  const handleOpenTournamentTeam = useCallback((teamDocumentId) => {
+    if (!teamDocumentId) return;
+    navigation.navigate(RouteNames.TournamentTeamDetails, {
+      eventId,
+      teamId: teamDocumentId,
+    });
+  }, [eventId, navigation]);
+
+  const handleCreateTournamentTeam = useCallback(() => {
+    const trimmedName = String(tournamentTeamNameDraft || '').trim();
+    if (!trimmedName) {
+      Alert.alert('Equipe tournoi', 'Ajoutez un nom d equipe avant de continuer.');
+      return;
+    }
+
+    createTournamentTeamMutation.mutate({ name: trimmedName });
+  }, [createTournamentTeamMutation, tournamentTeamNameDraft]);
+
+  const handleReviewTournamentTeam = useCallback((teamDocumentId, status) => {
+    reviewTournamentTeamMutation.mutate({ status, teamDocumentId });
+  }, [reviewTournamentTeamMutation]);
 
   const toggleFeaturedScope = useCallback((kind) => {
     setSelectedFeaturedScopes((previous) => ({
@@ -2365,6 +2480,179 @@ function EventDetails({ navigation, route }) {
     );
   }, [eventId, eventStartAt, hasSelfArrived, mutations.selfArrivalMutation, t]);
 
+  const renderTournamentSection = () => {
+    if (!isTournamentEvent || isStageDayEvent) return null;
+
+    return (
+      <View style={[Spaces.gap[12]]}>
+        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Equipes du tournoi</Text>
+        <Text style={[Fonts.p2, Fonts.primary100]}>
+          Les equipes de tournoi restent ephemeres et ne modifient jamais les equipes club permanentes.
+        </Text>
+
+        <View
+          style={[
+            ApplicationStyle.backgroundColor.primary900,
+            ApplicationStyle.borderRadius24,
+            ApplicationStyle.borderWidth1,
+            Spaces.padding[16],
+            Spaces.gap[8],
+            {
+              borderColor: `${Colors.primary500}33`,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>Cadre du tournoi</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {`Validation des equipes: ${event?.tournamentConfig?.registrationMode === 'auto' ? 'Automatique' : 'Manuelle'}`}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {`Max equipes: ${event?.tournamentConfig?.maxTeams ?? 'Non limite'}`}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {`Effectif: ${event?.tournamentConfig?.minRosterSize ?? 'Libre'} - ${event?.tournamentConfig?.maxRosterSize ?? 'Libre'}`}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {`Equipes ephemeres: ${event?.tournamentConfig?.allowCustomTeams !== false ? 'Autorisees' : 'Desactivees'}`}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {`Mix clubs: ${event?.tournamentConfig?.allowCrossClubPlayers === true ? 'Autorise' : 'Non autorise'}`}
+          </Text>
+          {event?.tournamentConfig?.rulesText ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {event.tournamentConfig.rulesText}
+            </Text>
+          ) : null}
+        </View>
+
+        {managedTournamentTeam?.documentId ? (
+          <Button
+            onPress={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
+            title="Gerer mon equipe tournoi"
+            variant="Primary"
+          />
+        ) : null}
+
+        {!managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
+          <Button
+            onPress={() => handleOpenTournamentTeam(currentUserTournamentTeam.documentId)}
+            title="Voir mon equipe tournoi"
+            variant="Primary"
+          />
+        ) : null}
+
+        {canRegisterTournamentSourceTeam ? (
+          <Button
+            onPress={() => setIsTournamentRegisterModalVisible(true)}
+            title="Inscrire mon equipe"
+            variant="Secondary"
+          />
+        ) : null}
+
+        {canCreateCustomTournamentTeam ? (
+          <Button
+            onPress={() => setIsTournamentCreateModalVisible(true)}
+            title="Creer une equipe"
+            variant="Secondary"
+          />
+        ) : null}
+
+        {tournamentTeams.length === 0 ? (
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary900,
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              {
+                borderColor: `${Colors.primary500}33`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Aucune equipe n est encore inscrite sur ce tournoi.
+            </Text>
+          </View>
+        ) : null}
+
+        {tournamentTeams.map((tournamentTeam) => {
+          const activeMembers = Array.isArray(tournamentTeam?.members)
+            ? tournamentTeam.members.filter((member) => !['declined', 'removed'].includes(String(member?.responseStatus || '').toLowerCase()))
+            : [];
+          let tournamentTeamStatusLabel = 'Equipe inscrite';
+          if (tournamentTeam?.status === 'pending') {
+            tournamentTeamStatusLabel = 'Validation en attente';
+          } else if (tournamentTeam?.status === 'declined') {
+            tournamentTeamStatusLabel = 'Equipe refusee';
+          }
+
+          return (
+            <TouchableOpacity
+              key={tournamentTeam?.documentId || tournamentTeam?.name}
+              onPress={() => handleOpenTournamentTeam(tournamentTeam?.documentId)}
+              style={[
+                ApplicationStyle.backgroundColor.primary900,
+                ApplicationStyle.borderRadius24,
+                ApplicationStyle.borderWidth1,
+                Spaces.padding[16],
+                Spaces.gap[8],
+                {
+                  borderColor: `${Colors.primary500}33`,
+                },
+              ]}
+            >
+              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {tournamentTeam?.name || 'Equipe tournoi'}
+                  </Text>
+                  <Text style={[Fonts.p4, Fonts.primary100]}>
+                    {tournamentTeam?.sourceType === 'club_team'
+                      ? `Depuis ${tournamentTeam?.sourceTeam?.name || 'une equipe club'}`
+                      : 'Equipe ephemere'}
+                  </Text>
+                </View>
+                <Tag
+                  style={{
+                    backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                    borderColor: `${Colors.primary500}33`,
+                  }}
+                  text={String(activeMembers.length || 0)}
+                  textColor="primary500"
+                />
+              </View>
+
+              <Text style={[Fonts.p4, Fonts.neutral200]}>
+                {tournamentTeamStatusLabel}
+              </Text>
+
+              {canEdit && tournamentTeam?.status === 'pending' ? (
+                <View style={[Alignments.row, Spaces.gap[10], Spaces.marginTop[4]]}>
+                  <Button
+                    isLoading={reviewTournamentTeamMutation.isPending}
+                    onPress={() => handleReviewTournamentTeam(tournamentTeam?.documentId, 'accepted')}
+                    size="sm"
+                    title="Valider"
+                    variant="Primary"
+                  />
+                  <Button
+                    isLoading={reviewTournamentTeamMutation.isPending}
+                    onPress={() => handleReviewTournamentTeam(tournamentTeam?.documentId, 'declined')}
+                    size="sm"
+                    style={{ borderColor: `${Colors.error500}55` }}
+                    textStyle={{ color: Colors.error500 }}
+                    title="Refuser"
+                    variant="SecondaryLight"
+                  />
+                </View>
+              ) : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
   const renderActionButtons = () => {
     const isReservation = event?.type?.name?.toLowerCase()?.includes('reservation')
       || event?.type?.name?.toLowerCase()?.includes('reservation');
@@ -2832,6 +3120,8 @@ function EventDetails({ navigation, route }) {
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>Voir le stage</Text>
               </TouchableOpacity>
             ) : null}
+
+            {renderTournamentSection()}
 
             {eventDescriptionText ? (
               <View style={[Spaces.gap[16]]}>
@@ -3508,6 +3798,101 @@ function EventDetails({ navigation, route }) {
         onClose={() => setIsShareModalVisible(false)}
         onSelectChat={handleShareEventInChat}
       />
+
+      <BottomModal
+        close={() => setIsTournamentRegisterModalVisible(false)}
+        isVisible={isTournamentRegisterModalVisible}
+        snapPoints={['52%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Inscrire mon equipe</Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Selectionnez une equipe club. L application creera une equipe ephemere de tournoi sans toucher a votre effectif permanent.
+            </Text>
+          </View>
+
+          {availableTournamentSourceTeams.length === 0 ? (
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Aucune equipe club disponible a inscrire.
+            </Text>
+          ) : (
+            availableTournamentSourceTeams.map((sourceTeam) => (
+              <TouchableOpacity
+                key={sourceTeam?.documentId}
+                onPress={() => registerTournamentTeamMutation.mutate({ sourceTeamId: sourceTeam.documentId })}
+                style={[
+                  ApplicationStyle.backgroundColor.primary900,
+                  ApplicationStyle.borderRadius16,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.padding[14],
+                  {
+                    borderColor: `${Colors.primary500}44`,
+                    opacity: registerTournamentTeamMutation.isPending ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{sourceTeam?.name || 'Equipe'}</Text>
+                <Text style={[Fonts.p4, Fonts.primary100]}>
+                  {[
+                    sourceTeam?.section?.name,
+                    sourceTeam?.category?.name || sourceTeam?.category,
+                    sourceTeam?.level?.name || sourceTeam?.level,
+                  ].filter(Boolean).join(' - ')}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      </BottomModal>
+
+      <BottomModal
+        close={() => setIsTournamentCreateModalVisible(false)}
+        isVisible={isTournamentCreateModalVisible}
+        snapPoints={['44%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Creer une equipe</Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Cette equipe n existera que pour ce tournoi. Vous en deviendrez automatiquement le capitaine.
+            </Text>
+          </View>
+
+          <TextInput
+            onChangeText={setTournamentTeamNameDraft}
+            placeholder="Nom de l equipe"
+            placeholderTextColor={Colors.neutral300}
+            style={[
+              ApplicationStyle.backgroundColor.primary900,
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Fonts.p2,
+              Fonts.neutral00,
+              Spaces.paddingHorizontal[16],
+              Spaces.paddingVertical[14],
+              {
+                borderColor: `${Colors.primary500}44`,
+              },
+            ]}
+            value={tournamentTeamNameDraft}
+          />
+
+          <View style={[Spaces.gap[12]]}>
+            <Button
+              disabled={createTournamentTeamMutation.isPending}
+              onPress={handleCreateTournamentTeam}
+              title="Creer mon equipe"
+              variant="Primary"
+            />
+            <Button
+              onPress={() => setIsTournamentCreateModalVisible(false)}
+              title="Annuler"
+              variant="Secondary"
+            />
+          </View>
+        </View>
+      </BottomModal>
 
       <BottomModal
         close={() => {

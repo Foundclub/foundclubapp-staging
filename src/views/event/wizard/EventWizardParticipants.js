@@ -18,6 +18,7 @@ import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardParticipantsStepIndex,
   getEventWizardStepCount,
+  isTournamentEventType,
   shouldExplainDetectionSlotsDisabled,
   shouldShowDetectionSlotsStep,
 } from './eventWizardDetectionUtils';
@@ -137,11 +138,15 @@ function EventWizardParticipants({ navigation }) {
       },
       type: 'SET_PARTICIPANTS',
     });
-    navigation.navigate(
-      shouldShowDetectionStep
-        ? RouteNames.EventWizardDetectionSlots
-        : RouteNames.EventWizardValidationMode,
-    );
+
+    let nextRoute = RouteNames.EventWizardValidationMode;
+    if (isTournamentEventType(state?.type?.name)) {
+      nextRoute = RouteNames.EventWizardDescription;
+    } else if (shouldShowDetectionStep) {
+      nextRoute = RouteNames.EventWizardDetectionSlots;
+    }
+
+    navigation.navigate(nextRoute);
   };
 
   return (

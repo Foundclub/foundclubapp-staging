@@ -109,6 +109,17 @@ function EventWizardDetectionSlots({ navigation }) {
     borderColor: 'rgba(1, 179, 244, 0.24)',
     borderWidth: 1,
   };
+  const stackStyle = { paddingBottom: 40, rowGap: 24 };
+  const cardInsetStyle = { padding: 24, rowGap: 16 };
+  const compactCardInsetStyle = { padding: 20, rowGap: 12 };
+  const bodyCopyStyle = { lineHeight: 20 };
+  const helperCopyStyle = { lineHeight: 18 };
+  const chipStyle = {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  };
 
   const selectedQuantityLabel = (quantity) => t(
     'eventWizard.steps.detectionSlots.positionSummary',
@@ -151,7 +162,7 @@ function EventWizardDetectionSlots({ navigation }) {
       )}
       title={t('eventWizard.steps.detectionSlots.title', 'Postes recherch\u00e9s')}
     >
-      <View style={[Spaces.gap[16], Spaces.paddingBottom[40]]}>
+      <View style={stackStyle}>
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => {
@@ -163,9 +174,8 @@ function EventWizardDetectionSlots({ navigation }) {
           }}
           style={[
             ApplicationStyle.card,
-            Spaces.padding[16],
-            Spaces.gap[8],
             surfaceStyle,
+            cardInsetStyle,
             isEnabled ? { backgroundColor: 'rgba(1, 179, 244, 0.12)', borderColor: Colors.primary500 } : null,
           ]}
         >
@@ -174,7 +184,7 @@ function EventWizardDetectionSlots({ navigation }) {
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 {t('eventWizard.steps.detectionSlots.toggleTitle', 'Ajouter des places par poste')}
               </Text>
-              <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
+              <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8], bodyCopyStyle]}>
                 {t(
                   'eventWizard.steps.detectionSlots.toggleHint',
                   'Optionnel : les joueurs candidateront ensuite sur un poste pr\u00e9cis.',
@@ -199,26 +209,25 @@ function EventWizardDetectionSlots({ navigation }) {
         </TouchableOpacity>
 
         {isEnabled ? (
-          <View style={[Spaces.gap[16]]}>
+          <View style={{ rowGap: 24 }}>
             <View
               style={[
                 ApplicationStyle.card,
-                Spaces.padding[20],
-                Spaces.gap[16],
                 surfaceStyle,
+                cardInsetStyle,
                 {
                   backgroundColor: 'rgba(1, 179, 244, 0.08)',
                 },
               ]}
             >
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
-                <View style={[Spaces.gap[8], { flex: 1, minWidth: 180 }]}>
+                <View style={{ flex: 1, minWidth: 180, rowGap: 12 }}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                     {selectedPositionsCount > 0
                       ? t('eventWizard.steps.detectionSlots.summaryFilledTitle', '{{count}} poste(s) configur\u00e9(s)', { count: selectedPositionsCount })
                       : t('eventWizard.steps.detectionSlots.summaryEmptyTitle', 'Aucun poste s\u00e9lectionn\u00e9')}
                   </Text>
-                  <Text style={[Fonts.p4, Fonts.neutral200]}>
+                  <Text style={[Fonts.p4, Fonts.neutral200, helperCopyStyle]}>
                     {selectedPositionsCount > 0
                       ? t('eventWizard.steps.detectionSlots.summaryFilledHint', '{{count}} place(s) demand\u00e9e(s) sur cette d\u00e9tection.', { count: totalSlots })
                       : t('eventWizard.steps.detectionSlots.summaryEmptyHint', 'Active des postes ci-dessous ou applique un volume \u00e0 tous les postes.')}
@@ -227,13 +236,10 @@ function EventWizardDetectionSlots({ navigation }) {
 
                 <View
                   style={[
-                    Spaces.paddingHorizontal[12],
-                    Spaces.paddingVertical[8],
+                    chipStyle,
                     {
                       backgroundColor: `${Colors.primary500}18`,
                       borderColor: `${Colors.primary500}40`,
-                      borderRadius: 999,
-                      borderWidth: 1,
                     },
                   ]}
                 >
@@ -241,16 +247,13 @@ function EventWizardDetectionSlots({ navigation }) {
                 </View>
               </View>
 
-              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[10]]}>
+              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
                 <View
                   style={[
-                    Spaces.paddingHorizontal[12],
-                    Spaces.paddingVertical[8],
+                    chipStyle,
                     {
                       backgroundColor: `${Colors.primary500}18`,
                       borderColor: `${Colors.primary500}55`,
-                      borderRadius: 999,
-                      borderWidth: 1,
                     },
                   ]}
                 >
@@ -261,13 +264,10 @@ function EventWizardDetectionSlots({ navigation }) {
 
                 <View
                   style={[
-                    Spaces.paddingHorizontal[12],
-                    Spaces.paddingVertical[8],
+                    chipStyle,
                     {
                       backgroundColor: `${Colors.primary500}12`,
                       borderColor: `${Colors.primary500}40`,
-                      borderRadius: 999,
-                      borderWidth: 1,
                     },
                   ]}
                 >
@@ -279,13 +279,10 @@ function EventWizardDetectionSlots({ navigation }) {
                 {capacityLimit !== null ? (
                   <View
                     style={[
-                      Spaces.paddingHorizontal[12],
-                      Spaces.paddingVertical[8],
+                      chipStyle,
                       {
                         backgroundColor: 'rgba(255,255,255,0.04)',
                         borderColor: `${Colors.neutral300}33`,
-                        borderRadius: 999,
-                        borderWidth: 1,
                       },
                     ]}
                   >
@@ -301,7 +298,7 @@ function EventWizardDetectionSlots({ navigation }) {
               <View
                 style={[
                   ApplicationStyle.card,
-                  Spaces.padding[14],
+                  compactCardInsetStyle,
                   {
                     backgroundColor: `${Colors.warning500}14`,
                     borderColor: `${Colors.warning500}55`,
@@ -315,7 +312,7 @@ function EventWizardDetectionSlots({ navigation }) {
                     'Le total des places par poste depasse la capacite de l evenement.',
                   )}
                 </Text>
-                <Text style={[Fonts.p4, Fonts.neutral200, Spaces.marginTop[4]]}>
+                <Text style={[Fonts.p4, Fonts.neutral200, { lineHeight: 18, marginTop: 8 }]}>
                   {t(
                     'eventWizard.steps.detectionSlots.capacityWarningHint',
                     'Augmente la capacite ou reduis les quantites pour garder une detection coherente.',
@@ -328,16 +325,15 @@ function EventWizardDetectionSlots({ navigation }) {
               <View
                 style={[
                   ApplicationStyle.card,
-                  Spaces.padding[20],
-                  Spaces.gap[12],
                   surfaceStyle,
+                  cardInsetStyle,
                 ]}
               >
-                <View style={[Spaces.gap[6]]}>
+                <View style={{ rowGap: 8 }}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                     {t('eventWizard.steps.detectionSlots.quickActionsTitle', 'Appliquer a tous les postes')}
                   </Text>
-                  <Text style={[Fonts.p4, Fonts.neutral200]}>
+                  <Text style={[Fonts.p4, Fonts.neutral200, helperCopyStyle]}>
                     {t(
                       'eventWizard.steps.detectionSlots.quickActionsHint',
                       'Le compteur met a jour toute la liste instantanement. 0 reinitialise la selection globale.',
@@ -345,21 +341,21 @@ function EventWizardDetectionSlots({ navigation }) {
                   </Text>
                 </View>
 
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifyCenter, { columnGap: 12, flexWrap: 'wrap', rowGap: 10 }]}>
+                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifyCenter, { columnGap: 12, flexWrap: 'wrap', rowGap: 12 }]}>
                   <View
                     style={[
                       Alignments.row,
                       Alignments.alignCenter,
                       Alignments.justifyCenter,
-                      Spaces.paddingHorizontal[10],
-                      Spaces.paddingVertical[10],
                       {
                         backgroundColor: 'rgba(1, 179, 244, 0.08)',
                         borderColor: 'rgba(1, 179, 244, 0.18)',
                         borderRadius: 16,
                         borderWidth: 1,
-                        columnGap: 10,
-                        minWidth: 228,
+                        columnGap: 12,
+                        minWidth: 236,
+                        paddingHorizontal: 12,
+                        paddingVertical: 12,
                       },
                     ]}
                   >
@@ -396,7 +392,7 @@ function EventWizardDetectionSlots({ navigation }) {
                       <Text style={[Fonts.h2, Fonts.primary500, { textAlign: 'center' }]}>
                         {bulkQuantity}
                       </Text>
-                      <Text style={[Fonts.p4, Fonts.neutral200, { textAlign: 'center' }]}>
+                      <Text style={[Fonts.p4, Fonts.neutral200, { lineHeight: 18, textAlign: 'center' }]}>
                         {t('eventWizard.steps.detectionSlots.bulkQuantityLabel', 'places par poste')}
                       </Text>
                     </View>
@@ -427,19 +423,21 @@ function EventWizardDetectionSlots({ navigation }) {
             ) : null}
 
             {positions.length > 0 ? (
-              <PositionSelectionList
-                getQuantity={getQuantityForPosition}
-                isSelected={isSelected}
-                onQuantityChange={handleQuantityChange}
-                onToggle={handleTogglePosition}
-                positions={positions}
-                selectedQuantityLabel={selectedQuantityLabel}
-                selectedSectionTitle={t('eventWizard.steps.detectionSlots.selectedSectionTitle', 'Postes actifs')}
-                sportName={sportName}
-                unselectedActionLabel={t('eventWizard.steps.detectionSlots.unselectedActionLabel', 'Activer')}
-              />
+              <View style={{ marginTop: 4 }}>
+                <PositionSelectionList
+                  getQuantity={getQuantityForPosition}
+                  isSelected={isSelected}
+                  onQuantityChange={handleQuantityChange}
+                  onToggle={handleTogglePosition}
+                  positions={positions}
+                  selectedQuantityLabel={selectedQuantityLabel}
+                  selectedSectionTitle={t('eventWizard.steps.detectionSlots.selectedSectionTitle', 'Postes actifs')}
+                  sportName={sportName}
+                  unselectedActionLabel={t('eventWizard.steps.detectionSlots.unselectedActionLabel', 'Activer')}
+                />
+              </View>
             ) : (
-              <View style={[ApplicationStyle.card, Spaces.padding[20], surfaceStyle]}>
+              <View style={[ApplicationStyle.card, surfaceStyle, compactCardInsetStyle]}>
                 <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
                   {t('eventWizard.steps.detectionSlots.emptyPositions', 'Aucun poste n est actuellement defini pour ce sport.')}
                 </Text>

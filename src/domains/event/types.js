@@ -26,6 +26,7 @@
  * @property {any} [composition] - Tactical composition payload
  * @property {Array<{position: string, quantity: number}>} [detectionSlots] - Optional detection slots
  * @property {'single' | 'stage_parent' | 'stage_day'} [eventFormat]
+ * @property {object} [tournamentConfig]
  * @property {Date | string} [stageStartDate]
  * @property {Date | string} [stageEndDate]
  * @property {Date | string} [stageDefaultStartTime]
@@ -79,6 +80,25 @@
  * @property {string} [stageDefaultStartTime]
  * @property {string} [stageDefaultEndTime]
  * @property {any[]} [stageSchedule]
+ * @property {Array<{
+ *   documentId?: string,
+ *   sourceType?: 'club_team' | 'custom_team',
+ *   name?: string,
+ *   status?: 'pending' | 'accepted' | 'declined' | 'archived',
+ *   captainUser?: User,
+ *   sourceTeam?: Team,
+ *   members?: Array<any>,
+ *   adminUsers?: User[],
+ * }>} [tournamentTeams]
+ * @property {{
+ *   allowCustomTeams?: boolean,
+ *   allowCrossClubPlayers?: boolean,
+ *   maxTeams?: number | null,
+ *   minRosterSize?: number | null,
+ *   maxRosterSize?: number | null,
+ *   registrationMode?: 'auto' | 'manual',
+ *   rulesText?: string,
+ * }} [tournamentConfig]
  */
 
 /**

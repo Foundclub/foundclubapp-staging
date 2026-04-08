@@ -20,7 +20,11 @@ import { useGetTeams } from '@/services/team/teamQueries';
 import { sortTeamsForDisplay } from '@/utils/teamSort';
 
 import { useEventWizard } from './EventWizardContext';
-import { getEventWizardStepCount, isStageEventType } from './eventWizardDetectionUtils';
+import {
+  getEventWizardStepCount,
+  isStageEventType,
+  isTournamentEventType,
+} from './eventWizardDetectionUtils';
 
 /**
  *
@@ -99,12 +103,15 @@ function EventWizardTeam({ navigation }) {
   const hasFilteredTeams = filteredTeams.length > 0;
 
   const handleSelectTeam = (team) => {
+    let nextRoute = RouteNames.EventWizardInvites;
+    if (isStageEventType(state?.type?.name)) {
+      nextRoute = RouteNames.EventWizardStageProgram;
+    } else if (isTournamentEventType(state?.type?.name)) {
+      nextRoute = RouteNames.EventWizardLogistics;
+    }
+
     dispatch({ payload: team, type: 'SET_TEAM' });
-    navigation.navigate(
-      isStageEventType(state?.type?.name)
-        ? RouteNames.EventWizardStageProgram
-        : RouteNames.EventWizardInvites,
-    );
+    navigation.navigate(nextRoute);
   };
 
   const renderTeamCard = (team) => (

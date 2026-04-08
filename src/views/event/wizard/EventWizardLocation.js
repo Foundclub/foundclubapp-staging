@@ -13,6 +13,7 @@ import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardLocationStepIndex,
   getEventWizardStepCount,
+  isTournamentEventType,
 } from './eventWizardDetectionUtils';
 
 const buildDateTimeIso = (baseDate, timeValue) => {
@@ -62,7 +63,11 @@ function EventWizardLocation({ navigation }) {
       payload: { facility: facilityId, location },
       type: 'SET_LOCATION',
     });
-    navigation.navigate(RouteNames.EventWizardVisibility);
+    navigation.navigate(
+      isTournamentEventType(state?.type?.name)
+        ? RouteNames.EventWizardTournamentSettings
+        : RouteNames.EventWizardVisibility,
+    );
   };
 
   const handleAddFacility = () => {

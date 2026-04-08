@@ -590,7 +590,7 @@ function EventListContent({
 
       <View>
         <Text style={[Fonts.p1, { color: Colors.neutral00, marginBottom: 8 }]}>
-          Evenements a partir de
+          Événements à partir de
         </Text>
         <DateSlider
           onDateSelected={handleDateSelected}
@@ -617,11 +617,11 @@ function EventListContent({
       {isViewportListMode ? (
         <View style={[Spaces.gap[4]]}>
           <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-            {`${viewportDisplayCount} Ã©vÃ©nement${viewportDisplayCount > 1 ? 's' : ''} dans cette zone`}
+            {`${viewportDisplayCount} \u00E9v\u00E9nement${viewportDisplayCount > 1 ? 's' : ''} dans cette zone`}
           </Text>
           {isViewportTruncated ? (
             <Text style={[Fonts.p4, Fonts.neutral200]}>
-              Zoomez sur la carte pour afficher tous les Ã©vÃ©nements de cette zone.
+              Zoomez sur la carte pour afficher tous les événements de cette zone.
             </Text>
           ) : null}
         </View>

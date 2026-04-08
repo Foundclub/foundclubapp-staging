@@ -55,6 +55,12 @@ function PositionSelectionList({
     return null;
   }
 
+  const selectedRowStyle = { padding: 24, rowGap: 16 };
+  const unselectedRowStyle = { padding: 24, rowGap: 12 };
+  const contentStackStyle = { flex: 1, rowGap: 8 };
+  const sectionStackStyle = { rowGap: 16 };
+  const listStackStyle = { rowGap: 16 };
+
   /**
    * @param {string} position
    * @returns {import('react').ReactElement}
@@ -70,8 +76,7 @@ function PositionSelectionList({
         onPress={() => onToggle(position)}
         style={[
           ApplicationStyle.card,
-          Spaces.padding[24],
-          selected ? Spaces.gap[16] : Spaces.gap[12],
+          selected ? selectedRowStyle : unselectedRowStyle,
           {
             backgroundColor: selected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(4, 31, 44, 0.82)',
             borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.20)',
@@ -100,12 +105,12 @@ function PositionSelectionList({
               ) : null}
             </View>
 
-            <View style={[Spaces.gap[10], { flex: 1 }]}>
-              <Text style={[Fonts.h4, selected ? Fonts.neutral00 : Fonts.neutral100]}>
+            <View style={contentStackStyle}>
+              <Text style={[Fonts.h4, selected ? Fonts.neutral00 : Fonts.neutral100, { lineHeight: 26 }]}>
                 {position}
               </Text>
               {selected ? (
-                <Text style={[Fonts.p4, Fonts.neutral300]}>
+                <Text style={[Fonts.p4, Fonts.neutral300, { lineHeight: 18 }]}>
                   {selectedQuantityLabel(quantity)}
                 </Text>
               ) : null}
@@ -167,14 +172,14 @@ function PositionSelectionList({
           ) : (
             <View
               style={[
-                Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[8],
                 {
                   backgroundColor: 'rgba(1, 179, 244, 0.10)',
                   borderColor: 'rgba(1, 179, 244, 0.24)',
                   borderRadius: 999,
                   borderWidth: 1,
                   minWidth: 124,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
                 },
               ]}
             >
@@ -189,24 +194,24 @@ function PositionSelectionList({
   };
 
   return (
-    <View style={[Spaces.gap[24]]}>
+    <View style={{ rowGap: 24 }}>
       {selectedPositions.length > 0 ? (
-        <View style={[Spaces.gap[16]]}>
+        <View style={sectionStackStyle}>
           <Text style={[Fonts.p4Bold, Fonts.neutral300]}>
             {selectedSectionTitle}
           </Text>
-          <View style={[Spaces.gap[12]]}>
+          <View style={listStackStyle}>
             {selectedPositions.map(renderPositionRow)}
           </View>
         </View>
       ) : null}
 
       {unselectedGroups.map((group) => (
-        <View key={group.label} style={[Spaces.gap[16]]}>
+        <View key={group.label} style={sectionStackStyle}>
           <Text style={[Fonts.p4Bold, Fonts.neutral300]}>
             {group.label}
           </Text>
-          <View style={[Spaces.gap[12]]}>
+          <View style={listStackStyle}>
             {group.positions.map(renderPositionRow)}
           </View>
         </View>

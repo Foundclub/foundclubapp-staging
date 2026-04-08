@@ -26,6 +26,7 @@ import {
   getEventWizardRecapStepIndex,
   getEventWizardStepCount,
   isStageEventType,
+  isTournamentEventType,
 } from './eventWizardDetectionUtils';
 
 const getErrorCode = (error) => (
@@ -35,7 +36,16 @@ const getErrorCode = (error) => (
   || null
 );
 
+const getErrorMessage = (error, fallback) => (
+  error?.response?.data?.error?.message
+  || error?.response?.data?.error
+  || error?.response?.data?.message
+  || error?.message
+  || fallback
+);
+
 const buildWizardFormData = (wizardState) => {
+  const isTournament = isTournamentEventType(wizardState?.type?.name);
   const eventDate = wizardState.date ? new Date(wizardState.date) : new Date();
   const start = wizardState.startTime ? new Date(wizardState.startTime) : new Date(eventDate);
   const end = wizardState.endTime ? new Date(wizardState.endTime) : new Date(start.getTime() + (60 * 60000));
@@ -87,8 +97,19 @@ const buildWizardFormData = (wizardState) => {
     startTime: format(start, 'HH:mm'),
     team: wizardState.team?.documentId,
     totalPlayers: wizardState.totalPlayers ?? null,
+    tournamentConfig: isTournament ? {
+      allowCrossClubPlayers: wizardState.tournamentAllowCrossClubPlayers === true,
+      allowCustomTeams: wizardState.tournamentAllowCustomTeams !== false,
+      maxRosterSize: wizardState.tournamentMaxRosterSize ?? null,
+      maxTeams: wizardState.tournamentMaxTeams ?? null,
+      minRosterSize: wizardState.tournamentMinRosterSize ?? null,
+      registrationMode: wizardState.tournamentRegistrationMode || 'manual',
+      rulesText: wizardState.tournamentRulesText || '',
+    } : undefined,
     type: wizardState.type?.documentId,
-    validationMode: wizardState.validationMode || 'auto',
+    validationMode: isTournament
+      ? (wizardState.tournamentRegistrationMode || 'manual')
+      : (wizardState.validationMode || 'auto'),
   };
 };
 
@@ -123,6 +144,7 @@ function EventWizardRecap({ navigation }) {
     .replace(/[\u0300-\u036f]/g, '')
     .includes('reservation');
   const isStage = isStageEventType(state.type?.name);
+  const isTournament = isTournamentEventType(state.type?.name);
 
   const wizardFormData = useMemo(() => buildWizardFormData(state), [state]);
 
@@ -174,7 +196,10 @@ function EventWizardRecap({ navigation }) {
   const visibilityValue = state.sessionStatus === 'closed'
     ? t('eventWizard.steps.visibility.team')
     : t('eventWizard.steps.visibility.public');
-  const validationValue = state.validationMode === 'manual'
+  const effectiveValidationMode = isTournament
+    ? (state.tournamentRegistrationMode || 'manual')
+    : (state.validationMode || 'auto');
+  const validationValue = effectiveValidationMode === 'manual'
     ? t('eventEdit.fields.validationMode.options.manual')
     : t('eventEdit.fields.validationMode.options.auto');
   const invitedCount = state.invitedTeams?.length || 0;
@@ -302,9 +327,13 @@ function EventWizardRecap({ navigation }) {
       }
 
       if (created.length === 0) {
+        const singleFailureMessage = failed.length === 1
+          ? getErrorMessage(failed[0]?.error, getFailureSummary(failed))
+          : getFailureSummary(failed);
+
         Alert.alert(
           t('common.error', 'Erreur'),
-          getFailureSummary(failed),
+          singleFailureMessage,
         );
         return;
       }
@@ -393,7 +422,7 @@ function EventWizardRecap({ navigation }) {
       <WizardStepLayout
         isNextDisabled={!isRecapReady}
         isNextLoading={isSubmitting}
-        nextLabel={t('eventWizard.recap.actions.createShort', 'Créer')}
+        nextLabel={t('eventWizard.recap.actions.createShort', 'CrÃ©er')}
         onBack={() => navigation.goBack()}
         onNext={handleSubmit}
         stepCount={getEventWizardStepCount(state)}
@@ -432,14 +461,14 @@ function EventWizardRecap({ navigation }) {
               >
                 <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
                   {isRecapReady
-                    ? t('eventWizard.recap.ready', 'Prêt a créer')
-                    : t('eventWizard.recap.incomplete', 'à compléter')}
+                    ? t('eventWizard.recap.ready', 'PrÃªt a crÃ©er')
+                    : t('eventWizard.recap.incomplete', 'Ã  complÃ©ter')}
                 </Text>
               </View>
             </View>
 
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('eventWizard.recap.completedCount', '{{done}}/5 infos clés complétées', {
+              {t('eventWizard.recap.completedCount', '{{done}}/5 infos clÃ©s complÃ©tÃ©es', {
                 done: completedQuickOverviewCount,
               })}
             </Text>
@@ -492,10 +521,10 @@ function EventWizardRecap({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.team')}</Text>
                 <Text style={[Fonts.p2, hasTeam ? Fonts.neutral00 : Fonts.gold500]}>{teamValue}</Text>
               </View>
-              {!isStage ? (
+              {!isStage && !isTournament ? (
                 <View style={[Spaces.gap[4]]}>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    {t('eventWizard.recap.invitedTeamsTitle', 'Équipes invitees')}
+                    {t('eventWizard.recap.invitedTeamsTitle', 'Ã‰quipes invitees')}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
                     {t('eventWizard.recap.invitesCount', { count: invitedCount })}
@@ -591,6 +620,38 @@ function EventWizardRecap({ navigation }) {
               ) : null}
             </View>
           </View>
+
+          {isTournament ? (
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+                <Text style={[Fonts.h4, Fonts.neutral00]}>Parametres tournoi</Text>
+                <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardTournamentSettings)}>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`Max equipes: ${state.tournamentMaxTeams ?? recapNotSet}`}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`Effectif: ${state.tournamentMinRosterSize ?? recapNotSet} - ${state.tournamentMaxRosterSize ?? recapNotSet}`}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`Equipes ephemeres: ${state.tournamentAllowCustomTeams !== false ? 'Autorisees' : 'Desactivees'}`}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`Mix clubs: ${state.tournamentAllowCrossClubPlayers === true ? 'Autorise' : 'Non autorise'}`}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`Validation des equipes: ${validationValue}`}
+                </Text>
+                <Text style={[Fonts.p2, state.tournamentRulesText ? Fonts.neutral100 : Fonts.neutral300]}>
+                  {state.tournamentRulesText || 'Aucune regle specifique renseignee.'}
+                </Text>
+              </View>
+            </View>
+          ) : null}
 
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>

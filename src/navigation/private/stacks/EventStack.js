@@ -5,6 +5,7 @@ import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
 import TacticalBoardScreen from '@/views/event/TacticalBoardScreen';
+import TournamentTeamDetails from '@/views/event/TournamentTeamDetails';
 import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
 import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
 import EventWizardDetectionSlots from '@/views/event/wizard/EventWizardDetectionSlots';
@@ -15,6 +16,7 @@ import EventWizardParticipants from '@/views/event/wizard/EventWizardParticipant
 import EventWizardRecap from '@/views/event/wizard/EventWizardRecap';
 import EventWizardStageProgram from '@/views/event/wizard/EventWizardStageProgram';
 import EventWizardTeam from '@/views/event/wizard/EventWizardTeam';
+import EventWizardTournamentSettings from '@/views/event/wizard/EventWizardTournamentSettings';
 import EventWizardType from '@/views/event/wizard/EventWizardType';
 import EventWizardValidationMode from '@/views/event/wizard/EventWizardValidationMode';
 import EventWizardVisibility from '@/views/event/wizard/EventWizardVisibility';
@@ -61,6 +63,14 @@ function EventStack() {
         <Stack.Screen
           component={EventFilters}
           name={RouteNames.EventFilters}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          component={TournamentTeamDetails}
+          name={RouteNames.TournamentTeamDetails}
           options={{
             ...commonOptions,
             headerTitle: '',
@@ -125,6 +135,11 @@ function EventStack() {
         <Stack.Screen
           component={EventWizardStageProgram}
           name={RouteNames.EventWizardStageProgram}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={EventWizardTournamentSettings}
+          name={RouteNames.EventWizardTournamentSettings}
           options={{ headerShown: false }}
         />
         <Stack.Screen

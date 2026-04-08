@@ -228,6 +228,45 @@ describe('Event Use Cases', () => {
       const result = createEventPayload(mockEvent);
       expect(result.location).toBeUndefined();
     });
+
+    test('should support Date inputs for time fields', () => {
+      const startTime = new Date(2025, 4, 15, 14, 30, 12, 45);
+      const endTime = new Date(2025, 4, 15, 15, 45, 0, 0);
+      const mockEvent = {
+        date: '15/05/2025',
+        endTime,
+        location: { label: 'Paris', value: '2.3522|48.8566' },
+        startTime,
+      };
+
+      const result = createEventPayload(mockEvent);
+
+      expect(result.date).toMatch(/^2025-05-15T.*:30:12/);
+      expect(result.startTime).toBe('14:30:12.045');
+      expect(result.endTime).toBe('15:45:00.000');
+    });
+
+    test('should remove stage-only time fields for regular events', () => {
+      const mockEvent = {
+        date: '15/05/2025',
+        location: { label: 'Paris', value: '2.3522|48.8566' },
+        stageDefaultEndTime: '15:45',
+        stageDefaultStartTime: '14:30',
+        stageEndDate: '2025-05-16',
+        stageSchedule: [],
+        stageStartDate: '2025-05-15',
+        startTime: '14:30',
+      };
+
+      const result = createEventPayload(mockEvent);
+
+      expect(result).not.toHaveProperty('stageDefaultEndTime');
+      expect(result).not.toHaveProperty('stageDefaultStartTime');
+      expect(result).not.toHaveProperty('stageEndDate');
+      expect(result).not.toHaveProperty('stageSchedule');
+      expect(result).not.toHaveProperty('stageStartDate');
+      expect(result.startTime).toBe('14:30:00.000');
+    });
   });
 
   describe('createReccurrentEventPayload', () => {

@@ -292,6 +292,17 @@ const useAuth = () => {
       return false;
     }
 
+    const normalizedTypeName = String(event?.type?.name || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+    const isTournament = normalizedTypeName.includes('tournoi');
+    const organizerDocumentId = String(event?.organizer?.documentId || '').trim();
+    if (isTournament && organizerDocumentId) {
+      return organizerDocumentId === String(userData?.documentId || '').trim();
+    }
+
     const trainedTeamIds = new Set((userData?.trainedTeams || []).map(({ documentId }) => documentId));
     const organizerTeamId = event?.team?.documentId;
     const invitedTeamIds = (event?.invitedTeams || []).map((team) => team?.documentId).filter(Boolean);

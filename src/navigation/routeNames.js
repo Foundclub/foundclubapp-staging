@@ -134,9 +134,11 @@ export const RouteNames = /** @type {const} */ ({
   EventWizardRecap: 'EventWizardRecap',
   EventWizardStageProgram: 'EventWizardStageProgram',
   EventWizardTeam: 'EventWizardTeam',
+  EventWizardTournamentSettings: 'EventWizardTournamentSettings',
   EventWizardType: 'EventWizardType',
   EventWizardValidationMode: 'EventWizardValidationMode',
   EventWizardVisibility: 'EventWizardVisibility',
+  TournamentTeamDetails: 'TournamentTeamDetails',
 
   // History Wizard
   HistoryWizardCategory: 'HistoryWizardCategory',

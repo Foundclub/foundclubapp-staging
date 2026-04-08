@@ -18,7 +18,10 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
-import { getEventWizardStepCount } from './eventWizardDetectionUtils';
+import {
+  getEventWizardLogisticsStepIndex,
+  getEventWizardStepCount,
+} from './eventWizardDetectionUtils';
 
 const parseInteger = (rawValue) => {
   if (!rawValue || String(rawValue).trim() === '') return null;
@@ -345,7 +348,7 @@ function EventWizardLogistics({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(state)}
-      stepIndex={4}
+      stepIndex={getEventWizardLogisticsStepIndex(state)}
       subtitle={t('eventWizard.steps.logistics.subtitle')}
       title={t('eventWizard.steps.logistics.title')}
     >

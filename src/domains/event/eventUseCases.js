@@ -53,16 +53,77 @@ export const isStageEventType = (typeName = '') => normalizeEventTypeLabel(typeN
  * @param {string | undefined} timeString - The time string to format
  * @returns {string | undefined} The formatted date string or null if invalid
  */
+const padTimePart = (value, size = 2) => String(value).padStart(size, '0');
+
+const getTimeParts = (value) => {
+  if (!value) return undefined;
+
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return undefined;
+    return {
+      hours: value.getHours(),
+      milliseconds: value.getMilliseconds(),
+      minutes: value.getMinutes(),
+      seconds: value.getSeconds(),
+    };
+  }
+
+  if (typeof value !== 'string') return undefined;
+
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+
+  const fullMatch = normalized.match(/^(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?$/);
+  if (fullMatch) {
+    return {
+      hours: Number.parseInt(fullMatch[1], 10),
+      milliseconds: Number.parseInt(String(fullMatch[4] || '0').padEnd(3, '0'), 10),
+      minutes: Number.parseInt(fullMatch[2], 10),
+      seconds: Number.parseInt(fullMatch[3], 10),
+    };
+  }
+
+  const shortMatch = normalized.match(/^(\d{2}):(\d{2})$/);
+  if (shortMatch) {
+    return {
+      hours: Number.parseInt(shortMatch[1], 10),
+      milliseconds: 0,
+      minutes: Number.parseInt(shortMatch[2], 10),
+      seconds: 0,
+    };
+  }
+
+  const parsedDate = new Date(normalized);
+  if (Number.isNaN(parsedDate.getTime())) return undefined;
+
+  return {
+    hours: parsedDate.getHours(),
+    milliseconds: parsedDate.getMilliseconds(),
+    minutes: parsedDate.getMinutes(),
+    seconds: parsedDate.getSeconds(),
+  };
+};
+
 export const formatDateTimeToSend = (dateString, timeString) => {
-  if (!dateString || !timeString || typeof dateString !== 'string' || typeof timeString !== 'string') return undefined;
-  const splittedDate = dateString.split('/');
-  const splittedTime = timeString.split(':');
-  const day = splittedDate[0];
-  const month = splittedDate[1];
-  const year = splittedDate[2];
-  const hours = splittedTime[0];
-  const minutes = splittedTime[1];
-  const date = new Date(`${year}-${month}-${day}T${hours}:${minutes}`);
+  if (!dateString || !timeString) return undefined;
+
+  const timeParts = getTimeParts(timeString);
+  if (!timeParts) return undefined;
+
+  let date;
+  if (typeof dateString === 'string' && dateString.includes('/')) {
+    const splittedDate = dateString.split('/');
+    const day = splittedDate[0];
+    const month = splittedDate[1];
+    const year = splittedDate[2];
+    date = new Date(`${year}-${month}-${day}T${padTimePart(timeParts.hours)}:${padTimePart(timeParts.minutes)}:${padTimePart(timeParts.seconds)}.${padTimePart(timeParts.milliseconds, 3)}`);
+  } else {
+    const parsedDate = dateString instanceof Date ? dateString : new Date(dateString);
+    if (Number.isNaN(parsedDate.getTime())) return undefined;
+    date = new Date(parsedDate);
+    date.setHours(timeParts.hours, timeParts.minutes, timeParts.seconds, timeParts.milliseconds);
+  }
+
   if (Number.isNaN(date.getTime())) return undefined;
   return date.toISOString();
 };
@@ -177,11 +238,30 @@ export const isValidTime = (timeString) => {
  * @returns {string | undefined} The formatted time string in HH:mm:ss.SSS format
  */
 const formatTimeForStrapi = (timeString) => {
-  if (!timeString || typeof timeString !== 'string') return undefined;
-  const pattern = /^(\d{2}):(\d{2})$/;
-  const match = timeString.match(pattern);
-  if (!match) return undefined;
-  return `${timeString}:00.000`;
+  const timeParts = getTimeParts(timeString);
+  if (!timeParts) return undefined;
+
+  const {
+    hours,
+    milliseconds,
+    minutes,
+    seconds,
+  } = timeParts;
+
+  if (
+    hours < 0
+    || hours > 23
+    || minutes < 0
+    || minutes > 59
+    || seconds < 0
+    || seconds > 59
+    || milliseconds < 0
+    || milliseconds > 999
+  ) {
+    return undefined;
+  }
+
+  return `${padTimePart(hours)}:${padTimePart(minutes)}:${padTimePart(seconds)}.${padTimePart(milliseconds, 3)}`;
 };
 
 const buildLocationPayload = (location) => {
@@ -236,6 +316,11 @@ export const createEventPayload = (event) => {
   delete formattedData.recurrenceDays;
   delete formattedData.isRecurrent;
   delete formattedData.requestFeatured; // Ne pas envoyer à Strapi
+  delete formattedData.stageDefaultEndTime;
+  delete formattedData.stageDefaultStartTime;
+  delete formattedData.stageEndDate;
+  delete formattedData.stageSchedule;
+  delete formattedData.stageStartDate;
 
   // Remove undefined or null numeric fields to let Strapi use defaults
   if (formattedData.capacity == null || formattedData.capacity === '') delete formattedData.capacity;
@@ -243,6 +328,8 @@ export const createEventPayload = (event) => {
   if (formattedData.totalPlayers == null || formattedData.totalPlayers === '') delete formattedData.totalPlayers;
   if (!formattedData.location) delete formattedData.location;
   if (!formattedData.locationDetails) delete formattedData.locationDetails;
+  if (!formattedData.endTime) delete formattedData.endTime;
+  if (!formattedData.startTime) delete formattedData.startTime;
 
   return formattedData;
 };

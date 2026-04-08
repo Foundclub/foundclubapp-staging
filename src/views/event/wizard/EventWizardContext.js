@@ -21,6 +21,7 @@ const normalizeTypeLabel = (value = '') => String(value || '')
   .trim();
 
 const isStageTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('stage');
+const isTournamentTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('tournoi');
 
 const createInitialState = () => {
   const { end, start } = createDefaultTimeRange();
@@ -61,6 +62,13 @@ const createInitialState = () => {
     // Step 7+: Meta
     description: '',
     sessionStatus: 'open',
+    tournamentAllowCrossClubPlayers: false,
+    tournamentAllowCustomTeams: true,
+    tournamentMaxRosterSize: null,
+    tournamentMaxTeams: null,
+    tournamentMinRosterSize: null,
+    tournamentRegistrationMode: 'manual',
+    tournamentRulesText: '',
 
     // Step 9: Location
     facility: null,
@@ -137,8 +145,14 @@ function eventWizardReducer(state, action) {
         invitedTeams: [],
         team: action.payload,
       };
+    case 'SET_TOURNAMENT_SETTINGS':
+      return {
+        ...state,
+        ...action.payload,
+      };
     case 'SET_TYPE': {
       const isStage = isStageTypeName(action.payload?.name);
+      const isTournament = isTournamentTypeName(action.payload?.name);
       const nextState = {
         ...state,
         detectionSlots: [],
@@ -146,9 +160,24 @@ function eventWizardReducer(state, action) {
       };
 
       if (!isStage) {
-        return {
+        const normalizedState = {
           ...nextState,
           stageSchedule: [],
+        };
+
+        if (!isTournament) {
+          return normalizedState;
+        }
+
+        return {
+          ...normalizedState,
+          invitedTeams: [],
+          isRecurrent: false,
+          recurrenceDays: [],
+          recurrenceEndDate: null,
+          recurrenceFrequency: 'week',
+          recurrenceInterval: 1,
+          recurrenceStartDate: null,
         };
       }
 
