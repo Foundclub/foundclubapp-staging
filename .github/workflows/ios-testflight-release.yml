@@ -88,6 +88,40 @@ jobs:
           Path("ios/GoogleService-Info.plist").write_bytes(data)
           PY
 
+      - name: Sync Firebase iOS URL scheme
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          firebase_plist = Path("ios/GoogleService-Info.plist")
+          info_plist = Path("ios/foundclub/Info.plist")
+
+          firebase = plistlib.loads(firebase_plist.read_bytes())
+          info = plistlib.loads(info_plist.read_bytes())
+
+          google_app_id = str(firebase.get("GOOGLE_APP_ID", "")).strip()
+          if not google_app_id:
+              raise SystemExit("GOOGLE_APP_ID missing from ios/GoogleService-Info.plist")
+
+          encoded_app_id = f'app-{google_app_id.replace(":", "-")}'
+          url_types = info.get("CFBundleURLTypes", [])
+          if not url_types:
+              raise SystemExit("CFBundleURLTypes missing from ios/foundclub/Info.plist")
+
+          schemes = url_types[0].get("CFBundleURLSchemes", [])
+          if not schemes:
+              raise SystemExit("CFBundleURLSchemes missing from ios/foundclub/Info.plist")
+
+          schemes[0] = encoded_app_id
+          url_types[0]["CFBundleURLSchemes"] = schemes
+          info["CFBundleURLTypes"] = url_types
+
+          info_plist.write_bytes(plistlib.dumps(info))
+          print(f"Synced Firebase URL scheme: {encoded_app_id}")
+          PY
+
       - name: Decode signing assets
         shell: bash
         env:

@@ -313,6 +313,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 804CEEB023B6C55DBD7244D4 /* Pods-foundclub.debug.xcconfig */;
 			buildSettings = {
+				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = foundclub/foundclub.entitlements;
@@ -346,6 +347,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 421B9EE0124DD517E21AEAF4 /* Pods-foundclub.release.xcconfig */;
 			buildSettings = {
+				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = foundclub/foundclub.entitlements;
