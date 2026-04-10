@@ -13,6 +13,7 @@ jobs:
       IOS_SCHEME: foundclub
       IOS_CONFIGURATION: Release
       IOS_BUNDLE_ID: com.foundclub
+      IOS_BUILD_NUMBER: ${{ github.run_number }}${{ github.run_attempt }}
 
     steps:
       - name: Checkout
@@ -164,6 +165,7 @@ jobs:
         shell: bash
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_BUILD_NUMBER: ${{ env.IOS_BUILD_NUMBER }}
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -175,6 +177,7 @@ jobs:
           replacements = {
               'PROVISIONING_PROFILE_SPECIFIER = "";': f'PROVISIONING_PROFILE_SPECIFIER = "{os.environ["PROFILE_NAME"]}";',
               '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";': '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";',
+              'CURRENT_PROJECT_VERSION = 1;': f'CURRENT_PROJECT_VERSION = {os.environ["IOS_BUILD_NUMBER"]};',
           }
 
           if 'DEVELOPMENT_TEAM = "";' in text:
@@ -187,6 +190,13 @@ jobs:
 
           pbxproj.write_text(text)
           PY
+
+      - name: Print release version metadata
+        shell: bash
+        run: |
+          echo "Using iOS build number: ${IOS_BUILD_NUMBER}"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ios/foundclub/Info.plist || true
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' ios/foundclub/Info.plist || true
 
       - name: Build archive
         shell: bash
