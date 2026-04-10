@@ -40,8 +40,10 @@ const MAP_LOAD_TIMEOUT_MS = 6500;
  * @param {any} [props.command]
  * @param {string} props.errorMessage
  * @param {'results' | 'selected' | 'user' | 'region'} [props.focusMode]
- * @param {number} [props.height]
- * @param {any[]} [props.items]
+  * @param {number} [props.height]
+  * @param {any[]} [props.items]
+ * @param {any[]} [props.renderItems]
+ * @param {{ dataCount?: number; renderableCount?: number; markerCount?: number; clusterCount?: number; fallbackActive?: boolean } | null} [props.renderStats]
  * @param {string} [props.markerColor]
  * @param {string} [props.message]
  * @param {(itemId: string) => void} [props.onOpenItem]
@@ -71,6 +73,8 @@ function SearchMapIframeRuntime({
   onSelectItem,
   overlayInsets = null,
   regionHint = null,
+  renderItems = [],
+  renderStats = null,
   selectedItemId = '',
   tileAttribution,
   tileProbeUrl = '',
@@ -91,9 +95,21 @@ function SearchMapIframeRuntime({
     items,
     overlayInsets,
     regionHint,
+    renderItems,
+    renderStats,
     selectedItemId,
     userLocation,
-  }), [command, focusMode, items, overlayInsets, regionHint, selectedItemId, userLocation]);
+  }), [
+    command,
+    focusMode,
+    items,
+    overlayInsets,
+    regionHint,
+    renderItems,
+    renderStats,
+    selectedItemId,
+    userLocation,
+  ]);
   const html = useMemo(() => buildSearchMapRuntimeHtml({
     initialState: runtimeState,
     mapId,
@@ -329,6 +345,8 @@ function SearchMapIframeRuntime({
  * @param {'results' | 'selected' | 'user' | 'region'} [props.focusMode]
  * @param {number} [props.height]
  * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
+ * @param {any[]} [props.renderItems]
+ * @param {{ dataCount?: number; renderableCount?: number; markerCount?: number; clusterCount?: number; fallbackActive?: boolean } | null} [props.renderStats]
  * @param {string} [props.message]
  * @param {(itemId: string) => void} [props.onOpenItem]
  * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
@@ -354,6 +372,8 @@ export const renderMap = ({
   onSelectItem,
   overlayInsets = null,
   regionHint = null,
+  renderItems = [],
+  renderStats = null,
   scope = 'events',
   selectedItemId = '',
   userLocation = null,
@@ -380,6 +400,8 @@ export const renderMap = ({
         onSelectItem={onSelectItem}
         overlayInsets={overlayInsets}
         regionHint={regionHint}
+        renderItems={renderItems}
+        renderStats={renderStats}
         selectedItemId={selectedItemId}
         tileAttribution={TOMTOM_TILE_PROVIDER.attribution}
         tileProbeUrl={tomTomApiKey ? buildTomTomProbeUrl(tomTomApiKey) : ''}
@@ -404,6 +426,8 @@ export const renderMap = ({
       onSelectItem={onSelectItem}
       overlayInsets={overlayInsets}
       regionHint={regionHint}
+      renderItems={renderItems}
+      renderStats={renderStats}
       selectedItemId={selectedItemId}
       tileAttribution={LEGACY_TILE_PROVIDER.attribution}
       tileProbeUrl=""

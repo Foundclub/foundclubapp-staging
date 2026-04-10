@@ -478,13 +478,21 @@ export const buildSearchMapRuntimeHtml = ({
           }).join('|');
         };
 
+        var buildRenderableSignature = function (entries) {
+          return entries.map(function (entry) {
+            var entryKey = entry && entry.key ? entry.key : '';
+            var count = Number(entry && entry.count ? entry.count : 1);
+            return entryKey + ':' + Number(entry.lat).toFixed(5) + ':' + Number(entry.lng).toFixed(5) + ':' + count;
+          }).join('|');
+        };
+
         var getOverlayInsets = function () {
           var insets = currentState && currentState.overlayInsets ? currentState.overlayInsets : {};
           return {
-            bottom: isFinite(insets.bottom) ? Math.max(96, insets.bottom) : 208,
-            left: isFinite(insets.left) ? Math.max(24, insets.left) : 48,
-            right: isFinite(insets.right) ? Math.max(24, insets.right) : 48,
-            top: isFinite(insets.top) ? Math.max(72, insets.top) : 132,
+            bottom: isFinite(insets.bottom) ? Math.max(72, insets.bottom) : 104,
+            left: isFinite(insets.left) ? Math.max(16, insets.left) : 24,
+            right: isFinite(insets.right) ? Math.max(16, insets.right) : 24,
+            top: isFinite(insets.top) ? Math.max(56, insets.top) : 84,
           };
         };
 
@@ -658,6 +666,21 @@ export const buildSearchMapRuntimeHtml = ({
         var focusSelectedItem = function () {
           var selectedMarker = markersById[currentState.selectedItemId];
           if (!selectedMarker) {
+            var items = Array.isArray(currentState.items) ? currentState.items : [];
+            var selectedItem = currentState.selectedItemId
+              ? items.find(function (item) { return item.id === currentState.selectedItemId; })
+              : null;
+            if (selectedItem && isFinite(selectedItem.lat) && isFinite(selectedItem.lng)) {
+              postDiagnostic('focus_selected_item_fallback', {
+                lat: selectedItem.lat,
+                lng: selectedItem.lng,
+                selectedItemId: currentState.selectedItemId,
+                zoom: 13,
+              });
+              setFocusedView(selectedItem.lat, selectedItem.lng, 13, getFocusYOffset());
+              postBridgeMessage('FIT_RESULTS_DONE', { reason: 'selected_fallback' });
+              return;
+            }
             fitToResults();
             return;
           }
@@ -870,7 +893,9 @@ export const buildSearchMapRuntimeHtml = ({
           return runSafely('render_markers', function () {
             var items = Array.isArray(currentState.items) ? currentState.items : [];
             var itemsSignature = buildItemsSignature(items);
-            var renderableEntries = buildRenderableEntries(items);
+            var renderableEntries = Array.isArray(currentState.renderItems)
+              ? currentState.renderItems
+              : buildRenderableEntries(items);
             if (!renderableEntries.length && items.length) {
               postDiagnostic('render_fallback_unclustered', {
                 itemsCount: items.length,
@@ -880,14 +905,21 @@ export const buildSearchMapRuntimeHtml = ({
             }
             var markerCount = renderableEntries.filter(function (entry) { return !entry.isCluster; }).length;
             var clusterCount = renderableEntries.filter(function (entry) { return entry.isCluster; }).length;
+            var renderStatsPayload = Object.assign({
+              clusterCount: clusterCount,
+              dataCount: items.length,
+              fallbackActive: Boolean(currentState.renderStats && currentState.renderStats.fallbackActive),
+              markerCount: markerCount,
+              renderableCount: renderableEntries.length,
+            }, currentState.renderStats || {});
             var renderStatsSignature = [
-              renderableEntries.length,
-              markerCount,
-              clusterCount,
+              renderStatsPayload.dataCount,
+              renderStatsPayload.renderableCount,
+              renderStatsPayload.markerCount,
+              renderStatsPayload.clusterCount,
+              renderStatsPayload.fallbackActive ? '1' : '0',
             ].join(':');
-            var clusterSignature = renderableEntries.map(function (entry) {
-              return entry.key + ':' + entry.lat.toFixed(5) + ':' + entry.lng.toFixed(5) + ':' + (entry.count || 1);
-            }).join('|');
+            var clusterSignature = buildRenderableSignature(renderableEntries);
 
             if (firstRenderedItemsCount !== items.length) {
               firstRenderedItemsCount = items.length;
@@ -917,11 +949,7 @@ export const buildSearchMapRuntimeHtml = ({
               lastSelectedItemId = currentState.selectedItemId;
               if (lastRenderStatsSignature !== renderStatsSignature) {
                 lastRenderStatsSignature = renderStatsSignature;
-                postBridgeMessage('MAP_RENDER_STATS', {
-                  clusterCount: clusterCount,
-                  markerCount: markerCount,
-                  renderableCount: renderableEntries.length,
-                });
+                postBridgeMessage('MAP_RENDER_STATS', renderStatsPayload);
               }
               return;
             }
@@ -945,7 +973,15 @@ export const buildSearchMapRuntimeHtml = ({
               marker.on('click', function () {
                 runSafely('marker_click', function () {
                   if (entry.isCluster) {
-                    map.setView([entry.lat, entry.lng], Math.min(map.getZoom() + 2, 16));
+                    map.setView(
+                      [entry.lat, entry.lng],
+                      Math.min(
+                        Number.isFinite(Number(entry.expansionZoom))
+                          ? Number(entry.expansionZoom)
+                          : (map.getZoom() + 2),
+                        16
+                      )
+                    );
                     return;
                   }
 
@@ -971,11 +1007,7 @@ export const buildSearchMapRuntimeHtml = ({
             lastSelectedItemId = currentState.selectedItemId;
             if (lastRenderStatsSignature !== renderStatsSignature) {
               lastRenderStatsSignature = renderStatsSignature;
-              postBridgeMessage('MAP_RENDER_STATS', {
-                clusterCount: clusterCount,
-                markerCount: markerCount,
-                renderableCount: renderableEntries.length,
-              });
+              postBridgeMessage('MAP_RENDER_STATS', renderStatsPayload);
             }
           });
         };
@@ -1090,6 +1122,7 @@ export const buildSearchMapRuntimeHtml = ({
               firstItemLng: firstItem && isFinite(firstItem.lng) ? firstItem.lng : undefined,
               hasRegionHint: Boolean(currentState.regionHint),
               itemsCount: items.length,
+              renderItemsCount: Array.isArray(currentState.renderItems) ? currentState.renderItems.length : 0,
               selectedItemId: currentState.selectedItemId || '',
             });
 

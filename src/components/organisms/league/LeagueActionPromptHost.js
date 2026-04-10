@@ -612,71 +612,52 @@ function LeagueActionPromptHost() {
   ]);
 
   const renderPromptActions = useCallback(() => {
-    if (nextAction?.state === 'proposal_received') {
-      return (
-        <View style={{ gap: 12 }}>
-          <Button
-            onPress={handleAcceptProposal}
-            style={ApplicationStyle.borderRadius24}
-            title={isSubmitting ? 'Validation...' : 'Accepter'}
-            variant="Primary"
-          />
-          <Button
-            onPress={handleDeclineProposal}
-            style={ApplicationStyle.borderRadius24}
-            title="Refuser"
-            variant="Secondary"
-          />
-          <Button
-            onPress={() => openMatchDetails('negotiation')}
-            style={ApplicationStyle.borderRadius24}
-            title="Voir tous les d\u00E9tails"
-            variant="Secondary"
-          />
-          <Button
-            onPress={openChat}
-            style={ApplicationStyle.borderRadius24}
-            title="Ouvrir le chat"
-            variant="Secondary"
-          />
-        </View>
-      );
-    }
+    const state = String(nextAction?.state || '').trim();
+    const phase = String(nextAction?.match?.phase || '').trim().toLowerCase();
 
-    if (nextAction?.state === 'post_slot_resolution') {
-      return (
-        <View style={{ gap: 12 }}>
-          {renderPostSlotActions()}
-        </View>
-      );
-    }
+    const goToCanonicalScreen = () => {
+      if (!nextAction?.matchId) return;
+      if (phase === 'waiting_score' || phase === 'pending_validation' || phase === 'disputed') {
+        dismissForSession();
+        openLeagueScoreFlow(nextAction.matchId);
+        return;
+      }
+
+      if (state === 'waiting_venue') {
+        openMatchDetails('venueBooking');
+        return;
+      }
+
+      if (state === 'proposal_received') {
+        openMatchDetails('negotiation');
+        return;
+      }
+
+      openMatchDetails('timeline');
+    };
+
+    const primaryTitle = phase === 'waiting_score' || phase === 'pending_validation' || phase === 'disputed'
+      ? 'Saisir le score'
+      : 'Ouvrir le match';
 
     return (
       <View style={{ gap: 12 }}>
         <Button
-          onPress={handleVenueReminder}
+          onPress={goToCanonicalScreen}
           style={ApplicationStyle.borderRadius24}
-          title="Reserver le terrain"
+          title={primaryTitle}
           variant="Primary"
-        />
-        <Button
-          onPress={() => openMatchDetails('venueBooking')}
-          style={ApplicationStyle.borderRadius24}
-          title="Voir le match"
-          variant="Secondary"
         />
       </View>
     );
   }, [
     ApplicationStyle.borderRadius24,
-    handleAcceptProposal,
-    handleDeclineProposal,
-    handleVenueReminder,
-    isSubmitting,
+    dismissForSession,
+    nextAction?.match?.phase,
+    nextAction?.matchId,
     nextAction?.state,
-    openChat,
+    openLeagueScoreFlow,
     openMatchDetails,
-    renderPostSlotActions,
   ]);
 
   if (!nextAction) return null;

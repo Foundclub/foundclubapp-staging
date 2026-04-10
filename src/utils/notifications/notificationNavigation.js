@@ -215,6 +215,27 @@ const eventDetailsDestination = (eventId) => {
 };
 
 /**
+ * @param {unknown} eventId
+ * @param {unknown} teamId
+ */
+const tournamentTeamDestination = (eventId, teamId) => {
+  const safeTeamId = normalizeEntityId(teamId);
+  const safeEventId = normalizeEntityId(eventId);
+  if (!safeTeamId) return eventDetailsDestination(safeEventId);
+
+  return {
+    params: {
+      params: {
+        eventId: safeEventId,
+        teamId: safeTeamId,
+      },
+      screen: RouteNames.TournamentTeamDetails,
+    },
+    route: RouteNames.EventStack,
+  };
+};
+
+/**
  * @param {NotificationPayload} payload
  */
 const coachReportPublishedDestination = (payload) => {
@@ -592,7 +613,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           route: RouteNames.LeagueMatchDetails,
         }
         : { params: {}, route: RouteNames.LeagueMatchTab };
-
     case NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE:
@@ -618,6 +638,22 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           source: 'notification',
         },
         route: RouteNames.RequestsHub,
+      };
+    case NOTIFICATION_TYPES.TOURNAMENT_CAPTAIN_TRANSFER:
+    case NOTIFICATION_TYPES.TOURNAMENT_TEAM_INVITATION:
+    case NOTIFICATION_TYPES.TOURNAMENT_TEAM_INVITATION_STATUS:
+    case NOTIFICATION_TYPES.TOURNAMENT_TEAM_JOIN_REQUEST:
+    case NOTIFICATION_TYPES.TOURNAMENT_TEAM_JOIN_REQUEST_STATUS:
+    case NOTIFICATION_TYPES.TOURNAMENT_TEAM_STATUS:
+      return tournamentTeamDestination(payload.eventId, payload.teamId);
+    case NOTIFICATION_TYPES.TOURNAMENT_CLOSED:
+      return eventDetailsDestination(payload.eventId);
+    case NOTIFICATION_TYPES.TOURNAMENT_TEAM_ROSTER_WARNING:
+      return {
+        params: {
+          eventId: normalizeEntityId(payload.eventId),
+        },
+        route: RouteNames.TournamentManagement,
       };
 
     default:

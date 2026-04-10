@@ -37,24 +37,20 @@ import {
   normalizeMatchStatus,
   shouldMaskOpponentIdentity,
 } from '@/views/league/match/utils/matchStatus';
+import buildLeagueWorkflowViewModel from '@/views/league/match/utils/leagueWorkflowPresenter';
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
-import { buildLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import {
-  createChatMessage,
-  respondProposalMessage,
-} from '@/services/chat/chatService';
 import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
 import {
   cancelMatch,
-  confirmMatch,
   confirmParticipation,
+  createLeagueProposal,
   declineParticipation,
   fetchMatch,
   markVenueBooked,
-  updateMatch,
+  respondToLeagueProposal,
 } from '@/services/league/leagueMatchService';
 import {
   useGetLeagueMatchStats,
@@ -251,6 +247,11 @@ function LeagueMatchDetails({ navigation, route }) {
     [canSubmitScore, isCaptain, isVenueBooked, normalizedStatus],
   );
   const pendingLeagueAction = pendingLeagueActionPayload?.nextAction || null;
+  const workflowViewModel = useMemo(
+    () => buildLeagueWorkflowViewModel(match, pendingLeagueAction, { isCaptain }),
+    [isCaptain, match, pendingLeagueAction],
+  );
+  const leagueTimeline = Array.isArray(match?.workflow?.timeline) ? match.workflow.timeline : [];
   const isPendingActionForCurrentMatch = useMemo(() => {
     const currentMatchId = getEntityDocumentId(match);
     return areSameEntityId(pendingLeagueAction?.matchId, matchId)
@@ -275,6 +276,7 @@ function LeagueMatchDetails({ navigation, route }) {
     return fallbackNegotiationState;
   }, [fallbackNegotiationState, isPendingActionForCurrentMatch, pendingLeagueAction?.state]);
   const isNegotiationHighlighted = highlightedSection === 'negotiation';
+  const isTimelineHighlighted = highlightedSection === 'timeline';
   const negotiationProposalDate = pendingLeagueAction?.date || match?.proposed_time || match?.date || null;
   const negotiationProposalVenue = pendingLeagueAction?.venue || match?.proposed_venue || match?.venue || 'Lieu \u00E0 d\u00E9finir';
   const negotiationProposalMessageId = String(pendingLeagueAction?.proposalMessageId || '').trim();
@@ -838,10 +840,10 @@ function LeagueMatchDetails({ navigation, route }) {
     if (!matchId || actionLoading) return;
     setActionLoading(true);
     try {
-      await confirmMatch(matchId);
-      if (negotiationProposalMessageId) {
-        await respondProposalMessage(negotiationProposalMessageId, 'accepted');
+      if (!negotiationProposalMessageId) {
+        throw new Error('Missing proposal message id');
       }
+      await respondToLeagueProposal(matchId, negotiationProposalMessageId, 'accept');
       invalidateNegotiationQueries();
       await refetchPendingLeagueAction();
       await loadMatch();
@@ -874,7 +876,7 @@ function LeagueMatchDetails({ navigation, route }) {
     if (!negotiationProposalMessageId || actionLoading) return;
     setActionLoading(true);
     try {
-      await respondProposalMessage(negotiationProposalMessageId, 'declined');
+      await respondToLeagueProposal(matchId, negotiationProposalMessageId, 'decline');
       invalidateNegotiationQueries();
       await refetchPendingLeagueAction();
       await loadMatch();
@@ -894,6 +896,7 @@ function LeagueMatchDetails({ navigation, route }) {
     actionLoading,
     invalidateNegotiationQueries,
     loadMatch,
+    matchId,
     negotiationProposalMessageId,
     refetchPendingLeagueAction,
   ]);
@@ -908,15 +911,15 @@ function LeagueMatchDetails({ navigation, route }) {
 
     setActionLoading(true);
     try {
-      const payload = buildLeagueProposalPayload(matchId, proposalData, match?.location);
-      if (canReplyFromNegotiationCard && negotiationProposalMessageId) {
-        await respondProposalMessage(negotiationProposalMessageId, 'declined');
-      }
-      await updateMatch(matchId, payload.matchUpdate);
-      await createChatMessage({
-        chatId,
-        composition: payload.message.composition,
-        message: payload.message.message,
+      await createLeagueProposal(matchId, {
+        addressLabel: typeof proposalData?.address === 'string'
+          ? proposalData.address
+          : proposalData?.addressObject?.label
+            || proposalData?.addressObject?.address
+            || proposalData?.venue,
+        addressObject: proposalData?.addressObject,
+        startAt: proposalData?.date,
+        venueLabel: proposalData?.venue,
       });
       invalidateNegotiationQueries();
       await refetchPendingLeagueAction();
@@ -945,18 +948,15 @@ function LeagueMatchDetails({ navigation, route }) {
     }
   }, [
     actionLoading,
-    canReplyFromNegotiationCard,
     invalidateNegotiationQueries,
     isAnonymous,
     loadMatch,
     match?.chat,
-    match?.location,
     match?.team_a?.name,
     match?.team_b?.name,
     matchId,
     myTeam?.name,
     navigation,
-    negotiationProposalMessageId,
     refetchPendingLeagueAction,
   ]);
 
@@ -1832,6 +1832,48 @@ function LeagueMatchDetails({ navigation, route }) {
               </View>
             </View>
           </LeagueCard>
+
+          {leagueTimeline.length ? (
+            <>
+              {renderSectionHeader('Historique League')}
+              <LeagueCard style={isTimelineHighlighted ? { borderColor: Colors.warning500, borderWidth: 2 } : null}>
+                <Text style={[Fonts.p3, { color: leagueCardTextColor, marginBottom: 14 }]}>
+                  {workflowViewModel.helper}
+                </Text>
+                <View style={{ gap: 12 }}>
+                  {leagueTimeline.slice(0, 6).map((entry) => (
+                    <View
+                      key={entry?.key || `${entry?.type || 'event'}:${entry?.at || 'na'}`}
+                      style={{
+                        alignItems: 'flex-start',
+                        borderBottomColor: 'rgba(255,255,255,0.08)',
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        flexDirection: 'row',
+                        gap: 10,
+                        paddingBottom: 10,
+                      }}
+                    >
+                      <View
+                        style={{
+                          backgroundColor: Colors.primary500,
+                          borderRadius: 999,
+                          height: 8,
+                          marginTop: 7,
+                          width: 8,
+                        }}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{entry?.title || 'Mise a jour League'}</Text>
+                        <Text style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 2 }]}>
+                          {entry?.at ? new Date(entry.at).toLocaleString('fr-FR') : 'Horodatage indisponible'}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </LeagueCard>
+            </>
+          ) : null}
 
           {(canShowCaptainPrimary || canShowCaptainCancel) ? (
             <>

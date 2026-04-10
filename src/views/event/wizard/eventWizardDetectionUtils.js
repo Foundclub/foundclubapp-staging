@@ -32,7 +32,7 @@ export const shouldExplainDetectionSlotsDisabled = (state = {}) => {
 
 export const getEventWizardStepCount = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 9;
-  if (isTournamentEventType(state?.type?.name)) return 9;
+  if (isTournamentEventType(state?.type?.name)) return 10;
   return shouldShowDetectionSlotsStep(state) ? 11 : 10;
 };
 
@@ -52,13 +52,20 @@ export const getEventWizardTournamentSettingsStepIndex = (state = {}) => {
   return 0;
 };
 
+export const getEventWizardTournamentStructureStepIndex = (state = {}) => {
+  if (isTournamentEventType(state?.type?.name)) return 6;
+  return 0;
+};
+
 export const getEventWizardVisibilityStepIndex = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 5;
+  if (isTournamentEventType(state?.type?.name)) return 7;
   return 6;
 };
 
 export const getEventWizardParticipantsStepIndex = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 6;
+  if (isTournamentEventType(state?.type?.name)) return 8;
   return 7;
 };
 
@@ -76,14 +83,14 @@ export const getEventWizardValidationStepIndex = (state = {}) => {
 
 export const getEventWizardDescriptionStepIndex = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 8;
-  if (isTournamentEventType(state?.type?.name)) return 8;
+  if (isTournamentEventType(state?.type?.name)) return 9;
   if (shouldShowDetectionSlotsStep(state)) return 10;
   return 9;
 };
 
 export const getEventWizardRecapStepIndex = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 9;
-  if (isTournamentEventType(state?.type?.name)) return 9;
+  if (isTournamentEventType(state?.type?.name)) return 10;
   if (shouldShowDetectionSlotsStep(state)) return 11;
   return 10;
 };

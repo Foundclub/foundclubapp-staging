@@ -5,6 +5,9 @@ import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
 import TacticalBoardScreen from '@/views/event/TacticalBoardScreen';
+import TournamentManagement from '@/views/event/TournamentManagement';
+import TournamentMatchDetails from '@/views/event/TournamentMatchDetails';
+import TournamentSettingsEdit from '@/views/event/TournamentSettingsEdit';
 import TournamentTeamDetails from '@/views/event/TournamentTeamDetails';
 import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
 import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
@@ -17,6 +20,7 @@ import EventWizardRecap from '@/views/event/wizard/EventWizardRecap';
 import EventWizardStageProgram from '@/views/event/wizard/EventWizardStageProgram';
 import EventWizardTeam from '@/views/event/wizard/EventWizardTeam';
 import EventWizardTournamentSettings from '@/views/event/wizard/EventWizardTournamentSettings';
+import EventWizardTournamentStructure from '@/views/event/wizard/EventWizardTournamentStructure';
 import EventWizardType from '@/views/event/wizard/EventWizardType';
 import EventWizardValidationMode from '@/views/event/wizard/EventWizardValidationMode';
 import EventWizardVisibility from '@/views/event/wizard/EventWizardVisibility';
@@ -63,6 +67,30 @@ function EventStack() {
         <Stack.Screen
           component={EventFilters}
           name={RouteNames.EventFilters}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          component={TournamentManagement}
+          name={RouteNames.TournamentManagement}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          component={TournamentMatchDetails}
+          name={RouteNames.TournamentMatchDetails}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          component={TournamentSettingsEdit}
+          name={RouteNames.TournamentSettingsEdit}
           options={{
             ...commonOptions,
             headerTitle: '',
@@ -140,6 +168,11 @@ function EventStack() {
         <Stack.Screen
           component={EventWizardTournamentSettings}
           name={RouteNames.EventWizardTournamentSettings}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={EventWizardTournamentStructure}
+          name={RouteNames.EventWizardTournamentStructure}
           options={{ headerShown: false }}
         />
         <Stack.Screen

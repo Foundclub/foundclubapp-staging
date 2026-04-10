@@ -43,7 +43,7 @@ const STATUS_CONFIG = {
   },
 };
 
-const getProposalMeta = ({ isMe, status, statusConfig }) => {
+const getProposalMeta = ({ isMe, status }) => {
   if (status === 'accepted') {
     return {
       badgeLabel: 'Acceptee',
@@ -163,18 +163,24 @@ const styles = StyleSheet.create({
  * @param {object} props.proposal
  * @param {boolean} [props.isHighlighted]
  * @param {boolean} [props.isMe]
+ * @param {boolean} [props.allowResponseActions]
  * @param {Function} [props.onAccept]
  * @param {Function} [props.onCounter]
  * @param {Function} [props.onDecline]
+ * @param {Function} [props.onViewMatch]
+ * @param {string} [props.viewMatchLabel]
  * @returns {import('react').ReactElement | null}
  */
 function ProposalMessageBubble({
+  allowResponseActions = true,
   isHighlighted = false,
   isMe = false,
   onAccept,
   onCounter,
   onDecline,
+  onViewMatch,
   proposal,
+  viewMatchLabel = 'Voir la fiche match',
 }) {
   const { Colors, Fonts } = useTheme();
   const [loading, setLoading] = useState(false);
@@ -191,7 +197,7 @@ function ProposalMessageBubble({
 
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
   const statusColor = Colors[statusConfig.colorToken] || Colors.gold500;
-  const proposalMeta = getProposalMeta({ isMe, status, statusConfig });
+  const proposalMeta = getProposalMeta({ isMe, status });
   const addressLabel = resolveAddressLabel(address);
 
   const formattedDate = date
@@ -317,7 +323,31 @@ function ProposalMessageBubble({
         ) : null}
       </View>
 
-      {status === 'pending' && !isMe ? (
+      {status === 'pending' && !allowResponseActions ? (
+        <>
+          <View style={[styles.separator, { backgroundColor: Colors.neutral700 }]} />
+          <View style={styles.footer}>
+            {loading ? (
+              <ActivityIndicator color={Colors.primary500} />
+            ) : (
+              <TouchableOpacity
+                onPress={() => handleAction(onViewMatch)}
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                    borderColor: Colors.primary500,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{viewMatchLabel}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </>
+      ) : null}
+
+      {status === 'pending' && allowResponseActions && !isMe ? (
         <>
           <View style={[styles.separator, { backgroundColor: Colors.neutral700 }]} />
           <View style={styles.footer}>
@@ -372,7 +402,7 @@ function ProposalMessageBubble({
         </>
       ) : null}
 
-      {status === 'pending' && isMe ? (
+      {status === 'pending' && allowResponseActions && isMe ? (
         <>
           <View style={[styles.separator, { backgroundColor: Colors.neutral700 }]} />
           <View style={styles.footer}>

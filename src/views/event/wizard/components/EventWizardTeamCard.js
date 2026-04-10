@@ -52,7 +52,7 @@ function EventWizardTeamCard({
   const levelLabel = team?.level?.name || team?.level;
   const metaItems = [
     { label: t('teamList.fields.section', 'Section'), value: sectionLabel },
-    { label: t('teamList.fields.category', 'Catégorie'), value: categoryLabel },
+    { label: t('teamList.fields.category', 'CatÃ©gorie'), value: categoryLabel },
     { label: t('teamList.fields.level', 'Niveau'), value: levelLabel },
     {
       label: t('teamList.fields.members', 'Membres'),
@@ -215,7 +215,7 @@ function EventWizardTeamCard({
           />
 
           {metaItems.length > 0 || sponsors.length > 0 ? (
-            <View style={[Alignments.fullWidth, Alignments.row, Alignments.wrap, Spaces.gap[10]]}>
+            <View style={[Alignments.fullWidth, Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
               {sponsors.length > 0 ? (
                 <View style={[Alignments.fullWidth, Spaces.marginBottom[12], Spaces.gap[8]]}>
                   <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>

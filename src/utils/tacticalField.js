@@ -10,12 +10,12 @@ const FIELD_ASPECT_RATIOS = {
 };
 
 const FIELD_IMAGES = {
-  basketball: require('@/assets/fields/field_basket.png'),
-  football: require('@/assets/fields/field_football.png'),
-  generic: require('@/assets/fields/field_generic.png'),
-  handball: require('@/assets/fields/field_handball.png'),
-  rugby: require('@/assets/fields/field_rugby.png'),
-  volleyball: require('@/assets/fields/field_volley.png'),
+  basketball: require('@/assets/fields/field_basket.jpg'),
+  football: require('@/assets/fields/field_football.jpg'),
+  generic: require('@/assets/fields/field_generic.jpg'),
+  handball: require('@/assets/fields/field_handball.jpg'),
+  rugby: require('@/assets/fields/field_rugby.jpg'),
+  volleyball: require('@/assets/fields/field_volley.jpg'),
 };
 
 const normalizeSportInput = (value) => String(value || '')
@@ -35,7 +35,13 @@ export const getTacticalSportKey = (sport) => {
 
   if (!normalized) return 'generic';
   if (normalized.includes('basket')) return 'basketball';
-  if (normalized.includes('foot') || normalized.includes('soccer') || normalized.includes('futsal')) return 'football';
+  if (
+    normalized.includes('foot')
+    || normalized.includes('soccer')
+    || normalized.includes('futsal')
+  ) {
+    return 'football';
+  }
   if (normalized.includes('hand')) return 'handball';
   if (normalized.includes('rugby')) return 'rugby';
   if (normalized.includes('volley')) return 'volleyball';
@@ -48,11 +54,15 @@ export const getTacticalSportKey = (sport) => {
  * @param {string | null | undefined} sport
  * @returns {any}
  */
-export const getTacticalFieldImage = (sport) => FIELD_IMAGES[getTacticalSportKey(sport)] || FIELD_IMAGES.generic;
+export const getTacticalFieldImage = (sport) => (
+  FIELD_IMAGES[getTacticalSportKey(sport)] || FIELD_IMAGES.generic
+);
 
 /**
  * Returns the tactical field aspect ratio for a sport.
  * @param {string | null | undefined} sport
  * @returns {number}
  */
-export const getTacticalFieldAspectRatio = (sport) => FIELD_ASPECT_RATIOS[getTacticalSportKey(sport)] || FIELD_ASPECT_RATIOS.generic;
+export const getTacticalFieldAspectRatio = (sport) => (
+  FIELD_ASPECT_RATIOS[getTacticalSportKey(sport)] || FIELD_ASPECT_RATIOS.generic
+);

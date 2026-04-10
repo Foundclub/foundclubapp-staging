@@ -69,7 +69,6 @@ import PollCreationModal from '@/components/organisms/pollCreationModal/PollCrea
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
-import { buildLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -84,7 +83,11 @@ import {
 import client from '@/services/client';
 import { useGetEvents } from '@/services/event/eventQueries';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
-import { cancelMatch, confirmMatch, updateMatch } from '@/services/league/leagueMatchService';
+import {
+  cancelMatch,
+  createLeagueProposal,
+  respondToLeagueProposal,
+} from '@/services/league/leagueMatchService';
 import { createMessageReport } from '@/services/messageReport/messageReportService';
 
 import {
@@ -2685,23 +2688,18 @@ function Conversation({ navigation, route }) {
   const handleSendProposal = async (/** @type {any} */ proposalData) => {
     try {
       const matchId = getEntityDocumentId(chatData?.league_match);
-      const payload = buildLeagueProposalPayload(
-        matchId,
-        proposalData,
-        chatData?.league_match?.location,
-      );
-
-      if (counterProposalContext?.shouldDecline && counterProposalContext?.messageId) {
-        await respondToProposal(counterProposalContext.messageId, 'declined');
+      if (!matchId) {
+        throw new Error('Missing match id');
       }
-
-      if (matchId) {
-        await updateMatch(matchId, payload.matchUpdate);
-      }
-
-      sendMessage(chatId, payload.message.message, {
-        composition: payload.message.composition,
-        sender: userData,
+      await createLeagueProposal(matchId, {
+        addressLabel: typeof proposalData?.address === 'string'
+          ? proposalData.address
+          : proposalData?.addressObject?.label
+            || proposalData?.addressObject?.address
+            || proposalData?.venue,
+        addressObject: proposalData?.addressObject,
+        startAt: proposalData?.date,
+        venueLabel: proposalData?.venue,
       });
 
       setIsProposalModalVisible(false);
@@ -2760,17 +2758,18 @@ function Conversation({ navigation, route }) {
     try {
       if (status === 'accepted') {
         conversationLogger.debug('Accepting match proposal', { matchId });
-        await confirmMatch(matchId);
-        await respondToProposal(
+        await respondToLeagueProposal(
+          matchId,
           String(message.documentId || message._id || message.id || ''),
-          'accepted',
+          'accept',
         );
         showSuccessBanner('Le match est validé !', 'Match confirmé', 'league');
         promptAddMatchToCalendar(message);
       } else {
-        await respondToProposal(
+        await respondToLeagueProposal(
+          matchId,
           String(message.documentId || message._id || message.id || ''),
-          'declined',
+          'decline',
         );
         conversationLogger.debug('Proposal declined');
       }
@@ -4190,6 +4189,7 @@ function Conversation({ navigation, route }) {
           currentMessage, (
             <View style={{ marginBottom, marginTop }}>
               <ProposalMessageBubble
+                allowResponseActions={!isLeagueConversation}
                 isHighlighted={latestProposalMessageId === String(currentMessage.documentId || currentMessage._id || '')}
                 isMe={!isLeft}
                 onAccept={() => handleRespondProposal(currentMessage, 'accepted')}
@@ -4198,7 +4198,9 @@ function Conversation({ navigation, route }) {
                   shouldDecline: isLeft,
                 })}
                 onDecline={() => handleRespondProposal(currentMessage, 'declined')}
+                onViewMatch={handleOpenLeagueMatchDetails}
                 proposal={currentMessage.composition}
+                viewMatchLabel="Voir la fiche match"
               />
             </View>
           ),
@@ -4562,10 +4564,7 @@ function Conversation({ navigation, route }) {
     <View style={{ alignItems: 'center', flexDirection: 'row', height: 44 }}>
       {isLeagueConversation ? (
         <TouchableOpacity
-          onPress={() => {
-            setCounterProposalContext(null);
-            setIsProposalModalVisible(true);
-          }}
+          onPress={handleOpenLeagueMatchDetails}
           style={{
             alignItems: 'center',
             backgroundColor: Colors.gold500,
@@ -4576,7 +4575,7 @@ function Conversation({ navigation, route }) {
             width: 32,
           }}
         >
-          <Text style={{ fontSize: 16 }}>{'\uD83E\uDD1D'}</Text>
+          <Text style={{ fontSize: 16 }}>{'\uD83D\uDCC4'}</Text>
         </TouchableOpacity>
       ) : null}
       <TouchableOpacity

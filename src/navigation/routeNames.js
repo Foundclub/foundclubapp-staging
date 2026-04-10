@@ -135,9 +135,13 @@ export const RouteNames = /** @type {const} */ ({
   EventWizardStageProgram: 'EventWizardStageProgram',
   EventWizardTeam: 'EventWizardTeam',
   EventWizardTournamentSettings: 'EventWizardTournamentSettings',
+  EventWizardTournamentStructure: 'EventWizardTournamentStructure',
   EventWizardType: 'EventWizardType',
   EventWizardValidationMode: 'EventWizardValidationMode',
   EventWizardVisibility: 'EventWizardVisibility',
+  TournamentManagement: 'TournamentManagement',
+  TournamentMatchDetails: 'TournamentMatchDetails',
+  TournamentSettingsEdit: 'TournamentSettingsEdit',
   TournamentTeamDetails: 'TournamentTeamDetails',
 
   // History Wizard

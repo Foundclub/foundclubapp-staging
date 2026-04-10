@@ -14,6 +14,7 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { createTournamentDesignSystem } from '../tournamentDesignSystem';
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardStepCount,
@@ -27,6 +28,11 @@ const parseOptionalInteger = (value) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
 function EventWizardTournamentSettings({ navigation }) {
   const {
     Alignments,
@@ -37,6 +43,12 @@ function EventWizardTournamentSettings({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const { dispatch, state } = useEventWizard();
+  const tournamentDs = createTournamentDesignSystem({
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
+  });
 
   const [maxTeamsText, setMaxTeamsText] = useState(
     state.tournamentMaxTeams === null || state.tournamentMaxTeams === undefined
@@ -74,28 +86,6 @@ function EventWizardTournamentSettings({ navigation }) {
     && minRosterSize > maxRosterSize,
   );
 
-  const inputStyle = [
-    ApplicationStyle.card,
-    Spaces.paddingHorizontal[16],
-    Spaces.paddingVertical[14],
-    Fonts.p2,
-    {
-      backgroundColor: 'rgba(1, 179, 244, 0.08)',
-      borderColor: 'rgba(1, 179, 244, 0.26)',
-      color: Colors.neutral00,
-    },
-  ];
-
-  const sectionCardStyle = [
-    ApplicationStyle.card,
-    Spaces.padding[20],
-    Spaces.gap[16],
-    {
-      backgroundColor: 'rgba(4, 31, 44, 0.82)',
-      borderColor: 'rgba(1, 179, 244, 0.24)',
-    },
-  ];
-
   const handleNext = () => {
     dispatch({
       payload: {
@@ -110,7 +100,7 @@ function EventWizardTournamentSettings({ navigation }) {
       },
       type: 'SET_TOURNAMENT_SETTINGS',
     });
-    navigation.navigate(RouteNames.EventWizardVisibility);
+    navigation.navigate(RouteNames.EventWizardTournamentStructure);
   };
 
   const renderRegistrationModeCard = (mode, title, subtitle) => {
@@ -119,15 +109,7 @@ function EventWizardTournamentSettings({ navigation }) {
       <TouchableOpacity
         key={mode}
         onPress={() => setRegistrationMode(mode)}
-        style={[
-          ApplicationStyle.card,
-          Spaces.padding[16],
-          Spaces.gap[8],
-          {
-            backgroundColor: selected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(1, 179, 244, 0.08)',
-            borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
-          },
-        ]}
+        style={tournamentDs.getSelectionCardStyle(selected)}
       >
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
           <Text style={[Fonts.p2Bold, selected ? Fonts.primary100 : Fonts.neutral00]}>{title}</Text>
@@ -138,7 +120,7 @@ function EventWizardTournamentSettings({ navigation }) {
               Alignments.justifyCenter,
               {
                 backgroundColor: selected ? Colors.primary500 : 'transparent',
-                borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.42)',
+                borderColor: selected ? Colors.primary500 : tournamentDs.colors.borderStrong,
                 borderRadius: 999,
                 height: 22,
                 width: 22,
@@ -168,23 +150,23 @@ function EventWizardTournamentSettings({ navigation }) {
       )}
       title={t('eventWizard.steps.tournament.title', 'Parametres du tournoi')}
     >
-      <View style={[Spaces.gap[20]]}>
-        <View style={sectionCardStyle}>
-          <View style={[Spaces.gap[6]]}>
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Cadre du tournoi</Text>
+      <View style={tournamentDs.styles.sectionStack}>
+        <View style={tournamentDs.styles.wizardSectionCard}>
+          <View style={tournamentDs.styles.headerBlock}>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Cadre du tournoi</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               Ces regles pilotent les equipes ephemeres et les inscriptions sur ce tournoi uniquement.
             </Text>
           </View>
 
-          <View style={[Spaces.gap[8]]}>
+          <View style={Spaces.gap[8]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>Nombre max d equipes</Text>
             <TextInput
               keyboardType="number-pad"
               onChangeText={setMaxTeamsText}
               placeholder="Ex. 16"
               placeholderTextColor={Colors.neutral500}
-              style={inputStyle}
+              style={tournamentDs.styles.input}
               value={maxTeamsText}
             />
           </View>
@@ -197,7 +179,7 @@ function EventWizardTournamentSettings({ navigation }) {
                 onChangeText={setMinRosterText}
                 placeholder="Ex. 5"
                 placeholderTextColor={Colors.neutral500}
-                style={inputStyle}
+                style={tournamentDs.styles.input}
                 value={minRosterText}
               />
             </View>
@@ -209,7 +191,7 @@ function EventWizardTournamentSettings({ navigation }) {
                 onChangeText={setMaxRosterText}
                 placeholder="Ex. 8"
                 placeholderTextColor={Colors.neutral500}
-                style={inputStyle}
+                style={tournamentDs.styles.input}
                 value={maxRosterText}
               />
             </View>
@@ -222,9 +204,9 @@ function EventWizardTournamentSettings({ navigation }) {
           ) : null}
         </View>
 
-        <View style={sectionCardStyle}>
-          <View style={[Spaces.gap[6]]}>
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Equipes et eligibility</Text>
+        <View style={tournamentDs.styles.wizardSectionCard}>
+          <View style={tournamentDs.styles.headerBlock}>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Equipes et eligibilite</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               Choisis si les joueurs peuvent creer une equipe ephemere et si le melange entre clubs est autorise.
             </Text>
@@ -261,15 +243,15 @@ function EventWizardTournamentSettings({ navigation }) {
           </View>
         </View>
 
-        <View style={sectionCardStyle}>
-          <View style={[Spaces.gap[6]]}>
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Validation des equipes</Text>
+        <View style={tournamentDs.styles.wizardSectionCard}>
+          <View style={tournamentDs.styles.headerBlock}>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Validation des equipes</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Decide si les equipes inscrites sont acceptees automatiquement ou validées par l organisateur.
+              Decide si les equipes inscrites sont acceptees automatiquement ou validees par l organisateur.
             </Text>
           </View>
 
-          <View style={[Spaces.gap[12]]}>
+          <View style={Spaces.gap[12]}>
             {renderRegistrationModeCard(
               'manual',
               'Validation manuelle',
@@ -283,11 +265,11 @@ function EventWizardTournamentSettings({ navigation }) {
           </View>
         </View>
 
-        <View style={sectionCardStyle}>
-          <View style={[Spaces.gap[6]]}>
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Regles du tournoi</Text>
+        <View style={tournamentDs.styles.wizardSectionCard}>
+          <View style={tournamentDs.styles.headerBlock}>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Regles du tournoi</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Ajoute les consignes a afficher sur la fiche tournoi: tenue, format, conditions d inscription ou arbitraire.
+              Ajoute les consignes a afficher sur la fiche tournoi: tenue, format, conditions d inscription ou arbitrage.
             </Text>
           </View>
 
@@ -298,15 +280,9 @@ function EventWizardTournamentSettings({ navigation }) {
             placeholder="Ex. 5 contre 5, un joueur actif par tournoi, tenue claire obligatoire..."
             placeholderTextColor={Colors.neutral500}
             style={[
-              ApplicationStyle.card,
-              Spaces.padding[16],
-              Fonts.p2,
+              ...tournamentDs.styles.multilineInput,
               {
-                backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                borderColor: 'rgba(1, 179, 244, 0.26)',
-                color: Colors.neutral00,
-                minHeight: 140,
-                textAlignVertical: 'top',
+                minHeight: 144,
               },
             ]}
             value={rulesText}

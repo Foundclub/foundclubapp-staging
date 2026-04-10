@@ -93,7 +93,7 @@ function EventWizardType({ navigation, route }) {
               style={[
                 ApplicationStyle.card,
                 Spaces.paddingHorizontal[16],
-                Spaces.paddingVertical[10],
+                Spaces.paddingVertical[12],
                 {
                   alignSelf: 'flex-start',
                   backgroundColor: 'rgba(1, 179, 244, 0.16)',
@@ -116,7 +116,7 @@ function EventWizardType({ navigation, route }) {
 
         {!isLoading && !error && hasTypes ? (
           <OnboardingWrapper
-            description="Choisissez le type d événement avant de continuer le wizard."
+            description="Choisissez le type d evenement avant de continuer le wizard."
             id="event-wizard-type-list"
             order={1}
             spotlight={{

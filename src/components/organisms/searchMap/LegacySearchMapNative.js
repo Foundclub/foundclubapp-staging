@@ -12,8 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import ClusteredMapView from 'react-native-map-clustering';
-import { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import useTheme from '@/theme/themeContext';
 
@@ -26,6 +25,7 @@ import {
   getSearchMapEmptyMessage,
 } from '@/utils/searchMap';
 
+import { buildSearchMapRenderableModel } from '@/platform/maps/searchMapClustering';
 import { requestCurrentSearchMapLocation } from '@/platform/maps/searchMapGeolocation';
 
 const FALLBACK_REGION = buildSearchMapRegion([]);
@@ -122,6 +122,18 @@ const resolveOverlayInsets = (
  *  latitudeDelta?: number;
  *  longitudeDelta?: number;
  * } | null} [props.regionHint]
+ * @param {{
+ *  lat: number;
+ *  lng: number;
+ *  zoom?: number;
+ *  north?: number;
+ *  south?: number;
+ *  east?: number;
+ *  west?: number;
+ *  latitudeDelta?: number;
+ *  longitudeDelta?: number;
+ * } | null} [props.focusedViewport]
+ * @param {'manual' | 'debounced-auto'} [props.refreshStrategy]
  * @param {'events' | 'clubs' | 'reservations'} [props.scope]
  * @param {string} [props.selectedItemId]
  * @param {number} [props.height]
@@ -132,6 +144,7 @@ const resolveOverlayInsets = (
  * @returns {import('react').ReactElement}
  */
 function LegacySearchMapNative({
+  focusedViewport = null,
   height = 360,
   isLoadingResults = false,
   items = [],
@@ -143,6 +156,7 @@ function LegacySearchMapNative({
   onShowList,
   overlayInsets = null,
   previewBottomOffset = 12,
+  refreshStrategy = 'manual',
   regionHint = null,
   scope = 'events',
   selectedItemId,
@@ -164,6 +178,7 @@ function LegacySearchMapNative({
   const [mapStatus, setMapStatus] = useState('loading');
   const [region, setRegion] = useState(FALLBACK_REGION);
   const [showsUserLocation, setShowsUserLocation] = useState(false);
+  const [visibleViewport, setVisibleViewport] = useState(focusedViewport || regionHint || null);
   const [hudControlsWidth, setHudControlsWidth] = useState(0);
   const [hudSummaryWidth, setHudSummaryWidth] = useState(0);
   const [previewCardHeight, setPreviewCardHeight] = useState(0);
@@ -178,7 +193,37 @@ function LegacySearchMapNative({
     () => items.find((item) => item.id === activeSelectedItemId) || null,
     [activeSelectedItemId, items],
   );
-  const visibleMarkerCount = items.length;
+  const regionViewport = useMemo(() => {
+    if (!region) {
+      return null;
+    }
+
+    return {
+      ...buildRegionBounds(region),
+      lat: region.latitude,
+      latitudeDelta: region.latitudeDelta,
+      lng: region.longitude,
+      longitudeDelta: region.longitudeDelta,
+      zoom: estimateZoomFromRegion(region),
+    };
+  }, [region]);
+  const activeViewport = useMemo(
+    () => visibleViewport || focusedViewport || regionViewport || regionHint || null,
+    [focusedViewport, regionHint, regionViewport, visibleViewport],
+  );
+  const renderModel = useMemo(
+    () => buildSearchMapRenderableModel({
+      items,
+      viewport: activeViewport,
+    }),
+    [activeViewport, items],
+  );
+  const renderItems = renderModel.entries;
+  const renderStats = renderModel.stats;
+  const visibleMarkerCount = Math.max(
+    0,
+    Number(renderStats?.markerCount || 0) + Number(renderStats?.clusterCount || 0),
+  );
   const resolvedOverlayInsets = useMemo(
     () => resolveOverlayInsets(
       overlayInsets,
@@ -192,9 +237,10 @@ function LegacySearchMapNative({
   const totalResults = Number.isFinite(totalCount) && totalCount > 0 ? totalCount : items.length;
   const logContext = useMemo(() => ({
     geolocatableCount: items.length,
+    refreshStrategy,
     scope,
     totalResults,
-  }), [items.length, scope, totalResults]);
+  }), [items.length, refreshStrategy, scope, totalResults]);
 
   const fitToResults = useCallback((animated = true) => {
     if (!items.length) {
@@ -332,12 +378,16 @@ function LegacySearchMapNative({
   }, [mapStatus, regionHint, resolvedOverlayInsets.bottom, resolvedOverlayInsets.left, resolvedOverlayInsets.right, resolvedOverlayInsets.top]);
 
   useEffect(() => {
-    onRenderStats?.({
-      clusterCount: 0,
-      markerCount: items.length,
-      renderableCount: items.length,
-    });
-  }, [items.length, onRenderStats]);
+    if (!focusedViewport || !Number.isFinite(Number(focusedViewport.lat)) || !Number.isFinite(Number(focusedViewport.lng))) {
+      return;
+    }
+
+    setVisibleViewport(focusedViewport);
+  }, [focusedViewport]);
+
+  useEffect(() => {
+    onRenderStats?.(renderStats || null);
+  }, [onRenderStats, renderStats]);
 
   const handleMarkerSelect = useCallback((item) => {
     if (selectedItemId === undefined) {
@@ -345,6 +395,25 @@ function LegacySearchMapNative({
     }
     onSelectItem?.(item.id);
   }, [onSelectItem, selectedItemId]);
+
+  const handleClusterPress = useCallback((entry) => {
+    if (!entry) {
+      return;
+    }
+
+    const nextZoom = Number.isFinite(Number(entry.expansionZoom))
+      ? Number(entry.expansionZoom)
+      : Math.min((estimateZoomFromRegion(region) || 11) + 2, 16);
+    const nextRegion = {
+      latitude: Number(entry.lat),
+      latitudeDelta: Math.max(360 / (2 ** nextZoom), 0.01),
+      longitude: Number(entry.lng),
+      longitudeDelta: Math.max(360 / (2 ** nextZoom), 0.01),
+    };
+
+    setRegion(nextRegion);
+    mapRef.current?.animateToRegion(nextRegion, 240);
+  }, [region]);
 
   const handleClearSelection = useCallback(() => {
     if (selectedItemId === undefined) {
@@ -411,8 +480,7 @@ function LegacySearchMapNative({
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.primary900, height }]}>
-      <ClusteredMapView
-        clusterColor={markerColor}
+      <MapView
         initialRegion={region}
         key={`search-map-${scope}-${mapRenderKey}`}
         onMapLoaded={handleMapLoaded}
@@ -420,13 +488,17 @@ function LegacySearchMapNative({
         onRegionChangeComplete={(nextRegion) => {
           setRegion(nextRegion);
           const nextBounds = buildRegionBounds(nextRegion);
-          onRegionChangeComplete?.({
+          const nextViewport = {
             ...nextBounds,
             lat: nextRegion.latitude,
             latitudeDelta: nextRegion.latitudeDelta,
             lng: nextRegion.longitude,
             longitudeDelta: nextRegion.longitudeDelta,
             zoom: estimateZoomFromRegion(nextRegion),
+          };
+          setVisibleViewport(nextViewport);
+          onRegionChangeComplete?.({
+            ...nextViewport,
           });
         }}
         onUserLocationChange={handleUserLocationChange}
@@ -436,13 +508,50 @@ function LegacySearchMapNative({
         showsUserLocation={showsUserLocation}
         style={[styles.map, !isMapReady && styles.mapHidden]}
       >
-        {items.map((item) => {
+        {renderItems.map((entry) => {
+          if (entry?.isCluster) {
+            let clusterSize = 46;
+            if (entry.count >= 100) {
+              clusterSize = 56;
+            } else if (entry.count >= 10) {
+              clusterSize = 50;
+            }
+
+            return (
+              <Marker
+                coordinate={{ latitude: Number(entry.lat), longitude: Number(entry.lng) }}
+                key={entry.key}
+                onPress={() => handleClusterPress(entry)}
+              >
+                <View
+                  style={[
+                    styles.clusterOuter,
+                    {
+                      backgroundColor: markerColor,
+                      height: clusterSize,
+                      width: clusterSize,
+                    },
+                  ]}
+                >
+                  <Text style={styles.clusterLabel}>
+                    {entry.count}
+                  </Text>
+                </View>
+              </Marker>
+            );
+          }
+
+          const item = entry?.item;
+          if (!item) {
+            return null;
+          }
+
           const isSelected = item.id === activeSelectedItemId;
 
           return (
             <Marker
-              coordinate={{ latitude: item.lat, longitude: item.lng }}
-              key={item.id}
+              coordinate={{ latitude: Number(entry.lat), longitude: Number(entry.lng) }}
+              key={entry.key}
               onPress={() => handleMarkerSelect(item)}
             >
               <View
@@ -465,7 +574,7 @@ function LegacySearchMapNative({
             </Marker>
           );
         })}
-      </ClusteredMapView>
+      </MapView>
 
       <View
         pointerEvents="box-none"
@@ -527,11 +636,7 @@ function LegacySearchMapNative({
             onSummaryWidthChange={setHudSummaryWidth}
             onZoomIn={() => handleZoom(0.65)}
             onZoomOut={() => handleZoom(1.45)}
-            renderStats={{
-              clusterCount: 0,
-              markerCount: items.length,
-              renderableCount: items.length,
-            }}
+            renderStats={renderStats}
             scope={scope}
             totalCount={totalResults}
             truncated={truncated}
@@ -662,6 +767,23 @@ function LegacySearchMapNative({
 }
 
 const styles = StyleSheet.create({
+  clusterLabel: {
+    color: '#061822',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  clusterOuter: {
+    alignItems: 'center',
+    borderColor: 'rgba(255,255,255,0.84)',
+    borderRadius: 999,
+    borderWidth: 3,
+    elevation: 6,
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+  },
   container: {
     borderRadius: 24,
     flex: 1,

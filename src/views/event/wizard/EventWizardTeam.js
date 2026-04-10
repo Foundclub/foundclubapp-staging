@@ -168,7 +168,7 @@ function EventWizardTeam({ navigation }) {
               style={[
                 ApplicationStyle.card,
                 Spaces.paddingHorizontal[16],
-                Spaces.paddingVertical[10],
+                Spaces.paddingVertical[12],
                 {
                   alignSelf: 'center',
                   backgroundColor: 'rgba(1, 179, 244, 0.16)',
@@ -186,7 +186,7 @@ function EventWizardTeam({ navigation }) {
             density="compact"
             icon="search"
             onChangeText={setSearchQuery}
-            placeholder={t('teamList.searchPlaceholder', 'Rechercher une équipe')}
+            placeholder={t('teamList.searchPlaceholder', 'Rechercher une equipe')}
             value={searchQuery}
           />
         ) : null}
@@ -220,7 +220,7 @@ function EventWizardTeam({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
-              {t('teamList.noSearchResult', 'Aucune équipe trouvée pour cette recherche')}
+              {t('teamList.noSearchResult', 'Aucune equipe trouvee pour cette recherche')}
             </Text>
           </View>
         ) : null}

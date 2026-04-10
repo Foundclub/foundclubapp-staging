@@ -40,6 +40,32 @@ export const addTournamentTeamMember = async (teamId, userId, origin = 'invited'
   return response?.data?.data || response?.data;
 };
 
+export const inviteTournamentTeamMember = async (teamId, userId, origin = 'invited') => {
+  const response = await client.post(`/tournament-teams/${teamId}/invite-member`, {
+    data: { origin, userId },
+  });
+  return response?.data?.data || response?.data;
+};
+
+export const requestJoinTournamentTeam = async (teamId) => {
+  const response = await client.post(`/tournament-teams/${teamId}/request-join`);
+  return response?.data?.data || response?.data;
+};
+
+export const respondToTournamentInvitation = async (teamId, status) => {
+  const response = await client.post(`/tournament-teams/${teamId}/respond-invitation`, {
+    data: { status },
+  });
+  return response?.data?.data || response?.data;
+};
+
+export const reviewTournamentJoinRequest = async (teamId, memberId, status) => {
+  const response = await client.post(`/tournament-teams/${teamId}/review-request`, {
+    data: { memberId, status },
+  });
+  return response?.data?.data || response?.data;
+};
+
 export const removeTournamentTeamMember = async (teamId, memberId, reason = '') => {
   const response = await client.post(`/tournament-teams/${teamId}/remove-member`, {
     data: { memberId, reason },
@@ -51,5 +77,22 @@ export const transferTournamentTeamCaptain = async (teamId, memberId) => {
   const response = await client.post(`/tournament-teams/${teamId}/transfer-captain`, {
     data: { memberId },
   });
+  return response?.data?.data || response?.data;
+};
+
+export const leaveTournamentTeam = async (teamId) => {
+  const response = await client.post(`/tournament-teams/${teamId}/leave`);
+  return response?.data?.data || response?.data;
+};
+
+export const toggleTournamentTeamOpenRequests = async (teamId, isOpenToJoinRequests) => {
+  const response = await client.post(`/tournament-teams/${teamId}/toggle-open-requests`, {
+    data: { isOpenToJoinRequests },
+  });
+  return response?.data?.data || response?.data;
+};
+
+export const closeTournament = async (eventId) => {
+  const response = await client.post(`/events/${eventId}/tournament/close`);
   return response?.data?.data || response?.data;
 };

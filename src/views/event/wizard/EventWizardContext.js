@@ -64,11 +64,23 @@ const createInitialState = () => {
     sessionStatus: 'open',
     tournamentAllowCrossClubPlayers: false,
     tournamentAllowCustomTeams: true,
+    tournamentBestThirdPlacesCount: 0,
+    tournamentFormatMode: 'groups_only',
+    tournamentGroupCount: 2,
+    tournamentKnockoutSize: 8,
     tournamentMaxRosterSize: null,
     tournamentMaxTeams: null,
+    tournamentMatchGenerationMode: 'auto',
     tournamentMinRosterSize: null,
+    tournamentPointsDraw: 1,
+    tournamentPointsForfeit: 0,
+    tournamentPointsLoss: 0,
+    tournamentPointsWin: 3,
+    tournamentQualifiedPerGroup: 2,
     tournamentRegistrationMode: 'manual',
     tournamentRulesText: '',
+    tournamentSeedingMode: 'random',
+    tournamentThirdPlaceMatch: false,
 
     // Step 9: Location
     facility: null,
@@ -150,6 +162,11 @@ function eventWizardReducer(state, action) {
         ...state,
         ...action.payload,
       };
+    case 'SET_TOURNAMENT_STRUCTURE':
+      return {
+        ...state,
+        ...action.payload,
+      };
     case 'SET_TYPE': {
       const isStage = isStageTypeName(action.payload?.name);
       const isTournament = isTournamentTypeName(action.payload?.name);
@@ -178,6 +195,18 @@ function eventWizardReducer(state, action) {
           recurrenceFrequency: 'week',
           recurrenceInterval: 1,
           recurrenceStartDate: null,
+          tournamentBestThirdPlacesCount: state.tournamentBestThirdPlacesCount ?? 0,
+          tournamentFormatMode: state.tournamentFormatMode || 'groups_only',
+          tournamentGroupCount: state.tournamentGroupCount || 2,
+          tournamentKnockoutSize: state.tournamentKnockoutSize || 8,
+          tournamentMatchGenerationMode: state.tournamentMatchGenerationMode || 'auto',
+          tournamentPointsDraw: state.tournamentPointsDraw ?? 1,
+          tournamentPointsForfeit: state.tournamentPointsForfeit ?? 0,
+          tournamentPointsLoss: state.tournamentPointsLoss ?? 0,
+          tournamentPointsWin: state.tournamentPointsWin ?? 3,
+          tournamentQualifiedPerGroup: state.tournamentQualifiedPerGroup || 2,
+          tournamentSeedingMode: state.tournamentSeedingMode || 'random',
+          tournamentThirdPlaceMatch: state.tournamentThirdPlaceMatch === true,
         };
       }
 

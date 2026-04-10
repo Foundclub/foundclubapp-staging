@@ -61,7 +61,15 @@ const MIN_CLUB_MAP_QUERY_ZOOM = 9;
 const MIN_EVENT_MAP_QUERY_ZOOM = 10;
 const MOVE_THRESHOLD = 0.005;
 const DEFAULT_MAP_ASPECT_RATIO = 0.58;
-const EVENT_VIEWPORT_AUTO_SEARCH_DEBOUNCE_MS = 320;
+const EVENT_VIEWPORT_AUTO_SEARCH_DEBOUNCE_MS = 300;
+const CLUB_VIEWPORT_MOVE_OPTIONS = Object.freeze({
+  boundsTolerance: 0.08,
+  zoomTolerance: 0.35,
+});
+const EVENT_VIEWPORT_MOVE_OPTIONS = Object.freeze({
+  boundsTolerance: 0.05,
+  zoomTolerance: 0.2,
+});
 
 const sanitizeScope = (value) => (
   value === 'clubs' || value === 'reservations' ? value : 'events'
@@ -322,7 +330,14 @@ const buildViewportFromRegionCandidate = (region, aspectRatio = DEFAULT_MAP_ASPE
   });
 };
 
-const areViewportsEquivalent = (left, right) => {
+const areViewportsEquivalent = (
+  left,
+  right,
+  {
+    boundsTolerance = CLUB_VIEWPORT_MOVE_OPTIONS.boundsTolerance,
+    zoomTolerance = CLUB_VIEWPORT_MOVE_OPTIONS.zoomTolerance,
+  } = {},
+) => {
   if (!left && !right) return true;
   if (!left || !right) return false;
 
@@ -347,16 +362,16 @@ const areViewportsEquivalent = (left, right) => {
   );
 
   return (
-    compare('lat', latSpan * 0.08)
-    && compare('lng', lngSpan * 0.08)
-    && compare('north', latSpan * 0.08)
-    && compare('south', latSpan * 0.08)
-    && compare('east', lngSpan * 0.08)
-    && compare('west', lngSpan * 0.08)
+    compare('lat', latSpan * boundsTolerance)
+    && compare('lng', lngSpan * boundsTolerance)
+    && compare('north', latSpan * boundsTolerance)
+    && compare('south', latSpan * boundsTolerance)
+    && compare('east', lngSpan * boundsTolerance)
+    && compare('west', lngSpan * boundsTolerance)
     && (
       !Number.isFinite(Number(normalizedLeft?.zoom))
       || !Number.isFinite(Number(normalizedRight?.zoom))
-      || Math.abs(Number(normalizedLeft.zoom) - Number(normalizedRight.zoom)) < 0.35
+      || Math.abs(Number(normalizedLeft.zoom) - Number(normalizedRight.zoom)) < zoomTolerance
     )
   );
 };
@@ -370,10 +385,10 @@ const hasMeaningfulMove = (nextRegion, appliedCenter) => (
   )
 );
 
-const hasMeaningfulViewportMove = (nextViewport, executedViewport) => (
+const hasMeaningfulViewportMove = (nextViewport, executedViewport, options) => (
   !!nextViewport
   && !!executedViewport
-  && !areViewportsEquivalent(nextViewport, executedViewport)
+  && !areViewportsEquivalent(nextViewport, executedViewport, options)
 );
 
 const formatDateChip = (value, prefix) => {
@@ -611,7 +626,7 @@ const getMapHeading = (scope) => {
 };
 
 const resolveScopedMapAddressSelection = (scope, filters, session) => {
-  if (scope === 'events') {
+  if (scope === 'events' || scope === 'clubs') {
     return session?.addressSelection || filters?.city || undefined;
   }
 
@@ -885,7 +900,7 @@ function SearchMapScreen({ navigation, route }) {
   ]);
 
   useEffect(() => {
-    if (isEventScope) {
+    if (isEventScope || isClubScope) {
       return;
     }
 
@@ -902,7 +917,7 @@ function SearchMapScreen({ navigation, route }) {
     }
     setPendingRegion(null);
     setShowSearchThisArea(false);
-  }, [activeFilters, isEventScope]);
+  }, [activeFilters, isClubScope, isEventScope]);
 
   useEffect(() => () => {
     if (pendingAddressViewportTimeoutRef.current) {
@@ -1717,16 +1732,14 @@ function SearchMapScreen({ navigation, route }) {
       return;
     }
 
-    const viewport = isEventScope
-      ? (currentViewport || executedViewport)
-      : (executedViewport || currentViewport);
+    const viewport = executedViewport || currentViewport;
     const nextListQuery = isClubScope
       ? buildClubMapViewportQuery(activeFilters, viewport, 'list')
       : buildEventMapViewportQuery(activeFilters, viewport, 'list');
 
     if (viewport && nextListQuery) {
       persistSessionState({
-        ...(isEventScope ? { addressSelection } : {}),
+        ...((isEventScope || isClubScope) ? { addressSelection } : {}),
         ...(isClubScope ? { executedClubMapQuery: nextListQuery } : {}),
         executedQuery: nextListQuery,
         executedViewport: normalizeViewport(viewport),
@@ -1797,17 +1810,13 @@ function SearchMapScreen({ navigation, route }) {
         zoom: nextRegion.zoom,
       });
 
-      dispatchFilters({
-        ...activeFilters,
-        city: nextAddress,
-      });
-
       setSelectedMapItemId('');
       setRegionHint(nextRegion);
       setAppliedCenter(nextRegion);
       setPendingRegion(null);
       setShowSearchThisArea(false);
       persistSessionState({
+        addressSelection: nextAddress,
         region: nextRegion,
         selectedItemId: '',
       });
@@ -1979,7 +1988,11 @@ function SearchMapScreen({ navigation, route }) {
         return;
       }
 
-      if (hasMeaningfulViewportMove(nextViewport, executedViewport)) {
+      if (hasMeaningfulViewportMove(
+        nextViewport,
+        executedViewport,
+        CLUB_VIEWPORT_MOVE_OPTIONS,
+      )) {
         setPendingRegion(nextViewport);
         setShowSearchThisArea(true);
         return;
@@ -2049,7 +2062,11 @@ function SearchMapScreen({ navigation, route }) {
         return;
       }
 
-      if (hasMeaningfulViewportMove(nextViewport, executedViewport)) {
+      if (hasMeaningfulViewportMove(
+        nextViewport,
+        executedViewport,
+        EVENT_VIEWPORT_MOVE_OPTIONS,
+      )) {
         scheduleEventViewportRefresh(nextViewport, 'user');
         return;
       }
@@ -2238,6 +2255,7 @@ function SearchMapScreen({ navigation, route }) {
             </View>
           ) : (
             <SearchMap
+              focusedViewport={executedViewport || currentViewport || null}
               height={mapHeight}
               isLoadingResults={Boolean(isLoading || isSubmittingRegionSearch)}
               items={mapItems}
@@ -2248,6 +2266,7 @@ function SearchMapScreen({ navigation, route }) {
               onShowList={handleShowList}
               overlayInsets={overlayInsets}
               previewBottomOffset={insets.bottom + 12}
+              refreshStrategy={isEventScope ? 'debounced-auto' : 'manual'}
               regionHint={regionHint}
               scope={scope}
               selectedItemId={selectedMapItemId}

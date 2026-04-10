@@ -91,7 +91,7 @@ function EventWizardParticipants({ navigation }) {
   );
 
   const capacityLabel = capacityMode === 'unlimited'
-    ? t('eventWizard.steps.participants.unlimitedLabel', 'Illimité')
+    ? t('eventWizard.steps.participants.unlimitedLabel', 'Illimite')
     : `${clampedCapacity} ${t('eventWizard.steps.participants.playersUnit', 'joueurs max')}`;
 
   const surfaceStyle = {
@@ -125,7 +125,7 @@ function EventWizardParticipants({ navigation }) {
         t('common.error', 'Erreur'),
         t(
           'eventWizard.steps.participants.totalPlayersExceedsCapacity',
-          'Le nombre de joueurs attendus ne peut pas depasser la capacité max.',
+          'Le nombre de joueurs attendus ne peut pas depasser la capacite max.',
         ),
       );
       return;
@@ -158,25 +158,25 @@ function EventWizardParticipants({ navigation }) {
       stepIndex={getEventWizardParticipantsStepIndex(projectedState)}
       subtitle={t(
         'eventWizard.steps.participants.subtitle',
-        'Choisis une capacité max, ou laisse l événement en accès illimité.',
+        'Choisis une capacite max, ou laisse l evenement en acces illimite.',
       )}
       title={t('eventWizard.steps.participants.title', 'Participants')}
     >
       <View style={[Spaces.gap[16]]}>
         <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {t('eventWizard.steps.participants.modeLabel', 'Mode de capacité')}
+            {t('eventWizard.steps.participants.modeLabel', 'Mode de capacite')}
           </Text>
           <SegmentedControl
             centerContent
             onChange={setCapacityMode}
             options={[
               {
-                label: t('eventWizard.steps.participants.unlimited', 'Illimité'),
+                label: t('eventWizard.steps.participants.unlimited', 'Illimite'),
                 value: 'unlimited',
               },
               {
-                label: t('eventWizard.steps.participants.fixed', 'Capacité fixe'),
+                label: t('eventWizard.steps.participants.fixed', 'Capacite fixe'),
                 value: 'fixed',
               },
             ]}
@@ -186,16 +186,16 @@ function EventWizardParticipants({ navigation }) {
             {capacityMode === 'unlimited'
               ? t(
                 'eventWizard.steps.participants.modeHintUnlimited',
-                'Mode illimité: aucun plafond de participants.',
+                'Mode illimite: aucun plafond de participants.',
               )
               : t(
                 'eventWizard.steps.participants.modeHintFixed',
-                'Mode capacité fixe: nombre de places limite.',
+                'Mode capacite fixe: nombre de places limite.',
               )}
           </Text>
         </View>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[14], surfaceStyle]}>
+        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], surfaceStyle]}>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t('eventEdit.fields.capacity.label')}
           </Text>
@@ -211,7 +211,7 @@ function EventWizardParticipants({ navigation }) {
             <View style={[Spaces.paddingHorizontal[12]]}>
               <Text style={[Fonts.h1, Fonts.neutral00, { textAlign: 'center' }]}>
                 {capacityMode === 'unlimited'
-                  ? t('eventWizard.steps.participants.unlimited', 'Illimité')
+                  ? t('eventWizard.steps.participants.unlimited', 'Illimite')
                   : clampedCapacity}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
@@ -246,7 +246,7 @@ function EventWizardParticipants({ navigation }) {
                         ApplicationStyle.card,
                         Alignments.alignCenter,
                         Alignments.justifyCenter,
-                        Spaces.paddingVertical[10],
+                        Spaces.paddingVertical[12],
                         Spaces.paddingHorizontal[16],
                         {
                           backgroundColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.08)',
@@ -305,11 +305,11 @@ function EventWizardParticipants({ navigation }) {
             },
           ]}
         >
-          <Text style={[Fonts.p3Bold, Fonts.primary500, Spaces.marginBottom[6]]}>
+          <Text style={[Fonts.p3Bold, Fonts.primary500, Spaces.marginBottom[8]]}>
             {t('eventWizard.steps.participants.summaryTitle', 'Resume')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {t('eventWizard.steps.participants.previewCapacity', 'Capacité: {{value}}', { value: capacityLabel })}
+            {t('eventWizard.steps.participants.previewCapacity', 'Capacite: {{value}}', { value: capacityLabel })}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t(
@@ -317,8 +317,8 @@ function EventWizardParticipants({ navigation }) {
               'Mode: {{value}}',
               {
                 value: capacityMode === 'fixed'
-                  ? t('eventWizard.steps.participants.fixed', 'Capacité fixe')
-                  : t('eventWizard.steps.participants.unlimited', 'Illimité'),
+                  ? t('eventWizard.steps.participants.fixed', 'Capacite fixe')
+                  : t('eventWizard.steps.participants.unlimited', 'Illimite'),
               },
             )}
           </Text>
@@ -328,10 +328,10 @@ function EventWizardParticipants({ navigation }) {
             </Text>
           ) : null}
           {hasInvalidPlayersConfig ? (
-            <Text style={[Fonts.p3, Fonts.error700, Spaces.marginTop[6]]}>
+            <Text style={[Fonts.p3, Fonts.error700, Spaces.marginTop[8]]}>
               {t(
                 'eventWizard.steps.participants.totalPlayersExceedsCapacity',
-                'Le nombre de joueurs attendus ne peut pas depasser la capacité max.',
+                'Le nombre de joueurs attendus ne peut pas depasser la capacite max.',
               )}
             </Text>
           ) : null}
@@ -340,7 +340,7 @@ function EventWizardParticipants({ navigation }) {
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {t(
             'eventWizard.steps.participants.hint',
-            'Tu pourras encore modifier ces valeurs avant la création finale.',
+            'Tu pourras encore modifier ces valeurs avant la creation finale.',
           )}
         </Text>
 

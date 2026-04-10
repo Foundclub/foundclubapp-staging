@@ -1,0 +1,94 @@
+name: Android Staging Distribution
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - staging
+
+jobs:
+  distribute-android-staging:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: staging
+      ENV: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          test -n "${{ secrets.ANDROID_STAGING_GOOGLE_SERVICES_JSON_BASE64 }}" || (echo "Missing secret: ANDROID_STAGING_GOOGLE_SERVICES_JSON_BASE64" && exit 1)
+          test -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 }}" || (echo "Missing secret: FIREBASE_SERVICE_ACCOUNT_JSON_BASE64" && exit 1)
+          test -n "${{ secrets.FIREBASE_APP_ID_ANDROID }}" || (echo "Missing secret: FIREBASE_APP_ID_ANDROID" && exit 1)
+          test -n "${{ secrets.FIREBASE_GROUPS }}" || (echo "Missing secret: FIREBASE_GROUPS" && exit 1)
+          echo "All Android staging distribution secrets are present."
+
+      - name: Restore staging google-services.json
+        shell: bash
+        run: |
+          mkdir -p android/app/src/staging
+          printf '%s' "${{ secrets.ANDROID_STAGING_GOOGLE_SERVICES_JSON_BASE64 }}" | base64 --decode > android/app/src/staging/google-services.json
+          test -s android/app/src/staging/google-services.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build staging release APK
+        shell: bash
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleStagingRelease --no-daemon
+
+      - name: Resolve APK path
+        id: apk
+        shell: bash
+        run: |
+          APK_PATH="$(find android/app/build/outputs/apk/staging/release -name '*.apk' | head -n 1)"
+          test -n "$APK_PATH" || (echo "Unable to locate staging release APK" && exit 1)
+          echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundclub-android-staging-apk
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+
+      - name: Restore Firebase service account
+        shell: bash
+        run: |
+          mkdir -p ci-firebase
+          printf '%s' "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 }}" | base64 --decode > ci-firebase/firebase-service-account.json
+          test -s ci-firebase/firebase-service-account.json
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Distribute APK to Firebase App Distribution
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/ci-firebase/firebase-service-account.json
+        run: |
+          firebase appdistribution:distribute "${{ steps.apk.outputs.path }}" \
+            --app "${{ secrets.FIREBASE_APP_ID_ANDROID }}" \
+            --groups "${{ secrets.FIREBASE_GROUPS }}" \
+            --release-notes "GitHub Actions Android staging build ${{ github.sha }}"

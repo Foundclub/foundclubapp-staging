@@ -27,9 +27,10 @@
  *     executedViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
  *     executedQuery?: Record<string, any> | null,
  *     lastResultMeta?: Record<string, any> | null,
- *     lastRenderStats?: { renderableCount?: number, markerCount?: number, clusterCount?: number } | null
+ *     lastRenderStats?: { dataCount?: number, renderableCount?: number, markerCount?: number, clusterCount?: number, fallbackActive?: boolean } | null
  *   },
  *   clubs?: {
+ *     addressSelection?: { label?: string, value?: string, lat?: number | string, lng?: number | string, lon?: number | string, bbox?: Record<string, any> },
  *     region?: { lat: number, lng: number, zoom?: number },
  *     selectedItemId?: string,
  *     searchedViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
@@ -38,7 +39,7 @@
  *     executedQuery?: Record<string, any> | null,
  *     executedClubMapQuery?: Record<string, any> | null,
  *     lastResultMeta?: Record<string, any> | null,
- *     lastRenderStats?: { renderableCount?: number, markerCount?: number, clusterCount?: number } | null
+ *     lastRenderStats?: { dataCount?: number, renderableCount?: number, markerCount?: number, clusterCount?: number, fallbackActive?: boolean } | null
  *   },
  *   reservations?: { region?: { lat: number, lng: number, zoom?: number }, selectedItemId?: string }
  * }} [searchMapSessions] - Session-only map viewport and selection state per search scope.

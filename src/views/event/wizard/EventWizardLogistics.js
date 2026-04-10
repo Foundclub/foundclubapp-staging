@@ -352,7 +352,7 @@ function EventWizardLogistics({ navigation }) {
       subtitle={t('eventWizard.steps.logistics.subtitle')}
       title={t('eventWizard.steps.logistics.title')}
     >
-      <View style={[Spaces.gap[20]]}>
+      <View style={[Spaces.gap[24]]}>
         <DateTimeSelector
           display="inline"
           label={t('eventEdit.fields.date.label')}
@@ -501,7 +501,7 @@ function EventWizardLogistics({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
                   {t(
                     'eventWizard.steps.logistics.recurrenceBaseDayHint',
-                    "Le jour de l'événement est présélectionné. Tu peux ajouter d'autres jours.",
+                    "Le jour de l'Ã©vÃ©nement est prÃ©sÃ©lectionnÃ©. Tu peux ajouter d'autres jours.",
                   )}
                 </Text>
               </View>

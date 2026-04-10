@@ -70,6 +70,15 @@ import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { useEventMutations } from './hooks/useEventMutations';
+import { createTournamentDesignSystem } from './tournamentDesignSystem';
+import {
+  getTournamentPendingMembershipForUser,
+  getTournamentRosterSummary,
+  getTournamentStatusCounters,
+  isTournamentActiveMemberStatus,
+  isTournamentTeamNonCompliant,
+  normalizeTournamentText,
+} from './tournamentUtils';
 
 const SharePlatform = require('@/platform/share').default;
 
@@ -113,8 +122,8 @@ const getStageDayStatusSummary = (stageDay) => {
 
 const getFeaturedScopeStatusLabel = (status) => {
   if (status === 'pending') return 'Demande en attente';
-  if (status === 'approved') return 'DÃ©jÃ  Ã  la une';
-  if (status === 'rejected') return 'RefusÃ©e, vous pouvez redemander';
+  if (status === 'approved') return 'DÃƒÂ©jÃƒÂ  ÃƒÂ  la une';
+  if (status === 'rejected') return 'RefusÃƒÂ©e, vous pouvez redemander';
   return 'Disponible';
 };
 
@@ -228,6 +237,12 @@ function EventDetails({ navigation, route }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const tournamentDs = createTournamentDesignSystem({
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
+  });
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { canEditEvent, canManageEvent, userData } = useAuth();
@@ -270,6 +285,14 @@ function EventDetails({ navigation, route }) {
       .sort((left, right) => String(left?.name || '').localeCompare(String(right?.name || ''))),
     [event?.tournamentTeams],
   );
+  const tournamentConfig = useMemo(
+    () => (event?.tournamentConfig && typeof event.tournamentConfig === 'object' ? event.tournamentConfig : {}),
+    [event?.tournamentConfig],
+  );
+  const tournamentTeamCounters = useMemo(
+    () => getTournamentStatusCounters(tournamentTeams, tournamentConfig),
+    [tournamentConfig, tournamentTeams],
+  );
   const currentUserTournamentTeam = useMemo(() => {
     const currentUserId = userData?.documentId;
     if (!currentUserId) return null;
@@ -278,10 +301,14 @@ function EventDetails({ navigation, route }) {
       Array.isArray(team?.members)
       && team.members.some((member) => (
         member?.user?.documentId === currentUserId
-        && !['declined', 'removed'].includes(String(member?.responseStatus || '').toLowerCase())
+        && isTournamentActiveMemberStatus(member?.responseStatus)
       ))
     )) || null;
   }, [tournamentTeams, userData?.documentId]);
+  const currentUserPendingTournamentTeam = useMemo(
+    () => getTournamentPendingMembershipForUser(tournamentTeams, userData?.documentId || ''),
+    [tournamentTeams, userData?.documentId],
+  );
   const managedTournamentTeam = useMemo(() => {
     const currentUserId = userData?.documentId;
     if (!currentUserId) return null;
@@ -309,11 +336,14 @@ function EventDetails({ navigation, route }) {
     && !isStageDayEvent
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
-    && !currentUserTournamentTeam,
+    && !currentUserTournamentTeam
+    && !currentUserPendingTournamentTeam,
   );
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
     && !isStageDayEvent
+    && !currentUserTournamentTeam
+    && !currentUserPendingTournamentTeam
     && availableTournamentSourceTeams.length > 0,
   );
   useEffect(() => {
@@ -1182,21 +1212,21 @@ function EventDetails({ navigation, route }) {
   const featuredScopeOptions = useMemo(() => ([
     {
       kind: 'PUBLIC',
-      label: 'À la une publique',
+      label: 'Ã€ la une publique',
       status: featuredRequestsSummary.PUBLIC.status,
       summary: featuredRequestsSummary.PUBLIC,
       visible: canManageFeatured,
     },
     {
       kind: 'SECTION',
-      label: 'À la une dans mon club',
+      label: 'Ã€ la une dans mon club',
       status: featuredRequestsSummary.SECTION.status,
       summary: featuredRequestsSummary.SECTION,
       visible: canManageFeatured && Boolean(eventClubId),
     },
     {
       kind: 'CM',
-      label: 'À la une dans le club multisport',
+      label: 'Ã€ la une dans le club multisport',
       status: featuredRequestsSummary.CM.status,
       summary: featuredRequestsSummary.CM,
       visible: canManageFeatured && Boolean(eventMultisportId),
@@ -1303,6 +1333,16 @@ function EventDetails({ navigation, route }) {
     });
   }, [eventId, navigation]);
 
+  const handleOpenTournamentManagement = useCallback(() => {
+    if (!eventId) return;
+    navigation.navigate(RouteNames.TournamentManagement, { eventId });
+  }, [eventId, navigation]);
+
+  const handleOpenTournamentSettings = useCallback(() => {
+    if (!eventId) return;
+    navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId });
+  }, [eventId, navigation]);
+
   const handleCreateTournamentTeam = useCallback(() => {
     const trimmedName = String(tournamentTeamNameDraft || '').trim();
     if (!trimmedName) {
@@ -1337,7 +1377,7 @@ function EventDetails({ navigation, route }) {
     if (!pendingFeaturedApproval?.requestId) return;
     Alert.alert(
       'Refuser la demande ?',
-      'Le demandeur sera notifié du refus.',
+      'Le demandeur sera notifiÃ© du refus.',
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -1645,18 +1685,18 @@ function EventDetails({ navigation, route }) {
 
   const handleOpenEventActionsMenu = useCallback(() => {
     Alert.alert(
-      t('eventDetails.actions.menuTitle', 'Actions événement'),
+      t('eventDetails.actions.menuTitle', 'Actions Ã©vÃ©nement'),
       t('eventDetails.actions.menuDescription', 'Choisissez une action.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
           onPress: handleEditEvent,
-          text: t('eventDetails.actions.edit', "Modifier l'événement"),
+          text: t('eventDetails.actions.edit', "Modifier l'Ã©vÃ©nement"),
         },
         {
           onPress: handleCancelEvent,
           style: 'destructive',
-          text: t('eventDetails.actions.cancelEvent', "Annuler l'événement"),
+          text: t('eventDetails.actions.cancelEvent', "Annuler l'Ã©vÃ©nement"),
         },
       ],
     );
@@ -2482,26 +2522,23 @@ function EventDetails({ navigation, route }) {
 
   const renderTournamentSection = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
+    let tournamentFormatLabel = 'Poules uniquement';
+    if (event?.tournamentConfig?.formatMode === 'groups_to_knockout') {
+      tournamentFormatLabel = 'Poules + finale';
+    } else if (event?.tournamentConfig?.formatMode === 'knockout_only') {
+      tournamentFormatLabel = 'Phase finale directe';
+    } else if (event?.tournamentConfig?.formatMode === 'round_robin') {
+      tournamentFormatLabel = 'Championnat';
+    }
 
     return (
-      <View style={[Spaces.gap[12]]}>
+      <View style={Spaces.gap[16]}>
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Equipes du tournoi</Text>
         <Text style={[Fonts.p2, Fonts.primary100]}>
           Les equipes de tournoi restent ephemeres et ne modifient jamais les equipes club permanentes.
         </Text>
 
-        <View
-          style={[
-            ApplicationStyle.backgroundColor.primary900,
-            ApplicationStyle.borderRadius24,
-            ApplicationStyle.borderWidth1,
-            Spaces.padding[16],
-            Spaces.gap[8],
-            {
-              borderColor: `${Colors.primary500}33`,
-            },
-          ]}
-        >
+        <View style={tournamentDs.styles.panelCard}>
           <Text style={[Fonts.p3Bold, Fonts.primary500]}>Cadre du tournoi</Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {`Validation des equipes: ${event?.tournamentConfig?.registrationMode === 'auto' ? 'Automatique' : 'Manuelle'}`}
@@ -2523,7 +2560,54 @@ function EventDetails({ navigation, route }) {
               {event.tournamentConfig.rulesText}
             </Text>
           ) : null}
+          <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+            <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={`${tournamentTeams.length} equipe(s)`} textColor="primary500" />
+            <Tag style={tournamentDs.getToneTagStyle(Colors.warning500)} text={`${tournamentTeamCounters.pending} en attente`} textColor="warning500" />
+            <Tag
+              style={tournamentDs.getToneTagStyle(Colors.success500)}
+              text={`${tournamentTeamCounters.accepted} validee(s)`}
+              textColor="neutral00"
+              textStyle={{ color: Colors.success500 }}
+            />
+            {tournamentTeamCounters.warning > 0 ? (
+              <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={`${tournamentTeamCounters.warning} warning(s)`} textColor="gold500" />
+            ) : null}
+          </View>
         </View>
+
+        <View style={tournamentDs.styles.panelCard}>
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>Structure sportive</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {`Format: ${tournamentFormatLabel}`}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {`Etat: ${event?.tournamentConfig?.competitionState === 'published' ? 'Competition publiee' : 'Competition en brouillon'}`}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {`Points: V ${event?.tournamentConfig?.pointsWin ?? 3} | N ${event?.tournamentConfig?.pointsDraw ?? 1} | D ${event?.tournamentConfig?.pointsLoss ?? 0}`}
+          </Text>
+          {event?.tournamentConfig?.knockoutSize ? (
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {`Bracket cible: ${event.tournamentConfig.knockoutSize}`}
+            </Text>
+          ) : null}
+        </View>
+
+        <Button
+          onPress={handleOpenTournamentManagement}
+          title={canEdit ? 'Piloter la competition' : 'Voir la competition'}
+          variant={canEdit ? 'Primary' : 'Secondary'}
+        />
+
+        {canEdit ? (
+          <View style={[Spaces.gap[12]]}>
+            <Button
+              onPress={handleOpenTournamentSettings}
+              title="Modifier les parametres"
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
 
         {managedTournamentTeam?.documentId ? (
           <Button
@@ -2537,6 +2621,22 @@ function EventDetails({ navigation, route }) {
           <Button
             onPress={() => handleOpenTournamentTeam(currentUserTournamentTeam.documentId)}
             title="Voir mon equipe tournoi"
+            variant="Primary"
+          />
+        ) : null}
+
+        {!managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
+          <Button
+            onPress={() => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId)}
+            title={
+              normalizeTournamentText(
+                currentUserPendingTournamentTeam?.members?.find(
+                  (member) => member?.user?.documentId === userData?.documentId,
+                )?.responseStatus,
+              ) === 'invited'
+                ? 'Repondre a mon invitation'
+                : 'Suivre ma demande'
+            }
             variant="Primary"
           />
         ) : null}
@@ -2558,17 +2658,7 @@ function EventDetails({ navigation, route }) {
         ) : null}
 
         {tournamentTeams.length === 0 ? (
-          <View
-            style={[
-              ApplicationStyle.backgroundColor.primary900,
-              ApplicationStyle.borderRadius24,
-              ApplicationStyle.borderWidth1,
-              Spaces.padding[16],
-              {
-                borderColor: `${Colors.primary500}33`,
-              },
-            ]}
-          >
+          <View style={tournamentDs.styles.panelCard}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               Aucune equipe n est encore inscrite sur ce tournoi.
             </Text>
@@ -2576,30 +2666,22 @@ function EventDetails({ navigation, route }) {
         ) : null}
 
         {tournamentTeams.map((tournamentTeam) => {
-          const activeMembers = Array.isArray(tournamentTeam?.members)
-            ? tournamentTeam.members.filter((member) => !['declined', 'removed'].includes(String(member?.responseStatus || '').toLowerCase()))
-            : [];
+          const rosterSummary = getTournamentRosterSummary(tournamentTeam, tournamentConfig);
+          const hasRosterWarning = isTournamentTeamNonCompliant(tournamentTeam, tournamentConfig);
           let tournamentTeamStatusLabel = 'Equipe inscrite';
           if (tournamentTeam?.status === 'pending') {
             tournamentTeamStatusLabel = 'Validation en attente';
           } else if (tournamentTeam?.status === 'declined') {
             tournamentTeamStatusLabel = 'Equipe refusee';
+          } else if (tournamentTeam?.status === 'archived') {
+            tournamentTeamStatusLabel = 'Equipe archivee';
           }
 
           return (
             <TouchableOpacity
               key={tournamentTeam?.documentId || tournamentTeam?.name}
               onPress={() => handleOpenTournamentTeam(tournamentTeam?.documentId)}
-              style={[
-                ApplicationStyle.backgroundColor.primary900,
-                ApplicationStyle.borderRadius24,
-                ApplicationStyle.borderWidth1,
-                Spaces.padding[16],
-                Spaces.gap[8],
-                {
-                  borderColor: `${Colors.primary500}33`,
-                },
-              ]}
+              style={tournamentDs.styles.panelCard}
             >
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
@@ -2613,11 +2695,8 @@ function EventDetails({ navigation, route }) {
                   </Text>
                 </View>
                 <Tag
-                  style={{
-                    backgroundColor: 'rgba(1, 179, 244, 0.12)',
-                    borderColor: `${Colors.primary500}33`,
-                  }}
-                  text={String(activeMembers.length || 0)}
+                  style={tournamentDs.getToneTagStyle(Colors.primary500)}
+                  text={String(rosterSummary.totalCount || 0)}
                   textColor="primary500"
                 />
               </View>
@@ -2625,9 +2704,28 @@ function EventDetails({ navigation, route }) {
               <Text style={[Fonts.p4, Fonts.neutral200]}>
                 {tournamentTeamStatusLabel}
               </Text>
+              <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                {rosterSummary.invitedCount > 0 ? (
+                  <Tag
+                    style={tournamentDs.getToneTagStyle(Colors.primary500)}
+                    text={`${rosterSummary.invitedCount} invitation${rosterSummary.invitedCount > 1 ? 's' : ''}`}
+                    textColor="primary500"
+                  />
+                ) : null}
+                {rosterSummary.requestedCount > 0 ? (
+                  <Tag
+                    style={tournamentDs.getToneTagStyle(Colors.warning500)}
+                    text={`${rosterSummary.requestedCount} demande${rosterSummary.requestedCount > 1 ? 's' : ''}`}
+                    textColor="warning500"
+                  />
+                ) : null}
+                {hasRosterWarning ? (
+                  <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text="Warning roster" textColor="gold500" />
+                ) : null}
+              </View>
 
               {canEdit && tournamentTeam?.status === 'pending' ? (
-                <View style={[Alignments.row, Spaces.gap[10], Spaces.marginTop[4]]}>
+                <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[4]]}>
                   <Button
                     isLoading={reviewTournamentTeamMutation.isPending}
                     onPress={() => handleReviewTournamentTeam(tournamentTeam?.documentId, 'accepted')}
@@ -2672,7 +2770,7 @@ function EventDetails({ navigation, route }) {
           {!hasAlreadyJoined && <Button onPress={handleJoinEvent} title="Reserver" variant="Primary" />}
           {canEdit && (
             <View style={Spaces.marginTop[12]}>
-              <Button onPress={handleOpenEventActionsMenu} title="Actions événement" variant="Secondary" />
+              <Button onPress={handleOpenEventActionsMenu} title="Actions Ã©vÃ©nement" variant="Secondary" />
             </View>
           )}
         </View>
@@ -2696,7 +2794,7 @@ function EventDetails({ navigation, route }) {
       if (hasApprovedFeaturedScope && canManageFeatured) {
         return (
           <View style={{ marginTop: 12, opacity: 0.8 }}>
-            <Button disabled icon="check" title="Déjà à la une" variant="Secondary" />
+            <Button disabled icon="check" title="DÃ©jÃ  Ã  la une" variant="Secondary" />
           </View>
         );
       }
@@ -2706,7 +2804,7 @@ function EventDetails({ navigation, route }) {
     const actionButtonsNode = (
       <View>
         {canEdit ? (
-          <Button onPress={handleOpenEventActionsMenu} title="Actions événement" variant="Secondary" />
+          <Button onPress={handleOpenEventActionsMenu} title="Actions Ã©vÃ©nement" variant="Secondary" />
         ) : (
           <EventAnswerButtons
             event={event}
@@ -2771,9 +2869,9 @@ function EventDetails({ navigation, route }) {
               style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}
             >
               <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions événement</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions Ã©vÃ©nement</Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  Modifie cet événement, gère son annulation ou ouvre la composition d&apos;équipe.
+                  Modifie cet Ã©vÃ©nement, gÃ¨re son annulation ou ouvre la composition d&apos;Ã©quipe.
                 </Text>
               </View>
               <View
@@ -2981,8 +3079,8 @@ function EventDetails({ navigation, route }) {
                           onPress={() => setStageDetailsTab(tab.key)}
                           style={[
                             ApplicationStyle.borderRadius100,
-                            Spaces.paddingHorizontal[14],
-                            Spaces.paddingVertical[10],
+                            Spaces.paddingHorizontal[16],
+                            Spaces.paddingVertical[12],
                             {
                               backgroundColor: selected ? `${Colors.primary500}22` : 'rgba(255,255,255,0.05)',
                               borderColor: selected ? Colors.primary500 : `${Colors.primary500}40`,
@@ -2999,7 +3097,7 @@ function EventDetails({ navigation, route }) {
                   </View>
 
                   {stageDetailsTab === 'overview' ? (
-                    <View style={[Spaces.gap[10]]}>
+                    <View style={[Spaces.gap[12]]}>
                       <View style={[Spaces.gap[4]]}>
                         <Text style={[Fonts.p3, Fonts.neutral200]}>Periode</Text>
                         <Text style={[Fonts.p2, Fonts.neutral00]}>{stagePeriodSummary || 'Non renseignee'}</Text>
@@ -3044,7 +3142,7 @@ function EventDetails({ navigation, route }) {
                       </View>
                     </View>
                   ) : (
-                    <View style={[Spaces.gap[10]]}>
+                    <View style={[Spaces.gap[12]]}>
                       {stageChildDays.map((stageDay) => {
                         const summary = getStageDayStatusSummary(stageDay);
                         return (
@@ -3055,7 +3153,7 @@ function EventDetails({ navigation, route }) {
                             })}
                             style={[
                               ApplicationStyle.card,
-                              Spaces.padding[14],
+                              Spaces.padding[16],
                               Spaces.gap[8],
                               {
                                 backgroundColor: 'rgba(1, 179, 244, 0.08)',
@@ -3107,7 +3205,7 @@ function EventDetails({ navigation, route }) {
                   ApplicationStyle.borderRadius24,
                   ApplicationStyle.borderWidth1,
                   Spaces.padding[16],
-                  Spaces.gap[6],
+                  Spaces.gap[8],
                   {
                     borderColor: `${Colors.primary500}55`,
                   },
@@ -3243,7 +3341,7 @@ function EventDetails({ navigation, route }) {
                   ApplicationStyle.backgroundColor.primary900,
                   ApplicationStyle.borderRadius24,
                   Spaces.padding[16],
-                  Spaces.gap[10],
+                  Spaces.gap[12],
                   {
                     borderColor: `${Colors.error500 || 'rgb(248, 113, 113)'}55`,
                     borderWidth: 1,
@@ -3282,8 +3380,8 @@ function EventDetails({ navigation, route }) {
                     </View>
                     <View
                       style={[
-                        Spaces.paddingHorizontal[10],
-                        Spaces.paddingVertical[6],
+                        Spaces.paddingHorizontal[12],
+                        Spaces.paddingVertical[8],
                         {
                           backgroundColor: myMatchResponseStatusMeta.backgroundColor,
                           borderColor: myMatchResponseStatusMeta.borderColor,
@@ -3369,8 +3467,8 @@ function EventDetails({ navigation, route }) {
                     </View>
                     <View
                       style={[
-                        Spaces.paddingHorizontal[10],
-                        Spaces.paddingVertical[6],
+                        Spaces.paddingHorizontal[12],
+                        Spaces.paddingVertical[8],
                         {
                           backgroundColor: hasMyCoachReview ? `${Colors.success500}18` : `${Colors.primary500}18`,
                           borderColor: hasMyCoachReview ? `${Colors.success500}55` : `${Colors.primary500}40`,
@@ -3428,8 +3526,8 @@ function EventDetails({ navigation, route }) {
                     </View>
                     <View
                       style={[
-                        Spaces.paddingHorizontal[10],
-                        Spaces.paddingVertical[6],
+                        Spaces.paddingHorizontal[12],
+                        Spaces.paddingVertical[8],
                         {
                           backgroundColor: matchStatsStatusMeta.backgroundColor,
                           borderColor: matchStatsStatusMeta.borderColor,
@@ -3805,7 +3903,7 @@ function EventDetails({ navigation, route }) {
         snapPoints={['52%']}
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
-          <View style={[Spaces.gap[4]]}>
+          <View style={tournamentDs.styles.headerBlock}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Inscrire mon equipe</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               Selectionnez une equipe club. L application creera une equipe ephemere de tournoi sans toucher a votre effectif permanent.
@@ -3822,12 +3920,8 @@ function EventDetails({ navigation, route }) {
                 key={sourceTeam?.documentId}
                 onPress={() => registerTournamentTeamMutation.mutate({ sourceTeamId: sourceTeam.documentId })}
                 style={[
-                  ApplicationStyle.backgroundColor.primary900,
-                  ApplicationStyle.borderRadius16,
-                  ApplicationStyle.borderWidth1,
-                  Spaces.padding[14],
+                  ...tournamentDs.styles.compactPanelCard,
                   {
-                    borderColor: `${Colors.primary500}44`,
                     opacity: registerTournamentTeamMutation.isPending ? 0.7 : 1,
                   },
                 ]}
@@ -3852,7 +3946,7 @@ function EventDetails({ navigation, route }) {
         snapPoints={['44%']}
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
-          <View style={[Spaces.gap[4]]}>
+          <View style={tournamentDs.styles.headerBlock}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Creer une equipe</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               Cette equipe n existera que pour ce tournoi. Vous en deviendrez automatiquement le capitaine.
@@ -3864,16 +3958,8 @@ function EventDetails({ navigation, route }) {
             placeholder="Nom de l equipe"
             placeholderTextColor={Colors.neutral300}
             style={[
-              ApplicationStyle.backgroundColor.primary900,
-              ApplicationStyle.borderRadius16,
-              ApplicationStyle.borderWidth1,
-              Fonts.p2,
+              ...tournamentDs.styles.input,
               Fonts.neutral00,
-              Spaces.paddingHorizontal[16],
-              Spaces.paddingVertical[14],
-              {
-                borderColor: `${Colors.primary500}44`,
-              },
             ]}
             value={tournamentTeamNameDraft}
           />
@@ -3915,7 +4001,7 @@ function EventDetails({ navigation, route }) {
               ApplicationStyle.backgroundColor.primary900,
               { borderRadius: 20 },
               Spaces.padding[16],
-              Spaces.gap[6],
+              Spaces.gap[8],
             ]}
           >
             <Text style={[Fonts.p3, Fonts.neutral300]}>Match</Text>

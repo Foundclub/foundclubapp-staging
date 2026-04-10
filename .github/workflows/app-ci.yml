@@ -1,0 +1,33 @@
+name: App CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - staging
+      - main
+  workflow_dispatch:
+
+jobs:
+  app-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint ratchet (no regression)
+        run: npm run lint:no-regression
+
+      - name: Type-check ratchet (no regression)
+        run: npm run type-check:no-regression
+
+      - name: Unit tests
+        run: npm test -- --ci --runInBand

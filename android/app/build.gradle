@@ -130,26 +130,6 @@ android {
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 1
         versionName project.hasProperty('versionName') ? project.property('versionName') : "1.0.0"
     }
-    flavorDimensions "env"
-    productFlavors {
-        production {
-            dimension "env"
-            manifestPlaceholders = [googleMapsApiKey: productionMapsApiKey ?: MAPS_API_KEY_PLACEHOLDER]
-            resValue "string", "app_name", "FoundClub"
-        }
-        staging {
-            dimension "env"
-            applicationIdSuffix ".staging"
-            manifestPlaceholders = [googleMapsApiKey: stagingMapsApiKey ?: MAPS_API_KEY_PLACEHOLDER]
-            versionNameSuffix "-staging"
-            resValue "string", "app_name", "FoundClub Staging"
-        }
-    }
-    variantFilter { variant ->
-        if (variant.flavors*.name.contains("production") && !hasProductionGoogleServices) {
-            setIgnore(true)
-        }
-    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -164,11 +144,32 @@ android {
             keyPassword project.hasProperty('RELEASE_KEY_PASSWORD') ? project.RELEASE_KEY_PASSWORD : ''
         }
         staging {
-            // Utiliser keystore staging distinct ou debug
             storeFile file('debug.keystore')
             storePassword 'android'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
+        }
+    }
+    flavorDimensions "env"
+    productFlavors {
+        production {
+            dimension "env"
+            signingConfig signingConfigs.release
+            manifestPlaceholders = [googleMapsApiKey: productionMapsApiKey ?: MAPS_API_KEY_PLACEHOLDER]
+            resValue "string", "app_name", "FoundClub"
+        }
+        staging {
+            dimension "env"
+            applicationIdSuffix ".staging"
+            signingConfig signingConfigs.staging
+            manifestPlaceholders = [googleMapsApiKey: stagingMapsApiKey ?: MAPS_API_KEY_PLACEHOLDER]
+            versionNameSuffix "-staging"
+            resValue "string", "app_name", "FoundClub Staging"
+        }
+    }
+    variantFilter { variant ->
+        if (variant.flavors*.name.contains("production") && !hasProductionGoogleServices) {
+            setIgnore(true)
         }
     }
     buildTypes {
@@ -177,9 +178,6 @@ android {
             debuggable true
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

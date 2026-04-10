@@ -248,9 +248,9 @@ function EventHeader({ event, matchScoreSummary = null }) {
           style={[
             ApplicationStyle.borderRadius24,
             Alignments.alignCenter,
-            Spaces.paddingVertical[10],
+            Spaces.paddingVertical[12],
             Spaces.paddingHorizontal[18],
-            Spaces.gap[6],
+            Spaces.gap[8],
             {
               backgroundColor: `${Colors.primary500}18`,
               borderColor: `${Colors.primary500}55`,

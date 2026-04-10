@@ -100,11 +100,24 @@ const buildWizardFormData = (wizardState) => {
     tournamentConfig: isTournament ? {
       allowCrossClubPlayers: wizardState.tournamentAllowCrossClubPlayers === true,
       allowCustomTeams: wizardState.tournamentAllowCustomTeams !== false,
+      bestThirdPlacesCount: wizardState.tournamentBestThirdPlacesCount ?? 0,
+      formatMode: wizardState.tournamentFormatMode || 'groups_only',
+      groupCount: wizardState.tournamentGroupCount ?? 2,
+      knockoutSize: wizardState.tournamentKnockoutSize ?? 0,
+      matchGenerationMode: wizardState.tournamentMatchGenerationMode || 'auto',
       maxRosterSize: wizardState.tournamentMaxRosterSize ?? null,
       maxTeams: wizardState.tournamentMaxTeams ?? null,
       minRosterSize: wizardState.tournamentMinRosterSize ?? null,
+      pointsDraw: wizardState.tournamentPointsDraw ?? 1,
+      pointsForfeit: wizardState.tournamentPointsForfeit ?? 0,
+      pointsLoss: wizardState.tournamentPointsLoss ?? 0,
+      pointsWin: wizardState.tournamentPointsWin ?? 3,
+      qualifiedPerGroup: wizardState.tournamentQualifiedPerGroup ?? 2,
       registrationMode: wizardState.tournamentRegistrationMode || 'manual',
       rulesText: wizardState.tournamentRulesText || '',
+      scorePolicy: 'organizer_only',
+      seedingMode: wizardState.tournamentSeedingMode || 'random',
+      thirdPlaceMatch: wizardState.tournamentThirdPlaceMatch === true,
     } : undefined,
     type: wizardState.type?.documentId,
     validationMode: isTournament
@@ -205,6 +218,31 @@ function EventWizardRecap({ navigation }) {
   const invitedCount = state.invitedTeams?.length || 0;
   const detectionSlots = Array.isArray(state.detectionSlots) ? state.detectionSlots : [];
   const detectionSlotsTotal = detectionSlots.reduce((sum, slot) => sum + Number(slot?.quantity || 0), 0);
+  const tournamentFormatLabel = {
+    groups_only: 'Poules uniquement',
+    groups_to_knockout: 'Poules + finale',
+    knockout_only: 'Phase finale directe',
+    round_robin: 'Championnat',
+  }[state.tournamentFormatMode || 'groups_only'] || 'Poules uniquement';
+  let tournamentGroupsSummary = state.tournamentGroupCount ?? 1;
+  if (state.tournamentFormatMode === 'knockout_only') {
+    tournamentGroupsSummary = 'Aucune';
+  } else if (state.tournamentFormatMode === 'round_robin') {
+    tournamentGroupsSummary = '1 classement';
+  }
+  let tournamentQualificationSummary = `${state.tournamentQualifiedPerGroup ?? 2} / poule`;
+  if (state.tournamentFormatMode === 'knockout_only') {
+    tournamentQualificationSummary = 'Directs';
+  }
+  let tournamentSeedingSummary = 'Aleatoire';
+  if (state.tournamentSeedingMode === 'manual') {
+    tournamentSeedingSummary = 'Manuel';
+  } else if (state.tournamentSeedingMode === 'snake') {
+    tournamentSeedingSummary = 'Serpentin';
+  }
+  const tournamentGenerationSummary = state.tournamentMatchGenerationMode === 'manual'
+    ? 'Manuelle'
+    : 'Automatique';
   const stageSchedule = Array.isArray(state.stageSchedule) ? state.stageSchedule : [];
   const activeStageDays = stageSchedule.filter((day) => day?.isActive !== false);
   const stageHasVariableHours = activeStageDays.some((day) => (
@@ -422,7 +460,7 @@ function EventWizardRecap({ navigation }) {
       <WizardStepLayout
         isNextDisabled={!isRecapReady}
         isNextLoading={isSubmitting}
-        nextLabel={t('eventWizard.recap.actions.createShort', 'CrÃ©er')}
+        nextLabel={t('eventWizard.recap.actions.createShort', 'Creer')}
         onBack={() => navigation.goBack()}
         onNext={handleSubmit}
         stepCount={getEventWizardStepCount(state)}
@@ -461,14 +499,14 @@ function EventWizardRecap({ navigation }) {
               >
                 <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
                   {isRecapReady
-                    ? t('eventWizard.recap.ready', 'PrÃªt a crÃ©er')
-                    : t('eventWizard.recap.incomplete', 'Ã  complÃ©ter')}
+                    ? t('eventWizard.recap.ready', 'Pret a creer')
+                    : t('eventWizard.recap.incomplete', 'A completer')}
                 </Text>
               </View>
             </View>
 
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('eventWizard.recap.completedCount', '{{done}}/5 infos clÃ©s complÃ©tÃ©es', {
+              {t('eventWizard.recap.completedCount', '{{done}}/5 infos cles completees', {
                 done: completedQuickOverviewCount,
               })}
             </Text>
@@ -524,7 +562,7 @@ function EventWizardRecap({ navigation }) {
               {!isStage && !isTournament ? (
                 <View style={[Spaces.gap[4]]}>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    {t('eventWizard.recap.invitedTeamsTitle', 'Ã‰quipes invitees')}
+                    {t('eventWizard.recap.invitedTeamsTitle', 'Equipes invitees')}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
                     {t('eventWizard.recap.invitesCount', { count: invitedCount })}
@@ -589,7 +627,7 @@ function EventWizardRecap({ navigation }) {
                         Alignments.justifySpaceBetween,
                         Alignments.alignCenter,
                         Spaces.paddingHorizontal[12],
-                        Spaces.paddingVertical[10],
+                        Spaces.paddingVertical[12],
                         {
                           backgroundColor: 'rgba(1, 179, 244, 0.08)',
                           borderColor: 'rgba(1, 179, 244, 0.20)',
@@ -649,6 +687,44 @@ function EventWizardRecap({ navigation }) {
                 <Text style={[Fonts.p2, state.tournamentRulesText ? Fonts.neutral100 : Fonts.neutral300]}>
                   {state.tournamentRulesText || 'Aucune regle specifique renseignee.'}
                 </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {isTournament ? (
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+                <Text style={[Fonts.h4, Fonts.neutral00]}>Structure du tournoi</Text>
+                <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardTournamentStructure)}>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>{`Format: ${tournamentFormatLabel}`}</Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`Poules: ${tournamentGroupsSummary}`}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`Qualifies: ${tournamentQualificationSummary}`}
+                </Text>
+                {(state.tournamentFormatMode === 'groups_to_knockout' || state.tournamentFormatMode === 'knockout_only') ? (
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>
+                    {`Bracket: ${state.tournamentKnockoutSize || recapNotSet}`}
+                  </Text>
+                ) : null}
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`Tirage: ${tournamentSeedingSummary}`}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`Generation matchs: ${tournamentGenerationSummary}`}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`Points: V ${state.tournamentPointsWin ?? 3} | N ${state.tournamentPointsDraw ?? 1} | D ${state.tournamentPointsLoss ?? 0} | F ${state.tournamentPointsForfeit ?? 0}`}
+                </Text>
+                {(state.tournamentFormatMode === 'groups_to_knockout' || state.tournamentFormatMode === 'knockout_only') && state.tournamentThirdPlaceMatch ? (
+                  <Text style={[Fonts.p2, Fonts.primary500]}>Petite finale activee</Text>
+                ) : null}
               </View>
             </View>
           ) : null}
@@ -722,7 +798,7 @@ function EventWizardRecap({ navigation }) {
                       Alignments.justifySpaceBetween,
                       Alignments.alignCenter,
                       Spaces.paddingHorizontal[12],
-                      Spaces.paddingVertical[10],
+                      Spaces.paddingVertical[12],
                       {
                         backgroundColor: 'rgba(1, 179, 244, 0.08)',
                         borderColor: 'rgba(1, 179, 244, 0.20)',

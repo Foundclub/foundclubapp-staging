@@ -16,7 +16,13 @@ import { getSearchMapResultLabel } from '@/utils/searchMap';
  * @param {() => void} [props.onRecenter]
  * @param {() => void} [props.onZoomIn]
  * @param {() => void} [props.onZoomOut]
- * @param {{ renderableCount?: number, markerCount?: number, clusterCount?: number } | null} [props.renderStats]
+ * @param {{
+ *  dataCount?: number,
+ *  renderableCount?: number,
+ *  markerCount?: number,
+ *  clusterCount?: number,
+ *  fallbackActive?: boolean,
+ * } | null} [props.renderStats]
  * @param {'events' | 'clubs' | 'reservations'} [props.scope]
  * @param {number} [props.totalCount]
  * @param {boolean} [props.truncated]
@@ -58,22 +64,20 @@ function SearchMapHud({
   );
 
   let geolocatableLabel = 'Aucun repere';
-  if (scope === 'clubs') {
-    if (visibleMarkerCount > 0) {
-      geolocatableLabel = `${visibleMarkerCount} reperes visibles`;
-    } else if (safeAvailableCount > 0 && truncated) {
-      geolocatableLabel = 'Zoomez pour tout voir';
-    } else if (safeAvailableCount > 0 && isLoadingResults) {
-      geolocatableLabel = 'Mise a jour des reperes...';
-    } else if (geolocatableCount > 0) {
-      geolocatableLabel = `${geolocatableCount} geolocalisables`;
-    } else if (safeAvailableCount > 0) {
-      geolocatableLabel = 'Aucun repere visible';
-    }
+  if (visibleMarkerCount > 0) {
+    geolocatableLabel = `${visibleMarkerCount} reperes visibles`;
+  } else if (safeAvailableCount > 0 && truncated) {
+    geolocatableLabel = 'Zoomez pour tout voir';
+  } else if (safeAvailableCount > 0 && isLoadingResults) {
+    geolocatableLabel = 'Mise a jour des reperes...';
   } else if (geolocatableCount > 0 && isPartialDataset) {
-    geolocatableLabel = `${geolocatableCount} visibles`;
+    geolocatableLabel = `${geolocatableCount} geolocalisables`;
   } else if (geolocatableCount > 0) {
-    geolocatableLabel = 'Touchez un repere';
+    geolocatableLabel = scope === 'clubs'
+      ? `${geolocatableCount} geolocalisables`
+      : 'Touchez un repere';
+  } else if (safeAvailableCount > 0) {
+    geolocatableLabel = 'Aucun repere visible';
   }
 
   const zoomGroupStyle = [

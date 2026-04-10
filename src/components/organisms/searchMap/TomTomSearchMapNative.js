@@ -25,6 +25,7 @@ import {
   getSearchMapNoCoordinatesMessage,
 } from '@/utils/searchMap';
 
+import { buildSearchMapRenderableModel } from '@/platform/maps/searchMapClustering';
 import {
   getSearchMapLoadingCopy,
   getSearchMapProviderErrorMessage,
@@ -119,6 +120,8 @@ const hasValidRegionHint = (value) => (
 const buildRuntimeState = (
   focusMode,
   items,
+  renderItems,
+  renderStats,
   overlayInsets,
   regionHint,
   selectedItemId,
@@ -128,6 +131,8 @@ const buildRuntimeState = (
   items,
   overlayInsets,
   regionHint,
+  renderItems,
+  renderStats,
   selectedItemId,
   userLocation,
 });
@@ -162,6 +167,17 @@ const resolveMeasuredOverlayInsets = (
  * @param {number} [props.height]
  * @param {boolean} [props.isLoadingResults]
  * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
+ * @param {{
+ *  lat: number;
+ *  lng: number;
+ *  zoom?: number;
+ *  north?: number;
+ *  south?: number;
+ *  east?: number;
+ *  west?: number;
+ *  latitudeDelta?: number;
+ *  longitudeDelta?: number;
+ * } | null} [props.focusedViewport]
  * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} [props.onOpenItem]
  * @param {(region: {
  *  lat: number;
@@ -176,8 +192,15 @@ const resolveMeasuredOverlayInsets = (
  * }) => void} [props.onRegionChangeComplete]
  * @param {(itemId: string) => void} [props.onSelectItem]
  * @param {'camera' | 'highlight-only'} [props.selectionFocusBehavior]
+ * @param {'manual' | 'debounced-auto'} [props.refreshStrategy]
  * @param {() => void} [props.onShowList]
- * @param {(stats: { renderableCount?: number, markerCount?: number, clusterCount?: number }) => void} [props.onRenderStats]
+ * @param {(stats: {
+ *  dataCount?: number,
+ *  renderableCount?: number,
+ *  markerCount?: number,
+ *  clusterCount?: number,
+ *  fallbackActive?: boolean,
+ * }) => void} [props.onRenderStats]
  * @param {{ top?: number, right?: number, bottom?: number, left?: number } | null} [props.overlayInsets]
  * @param {number} [props.previewBottomOffset]
  * @param {{
@@ -199,6 +222,7 @@ const resolveMeasuredOverlayInsets = (
  * @returns {import('react').ReactElement}
  */
 function TomTomSearchMapNative({
+  focusedViewport = null,
   height = 360,
   isLoadingResults = false,
   items = [],
@@ -209,6 +233,7 @@ function TomTomSearchMapNative({
   onShowList,
   overlayInsets = null,
   previewBottomOffset = 12,
+  refreshStrategy = 'manual',
   regionHint = null,
   scope = 'events',
   selectedItemId,
@@ -234,7 +259,7 @@ function TomTomSearchMapNative({
   const [internalSelectedItemId, setInternalSelectedItemId] = useState('');
   const [mapErrorReason, setMapErrorReason] = useState('');
   const [mapRenderKey, setMapRenderKey] = useState(0);
-  const [renderStats, setRenderStats] = useState(null);
+  const [providerRenderStats, setProviderRenderStats] = useState(null);
   const [mapStatus, setMapStatus] = useState(
     /** @type {'loading' | 'ready' | 'error'} */ ('loading'),
   );
@@ -244,6 +269,7 @@ function TomTomSearchMapNative({
   );
   const [webViewLoaded, setWebViewLoaded] = useState(false);
   const [focusedRegion, setFocusedRegion] = useState(regionHint);
+  const [visibleViewport, setVisibleViewport] = useState(focusedViewport || regionHint || null);
   const [hudControlsWidth, setHudControlsWidth] = useState(0);
   const [hudSummaryWidth, setHudSummaryWidth] = useState(0);
   const [previewCardHeight, setPreviewCardHeight] = useState(0);
@@ -261,6 +287,16 @@ function TomTomSearchMapNative({
   const totalResults = Number.isFinite(totalCount) && totalCount > 0
     ? totalCount
     : items.length;
+  const activeViewport = visibleViewport || focusedViewport || focusedRegion || regionHint || null;
+  const renderModel = useMemo(
+    () => buildSearchMapRenderableModel({
+      items,
+      viewport: activeViewport,
+    }),
+    [activeViewport, items],
+  );
+  const renderItems = renderModel.entries;
+  const renderStats = renderModel.stats;
   const visibleMarkerCount = Math.max(
     0,
     Number(renderStats?.markerCount || 0) + Number(renderStats?.clusterCount || 0),
@@ -281,12 +317,23 @@ function TomTomSearchMapNative({
     () => buildRuntimeState(
       focusMode,
       items,
+      renderItems,
+      renderStats,
       resolvedOverlayInsets,
       focusedRegion,
       activeSelectedItemId,
       userLocation,
     ),
-    [activeSelectedItemId, focusMode, focusedRegion, items, resolvedOverlayInsets, userLocation],
+    [
+      activeSelectedItemId,
+      focusMode,
+      focusedRegion,
+      items,
+      renderItems,
+      renderStats,
+      resolvedOverlayInsets,
+      userLocation,
+    ],
   );
   const bootstrapHtmlRef = useRef({ html: '', mapId: '' });
   if (bootstrapHtmlRef.current.mapId !== mapId) {
@@ -307,10 +354,11 @@ function TomTomSearchMapNative({
     () => ({
       geolocatableCount: items.length,
       provider: 'tomtom',
+      refreshStrategy,
       scope,
       totalResults,
     }),
-    [items.length, scope, totalResults],
+    [items.length, refreshStrategy, scope, totalResults],
   );
   const emptyMessage = totalResults > 0 && items.length === 0
     ? getSearchMapNoCoordinatesMessage(scope, totalResults)
@@ -333,6 +381,16 @@ function TomTomSearchMapNative({
   }, [focusedRegion, regionHint]);
 
   useEffect(() => {
+    if (!focusedViewport || !Number.isFinite(Number(focusedViewport.lat)) || !Number.isFinite(Number(focusedViewport.lng))) {
+      return;
+    }
+
+    setVisibleViewport((current) => (
+      areRegionsEquivalent(current, focusedViewport) ? current : focusedViewport
+    ));
+  }, [focusedViewport]);
+
+  useEffect(() => {
     logDevDiagnostic('FOCUS_MODE_CHANGED', {
       ...logContext,
       focusMode,
@@ -342,12 +400,40 @@ function TomTomSearchMapNative({
   }, [activeSelectedItemId, focusMode, focusedRegion, logContext]);
 
   useEffect(() => {
+    if (!__DEV__ || !providerRenderStats) {
+      return;
+    }
+
+    const sharedSignature = JSON.stringify({
+      clusterCount: renderStats?.clusterCount || 0,
+      dataCount: renderStats?.dataCount || 0,
+      fallbackActive: Boolean(renderStats?.fallbackActive),
+      markerCount: renderStats?.markerCount || 0,
+      renderableCount: renderStats?.renderableCount || 0,
+    });
+    const providerSignature = JSON.stringify({
+      clusterCount: providerRenderStats?.clusterCount || 0,
+      dataCount: providerRenderStats?.dataCount || 0,
+      fallbackActive: Boolean(providerRenderStats?.fallbackActive),
+      markerCount: providerRenderStats?.markerCount || 0,
+      renderableCount: providerRenderStats?.renderableCount || 0,
+    });
+
+    if (sharedSignature !== providerSignature) {
+      logDevDiagnostic('MAP_RENDER_STATS provider mismatch', {
+        provider: providerRenderStats,
+        shared: renderStats,
+      });
+    }
+  }, [providerRenderStats, renderStats]);
+
+  useEffect(() => {
     mapLoadStartedAtRef.current = Date.now();
     setWebViewLoaded(false);
     setDiagnosticTrail([]);
     setMapStatus(tomTomApiKey ? 'loading' : 'error');
     setMapErrorReason(tomTomApiKey ? '' : 'missing_api_key');
-    setRenderStats(null);
+    setProviderRenderStats(null);
     searchMapLogger.info('map cycle started', {
       ...logContext,
       retryCycle: mapRenderKey,
@@ -668,11 +754,12 @@ function TomTomSearchMapNative({
         break;
       case SEARCH_MAP_BRIDGE_TYPES.MAP_REGION_CHANGE:
         if (bridgeMessage.payload) {
+          setVisibleViewport(bridgeMessage.payload);
           onRegionChangeComplete?.(bridgeMessage.payload);
         }
         break;
       case SEARCH_MAP_BRIDGE_TYPES.MAP_RENDER_STATS:
-        setRenderStats(bridgeMessage.payload || null);
+        setProviderRenderStats(bridgeMessage.payload || null);
         break;
       case SEARCH_MAP_BRIDGE_TYPES.MARKER_OPEN:
         if (bridgeMessage.payload?.itemId) {

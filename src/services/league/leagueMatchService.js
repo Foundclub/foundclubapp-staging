@@ -15,6 +15,38 @@ export const updateMatch = async (matchId, data) => {
 };
 
 /**
+ * Create or counter a League proposal from the canonical backend workflow.
+ * @param {string} matchId
+ * @param {{
+ *  startAt: string,
+ *  venueLabel: string,
+ *  addressLabel?: string,
+ *  addressObject?: Record<string, unknown>,
+ * }} payload
+ */
+export const createLeagueProposal = async (matchId, payload) => {
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.post(`/league-matches/${normalizedMatchId}/proposals`, payload);
+  return response.data?.data || response.data;
+};
+
+/**
+ * Respond to the current canonical League proposal.
+ * @param {string} matchId
+ * @param {string} proposalMessageId
+ * @param {'accept' | 'decline'} decision
+ */
+export const respondToLeagueProposal = async (matchId, proposalMessageId, decision) => {
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const normalizedProposalMessageId = requireDocumentId(proposalMessageId, 'proposalMessage');
+  const response = await client.post(
+    `/league-matches/${normalizedMatchId}/proposals/${normalizedProposalMessageId}/respond`,
+    { decision },
+  );
+  return response.data?.data || response.data;
+};
+
+/**
  * Confirm participation for a match
  * @param {string} matchId - The match documentId
  * @param {'a' | 'b'} teamSide - Which team the user is part of

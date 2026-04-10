@@ -1421,19 +1421,13 @@ function MatchCenterScreen() {
 
           <Button
             onPress={() => {
-              if (currentMatch && currentMatch.chat) {
-                const chatId = getEntityDocumentId(currentMatch.chat);
-                if (!currentMatch.proposed_venue) {
-                  setIsProposalModalVisible(true);
-                } else {
-                  navigation.navigate(RouteNames.Conversation, {
-                    chatId,
-                    subTitle: 'Match de Ligue',
-                    title: opponentChatTitle,
-                  });
-                }
+              if (currentMatch) {
+                navigation.navigate(RouteNames.LeagueMatchDetails, {
+                  focusSection: currentMatch?.phase === 'waiting_proposal' ? 'negotiation' : undefined,
+                  matchId: getEntityDocumentId(currentMatch),
+                });
               } else {
-                Alert.alert('Erreur', "Le chat n'est pas encore pret. Reessayez dans quelques secondes.");
+                Alert.alert('Erreur', "Le match n'est pas encore pret. Reessayez dans quelques secondes.");
               }
             }}
             style={{
@@ -1445,7 +1439,7 @@ function MatchCenterScreen() {
               width: '100%',
             }}
             textStyle={{ color: Colors.neutral900, fontSize: 16, fontWeight: 'bold' }}
-            title="OUVRIR LE CHAT"
+            title="OUVRIR LE MATCH"
             variant="Primary"
           />
 
@@ -1813,25 +1807,18 @@ function MatchCenterScreen() {
 
           <Button
             onPress={() => {
-              if (currentMatch && currentMatch.chat) {
-                const chatId = getEntityDocumentId(currentMatch.chat);
-                // Check if we should show proposal modal (First Contact)
-                if (!currentMatch.proposed_venue) {
-                  setIsProposalModalVisible(true);
-                } else {
-                  navigation.navigate(RouteNames.Conversation, {
-                    chatId,
-                    subTitle: 'Match de Ligue',
-                    title: opponentChatTitle,
-                  });
-                }
+              if (currentMatch) {
+                navigation.navigate(RouteNames.LeagueMatchDetails, {
+                  focusSection: currentMatch?.phase === 'waiting_proposal' ? 'negotiation' : undefined,
+                  matchId: getEntityDocumentId(currentMatch),
+                });
               } else {
-                Alert.alert('Erreur', "Le chat n'est pas encore prêt. Réessayez dans quelques secondes.");
+                Alert.alert('Erreur', "Le match n'est pas encore prêt. Réessayez dans quelques secondes.");
               }
             }}
             style={{ backgroundColor: Colors.gold500, width: '100%' }}
             textStyle={{ color: Colors.neutral900, fontSize: 16, fontWeight: 'bold' }}
-            title="ACCEDER AU CHAT"
+            title="OUVRIR LE MATCH"
             variant="Primary"
           />
 

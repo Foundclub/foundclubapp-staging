@@ -12,12 +12,14 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
+import buildLeagueWorkflowViewModel from '@/views/league/match/utils/leagueWorkflowPresenter';
 import {
   getMatchDerivedPhase,
   isMatchPastEnd,
   normalizeMatchStatus,
   shouldMaskOpponentIdentity,
 } from '@/views/league/match/utils/matchStatus';
+import { RouteNames } from '@/navigation/routeNames';
 
 import { markVenueBooked as markEventVenueBooked, missingEvent } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
@@ -107,6 +109,10 @@ function NextMatchCard({
   const canSubmitScoreByPhase = ['disputed', 'pending_validation', 'waiting_score'].includes(derivedPhase);
   const isScoreLockedByTime = normalizedStatus === 'scheduled' && isVenueBooked && !canSubmitScoreByPhase;
   const canManageVenue = Boolean(myTeam) && derivedPhase === 'waiting_venue' && !isTerminalStatus;
+  const workflowViewModel = useMemo(
+    () => buildLeagueWorkflowViewModel(match, null, { event, isCaptain }),
+    [event, isCaptain, match],
+  );
 
   // Participations
   // SOT: use event.participations if available (Event Mode)
@@ -189,6 +195,18 @@ function NextMatchCard({
       { done: resultSubmitted, key: 'result', label: 'Résultat' },
     ];
   }, [derivedPhase, hasMatchEnded, isVenueBooked, normalizedStatus]);
+
+  const handlePrimaryWorkflowAction = () => {
+    if (['disputed', 'pending_validation', 'waiting_score'].includes(workflowViewModel.phase)) {
+      navigateToEndMatchScreen(navigation, match);
+      return;
+    }
+
+    navigation.navigate(RouteNames.LeagueMatchDetails, {
+      focusSection: workflowViewModel.focusSection,
+      matchId: getEntityDocumentId(match),
+    });
+  };
 
   // Handlers
   const handleConfirm = async () => {
@@ -417,73 +435,6 @@ function NextMatchCard({
             </View>
           </View>
         </View>
-
-        {/* ELO Prediction */}
-        <View style={styles.eloPrediction}>
-          <Text style={styles.eloPredictionTitle}>📊 ENJEU ELO</Text>
-          <View style={styles.eloPredictionRow}>
-            <View style={[styles.eloPredictionBadge, { backgroundColor: 'rgba(76, 175, 80, 0.2)' }]}>
-              <Text style={{ color: '#4CAF50', fontWeight: 'bold' }}>
-                Victoire:
-                {eloPrediction.ifWin}
-              </Text>
-            </View>
-            <View style={[styles.eloPredictionBadge, { backgroundColor: 'rgba(244, 67, 54, 0.2)' }]}>
-              <Text style={{ color: '#F44336', fontWeight: 'bold' }}>
-                Défaite:
-                {eloPrediction.ifLoss}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.eloPredictionDetails}>
-            {myTeam.name}
-            {' '}
-            (
-            {eloPrediction.myElo}
-            ) vs
-            {isAnonymous ? '???' : `${opponent.name} (${eloPrediction.oppElo})`}
-          </Text>
-        </View>
-
-        {/* Venue Booking Section */}
-        {canManageVenue && (
-        <TouchableOpacity
-          onPress={handleMarkVenueBooked}
-          style={styles.bookingButton}
-        >
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.bookingButtonText}>
-            🏟️ MARQUER TERRAIN RÉSERVÉ
-          </Text>
-        </TouchableOpacity>
-        )}
-
-        {/* Score Entry Section (Post-Match) */}
-        {isCaptain && (['disputed', 'pending_validation', 'waiting_score'].includes(derivedPhase) || isScoreLockedByTime) && !isTerminalStatus && (
-        <TouchableOpacity
-          onPress={() => {
-            if (isScoreLockedByTime) {
-              Alert.alert(
-                'Score indisponible',
-                "Vous pourrez saisir le score une fois l'heure de début du match dépassée de 1 minute.",
-              );
-              return;
-            }
-            // Match tab is not inside LeagueNavigator stack.
-            navigateToEndMatchScreen(navigation, match);
-          }}
-          style={[
-            styles.bookingButton,
-            isScoreLockedByTime
-              ? { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: Colors.neutral600 }
-              : { backgroundColor: 'rgba(1, 179, 244, 0.15)', borderColor: Colors.primary500 },
-          ]}
-        >
-          <Text style={[styles.bookingButtonText, { color: isScoreLockedByTime ? Colors.neutral400 : Colors.primary500 }]}>
-            {isScoreLockedByTime ? 'SCORE Verrouillé (AVANT Début + 1 MIN)' : 'SAISIR LE SCORE'}
-          </Text>
-        </TouchableOpacity>
-        )}
-
         {/* Attendance Gauge */}
         <View style={styles.attendance}>
           <Text style={styles.attendanceTitle}>
@@ -502,54 +453,26 @@ function NextMatchCard({
             <View style={[styles.gaugeFill, { backgroundColor: isQuorumReached ? '#4CAF50' : '#FFC107', width: `${Math.min((confirmedCount / Math.max(requiredPlayers, 1)) * 100, 100)}%` }]} />
           </View>
         </View>
-
-        {/* Actions */}
-        <View style={styles.actions}>
-          {myParticipation ? (
-            <View style={styles.statusContainer}>
-              <Text style={styles.statusText}>✅ Vous participez</Text>
-              <TouchableOpacity onPress={handleDecline} style={{ padding: 8 }}>
-                <Text style={styles.linkText}>Annuler</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.buttonRow}>
-              <View style={{ flex: 1 }}>
-                <Button
-                      onPress={handleConfirm}
-                      style={{
-                        backgroundColor: '#01B3F4', borderRadius: 14, height: 48, width: '100%',
-                      }}
-                      textStyle={{ fontSize: 13 }}
-                      title="Confirmer"
-                      variant="Primary"
-                    />
-              </View>
-              <View style={{ width: 10 }} />
-              <View style={{ flex: 1 }}>
-                <Button
-                      onPress={handleDecline}
-                      style={{
-                        borderColor: '#F44336', borderRadius: 14, height: 48, width: '100%',
-                      }}
-                      textStyle={{ color: '#F44336', fontSize: 13 }}
-                      title="Absent"
-                      variant="Secondary"
-                    />
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Captain Cancel Match (Secondary Action) */}
-        {isCaptain && !isTerminalStatus && (
         <TouchableOpacity
-          onPress={handleCancelMatch}
-          style={styles.cancelLinkButton}
+          onPress={handlePrimaryWorkflowAction}
+          style={[
+            styles.bookingButton,
+            workflowViewModel.isBlockingAction
+              ? { backgroundColor: 'rgba(1, 179, 244, 0.15)', borderColor: Colors.primary500 }
+              : { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: Colors.neutral600 },
+          ]}
         >
-          <Text style={styles.cancelLinkText}>Annuler ce match</Text>
+          <Text
+            adjustsFontSizeToFit
+            numberOfLines={1}
+            style={[
+              styles.bookingButtonText,
+              { color: workflowViewModel.isBlockingAction ? Colors.primary500 : Colors.neutral100 },
+            ]}
+          >
+            {workflowViewModel.primaryCta || 'Voir le match'}
+          </Text>
         </TouchableOpacity>
-        )}
       </View>
     </TouchableOpacity>
   );
@@ -785,3 +708,4 @@ const styles = StyleSheet.create({
 });
 
 export default NextMatchCard;
+

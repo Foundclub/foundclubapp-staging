@@ -82,10 +82,15 @@ yarn-error.log
 .env.*
 !.env.example
 !.env.dist
+!.env.local.example
+!.env.staging.example
+!.env.production.example
 # Évite de commiter les configs Firebase
 android/app/google-services.json
 android/app/src/**/google-services.json
-# ios/**/GoogleService-Info*.plist
+ios/GoogleService-Info.plist
+ios/GoogleService-Info.*.plist
+!ios/GoogleService-Info.*.example.plist
 
 # Local mobile secrets (must stay out of git)
 /google-services.json
@@ -96,6 +101,9 @@ android/app/*.keystore
 android/private-key.json
 ios/private-key.json
 *.p8
+*.p12
+*.mobileprovision
+*firebase-adminsdk*.json
 
 # Scratch/debug artifacts should never live under product source
 src/debug_*

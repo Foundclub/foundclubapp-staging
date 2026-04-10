@@ -359,6 +359,14 @@ export const NOTIFICATION_TYPES = {
   TEAM_EXTERNAL_SOURCE_UPDATED: 'teamExternalSourceUpdated',
   TEAM_MEMBERSHIP_REQUEST: 'teamMembershipRequest',
   TEAM_REQUEST: 'teamRequest',
+  TOURNAMENT_CAPTAIN_TRANSFER: 'tournamentCaptainTransfer',
+  TOURNAMENT_CLOSED: 'tournamentClosed',
+  TOURNAMENT_TEAM_INVITATION: 'tournamentTeamInvitation',
+  TOURNAMENT_TEAM_INVITATION_STATUS: 'tournamentTeamInvitationStatus',
+  TOURNAMENT_TEAM_JOIN_REQUEST: 'tournamentTeamJoinRequest',
+  TOURNAMENT_TEAM_JOIN_REQUEST_STATUS: 'tournamentTeamJoinRequestStatus',
+  TOURNAMENT_TEAM_ROSTER_WARNING: 'tournamentTeamRosterWarning',
+  TOURNAMENT_TEAM_STATUS: 'tournamentTeamStatus',
 
   // Events
   COACH_REPORT_PUBLISHED: 'coachReportPublished',
