@@ -8,6 +8,7 @@
     "android": "react-native run-android",
     "android:staging": "cross-env APP_ENV=staging react-native run-android --mode=stagingDebug --appId com.foundclub.staging",
     "android:local": "cross-env APP_ENV=local react-native run-android --mode=stagingDebug --appId com.foundclub.staging",
+    "android:release:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-production-android.ps1",
     "ios": "react-native run-ios",
     "ios:local": "cross-env APP_ENV=local react-native run-ios",
     "secrets:sync": "powershell -ExecutionPolicy Bypass -File ./scripts/secrets/sync-mobile-secrets.ps1",

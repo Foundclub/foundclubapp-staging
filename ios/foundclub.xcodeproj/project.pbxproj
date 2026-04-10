@@ -318,7 +318,7 @@
 				CODE_SIGN_ENTITLEMENTS = foundclub/foundclub.entitlements;
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = RBJCH8458B;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = foundclub/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -351,7 +351,7 @@
 				CODE_SIGN_ENTITLEMENTS = foundclub/foundclub.entitlements;
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = RBJCH8458B;
 				INFOPLIST_FILE = foundclub/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
