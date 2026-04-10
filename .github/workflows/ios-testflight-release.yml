@@ -2,6 +2,11 @@ name: iOS TestFlight Release
 
 on:
   workflow_dispatch:
+    inputs:
+      marketing_version:
+        description: "Version iOS a envoyer sur TestFlight"
+        required: true
+        default: "1.7.13"
 
 jobs:
   build-and-upload-testflight:
@@ -13,6 +18,7 @@ jobs:
       IOS_SCHEME: foundclub
       IOS_CONFIGURATION: Release
       IOS_BUNDLE_ID: com.foundclub
+      IOS_MARKETING_VERSION: ${{ github.event.inputs.marketing_version }}
       IOS_BUILD_NUMBER: ${{ github.run_number }}${{ github.run_attempt }}
 
     steps:
@@ -165,11 +171,13 @@ jobs:
         shell: bash
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_MARKETING_VERSION: ${{ env.IOS_MARKETING_VERSION }}
           IOS_BUILD_NUMBER: ${{ env.IOS_BUILD_NUMBER }}
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import os
+          import re
 
           pbxproj = Path("ios/foundclub.xcodeproj/project.pbxproj")
           text = pbxproj.read_text()
@@ -177,7 +185,6 @@ jobs:
           replacements = {
               'PROVISIONING_PROFILE_SPECIFIER = "";': f'PROVISIONING_PROFILE_SPECIFIER = "{os.environ["PROFILE_NAME"]}";',
               '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";': '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";',
-              'CURRENT_PROJECT_VERSION = 1;': f'CURRENT_PROJECT_VERSION = {os.environ["IOS_BUILD_NUMBER"]};',
           }
 
           if 'DEVELOPMENT_TEAM = "";' in text:
@@ -188,12 +195,29 @@ jobs:
                   raise SystemExit(f"Expected setting not found in project.pbxproj: {old}")
               text = text.replace(old, new)
 
+          text, current_project_version_count = re.subn(
+              r'CURRENT_PROJECT_VERSION = [^;]+;',
+              f'CURRENT_PROJECT_VERSION = {os.environ["IOS_BUILD_NUMBER"]};',
+              text,
+          )
+          if current_project_version_count == 0:
+              raise SystemExit("Expected at least one CURRENT_PROJECT_VERSION setting in project.pbxproj")
+
+          text, marketing_version_count = re.subn(
+              r'MARKETING_VERSION = [^;]+;',
+              f'MARKETING_VERSION = {os.environ["IOS_MARKETING_VERSION"]};',
+              text,
+          )
+          if marketing_version_count == 0:
+              raise SystemExit("Expected at least one MARKETING_VERSION setting in project.pbxproj")
+
           pbxproj.write_text(text)
           PY
 
       - name: Print release version metadata
         shell: bash
         run: |
+          echo "Using iOS marketing version: ${IOS_MARKETING_VERSION}"
           echo "Using iOS build number: ${IOS_BUILD_NUMBER}"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ios/foundclub/Info.plist || true
           /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' ios/foundclub/Info.plist || true
@@ -236,6 +260,16 @@ jobs:
             -archivePath ios/build/foundclub.xcarchive \
             -exportPath ios/build/export \
             -exportOptionsPlist ios/exportOptions.testflight.plist
+
+      - name: Validate archived app version metadata
+        shell: bash
+        run: |
+          APP_INFO_PLIST="ios/build/foundclub.xcarchive/Products/Applications/foundclub.app/Info.plist"
+          test -f "$APP_INFO_PLIST" || (echo "Archived app Info.plist not found" && exit 1)
+          echo "Archived CFBundleShortVersionString:"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_INFO_PLIST"
+          echo "Archived CFBundleVersion:"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_INFO_PLIST"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
