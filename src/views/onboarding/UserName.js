@@ -1,7 +1,7 @@
 import { joiResolver } from '@hookform/resolvers/joi';
-import { useMutation } from '@tanstack/react-query';
-import { Controller, useForm } from 'react-hook-form';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, KeyboardAvoidingView, Platform, Text, View,
@@ -29,6 +29,19 @@ const defaultValues = {
   lastname: '',
 };
 
+const resolveAvailableRoute = (navigation, ...candidates) => {
+  const routeNames = navigation?.getState?.()?.routeNames || [];
+  const firstCandidate = candidates.find(Boolean);
+
+  if (!Array.isArray(routeNames) || routeNames.length === 0) {
+    return firstCandidate;
+  }
+
+  return candidates.find(
+    (candidate) => candidate && routeNames.includes(candidate),
+  ) || firstCandidate;
+};
+
 const nameSchema = Joi.object({
   firstname: Joi.string().required(),
   lastname: Joi.string().required(),
@@ -52,6 +65,7 @@ function UserName({ navigation }) {
   } = useGetMe();
   const { getNextOnboardingRoute } = useAuth();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -59,7 +73,15 @@ function UserName({ navigation }) {
       Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour votre profil.');
     },
     onSuccess: () => {
-      navigation.navigate(getNextOnboardingRoute(RouteNames.UserName) || RouteNames.UserBirthdate);
+      queryClient.invalidateQueries({ queryKey: ['get-me'] });
+      const nextRoute = resolveAvailableRoute(
+        navigation,
+        getNextOnboardingRoute(RouteNames.UserName),
+        RouteNames.UserBirthdate,
+      );
+      if (nextRoute) {
+        navigation.navigate(nextRoute);
+      }
     },
   });
   const {

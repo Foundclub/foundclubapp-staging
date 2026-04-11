@@ -1,4 +1,6 @@
-import { Image, Platform, Text, TouchableOpacity } from 'react-native';
+import {
+  Image, Platform, Text, TouchableOpacity,
+} from 'react-native';
 
 import useTheme from '../../../theme/themeContext';
 
@@ -20,6 +22,7 @@ function TabButton({
   } = useTheme();
 
   /**
+   * Handle keyboard activation on web only.
    * @param {any} event
    */
   const handleKeyDown = (event) => {
@@ -38,8 +41,8 @@ function TabButton({
   return (
     <TouchableOpacity
       accessibilityRole="button"
-      focusable
-      onKeyDown={handleKeyDown}
+      focusable={Platform.OS === 'web'}
+      onKeyDown={Platform.OS === 'web' ? handleKeyDown : undefined}
       onPress={onPress}
       style={[
         Alignments.row,
