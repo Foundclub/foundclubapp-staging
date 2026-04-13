@@ -41,7 +41,8 @@ jobs:
               continue
             fi
 
-            version="$("$candidate/Contents/Developer/usr/bin/xcodebuild" -version | awk '/Xcode/{print $2; exit}')"
+            version_output="$("$candidate/Contents/Developer/usr/bin/xcodebuild" -version)"
+            version="$(printf '%s\n' "$version_output" | awk '/^Xcode /{print $2; exit}')"
             major="${version%%.*}"
             echo "$candidate -> Xcode $version"
 
@@ -68,8 +69,9 @@ jobs:
           REQUIRED_XCODE_MAJOR=26
           REQUIRED_IOS_SDK_MAJOR=26
 
-          xcodebuild -version
-          xcode_version="$(xcodebuild -version | awk '/Xcode/{print $2; exit}')"
+          xcode_version_output="$(xcodebuild -version)"
+          printf '%s\n' "$xcode_version_output"
+          xcode_version="$(printf '%s\n' "$xcode_version_output" | awk '/^Xcode /{print $2; exit}')"
           xcode_major="${xcode_version%%.*}"
 
           if ! [[ "$xcode_major" =~ ^[0-9]+$ ]] || [ "$xcode_major" -lt "$REQUIRED_XCODE_MAJOR" ]; then
