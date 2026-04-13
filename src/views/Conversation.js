@@ -99,10 +99,12 @@ import {
 } from '@/utils/documentAttachment';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { createLogger } from '@/utils/logger/logger';
+import safeJsonParse from '@/utils/safeJsonParse';
 
 import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 import useAudioPlayback from '@/hooks/useAudioPlayback';
+import useSafeTimers from '@/hooks/useSafeTimers';
 import { EVENTS } from '@/hooks/useSocket';
 import shareApi from '@/platform/share';
 
@@ -286,6 +288,7 @@ function Conversation({ navigation, route }) {
   const { t } = useTranslationCompat();
   const { userData } = useAuth();
   const { showBanner } = useAppFeedback();
+  const { clearSafeTimer, setSafeTimeout } = useSafeTimers();
 
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [conversationPrompt, setConversationPrompt] = useState(/** @type {any | null} */ (null));
@@ -370,7 +373,6 @@ function Conversation({ navigation, route }) {
     getConversationName,
     isSocketConnected,
     removeGroupMember,
-    respondToProposal,
     retryFailedMessage,
     sendMessage,
     sendReadReceipt,
@@ -830,7 +832,7 @@ function Conversation({ navigation, route }) {
   const [isAttachmentMenuVisible, setIsAttachmentMenuVisible] = useState(false);
   const [isPollModalVisible, setIsPollModalVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
-  const [counterProposalContext, setCounterProposalContext] = useState(
+  const [, setCounterProposalContext] = useState(
     /** @type {{ messageId: string; shouldDecline: boolean } | null} */ (null),
   );
   const [isLocationShareModalVisible, setIsLocationShareModalVisible] = useState(false);
@@ -1124,11 +1126,7 @@ function Conversation({ navigation, route }) {
     });
     const rawBody = await response.text();
     let parsedBody = null;
-    try {
-      parsedBody = rawBody ? JSON.parse(rawBody) : null;
-    } catch (_parseError) {
-      parsedBody = null;
-    }
+    parsedBody = safeJsonParse(rawBody, null);
 
     if (!response.ok) {
       const parsedError = parsedBody?.error?.message
@@ -1973,13 +1971,9 @@ function Conversation({ navigation, route }) {
     const fallback = event?.location?.label || event?.facility?.address || event?.facility?.name || '';
     if (!event?.locationDetails) return fallback;
 
-    try {
-      const parsed = JSON.parse(event.locationDetails);
-      const parsedLabel = parsed?.address?.description || parsed?.address?.label || parsed?.address?.address;
-      return parsedLabel || fallback;
-    } catch (_error) {
-      return fallback;
-    }
+    const parsed = safeJsonParse(event.locationDetails, null);
+    const parsedLabel = parsed?.address?.description || parsed?.address?.label || parsed?.address?.address;
+    return parsedLabel || fallback;
   }, []);
 
   const handleShareLocation = () => {
@@ -2578,12 +2572,12 @@ function Conversation({ navigation, route }) {
     Keyboard.dismiss();
 
     if (visibleKeyboardHeight > 0) {
-      setTimeout(openMenu, Platform.OS === 'ios' ? 120 : 170);
+      setSafeTimeout(openMenu, Platform.OS === 'ios' ? 120 : 170);
       return;
     }
 
     openMenu();
-  }, [isAttachmentMenuVisible]);
+  }, [isAttachmentMenuVisible, setSafeTimeout]);
 
   const attachmentSheetActions = useMemo(() => {
     let contactReason = '';
@@ -3852,20 +3846,22 @@ function Conversation({ navigation, route }) {
     const focusKey = `${focusToken || 'default'}:${targetMessageId}`;
     if (consumedNegotiationFocusKeyRef.current === focusKey) return undefined;
 
-    const timeout = setTimeout(() => {
+    const timeout = setSafeTimeout(() => {
       const didScroll = scrollToMessageByDocumentId(targetMessageId);
       if (didScroll) {
         consumedNegotiationFocusKeyRef.current = focusKey;
       }
     }, 180);
 
-    return () => clearTimeout(timeout);
+    return () => clearSafeTimer(timeout);
   }, [
+    clearSafeTimer,
     latestProposalMessageId,
     route?.params?.focusLatestProposal,
     route?.params?.focusProposalMessageId,
     route?.params?.leagueNegotiationFocusToken,
     scrollToMessageByDocumentId,
+    setSafeTimeout,
   ]);
 
   const handleReplyPreviewPress = useCallback((replyTo) => {
@@ -5109,7 +5105,7 @@ function Conversation({ navigation, route }) {
     const estimatedOffset = Math.max(0, (info.averageItemLength || 88) * info.index);
     listRef.scrollToOffset({ animated: true, offset: estimatedOffset });
 
-    setTimeout(() => {
+    setSafeTimeout(() => {
       if (typeof listRef.scrollToIndex !== 'function') return;
       listRef.scrollToIndex({
         animated: true,
@@ -5117,7 +5113,7 @@ function Conversation({ navigation, route }) {
         viewPosition: 0.4,
       });
     }, 120);
-  }, []);
+  }, [setSafeTimeout]);
 
   const renderLeagueNegotiationBanner = () => {
     if (!isLeagueConversation || !leagueConversationMatch) return null;
@@ -5392,7 +5388,7 @@ function Conversation({ navigation, route }) {
             <Button
               onPress={() => {
                 setIsMenuVisible(false);
-                setTimeout(() => {
+                setSafeTimeout(() => {
                   handleCancelMatch();
                 }, 300);
               }}
@@ -5412,7 +5408,7 @@ function Conversation({ navigation, route }) {
             <Button
               onPress={() => {
                 setIsMenuVisible(false);
-                setTimeout(() => {
+                setSafeTimeout(() => {
                   showInfoBanner(
                     'Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramètres.',
                     'Signaler',

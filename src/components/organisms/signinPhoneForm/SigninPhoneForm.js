@@ -45,9 +45,9 @@ function PhoneForm({ isLoading, onSubmit }) {
 
   return (
     <View style={[
-      Alignments.fill,
-      Alignments.justifySpaceBetween,
-      Spaces.gap[40]]}
+      Alignments.fullWidth,
+      Spaces.gap[24],
+    ]}
     >
       <Controller
         control={control}

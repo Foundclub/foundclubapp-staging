@@ -2,6 +2,8 @@ import {
   createContext, useContext, useEffect, useMemo, useReducer,
 } from 'react';
 
+import safeJsonParse from '@/utils/safeJsonParse';
+
 const EventWizardContext = createContext();
 const EVENT_WIZARD_STORAGE_KEY = 'fc:web:event-wizard';
 
@@ -104,7 +106,7 @@ const loadPersistedState = () => {
     const raw = window.sessionStorage.getItem(EVENT_WIZARD_STORAGE_KEY);
     if (!raw) return initialState;
 
-    const parsed = JSON.parse(raw);
+    const parsed = safeJsonParse(raw, null);
     if (!parsed || typeof parsed !== 'object') return initialState;
 
     return {

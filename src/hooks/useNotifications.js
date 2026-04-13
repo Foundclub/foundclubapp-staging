@@ -39,6 +39,7 @@ import {
   isEventRsvpActionablePayload,
 } from '@/services/notificationActions/rsvpActions';
 
+import { persistDiagnosticError } from '@/utils/bootDiagnostics';
 import { createLogger } from '@/utils/logger/logger';
 import { isDuplicateNotificationKey } from '@/utils/notifications/notificationDedupe';
 import {
@@ -58,6 +59,7 @@ import {
   usePopupManager,
 } from '@/context/PopupManagerContext';
 import { NOTIFICATIONS_QUERY_KEY, UNREAD_COUNT_QUERY_KEY } from '@/hooks/useNotificationController';
+import useSafeTimers from '@/hooks/useSafeTimers';
 
 const notificationsLogger = createLogger('notifications');
 
@@ -224,6 +226,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   const [{ pendingNotification }, dispatch] = useAppContext();
   const { userData } = useAuth();
   const queryClient = useQueryClient();
+  const { clearSafeTimer, setSafeInterval } = useSafeTimers();
   const { isStartupWindowActive } = usePopupManager();
 
   const { mutate: saveTokenMutation } = useMutation({
@@ -388,12 +391,22 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       const token = await getToken(messagingInstance);
       notificationsLogger.debug('[FCM] Token received:', token ? `${token.substring(0, 20)}...` : 'null');
       if (!token) {
-        throw new Error('Failed to get FCM token');
+        const tokenError = new Error('Failed to get FCM token');
+        persistDiagnosticError(tokenError, 'FCM_TOKEN_FAILED', {
+          isFatal: false,
+        });
+        notificationsLogger.warn('[FCM] Empty token returned. Token sync skipped.', { reason });
+        return;
       }
       saveToken(token);
     } catch (err) {
       const typedError = /** @type {any} */ (err);
-      const errorMessage = typeof typedError === 'string' ? typedError : typedError?.message || JSON.stringify(typedError);
+      const errorMessage = typeof typedError === 'string'
+        ? typedError
+        : typedError?.message || 'Unknown FCM token error';
+      persistDiagnosticError(typedError, 'FCM_TOKEN_FAILED', {
+        isFatal: false,
+      });
       if (errorMessage.includes('FIS_AUTH_ERROR')) {
         notificationsLogger.warn('[FCM] Firebase Auth failed (SHA-1 mismatch in local). Notifications skipped.');
       } else {
@@ -722,16 +735,16 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     if (!pendingNotification?.type) return undefined;
     let attempts = 0;
     const maxAttempts = 20;
-    const interval = setInterval(() => {
+    const interval = setSafeInterval(() => {
       const handled = handleNavigateOnOpen(/** @type {any} */ (pendingNotification));
       if (handled || attempts >= maxAttempts) {
         dispatch({ payload: null, type: 'SET_PENDING_NOTIFICATION' });
-        clearInterval(interval);
+        clearSafeTimer(interval);
       }
       attempts += 1;
     }, 500);
-    return () => clearInterval(interval);
-  }, [pendingNotification, handleNavigateOnOpen, dispatch]);
+    return () => clearSafeTimer(interval);
+  }, [clearSafeTimer, pendingNotification, handleNavigateOnOpen, dispatch, setSafeInterval]);
 
   return {
     calendarPrompt: {

@@ -292,7 +292,13 @@ export default function appReducer(state, action) {
       };
     }
     default: {
-      throw new Error(`Unhandled action type: ${action.type}`);
+      const actionType = action?.type || 'unknown';
+      const message = `Unhandled action type: ${actionType}`;
+      if (__DEV__) {
+        throw new Error(message);
+      }
+      console.warn('[store] UNHANDLED_REDUCER_ACTION', { actionType });
+      return state;
     }
   }
 }

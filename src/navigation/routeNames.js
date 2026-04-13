@@ -65,6 +65,7 @@ export const RouteNames = /** @type {const} */ ({
   PollDetails: 'PollDetails',
   Profile: 'Profile',
   ProfileEdit: 'ProfileEdit',
+  PublicAuthStack: 'PublicAuthStack',
   Register: 'Register',
   RequestsDashboard: 'RequestsDashboard',
   RequestsHub: 'RequestsHub',

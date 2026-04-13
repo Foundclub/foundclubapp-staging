@@ -2,6 +2,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { canLoadNitroSoundModule } from '@/utils/audio/nitroSoundRuntime';
+import { persistDiagnosticError } from '@/utils/bootDiagnostics';
 import { createLogger } from '@/utils/logger/logger';
 
 const voiceNoteLogger = createLogger('voice-note-service');
@@ -45,6 +46,16 @@ const safeCall = (fn, thisArg, args, context, fallback = null) => {
     }
     return fallback;
   }
+};
+
+const reportVoiceNativeError = (error, phase) => {
+  persistDiagnosticError(error, 'VOICE_NATIVE_ERROR', {
+    isFatal: false,
+  });
+  voiceNoteLogger.warn('VOICE_NATIVE_ERROR', {
+    message: error?.message || String(error || 'unknown'),
+    phase,
+  });
 };
 
 const hasRecorderApi = (candidate) => {
@@ -350,18 +361,29 @@ export const startRecording = async (params = {}) => {
   if (!recorder) throw new Error('VOICE_MODULE_UNAVAILABLE');
   if (recordingSession.isBusy || recordingSession.isRecording) throw new Error('VOICE_ALREADY_RECORDING');
 
-  const hasPermission = await ensureRecordPermission();
-  if (!hasPermission) throw new Error('VOICE_PERMISSION_DENIED');
-
-  const filePath = buildRecordingPath();
-  if (!filePath) throw new Error('VOICE_CACHE_DIR_UNAVAILABLE');
-
   recordingSession = {
     durationMs: 0,
-    filePath,
+    filePath: '',
     isBusy: true,
     isRecording: false,
     meteringSamples: [],
+  };
+
+  const hasPermission = await ensureRecordPermission();
+  if (!hasPermission) {
+    resetSession();
+    throw new Error('VOICE_PERMISSION_DENIED');
+  }
+
+  const filePath = buildRecordingPath();
+  if (!filePath) {
+    resetSession();
+    throw new Error('VOICE_CACHE_DIR_UNAVAILABLE');
+  }
+
+  recordingSession = {
+    ...recordingSession,
+    filePath,
   };
 
   recorder.removeRecordBackListener?.();
@@ -399,6 +421,7 @@ export const startRecording = async (params = {}) => {
   } catch (error) {
     recorder.removeRecordBackListener?.();
     resetSession();
+    reportVoiceNativeError(error, 'start');
     throw error;
   }
 };
@@ -430,7 +453,8 @@ export const stopRecording = async () => {
   let stoppedPath = '';
   try {
     stoppedPath = await recorder.stopRecorder();
-  } catch (_error) {
+  } catch (error) {
+    reportVoiceNativeError(error, 'stop');
     throw new Error('VOICE_STOP_FAILED');
   } finally {
     recorder.removeRecordBackListener?.();

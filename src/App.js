@@ -22,12 +22,11 @@ import {
 } from '@/utils/bootDiagnostics';
 import { displayErrorAlert } from '@/utils/errors/displayError';
 
+import AppErrorBoundary from '@/app/AppErrorBoundary';
 import AppProvidersNative from '@/app/AppProviders.native';
+import BootGate from '@/app/BootGate';
 import buildFoundClubQueryClient from '@/app/queryClient';
-import {
-  assertRuntimeEndpointsReady,
-  getRuntimeEndpointsLog,
-} from '@/config/runtimeUrls';
+import { getRuntimeEndpointsLog } from '@/config/runtimeUrls';
 import { POPUP_IDS } from '@/constants/popupRegistry';
 import { NOTIFICATIONS_RUNTIME_CONFIG } from '@/constants/runtimeFlags';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
@@ -65,7 +64,6 @@ const sentryTracesSampleRate = parseSampleRate(
   process.env.SENTRY_TRACES_SAMPLE_RATE,
   __DEV__ || isStaging ? 1 : 0.2,
 );
-assertRuntimeEndpointsReady();
 const navigationIntegration = /** @type {any} */ (isSentryEnabled
   ? Sentry.reactNavigationIntegration({
     enableTimeToInitialDisplay: true,
@@ -208,29 +206,28 @@ function BootErrorAlertHost() {
 function App() {
   return (
     <AppProvidersNative queryClient={queryClient}>
-      <StartupPromptBoundary>
-        <BootErrorAlertHost />
-        <SessionManager />
-        <AppBannerHost />
-        <RemotePopupCampaignHost />
-        {isSentryEnabled ? (
-          <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
+      <AppErrorBoundary
+        fallback={<ErrorScreen />}
+        onError={(error) => {
+          if (isSentryEnabled) {
+            Sentry.captureException(error);
+          }
+        }}
+      >
+        <StartupPromptBoundary>
+          <BootGate>
+            <BootErrorAlertHost />
+            <SessionManager />
+            <AppBannerHost />
+            <RemotePopupCampaignHost />
             <AppNavigator navigationIntegration={navigationIntegration} />
             <MatchStatsPromptHost />
             <LeagueActionPromptHost />
             <NotificationBootstrap />
             <SmartNotificationHost />
-          </Sentry.ErrorBoundary>
-        ) : (
-          <>
-            <AppNavigator navigationIntegration={navigationIntegration} />
-            <MatchStatsPromptHost />
-            <LeagueActionPromptHost />
-            <NotificationBootstrap />
-            <SmartNotificationHost />
-          </>
-        )}
-      </StartupPromptBoundary>
+          </BootGate>
+        </StartupPromptBoundary>
+      </AppErrorBoundary>
     </AppProvidersNative>
   );
 }

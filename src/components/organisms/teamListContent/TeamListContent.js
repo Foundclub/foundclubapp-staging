@@ -13,7 +13,6 @@ import {
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
@@ -28,8 +27,8 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
-import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import {
   useGetInvitedLeagueTeams,
@@ -78,7 +77,7 @@ function TeamListContent({
   const { userData } = useAuth();
   const [{ teamFilters }] = useAppContext();
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
+  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const { width } = useWindowDimensions();
   const isCompactScreen = width <= 375;
 
@@ -324,14 +323,13 @@ function TeamListContent({
     });
   }, [isLeagueMode, navigation]);
 
-  const floatingActionBottom = useMemo(
-    () => getFloatingActionBottomOffset(insets.bottom, 14),
-    [insets.bottom],
-  );
+  const floatingActionBottom = floatingActionBottomOffset;
 
   const listBottomPadding = useMemo(
-    () => (isLeagueMode ? floatingActionBottom + 92 : 120 + insets.bottom),
-    [floatingActionBottom, insets.bottom, isLeagueMode],
+    () => (isLeagueMode
+      ? Math.max(sceneBottomInset, floatingActionBottom + 92)
+      : sceneBottomInset),
+    [floatingActionBottom, isLeagueMode, sceneBottomInset],
   );
 
   const renderTeamCard = useCallback((/** @type {Team} */ item, stateVariant = null) => {

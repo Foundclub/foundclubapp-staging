@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
@@ -21,8 +20,8 @@ import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import {
   POPUP_DISMISS_SCOPES,
@@ -40,10 +39,10 @@ function TeamList({ navigation, route }) {
   const { t } = useTranslation();
   const { canManageTeam, refetchUserData, userData } = useAuth();
   const clubId = route?.params?.clubId ? route?.params.clubId : userData?.club?.documentId;
-  const insets = useSafeAreaInsets();
   const assignmentTrainerName = route?.params?.assignmentTrainerName;
   const assignmentTrainerId = route?.params?.assignmentTrainerId;
   const openAssignTrainerGuide = route?.params?.openAssignTrainerGuide;
+  const { floatingActionBottomOffset } = useBottomDockLayout();
   const trainerGuidePopup = usePopupEligibility(
     POPUP_IDS.TEAM_ASSIGN_TRAINER_GUIDE,
     Boolean(openAssignTrainerGuide),
@@ -83,7 +82,7 @@ function TeamList({ navigation, route }) {
     Spaces,
   } = useTheme();
 
-  const floatingButtonBottom = getFloatingActionBottomOffset(insets.bottom, 14);
+  const floatingButtonBottom = floatingActionBottomOffset;
 
   const handleAddTeam = () => {
     navigation.navigate(RouteNames.TeamStack, {

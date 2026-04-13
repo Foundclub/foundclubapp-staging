@@ -16,7 +16,6 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import { RouteNames } from '@/navigation/routeNames';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -28,6 +27,8 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetClub } from '@/services/club/clubQueries';
@@ -37,6 +38,7 @@ import { useGetTeam } from '@/services/team/teamQueries';
 import { createTeam, deleteTeam, updateTeam } from '@/services/team/teamService';
 
 import { getFieldError } from '@/utils/form/formUtils';
+import safeJsonParse from '@/utils/safeJsonParse';
 
 /** @typedef {{ label: string; value: string }} Option */
 
@@ -172,24 +174,18 @@ function TeamEdit({ navigation, route }) {
     const formatted = formatAddress(club.address);
     if (formatted) return formatted;
     if (club.addressDetails) {
-      try {
-        const details = typeof club.addressDetails === 'string'
-          ? JSON.parse(club.addressDetails)
-          : club.addressDetails;
+      const details = safeJsonParse(club.addressDetails, null);
 
-        if (details?.address) {
-          return {
-            city: details.city,
-            label: details.address,
-            postcode: details.postcode,
-            value: club.address?.lat && club.address?.lng
-              ? `${club.address.lng}|${club.address.lat}`
-              : '',
-            ...club.address,
-          };
-        }
-      } catch (e) {
-        console.warn('Failed to parse club addressDetails', e);
+      if (details?.address) {
+        return {
+          city: details.city,
+          label: details.address,
+          postcode: details.postcode,
+          value: club.address?.lat && club.address?.lng
+            ? `${club.address.lng}|${club.address.lat}`
+            : '',
+          ...club.address,
+        };
       }
     }
     return null;

@@ -6,6 +6,8 @@ import {
   useReducer,
 } from 'react';
 
+import safeJsonParse from '@/utils/safeJsonParse';
+
 /**
  * @typedef {{ documentId?: string, name?: string, logo?: { url?: string }, _type?: string, sectionsCount?: number, sections?: Array<{ documentId?: string, name?: string }> }} HistoryWizardClub
  */
@@ -83,7 +85,7 @@ const loadPersistedState = () => {
     const raw = globalThis.sessionStorage.getItem(HISTORY_WIZARD_STORAGE_KEY);
     if (!raw) return initialState;
 
-    const parsed = JSON.parse(raw);
+    const parsed = safeJsonParse(raw, null);
     if (!parsed || typeof parsed !== 'object') {
       return initialState;
     }

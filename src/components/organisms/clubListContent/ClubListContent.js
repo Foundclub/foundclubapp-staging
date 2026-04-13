@@ -19,6 +19,7 @@ import ClubSearchResultCard from '@/components/molecules/clubSearchResultCard/Cl
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetClubs } from '@/services/club/clubQueries';
 import { useSearchClubs, useSearchClubsMap } from '@/services/search/searchQueries';
@@ -134,6 +135,7 @@ function ClubListContent({ enableMapMode = false }) {
   });
   const navigation = useNavigation();
   const { t } = useTranslation();
+  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
 
   // variables
   const clubs = useMemo(() => clubPages?.pages
@@ -188,6 +190,9 @@ function ClubListContent({ enableMapMode = false }) {
     refreshHandler = refetchSmart;
   }
   const shouldShowMapToggle = enableMapMode && displayedClubs.length > 0;
+  const listBottomPadding = shouldShowMapToggle
+    ? Math.max(sceneBottomInset, floatingActionBottomOffset + 84)
+    : sceneBottomInset;
   const viewportMeta = viewportClubPages?.pages?.[0]?.meta || null;
   const viewportTotalInBounds = Number(viewportMeta?.totalInBounds);
   const viewportDisplayCount = Number.isFinite(viewportTotalInBounds) && viewportTotalInBounds > 0
@@ -414,7 +419,7 @@ function ClubListContent({ enableMapMode = false }) {
       >
         <FlashList
           contentContainerStyle={[
-            Spaces.paddingBottom[96],
+            { paddingBottom: listBottomPadding },
             displayedClubs.length === 0 ? Alignments.fill : null,
           ]}
           data={displayedClubs}

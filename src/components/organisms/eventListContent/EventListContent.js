@@ -21,7 +21,9 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
+import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetEvents } from '@/services/event/eventQueries';
 import { missingEvent } from '@/services/event/eventService';
@@ -138,6 +140,7 @@ function EventListContent({
   const { userData } = useAuth();
   const userDocumentId = userData?.documentId;
   const viewportSession = searchMapSessions?.events || {};
+  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
 
   const emitTutorialLayout = useCallback((key, ref) => {
     if (!onTutorialLayout || !ref?.current) return;
@@ -344,6 +347,9 @@ function EventListContent({
     }
   }
   const shouldShowMapToggle = enableMapMode && events.length > 0;
+  const listBottomPadding = shouldShowMapToggle
+    ? Math.max(sceneBottomInset, floatingActionBottomOffset + 84)
+    : sceneBottomInset;
   let isListFetchingNext = isFetchingNextPage;
   if (isViewportListMode) {
     isListFetchingNext = isFetchingViewportNextPage;
@@ -479,8 +485,10 @@ function EventListContent({
   }, [missingEventMutation]);
 
   const handleGoLogin = () => {
-    // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.AuthStackAccount });
+    openPublicAuthFlow(navigation, {
+      origin: RouteNames.EventDetails,
+      source: 'event-list-login',
+    });
   };
 
   const handleCloseJoinModal = useCallback(() => {
@@ -643,7 +651,7 @@ function EventListContent({
       >
         <View style={[Alignments.fill, ApplicationStyle.borderRadius2]}>
           <FlashList
-            contentContainerStyle={{ paddingBottom: 120 }}
+            contentContainerStyle={{ paddingBottom: listBottomPadding }}
             data={/** @type {FCEvent[]} */ (events)}
             estimatedItemSize={200}
             ItemSeparatorComponent={EventListSeparator}

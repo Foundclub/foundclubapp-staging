@@ -40,6 +40,8 @@ import {
   useGetUserHistories,
 } from '@/services/userHistory/userHistoryQueries';
 
+import safeJsonParse from '@/utils/safeJsonParse';
+
 const resolveProfileStatValue = ({
   overallValue,
   selectedStatsSport,
@@ -98,9 +100,8 @@ const parseAddressLabel = (address) => {
 
   let rawAddress = address;
   if (typeof rawAddress === 'string') {
-    try {
-      rawAddress = JSON.parse(rawAddress);
-    } catch {
+    rawAddress = safeJsonParse(rawAddress, rawAddress);
+    if (typeof rawAddress === 'string') {
       return rawAddress;
     }
   }

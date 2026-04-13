@@ -37,6 +37,7 @@ import ReportEventModal from '@/components/organisms/reportEventModal/ReportEven
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
@@ -2813,7 +2814,10 @@ function EventDetails({ navigation, route }) {
             onDecline={() => handleDeclineEvent(event)}
             onDeleteParticipation={handleDeleteParticipation}
             onJoin={handleJoinEvent}
-            onLogin={() => navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.AuthStackAccount })}
+            onLogin={() => openPublicAuthFlow(navigation, {
+              origin: RouteNames.EventDetails,
+              source: 'event-details-login',
+            })}
             onParticipate={() => handleParticipateToEvent(event)}
           />
         )}

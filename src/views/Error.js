@@ -11,9 +11,22 @@ import Button from '@/components/atoms/button/Button';
 /**
  * Error screen component displayed when an unrecoverable app error occurs.
  * Provides information about the error and allows users to reload the app.
+ * @param {{
+ *  actionTitle?: string;
+ *  details?: string;
+ *  onReload?: () => void;
+ *  subtitle?: string;
+ *  title?: string;
+ * }} props
  * @returns {import('react').ReactElement} Error screen component
  */
-function ErrorScreen() {
+function ErrorScreen({
+  actionTitle,
+  details = '',
+  onReload,
+  subtitle,
+  title,
+} = {}) {
   const {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
@@ -31,8 +44,15 @@ function ErrorScreen() {
 
   // handlers
   const handleReloadApp = () => {
+    if (typeof onReload === 'function') {
+      onReload();
+      return;
+    }
+
     // This will force a reload of the entire JS bundle
-    NativeModules.DevSettings.reload();
+    if (typeof NativeModules?.DevSettings?.reload === 'function') {
+      NativeModules.DevSettings.reload();
+    }
   };
 
   return (
@@ -52,11 +72,16 @@ function ErrorScreen() {
       />
       <View style={[Alignments.justifyCenter, Alignments.alignCenter, Spaces.gap[12]]}>
         <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-          {t('errorPage.title').toUpperCase()}
+          {(title || t('errorPage.title')).toUpperCase()}
         </Text>
         <Text style={[Fonts.p1, Fonts.neutral00]}>
-          {t('errorPage.subtitle')}
+          {subtitle || t('errorPage.subtitle')}
         </Text>
+        {details ? (
+          <Text style={[Fonts.p3, Fonts.neutral00]}>
+            {details}
+          </Text>
+        ) : null}
       </View>
       <View
         style={[
@@ -67,7 +92,7 @@ function ErrorScreen() {
         <Button
           onPress={handleReloadApp}
           style={Alignments.fullWidth}
-          title={t('errorPage.action')}
+          title={actionTitle || t('errorPage.action')}
           variant="Primary"
         />
       </View>

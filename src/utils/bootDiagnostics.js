@@ -7,6 +7,7 @@ const getBootStorage = () => {
   if (bootStorageInstance) return bootStorageInstance;
 
   try {
+    // eslint-disable-next-line global-require
     const { MMKV } = require('react-native-mmkv');
     bootStorageInstance = new MMKV({
       id: 'boot-diagnostics-storage',
@@ -19,6 +20,28 @@ const getBootStorage = () => {
   }
 
   return bootStorageInstance;
+};
+
+export const createBootErrorPayload = (error, isFatal, context) => ({
+  context: String(context || 'UNKNOWN_RUNTIME_ERROR'),
+  isFatal: Boolean(isFatal),
+  message: error?.message || String(error || 'unknown'),
+  name: error?.name || 'Error',
+  stack: error?.stack || 'no_stack',
+  timestamp: new Date().toISOString(),
+});
+
+export const persistDiagnosticError = (error, context, options = {}) => {
+  const payload = createBootErrorPayload(
+    error,
+    options?.isFatal !== undefined ? options.isFatal : true,
+    context,
+  );
+
+  if (payload.isFatal || options?.persistNonFatal === true) {
+    persistBootError(payload);
+  }
+  return payload;
 };
 
 /**

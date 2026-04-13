@@ -22,6 +22,7 @@ export const SEARCH_MAP_ERROR_REASONS = Object.freeze({
   tileError: 'tile_error',
   tilesUnavailable: 'tiles_unavailable',
   webViewError: 'webview_error',
+  webViewProcessGone: 'webview_process_gone',
 });
 
 export const getSearchMapTitle = (scope) => SCOPE_TITLES[scope] || SCOPE_TITLES.events;
@@ -73,6 +74,8 @@ export const getSearchMapProviderErrorMessage = (errorReason) => {
       return 'La carte a démarré, mais aucune tuile exploitable n’a pu être chargée. Réessayez ou revenez à la liste.';
     case SEARCH_MAP_ERROR_REASONS.webViewError:
       return 'Le moteur web de la carte a échoué au chargement. Fermez puis rouvrez la carte.';
+    case SEARCH_MAP_ERROR_REASONS.webViewProcessGone:
+      return 'Le moteur web de la carte a ete interrompu. Rechargez la carte ou revenez a la liste.';
     case SEARCH_MAP_ERROR_REASONS.runtimeError:
     case SEARCH_MAP_ERROR_REASONS.tileError:
     default:

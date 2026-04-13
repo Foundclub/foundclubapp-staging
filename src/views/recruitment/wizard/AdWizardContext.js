@@ -2,6 +2,8 @@ import React, {
   createContext, useContext, useEffect, useMemo, useReducer,
 } from 'react';
 
+import safeJsonParse from '@/utils/safeJsonParse';
+
 const AdWizardContext = createContext();
 const AD_WIZARD_STORAGE_KEY = 'fc:web:ad-wizard';
 
@@ -53,7 +55,7 @@ const loadPersistedState = () => {
     const raw = globalThis.sessionStorage.getItem(AD_WIZARD_STORAGE_KEY);
     if (!raw) return initialState;
 
-    const parsed = JSON.parse(raw);
+    const parsed = safeJsonParse(raw, null);
     if (!parsed || typeof parsed !== 'object') {
       return initialState;
     }

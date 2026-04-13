@@ -1,9 +1,12 @@
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useMemo } from 'react';
 import { ImageBackground, useWindowDimensions, View } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
+
+import { getFloatingTabBarScenePaddingBottom } from '@/navigation/commonOptions';
 
 /**
  * The ScreenContainer component is a template for all screens in the application.
@@ -12,25 +15,24 @@ import useTheme from '@/theme/themeContext';
  * @param {'bg1' | 'bg2' | 'bg3'} [props.bgImage]
  * @param {Array<import('react-native').ViewStyle>} [props.style]
  * @param {Array<import('react-native').ViewStyle>} [props.contentContainerStyle]
+ * @param {'none' | 'tab-scene'} [props.bottomInsetMode]
+ * @param {number} [props.bottomInsetExtra]
  * @param {boolean} [props.responsiveHorizontalPadding]
- * @param props.gradient
- * @param props.withHeaderPadding
+ * @param {string[] | null} [props.gradient]
+ * @param {boolean} [props.withHeaderPadding]
  * @returns {import('react').ReactElement}
  */
 function ScreenContainer({
   bgImage = 'bg2', // Default to bg2 per user request
+  bottomInsetExtra = 12,
+  bottomInsetMode = 'none',
   children,
   contentContainerStyle = [],
-  contentWidth,
-  desktopAlignment,
-  desktopMinHeight,
   gradient = null, // Default to no gradient
   responsiveHorizontalPadding = false,
   responsivePadding,
-  surface,
   style = [],
   withHeaderPadding = true,
-  ...props
 }) {
   // hooks
   const {
@@ -46,21 +48,23 @@ function ScreenContainer({
     ? contentContainerStyle
     : [contentContainerStyle];
 
-  void contentWidth;
-  void desktopAlignment;
-  void desktopMinHeight;
-  void surface;
-
   // constants
   const containerSpaces = useMemo(() => {
-    if (!withHeaderPadding) return {};
-    return {
-      paddingTop: headerHeightNative || insets.top,
-    };
-  }, [headerHeightNative, insets.top, withHeaderPadding]);
+    /** @type {{ paddingTop?: number, paddingBottom?: number }} */
+    const nextSpaces = {};
+
+    if (withHeaderPadding) {
+      nextSpaces.paddingTop = headerHeightNative || insets.top;
+    }
+
+    if (bottomInsetMode === 'tab-scene') {
+      nextSpaces.paddingBottom = getFloatingTabBarScenePaddingBottom(insets.bottom, bottomInsetExtra);
+    }
+
+    return nextSpaces;
+  }, [bottomInsetExtra, bottomInsetMode, headerHeightNative, insets.bottom, insets.top, withHeaderPadding]);
 
   if (gradient) {
-    const LinearGradient = require('react-native-linear-gradient').default;
     return (
       <View style={[Alignments.fill, ...safeStyle]}>
 
@@ -92,7 +96,6 @@ function ScreenContainer({
         containerSpaces,
         ...safeStyle,
       ]}
-      {...props}
     >
       <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
         {children}

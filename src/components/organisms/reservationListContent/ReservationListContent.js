@@ -22,6 +22,7 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { useGetFeaturedReservations, useGetReservations } from '@/services/reservation/reservationQueries';
@@ -55,6 +56,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */ (undefined));
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [{ reservationFilters }, appDispatch] = useAppContext();
+  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const selectedActivity = reservationFilters?.activitySlug || null;
   const activeSearchText = useMemo(
     () => (typeof reservationFilters?.q === 'string' ? reservationFilters.q.trim() : ''),
@@ -187,6 +189,9 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
   const activeLoading = isSmartSearchEnabled ? isSmartLoading : isLoading;
   const activeFetchingNext = isSmartSearchEnabled ? isFetchingSmartNextPage : isFetchingNextPage;
   const shouldShowMapToggle = enableMapMode && showFilters && displayedReservations.length > 0;
+  const listBottomPadding = shouldShowMapToggle
+    ? Math.max(sceneBottomInset, floatingActionBottomOffset + 84)
+    : sceneBottomInset;
 
   const filterCount = useMemo(() => {
     if (!reservationFilters) return 0;
@@ -447,7 +452,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
         wrapperStyle={[Alignments.fill]}
       >
         <FlashList
-          contentContainerStyle={{ paddingBottom: 120 }}
+          contentContainerStyle={{ paddingBottom: listBottomPadding }}
           data={displayedReservations}
           estimatedItemSize={200}
           ItemSeparatorComponent={ReservationsListSeparator}

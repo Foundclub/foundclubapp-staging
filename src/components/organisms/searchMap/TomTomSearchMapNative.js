@@ -19,12 +19,14 @@ import useTheme from '@/theme/themeContext';
 import SearchMapPreviewCard from '@/components/molecules/searchMapPreviewCard/SearchMapPreviewCard';
 import SearchMapHud from '@/components/organisms/searchMap/SearchMapHud';
 
+import { persistDiagnosticError } from '@/utils/bootDiagnostics';
 import { createLogger } from '@/utils/logger/logger';
 import {
   getSearchMapEmptyMessage,
   getSearchMapNoCoordinatesMessage,
 } from '@/utils/searchMap';
 
+import useSafeTimers from '@/hooks/useSafeTimers';
 import { buildSearchMapRenderableModel } from '@/platform/maps/searchMapClustering';
 import {
   getSearchMapLoadingCopy,
@@ -55,6 +57,7 @@ const CRITICAL_ERROR_REASONS = new Set([
   SEARCH_MAP_ERROR_REASONS.missingApiKey,
   SEARCH_MAP_ERROR_REASONS.runtimeError,
   SEARCH_MAP_ERROR_REASONS.webViewError,
+  SEARCH_MAP_ERROR_REASONS.webViewProcessGone,
 ]);
 const DEV_DIAGNOSTIC_LIMIT = 6;
 const DEV_DIAGNOSTIC_LOG_STAGES = new Set([
@@ -251,6 +254,7 @@ function TomTomSearchMapNative({
   } = useTheme();
 
   const tomTomApiKey = getTomTomApiKey();
+  const { clearSafeTimer, setSafeTimeout } = useSafeTimers();
   const webViewRef = useRef(/** @type {import('react-native-webview').WebView | null} */ (null));
   const mapLoadStartedAtRef = useRef(Date.now());
   const [focusMode, setFocusMode] = useState(
@@ -521,12 +525,12 @@ function TomTomSearchMapNative({
   }, [internalSelectedItemId, items, regionHint, selectedItemId, selectionFocusBehavior]);
 
   useEffect(() => {
-    if (!webViewLoaded || !tomTomApiKey) {
+    if (!webViewLoaded || !tomTomApiKey || mapStatus === 'error') {
       return;
     }
 
     webViewRef.current?.injectJavaScript(buildSearchMapSyncScript(mapId, runtimeState));
-  }, [mapId, runtimeState, tomTomApiKey, webViewLoaded]);
+  }, [mapId, mapStatus, runtimeState, tomTomApiKey, webViewLoaded]);
 
   useEffect(() => {
     onRenderStats?.(renderStats || null);
@@ -537,7 +541,7 @@ function TomTomSearchMapNative({
       return undefined;
     }
 
-    const timeout = setTimeout(() => {
+    const timeout = setSafeTimeout(() => {
       searchMapLogger.warn('map load timeout', {
         ...logContext,
         elapsedMs: Date.now() - mapLoadStartedAtRef.current,
@@ -548,8 +552,8 @@ function TomTomSearchMapNative({
       setMapStatus('error');
     }, MAP_LOAD_TIMEOUT_MS);
 
-    return () => clearTimeout(timeout);
-  }, [logContext, mapStatus, tomTomApiKey]);
+    return () => clearSafeTimer(timeout);
+  }, [clearSafeTimer, logContext, mapStatus, setSafeTimeout, tomTomApiKey]);
 
   const handleMarkerSelect = useCallback((itemId) => {
     if (selectedItemId === undefined) {
@@ -601,9 +605,31 @@ function TomTomSearchMapNative({
   }, [focusedRegion, onSelectItem, selectedItemId]);
 
   const handleRetryMap = useCallback(() => {
+    setWebViewLoaded(false);
+    setMapErrorReason('');
     setFocusMode(hasValidRegionHint(focusedRegion) ? 'region' : 'results');
     setMapRenderKey((current) => current + 1);
   }, [focusedRegion]);
+
+  const handleWebViewProcessGone = useCallback((event) => {
+    const didCrash = Boolean(event?.nativeEvent?.didCrash);
+    const error = new Error(`MAP_WEBVIEW_PROCESS_GONE${didCrash ? '_CRASH' : ''}`);
+    const payload = persistDiagnosticError(error, 'MAP_WEBVIEW_PROCESS_GONE', {
+      isFatal: false,
+    });
+
+    searchMapLogger.error('tomtom webview process gone', {
+      ...logContext,
+      didCrash,
+      payload,
+    });
+    setWebViewLoaded(false);
+    setProviderRenderStats(null);
+    setMapErrorReason(SEARCH_MAP_ERROR_REASONS.webViewProcessGone);
+    setMapStatus('error');
+
+    return true;
+  }, [logContext]);
 
   const issueCommand = useCallback((type) => {
     const nextCommand = {
@@ -794,6 +820,7 @@ function TomTomSearchMapNative({
         geolocationEnabled
         javaScriptEnabled
         key={`search-map-${scope}-${mapRenderKey}`}
+        onContentProcessDidTerminate={handleWebViewProcessGone}
         onError={() => {
           searchMapLogger.warn('tomtom webview error', logContext);
           setMapErrorReason(SEARCH_MAP_ERROR_REASONS.webViewError);
@@ -803,6 +830,7 @@ function TomTomSearchMapNative({
           setWebViewLoaded(true);
         }}
         onMessage={handleMessage}
+        onRenderProcessGone={handleWebViewProcessGone}
         originWhitelist={['*']}
         ref={webViewRef}
         setSupportMultipleWindows={false}

@@ -3,15 +3,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { BREAKPOINTS } from '@/responsive';
+import { createEventPayload } from '@/domains/event/eventUseCases';
+import useTheme from '@/theme/themeContext';
+
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { RouteNames } from '@/navigation/routeNames';
+
 import { useGetEvent, useGetEventTypes } from '@/services/event/eventQueries';
 import { createEvent, updateEvent } from '@/services/event/eventService';
 import { useGetFacilities } from '@/services/facility/facilityQueries';
-import useTheme from '@/theme/themeContext';
+
 import { getEntityDocumentId } from '@/utils/entityId';
-import { createEventPayload } from '@/domains/event/eventUseCases';
+import safeJsonParse from '@/utils/safeJsonParse';
+
+import { BREAKPOINTS } from '@/responsive';
 
 const toDateInputValue = (value) => {
   if (!value) return '';
@@ -101,14 +107,10 @@ function EventEdit({ navigation, route }) {
       locationLabel: String(
         event?.locationDetails
           ? (() => {
-            try {
-              const parsed = JSON.parse(event.locationDetails);
-              return parsed?.address?.description || parsed?.address?.label || parsed?.address?.address || '';
-            } catch (_error) {
-              return '';
-            }
+            const parsed = safeJsonParse(event.locationDetails, null);
+            return parsed?.address?.description || parsed?.address?.label || parsed?.address?.address || '';
           })()
-          : event?.location?.label || ''
+          : event?.location?.label || '',
       ),
       pricePerPerson: event?.pricePerPerson != null ? String(event.pricePerPerson) : '',
       sessionStatus: String(event?.sessionStatus || 'open'),

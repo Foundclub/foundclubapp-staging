@@ -7,28 +7,42 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  * @param {import('react').ReactNode} props.children
  * @param {'form' | 'readable' | 'content' | 'wide' | 'full' | number} [props.contentWidth]
  * @param {'top' | 'center'} [props.desktopAlignment]
+ * @param {'none' | 'tab-scene'} [props.bottomInsetMode]
  * @param {'none' | 'card'} [props.surface]
  * @returns {import('react').ReactElement}
  */
 function FormScreenContainer({
+  bgImage = 'bg2',
+  bottomInsetMode = 'none',
+  children,
+  contentContainerStyle = [],
   contentWidth = 'form',
   desktopAlignment = 'center',
   desktopMinHeight = false,
+  gradient = null,
   responsiveHorizontalPadding = true,
   responsivePadding = true,
+  style = [],
   surface = 'none',
-  ...props
+  withHeaderPadding = true,
 }) {
   return (
     <ScreenContainer
+      bgImage={bgImage}
+      bottomInsetMode={bottomInsetMode}
+      contentContainerStyle={contentContainerStyle}
       contentWidth={contentWidth}
       desktopAlignment={desktopAlignment}
       desktopMinHeight={desktopMinHeight}
+      gradient={gradient}
       responsiveHorizontalPadding={responsiveHorizontalPadding}
       responsivePadding={responsivePadding}
+      style={style}
       surface={surface}
-      {...props}
-    />
+      withHeaderPadding={withHeaderPadding}
+    >
+      {children}
+    </ScreenContainer>
   );
 }
 

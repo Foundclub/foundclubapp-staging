@@ -24,6 +24,7 @@ import { useGetClub } from '@/services/club/clubQueries';
 import { updateClubInfo } from '@/services/club/clubService';
 
 import { getFieldError } from '@/utils/form/formUtils';
+import safeJsonParse from '@/utils/safeJsonParse';
 
 /** @type {{ name: string; email: string; phoneNumber: string; addressDetails: string; activites: string[] }} */
 const defaultValues = {
@@ -95,10 +96,10 @@ function ClubEdit({ navigation, route }) {
 
   const updateClubMutation = useMutation({
     mutationFn: updateClubInfo,
-    onError: (error) => {
+    onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        error?.message || 'Impossible de mettre a jour ce club pour le moment.',
+        mutationError?.message || 'Impossible de mettre a jour ce club pour le moment.',
       );
     },
     onSuccess: () => {
@@ -124,12 +125,10 @@ function ClubEdit({ navigation, route }) {
 
   useEffect(() => {
     if (clubData) {
-      let parsedAddress = '';
-      try {
-        parsedAddress = clubData.addressDetails ? JSON.parse(clubData.addressDetails)?.address || '' : '';
-      } catch (_error) {
-        parsedAddress = clubData.addressDetails || '';
-      }
+      const parsedDetails = safeJsonParse(clubData.addressDetails, null);
+      const parsedAddress = typeof parsedDetails?.address === 'object'
+        ? parsedDetails.address?.description || parsedDetails.address?.label || ''
+        : parsedDetails?.address || clubData.addressDetails || '';
 
       reset({
         activites: (clubData.activites || []).map((activity) => activity.documentId).filter(Boolean),

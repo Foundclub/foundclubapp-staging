@@ -37,6 +37,7 @@ import { createEvent, getEvents, updateEvent } from '@/services/event/eventServi
 import { getTeams } from '@/services/team/teamService';
 
 import { getFieldError } from '@/utils/form/formUtils';
+import safeJsonParse from '@/utils/safeJsonParse';
 
 /** @typedef {import('@/domains/event/types').FCEventForm} FCEventForm */
 /** @typedef {import('@/domains/team/types').Team} Team */
@@ -89,6 +90,15 @@ const buildOccupancyWindow = (dateValue, startTime, endTime, getDateFromDateInpu
   if (!start || !end) return null;
 
   return { end, start };
+};
+
+const getEventLocationLabel = (locationDetails) => {
+  const parsed = safeJsonParse(locationDetails, null);
+  const address = parsed?.address;
+  if (typeof address === 'object') {
+    return String(address?.description || address?.label || '').trim();
+  }
+  return String(address || '').trim();
 };
 
 const eventSchema = Joi.object({
@@ -227,15 +237,7 @@ function EventEdit({ navigation, route }) {
       facility: event?.facility?.documentId || null,
       invitedTeams: event?.invitedTeams?.map((/** @type {Team} */ t) => t.documentId || '') || [],
       location: {
-        label: (() => {
-          try {
-            const parsed = event?.locationDetails ? JSON.parse(event.locationDetails) : null;
-            const addr = parsed?.address;
-            return (typeof addr === 'object' ? addr?.description : addr) || '';
-          } catch {
-            return '';
-          }
-        })(),
+        label: getEventLocationLabel(event?.locationDetails),
         value: `${event?.location?.lat}|${event?.location?.lng}`,
       },
       pricePerPerson: event?.pricePerPerson,
@@ -455,7 +457,7 @@ function EventEdit({ navigation, route }) {
         endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
         facility: event?.facility?.documentId || null,
         location: {
-          label: event?.locationDetails ? JSON.parse(event?.locationDetails)?.address : '',
+          label: getEventLocationLabel(event?.locationDetails),
           value: `${event?.location?.lat}|${event?.location?.lng}`,
         },
         pricePerPerson: event?.pricePerPerson,

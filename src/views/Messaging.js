@@ -7,7 +7,6 @@ import {
   Alert, Image, Platform, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
@@ -26,8 +25,8 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
@@ -72,13 +71,15 @@ function Messaging({ navigation, route }) {
     archiveChatAsync, getConversationName, getUnreadStatus,
     joinChat, pinChatAsync, unpinChatAsync,
   } = useMessaging();
-  const insets = useSafeAreaInsets();
+  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const isWeb = Platform.OS === 'web';
   const canCreateConversation = userData?.role?.name === 'Entraîneur'
     || userData?.role?.name === 'Dirigeant'
     || userData?.role?.name === 'SuperAdmin';
-  const floatingButtonBottom = isWeb ? 24 : getFloatingActionBottomOffset(insets.bottom, 14);
-  const chatListBottomInset = canCreateConversation ? floatingButtonBottom + 84 : 16;
+  const floatingButtonBottom = isWeb ? 24 : floatingActionBottomOffset;
+  const chatListBottomInset = canCreateConversation
+    ? Math.max(sceneBottomInset, floatingButtonBottom + 84)
+    : sceneBottomInset;
   const allChats = useMemo(() => {
     const chats = chatsData?.pages ? chatsData?.pages?.reduce(
       (acc, page) => acc.concat(page.data || []),

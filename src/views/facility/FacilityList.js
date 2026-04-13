@@ -22,6 +22,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { deleteFacility, getFacilitySections } from '@/services/facility/facilityService';
@@ -65,6 +66,7 @@ function FacilityList() {
   const navigation = useNavigation();
   const route = useRoute();
   const { userData } = useAuth();
+  const { sceneBottomInset } = useBottomDockLayout();
 
   const contextClubId = route.params?.clubId || userData?.club?.documentId || userData?.club?.id;
   const contextCmId = route.params?.cmId
@@ -445,7 +447,7 @@ function FacilityList() {
   let content = (
     <SectionList
       contentContainerStyle={[
-        Spaces.paddingBottom[120],
+        { paddingBottom: sceneBottomInset },
         facilities.length === 0 && Alignments.fill,
         facilities.length === 0 && Alignments.mainCenter,
       ]}

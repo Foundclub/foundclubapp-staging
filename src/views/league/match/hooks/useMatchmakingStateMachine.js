@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import MatchmakingService from '@/services/league/MatchmakingService';
 
 import { getEntityDocumentId } from '@/utils/entityId';
+import safeJsonParse from '@/utils/safeJsonParse';
 
 const POLLING_VIEWS = new Set(['locker_room', 'match_found', 'radar']);
 
@@ -64,11 +65,7 @@ const pickFirstText = (...values) => {
 const parseMaybeJson = (value) => {
   if (value && typeof value === 'object') return value;
   if (typeof value !== 'string') return value;
-  try {
-    return JSON.parse(value);
-  } catch (_error) {
-    return value;
-  }
+  return safeJsonParse(value, value);
 };
 
 /**

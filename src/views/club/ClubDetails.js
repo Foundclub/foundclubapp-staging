@@ -40,6 +40,7 @@ import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/te
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getImageUrl } from '@/utils/imageUrl';
+import safeJsonParse from '@/utils/safeJsonParse';
 
 import ClubPlanning from './ClubPlanningScreen';
 
@@ -1344,11 +1345,8 @@ function ClubDetails({ navigation, route }) {
               </Text>
               <Text style={[Fonts.p2, Fonts.primary100]}>
                 {(() => {
-                  try {
-                    return club?.addressDetails ? JSON.parse(club.addressDetails)?.address : '';
-                  } catch (e) {
-                    return club?.addressDetails || '';
-                  }
+                  const parsedAddress = safeJsonParse(club?.addressDetails, null);
+                  return parsedAddress?.address || club?.addressDetails || '';
                 })()}
               </Text>
             </View>

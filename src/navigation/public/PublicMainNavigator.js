@@ -1,5 +1,7 @@
 import { createStackNavigator } from '@react-navigation/stack';
 
+import { useAppContext } from '@/store/appContext';
+
 import ClubDetails from '@/views/club/ClubDetails';
 import ClubFilters from '@/views/club/ClubFilters';
 import EventDetails from '@/views/event/EventDetails';
@@ -11,6 +13,7 @@ import TeamDetails from '@/views/team/TeamDetails';
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
+import AuthStackNavigator from './AuthStackNavigator';
 import PublicTabNavigator from './PublicTabNavigator';
 
 const Stack = createStackNavigator();
@@ -21,12 +24,19 @@ const Stack = createStackNavigator();
  * @returns {import('react').ReactElement | null} PrivateNavigator component.
  */
 function PublicNavigator() {
+  const [{ isAddingAccount }] = useAppContext();
+
   return (
     <Stack.Navigator
       id={undefined}
-      initialRouteName={RouteNames.HomeTab}
+      initialRouteName={isAddingAccount ? RouteNames.PublicAuthStack : RouteNames.HomeTab}
       screenOptions={commonOptions}
     >
+      <Stack.Screen
+        component={AuthStackNavigator}
+        name={RouteNames.PublicAuthStack}
+        options={{ headerShown: false }}
+      />
 
       <Stack.Screen
         component={PublicTabNavigator}

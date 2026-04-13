@@ -40,6 +40,7 @@ import {
   normalizeLocationInput,
   normalizeRadius,
 } from '@/utils/location';
+import safeJsonParse from '@/utils/safeJsonParse';
 
 import ClockIcon from '../../../assets/icons/clock.png';
 import LocationIcon from '../../../assets/icons/location.png';
@@ -1124,11 +1125,7 @@ function MatchCenterScreen() {
       const parseAnonymousValue = (/** @type {unknown} */ value) => {
         if (value && typeof value === 'object') return value;
         if (typeof value !== 'string') return value;
-        try {
-          return JSON.parse(value);
-        } catch (_error) {
-          return value;
-        }
+        return safeJsonParse(value, value);
       };
       const cleanAnonymousLabel = (/** @type {unknown} */ value) => {
         if (typeof value !== 'string') return null;
@@ -1462,7 +1459,7 @@ function MatchCenterScreen() {
                             setViewState('searching_start');
                             setTimeout(async () => {
                               try {
-                                const userLoc = userData?.location ? (typeof userData.location === 'string' ? JSON.parse(userData.location) : userData.location) : { lat: 48.8566, lng: 2.3522 };
+                                const userLoc = userData?.location ? safeJsonParse(userData.location, { lat: 48.8566, lng: 2.3522 }) : { lat: 48.8566, lng: 2.3522 };
                                 const fallbackSlotIds = (selectedSlotIds && selectedSlotIds.length > 0)
                                   ? selectedSlotIds
                                   : toDocumentIdList(squadSlots);
@@ -1563,11 +1560,7 @@ function MatchCenterScreen() {
       const parseMaybeJson = (/** @type {unknown} */ value) => {
         if (value && typeof value === 'object') return value;
         if (typeof value !== 'string') return value;
-        try {
-          return JSON.parse(value);
-        } catch (_err) {
-          return value;
-        }
+        return safeJsonParse(value, value);
       };
 
       const getOpponentCity = (/** @type {OpponentDetails | null} */ details) => {
@@ -1846,7 +1839,7 @@ function MatchCenterScreen() {
                               // Re-use current params if available or re-trigger logic
                               // Ideally we call handleConfirmSearch logic but access is tricky.
                               // Simpler: Trigger search with current params from squad
-                              const userLoc = userData?.location ? (typeof userData.location === 'string' ? JSON.parse(userData.location) : userData.location) : { lat: 48.8566, lng: 2.3522 };
+                              const userLoc = userData?.location ? safeJsonParse(userData.location, { lat: 48.8566, lng: 2.3522 }) : { lat: 48.8566, lng: 2.3522 };
                               const fallbackSlotIds = (selectedSlotIds && selectedSlotIds.length > 0)
                                 ? selectedSlotIds
                                 : toDocumentIdList(squadSlots);

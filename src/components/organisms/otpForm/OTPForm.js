@@ -71,7 +71,7 @@ function OTPForm({
   };
 
   return (
-    <View style={[Spaces.gap[40], Alignments.fill, Alignments.justifySpaceBetween]}>
+    <View style={[Spaces.gap[24], Alignments.fullWidth]}>
       <Controller
         control={control}
         name="code"

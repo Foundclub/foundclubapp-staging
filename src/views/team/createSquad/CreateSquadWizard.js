@@ -22,6 +22,7 @@ import { createLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
 import { createTeamSlot } from '@/services/teamSlot/teamSlotService';
 
 import { buildHomeBasePayload, normalizeLocationInput } from '@/utils/location';
+import safeJsonParse from '@/utils/safeJsonParse';
 
 const CREATE_SQUAD_STORAGE_KEY = 'fc:web:create-squad-wizard';
 
@@ -101,7 +102,7 @@ const loadPersistedWizardState = () => {
     const raw = globalThis.sessionStorage.getItem(CREATE_SQUAD_STORAGE_KEY);
     if (!raw) return initialState;
 
-    const parsed = JSON.parse(raw);
+    const parsed = safeJsonParse(raw, null);
     if (!parsed || typeof parsed !== 'object') return initialState;
 
     return {

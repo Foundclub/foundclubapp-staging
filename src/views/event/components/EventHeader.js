@@ -19,6 +19,7 @@ import {
   normalizeLocationInput,
   getLocationCoordinates as resolveLocationCoordinates,
 } from '@/utils/location';
+import safeJsonParse from '@/utils/safeJsonParse';
 
 // Assets
 const BG_OTHER = require('@/assets/background-card-event/card-autre.png');
@@ -121,18 +122,8 @@ function EventHeader({ event, matchScoreSummary = null }) {
     .filter(Boolean);
 
   const getParsedLocationDetails = () => {
-    try {
-      if (!locationDetails) return null;
-      if (typeof locationDetails === 'string') {
-        return JSON.parse(locationDetails);
-      }
-      if (typeof locationDetails === 'object') {
-        return locationDetails;
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    if (!locationDetails) return null;
+    return safeJsonParse(locationDetails, null);
   };
 
   const getLocationText = () => {

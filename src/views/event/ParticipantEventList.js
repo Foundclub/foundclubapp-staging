@@ -1,17 +1,15 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAfter, isSameDay } from 'date-fns';
-import React, {
+import {
   useCallback, useMemo, useRef, useState,
 } from 'react';
 import {
   FlatList, Image, Text, TouchableOpacity, View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
-import { createLogger } from '@/utils/logger/logger';
 
 import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
@@ -24,11 +22,13 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import PersonalPlanningContainer from '@/components/organisms/planning/PersonalPlanningContainer';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetEvents } from '@/services/event/eventQueries';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+
+import { createLogger } from '@/utils/logger/logger';
 
 const participantEventListLogger = createLogger('participant-event-list');
 
@@ -48,7 +48,7 @@ function ParticipantEventList({ navigation }) {
     Spaces,
   } = useTheme();
   const { canManageEvents, userData } = useAuth();
-  const insets = useSafeAreaInsets();
+  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
 
   // State
   const [listStartDate, setListStartDate] = useState(new Date());
@@ -242,12 +242,30 @@ function ParticipantEventList({ navigation }) {
     flatListRef.current?.scrollToOffset({ animated: true, offset: 500 });
   };
 
-  const floatingCtaBottom = getFloatingActionBottomOffset(insets.bottom, 14);
-  const listBottomPadding = canManageEvents ? floatingCtaBottom + 84 : insets.bottom + 24;
+  const handleCreateEventPress = useCallback(() => {
+    // @ts-ignore
+    navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType });
+  }, [navigation]);
+
+  const handleListEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  const keyExtractor = useCallback(
+    (item) => item.documentId || Math.random().toString(),
+    [],
+  );
+
+  const floatingCtaBottom = floatingActionBottomOffset;
+  const listBottomPadding = canManageEvents
+    ? Math.max(sceneBottomInset, floatingCtaBottom + 84)
+    : sceneBottomInset;
 
   /**
    *
    */
+  // eslint-disable-next-line react/no-unstable-nested-components
   function ListHeader() {
     return (
       <View style={[Spaces.gap[24], Spaces.marginBottom[16]]}>
@@ -311,11 +329,9 @@ function ParticipantEventList({ navigation }) {
         // @ts-ignore
         contentContainerStyle={{ paddingBottom: listBottomPadding }}
         extraData={userData}
-        keyExtractor={(item) => item.documentId || Math.random().toString()}
-        ListHeaderComponent={ListHeader}
-        onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-        }}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={<ListHeader />}
+        onEndReached={handleListEndReached}
         onEndReachedThreshold={0.5}
         showsVerticalScrollIndicator={false}
       />
@@ -329,8 +345,7 @@ function ParticipantEventList({ navigation }) {
           <TouchableOpacity
             accessibilityLabel="Ajouter un evenement"
             activeOpacity={0.85}
-            // @ts-ignore
-            onPress={() => navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType })}
+            onPress={handleCreateEventPress}
             style={[
               ApplicationStyle.shadow200,
               {

@@ -6,6 +6,7 @@ import {
   NOTIFICATIONS_RUNTIME_CONFIG,
 } from './src/constants/runtimeFlags';
 import {
+  createBootErrorPayload,
   persistBootError,
   readPersistedBootError,
 } from './src/utils/bootDiagnostics';
@@ -19,15 +20,6 @@ const logBoot = (step, meta) => {
   }
   console.info(`[BOOT] ${step}`, meta);
 };
-
-const createBootErrorPayload = (error, isFatal, context) => ({
-  context,
-  isFatal: Boolean(isFatal),
-  message: error?.message || 'unknown',
-  name: error?.name || 'Error',
-  stack: error?.stack || 'no_stack',
-  timestamp: new Date().toISOString(),
-});
 
 const installGlobalErrorHandler = () => {
   try {

@@ -7,6 +7,7 @@ import useTheme from '@/theme/themeContext';
 
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
+import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 /**
@@ -24,11 +25,22 @@ function ProfileButton() {
       dispatch({ type: 'CANCEL_ADD_ACCOUNT' });
       return;
     }
-    const targetRoute = userData
-      ? (Platform.OS === 'web' ? RouteNames.Profile : RouteNames.ProfileStack)
-      : (Platform.OS === 'web' ? RouteNames.Login : RouteNames.AuthStackAccount);
+
+    let targetRoute = null;
+    if (userData) {
+      targetRoute = Platform.OS === 'web' ? RouteNames.Profile : RouteNames.ProfileStack;
+    }
+
     // @ts-expect-error - Navigation typing will be fixed when types are properly set up
-    navigation.navigate(targetRoute);
+    if (targetRoute) {
+      navigation.navigate(targetRoute);
+      return;
+    }
+
+    openPublicAuthFlow(navigation, {
+      origin: 'profile-button',
+      source: 'profile-button',
+    });
   };
 
   return (

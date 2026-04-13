@@ -2,6 +2,8 @@ import {
   createContext, useContext, useEffect, useMemo, useReducer,
 } from 'react';
 
+import safeJsonParse from '@/utils/safeJsonParse';
+
 const TeamWizardContext = createContext(/** @type {any} */ (null));
 const TEAM_WIZARD_STORAGE_KEY = 'fc:web:team-wizard';
 
@@ -33,7 +35,7 @@ const loadPersistedState = () => {
     const raw = globalThis.sessionStorage.getItem(TEAM_WIZARD_STORAGE_KEY);
     if (!raw) return initialState;
 
-    const parsed = JSON.parse(raw);
+    const parsed = safeJsonParse(raw, null);
     if (!parsed || typeof parsed !== 'object') {
       return initialState;
     }

@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Home from '@/views/Home';
@@ -22,7 +21,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { createLogger } from '@/utils/logger/logger';
 
-import AuthStackNavigator from './AuthStackNavigator';
+import PublicAuthGateScreen from './PublicAuthGateScreen';
+import { openPublicAuthFlow } from './publicAuthNavigation';
 
 const publicTabLogger = createLogger('public-tab-navigator');
 
@@ -35,12 +35,10 @@ const Tab = createBottomTabNavigator();
 function PublicTabNavigator() {
   const { Colors, Images } = useTheme();
   const { t } = useTranslation();
-  const [{ isAddingAccount }] = useAppContext();
   const insets = useSafeAreaInsets();
   const floatingScenePaddingBottom = getFloatingTabBarScenePaddingBottom(insets.bottom);
   publicTabLogger.debug('Rendering', {
-    initialRoute: isAddingAccount ? RouteNames.AuthStackAccount : RouteNames.Search,
-    isAddingAccount,
+    initialRoute: RouteNames.Search,
   });
 
   /**
@@ -98,7 +96,7 @@ function PublicTabNavigator() {
   return (
     <Tab.Navigator
       id={undefined}
-      initialRouteName={isAddingAccount ? RouteNames.AuthStackAccount : RouteNames.Search}
+      initialRouteName={RouteNames.Search}
       screenOptions={{
         ...commonOptions,
         sceneContainerStyle: {
@@ -126,7 +124,16 @@ function PublicTabNavigator() {
         }}
       />
       <Tab.Screen
-        component={AuthStackNavigator}
+        component={PublicAuthGateScreen}
+        listeners={({ navigation, route }) => ({
+          tabPress: (event) => {
+            event.preventDefault();
+            openPublicAuthFlow(navigation, {
+              origin: route.name,
+              source: 'public-tab-press',
+            });
+          },
+        })}
         name={RouteNames.AuthStackPlanning}
         options={({
           headerShown: false,
@@ -144,7 +151,16 @@ function PublicTabNavigator() {
         })}
       />
       <Tab.Screen
-        component={AuthStackNavigator}
+        component={PublicAuthGateScreen}
+        listeners={({ navigation, route }) => ({
+          tabPress: (event) => {
+            event.preventDefault();
+            openPublicAuthFlow(navigation, {
+              origin: route.name,
+              source: 'public-tab-press',
+            });
+          },
+        })}
         name={RouteNames.AuthStackAccount}
         options={({
           headerShown: false,
@@ -162,7 +178,16 @@ function PublicTabNavigator() {
         })}
       />
       <Tab.Screen
-        component={AuthStackNavigator}
+        component={PublicAuthGateScreen}
+        listeners={({ navigation, route }) => ({
+          tabPress: (event) => {
+            event.preventDefault();
+            openPublicAuthFlow(navigation, {
+              origin: route.name,
+              source: 'public-tab-press',
+            });
+          },
+        })}
         name={RouteNames.AuthStackMessaging}
         options={({
           headerShown: false,

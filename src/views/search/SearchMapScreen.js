@@ -49,6 +49,7 @@ import { mapSearchPayload } from '@/services/search/searchService';
 import { createLogger } from '@/utils/logger/logger';
 import { toSearchMapItems } from '@/utils/searchMap';
 
+import useSafeTimers from '@/hooks/useSafeTimers';
 import {
   getSearchMapSearchAreaLabel,
   getSearchMapUpdatingResultsCopy,
@@ -707,6 +708,7 @@ function SearchMapScreen({ navigation, route }) {
   const { t } = useTranslation();
   const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { clearSafeTimer, setSafeTimeout } = useSafeTimers();
   const {
     Alignments,
     ApplicationStyle,
@@ -921,18 +923,18 @@ function SearchMapScreen({ navigation, route }) {
 
   useEffect(() => () => {
     if (pendingAddressViewportTimeoutRef.current) {
-      clearTimeout(pendingAddressViewportTimeoutRef.current);
+      clearSafeTimer(pendingAddressViewportTimeoutRef.current);
     }
     if (pendingEventViewportSearchTimeoutRef.current) {
-      clearTimeout(pendingEventViewportSearchTimeoutRef.current);
+      clearSafeTimer(pendingEventViewportSearchTimeoutRef.current);
     }
     if (pendingVisibleViewportTimeoutRef.current) {
-      clearTimeout(pendingVisibleViewportTimeoutRef.current);
+      clearSafeTimer(pendingVisibleViewportTimeoutRef.current);
     }
     if (persistedRegionTimeoutRef.current) {
-      clearTimeout(persistedRegionTimeoutRef.current);
+      clearSafeTimer(persistedRegionTimeoutRef.current);
     }
-  }, []);
+  }, [clearSafeTimer]);
 
   const persistViewportRegion = useCallback((nextRegion) => {
     if (!nextRegion || !Number.isFinite(nextRegion.lat) || !Number.isFinite(nextRegion.lng)) {
@@ -940,10 +942,10 @@ function SearchMapScreen({ navigation, route }) {
     }
 
     if (persistedRegionTimeoutRef.current) {
-      clearTimeout(persistedRegionTimeoutRef.current);
+      clearSafeTimer(persistedRegionTimeoutRef.current);
     }
 
-    persistedRegionTimeoutRef.current = setTimeout(() => {
+    persistedRegionTimeoutRef.current = setSafeTimeout(() => {
       if (areRegionsEquivalent(lastPersistedRegionRef.current, nextRegion)) {
         persistedRegionTimeoutRef.current = null;
         return;
@@ -953,7 +955,7 @@ function SearchMapScreen({ navigation, route }) {
       lastPersistedRegionRef.current = nextRegion;
       persistedRegionTimeoutRef.current = null;
     }, 180);
-  }, [persistSessionState]);
+  }, [clearSafeTimer, persistSessionState, setSafeTimeout]);
 
   const persistVisibleViewport = useCallback((nextViewport) => {
     const normalizedViewport = normalizeViewport(nextViewport);
@@ -962,10 +964,10 @@ function SearchMapScreen({ navigation, route }) {
     }
 
     if (pendingVisibleViewportTimeoutRef.current) {
-      clearTimeout(pendingVisibleViewportTimeoutRef.current);
+      clearSafeTimer(pendingVisibleViewportTimeoutRef.current);
     }
 
-    pendingVisibleViewportTimeoutRef.current = setTimeout(() => {
+    pendingVisibleViewportTimeoutRef.current = setSafeTimeout(() => {
       if (areViewportsEquivalent(lastPersistedVisibleViewportRef.current, normalizedViewport)) {
         pendingVisibleViewportTimeoutRef.current = null;
         return;
@@ -975,7 +977,7 @@ function SearchMapScreen({ navigation, route }) {
       lastPersistedVisibleViewportRef.current = normalizedViewport;
       pendingVisibleViewportTimeoutRef.current = null;
     }, 180);
-  }, [isViewportSearchScope, persistSessionState]);
+  }, [clearSafeTimer, isViewportSearchScope, persistSessionState, setSafeTimeout]);
 
   const executeClubViewportSearch = useCallback((viewport, view = 'map') => {
     const normalizedViewport = normalizeViewport(viewport);
@@ -984,7 +986,7 @@ function SearchMapScreen({ navigation, route }) {
     }
 
     if (pendingAddressViewportTimeoutRef.current) {
-      clearTimeout(pendingAddressViewportTimeoutRef.current);
+      clearSafeTimer(pendingAddressViewportTimeoutRef.current);
       pendingAddressViewportTimeoutRef.current = null;
     }
 
@@ -1078,7 +1080,7 @@ function SearchMapScreen({ navigation, route }) {
     });
     lastPersistedRegionRef.current = nextRegion;
     lastPersistedVisibleViewportRef.current = normalizedViewport;
-  }, [activeFilters, executedViewport, isClubScope, persistSessionState]);
+  }, [activeFilters, clearSafeTimer, executedViewport, isClubScope, persistSessionState]);
 
   const executeEventViewportSearch = useCallback((viewport, view = 'map') => {
     const normalizedViewport = normalizeViewport(viewport);
@@ -1087,11 +1089,11 @@ function SearchMapScreen({ navigation, route }) {
     }
 
     if (pendingAddressViewportTimeoutRef.current) {
-      clearTimeout(pendingAddressViewportTimeoutRef.current);
+      clearSafeTimer(pendingAddressViewportTimeoutRef.current);
       pendingAddressViewportTimeoutRef.current = null;
     }
     if (pendingEventViewportSearchTimeoutRef.current) {
-      clearTimeout(pendingEventViewportSearchTimeoutRef.current);
+      clearSafeTimer(pendingEventViewportSearchTimeoutRef.current);
       pendingEventViewportSearchTimeoutRef.current = null;
     }
 
@@ -1184,7 +1186,7 @@ function SearchMapScreen({ navigation, route }) {
     });
     lastPersistedRegionRef.current = nextRegion;
     lastPersistedVisibleViewportRef.current = normalizedViewport;
-  }, [activeFilters, executedViewport, isEventScope, persistSessionState]);
+  }, [activeFilters, clearSafeTimer, executedViewport, isEventScope, persistSessionState]);
 
   const scheduleEventViewportRefresh = useCallback((viewport, reason = 'user') => {
     const normalizedViewport = normalizeViewport(viewport);
@@ -1193,7 +1195,7 @@ function SearchMapScreen({ navigation, route }) {
     }
 
     if (pendingEventViewportSearchTimeoutRef.current) {
-      clearTimeout(pendingEventViewportSearchTimeoutRef.current);
+      clearSafeTimer(pendingEventViewportSearchTimeoutRef.current);
       pendingEventViewportSearchTimeoutRef.current = null;
     }
 
@@ -1214,11 +1216,11 @@ function SearchMapScreen({ navigation, route }) {
       zoom: normalizedViewport.zoom,
     });
 
-    pendingEventViewportSearchTimeoutRef.current = setTimeout(() => {
+    pendingEventViewportSearchTimeoutRef.current = setSafeTimeout(() => {
       pendingEventViewportSearchTimeoutRef.current = null;
       executeEventViewportSearch(normalizedViewport, 'map');
     }, reason === 'bootstrap' ? 120 : EVENT_VIEWPORT_AUTO_SEARCH_DEBOUNCE_MS);
-  }, [executeEventViewportSearch, isEventScope]);
+  }, [clearSafeTimer, executeEventViewportSearch, isEventScope, setSafeTimeout]);
 
   const eventConfig = useMemo(() => ({
     ...(eventFilters || {}),
@@ -1573,7 +1575,7 @@ function SearchMapScreen({ navigation, route }) {
       return undefined;
     }
 
-    const timeout = setTimeout(() => {
+    const timeout = setSafeTimeout(() => {
       const payload = {
         geolocatableCount: mapItems.length,
         totalCount,
@@ -1588,8 +1590,8 @@ function SearchMapScreen({ navigation, route }) {
       }
     }, 500);
 
-    return () => clearTimeout(timeout);
-  }, [isClubScope, isEventViewportMode, isLoading, isViewportSearchScope, mapItems.length, renderStats, totalCount]);
+    return () => clearSafeTimer(timeout);
+  }, [clearSafeTimer, isClubScope, isEventViewportMode, isLoading, isViewportSearchScope, mapItems.length, renderStats, setSafeTimeout, totalCount]);
 
   useEffect(() => {
     if (!isClubScope) {
@@ -1823,9 +1825,9 @@ function SearchMapScreen({ navigation, route }) {
       lastPersistedRegionRef.current = nextRegion;
       shouldAutoSubmitViewportRef.current = true;
       if (pendingAddressViewportTimeoutRef.current) {
-        clearTimeout(pendingAddressViewportTimeoutRef.current);
+        clearSafeTimer(pendingAddressViewportTimeoutRef.current);
       }
-      pendingAddressViewportTimeoutRef.current = setTimeout(() => {
+      pendingAddressViewportTimeoutRef.current = setSafeTimeout(() => {
         if (!shouldAutoSubmitViewportRef.current) {
           pendingAddressViewportTimeoutRef.current = null;
           return;
@@ -1871,9 +1873,9 @@ function SearchMapScreen({ navigation, route }) {
       lastPersistedRegionRef.current = nextRegion;
       shouldAutoSubmitViewportRef.current = true;
       if (pendingAddressViewportTimeoutRef.current) {
-        clearTimeout(pendingAddressViewportTimeoutRef.current);
+        clearSafeTimer(pendingAddressViewportTimeoutRef.current);
       }
-      pendingAddressViewportTimeoutRef.current = setTimeout(() => {
+      pendingAddressViewportTimeoutRef.current = setSafeTimeout(() => {
         if (!shouldAutoSubmitViewportRef.current) {
           pendingAddressViewportTimeoutRef.current = null;
           return;
@@ -1930,6 +1932,8 @@ function SearchMapScreen({ navigation, route }) {
     isClubScope,
     mapAspectRatio,
     persistSessionState,
+    clearSafeTimer,
+    setSafeTimeout,
   ]);
 
   const handleRegionChangeComplete = useCallback((nextRegion) => {
@@ -1956,7 +1960,7 @@ function SearchMapScreen({ navigation, route }) {
       if (shouldAutoSubmitViewportRef.current) {
         shouldAutoSubmitViewportRef.current = false;
         if (pendingAddressViewportTimeoutRef.current) {
-          clearTimeout(pendingAddressViewportTimeoutRef.current);
+          clearSafeTimer(pendingAddressViewportTimeoutRef.current);
           pendingAddressViewportTimeoutRef.current = null;
         }
         if (canSearchClubViewport(nextViewport)) {
@@ -2021,7 +2025,7 @@ function SearchMapScreen({ navigation, route }) {
       if (shouldAutoSubmitViewportRef.current) {
         shouldAutoSubmitViewportRef.current = false;
         if (pendingAddressViewportTimeoutRef.current) {
-          clearTimeout(pendingAddressViewportTimeoutRef.current);
+          clearSafeTimer(pendingAddressViewportTimeoutRef.current);
           pendingAddressViewportTimeoutRef.current = null;
         }
         if (canSearchEventViewport(nextViewport)) {
@@ -2049,7 +2053,7 @@ function SearchMapScreen({ navigation, route }) {
       setShowSearchThisArea(false);
       if (!canSearchEventViewport(nextViewport)) {
         if (pendingEventViewportSearchTimeoutRef.current) {
-          clearTimeout(pendingEventViewportSearchTimeoutRef.current);
+          clearSafeTimer(pendingEventViewportSearchTimeoutRef.current);
           pendingEventViewportSearchTimeoutRef.current = null;
         }
         setPendingRegion(null);
@@ -2072,7 +2076,7 @@ function SearchMapScreen({ navigation, route }) {
       }
 
       if (pendingEventViewportSearchTimeoutRef.current) {
-        clearTimeout(pendingEventViewportSearchTimeoutRef.current);
+        clearSafeTimer(pendingEventViewportSearchTimeoutRef.current);
         pendingEventViewportSearchTimeoutRef.current = null;
       }
       setPendingRegion(null);
@@ -2090,6 +2094,7 @@ function SearchMapScreen({ navigation, route }) {
     setShowSearchThisArea(true);
   }, [
     appliedCenter,
+    clearSafeTimer,
     executeClubViewportSearch,
     executeEventViewportSearch,
     executedViewport,
