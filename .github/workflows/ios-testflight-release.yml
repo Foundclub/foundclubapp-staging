@@ -25,6 +25,67 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select Xcode 26
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REQUIRED_XCODE_MAJOR=26
+          XCODE_CANDIDATE=""
+
+          echo "Installed Xcode applications:"
+          ls -1d /Applications/Xcode*.app 2>/dev/null || true
+
+          for candidate in /Applications/Xcode_26*.app /Applications/Xcode.app; do
+            if [ ! -x "$candidate/Contents/Developer/usr/bin/xcodebuild" ]; then
+              continue
+            fi
+
+            version="$("$candidate/Contents/Developer/usr/bin/xcodebuild" -version | awk '/Xcode/{print $2; exit}')"
+            major="${version%%.*}"
+            echo "$candidate -> Xcode $version"
+
+            if [[ "$major" =~ ^[0-9]+$ ]] && [ "$major" -ge "$REQUIRED_XCODE_MAJOR" ]; then
+              XCODE_CANDIDATE="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$XCODE_CANDIDATE" ]; then
+            echo "::error::Xcode 26 not found on this GitHub Actions runner. Use a macOS runner image that includes Xcode 26+ before uploading iOS builds after 2026-04-28."
+            exit 1
+          fi
+
+          sudo xcode-select -s "$XCODE_CANDIDATE/Contents/Developer"
+          echo "DEVELOPER_DIR=$XCODE_CANDIDATE/Contents/Developer" >> "$GITHUB_ENV"
+          echo "Selected $XCODE_CANDIDATE"
+
+      - name: Validate Xcode and iOS SDK versions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REQUIRED_XCODE_MAJOR=26
+          REQUIRED_IOS_SDK_MAJOR=26
+
+          xcodebuild -version
+          xcode_version="$(xcodebuild -version | awk '/Xcode/{print $2; exit}')"
+          xcode_major="${xcode_version%%.*}"
+
+          if ! [[ "$xcode_major" =~ ^[0-9]+$ ]] || [ "$xcode_major" -lt "$REQUIRED_XCODE_MAJOR" ]; then
+            echo "::error::Xcode 26+ is required, but selected Xcode version is '$xcode_version'."
+            exit 1
+          fi
+
+          ios_sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+          ios_sdk_major="${ios_sdk_version%%.*}"
+          echo "iOS SDK version: $ios_sdk_version"
+
+          if ! [[ "$ios_sdk_major" =~ ^[0-9]+$ ]] || [ "$ios_sdk_major" -lt "$REQUIRED_IOS_SDK_MAJOR" ]; then
+            echo "::error::iOS SDK 26+ is required, but selected iphoneos SDK version is '$ios_sdk_version'."
+            exit 1
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

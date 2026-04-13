@@ -28,6 +28,8 @@
   - plist Firebase prod
 - chemin sans Mac local maintenant prepare :
   - workflow GitHub Actions `iOS TestFlight Release`
+- contrainte App Store Connect a partir du 28 avril 2026 :
+  - workflow iOS avec Xcode 26+ et SDK `iphoneos` 26+
 - reste bloquant :
   - fournir les secrets GitHub Actions iOS release
   - verifier si le provisioning profile fourni est bien celui a utiliser pour TestFlight/App Store

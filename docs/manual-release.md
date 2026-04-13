@@ -60,6 +60,11 @@ Important :
 Si vous n'avez pas de Mac, utilisez le workflow GitHub Actions :
 - [ios-testflight-release.yml](/d:/App/fc/app/.github/workflows/ios-testflight-release.yml)
 
+Precondition toolchain obligatoire :
+- le workflow doit afficher `Xcode 26.x` ou plus
+- le workflow doit afficher un SDK `iphoneos 26.x` ou plus
+- si le workflow echoue avec `Xcode 26 not found`, il faut changer de runner/image macOS avant de refaire un upload TestFlight ou App Store Connect
+
 Secrets GitHub requis :
 - `GOOGLE_SERVICE_INFO_PLIST_PRODUCTION_BASE64`
 - `BUILD_CERTIFICATE_BASE64`
