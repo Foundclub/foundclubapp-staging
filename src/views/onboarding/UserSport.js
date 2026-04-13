@@ -107,6 +107,13 @@ function UserSport({ navigation }) {
     }
   }, [userData?.preferredSport]);
 
+  const filteredActivities = useMemo(() => {
+    if (!activities) return [];
+    if (!searchQuery.trim()) return activities;
+    const query = searchQuery.toLowerCase().trim();
+    return activities.filter((activity) => activity.name?.toLowerCase().includes(query));
+  }, [activities, searchQuery]);
+
   if (userDataLoading) {
     return (
       <OnboardingStateView
@@ -149,14 +156,6 @@ function UserSport({ navigation }) {
     );
   }
 
-  // Filter activities based on search query
-  const filteredActivities = useMemo(() => {
-    if (!activities) return [];
-    if (!searchQuery.trim()) return activities;
-    const query = searchQuery.toLowerCase().trim();
-    return activities.filter((activity) => activity.name?.toLowerCase().includes(query));
-  }, [activities, searchQuery]);
-
   const handleNext = () => {
     if (selectedSport && userData) {
       updateUserMutation.mutate({ preferredSport: selectedSport.trim() });
@@ -183,7 +182,6 @@ function UserSport({ navigation }) {
   return (
     <FormScreenContainer
       bgImage="bg2"
-      contentWidth="readable"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
         { marginBottom: insets.bottom },
@@ -191,6 +189,7 @@ function UserSport({ navigation }) {
         Alignments.column,
         Alignments.fill,
       ]}
+      contentWidth="readable"
     >
       <View style={[Alignments.fill, Spaces.gap[16]]}>
         <View style={[Spaces.gap[16]]}>

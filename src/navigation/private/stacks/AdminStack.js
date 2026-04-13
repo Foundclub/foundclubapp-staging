@@ -3,6 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import AdminClaimDetail from '@/views/admin/AdminClaimDetail';
 import AdminClaimList from '@/views/admin/AdminClaimList';
 import AdminClubDetail from '@/views/admin/AdminClubDetail';
+import AdminClubForm from '@/views/admin/AdminClubForm';
 import AdminClubList from '@/views/admin/AdminClubList';
 import AdminClubOnboardingList from '@/views/admin/AdminClubOnboardingList';
 import AdminDashboard from '@/views/admin/AdminDashboard';
@@ -131,6 +132,14 @@ function AdminStack() {
         options={{
           ...commonOptions,
           headerTitle: 'Détail Club',
+        }}
+      />
+      <Stack.Screen
+        component={AdminClubForm}
+        name={RouteNames.AdminClubForm}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Edition Club',
         }}
       />
       <Stack.Screen

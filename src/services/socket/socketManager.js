@@ -43,7 +43,7 @@ const attachInternalListeners = (socket) => {
   });
 
   socket.on('connect_error', (error) => {
-    socketLogger.error('Connection error', { message: error?.message });
+    socketLogger.warn('Connection error', { message: error?.message });
     notifyConnectionSubscribers(false);
   });
 };
@@ -101,7 +101,7 @@ export const connectSharedSocket = (token) => {
     reconnectionDelayMax: 10000,
     secure: false,
     timeout: 20000,
-    transports: ['websocket'],
+    transports: ['websocket', 'polling'],
   });
   sharedToken = token;
   attachInternalListeners(sharedSocket);

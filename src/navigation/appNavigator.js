@@ -48,10 +48,14 @@ function AppNavigator({ navigationIntegration }) {
       'foundclub://',
     ],
   };
+  const navigationContainerKey = [
+    auth?.token || 'no-token',
+    isAddingAccount ? 'add-account' : 'main',
+  ].join('-');
 
   return (
     <NavigationContainer
-      key={auth?.token || 'no-token'}
+      key={navigationContainerKey}
       linking={linking}
       onReady={() => {
         navigationIntegration.registerNavigationContainer(navigationRef);

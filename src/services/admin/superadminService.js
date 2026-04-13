@@ -33,9 +33,10 @@ export const listSuperadminEntries = async (uid, payload = {}) => {
 /**
  * @param {string} uid
  * @param {string} documentId
+ * @param {Record<string, any>} [params]
  */
-export const getSuperadminEntry = async (uid, documentId) => {
-  const response = await client.get(`/superadmin/content/${encodeUid(uid)}/${encodeDocumentId(documentId)}`);
+export const getSuperadminEntry = async (uid, documentId, params = {}) => {
+  const response = await client.get(`/superadmin/content/${encodeUid(uid)}/${encodeDocumentId(documentId)}`, { params });
   return unwrap(response);
 };
 

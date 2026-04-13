@@ -122,6 +122,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AdminUserDetail]: '/admin/users/:userId',
   [RouteNames.AdminClubList]: '/admin/clubs',
   [RouteNames.AdminClubDetail]: '/admin/clubs/:clubId',
+  [RouteNames.AdminClubForm]: '/admin/clubs/:clubId?/edit',
   [RouteNames.AdminLeagueDisputes]: '/admin/league/disputes',
   [RouteNames.FeaturedRequestsList]: '/admin/featured-requests',
   [RouteNames.SuperAdminContentExplorer]: '/admin/content',

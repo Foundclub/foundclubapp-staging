@@ -51,6 +51,9 @@ export const getRoleDocumentIdByKey = (roles, roleNameOrKey) => (
 export const getAuthTokens = () => {
   const runtimeSnapshot = getAuthRuntimeSnapshot();
   if (runtimeSnapshot.ready) {
+    if (runtimeSnapshot.isAddingAccount) {
+      return null;
+    }
     return runtimeSnapshot.auth || null;
   }
 

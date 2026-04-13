@@ -12,12 +12,11 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
-import AdminStateView from '@/views/admin/components/AdminStateView';
-
 import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
 import SuperAdminEmptyState from '@/components/molecules/superAdmin/SuperAdminEmptyState';
 import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -79,6 +78,24 @@ function SuperAdminContentExplorer({ navigation }) {
     () => (Array.isArray(data?.data) ? data.data : []),
     [data?.data],
   );
+  const filtered = useMemo(() => {
+    const sorted = [...contentTypes].sort(sortByDisplayName);
+    if (!normalizedQuery) {
+      return sorted;
+    }
+
+    return sorted.filter((item) => {
+      const haystack = [
+        item?.displayName,
+        item?.uid,
+        item?.kind,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [contentTypes, normalizedQuery]);
 
   if (isLoading && !contentTypes.length) {
     return (
@@ -100,25 +117,6 @@ function SuperAdminContentExplorer({ navigation }) {
       />
     );
   }
-
-  const filtered = useMemo(() => {
-    const sorted = [...contentTypes].sort(sortByDisplayName);
-    if (!normalizedQuery) {
-      return sorted;
-    }
-
-    return sorted.filter((item) => {
-      const haystack = [
-        item?.displayName,
-        item?.uid,
-        item?.kind,
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(normalizedQuery);
-    });
-  }, [contentTypes, normalizedQuery]);
 
   return (
     <ScreenContainer bgImage="bg2">

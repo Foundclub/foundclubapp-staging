@@ -52,6 +52,19 @@ describe('authUseCases', () => {
       expect(getAuthTokens()).toEqual(runtimeAuth);
     });
 
+    it('returns null during add-account flow even if a session is kept in memory', () => {
+      const runtimeAuth = { token: 'runtime-token' };
+      syncAuthRuntimeState({
+        activeSessionDocumentId: 'user-doc',
+        auth: runtimeAuth,
+        authSessions: [runtimeAuth],
+        isAddingAccount: true,
+      });
+      storage.getString.mockReturnValue(JSON.stringify({ token: 'storage-token' }));
+
+      expect(getAuthTokens()).toBeNull();
+    });
+
     it('returns null when auth data is invalid JSON', () => {
       storage.getString.mockReturnValue('invalid-json');
       expect(getAuthTokens()).toBeNull();

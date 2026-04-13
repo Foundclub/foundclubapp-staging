@@ -4,6 +4,7 @@ export const RouteNames = /** @type {const} */ ({
   AdminClaimDetail: 'AdminClaimDetail',
   AdminClaimList: 'AdminClaimList',
   AdminClubDetail: 'AdminClubDetail',
+  AdminClubForm: 'AdminClubForm',
   AdminClubList: 'AdminClubList',
   AdminClubOnboardingList: 'AdminClubOnboardingList',
   AdminDashboard: 'AdminDashboard',

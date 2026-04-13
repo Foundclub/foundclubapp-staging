@@ -130,13 +130,18 @@ const useAuth = () => {
   const addAccount = useCallback(async () => {
     authLogger.debug('Preparing add-account flow');
     setConfirm(undefined);
-    // Sign out from Firebase SDK to ensure a clean slate for the new account
-    // This does NOT remove the session from our app state (authSessions) because we don't trigger the reducer here
-    await logout().catch((e) => authLogger.warn('Logout failed before add-account flow', e?.message || 'Unknown error'));
-
-    queryClient.clear();
     appDispatch({
       type: 'PREPARE_ADD_ACCOUNT',
+    });
+    queryClient.clear();
+
+    // Sign out from Firebase SDK to ensure a clean slate for the new account
+    // This does NOT remove the saved app session from authSessions.
+    await logout().catch((error) => {
+      authLogger.warn(
+        'Logout failed before add-account flow',
+        error?.message || 'Unknown error',
+      );
     });
   }, [appDispatch, queryClient]);
 

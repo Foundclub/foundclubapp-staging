@@ -30,6 +30,7 @@ function PublicNavigator() {
     <Stack.Navigator
       id={undefined}
       initialRouteName={isAddingAccount ? RouteNames.PublicAuthStack : RouteNames.HomeTab}
+      key={isAddingAccount ? 'public-add-account' : 'public-main'}
       screenOptions={commonOptions}
     >
       <Stack.Screen

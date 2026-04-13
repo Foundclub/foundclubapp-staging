@@ -83,45 +83,35 @@ const toEntity = (value) => {
 };
 
 const pickDocumentId = (...values) => {
-  for (const value of values) {
-    const candidate = typeof value === 'object' ? value?.documentId || value?.id : value;
-    if (candidate !== undefined && candidate !== null && String(candidate).trim()) {
-      return String(candidate).trim();
-    }
-  }
-  return null;
+  const candidate = values
+    .map((value) => (typeof value === 'object' ? value?.documentId || value?.id : value))
+    .find((value) => value !== undefined && value !== null && String(value).trim());
+
+  return candidate !== undefined && candidate !== null ? String(candidate).trim() : null;
 };
 
-const pickFirstText = (...values) => {
-  for (const value of values) {
-    if (value === undefined || value === null) continue;
-    const normalized = String(value).trim();
-    if (normalized) return normalized;
-  }
-  return '';
+const pickFirstText = (...values) => values
+  .map((value) => (value === undefined || value === null ? '' : String(value).trim()))
+  .find(Boolean) || '';
+
+const getPersonLabel = (person) => {
+  const entity = toEntity(person);
+  if (!entity || typeof entity !== 'object') return '';
+
+  const fullname = [entity.firstname, entity.lastname].filter(Boolean).join(' ').trim();
+  if (fullname) return fullname;
+
+  return pickFirstText(entity.username, entity.email, entity.phoneNumber, entity.name);
 };
 
-const buildPersonLabel = (...people) => {
-  for (const person of people) {
-    const entity = toEntity(person);
-    if (!entity || typeof entity !== 'object') continue;
-
-    const fullname = [entity.firstname, entity.lastname].filter(Boolean).join(' ').trim();
-    if (fullname) return fullname;
-
-    const fallback = pickFirstText(entity.username, entity.email, entity.phoneNumber, entity.name);
-    if (fallback) return fallback;
-  }
-
-  return 'Utilisateur inconnu';
-};
+const buildPersonLabel = (...people) => people.map(getPersonLabel).find(Boolean) || 'Utilisateur inconnu';
 
 const normalizeReportStatus = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return 'pending';
-  if (['pending', 'en attente', 'open', 'new'].includes(normalized)) return 'pending';
-  if (['resolved', 'processed', 'closed', 'done', 'accepted'].includes(normalized)) return 'resolved';
-  if (['rejected', 'refused', 'dismissed'].includes(normalized)) return 'rejected';
+  if (['en attente', 'new', 'open', 'pending'].includes(normalized)) return 'pending';
+  if (['accepted', 'closed', 'done', 'processed', 'resolved'].includes(normalized)) return 'resolved';
+  if (['dismissed', 'refused', 'rejected'].includes(normalized)) return 'rejected';
   return normalized;
 };
 
@@ -543,7 +533,7 @@ export const getAdminClubs = async (params = {}) => {
   const filters = /** @type {any} */ ({
     filters: {},
     pagination: { page, pageSize },
-    populate: ['logo', 'sport'],
+    populate: ['logo', 'activites'],
     sort: ['createdAt:desc'],
   });
 
@@ -563,7 +553,7 @@ export const getAdminClubs = async (params = {}) => {
 export const getAdminClub = async (documentId) => {
   const response = await client.get(`/clubs/${documentId}`, {
     params: {
-      populate: ['logo', 'members', 'members.avatar', 'sport', 'sponsor', 'sponsor.logo'],
+      populate: ['logo', 'members', 'members.avatar', 'activites', 'sponsor', 'sponsor.logo'],
     },
   });
   return response.data;
