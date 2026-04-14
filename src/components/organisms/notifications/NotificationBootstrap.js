@@ -5,6 +5,8 @@ import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 
 import { navigate } from '@/navigation/navigationService';
 
+import { getNotificationRuntimeSnapshot } from '@/services/notifications/notificationRuntimeSnapshot';
+
 import {
   ENABLE_PUSH_NOTIFICATIONS,
   ENABLE_SMART_NOTIFICATIONS,
@@ -16,6 +18,7 @@ import { useSmartNotifications } from '@/context/SmartNotificationContext';
 import useNotifications from '@/hooks/useNotifications';
 
 const isNotificationsBootstrapDisabled = !ENABLE_PUSH_NOTIFICATIONS;
+const shouldExposeNotificationRuntimeSnapshot = NOTIFICATIONS_RUNTIME_CONFIG.appEnv !== 'production';
 
 /**
  *
@@ -25,6 +28,7 @@ function NotificationBootstrapDisabled() {
     console.info('[BOOT] BOOT_NOTIFICATIONS_COMPONENT_SKIPPED', {
       platform: Platform.OS,
       policy: NOTIFICATIONS_BOOTSTRAP_POLICY,
+      ...(shouldExposeNotificationRuntimeSnapshot ? { snapshot: getNotificationRuntimeSnapshot() } : {}),
     });
   }, []);
 
@@ -41,6 +45,7 @@ function NotificationBootstrapEnabled() {
     console.info('[BOOT] BOOT_NOTIFICATIONS_COMPONENT_READY', {
       platform: Platform.OS,
       runtime: NOTIFICATIONS_RUNTIME_CONFIG,
+      ...(shouldExposeNotificationRuntimeSnapshot ? { snapshot: getNotificationRuntimeSnapshot() } : {}),
     });
   }, []);
 

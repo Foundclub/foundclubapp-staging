@@ -270,7 +270,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
           )}
           showsVerticalScrollIndicator={false}
         >
-          <WithDataWrapper error={error?.message} isLoading={isLoading} wrapperStyle={[Spaces.gap[16]]}>
+          <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Spaces.gap[16]]}>
             <OnboardingWrapper
               description="Analysez les demandes et validez les evenements a la une."
               id="featured-requests-list"

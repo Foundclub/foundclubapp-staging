@@ -573,8 +573,24 @@ export default {
     title: 'Oups !',
   },
   event: {
-    sharedEvent: 'Événement partagé',
+    shareChatAccessibilityHint: 'Partager l’événement dans cette conversation',
+    shareChatCardHint: 'Partage direct FoundClub',
+    shareChatType: {
+      club: 'Club',
+      group: 'Groupe',
+      multisport: 'Omnisport',
+      team: 'Équipe',
+      whisper: 'Privé',
+    },
+    shareEyebrow: 'Diffusion',
     shareInChat: 'Partager dans une conversation',
+    shareInChatHint: 'Envoi direct dans FoundClub.',
+    sharedEvent: 'Événement partagé',
+    shareNoChatAvailable: 'Aucune conv disponible.',
+    shareNoChatAvailableHint: 'Rejoins ou crée une conversation pour partager cet événement ici.',
+    shareOutsideHint: 'SMS, mail ou application externe',
+    shareOutsideLabel: 'Lien externe',
+    shareSubtitle: 'Choisis un canal pour envoyer cette fiche rapidement.',
   },
   eventDetails: {
     actions: {

@@ -19,6 +19,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import client from '@/services/client';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
 import { createLogger } from '@/utils/logger/logger';
 
 const newConversationLogger = createLogger('new-conversation');
@@ -159,6 +160,15 @@ function NewConversation({ navigation, route }) {
   const [selectedUserIds, setSelectedUserIds] = useState(/** @type {Set<string>} */ (new Set()));
   const [selectedTeamId, setSelectedTeamId] = useState(/** @type {string | null} */ (null));
   const [isCreating, setIsCreating] = useState(false);
+  const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Veuillez reessayer plus tard.');
+
+  const resolveConversationErrorMessage = (sourceError, fallbackMessage = '') => {
+    const resolvedMessage = getErrorMessage(sourceError, 'generic');
+    if (fallbackMessage && resolvedMessage === genericErrorMessage) {
+      return fallbackMessage;
+    }
+    return resolvedMessage || fallbackMessage || genericErrorMessage;
+  };
 
   // Determine scope
   const clubId = userData?.club?.documentId;
@@ -312,7 +322,10 @@ function NewConversation({ navigation, route }) {
       }
     } catch (error) {
       newConversationLogger.error('Failed to create chat', error?.message || error);
-      const safeMessage = error?.message || t('messaging.createConversationError', 'Impossible de demarrer cette conversation.');
+      const safeMessage = resolveConversationErrorMessage(
+        error,
+        t('messaging.createConversationError', 'Impossible de demarrer cette conversation.'),
+      );
       if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
         window.alert(safeMessage);
       } else {
@@ -372,11 +385,53 @@ function NewConversation({ navigation, route }) {
     );
   };
 
-  let createButtonTitle = t('common.start', 'Démarrer la discussion');
+  let createButtonTitle = t('common.start', 'Demarrer la discussion');
   if (isAddMembersMode) {
     createButtonTitle = t('messaging.addMembersCta', `Ajouter (${selectedUserIds.size})`);
   } else if (selectedUserIds.size > 1) {
-    createButtonTitle = t('messaging.createGroup', `Créer un groupe (${selectedUserIds.size})`);
+    createButtonTitle = t('messaging.createGroup', `Creer un groupe (${selectedUserIds.size})`);
+  }
+  const headerTitle = isAddMembersMode
+    ? t('messaging.addGroupMembers', 'Ajouter des membres')
+    : t('messaging.newConversation', 'Nouvelle discussion');
+
+  let userListContent = (
+    <SectionList
+      contentContainerStyle={Spaces.paddingBottom[80]}
+      keyExtractor={(item, index) => {
+        const userId = getUserIdentifier(item);
+        return userId ? `user:${userId}` : `user:fallback:${index}`;
+      }}
+      ListEmptyComponent={(
+        <Text style={[Fonts.p2, Fonts.neutral500, Fonts.textCenter, Spaces.marginTop[32]]}>
+          {t('common.noResults', 'Aucun membre trouve')}
+        </Text>
+      )}
+      renderItem={renderItem}
+      renderSectionHeader={renderSectionHeader}
+      sections={processedSections}
+      stickySectionHeadersEnabled={false}
+    />
+  );
+
+  if (isLoading) {
+    userListContent = <Loader />;
+  } else if (usersError) {
+    userListContent = (
+      <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[16], Spaces.paddingHorizontal[24]]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
+          {resolveConversationErrorMessage(
+            usersError,
+            t('messaging.loadUsersError', 'Impossible de charger les membres pour cette conversation.'),
+          )}
+        </Text>
+        <Button
+          onPress={() => refetch()}
+          title={t('common.retry', 'Reessayer')}
+          variant="Primary"
+        />
+      </View>
+    );
   }
 
   return (
@@ -393,9 +448,7 @@ function NewConversation({ navigation, route }) {
       <View style={[Spaces.marginTop[16], Alignments.row, Alignments.alignCenter]}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
         <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginLeft[16]]}>
-          {isAddMembersMode
-            ? t('messaging.addGroupMembers', 'Ajouter des membres')
-            : t('messaging.newConversation', 'Nouvelle discussion')}
+          {headerTitle}
         </Text>
       </View>
 
@@ -467,40 +520,9 @@ function NewConversation({ navigation, route }) {
           />
         </View>
       )}
-
       {/* User List */}
       <View style={Alignments.fill}>
-        {isLoading ? (
-          <Loader />
-        ) : usersError ? (
-          <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[16], Spaces.paddingHorizontal[24]]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
-              {usersError?.message || t('messaging.loadUsersError', 'Impossible de charger les membres pour cette conversation.')}
-            </Text>
-            <Button
-              onPress={() => refetch()}
-              title={t('common.retry', 'R\u00E9essayer')}
-              variant="Primary"
-            />
-          </View>
-        ) : (
-          <SectionList
-            contentContainerStyle={Spaces.paddingBottom[80]}
-            keyExtractor={(item, index) => {
-              const userId = getUserIdentifier(item);
-              return userId ? `user:${userId}` : `user:fallback:${index}`;
-            }}
-            ListEmptyComponent={(
-              <Text style={[Fonts.p2, Fonts.neutral500, Fonts.textCenter, Spaces.marginTop[32]]}>
-                {t('common.noResults', 'Aucun membre trouvé')}
-              </Text>
-                      )}
-            renderItem={renderItem}
-            renderSectionHeader={renderSectionHeader}
-            sections={processedSections}
-            stickySectionHeadersEnabled={false}
-          />
-        )}
+        {userListContent}
       </View>
 
       {/* Create Button */}

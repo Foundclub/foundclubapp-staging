@@ -40,6 +40,8 @@ import {
   useGetAdminClubContentList,
 } from '@/services/admin/adminClubContentQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 const rightIcon = require('@/assets/icons/arrowRight.png');
 const closeIcon = require('@/assets/icons/close.png');
 const searchIcon = require('@/assets/icons/search.png');
@@ -200,7 +202,7 @@ function AdminClubList() {
       closeDangerAction();
       leaveSelectionMode();
     } catch (mutationError) {
-      Alert.alert('Action impossible', mutationError?.message || 'Une erreur est survenue.');
+      Alert.alert('Action impossible', getErrorMessage(mutationError, 'generic'));
     }
   }, [
     bulkDeleteMutation,
@@ -395,7 +397,7 @@ function AdminClubList() {
     return (
       <AdminStateView
         actionLabel="Réessayer"
-        description={error?.message || 'Impossible de charger les clubs.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger les clubs.'}
         onAction={refetch}
         title="Chargement impossible"
       />

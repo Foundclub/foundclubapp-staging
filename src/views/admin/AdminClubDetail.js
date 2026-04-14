@@ -45,6 +45,8 @@ import {
   useUpdateAdminClubRelation,
 } from '@/services/admin/adminClubContentQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 const RELATION_CONFIGS = [
   {
     field: 'activites', isMany: true, label: 'Activités', targetUid: 'api::activity.activity',
@@ -215,7 +217,7 @@ function AdminClubDetail() {
       });
       setRelationResults(Array.isArray(response?.data) ? response.data : []);
     } catch (searchError) {
-      Alert.alert('Recherche impossible', searchError?.message || 'Impossible de rechercher cette relation.');
+      Alert.alert('Recherche impossible', getErrorMessage(searchError, 'generic'));
     }
   }, [relationConfig, relationQuery, relationSearchMutation]);
 
@@ -238,7 +240,7 @@ function AdminClubDetail() {
       closeRelationModal();
       refetch();
     } catch (mutationError) {
-      Alert.alert('Relation impossible', mutationError?.message || 'Impossible de mettre à jour cette relation.');
+      Alert.alert('Relation impossible', getErrorMessage(mutationError, 'generic'));
     }
   }, [closeRelationModal, clubId, refetch, relationConfig, relationReason, updateRelationMutation]);
 
@@ -254,7 +256,7 @@ function AdminClubDetail() {
       setIsDeleteVisible(false);
       navigation.goBack();
     } catch (deleteError) {
-      Alert.alert('Suppression impossible', deleteError?.message || 'Impossible de supprimer ce club.');
+      Alert.alert('Suppression impossible', getErrorMessage(deleteError, 'generic'));
     }
   }, [clubId, deleteMutation, deleteReason, navigation]);
 
@@ -400,7 +402,7 @@ function AdminClubDetail() {
     return (
       <AdminStateView
         actionLabel="Réessayer"
-        description={error?.message || 'Impossible de charger ce club.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger ce club.'}
         onAction={refetch}
         title="Chargement impossible"
       />

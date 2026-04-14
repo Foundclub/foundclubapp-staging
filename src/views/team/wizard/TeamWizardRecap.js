@@ -77,6 +77,7 @@ function TeamWizardRecap({ navigation }) {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
+      await queryClient.invalidateQueries({ queryKey: ['get-me'] });
       const targetClubId = selectedOverview.clubId;
       dispatch({ type: 'RESET' });
       const rootRoute = isGold ? RouteNames.LeagueHomeTab : RouteNames.HomeTab;

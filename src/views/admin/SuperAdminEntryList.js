@@ -37,6 +37,8 @@ import {
   useGetSuperadminEntries,
 } from '@/services/admin/superadminQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 let clipboardModule;
 
 const getClipboardModule = () => {
@@ -256,7 +258,7 @@ function SuperAdminEntryList({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.alerts.deleteFailedTitle', 'Suppression impossible'),
-        error?.message || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+        getErrorMessage(error, 'generic') || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
       );
     }
   };
@@ -296,7 +298,7 @@ function SuperAdminEntryList({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.alerts.bulkFailedTitle', 'Action de masse impossible'),
-        error?.message || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+        getErrorMessage(error, 'generic') || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
       );
     }
   };
@@ -337,7 +339,7 @@ function SuperAdminEntryList({ navigation, route }) {
     return (
       <AdminStateView
         actionLabel="R\u00E9essayer"
-        description={metadataQuery.error?.message || entriesError?.message || 'Impossible de charger cette liste superadmin.'}
+        description={getErrorMessage(metadataQuery.error || entriesError, 'generic') || 'Impossible de charger cette liste superadmin.'}
         onAction={() => {
           metadataQuery.refetch();
           refetch();

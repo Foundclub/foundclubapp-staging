@@ -27,6 +27,7 @@ import {
   usePublishInAppPopupCampaign,
 } from '@/services/inAppPopupCampaign/inAppPopupCampaignQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 const sortActions = (actions = []) => [...actions].sort((left, right) => {
@@ -84,7 +85,7 @@ function AdminPopupCampaignDetail() {
     return (
       <AdminStateView
         actionLabel="Réessayer"
-        description={campaignQuery.error?.message || statsQuery.error?.message || 'Impossible de charger cette campagne.'}
+        description={getErrorMessage(campaignQuery.error || statsQuery.error, 'generic') || 'Impossible de charger cette campagne.'}
         onAction={() => {
           campaignQuery.refetch();
           statsQuery.refetch();
@@ -100,7 +101,7 @@ function AdminPopupCampaignDetail() {
       campaignQuery.refetch();
       statsQuery.refetch();
     } catch (error) {
-      Alert.alert('Publication impossible', error?.message || 'Une erreur est survenue.');
+      Alert.alert('Publication impossible', getErrorMessage(error, 'generic'));
     }
   };
 
@@ -110,7 +111,7 @@ function AdminPopupCampaignDetail() {
       campaignQuery.refetch();
       statsQuery.refetch();
     } catch (error) {
-      Alert.alert('Pause impossible', error?.message || 'Une erreur est survenue.');
+      Alert.alert('Pause impossible', getErrorMessage(error, 'generic'));
     }
   };
 
@@ -120,7 +121,7 @@ function AdminPopupCampaignDetail() {
       campaignQuery.refetch();
       statsQuery.refetch();
     } catch (error) {
-      Alert.alert('Archivage impossible', error?.message || 'Une erreur est survenue.');
+      Alert.alert('Archivage impossible', getErrorMessage(error, 'generic'));
     }
   };
 
@@ -132,7 +133,7 @@ function AdminPopupCampaignDetail() {
         navigation.navigate(RouteNames.AdminPopupCampaignForm, { campaignId: nextDocumentId });
       }
     } catch (error) {
-      Alert.alert('Duplication impossible', error?.message || 'Une erreur est survenue.');
+      Alert.alert('Duplication impossible', getErrorMessage(error, 'generic'));
     }
   };
 

@@ -52,10 +52,16 @@ import {
  * @param {object} props
  * @param {string} props.cmId
  * @param {import('@react-navigation/native').NavigationProp<any>} props.navigation
+ * @param {boolean} [props.insideScreenContainer]
  * @param {boolean} [props.showTopHeader]
  * @returns {import('react').ReactElement}
  */
-function CMPlanningContent({ cmId, navigation, showTopHeader = false }) {
+function CMPlanningContent({
+  cmId,
+  insideScreenContainer = false,
+  navigation,
+  showTopHeader = false,
+}) {
   const {
     Alignments,
     ApplicationStyle,
@@ -72,6 +78,7 @@ function CMPlanningContent({ cmId, navigation, showTopHeader = false }) {
   const [listStartDate, setListStartDate] = useState(getPlanningDefaultDate());
   const [listAnchorY, setListAnchorY] = useState(0);
   const scrollRef = useRef(null);
+  const pagePaddingStyle = insideScreenContainer ? null : Spaces.paddingHorizontal[24];
 
   const planningRange = useMemo(
     () => getPlanningRange(currentDate, viewMode),
@@ -229,7 +236,7 @@ function CMPlanningContent({ cmId, navigation, showTopHeader = false }) {
       ref={scrollRef}
       showsVerticalScrollIndicator={false}
     >
-      <View style={[Spaces.paddingHorizontal[16], Spaces.gap[12]]}>
+      <View style={[pagePaddingStyle, Spaces.gap[16]]}>
         {showTopHeader ? (
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.marginBottom[4]]}>
             <LeagueHeaderSwitch />
@@ -345,9 +352,9 @@ function CMPlanningContent({ cmId, navigation, showTopHeader = false }) {
       </View>
 
       <WithDataWrapper
-        error={error?.message}
+        error={error}
         isLoading={isLoading}
-        wrapperStyle={[Spaces.paddingHorizontal[16], Spaces.gap[24]]}
+        wrapperStyle={[pagePaddingStyle, Spaces.gap[24]]}
       >
         <View style={[Spaces.gap[24]]}>
           {planningView}

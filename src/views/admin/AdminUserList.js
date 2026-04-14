@@ -15,6 +15,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetAdminUsers } from '@/services/admin/adminQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 /**
  *
  */
@@ -55,7 +57,7 @@ function AdminUserList() {
     return (
       <AdminStateView
         actionLabel="R\u00E9essayer"
-        description={error?.message || 'Impossible de charger les utilisateurs.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger les utilisateurs.'}
         onAction={refetch}
         title="Chargement impossible"
       />

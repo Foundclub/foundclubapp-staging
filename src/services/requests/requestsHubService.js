@@ -17,6 +17,8 @@ const toUniqueIds = (values = []) => (
   [...new Set((values || []).map((value) => String(value || '').trim()).filter(Boolean))]
 );
 
+const toBoolean = (value) => value === true;
+
 const toErrorMessage = (error) => {
   if (!error) return 'Erreur inconnue';
   if (typeof error === 'string') return error;
@@ -24,8 +26,16 @@ const toErrorMessage = (error) => {
   return 'Erreur inconnue';
 };
 
+const toErrorStatus = (error) => (
+  error?.status
+  || error?.response?.status
+  || error?.error?.status
+  || null
+);
+
 /**
  * @typedef {object} RequestsHubContext
+ * @property {boolean} canManageInstallationRequests
  * @property {string[]} teamIds
  * @property {string} clubId
  * @property {string} cmId
@@ -36,6 +46,7 @@ const toErrorMessage = (error) => {
  * @returns {RequestsHubContext}
  */
 export const normalizeRequestsHubContext = (context = {}) => ({
+  canManageInstallationRequests: toBoolean(context?.canManageInstallationRequests),
   clubId: String(context?.clubId || '').trim(),
   cmId: String(context?.cmId || '').trim(),
   teamIds: toUniqueIds(context?.teamIds || []),
@@ -180,7 +191,7 @@ export const getRequestsHubData = async (rawContext = {}) => {
       key: 'featured',
     },
     {
-      enabled: Boolean(context.clubId),
+      enabled: Boolean(context.clubId) && context.canManageInstallationRequests,
       fetcher: () => fetchFacilityRequests(context.clubId),
       key: 'installation',
     },
@@ -195,9 +206,13 @@ export const getRequestsHubData = async (rawContext = {}) => {
   settled.forEach((result, index) => {
     const source = enabledSources[index];
     if (result.status === 'rejected') {
+      if (source.key === 'installation' && toErrorStatus(result.reason) === 403) {
+        return;
+      }
       errors.push({
         message: toErrorMessage(result.reason),
         source: source.key,
+        status: toErrorStatus(result.reason),
       });
       return;
     }

@@ -208,7 +208,10 @@ const getPendingFacilityOverrideRequests = async (clubId) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching facility override requests:', error);
+    const status = error?.status || error?.response?.status || error?.error?.status || null;
+    if (status !== 403) {
+      console.error('Error fetching facility override requests:', error);
+    }
     throw error;
   }
 };

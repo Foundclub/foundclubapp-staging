@@ -108,4 +108,28 @@ describe('requestsHubService', () => {
       total: 0,
     });
   });
+
+  test('does not fetch installation requests when the user cannot manage them', async () => {
+    await getRequestsHubData({
+      canManageInstallationRequests: false,
+      clubId: 'club-1',
+    });
+
+    expect(getPendingFacilityOverrideRequests).not.toHaveBeenCalled();
+  });
+
+  test('ignores forbidden installation source errors without surfacing a partial error', async () => {
+    getPendingFacilityOverrideRequests.mockRejectedValue({
+      message: 'Only club managers can process facility override requests',
+      status: 403,
+    });
+
+    const result = await getRequestsHubData({
+      canManageInstallationRequests: true,
+      clubId: 'club-1',
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.items).toEqual([]);
+  });
 });

@@ -28,6 +28,7 @@ import {
   useUpdateInAppPopupCampaign,
 } from '@/services/inAppPopupCampaign/inAppPopupCampaignQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 const TEMPLATE_OPTIONS = ['standard_modal', 'hero_image_modal', 'critical_modal'];
@@ -212,7 +213,7 @@ function AdminPopupCampaignForm() {
     return (
       <AdminStateView
         actionLabel="Réessayer"
-        description={campaignQuery.error?.message || 'Impossible de charger ce brouillon.'}
+        description={getErrorMessage(campaignQuery.error, 'generic') || 'Impossible de charger ce brouillon.'}
         onAction={() => campaignQuery.refetch()}
         title="Chargement impossible"
       />
@@ -290,7 +291,7 @@ function AdminPopupCampaignForm() {
 
       setField('image', uploadedFile);
     } catch (error) {
-      Alert.alert('Upload impossible', error?.message || 'Une erreur est survenue.');
+      Alert.alert('Upload impossible', getErrorMessage(error, 'generic'));
     }
   };
 
@@ -315,7 +316,7 @@ function AdminPopupCampaignForm() {
         navigation.replace(RouteNames.AdminPopupCampaignDetail, { campaignId: nextDocumentId });
       }
     } catch (error) {
-      Alert.alert('Enregistrement impossible', error?.message || 'Une erreur est survenue.');
+      Alert.alert('Enregistrement impossible', getErrorMessage(error, 'generic'));
     }
   };
 

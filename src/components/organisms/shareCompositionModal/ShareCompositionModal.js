@@ -226,7 +226,7 @@ function ShareCompositionModal({
         </View>
 
         {/* List */}
-        <WithDataWrapper error={error?.message} isLoading={isLoading} wrapperStyle={[Alignments.fill]}>
+        <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill]}>
           <FlashList
             contentContainerStyle={[Spaces.paddingBottom[24]]}
             data={allChats}

@@ -62,6 +62,7 @@ import {
 } from '@/services/team/teamService';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
+import { getErrorMessage as getDisplayErrorMessage } from '@/utils/errors/displayError';
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
@@ -150,6 +151,7 @@ function TeamDetails({ navigation, route }) {
   const [calendarDisplayMode, setCalendarDisplayMode] = useState(/** @type {'upcoming' | 'results' | 'all'} */ ('upcoming'));
   const [isTeamActionsPanelOpen, setIsTeamActionsPanelOpen] = useState(false);
   const [trainerSearch, setTrainerSearch] = useState('');
+  const autoOpenedTeamActionsKeyRef = useRef(null);
 
   // FFBB Modal states
   const [showFFBBUrlModal, setShowFFBBUrlModal] = useState(false);
@@ -174,41 +176,20 @@ function TeamDetails({ navigation, route }) {
   const [teamClubLogoRatio, setTeamClubLogoRatio] = useState(1);
   const createTrainerOpenTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
   const assignmentPrefillHandledRef = useRef(false);
+  const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Veuillez reessayer plus tard.');
 
   /**
    * @param {unknown} error
    * @param {string} [fallback]
    * @returns {string}
    */
-  const getErrorMessage = (sourceError, fallback = 'Erreur') => {
-    if (typeof sourceError === 'string') return sourceError;
-
-    if (sourceError && typeof sourceError === 'object') {
-      const typedError = /** @type {any} */ (sourceError);
-      const detailError = typedError?.details?.error;
-      if (typeof detailError === 'string' && detailError.trim()) {
-        return detailError.trim();
-      }
-
-      const responseDetailError = typedError?.response?.data?.details?.error
-        || typedError?.response?.data?.error?.details?.error;
-      if (typeof responseDetailError === 'string' && responseDetailError.trim()) {
-        return responseDetailError.trim();
-      }
-
-      const responseMessage = typedError?.response?.data?.message
-        || typedError?.response?.data?.error?.message;
-      if (typeof responseMessage === 'string' && responseMessage.trim()) {
-        return responseMessage.trim();
-      }
-
-      if (typeof typedError.message === 'string' && typedError.message.trim()) {
-        return typedError.message.trim();
-      }
+  const getErrorMessage = useCallback((sourceError, fallback = 'Erreur') => {
+    const resolvedMessage = getDisplayErrorMessage(sourceError, 'generic');
+    if (fallback && resolvedMessage === genericErrorMessage) {
+      return fallback;
     }
-
-    return fallback;
-  };
+    return resolvedMessage || fallback || genericErrorMessage;
+  }, [genericErrorMessage]);
 
   /**
    * @param {unknown} sourceError
@@ -1463,10 +1444,13 @@ function TeamDetails({ navigation, route }) {
     } catch (contactError) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        contactError?.message || t('teamDetails.actions.contactTrainersError', "Impossible d'ouvrir la conversation pour le moment."),
+        getErrorMessage(
+          contactError,
+          t('teamDetails.actions.contactTrainersError', "Impossible d'ouvrir la conversation pour le moment."),
+        ),
       );
     }
-  }, [navigation, startWhisperChat, t, trainerContactIds]);
+  }, [getErrorMessage, navigation, startWhisperChat, t, trainerContactIds]);
 
   const handleLeaveTeam = useCallback(() => {
     if (teamId && currentUser?.documentId) {
@@ -1574,6 +1558,16 @@ function TeamDetails({ navigation, route }) {
       setIsTeamActionsPanelOpen(false);
     }
   }, [hasTeamActionsPanel]);
+
+  useEffect(() => {
+    if (!showJoinAction || !teamId) return;
+
+    const autoOpenKey = `${teamId}:${canCoachRequestJoinViewedTeam ? 'coach' : 'player'}`;
+    if (autoOpenedTeamActionsKeyRef.current === autoOpenKey) return;
+
+    autoOpenedTeamActionsKeyRef.current = autoOpenKey;
+    setIsTeamActionsPanelOpen(true);
+  }, [canCoachRequestJoinViewedTeam, showJoinAction, teamId]);
 
   const handleDeleteTrainer = (/** @type {string} */ trainerId) => {
     Alert.alert(
@@ -2201,7 +2195,7 @@ function TeamDetails({ navigation, route }) {
             Impossible de charger l'équipe
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {error?.message || 'Reessayez dans quelques instants.'}
+            {getErrorMessage(error, 'Reessayez dans quelques instants.')}
           </Text>
           <Button onPress={() => refetch()} title="R\u00E9essayer" variant="Primary" />
           <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux équipes" variant="Secondary" />
@@ -3726,6 +3720,21 @@ function TeamDetails({ navigation, route }) {
 
             {isTeamActionsPanelOpen ? (
               <View style={[Spaces.gap[12], Spaces.paddingBottom[16]]}>
+                {showJoinAction ? (
+                  <Button
+                    disabled={!!pendingRequest}
+                    onPress={pendingRequest ? undefined : handleJoinTeam}
+                    title={
+                      pendingRequest
+                        ? t('teamDetails.actions.requestPending', 'Demande en attente')
+                        : canCoachRequestJoinViewedTeam
+                          ? t('teamDetails.actions.joinRequest', "Demander à rejoindre l'équipe")
+                          : t('teamDetails.actions.join')
+                    }
+                    variant={pendingRequest ? 'Secondary' : 'Primary'}
+                  />
+                ) : null}
+
                 {(showEditAction || showTeamChatAction) ? (
                   <View style={[Alignments.row, Spaces.gap[16]]}>
                     {showEditAction ? (
@@ -3782,20 +3791,6 @@ function TeamDetails({ navigation, route }) {
                   />
                 ) : null}
 
-                {showJoinAction ? (
-                  <Button
-                    disabled={!!pendingRequest}
-                    onPress={pendingRequest ? undefined : handleJoinTeam}
-                    title={
-                      pendingRequest
-                        ? t('teamDetails.actions.requestPending', 'Demande en attente')
-                        : canCoachRequestJoinViewedTeam
-                          ? t('teamDetails.actions.joinRequest', "Demander à rejoindre l'équipe")
-                          : t('teamDetails.actions.join')
-                    }
-                    variant={pendingRequest ? 'Secondary' : 'Primary'}
-                  />
-                ) : null}
               </View>
             ) : null}
           </View>

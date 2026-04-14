@@ -32,6 +32,8 @@ import {
   useGetSuperadminEntry,
 } from '@/services/admin/superadminQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 const getBadgeColors = (tone, colors) => {
   if (tone === 'success') {
     return {
@@ -175,7 +177,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
     return (
       <AdminStateView
         actionLabel="R\u00E9essayer"
-        description={error?.message || metadataQuery.error?.message || 'Impossible de charger cette entree.'}
+        description={getErrorMessage(error || metadataQuery.error, 'generic') || 'Impossible de charger cette entree.'}
         onAction={() => {
           metadataQuery.refetch();
           refetch();
@@ -223,7 +225,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.alerts.deleteFailedTitle', 'Suppression impossible'),
-        error?.message || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+        getErrorMessage(error, 'generic') || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
       );
     }
   };
@@ -253,7 +255,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('common.errors.error', 'Erreur'),
-        error?.message || t('messaging.errors.failedToCreateConversation', 'Impossible de créer la conversation.'),
+        getErrorMessage(error, 'generic') || t('messaging.errors.failedToCreateConversation', 'Impossible de creer la conversation.'),
       );
     } finally {
       setIsContacting(false);

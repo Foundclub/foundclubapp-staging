@@ -1,3 +1,4 @@
+/* eslint-disable perfectionist/sort-objects */
 import { RouteNames } from './routeNames';
 
 const WEB_ROUTE_PATTERNS = {
@@ -124,6 +125,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AdminClubDetail]: '/admin/clubs/:clubId',
   [RouteNames.AdminClubForm]: '/admin/clubs/:clubId?/edit',
   [RouteNames.AdminLeagueDisputes]: '/admin/league/disputes',
+  [RouteNames.AdminNotificationsHealth]: '/admin/notifications-health',
   [RouteNames.FeaturedRequestsList]: '/admin/featured-requests',
   [RouteNames.SuperAdminContentExplorer]: '/admin/content',
   [RouteNames.SuperAdminEntryList]: '/admin/content/:uid',

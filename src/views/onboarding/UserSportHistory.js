@@ -23,7 +23,7 @@ import { useGetMe } from '@/services/auth/authQueries';
 function UserSportHistory({ navigation }) {
   const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const {

@@ -157,7 +157,7 @@ function AdminRevenue() {
       </View>
 
       <WithDataWrapper
-        error={error?.message}
+        error={error}
         isLoading={isLoading && !isFetchingNextPage}
         wrapperStyle={[Alignments.fill]}
       >

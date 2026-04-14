@@ -30,6 +30,8 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 /**
  * Main messaging screen component
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
@@ -235,9 +237,18 @@ function Messaging({ navigation, route }) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingChatAction, setPendingChatAction] = useState({ chatId: '', type: '' });
+  const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Veuillez reessayer plus tard.');
 
-  const showMessagingAlert = (message) => {
-    const safeMessage = String(message || '').trim();
+  const resolveMessagingErrorMessage = (sourceError, fallbackMessage = '') => {
+    const resolvedMessage = getErrorMessage(sourceError, 'generic');
+    if (fallbackMessage && resolvedMessage === genericErrorMessage) {
+      return fallbackMessage;
+    }
+    return resolvedMessage || fallbackMessage || genericErrorMessage;
+  };
+
+  const showMessagingAlert = (message, fallbackMessage = '') => {
+    const safeMessage = String(resolveMessagingErrorMessage(message, fallbackMessage) || '').trim();
     if (!safeMessage) return;
 
     if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
@@ -301,11 +312,11 @@ function Messaging({ navigation, route }) {
         onPress={() => {
           if (isPinned) {
             unpinChatAsync(chat.documentId).catch((actionError) => {
-              showMessagingAlert(actionError?.message || t('messaging.unpinError', 'Impossible de désépingler cette conversation.'));
+              showMessagingAlert(actionError, t('messaging.unpinError', 'Impossible de désépingler cette conversation.'));
             });
           } else {
             pinChatAsync(chat.documentId).catch((actionError) => {
-              showMessagingAlert(actionError?.message || t('messaging.pinError', "Impossible d'épingler cette conversation."));
+              showMessagingAlert(actionError, t('messaging.pinError', "Impossible d'épingler cette conversation."));
             });
           }
         }}
@@ -328,7 +339,7 @@ function Messaging({ navigation, route }) {
   const renderRightActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => (
     <TouchableOpacity
       onPress={() => archiveChatAsync(chat.documentId).catch((actionError) => {
-        showMessagingAlert(actionError?.message || t('messaging.archiveError', "Impossible d'archiver cette conversation."));
+        showMessagingAlert(actionError, t('messaging.archiveError', "Impossible d'archiver cette conversation."));
       })}
       style={{
         alignItems: 'center',
@@ -359,9 +370,12 @@ function Messaging({ navigation, route }) {
         await pinChatAsync(chatId);
       }
     } catch (actionError) {
-      showMessagingAlert(actionError?.message || (isPinned
-        ? t('messaging.unpinError', 'Impossible de désépingler cette conversation.')
-        : t('messaging.pinError', "Impossible d'épingler cette conversation.")));
+      showMessagingAlert(
+        actionError,
+        isPinned
+          ? t('messaging.unpinError', 'Impossible de desepingler cette conversation.')
+          : t('messaging.pinError', "Impossible d'epingler cette conversation."),
+      );
     } finally {
       setPendingChatAction({ chatId: '', type: '' });
     }
@@ -376,7 +390,7 @@ function Messaging({ navigation, route }) {
     try {
       await archiveChatAsync(chatId);
     } catch (actionError) {
-      showMessagingAlert(actionError?.message || t('messaging.archiveError', "Impossible d'archiver cette conversation."));
+      showMessagingAlert(actionError, t('messaging.archiveError', "Impossible d'archiver cette conversation."));
     } finally {
       setPendingChatAction({ chatId: '', type: '' });
     }
@@ -458,7 +472,7 @@ function Messaging({ navigation, route }) {
     ]}
     >
       <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
-        {error?.message || t('messaging.loadError', 'Impossible de charger les conversations.')}
+        {resolveMessagingErrorMessage(error, t('messaging.loadError', 'Impossible de charger les conversations.'))}
       </Text>
       <TouchableOpacity
         disabled={isLoading}
@@ -789,5 +803,4 @@ function Messaging({ navigation, route }) {
     </TutorialFlowBoundary>
   );
 }
-
 export default Messaging;

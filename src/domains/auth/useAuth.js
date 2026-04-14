@@ -5,7 +5,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Linking, Platform,
+  Linking, Platform,
 } from 'react-native';
 
 import { storage, useAppContext } from '@/store/appContext';
@@ -18,6 +18,7 @@ import {
   getMe, login, logout, signInWithPhoneNumber,
 } from '@/services/auth/authService';
 
+import { displayErrorAlert } from '@/utils/errors/displayError';
 import { createLogger } from '@/utils/logger/logger';
 import {
   buildInstallLandingUrl,
@@ -56,8 +57,7 @@ const useAuth = () => {
   const otpMutation = useMutation({
     mutationFn: signInWithPhoneNumber,
     onError: (error) => {
-      const message = error?.message || error?.toString() || 'Unknown error';
-      Alert.alert(t('APIerrors.OTP_ERROR'), message);
+      displayErrorAlert(error, 'OTP_ERROR');
     },
     onSuccess: (data) => {
       setConfirm(data);
@@ -67,8 +67,7 @@ const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: login,
     onError: (error) => {
-      const message = error?.message || error?.toString() || 'Unknown error';
-      Alert.alert(t('APIerrors.OTP_ERROR'), message);
+      displayErrorAlert(error, 'OTP_ERROR');
     },
     onSuccess: async (data) => {
       authLogger.debug('Login mutation succeeded', { userDocumentId: data?.user?.documentId });
@@ -306,6 +305,17 @@ const useAuth = () => {
     const organizerDocumentId = String(event?.organizer?.documentId || '').trim();
     if (isTournament && organizerDocumentId) {
       return organizerDocumentId === String(userData?.documentId || '').trim();
+    }
+
+    const userClubId = String(userData?.club?.documentId || '').trim();
+    const organizerClubId = String(event?.team?.club?.documentId || '').trim();
+    if (
+      roleName === USER_ROLES.president
+      && userClubId
+      && organizerClubId
+      && organizerClubId === userClubId
+    ) {
+      return true;
     }
 
     const trainedTeamIds = new Set((userData?.trainedTeams || []).map(({ documentId }) => documentId));

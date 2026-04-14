@@ -19,6 +19,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetAdminReports } from '@/services/admin/adminQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 const SOURCE_FILTERS = [
   { label: 'Tous', value: 'all' },
   { label: 'Evenements', value: 'event' },
@@ -101,7 +103,7 @@ function AdminReports() {
     return (
       <AdminStateView
         actionLabel="R\u00E9essayer"
-        description={error?.message || 'Impossible de charger les signalements admin.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger les signalements admin.'}
         onAction={refetch}
         title="Chargement impossible"
       />

@@ -24,6 +24,8 @@ import {
   useRefuseClubClaim,
 } from '@/services/admin/adminQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 /**
  *
  */
@@ -61,7 +63,7 @@ function AdminClaimList() {
     return (
       <AdminStateView
         actionLabel="R\u00E9essayer"
-        description={error?.message || 'Impossible de charger les demandes admin.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger les demandes admin.'}
         onAction={refetch}
         title="Chargement impossible"
       />

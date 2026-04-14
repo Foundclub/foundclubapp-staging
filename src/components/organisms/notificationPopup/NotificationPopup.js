@@ -15,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
 import {
   formatNotificationRelativeTime,
@@ -102,8 +103,7 @@ function NotificationPopup({
       try {
         await onMarkAsRead(notificationId);
       } catch (error) {
-        const typedError = /** @type {any} */ (error);
-        showFeedback(typedError?.response?.data?.error?.message || 'Impossible de marquer comme lu.');
+        showFeedback(getErrorMessage(error, 'generic') || 'Impossible de marquer comme lu.');
       }
     }
 
@@ -140,8 +140,7 @@ function NotificationPopup({
     try {
       await onMarkAllAsRead();
     } catch (error) {
-      const typedError = /** @type {any} */ (error);
-      showFeedback(typedError?.response?.data?.error?.message || 'Impossible de marquer toutes les notifications.');
+      showFeedback(getErrorMessage(error, 'generic') || 'Impossible de marquer toutes les notifications.');
     }
   };
 

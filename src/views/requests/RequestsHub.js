@@ -76,6 +76,28 @@ const getSourceErrorLabel = (source, t) => {
   }
 };
 
+const getSourceErrorDescription = (sourceError, t) => {
+  const status = Number(sourceError?.status || 0);
+  if (status === 403) {
+    return t(
+      'requestsHub.partialErrorForbidden',
+      'Cette section n est pas disponible pour ce compte.',
+    );
+  }
+
+  if (status >= 500) {
+    return t(
+      'requestsHub.partialErrorServer',
+      'Le chargement est temporairement indisponible. Reessaie dans un instant.',
+    );
+  }
+
+  return t(
+    'requestsHub.partialErrorDescription',
+    'Certaines demandes n ont pas pu etre chargees. Le reste reste disponible.',
+  );
+};
+
 /**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  */
@@ -88,7 +110,11 @@ function RequestsHub({ navigation, route }) {
     Fonts,
     Spaces,
   } = useTheme();
-  const { canManageTeam, userData } = useAuth();
+  const {
+    canEditClub,
+    canManageTeam,
+    userData,
+  } = useAuth();
   const queryClient = useQueryClient();
 
   const [activeFilter, setActiveFilter] = useState(() => normalizeFilter(route?.params?.initialFilter));
@@ -107,12 +133,17 @@ function RequestsHub({ navigation, route }) {
   );
   const clubId = userData?.club?.documentId || userData?.trainedTeams?.[0]?.club?.documentId || '';
   const cmId = userData?.multisportClubs?.[0]?.documentId || '';
+  const canManageInstallationRequests = useMemo(
+    () => Boolean(clubId && canEditClub(clubId)),
+    [canEditClub, clubId],
+  );
 
   const context = useMemo(() => ({
+    canManageInstallationRequests,
     clubId,
     cmId,
     teamIds: trainedTeamIds,
-  }), [clubId, cmId, trainedTeamIds]);
+  }), [canManageInstallationRequests, clubId, cmId, trainedTeamIds]);
 
   const requestsQuery = useRequestsHubData(context, {
     enabled: canManageTeam,
@@ -124,9 +155,9 @@ function RequestsHub({ navigation, route }) {
     if (trainedTeamIds.length || clubId) filters.push('team');
     if (clubId) filters.push('club', 'event');
     if (clubId || cmId) filters.push('featured');
-    if (clubId) filters.push('installation');
+    if (canManageInstallationRequests) filters.push('installation');
     return filters;
-  }, [clubId, cmId, trainedTeamIds.length]);
+  }, [canManageInstallationRequests, clubId, cmId, trainedTeamIds.length]);
 
   useEffect(() => {
     if (!availableFilters.includes(activeFilter)) {
@@ -550,22 +581,23 @@ function RequestsHub({ navigation, route }) {
               <View
                 key={`${sourceError?.source || 'source'}-${sourceError?.message || 'message'}`}
                 style={[
+                  ApplicationStyle.backgroundColor.primary700,
                   ApplicationStyle.borderRadius12,
                   ApplicationStyle.borderWidth1,
                   Spaces.padding[12],
+                  Spaces.gap[4],
                   {
-                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                    borderColor: `${Colors.error500}88`,
+                    borderColor: `${Colors.primary500}44`,
                   },
                 ]}
               >
-                <Text style={[Fonts.p3Bold, Fonts.error500]}>
-                  {t('requestsHub.partialError', 'Source indisponible')}
-                  :
+                <Text style={[Fonts.p3Bold, Fonts.primary200]}>
                   {getSourceErrorLabel(sourceError?.source, t)}
+                  {' '}
+                  {t('requestsHub.partialErrorLabel', 'indisponible')}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {sourceError?.message}
+                  {getSourceErrorDescription(sourceError, t)}
                 </Text>
               </View>
             ))}

@@ -37,6 +37,7 @@ function MyEventList({ navigation, route }) {
         <ScreenContainer bgImage="bg2">
           <CMPlanningContent
             cmId={multisportClub.documentId}
+            insideScreenContainer
             navigation={navigation}
             showTopHeader
           />

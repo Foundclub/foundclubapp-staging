@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
+import { ENABLE_AFFILIATION_ONBOARDING_TUTORIAL } from '@/domains/tutorial/tutorialFeatureFlags';
 import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -40,6 +41,43 @@ const WEB_FILTER_SURFACE_PROPS = {
   responsivePadding: true,
   surface: 'card',
 };
+
+function AffiliationTutorialStep({
+  children,
+  description,
+  id,
+  nextAction,
+  nextLabel,
+  nextTargetStepId,
+  onNext,
+  order,
+  spotlight,
+  style,
+  targetNodeResolver,
+  title,
+}) {
+  if (!ENABLE_AFFILIATION_ONBOARDING_TUTORIAL) {
+    return children;
+  }
+
+  return (
+    <OnboardingWrapper
+      description={description}
+      id={id}
+      nextAction={nextAction}
+      nextLabel={nextLabel}
+      nextTargetStepId={nextTargetStepId}
+      onNext={onNext}
+      order={order}
+      spotlight={spotlight}
+      style={style}
+      targetNodeResolver={targetNodeResolver}
+      title={title}
+    >
+      {children}
+    </OnboardingWrapper>
+  );
+}
 
 /**
  * ClubFilters component for filtering clubs by location and activity
@@ -91,6 +129,7 @@ function ClubFiltersContent({ navigation, route }) {
   } = useGetActivities();
 
   useEffect(() => {
+    if (!ENABLE_AFFILIATION_ONBOARDING_TUTORIAL) return undefined;
     if (!fromOnboardingAffiliation || isActive || totalSteps === 0) return undefined;
 
     const timer = setTimeout(() => {
@@ -205,7 +244,7 @@ function ClubFiltersContent({ navigation, route }) {
         contentContainerStyle={[Spaces.gap[40]]}
         style={[Spaces.marginVertical[16]]}
       >
-        <OnboardingWrapper
+        <AffiliationTutorialStep
           description={t(
             'onboardingAffiliation.filtersTutorial.cityDescription',
             'Choisis une ville ou une adresse pour centrer la recherche des clubs.',
@@ -240,9 +279,9 @@ function ClubFiltersContent({ navigation, route }) {
               />
             )}
           />
-        </OnboardingWrapper>
+        </AffiliationTutorialStep>
 
-        <OnboardingWrapper
+        <AffiliationTutorialStep
           description={t(
             'onboardingAffiliation.filtersTutorial.radiusDescription',
             'Ajuste le rayon en kilomêtres autour de ta localisation.',
@@ -289,9 +328,9 @@ function ClubFiltersContent({ navigation, route }) {
               </View>
             )}
           />
-        </OnboardingWrapper>
+        </AffiliationTutorialStep>
 
-        <OnboardingWrapper
+        <AffiliationTutorialStep
           description={t(
             'onboardingAffiliation.filtersTutorial.activityDescription',
             'Sélectionné un sport pour filtrer uniquement les clubs correspondants.',
@@ -354,7 +393,7 @@ function ClubFiltersContent({ navigation, route }) {
               </View>
             )}
           />
-        </OnboardingWrapper>
+        </AffiliationTutorialStep>
       </ScrollView>
       <View style={[Spaces.gap[24]]}>
         <Button
@@ -362,7 +401,7 @@ function ClubFiltersContent({ navigation, route }) {
           title={t('clubFilters.actions.clear')}
           variant="Secondary"
         />
-        <OnboardingWrapper
+        <AffiliationTutorialStep
           description={t(
             'onboardingAffiliation.filtersTutorial.applyDescription',
             'Applique tes filtres pour revenir à la liste avec des résultats plus précis.',
@@ -385,9 +424,9 @@ function ClubFiltersContent({ navigation, route }) {
             title={t('clubFilters.actions.apply')}
             variant="Primary"
           />
-        </OnboardingWrapper>
+        </AffiliationTutorialStep>
       </View>
-      <OnboardingOverlay />
+      {ENABLE_AFFILIATION_ONBOARDING_TUTORIAL ? <OnboardingOverlay /> : null}
     </ScreenContainer>
   );
 }

@@ -324,6 +324,12 @@ function TeamListContent({
   }, [isLeagueMode, navigation]);
 
   const floatingActionBottom = floatingActionBottomOffset;
+  const hasClubContext = Boolean(
+    userData?.club?.documentId
+      || userData?.club?.id
+      || (Array.isArray(userData?.multisportClubs) && userData.multisportClubs.length > 0),
+  );
+  const shouldShowClubSearchCta = !isLeagueMode && !hasClubContext;
 
   const listBottomPadding = useMemo(
     () => (isLeagueMode
@@ -331,6 +337,12 @@ function TeamListContent({
       : sceneBottomInset),
     [floatingActionBottom, isLeagueMode, sceneBottomInset],
   );
+
+  const handleOpenClubSearch = useCallback(() => {
+    /** @type {any} */ (navigation).navigate(RouteNames.Search, {
+      screen: RouteNames.SearchClubs,
+    });
+  }, [navigation]);
 
   const renderTeamCard = useCallback((/** @type {Team} */ item, stateVariant = null) => {
     const isPending = stateVariant === 'pending';
@@ -775,8 +787,28 @@ function TeamListContent({
       ]}
     >
       <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
-        {t('teamList.noData')}
+        {shouldShowClubSearchCta
+          ? t('teamList.noClubEmptyTitle', "Tu n'as pas encore d'équipe")
+          : t('teamList.noData')}
       </Text>
+      {shouldShowClubSearchCta ? (
+        <>
+          <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter, { lineHeight: 22 }]}>
+            {t(
+              'teamList.noClubEmptyDescription',
+              'Recherche un club, ouvre sa fiche, puis demande a rejoindre une equipe.',
+            )}
+          </Text>
+          <Button
+            icon="search"
+            iconPosition="after"
+            onPress={handleOpenClubSearch}
+            style={{ minWidth: 240 }}
+            title={t('teamList.findTeamCta', 'Rechercher une équipe')}
+            variant="Primary"
+          />
+        </>
+      ) : null}
       {isLeagueMode ? (
         <Button
           onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.SquadSearch)}
@@ -791,7 +823,7 @@ function TeamListContent({
   return (
     <View style={[Spaces.gap[40], Alignments.fill, { position: 'relative' }]}>
       <WithDataWrapper
-        error={error?.message}
+        error={error}
         isLoading={isLoadingTeams && !isFetchingNextPage}
         wrapperStyle={[Alignments.fill]}
       >

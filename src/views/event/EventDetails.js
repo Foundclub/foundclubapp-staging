@@ -389,7 +389,6 @@ function EventDetails({ navigation, route }) {
     return resolvedDescription;
   }, [event?.description, externalMatchDisplay?.contextLabel, externalMatchDisplay?.title]);
   const canEdit = Boolean(canManageEvent(event));
-  const canApprovePendingRequests = Boolean(canEditEvent(event?.team?.documentId || ''));
   const eventClubId = event?.team?.club?.documentId || '';
   const eventMultisportId = event?.team?.club?.parentMultisport?.documentId || '';
   const userClubId = userData?.club?.documentId || '';
@@ -402,6 +401,10 @@ function EventDetails({ navigation, route }) {
     && userClubId
     && eventClubId
     && userClubId === eventClubId,
+  );
+  const canApprovePendingRequests = Boolean(
+    canEditEvent(event?.team?.documentId || '')
+    || isClubManagerForEvent,
   );
   const isMultisportAdminForEvent = Boolean(
     eventMultisportId
@@ -3052,7 +3055,7 @@ function EventDetails({ navigation, route }) {
         )}
         showsVerticalScrollIndicator={false}
       >
-        <WithDataWrapper error={error?.message} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
+        <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
           <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
           <View style={[Spaces.gap[24]]}>
 

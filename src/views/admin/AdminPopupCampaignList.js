@@ -19,6 +19,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetInAppPopupCampaigns } from '@/services/inAppPopupCampaign/inAppPopupCampaignQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 const STATUS_FILTERS = [
   { label: 'Tous', value: '' },
   { label: 'Draft', value: 'draft' },
@@ -72,7 +74,7 @@ function AdminPopupCampaignList() {
     return (
       <AdminStateView
         actionLabel="Réessayer"
-        description={error?.message || 'Impossible de charger les campagnes pop-up.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger les campagnes pop-up.'}
         onAction={() => refetch()}
         title="Chargement impossible"
       />

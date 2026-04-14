@@ -40,6 +40,8 @@ import {
   useUploadAdminClubLogo,
 } from '@/services/admin/adminClubContentQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 const RELATION_PICKERS = {
   activites: {
     isMany: true,
@@ -178,7 +180,7 @@ function AdminClubForm() {
       });
       setRelationResults(Array.isArray(response?.data) ? response.data : []);
     } catch (searchError) {
-      Alert.alert('Recherche impossible', searchError?.message || 'Impossible de rechercher cette relation.');
+      Alert.alert('Recherche impossible', getErrorMessage(searchError, 'generic'));
     }
   }, [relationPicker, relationQuery, relationSearchMutation]);
 
@@ -218,7 +220,7 @@ function AdminClubForm() {
         setField('logo', uploaded);
       }
     } catch (uploadError) {
-      Alert.alert('Upload impossible', uploadError?.message || 'Impossible d’envoyer le logo.');
+      Alert.alert('Upload impossible', getErrorMessage(uploadError, 'generic'));
     }
   }, [setField, uploadLogoMutation]);
 
@@ -255,7 +257,7 @@ function AdminClubForm() {
       const nextDocumentId = result?.data?.documentId || clubId;
       navigation.replace(RouteNames.AdminClubDetail, { clubId: nextDocumentId });
     } catch (saveError) {
-      Alert.alert('Sauvegarde impossible', saveError?.message || 'Impossible de sauvegarder ce club.');
+      Alert.alert('Sauvegarde impossible', getErrorMessage(saveError, 'generic'));
     }
   }, [
     clubId,
@@ -354,7 +356,7 @@ function AdminClubForm() {
     return (
       <AdminStateView
         actionLabel="Réessayer"
-        description={error?.message || 'Impossible de charger ce club.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger ce club.'}
         onAction={refetch}
         title="Chargement impossible"
       />

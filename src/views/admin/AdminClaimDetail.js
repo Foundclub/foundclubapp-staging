@@ -23,6 +23,8 @@ import {
   useRefuseClubClaim,
 } from '@/services/admin/adminQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 const normalizeComparableValue = (value) => String(value || '').trim().toLowerCase();
 
 /**
@@ -101,7 +103,7 @@ function AdminClaimDetail() {
         { adminNote: adminNote.trim(), documentId: requestId },
         {
           onError: (error) => {
-            Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
+            Alert.alert('Erreur', getErrorMessage(error, 'generic'));
           },
           onSuccess: () => {
             Alert.alert('Succes', 'Demande traitee.');
@@ -114,7 +116,7 @@ function AdminClaimDetail() {
 
     approveMutation.mutate(requestId, {
       onError: (error) => {
-        Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
+        Alert.alert('Erreur', getErrorMessage(error, 'generic'));
       },
       onSuccess: () => {
         Alert.alert('Succes', 'Demande acceptee.');
@@ -131,7 +133,7 @@ function AdminClaimDetail() {
         { adminNote: adminNote.trim(), documentId: requestId },
         {
           onError: (error) => {
-            Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
+            Alert.alert('Erreur', getErrorMessage(error, 'generic'));
           },
           onSuccess: () => {
             Alert.alert('Succes', 'Demande refusee.');
@@ -144,7 +146,7 @@ function AdminClaimDetail() {
 
     refuseClaimMutation.mutate(requestId, {
       onError: (error) => {
-        Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
+        Alert.alert('Erreur', getErrorMessage(error, 'generic'));
       },
       onSuccess: () => {
         Alert.alert('Succes', 'Demande rejetee.');
@@ -202,7 +204,7 @@ function AdminClaimDetail() {
     return (
       <AdminStateView
         actionLabel="R\u00E9essayer"
-        description={error?.message || 'Impossible de charger cette demande.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger cette demande.'}
         onAction={refetch}
         title="Chargement impossible"
       />

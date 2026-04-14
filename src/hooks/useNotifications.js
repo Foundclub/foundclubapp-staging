@@ -92,6 +92,10 @@ const getCalendarPromptKey = (notificationData) => String(
   notificationData?.matchId || notificationData?.dedupeKey || '',
 ).trim();
 
+const getUserNotificationIdentity = (userData) => String(
+  userData?.documentId || userData?.id || '',
+).trim();
+
 const isFirebaseMessagingApiAvailable = () => (
   typeof getApp === 'function'
   && typeof getMessaging === 'function'
@@ -200,7 +204,6 @@ const onDisplayNotification = async ({ body, data, title }) => {
         body,
         data: /** @type {any} */ (normalizedData),
         ios: {
-          critical: true,
           foregroundPresentationOptions: {
             alert: true,
             badge: true,
@@ -264,7 +267,8 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   const handledNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
   const tokenSyncInFlightRef = useRef(false);
   const lastTokenSyncAtRef = useRef(0);
-  const hasSynced = useRef(false);
+  const lastSyncedUserIdRef = useRef('');
+  const currentUserNotificationIdentity = getUserNotificationIdentity(userData);
   const pendingCalendarPrompt = pendingCalendarPrompts[0] || null;
   const pendingCalendarPromptKey = getCalendarPromptKey(pendingCalendarPrompt);
   const calendarPrompt = usePopupEligibility(
@@ -302,6 +306,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   useEffect(() => {
     if (!userData) {
       setPendingPushPermissionReason('');
+      lastSyncedUserIdRef.current = '';
     }
   }, [userData]);
 
@@ -331,9 +336,13 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
 
     const bypassPreprompt = Boolean(options?.bypassPreprompt);
+    const force = Boolean(options?.force);
 
     const now = Date.now();
-    if (tokenSyncInFlightRef.current || (now - lastTokenSyncAtRef.current < 30000 && reason !== 'token_refresh')) {
+    if (
+      tokenSyncInFlightRef.current
+      || (!force && now - lastTokenSyncAtRef.current < 30000 && reason !== 'token_refresh')
+    ) {
       return;
     }
 
@@ -640,10 +649,14 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   }, [handleNavigateOnOpen, invalidateNotificationQueries]);
 
   useEffect(() => {
-    notificationsLogger.debug('[FCM] useEffect triggered - userData:', !!userData, 'hasSynced:', hasSynced.current);
-    if (ENABLE_PUSH_NOTIFICATIONS && userData && !hasSynced.current) {
-      hasSynced.current = true;
-      syncTokenIfNeeded('login');
+    notificationsLogger.debug('[FCM] useEffect triggered - userData:', !!userData, 'userIdentity:', currentUserNotificationIdentity);
+    if (
+      ENABLE_PUSH_NOTIFICATIONS
+      && currentUserNotificationIdentity
+      && lastSyncedUserIdRef.current !== currentUserNotificationIdentity
+    ) {
+      lastSyncedUserIdRef.current = currentUserNotificationIdentity;
+      syncTokenIfNeeded('login', { force: true });
     }
 
     const queuePendingNotification = (payload, source) => {
@@ -714,6 +727,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const unsubscribeTokenRefresh = onTokenRefresh(messagingInstance, async (token) => {
       if (!token) return;
       notificationsLogger.debug('[FCM] Token refreshed by Firebase runtime');
+      lastTokenSyncAtRef.current = Date.now();
       saveToken(token);
     });
 
@@ -729,7 +743,14 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       unsubscribeTokenRefresh();
       appStateSubscription?.remove?.();
     };
-  }, [dispatch, invalidateNotificationQueries, saveToken, syncTokenIfNeeded, userData]);
+  }, [
+    currentUserNotificationIdentity,
+    dispatch,
+    invalidateNotificationQueries,
+    saveToken,
+    syncTokenIfNeeded,
+    userData,
+  ]);
 
   useEffect(() => {
     if (!pendingNotification?.type) return undefined;

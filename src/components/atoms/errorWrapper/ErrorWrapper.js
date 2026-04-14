@@ -9,7 +9,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * Error wrapper component.
  * @param {object} props
  * @param {import('react').ReactNode} props.children
- * @param {string} props.error
+ * @param {unknown} props.error
  * @param {Array<import('react-native').ViewStyle>} [props.wrapperStyle]
  * @returns {import('react').ReactElement}
  */

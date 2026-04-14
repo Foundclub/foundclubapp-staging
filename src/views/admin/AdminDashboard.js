@@ -321,6 +321,14 @@ function AdminDashboard() {
             value={leagueDisputesCount}
           />
 
+          <DashboardCard
+            color={Colors.primary500}
+            meta="Push"
+            onPress={() => navigation.navigate(RouteNames.AdminNotificationsHealth)}
+            title="Notifications"
+            value="Push"
+          />
+
           {/* Gestion Utilisateurs */}
           <DashboardCard
             color={Colors.primary200}

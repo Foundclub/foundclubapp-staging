@@ -29,6 +29,8 @@ import {
 } from '@/services/admin/superadminQueries';
 import client from '@/services/client';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 const SYSTEM_KEYS = new Set([
   'createdAt',
   'createdBy',
@@ -154,9 +156,9 @@ const safeParseJson = (value) => {
       ok: true,
       value: JSON.parse(value),
     };
-  } catch (error) {
+  } catch (_error) {
     return {
-      error: error?.message || 'Invalid JSON',
+      error: 'Invalid JSON',
       ok: false,
       value: null,
     };
@@ -495,7 +497,7 @@ function SuperAdminEntryForm({ navigation, route }) {
     return (
       <AdminStateView
         actionLabel="R\u00E9essayer"
-        description={metadataQuery.error?.message || entryQuery.error?.message || 'Impossible de charger ce formulaire.'}
+        description={getErrorMessage(metadataQuery.error || entryQuery.error, 'generic') || 'Impossible de charger ce formulaire.'}
         onAction={() => {
           metadataQuery.refetch();
           if (isEditMode) entryQuery.refetch();
@@ -556,7 +558,7 @@ function SuperAdminEntryForm({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.alerts.relationSearchFailedTitle', 'Recherche impossible'),
-        error?.message || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+        getErrorMessage(error, 'generic') || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
       );
     } finally {
       setRelationLoadingField('');
@@ -668,7 +670,7 @@ function SuperAdminEntryForm({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.alerts.uploadFailedTitle', 'Upload impossible'),
-        error?.message || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+        getErrorMessage(error, 'generic') || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
       );
     } finally {
       setMediaUploadingField('');
@@ -699,7 +701,7 @@ function SuperAdminEntryForm({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.media.gallery', 'Galerie'),
-        error?.message || t('superAdminContentManager.alerts.openGalleryFailed', 'Impossible d\'ouvrir la galerie.'),
+        getErrorMessage(error, 'generic') || t('superAdminContentManager.alerts.openGalleryFailed', 'Impossible d\'ouvrir la galerie.'),
       );
     }
   };
@@ -728,7 +730,7 @@ function SuperAdminEntryForm({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.media.camera', 'Camera'),
-        error?.message || t('superAdminContentManager.alerts.takePhotoFailed', 'Impossible de prendre une photo.'),
+        getErrorMessage(error, 'generic') || t('superAdminContentManager.alerts.takePhotoFailed', 'Impossible de prendre une photo.'),
       );
     }
   };
@@ -805,7 +807,7 @@ function SuperAdminEntryForm({ navigation, route }) {
       if (typeof documentPicker?.isCancel === 'function' && documentPicker.isCancel(error)) return;
       Alert.alert(
         t('superAdminContentManager.media.file', 'Fichier'),
-        error?.message || t('superAdminContentManager.alerts.fileSelectFailed', 'Impossible de sélectionner ce fichier.'),
+        getErrorMessage(error, 'generic') || t('superAdminContentManager.alerts.fileSelectFailed', 'Impossible de selectionner ce fichier.'),
       );
     }
   };
@@ -851,7 +853,7 @@ function SuperAdminEntryForm({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.alerts.saveFailedTitle', 'Enregistrement impossible'),
-        error?.message || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+        getErrorMessage(error, 'generic') || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
       );
     }
   };

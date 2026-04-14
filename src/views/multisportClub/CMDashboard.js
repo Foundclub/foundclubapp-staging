@@ -29,6 +29,8 @@ import {
   getMultisportClubById,
 } from '@/services/multisportClub/multisportClubService';
 
+import { displayErrorAlert } from '@/utils/errors/displayError';
+
 import MultisportActionGrid from './components/MultisportActionGrid';
 import MultisportAdminsSection from './components/MultisportAdminsSection';
 import MultisportHeroCard from './components/MultisportHeroCard';
@@ -134,7 +136,7 @@ function CMDashboard({ navigation, route }) {
       return deleteCMSection(cmId, sectionId);
     },
     onError: (err) => {
-      Alert.alert(t('APIerrors.title'), err.message || t('APIerrors.generic'));
+      displayErrorAlert(err);
     },
     onSuccess: () => {
       refetchSections();
@@ -338,7 +340,7 @@ function CMDashboard({ navigation, route }) {
             showsVerticalScrollIndicator={false}
           >
             <WithDataWrapper
-              error={error?.message}
+              error={error}
               isLoading={isLoading}
               wrapperStyle={[Spaces.gap[24]]}
             >

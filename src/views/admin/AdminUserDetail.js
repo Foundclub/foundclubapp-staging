@@ -19,6 +19,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetAdminUser, useUpdateAdminUser } from '@/services/admin/adminQueries';
 import { useGetRoles } from '@/services/auth/authQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 /**
  *
  */
@@ -73,7 +75,7 @@ function AdminUserDetail() {
               },
               {
                 onError: (err) => {
-                  Alert.alert('Erreur', err?.message || 'Une erreur est survenue');
+                  Alert.alert('Erreur', getErrorMessage(err, 'generic'));
                 },
                 onSuccess: () => {
                   Alert.alert('Succès', 'Utilisateur mis à jour');
@@ -111,7 +113,7 @@ function AdminUserDetail() {
       }
       navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
     } catch (contactError) {
-      Alert.alert('Erreur', contactError?.message || "Impossible d'ouvrir la conversation.");
+      Alert.alert('Erreur', getErrorMessage(contactError, 'generic') || "Impossible d'ouvrir la conversation.");
     } finally {
       setIsContacting(false);
     }

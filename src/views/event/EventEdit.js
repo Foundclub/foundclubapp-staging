@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useEvent from '@/domains/event/useEvent';
 import useTheme from '@/theme/themeContext';
 
@@ -185,14 +186,11 @@ function EventEdit({ navigation, route }) {
     validationModeOptions,
   } = useEvent();
 
+  const isClubManager = userData?.role?.name === USER_ROLES.president;
+
   const eventTypeOptions = eventTypes?.map((type) => ({
     label: type.name,
     value: type.documentId,
-  })) || [];
-
-  const teamOptions = userData?.trainedTeams?.map((team) => ({
-    label: team.name,
-    value: team.documentId || '',
   })) || [];
 
   const [hasConflict, setHasConflict] = useState(false);
@@ -231,11 +229,15 @@ function EventEdit({ navigation, route }) {
       capacity: event?.capacity,
       date: event?.date
         ? format(new Date(event?.date), 'dd/MM/yyyy')
-        : (route.params?.date ? format(new Date(route.params.date), 'dd/MM/yyyy') : ''),
+        : (route.params?.date
+          ? format(new Date(route.params.date), 'dd/MM/yyyy')
+          : ''),
       description: event?.description || '',
       endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
       facility: event?.facility?.documentId || null,
-      invitedTeams: event?.invitedTeams?.map((/** @type {Team} */ t) => t.documentId || '') || [],
+      invitedTeams: event?.invitedTeams?.map(
+        (/** @type {Team} */ invitedTeam) => invitedTeam.documentId || '',
+      ) || [],
       location: {
         label: getEventLocationLabel(event?.locationDetails),
         value: `${event?.location?.lat}|${event?.location?.lng}`,
@@ -283,11 +285,17 @@ function EventEdit({ navigation, route }) {
     }
   }, [selectedDate, isRecurrent, recurrenceFrequency, setValue, getDateFromDateInput]);
 
-  // Derive clubId from selected team
+  const trainedTeams = useMemo(
+    () => (Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : []),
+    [userData?.trainedTeams],
+  );
+
   // Derive clubId from selected team or user's club (for Dirigeant)
-  const selectedTeam = userData?.trainedTeams?.find((/** @type {Team} */ t) => t.documentId === selectedTeamId);
-  const clubId = selectedTeam?.club?.documentId || userData?.club?.documentId;
-  const cmId = selectedTeam?.club?.parentMultisport?.documentId || userData?.club?.parentMultisport?.documentId;
+  const initialSelectedTeam = trainedTeams.find((/** @type {Team} */ teamItem) => teamItem.documentId === selectedTeamId)
+    || event?.team
+    || null;
+  const clubId = initialSelectedTeam?.club?.documentId || userData?.club?.documentId;
+  const cmId = initialSelectedTeam?.club?.parentMultisport?.documentId || userData?.club?.parentMultisport?.documentId;
 
   // Fetch club teams for invited teams selection
   const [clubTeams, setClubTeams] = useState(/** @type {Team[]} */ ([]));
@@ -311,15 +319,28 @@ function EventEdit({ navigation, route }) {
     fetchClubTeams();
   }, [clubId]);
 
+  const manageableTeams = useMemo(() => {
+    if (isClubManager && clubTeams.length > 0) {
+      return clubTeams;
+    }
+
+    return trainedTeams;
+  }, [clubTeams, isClubManager, trainedTeams]);
+
+  const teamOptions = manageableTeams.map((team) => ({
+    label: team.name,
+    value: team.documentId || '',
+  }));
+
   // Construct invited team options with headers
   const invitedTeamOptions = useMemo(() => {
-    const myTeamsOptions = teamOptions.filter((t) => t.value !== selectedTeamId);
+    const myTeamsOptions = teamOptions.filter((teamOption) => teamOption.value !== selectedTeamId);
 
     // Filter other teams (exclude my teams and selected team)
-    const myTeamIds = userData?.trainedTeams?.map((t) => t.documentId) || [];
+    const myTeamIds = trainedTeams.map((teamItem) => teamItem.documentId);
     const otherTeamsOptions = clubTeams
-      .filter((t) => !myTeamIds.includes(t.documentId) && t.documentId !== selectedTeamId)
-      .map((t) => ({ label: t.name, value: t.documentId }));
+      .filter((teamItem) => !myTeamIds.includes(teamItem.documentId) && teamItem.documentId !== selectedTeamId)
+      .map((teamItem) => ({ label: teamItem.name, value: teamItem.documentId }));
 
     const finalOptions = [];
 
@@ -334,7 +355,7 @@ function EventEdit({ navigation, route }) {
     }
 
     return finalOptions;
-  }, [teamOptions, selectedTeamId, clubTeams, userData, t]);
+  }, [teamOptions, selectedTeamId, clubTeams, trainedTeams, t]);
 
   // Conflict Detection
   const { data: facilityEvents } = useQuery({
@@ -385,8 +406,8 @@ function EventEdit({ navigation, route }) {
 
   useEffect(() => {
     if (facilityEvents && selectedStartTime && selectedEndTime) {
-      const parseTime = (/** @type {string} */ t) => {
-        const [h, m] = t.split(':').map(Number);
+      const parseTime = (/** @type {string} */ timeValue) => {
+        const [h, m] = timeValue.split(':').map(Number);
         return h * 60 + m;
       };
 
@@ -440,7 +461,7 @@ function EventEdit({ navigation, route }) {
 
   // Déterminer si le type sélectionné est "Réservation"
   const isReservationType = useMemo(() => {
-    const selectedTypeData = eventTypes?.find((t) => t.documentId === selectedType);
+    const selectedTypeData = eventTypes?.find((eventType) => eventType.documentId === selectedType);
     return selectedTypeData?.name === 'Réservation';
   }, [selectedType, eventTypes]);
 

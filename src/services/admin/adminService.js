@@ -20,6 +20,26 @@ export const getAdminStats = async () => {
   return result.data;
 };
 
+export const getNotificationsHealth = async () => {
+  const result = await client.get('/notifications/health');
+  return result.data;
+};
+
+export const sendNotificationsHealthTest = async (payload = {}) => {
+  const result = await client.post('/notifications/health/test', payload);
+  return result.data;
+};
+
+export const retryNotificationDelivery = async (documentId) => {
+  const result = await client.post(`/notifications/health/deliveries/${encodeURIComponent(documentId)}/retry`);
+  return result.data;
+};
+
+export const purgeNotificationDeliveries = async (payload = {}) => {
+  const result = await client.post('/notifications/health/purge', payload);
+  return result.data;
+};
+
 /**
  * Get aggregated admin reports inbox.
  * @returns {Promise<{ data: Array<any> }>}

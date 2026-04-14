@@ -22,6 +22,8 @@ import {
   useRefuseAffiliationHelpRequest,
 } from '@/services/admin/adminQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 /**
  * Dedicated superadmin space for club onboarding requests.
  * @returns {import('react').ReactElement}
@@ -58,7 +60,7 @@ function AdminClubOnboardingList() {
     return (
       <AdminStateView
         actionLabel="R\u00E9essayer"
-        description={error?.message || 'Impossible de charger les demandes d\'onboarding.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger les demandes d\'onboarding.'}
         onAction={refetch}
         title="Chargement impossible"
       />

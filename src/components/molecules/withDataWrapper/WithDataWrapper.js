@@ -8,7 +8,7 @@ import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
  * @param {object} props
  * @param {import('react').ReactNode} props.children
  * @param {boolean} props.isLoading
- * @param {string} [props.error]
+ * @param {unknown} [props.error]
  * @param {string} [props.backgroundColor]
  * @param {Array<import('react-native').ViewStyle>} [props.wrapperStyle]
  * @returns {import('react').ReactElement}

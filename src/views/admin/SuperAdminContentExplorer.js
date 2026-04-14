@@ -22,6 +22,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetSuperadminContentTypes } from '@/services/admin/superadminQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 const closeIcon = require('@/assets/icons/close.png');
 const searchIcon = require('@/assets/icons/search.png');
 
@@ -111,7 +113,7 @@ function SuperAdminContentExplorer({ navigation }) {
     return (
       <AdminStateView
         actionLabel="R\u00E9essayer"
-        description={error?.message || 'Impossible de charger les content-types superadmin.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger les content-types superadmin.'}
         onAction={refetch}
         title="Chargement impossible"
       />

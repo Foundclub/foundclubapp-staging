@@ -39,15 +39,16 @@ function EventWizardTeam({ navigation }) {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { userData } = useAuth();
+  const { USER_ROLES, userData } = useAuth();
   const { dispatch, state } = useEventWizard();
   const [searchQuery, setSearchQuery] = useState('');
+  const isClubManager = userData?.role?.name === USER_ROLES.president;
 
-  const trainedTeamIds = new Set(
+  const trainedTeamIds = useMemo(() => new Set(
     (userData?.trainedTeams || [])
       .map((team) => team?.documentId)
       .filter(Boolean),
-  );
+  ), [userData?.trainedTeams]);
 
   const {
     data: teamsData,
@@ -60,19 +61,34 @@ function EventWizardTeam({ navigation }) {
       pageSize: 100,
     },
     {
-      enabled: Boolean(userData?.club?.documentId && trainedTeamIds.size > 0),
+      enabled: Boolean(userData?.club?.documentId && (isClubManager || trainedTeamIds.size > 0)),
     },
   );
 
-  const fetchedTeams = teamsData?.pages?.flatMap((page) => page?.data || [])?.filter(Boolean) || [];
-  const fallbackTeams = Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : [];
-  const myTeams = fetchedTeams.length > 0
-    ? fetchedTeams.filter((team) => (
-      trainedTeamIds.has(team?.documentId)
-      || team?.trainers?.some((trainer) => trainer?.documentId === userData?.documentId)
-    ))
-    : fallbackTeams;
-  const orderedTeams = useMemo(() => sortTeamsForDisplay(myTeams), [myTeams]);
+  const fetchedTeams = useMemo(
+    () => teamsData?.pages?.flatMap((page) => page?.data || [])?.filter(Boolean) || [],
+    [teamsData],
+  );
+  const fallbackTeams = useMemo(
+    () => (Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : []),
+    [userData?.trainedTeams],
+  );
+  const availableTeams = useMemo(() => {
+    if (fetchedTeams.length > 0) {
+      if (isClubManager) {
+        return sortTeamsForDisplay(fetchedTeams);
+      }
+
+      return sortTeamsForDisplay(
+        fetchedTeams.filter((team) => (
+          trainedTeamIds.has(team?.documentId)
+          || team?.trainers?.some((trainer) => trainer?.documentId === userData?.documentId)
+        )),
+      );
+    }
+
+    return sortTeamsForDisplay(fallbackTeams);
+  }, [fallbackTeams, fetchedTeams, isClubManager, trainedTeamIds, userData?.documentId]);
 
   const normalizeSearchText = (value) => String(value || '')
     .normalize('NFD')
@@ -82,9 +98,9 @@ function EventWizardTeam({ navigation }) {
 
   const filteredTeams = useMemo(() => {
     const normalizedQuery = normalizeSearchText(searchQuery);
-    if (!normalizedQuery) return orderedTeams;
+    if (!normalizedQuery) return availableTeams;
 
-    return orderedTeams.filter((team) => {
+    return availableTeams.filter((team) => {
       const searchableParts = [
         team?.name,
         team?.club?.name,
@@ -98,8 +114,30 @@ function EventWizardTeam({ navigation }) {
         .map((part) => normalizeSearchText(part))
         .some((part) => part.includes(normalizedQuery));
     });
-  }, [orderedTeams, searchQuery]);
-  const hasTeams = orderedTeams.length > 0;
+  }, [availableTeams, searchQuery]);
+
+  const teamsByOwnership = useMemo(() => {
+    const myTeams = [];
+    const otherTeams = [];
+
+    filteredTeams.forEach((team) => {
+      const isTrainerTeam = trainedTeamIds.has(team?.documentId)
+        || team?.trainers?.some((trainer) => trainer?.documentId === userData?.documentId);
+
+      if (isTrainerTeam) {
+        myTeams.push(team);
+      } else {
+        otherTeams.push(team);
+      }
+    });
+
+    return {
+      myTeams: sortTeamsForDisplay(myTeams),
+      otherTeams: isClubManager ? sortTeamsForDisplay(otherTeams) : [],
+    };
+  }, [filteredTeams, isClubManager, trainedTeamIds, userData?.documentId]);
+
+  const hasTeams = availableTeams.length > 0;
   const hasFilteredTeams = filteredTeams.length > 0;
 
   const handleSelectTeam = (team) => {
@@ -225,7 +263,33 @@ function EventWizardTeam({ navigation }) {
           </View>
         ) : null}
 
-        {!isLoading && !error && hasFilteredTeams ? filteredTeams.map(renderTeamCard) : null}
+        {!isLoading && !error && hasFilteredTeams && !isClubManager ? filteredTeams.map(renderTeamCard) : null}
+
+        {!isLoading && !error && hasFilteredTeams && isClubManager ? (
+          <View style={[Spaces.gap[16]]}>
+            {teamsByOwnership.myTeams.length > 0 ? (
+              <>
+                <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+                  {t('eventWizard.steps.team.myTeams', 'MES ÉQUIPES')}
+                </Text>
+                <View style={[Spaces.gap[12]]}>
+                  {teamsByOwnership.myTeams.map(renderTeamCard)}
+                </View>
+              </>
+            ) : null}
+
+            {teamsByOwnership.otherTeams.length > 0 ? (
+              <>
+                <Text style={[Fonts.p3Bold, Fonts.neutral200, Spaces.marginTop[8]]}>
+                  {t('eventWizard.steps.team.otherClubTeams', 'AUTRES ÉQUIPES DU CLUB')}
+                </Text>
+                <View style={[Spaces.gap[12]]}>
+                  {teamsByOwnership.otherTeams.map(renderTeamCard)}
+                </View>
+              </>
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </WizardStepLayout>
   );

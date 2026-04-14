@@ -187,7 +187,7 @@ function FeaturedRequestsList() {
       ]}
     >
       <WithDataWrapper
-        error={error?.message}
+        error={error}
         isLoading={isLoading}
         wrapperStyle={[Alignments.fill]}
       >

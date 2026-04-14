@@ -10,6 +10,7 @@ export const RouteNames = /** @type {const} */ ({
   AdminDashboard: 'AdminDashboard',
   AdminEvents: 'AdminEvents',
   AdminLeagueDisputes: 'AdminLeagueDisputes',
+  AdminNotificationsHealth: 'AdminNotificationsHealth',
   AdminPopupCampaignDetail: 'AdminPopupCampaignDetail',
   AdminPopupCampaignForm: 'AdminPopupCampaignForm',
   AdminPopupCampaignList: 'AdminPopupCampaignList',

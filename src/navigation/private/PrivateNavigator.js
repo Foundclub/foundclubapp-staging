@@ -15,6 +15,12 @@ import Conversation from '@/views/Conversation';
 import EventFilters from '@/views/event/EventFilters';
 import FacilityForm from '@/views/facility/FacilityForm';
 import FacilityList from '@/views/facility/FacilityList';
+import HistoryWizardCategory from '@/views/historyWizard/HistoryWizardCategory';
+import HistoryWizardClub from '@/views/historyWizard/HistoryWizardClub';
+import { HistoryWizardProvider } from '@/views/historyWizard/HistoryWizardContext';
+import HistoryWizardLevel from '@/views/historyWizard/HistoryWizardLevel';
+import HistoryWizardPeriod from '@/views/historyWizard/HistoryWizardPeriod';
+import HistoryWizardRecap from '@/views/historyWizard/HistoryWizardRecap';
 import MercatoFilters from '@/views/mercato/MercatoFilters';
 import CMDashboard from '@/views/multisportClub/CMDashboard';
 import CMMembersScreen from '@/views/multisportClub/CMMembersScreen';
@@ -48,8 +54,8 @@ import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
 import RecruitmentAdEdit from '@/views/recruitment/RecruitmentAdEdit';
 import RecruitmentAdFilters from '@/views/recruitment/RecruitmentAdFilters';
 import RequestsHub from '@/views/requests/RequestsHub';
-import ReservationDetails from '@/views/reservation/ReservationDetails';
 import MissingPlayersView from '@/views/reservation/MissingPlayersView';
+import ReservationDetails from '@/views/reservation/ReservationDetails';
 import ReservationFilters from '@/views/reservation/ReservationFilters';
 import SearchAlerts from '@/views/search/SearchAlerts';
 import SearchHubLegacyRedirect from '@/views/search/SearchHubLegacyRedirect';
@@ -135,594 +141,634 @@ function PrivateNavigator() {
   }
 
   return userData?.documentId ? (
-    <>
+    <HistoryWizardProvider>
       <Stack.Navigator id={undefined} initialRouteName={initialRouteName} key={userData?.documentId} screenOptions={commonOptions}>
-      <Stack.Screen
-        component={PrivateTabNavigator}
-        name={RouteNames.HomeTab}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        component={LeagueTabNavigator}
-        name={RouteNames.LeagueHomeTab}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        component={SearchHubLegacyRedirect}
-        name={RouteNames.SearchHub}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        component={SearchRouteRedirect}
-        name={RouteNames.SearchEvents}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        component={SearchRouteRedirect}
-        name={RouteNames.SearchClubs}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        component={SearchRouteRedirect}
-        name={RouteNames.SearchReservations}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        component={SearchRouteRedirect}
-        name={RouteNames.SearchRecruitment}
-        options={{ headerShown: false }}
-      />
-
-      {/* Domain Stacks - These contain the refactored screens */}
-      {/* Note: We use headerShown: false because the stacks manage their own headers */}
-
-      <Stack.Screen
-        component={ProfileStack}
-        name={RouteNames.ProfileStack}
-        options={{ headerShown: false }}
-      />
-
-      <Stack.Screen
-        component={ClubStack}
-        name={RouteNames.ClubStack}
-        options={{ headerShown: false }}
-      />
-
-      <Stack.Screen
-        component={TeamStack}
-        name={RouteNames.TeamStack}
-        options={{ headerShown: false }}
-      />
-
-      <Stack.Screen
-        component={EventStack}
-        name={RouteNames.EventStack}
-        options={{ headerShown: false }}
-      />
-
-      {userData?.role?.name === USER_ROLES.superAdmin ? (
         <Stack.Screen
-          component={AdminStack}
-          name={RouteNames.AdminStack}
+          component={PrivateTabNavigator}
+          name={RouteNames.HomeTab}
           options={{ headerShown: false }}
         />
-      ) : null}
-
-      {/* Remaining Screens (Filters, Chat, Alerts, Notifications) */}
-      <Stack.Screen
-        component={EventFilters}
-        name={RouteNames.EventFilters}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={MercatoFilters}
-        name={RouteNames.MercatoFilters}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={RecruitmentAdFilters}
-        name={RouteNames.RecruitmentAdFilters}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={AdWizardStack}
-        name={RouteNames.AdWizardStack}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        component={ReservationDetails}
-        name={RouteNames.ReservationDetails}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={ReservationFilters}
-        name={RouteNames.ReservationFilters}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={MissingPlayersView}
-        name={RouteNames.MissingPlayersView}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Joueurs recherchés',
-        }}
-      />
-      <Stack.Screen
-        component={BookingCalendar}
-        name={RouteNames.BookingCalendar}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Réserver un créneau',
-        }}
-      />
-      <Stack.Screen
-        component={MultisportClubDetails}
-        name={RouteNames.MultisportClubDetails}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Club Omnisport',
-        }}
-      />
-      <Stack.Screen
-        component={MultisportClubEditDetails}
-        name={RouteNames.MultisportClubEdit}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Modifier le club',
-        }}
-      />
-      <Stack.Screen
-        component={FeaturedRequestsScreen}
-        name={RouteNames.FeaturedRequests}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Demandes à la une',
-        }}
-      />
-      <Stack.Screen
-        component={CMDashboard}
-        name={RouteNames.CMDashboard}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Gestion CM',
-        }}
-      />
-      <Stack.Screen
-        component={CMPlanningScreen}
-        name={RouteNames.CMPlanning}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Planning',
-        }}
-      />
-      <Stack.Screen
-        component={AddSponsor}
-        name={RouteNames.AddSponsor}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Ajouter un partenaire',
-        }}
-      />
-      <Stack.Screen
-        component={CMMembersScreen}
-        name={RouteNames.CMMembers}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Membres',
-        }}
-      />
-      <Stack.Screen
-        component={CMTeamsScreen}
-        name={RouteNames.CMTeams}
-        options={{
-          headerShown: true,
-          title: t('common.teams'),
-        }}
-      />
-      <Stack.Screen
-        component={CreateSectionScreen}
-        name={RouteNames.CreateSection}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Nouvelle section',
-        }}
-      />
-      <Stack.Screen
-        component={SearchAlerts}
-        name={RouteNames.SearchAlerts}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={SearchMapScreen}
-        name={RouteNames.SearchMapScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        component={Conversation}
-        name={RouteNames.Conversation}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={ConversationPublicEventPicker}
-        name={RouteNames.ConversationPublicEventPicker}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={PlanningWeekFullscreen}
-        name={RouteNames.PlanningWeekFullscreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={PlanningWeekFullscreen}
-        name={RouteNames.PersonalPlanningWeekFullscreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={NewConversation}
-        name={RouteNames.NewConversation}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={PollDetails}
-        name={RouteNames.PollDetails}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={NotificationList}
-        name={RouteNames.NotificationList}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={NotificationDetails}
-        name={RouteNames.NotificationDetails}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={RequestsHub}
-        name={RouteNames.RequestsHub}
-        options={{
-          headerShown: false,
-        }}
-      />
-
-      <Stack.Screen
-        component={FacilityList}
-        name={RouteNames.FacilityList}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Installations',
-        }}
-      />
-      <Stack.Screen
-        component={RecruitmentAdDetails}
-        name={RouteNames.RecruitmentAdDetails}
-        options={{
-          ...commonOptions,
-          headerTintColor: '#fff',
-          headerTitle: '',
-          headerTransparent: true,
-        }}
-      />
-      <Stack.Screen
-        component={RecruitmentAdEdit}
-        name={RouteNames.RecruitmentAdEdit}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Modifier l\'annonce',
-        }}
-      />
-      <Stack.Screen
-        component={FacilityForm}
-        name={RouteNames.FacilityForm}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-
-      {/* League Screens */}
-      <Stack.Screen
-        component={require('@/views/league/match/LeagueMatchDetails').default}
-        name={RouteNames.MatchDetails}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Détails du match',
-        }}
-      />
-      <Stack.Screen
-        component={require('@/views/league/match/LeagueMatchDetails').default}
-        name={RouteNames.LeagueMatchDetails}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={require('@/views/league/match/PastMatchDetails').default}
-        name={RouteNames.PastMatchDetails}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={require('@/views/league/details/SquadDetailsScreen').default}
-        name={RouteNames.SquadDetails}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={require('@/views/league/search/SquadSearchScreen').default}
-        name={RouteNames.SquadSearch}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={require('@/views/league/search/SquadFiltersScreen').default}
-        name={RouteNames.SquadFilters}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={require('@/views/league/details/SquadRequestsScreen').default}
-        name={RouteNames.SquadRequests}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      {canShowView(RouteNames.UserRole) ? (
         <Stack.Screen
-          component={UserType}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserRole}
-          options={commonOptions}
+          component={LeagueTabNavigator}
+          name={RouteNames.LeagueHomeTab}
+          options={{ headerShown: false }}
         />
-      ) : null}
-      {canShowView(RouteNames.UserName) ? (
         <Stack.Screen
-          component={UserName}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserName}
+          component={SearchHubLegacyRedirect}
+          name={RouteNames.SearchHub}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={SearchRouteRedirect}
+          name={RouteNames.SearchEvents}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={SearchRouteRedirect}
+          name={RouteNames.SearchClubs}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={SearchRouteRedirect}
+          name={RouteNames.SearchReservations}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={SearchRouteRedirect}
+          name={RouteNames.SearchRecruitment}
+          options={{ headerShown: false }}
+        />
+
+        {/* Domain Stacks - These contain the refactored screens */}
+        {/* Note: We use headerShown: false because the stacks manage their own headers */}
+
+        <Stack.Screen
+          component={ProfileStack}
+          name={RouteNames.ProfileStack}
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen
+          component={ClubStack}
+          name={RouteNames.ClubStack}
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen
+          component={TeamStack}
+          name={RouteNames.TeamStack}
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen
+          component={EventStack}
+          name={RouteNames.EventStack}
+          options={{ headerShown: false }}
+        />
+
+        {userData?.role?.name === USER_ROLES.superAdmin ? (
+          <Stack.Screen
+            component={AdminStack}
+            name={RouteNames.AdminStack}
+            options={{ headerShown: false }}
+          />
+        ) : null}
+
+        {/* Remaining Screens (Filters, Chat, Alerts, Notifications) */}
+        <Stack.Screen
+          component={EventFilters}
+          name={RouteNames.EventFilters}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserName),
-            headerTitle: () => renderStepper(RouteNames.UserName),
-            headerTitleAlign: 'left',
-
+            headerTitle: '',
           }}
         />
-      ) : null}
-      {canShowView(RouteNames.UserSection) ? (
         <Stack.Screen
-          component={UserSection}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserSection}
+          component={MercatoFilters}
+          name={RouteNames.MercatoFilters}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserSection),
-            headerTitle: () => renderStepper(RouteNames.UserSection),
-            headerTitleAlign: 'left',
-
+            headerTitle: '',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.UserBirthdate) ? (
         <Stack.Screen
-          component={UserBirthdate}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserBirthdate}
+          component={RecruitmentAdFilters}
+          name={RouteNames.RecruitmentAdFilters}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserBirthdate),
-            headerTitle: () => renderStepper(RouteNames.UserBirthdate),
-            headerTitleAlign: 'left',
+            headerTitle: '',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.UserAddress) ? (
         <Stack.Screen
-          component={UserAddress}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserAddress}
+          component={AdWizardStack}
+          name={RouteNames.AdWizardStack}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={ReservationDetails}
+          name={RouteNames.ReservationDetails}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserAddress),
-            headerTitle: () => renderStepper(RouteNames.UserAddress),
-            headerTitleAlign: 'left',
+            headerTitle: '',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.UserAvatar) ? (
         <Stack.Screen
-          component={UserAvatar}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserAvatar}
+          component={ReservationFilters}
+          name={RouteNames.ReservationFilters}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserAvatar),
-            headerTitle: () => renderStepper(RouteNames.UserAvatar),
-            headerTitleAlign: 'left',
-
+            headerTitle: '',
           }}
         />
-      ) : null}
-
-      {/* Optional onboarding steps for players */}
-      {canShowView(RouteNames.UserSport) ? (
         <Stack.Screen
-          component={UserSport}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserSport}
+          component={MissingPlayersView}
+          name={RouteNames.MissingPlayersView}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserSport),
-            headerTitle: () => renderStepper(RouteNames.UserSport),
-            headerTitleAlign: 'left',
+            headerTitle: 'Joueurs recherchés',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.UserPosition) ? (
         <Stack.Screen
-          component={UserPosition}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserPosition}
+          component={BookingCalendar}
+          name={RouteNames.BookingCalendar}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserPosition),
-            headerTitle: () => renderStepper(RouteNames.UserPosition),
-            headerTitleAlign: 'left',
+            headerTitle: 'Réserver un créneau',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.UserPhysique) ? (
         <Stack.Screen
-          component={UserPhysique}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserPhysique}
+          component={MultisportClubDetails}
+          name={RouteNames.MultisportClubDetails}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserPhysique),
-            headerTitle: () => renderStepper(RouteNames.UserPhysique),
-            headerTitleAlign: 'left',
+            headerTitle: 'Club Omnisport',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.UserLevel) ? (
         <Stack.Screen
-          component={UserLevel}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserLevel}
+          component={MultisportClubEditDetails}
+          name={RouteNames.MultisportClubEdit}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserLevel),
-            headerTitle: () => renderStepper(RouteNames.UserLevel),
-            headerTitleAlign: 'left',
+            headerTitle: 'Modifier le club',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.UserCategory) ? (
         <Stack.Screen
-          component={UserCategory}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserCategory}
+          component={FeaturedRequestsScreen}
+          name={RouteNames.FeaturedRequests}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserCategory),
-            headerTitle: () => renderStepper(RouteNames.UserCategory),
-            headerTitleAlign: 'left',
+            headerTitle: 'Demandes à la une',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.UserSportHistory) ? (
         <Stack.Screen
-          component={UserSportHistory}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserSportHistory}
+          component={CMDashboard}
+          name={RouteNames.CMDashboard}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserSportHistory),
-            headerTitle: () => renderStepper(RouteNames.UserSportHistory),
-            headerTitleAlign: 'left',
+            headerTitle: 'Gestion CM',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.UserClubSearch) ? (
         <Stack.Screen
-          component={UserClubSearch}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserClubSearch}
+          component={CMPlanningScreen}
+          name={RouteNames.CMPlanning}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserClubSearch),
-            headerTitle: () => renderStepper(RouteNames.UserClubSearch),
-            headerTitleAlign: 'left',
+            headerTitle: 'Planning',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.UserAffiliationGuide) ? (
         <Stack.Screen
-          component={UserAffiliationGuide}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.UserAffiliationGuide}
+          component={AddSponsor}
+          name={RouteNames.AddSponsor}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserAffiliationGuide),
-            headerTitle: () => renderStepper(RouteNames.UserAffiliationGuide),
-            headerTitleAlign: 'left',
+            headerTitle: 'Ajouter un partenaire',
           }}
         />
-      ) : null}
-
-      {canShowView(RouteNames.Welcome) ? (
         <Stack.Screen
-          component={Welcome}
-          key={onboardingViews?.totalViews}
-          name={RouteNames.Welcome}
+          component={CMMembersScreen}
+          name={RouteNames.CMMembers}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.Welcome),
-            headerTitle: () => renderStepper(RouteNames.Welcome),
-            headerTitleAlign: 'left',
-
+            headerTitle: 'Membres',
           }}
         />
-      ) : null}
+        <Stack.Screen
+          component={CMTeamsScreen}
+          name={RouteNames.CMTeams}
+          options={{
+            headerShown: true,
+            title: t('common.teams'),
+          }}
+        />
+        <Stack.Screen
+          component={CreateSectionScreen}
+          name={RouteNames.CreateSection}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Nouvelle section',
+          }}
+        />
+        <Stack.Screen
+          component={SearchAlerts}
+          name={RouteNames.SearchAlerts}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          component={SearchMapScreen}
+          name={RouteNames.SearchMapScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={HistoryWizardCategory}
+          name={RouteNames.HistoryWizardCategory}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Ajouter une experience',
+          }}
+        />
+        <Stack.Screen
+          component={HistoryWizardClub}
+          name={RouteNames.HistoryWizardClub}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Ajouter une experience',
+          }}
+        />
+        <Stack.Screen
+          component={HistoryWizardPeriod}
+          name={RouteNames.HistoryWizardPeriod}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Ajouter une experience',
+          }}
+        />
+        <Stack.Screen
+          component={HistoryWizardLevel}
+          name={RouteNames.HistoryWizardLevel}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Ajouter une experience',
+          }}
+        />
+        <Stack.Screen
+          component={HistoryWizardRecap}
+          name={RouteNames.HistoryWizardRecap}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Ajouter une experience',
+          }}
+        />
+        <Stack.Screen
+          component={Conversation}
+          name={RouteNames.Conversation}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={ConversationPublicEventPicker}
+          name={RouteNames.ConversationPublicEventPicker}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={PlanningWeekFullscreen}
+          name={RouteNames.PlanningWeekFullscreen}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={PlanningWeekFullscreen}
+          name={RouteNames.PersonalPlanningWeekFullscreen}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={NewConversation}
+          name={RouteNames.NewConversation}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={PollDetails}
+          name={RouteNames.PollDetails}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={NotificationList}
+          name={RouteNames.NotificationList}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={NotificationDetails}
+          name={RouteNames.NotificationDetails}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={RequestsHub}
+          name={RouteNames.RequestsHub}
+          options={{
+            headerShown: false,
+          }}
+        />
+
+        <Stack.Screen
+          component={FacilityList}
+          name={RouteNames.FacilityList}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Installations',
+          }}
+        />
+        <Stack.Screen
+          component={RecruitmentAdDetails}
+          name={RouteNames.RecruitmentAdDetails}
+          options={{
+            ...commonOptions,
+            headerTintColor: '#fff',
+            headerTitle: '',
+            headerTransparent: true,
+          }}
+        />
+        <Stack.Screen
+          component={RecruitmentAdEdit}
+          name={RouteNames.RecruitmentAdEdit}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Modifier l\'annonce',
+          }}
+        />
+        <Stack.Screen
+          component={FacilityForm}
+          name={RouteNames.FacilityForm}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+
+        {/* League Screens */}
+        <Stack.Screen
+          component={require('@/views/league/match/LeagueMatchDetails').default}
+          name={RouteNames.MatchDetails}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Détails du match',
+          }}
+        />
+        <Stack.Screen
+          component={require('@/views/league/match/LeagueMatchDetails').default}
+          name={RouteNames.LeagueMatchDetails}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={require('@/views/league/match/PastMatchDetails').default}
+          name={RouteNames.PastMatchDetails}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={require('@/views/league/details/SquadDetailsScreen').default}
+          name={RouteNames.SquadDetails}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={require('@/views/league/search/SquadSearchScreen').default}
+          name={RouteNames.SquadSearch}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={require('@/views/league/search/SquadFiltersScreen').default}
+          name={RouteNames.SquadFilters}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={require('@/views/league/details/SquadRequestsScreen').default}
+          name={RouteNames.SquadRequests}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        {canShowView(RouteNames.UserRole) ? (
+          <Stack.Screen
+            component={UserType}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserRole}
+            options={commonOptions}
+          />
+        ) : null}
+        {canShowView(RouteNames.UserName) ? (
+          <Stack.Screen
+            component={UserName}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserName}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserName),
+              headerTitle: () => renderStepper(RouteNames.UserName),
+              headerTitleAlign: 'left',
+
+            }}
+          />
+        ) : null}
+        {canShowView(RouteNames.UserSection) ? (
+          <Stack.Screen
+            component={UserSection}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserSection}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserSection),
+              headerTitle: () => renderStepper(RouteNames.UserSection),
+              headerTitleAlign: 'left',
+
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.UserBirthdate) ? (
+          <Stack.Screen
+            component={UserBirthdate}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserBirthdate}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserBirthdate),
+              headerTitle: () => renderStepper(RouteNames.UserBirthdate),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.UserAddress) ? (
+          <Stack.Screen
+            component={UserAddress}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserAddress}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserAddress),
+              headerTitle: () => renderStepper(RouteNames.UserAddress),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.UserAvatar) ? (
+          <Stack.Screen
+            component={UserAvatar}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserAvatar}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserAvatar),
+              headerTitle: () => renderStepper(RouteNames.UserAvatar),
+              headerTitleAlign: 'left',
+
+            }}
+          />
+        ) : null}
+
+        {/* Optional onboarding steps for players */}
+        {canShowView(RouteNames.UserSport) ? (
+          <Stack.Screen
+            component={UserSport}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserSport}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserSport),
+              headerTitle: () => renderStepper(RouteNames.UserSport),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.UserPosition) ? (
+          <Stack.Screen
+            component={UserPosition}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserPosition}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserPosition),
+              headerTitle: () => renderStepper(RouteNames.UserPosition),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.UserPhysique) ? (
+          <Stack.Screen
+            component={UserPhysique}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserPhysique}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserPhysique),
+              headerTitle: () => renderStepper(RouteNames.UserPhysique),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.UserLevel) ? (
+          <Stack.Screen
+            component={UserLevel}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserLevel}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserLevel),
+              headerTitle: () => renderStepper(RouteNames.UserLevel),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.UserCategory) ? (
+          <Stack.Screen
+            component={UserCategory}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserCategory}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserCategory),
+              headerTitle: () => renderStepper(RouteNames.UserCategory),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.UserSportHistory) ? (
+          <Stack.Screen
+            component={UserSportHistory}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserSportHistory}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserSportHistory),
+              headerTitle: () => renderStepper(RouteNames.UserSportHistory),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.UserClubSearch) ? (
+          <Stack.Screen
+            component={UserClubSearch}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserClubSearch}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserClubSearch),
+              headerTitle: () => renderStepper(RouteNames.UserClubSearch),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.UserAffiliationGuide) ? (
+          <Stack.Screen
+            component={UserAffiliationGuide}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserAffiliationGuide}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserAffiliationGuide),
+              headerTitle: () => renderStepper(RouteNames.UserAffiliationGuide),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {canShowView(RouteNames.Welcome) ? (
+          <Stack.Screen
+            component={Welcome}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.Welcome}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.Welcome),
+              headerTitle: () => renderStepper(RouteNames.Welcome),
+              headerTitleAlign: 'left',
+
+            }}
+          />
+        ) : null}
 
       </Stack.Navigator>
-    </>
+    </HistoryWizardProvider>
   ) : null;
 }
 

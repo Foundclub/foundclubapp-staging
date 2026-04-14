@@ -19,6 +19,7 @@ import {
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import { ENABLE_AFFILIATION_ONBOARDING_TUTORIAL } from '@/domains/tutorial/tutorialFeatureFlags';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -46,6 +47,43 @@ const RESULT_CARD_MIN_HEIGHT = 96;
 const SKELETON_RESULT_COUNT = 3;
 const SKELETON_PLACEHOLDER_KEYS = ['one', 'two', 'three'];
 const AFFILIATION_TUTORIAL_FLOW_PREFIX = 'onboarding-affiliation-v2';
+
+function AffiliationTutorialStep({
+  children,
+  description,
+  id,
+  nextAction,
+  nextLabel,
+  nextTargetStepId,
+  onNext,
+  order,
+  spotlight,
+  style,
+  targetNodeResolver,
+  title,
+}) {
+  if (!ENABLE_AFFILIATION_ONBOARDING_TUTORIAL) {
+    return children;
+  }
+
+  return (
+    <OnboardingWrapper
+      description={description}
+      id={id}
+      nextAction={nextAction}
+      nextLabel={nextLabel}
+      nextTargetStepId={nextTargetStepId}
+      onNext={onNext}
+      order={order}
+      spotlight={spotlight}
+      style={style}
+      targetNodeResolver={targetNodeResolver}
+      title={title}
+    >
+      {children}
+    </OnboardingWrapper>
+  );
+}
 
 const getClubCardMeta = (item, fallbackLabel) => {
   const city = item?.city || item?.addressDetails?.city;
@@ -131,6 +169,7 @@ function UserAffiliationGuideContent({ navigation }) {
   }, [searchValue]);
 
   useEffect(() => {
+    if (!ENABLE_AFFILIATION_ONBOARDING_TUTORIAL) return undefined;
     if (isActive || totalSteps === 0) return undefined;
 
     const timer = setTimeout(() => {
@@ -469,7 +508,7 @@ function UserAffiliationGuideContent({ navigation }) {
     }
 
     return (
-      <OnboardingWrapper
+      <AffiliationTutorialStep
         description={resultTutorialDescription}
         id={wrapperId}
         order={2}
@@ -483,7 +522,7 @@ function UserAffiliationGuideContent({ navigation }) {
         title={resultTutorialTitle}
       >
         {cardButton}
-      </OnboardingWrapper>
+      </AffiliationTutorialStep>
     );
   };
 
@@ -683,7 +722,7 @@ function UserAffiliationGuideContent({ navigation }) {
 
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <OnboardingWrapper
+              <AffiliationTutorialStep
                 description={t(
                   'onboardingAffiliation.tutorial.stepSearchDescription',
                   `Tape le nom du ${roleTargetLabel} pour filtrer la liste.`,
@@ -719,7 +758,7 @@ function UserAffiliationGuideContent({ navigation }) {
                     : t('onboardingAffiliation.search.placeholderTeam', "Nom de l'équipe")}
                   value={searchValue}
                 />
-              </OnboardingWrapper>
+              </AffiliationTutorialStep>
             </View>
 
             {isClubFlow ? (
@@ -746,7 +785,7 @@ function UserAffiliationGuideContent({ navigation }) {
                     </Text>
                   </View>
                 ) : null}
-                <OnboardingWrapper
+                <AffiliationTutorialStep
                   description={t(
                     'onboardingAffiliation.tutorial.stepFiltersDescription',
                     'On va maintenant ouvrir les filtres pour affiner ta recherche.',
@@ -777,7 +816,7 @@ function UserAffiliationGuideContent({ navigation }) {
                     onPress={handleOpenClubFilters}
                     variant="Secondary"
                   />
-                </OnboardingWrapper>
+                </AffiliationTutorialStep>
               </View>
             ) : null}
           </View>
@@ -839,7 +878,7 @@ function UserAffiliationGuideContent({ navigation }) {
             },
           ]}
         >
-          <OnboardingWrapper
+          <AffiliationTutorialStep
             description={isClubFlow
               ? t(
                 'onboardingAffiliation.tutorial.stepNotFoundDescriptionClub',
@@ -880,7 +919,7 @@ function UserAffiliationGuideContent({ navigation }) {
                 : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
               variant="Secondary"
             />
-          </OnboardingWrapper>
+          </AffiliationTutorialStep>
 
           <OnboardingOptionalHint />
           <Button
@@ -956,7 +995,7 @@ function UserAffiliationGuideContent({ navigation }) {
         </View>
       </BottomModal>
 
-      <OnboardingOverlay />
+      {ENABLE_AFFILIATION_ONBOARDING_TUTORIAL ? <OnboardingOverlay /> : null}
     </FormScreenContainer>
   );
 }

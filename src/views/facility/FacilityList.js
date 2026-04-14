@@ -27,6 +27,7 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { deleteFacility, getFacilitySections } from '@/services/facility/facilityService';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
 const getAddressLabel = (address, fallback = 'Adresse non renseignee') => {
@@ -504,7 +505,7 @@ function FacilityList() {
           Impossible de charger les installations
         </Text>
         <Text style={[Fonts.p2, Fonts.primary100]}>
-          {error?.message || 'Reessayez dans quelques instants.'}
+          {getErrorMessage(error, 'generic')}
         </Text>
         <Button
           onPress={() => refetchFacilities()}

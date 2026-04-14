@@ -13,6 +13,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetLeagueDisputes, useResolveLeagueDispute } from '@/services/admin/adminQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 const normalizeId = (value) => (value === null || value === undefined ? '' : String(value));
 
 const buildInitialResolution = (match) => {
@@ -59,7 +61,7 @@ function AdminLeagueDisputes() {
     return (
       <AdminStateView
         actionLabel="R\u00E9essayer"
-        description={error?.message || 'Impossible de charger les litiges League.'}
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger les litiges League.'}
         onAction={refetch}
         title="Chargement impossible"
       />
@@ -103,7 +105,7 @@ function AdminLeagueDisputes() {
       Alert.alert('Succès', 'Litige résolu.');
       refetch();
     } catch (error) {
-      Alert.alert('Erreur', error?.response?.data?.error?.message || 'Impossible de résoudre le litige.');
+      Alert.alert('Erreur', getErrorMessage(error, 'generic') || 'Impossible de resoudre le litige.');
     }
   };
 

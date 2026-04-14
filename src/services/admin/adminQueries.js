@@ -13,12 +13,16 @@ import {
   getClubClaimRequest,
   getClubClaimsRequestList,
   getLeagueDisputes,
+  getNotificationsHealth,
   getPendingClubClaims,
   getPendingClubOnboardingRequests,
   processAffiliationHelpRequest,
+  purgeNotificationDeliveries,
   refuseAffiliationHelpRequest,
   refuseClubClaim,
   resolveLeagueDispute,
+  retryNotificationDelivery,
+  sendNotificationsHealthTest,
   updateAdminClub,
   updateAdminUser,
 } from './adminService';
@@ -109,6 +113,42 @@ export const useGetAdminStats = () => useQuery({
   queryFn: getAdminStats,
   queryKey: ['adminStats'],
 });
+
+export const useGetNotificationsHealth = () => useQuery({
+  queryFn: getNotificationsHealth,
+  queryKey: ['admin', 'notifications-health'],
+  refetchInterval: 30000,
+});
+
+export const useSendNotificationsHealthTest = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: sendNotificationsHealthTest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'notifications-health'] });
+    },
+  });
+};
+
+export const useRetryNotificationDelivery = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: retryNotificationDelivery,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'notifications-health'] });
+    },
+  });
+};
+
+export const usePurgeNotificationDeliveries = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: purgeNotificationDeliveries,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'notifications-health'] });
+    },
+  });
+};
 
 /**
  * Hook to get aggregated admin reports.

@@ -9,6 +9,7 @@ import AdminClubOnboardingList from '@/views/admin/AdminClubOnboardingList';
 import AdminDashboard from '@/views/admin/AdminDashboard';
 import AdminEvents from '@/views/admin/AdminEvents';
 import AdminLeagueDisputes from '@/views/admin/AdminLeagueDisputes';
+import AdminNotificationsHealth from '@/views/admin/AdminNotificationsHealth';
 import AdminPopupCampaignDetail from '@/views/admin/AdminPopupCampaignDetail';
 import AdminPopupCampaignForm from '@/views/admin/AdminPopupCampaignForm';
 import AdminPopupCampaignList from '@/views/admin/AdminPopupCampaignList';
@@ -148,6 +149,14 @@ function AdminStack() {
         options={{
           ...commonOptions,
           headerTitle: 'Litiges League',
+        }}
+      />
+      <Stack.Screen
+        component={AdminNotificationsHealth}
+        name={RouteNames.AdminNotificationsHealth}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Notifications',
         }}
       />
       <Stack.Screen
