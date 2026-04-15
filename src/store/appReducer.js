@@ -1,4 +1,7 @@
-import { sanitizeUser } from '@/domains/auth/authSanitizer';
+import {
+  haveSameSanitizedUser,
+  sanitizeUser,
+} from '@/domains/auth/authSanitizer';
 
 const normalizeDocumentId = (value) => {
   if (typeof value !== 'string') return undefined;
@@ -262,6 +265,16 @@ export default function appReducer(state, action) {
 
       // Sanitize user object similar to SET_AUTHENTICATION
       const sanitizedUser = sanitizeUser(updatedUserData);
+      const matchingSession = (state.authSessions || []).find(
+        (session) => session?.user?.documentId === sanitizedUser.documentId,
+      );
+      const currentAuthMatches = state.auth?.user?.documentId !== sanitizedUser.documentId
+        || haveSameSanitizedUser(state.auth?.user, sanitizedUser);
+      const sessionMatches = haveSameSanitizedUser(matchingSession?.user, sanitizedUser);
+
+      if (currentAuthMatches && sessionMatches) {
+        return state;
+      }
 
       // Update auth if it matches current user
       let newAuth = state.auth;

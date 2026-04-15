@@ -7,6 +7,8 @@ import { navigate } from '@/navigation/navigationService';
 
 import { getNotificationRuntimeSnapshot } from '@/services/notifications/notificationRuntimeSnapshot';
 
+import { formatBootMeta } from '@/utils/performance/bootPerformance';
+
 import {
   ENABLE_PUSH_NOTIFICATIONS,
   ENABLE_SMART_NOTIFICATIONS,
@@ -25,11 +27,11 @@ const shouldExposeNotificationRuntimeSnapshot = NOTIFICATIONS_RUNTIME_CONFIG.app
  */
 function NotificationBootstrapDisabled() {
   React.useEffect(() => {
-    console.info('[BOOT] BOOT_NOTIFICATIONS_COMPONENT_SKIPPED', {
+    console.info(`[BOOT] BOOT_NOTIFICATIONS_COMPONENT_SKIPPED ${formatBootMeta({
       platform: Platform.OS,
       policy: NOTIFICATIONS_BOOTSTRAP_POLICY,
       ...(shouldExposeNotificationRuntimeSnapshot ? { snapshot: getNotificationRuntimeSnapshot() } : {}),
-    });
+    })}`);
   }, []);
 
   return null;
@@ -42,11 +44,11 @@ function NotificationBootstrapEnabled() {
   const { consumeNotification } = useSmartNotifications();
 
   React.useEffect(() => {
-    console.info('[BOOT] BOOT_NOTIFICATIONS_COMPONENT_READY', {
+    console.info(`[BOOT] BOOT_NOTIFICATIONS_COMPONENT_READY ${formatBootMeta({
       platform: Platform.OS,
       runtime: NOTIFICATIONS_RUNTIME_CONFIG,
       ...(shouldExposeNotificationRuntimeSnapshot ? { snapshot: getNotificationRuntimeSnapshot() } : {}),
-    });
+    })}`);
   }, []);
 
   const {

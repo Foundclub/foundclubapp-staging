@@ -22,11 +22,25 @@ function SearchHubLegacyRedirect({ navigation, route }) {
     const target = resolveLegacySearchTarget(route?.params, userData);
 
     if (!target) {
-      navigation.replace(RouteNames.SearchEvents);
+      navigation.replace(RouteNames.HomeTab, {
+        params: {
+          params: {
+            activeType: 'events',
+          },
+          screen: RouteNames.SearchHub,
+        },
+        screen: RouteNames.Search,
+      });
       return;
     }
 
-    navigation.replace(target.routeName, target.params);
+    navigation.replace(RouteNames.HomeTab, {
+      params: {
+        params: target.params,
+        screen: target.routeName,
+      },
+      screen: RouteNames.Search,
+    });
   }, [navigation, route?.params, userData]);
 
   return (

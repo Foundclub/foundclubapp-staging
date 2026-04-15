@@ -58,10 +58,18 @@ const sortActions = (actions = []) => [...actions]
   });
 
 /**
- * @param {{ initialCampaign?: any }} [props]
+ * @param {{
+ *   hasResolvedInitialCampaign?: boolean;
+ *   initialCampaign?: any;
+ *   skipInitialFetch?: boolean;
+ * }} [props]
  * @returns {import('react').ReactElement | null}
  */
-function RemotePopupCampaignHost({ initialCampaign = null } = {}) {
+function RemotePopupCampaignHost({
+  hasResolvedInitialCampaign = false,
+  initialCampaign = null,
+  skipInitialFetch = false,
+} = {}) {
   const [{ auth }] = useAppContext();
   const { showBanner } = useAppFeedback();
   const appStateRef = useRef(AppState.currentState);
@@ -139,9 +147,25 @@ function RemotePopupCampaignHost({ initialCampaign = null } = {}) {
       return undefined;
     }
 
+    if (skipInitialFetch) {
+      return undefined;
+    }
+
+    if (hasResolvedInitialCampaign) {
+      setActiveCampaign(null);
+      return undefined;
+    }
+
     fetchCampaigns('app_open');
     return undefined;
-  }, [auth?.token, auth?.user?.documentId, fetchCampaigns, initialCampaign]);
+  }, [
+    auth?.token,
+    auth?.user?.documentId,
+    fetchCampaigns,
+    hasResolvedInitialCampaign,
+    initialCampaign,
+    skipInitialFetch,
+  ]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {

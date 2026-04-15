@@ -5,7 +5,9 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Linking, Platform,
+  InteractionManager,
+  Linking,
+  Platform,
 } from 'react-native';
 
 import { storage, useAppContext } from '@/store/appContext';
@@ -27,6 +29,7 @@ import {
   buildShareMessageWithUrl,
 } from '@/utils/shareLinks';
 import {
+  getSanitizedUserSignature,
   haveSameSanitizedUser,
   sanitizeUser,
 } from '@/domains/auth/authSanitizer';
@@ -41,6 +44,22 @@ import { UNREAD_COUNT_QUERY_KEY } from '@/hooks/useNotificationController';
 /* eslint-enable import/order, perfectionist/sort-imports */
 
 const authLogger = createLogger('auth');
+let lastBootstrapSyncedKey = null;
+let lastFullUserSyncedKey = null;
+
+const getBootstrapErrorStatus = (error) => {
+  const parsedStatus = Number(error?.status || error?.response?.status || error?.error?.status);
+  return Number.isFinite(parsedStatus) ? parsedStatus : null;
+};
+
+const getBootstrapErrorMessage = (error) => String(
+  error?.response?.data?.error?.message
+  || error?.response?.data?.message
+  || error?.details?.message
+  || error?.message
+  || error
+  || 'unknown',
+).trim();
 
 /**
  * Custom hook to manage authentication
@@ -52,9 +71,10 @@ const useAuth = () => {
      @type {import('@react-native-firebase/auth')
     .FirebaseAuthTypes.ConfirmationResult | undefined} */(undefined),
   );
+  const [isFullUserFetchReady, setIsFullUserFetchReady] = useState(false);
 
   // hooks
-  const [, appDispatch] = useAppContext();
+  const [appState, appDispatch] = useAppContext();
   const { isGold } = useAppMode();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -156,10 +176,11 @@ const useAuth = () => {
     isLoading: isBootstrapLoading,
   } = useQuery({
     enabled: Boolean(auth?.token) && !isAddingAccount,
-    initialData: auth?.user ? { userSummary: auth.user } : undefined,
+    placeholderData: auth?.user ? { userSummary: auth.user } : undefined,
     queryFn: getAppBootstrap,
     queryKey: ['app-bootstrap', auth?.token || 'no-token'],
     refetchOnMount: false,
+    retry: false,
     staleTime: 1000 * 30,
   });
 
@@ -169,13 +190,61 @@ const useAuth = () => {
     }
   }, [auth?.token, isAddingAccount]);
 
+  useEffect(() => {
+    if (!bootstrapError) {
+      return;
+    }
+
+    const status = getBootstrapErrorStatus(bootstrapError);
+    const message = getBootstrapErrorMessage(bootstrapError);
+    authLogger.warn('Bootstrap request failed', {
+      message,
+      status,
+    });
+    markBootStep('bootstrap_failed', {
+      message,
+      ...(status ? { status } : {}),
+    });
+  }, [bootstrapError]);
+
+  useEffect(() => {
+    if (!auth?.token || isAddingAccount) {
+      setIsFullUserFetchReady(false);
+      return undefined;
+    }
+
+    let isCancelled = false;
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timeoutId;
+    const task = InteractionManager.runAfterInteractions(() => {
+      timeoutId = setTimeout(() => {
+        if (!isCancelled) {
+          setIsFullUserFetchReady(true);
+        }
+      }, 350);
+    });
+
+    return () => {
+      isCancelled = true;
+      task?.cancel?.();
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [auth?.token, isAddingAccount]);
+
+  const shouldEnableFullUserFetch = Boolean(auth?.token)
+    && !isAddingAccount
+    && isFullUserFetchReady
+    && (Boolean(bootstrapData?.serverTime) || Boolean(bootstrapError) || !auth?.user);
+
   const {
     data: fullUserData,
     error: fullUserDataError,
     isLoading: isFullUserDataLoading,
     refetch: refetchUserData,
   } = useQuery({
-    enabled: Boolean(auth?.token) && !isAddingAccount,
+    enabled: shouldEnableFullUserFetch,
     queryFn: getMe,
     // Scope by current token to avoid cross-account stale cache reuse
     queryKey: ['get-me', auth?.token || 'no-token'],
@@ -196,7 +265,7 @@ const useAuth = () => {
   // Sync user data to global state/sessions when it changes (e.g. after edit)
   // This ensures the account switcher displays the correct info
   // NOTE: User data is stored at state.auth.user, NOT state.userData
-  const currentContextUserData = useAppContext()[0].auth?.user;
+  const currentContextUserData = appState.auth?.user;
 
   useEffect(() => {
     if (!bootstrapData?.userSummary?.documentId) {
@@ -204,18 +273,27 @@ const useAuth = () => {
     }
 
     const sanitizedUserData = sanitizeUser(bootstrapData.userSummary);
+    const bootstrapSyncKey = `${String(auth?.token || 'no-token')}:${getSanitizedUserSignature(sanitizedUserData)}`;
     if (haveSameSanitizedUser(sanitizedUserData, currentContextUserData)) {
+      if (lastBootstrapSyncedKey === bootstrapSyncKey) {
+        return;
+      }
+      lastBootstrapSyncedKey = bootstrapSyncKey;
+      return;
+    }
+    if (lastBootstrapSyncedKey === bootstrapSyncKey) {
       return;
     }
 
     authLogger.debug('Bootstrap user summary synced', {
       userDocumentId: sanitizedUserData?.documentId,
     });
+    lastBootstrapSyncedKey = bootstrapSyncKey;
     appDispatch({
       payload: bootstrapData.userSummary,
       type: 'UPDATE_USER_DATA',
     });
-  }, [appDispatch, bootstrapData?.userSummary, currentContextUserData]);
+  }, [appDispatch, auth?.token, bootstrapData?.userSummary, currentContextUserData]);
 
   useEffect(() => {
     if (!bootstrapData?.serverTime) {
@@ -253,7 +331,15 @@ const useAuth = () => {
     }
 
     const sanitizedUserData = sanitizeUser(fullUserData);
+    const fullUserSyncKey = `${String(auth?.token || 'no-token')}:${getSanitizedUserSignature(sanitizedUserData)}`;
     if (haveSameSanitizedUser(sanitizedUserData, currentContextUserData)) {
+      if (lastFullUserSyncedKey === fullUserSyncKey) {
+        return;
+      }
+      lastFullUserSyncedKey = fullUserSyncKey;
+      return;
+    }
+    if (lastFullUserSyncedKey === fullUserSyncKey) {
       return;
     }
 
@@ -261,11 +347,12 @@ const useAuth = () => {
       userDocumentId: sanitizedUserData?.documentId,
     });
 
+    lastFullUserSyncedKey = fullUserSyncKey;
     appDispatch({
       payload: fullUserData,
       type: 'UPDATE_USER_DATA',
     });
-  }, [appDispatch, currentContextUserData, fullUserData]);
+  }, [appDispatch, auth?.token, currentContextUserData, fullUserData]);
 
   const onboardingViews = useMemo(() => (
     userData ? getOnboardingViews(userData) : undefined
@@ -493,6 +580,7 @@ const useAuth = () => {
     inviteTeamPlayers,
     inviteTrainer,
     isAddingAccount,
+    isBootstrapResolved: !auth?.token || isAddingAccount || Boolean(bootstrapData?.serverTime || bootstrapError),
     isLoading: otpMutation.isPending || loginMutation.isPending,
     loginMutation,
     logoutMutation,

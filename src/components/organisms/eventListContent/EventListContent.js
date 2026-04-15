@@ -1,12 +1,21 @@
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isBefore, startOfDay } from 'date-fns';
 import {
-  useCallback, useMemo, useRef, useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, View } from 'react-native';
+import {
+  Alert,
+  InteractionManager,
+  Text,
+  View,
+} from 'react-native';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -37,6 +46,7 @@ import { useSearchEvents, useSearchEventsMap } from '@/services/search/searchQue
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
 import { createLogger } from '@/utils/logger/logger';
+import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
 import JoinEventModal from '../joinEventModal/JoinEventModal';
 
@@ -109,6 +119,8 @@ function EventListSeparator() {
  * @param {boolean} [props.isPlanning] - Whether the list is displayed in planning mode (optional)
  * @param {(key: 'filters' | 'card', layout: { x: number; y: number; width: number; height: number }) => void} [props.onTutorialLayout]
  * @param {boolean} [props.enableMapMode]
+ * @param {number} [props.refreshSignal]
+ * @param {boolean} [props.screenActive]
  * @returns {import('react').ReactElement} Event list content component
  */
 function EventListContent({
@@ -119,14 +131,19 @@ function EventListContent({
   isPlanning = false,
   onLoadMore,
   onTutorialLayout,
+  refreshSignal = 0,
+  screenActive = true,
   showFilters = false,
 }) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [joinModalError, setJoinModalError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
+  const [areFeaturedEventsEnabled, setAreFeaturedEventsEnabled] = useState(false);
   const filtersTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
   const firstCardTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
-  const hasHandledInitialFocusRefreshRef = useRef(false);
+  const primaryQuerySignatureRef = useRef('');
+  const firstResultsSignatureRef = useRef('');
+  const secondaryQuerySignatureRef = useRef('');
 
   // Date Picker State
   // Date Picker State
@@ -225,7 +242,9 @@ function EventListContent({
     isFetchingNextPage,
     isLoading: isInternalLoading,
     refetch,
-  } = useGetEvents(eventsConfig, { enabled: !propEvents && !isViewportListMode && !isSmartSearchEnabled });
+  } = useGetEvents(eventsConfig, {
+    enabled: screenActive && !propEvents && !isViewportListMode && !isSmartSearchEnabled,
+  });
   const {
     data: searchPages,
     error: searchError,
@@ -251,7 +270,7 @@ function EventListContent({
     teamIds: eventsConfig?.teamIds,
     type: eventsConfig?.type,
   }, {
-    enabled: !propEvents && !isViewportListMode && isSmartSearchEnabled,
+    enabled: screenActive && !propEvents && !isViewportListMode && isSmartSearchEnabled,
   });
   const {
     data: viewportPages,
@@ -262,19 +281,40 @@ function EventListContent({
     isLoading: isViewportLoading,
     refetch: refetchViewport,
   } = useSearchEventsMap(viewportListParams || {}, {
-    enabled: !propEvents && isViewportListMode && Boolean(viewportListParams),
+    enabled: screenActive && !propEvents && isViewportListMode && Boolean(viewportListParams),
   });
 
   const {
     data: featuredPages,
     refetch: refetchFeatured,
-  } = useGetEvents(featuredEventsConfig, { enabled: !propEvents });
+  } = useGetEvents(featuredEventsConfig, {
+    enabled: screenActive && !propEvents && areFeaturedEventsEnabled,
+  });
 
   const selectedParticipationFlow = useMemo(
     () => resolveParticipationFlow(selectedEvent, { user: userData }),
     [selectedEvent, userData],
   );
   const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!screenActive || propEvents) {
+      setAreFeaturedEventsEnabled(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setAreFeaturedEventsEnabled(false);
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!cancelled) {
+        setAreFeaturedEventsEnabled(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      task.cancel?.();
+    };
+  }, [eventsConfig, propEvents, screenActive]);
   /**
    * Mutation to create an event participation
    * @type {import('@tanstack/react-query').UseMutationResult<EventParticipation,
@@ -396,6 +436,76 @@ function EventListContent({
   } else if (isSmartSearchEnabled) {
     isListFetchingNext = isFetchingSearchNextPage;
   }
+  let activeMode = 'default-list';
+  if (isViewportListMode) {
+    activeMode = 'viewport-list';
+  } else if (isSmartSearchEnabled) {
+    activeMode = 'smart-search';
+  }
+
+  useEffect(() => {
+    if (!screenActive) return;
+
+    const signature = JSON.stringify({
+      mode: activeMode,
+      q: activeSearchText,
+      viewport: isViewportListMode ? viewportListParams : null,
+    });
+    if (primaryQuerySignatureRef.current === signature) return;
+    primaryQuerySignatureRef.current = signature;
+    markSearchPerf('search_primary_query_started', {
+      fromCache: events.length > 0,
+      mode: activeMode,
+      networkCount: 1,
+      type: 'events',
+    });
+  }, [activeMode, activeSearchText, events.length, isViewportListMode, screenActive, viewportListParams]);
+
+  useEffect(() => {
+    if (!screenActive || isLoading) return;
+
+    const signature = JSON.stringify({
+      count: events.length,
+      mode: activeMode,
+    });
+    if (firstResultsSignatureRef.current === signature) return;
+    firstResultsSignatureRef.current = signature;
+    markSearchPerf('search_primary_query_completed', {
+      fromCache: events.length > 0 && !isListFetchingNext,
+      mode: activeMode,
+      networkCount: 1,
+      resultCount: events.length,
+      type: 'events',
+    });
+    markSearchPerf('search_first_results_rendered', {
+      fromCache: events.length > 0 && !isListFetchingNext,
+      mode: activeMode,
+      networkCount: 1,
+      resultCount: events.length,
+      type: 'events',
+    });
+  }, [activeMode, events.length, isListFetchingNext, isLoading, screenActive]);
+
+  useEffect(() => {
+    if (!screenActive || !areFeaturedEventsEnabled || propEvents) return;
+
+    const signature = `${activeMode}:${featuredEvents.length}`;
+    if (secondaryQuerySignatureRef.current === signature) return;
+    secondaryQuerySignatureRef.current = signature;
+    markSearchPerf('search_secondary_query_started', {
+      fromCache: featuredEvents.length > 0,
+      mode: activeMode,
+      networkCount: 1,
+      type: 'events',
+    });
+    markSearchPerf('search_secondary_query_completed', {
+      fromCache: featuredEvents.length > 0,
+      mode: activeMode,
+      networkCount: 1,
+      resultCount: featuredEvents.length,
+      type: 'events',
+    });
+  }, [activeMode, areFeaturedEventsEnabled, featuredEvents.length, propEvents, screenActive]);
 
   const filterCount = useMemo(() => {
     if (!eventFilters) return 0;
@@ -684,25 +794,35 @@ function EventListContent({
     });
   }, [appDispatch, eventFilters]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!hasHandledInitialFocusRefreshRef.current) {
-        hasHandledInitialFocusRefreshRef.current = true;
-        return undefined;
-      }
+  useEffect(() => {
+    if (!screenActive || !refreshSignal || propEvents) return;
 
-      if (!propEvents) {
-        if (isViewportListMode) {
-          refetchViewport();
-        } else if (isSmartSearchEnabled) {
-          refetchSearch();
-        } else {
-          refetch();
-        }
-        refetchFeatured();
-      }
-    }, [isSmartSearchEnabled, isViewportListMode, propEvents, refetch, refetchFeatured, refetchSearch, refetchViewport]),
-  );
+    if (isViewportListMode) {
+      refetchViewport();
+      return;
+    }
+
+    if (isSmartSearchEnabled) {
+      refetchSearch();
+      return;
+    }
+
+    refetch();
+    if (areFeaturedEventsEnabled) {
+      refetchFeatured();
+    }
+  }, [
+    areFeaturedEventsEnabled,
+    isSmartSearchEnabled,
+    isViewportListMode,
+    propEvents,
+    refreshSignal,
+    refetch,
+    refetchFeatured,
+    refetchSearch,
+    refetchViewport,
+    screenActive,
+  ]);
 
   // renderers
   /**
@@ -847,7 +967,9 @@ function EventListContent({
               } else {
                 refetch();
               }
-              refetchFeatured();
+              if (areFeaturedEventsEnabled) {
+                refetchFeatured();
+              }
             }}
             refreshing={isLoading && !isListFetchingNext}
             renderItem={renderItem}

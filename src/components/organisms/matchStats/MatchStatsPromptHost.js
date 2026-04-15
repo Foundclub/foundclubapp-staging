@@ -151,9 +151,9 @@ const openPendingMatchStatsList = () => navigate(RouteNames.EventStack, {
 });
 
 /**
- *
+ * @param {{ skipInitialFetch?: boolean }} [props]
  */
-function MatchStatsPromptHost() {
+function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   const [{ auth }] = useAppContext();
   const queryClient = useQueryClient();
   const [dismissedPromptKey, setDismissedPromptKey] = useState(/** @type {string | null} */ (null));
@@ -171,7 +171,7 @@ function MatchStatsPromptHost() {
     data: pendingPromptsPayload,
     refetch,
   } = useGetPendingMatchStatsPrompts({
-    enabled: Boolean(auth?.token),
+    enabled: Boolean(auth?.token) && !skipInitialFetch,
     refetchInterval: auth?.token ? 60000 : false,
     refetchIntervalInBackground: false,
   });

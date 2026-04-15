@@ -2,10 +2,24 @@ import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isBefore, startOfDay } from 'date-fns';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator, Alert, Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  InteractionManager,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
@@ -30,6 +44,8 @@ import { joinReservation } from '@/services/reservation/reservationService';
 import { useSearchReservations } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
+import { markSearchPerf } from '@/utils/performance/searchPerformance';
+
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 /** @typedef {{ pages?: Array<{ data?: FCEvent[] }> }} ReservationPages */
 
@@ -38,9 +54,14 @@ function ReservationsListSeparator() {
 }
 
 /**
- * @param {{ enableMapMode?: boolean; showFilters?: boolean }} props
+ * @param {{ enableMapMode?: boolean; refreshSignal?: number; screenActive?: boolean; showFilters?: boolean }} props
  */
-function ReservationListContent({ enableMapMode = false, showFilters = false }) {
+function ReservationListContent({
+  enableMapMode = false,
+  refreshSignal = 0,
+  screenActive = true,
+  showFilters = false,
+}) {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -56,6 +77,10 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */ (undefined));
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [areFeaturedReservationsEnabled, setAreFeaturedReservationsEnabled] = useState(false);
+  const primaryQuerySignatureRef = useRef('');
+  const firstResultsSignatureRef = useRef('');
+  const secondaryQuerySignatureRef = useRef('');
   const [{ reservationFilters }, appDispatch] = useAppContext();
   const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const selectedActivity = reservationFilters?.activitySlug || null;
@@ -121,7 +146,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     isLoading,
     refetch,
   } = useGetReservations({ ...activeFilters, pageSize: 15 }, {
-    enabled: !isSmartSearchEnabled,
+    enabled: screenActive && !isSmartSearchEnabled,
   });
   const {
     data: smartPages,
@@ -146,7 +171,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     startDateAfter: activeFilters?.startDateAfter,
     startDateBefore: activeFilters?.startDateBefore,
   }, {
-    enabled: isSmartSearchEnabled,
+    enabled: screenActive && isSmartSearchEnabled,
   });
 
   const {
@@ -154,7 +179,29 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     error: featuredError,
     isLoading: isFeaturedLoading,
     refetch: refetchFeatured,
-  } = useGetFeaturedReservations();
+  } = useGetFeaturedReservations(10, {
+    enabled: screenActive && areFeaturedReservationsEnabled,
+  });
+
+  useEffect(() => {
+    if (!screenActive) {
+      setAreFeaturedReservationsEnabled(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setAreFeaturedReservationsEnabled(false);
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!cancelled) {
+        setAreFeaturedReservationsEnabled(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      task.cancel?.();
+    };
+  }, [activeFilters, screenActive]);
 
   const featuredReservations = useMemo(() => {
     const typedFeaturedData = /** @type {{ data?: any[] }} */ (featuredData || {});
@@ -200,6 +247,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
   const activeError = isSmartSearchEnabled ? smartError : error;
   const activeLoading = isSmartSearchEnabled ? isSmartLoading : isLoading;
   const activeFetchingNext = isSmartSearchEnabled ? isFetchingSmartNextPage : isFetchingNextPage;
+  const activeMode = isSmartSearchEnabled ? 'smart-search' : 'default-list';
   const shouldShowMapToggle = enableMapMode && showFilters && displayedReservations.length > 0;
   const listBottomPadding = shouldShowMapToggle
     ? Math.max(sceneBottomInset, floatingActionBottomOffset + 84)
@@ -214,6 +262,69 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
       return acc + 1;
     }, 0);
   }, [reservationFilters]);
+
+  useEffect(() => {
+    if (!screenActive) return;
+
+    const signature = JSON.stringify({
+      mode: activeMode,
+      q: activeSearchText,
+    });
+    if (primaryQuerySignatureRef.current === signature) return;
+    primaryQuerySignatureRef.current = signature;
+    markSearchPerf('search_primary_query_started', {
+      fromCache: displayedReservations.length > 0,
+      mode: activeMode,
+      networkCount: 1,
+      type: 'reservations',
+    });
+  }, [activeMode, activeSearchText, displayedReservations.length, screenActive]);
+
+  useEffect(() => {
+    if (!screenActive || activeLoading) return;
+
+    const signature = JSON.stringify({
+      count: displayedReservations.length,
+      mode: activeMode,
+    });
+    if (firstResultsSignatureRef.current === signature) return;
+    firstResultsSignatureRef.current = signature;
+    markSearchPerf('search_primary_query_completed', {
+      fromCache: displayedReservations.length > 0 && !activeFetchingNext,
+      mode: activeMode,
+      networkCount: 1,
+      resultCount: displayedReservations.length,
+      type: 'reservations',
+    });
+    markSearchPerf('search_first_results_rendered', {
+      fromCache: displayedReservations.length > 0 && !activeFetchingNext,
+      mode: activeMode,
+      networkCount: 1,
+      resultCount: displayedReservations.length,
+      type: 'reservations',
+    });
+  }, [activeFetchingNext, activeLoading, activeMode, displayedReservations.length, screenActive]);
+
+  useEffect(() => {
+    if (!screenActive || !areFeaturedReservationsEnabled) return;
+
+    const signature = `${activeMode}:${featuredReservations.length}`;
+    if (secondaryQuerySignatureRef.current === signature) return;
+    secondaryQuerySignatureRef.current = signature;
+    markSearchPerf('search_secondary_query_started', {
+      fromCache: featuredReservations.length > 0,
+      mode: activeMode,
+      networkCount: 1,
+      type: 'reservations',
+    });
+    markSearchPerf('search_secondary_query_completed', {
+      fromCache: featuredReservations.length > 0,
+      mode: activeMode,
+      networkCount: 1,
+      resultCount: featuredReservations.length,
+      type: 'reservations',
+    });
+  }, [activeMode, areFeaturedReservationsEnabled, featuredReservations.length, screenActive]);
 
   const handleEndReached = useCallback(() => {
     if (isSmartSearchEnabled) {
@@ -281,8 +392,15 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     } else {
       refetch();
     }
-    refetchFeatured();
-  }, [isSmartSearchEnabled, refetch, refetchFeatured, refetchSmart]);
+    if (areFeaturedReservationsEnabled) {
+      refetchFeatured();
+    }
+  }, [areFeaturedReservationsEnabled, isSmartSearchEnabled, refetch, refetchFeatured, refetchSmart]);
+
+  useEffect(() => {
+    if (!screenActive || !refreshSignal) return;
+    handleRefresh();
+  }, [handleRefresh, refreshSignal, screenActive]);
 
   const handleActivitySelect = useCallback((/** @type {string | null} */ activitySlug) => {
     appDispatch({

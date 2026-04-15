@@ -101,8 +101,10 @@ export const useGetEvents = (params, options) => useInfiniteQuery({
     const { meta: { pagination } } = lastPage;
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },
+  placeholderData: options?.placeholderData ?? ((previousData) => previousData),
   queryFn: ({ pageParam = 1 }) => getEvents({ ...params, page: pageParam }),
   queryKey: getEventsQueryKey(params),
+  refetchOnMount: options?.refetchOnMount ?? false,
   staleTime: 30 * 1000,
   ...options,
 });

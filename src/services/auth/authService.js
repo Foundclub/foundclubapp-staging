@@ -10,8 +10,9 @@ import {
   onAuthStateChanged as subscribeToPlatformAuthState,
   sendOtp,
 } from '@/platform/auth';
-import { getAppVersion, getDeviceId } from '@/platform/device';
 import client from '@/services/client';
+import { formatBootMeta } from '@/utils/performance/bootPerformance';
+import { getAppVersion, getDeviceId } from '@/platform/device';
 
 import { isFirebaseBypassEnabled } from './bypassPolicy';
 
@@ -568,11 +569,11 @@ export const getUserById = async (id) => {
  */
 export const addDeviceToken = async (token) => {
   try {
-    logAuthDebug('[FCM] Registering device token', {
+    logAuthDebug(`[FCM] Registering device token ${formatBootMeta({
       device: getDeviceId(),
       platform: Platform.OS,
       tokenPrefix: token ? `${token.slice(0, 12)}...` : 'none',
-    });
+    })}`);
     const result = await client.post('/user-fcm-token/me/device', {
       data: {
         appVersion: getAppVersion(),

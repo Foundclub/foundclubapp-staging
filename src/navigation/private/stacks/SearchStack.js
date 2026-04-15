@@ -24,19 +24,23 @@ function SearchStack() {
         name={SEARCH_STACK_HOME}
       />
       <Stack.Screen
-        getComponent={() => require('@/views/search/SearchEventsScreen').default}
+        getComponent={() => require('@/views/search/SearchHubScreen').default}
+        name={RouteNames.SearchHub}
+      />
+      <Stack.Screen
+        getComponent={() => require('@/views/search/SearchHubRouteAlias').default}
         name={RouteNames.SearchEvents}
       />
       <Stack.Screen
-        getComponent={() => require('@/views/search/SearchClubsScreen').default}
+        getComponent={() => require('@/views/search/SearchHubRouteAlias').default}
         name={RouteNames.SearchClubs}
       />
       <Stack.Screen
-        getComponent={() => require('@/views/search/SearchReservationsScreen').default}
+        getComponent={() => require('@/views/search/SearchHubRouteAlias').default}
         name={RouteNames.SearchReservations}
       />
       <Stack.Screen
-        getComponent={() => require('@/views/search/SearchRecruitmentScreen').default}
+        getComponent={() => require('@/views/search/SearchHubRouteAlias').default}
         name={RouteNames.SearchRecruitment}
       />
     </Stack.Navigator>

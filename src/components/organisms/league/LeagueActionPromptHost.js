@@ -88,9 +88,9 @@ const getOpponentResponseLabel = (opponentResponse, opponentNextAction) => {
 };
 
 /**
- *
+ * @param {{ skipInitialFetch?: boolean }} [props]
  */
-function LeagueActionPromptHost() {
+function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const queryClient = useQueryClient();
   const [{ auth }] = useAppContext();
   const [consumedForcedPromptKey, setConsumedForcedPromptKey] = useState(/** @type {string | null} */ (null));
@@ -114,7 +114,7 @@ function LeagueActionPromptHost() {
     data: pendingActionPayload,
     refetch,
   } = usePendingLeagueAction(undefined, {
-    enabled: Boolean(auth?.token),
+    enabled: Boolean(auth?.token) && !skipInitialFetch,
     refetchInterval: 60000,
     refetchIntervalInBackground: false,
   });

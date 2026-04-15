@@ -1,12 +1,8 @@
-import { RouteNames } from '@/navigation/routeNames';
-import { VALID_RECRUITMENT_TABS, sanitizeRecruitmentTabForRole } from '@/domains/search/recruitmentFlow';
+import { sanitizeRecruitmentTabForRole, VALID_RECRUITMENT_TABS } from '@/domains/search/recruitmentFlow';
 
-const SEARCH_TYPE_TO_ROUTE = /** @type {const} */ ({
-  clubs: RouteNames.SearchClubs,
-  events: RouteNames.SearchEvents,
-  recrutement: RouteNames.SearchRecruitment,
-  reservations: RouteNames.SearchReservations,
-});
+import { RouteNames } from '@/navigation/routeNames';
+
+const CANONICAL_SEARCH_TYPES = new Set(['clubs', 'events', 'recruitment', 'reservations']);
 
 /**
  * @param {unknown} tab
@@ -25,9 +21,9 @@ export function normalizeRecruitmentTab(tab, fallback = 'annonces') {
 
 /**
  * @param {unknown} searchType
- * @returns {'events' | 'clubs' | 'reservations' | 'recrutement'}
+ * @returns {'events' | 'clubs' | 'reservations' | 'recruitment'}
  */
-function normalizeSearchType(searchType) {
+export function normalizeSearchType(searchType) {
   if (typeof searchType !== 'string') return 'events';
   const normalized = searchType.toLowerCase();
   if (normalized === 'event' || normalized === 'events') return 'events';
@@ -38,8 +34,31 @@ function normalizeSearchType(searchType) {
     || normalized === 'recrutement'
     || normalized === 'recruitment'
   ) {
-    return 'recrutement';
+    return 'recruitment';
   }
+  return 'events';
+}
+
+/**
+ * @param {unknown} searchType
+ * @returns {'events' | 'clubs' | 'reservations' | 'recruitment'}
+ */
+export function coerceSearchHubType(searchType) {
+  if (typeof searchType === 'string' && CANONICAL_SEARCH_TYPES.has(searchType)) {
+    return /** @type {'events' | 'clubs' | 'reservations' | 'recruitment'} */ (searchType);
+  }
+
+  return normalizeSearchType(searchType);
+}
+
+/**
+ * @param {string | undefined} routeName
+ * @returns {'events' | 'clubs' | 'reservations' | 'recruitment'}
+ */
+export function getSearchTypeFromRouteName(routeName) {
+  if (routeName === RouteNames.SearchClubs) return 'clubs';
+  if (routeName === RouteNames.SearchReservations) return 'reservations';
+  if (routeName === RouteNames.SearchRecruitment) return 'recruitment';
   return 'events';
 }
 
@@ -69,9 +88,8 @@ export function resolveLegacySearchTarget(params, userOrRole) {
     || (params?.initialTab === 'mercato' ? 'recrutement' : params?.initialTab);
 
   const normalizedType = normalizeSearchType(initialSearchType);
-  const routeName = SEARCH_TYPE_TO_ROUTE[normalizedType];
 
-  if (routeName === RouteNames.SearchRecruitment) {
+  if (normalizedType === 'recruitment') {
     const requestedRecruitmentTab = params?.initialRecruitmentTab
       || (params?.initialTab === 'mercato' ? 'profils' : undefined);
     const initialRecruitmentTab = sanitizeRecruitmentTabForRole(
@@ -81,12 +99,18 @@ export function resolveLegacySearchTarget(params, userOrRole) {
 
     return {
       params: {
+        activeType: normalizedType,
         initialRecruitmentTab,
         timestamp: params?.timestamp,
       },
-      routeName,
+      routeName: RouteNames.SearchHub,
     };
   }
 
-  return { routeName };
+  return {
+    params: {
+      activeType: normalizedType,
+    },
+    routeName: RouteNames.SearchHub,
+  };
 }

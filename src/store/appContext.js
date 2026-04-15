@@ -8,7 +8,7 @@ import {
   syncAuthRuntimeState,
 } from '@/store/authRuntime';
 
-import { markBootStep } from '@/utils/performance/bootPerformance';
+import { formatBootMeta, markBootStep } from '@/utils/performance/bootPerformance';
 
 import { getStorageBackend } from '@/platform/storage';
 
@@ -302,12 +302,12 @@ function AppProvider({ children }) {
   syncAuthRuntimeState(state);
 
   useEffect(() => {
-    console.info('[BOOT] BOOT_STORE_READY', {
+    console.info(`[BOOT] BOOT_STORE_READY ${formatBootMeta({
       activeSessionDocumentId: state.activeSessionDocumentId,
       hasAuth: Boolean(state.auth),
       sessionCount: Array.isArray(state.authSessions) ? state.authSessions.length : 0,
       storageBackend,
-    });
+    })}`);
     // We only need this marker once at bootstrap.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -351,12 +351,12 @@ function AppProvider({ children }) {
       return;
     }
 
-    console.info('[AUTH] APP_CONTEXT_SYNC', {
+    console.info(`[AUTH] APP_CONTEXT_SYNC ${formatBootMeta({
       activeSessionDocumentId: state.activeSessionDocumentId,
       hasAuthToken: Boolean(state.auth?.token),
       isAddingAccount: state.isAddingAccount,
       sessionCount: Array.isArray(state.authSessions) ? state.authSessions.length : 0,
-    });
+    })}`);
   }, [
     state.activeSessionDocumentId,
     state.auth?.token,

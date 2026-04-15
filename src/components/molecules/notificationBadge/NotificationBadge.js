@@ -3,6 +3,7 @@ import {
   Animated, Image, InteractionManager, StyleSheet, Text, TouchableOpacity, Vibration,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import NotificationPopup from '@/components/organisms/notificationPopup/NotificationPopup';
@@ -26,8 +27,10 @@ function NotificationBadge({
   withDefaultMargin = true,
 } = {}) {
   const { Colors, Images } = useTheme();
+  const { isBootstrapResolved } = useAuth();
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [isUnreadCountReady, setIsUnreadCountReady] = useState(false);
+  const [allowUnreadFallbackFetch, setAllowUnreadFallbackFetch] = useState(false);
   const [prevUnreadCount, setPrevUnreadCount] = useState(0);
   const shouldLoadNotifications = !onPress && isPopupVisible;
 
@@ -39,6 +42,22 @@ function NotificationBadge({
     return () => task?.cancel?.();
   }, []);
 
+  useEffect(() => {
+    if (isBootstrapResolved) {
+      setAllowUnreadFallbackFetch(false);
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setAllowUnreadFallbackFetch(true);
+    }, 2500);
+
+    return () => clearTimeout(timeoutId);
+  }, [isBootstrapResolved]);
+
+  const shouldEnableUnreadCount = isUnreadCountReady
+    && (isBootstrapResolved || allowUnreadFallbackFetch);
+
   const {
     isLoading,
     markAllAsRead,
@@ -48,7 +67,7 @@ function NotificationBadge({
   } = useNotificationController({
     notificationsEnabled: shouldLoadNotifications,
     skipInitialFocusRefresh: true,
-    unreadCountEnabled: isUnreadCountReady,
+    unreadCountEnabled: shouldEnableUnreadCount,
   });
 
   // Animation values

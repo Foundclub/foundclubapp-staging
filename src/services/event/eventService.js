@@ -631,12 +631,10 @@ export const getEvents = async (params = {}) => {
     populate: [
       'club',
       'club.sponsor',
-      'club.sponsor',
       'club.sponsor.logo',
       'club.logo',
       'team',
       'team.club',
-      'team.club.sponsor',
       'team.club.sponsor',
       'team.club.sponsor.logo',
       'team.club.logo',

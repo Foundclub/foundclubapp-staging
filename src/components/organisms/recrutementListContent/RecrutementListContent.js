@@ -1,6 +1,6 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -34,6 +34,8 @@ import {
   resolveRecruitmentAdApplicationState,
 } from '@/services/recruitment/recruitmentService';
 import { getMatchReasonLabel, mapSearchPayload, searchRecruitment } from '@/services/search/searchService';
+
+import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
 /**
  * @typedef {{ id?: string | number; documentId?: string; [key: string]: any }} MercatoUser
@@ -241,9 +243,19 @@ const dedupeManagedTeams = (teams) => {
  * Shows different content based on user role:
  * - Coach/Dirigeant: TopTabs with "Profils" (search players) and "Annonces" (manage ads)
  * - Joueur: Smart feed of recruitment ads matching their profile
- * @param {{ initialTab?: 'profils' | 'annonces' | 'opportunites' | 'candidatures'; timestamp?: number | string }} props
+ * @param {{
+ *  initialTab?: 'profils' | 'annonces' | 'opportunites' | 'candidatures';
+ *  refreshSignal?: number;
+ *  screenActive?: boolean;
+ *  timestamp?: number | string;
+ * }} props
  */
-function RecrutementListContent({ initialTab, timestamp }) {
+function RecrutementListContent({
+  initialTab,
+  refreshSignal = 0,
+  screenActive = true,
+  timestamp,
+}) {
   useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -283,6 +295,8 @@ function RecrutementListContent({ initialTab, timestamp }) {
   const [adSearchValue, setAdSearchValue] = useState('');
   const [audienceFilter, setAudienceFilter] = useState('all');
   const [showProfileMatchesOnly, setShowProfileMatchesOnly] = useState(false);
+  const primaryQuerySignatureRef = useRef('');
+  const firstResultsSignatureRef = useRef('');
   const adFiltersCount = React.useMemo(
     () => getAppliedFilterCount(recruitmentAdFilters, ['q']),
     [recruitmentAdFilters],
@@ -291,11 +305,12 @@ function RecrutementListContent({ initialTab, timestamp }) {
 
   // Handle external tab switching (e.g. from creation wizard)
   useEffect(() => {
+    if (!screenActive) return;
     const nextTab = sanitizeRecruitmentTabForRole(initialTab, userData);
     setActiveTab((previousTab) => (
       previousTab === nextTab ? previousTab : nextTab
     ));
-  }, [initialTab, userData]);
+  }, [initialTab, screenActive, userData]);
 
   // State for pagination (ads)
   const [adsPage, setAdsPage] = useState(1);
@@ -397,12 +412,12 @@ function RecrutementListContent({ initialTab, timestamp }) {
 
   // Handle forced refresh from navigation params (timestamp)
   useEffect(() => {
-    if (!timestamp) return;
+    if (!screenActive || !timestamp) return;
     console.log('[RecrutementListContent] Forced refresh triggered by timestamp:', timestamp);
     if (isCoachOrAdmin && activeTab === 'annonces') {
       fetchMyAds(true);
     }
-  }, [activeTab, fetchMyAds, isCoachOrAdmin, timestamp]);
+  }, [activeTab, fetchMyAds, isCoachOrAdmin, screenActive, timestamp]);
 
   // Fetch my applications (for players)
   const fetchMyApplications = useCallback(async (isRefresh = false) => {
@@ -428,6 +443,9 @@ function RecrutementListContent({ initialTab, timestamp }) {
 
   useFocusEffect(
     useCallback(() => {
+      if (!screenActive) {
+        return undefined;
+      }
       if (activeTab === 'profils') {
         return undefined;
       }
@@ -449,6 +467,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
       fetchMyApplications,
       fetchMyApplicationsSilently,
       isCoachOrAdmin,
+      screenActive,
     ]),
   );
 
@@ -472,6 +491,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
 
   // Effect to fetch data based on tab
   useEffect(() => {
+    if (!screenActive) return;
     if (activeTab === 'profils') return;
 
     if (activeTab === 'annonces' && isCoachOrAdmin) {
@@ -485,9 +505,10 @@ function RecrutementListContent({ initialTab, timestamp }) {
     }
 
     fetchAdsForPlayer(1, false);
-  }, [activeTab, fetchAdsForPlayer, fetchMyAds, fetchMyApplications, isCoachOrAdmin]);
+  }, [activeTab, fetchAdsForPlayer, fetchMyAds, fetchMyApplications, isCoachOrAdmin, screenActive]);
 
   const onRefresh = useCallback(async () => {
+    if (!screenActive) return;
     setRefreshing(true);
     try {
       if (activeTab === 'profils') return;
@@ -504,7 +525,12 @@ function RecrutementListContent({ initialTab, timestamp }) {
     } finally {
       setRefreshing(false);
     }
-  }, [activeTab, isCoachOrAdmin, fetchMyAds, fetchMyApplications, fetchAdsForPlayer]);
+  }, [activeTab, isCoachOrAdmin, fetchMyAds, fetchMyApplications, fetchAdsForPlayer, screenActive]);
+
+  useEffect(() => {
+    if (!screenActive || !refreshSignal) return;
+    onRefresh();
+  }, [onRefresh, refreshSignal, screenActive]);
 
   // Handle card press (navigate to user details)
   const handleUserCardPress = (/** @type {MercatoUser} */ user) => {
@@ -820,6 +846,49 @@ function RecrutementListContent({ initialTab, timestamp }) {
     otherAds,
     showMatchingOnly: showProfileMatchesOnly,
   }), [matchingAds, otherAds, showProfileMatchesOnly]);
+  const activeMode = isCoachOrAdmin ? `staff-${activeTab}` : `player-${activeTab}`;
+  const activeResultCount = useMemo(() => {
+    if (activeTab === 'profils') return 0;
+    if (activeTab === 'annonces' && isCoachOrAdmin) return filteredMyAds.length;
+    if (activeTab === 'candidatures') return filteredMyApplications.length;
+    return playerFeedItems.filter((item) => item.type === 'ad').length;
+  }, [activeTab, filteredMyAds.length, filteredMyApplications.length, isCoachOrAdmin, playerFeedItems]);
+
+  useEffect(() => {
+    if (!screenActive) return;
+
+    const signature = `${activeMode}:${adSearchValue}:${adFiltersCount}`;
+    if (primaryQuerySignatureRef.current === signature) return;
+    primaryQuerySignatureRef.current = signature;
+    markSearchPerf('search_primary_query_started', {
+      fromCache: activeResultCount > 0,
+      mode: activeMode,
+      networkCount: 1,
+      type: 'recruitment',
+    });
+  }, [activeMode, activeResultCount, adFiltersCount, adSearchValue, screenActive]);
+
+  useEffect(() => {
+    if (!screenActive || loading) return;
+
+    const signature = `${activeMode}:${activeResultCount}`;
+    if (firstResultsSignatureRef.current === signature) return;
+    firstResultsSignatureRef.current = signature;
+    markSearchPerf('search_primary_query_completed', {
+      fromCache: activeResultCount > 0,
+      mode: activeMode,
+      networkCount: 1,
+      resultCount: activeResultCount,
+      type: 'recruitment',
+    });
+    markSearchPerf('search_first_results_rendered', {
+      fromCache: activeResultCount > 0,
+      mode: activeMode,
+      networkCount: 1,
+      resultCount: activeResultCount,
+      type: 'recruitment',
+    });
+  }, [activeMode, activeResultCount, loading, screenActive]);
 
   const playerFilterHelperText = React.useMemo(() => {
     if (!hasProfileSignals) {
@@ -1167,6 +1236,8 @@ function RecrutementListContent({ initialTab, timestamp }) {
             <RecruitmentProfilesList
               bottomPadding={140}
               onUserPress={handleUserCardPress}
+              refreshSignal={refreshSignal}
+              screenActive={screenActive && activeTab === 'profils'}
             />
           ) : null}
           {activeTab === 'annonces' ? renderAnnoncesContent() : null}

@@ -35,8 +35,12 @@ const hasAnyActiveSearchParam = (params = {}) => Object.entries(params).some(([k
 export const useSearchEvents = (params = {}, options = {}) => useInfiniteQuery({
   enabled: Boolean(params?.q && String(params.q).trim().length >= 2),
   getNextPageParam,
+  placeholderData: options.placeholderData ?? ((previousData) => previousData),
   queryFn: ({ pageParam = 1, signal }) => searchEvents({ ...params, page: pageParam }, { signal }),
   queryKey: buildNormalizedQueryKey(['search', 'events'], params),
+  refetchOnMount: options.refetchOnMount ?? false,
+  refetchOnReconnect: options.refetchOnReconnect ?? false,
+  retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
 });
@@ -71,8 +75,12 @@ export const useSearchEventsMap = (params = {}, options = {}) => useInfiniteQuer
 export const useSearchClubs = (params = {}, options = {}) => useInfiniteQuery({
   enabled: Boolean(params?.q && String(params.q).trim().length >= 2),
   getNextPageParam,
+  placeholderData: options.placeholderData ?? ((previousData) => previousData),
   queryFn: ({ pageParam = 1, signal }) => searchClubs({ ...params, page: pageParam }, { signal }),
   queryKey: buildNormalizedQueryKey(['search', 'clubs'], params),
+  refetchOnMount: options.refetchOnMount ?? false,
+  refetchOnReconnect: options.refetchOnReconnect ?? false,
+  retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
 });
@@ -107,8 +115,12 @@ export const useSearchClubsMap = (params = {}, options = {}) => useInfiniteQuery
 export const useSearchReservations = (params = {}, options = {}) => useInfiniteQuery({
   enabled: Boolean(params?.q && String(params.q).trim().length >= 2),
   getNextPageParam,
+  placeholderData: options.placeholderData ?? ((previousData) => previousData),
   queryFn: ({ pageParam = 1, signal }) => searchReservations({ ...params, page: pageParam }, { signal }),
   queryKey: buildNormalizedQueryKey(['search', 'reservations'], params),
+  refetchOnMount: options.refetchOnMount ?? false,
+  refetchOnReconnect: options.refetchOnReconnect ?? false,
+  retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
 });
@@ -120,8 +132,12 @@ export const useSearchReservations = (params = {}, options = {}) => useInfiniteQ
 export const useSearchRecruitment = (params = {}, options = {}) => useInfiniteQuery({
   enabled: options.enabled ?? hasAnyActiveSearchParam(params),
   getNextPageParam,
+  placeholderData: options.placeholderData ?? ((previousData) => previousData),
   queryFn: ({ pageParam = 1, signal }) => searchRecruitment({ ...params, page: pageParam }, { signal }),
   queryKey: buildNormalizedQueryKey(['search', 'recruitment'], params),
+  refetchOnMount: options.refetchOnMount ?? false,
+  refetchOnReconnect: options.refetchOnReconnect ?? false,
+  retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
 });
@@ -133,8 +149,12 @@ export const useSearchRecruitment = (params = {}, options = {}) => useInfiniteQu
 export const useSearchProfiles = (params = {}, options = {}) => useInfiniteQuery({
   enabled: options.enabled ?? true,
   getNextPageParam,
+  placeholderData: options.placeholderData ?? ((previousData) => previousData),
   queryFn: ({ pageParam = 1, signal }) => searchProfiles({ ...params, page: pageParam }, { signal }),
   queryKey: buildNormalizedQueryKey(['search', 'profiles'], params),
+  refetchOnMount: options.refetchOnMount ?? false,
+  refetchOnReconnect: options.refetchOnReconnect ?? false,
+  retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
 });

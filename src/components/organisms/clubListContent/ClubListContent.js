@@ -1,8 +1,15 @@
 import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
-import { useCallback, useMemo } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  InteractionManager,
   Text,
   TouchableOpacity,
   View,
@@ -21,9 +28,11 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
-import { useGetClubs } from '@/services/club/clubQueries';
+import { useGetClubs, useGetMultisportClubs } from '@/services/club/clubQueries';
 import { useSearchClubs, useSearchClubsMap } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
+
+import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
 import SearchComponent from '../searchComponent/searchComponent';
 
@@ -61,18 +70,49 @@ const buildViewportListQuery = (viewport, filters = {}) => {
   };
 };
 
+const mergeClubCollections = (...collections) => {
+  const byKey = new Map();
+
+  collections.flat().forEach((item) => {
+    const type = Reflect.get(item || {}, '_type') === 'multisport' ? 'multisport' : 'club';
+    const id = String(item?.documentId || item?.id || '').trim();
+    if (!id) return;
+    const key = `${type}:${id}`;
+    if (!byKey.has(key)) {
+      byKey.set(key, {
+        ...item,
+        _type: type,
+      });
+    }
+  });
+
+  return Array.from(byKey.values());
+};
+
 /**
- * Club list element to inject on home page or a dedicate one
- * @param {{ enableMapMode?: boolean }} [props]
- * @returns {import('react').ReactElement} ClubListContent component
+ * Club list element to inject on home page or a dedicated one.
+ * @param {{ enableMapMode?: boolean; refreshSignal?: number; screenActive?: boolean }} [props]
+ * @returns {import('react').ReactElement}
  */
-function ClubListContent({ enableMapMode = false }) {
-  // hooks
+function ClubListContent({
+  enableMapMode = false,
+  refreshSignal = 0,
+  screenActive = true,
+}) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const [{ clubFilters, searchMapSessions }, appDispatch] = useAppContext();
   const { getClubFiltersNumber } = useClub();
+  const { t } = useTranslation();
+  const navigation = useNavigation();
+  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
+
+  const [isMultisportDeferredEnabled, setIsMultisportDeferredEnabled] = useState(false);
+  const primaryQuerySignatureRef = useRef('');
+  const firstResultsSignatureRef = useRef('');
+  const secondaryQuerySignatureRef = useRef('');
+
   const viewportSession = searchMapSessions?.clubs || {};
   const viewportExecutedQuery = viewportSession?.executedQuery
     || viewportSession?.executedClubMapQuery
@@ -91,6 +131,7 @@ function ClubListContent({ enableMapMode = false }) {
     [clubFilters?.name],
   );
   const isSmartSearchEnabled = !isViewportListMode && activeSearchText.length >= 2;
+
   const {
     data: clubPages,
     error,
@@ -99,11 +140,28 @@ function ClubListContent({ enableMapMode = false }) {
     isFetchingNextPage,
     isLoading,
     refetch,
-  } = useGetClubs(Object.assign(clubFilters || {}, {
+  } = useGetClubs({
+    ...(clubFilters || {}),
+    includeMultisport: false,
     pageSize: 30,
-  }), {
-    enabled: !isViewportListMode && !isSmartSearchEnabled,
+  }, {
+    enabled: screenActive && !isViewportListMode && !isSmartSearchEnabled,
   });
+
+  const {
+    data: multisportClubPages,
+    refetch: refetchMultisport,
+  } = useGetMultisportClubs({
+    geohash: clubFilters?.geohash,
+    name: activeSearchText || undefined,
+    pageSize: 10,
+  }, {
+    enabled: screenActive
+      && !isViewportListMode
+      && !isSmartSearchEnabled
+      && isMultisportDeferredEnabled,
+  });
+
   const {
     data: smartClubPages,
     error: smartError,
@@ -120,8 +178,9 @@ function ClubListContent({ enableMapMode = false }) {
     q: activeSearchText,
     radius: clubFilters?.radius,
   }, {
-    enabled: !isViewportListMode && isSmartSearchEnabled,
+    enabled: screenActive && !isViewportListMode && isSmartSearchEnabled,
   });
+
   const {
     data: viewportClubPages,
     error: viewportError,
@@ -131,19 +190,21 @@ function ClubListContent({ enableMapMode = false }) {
     isLoading: isViewportLoading,
     refetch: refetchViewport,
   } = useSearchClubsMap(viewportListParams || {}, {
-    enabled: isViewportListMode && Boolean(viewportListParams),
+    enabled: screenActive && isViewportListMode && Boolean(viewportListParams),
   });
-  const navigation = useNavigation();
-  const { t } = useTranslation();
-  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
 
-  // variables
   const clubs = useMemo(() => clubPages?.pages
     ?.reduce((/** @type {Club[]} */ acc, page) => {
       const items = page?.data || [];
       return acc.concat(items);
     }, [])
     || [], [clubPages]);
+  const multisportClubs = useMemo(() => multisportClubPages?.pages
+    ?.reduce((/** @type {Club[]} */ acc, page) => {
+      const items = page?.data || [];
+      return acc.concat(items);
+    }, [])
+    || [], [multisportClubPages]);
   const smartClubs = useMemo(() => smartClubPages?.pages
     ?.reduce((/** @type {Club[]} */ acc, page) => {
       const items = mapSearchPayload(page);
@@ -156,7 +217,13 @@ function ClubListContent({ enableMapMode = false }) {
       return acc.concat(items);
     }, [])
     || [], [viewportClubPages]);
-  let displayedClubs = clubs;
+
+  const defaultDisplayedClubs = useMemo(
+    () => mergeClubCollections(multisportClubs, clubs),
+    [clubs, multisportClubs],
+  );
+
+  let displayedClubs = defaultDisplayedClubs;
   if (isViewportListMode) {
     displayedClubs = viewportClubs;
   } else if (isSmartSearchEnabled) {
@@ -183,13 +250,8 @@ function ClubListContent({ enableMapMode = false }) {
   } else if (isSmartSearchEnabled) {
     activeIsFetchingNext = isFetchingSmartNextPage;
   }
-  let refreshHandler = refetch;
-  if (isViewportListMode) {
-    refreshHandler = refetchViewport;
-  } else if (isSmartSearchEnabled) {
-    refreshHandler = refetchSmart;
-  }
-  const shouldShowMapToggle = enableMapMode && displayedClubs.length > 0;
+
+  const shouldShowMapToggle = enableMapMode && (displayedClubs.length > 0 || isViewportListMode);
   const listBottomPadding = shouldShowMapToggle
     ? Math.max(sceneBottomInset, floatingActionBottomOffset + 84)
     : sceneBottomInset;
@@ -199,8 +261,155 @@ function ClubListContent({ enableMapMode = false }) {
     ? viewportTotalInBounds
     : displayedClubs.length;
   const isViewportTruncated = Boolean(viewportMeta?.truncated);
+  const requiresViewportZoom = Boolean(viewportMeta?.requiresZoom);
+  let activeMode = 'default-list';
+  if (isViewportListMode) {
+    activeMode = 'viewport-list';
+  } else if (isSmartSearchEnabled) {
+    activeMode = 'smart-search';
+  }
+  let viewportHelperText = 'La liste suit la zone actuellement choisie sur la carte.';
+  if (isViewportTruncated) {
+    viewportHelperText = 'Zoomez sur la carte pour charger tout le catalogue local.';
+  }
+  if (requiresViewportZoom) {
+    viewportHelperText = 'Zoomez pour affiner la recherche.';
+  }
 
-  // handlers
+  useEffect(() => {
+    if (!screenActive || isViewportListMode || isSmartSearchEnabled) {
+      setIsMultisportDeferredEnabled(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setIsMultisportDeferredEnabled(false);
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!cancelled) {
+        setIsMultisportDeferredEnabled(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      task.cancel?.();
+    };
+  }, [
+    activeSearchText,
+    clubFilters?.activity,
+    clubFilters?.geohash,
+    isSmartSearchEnabled,
+    isViewportListMode,
+    screenActive,
+  ]);
+
+  const refreshHandler = useCallback(() => {
+    if (isViewportListMode) {
+      return refetchViewport();
+    }
+
+    if (isSmartSearchEnabled) {
+      return refetchSmart();
+    }
+
+    const refreshTasks = [refetch()];
+    if (isMultisportDeferredEnabled) {
+      refreshTasks.push(refetchMultisport());
+    }
+
+    return Promise.allSettled(refreshTasks);
+  }, [
+    isMultisportDeferredEnabled,
+    isSmartSearchEnabled,
+    isViewportListMode,
+    refetch,
+    refetchMultisport,
+    refetchSmart,
+    refetchViewport,
+  ]);
+
+  useEffect(() => {
+    if (!screenActive || !refreshSignal) return;
+    refreshHandler();
+  }, [refreshHandler, refreshSignal, screenActive]);
+
+  useEffect(() => {
+    if (!screenActive) return;
+
+    const signature = JSON.stringify({
+      mode: activeMode,
+      q: activeSearchText,
+      viewport: isViewportListMode ? viewportListParams : null,
+    });
+
+    if (primaryQuerySignatureRef.current === signature) return;
+    primaryQuerySignatureRef.current = signature;
+    markSearchPerf('search_primary_query_started', {
+      fromCache: displayedClubs.length > 0,
+      mode: activeMode,
+      networkCount: 1,
+      type: 'clubs',
+    });
+  }, [activeMode, activeSearchText, displayedClubs.length, isViewportListMode, screenActive, viewportListParams]);
+
+  useEffect(() => {
+    if (!screenActive || activeIsLoading) return;
+
+    const signature = JSON.stringify({
+      count: displayedClubs.length,
+      mode: activeMode,
+      requiresViewportZoom,
+    });
+
+    if (firstResultsSignatureRef.current === signature) return;
+    firstResultsSignatureRef.current = signature;
+    markSearchPerf('search_primary_query_completed', {
+      fromCache: displayedClubs.length > 0 && !activeIsFetchingNext,
+      mode: activeMode,
+      networkCount: 1,
+      resultCount: displayedClubs.length,
+      type: 'clubs',
+    });
+    markSearchPerf('search_first_results_rendered', {
+      fromCache: displayedClubs.length > 0 && !activeIsFetchingNext,
+      mode: activeMode,
+      networkCount: 1,
+      resultCount: displayedClubs.length,
+      type: 'clubs',
+    });
+  }, [activeIsFetchingNext, activeIsLoading, activeMode, displayedClubs.length, requiresViewportZoom, screenActive]);
+
+  useEffect(() => {
+    if (!screenActive || isViewportListMode || isSmartSearchEnabled || !isMultisportDeferredEnabled) {
+      return;
+    }
+
+    const signature = `${activeSearchText}:${multisportClubs.length}`;
+    if (secondaryQuerySignatureRef.current === signature) return;
+    secondaryQuerySignatureRef.current = signature;
+
+    markSearchPerf('search_secondary_query_started', {
+      fromCache: multisportClubs.length > 0,
+      mode: 'default-list',
+      networkCount: 1,
+      type: 'clubs',
+    });
+    markSearchPerf('search_secondary_query_completed', {
+      fromCache: multisportClubs.length > 0,
+      mode: 'default-list',
+      networkCount: 1,
+      resultCount: multisportClubs.length,
+      type: 'clubs',
+    });
+  }, [
+    activeSearchText,
+    isMultisportDeferredEnabled,
+    isSmartSearchEnabled,
+    isViewportListMode,
+    multisportClubs.length,
+    screenActive,
+  ]);
+
   const handleEndReached = useCallback(() => {
     if (isViewportListMode) {
       if (hasViewportNextPage && !isFetchingViewportNextPage) {
@@ -208,32 +417,33 @@ function ClubListContent({ enableMapMode = false }) {
       }
       return;
     }
+
     if (isSmartSearchEnabled) {
       if (hasSmartNextPage && !isFetchingSmartNextPage) {
         fetchSmartNextPage();
       }
       return;
     }
+
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [
     fetchNextPage,
-    fetchViewportNextPage,
     fetchSmartNextPage,
+    fetchViewportNextPage,
     hasNextPage,
-    hasViewportNextPage,
     hasSmartNextPage,
+    hasViewportNextPage,
     isFetchingNextPage,
-    isFetchingViewportNextPage,
     isFetchingSmartNextPage,
-    isViewportListMode,
+    isFetchingViewportNextPage,
     isSmartSearchEnabled,
+    isViewportListMode,
   ]);
 
   const handleClubSelection = useCallback((/** @type {string | undefined} */ documentId) => {
     if (documentId) {
-      // @ts-expect-error because of react navigation type definitions
       navigation.navigate(RouteNames.ClubStack, {
         params: { clubId: documentId },
         screen: RouteNames.Club,
@@ -242,37 +452,26 @@ function ClubListContent({ enableMapMode = false }) {
   }, [navigation]);
 
   const handleOpenFilters = useCallback(() => {
-    // @ts-expect-error because of react navigation type definitions
     navigation.navigate(RouteNames.ClubStack, {
       screen: RouteNames.ClubFilters,
     });
   }, [navigation]);
 
-  /**
-   * Handles the search field input
-   * @param {string} name
-   */
-  const handleSearchField = (name) => {
+  const handleSearchField = useCallback((name) => {
     appDispatch({
       payload: Object.assign(clubFilters || {}, { name }),
       type: 'SET_CLUB_FILTERS',
     });
-  };
+  }, [appDispatch, clubFilters]);
 
-  const handleCreateClub = () => {
-    // @ts-expect-error because of react navigation type definitions
+  const handleCreateClub = useCallback(() => {
     navigation.navigate(RouteNames.ClubStack, {
       screen: RouteNames.CreateClub,
     });
-  };
-  // renderers
-  /**
-   * Handle multisport club selection - navigates to MultisportClubDetails
-   * @param {string | undefined} documentId
-   */
+  }, [navigation]);
+
   const handleMultisportSelection = useCallback((documentId) => {
     if (documentId) {
-      // @ts-expect-error because of react navigation type definitions
       navigation.navigate(RouteNames.MultisportClubDetails, {
         cmId: documentId,
       });
@@ -296,13 +495,7 @@ function ClubListContent({ enableMapMode = false }) {
     });
   }, [appDispatch]);
 
-  /**
-   * Render the club item
-   * @param {object} param
-   * @param {Club} param.item
-   * @returns {import('react').ReactElement}
-   */
-  const renderItem = ({ item }) => {
+  const renderItem = useCallback(({ item }) => {
     const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
     const searchMeta = Reflect.get(item || {}, '__search');
     const primaryReasonLabel = getMatchReasonLabel(searchMeta?.matchReasons?.[0]);
@@ -337,15 +530,26 @@ function ClubListContent({ enableMapMode = false }) {
         reasonLabel={primaryReasonLabel ? `Tri pertinence: ${primaryReasonLabel}` : ''}
       />
     );
-  };
+  }, [Alignments.row, Fonts.neutral00, Fonts.p4Bold, Spaces.gap, Spaces.marginTop, handleClubSelection, handleMultisportSelection]);
 
-  const renderEmptyList = () => (
-    <EmptyState
-      actionLabel={t('clubList.actions.createClub')}
-      onAction={handleCreateClub}
-      title={t('clubList.noData')}
-    />
-  );
+  const renderEmptyList = useCallback(() => {
+    if (requiresViewportZoom) {
+      return (
+        <EmptyState
+          description="La zone visible est trop large pour charger une liste fiable. Zoomez puis relancez la vue liste."
+          title="Zoomez pour affiner la recherche"
+        />
+      );
+    }
+
+    return (
+      <EmptyState
+        actionLabel={t('clubList.actions.createClub')}
+        onAction={handleCreateClub}
+        title={t('clubList.noData')}
+      />
+    );
+  }, [handleCreateClub, requiresViewportZoom, t]);
 
   return (
     <View style={[Alignments.fill, Spaces.gap[16]]}>
@@ -362,6 +566,7 @@ function ClubListContent({ enableMapMode = false }) {
           />
         </View>
       </View>
+
       {isViewportListMode ? (
         <View
           style={[
@@ -383,11 +588,7 @@ function ClubListContent({ enableMapMode = false }) {
             <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
               {`${viewportDisplayCount}${isViewportTruncated ? '+' : ''} clubs dans la zone visible`}
             </Text>
-            <Text style={[Fonts.p4, Fonts.neutral200]}>
-              {isViewportTruncated
-                ? 'Zoomez sur la carte pour charger tout le catalogue local.'
-                : 'La liste suit la zone actuellement choisie sur la carte.'}
-            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral200]}>{viewportHelperText}</Text>
           </View>
 
           <TouchableOpacity
@@ -412,6 +613,7 @@ function ClubListContent({ enableMapMode = false }) {
           </TouchableOpacity>
         </View>
       ) : null}
+
       <WithDataWrapper
         error={activeError?.message}
         isLoading={activeIsLoading && !activeIsFetchingNext}
@@ -440,6 +642,7 @@ function ClubListContent({ enableMapMode = false }) {
           showsVerticalScrollIndicator={false}
         />
       </WithDataWrapper>
+
       {shouldShowMapToggle ? (
         <SearchMapFab
           mode="list"

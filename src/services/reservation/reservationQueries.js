@@ -36,8 +36,11 @@ export const useGetReservations = (filters = {}, options = {}) => useInfiniteQue
     return undefined;
   },
   initialPageParam: 1,
+  placeholderData: options?.placeholderData ?? ((previousData) => previousData),
   queryFn: ({ pageParam = 1 }) => getReservations({ ...filters, page: pageParam }),
   queryKey: buildNormalizedQueryKey('reservations', filters),
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? 30_000,
   ...options,
 });
 
@@ -45,13 +48,15 @@ export const useGetReservations = (filters = {}, options = {}) => useInfiniteQue
  * Hook to get featured reservations
  * Returns featured items if available, otherwise returns latest reservations chronologically
  * @param {number} [limit] - Maximum number of items to return
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
  * @returns {import('@tanstack/react-query').UseQueryResult}
  */
-export const useGetFeaturedReservations = (limit = 10) => useQuery({
+export const useGetFeaturedReservations = (limit = 10, options = {}) => useQuery({
   queryFn: () => getFeaturedReservations(limit),
   queryKey: ['featured-reservations', limit],
-  refetchOnMount: false, // Ne pas refetch à chaque mount
-  refetchOnWindowFocus: false, // Éviter les refetch intempestifs
-  retry: false, // Pas de retry (le service gère déjà le fallback)
-  staleTime: 5 * 60 * 1000, // Cache 5 minutes (réduire les appels)
+  refetchOnMount: false,
+  refetchOnWindowFocus: false,
+  retry: false,
+  staleTime: 5 * 60 * 1000,
+  ...options,
 });

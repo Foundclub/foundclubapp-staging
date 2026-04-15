@@ -10,6 +10,7 @@ import {
   persistBootError,
   readPersistedBootError,
 } from './src/utils/bootDiagnostics';
+import { formatBootMeta } from './src/utils/performance/bootPerformance';
 
 const isNotificationsBootstrapDisabled = !ENABLE_PUSH_NOTIFICATIONS;
 
@@ -18,7 +19,8 @@ const logBoot = (step, meta) => {
     console.info(`[BOOT] ${step}`);
     return;
   }
-  console.info(`[BOOT] ${step}`, meta);
+  const formattedMeta = formatBootMeta(meta);
+  console.info(formattedMeta ? `[BOOT] ${step} ${formattedMeta}` : `[BOOT] ${step}`);
 };
 
 const installGlobalErrorHandler = () => {
@@ -37,7 +39,12 @@ const installGlobalErrorHandler = () => {
     errorUtils.setGlobalHandler((error, isFatal) => {
       const payload = createBootErrorPayload(error, isFatal, 'BOOT_GLOBAL_JS_ERROR');
       persistBootError(payload);
-      console.error('[BOOT] BOOT_GLOBAL_JS_ERROR', payload);
+      const formattedPayload = formatBootMeta(payload);
+      console.error(
+        formattedPayload
+          ? `[BOOT] BOOT_GLOBAL_JS_ERROR ${formattedPayload}`
+          : '[BOOT] BOOT_GLOBAL_JS_ERROR',
+      );
 
       if (typeof previousHandler === 'function') {
         previousHandler(error, isFatal);
@@ -102,7 +109,12 @@ try {
 } catch (error) {
   const payload = createBootErrorPayload(error, true, 'BOOT_APP_REQUIRE_FAILED');
   persistBootError(payload);
-  console.error('[BOOT] BOOT_APP_REQUIRE_FAILED', payload);
+  const formattedPayload = formatBootMeta(payload);
+  console.error(
+    formattedPayload
+      ? `[BOOT] BOOT_APP_REQUIRE_FAILED ${formattedPayload}`
+      : '[BOOT] BOOT_APP_REQUIRE_FAILED',
+  );
   throw error;
 }
 

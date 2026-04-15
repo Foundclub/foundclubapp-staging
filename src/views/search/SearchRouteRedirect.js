@@ -7,6 +7,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { getSearchTypeFromRouteName } from './searchRouteHelpers';
+
 const SEARCH_ROUTES = new Set([
   RouteNames.SearchClubs,
   RouteNames.SearchEvents,
@@ -34,8 +36,11 @@ function SearchRouteRedirect({ navigation, route }) {
 
     navigation.replace(RouteNames.HomeTab, {
       params: {
-        params: route?.params,
-        screen: targetRoute,
+        params: {
+          ...(route?.params || {}),
+          activeType: getSearchTypeFromRouteName(targetRoute),
+        },
+        screen: RouteNames.SearchHub,
       },
       screen: RouteNames.Search,
     });

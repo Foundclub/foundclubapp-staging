@@ -1,8 +1,12 @@
+/* eslint-disable perfectionist/sort-imports */
 import Joi from 'joi';
 import { Platform } from 'react-native';
 
+import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { getUploadEndpoint } from '@/config/runtimeUrls';
+
 import client from '../client';
+/* eslint-enable perfectionist/sort-imports */
 
 /**
  * Club validation schema
@@ -60,31 +64,36 @@ const clubListSchema = Joi.object({
   sectionsCount: Joi.number().optional(), // For multisport clubs
 }).required();
 
-/**
- * Get the list of clubs
- * @param {{
- *   activity?: string;
- *   geohash?: string[];
- *   isCustomer?: boolean;
- *   name?: string;
- *   page?: number;
- *   pageSize?: number;
- *   includeMultisport?: boolean;
- * }} params
- * @returns {Promise<{data: Club[], meta: {
- * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
- */
-export const getClubs = async (params = {}) => {
+const validateClubListPayload = async (data, meta) => {
+  const schema = Joi.object({
+    data: Joi.array().items(clubListSchema).empty(Joi.array().length(0)),
+    meta: Joi.object({
+      pagination: Joi.object({
+        page: Joi.number().required(),
+        pageCount: Joi.number().required(),
+        pageSize: Joi.number().required(),
+        total: Joi.number().required(),
+      }).required(),
+    }).required(),
+  }).required();
+
+  return schema.validateAsync(
+    { data, meta },
+    { allowUnknown: true },
+  );
+};
+
+const buildClubListParams = (params = {}) => {
   const {
     activity,
     geohash,
-    includeMultisport = true, // By default, include multisport clubs
     isCustomer,
     name,
     page,
     pageSize,
   } = params;
 
+  /** @type {Record<string, any>} */
   const filters = {
     filters: {},
     pagination: {
@@ -136,6 +145,75 @@ export const getClubs = async (params = {}) => {
     });
   }
 
+  return filters;
+};
+
+const buildMultisportClubListParams = (params = {}) => {
+  const {
+    geohash,
+    name,
+    page,
+    pageSize,
+  } = params;
+
+  /** @type {Record<string, any>} */
+  const filters = {
+    pagination: {
+      page: page || 1,
+      pageSize: pageSize || 10,
+    },
+    populate: {
+      logo: true,
+      sections: { fields: ['documentId', 'name'] },
+      sponsor: { populate: ['logo'] },
+    },
+    sort: {
+      name: 'asc',
+    },
+  };
+
+  if (name) {
+    filters.filters = {
+      ...(filters.filters || {}),
+      name: {
+        $containsi: name,
+      },
+    };
+  }
+
+  if (geohash && geohash.length) {
+    filters.filters = {
+      ...(filters.filters || {}),
+      geohash: {
+        $contains: geohash,
+      },
+    };
+  }
+
+  return filters;
+};
+
+/**
+ * Get the list of clubs
+ * @param {{
+ *   activity?: string;
+ *   geohash?: string[];
+ *   isCustomer?: boolean;
+ *   name?: string;
+ *   page?: number;
+ *   pageSize?: number;
+ *   includeMultisport?: boolean;
+ * }} params
+ * @returns {Promise<{data: Club[], meta: {
+ * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
+ */
+export const getClubs = async (params = {}) => {
+  const {
+    includeMultisport = true, // By default, include multisport clubs
+    page,
+  } = params;
+  const filters = buildClubListParams(params);
+
   // Fetch regular clubs
   const clubsResponse = await client.get('/clubs', { params: filters });
 
@@ -151,37 +229,12 @@ export const getClubs = async (params = {}) => {
   // Fetch multisport clubs if requested and on first page
   if (includeMultisport && (page || 1) === 1) {
     try {
-      /** @type {{ pagination: { page: number; pageSize: number }; populate: any; filters?: Record<string, any> }} */
-      const cmFilters = {
-        pagination: { page: 1, pageSize: 10 },
-        populate: {
-          logo: true,
-          sections: { fields: ['documentId', 'name'] },
-          sponsor: { populate: ['logo'] },
-        },
-      };
-
-      if (name) {
-        cmFilters.filters = { name: { $containsi: name } };
-      }
-
-      if (geohash && geohash.length) {
-        cmFilters.filters = {
-          ...cmFilters.filters,
-          geohash: { $contains: geohash },
-        };
-      }
-
-      const cmResponse = await client.get('/multisport-clubs', { params: cmFilters });
-      const cmWithType = (cmResponse.data?.data || []).map((/** @type {any} */ cm) => ({
-        ...cm,
-        _type: 'multisport',
-        sectionsCount: cm.sections?.length || 0,
-      }));
+      const cmResponse = await getMultisportClubs({ ...params, page: 1, pageSize: 10 });
+      const cmWithType = cmResponse?.data || [];
 
       // Prepend multisport clubs at the top
       allData = [...cmWithType, ...clubsWithType];
-      totalFromCM = cmResponse.data?.meta?.pagination?.total || 0;
+      totalFromCM = cmResponse.meta?.pagination?.total || 0;
     } catch (error) {
       // If CM fetch fails, just use regular clubs
       const message = error && typeof error === 'object' && 'message' in error ? error.message : error;
@@ -190,18 +243,6 @@ export const getClubs = async (params = {}) => {
   }
 
   try {
-    const schema = Joi.object({
-      data: Joi.array().items(clubListSchema).empty(Joi.array().length(0)),
-      meta: Joi.object({
-        pagination: Joi.object({
-          page: Joi.number().required(),
-          pageCount: Joi.number().required(),
-          pageSize: Joi.number().required(),
-          total: Joi.number().required(),
-        }).required(),
-      }).required(),
-    }).required();
-
     // Update pagination total to include CM count
     const originalMeta = clubsResponse.data?.meta || {};
     const updatedMeta = {
@@ -212,14 +253,46 @@ export const getClubs = async (params = {}) => {
       },
     };
 
-    const validationResult = await schema.validateAsync(
-      { data: allData, meta: updatedMeta },
-      { allowUnknown: true },
-    );
-    return validationResult;
+    return validateClubListPayload(allData, updatedMeta);
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch clubs: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Get the list of multisport clubs
+ * @param {{
+ *   geohash?: string[];
+ *   name?: string;
+ *   page?: number;
+ *   pageSize?: number;
+ * }} params
+ * @returns {Promise<{data: Club[], meta: {
+ * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
+ */
+export const getMultisportClubs = async (params = {}) => {
+  const filters = buildMultisportClubListParams(params);
+  const response = await client.get('/multisport-clubs', { params: filters });
+
+  const multisportClubsWithType = (response.data?.data || []).map((/** @type {any} */ cm) => ({
+    ...cm,
+    _type: 'multisport',
+    sectionsCount: cm.sections?.length || 0,
+  }));
+
+  try {
+    return await validateClubListPayload(multisportClubsWithType, response.data?.meta || {
+      pagination: {
+        page: filters.pagination.page,
+        pageCount: 1,
+        pageSize: filters.pagination.pageSize,
+        total: multisportClubsWithType.length,
+      },
+    });
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to fetch multisport clubs: ${errorToDisplay}`);
   }
 };
 
@@ -326,7 +399,7 @@ export const updateClub = async (clubData) => {
     // Handle sponsor data
     if (clubDataCopy.sponsor && Array.isArray(clubDataCopy.sponsor)) {
       // Process each sponsor separately
-      for (let i = 0; i < clubDataCopy.sponsor.length; i++) {
+      for (let i = 0; i < clubDataCopy.sponsor.length; i += 1) {
         const sponsor = clubDataCopy.sponsor[i];
         console.warn('Processing sponsor', i, sponsor.logo);
 
@@ -422,9 +495,7 @@ export const updateClub = async (clubData) => {
         // Let's assume standard multipart: `logo` as key for file.
         // @ts-expect-error - React Native FormData supports file descriptor objects.
         formData.append('files.logo', fileToUpload);
-      }
-      // Existing logo (sent as ID)
-      else if (clubDataCopy.logo.documentId) {
+      } else if (clubDataCopy.logo.documentId) {
         formData.append('logo', clubDataCopy.logo.documentId);
       } else if (clubDataCopy.logo.id) {
         formData.append('logo', clubDataCopy.logo.id);
@@ -507,7 +578,6 @@ export const uploadFile = async (file) => {
     // @ts-expect-error because of react native image type
     formData.append('files', fileToUpload);
 
-    const { getAuthTokens } = require('../../domains/auth/authUseCases');
     const auth = getAuthTokens();
     const token = auth?.token;
     const uploadEndpoint = getUploadEndpoint();

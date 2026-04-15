@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { getAppliedFilterCount } from '@/domains/search/recruitmentFlow';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -18,7 +19,6 @@ import SearchComponent from '@/components/organisms/searchComponent/searchCompon
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { getAppliedFilterCount } from '@/domains/search/recruitmentFlow';
 import { useSearchProfiles } from '@/services/search/searchQueries';
 import { mapSearchPayload } from '@/services/search/searchService';
 
@@ -26,10 +26,17 @@ import { mapSearchPayload } from '@/services/search/searchService';
  * @param {{
  *  bottomPadding?: number;
  *  onUserPress?: (user: any) => void;
+ *  refreshSignal?: number;
+ *  screenActive?: boolean;
  * }} props
  * @returns {import('react').ReactElement}
  */
-function RecruitmentProfilesList({ bottomPadding = 140, onUserPress }) {
+function RecruitmentProfilesList({
+  bottomPadding = 140,
+  onUserPress,
+  refreshSignal = 0,
+  screenActive = true,
+}) {
   const navigation = useNavigation();
   const {
     Alignments,
@@ -83,7 +90,14 @@ function RecruitmentProfilesList({ bottomPadding = 140, onUserPress }) {
     isLoading,
     isRefetching,
     refetch,
-  } = useSearchProfiles(profileSearchParams);
+  } = useSearchProfiles(profileSearchParams, {
+    enabled: screenActive,
+  });
+
+  useEffect(() => {
+    if (!screenActive || !refreshSignal) return;
+    refetch();
+  }, [refetch, refreshSignal, screenActive]);
 
   const users = useMemo(
     () => (data?.pages || []).flatMap((page) => mapSearchPayload(page)),
@@ -93,16 +107,18 @@ function RecruitmentProfilesList({ bottomPadding = 140, onUserPress }) {
   const trimmedSearch = String(searchValue || '').trim();
   const hasSearchTerm = trimmedSearch.length >= 2;
   const hasActiveFilters = filtersCount > 0;
-  const profilesCountLabel = totalProfiles === 0
-    ? 'Aucun profil'
-    : totalProfiles > 1
-      ? `${String(totalProfiles)} profils`
-      : '1 profil';
-  const headerDescription = hasSearchTerm
-    ? `Recherche en cours pour "${trimmedSearch}". Les profils les plus pertinents remontent en premier.`
-    : hasActiveFilters
-      ? 'Les filtres ci-dessous ciblent uniquement les profils ouverts a votre recrutement.'
-      : 'Retrouve ici les joueurs et joueuses ouverts a un club pour construire ton recrutement.';
+  let profilesCountLabel = '1 profil';
+  if (totalProfiles === 0) {
+    profilesCountLabel = 'Aucun profil';
+  } else if (totalProfiles > 1) {
+    profilesCountLabel = `${String(totalProfiles)} profils`;
+  }
+  let headerDescription = 'Retrouve ici les joueurs et joueuses ouverts a un club pour construire ton recrutement.';
+  if (hasSearchTerm) {
+    headerDescription = `Recherche en cours pour "${trimmedSearch}". Les profils les plus pertinents remontent en premier.`;
+  } else if (hasActiveFilters) {
+    headerDescription = 'Les filtres ci-dessous ciblent uniquement les profils ouverts a votre recrutement.';
+  }
   const summaryPills = [
     profilesCountLabel,
     hasSearchTerm ? 'Recherche active' : 'Feed complet',

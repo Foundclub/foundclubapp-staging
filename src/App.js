@@ -35,7 +35,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 
-import { markBootStep } from '@/utils/performance/bootPerformance';
+import { formatBootMeta, markBootStep } from '@/utils/performance/bootPerformance';
 
 const isAxiosError = (error) => Boolean(
   error
@@ -85,14 +85,14 @@ const navigationIntegration = /** @type {any} */ (isSentryEnabled
     setupOnce: () => {},
   });
 
-console.info('[BOOT] APP_ENV_RESOLVED', {
+console.info(`[BOOT] APP_ENV_RESOLVED ${formatBootMeta({
   appEnv,
   isSentryEnabled,
   isStaging,
   notificationsRuntime: NOTIFICATIONS_RUNTIME_CONFIG,
   runtimeEndpoints: getRuntimeEndpointsLog(),
   sentryTracesSampleRate,
-});
+})}`);
 markBootStep('app_module_loaded', {
   appEnv,
   isStaging,
@@ -169,7 +169,7 @@ function BootErrorAlertHost() {
     const previousBootError = readPersistedBootError();
     if (!previousBootError) return;
 
-    console.warn('[BOOT] BOOT_PREVIOUS_JS_ERROR_VISIBLE', previousBootError);
+    console.warn(`[BOOT] BOOT_PREVIOUS_JS_ERROR_VISIBLE ${formatBootMeta(previousBootError)}`);
     setPendingBootError(previousBootError);
   }, []);
 
@@ -219,15 +219,33 @@ function BootErrorAlertHost() {
 }
 
 function DeferredStartupHosts() {
-  const { appBootstrapData } = useAuth();
+  const { appBootstrapData, isBootstrapResolved } = useAuth();
+  const [allowBootstrapFallbackFetches, setAllowBootstrapFallbackFetches] = useState(false);
+
+  useEffect(() => {
+    if (isBootstrapResolved) {
+      setAllowBootstrapFallbackFetches(false);
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setAllowBootstrapFallbackFetches(true);
+    }, 2500);
+
+    return () => clearTimeout(timeoutId);
+  }, [isBootstrapResolved]);
+
+  const shouldSkipBootstrapBackedInitialFetch = !isBootstrapResolved && !allowBootstrapFallbackFetches;
 
   return (
     <>
       <RemotePopupCampaignHost
+        hasResolvedInitialCampaign={isBootstrapResolved}
         initialCampaign={appBootstrapData?.activeRemotePopupCampaign || null}
+        skipInitialFetch={shouldSkipBootstrapBackedInitialFetch}
       />
-      <MatchStatsPromptHost />
-      <LeagueActionPromptHost />
+      <MatchStatsPromptHost skipInitialFetch={shouldSkipBootstrapBackedInitialFetch} />
+      <LeagueActionPromptHost skipInitialFetch={shouldSkipBootstrapBackedInitialFetch} />
       <NotificationBootstrap />
       <SmartNotificationHost />
     </>

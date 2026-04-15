@@ -2,7 +2,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
-import { getClubById, getClubs } from './clubService';
+import { getClubById, getClubs, getMultisportClubs } from './clubService';
 
 /**
  * React Query hook to fetch clubs list
@@ -22,8 +22,29 @@ export const useGetClubs = (params, options) => useInfiniteQuery({
     const { meta: { pagination } } = lastPage;
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },
+  placeholderData: options?.placeholderData ?? ((previousData) => previousData),
   queryFn: ({ pageParam = 1 }) => getClubs({ ...params, page: pageParam }),
   queryKey: buildNormalizedQueryKey('clubs', params),
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? 30_000,
+  ...options,
+});
+
+/**
+ * React Query hook to fetch multisport clubs list
+ * @param {Record<string, any>} [params]
+ * @param {any} [options]
+ */
+export const useGetMultisportClubs = (params, options) => useInfiniteQuery({
+  getNextPageParam: (lastPage) => {
+    const { meta: { pagination } } = lastPage;
+    return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
+  },
+  placeholderData: options?.placeholderData ?? ((previousData) => previousData),
+  queryFn: ({ pageParam = 1 }) => getMultisportClubs({ ...params, page: pageParam }),
+  queryKey: buildNormalizedQueryKey('multisport-clubs', params),
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? 30_000,
   ...options,
 });
 

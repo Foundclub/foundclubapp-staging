@@ -8,9 +8,9 @@ import {
   View,
 } from 'react-native';
 
-import useTheme from '@/theme/themeContext';
 import useAuth from '@/domains/auth/useAuth';
 import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
+import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
@@ -31,6 +31,7 @@ import { RouteNames } from '@/navigation/routeNames';
  *  activeType: SearchType;
  *  children: import('react').ReactNode;
  *  navigation: import('@react-navigation/native').NavigationProp<any>;
+ *  onTypeChange?: (type: SearchType) => void;
  *  tutorialSteps?: {
  *    header?: { id: string; order: number; title: string; description: string };
  *    switcher?: { id: string; order: number; title: string; description: string };
@@ -44,6 +45,7 @@ function SearchScreenShell({
   children,
   navigation,
   onTutorialLayout,
+  onTypeChange,
   tutorialSteps,
 }) {
   const {
@@ -87,6 +89,10 @@ function SearchScreenShell({
      */
     (type) => {
       if (type === activeType) return;
+      if (onTypeChange) {
+        onTypeChange(type);
+        return;
+      }
 
       const navigateTo = (routeName, params = undefined) => {
         navigation.replace(routeName, params);
@@ -111,7 +117,7 @@ function SearchScreenShell({
         initialRecruitmentTab: getDefaultRecruitmentTab(userData),
       });
     },
-    [activeType, navigation, userData],
+    [activeType, navigation, onTypeChange, userData],
   );
 
   return (

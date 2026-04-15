@@ -7,6 +7,12 @@ const normalizeString = (value) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const normalizeIdList = (values) => (
+  Array.isArray(values)
+    ? values.filter(Boolean).sort()
+    : []
+);
+
 const sanitizeImageSummary = (image) => {
   if (!image) return null;
   return {
@@ -96,9 +102,9 @@ const buildUserSignature = (user) => JSON.stringify({
   birthdate: normalizeString(user?.birthdate),
   category: normalizeString(user?.category),
   clubId: normalizeString(user?.club?.documentId),
-  clubMembershipRequestIds: Array.isArray(user?.clubMembershipRequests)
-    ? user.clubMembershipRequests.map((request) => normalizeString(request?.documentId)).filter(Boolean)
-    : [],
+  clubMembershipRequestIds: normalizeIdList(
+    user?.clubMembershipRequests?.map((request) => normalizeString(request?.documentId)),
+  ),
   documentId: normalizeString(user?.documentId),
   firstname: normalizeString(user?.firstname),
   geohash: normalizeString(user?.geohash),
@@ -108,24 +114,24 @@ const buildUserSignature = (user) => JSON.stringify({
     ? user.isLookingForClub
     : null,
   lastname: normalizeString(user?.lastname),
-  multisportIds: Array.isArray(user?.multisportClubs)
-    ? user.multisportClubs.map((club) => normalizeString(club?.documentId)).filter(Boolean)
-    : [],
-  myTeamIds: Array.isArray(user?.myTeams)
-    ? user.myTeams.map((team) => normalizeString(team?.documentId)).filter(Boolean)
-    : [],
+  multisportIds: normalizeIdList(
+    user?.multisportClubs?.map((club) => normalizeString(club?.documentId)),
+  ),
+  myTeamIds: normalizeIdList(
+    user?.myTeams?.map((team) => normalizeString(team?.documentId)),
+  ),
   parentAccountDocumentId: normalizeString(user?.parentAccount?.documentId),
   position: normalizeString(user?.position),
   preferredSport: normalizeString(user?.preferredSport),
   roleId: normalizeString(user?.role?.documentId) || normalizeString(user?.role?.name),
   sectionId: normalizeString(user?.section?.documentId),
   sportsHistory: normalizeString(user?.sportsHistory),
-  teamMembershipRequestIds: Array.isArray(user?.teamMembershipRequests)
-    ? user.teamMembershipRequests.map((request) => normalizeString(request?.documentId)).filter(Boolean)
-    : [],
-  trainedTeamIds: Array.isArray(user?.trainedTeams)
-    ? user.trainedTeams.map((team) => normalizeString(team?.documentId)).filter(Boolean)
-    : [],
+  teamMembershipRequestIds: normalizeIdList(
+    user?.teamMembershipRequests?.map((request) => normalizeString(request?.documentId)),
+  ),
+  trainedTeamIds: normalizeIdList(
+    user?.trainedTeams?.map((team) => normalizeString(team?.documentId)),
+  ),
   weight: user?.weight ?? null,
 });
 
@@ -197,3 +203,9 @@ export const sanitizeUser = (user) => {
 export const haveSameSanitizedUser = (left, right) => (
   buildUserSignature(left) === buildUserSignature(right)
 );
+
+/**
+ * @param {User | undefined | null} user
+ * @returns {string}
+ */
+export const getSanitizedUserSignature = (user) => buildUserSignature(user);
