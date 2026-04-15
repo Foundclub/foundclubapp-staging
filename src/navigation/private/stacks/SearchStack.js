@@ -1,10 +1,7 @@
+/* eslint-disable global-require */
 import { createStackNavigator } from '@react-navigation/stack';
 
 import HomeHub from '@/views/home/HomeHub';
-import SearchClubsScreen from '@/views/search/SearchClubsScreen';
-import SearchEventsScreen from '@/views/search/SearchEventsScreen';
-import SearchRecruitmentScreen from '@/views/search/SearchRecruitmentScreen';
-import SearchReservationsScreen from '@/views/search/SearchReservationsScreen';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -27,19 +24,19 @@ function SearchStack() {
         name={SEARCH_STACK_HOME}
       />
       <Stack.Screen
-        component={SearchEventsScreen}
+        getComponent={() => require('@/views/search/SearchEventsScreen').default}
         name={RouteNames.SearchEvents}
       />
       <Stack.Screen
-        component={SearchClubsScreen}
+        getComponent={() => require('@/views/search/SearchClubsScreen').default}
         name={RouteNames.SearchClubs}
       />
       <Stack.Screen
-        component={SearchReservationsScreen}
+        getComponent={() => require('@/views/search/SearchReservationsScreen').default}
         name={RouteNames.SearchReservations}
       />
       <Stack.Screen
-        component={SearchRecruitmentScreen}
+        getComponent={() => require('@/views/search/SearchRecruitmentScreen').default}
         name={RouteNames.SearchRecruitment}
       />
     </Stack.Navigator>

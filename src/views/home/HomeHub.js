@@ -47,6 +47,7 @@ import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorialDebug';
+import { markBootStep } from '@/utils/performance/bootPerformance';
 
 import { POPUP_IDS } from '@/constants/popupRegistry';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -1964,6 +1965,14 @@ function HomeHubContent({ auth, navigation, route }) {
 function HomeHub({ navigation, route }) {
   const auth = useAuth();
   const userId = auth?.userData?.documentId;
+
+  useEffect(() => {
+    if (auth?.userData?.documentId) {
+      markBootStep('home_hub_mounted', {
+        userDocumentId: auth.userData.documentId,
+      });
+    }
+  }, [auth?.userData?.documentId]);
 
   const handleForceStartHandled = useCallback(() => {
     navigation.setParams({

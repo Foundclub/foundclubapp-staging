@@ -8,11 +8,11 @@ export const images = {
   bg3: require('../assets/pictures/bg-3.png'),
   bg4: require('../assets/pictures/bg-4.png'),
   bg5: require('../assets/pictures/bg-5.png'),
-  eventCardOther: require('../assets/background-card-event/card-autre.png'),
   eventCardDetection: require('../assets/background-card-event/card-detection.png'),
-  eventCardTraining: require('../assets/background-card-event/card-entrainement.png'),
   eventCardMatch: require('../assets/background-card-event/card-match.png'),
+  eventCardOther: require('../assets/background-card-event/card-autre.png'),
   eventCardReservation: require('../assets/background-card-event/card-reservation.png'),
+  eventCardTraining: require('../assets/background-card-event/card-entrainement.png'),
   logo: require('../assets/pictures/logo.png'),
   roundAvatar: require('../assets/pictures/avatar-round.png'),
   // icon
@@ -63,6 +63,8 @@ export const images = {
   whistle: require('../assets/icons/stadium.png'), // Temp mapping
 };
 
+const cachedThemeImages = new Map();
+
 /**
  * Get the images for the current theme
  * @param {import('./types').ColorScheme} [theme] - The theme
@@ -70,12 +72,16 @@ export const images = {
  */
 const getThemeImages = (theme = null) => {
   const scheme = theme || Appearance.getColorScheme();
+  const cacheKey = scheme || 'default';
+  if (cachedThemeImages.has(cacheKey)) {
+    return cachedThemeImages.get(cacheKey);
+  }
   /**
    * @type {import('./types').Images}
    */
   // @ts-expect-error because we can't use typescript as type to define the accumulator
   const initialAcc = {};
-  return Object.entries(images).reduce((acc, [key, value]) => {
+  const resolvedImages = Object.entries(images).reduce((acc, [key, value]) => {
     if (scheme && typeof value === 'object' && 'dark' in value && 'light' in value) {
       return {
         ...acc,
@@ -87,6 +93,9 @@ const getThemeImages = (theme = null) => {
       [key]: value,
     };
   }, initialAcc);
+
+  cachedThemeImages.set(cacheKey, resolvedImages);
+  return resolvedImages;
 };
 
 export default getThemeImages;

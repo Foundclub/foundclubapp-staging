@@ -325,7 +325,7 @@ function BookingCalendar({ navigation, route }) {
                         <span style={{ fontSize: 12, opacity: 0.78 }}>{format(option, 'EEE', { locale: fr })}</span>
                         <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18 }}>{format(option, 'd')}</strong>
                         <span style={{ color: isToday ? accentColor : mutedTextColor, fontSize: 11 }}>
-                          {isToday ? 'Aujourd’hui' : format(option, 'MMM', { locale: fr })}
+                          {isToday ? "Aujourd'hui" : format(option, 'MMM', { locale: fr })}
                         </span>
                       </button>
                     );

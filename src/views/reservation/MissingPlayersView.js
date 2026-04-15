@@ -4,22 +4,28 @@ import { differenceInHours, isBefore, startOfDay } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator, StyleSheet, Text, View,
+  ActivityIndicator, Alert, StyleSheet, Text, View,
 } from 'react-native';
 
+import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
 
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { RouteNames } from '@/navigation/routeNames';
 
-import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { useGetReservations } from '@/services/reservation/reservationQueries';
+import { joinReservation } from '@/services/reservation/reservationService';
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 /** @typedef {{ pages?: Array<{ data?: FCEvent[] }> }} ReservationPages */
+
+function ReservationListSeparator() {
+  return <View style={{ height: 16 }} />;
+}
 
 /**
  * MissingPlayersView - Lists reservations that need players (bookingStatus === 'shared')
@@ -53,20 +59,31 @@ function MissingPlayersView({ navigation }) {
     isLoading,
     refetch,
   } = useGetReservations({
+    needsPlayers: true,
     pageSize: 20,
     startDateAfter: startOfDay(new Date()).toISOString(),
-    // Note: Backend should filter by bookingStatus === 'shared', but we'll filter client-side as backup
   });
 
   // Join mutation
-  const createEventParticipationMutation = useMutation({
-    mutationFn: createEventParticipation,
+  const joinReservationMutation = useMutation({
+    mutationFn: (reservationId) => joinReservation(reservationId),
+    onError: (mutationError) => {
+      Alert.alert(
+        t('common.error'),
+        getParticipationErrorMessage(mutationError, t('reservation.joinError', 'Impossible de rejoindre cette reservation.')),
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       refetch();
       setIsJoinModalVisible(false);
+      setSelectedEvent(undefined);
+      Alert.alert(
+        t('reservation.joinSuccess.title', 'Participation confirmee'),
+        t('reservation.joinSuccess.message', 'Vous participez maintenant a cette reservation.'),
+      );
     },
   });
 
@@ -80,7 +97,6 @@ function MissingPlayersView({ navigation }) {
       }, [])
       || [];
 
-    // Filter only shared reservations (looking for players)
     const shared = allReservations.filter((/** @type {FCEvent & { bookingStatus?: string; reservationMode?: string; missingPlayers?: number }} */ reservation) => {
       const isShared = reservation?.bookingStatus === 'shared' || reservation?.reservationMode === 'RECRUITING';
       const hasMissingPlayers = reservation?.missingPlayers > 0;
@@ -138,7 +154,7 @@ function MissingPlayersView({ navigation }) {
     />
   ), [handleCardPress, handleJoinEvent]);
 
-  const renderEmptyList = () => (
+  const emptyListContent = (
     <View style={[
       ApplicationStyle.backgroundColor.primary900,
       ApplicationStyle.borderRadius16,
@@ -159,7 +175,7 @@ function MissingPlayersView({ navigation }) {
     </View>
   );
 
-  const renderHeader = () => (
+  const listHeader = (
     <View style={[Spaces.marginBottom[24]]}>
       <Text style={[Fonts.h2, Fonts.neutral00, Spaces.marginBottom[8]]}>
         {t('reservation.missingPlayers.title', 'Joueurs recherchés')}
@@ -183,6 +199,13 @@ function MissingPlayersView({ navigation }) {
       </View>
     </View>
   );
+  const listFooter = isFetchingNextPage ? (
+    <ActivityIndicator
+      color={Colors.primary500}
+      size="large"
+      style={Spaces.marginVertical[16]}
+    />
+  ) : null;
 
   return (
     <ScreenContainer bgImage="bg2">
@@ -196,17 +219,11 @@ function MissingPlayersView({ navigation }) {
             contentContainerStyle={{ paddingBottom: 100 }}
             data={sharedReservations}
             estimatedItemSize={220}
-            ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+            ItemSeparatorComponent={ReservationListSeparator}
             keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
-            ListEmptyComponent={renderEmptyList}
-            ListFooterComponent={isFetchingNextPage ? (
-              <ActivityIndicator
-                color={Colors.primary500}
-                size="large"
-                style={Spaces.marginVertical[16]}
-              />
-            ) : null}
-            ListHeaderComponent={renderHeader}
+            ListEmptyComponent={emptyListContent}
+            ListFooterComponent={listFooter}
+            ListHeaderComponent={listHeader}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
             onRefresh={refetch}
@@ -220,10 +237,11 @@ function MissingPlayersView({ navigation }) {
       {/* JoinEventModal */}
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || selectedEvent?.club?.name || ''}
-        createEventParticipationMutation={createEventParticipationMutation}
-        eventId={selectedEvent?.documentId}
+        confirmLabel="Reserver"
+        isSubmitting={joinReservationMutation.isPending}
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
+        onConfirm={() => joinReservationMutation.mutateAsync(selectedEvent?.documentId)}
       />
     </ScreenContainer>
   );

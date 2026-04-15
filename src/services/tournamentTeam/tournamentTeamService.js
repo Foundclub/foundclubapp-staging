@@ -47,8 +47,10 @@ export const inviteTournamentTeamMember = async (teamId, userId, origin = 'invit
   return response?.data?.data || response?.data;
 };
 
-export const requestJoinTournamentTeam = async (teamId) => {
-  const response = await client.post(`/tournament-teams/${teamId}/request-join`);
+export const requestJoinTournamentTeam = async (teamId, payload = {}) => {
+  const response = await client.post(`/tournament-teams/${teamId}/request-join`, {
+    data: payload,
+  });
   return response?.data?.data || response?.data;
 };
 

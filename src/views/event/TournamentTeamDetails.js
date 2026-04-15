@@ -16,6 +16,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import Tag from '@/components/atoms/tag/Tag';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -82,6 +83,8 @@ function TournamentTeamDetails({ navigation, route }) {
     Spaces,
   });
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isJoinRequestModalVisible, setIsJoinRequestModalVisible] = useState(false);
+  const [joinRequestError, setJoinRequestError] = useState('');
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
 
   const {
@@ -225,11 +228,15 @@ function TournamentTeamDetails({ navigation, route }) {
   });
 
   const requestJoinMutation = useMutation({
-    mutationFn: () => requestJoinTournamentTeam(teamId),
+    mutationFn: ({ acceptRiskDeclaration }) => requestJoinTournamentTeam(teamId, { acceptRiskDeclaration }),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible d envoyer cette demande.');
+      setJoinRequestError(mutationError?.message || 'Impossible d envoyer cette demande.');
     },
-    onSuccess: invalidate,
+    onSuccess: async () => {
+      setJoinRequestError('');
+      setIsJoinRequestModalVisible(false);
+      await invalidate();
+    },
   });
 
   const removeMemberMutation = useMutation({
@@ -584,7 +591,10 @@ function TournamentTeamDetails({ navigation, route }) {
                 <Button
                   disabled={requestJoinMutation.isPending}
                   isLoading={requestJoinMutation.isPending}
-                  onPress={() => requestJoinMutation.mutate()}
+                  onPress={() => {
+                    setJoinRequestError('');
+                    setIsJoinRequestModalVisible(true);
+                  }}
                   size="sm"
                   style={{ alignSelf: 'flex-start' }}
                   title="Demander a rejoindre"
@@ -722,6 +732,29 @@ function TournamentTeamDetails({ navigation, route }) {
 
           <Button onPress={() => navigation.navigate(RouteNames.EventDetails, { eventId })} title="Revenir au tournoi" variant="Secondary" />
         </ScrollView>
+
+        <JoinEventModal
+          clubName={team?.event?.club?.name || team?.club?.name || ''}
+          confirmLabel="Envoyer ma demande"
+          contextNote={`Equipe choisie : ${team?.name || 'Equipe tournoi'}.`}
+          errorMessage={joinRequestError || null}
+          isSubmitting={requestJoinMutation.isPending}
+          isVisible={isJoinRequestModalVisible}
+          onClose={() => {
+            setIsJoinRequestModalVisible(false);
+            setJoinRequestError('');
+          }}
+          onConfirm={async (acceptance = {}) => {
+            try {
+              setJoinRequestError('');
+              await requestJoinMutation.mutateAsync({
+                acceptRiskDeclaration: acceptance?.acceptRiskDeclaration === true,
+              });
+            } catch (mutationError) {
+              setJoinRequestError(mutationError?.message || 'Impossible d envoyer cette demande.');
+            }
+          }}
+        />
       </WithDataWrapper>
     </ScreenContainer>
   );

@@ -17,14 +17,19 @@ import {
   deleteDeviceToken,
   getMe, login, logout, signInWithPhoneNumber,
 } from '@/services/auth/authService';
+import { getAppBootstrap } from '@/services/bootstrap/bootstrapService';
 
 import { displayErrorAlert } from '@/utils/errors/displayError';
 import { createLogger } from '@/utils/logger/logger';
+import { markBootStep } from '@/utils/performance/bootPerformance';
 import {
   buildInstallLandingUrl,
   buildShareMessageWithUrl,
 } from '@/utils/shareLinks';
-import { sanitizeUser } from '@/domains/auth/authSanitizer';
+import {
+  haveSameSanitizedUser,
+  sanitizeUser,
+} from '@/domains/auth/authSanitizer';
 import {
   formatBirthdateToDisplay,
   formatBirthdateToSend,
@@ -32,6 +37,7 @@ import {
 } from './authUseCases';
 
 import { useAppMode } from '@/context/AppModeContext';
+import { UNREAD_COUNT_QUERY_KEY } from '@/hooks/useNotificationController';
 /* eslint-enable import/order, perfectionist/sort-imports */
 
 const authLogger = createLogger('auth');
@@ -145,16 +151,47 @@ const useAuth = () => {
   }, [appDispatch, queryClient]);
 
   const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
+    data: bootstrapData,
+    error: bootstrapError,
+    isLoading: isBootstrapLoading,
+  } = useQuery({
+    enabled: Boolean(auth?.token) && !isAddingAccount,
+    initialData: auth?.user ? { userSummary: auth.user } : undefined,
+    queryFn: getAppBootstrap,
+    queryKey: ['app-bootstrap', auth?.token || 'no-token'],
+    refetchOnMount: false,
+    staleTime: 1000 * 30,
+  });
+
+  useEffect(() => {
+    if (auth?.token && !isAddingAccount) {
+      markBootStep('bootstrap_requested');
+    }
+  }, [auth?.token, isAddingAccount]);
+
+  const {
+    data: fullUserData,
+    error: fullUserDataError,
+    isLoading: isFullUserDataLoading,
     refetch: refetchUserData,
   } = useQuery({
     enabled: Boolean(auth?.token) && !isAddingAccount,
     queryFn: getMe,
     // Scope by current token to avoid cross-account stale cache reuse
     queryKey: ['get-me', auth?.token || 'no-token'],
+    refetchOnMount: false,
+    staleTime: 1000 * 60 * 5,
   });
+
+  const userData = useMemo(() => (
+    fullUserData || bootstrapData?.userSummary || auth?.user
+  ), [auth?.user, bootstrapData?.userSummary, fullUserData]);
+
+  const userDataLoading = Boolean(auth?.token)
+    && !isAddingAccount
+    && !userData
+    && (isBootstrapLoading || isFullUserDataLoading);
+  const userDataError = userData ? null : (bootstrapError || fullUserDataError);
 
   // Sync user data to global state/sessions when it changes (e.g. after edit)
   // This ensures the account switcher displays the correct info
@@ -162,28 +199,73 @@ const useAuth = () => {
   const currentContextUserData = useAppContext()[0].auth?.user;
 
   useEffect(() => {
-    if (userData && userData.documentId) {
-      // Prevent infinite loops by comparing keys logic same as reducer
-      const sanitizedUserData = sanitizeUser(userData);
-      // NOTE: currentContextUserData is ALREADY sanitized by reducer
-
-      // Simple deep equal helper to avoid JSON.stringify order issues
-      const isDeepEqual = (ObjA, ObjB) => JSON.stringify(ObjA) === JSON.stringify(ObjB);
-
-      const hasChanged = !isDeepEqual(sanitizedUserData, currentContextUserData);
-
-      if (hasChanged) {
-        authLogger.debug('User data changed, dispatching update', {
-          userDocumentId: sanitizedUserData?.documentId,
-        });
-
-        appDispatch({
-          payload: userData,
-          type: 'UPDATE_USER_DATA',
-        });
-      }
+    if (!bootstrapData?.userSummary?.documentId) {
+      return;
     }
-  }, [userData, appDispatch, currentContextUserData]);
+
+    const sanitizedUserData = sanitizeUser(bootstrapData.userSummary);
+    if (haveSameSanitizedUser(sanitizedUserData, currentContextUserData)) {
+      return;
+    }
+
+    authLogger.debug('Bootstrap user summary synced', {
+      userDocumentId: sanitizedUserData?.documentId,
+    });
+    appDispatch({
+      payload: bootstrapData.userSummary,
+      type: 'UPDATE_USER_DATA',
+    });
+  }, [appDispatch, bootstrapData?.userSummary, currentContextUserData]);
+
+  useEffect(() => {
+    if (!bootstrapData?.serverTime) {
+      return;
+    }
+
+    markBootStep('bootstrap_loaded', {
+      hasLeagueAction: Boolean(bootstrapData?.pendingLeagueActionSummary),
+      hasMatchStatsPrompt: Boolean(bootstrapData?.pendingMatchStatsSummary?.nextPrompt),
+      hasRemotePopup: Boolean(bootstrapData?.activeRemotePopupCampaign?.documentId),
+    });
+
+    if (Number.isFinite(Number(bootstrapData?.unreadNotificationsCount))) {
+      queryClient.setQueryData(UNREAD_COUNT_QUERY_KEY, {
+        count: Number(bootstrapData.unreadNotificationsCount || 0),
+      });
+    }
+
+    queryClient.setQueryData(['pendingLeagueAction', 'auto'], {
+      nextAction: bootstrapData?.pendingLeagueActionSummary || null,
+      serverNow: bootstrapData?.serverTime || null,
+    });
+
+    if (bootstrapData?.pendingMatchStatsSummary) {
+      queryClient.setQueryData(
+        ['pendingMatchStatsPrompts'],
+        bootstrapData.pendingMatchStatsSummary,
+      );
+    }
+  }, [bootstrapData, queryClient]);
+
+  useEffect(() => {
+    if (!fullUserData?.documentId) {
+      return;
+    }
+
+    const sanitizedUserData = sanitizeUser(fullUserData);
+    if (haveSameSanitizedUser(sanitizedUserData, currentContextUserData)) {
+      return;
+    }
+
+    authLogger.debug('Full user data changed, dispatching update', {
+      userDocumentId: sanitizedUserData?.documentId,
+    });
+
+    appDispatch({
+      payload: fullUserData,
+      type: 'UPDATE_USER_DATA',
+    });
+  }, [appDispatch, currentContextUserData, fullUserData]);
 
   const onboardingViews = useMemo(() => (
     userData ? getOnboardingViews(userData) : undefined
@@ -389,6 +471,7 @@ const useAuth = () => {
   return {
     addAccount,
     allMyTeams,
+    appBootstrapData: bootstrapData || null,
     authSessions,
     cancelAddAccount,
     canContactAdmin,

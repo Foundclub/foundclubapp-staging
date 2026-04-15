@@ -19,9 +19,10 @@ const appNavigatorLogger = createLogger('app-navigator');
  * @param {object} props - Props object.
  * @param {{registerNavigationContainer:
  * (containerRef: any) => void}} props.navigationIntegration - Sentry navigation integration.
+ * @param {() => void} [props.onReady]
  * @returns {import('react').ReactElement} AppNavigator component.
  */
-function AppNavigator({ navigationIntegration }) {
+function AppNavigator({ navigationIntegration, onReady }) {
   // hooks
   const [{ auth, isAddingAccount }] = useAppContext();
   const { ApplicationStyle, Colors, scheme } = useTheme();
@@ -59,6 +60,7 @@ function AppNavigator({ navigationIntegration }) {
       linking={linking}
       onReady={() => {
         navigationIntegration.registerNavigationContainer(navigationRef);
+        onReady?.();
       }}
       ref={navigationRef}
       theme={navigationTheme}

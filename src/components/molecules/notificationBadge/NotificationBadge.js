@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Image, StyleSheet, Text, TouchableOpacity, Vibration,
+  Animated, Image, InteractionManager, StyleSheet, Text, TouchableOpacity, Vibration,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -27,8 +27,18 @@ function NotificationBadge({
 } = {}) {
   const { Colors, Images } = useTheme();
   const [isPopupVisible, setIsPopupVisible] = useState(false);
+  const [isUnreadCountReady, setIsUnreadCountReady] = useState(false);
   const [prevUnreadCount, setPrevUnreadCount] = useState(0);
   const shouldLoadNotifications = !onPress && isPopupVisible;
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setIsUnreadCountReady(true);
+    });
+
+    return () => task?.cancel?.();
+  }, []);
+
   const {
     isLoading,
     markAllAsRead,
@@ -37,6 +47,8 @@ function NotificationBadge({
     unreadCount,
   } = useNotificationController({
     notificationsEnabled: shouldLoadNotifications,
+    skipInitialFocusRefresh: true,
+    unreadCountEnabled: isUnreadCountReady,
   });
 
   // Animation values

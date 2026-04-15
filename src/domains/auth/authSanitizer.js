@@ -1,62 +1,199 @@
+const normalizeString = (value) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const sanitizeImageSummary = (image) => {
+  if (!image) return null;
+  return {
+    url: normalizeString(image?.url),
+  };
+};
+
+const sanitizeEntitySummary = (entity) => {
+  if (!entity) return null;
+  return {
+    documentId: normalizeString(entity?.documentId),
+    id: entity?.id ?? null,
+    name: normalizeString(entity?.name),
+  };
+};
+
+const sanitizeMultisportClubSummary = (club) => {
+  if (!club) return null;
+  return {
+    documentId: normalizeString(club?.documentId),
+    id: club?.id ?? null,
+    logo: sanitizeImageSummary(club?.logo),
+    name: normalizeString(club?.name),
+    sections: Array.isArray(club?.sections)
+      ? club.sections.map(sanitizeEntitySummary).filter(Boolean)
+      : [],
+  };
+};
+
+const sanitizeClubSummary = (club) => {
+  if (!club) return null;
+  return {
+    documentId: normalizeString(club?.documentId),
+    id: club?.id ?? null,
+    logo: sanitizeImageSummary(club?.logo),
+    name: normalizeString(club?.name),
+    parentMultisport: sanitizeMultisportClubSummary(club?.parentMultisport),
+  };
+};
+
+const sanitizeTeamSummary = (team) => {
+  if (!team) return null;
+  return {
+    activities: Array.isArray(team?.activities)
+      ? team.activities.map(sanitizeEntitySummary).filter(Boolean)
+      : [],
+    category: sanitizeEntitySummary(team?.category),
+    club: sanitizeClubSummary(team?.club),
+    documentId: normalizeString(team?.documentId),
+    externalCompetitionEligible: typeof team?.externalCompetitionEligible === 'boolean'
+      ? team.externalCompetitionEligible
+      : null,
+    externalProvider: normalizeString(team?.externalProvider),
+    externalStandingUrl: normalizeString(team?.externalStandingUrl),
+    externalSyncStatus: normalizeString(team?.externalSyncStatus),
+    id: team?.id ?? null,
+    level: sanitizeEntitySummary(team?.level),
+    name: normalizeString(team?.name),
+    section: sanitizeEntitySummary(team?.section),
+  };
+};
+
+const sanitizeTeamMembershipRequest = (request) => {
+  if (!request) return null;
+  return {
+    documentId: normalizeString(request?.documentId),
+    id: request?.id ?? null,
+    state: normalizeString(request?.state),
+    team: sanitizeTeamSummary(request?.team),
+  };
+};
+
+const sanitizeClubMembershipRequest = (request) => {
+  if (!request) return null;
+  return {
+    club: sanitizeClubSummary(request?.club),
+    documentId: normalizeString(request?.documentId),
+    id: request?.id ?? null,
+    state: normalizeString(request?.state),
+  };
+};
+
+const buildUserSignature = (user) => JSON.stringify({
+  address: normalizeString(user?.address),
+  avatarUrl: normalizeString(user?.avatar?.url),
+  bestLevel: normalizeString(user?.bestLevel),
+  birthdate: normalizeString(user?.birthdate),
+  category: normalizeString(user?.category),
+  clubId: normalizeString(user?.club?.documentId),
+  clubMembershipRequestIds: Array.isArray(user?.clubMembershipRequests)
+    ? user.clubMembershipRequests.map((request) => normalizeString(request?.documentId)).filter(Boolean)
+    : [],
+  documentId: normalizeString(user?.documentId),
+  firstname: normalizeString(user?.firstname),
+  geohash: normalizeString(user?.geohash),
+  height: user?.height ?? null,
+  id: user?.id ?? null,
+  isLookingForClub: typeof user?.isLookingForClub === 'boolean'
+    ? user.isLookingForClub
+    : null,
+  lastname: normalizeString(user?.lastname),
+  multisportIds: Array.isArray(user?.multisportClubs)
+    ? user.multisportClubs.map((club) => normalizeString(club?.documentId)).filter(Boolean)
+    : [],
+  myTeamIds: Array.isArray(user?.myTeams)
+    ? user.myTeams.map((team) => normalizeString(team?.documentId)).filter(Boolean)
+    : [],
+  parentAccountDocumentId: normalizeString(user?.parentAccount?.documentId),
+  position: normalizeString(user?.position),
+  preferredSport: normalizeString(user?.preferredSport),
+  roleId: normalizeString(user?.role?.documentId) || normalizeString(user?.role?.name),
+  sectionId: normalizeString(user?.section?.documentId),
+  sportsHistory: normalizeString(user?.sportsHistory),
+  teamMembershipRequestIds: Array.isArray(user?.teamMembershipRequests)
+    ? user.teamMembershipRequests.map((request) => normalizeString(request?.documentId)).filter(Boolean)
+    : [],
+  trainedTeamIds: Array.isArray(user?.trainedTeams)
+    ? user.trainedTeams.map((team) => normalizeString(team?.documentId)).filter(Boolean)
+    : [],
+  weight: user?.weight ?? null,
+});
+
 /**
- * Sanitize user object to prevent storage overflow while keeping essential data.
+ * Sanitize user object to prevent storage overflow while keeping boot-critical data.
  * @param {User} user
  * @returns {Partial<User> | undefined}
  */
 export const sanitizeUser = (user) => {
   if (!user) return undefined;
 
-  const {
-    address, avatar, bestLevel, birthdate, category, club,
-    documentId, email,
-    firstname,
-    geohash, height,
-    id,
-    isLookingForClub,
-    lastname,
-    multisportClubs,
-    myTeams,
-    phoneNumber,
-    position,
-    preferredSport,
-    role,
-    section,
-    teamMembershipRequests,
-    trainedTeams,
-    weight,
-  } = user;
-
-  const sanitizedRole = role ? {
-    documentId: role.documentId,
-    id: role.id,
-    name: role.name,
-    type: role.type,
-  } : role;
+  const sanitizedRole = user?.role ? {
+    documentId: normalizeString(user.role.documentId),
+    id: user.role.id ?? null,
+    name: normalizeString(user.role.name),
+    type: normalizeString(user.role.type),
+  } : null;
 
   return {
-    address,
-    avatar,
-    bestLevel,
-    birthdate,
-    category,
-    club,
-    documentId,
-    email,
-    firstname,
-    geohash,
-    height,
-    id,
-    isLookingForClub,
-    lastname,
-    multisportClubs,
-    myTeams,
-    phoneNumber,
-    position,
-    preferredSport,
+    address: normalizeString(user?.address),
+    avatar: sanitizeImageSummary(user?.avatar),
+    bestLevel: normalizeString(user?.bestLevel),
+    birthdate: normalizeString(user?.birthdate),
+    category: normalizeString(user?.category),
+    club: sanitizeClubSummary(user?.club),
+    clubMembershipRequests: Array.isArray(user?.clubMembershipRequests)
+      ? user.clubMembershipRequests.map(sanitizeClubMembershipRequest).filter(Boolean)
+      : [],
+    documentId: normalizeString(user?.documentId),
+    email: normalizeString(user?.email),
+    firstname: normalizeString(user?.firstname),
+    geohash: normalizeString(user?.geohash),
+    height: user?.height ?? null,
+    id: user?.id ?? null,
+    isLookingForClub: typeof user?.isLookingForClub === 'boolean'
+      ? user.isLookingForClub
+      : null,
+    lastname: normalizeString(user?.lastname),
+    multisportClubs: Array.isArray(user?.multisportClubs)
+      ? user.multisportClubs.map(sanitizeMultisportClubSummary).filter(Boolean)
+      : [],
+    myTeams: Array.isArray(user?.myTeams)
+      ? user.myTeams.map(sanitizeTeamSummary).filter(Boolean)
+      : [],
+    parentAccount: user?.parentAccount
+      ? { documentId: normalizeString(user.parentAccount.documentId) }
+      : null,
+    phoneNumber: normalizeString(user?.phoneNumber),
+    position: normalizeString(user?.position),
+    preferredSport: normalizeString(user?.preferredSport),
     role: sanitizedRole,
-    section,
-    teamMembershipRequests,
-    trainedTeams,
-    weight,
+    section: sanitizeEntitySummary(user?.section),
+    sportsHistory: normalizeString(user?.sportsHistory),
+    teamMembershipRequests: Array.isArray(user?.teamMembershipRequests)
+      ? user.teamMembershipRequests.map(sanitizeTeamMembershipRequest).filter(Boolean)
+      : [],
+    trainedTeams: Array.isArray(user?.trainedTeams)
+      ? user.trainedTeams.map(sanitizeTeamSummary).filter(Boolean)
+      : [],
+    weight: user?.weight ?? null,
   };
 };
+
+/**
+ * @param {User | undefined | null} left
+ * @param {User | undefined | null} right
+ * @returns {boolean}
+ */
+export const haveSameSanitizedUser = (left, right) => (
+  buildUserSignature(left) === buildUserSignature(right)
+);

@@ -259,7 +259,7 @@ function AdminPopupCampaignForm() {
 
       if (response?.didCancel) return;
       if (response?.errorCode) {
-        Alert.alert('Galerie', response?.errorMessage || 'Impossible d’ouvrir la galerie.');
+        Alert.alert('Galerie', response?.errorMessage || "Impossible d'ouvrir la galerie.");
         return;
       }
 
@@ -499,7 +499,7 @@ function AdminPopupCampaignForm() {
           )}
           <Button
             onPress={handleUploadImage}
-            title={imageUrl ? 'Remplacer l’image' : 'Ajouter une image'}
+            title={imageUrl ? "Remplacer l'image" : 'Ajouter une image'}
             variant="Secondary"
           />
         </View>

@@ -267,6 +267,31 @@ describe('Event Use Cases', () => {
       expect(result).not.toHaveProperty('stageStartDate');
       expect(result.startTime).toBe('14:30:00.000');
     });
+
+    test('should strip featured metadata from standard event payloads', () => {
+      const mockEvent = {
+        date: '15/05/2025',
+        featuredAt: '2026-04-15T08:00:00.000Z',
+        featuredBy: { id: 42 },
+        featuredRequestsSummary: { PUBLIC: { status: 'approved' } },
+        featuredRequestStatus: 'approved',
+        featuredScope: 'PUBLIC',
+        highlightRequests: [{ documentId: 'highlight-1' }],
+        isFeatured: true,
+        location: { label: 'Paris', value: '2.3522|48.8566' },
+        startTime: '14:30',
+      };
+
+      const result = createEventPayload(mockEvent);
+
+      expect(result).not.toHaveProperty('featuredAt');
+      expect(result).not.toHaveProperty('featuredBy');
+      expect(result).not.toHaveProperty('featuredRequestStatus');
+      expect(result).not.toHaveProperty('featuredRequestsSummary');
+      expect(result).not.toHaveProperty('featuredScope');
+      expect(result).not.toHaveProperty('highlightRequests');
+      expect(result).not.toHaveProperty('isFeatured');
+    });
   });
 
   describe('createReccurrentEventPayload', () => {

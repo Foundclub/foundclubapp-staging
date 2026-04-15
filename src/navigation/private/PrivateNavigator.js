@@ -1,3 +1,4 @@
+/* eslint-disable global-require */
 import { createStackNavigator } from '@react-navigation/stack';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,31 +9,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
-import BookingCalendar from '@/views/booking/BookingCalendar';
-import ConversationPublicEventPicker from '@/views/chat/ConversationPublicEventPicker';
-import AddSponsor from '@/views/club/AddSponsor';
-import Conversation from '@/views/Conversation';
-import EventFilters from '@/views/event/EventFilters';
-import FacilityForm from '@/views/facility/FacilityForm';
-import FacilityList from '@/views/facility/FacilityList';
-import HistoryWizardCategory from '@/views/historyWizard/HistoryWizardCategory';
-import HistoryWizardClub from '@/views/historyWizard/HistoryWizardClub';
 import { HistoryWizardProvider } from '@/views/historyWizard/HistoryWizardContext';
-import HistoryWizardLevel from '@/views/historyWizard/HistoryWizardLevel';
-import HistoryWizardPeriod from '@/views/historyWizard/HistoryWizardPeriod';
-import HistoryWizardRecap from '@/views/historyWizard/HistoryWizardRecap';
-import MercatoFilters from '@/views/mercato/MercatoFilters';
-import CMDashboard from '@/views/multisportClub/CMDashboard';
-import CMMembersScreen from '@/views/multisportClub/CMMembersScreen';
-import CMPlanningScreen from '@/views/multisportClub/CMPlanningScreen';
-import CMTeamsScreen from '@/views/multisportClub/CMTeamsScreen';
-import CreateSectionScreen from '@/views/multisportClub/CreateSectionScreen';
-import FeaturedRequestsScreen from '@/views/multisportClub/FeaturedRequestsScreen';
-import MultisportClubDetails from '@/views/multisportClub/MultisportClubDetails';
-import MultisportClubEditDetails from '@/views/multisportClub/MultisportClubEditDetails';
-import NewConversation from '@/views/NewConversation';
-import NotificationDetails from '@/views/notification/NotificationDetails';
-import NotificationList from '@/views/notification/NotificationList';
 import UserAddress from '@/views/onboarding/UserAddress';
 import UserAffiliationGuide from '@/views/onboarding/UserAffiliationGuide';
 import UserAvatar from '@/views/onboarding/UserAvatar';
@@ -48,31 +25,11 @@ import UserSection from '@/views/onboarding/UserSection';
 import UserSport from '@/views/onboarding/UserSport';
 import UserSportHistory from '@/views/onboarding/UserSportHistory';
 import Welcome from '@/views/onboarding/Welcome';
-import PlanningWeekFullscreen from '@/views/planning/PersonalPlanningWeekFullscreen';
-import PollDetails from '@/views/PollDetails';
-import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
-import RecruitmentAdEdit from '@/views/recruitment/RecruitmentAdEdit';
-import RecruitmentAdFilters from '@/views/recruitment/RecruitmentAdFilters';
-import RequestsHub from '@/views/requests/RequestsHub';
-import MissingPlayersView from '@/views/reservation/MissingPlayersView';
-import ReservationDetails from '@/views/reservation/ReservationDetails';
-import ReservationFilters from '@/views/reservation/ReservationFilters';
-import SearchAlerts from '@/views/search/SearchAlerts';
-import SearchHubLegacyRedirect from '@/views/search/SearchHubLegacyRedirect';
-import SearchMapScreen from '@/views/search/SearchMapScreen';
-import SearchRouteRedirect from '@/views/search/SearchRouteRedirect';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
-import LeagueTabNavigator from './LeagueTabNavigator';
 import PrivateTabNavigator from './PrivateTabNavigator';
-import AdminStack from './stacks/AdminStack';
-import AdWizardStack from './stacks/AdWizardStack';
-import ClubStack from './stacks/ClubStack';
-import EventStack from './stacks/EventStack';
-import ProfileStack from './stacks/ProfileStack';
-import TeamStack from './stacks/TeamStack';
 /* eslint-disable-next-line import/order */
 import { useAppMode } from '@/context/AppModeContext';
 
@@ -149,32 +106,32 @@ function PrivateNavigator() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          component={LeagueTabNavigator}
+          getComponent={() => require('./LeagueTabNavigator').default}
           name={RouteNames.LeagueHomeTab}
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          component={SearchHubLegacyRedirect}
+          getComponent={() => require('@/views/search/SearchHubLegacyRedirect').default}
           name={RouteNames.SearchHub}
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          component={SearchRouteRedirect}
+          getComponent={() => require('@/views/search/SearchRouteRedirect').default}
           name={RouteNames.SearchEvents}
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          component={SearchRouteRedirect}
+          getComponent={() => require('@/views/search/SearchRouteRedirect').default}
           name={RouteNames.SearchClubs}
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          component={SearchRouteRedirect}
+          getComponent={() => require('@/views/search/SearchRouteRedirect').default}
           name={RouteNames.SearchReservations}
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          component={SearchRouteRedirect}
+          getComponent={() => require('@/views/search/SearchRouteRedirect').default}
           name={RouteNames.SearchRecruitment}
           options={{ headerShown: false }}
         />
@@ -183,32 +140,32 @@ function PrivateNavigator() {
         {/* Note: We use headerShown: false because the stacks manage their own headers */}
 
         <Stack.Screen
-          component={ProfileStack}
+          getComponent={() => require('./stacks/ProfileStack').default}
           name={RouteNames.ProfileStack}
           options={{ headerShown: false }}
         />
 
         <Stack.Screen
-          component={ClubStack}
+          getComponent={() => require('./stacks/ClubStack').default}
           name={RouteNames.ClubStack}
           options={{ headerShown: false }}
         />
 
         <Stack.Screen
-          component={TeamStack}
+          getComponent={() => require('./stacks/TeamStack').default}
           name={RouteNames.TeamStack}
           options={{ headerShown: false }}
         />
 
         <Stack.Screen
-          component={EventStack}
+          getComponent={() => require('./stacks/EventStack').default}
           name={RouteNames.EventStack}
           options={{ headerShown: false }}
         />
 
         {userData?.role?.name === USER_ROLES.superAdmin ? (
           <Stack.Screen
-            component={AdminStack}
+            getComponent={() => require('./stacks/AdminStack').default}
             name={RouteNames.AdminStack}
             options={{ headerShown: false }}
           />
@@ -216,7 +173,7 @@ function PrivateNavigator() {
 
         {/* Remaining Screens (Filters, Chat, Alerts, Notifications) */}
         <Stack.Screen
-          component={EventFilters}
+          getComponent={() => require('@/views/event/EventFilters').default}
           name={RouteNames.EventFilters}
           options={{
             ...commonOptions,
@@ -224,7 +181,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={MercatoFilters}
+          getComponent={() => require('@/views/mercato/MercatoFilters').default}
           name={RouteNames.MercatoFilters}
           options={{
             ...commonOptions,
@@ -232,7 +189,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={RecruitmentAdFilters}
+          getComponent={() => require('@/views/recruitment/RecruitmentAdFilters').default}
           name={RouteNames.RecruitmentAdFilters}
           options={{
             ...commonOptions,
@@ -240,12 +197,12 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={AdWizardStack}
+          getComponent={() => require('./stacks/AdWizardStack').default}
           name={RouteNames.AdWizardStack}
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          component={ReservationDetails}
+          getComponent={() => require('@/views/reservation/ReservationDetails').default}
           name={RouteNames.ReservationDetails}
           options={{
             ...commonOptions,
@@ -253,7 +210,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={ReservationFilters}
+          getComponent={() => require('@/views/reservation/ReservationFilters').default}
           name={RouteNames.ReservationFilters}
           options={{
             ...commonOptions,
@@ -261,7 +218,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={MissingPlayersView}
+          getComponent={() => require('@/views/reservation/MissingPlayersView').default}
           name={RouteNames.MissingPlayersView}
           options={{
             ...commonOptions,
@@ -269,7 +226,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={BookingCalendar}
+          getComponent={() => require('@/views/booking/BookingCalendar').default}
           name={RouteNames.BookingCalendar}
           options={{
             ...commonOptions,
@@ -277,7 +234,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={MultisportClubDetails}
+          getComponent={() => require('@/views/multisportClub/MultisportClubDetails').default}
           name={RouteNames.MultisportClubDetails}
           options={{
             ...commonOptions,
@@ -285,7 +242,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={MultisportClubEditDetails}
+          getComponent={() => require('@/views/multisportClub/MultisportClubEditDetails').default}
           name={RouteNames.MultisportClubEdit}
           options={{
             ...commonOptions,
@@ -293,7 +250,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={FeaturedRequestsScreen}
+          getComponent={() => require('@/views/multisportClub/FeaturedRequestsScreen').default}
           name={RouteNames.FeaturedRequests}
           options={{
             ...commonOptions,
@@ -301,7 +258,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={CMDashboard}
+          getComponent={() => require('@/views/multisportClub/CMDashboard').default}
           name={RouteNames.CMDashboard}
           options={{
             ...commonOptions,
@@ -309,7 +266,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={CMPlanningScreen}
+          getComponent={() => require('@/views/multisportClub/CMPlanningScreen').default}
           name={RouteNames.CMPlanning}
           options={{
             ...commonOptions,
@@ -317,7 +274,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={AddSponsor}
+          getComponent={() => require('@/views/club/AddSponsor').default}
           name={RouteNames.AddSponsor}
           options={{
             ...commonOptions,
@@ -325,7 +282,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={CMMembersScreen}
+          getComponent={() => require('@/views/multisportClub/CMMembersScreen').default}
           name={RouteNames.CMMembers}
           options={{
             ...commonOptions,
@@ -333,7 +290,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={CMTeamsScreen}
+          getComponent={() => require('@/views/multisportClub/CMTeamsScreen').default}
           name={RouteNames.CMTeams}
           options={{
             headerShown: true,
@@ -341,7 +298,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={CreateSectionScreen}
+          getComponent={() => require('@/views/multisportClub/CreateSectionScreen').default}
           name={RouteNames.CreateSection}
           options={{
             ...commonOptions,
@@ -349,7 +306,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={SearchAlerts}
+          getComponent={() => require('@/views/search/SearchAlerts').default}
           name={RouteNames.SearchAlerts}
           options={{
             ...commonOptions,
@@ -357,12 +314,12 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={SearchMapScreen}
+          getComponent={() => require('@/views/search/SearchMapScreen').default}
           name={RouteNames.SearchMapScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          component={HistoryWizardCategory}
+          getComponent={() => require('@/views/historyWizard/HistoryWizardCategory').default}
           name={RouteNames.HistoryWizardCategory}
           options={{
             ...commonOptions,
@@ -370,7 +327,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={HistoryWizardClub}
+          getComponent={() => require('@/views/historyWizard/HistoryWizardClub').default}
           name={RouteNames.HistoryWizardClub}
           options={{
             ...commonOptions,
@@ -378,7 +335,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={HistoryWizardPeriod}
+          getComponent={() => require('@/views/historyWizard/HistoryWizardPeriod').default}
           name={RouteNames.HistoryWizardPeriod}
           options={{
             ...commonOptions,
@@ -386,7 +343,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={HistoryWizardLevel}
+          getComponent={() => require('@/views/historyWizard/HistoryWizardLevel').default}
           name={RouteNames.HistoryWizardLevel}
           options={{
             ...commonOptions,
@@ -394,7 +351,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={HistoryWizardRecap}
+          getComponent={() => require('@/views/historyWizard/HistoryWizardRecap').default}
           name={RouteNames.HistoryWizardRecap}
           options={{
             ...commonOptions,
@@ -402,35 +359,35 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={Conversation}
+          getComponent={() => require('@/views/Conversation').default}
           name={RouteNames.Conversation}
           options={{
             headerShown: false,
           }}
         />
         <Stack.Screen
-          component={ConversationPublicEventPicker}
+          getComponent={() => require('@/views/chat/ConversationPublicEventPicker').default}
           name={RouteNames.ConversationPublicEventPicker}
           options={{
             headerShown: false,
           }}
         />
         <Stack.Screen
-          component={PlanningWeekFullscreen}
+          getComponent={() => require('@/views/planning/PersonalPlanningWeekFullscreen').default}
           name={RouteNames.PlanningWeekFullscreen}
           options={{
             headerShown: false,
           }}
         />
         <Stack.Screen
-          component={PlanningWeekFullscreen}
+          getComponent={() => require('@/views/planning/PersonalPlanningWeekFullscreen').default}
           name={RouteNames.PersonalPlanningWeekFullscreen}
           options={{
             headerShown: false,
           }}
         />
         <Stack.Screen
-          component={NewConversation}
+          getComponent={() => require('@/views/NewConversation').default}
           name={RouteNames.NewConversation}
           options={{
             ...commonOptions,
@@ -438,7 +395,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={PollDetails}
+          getComponent={() => require('@/views/PollDetails').default}
           name={RouteNames.PollDetails}
           options={{
             ...commonOptions,
@@ -446,21 +403,21 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={NotificationList}
+          getComponent={() => require('@/views/notification/NotificationList').default}
           name={RouteNames.NotificationList}
           options={{
             headerShown: false,
           }}
         />
         <Stack.Screen
-          component={NotificationDetails}
+          getComponent={() => require('@/views/notification/NotificationDetails').default}
           name={RouteNames.NotificationDetails}
           options={{
             headerShown: false,
           }}
         />
         <Stack.Screen
-          component={RequestsHub}
+          getComponent={() => require('@/views/requests/RequestsHub').default}
           name={RouteNames.RequestsHub}
           options={{
             headerShown: false,
@@ -468,7 +425,7 @@ function PrivateNavigator() {
         />
 
         <Stack.Screen
-          component={FacilityList}
+          getComponent={() => require('@/views/facility/FacilityList').default}
           name={RouteNames.FacilityList}
           options={{
             ...commonOptions,
@@ -476,7 +433,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={RecruitmentAdDetails}
+          getComponent={() => require('@/views/recruitment/RecruitmentAdDetails').default}
           name={RouteNames.RecruitmentAdDetails}
           options={{
             ...commonOptions,
@@ -486,7 +443,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={RecruitmentAdEdit}
+          getComponent={() => require('@/views/recruitment/RecruitmentAdEdit').default}
           name={RouteNames.RecruitmentAdEdit}
           options={{
             ...commonOptions,
@@ -494,7 +451,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={FacilityForm}
+          getComponent={() => require('@/views/facility/FacilityForm').default}
           name={RouteNames.FacilityForm}
           options={{
             ...commonOptions,
@@ -504,7 +461,7 @@ function PrivateNavigator() {
 
         {/* League Screens */}
         <Stack.Screen
-          component={require('@/views/league/match/LeagueMatchDetails').default}
+          getComponent={() => require('@/views/league/match/LeagueMatchDetails').default}
           name={RouteNames.MatchDetails}
           options={{
             ...commonOptions,
@@ -512,7 +469,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={require('@/views/league/match/LeagueMatchDetails').default}
+          getComponent={() => require('@/views/league/match/LeagueMatchDetails').default}
           name={RouteNames.LeagueMatchDetails}
           options={{
             ...commonOptions,
@@ -520,7 +477,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={require('@/views/league/match/PastMatchDetails').default}
+          getComponent={() => require('@/views/league/match/PastMatchDetails').default}
           name={RouteNames.PastMatchDetails}
           options={{
             ...commonOptions,
@@ -528,7 +485,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={require('@/views/league/details/SquadDetailsScreen').default}
+          getComponent={() => require('@/views/league/details/SquadDetailsScreen').default}
           name={RouteNames.SquadDetails}
           options={{
             ...commonOptions,
@@ -536,7 +493,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={require('@/views/league/search/SquadSearchScreen').default}
+          getComponent={() => require('@/views/league/search/SquadSearchScreen').default}
           name={RouteNames.SquadSearch}
           options={{
             ...commonOptions,
@@ -544,7 +501,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={require('@/views/league/search/SquadFiltersScreen').default}
+          getComponent={() => require('@/views/league/search/SquadFiltersScreen').default}
           name={RouteNames.SquadFilters}
           options={{
             ...commonOptions,
@@ -552,7 +509,7 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          component={require('@/views/league/details/SquadRequestsScreen').default}
+          getComponent={() => require('@/views/league/details/SquadRequestsScreen').default}
           name={RouteNames.SquadRequests}
           options={{
             ...commonOptions,

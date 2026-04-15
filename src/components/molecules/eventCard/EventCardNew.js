@@ -1,6 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -19,6 +20,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useEvent from '@/domains/event/useEvent';
+import { resolveParticipationFlow } from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
 
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
@@ -199,6 +201,10 @@ function EventCardNew({
     userId: userData?.documentId,
   });
   const { hasAcceptedRequest, hasPendingRequest } = participationState;
+  const participationFlow = useMemo(() => resolveParticipationFlow(item, {
+    participationState,
+    user: userData,
+  }), [item, participationState, userData]);
 
   // Booking status for reservations
   const bookingStatus = item?.bookingStatus || 'open';
@@ -608,14 +614,25 @@ function EventCardNew({
                 />
               </View>
             ) : (
-              <Pressable
-                onPress={() => onParticipate?.(item)}
-                style={styles.reservationButton}
-              >
-                <Text style={styles.reservationButtonText}>
+              <View style={[Alignments.fullWidth, Spaces.gap[10]]}>
+                <Pressable
+                  disabled={!participationFlow?.canAct}
+                  onPress={() => onParticipate?.(item)}
+                  style={[
+                    styles.reservationButton,
+                    !participationFlow?.canAct ? styles.reservationButtonDisabled : null,
+                  ]}
+                >
+                  <Text style={styles.reservationButtonText}>
                   {actionLabel || t('reservation.actions.participate') || 'Réserver'}
                 </Text>
               </Pressable>
+              {!participationFlow?.canAct && participationFlow?.blockedReason ? (
+                <Text style={[Fonts.p4, Fonts.neutral300]}>
+                  {participationFlow.blockedReason}
+                </Text>
+              ) : null}
+            </View>
             )
           ) : (
             <EventAnswerButtons
@@ -627,6 +644,7 @@ function EventCardNew({
               onJoin={() => onJoin?.(item)}
               onLogin={onLogin}
               onParticipate={() => onParticipate?.(item)}
+              participationFlow={participationFlow}
             />
           )}
           </View>
@@ -852,6 +870,9 @@ const styles = StyleSheet.create({
     height: 38,
     justifyContent: 'center',
     width: '100%',
+  },
+  reservationButtonDisabled: {
+    opacity: 0.55,
   },
   reservationButtonText: {
     color: '#FFFFFF',

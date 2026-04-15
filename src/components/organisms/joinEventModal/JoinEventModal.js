@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
@@ -15,24 +15,27 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * @param {string} props.eventId - ID of the event to join
  * @param {boolean} props.isVisible - Whether the modal is visible
  * @param {() => void} props.onClose - Function to call when closing the modal
- * @param {(() => void) | undefined} [props.onConfirm] - Optional custom confirm handler
+ * @param {((acceptance: { acceptConditions: boolean, acceptResponsibility: boolean, acceptRiskDeclaration: boolean }) => Promise<void> | void)} props.onConfirm - Confirm handler controlled by the parent
  * @param {boolean} [props.isSubmitting] - Optional loading state for custom confirm handler
+ * @param {string} [props.confirmLabel]
  * @param {string} [props.contextNote] - Optional contextual note shown above the base declaration
- * @param {import('@tanstack/react-query').UseMutationResult<EventParticipation,
- * Error, {user: string, event: string, reason?: string},
- * unknown>} props.createEventParticipationMutation - Mutation for creating event participation
  * @param {string} props.clubName - Name of the club
+ * @param {string} [props.description]
+ * @param {string | null} [props.errorMessage]
+ * @param {string} [props.title]
  * @returns {import('react').ReactElement} JoinEventModal component
  */
 function JoinEventModal({
   clubName,
+  confirmLabel,
   contextNote,
-  createEventParticipationMutation,
-  eventId,
+  description,
+  errorMessage = null,
   isSubmitting = false,
   isVisible,
   onClose,
   onConfirm,
+  title,
 }) {
   const [acceptResponsibility, setAcceptResponsibility] = useState(false);
   const [acceptConditions, setAcceptConditions] = useState(false);
@@ -59,30 +62,25 @@ function JoinEventModal({
     setAcceptConditions(false);
   }, [onClose]);
 
-  const handleConfirmParticipation = useCallback(() => {
+  useEffect(() => {
+    if (!isVisible) {
+      setAcceptResponsibility(false);
+      setAcceptConditions(false);
+    }
+  }, [isVisible]);
+
+  const handleConfirmParticipation = useCallback(async () => {
     if (!acceptResponsibility || !acceptConditions || !userData?.documentId) return;
-
-    if (onConfirm) {
-      onConfirm();
-      handleClose();
-      return;
-    }
-
-    if (eventId) {
-      createEventParticipationMutation.mutate({
-        event: eventId,
-        user: userData.documentId,
-      });
-      handleClose(); // Force close on confirm
-    }
+    await Promise.resolve(onConfirm?.({
+      acceptConditions,
+      acceptResponsibility,
+      acceptRiskDeclaration: acceptResponsibility && acceptConditions,
+    }));
   }, [
-    eventId,
-    acceptResponsibility,
     acceptConditions,
+    acceptResponsibility,
     userData,
     onConfirm,
-    createEventParticipationMutation,
-    handleClose,
   ]);
 
   return (
@@ -92,9 +90,9 @@ function JoinEventModal({
         <View style={[Spaces.gap[16]]}>
           <Button
             disabled={!acceptResponsibility || !acceptConditions}
-            isLoading={isSubmitting || createEventParticipationMutation?.isPending}
+            isLoading={isSubmitting}
             onPress={handleConfirmParticipation}
-            title={t('eventList.joinModal.actions.confirm')}
+            title={confirmLabel || t('eventList.joinModal.actions.confirm')}
             variant="Primary"
           />
           <Button
@@ -106,7 +104,7 @@ function JoinEventModal({
       )}
       headerComponent={(
         <Text style={[Fonts.p1Black, Fonts.neutral00, { textAlign: 'center' }]}>
-          {t('eventList.joinModal.title')}
+          {title || t('eventList.joinModal.title')}
         </Text>
       )}
       hideCloseButton
@@ -133,14 +131,32 @@ function JoinEventModal({
         ) : null}
 
         <Text style={[Fonts.p1, Fonts.neutral00]}>
-          {t('eventList.joinModal.description', { clubName })}
+          {description || t('eventList.joinModal.description', { clubName })}
         </Text>
+
+        {errorMessage ? (
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              {
+                backgroundColor: 'rgba(176, 43, 59, 0.18)',
+                borderColor: 'rgba(255, 107, 129, 0.35)',
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, { color: '#FFB5C0' }]}>
+              {errorMessage}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={[Spaces.gap[16]]}>
           <Checkable
             fontStyle={[Fonts.p2, Fonts.neutral00]}
             isChecked={acceptResponsibility}
-            setIsChecked={() => setAcceptResponsibility(!acceptResponsibility)}
+            setIsChecked={() => setAcceptResponsibility((previous) => !previous)}
             text={t('eventList.joinModal.checkboxes.responsibility')}
             type="square"
             wrapperStyle={checkableWrapperStyle}
@@ -148,7 +164,7 @@ function JoinEventModal({
           <Checkable
             fontStyle={[Fonts.p2, Fonts.neutral00]}
             isChecked={acceptConditions}
-            setIsChecked={() => setAcceptConditions(!acceptConditions)}
+            setIsChecked={() => setAcceptConditions((previous) => !previous)}
             text={t('eventList.joinModal.checkboxes.conditions')}
             type="square"
             wrapperStyle={checkableWrapperStyle}

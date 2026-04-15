@@ -1,11 +1,14 @@
 import React, { useContext, useEffect, useReducer } from 'react';
 import { Platform } from 'react-native';
 
+import { sanitizeUser } from '@/domains/auth/authSanitizer';
 import appReducer from '@/store/appReducer';
 import {
   registerAuthRuntimeDispatch,
   syncAuthRuntimeState,
 } from '@/store/authRuntime';
+
+import { markBootStep } from '@/utils/performance/bootPerformance';
 
 import { getStorageBackend } from '@/platform/storage';
 
@@ -110,6 +113,30 @@ const normalizeDocumentId = (value) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+const sanitizePersistedSession = (session) => {
+  if (!session || typeof session !== 'object') {
+    return undefined;
+  }
+
+  const nextSession = {
+    idToken: typeof session?.idToken === 'string' ? session.idToken : undefined,
+    token: typeof session?.token === 'string' ? session.token : undefined,
+    user: sanitizeUser(session?.user),
+  };
+
+  if (!nextSession.user?.documentId || !nextSession.token) {
+    return undefined;
+  }
+
+  return nextSession;
+};
+
+const sanitizePersistedSessions = (sessions) => (
+  Array.isArray(sessions)
+    ? sessions.map(sanitizePersistedSession).filter(Boolean)
+    : []
+);
+
 const getSessionDocumentId = (session) => normalizeDocumentId(session?.user?.documentId);
 
 const orderSessionsByActive = (sessions, activeSessionDocumentId) => {
@@ -158,9 +185,11 @@ const normalizeStoredFcmToken = (rawValue) => {
   return trimmed;
 };
 
-const storedAuth = getStoredJson('auth', undefined);
+const storedAuth = sanitizePersistedSession(getStoredJson('auth', undefined));
 const storedAuthSessionsRaw = getStoredJson('authSessions', []);
-const storedAuthSessions = Array.isArray(storedAuthSessionsRaw) ? storedAuthSessionsRaw : [];
+const storedAuthSessions = Array.isArray(storedAuthSessionsRaw)
+  ? storedAuthSessionsRaw.map(sanitizePersistedSession).filter(Boolean)
+  : [];
 const storedActiveSessionDocumentId = normalizeDocumentId(
   storage.contains('activeSessionDocumentId') ? storage.getString('activeSessionDocumentId') : undefined,
 );
@@ -208,6 +237,11 @@ const orderedInitialAuthSessions = orderSessionsByActive(
 );
 const initialAuth = orderedInitialAuthSessions[0];
 const initialActiveSessionDocumentId = getSessionDocumentId(initialAuth);
+
+markBootStep('session_hydrated', {
+  hasStoredSession: Boolean(initialAuth?.token),
+  sessionCount: orderedInitialAuthSessions.length,
+});
 
 /**
  * Initial state for the global application context.
@@ -279,7 +313,7 @@ function AppProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    setPersistantState('auth', safeJsonStringify('auth', state.auth));
+    setPersistantState('auth', safeJsonStringify('auth', sanitizePersistedSession(state.auth)));
   }, [state.auth]);
 
   useEffect(() => {
@@ -290,7 +324,10 @@ function AppProvider({ children }) {
   }, [state.activeSessionDocumentId]);
 
   useEffect(() => {
-    setPersistantState('authSessions', safeJsonStringify('authSessions', state.authSessions));
+    setPersistantState(
+      'authSessions',
+      safeJsonStringify('authSessions', sanitizePersistedSessions(state.authSessions)),
+    );
   }, [state.authSessions]);
 
   useEffect(() => {

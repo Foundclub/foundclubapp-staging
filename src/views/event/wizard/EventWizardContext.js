@@ -40,6 +40,7 @@ const createInitialState = () => {
     // Step 4: Logistics
     date: new Date(),
     endTime: end,
+    isMultiDayTournament: false,
     isRecurrent: false,
     pricePerPerson: null,
     recurrenceDays: [],
@@ -70,9 +71,9 @@ const createInitialState = () => {
     tournamentFormatMode: 'groups_only',
     tournamentGroupCount: 2,
     tournamentKnockoutSize: 8,
+    tournamentMatchGenerationMode: 'auto',
     tournamentMaxRosterSize: null,
     tournamentMaxTeams: null,
-    tournamentMatchGenerationMode: 'auto',
     tournamentMinRosterSize: null,
     tournamentPointsDraw: 1,
     tournamentPointsForfeit: 0,
@@ -181,6 +182,7 @@ function eventWizardReducer(state, action) {
       if (!isStage) {
         const normalizedState = {
           ...nextState,
+          isMultiDayTournament: false,
           stageSchedule: [],
         };
 
@@ -214,6 +216,7 @@ function eventWizardReducer(state, action) {
 
       return {
         ...nextState,
+        isMultiDayTournament: false,
         isRecurrent: false,
         recurrenceDays: [],
         recurrenceEndDate: null,

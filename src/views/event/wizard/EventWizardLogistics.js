@@ -21,6 +21,7 @@ import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardLogisticsStepIndex,
   getEventWizardStepCount,
+  isTournamentEventType,
 } from './eventWizardDetectionUtils';
 
 const parseInteger = (rawValue) => {
@@ -122,6 +123,7 @@ function EventWizardLogistics({ navigation }) {
   const intervalControlBorder = 'rgba(1, 179, 244, 0.28)';
 
   const isReservation = isReservationTypeName(state.type?.name);
+  const isTournament = isTournamentEventType(state.type?.name);
 
   const [date, setDate] = useState(state.date ? new Date(state.date) : new Date());
   const [startTime, setStartTime] = useState(
@@ -146,8 +148,13 @@ function EventWizardLogistics({ navigation }) {
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(
     state.recurrenceEndDate ? new Date(state.recurrenceEndDate) : null,
   );
+  const [isMultiDayTournament, setIsMultiDayTournament] = useState(Boolean(state.isMultiDayTournament));
   const [reservationMode, setReservationMode] = useState(state.reservationMode || 'FULL_GROUP');
   const [pricePerPersonText, setPricePerPersonText] = useState(toNumberInputText(state.pricePerPerson));
+  const projectedWizardState = useMemo(() => ({
+    ...state,
+    isMultiDayTournament: isTournament ? isMultiDayTournament : false,
+  }), [isMultiDayTournament, isTournament, state]);
 
   const recurrenceInterval = useMemo(() => {
     const parsed = parseInteger(recurrenceIntervalText);
@@ -277,7 +284,9 @@ function EventWizardLogistics({ navigation }) {
     let normalizedRecurrenceStartDate = null;
     let normalizedRecurrenceEndDate = null;
 
-    if (isRecurrent) {
+    const effectiveIsRecurrent = isTournament ? false : isRecurrent;
+
+    if (effectiveIsRecurrent) {
       normalizedRecurrenceStartDate = recurrenceStartDate
         ? new Date(recurrenceStartDate)
         : new Date(fullStartDate);
@@ -291,7 +300,7 @@ function EventWizardLogistics({ navigation }) {
         );
     }
 
-    if (isRecurrent) {
+    if (effectiveIsRecurrent) {
       if (!recurrenceStartDate) {
         setRecurrenceStartDate(normalizedRecurrenceStartDate);
       }
@@ -300,7 +309,7 @@ function EventWizardLogistics({ navigation }) {
       }
     }
 
-    if (isRecurrent) {
+    if (effectiveIsRecurrent) {
       if (
         !normalizedRecurrenceStartDate
         || !normalizedRecurrenceEndDate
@@ -324,14 +333,22 @@ function EventWizardLogistics({ navigation }) {
     const payload = {
       date: fullStartDate,
       endTime: fullEndDate,
-      isRecurrent,
+      isMultiDayTournament: isTournament ? isMultiDayTournament : false,
+      isRecurrent: effectiveIsRecurrent,
       pricePerPerson: isReservation ? parseDecimal(pricePerPersonText) : null,
-      recurrenceDays: isRecurrent && recurrenceFrequency === 'week' ? recurrenceDays : [],
+      recurrenceDays: effectiveIsRecurrent && recurrenceFrequency === 'week' ? recurrenceDays : [],
       recurrenceEndDate: normalizedRecurrenceEndDate,
       recurrenceFrequency,
       recurrenceInterval,
       recurrenceStartDate: normalizedRecurrenceStartDate,
       reservationMode,
+      stageDefaultEndTime: fullEndDate,
+      stageDefaultStartTime: fullStartDate,
+      stageEndDate: isTournament && isMultiDayTournament && state.stageEndDate
+        ? state.stageEndDate
+        : fullStartDate,
+      stageSchedule: isTournament && isMultiDayTournament ? state.stageSchedule : [],
+      stageStartDate: fullStartDate,
       startTime: fullStartDate,
     };
 
@@ -340,15 +357,19 @@ function EventWizardLogistics({ navigation }) {
       type: 'SET_LOGISTICS',
     });
 
-    navigation.navigate(RouteNames.EventWizardLocation);
+    navigation.navigate(
+      isTournament && isMultiDayTournament
+        ? RouteNames.EventWizardStageProgram
+        : RouteNames.EventWizardLocation,
+    );
   };
 
   return (
     <WizardStepLayout
       onBack={() => navigation.goBack()}
       onNext={handleNext}
-      stepCount={getEventWizardStepCount(state)}
-      stepIndex={getEventWizardLogisticsStepIndex(state)}
+      stepCount={getEventWizardStepCount(projectedWizardState)}
+      stepIndex={getEventWizardLogisticsStepIndex(projectedWizardState)}
       subtitle={t('eventWizard.steps.logistics.subtitle')}
       title={t('eventWizard.steps.logistics.title')}
     >
@@ -382,28 +403,63 @@ function EventWizardLogistics({ navigation }) {
           </View>
         </View>
 
-        <View
-          style={[
-            ApplicationStyle.card,
-            Spaces.padding[16],
-            Alignments.row,
-            Alignments.alignCenter,
-            Alignments.justifySpaceBetween,
-            { backgroundColor: cardSurface, borderColor: cardBorder },
-          ]}
-        >
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-            {t('eventWizard.steps.logistics.isRecurrent')}
-          </Text>
-          <Switch
-            onValueChange={setIsRecurrent}
-            thumbColor={Colors.neutral00}
-            trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
-            value={isRecurrent}
-          />
-        </View>
+        {isTournament ? (
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[16],
+              Alignments.row,
+              Alignments.alignCenter,
+              Alignments.justifySpaceBetween,
+              Spaces.gap[16],
+              { backgroundColor: cardSurface, borderColor: cardBorder },
+            ]}
+          >
+            <View style={[Spaces.gap[6], { flex: 1 }]}>
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {t('eventWizard.tournamentProgram.logisticsToggleTitle', 'Tournoi sur plusieurs jours')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'eventWizard.tournamentProgram.logisticsToggleHelper',
+                  'Active cette option pour definir une periode, les jours actifs et les horaires par jour.',
+                )}
+              </Text>
+            </View>
+            <Switch
+              onValueChange={(value) => {
+                setIsMultiDayTournament(value);
+                if (value) setIsRecurrent(false);
+              }}
+              thumbColor={Colors.neutral00}
+              trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
+              value={isMultiDayTournament}
+            />
+          </View>
+        ) : (
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[16],
+              Alignments.row,
+              Alignments.alignCenter,
+              Alignments.justifySpaceBetween,
+              { backgroundColor: cardSurface, borderColor: cardBorder },
+            ]}
+          >
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {t('eventWizard.steps.logistics.isRecurrent')}
+            </Text>
+            <Switch
+              onValueChange={setIsRecurrent}
+              thumbColor={Colors.neutral00}
+              trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
+              value={isRecurrent}
+            />
+          </View>
+        )}
 
-        {isRecurrent ? (
+        {!isTournament && isRecurrent ? (
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], { backgroundColor: cardSurface, borderColor: cardBorder }]}>
             <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
               {t('eventWizard.steps.logistics.recurrenceTitle')}
@@ -501,7 +557,7 @@ function EventWizardLogistics({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
                   {t(
                     'eventWizard.steps.logistics.recurrenceBaseDayHint',
-                    "Le jour de l'Ã©vÃ©nement est prÃ©sÃ©lectionnÃ©. Tu peux ajouter d'autres jours.",
+                    "Le jour de l'événement est présélectionné. Tu peux ajouter d'autres jours.",
                   )}
                 </Text>
               </View>

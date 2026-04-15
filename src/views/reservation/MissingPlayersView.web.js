@@ -72,6 +72,7 @@ function MissingPlayersView({ navigation }) {
     isLoading,
     refetch,
   } = useGetReservations({
+    needsPlayers: true,
     pageSize: 24,
     startDateAfter: startOfDay(new Date()).toISOString(),
   });

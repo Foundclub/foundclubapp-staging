@@ -133,7 +133,7 @@ function EventDetectionSlots({
           const isDisabledByOtherSlot = Boolean(currentUserSlotId) && !isCurrentUserSlot;
           const isDisabledByGenericParticipation = !currentUserSlotId && currentUserHasGenericParticipation;
 
-          let primaryTitle = 'Postuler';
+          let primaryTitle = 'Participer';
           let primaryDisabled = false;
           let primaryVariant = 'Primary';
 
@@ -142,11 +142,11 @@ function EventDetectionSlots({
             primaryDisabled = true;
             primaryVariant = 'SecondaryLight';
           } else if (isCurrentUserSlot) {
-            primaryTitle = currentUserSlotStatus === 'accepted' ? 'Reserve' : 'Envoyee';
+            primaryTitle = currentUserSlotStatus === 'accepted' ? 'Participation validee' : 'Demande envoyee';
             primaryDisabled = true;
             primaryVariant = 'SecondaryLight';
           } else if (isDisabledByOtherSlot) {
-            primaryTitle = 'Deja candidate';
+            primaryTitle = 'Deja inscrit';
             primaryDisabled = true;
             primaryVariant = 'SecondaryLight';
           } else if (isDisabledByGenericParticipation) {
@@ -213,7 +213,7 @@ function EventDetectionSlots({
               <View style={[Alignments.row, { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
                 {renderMetricChip(`${slot.acceptedCount}/${slot.quantity} valide`)}
                 {renderMetricChip(`${slot.pendingCount} attente`)}
-                {renderMetricChip(`${slot.candidatesCount} candidat`)}
+                {renderMetricChip(`${slot.candidatesCount} demande(s)`)}
               </View>
 
               {!canEdit ? (

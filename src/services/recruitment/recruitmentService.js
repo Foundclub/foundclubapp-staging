@@ -510,7 +510,8 @@ export const applyToRecruitmentAd = async (adId, payload = {}) => {
       || error?.message
       || '',
     ).trim();
-    const isExpectedBusinessRejection = status === 400 && /deja candidate|deja une candidature en attente|deja postule|deja validee|deja acceptee/i.test(backendMessage);
+    const isExpectedBusinessRejection = status === 400
+      && /deja candidate|deja une candidature en attente|deja postule|deja validee|deja acceptee|declaration de responsabilite|poste est deja complet|candidature active|detection fermee/i.test(backendMessage);
 
     if (!isExpectedBusinessRejection) {
       console.error('[recruitmentService] Error applying to ad:', error);

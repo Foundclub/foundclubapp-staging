@@ -5,10 +5,14 @@ import {
   useCallback, useMemo, useRef, useState,
 } from 'react';
 import {
-  FlatList, Image, Text, TouchableOpacity, View,
+  Alert, FlatList, Image, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import {
+  getParticipationErrorMessage,
+  resolveParticipationFlow,
+} from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
 
 import DateSlider from '@/components/molecules/dateSlider/DateSlider';
@@ -27,6 +31,7 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetEvents } from '@/services/event/eventQueries';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+import { joinReservation } from '@/services/reservation/reservationService';
 
 import { createLogger } from '@/utils/logger/logger';
 
@@ -53,6 +58,7 @@ function ParticipantEventList({ navigation }) {
   // State
   const [listStartDate, setListStartDate] = useState(new Date());
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
+  const [joinModalError, setJoinModalError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(undefined);
   const flatListRef = useRef(null);
 
@@ -109,6 +115,10 @@ function ParticipantEventList({ navigation }) {
     () => featuredData?.pages?.flatMap((page) => page.data) || [],
     [featuredData],
   );
+  const selectedParticipationFlow = useMemo(
+    () => resolveParticipationFlow(selectedEvent, { user: userData }),
+    [selectedEvent, userData],
+  );
 
   // Filter events for the list (starting from listStartDate)
   const listEvents = useMemo(() => {
@@ -145,31 +155,136 @@ function ParticipantEventList({ navigation }) {
    */
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
+    onError: (error) => {
+      const message = getParticipationErrorMessage(error, 'Une erreur est survenue.');
+      Alert.alert('Erreur', message);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       refetch();
+      setIsJoinModalVisible(false);
+      setJoinModalError('');
+    },
+  });
+  const joinReservationMutation = useMutation({
+    mutationFn: (reservationId) => joinReservation(reservationId),
+    onError: (error) => {
+      const message = getParticipationErrorMessage(error, 'Une erreur est survenue.');
+      Alert.alert('Erreur', message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-reservations'] });
+      refetch();
+      setIsJoinModalVisible(false);
+      setJoinModalError('');
     },
   });
 
-  const handleParticipateToEvent = useCallback((event) => {
-    if (event?.documentId && userData?.documentId) {
-      createEventParticipationMutation.mutate({
-        event: event.documentId,
-        user: userData.documentId,
-      });
+  const handleParticipateToEvent = useCallback(async (event) => {
+    const participationFlow = resolveParticipationFlow(event, { user: userData });
+
+    if (!participationFlow?.canAct) {
+      Alert.alert('Erreur', participationFlow?.blockedReason || 'Cette action est indisponible.');
+      return;
     }
-  }, [createEventParticipationMutation, userData]);
+
+    if (participationFlow?.kind === 'reservation-recruiting') {
+      setJoinModalError('');
+      setSelectedEvent(event);
+      setIsJoinModalVisible(true);
+      return;
+    }
+
+    if (participationFlow?.submitMode === 'redirect-parent' && event?.parentEvent?.documentId) {
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: event.parentEvent.documentId },
+        screen: RouteNames.EventDetails,
+      });
+      return;
+    }
+
+    if (event?.documentId && userData?.documentId) {
+      try {
+        await createEventParticipationMutation.mutateAsync({
+          event: event.documentId,
+          user: userData.documentId,
+        });
+      } catch (error) {
+        Alert.alert('Erreur', getParticipationErrorMessage(error, 'Une erreur est survenue.'));
+      }
+    }
+  }, [createEventParticipationMutation, navigation, userData]);
 
   const handleJoinEvent = useCallback((event) => {
+    const participationFlow = resolveParticipationFlow(event, { user: userData });
+    if (!participationFlow?.canAct) {
+      Alert.alert('Erreur', participationFlow?.blockedReason || 'Cette action est indisponible.');
+      return;
+    }
+
+    if (participationFlow?.submitMode === 'redirect-parent' && event?.parentEvent?.documentId) {
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: event.parentEvent.documentId },
+        screen: RouteNames.EventDetails,
+      });
+      return;
+    }
+
+    if (participationFlow?.submitMode === 'detection-slot-picker') {
+      if (event?.documentId) {
+        navigation.navigate(RouteNames.EventStack, {
+          params: { eventId: event.documentId },
+          screen: RouteNames.EventDetails,
+        });
+      }
+      return;
+    }
+
+    setJoinModalError('');
     setSelectedEvent(event);
     setIsJoinModalVisible(true);
-  }, []);
+  }, [navigation, userData]);
 
   const handleCloseJoinModal = useCallback(() => {
     setIsJoinModalVisible(false);
+    setJoinModalError('');
     setSelectedEvent(undefined);
   }, []);
+
+  const handleConfirmJoinEvent = useCallback(async () => {
+    if (!selectedEvent?.documentId) {
+      return;
+    }
+
+    const participationFlow = resolveParticipationFlow(selectedEvent, { user: userData });
+
+    try {
+      if (participationFlow?.kind === 'reservation-recruiting') {
+        await joinReservationMutation.mutateAsync(selectedEvent.documentId);
+        return;
+      }
+
+      if (!userData?.documentId) {
+        return;
+      }
+
+      await createEventParticipationMutation.mutateAsync({
+        event: selectedEvent.documentId,
+        user: userData.documentId,
+      });
+    } catch (error) {
+      setJoinModalError(getParticipationErrorMessage(error, 'Une erreur est survenue.'));
+    }
+  }, [
+    createEventParticipationMutation,
+    joinReservationMutation,
+    selectedEvent,
+    userData,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -407,10 +522,15 @@ function ParticipantEventList({ navigation }) {
       )}
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || ''}
-        createEventParticipationMutation={createEventParticipationMutation}
-        eventId={selectedEvent?.documentId || ''}
+        confirmLabel={selectedParticipationFlow?.confirmLabel}
+        errorMessage={joinModalError || null}
+        isSubmitting={
+          joinReservationMutation.isPending
+          || createEventParticipationMutation.isPending
+        }
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
+        onConfirm={handleConfirmJoinEvent}
       />
     </ScreenContainer>
   );

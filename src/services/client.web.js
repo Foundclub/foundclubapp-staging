@@ -7,6 +7,8 @@ import {
   getAuthRuntimeSnapshot,
 } from '@/store/authRuntime';
 
+import { trackBootNetworkRequest } from '@/utils/performance/bootPerformance';
+
 import { getApiBaseUrl } from '@/config/runtimeUrls';
 
 const instance = axios.create({
@@ -27,6 +29,11 @@ const onRequest = (axiosConfig) => {
   if (token) {
     newConfig.headers.Authorization = `Bearer ${token}`;
   }
+
+  trackBootNetworkRequest({
+    method: newConfig.method,
+    url: `${newConfig.baseURL || ''}${newConfig.url || ''}`,
+  });
 
   return newConfig;
 };

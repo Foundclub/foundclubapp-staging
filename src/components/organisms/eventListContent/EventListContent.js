@@ -6,10 +6,14 @@ import {
   useCallback, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import {
+  getParticipationErrorMessage,
+  resolveParticipationFlow,
+} from '@/domains/participation/participationFlow';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -26,8 +30,9 @@ import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetEvents } from '@/services/event/eventQueries';
-import { missingEvent } from '@/services/event/eventService';
+import { missingEvent, respondToEventRsvp } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+import { joinReservation } from '@/services/reservation/reservationService';
 import { useSearchEvents, useSearchEventsMap } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
@@ -117,9 +122,11 @@ function EventListContent({
   showFilters = false,
 }) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
+  const [joinModalError, setJoinModalError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
   const filtersTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
   const firstCardTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
+  const hasHandledInitialFocusRefreshRef = useRef(false);
 
   // Date Picker State
   // Date Picker State
@@ -263,6 +270,10 @@ function EventListContent({
     refetch: refetchFeatured,
   } = useGetEvents(featuredEventsConfig, { enabled: !propEvents });
 
+  const selectedParticipationFlow = useMemo(
+    () => resolveParticipationFlow(selectedEvent, { user: userData }),
+    [selectedEvent, userData],
+  );
   const queryClient = useQueryClient();
   /**
    * Mutation to create an event participation
@@ -271,6 +282,10 @@ function EventListContent({
    */
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
+    onError: (mutationError) => {
+      const message = getParticipationErrorMessage(mutationError, t('common.errorOccurred'));
+      Alert.alert(t('common.error', 'Erreur'), message);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
@@ -284,6 +299,31 @@ function EventListContent({
         }
       }
       setIsJoinModalVisible(false);
+      setJoinModalError('');
+    },
+  });
+  const joinReservationMutation = useMutation({
+    mutationFn: (reservationId) => joinReservation(reservationId),
+    onError: (mutationError) => {
+      const message = getParticipationErrorMessage(mutationError, t('common.errorOccurred'));
+      Alert.alert(t('common.error', 'Erreur'), message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-reservations'] });
+      if (!propEvents) {
+        if (isViewportListMode) {
+          refetchViewport();
+        } else if (isSmartSearchEnabled) {
+          refetchSearch();
+        } else {
+          refetch();
+        }
+      }
+      setIsJoinModalVisible(false);
+      setJoinModalError('');
     },
   });
 
@@ -436,6 +476,29 @@ function EventListContent({
     },
   });
 
+  const respondToEventRsvpMutation = useMutation({
+    mutationFn: ({ answer, eventId }) => respondToEventRsvp(eventId, answer),
+    onError: (mutationError) => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        getParticipationErrorMessage(mutationError, t('common.errorOccurred')),
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+      if (!propEvents) {
+        if (isViewportListMode) {
+          refetchViewport();
+        } else if (isSmartSearchEnabled) {
+          refetchSearch();
+        } else {
+          refetch();
+        }
+      }
+    },
+  });
+
   const handleEventSelect = useCallback((/** @type {FCEvent} */ event) => {
     if (!event?.documentId) {
       eventListLogger.warn('Navigation blocked: missing event documentId');
@@ -466,23 +529,100 @@ function EventListContent({
   }, [appDispatch, eventFilters]);
 
   const handleJoinEvent = useCallback((/** @type {FCEvent} */ event) => {
+    const participationFlow = resolveParticipationFlow(event, { user: userData });
+    if (!participationFlow?.canAct) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        participationFlow?.blockedReason || t('common.errorOccurred'),
+      );
+      return;
+    }
+
+    if (participationFlow?.submitMode === 'redirect-parent' && event?.parentEvent?.documentId) {
+      handleEventSelect(event.parentEvent);
+      return;
+    }
+
+    if (participationFlow?.submitMode === 'detection-slot-picker') {
+      handleEventSelect(event);
+      return;
+    }
+
+    setJoinModalError('');
     setSelectedEvent(event);
     setIsJoinModalVisible(true);
-  }, []);
+  }, [handleEventSelect, t, userData]);
 
-  const handleParticipateToEvent = useCallback((/** @type {FCEvent} */ event) => {
-    if (event?.documentId && userDocumentId) {
-      createEventParticipationMutation.mutate({
+  const handleParticipateToEvent = useCallback(async (/** @type {FCEvent} */ event) => {
+    const isStageDayEvent = String(event?.eventFormat || '').toLowerCase() === 'stage_day';
+    if (isStageDayEvent && event?.documentId) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({
+          answer: 'present',
+          eventId: event.documentId,
+        });
+      } catch {
+        // Error feedback is handled by the mutation.
+      }
+      return;
+    }
+
+    const participationFlow = resolveParticipationFlow(event, { user: userData });
+
+    if (!participationFlow?.canAct) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        participationFlow?.blockedReason || t('common.errorOccurred'),
+      );
+      return;
+    }
+
+    if (participationFlow?.kind === 'reservation-recruiting') {
+      handleJoinEvent(event);
+      return;
+    }
+
+    if (participationFlow?.submitMode === 'redirect-parent' && event?.parentEvent?.documentId) {
+      handleEventSelect(event.parentEvent);
+      return;
+    }
+
+    if (!event?.documentId || !userDocumentId) {
+      return;
+    }
+
+    try {
+      await createEventParticipationMutation.mutateAsync({
         event: event.documentId,
         user: userDocumentId,
       });
+    } catch (mutationError) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        getParticipationErrorMessage(mutationError, t('common.errorOccurred')),
+      );
     }
-  }, [createEventParticipationMutation, userDocumentId]);
+  }, [
+    createEventParticipationMutation,
+    handleEventSelect,
+    handleJoinEvent,
+    respondToEventRsvpMutation,
+    t,
+    userData,
+    userDocumentId,
+  ]);
 
   const handleDeclineEvent = useCallback((/** @type {FCEvent} */ event) => {
     if (!event?.documentId) return;
+    if (String(event?.eventFormat || '').toLowerCase() === 'stage_day') {
+      respondToEventRsvpMutation.mutate({
+        answer: 'absent',
+        eventId: event.documentId,
+      });
+      return;
+    }
     missingEventMutation.mutate(event.documentId);
-  }, [missingEventMutation]);
+  }, [missingEventMutation, respondToEventRsvpMutation]);
 
   const handleGoLogin = () => {
     openPublicAuthFlow(navigation, {
@@ -493,8 +633,42 @@ function EventListContent({
 
   const handleCloseJoinModal = useCallback(() => {
     setIsJoinModalVisible(false);
+    setJoinModalError('');
     setSelectedEvent(undefined);
   }, []);
+
+  const handleConfirmJoinEvent = useCallback(async () => {
+    if (!selectedEvent?.documentId) {
+      return;
+    }
+
+    const participationFlow = resolveParticipationFlow(selectedEvent, { user: userData });
+
+    try {
+      if (participationFlow?.kind === 'reservation-recruiting') {
+        await joinReservationMutation.mutateAsync(selectedEvent.documentId);
+        return;
+      }
+
+      if (!userDocumentId) {
+        return;
+      }
+
+      await createEventParticipationMutation.mutateAsync({
+        event: selectedEvent.documentId,
+        user: userDocumentId,
+      });
+    } catch (mutationError) {
+      setJoinModalError(getParticipationErrorMessage(mutationError, t('common.errorOccurred')));
+    }
+  }, [
+    createEventParticipationMutation,
+    joinReservationMutation,
+    selectedEvent,
+    t,
+    userData,
+    userDocumentId,
+  ]);
 
   // Date Picker Handlers
   const handleDateSelected = useCallback((/** @type {Date} */ date) => {
@@ -512,6 +686,11 @@ function EventListContent({
 
   useFocusEffect(
     useCallback(() => {
+      if (!hasHandledInitialFocusRefreshRef.current) {
+        hasHandledInitialFocusRefreshRef.current = true;
+        return undefined;
+      }
+
       if (!propEvents) {
         if (isViewportListMode) {
           refetchViewport();
@@ -678,10 +857,15 @@ function EventListContent({
       </WithDataWrapper>
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || ''}
-        createEventParticipationMutation={createEventParticipationMutation}
-        eventId={selectedEvent?.documentId || ''}
+        confirmLabel={selectedParticipationFlow?.confirmLabel}
+        errorMessage={joinModalError || null}
+        isSubmitting={
+          joinReservationMutation.isPending
+          || createEventParticipationMutation.isPending
+        }
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
+        onConfirm={handleConfirmJoinEvent}
       />
       {shouldShowMapToggle ? (
         <SearchMapFab

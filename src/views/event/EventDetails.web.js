@@ -216,6 +216,8 @@ function EventDetails({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
       queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventId] }),
       queryClient.invalidateQueries({ queryKey: ['events'] }),
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] }),
+      queryClient.invalidateQueries({ queryKey: ['myApplications'] }),
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] }),
     ]);
     await refetch();

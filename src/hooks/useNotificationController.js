@@ -16,7 +16,7 @@ const PAGE_SIZE = 20;
 export const NOTIFICATIONS_QUERY_KEY = ['notifications'];
 export const UNREAD_COUNT_QUERY_KEY = ['notifications', 'unread-count'];
 const NOTIFICATIONS_STALE_MS = 10000;
-const UNREAD_POLL_MS = 30000;
+const UNREAD_POLL_MS = 60000;
 const FOCUS_REFRESH_THROTTLE_MS = 8000;
 
 /**
@@ -75,11 +75,13 @@ const findNotificationByDocumentId = (data, documentId) => {
 export const useNotificationController = (options = {}) => {
   const {
     notificationsEnabled = true,
+    skipInitialFocusRefresh = false,
     unreadCountEnabled = true,
     unreadPollMs = UNREAD_POLL_MS,
   } = options;
   const queryClient = useQueryClient();
   const lastFocusRefreshAtRef = useRef(0);
+  const hasHandledInitialFocusRef = useRef(false);
 
   // Fetch notifications with infinite scroll
   const {
@@ -133,6 +135,11 @@ export const useNotificationController = (options = {}) => {
         return undefined;
       }
 
+      if (skipInitialFocusRefresh && !hasHandledInitialFocusRef.current) {
+        hasHandledInitialFocusRef.current = true;
+        return undefined;
+      }
+
       const now = Date.now();
       if (now - lastFocusRefreshAtRef.current < FOCUS_REFRESH_THROTTLE_MS) {
         return undefined;
@@ -145,7 +152,13 @@ export const useNotificationController = (options = {}) => {
         queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
       }
       return undefined;
-    }, [notificationsEnabled, queryClient, refetch, unreadCountEnabled]),
+    }, [
+      notificationsEnabled,
+      queryClient,
+      refetch,
+      skipInitialFocusRefresh,
+      unreadCountEnabled,
+    ]),
   );
 
   // Mark as read mutation

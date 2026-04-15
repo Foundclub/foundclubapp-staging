@@ -52,7 +52,7 @@ function EventWizardTeamCard({
   const levelLabel = team?.level?.name || team?.level;
   const metaItems = [
     { label: t('teamList.fields.section', 'Section'), value: sectionLabel },
-    { label: t('teamList.fields.category', 'CatÃ©gorie'), value: categoryLabel },
+    { label: t('teamList.fields.category', 'Catégorie'), value: categoryLabel },
     { label: t('teamList.fields.level', 'Niveau'), value: levelLabel },
     {
       label: t('teamList.fields.members', 'Membres'),

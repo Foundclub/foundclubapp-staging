@@ -13,6 +13,8 @@ export const useGetMe = (options) => useQuery({
   enabled: Boolean(getAuthTokens()?.token),
   queryFn: () => getMe(),
   queryKey: ['get-me', getAuthTokens()?.token || 'no-token'],
+  refetchOnMount: false,
+  staleTime: 1000 * 60 * 5,
   ...options,
 });
 

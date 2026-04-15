@@ -390,6 +390,11 @@ function RecruitmentAdDetails() {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAd', adId] });
       queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
       queryClient.invalidateQueries({ queryKey: ['myApplications'] });
+      if (ad?.event?.documentId) {
+        queryClient.invalidateQueries({ queryKey: ['event', ad.event.documentId] });
+        queryClient.invalidateQueries({ queryKey: ['eventParticipations', ad.event.documentId] });
+      }
+      Alert.alert('Candidature', 'Ta candidature a bien ete retiree.');
     },
   });
 
@@ -1367,7 +1372,7 @@ function RecruitmentAdDetails() {
               disabled={!hasAcceptedDetectionRiskDeclaration || !hasAcceptedDetectionConditions}
               isLoading={applyMutation.isPending}
               onPress={handleConfirmDetectionApply}
-              title="Confirmer ma candidature"
+              title="Participer"
               variant="Primary"
             />
             <Button
@@ -1398,7 +1403,7 @@ function RecruitmentAdDetails() {
             }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 8 }]}>
-              Tu candidates a une detection
+              Tu participes a une detection
             </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral100, lineHeight: 22 }]}>
               {detectionApplySummary || 'Verification de la detection en cours.'}

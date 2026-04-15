@@ -12,6 +12,7 @@ import {
   remindUnansweredPlayers,
   requestFeatured,
   resetCoachAttendance,
+  respondToEventRsvp,
   updateCoachLateMinutes,
   updateEvent,
 } from '@/services/event/eventService';
@@ -38,6 +39,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   };
   const invalidateEventParticipationState = () => {
     queryClient.invalidateQueries({ queryKey: ['events'] });
+    queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
+    queryClient.invalidateQueries({ queryKey: ['myApplications'] });
     if (eventId) {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventId] });
@@ -49,6 +52,12 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
 
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
+    onError: (error) => {
+      Alert.alert(
+        t('common.error'),
+        error?.message || "Impossible d'enregistrer votre participation pour le moment.",
+      );
+    },
     onSuccess: () => {
       invalidateEventParticipationState();
       refetch();
@@ -58,6 +67,12 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
 
   const acceptParticipationMutation = useMutation({
     mutationFn: acceptEventParticipation,
+    onError: (error) => {
+      Alert.alert(
+        t('common.error'),
+        error?.message || 'Impossible de valider cette participation pour le moment.',
+      );
+    },
     onSuccess: () => {
       invalidateEventParticipationState();
       refetch();
@@ -67,6 +82,12 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
 
   const declineParticipationMutation = useMutation({
     mutationFn: declineEventParticipation,
+    onError: (error) => {
+      Alert.alert(
+        t('common.error'),
+        error?.message || 'Impossible de refuser cette participation pour le moment.',
+      );
+    },
     onSuccess: () => {
       invalidateEventParticipationState();
       refetch();
@@ -91,6 +112,27 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
 
   const missingEventMutation = useMutation({
     mutationFn: missingEvent,
+    onError: (error) => {
+      Alert.alert(
+        t('common.error'),
+        error?.message || "Impossible d'enregistrer votre absence pour le moment.",
+      );
+    },
+    onSuccess: () => {
+      invalidateEventParticipationState();
+      refetch();
+      refetchParticipations();
+    },
+  });
+
+  const respondToEventRsvpMutation = useMutation({
+    mutationFn: ({ answer, eventId: targetEventId }) => respondToEventRsvp(targetEventId, answer),
+    onError: (error) => {
+      Alert.alert(
+        t('common.error'),
+        error?.message || "Impossible d'enregistrer votre réponse pour le moment.",
+      );
+    },
     onSuccess: () => {
       invalidateEventParticipationState();
       refetch();
@@ -353,6 +395,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     reportEventMutation,
     requestFeaturedMutation,
     resetAttendanceMutation,
+    respondToEventRsvpMutation,
     selfArrivalMutation,
     selfLateMutation,
     sosAlertMutation,

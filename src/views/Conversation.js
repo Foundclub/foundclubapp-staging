@@ -46,6 +46,10 @@ import {
   createPollComposition,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import {
+  getParticipationErrorMessage,
+  resolveParticipationFlow,
+} from '@/domains/participation/participationFlow';
 import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -89,6 +93,7 @@ import {
   respondToLeagueProposal,
 } from '@/services/league/leagueMatchService';
 import { createMessageReport } from '@/services/messageReport/messageReportService';
+import { joinReservation } from '@/services/reservation/reservationService';
 
 import {
   getDocumentCaption,
@@ -879,8 +884,13 @@ function Conversation({ navigation, route }) {
   // Event Participation Logic
   const queryClient = useQueryClient();
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
+  const [joinModalError, setJoinModalError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(/** @type {{ documentId?: string; team?: Team } | undefined} */ (undefined));
   const [selectedDocumentActionMessage, setSelectedDocumentActionMessage] = useState(null);
+  const selectedParticipationFlow = useMemo(
+    () => resolveParticipationFlow(selectedEvent, { user: userData }),
+    [selectedEvent, userData],
+  );
 
   useEffect(() => {
     voiceRecordingStateRef.current = voiceRecordingState;
@@ -889,33 +899,137 @@ function Conversation({ navigation, route }) {
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
     onError: (error) => {
-      showErrorBanner(error.message || t('common.errorOccurred'), t('common.error'));
+      showErrorBanner(
+        getParticipationErrorMessage(error, t('common.errorOccurred')),
+        t('common.error'),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
+      setIsJoinModalVisible(false);
+      setJoinModalError('');
       showSuccessBanner(t('eventDetails.participationSuccess'), t('common.success'));
     },
   });
+  const joinReservationMutation = useMutation({
+    mutationFn: (reservationId) => joinReservation(reservationId),
+    onError: (error) => {
+      showErrorBanner(
+        getParticipationErrorMessage(error, t('common.errorOccurred')),
+        t('common.error'),
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-reservations'] });
+      setIsJoinModalVisible(false);
+      setJoinModalError('');
+      showSuccessBanner('Reservation rejointe.', t('common.success'));
+    },
+  });
 
-  const handleParticipateToEvent = (/** @type {{ documentId?: string }} */ event) => {
-    if (event?.documentId && userData?.documentId) {
-      createEventParticipationMutation.mutate({
-        event: event.documentId,
-        user: userData.documentId,
+  const handleParticipateToEvent = async (/** @type {{ documentId?: string; parentEvent?: { documentId?: string } }} */ event) => {
+    const participationFlow = resolveParticipationFlow(event, { user: userData });
+
+    if (!participationFlow?.canAct) {
+      showErrorBanner(participationFlow?.blockedReason || t('common.errorOccurred'), t('common.error'));
+      return;
+    }
+
+    if (participationFlow?.kind === 'reservation-recruiting') {
+      setJoinModalError('');
+      setSelectedEvent(event);
+      setIsJoinModalVisible(true);
+      return;
+    }
+
+    if (participationFlow?.submitMode === 'redirect-parent' && event?.parentEvent?.documentId) {
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: event.parentEvent.documentId },
+        screen: RouteNames.EventDetails,
       });
+      return;
+    }
+
+    if (event?.documentId && userData?.documentId) {
+      try {
+        await createEventParticipationMutation.mutateAsync({
+          event: event.documentId,
+          user: userData.documentId,
+        });
+      } catch (error) {
+        showErrorBanner(
+          getParticipationErrorMessage(error, t('common.errorOccurred')),
+          t('common.error'),
+        );
+      }
     }
   };
 
-  const handleJoinEvent = (/** @type {{ documentId?: string; team?: Team }} */ event) => {
+  const handleJoinEvent = (/** @type {{ documentId?: string; team?: Team; parentEvent?: { documentId?: string } }} */ event) => {
+    const participationFlow = resolveParticipationFlow(event, { user: userData });
+
+    if (!participationFlow?.canAct) {
+      showErrorBanner(participationFlow?.blockedReason || t('common.errorOccurred'), t('common.error'));
+      return;
+    }
+
+    if (participationFlow?.submitMode === 'redirect-parent' && event?.parentEvent?.documentId) {
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: event.parentEvent.documentId },
+        screen: RouteNames.EventDetails,
+      });
+      return;
+    }
+
+    if (participationFlow?.submitMode === 'detection-slot-picker') {
+      if (event?.documentId) {
+        navigation.navigate(RouteNames.EventStack, {
+          params: { eventId: event.documentId },
+          screen: RouteNames.EventDetails,
+        });
+      }
+      return;
+    }
+
+    setJoinModalError('');
     setSelectedEvent(event);
     setIsJoinModalVisible(true);
   };
 
   const handleCloseJoinModal = () => {
     setIsJoinModalVisible(false);
+    setJoinModalError('');
     setSelectedEvent(undefined);
+  };
+
+  const handleConfirmJoinEvent = async () => {
+    if (!selectedEvent?.documentId) {
+      return;
+    }
+
+    try {
+      if (selectedParticipationFlow?.kind === 'reservation-recruiting') {
+        await joinReservationMutation.mutateAsync(selectedEvent.documentId);
+        return;
+      }
+
+      if (!userData?.documentId) {
+        return;
+      }
+
+      await createEventParticipationMutation.mutateAsync({
+        event: selectedEvent.documentId,
+        user: userData.documentId,
+      });
+    } catch (error) {
+      setJoinModalError(getParticipationErrorMessage(error, t('common.errorOccurred')));
+    }
   };
 
   // Typing Indicator Logic
@@ -5980,10 +6094,15 @@ function Conversation({ navigation, route }) {
         </BottomModal>
         <JoinEventModal
           clubName={selectedEvent?.team?.club?.name || ''}
-          createEventParticipationMutation={createEventParticipationMutation}
-          eventId={selectedEvent?.documentId || ''}
+          confirmLabel={selectedParticipationFlow?.confirmLabel}
+          errorMessage={joinModalError || null}
+          isSubmitting={
+            createEventParticipationMutation.isPending
+            || joinReservationMutation.isPending
+          }
           isVisible={isJoinModalVisible}
           onClose={handleCloseJoinModal}
+          onConfirm={handleConfirmJoinEvent}
         />
 
         <VenueProposalModal

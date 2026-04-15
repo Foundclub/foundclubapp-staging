@@ -19,6 +19,7 @@ import {
  *   activity?: string;
  *   geohash?: string;
  *   maxPricePerPerson?: number;
+ *   needsPlayers?: boolean;
  *   startTime?: string;
  *   startDateAfter?: string;
  *   startDateBefore?: string;

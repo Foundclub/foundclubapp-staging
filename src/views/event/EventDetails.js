@@ -22,6 +22,10 @@ import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useMessaging from '@/domains/messaging/useMessaging';
+import {
+  getParticipationErrorMessage,
+  resolveParticipationFlow,
+} from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -60,6 +64,7 @@ import { applyToRecruitmentAd } from '@/services/recruitment/recruitmentService'
 import {
   createCustomTournamentTeam,
   registerClubTeamToTournament,
+  requestJoinTournamentTeam,
   reviewTournamentTeamRegistration,
 } from '@/services/tournamentTeam/tournamentTeamService';
 
@@ -123,8 +128,8 @@ const getStageDayStatusSummary = (stageDay) => {
 
 const getFeaturedScopeStatusLabel = (status) => {
   if (status === 'pending') return 'Demande en attente';
-  if (status === 'approved') return 'DÃƒÂ©jÃƒÂ  ÃƒÂ  la une';
-  if (status === 'rejected') return 'RefusÃƒÂ©e, vous pouvez redemander';
+  if (status === 'approved') return 'Déjà à la une';
+  if (status === 'rejected') return 'Refusée, vous pouvez redemander';
   return 'Disponible';
 };
 
@@ -206,12 +211,15 @@ function EventDetails({ navigation, route }) {
   const highlightedSection = route?.params?.focusSection || null;
 
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
+  const [joinModalError, setJoinModalError] = useState('');
   const [isDetectionSlotPickerVisible, setIsDetectionSlotPickerVisible] = useState(false);
   const [pendingDetectionSlot, setPendingDetectionSlot] = useState(null);
   const [isRefuseModalVisible, setIsRefuseModalVisible] = useState(false);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [isFeaturedModalVisible, setIsFeaturedModalVisible] = useState(false);
+  const [isTournamentParticipationModalVisible, setIsTournamentParticipationModalVisible] = useState(false);
   const [isTournamentCreateModalVisible, setIsTournamentCreateModalVisible] = useState(false);
+  const [isTournamentJoinSelectorVisible, setIsTournamentJoinSelectorVisible] = useState(false);
   const [isTournamentRegisterModalVisible, setIsTournamentRegisterModalVisible] = useState(false);
   const [selectedFeaturedScopes, setSelectedFeaturedScopes] = useState({
     CM: false,
@@ -219,6 +227,7 @@ function EventDetails({ navigation, route }) {
     SECTION: false,
   });
   const [tournamentTeamNameDraft, setTournamentTeamNameDraft] = useState('');
+  const [pendingTournamentAction, setPendingTournamentAction] = useState(null);
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
   const [stageDetailsTab, setStageDetailsTab] = useState('overview');
@@ -346,6 +355,18 @@ function EventDetails({ navigation, route }) {
     && !currentUserTournamentTeam
     && !currentUserPendingTournamentTeam
     && availableTournamentSourceTeams.length > 0,
+  );
+  const joinableTournamentTeams = useMemo(
+    () => tournamentTeams.filter((team) => {
+      const normalizedSourceType = normalizeTournamentText(team?.sourceType);
+      const normalizedStatus = normalizeTournamentText(team?.status);
+      if (!team?.documentId) return false;
+      if (normalizedSourceType !== 'custom_team') return false;
+      if (team?.isOpenToJoinRequests !== true) return false;
+      if (normalizedStatus === 'declined' || normalizedStatus === 'archived') return false;
+      return true;
+    }),
+    [tournamentTeams],
   );
   useEffect(() => {
     setStageDetailsTab('overview');
@@ -588,15 +609,47 @@ function EventDetails({ navigation, route }) {
     },
   });
   const createTournamentTeamMutation = useMutation({
-    mutationFn: ({ name }) => createCustomTournamentTeam(eventId, { name }),
+    mutationFn: ({ acceptRiskDeclaration, name }) => createCustomTournamentTeam(eventId, { acceptRiskDeclaration, name }),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de creer cette equipe de tournoi.');
+      setJoinModalError(mutationError?.message || 'Impossible de creer cette equipe de tournoi.');
     },
-    onSuccess: () => {
+    onSuccess: (createdTeam) => {
+      setIsJoinModalVisible(false);
+      setIsTournamentParticipationModalVisible(false);
       setIsTournamentCreateModalVisible(false);
+      setIsTournamentJoinSelectorVisible(false);
+      setPendingTournamentAction(null);
+      setJoinModalError('');
       setTournamentTeamNameDraft('');
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       refetch();
+      if (createdTeam?.documentId) {
+        navigation.navigate(RouteNames.TournamentTeamDetails, {
+          eventId,
+          teamId: createdTeam.documentId,
+        });
+      }
+    },
+  });
+  const requestJoinTournamentTeamMutation = useMutation({
+    mutationFn: ({ acceptRiskDeclaration, teamDocumentId }) => requestJoinTournamentTeam(teamDocumentId, { acceptRiskDeclaration }),
+    onError: (mutationError) => {
+      setJoinModalError(mutationError?.message || 'Impossible d envoyer cette demande pour le moment.');
+    },
+    onSuccess: (updatedTeam) => {
+      setIsJoinModalVisible(false);
+      setIsTournamentParticipationModalVisible(false);
+      setIsTournamentJoinSelectorVisible(false);
+      setPendingTournamentAction(null);
+      setJoinModalError('');
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      refetch();
+      if (updatedTeam?.documentId) {
+        navigation.navigate(RouteNames.TournamentTeamDetails, {
+          eventId,
+          teamId: updatedTeam.documentId,
+        });
+      }
     },
   });
   const reviewTournamentTeamMutation = useMutation({
@@ -921,6 +974,54 @@ function EventDetails({ navigation, route }) {
       totalRequested,
     };
   }, [detectionSlots]);
+  const currentParticipationFlow = useMemo(() => resolveParticipationFlow(event, {
+    detectionSlotsCount: detectionSlots.length,
+    participationState: currentUserParticipationState,
+    user: userData,
+  }), [currentUserParticipationState, detectionSlots.length, event, userData]);
+  const tournamentAwareParticipationFlow = useMemo(() => {
+    if (!isTournamentEvent || isStageDayEvent || userData?.role?.name !== USER_ROLES.player) {
+      return currentParticipationFlow;
+    }
+
+    if (managedTournamentTeam?.documentId) {
+      return {
+        ...currentParticipationFlow,
+        actionLabel: 'Gerer mon equipe tournoi',
+        confirmLabel: 'Gerer mon equipe tournoi',
+      };
+    }
+
+    if (currentUserTournamentTeam?.documentId) {
+      return {
+        ...currentParticipationFlow,
+        actionLabel: 'Voir mon equipe tournoi',
+        confirmLabel: 'Voir mon equipe tournoi',
+      };
+    }
+
+    if (currentUserPendingTournamentTeam?.documentId) {
+      return {
+        ...currentParticipationFlow,
+        actionLabel: 'Suivre ma demande',
+        confirmLabel: 'Suivre ma demande',
+      };
+    }
+
+    return {
+      ...currentParticipationFlow,
+      actionLabel: 'Participer',
+      confirmLabel: 'Participer',
+    };
+  }, [
+    currentParticipationFlow,
+    currentUserPendingTournamentTeam?.documentId,
+    currentUserTournamentTeam?.documentId,
+    isStageDayEvent,
+    isTournamentEvent,
+    managedTournamentTeam?.documentId,
+    userData?.role?.name,
+  ]);
 
   const pendingParticipations = useMemo(
     () => /** @type {EventParticipation[]} */ (
@@ -1189,26 +1290,16 @@ function EventDetails({ navigation, route }) {
     };
   }, [canEdit, event, pendingParticipations, trainerKeysForEvent]);
   const applyToDetectionSlotMutation = useMutation({
-    mutationFn: (slotDocumentId) => applyToRecruitmentAd(slotDocumentId),
-    onError: (mutationError) => {
-      const message = mutationError?.response?.data?.error?.message
-        || mutationError?.response?.data?.message
-        || mutationError?.message
-        || 'Impossible de candidater sur ce poste pour le moment.';
-      Alert.alert('Detection', message);
-    },
-    onSettled: () => {
-      setPendingDetectionSlot(null);
-    },
-    onSuccess: (result, slotDocumentId) => {
+    mutationFn: ({ payload = {}, slotDocumentId }) => applyToRecruitmentAd(slotDocumentId, payload),
+    onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventId] });
       queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
-      queryClient.invalidateQueries({ queryKey: ['recruitmentAd', slotDocumentId] });
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAd', variables?.slotDocumentId] });
       queryClient.invalidateQueries({ queryKey: ['myApplications'] });
       Alert.alert(
         'Detection',
-        result?.message || 'Votre candidature a bien ete envoyee sur ce poste.',
+        result?.message || 'Votre participation a bien ete envoyee sur ce poste.',
       );
     },
   });
@@ -1216,21 +1307,21 @@ function EventDetails({ navigation, route }) {
   const featuredScopeOptions = useMemo(() => ([
     {
       kind: 'PUBLIC',
-      label: 'Ã€ la une publique',
+      label: 'À la une publique',
       status: featuredRequestsSummary.PUBLIC.status,
       summary: featuredRequestsSummary.PUBLIC,
       visible: canManageFeatured,
     },
     {
       kind: 'SECTION',
-      label: 'Ã€ la une dans mon club',
+      label: 'À la une dans mon club',
       status: featuredRequestsSummary.SECTION.status,
       summary: featuredRequestsSummary.SECTION,
       visible: canManageFeatured && Boolean(eventClubId),
     },
     {
       kind: 'CM',
-      label: 'Ã€ la une dans le club multisport',
+      label: 'À la une dans le club multisport',
       status: featuredRequestsSummary.CM.status,
       summary: featuredRequestsSummary.CM,
       visible: canManageFeatured && Boolean(eventMultisportId),
@@ -1347,6 +1438,49 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId });
   }, [eventId, navigation]);
 
+  const closeTournamentParticipationFlow = useCallback(() => {
+    setIsTournamentParticipationModalVisible(false);
+    setIsTournamentCreateModalVisible(false);
+    setIsTournamentJoinSelectorVisible(false);
+    setPendingTournamentAction(null);
+    setJoinModalError('');
+  }, []);
+
+  const handleOpenTournamentParticipationOptions = useCallback(() => {
+    if (userData?.role?.name !== USER_ROLES.player) return;
+
+    if (!canCreateCustomTournamentTeam && joinableTournamentTeams.length === 0) {
+      Alert.alert(
+        'Tournoi',
+        'Aucune equipe tournoi ouverte ne peut etre rejointe pour le moment.',
+      );
+      return;
+    }
+
+    setPendingDetectionSlot(null);
+    setJoinModalError('');
+    setPendingTournamentAction(null);
+    setIsTournamentCreateModalVisible(false);
+    setIsTournamentJoinSelectorVisible(false);
+    setIsTournamentParticipationModalVisible(true);
+  }, [
+    canCreateCustomTournamentTeam,
+    joinableTournamentTeams.length,
+    userData?.role?.name,
+  ]);
+
+  const handleSelectExistingTournamentTeam = useCallback((team) => {
+    if (!team?.documentId) return;
+    setPendingTournamentAction({
+      mode: 'join_existing',
+      teamDocumentId: team.documentId,
+      teamName: team?.name || 'Equipe tournoi',
+    });
+    setIsTournamentJoinSelectorVisible(false);
+    setJoinModalError('');
+    setIsJoinModalVisible(true);
+  }, []);
+
   const handleCreateTournamentTeam = useCallback(() => {
     const trimmedName = String(tournamentTeamNameDraft || '').trim();
     if (!trimmedName) {
@@ -1354,8 +1488,15 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
-    createTournamentTeamMutation.mutate({ name: trimmedName });
-  }, [createTournamentTeamMutation, tournamentTeamNameDraft]);
+    setPendingTournamentAction({
+      mode: 'create_custom',
+      teamName: trimmedName,
+    });
+    setIsTournamentParticipationModalVisible(false);
+    setIsTournamentCreateModalVisible(false);
+    setJoinModalError('');
+    setIsJoinModalVisible(true);
+  }, [tournamentTeamNameDraft]);
 
   const handleReviewTournamentTeam = useCallback((teamDocumentId, status) => {
     reviewTournamentTeamMutation.mutate({ status, teamDocumentId });
@@ -1381,7 +1522,7 @@ function EventDetails({ navigation, route }) {
     if (!pendingFeaturedApproval?.requestId) return;
     Alert.alert(
       'Refuser la demande ?',
-      'Le demandeur sera notifiÃ© du refus.',
+      'Le demandeur sera notifié du refus.',
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -1397,6 +1538,7 @@ function EventDetails({ navigation, route }) {
     const slotDocumentId = slot?.documentId;
     if (!slotDocumentId || applyToDetectionSlotMutation.isPending) return;
     setPendingDetectionSlot(slot);
+    setJoinModalError('');
     setIsJoinModalVisible(true);
   }, [applyToDetectionSlotMutation.isPending]);
 
@@ -1408,28 +1550,30 @@ function EventDetails({ navigation, route }) {
     });
   }, [navigation]);
 
+  const handleBlockedParticipationFlow = useCallback((flow) => {
+    if (!flow?.blockedReason) return;
+    Alert.alert('Participation', flow.blockedReason);
+  }, []);
+
   const handleJoinEvent = useCallback(() => {
-    if (isStageDayEvent) {
-      const parentEventId = event?.parentEvent?.documentId;
-      if (parentEventId) {
-        navigation.navigate(RouteNames.EventDetails, { eventId: parentEventId });
+    if (isTournamentEvent && !isStageDayEvent && userData?.role?.name === USER_ROLES.player) {
+      if (managedTournamentTeam?.documentId) {
+        handleOpenTournamentTeam(managedTournamentTeam.documentId);
         return;
       }
-    }
-
-    if (detectionSlots.length > 0) {
-      setIsJoinModalVisible(false);
-      setIsDetectionSlotPickerVisible(true);
+      if (currentUserTournamentTeam?.documentId) {
+        handleOpenTournamentTeam(currentUserTournamentTeam.documentId);
+        return;
+      }
+      if (currentUserPendingTournamentTeam?.documentId) {
+        handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId);
+        return;
+      }
+      handleOpenTournamentParticipationOptions();
       return;
     }
 
-    setIsJoinModalVisible(true);
-  }, [detectionSlots.length, event?.parentEvent?.documentId, isStageDayEvent, navigation]);
-
-  const handleParticipateToEvent = (/** @type {any} */ eventToJoin) => {
-    if (!eventToJoin?.documentId || !userData?.documentId) return;
-
-    if (isStageDayEvent) {
+    if (currentParticipationFlow?.submitMode === 'redirect-parent') {
       const parentEventId = event?.parentEvent?.documentId;
       if (parentEventId) {
         navigation.navigate(RouteNames.EventDetails, { eventId: parentEventId });
@@ -1437,29 +1581,103 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
-    if (detectionSlots.length > 0) {
+    if (currentParticipationFlow?.submitMode === 'detection-slot-picker') {
       setIsJoinModalVisible(false);
       setIsDetectionSlotPickerVisible(true);
       return;
     }
 
-    mutations.createEventParticipationMutation.mutate({
-      event: eventToJoin.documentId,
-      user: userData.documentId,
-    });
-    setIsJoinModalVisible(false);
-  };
+    if (!currentParticipationFlow?.canAct) {
+      handleBlockedParticipationFlow(currentParticipationFlow);
+      return;
+    }
+
+    setJoinModalError('');
+    setIsJoinModalVisible(true);
+  }, [
+    currentParticipationFlow,
+    event?.parentEvent?.documentId,
+    handleBlockedParticipationFlow,
+    handleOpenTournamentParticipationOptions,
+    handleOpenTournamentTeam,
+    currentUserPendingTournamentTeam?.documentId,
+    currentUserTournamentTeam?.documentId,
+    isStageDayEvent,
+    isTournamentEvent,
+    managedTournamentTeam?.documentId,
+    navigation,
+    userData?.role?.name,
+  ]);
+
+  const handleParticipateToEvent = useCallback((eventToParticipate = event) => {
+    const targetEventId = eventToParticipate?.documentId;
+    const targetIsStageDay = String(eventToParticipate?.eventFormat || '').toLowerCase() === 'stage_day';
+    if (targetIsStageDay && targetEventId) {
+      mutations.respondToEventRsvpMutation.mutate({
+        answer: 'present',
+        eventId: targetEventId,
+      });
+      return;
+    }
+
+    handleJoinEvent();
+  }, [event, handleJoinEvent, mutations.respondToEventRsvpMutation]);
+
+  const handleConfirmParticipation = useCallback(async () => {
+    if (!event?.documentId) return;
+
+    if (!currentParticipationFlow?.canAct) {
+      handleBlockedParticipationFlow(currentParticipationFlow);
+      return;
+    }
+
+    setJoinModalError('');
+
+    try {
+      if (currentParticipationFlow.submitMode === 'joinReservation') {
+        await mutations.joinReservationMutation.mutateAsync(event.documentId);
+      } else {
+        if (!userData?.documentId) return;
+        await mutations.createEventParticipationMutation.mutateAsync({
+          event: event.documentId,
+          user: userData.documentId,
+        });
+      }
+
+      setIsJoinModalVisible(false);
+      setPendingDetectionSlot(null);
+    } catch (mutationError) {
+      setJoinModalError(
+        getParticipationErrorMessage(mutationError, 'Impossible de confirmer votre participation pour le moment.'),
+      );
+    }
+  }, [
+    currentParticipationFlow,
+    event?.documentId,
+    handleBlockedParticipationFlow,
+    mutations.createEventParticipationMutation,
+    mutations.joinReservationMutation,
+    userData?.documentId,
+  ]);
 
   const handleApplyToDetectionSlotFromPicker = useCallback((slot) => {
     const slotDocumentId = String(slot?.documentId || '').trim();
     if (!slotDocumentId || applyToDetectionSlotMutation.isPending) return;
     setIsDetectionSlotPickerVisible(false);
     setPendingDetectionSlot(slot);
+    setJoinModalError('');
     setIsJoinModalVisible(true);
   }, [applyToDetectionSlotMutation.isPending]);
 
   const handleDeclineEvent = (/** @type {any} */ eventToDecline) => {
     if (!eventToDecline?.documentId) return;
+    if (String(eventToDecline?.eventFormat || '').toLowerCase() === 'stage_day') {
+      mutations.respondToEventRsvpMutation.mutate({
+        answer: 'absent',
+        eventId: eventToDecline.documentId,
+      });
+      return;
+    }
     mutations.missingEventMutation.mutate(eventToDecline.documentId);
   };
 
@@ -1689,18 +1907,18 @@ function EventDetails({ navigation, route }) {
 
   const handleOpenEventActionsMenu = useCallback(() => {
     Alert.alert(
-      t('eventDetails.actions.menuTitle', 'Actions Ã©vÃ©nement'),
+      t('eventDetails.actions.menuTitle', 'Actions événement'),
       t('eventDetails.actions.menuDescription', 'Choisissez une action.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
           onPress: handleEditEvent,
-          text: t('eventDetails.actions.edit', "Modifier l'Ã©vÃ©nement"),
+          text: t('eventDetails.actions.edit', "Modifier l'événement"),
         },
         {
           onPress: handleCancelEvent,
           style: 'destructive',
-          text: t('eventDetails.actions.cancelEvent', "Annuler l'Ã©vÃ©nement"),
+          text: t('eventDetails.actions.cancelEvent', "Annuler l'événement"),
         },
       ],
     );
@@ -2648,7 +2866,7 @@ function EventDetails({ navigation, route }) {
         {canRegisterTournamentSourceTeam ? (
           <Button
             onPress={() => setIsTournamentRegisterModalVisible(true)}
-            title="Inscrire mon equipe"
+            title="Inscrire une de mes equipes"
             variant="Secondary"
           />
         ) : null}
@@ -2774,7 +2992,7 @@ function EventDetails({ navigation, route }) {
           {!hasAlreadyJoined && <Button onPress={handleJoinEvent} title="Reserver" variant="Primary" />}
           {canEdit && (
             <View style={Spaces.marginTop[12]}>
-              <Button onPress={handleOpenEventActionsMenu} title="Actions Ã©vÃ©nement" variant="Secondary" />
+              <Button onPress={handleOpenEventActionsMenu} title="Actions événement" variant="Secondary" />
             </View>
           )}
         </View>
@@ -2798,7 +3016,7 @@ function EventDetails({ navigation, route }) {
       if (hasApprovedFeaturedScope && canManageFeatured) {
         return (
           <View style={{ marginTop: 12, opacity: 0.8 }}>
-            <Button disabled icon="check" title="DÃ©jÃ  Ã  la une" variant="Secondary" />
+            <Button disabled icon="check" title="Déjà à la une" variant="Secondary" />
           </View>
         );
       }
@@ -2808,7 +3026,7 @@ function EventDetails({ navigation, route }) {
     const actionButtonsNode = (
       <View>
         {canEdit ? (
-          <Button onPress={handleOpenEventActionsMenu} title="Actions Ã©vÃ©nement" variant="Secondary" />
+          <Button onPress={handleOpenEventActionsMenu} title="Actions événement" variant="Secondary" />
         ) : (
           <EventAnswerButtons
             event={event}
@@ -2822,6 +3040,7 @@ function EventDetails({ navigation, route }) {
               source: 'event-details-login',
             })}
             onParticipate={() => handleParticipateToEvent(event)}
+            participationFlow={tournamentAwareParticipationFlow}
           />
         )}
         {canEdit && isMatchEvent && (
@@ -2876,9 +3095,9 @@ function EventDetails({ navigation, route }) {
               style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}
             >
               <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions Ã©vÃ©nement</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions événement</Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  Modifie cet Ã©vÃ©nement, gÃ¨re son annulation ou ouvre la composition d&apos;Ã©quipe.
+                  Modifie cet événement, gère son annulation ou ouvre la composition d&apos;équipe.
                 </Text>
               </View>
               <View
@@ -3061,7 +3280,9 @@ function EventDetails({ navigation, route }) {
 
             {isStageParentEvent ? (
               <View style={[Spaces.gap[16]]}>
-                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stage</Text>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                  {isTournamentEvent ? 'Tournoi' : 'Stage'}
+                </Text>
                 <View
                   style={[
                     ApplicationStyle.backgroundColor.primary900,
@@ -3308,7 +3529,7 @@ function EventDetails({ navigation, route }) {
                 currentUserHasGenericParticipation={Boolean((hasAcceptedRequest || hasPendingRequest) && !currentUserDetectionParticipation)}
                 currentUserSlotId={currentUserDetectionParticipation?.recruitmentAd?.documentId || ''}
                 currentUserSlotStatus={String(currentUserDetectionParticipation?.participationStatus || '').toLowerCase()}
-                isApplyingSlotId={applyToDetectionSlotMutation.isPending ? (applyToDetectionSlotMutation.variables || '') : ''}
+                isApplyingSlotId={applyToDetectionSlotMutation.isPending ? String(applyToDetectionSlotMutation.variables?.slotDocumentId || '') : ''}
                 onApply={handleApplyToDetectionSlot}
                 onOpenSlot={handleOpenDetectionSlot}
                 slots={detectionSlots}
@@ -3779,23 +4000,97 @@ function EventDetails({ navigation, route }) {
           : renderActionButtons()}
       </View>
 
-      <JoinEventModal
-        clubName={event?.team?.club?.name || ''}
-        contextNote={pendingDetectionSlot?.position
-          ? `Poste choisi : ${pendingDetectionSlot.position}.`
-          : undefined}
-        createEventParticipationMutation={mutations.createEventParticipationMutation}
-        eventId={eventId || ''}
-        isSubmitting={applyToDetectionSlotMutation.isPending && Boolean(pendingDetectionSlot?.documentId)}
-        isVisible={isJoinModalVisible}
-        onClose={() => {
-          setIsJoinModalVisible(false);
-          setPendingDetectionSlot(null);
-        }}
-        onConfirm={pendingDetectionSlot?.documentId
-          ? () => applyToDetectionSlotMutation.mutate(pendingDetectionSlot.documentId)
-          : undefined}
-      />
+      {(() => {
+        let joinModalConfirmLabel = currentParticipationFlow?.confirmLabel;
+        let joinModalContextNote;
+        let joinModalIsSubmitting = mutations.createEventParticipationMutation.isPending;
+
+        if (pendingDetectionSlot?.documentId) {
+          joinModalConfirmLabel = 'Participer';
+          joinModalContextNote = `Poste choisi : ${pendingDetectionSlot.position}.`;
+          joinModalIsSubmitting = applyToDetectionSlotMutation.isPending
+            && Boolean(pendingDetectionSlot?.documentId);
+        } else if (pendingTournamentAction?.mode === 'create_custom') {
+          joinModalConfirmLabel = 'Creer mon equipe';
+          joinModalContextNote = `Equipe a creer : ${pendingTournamentAction?.teamName || 'Mon equipe'}.`;
+          joinModalIsSubmitting = createTournamentTeamMutation.isPending;
+        } else if (pendingTournamentAction?.mode === 'join_existing') {
+          joinModalConfirmLabel = 'Envoyer ma demande';
+          joinModalContextNote = `Equipe choisie : ${pendingTournamentAction?.teamName || 'Equipe tournoi'}.`;
+          joinModalIsSubmitting = requestJoinTournamentTeamMutation.isPending;
+        } else if (currentParticipationFlow?.submitMode === 'joinReservation') {
+          joinModalIsSubmitting = mutations.joinReservationMutation.isPending;
+        }
+
+        /** @type {(acceptance?: { acceptRiskDeclaration?: boolean }) => Promise<void>} */
+        let handleJoinModalConfirm = handleConfirmParticipation;
+
+        if (pendingDetectionSlot?.documentId) {
+          handleJoinModalConfirm = async (acceptance = {}) => {
+            try {
+              setJoinModalError('');
+              await applyToDetectionSlotMutation.mutateAsync({
+                payload: {
+                  acceptRiskDeclaration: acceptance?.acceptRiskDeclaration === true,
+                },
+                slotDocumentId: pendingDetectionSlot.documentId,
+              });
+              setIsJoinModalVisible(false);
+              setPendingDetectionSlot(null);
+            } catch (mutationError) {
+              setJoinModalError(
+                getParticipationErrorMessage(mutationError, 'Impossible de confirmer votre participation pour le moment.'),
+              );
+            }
+          };
+        } else if (pendingTournamentAction?.mode === 'create_custom') {
+          handleJoinModalConfirm = async (acceptance = {}) => {
+            try {
+              setJoinModalError('');
+              await createTournamentTeamMutation.mutateAsync({
+                acceptRiskDeclaration: acceptance?.acceptRiskDeclaration === true,
+                name: pendingTournamentAction?.teamName || 'Mon equipe',
+              });
+            } catch (mutationError) {
+              setJoinModalError(
+                getParticipationErrorMessage(mutationError, 'Impossible de creer cette equipe de tournoi pour le moment.'),
+              );
+            }
+          };
+        } else if (pendingTournamentAction?.mode === 'join_existing') {
+          handleJoinModalConfirm = async (acceptance = {}) => {
+            try {
+              setJoinModalError('');
+              await requestJoinTournamentTeamMutation.mutateAsync({
+                acceptRiskDeclaration: acceptance?.acceptRiskDeclaration === true,
+                teamDocumentId: pendingTournamentAction?.teamDocumentId,
+              });
+            } catch (mutationError) {
+              setJoinModalError(
+                getParticipationErrorMessage(mutationError, 'Impossible d envoyer cette demande pour le moment.'),
+              );
+            }
+          };
+        }
+
+        return (
+          <JoinEventModal
+            clubName={event?.team?.club?.name || event?.club?.name || ''}
+            confirmLabel={joinModalConfirmLabel}
+            contextNote={joinModalContextNote}
+            errorMessage={joinModalError || null}
+            isSubmitting={joinModalIsSubmitting}
+            isVisible={isJoinModalVisible}
+            onClose={() => {
+              setIsJoinModalVisible(false);
+              setPendingDetectionSlot(null);
+              setPendingTournamentAction(null);
+              setJoinModalError('');
+            }}
+            onConfirm={handleJoinModalConfirm}
+          />
+        );
+      })()}
 
       <BottomModal
         close={() => setIsDetectionSlotPickerVisible(false)}
@@ -3805,7 +4100,7 @@ function EventDetails({ navigation, route }) {
               Choisir un poste
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100, { textAlign: 'center' }]}>
-              Selectionne le poste sur lequel tu veux candidater.
+              Selectionne le poste auquel tu veux participer.
             </Text>
             <Text style={[Fonts.p3, Fonts.primary200, { textAlign: 'center' }]}>
               {`${detectionSlots.length} poste(s) - ${detectionSlotsSummary.totalRequested} place(s) - ${detectionSlotsSummary.totalOpen} ouvert(s)`}
@@ -3825,9 +4120,9 @@ function EventDetails({ navigation, route }) {
             const isCurrentUserSlot = currentUserDetectionParticipation?.recruitmentAd?.documentId === slotId;
             const isComplete = Boolean(slot?.isComplete) && !isCurrentUserSlot;
             const isDisabled = isComplete || applyToDetectionSlotMutation.isPending || isCurrentUserSlot;
-            let buttonTitle = 'Choisir ce poste';
+            let buttonTitle = 'Participer';
             if (isCurrentUserSlot) {
-              buttonTitle = 'Candidature envoyee';
+              buttonTitle = 'Demande envoyee';
             } else if (isComplete) {
               buttonTitle = 'Poste complet';
             }
@@ -3872,7 +4167,7 @@ function EventDetails({ navigation, route }) {
                 <View style={Spaces.marginTop[4]}>
                   <Button
                     disabled={isDisabled}
-                    isLoading={applyToDetectionSlotMutation.isPending && applyToDetectionSlotMutation.variables === slotId}
+                    isLoading={applyToDetectionSlotMutation.isPending && applyToDetectionSlotMutation.variables?.slotDocumentId === slotId}
                     onPress={() => handleApplyToDetectionSlotFromPicker(slot)}
                     title={buttonTitle}
                     variant={isDisabled ? 'SecondaryLight' : 'Primary'}
@@ -3903,6 +4198,97 @@ function EventDetails({ navigation, route }) {
         onClose={() => setIsShareModalVisible(false)}
         onSelectChat={handleShareEventInChat}
       />
+
+      <BottomModal
+        close={closeTournamentParticipationFlow}
+        isVisible={isTournamentParticipationModalVisible}
+        snapPoints={['42%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
+          <View style={tournamentDs.styles.headerBlock}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Participer au tournoi</Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Choisissez si vous creez votre equipe ephemere ou si vous rejoignez une equipe deja inscrite.
+            </Text>
+          </View>
+
+          {canCreateCustomTournamentTeam ? (
+            <Button
+              onPress={() => {
+                setIsTournamentParticipationModalVisible(false);
+                setIsTournamentCreateModalVisible(true);
+              }}
+              title="Creer une equipe pour le tournoi"
+              variant="Primary"
+            />
+          ) : null}
+
+          <Button
+            disabled={joinableTournamentTeams.length === 0}
+            onPress={() => {
+              setIsTournamentParticipationModalVisible(false);
+              setIsTournamentJoinSelectorVisible(true);
+            }}
+            title="Rejoindre une equipe existante"
+            variant="Secondary"
+          />
+
+          {joinableTournamentTeams.length === 0 ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              Aucune equipe ouverte aux demandes n est disponible pour le moment.
+            </Text>
+          ) : null}
+        </View>
+      </BottomModal>
+
+      <BottomModal
+        close={() => {
+          setIsTournamentJoinSelectorVisible(false);
+          setPendingTournamentAction(null);
+        }}
+        isVisible={isTournamentJoinSelectorVisible}
+        snapPoints={['62%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
+          <View style={tournamentDs.styles.headerBlock}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Equipes ouvertes</Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Selectionnez une equipe tournoi qui accepte actuellement de nouvelles demandes.
+            </Text>
+          </View>
+
+          {joinableTournamentTeams.length === 0 ? (
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Aucune equipe tournoi n accepte de nouvelles demandes pour le moment.
+            </Text>
+          ) : (
+            joinableTournamentTeams.map((team) => {
+              const rosterSummary = getTournamentRosterSummary(team, tournamentConfig);
+              return (
+                <TouchableOpacity
+                  key={team?.documentId}
+                  onPress={() => handleSelectExistingTournamentTeam(team)}
+                  style={tournamentDs.styles.compactPanelCard}
+                >
+                  <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{team?.name || 'Equipe tournoi'}</Text>
+                      <Text style={[Fonts.p4, Fonts.primary100]}>
+                        {`${rosterSummary.totalCount || 0} membre(s) - demandes ouvertes`}
+                      </Text>
+                    </View>
+                    <Tag
+                      style={tournamentDs.getToneTagStyle(Colors.primary500)}
+                      text="Rejoindre"
+                      textColor="primary500"
+                    />
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
+      </BottomModal>
 
       <BottomModal
         close={() => setIsTournamentRegisterModalVisible(false)}

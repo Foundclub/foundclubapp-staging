@@ -32,7 +32,9 @@ export const shouldExplainDetectionSlotsDisabled = (state = {}) => {
 
 export const getEventWizardStepCount = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 9;
-  if (isTournamentEventType(state?.type?.name)) return 10;
+  if (isTournamentEventType(state?.type?.name)) {
+    return state?.isMultiDayTournament === true ? 11 : 10;
+  }
   return shouldShowDetectionSlotsStep(state) ? 11 : 10;
 };
 
@@ -43,34 +45,35 @@ export const getEventWizardLogisticsStepIndex = (state = {}) => {
 
 export const getEventWizardLocationStepIndex = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 4;
-  if (isTournamentEventType(state?.type?.name)) return 4;
+  if (isTournamentEventType(state?.type?.name)) return state?.isMultiDayTournament === true ? 5 : 4;
   return 5;
 };
 
 export const getEventWizardTournamentSettingsStepIndex = (state = {}) => {
-  if (isTournamentEventType(state?.type?.name)) return 5;
+  if (isTournamentEventType(state?.type?.name)) return state?.isMultiDayTournament === true ? 6 : 5;
   return 0;
 };
 
 export const getEventWizardTournamentStructureStepIndex = (state = {}) => {
-  if (isTournamentEventType(state?.type?.name)) return 6;
+  if (isTournamentEventType(state?.type?.name)) return state?.isMultiDayTournament === true ? 7 : 6;
   return 0;
 };
 
 export const getEventWizardVisibilityStepIndex = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 5;
-  if (isTournamentEventType(state?.type?.name)) return 7;
+  if (isTournamentEventType(state?.type?.name)) return state?.isMultiDayTournament === true ? 8 : 7;
   return 6;
 };
 
 export const getEventWizardParticipantsStepIndex = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 6;
-  if (isTournamentEventType(state?.type?.name)) return 8;
+  if (isTournamentEventType(state?.type?.name)) return state?.isMultiDayTournament === true ? 9 : 8;
   return 7;
 };
 
 export const getEventWizardStageProgramStepIndex = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 3;
+  if (isTournamentEventType(state?.type?.name) && state?.isMultiDayTournament === true) return 4;
   return 0;
 };
 
@@ -83,14 +86,14 @@ export const getEventWizardValidationStepIndex = (state = {}) => {
 
 export const getEventWizardDescriptionStepIndex = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 8;
-  if (isTournamentEventType(state?.type?.name)) return 9;
+  if (isTournamentEventType(state?.type?.name)) return state?.isMultiDayTournament === true ? 10 : 9;
   if (shouldShowDetectionSlotsStep(state)) return 10;
   return 9;
 };
 
 export const getEventWizardRecapStepIndex = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return 9;
-  if (isTournamentEventType(state?.type?.name)) return 10;
+  if (isTournamentEventType(state?.type?.name)) return state?.isMultiDayTournament === true ? 11 : 10;
   if (shouldShowDetectionSlotsStep(state)) return 11;
   return 10;
 };

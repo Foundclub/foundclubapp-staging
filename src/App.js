@@ -1,5 +1,7 @@
+/* eslint-disable perfectionist/sort-imports */
 import * as Sentry from '@sentry/react-native';
 import { useEffect, useState } from 'react';
+import { InteractionManager } from 'react-native';
 
 import SessionManager from '@/components/atoms/sessionManager/SessionManager';
 import LeagueActionPromptHost from '@/components/organisms/league/LeagueActionPromptHost';
@@ -29,8 +31,11 @@ import buildFoundClubQueryClient from '@/app/queryClient';
 import { getRuntimeEndpointsLog } from '@/config/runtimeUrls';
 import { POPUP_IDS } from '@/constants/popupRegistry';
 import { NOTIFICATIONS_RUNTIME_CONFIG } from '@/constants/runtimeFlags';
+import useAuth from '@/domains/auth/useAuth';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
+
+import { markBootStep } from '@/utils/performance/bootPerformance';
 
 const isAxiosError = (error) => Boolean(
   error
@@ -60,9 +65,15 @@ const appEnv = String(process.env.APP_ENV || process.env.ENV || '').trim().toLow
 const isStaging = appEnv === 'staging';
 const sentryDsn = process.env.SENTRY_DSN;
 const isSentryEnabled = Boolean(sentryDsn);
+let defaultSentryTracesSampleRate = 0.2;
+if (__DEV__) {
+  defaultSentryTracesSampleRate = 0;
+} else if (isStaging) {
+  defaultSentryTracesSampleRate = 0.05;
+}
 const sentryTracesSampleRate = parseSampleRate(
   process.env.SENTRY_TRACES_SAMPLE_RATE,
-  __DEV__ || isStaging ? 1 : 0.2,
+  defaultSentryTracesSampleRate,
 );
 const navigationIntegration = /** @type {any} */ (isSentryEnabled
   ? Sentry.reactNavigationIntegration({
@@ -81,6 +92,11 @@ console.info('[BOOT] APP_ENV_RESOLVED', {
   notificationsRuntime: NOTIFICATIONS_RUNTIME_CONFIG,
   runtimeEndpoints: getRuntimeEndpointsLog(),
   sentryTracesSampleRate,
+});
+markBootStep('app_module_loaded', {
+  appEnv,
+  isStaging,
+  sentryEnabled: isSentryEnabled,
 });
 
 // Désactiver Sentry en staging ou utiliser un projet Sentry séparé
@@ -115,8 +131,11 @@ if (isSentryEnabled) {
 
 // Reactotron configuration to debug app
 if (__DEV__) {
-  // eslint-disable-next-line global-require
-  require('../ReactotronConfig');
+  const isReactotronEnabled = String(process.env.ENABLE_REACTOTRON || '').trim().toLowerCase() === 'true';
+  if (isReactotronEnabled) {
+    // eslint-disable-next-line global-require
+    require('../ReactotronConfig');
+  }
 }
 
 const queryClient = buildFoundClubQueryClient({
@@ -199,11 +218,51 @@ function BootErrorAlertHost() {
   );
 }
 
+function DeferredStartupHosts() {
+  const { appBootstrapData } = useAuth();
+
+  return (
+    <>
+      <RemotePopupCampaignHost
+        initialCampaign={appBootstrapData?.activeRemotePopupCampaign || null}
+      />
+      <MatchStatsPromptHost />
+      <LeagueActionPromptHost />
+      <NotificationBootstrap />
+      <SmartNotificationHost />
+    </>
+  );
+}
+
 /**
  * App root component.
  * @returns {import('react').ReactElement} App root component.
  */
 function App() {
+  const [isNavigationReady, setIsNavigationReady] = useState(false);
+  const [isDeferredStartupReady, setIsDeferredStartupReady] = useState(false);
+
+  useEffect(() => {
+    markBootStep('app_component_mounted');
+  }, []);
+
+  useEffect(() => {
+    if (!isNavigationReady) {
+      setIsDeferredStartupReady(false);
+      return undefined;
+    }
+
+    markBootStep('navigation_ready');
+    const task = InteractionManager.runAfterInteractions(() => {
+      markBootStep('deferred_startup_tasks_ready');
+      setIsDeferredStartupReady(true);
+    });
+
+    return () => {
+      task?.cancel?.();
+    };
+  }, [isNavigationReady]);
+
   return (
     <AppProvidersNative queryClient={queryClient}>
       <AppErrorBoundary
@@ -219,12 +278,11 @@ function App() {
             <BootErrorAlertHost />
             <SessionManager />
             <AppBannerHost />
-            <RemotePopupCampaignHost />
-            <AppNavigator navigationIntegration={navigationIntegration} />
-            <MatchStatsPromptHost />
-            <LeagueActionPromptHost />
-            <NotificationBootstrap />
-            <SmartNotificationHost />
+            <AppNavigator
+              navigationIntegration={navigationIntegration}
+              onReady={() => setIsNavigationReady(true)}
+            />
+            {isDeferredStartupReady ? <DeferredStartupHosts /> : null}
           </BootGate>
         </StartupPromptBoundary>
       </AppErrorBoundary>

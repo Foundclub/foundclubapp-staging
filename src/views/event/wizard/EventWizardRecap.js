@@ -58,6 +58,7 @@ const buildWizardFormData = (wizardState) => {
     endTime: format(end, 'HH:mm'),
     facility: wizardState.facility,
     invitedTeams: Array.isArray(wizardState.invitedTeams) ? wizardState.invitedTeams : [],
+    isMultiDayTournament: wizardState.isMultiDayTournament === true,
     isRecurrent: Boolean(wizardState.isRecurrent),
     location: wizardState.location,
     pricePerPerson: wizardState.pricePerPerson ?? null,
@@ -158,14 +159,15 @@ function EventWizardRecap({ navigation }) {
     .includes('reservation');
   const isStage = isStageEventType(state.type?.name);
   const isTournament = isTournamentEventType(state.type?.name);
+  const isMultiDayProgram = isStage || (isTournament && state.isMultiDayTournament === true);
 
   const wizardFormData = useMemo(() => buildWizardFormData(state), [state]);
 
   const plannedPayloads = useMemo(
-    () => (isStage
+    () => (isMultiDayProgram
       ? [createStageEventPayload(wizardFormData)]
       : createReccurrentEventPayload(wizardFormData)),
-    [createReccurrentEventPayload, createStageEventPayload, isStage, wizardFormData],
+    [createReccurrentEventPayload, createStageEventPayload, isMultiDayProgram, wizardFormData],
   );
 
   const recurrencePreviewCount = plannedPayloads.length;
@@ -253,19 +255,22 @@ function EventWizardRecap({ navigation }) {
       )
       : false
   ));
-  const stagePeriodValue = isStage && state.stageStartDate && state.stageEndDate
+  const stagePeriodValue = isMultiDayProgram && state.stageStartDate && state.stageEndDate
     ? `${format(new Date(state.stageStartDate), 'dd/MM/yyyy')} - ${format(new Date(state.stageEndDate), 'dd/MM/yyyy')}`
     : dateValue;
   let stageHoursValue = timeValue;
-  if (isStage) {
+  if (isMultiDayProgram) {
     stageHoursValue = stageHasVariableHours
-      ? t('eventWizard.stage.variableHours', 'Horaires variables')
+      ? t(
+        isTournament ? 'eventWizard.tournamentProgram.variableHours' : 'eventWizard.stage.variableHours',
+        'Horaires variables',
+      )
       : `${format(new Date(state.stageDefaultStartTime || state.startTime), 'HH:mm')} - ${format(new Date(state.stageDefaultEndTime || state.endTime), 'HH:mm')}`;
   }
   const hasType = Boolean(state.type?.name);
   const hasTeam = Boolean(state.team?.name);
-  const hasDate = Boolean(isStage ? state.stageStartDate && state.stageEndDate : state.date);
-  const hasTime = Boolean(isStage ? state.stageDefaultStartTime && state.stageDefaultEndTime : state.startTime && state.endTime);
+  const hasDate = Boolean(isMultiDayProgram ? state.stageStartDate && state.stageEndDate : state.date);
+  const hasTime = Boolean(isMultiDayProgram ? state.stageDefaultStartTime && state.stageDefaultEndTime : state.startTime && state.endTime);
   const hasLocation = Boolean(state.location || state.facility);
   const quickOverviewItems = [
     {
@@ -575,13 +580,16 @@ function EventWizardRecap({ navigation }) {
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>
-                {isStage
-                  ? t('eventWizard.stage.recapProgramTitle', 'Programme du stage')
+                {isMultiDayProgram
+                  ? t(
+                    isTournament ? 'eventWizard.tournamentProgram.recapProgramTitle' : 'eventWizard.stage.recapProgramTitle',
+                    isTournament ? 'Programme du tournoi' : 'Programme du stage',
+                  )
                   : t('eventWizard.recap.whenWhereTitle', 'Quand et lieu')}
               </Text>
               <TouchableOpacity
                 onPress={() => navigation.navigate(
-                  isStage ? RouteNames.EventWizardStageProgram : RouteNames.EventWizardLogistics,
+                  isMultiDayProgram ? RouteNames.EventWizardStageProgram : RouteNames.EventWizardLogistics,
                 )}
               >
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
@@ -591,32 +599,41 @@ function EventWizardRecap({ navigation }) {
             <View style={[Spaces.gap[8]]}>
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {isStage
-                    ? t('eventWizard.stage.periodTitle', 'Periode')
+                  {isMultiDayProgram
+                    ? t(
+                      isTournament ? 'eventWizard.tournamentProgram.periodTitle' : 'eventWizard.stage.periodTitle',
+                      'Periode',
+                    )
                     : t('eventWizard.recap.dateLabel', 'Date')}
                 </Text>
                 <Text style={[Fonts.p2, hasDate ? Fonts.neutral00 : Fonts.gold500]}>
-                  {isStage ? stagePeriodValue : dateValue}
+                  {isMultiDayProgram ? stagePeriodValue : dateValue}
                 </Text>
               </View>
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {isStage
-                    ? t('eventWizard.stage.defaultHoursTitle', 'Horaires par defaut')
+                  {isMultiDayProgram
+                    ? t(
+                      isTournament ? 'eventWizard.tournamentProgram.defaultHoursTitle' : 'eventWizard.stage.defaultHoursTitle',
+                      'Horaires par defaut',
+                    )
                     : t('eventWizard.recap.timeLabel', 'Horaire')}
                 </Text>
                 <Text style={[Fonts.p1Bold, hasTime ? Fonts.primary500 : Fonts.gold500]}>
-                  {isStage ? stageHoursValue : timeValue}
+                  {isMultiDayProgram ? stageHoursValue : timeValue}
                 </Text>
               </View>
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.location')}</Text>
                 <Text style={[Fonts.p2, hasLocation ? Fonts.neutral00 : Fonts.gold500]}>{locationValue}</Text>
               </View>
-              {isStage ? (
+              {isMultiDayProgram ? (
                 <View style={[Spaces.gap[8], Spaces.marginTop[8]]}>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    {t('eventWizard.stage.daysTitle', 'Jours du stage')}
+                    {t(
+                      isTournament ? 'eventWizard.tournamentProgram.daysTitle' : 'eventWizard.stage.daysTitle',
+                      isTournament ? 'Jours du tournoi' : 'Jours du stage',
+                    )}
                   </Text>
                   {activeStageDays.map((day) => (
                     <View
@@ -644,7 +661,10 @@ function EventWizardRecap({ navigation }) {
                       </View>
                       {day?.facilityId || day?.location ? (
                         <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                          {t('eventWizard.stage.customizedLabel', 'Personnalise')}
+                          {t(
+                            isTournament ? 'eventWizard.tournamentProgram.customizedLabel' : 'eventWizard.stage.customizedLabel',
+                            'Personnalise',
+                          )}
                         </Text>
                       ) : null}
                     </View>

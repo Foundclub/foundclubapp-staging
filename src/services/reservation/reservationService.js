@@ -5,6 +5,7 @@ import client from '../client';
 /** @typedef {import('@/domains/event/types').FCEvent} Reservation */
 
 export const reservationSchema = Joi.object({
+  bookingStatus: Joi.string().allow('', null).optional(),
   club: Joi.object().optional(),
   currentPlayers: Joi.number().required(),
   date: Joi.string().required(),
@@ -35,6 +36,7 @@ export const reservationSchema = Joi.object({
  *   activity?: string;
  *   geohash?: string;
  *   maxPricePerPerson?: number;
+ *   needsPlayers?: boolean;
  *   startTime?: string;
  *   startDateAfter?: string;
  *   startDateBefore?: string;
@@ -48,6 +50,7 @@ export const getReservations = async (filters = {}) => {
       club,
       geohash,
       maxPricePerPerson,
+      needsPlayers = false,
       page = 1,
       pageSize = 15,
       q,
@@ -113,6 +116,12 @@ export const getReservations = async (filters = {}) => {
 
     if (reservationMode) {
       params.filters.reservationMode = { $eq: reservationMode };
+    }
+
+    if (needsPlayers) {
+      params.filters.bookingStatus = { $eq: 'shared' };
+      params.filters.missingPlayers = { $gt: 0 };
+      params.filters.reservationMode = { $eq: 'RECRUITING' };
     }
 
     if (club) {

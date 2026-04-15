@@ -1,3 +1,4 @@
+/* eslint-disable global-require */
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,12 +11,6 @@ import {
 // hooks
 import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
-// screens
-import MyEventsList from '@/views/event/MyEventList';
-import Messaging from '@/views/Messaging';
-import CMDashboard from '@/views/multisportClub/CMDashboard';
-import MyTeamList from '@/views/team/MyTeamList';
-import TeamList from '@/views/team/TeamList';
 // utils and misc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,12 +37,17 @@ function PrivateTabNavigator() {
   const { canManageTeam, userData } = useAuth();
   const insets = useSafeAreaInsets();
   const floatingScenePaddingBottom = getFloatingTabBarScenePaddingBottom(insets.bottom);
-  let teamTabComponent = MyTeamList;
-  if (canManageTeam && userData?.multisportClubs?.length > 0) {
-    teamTabComponent = CMDashboard;
-  } else if (canManageTeam && userData?.club) {
-    teamTabComponent = TeamList;
-  }
+  const getTeamTabComponent = () => {
+    if (canManageTeam && userData?.multisportClubs?.length > 0) {
+      return require('@/views/multisportClub/CMDashboard').default;
+    }
+
+    if (canManageTeam && userData?.club) {
+      return require('@/views/team/TeamList').default;
+    }
+
+    return require('@/views/team/MyTeamList').default;
+  };
   const teamTabLabel = canManageTeam && userData?.multisportClubs?.length > 0
     ? t('menu.myClub')
     : t('menu.myTeams');
@@ -134,7 +134,7 @@ function PrivateTabNavigator() {
         }}
       />
       <Tab.Screen
-        component={MyEventsList}
+        getComponent={() => require('@/views/event/MyEventList').default}
         name={RouteNames.MyEventList}
         options={{
           headerShown: false,
@@ -151,7 +151,7 @@ function PrivateTabNavigator() {
       />
       {userData?.id ? (
         <Tab.Screen
-          component={teamTabComponent}
+          getComponent={getTeamTabComponent}
           initialParams={{
             clubId: userData?.club?.documentId,
             cmId: userData?.multisportClubs?.[0]?.documentId,
@@ -175,7 +175,7 @@ function PrivateTabNavigator() {
         />
       ) : null}
       <Tab.Screen
-        component={Messaging}
+        getComponent={() => require('@/views/Messaging').default}
         name={RouteNames.Chat}
         options={{
           headerShown: false,

@@ -46,6 +46,7 @@ export const normalizeEventTypeLabel = (value = '') => String(value || '')
   .trim();
 
 export const isStageEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('stage');
+export const isTournamentEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('tournoi');
 
 /**
  * Format a date string to send
@@ -289,6 +290,16 @@ const formatStageDate = (value) => {
   return format(new Date(value), 'yyyy-MM-dd');
 };
 
+const EVENT_FEATURED_MUTATION_FIELDS = [
+  'featuredAt',
+  'featuredBy',
+  'featuredRequestStatus',
+  'featuredRequestsSummary',
+  'featuredScope',
+  'highlightRequests',
+  'isFeatured',
+];
+
 /**
  * Create the event payload for the API from the event form data
  * @param {FCEventForm} event
@@ -315,12 +326,16 @@ export const createEventPayload = (event) => {
   delete formattedData.recurrenceInterval;
   delete formattedData.recurrenceDays;
   delete formattedData.isRecurrent;
+  delete formattedData.isMultiDayTournament;
   delete formattedData.requestFeatured; // Ne pas envoyer à Strapi
   delete formattedData.stageDefaultEndTime;
   delete formattedData.stageDefaultStartTime;
   delete formattedData.stageEndDate;
   delete formattedData.stageSchedule;
   delete formattedData.stageStartDate;
+  EVENT_FEATURED_MUTATION_FIELDS.forEach((field) => {
+    delete formattedData[field];
+  });
 
   // Remove undefined or null numeric fields to let Strapi use defaults
   if (formattedData.capacity == null || formattedData.capacity === '') delete formattedData.capacity;
@@ -386,7 +401,11 @@ export const createStageEventPayload = (event) => {
  * @returns {FCEventForm[]}
  */
 export const createReccurrentEventPayload = (event) => {
-  if (isStageEventType(event?.type?.name || event?.typeName || '')) {
+  const typeName = event?.type?.name || event?.typeName || '';
+  if (
+    isStageEventType(typeName)
+    || (isTournamentEventType(typeName) && event?.isMultiDayTournament === true)
+  ) {
     return [createStageEventPayload(event)];
   }
 

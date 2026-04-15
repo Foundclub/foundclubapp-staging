@@ -5,11 +5,12 @@ import { isBefore, startOfDay } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
+  ActivityIndicator, Alert, Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
 import { useAppContext } from '@/store/appContext';
 import { horizontalScale } from '@/theme/scaling';
 import useTheme from '@/theme/themeContext';
@@ -24,8 +25,8 @@ import SearchComponent from '@/components/organisms/searchComponent/searchCompon
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
-import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { useGetFeaturedReservations, useGetReservations } from '@/services/reservation/reservationQueries';
+import { joinReservation } from '@/services/reservation/reservationService';
 import { useSearchReservations } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
@@ -72,8 +73,14 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     { id: 'basket', label: 'Basket', slug: 'basket' },
   ];
 
-  const createEventParticipationMutation = useMutation({
-    mutationFn: createEventParticipation,
+  const joinReservationMutation = useMutation({
+    mutationFn: (reservationId) => joinReservation(reservationId),
+    onError: (error) => {
+      Alert.alert(
+        t('common.error'),
+        getParticipationErrorMessage(error, 'Impossible de rejoindre cette reservation pour le moment.'),
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       queryClient.invalidateQueries({ queryKey: ['featured-reservations'] });
@@ -85,6 +92,11 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
         refetch();
       }
       setIsJoinModalVisible(false);
+      setSelectedEvent(undefined);
+      Alert.alert(
+        t('reservation.joinSuccess.title', 'Participation confirmee'),
+        t('reservation.joinSuccess.message', 'Vous participez maintenant a cette reservation.'),
+      );
     },
   });
 
@@ -448,7 +460,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     <View style={[Alignments.fill]}>
       <WithDataWrapper
         error={activeError?.message}
-        isLoading={(activeLoading && !activeFetchingNext) || createEventParticipationMutation.isPending}
+        isLoading={(activeLoading && !activeFetchingNext) || joinReservationMutation.isPending}
         wrapperStyle={[Alignments.fill]}
       >
         <FlashList
@@ -477,10 +489,11 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
 
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || selectedEvent?.club?.name || ''}
-        createEventParticipationMutation={createEventParticipationMutation}
-        eventId={selectedEvent?.documentId}
+        confirmLabel="Reserver"
+        isSubmitting={joinReservationMutation.isPending}
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
+        onConfirm={() => joinReservationMutation.mutateAsync(selectedEvent?.documentId)}
       />
 
       {shouldShowMapToggle ? (
