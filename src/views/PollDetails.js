@@ -275,7 +275,7 @@ function PollDetails({ navigation, route }) {
 
     if (!changed) return;
 
-    queryClient.setQueryData(['chat-messages', chatId], (/** @type {any} */ oldData) => {
+    queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, (/** @type {any} */ oldData) => {
       if (!oldData?.pages) return oldData;
       return {
         ...oldData,

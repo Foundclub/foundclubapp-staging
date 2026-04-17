@@ -43,6 +43,14 @@ function SearchStack() {
         getComponent={() => require('@/views/search/SearchHubRouteAlias').default}
         name={RouteNames.SearchRecruitment}
       />
+      <Stack.Screen
+        getComponent={() => require('@/views/license/MyLicense').default}
+        name={RouteNames.MyLicense}
+      />
+      <Stack.Screen
+        getComponent={() => require('@/views/license/LicenseCheckoutStatus').default}
+        name={RouteNames.LicenseCheckoutStatus}
+      />
     </Stack.Navigator>
   );
 }

@@ -2195,7 +2195,14 @@ function SearchMapScreen({ navigation, route }) {
   }, [persistSessionState]);
 
   const handleMapRenderStats = useCallback((nextStats) => {
-    setRenderStats(nextStats || null);
+    const normalizedStats = nextStats || null;
+    const nextSignature = toStableJson(normalizedStats);
+
+    setRenderStats((currentStats) => (
+      toStableJson(currentStats || null) === nextSignature
+        ? currentStats
+        : normalizedStats
+    ));
   }, []);
 
   const filterChips = useMemo(

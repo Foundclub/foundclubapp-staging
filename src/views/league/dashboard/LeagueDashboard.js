@@ -97,19 +97,19 @@ const LEAGUE_ACTION_META = {
   },
   opponent_found: {
     accent: 'primary',
-    actionLabel: 'Voir le match',
+    actionLabel: 'Envoyer une proposition',
     helper: 'Un adversaire a ete trouve. Il reste a vous accorder sur la proposition de match.',
     title: 'Adversaire trouve',
   },
   proposal_received: {
     accent: 'warning',
-    actionLabel: 'Repondre',
-    helper: 'Une proposition attend votre r\u00E9ponse. R\u00E9pondez depuis le popup, la conversation ou la fiche match.',
-    title: 'Nouvelle proposition recue',
+    actionLabel: 'R\u00E9pondre',
+    helper: 'Une proposition adverse attend votre r\u00E9ponse. Ouvrez la conversation pour accepter, refuser ou contre-proposer.',
+    title: 'Nouvelle proposition re\u00E7ue',
   },
   proposal_sent_waiting: {
     accent: 'gold',
-    actionLabel: 'Repondre',
+    actionLabel: 'Voir la proposition',
     helper: "Votre proposition a \u00E9t\u00E9 envoy\u00E9e. Continuez l'echange dans la conversation avec l'adversaire.",
     title: 'Proposition envoy\u00E9e',
   },
@@ -274,13 +274,13 @@ function LeagueDashboard() {
     });
   }, [leagueActionState, navigation, userTeam?.name]);
 
-  const reopenLeaguePrompt = useCallback(() => {
-    navigation.setParams({
-      forceLeagueActionPrompt: true,
-      forceLeagueActionPromptToken: String(Date.now()),
-      matchId: leagueActionState?.matchId || leagueActionState?.match?.documentId || undefined,
+  const openLeagueProposalComposer = useCallback((matchId) => {
+    navigation.navigate(RouteNames.LeagueMatchTab, {
+      matchId: matchId || undefined,
+      openLeagueProposal: true,
+      openLeagueProposalToken: String(Date.now()),
     });
-  }, [leagueActionState?.match?.documentId, leagueActionState?.matchId, navigation]);
+  }, [navigation]);
 
   const openLeagueMatchDetails = useCallback((matchId, focusSection = undefined) => {
     if (!matchId) {
@@ -306,12 +306,21 @@ function LeagueDashboard() {
       return;
     }
 
-    if (state === 'proposal_received') {
-      reopenLeaguePrompt();
+    if (state === 'opponent_found') {
+      openLeagueProposalComposer(leagueActionState?.matchId || leagueActionState?.match?.documentId);
       return;
     }
 
-    if (['confirm\u00E9d_upcoming', 'opponent_found', 'proposal_sent_waiting'].includes(state)) {
+    if (state === 'proposal_received') {
+      openLeagueConversation({
+        chatId: leagueActionState?.chatId,
+        matchId: leagueActionState?.matchId || leagueActionState?.match?.documentId,
+        proposalMessageId: leagueActionState?.proposalMessageId,
+      });
+      return;
+    }
+
+    if (['confirm\u00E9d_upcoming', 'proposal_sent_waiting'].includes(state)) {
       if (state === 'proposal_sent_waiting') {
         openLeagueConversation({
           chatId: leagueActionState?.chatId,
@@ -325,7 +334,7 @@ function LeagueDashboard() {
     }
 
     navigation.navigate(RouteNames.LeagueMatchTab);
-  }, [leagueActionState, navigation, openLeagueConversation, openLeagueMatchDetails, reopenLeaguePrompt]);
+  }, [leagueActionState, navigation, openLeagueConversation, openLeagueMatchDetails, openLeagueProposalComposer]);
 
   const handleSecondaryLeagueAction = useCallback(() => {
     const state = String(leagueActionState?.state || '');
@@ -339,7 +348,7 @@ function LeagueDashboard() {
       return;
     }
 
-    if (state === 'proposal_sent_waiting') {
+    if (state === 'opponent_found' || state === 'proposal_sent_waiting') {
       openLeagueMatchDetails(leagueActionState?.matchId || leagueActionState?.match?.documentId);
       return;
     }
@@ -623,7 +632,7 @@ function LeagueDashboard() {
       ? 'Adversaire'
       : leagueActionState?.opponent?.name || leagueActionState?.opponentDetails?.name || 'Adversaire';
     const actionRequired = state === 'proposal_received' || state === 'waiting_venue';
-    const hasSecondaryAction = ['proposal_received', 'proposal_sent_waiting', 'waiting_venue'].includes(state);
+    const hasSecondaryAction = ['opponent_found', 'proposal_received', 'proposal_sent_waiting', 'waiting_venue'].includes(state);
     let secondaryActionLabel = 'Voir le chat';
     if (state === 'proposal_sent_waiting' || state === 'waiting_venue') {
       secondaryActionLabel = 'Voir le match';

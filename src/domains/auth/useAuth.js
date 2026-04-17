@@ -44,6 +44,9 @@ import { UNREAD_COUNT_QUERY_KEY } from '@/hooks/useNotificationController';
 /* eslint-enable import/order, perfectionist/sort-imports */
 
 const authLogger = createLogger('auth');
+let lastBootstrapErrorLogKey = null;
+let lastBootstrapLoadedLogKey = null;
+let lastBootstrapRequestLogKey = null;
 let lastBootstrapSyncedKey = null;
 let lastFullUserSyncedKey = null;
 
@@ -60,6 +63,13 @@ const getBootstrapErrorMessage = (error) => String(
   || error
   || 'unknown',
 ).trim();
+
+const getBootstrapSessionKey = (auth) => String(
+  auth?.user?.documentId
+  || auth?.user?.id
+  || auth?.token
+  || 'no-session',
+);
 
 /**
  * Custom hook to manage authentication
@@ -186,9 +196,14 @@ const useAuth = () => {
 
   useEffect(() => {
     if (auth?.token && !isAddingAccount) {
+      const requestLogKey = getBootstrapSessionKey(auth);
+      if (lastBootstrapRequestLogKey === requestLogKey) {
+        return;
+      }
+      lastBootstrapRequestLogKey = requestLogKey;
       markBootStep('bootstrap_requested');
     }
-  }, [auth?.token, isAddingAccount]);
+  }, [auth, auth?.token, isAddingAccount]);
 
   useEffect(() => {
     if (!bootstrapError) {
@@ -197,6 +212,12 @@ const useAuth = () => {
 
     const status = getBootstrapErrorStatus(bootstrapError);
     const message = getBootstrapErrorMessage(bootstrapError);
+    const errorLogKey = `${getBootstrapSessionKey(auth)}:${status || 'no-status'}:${message}`;
+    if (lastBootstrapErrorLogKey === errorLogKey) {
+      return;
+    }
+    lastBootstrapErrorLogKey = errorLogKey;
+
     authLogger.warn('Bootstrap request failed', {
       message,
       status,
@@ -205,7 +226,7 @@ const useAuth = () => {
       message,
       ...(status ? { status } : {}),
     });
-  }, [bootstrapError]);
+  }, [auth, bootstrapError]);
 
   useEffect(() => {
     if (!auth?.token || isAddingAccount) {
@@ -300,11 +321,15 @@ const useAuth = () => {
       return;
     }
 
-    markBootStep('bootstrap_loaded', {
-      hasLeagueAction: Boolean(bootstrapData?.pendingLeagueActionSummary),
-      hasMatchStatsPrompt: Boolean(bootstrapData?.pendingMatchStatsSummary?.nextPrompt),
-      hasRemotePopup: Boolean(bootstrapData?.activeRemotePopupCampaign?.documentId),
-    });
+    const loadedLogKey = `${getBootstrapSessionKey(auth)}:${bootstrapData.serverTime}`;
+    if (lastBootstrapLoadedLogKey !== loadedLogKey) {
+      lastBootstrapLoadedLogKey = loadedLogKey;
+      markBootStep('bootstrap_loaded', {
+        hasLeagueAction: Boolean(bootstrapData?.pendingLeagueActionSummary),
+        hasMatchStatsPrompt: Boolean(bootstrapData?.pendingMatchStatsSummary?.nextPrompt),
+        hasRemotePopup: Boolean(bootstrapData?.activeRemotePopupCampaign?.documentId),
+      });
+    }
 
     if (Number.isFinite(Number(bootstrapData?.unreadNotificationsCount))) {
       queryClient.setQueryData(UNREAD_COUNT_QUERY_KEY, {
@@ -323,7 +348,7 @@ const useAuth = () => {
         bootstrapData.pendingMatchStatsSummary,
       );
     }
-  }, [bootstrapData, queryClient]);
+  }, [auth, bootstrapData, queryClient]);
 
   useEffect(() => {
     if (!fullUserData?.documentId) {
@@ -472,12 +497,12 @@ const useAuth = () => {
       .trim();
     const isTournament = normalizedTypeName.includes('tournoi');
     const organizerDocumentId = String(event?.organizer?.documentId || '').trim();
-    if (isTournament && organizerDocumentId) {
-      return organizerDocumentId === String(userData?.documentId || '').trim();
+    if (isTournament && organizerDocumentId === String(userData?.documentId || '').trim()) {
+      return true;
     }
 
     const userClubId = String(userData?.club?.documentId || '').trim();
-    const organizerClubId = String(event?.team?.club?.documentId || '').trim();
+    const organizerClubId = String(event?.team?.club?.documentId || event?.club?.documentId || '').trim();
     if (
       roleName === USER_ROLES.president
       && userClubId

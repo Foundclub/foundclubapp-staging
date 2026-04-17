@@ -17,6 +17,12 @@ import { getAppVersion, getDeviceId } from '@/platform/device';
 import { isFirebaseBypassEnabled } from './bypassPolicy';
 
 const isLocalAppEnvironment = () => String(process.env.APP_ENV || '').trim().toLowerCase() === 'local';
+const isNetworkError = (error) => {
+  const statusCode = error?.status || error?.response?.status;
+  const message = String(error?.message || error || '').toLowerCase();
+  return !statusCode && message.includes('network');
+};
+
 const logAuthDebug = (...args) => {
   if (isLocalAppEnvironment()) {
     // Keep verbose auth logs strictly local to avoid noisy production runtime logs.
@@ -588,6 +594,8 @@ export const addDeviceToken = async (token) => {
     const statusCode = error?.status || error?.response?.status;
     if (statusCode === 401 || statusCode === 403) {
       console.warn('[FCM] addDeviceToken unauthorized/forbidden. Skipping device registration.');
+    } else if (isNetworkError(error)) {
+      console.warn('[FCM] addDeviceToken network error. Token sync will retry later:', error?.message || error);
     } else {
       console.error('[FCM] addDeviceToken failed:', error?.message || error);
     }

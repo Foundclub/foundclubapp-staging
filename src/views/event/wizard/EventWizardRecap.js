@@ -19,15 +19,39 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { createEventsSequentially, rollbackEventsByCancel } from '@/services/event/eventService';
+import {
+  createEventsWithConcurrency,
+  requestFeatured,
+  rollbackEventsByCancel,
+} from '@/services/event/eventService';
 
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardRecapStepIndex,
   getEventWizardStepCount,
+  hasCompletePerDayLocations,
   isStageEventType,
   isTournamentEventType,
 } from './eventWizardDetectionUtils';
+
+const CREATE_EVENT_BATCH_CONCURRENCY = 3;
+const FEATURED_SCOPE_OPTIONS = [
+  {
+    description: 'Visible dans les espaces publics FoundClub apres validation.',
+    label: 'A la une publique',
+    value: 'PUBLIC',
+  },
+  {
+    description: 'Visible pour les membres du club ou de la section.',
+    label: 'A la une du club',
+    value: 'SECTION',
+  },
+  {
+    description: 'Visible au niveau de la structure multisport.',
+    label: 'A la une multisport',
+    value: 'CM',
+  },
+];
 
 const getErrorCode = (error) => (
   error?.response?.data?.error?.details?.code
@@ -46,12 +70,14 @@ const getErrorMessage = (error, fallback) => (
 
 const buildWizardFormData = (wizardState) => {
   const isTournament = isTournamentEventType(wizardState?.type?.name);
+  const tournamentScopeMode = wizardState.tournamentScopeMode === 'autonomous' ? 'autonomous' : 'team';
   const eventDate = wizardState.date ? new Date(wizardState.date) : new Date();
   const start = wizardState.startTime ? new Date(wizardState.startTime) : new Date(eventDate);
   const end = wizardState.endTime ? new Date(wizardState.endTime) : new Date(start.getTime() + (60 * 60000));
 
   return {
     capacity: wizardState.capacity ?? null,
+    club: wizardState.team?.club?.documentId || wizardState.club?.documentId || null,
     date: format(eventDate, 'dd/MM/yyyy'),
     description: wizardState.description || '',
     detectionSlots: Array.isArray(wizardState.detectionSlots) ? wizardState.detectionSlots : [],
@@ -96,8 +122,14 @@ const buildWizardFormData = (wizardState) => {
       ? format(new Date(wizardState.stageStartDate), 'yyyy-MM-dd')
       : '',
     startTime: format(start, 'HH:mm'),
-    team: wizardState.team?.documentId,
+    team: isTournament && tournamentScopeMode === 'autonomous' ? undefined : wizardState.team?.documentId,
     totalPlayers: wizardState.totalPlayers ?? null,
+    tournamentActivity: isTournament && tournamentScopeMode === 'autonomous'
+      ? wizardState.tournamentActivity?.documentId
+      : undefined,
+    tournamentCategory: isTournament && tournamentScopeMode === 'autonomous'
+      ? wizardState.tournamentCategory?.documentId
+      : undefined,
     tournamentConfig: isTournament ? {
       allowCrossClubPlayers: wizardState.tournamentAllowCrossClubPlayers === true,
       allowCustomTeams: wizardState.tournamentAllowCustomTeams !== false,
@@ -120,6 +152,10 @@ const buildWizardFormData = (wizardState) => {
       seedingMode: wizardState.tournamentSeedingMode || 'random',
       thirdPlaceMatch: wizardState.tournamentThirdPlaceMatch === true,
     } : undefined,
+    tournamentScopeMode: isTournament ? tournamentScopeMode : undefined,
+    tournamentSection: isTournament && tournamentScopeMode === 'autonomous'
+      ? wizardState.tournamentSection?.documentId
+      : undefined,
     type: wizardState.type?.documentId,
     validationMode: isTournament
       ? (wizardState.tournamentRegistrationMode || 'manual')
@@ -146,6 +182,8 @@ function EventWizardRecap({ navigation }) {
   const queryClient = useQueryClient();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFeaturedScopes, setSelectedFeaturedScopes] = useState([]);
+  const [submitProgress, setSubmitProgress] = useState(null);
   const [partialState, setPartialState] = useState(null);
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
@@ -160,6 +198,7 @@ function EventWizardRecap({ navigation }) {
   const isStage = isStageEventType(state.type?.name);
   const isTournament = isTournamentEventType(state.type?.name);
   const isMultiDayProgram = isStage || (isTournament && state.isMultiDayTournament === true);
+  const hasCompletePerDayLocationSet = hasCompletePerDayLocations(state);
 
   const wizardFormData = useMemo(() => buildWizardFormData(state), [state]);
 
@@ -174,8 +213,16 @@ function EventWizardRecap({ navigation }) {
   const recapNotSet = t('eventWizard.recap.notSet');
 
   const getLocationDisplayText = () => {
-    const { location } = state;
-    if (!location) return t('eventWizard.recap.notSet');
+    const { facility, location } = state;
+    if (!location) {
+      if (facility) {
+        return t('eventWizard.recap.facilitySelected', 'Installation selectionnee');
+      }
+      if (hasCompletePerDayLocations(state)) {
+        return t('eventWizard.recap.perDayLocations', 'Lieux personnalises par jour');
+      }
+      return t('eventWizard.recap.notSet');
+    }
     if (typeof location === 'string') return location;
     if (typeof location === 'object') {
       const label = location.label || location.description || location.name || location.address;
@@ -204,7 +251,9 @@ function EventWizardRecap({ navigation }) {
   };
 
   const typeValue = state.type?.name || recapNotSet;
-  const teamValue = state.team?.name || recapNotSet;
+  const teamValue = isTournament && state.tournamentScopeMode === 'autonomous'
+    ? 'Tournoi autonome'
+    : (state.team?.name || recapNotSet);
   const dateValue = getFormattedDate();
   const timeValue = getFormattedTime();
   const locationValue = getLocationDisplayText();
@@ -268,10 +317,10 @@ function EventWizardRecap({ navigation }) {
       : `${format(new Date(state.stageDefaultStartTime || state.startTime), 'HH:mm')} - ${format(new Date(state.stageDefaultEndTime || state.endTime), 'HH:mm')}`;
   }
   const hasType = Boolean(state.type?.name);
-  const hasTeam = Boolean(state.team?.name);
+  const hasTeam = Boolean(state.team?.name || (isTournament && state.tournamentScopeMode === 'autonomous'));
   const hasDate = Boolean(isMultiDayProgram ? state.stageStartDate && state.stageEndDate : state.date);
   const hasTime = Boolean(isMultiDayProgram ? state.stageDefaultStartTime && state.stageDefaultEndTime : state.startTime && state.endTime);
-  const hasLocation = Boolean(state.location || state.facility);
+  const hasLocation = Boolean(state.location || state.facility || hasCompletePerDayLocationSet);
   const quickOverviewItems = [
     {
       complete: hasType,
@@ -301,9 +350,21 @@ function EventWizardRecap({ navigation }) {
   ];
   const completedQuickOverviewCount = quickOverviewItems.filter((item) => item.complete).length;
   const isRecapReady = completedQuickOverviewCount === quickOverviewItems.length;
+  const hasFeaturedRequestSelection = selectedFeaturedScopes.length > 0;
+
+  const toggleFeaturedScope = (scope) => {
+    setSelectedFeaturedScopes((current) => (
+      current.includes(scope)
+        ? current.filter((item) => item !== scope)
+        : [...current, scope]
+    ));
+  };
 
   const runCreateBatch = async (payloads) => {
-    const result = await createEventsSequentially(payloads);
+    const result = await createEventsWithConcurrency(payloads, {
+      concurrency: CREATE_EVENT_BATCH_CONCURRENCY,
+      onProgress: setSubmitProgress,
+    });
     return {
       created: result.created,
       failed: result.failed.map((item) => ({
@@ -314,10 +375,49 @@ function EventWizardRecap({ navigation }) {
     };
   };
 
+  const requestFeaturedForCreatedEvents = async (created = []) => {
+    if (!hasFeaturedRequestSelection) return [];
+
+    const createdEventIds = Array.from(new Set(
+      created
+        .map((item) => String(item?.documentId || '').trim())
+        .filter(Boolean),
+    ));
+
+    if (!createdEventIds.length) return [];
+
+    const results = await Promise.allSettled(
+      createdEventIds.map((eventId) => requestFeatured({
+        eventId,
+        scopes: selectedFeaturedScopes,
+      })),
+    );
+
+    return results
+      .map((result, index) => ({
+        eventId: createdEventIds[index],
+        result,
+      }))
+      .filter((item) => item.result.status === 'rejected');
+  };
+
   const finalizeSuccess = async (created) => {
     const firstCreatedId = created.find((item) => item.documentId)?.documentId;
+    const featuredFailures = await requestFeaturedForCreatedEvents(created);
     await queryClient.invalidateQueries({ queryKey: ['events'] });
+    await queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+    await queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
     dispatch({ type: 'RESET' });
+
+    if (featuredFailures.length > 0) {
+      Alert.alert(
+        t('eventWizard.recap.featured.warningTitle', 'Evenement cree'),
+        t(
+          'eventWizard.recap.featured.warningMessage',
+          "L'evenement est cree, mais la demande de mise a la une n'a pas pu etre envoyee. Vous pourrez la refaire depuis le detail.",
+        ),
+      );
+    }
 
     if (firstCreatedId) {
       navigation.reset({
@@ -362,6 +462,7 @@ function EventWizardRecap({ navigation }) {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    setSubmitProgress(null);
     try {
       const { created, failed } = await runCreateBatch(plannedPayloads);
       if (failed.length === 0) {
@@ -392,12 +493,14 @@ function EventWizardRecap({ navigation }) {
       );
     } finally {
       setIsSubmitting(false);
+      setSubmitProgress(null);
     }
   };
 
   const handleKeepCreated = async () => {
     if (!partialState) return;
     setIsSubmitting(true);
+    setSubmitProgress(null);
     try {
       if (partialState.created.length === 0) {
         Alert.alert(t('common.error'), t('eventWizard.partial.noCreated'));
@@ -408,12 +511,14 @@ function EventWizardRecap({ navigation }) {
     } finally {
       setIsSubmitting(false);
       setPartialState(null);
+      setSubmitProgress(null);
     }
   };
 
   const handleRollbackCreated = async () => {
     if (!partialState) return;
     setIsSubmitting(true);
+    setSubmitProgress(null);
     try {
       const cancellableIds = partialState.created
         .map((item) => item.documentId)
@@ -434,6 +539,7 @@ function EventWizardRecap({ navigation }) {
       setPartialState(null);
     } finally {
       setIsSubmitting(false);
+      setSubmitProgress(null);
     }
   };
 
@@ -545,6 +651,29 @@ function EventWizardRecap({ navigation }) {
             </View>
           </View>
 
+          {isSubmitting && submitProgress?.total > 1 ? (
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('eventWizard.recap.creationProgress.title', 'Creation en cours')}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {t('eventWizard.recap.creationProgress.description', {
+                  completed: submitProgress.completed,
+                  defaultValue: '{{completed}}/{{total}} evenements traites',
+                  total: submitProgress.total,
+                })}
+              </Text>
+              {submitProgress.failed > 0 ? (
+                <Text style={[Fonts.p3, Fonts.gold500]}>
+                  {t('eventWizard.recap.creationProgress.partialFailures', {
+                    count: submitProgress.failed,
+                    defaultValue: '{{count}} creation(s) a verifier',
+                  })}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>
@@ -564,6 +693,18 @@ function EventWizardRecap({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.team')}</Text>
                 <Text style={[Fonts.p2, hasTeam ? Fonts.neutral00 : Fonts.gold500]}>{teamValue}</Text>
               </View>
+              {isTournament && state.tournamentScopeMode === 'autonomous' ? (
+                <View style={[Spaces.gap[4]]}>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>Cadre autonome</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>
+                    {[
+                      state.tournamentActivity?.name,
+                      state.tournamentSection?.name,
+                      state.tournamentCategory?.name,
+                    ].filter(Boolean).join(' - ') || recapNotSet}
+                  </Text>
+                </View>
+              ) : null}
               {!isStage && !isTournament ? (
                 <View style={[Spaces.gap[4]]}>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -589,7 +730,9 @@ function EventWizardRecap({ navigation }) {
               </Text>
               <TouchableOpacity
                 onPress={() => navigation.navigate(
-                  isMultiDayProgram ? RouteNames.EventWizardStageProgram : RouteNames.EventWizardLogistics,
+                  isMultiDayProgram && !isTournament
+                    ? RouteNames.EventWizardStageProgram
+                    : RouteNames.EventWizardLogistics,
                 )}
               >
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
@@ -843,6 +986,80 @@ function EventWizardRecap({ navigation }) {
             <Text numberOfLines={3} style={[Fonts.p2, state.description ? Fonts.neutral100 : Fonts.gold500]}>
               {state.description || t('eventWizard.recap.noDescription')}
             </Text>
+          </View>
+
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[14], cardSurfaceStyle]}>
+            <View style={[Spaces.gap[6]]}>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>
+                {t('eventWizard.recap.featured.title', 'Mise a la une')}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral200, { lineHeight: 20 }]}>
+                {t(
+                  'eventWizard.recap.featured.description',
+                  "Optionnel : choisissez les espaces ou demander la mise en avant. Rien n'est envoye si aucune option n'est cochee.",
+                )}
+              </Text>
+              {recurrencePreviewCount > 1 ? (
+                <Text style={[Fonts.p3, Fonts.gold500, { lineHeight: 18 }]}>
+                  {t(
+                    'eventWizard.recap.featured.recurrentNote',
+                    'Pour une recurrence, la demande sera envoyee pour chaque occurrence creee.',
+                  )}
+                </Text>
+              ) : null}
+            </View>
+
+            <View style={[Spaces.gap[10]]}>
+              {FEATURED_SCOPE_OPTIONS.map((option) => {
+                const isSelected = selectedFeaturedScopes.includes(option.value);
+
+                return (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    key={option.value}
+                    onPress={() => toggleFeaturedScope(option.value)}
+                    style={[
+                      ApplicationStyle.borderRadius16,
+                      ApplicationStyle.borderWidth1,
+                      Spaces.padding[14],
+                      {
+                        backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(1, 179, 244, 0.06)',
+                        borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.20)',
+                      },
+                    ]}
+                  >
+                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+                      <View
+                        style={[
+                          Alignments.alignCenter,
+                          Alignments.justifyCenter,
+                          {
+                            backgroundColor: isSelected ? Colors.primary500 : 'transparent',
+                            borderColor: Colors.primary500,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            height: 22,
+                            width: 22,
+                          },
+                        ]}
+                      >
+                        {isSelected ? (
+                          <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>x</Text>
+                        ) : null}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[Fonts.p2Bold, isSelected ? Fonts.primary500 : Fonts.neutral00]}>
+                          {option.label}
+                        </Text>
+                        <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 2 }]}>
+                          {option.description}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           {isReservation ? (

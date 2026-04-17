@@ -1,4 +1,3 @@
-import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useMemo } from 'react';
@@ -6,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Image,
   ImageBackground,
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -29,9 +27,6 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
-import { RouteNames } from '@/navigation/routeNames';
-
-import { formatDateWithDayPrefix } from '@/utils/date';
 import {
   resolveExternalMatchDisplay,
   resolveExternalMatchLocation,
@@ -121,8 +116,8 @@ const resolveTeamFocusedPrimaryTitle = ({
   eventTitle,
   invitedTeamNames,
   isMatchEvent,
-  teamName,
   matchContext,
+  teamName,
 }) => {
   if (!isMatchEvent) {
     return teamName || clubName || 'Equipe';
@@ -177,7 +172,6 @@ function EventCardNew({
 }) {
   const {
     Alignments,
-    ApplicationStyle,
     Colors,
     Fonts,
     Images,
@@ -235,8 +229,10 @@ function EventCardNew({
   };
 
   const typeName = item?.type?.name || '';
-  const isReservation = typeName.toLowerCase().includes('réservation') || typeName.toLowerCase().includes('reservation');
-  const isMatchEvent = typeName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('match');
+  const normalizedTypeName = typeName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const isReservation = normalizedTypeName.includes('reservation');
+  const isMatchEvent = normalizedTypeName.includes('match');
+  const isTournamentEvent = normalizedTypeName.includes('tournoi');
   const isStageParentEvent = String(item?.eventFormat || '').toLowerCase() === 'stage_parent';
   const isShareMode = mode === 'share';
   const isTeamFocusedCard = displayProfile === 'teamFocused' && !isShareMode && !isReservation;
@@ -271,21 +267,29 @@ function EventCardNew({
     );
 
   // Sport/Activity
-  const sportName = item?.team?.activities?.map(({ name }) => name)?.join(', ') || item?.type?.name || 'Sport';
+  const sportName = item?.team?.activities?.map(({ name }) => name)?.join(', ')
+    || item?.tournamentActivity?.name
+    || item?.type?.name
+    || 'Sport';
 
   const clubName = item?.team?.club?.name || item?.club?.name || 'FoundClub';
   const clubLogo = item?.team?.club?.logo?.url || item?.club?.logo?.url;
-  const teamName = item?.team?.name || '';
+  const tournamentMetaName = [
+    getDisplayLabel(item?.tournamentActivity),
+    getDisplayLabel(item?.tournamentSection),
+    getDisplayLabel(item?.tournamentCategory),
+  ].filter(Boolean).join(' • ');
+  const teamName = item?.team?.name || (isTournamentEvent && item?.tournamentScopeMode === 'autonomous' ? 'Tournoi autonome' : '');
   const matchDisplay = isMatchEvent ? resolveExternalMatchDisplay(item) : { contextLabel: '', title: '' };
   const eventTitle = matchDisplay.title;
   const matchContextLabel = matchDisplay.contextLabel;
-  const defaultPrimaryTitle = isMatchEvent && eventTitle ? eventTitle : clubName;
+  const defaultPrimaryTitle = isMatchEvent && eventTitle ? eventTitle : (item?.name || clubName);
   const defaultSecondaryTitle = isMatchEvent && eventTitle
     ? [matchContextLabel, clubName].filter(Boolean).join(' - ')
-    : teamName;
-  const teamSection = getDisplayLabel(item?.team?.section || item?.section);
+    : (teamName || (isTournamentEvent ? tournamentMetaName : ''));
+  const teamSection = getDisplayLabel(item?.team?.section || item?.tournamentSection || item?.section);
   const teamLevel = getDisplayLabel(item?.team?.level || item?.level);
-  const teamCategory = getDisplayLabel(item?.team?.category || item?.category);
+  const teamCategory = getDisplayLabel(item?.team?.category || item?.tournamentCategory || item?.category);
   const defaultTeamMetaLine = [teamCategory, teamSection, teamLevel]
     .filter((value) => !!value)
     .join(' • ');
@@ -355,6 +359,106 @@ function EventCardNew({
   const dateLabel = isStageParentEvent
     ? formatStagePeriodLabel(item?.stageStartDate || item?.date, item?.stageEndDate)
     : formatEventDateLabel(item?.date);
+  let reservationTimeLabel = '';
+  if (item.startTime && item.endTime) {
+    reservationTimeLabel = `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`;
+  } else if (item.startTime) {
+    reservationTimeLabel = item.startTime.substring(0, 5);
+  }
+  const reservationFillGaugeLabel = missingPlayers > 0
+    ? `Il manque ${missingPlayers} joueur${missingPlayers > 1 ? 's' : ''} (${currentPlayers}/${totalPlayers})`
+    : `${currentPlayers}/${totalPlayers} joueurs`;
+  const reservationPlayersLabel = !isShared && totalPlayers
+    ? `${totalPlayers} joueurs`
+    : (sportName || 'Sport');
+  const renderCtaContent = () => {
+    if (onValidate && onRefuse) {
+      return (
+        <View style={{
+          elevation: 999, flexDirection: 'row', gap: 10, zIndex: 999,
+        }}
+        >
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              console.log('Valider pressed for item:', item?.documentId);
+              onValidate?.(item);
+            }}
+            style={[styles.reservationButton, { backgroundColor: Colors.primary500, flex: 1 }]}
+          >
+            <Text style={styles.reservationButtonText}>Valider</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              console.log('Refuser pressed for item:', item?.documentId);
+              onRefuse?.(item);
+            }}
+            style={[
+              styles.reservationButton,
+              {
+                backgroundColor: 'transparent',
+                borderColor: Colors.error500,
+                borderWidth: 1,
+                flex: 1,
+              },
+            ]}
+          >
+            <Text style={[styles.reservationButtonText, { color: Colors.error500 }]}>Refuser</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (!isReservation) {
+      return (
+        <EventAnswerButtons
+          event={item}
+          hasAcceptedRequest={hasAcceptedRequest}
+          hasPendingRequest={hasPendingRequest}
+          onAbout={() => onPress?.(item)}
+          onDecline={() => onDecline?.(item)}
+          onJoin={() => onJoin?.(item)}
+          onLogin={onLogin}
+          onParticipate={() => onParticipate?.(item)}
+          participationFlow={participationFlow}
+        />
+      );
+    }
+
+    if (alreadyJoined) {
+      return (
+        <View style={[Alignments.fullWidth]}>
+          <Tag
+            text={t('eventList.info.alreadyJoined', 'Je participe !')}
+            textStyle={Fonts.p1Bold}
+          />
+        </View>
+      );
+    }
+
+    return (
+      <View style={[Alignments.fullWidth, Spaces.gap[10]]}>
+        <Pressable
+          disabled={!participationFlow?.canAct}
+          onPress={() => onParticipate?.(item)}
+          style={[
+            styles.reservationButton,
+            !participationFlow?.canAct ? styles.reservationButtonDisabled : null,
+          ]}
+        >
+          <Text style={styles.reservationButtonText}>
+            {actionLabel || t('reservation.actions.participate') || 'Réserver'}
+          </Text>
+        </Pressable>
+        {!participationFlow?.canAct && participationFlow?.blockedReason ? (
+          <Text style={[Fonts.p4, Fonts.neutral300]}>
+            {participationFlow.blockedReason}
+          </Text>
+        ) : null}
+      </View>
+    );
+  };
 
   return (
 
@@ -393,15 +497,15 @@ function EventCardNew({
                   imageStyle={{ borderRadius: 20 }}
                   imageUrl={clubLogo}
                   size={40}
-                  variant="logo"
                   style={{ borderRadius: 20 }}
+                  variant="logo"
                 />
               ) : (
                 <TeamShield
-                    initials={clubName ? getClubInitials(clubName) : ''}
-                    isSmall
-                    size={40}
-                  />
+                  initials={clubName ? getClubInitials(clubName) : ''}
+                  isSmall
+                  size={40}
+                />
               )}
             </View>
             <View style={styles.clubTextContainer}>
@@ -447,16 +551,14 @@ function EventCardNew({
                     <View style={styles.dateMetaGroup}>
                       <Image source={Images.calendar} style={styles.dateMetaIcon} />
                       <Text numberOfLines={1} style={styles.dateText}>
-                              {formatEventDateLabel(item.date)}
-                            </Text>
+                        {formatEventDateLabel(item.date)}
+                      </Text>
                     </View>
                     <View style={styles.dateMetaGroupRight}>
                       <Image source={Images.clock} style={styles.dateMetaIcon} />
                       <Text style={styles.timeText}>
-                              {item.startTime && item.endTime
-                                ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
-                                : (item.startTime ? item.startTime.substring(0, 5) : '')}
-                            </Text>
+                        {reservationTimeLabel}
+                      </Text>
                     </View>
                   </View>
                 )}
@@ -466,18 +568,18 @@ function EventCardNew({
                   <View style={styles.statusBadgesRow}>
                     {isLastMinuteAlert && (
                     <View style={[styles.statusBadge, styles.sosBadge]}>
-                            <Text style={styles.statusBadgeText}>🔥 Dernière minute</Text>
-                          </View>
+                      <Text style={styles.statusBadgeText}>🔥 Dernière minute</Text>
+                    </View>
                     )}
                     {isShared && !isLastMinuteAlert && (
                     <View style={[styles.statusBadge, styles.sharedBadge]}>
-                            <Text style={styles.statusBadgeText}>👥 Joueurs recherchés</Text>
-                          </View>
+                      <Text style={styles.statusBadgeText}>👥 Joueurs recherchés</Text>
+                    </View>
                     )}
                     {isBooked && (
                     <View style={[styles.statusBadge, styles.bookedBadge]}>
-                            <Text style={styles.statusBadgeText}>✅ Complet</Text>
-                          </View>
+                      <Text style={styles.statusBadgeText}>✅ Complet</Text>
+                    </View>
                     )}
                   </View>
                 )}
@@ -487,19 +589,17 @@ function EventCardNew({
                   <View style={styles.fillGaugeContainer}>
                     <View style={styles.fillGaugeBackground}>
                       <View
-                              style={[
-                                styles.fillGaugeFill,
-                                {
-                                  backgroundColor: isLastMinuteAlert ? '#FF6B35' : '#01B3F4',
-                                  width: `${fillPercentage}%`,
-                                },
-                              ]}
-                            />
+                        style={[
+                          styles.fillGaugeFill,
+                          {
+                            backgroundColor: isLastMinuteAlert ? '#FF6B35' : '#01B3F4',
+                            width: `${fillPercentage}%`,
+                          },
+                        ]}
+                      />
                     </View>
                     <Text style={styles.fillGaugeText}>
-                      {missingPlayers > 0
-                              ? `Il manque ${missingPlayers} joueur${missingPlayers > 1 ? 's' : ''} (${currentPlayers}/${totalPlayers})`
-                              : `${currentPlayers}/${totalPlayers} joueurs`}
+                      {reservationFillGaugeLabel}
                     </Text>
                   </View>
                 )}
@@ -507,42 +607,42 @@ function EventCardNew({
                 {/* Price + Players Row */}
                 <View style={styles.detailRow}>
                   <View style={styles.detailLeft}>
-                      <Image source={Images.euroCircle} style={styles.icon} />
-                      <Text numberOfLines={1} style={styles.detailText}>
-                        {item.pricePerPerson !== undefined ? `${item.pricePerPerson}€ / pers` : 'Prix non défini'}
-                      </Text>
-                    </View>
+                    <Image source={Images.euroCircle} style={styles.icon} />
+                    <Text numberOfLines={1} style={styles.detailText}>
+                      {item.pricePerPerson !== undefined ? `${item.pricePerPerson}€ / pers` : 'Prix non défini'}
+                    </Text>
+                  </View>
                   <View style={styles.detailRight}>
-                      <Image source={Images.running} style={styles.icon} />
-                      <Text numberOfLines={1} style={styles.detailText}>
-                        {!isShared && totalPlayers ? `${totalPlayers} joueurs` : (sportName || 'Sport')}
-                      </Text>
-                    </View>
+                    <Image source={Images.running} style={styles.icon} />
+                    <Text numberOfLines={1} style={styles.detailText}>
+                      {reservationPlayersLabel}
+                    </Text>
+                  </View>
                 </View>
 
                 {/* Location Row */}
                 <View style={styles.detailRow}>
                   <Image source={Images.pin} style={[styles.icon, locationIconAccentStyle]} />
                   <Text numberOfLines={1} style={[styles.detailText, locationTextAccentStyle]}>
-                      {locationText || 'Lieu non défini'}
-                    </Text>
+                    {locationText || 'Lieu non défini'}
+                  </Text>
                 </View>
               </>
             ) : (
               <>
                 {/* Standard Event Layout */}
                 <View style={styles.detailRow}>
-                    <View style={styles.detailLeft}>
-                      <Image source={Images.pin} style={[styles.icon, locationIconAccentStyle]} />
-                      <Text numberOfLines={1} style={resolvedLocationTextStyle}>
-                            {locationText || 'Lieu non défini'}
-                          </Text>
-                    </View>
-                    <View style={styles.detailRightStandard}>
-                      <Image source={Images.running} style={styles.icon} />
-                      <Text numberOfLines={1} style={resolvedSportTextStyle}>{sportName}</Text>
-                    </View>
+                  <View style={styles.detailLeft}>
+                    <Image source={Images.pin} style={[styles.icon, locationIconAccentStyle]} />
+                    <Text numberOfLines={1} style={resolvedLocationTextStyle}>
+                      {locationText || 'Lieu non défini'}
+                    </Text>
                   </View>
+                  <View style={styles.detailRightStandard}>
+                    <Image source={Images.running} style={styles.icon} />
+                    <Text numberOfLines={1} style={resolvedSportTextStyle}>{sportName}</Text>
+                  </View>
+                </View>
               </>
             )}
           </View>
@@ -571,82 +671,7 @@ function EventCardNew({
         {/* CTA - Interactive (Captures touches) */}
         {!isShareMode ? (
           <View pointerEvents="auto" style={[styles.ctaContainer, { elevation: 999, zIndex: 999 }]}>
-          {onValidate && onRefuse ? (
-            <View style={{
-              elevation: 999, flexDirection: 'row', gap: 10, zIndex: 999,
-            }}
-            >
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => {
-                  console.log('Valider pressed for item:', item?.documentId);
-                  onValidate && onValidate(item);
-                }}
-                style={[styles.reservationButton, { backgroundColor: Colors.primary500, flex: 1 }]}
-              >
-                <Text style={styles.reservationButtonText}>Valider</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => {
-                  console.log('Refuser pressed for item:', item?.documentId);
-                  onRefuse && onRefuse(item);
-                }}
-                style={[
-                  styles.reservationButton,
-                  {
-                    backgroundColor: 'transparent',
-                    borderColor: Colors.error500,
-                    borderWidth: 1,
-                    flex: 1,
-                  },
-                ]}
-              >
-                <Text style={[styles.reservationButtonText, { color: Colors.error500 }]}>Refuser</Text>
-              </TouchableOpacity>
-            </View>
-          ) : isReservation ? (
-            alreadyJoined ? (
-              <View style={[Alignments.fullWidth]}>
-                <Tag
-                  text={t('eventList.info.alreadyJoined', 'Je participe !')}
-                  textStyle={Fonts.p1Bold}
-                />
-              </View>
-            ) : (
-              <View style={[Alignments.fullWidth, Spaces.gap[10]]}>
-                <Pressable
-                  disabled={!participationFlow?.canAct}
-                  onPress={() => onParticipate?.(item)}
-                  style={[
-                    styles.reservationButton,
-                    !participationFlow?.canAct ? styles.reservationButtonDisabled : null,
-                  ]}
-                >
-                  <Text style={styles.reservationButtonText}>
-                  {actionLabel || t('reservation.actions.participate') || 'Réserver'}
-                </Text>
-              </Pressable>
-              {!participationFlow?.canAct && participationFlow?.blockedReason ? (
-                <Text style={[Fonts.p4, Fonts.neutral300]}>
-                  {participationFlow.blockedReason}
-                </Text>
-              ) : null}
-            </View>
-            )
-          ) : (
-            <EventAnswerButtons
-              event={item}
-              hasAcceptedRequest={hasAcceptedRequest}
-              hasPendingRequest={hasPendingRequest}
-              onAbout={() => onPress?.(item)}
-              onDecline={() => onDecline?.(item)}
-              onJoin={() => onJoin?.(item)}
-              onLogin={onLogin}
-              onParticipate={() => onParticipate?.(item)}
-              participationFlow={participationFlow}
-            />
-          )}
+            {renderCtaContent()}
           </View>
         ) : null}
 
@@ -941,4 +966,3 @@ const styles = StyleSheet.create({
 });
 
 export default EventCardNew;
-

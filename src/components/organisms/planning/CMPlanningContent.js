@@ -32,6 +32,7 @@ import PlanningCalendarView from '@/components/organisms/planningCalendarView';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { getCMFacilities } from '@/services/facility/facilityService';
 import { getCMClubs, getCMPlanning } from '@/services/multisportClub/multisportClubService';
@@ -70,6 +71,7 @@ function CMPlanningContent({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const { sceneBottomInset } = useBottomDockLayout();
 
   const [selectedSectionId, setSelectedSectionId] = useState(/** @type {string | null} */ (null));
   const [selectedFacilityId, setSelectedFacilityId] = useState(/** @type {string | null} */ (null));
@@ -79,6 +81,7 @@ function CMPlanningContent({
   const [listAnchorY, setListAnchorY] = useState(0);
   const scrollRef = useRef(null);
   const pagePaddingStyle = insideScreenContainer ? null : Spaces.paddingHorizontal[24];
+  const scrollBottomPadding = Math.max(sceneBottomInset, 40);
 
   const planningRange = useMemo(
     () => getPlanningRange(currentDate, viewMode),
@@ -232,7 +235,11 @@ function CMPlanningContent({
 
   return (
     <ScrollView
-      contentContainerStyle={[Spaces.paddingVertical[24], Spaces.paddingBottom[40], Spaces.gap[24]]}
+      contentContainerStyle={[
+        Spaces.paddingVertical[24],
+        Spaces.gap[24],
+        { paddingBottom: scrollBottomPadding },
+      ]}
       ref={scrollRef}
       showsVerticalScrollIndicator={false}
     >

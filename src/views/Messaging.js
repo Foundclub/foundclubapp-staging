@@ -1,7 +1,12 @@
 import { FlashList } from '@shopify/flash-list';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Image, Platform, Text, TextInput, TouchableOpacity, View,
@@ -31,6 +36,7 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+import { markMessagingPerf } from '@/utils/performance/messagingPerformance';
 
 /**
  * Main messaging screen component
@@ -61,6 +67,7 @@ function Messaging({ navigation, route }) {
     error,
     fetchNextPage,
     hasNextPage,
+    isFetching,
     isLoading,
     refetch,
   } = useGetChats({
@@ -82,6 +89,9 @@ function Messaging({ navigation, route }) {
   const chatListBottomInset = canCreateConversation
     ? Math.max(sceneBottomInset, floatingButtonBottom + 84)
     : sceneBottomInset;
+  const listOpenLoggedRef = useRef(false);
+  const listPrimaryLoggedRef = useRef(false);
+  const listFirstRenderedLoggedRef = useRef(false);
   const allChats = useMemo(() => {
     const chats = chatsData?.pages ? chatsData?.pages?.reduce(
       (acc, page) => acc.concat(page.data || []),
@@ -118,6 +128,36 @@ function Messaging({ navigation, route }) {
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });
   }, [chatsData?.pages, userData]);
+
+  useEffect(() => {
+    if (listOpenLoggedRef.current) return;
+    listOpenLoggedRef.current = true;
+    markMessagingPerf('messaging_list_open_started', {
+      hasUser: Boolean(userData?.documentId),
+    });
+  }, [userData?.documentId]);
+
+  useEffect(() => {
+    if (!chatsData?.pages || isLoading || listPrimaryLoggedRef.current) return;
+    listPrimaryLoggedRef.current = true;
+    markMessagingPerf('messaging_list_primary_query_completed', {
+      fromCache: !isFetching,
+      resultCount: allChats.length,
+    });
+  }, [allChats.length, chatsData?.pages, isFetching, isLoading]);
+
+  useEffect(() => {
+    if (!chatsData?.pages || isLoading || listFirstRenderedLoggedRef.current) return undefined;
+
+    const frameId = requestAnimationFrame(() => {
+      listFirstRenderedLoggedRef.current = true;
+      markMessagingPerf('messaging_list_first_results_rendered', {
+        resultCount: allChats.length,
+      });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [allChats.length, chatsData?.pages, isLoading]);
 
   /**
    * Handle chat press event
@@ -692,6 +732,7 @@ function Messaging({ navigation, route }) {
                   <FlashList
                     contentContainerStyle={{ paddingBottom: chatListBottomInset }}
                     data={filteredChats}
+                    estimatedItemSize={92}
                     keyExtractor={(item) => item.documentId}
                     ListEmptyComponent={renderEmptyList}
                     onEndReached={() => hasNextPage && fetchNextPage()}
@@ -713,12 +754,13 @@ function Messaging({ navigation, route }) {
                 <FlashList
                   contentContainerStyle={{ paddingBottom: chatListBottomInset }}
                   data={filteredChats}
+                  estimatedItemSize={92}
                   keyExtractor={(item) => item.documentId}
                   ListEmptyComponent={renderEmptyList}
                   onEndReached={() => hasNextPage && fetchNextPage()}
                   onEndReachedThreshold={0.5}
                   onRefresh={refetch}
-                  refreshing={false}
+                  refreshing={isFetching && !isLoading}
                   renderItem={renderChat}
                   showsVerticalScrollIndicator={false}
                 />

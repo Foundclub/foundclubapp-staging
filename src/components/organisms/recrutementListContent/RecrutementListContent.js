@@ -15,6 +15,7 @@ import {
 } from '@/domains/search/recruitmentFlow';
 import useTheme from '@/theme/themeContext';
 
+import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 // Components
@@ -270,6 +271,7 @@ function RecrutementListContent({
   const navigation = useNavigation();
   const nav = /** @type {any} */ (navigation);
   const { userData } = useAuth();
+  const isAuthenticated = Boolean(userData?.documentId);
   const [{ recruitmentAdFilters }] = useAppContext();
   const recruitmentMode = getRecruitmentRoleMode(userData);
   const isCoachOrAdmin = recruitmentMode === 'staff';
@@ -306,11 +308,17 @@ function RecrutementListContent({
   // Handle external tab switching (e.g. from creation wizard)
   useEffect(() => {
     if (!screenActive) return;
+    if (!isAuthenticated) {
+      if (activeTab !== 'annonces') {
+        setActiveTab('annonces');
+      }
+      return;
+    }
     const nextTab = sanitizeRecruitmentTabForRole(initialTab, userData);
     setActiveTab((previousTab) => (
       previousTab === nextTab ? previousTab : nextTab
     ));
-  }, [initialTab, screenActive, userData]);
+  }, [activeTab, initialTab, isAuthenticated, screenActive, userData]);
 
   // State for pagination (ads)
   const [adsPage, setAdsPage] = useState(1);
@@ -421,6 +429,10 @@ function RecrutementListContent({
 
   // Fetch my applications (for players)
   const fetchMyApplications = useCallback(async (isRefresh = false) => {
+    if (!userData?.documentId) {
+      setMyApplications([]);
+      return;
+    }
     if (!isRefresh) setLoading(true);
     try {
       const data = await getMyApplications(userData);
@@ -433,6 +445,10 @@ function RecrutementListContent({
   }, [userData]);
 
   const fetchMyApplicationsSilently = useCallback(async () => {
+    if (!userData?.documentId) {
+      setMyApplications([]);
+      return;
+    }
     try {
       const data = await getMyApplications(userData);
       setMyApplications(data || []);
@@ -545,9 +561,22 @@ function RecrutementListContent({
     nav.navigate(RouteNames.RecruitmentAdDetails, { ad, isOwner: isOwnerContext });
   }, [nav]);
 
+  const openRecruitmentAuthFlow = useCallback((source, ad) => {
+    openPublicAuthFlow(nav, {
+      adId: getRecruitmentAdKey(ad),
+      origin: RouteNames.RecruitmentAdDetails,
+      source,
+    });
+  }, [nav]);
+
   const handleAdApply = useCallback(async (/** @type {RecruitmentAdItem} */ ad) => {
     const adId = getRecruitmentAdKey(ad);
     if (!adId) return;
+
+    if (!isAuthenticated) {
+      openRecruitmentAuthFlow('recruitment-apply-login', ad);
+      return;
+    }
 
     if (!ad?.isActive) {
       Alert.alert('Candidature', 'Cette annonce n est plus active.');
@@ -615,6 +644,8 @@ function RecrutementListContent({
     fetchAdsForPlayer,
     fetchMyApplicationsSilently,
     handleAdCardPress,
+    isAuthenticated,
+    openRecruitmentAuthFlow,
     userData,
   ]);
 
@@ -1048,7 +1079,7 @@ function RecrutementListContent({
           </TouchableOpacity>
         </View>
       </View>
-      {!hasProfileSignals ? (
+      {isAuthenticated && !hasProfileSignals ? (
         <TouchableOpacity
           onPress={() => nav.navigate(RouteNames.ProfileStack, {
             screen: RouteNames.Profile,
@@ -1161,25 +1192,29 @@ function RecrutementListContent({
   );
 
   // Render Player Tabs
-  const renderPlayerTabs = () => (
-    <View style={[
-      Alignments.row,
-      Alignments.justifyCenter,
-      Spaces.marginBottom[20],
-      Spaces.gap[8],
-      {
-        backgroundColor: recruitmentSurfaceSoft,
-        borderColor: recruitmentBorderSoft,
-        borderRadius: 16,
-        borderWidth: 1,
-        padding: 5,
-      },
-    ]}
-    >
-      {renderSegmentedTab('annonces', 'Annonces')}
-      {renderSegmentedTab('candidatures', 'Mes candidatures')}
-    </View>
-  );
+  const renderPlayerTabs = () => {
+    if (!isAuthenticated) return null;
+
+    return (
+      <View style={[
+        Alignments.row,
+        Alignments.justifyCenter,
+        Spaces.marginBottom[20],
+        Spaces.gap[8],
+        {
+          backgroundColor: recruitmentSurfaceSoft,
+          borderColor: recruitmentBorderSoft,
+          borderRadius: 16,
+          borderWidth: 1,
+          padding: 5,
+        },
+      ]}
+      >
+        {renderSegmentedTab('annonces', 'Annonces')}
+        {renderSegmentedTab('candidatures', 'Mes candidatures')}
+      </View>
+    );
+  };
 
   // Render Applications Content
   const renderApplicationsContent = () => (

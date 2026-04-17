@@ -59,7 +59,8 @@ export const getTournamentRosterSummary = (team, tournamentConfig = {}) => {
     ? Number(tournamentConfig.maxRosterSize)
     : null;
   const totalCount = rosterMembers.length;
-  const meetsMinRoster = !minRosterSize || totalCount >= minRosterSize;
+  const shouldApplyMinRoster = normalizeTournamentText(team?.sourceType) !== 'club_team';
+  const meetsMinRoster = !shouldApplyMinRoster || !minRosterSize || totalCount >= minRosterSize;
   const meetsMaxRoster = !maxRosterSize || totalCount <= maxRosterSize;
 
   return {
@@ -85,13 +86,13 @@ export const isTournamentTeamNonCompliant = (team, tournamentConfig = {}) => {
 export const getTournamentTeamStatusMeta = (status, colors) => {
   const normalized = normalizeTournamentText(status);
   if (normalized === 'accepted') {
-    return { label: 'Validee', tone: colors.success500 };
+    return { label: 'Validée', tone: colors.success500 };
   }
   if (normalized === 'declined') {
-    return { label: 'Refusee', tone: colors.error500 };
+    return { label: 'Refusée', tone: colors.error500 };
   }
   if (normalized === 'archived') {
-    return { label: 'Archivee', tone: colors.neutral300 };
+    return { label: 'Archivée', tone: colors.neutral300 };
   }
   return { label: 'En attente', tone: colors.warning500 };
 };

@@ -379,7 +379,9 @@ export const NOTIFICATION_TYPES = {
   EVENT_CREATED: 'eventCreated',
   EVENT_LINEUP_PUBLISH_REMINDER: 'eventLineupPublishReminder',
   EVENT_PARTICIPANT_REMINDER: 'eventParticipantReminder',
+  EVENT_PUBLISHED: 'eventPublished',
   EVENT_REMINDER: 'eventReminder',
+  EVENT_RSVP_STATUS_CHANGED: 'eventRsvpStatusChanged',
   EVENT_TEAM_INVITED: 'eventTeamInvited',
   EVENT_UPDATED: 'eventUpdated',
   FEATURED_APPROVED: 'featuredApproved',
@@ -392,6 +394,13 @@ export const NOTIFICATION_TYPES = {
   RESERVATION_PLAYER_JOINED: 'reservationPlayerJoined',
   RESERVATION_SOS_ALERT: 'reservationSosAlert',
   SEARCH_ALERT_MATCH: 'searchAlertMatch',
+
+  // Licences
+  LICENSE_INSTALLMENT_OVERDUE: 'licenseInstallmentOverdue',
+  LICENSE_PAYMENT_CONFIRMED: 'licensePaymentConfirmed',
+  LICENSE_PAYMENT_DUE: 'licensePaymentDue',
+  LICENSE_PAYMENT_REJECTED: 'licensePaymentRejected',
+  LICENSE_PAYMENT_REMINDER: 'licensePaymentReminder',
 
   // Messages
   NEW_LEAGUE_MATCH_MESSAGE: 'newLeagueMatchMessage',

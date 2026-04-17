@@ -1119,6 +1119,26 @@ function HomeHubContent({ auth, navigation, route }) {
     });
   }, [navigation]);
 
+  const handleOpenClubLicenses = useCallback(() => {
+    if (!clubId) {
+      showBanner({
+        body: t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour cette action.'),
+        title: t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
+        tone: 'error',
+      });
+      return;
+    }
+
+    navigation.navigate(RouteNames.ClubStack, {
+      params: { clubId },
+      screen: RouteNames.ClubLicenses,
+    });
+  }, [clubId, navigation, showBanner, t]);
+
+  const handleOpenMyLicense = useCallback(() => {
+    navigation.navigate(RouteNames.MyLicense);
+  }, [navigation]);
+
   const handleOpenRequestsHub = useCallback((initialFilter = 'all') => {
     const hasRequestsContext = Boolean(clubId || cmId || trainedTeamIds.length);
     if (!hasRequestsContext) {
@@ -1355,6 +1375,27 @@ function HomeHubContent({ auth, navigation, route }) {
             },
           ),
         },
+        {
+          accentColor: Colors.primary500,
+          icon: 'euroCircle',
+          key: 'manage-licenses',
+          onPress: handleOpenClubLicenses,
+          subtitle: t('homeHub.cards.manage.licenses.subtitle', 'Suivez les paiements, relances et echeances des cotisations.'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.manage.licenses.title', 'Cotisations'),
+          tutorial: makeTutorial(
+            'manageLicenses',
+            7,
+            'Cotisations',
+            'Pilotez les cotisations et relances depuis un tableau dedie.',
+            {
+              nextAction: 'scrollDown',
+              nextLabel: scrollDownLabel,
+              nextTargetStepId: 'homehub-searchEvents',
+              onNext: scrollToSearchSection,
+            },
+          ),
+        },
       ];
     }
 
@@ -1437,6 +1478,27 @@ function HomeHubContent({ auth, navigation, route }) {
             },
           ),
         },
+        {
+          accentColor: Colors.primary500,
+          icon: 'euroCircle',
+          key: 'manage-licenses',
+          onPress: handleOpenClubLicenses,
+          subtitle: t('homeHub.cards.manage.licensesCoach.subtitle', 'Suivez les statuts cotisation de vos joueurs et relancez si besoin.'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.manage.licenses.title', 'Cotisations'),
+          tutorial: makeTutorial(
+            'manageLicenses',
+            7,
+            'Cotisations',
+            'Consultez les statuts de cotisation de vos equipes.',
+            {
+              nextAction: 'scrollDown',
+              nextLabel: scrollDownLabel,
+              nextTargetStepId: 'homehub-searchEvents',
+              onNext: scrollToSearchSection,
+            },
+          ),
+        },
       ];
     }
 
@@ -1445,6 +1507,7 @@ function HomeHubContent({ auth, navigation, route }) {
     Colors.primary500,
     handleAddEvent,
     handleAddRecruitmentAd,
+    handleOpenClubLicenses,
     handleOpenMyRecruitmentAds,
     handleOpenManageClub,
     handleOpenRequestsHub,
@@ -1652,6 +1715,15 @@ function HomeHubContent({ auth, navigation, route }) {
     },
     {
       accentColor: Colors.primary500,
+      icon: 'euroCircle',
+      key: 'quick-license',
+      onPress: handleOpenMyLicense,
+      subtitle: t('homeHub.cards.quick.license.subtitle', 'Consulte ton statut, le reste a payer et les moyens de paiement.'),
+      title: t('homeHub.cards.quick.license.title', 'Ma cotisation'),
+      tutorial: makeTutorial('quickLicense', 42, 'Ma cotisation', 'Suivez votre cotisation et vos paiements depuis l accueil.'),
+    },
+    {
+      accentColor: Colors.primary500,
       icon: 'envelope',
       key: 'quick-chat',
       onPress: handleOpenMessaging,
@@ -1659,7 +1731,7 @@ function HomeHubContent({ auth, navigation, route }) {
       title: t('homeHub.cards.quick.chat.title'),
       tutorial: makeTutorial(
         'quickChat',
-        42,
+        43,
         'Messagerie',
         'Ouvrez votre messagerie et suivez vos conversations.',
         {
@@ -1672,6 +1744,7 @@ function HomeHubContent({ auth, navigation, route }) {
     },
   ]), [
     Colors.primary500,
+    handleOpenMyLicense,
     handleOpenMessaging,
     handleOpenMyTeams,
     handleOpenPlanning,

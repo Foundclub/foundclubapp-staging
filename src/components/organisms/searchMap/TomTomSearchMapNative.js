@@ -76,6 +76,35 @@ const logDevDiagnostic = (message, payload) => {
   console.log(`[search-map-tomtom] ${message}`, payload);
 };
 
+const buildStableSignature = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => buildStableSignature(item));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort()
+      .reduce((acc, key) => {
+        const nextValue = buildStableSignature(value[key]);
+        if (nextValue !== undefined) {
+          acc[key] = nextValue;
+        }
+        return acc;
+      }, {});
+  }
+
+  return value;
+};
+
+const toStableJson = (value) => JSON.stringify(buildStableSignature(value));
+const buildRenderStatsSummary = (value) => ({
+  clusterCount: Number(value?.clusterCount || 0),
+  dataCount: Number(value?.dataCount || 0),
+  fallbackActive: Boolean(value?.fallbackActive),
+  markerCount: Number(value?.markerCount || 0),
+  renderableCount: Number(value?.renderableCount || 0),
+});
+
 const areRegionsEquivalent = (left, right) => {
   if (!left && !right) return true;
   if (!left || !right) return false;
@@ -257,6 +286,9 @@ function TomTomSearchMapNative({
   const { clearSafeTimer, setSafeTimeout } = useSafeTimers();
   const webViewRef = useRef(/** @type {import('react-native-webview').WebView | null} */ (null));
   const mapLoadStartedAtRef = useRef(Date.now());
+  const reportedRenderStatsSignatureRef = useRef('');
+  const providerRenderStatsSignatureRef = useRef('');
+  const mismatchSignatureRef = useRef('');
   const [focusMode, setFocusMode] = useState(
     /** @type {'results' | 'selected' | 'user' | 'region'} */ ('results'),
   );
@@ -301,6 +333,14 @@ function TomTomSearchMapNative({
   );
   const renderItems = renderModel.entries;
   const renderStats = renderModel.stats;
+  const renderStatsSignature = useMemo(
+    () => toStableJson(renderStats || null),
+    [renderStats],
+  );
+  const sharedRenderStatsSignature = useMemo(
+    () => toStableJson(buildRenderStatsSummary(renderStats)),
+    [renderStats],
+  );
   const visibleMarkerCount = Math.max(
     0,
     Number(renderStats?.markerCount || 0) + Number(renderStats?.clusterCount || 0),
@@ -408,31 +448,28 @@ function TomTomSearchMapNative({
       return;
     }
 
-    const sharedSignature = JSON.stringify({
-      clusterCount: renderStats?.clusterCount || 0,
-      dataCount: renderStats?.dataCount || 0,
-      fallbackActive: Boolean(renderStats?.fallbackActive),
-      markerCount: renderStats?.markerCount || 0,
-      renderableCount: renderStats?.renderableCount || 0,
-    });
-    const providerSignature = JSON.stringify({
-      clusterCount: providerRenderStats?.clusterCount || 0,
-      dataCount: providerRenderStats?.dataCount || 0,
-      fallbackActive: Boolean(providerRenderStats?.fallbackActive),
-      markerCount: providerRenderStats?.markerCount || 0,
-      renderableCount: providerRenderStats?.renderableCount || 0,
-    });
+    const providerSignature = toStableJson(buildRenderStatsSummary(providerRenderStats));
 
-    if (sharedSignature !== providerSignature) {
+    if (sharedRenderStatsSignature === providerSignature) {
+      mismatchSignatureRef.current = '';
+      return;
+    }
+
+    const nextMismatchSignature = `${sharedRenderStatsSignature}::${providerSignature}`;
+    if (mismatchSignatureRef.current !== nextMismatchSignature) {
+      mismatchSignatureRef.current = nextMismatchSignature;
       logDevDiagnostic('MAP_RENDER_STATS provider mismatch', {
         provider: providerRenderStats,
         shared: renderStats,
       });
     }
-  }, [providerRenderStats, renderStats]);
+  }, [providerRenderStats, renderStats, sharedRenderStatsSignature]);
 
   useEffect(() => {
     mapLoadStartedAtRef.current = Date.now();
+    mismatchSignatureRef.current = '';
+    providerRenderStatsSignatureRef.current = '';
+    reportedRenderStatsSignatureRef.current = '';
     setWebViewLoaded(false);
     setDiagnosticTrail([]);
     setMapStatus(tomTomApiKey ? 'loading' : 'error');
@@ -533,8 +570,13 @@ function TomTomSearchMapNative({
   }, [mapId, mapStatus, runtimeState, tomTomApiKey, webViewLoaded]);
 
   useEffect(() => {
+    if (reportedRenderStatsSignatureRef.current === renderStatsSignature) {
+      return;
+    }
+
+    reportedRenderStatsSignatureRef.current = renderStatsSignature;
     onRenderStats?.(renderStats || null);
-  }, [onRenderStats, renderStats]);
+  }, [onRenderStats, renderStats, renderStatsSignature]);
 
   useEffect(() => {
     if (mapStatus !== 'loading' || !tomTomApiKey) {
@@ -785,8 +827,15 @@ function TomTomSearchMapNative({
         }
         break;
       case SEARCH_MAP_BRIDGE_TYPES.MAP_RENDER_STATS:
-        setProviderRenderStats(bridgeMessage.payload || null);
+      {
+        const nextRenderStats = bridgeMessage.payload || null;
+        const nextSignature = toStableJson(nextRenderStats);
+        if (providerRenderStatsSignatureRef.current !== nextSignature) {
+          providerRenderStatsSignatureRef.current = nextSignature;
+          setProviderRenderStats(nextRenderStats);
+        }
         break;
+      }
       case SEARCH_MAP_BRIDGE_TYPES.MARKER_OPEN:
         if (bridgeMessage.payload?.itemId) {
           handleMarkerOpen(String(bridgeMessage.payload.itemId));

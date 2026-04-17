@@ -27,7 +27,13 @@ export const updateMatch = async (matchId, data) => {
 export const createLeagueProposal = async (matchId, payload) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
   const response = await client.post(`/league-matches/${normalizedMatchId}/proposals`, payload);
-  return response.data?.data || response.data;
+  if (response.data?.data) {
+    return {
+      match: response.data.data,
+      proposalMessageId: response.data?.proposalMessageId || null,
+    };
+  }
+  return response.data;
 };
 
 /**
@@ -241,9 +247,16 @@ export const getMatchHistory = async (teamId, limit = 10) => {
         : 'loss';
     }
 
+    let eloChange = 0;
+    if (result === 'win') {
+      eloChange = 25;
+    } else if (result === 'loss') {
+      eloChange = -25;
+    }
+
     return {
       date: match.date,
-      eloChange: result === 'win' ? 25 : result === 'loss' ? -25 : 0, // Approximation, real value in lifecycle
+      eloChange, // Approximation, real value in lifecycle
       id: getEntityDocumentId(match),
       opponent,
       result,

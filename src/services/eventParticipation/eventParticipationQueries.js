@@ -6,6 +6,8 @@ import {
   getEventParticipations,
 } from './eventParticipationService';
 
+const EVENT_PARTICIPATIONS_STALE_MS = 30_000;
+
 /**
  * React Query hook to fetch event participation requests
  * @param {string} eventId
@@ -31,5 +33,7 @@ export const useGetEventParticipations = (eventId, userId, params, options) => u
     { ...params, page: pageParam },
   ),
   queryKey: buildNormalizedQueryKey(['eventParticipations', eventId, userId || 'all'], params),
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? EVENT_PARTICIPATIONS_STALE_MS,
   ...options,
 });

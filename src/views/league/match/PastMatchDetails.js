@@ -25,6 +25,7 @@ import LeagueCard from '@/components/atoms/league/LeagueCard';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
+import { getProposalLocationLabel } from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -46,13 +47,21 @@ const normalizeComparableText = (value) => String(value || '')
  * @param {LeagueMatch | null} match
  * @returns {string}
  */
-const resolveVenueLabel = (match) => match?.venue || match?.proposed_venue || 'Lieu \u00E0 d\u00E9finir';
+const resolveVenueLabel = (match) => (
+  getProposalLocationLabel(match?.venue)
+    || getProposalLocationLabel(match?.proposed_venue)
+    || 'Lieu \u00E0 d\u00E9finir'
+);
 
 /**
  * @param {LeagueMatch | null} match
  * @returns {string}
  */
-const resolveAddressLabel = (match) => match?.location?.address || match?.address || '';
+const resolveAddressLabel = (match) => (
+  getProposalLocationLabel(match?.location?.address)
+    || getProposalLocationLabel(match?.address)
+    || ''
+);
 
 /**
  * @returns {import('react').ReactElement}

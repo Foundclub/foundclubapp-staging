@@ -372,7 +372,10 @@ function ReservationListContent({
 
   const handleSearchField = useCallback((/** @type {string} */ q) => {
     appDispatch({
-      payload: Object.assign(reservationFilters || {}, { q }),
+      payload: {
+        ...(reservationFilters || {}),
+        q,
+      },
       type: 'SET_RESERVATION_FILTERS',
     });
   }, [appDispatch, reservationFilters]);
@@ -381,7 +384,10 @@ function ReservationListContent({
     setSelectedDate(date);
     const start = startOfDay(date).toISOString();
     appDispatch({
-      payload: Object.assign(reservationFilters || {}, { startDateAfter: start }),
+      payload: {
+        ...(reservationFilters || {}),
+        startDateAfter: start,
+      },
       type: 'SET_RESERVATION_FILTERS',
     });
   }, [appDispatch, reservationFilters]);

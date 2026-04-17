@@ -485,7 +485,9 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.EVENT_CREATED:
     case NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER:
     case NOTIFICATION_TYPES.EVENT_PARTICIPANT_REMINDER:
+    case NOTIFICATION_TYPES.EVENT_PUBLISHED:
     case NOTIFICATION_TYPES.EVENT_REMINDER:
+    case NOTIFICATION_TYPES.EVENT_RSVP_STATUS_CHANGED:
     case NOTIFICATION_TYPES.EVENT_TEAM_INVITED:
     case NOTIFICATION_TYPES.EVENT_UPDATED:
     case NOTIFICATION_TYPES.FEATURED_APPROVED:
@@ -529,22 +531,17 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     }
     case NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND:
     case NOTIFICATION_TYPES.MATCH_FOUND:
-      return payload.matchId
-        ? {
+      return {
+        params: {
           params: {
-            matchId: String(payload.matchId),
+            matchId: payload.matchId ? String(payload.matchId) : undefined,
+            openLeagueProposal: true,
+            openLeagueProposalToken: String(payload.notificationId || payload.dedupeKey || payload.matchId || 'match-found'),
           },
-          route: RouteNames.LeagueMatchDetails,
-        }
-        : {
-          params: {
-            params: {
-              forceLeagueActionPrompt: true,
-            },
-            screen: RouteNames.LeagueDashboard,
-          },
-          route: RouteNames.LeagueHomeTab,
-        };
+          screen: RouteNames.LeagueMatchTab,
+        },
+        route: RouteNames.LeagueHomeTab,
+      };
     case NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED:
       return payload.matchId
         ? {
@@ -566,11 +563,11 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       return {
         params: {
           params: {
-            forceLeagueActionPrompt: true,
-            forceLeagueActionPromptToken: String(payload.notificationId || payload.dedupeKey || payload.matchId || 'proposal'),
             matchId: payload.matchId ? String(payload.matchId) : undefined,
+            openLeagueProposal: true,
+            openLeagueProposalToken: String(payload.notificationId || payload.dedupeKey || payload.matchId || 'proposal'),
           },
-          screen: RouteNames.LeagueDashboard,
+          screen: RouteNames.LeagueMatchTab,
         },
         route: RouteNames.LeagueHomeTab,
       };
@@ -613,6 +610,15 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           route: RouteNames.LeagueMatchDetails,
         }
         : { params: {}, route: RouteNames.LeagueMatchTab };
+    case NOTIFICATION_TYPES.LICENSE_INSTALLMENT_OVERDUE:
+    case NOTIFICATION_TYPES.LICENSE_PAYMENT_CONFIRMED:
+    case NOTIFICATION_TYPES.LICENSE_PAYMENT_DUE:
+    case NOTIFICATION_TYPES.LICENSE_PAYMENT_REJECTED:
+    case NOTIFICATION_TYPES.LICENSE_PAYMENT_REMINDER:
+      return {
+        params: payload.assignmentId ? { assignmentId: String(payload.assignmentId) } : {},
+        route: RouteNames.MyLicense,
+      };
     case NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE:

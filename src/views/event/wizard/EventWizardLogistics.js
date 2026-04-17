@@ -1,3 +1,5 @@
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,6 +13,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
 import DayPicker from '@/components/molecules/dayPicker/DayPicker';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -98,6 +101,65 @@ const buildDefaultRecurrenceEndDate = (startDate, frequency, interval) => {
   return fallbackEnd;
 };
 
+const buildDateKey = (value) => format(new Date(value), 'yyyy-MM-dd');
+
+const buildDayRange = (startDate, endDate) => {
+  const days = [];
+  const cursor = new Date(startDate);
+  cursor.setHours(0, 0, 0, 0);
+  const boundary = new Date(endDate);
+  boundary.setHours(0, 0, 0, 0);
+
+  while (cursor <= boundary) {
+    days.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return days;
+};
+
+const buildDayStartTime = (dayDate, sourceTime) => {
+  const date = new Date(dayDate);
+  date.setHours(sourceTime.getHours(), sourceTime.getMinutes(), 0, 0);
+  return date;
+};
+
+const normalizeInitialSchedule = (rawSchedule = []) => rawSchedule.map((entry) => ({
+  date: entry?.date ? new Date(entry.date) : new Date(),
+  endTime: entry?.endTime ? new Date(entry.endTime) : new Date(),
+  facilityId: entry?.facilityId || entry?.facility?.documentId || entry?.facility || null,
+  hasCustomTime: Boolean(entry?.startTime && entry?.endTime),
+  hasLocationOverride: Boolean(entry?.facilityId || entry?.facility || entry?.location),
+  isActive: entry?.isActive !== false,
+  location: entry?.location || null,
+  startTime: entry?.startTime ? new Date(entry.startTime) : new Date(),
+}));
+
+const buildTournamentDayState = ({
+  date,
+  defaultEndTime,
+  defaultStartTime,
+  previousDay,
+}) => {
+  const startTime = previousDay?.hasCustomTime
+    ? new Date(previousDay.startTime)
+    : buildDayStartTime(date, defaultStartTime);
+  const inheritedEnd = previousDay?.hasCustomTime
+    ? new Date(previousDay.endTime)
+    : buildDayStartTime(date, defaultEndTime);
+
+  return {
+    date,
+    endTime: ensureEndAfterStart(startTime, inheritedEnd),
+    facilityId: previousDay?.facilityId || null,
+    hasCustomTime: Boolean(previousDay?.hasCustomTime),
+    hasLocationOverride: Boolean(previousDay?.hasLocationOverride),
+    isActive: previousDay?.isActive !== false,
+    location: previousDay?.location || null,
+    startTime,
+  };
+};
+
 /**
  *
  * @param root0
@@ -149,6 +211,26 @@ function EventWizardLogistics({ navigation }) {
     state.recurrenceEndDate ? new Date(state.recurrenceEndDate) : null,
   );
   const [isMultiDayTournament, setIsMultiDayTournament] = useState(Boolean(state.isMultiDayTournament));
+  const [tournamentStartDate, setTournamentStartDate] = useState(
+    state.stageStartDate ? new Date(state.stageStartDate) : new Date(date),
+  );
+  const [tournamentEndDate, setTournamentEndDate] = useState(
+    state.stageEndDate ? new Date(state.stageEndDate) : new Date(date),
+  );
+  const [tournamentDefaultStartTime, setTournamentDefaultStartTime] = useState(
+    state.stageDefaultStartTime ? new Date(state.stageDefaultStartTime) : new Date(startTime),
+  );
+  const [tournamentDefaultEndTime, setTournamentDefaultEndTime] = useState(
+    state.stageDefaultEndTime
+      ? ensureEndAfterStart(
+        state.stageDefaultStartTime ? new Date(state.stageDefaultStartTime) : new Date(startTime),
+        new Date(state.stageDefaultEndTime),
+      )
+      : new Date(endTime),
+  );
+  const [tournamentDays, setTournamentDays] = useState(
+    () => normalizeInitialSchedule(state.stageSchedule || []),
+  );
   const [reservationMode, setReservationMode] = useState(state.reservationMode || 'FULL_GROUP');
   const [pricePerPersonText, setPricePerPersonText] = useState(toNumberInputText(state.pricePerPerson));
   const projectedWizardState = useMemo(() => ({
@@ -255,6 +337,46 @@ function EventWizardLogistics({ navigation }) {
     });
   }, [date, isRecurrent, recurrenceFrequency]);
 
+  useEffect(() => {
+    if (!isTournament || !isMultiDayTournament) return;
+    if (tournamentEndDate < tournamentStartDate) {
+      setTournamentEndDate(new Date(tournamentStartDate));
+    }
+  }, [isMultiDayTournament, isTournament, tournamentEndDate, tournamentStartDate]);
+
+  useEffect(() => {
+    if (!isTournament || !isMultiDayTournament) return;
+    setTournamentDefaultEndTime((currentEnd) => ensureEndAfterStart(
+      tournamentDefaultStartTime,
+      currentEnd,
+    ));
+  }, [isMultiDayTournament, isTournament, tournamentDefaultStartTime]);
+
+  useEffect(() => {
+    if (!isTournament || !isMultiDayTournament) return;
+
+    const days = buildDayRange(tournamentStartDate, tournamentEndDate);
+    setTournamentDays((currentDays) => {
+      const previousByDate = new Map(
+        currentDays.map((day) => [buildDateKey(day.date), day]),
+      );
+
+      return days.map((dayDate) => buildTournamentDayState({
+        date: dayDate,
+        defaultEndTime: tournamentDefaultEndTime,
+        defaultStartTime: tournamentDefaultStartTime,
+        previousDay: previousByDate.get(buildDateKey(dayDate)),
+      }));
+    });
+  }, [
+    isMultiDayTournament,
+    isTournament,
+    tournamentDefaultEndTime,
+    tournamentDefaultStartTime,
+    tournamentEndDate,
+    tournamentStartDate,
+  ]);
+
   const handleStartTimeChange = (nextStartTime) => {
     setStartTime(nextStartTime);
     setEndTime(buildAutomaticEndTime(nextStartTime));
@@ -264,12 +386,165 @@ function EventWizardLogistics({ navigation }) {
     setEndTime(ensureEndAfterStart(startTime, nextEndTime));
   };
 
+  const handleTournamentToggle = (value) => {
+    setIsMultiDayTournament(value);
+
+    if (value) {
+      const nextTournamentStartDate = new Date(date);
+      const nextTournamentEndDate = tournamentEndDate && tournamentEndDate >= date
+        ? new Date(tournamentEndDate)
+        : new Date(date);
+      const nextDefaultStartTime = new Date(startTime);
+      const nextDefaultEndTime = ensureEndAfterStart(startTime, endTime);
+
+      setIsRecurrent(false);
+      setTournamentStartDate(nextTournamentStartDate);
+      setTournamentEndDate(nextTournamentEndDate);
+      setTournamentDefaultStartTime(nextDefaultStartTime);
+      setTournamentDefaultEndTime(nextDefaultEndTime);
+      setTournamentDays((currentDays) => {
+        const previousByDate = new Map(
+          currentDays.map((day) => [buildDateKey(day.date), day]),
+        );
+
+        return buildDayRange(nextTournamentStartDate, nextTournamentEndDate)
+          .map((dayDate) => buildTournamentDayState({
+            date: dayDate,
+            defaultEndTime: nextDefaultEndTime,
+            defaultStartTime: nextDefaultStartTime,
+            previousDay: previousByDate.get(buildDateKey(dayDate)),
+          }));
+      });
+      return;
+    }
+
+    setDate(new Date(tournamentStartDate));
+    setStartTime(new Date(tournamentDefaultStartTime));
+    setEndTime(ensureEndAfterStart(tournamentDefaultStartTime, tournamentDefaultEndTime));
+  };
+
+  const handleTournamentDefaultStartTimeChange = (nextStartTime) => {
+    setTournamentDefaultStartTime(nextStartTime);
+    setTournamentDefaultEndTime((currentEndTime) => ensureEndAfterStart(nextStartTime, currentEndTime));
+  };
+
+  const handleTournamentDefaultEndTimeChange = (nextEndTime) => {
+    setTournamentDefaultEndTime(ensureEndAfterStart(tournamentDefaultStartTime, nextEndTime));
+  };
+
+  const handleToggleTournamentDay = (dateKey, isActive) => {
+    setTournamentDays((currentDays) => currentDays.map((day) => (
+      buildDateKey(day.date) === dateKey
+        ? { ...day, isActive }
+        : day
+    )));
+  };
+
+  const handleTournamentTimeModeChange = (dateKey, hasCustomTime) => {
+    setTournamentDays((currentDays) => currentDays.map((day) => {
+      if (buildDateKey(day.date) !== dateKey) return day;
+      if (!hasCustomTime) {
+        return {
+          ...day,
+          endTime: buildDayStartTime(day.date, tournamentDefaultEndTime),
+          hasCustomTime: false,
+          startTime: buildDayStartTime(day.date, tournamentDefaultStartTime),
+        };
+      }
+      return { ...day, hasCustomTime: true };
+    }));
+  };
+
+  const handleUpdateTournamentDay = (dateKey, partialUpdate) => {
+    setTournamentDays((currentDays) => currentDays.map((day) => (
+      buildDateKey(day.date) === dateKey
+        ? { ...day, ...partialUpdate }
+        : day
+    )));
+  };
+
+  const applyTournamentDefaultsToAllDays = () => {
+    setTournamentDays((currentDays) => currentDays.map((day) => ({
+      ...day,
+      endTime: buildDayStartTime(day.date, tournamentDefaultEndTime),
+      hasCustomTime: false,
+      startTime: buildDayStartTime(day.date, tournamentDefaultStartTime),
+    })));
+  };
+
+  const activeTournamentDays = useMemo(
+    () => tournamentDays.filter((day) => day.isActive !== false),
+    [tournamentDays],
+  );
+
   const handleNext = () => {
     const fullStartDate = new Date(date);
     fullStartDate.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
 
     const fullEndDate = new Date(date);
     fullEndDate.setHours(endTime.getHours(), endTime.getMinutes(), 0, 0);
+
+    if (isTournament && isMultiDayTournament) {
+      if (!activeTournamentDays.length) {
+        Alert.alert(
+          t('common.error'),
+          t(
+            'eventWizard.tournamentProgram.errors.noActiveDays',
+            'Active au moins une journee de tournoi pour continuer.',
+          ),
+        );
+        return;
+      }
+
+      const invalidDay = activeTournamentDays.find((day) => day.endTime <= day.startTime);
+      if (invalidDay) {
+        Alert.alert(t('common.error'), t('eventWizard.errors.invalidTimeRange'));
+        return;
+      }
+
+      const firstActiveDay = [...activeTournamentDays]
+        .sort((left, right) => left.date - right.date)[0];
+
+      if (firstActiveDay.startTime.getTime() <= Date.now()) {
+        Alert.alert(t('common.error'), t('eventWizard.errors.datePast'));
+        return;
+      }
+
+      dispatch({
+        payload: {
+          date: new Date(firstActiveDay.startTime),
+          endTime: new Date(firstActiveDay.endTime),
+          isMultiDayTournament: true,
+          isRecurrent: false,
+          pricePerPerson: isReservation ? parseDecimal(pricePerPersonText) : null,
+          recurrenceDays: [],
+          recurrenceEndDate: null,
+          recurrenceFrequency,
+          recurrenceInterval,
+          recurrenceStartDate: null,
+          reservationMode,
+          stageDefaultEndTime: tournamentDefaultEndTime,
+          stageDefaultStartTime: tournamentDefaultStartTime,
+          stageEndDate: tournamentEndDate,
+          stageSchedule: tournamentDays.map((day) => ({
+            date: new Date(day.date),
+            endTime: new Date(day.endTime),
+            facilityId: day.facilityId || null,
+            hasCustomTime: day.hasCustomTime,
+            hasLocationOverride: day.hasLocationOverride,
+            isActive: day.isActive !== false,
+            location: day.location || null,
+            startTime: new Date(day.startTime),
+          })),
+          stageStartDate: tournamentStartDate,
+          startTime: new Date(firstActiveDay.startTime),
+        },
+        type: 'SET_LOGISTICS',
+      });
+
+      navigation.navigate(RouteNames.EventWizardLocation);
+      return;
+    }
 
     if (fullEndDate <= fullStartDate) {
       Alert.alert(t('common.error'), t('eventWizard.errors.invalidTimeRange'));
@@ -358,11 +633,11 @@ function EventWizardLogistics({ navigation }) {
     });
 
     navigation.navigate(
-      isTournament && isMultiDayTournament
-        ? RouteNames.EventWizardStageProgram
-        : RouteNames.EventWizardLocation,
+      RouteNames.EventWizardLocation,
     );
   };
+
+  const showSingleDateTimeFields = !(isTournament && isMultiDayTournament);
 
   return (
     <WizardStepLayout
@@ -374,34 +649,38 @@ function EventWizardLogistics({ navigation }) {
       title={t('eventWizard.steps.logistics.title')}
     >
       <View style={[Spaces.gap[24]]}>
-        <DateTimeSelector
-          display="inline"
-          label={t('eventEdit.fields.date.label')}
-          mode="date"
-          onChange={setDate}
-          value={date}
-        />
+        {showSingleDateTimeFields ? (
+          <>
+            <DateTimeSelector
+              display="inline"
+              label={t('eventEdit.fields.date.label')}
+              mode="date"
+              onChange={setDate}
+              value={date}
+            />
 
-        <View style={[Alignments.row, Spaces.gap[16]]}>
-          <View style={{ flex: 1 }}>
-            <DateTimeSelector
-              display="inline"
-              label={t('eventEdit.fields.startTime.label')}
-              mode="time"
-              onChange={handleStartTimeChange}
-              value={startTime}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <DateTimeSelector
-              display="inline"
-              label={t('eventEdit.fields.endTime.label')}
-              mode="time"
-              onChange={handleEndTimeChange}
-              value={endTime}
-            />
-          </View>
-        </View>
+            <View style={[Alignments.row, Spaces.gap[16]]}>
+              <View style={{ flex: 1 }}>
+                <DateTimeSelector
+                  display="inline"
+                  label={t('eventEdit.fields.startTime.label')}
+                  mode="time"
+                  onChange={handleStartTimeChange}
+                  value={startTime}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <DateTimeSelector
+                  display="inline"
+                  label={t('eventEdit.fields.endTime.label')}
+                  mode="time"
+                  onChange={handleEndTimeChange}
+                  value={endTime}
+                />
+              </View>
+            </View>
+          </>
+        ) : null}
 
         {isTournament ? (
           <View
@@ -427,10 +706,7 @@ function EventWizardLogistics({ navigation }) {
               </Text>
             </View>
             <Switch
-              onValueChange={(value) => {
-                setIsMultiDayTournament(value);
-                if (value) setIsRecurrent(false);
-              }}
+              onValueChange={handleTournamentToggle}
               thumbColor={Colors.neutral00}
               trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
               value={isMultiDayTournament}
@@ -458,6 +734,215 @@ function EventWizardLogistics({ navigation }) {
             />
           </View>
         )}
+
+        {isTournament && isMultiDayTournament ? (
+          <View style={[Spaces.gap[24]]}>
+            <View
+              style={[
+                ApplicationStyle.card,
+                Spaces.padding[16],
+                Spaces.gap[16],
+                { backgroundColor: cardSurface, borderColor: cardBorder },
+              ]}
+            >
+              <View style={{ rowGap: 6 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('eventWizard.tournamentProgram.periodTitle', 'Periode')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
+                  {t(
+                    'eventWizard.tournamentProgram.inlinePeriodHelper',
+                    'Definis directement les dates du tournoi avant de choisir le lieu.',
+                  )}
+                </Text>
+              </View>
+              <View style={[Spaces.gap[16]]}>
+                <DateTimeSelector
+                  display="inline"
+                  label={t('eventWizard.tournamentProgram.startDate', 'Date de debut')}
+                  mode="date"
+                  onChange={setTournamentStartDate}
+                  value={tournamentStartDate}
+                />
+                <DateTimeSelector
+                  display="inline"
+                  label={t('eventWizard.tournamentProgram.endDate', 'Date de fin')}
+                  mode="date"
+                  onChange={setTournamentEndDate}
+                  value={tournamentEndDate}
+                />
+              </View>
+            </View>
+
+            <View
+              style={[
+                ApplicationStyle.card,
+                Spaces.padding[16],
+                Spaces.gap[16],
+                { backgroundColor: cardSurface, borderColor: cardBorder },
+              ]}
+            >
+              <View style={{ rowGap: 6 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('eventWizard.tournamentProgram.defaultHoursTitle', 'Horaires par defaut')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
+                  {t(
+                    'eventWizard.tournamentProgram.defaultHoursHelper',
+                    'Ces horaires servent de base pour toutes les journees actives du tournoi.',
+                  )}
+                </Text>
+              </View>
+
+              <View style={[Alignments.row, Spaces.gap[16]]}>
+                <View style={{ flex: 1 }}>
+                  <DateTimeSelector
+                    display="inline"
+                    label={t('eventWizard.tournamentProgram.defaultStartTime', 'Heure de debut')}
+                    mode="time"
+                    onChange={handleTournamentDefaultStartTimeChange}
+                    value={tournamentDefaultStartTime}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <DateTimeSelector
+                    display="inline"
+                    label={t('eventWizard.tournamentProgram.defaultEndTime', 'Heure de fin')}
+                    mode="time"
+                    onChange={handleTournamentDefaultEndTimeChange}
+                    value={tournamentDefaultEndTime}
+                  />
+                </View>
+              </View>
+
+              <View style={{ rowGap: 8 }}>
+                <Button
+                  onPress={applyTournamentDefaultsToAllDays}
+                  size="sm"
+                  style={{ alignSelf: 'flex-start' }}
+                  title={t('eventWizard.tournamentProgram.applyToAll', 'Appliquer a tous')}
+                  variant="Secondary"
+                />
+                <Text style={[Fonts.p4, Fonts.neutral300, { lineHeight: 18 }]}>
+                  {t(
+                    'eventWizard.tournamentProgram.applyToAllHelper',
+                    'Reinitialise les horaires personnalises et reapplique la base du tournoi.',
+                  )}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[Spaces.gap[16]]}>
+              <View style={{ rowGap: 6 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('eventWizard.tournamentProgram.daysTitle', 'Jours du tournoi')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
+                  {t(
+                    'eventWizard.tournamentProgram.daysHelper',
+                    'Active ou personnalise uniquement les journees qui sortent du cadre par defaut.',
+                  )}
+                </Text>
+              </View>
+
+              {tournamentDays.map((day) => {
+                const dateKey = buildDateKey(day.date);
+                const inheritedHours = !day.hasCustomTime;
+
+                return (
+                  <View
+                    key={dateKey}
+                    style={[
+                      ApplicationStyle.card,
+                      Spaces.padding[16],
+                      Spaces.gap[16],
+                      { backgroundColor: cardSurface, borderColor: cardBorder },
+                    ]}
+                  >
+                    <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[Fonts.h4, Fonts.neutral00]}>
+                          {format(day.date, 'EEEE d MMMM', { locale: fr })}
+                        </Text>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>
+                          {`${format(day.startTime, 'HH:mm')} - ${format(day.endTime, 'HH:mm')}`}
+                        </Text>
+                      </View>
+                      <Switch
+                        onValueChange={(value) => handleToggleTournamentDay(dateKey, value)}
+                        thumbColor={day.isActive !== false ? Colors.primary500 : Colors.neutral500}
+                        trackColor={{
+                          false: `${Colors.neutral500}55`,
+                          true: `${Colors.primary500}55`,
+                        }}
+                        value={day.isActive !== false}
+                      />
+                    </View>
+
+                    <View style={{ rowGap: 10 }}>
+                      <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        {inheritedHours
+                          ? t('eventWizard.tournamentProgram.inheritedHours', 'Horaires herites du tournoi')
+                          : t('eventWizard.tournamentProgram.customHours', 'Horaires personnalises')}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => handleTournamentTimeModeChange(dateKey, !day.hasCustomTime)}
+                        style={[
+                          ApplicationStyle.card,
+                          Spaces.paddingHorizontal[12],
+                          Spaces.paddingVertical[8],
+                          {
+                            alignSelf: 'flex-start',
+                            backgroundColor: day.hasCustomTime ? `${Colors.primary500}18` : 'rgba(255,255,255,0.06)',
+                            borderColor: `${Colors.primary500}55`,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p3Bold, day.hasCustomTime ? Fonts.primary500 : Fonts.neutral200]}>
+                          {day.hasCustomTime
+                            ? t('eventWizard.tournamentProgram.useDefaultHours', 'Revenir aux horaires par defaut')
+                            : t('eventWizard.tournamentProgram.customizeHours', 'Personnaliser les horaires')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {day.hasCustomTime ? (
+                      <View style={[Spaces.gap[16]]}>
+                        <DateTimeSelector
+                          display="inline"
+                          label={t('eventWizard.tournamentProgram.dayStartTime', 'Heure de debut du jour')}
+                          mode="time"
+                          onChange={(nextStartTime) => {
+                            const adjustedStart = buildDayStartTime(day.date, nextStartTime);
+                            handleUpdateTournamentDay(dateKey, {
+                              endTime: ensureEndAfterStart(adjustedStart, day.endTime),
+                              startTime: adjustedStart,
+                            });
+                          }}
+                          value={day.startTime}
+                        />
+                        <DateTimeSelector
+                          display="inline"
+                          label={t('eventWizard.tournamentProgram.dayEndTime', 'Heure de fin du jour')}
+                          mode="time"
+                          onChange={(nextEndTime) => handleUpdateTournamentDay(dateKey, {
+                            endTime: ensureEndAfterStart(
+                              day.startTime,
+                              buildDayStartTime(day.date, nextEndTime),
+                            ),
+                          })}
+                          value={day.endTime}
+                        />
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
 
         {!isTournament && isRecurrent ? (
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], { backgroundColor: cardSurface, borderColor: cardBorder }]}>

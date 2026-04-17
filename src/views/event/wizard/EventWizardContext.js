@@ -32,7 +32,12 @@ const createInitialState = () => {
     type: null,
 
     // Step 2: Team
+    club: null,
     team: null,
+    tournamentActivity: null,
+    tournamentCategory: null,
+    tournamentScopeMode: 'team',
+    tournamentSection: null,
 
     // Step 3: Invites
     invitedTeams: [],
@@ -160,6 +165,18 @@ function eventWizardReducer(state, action) {
         invitedTeams: [],
         team: action.payload,
       };
+    case 'SET_TOURNAMENT_CONTEXT':
+      return {
+        ...state,
+        club: action.payload?.club || null,
+        detectionSlots: [],
+        invitedTeams: [],
+        team: action.payload?.team || null,
+        tournamentActivity: action.payload?.tournamentActivity || null,
+        tournamentCategory: action.payload?.tournamentCategory || null,
+        tournamentScopeMode: action.payload?.tournamentScopeMode || 'team',
+        tournamentSection: action.payload?.tournamentSection || null,
+      };
     case 'SET_TOURNAMENT_SETTINGS':
       return {
         ...state,
@@ -209,6 +226,7 @@ function eventWizardReducer(state, action) {
           tournamentPointsLoss: state.tournamentPointsLoss ?? 0,
           tournamentPointsWin: state.tournamentPointsWin ?? 3,
           tournamentQualifiedPerGroup: state.tournamentQualifiedPerGroup || 2,
+          tournamentScopeMode: state.tournamentScopeMode || 'team',
           tournamentSeedingMode: state.tournamentSeedingMode || 'random',
           tournamentThirdPlaceMatch: state.tournamentThirdPlaceMatch === true,
         };

@@ -43,6 +43,7 @@ import EventListContent from '@/components/organisms/eventListContent/EventListC
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 
+import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { removeTrainerFromClub } from '@/services/auth/authService';
@@ -103,8 +104,17 @@ function TeamDetails({ navigation, route }) {
     USER_ROLES: AUTH_USER_ROLES,
     userData: currentUser,
   } = useAuth();
+  const isAuthenticated = Boolean(currentUser?.documentId);
   const { getClubInitials } = useClub();
   const { startTeamChat, startWhisperChat } = useMessaging();
+  const openTeamAuthFlow = useCallback((source, extraParams = {}) => {
+    openPublicAuthFlow(navigation, {
+      origin: RouteNames.TeamDetails,
+      source,
+      teamId,
+      ...extraParams,
+    });
+  }, [navigation, teamId]);
   const isMyTeam = useMemo(
     () => {
       const allMyTeams = (currentUser?.myTeams || [])?.concat(currentUser?.trainedTeams || []);
@@ -1398,6 +1408,11 @@ function TeamDetails({ navigation, route }) {
   ), [AUTH_USER_ROLES.coach, currentUser?.role?.name, isMyClub, isMyTeam, trainerContactIds.length]);
 
   const handleJoinTeam = useCallback(() => {
+    if (!isAuthenticated) {
+      openTeamAuthFlow('team-join-login');
+      return;
+    }
+
     const userId = currentUser?.documentId;
     if (teamId && userId) {
       Alert.alert(
@@ -1425,9 +1440,14 @@ function TeamDetails({ navigation, route }) {
         ],
       );
     }
-  }, [canCoachRequestJoinViewedTeam, teamId, createTeamMembershipRequestMutation, currentUser?.documentId, t]);
+  }, [canCoachRequestJoinViewedTeam, teamId, createTeamMembershipRequestMutation, currentUser?.documentId, isAuthenticated, openTeamAuthFlow, t]);
 
   const handleContactTeamTrainers = useCallback(async () => {
+    if (!isAuthenticated) {
+      openTeamAuthFlow('team-contact-trainers-login');
+      return;
+    }
+
     if (!trainerContactIds.length) {
       Alert.alert(
         t('common.error', 'Erreur'),
@@ -1450,7 +1470,7 @@ function TeamDetails({ navigation, route }) {
         ),
       );
     }
-  }, [getErrorMessage, navigation, startWhisperChat, t, trainerContactIds]);
+  }, [getErrorMessage, isAuthenticated, navigation, openTeamAuthFlow, startWhisperChat, t, trainerContactIds]);
 
   const handleLeaveTeam = useCallback(() => {
     if (teamId && currentUser?.documentId) {
@@ -1496,6 +1516,11 @@ function TeamDetails({ navigation, route }) {
   }, [canResetTeamStats, resetTeamStatsMutation, t, teamId]);
 
   const handleUserPress = (/** @type {User} */ user) => {
+    if (!isAuthenticated) {
+      openTeamAuthFlow('team-user-profile-login', { userId: user?.documentId });
+      return;
+    }
+
     if (user?.documentId) {
       if (user?.documentId === currentUser?.documentId) {
         navigation.navigate(RouteNames.ProfileStack);
@@ -1509,6 +1534,11 @@ function TeamDetails({ navigation, route }) {
   };
 
   const handleStartChat = async () => {
+    if (!isAuthenticated) {
+      openTeamAuthFlow('team-chat-login');
+      return;
+    }
+
     if (team?.documentId) {
       const newChat = await startTeamChat(team?.documentId);
       if (newChat?.documentId) {
@@ -1545,7 +1575,22 @@ function TeamDetails({ navigation, route }) {
   const showDefaultCompositionAction = canManageTeam;
   const showLeaveAction = isMyTeam;
   const showContactTrainersAction = canContactViewedTeamTrainers;
-  const showJoinAction = canJoinTeam(teamId) || canCoachRequestJoinViewedTeam;
+  const showJoinAction = !isAuthenticated || canJoinTeam(teamId) || canCoachRequestJoinViewedTeam;
+  const joinActionTitle = (() => {
+    if (pendingRequest) {
+      return t('teamDetails.actions.requestPending', 'Demande en attente');
+    }
+
+    if (!isAuthenticated) {
+      return t('teamDetails.actions.publicJoin', "C'est mon \u00E9quipe");
+    }
+
+    if (canCoachRequestJoinViewedTeam) {
+      return t('teamDetails.actions.joinRequest', "Demander \u00E0 rejoindre l'\u00E9quipe");
+    }
+
+    return t('teamDetails.actions.join');
+  })();
   const hasTeamActionsPanel = showEditAction
     || showTeamChatAction
     || showContactTrainersAction
@@ -3724,13 +3769,7 @@ function TeamDetails({ navigation, route }) {
                   <Button
                     disabled={!!pendingRequest}
                     onPress={pendingRequest ? undefined : handleJoinTeam}
-                    title={
-                      pendingRequest
-                        ? t('teamDetails.actions.requestPending', 'Demande en attente')
-                        : canCoachRequestJoinViewedTeam
-                          ? t('teamDetails.actions.joinRequest', "Demander à rejoindre l'équipe")
-                          : t('teamDetails.actions.join')
-                    }
+                    title={joinActionTitle}
                     variant={pendingRequest ? 'Secondary' : 'Primary'}
                   />
                 ) : null}

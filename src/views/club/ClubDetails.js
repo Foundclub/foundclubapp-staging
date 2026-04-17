@@ -25,6 +25,8 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
+import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
@@ -156,6 +158,7 @@ function ClubDetails({ navigation, route }) {
   const { startClubChat } = useMessaging();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
+  const isAuthenticated = Boolean(userData?.documentId);
   const [selectedTab, setSelectedTab] = useState('infos');
   const [joinRequestPending, setJoinRequestPending] = useState(false);
   const [isEditingActivities, setIsEditingActivities] = useState(false);
@@ -198,6 +201,15 @@ function ClubDetails({ navigation, route }) {
     navigation,
     userData?.documentId,
   ]);
+
+  const openClubAuthFlow = useCallback((source, extraParams = {}) => {
+    openPublicAuthFlow(navigation, {
+      clubId,
+      origin: RouteNames.Club,
+      source,
+      ...extraParams,
+    });
+  }, [clubId, navigation]);
 
   const {
     data: club,
@@ -402,6 +414,11 @@ function ClubDetails({ navigation, route }) {
   });
 
   const handleClaimClub = () => {
+    if (!isAuthenticated) {
+      openClubAuthFlow('club-claim-login');
+      return;
+    }
+
     Alert.alert(
       t('clubDetails.alerts.claimClub.confirmTitle', "C'est votre club ?"),
       t('clubDetails.alerts.claimClub.confirmDescription', 'Voulez-vous revendiquer la gestion de ce club ? Une vérification sera effectuée.'),
@@ -449,6 +466,11 @@ function ClubDetails({ navigation, route }) {
 
   // handlers
   const handleStartChat = async () => {
+    if (!isAuthenticated) {
+      openClubAuthFlow('club-chat-login');
+      return;
+    }
+
     if (club?.documentId) {
       const newChat = await startClubChat(club?.documentId);
       if (newChat?.documentId) {
@@ -647,6 +669,11 @@ function ClubDetails({ navigation, route }) {
   }, [handleLeaveClub, t]);
 
   const handleAskToJoinClub = () => {
+    if (!isAuthenticated) {
+      openClubAuthFlow('club-join-login');
+      return;
+    }
+
     if (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending) {
       return;
     }
@@ -662,6 +689,11 @@ function ClubDetails({ navigation, route }) {
    * @param {User} user
    */
   const handleUserPress = (user) => {
+    if (!isAuthenticated) {
+      openClubAuthFlow('club-user-profile-login', { userId: user?.documentId });
+      return;
+    }
+
     if (user?.documentId) {
       if (user?.documentId === userData?.documentId) {
         navigation.navigate(RouteNames.ProfileStack);
@@ -680,9 +712,10 @@ function ClubDetails({ navigation, route }) {
    */
   const handleTeamPress = (team) => {
     if (team?.documentId) {
-      navigation.navigate(RouteNames.TeamStack, {
+      navigateToStackScreenOrScreen(navigation, {
         params: { teamId: team.documentId },
         screen: RouteNames.TeamDetails,
+        stack: RouteNames.TeamStack,
       });
     }
   };
@@ -903,12 +936,17 @@ function ClubDetails({ navigation, route }) {
   }, []);
 
   const handleOpenClubPartnerRequest = useCallback(() => {
+    if (!isAuthenticated) {
+      openClubAuthFlow('club-partner-request-login');
+      return;
+    }
+
     if (hasPendingClubPartneringRequest || createClubRequestMutation.isPending) {
       return;
     }
     setClubPartnerForm(buildDefaultClubPartnerForm(userData));
     setIsClubPartnerRequestVisible(true);
-  }, [createClubRequestMutation.isPending, hasPendingClubPartneringRequest, userData]);
+  }, [createClubRequestMutation.isPending, hasPendingClubPartneringRequest, isAuthenticated, openClubAuthFlow, userData]);
 
   const handleCloseClubPartnerRequest = useCallback(() => {
     if (createClubRequestMutation.isPending) return;
@@ -1910,6 +1948,16 @@ function ClubDetails({ navigation, route }) {
           )}
         </WithDataWrapper>
       </ScrollView>
+      {
+        !isAuthenticated ? (
+          <Button
+            onPress={() => openClubAuthFlow('club-public-claim-login')}
+            style={[Spaces.marginTop[12], Spaces.marginBottom[24]]}
+            title={t('clubDetails.actions.claimClub', "C'est mon club")}
+            variant="Primary"
+          />
+        ) : null
+      }
       {
         canJoinClub && !isParentClubAdmin && !canUseClubPartneringFlow ? (
           <Button

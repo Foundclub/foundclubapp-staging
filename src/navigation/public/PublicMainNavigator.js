@@ -6,6 +6,8 @@ import ClubDetails from '@/views/club/ClubDetails';
 import ClubFilters from '@/views/club/ClubFilters';
 import EventDetails from '@/views/event/EventDetails';
 import EventFilters from '@/views/event/EventFilters';
+import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
+import RecruitmentAdFilters from '@/views/recruitment/RecruitmentAdFilters';
 import ReservationDetails from '@/views/reservation/ReservationDetails';
 import SearchMapScreen from '@/views/search/SearchMapScreen';
 import TeamDetails from '@/views/team/TeamDetails';
@@ -87,6 +89,22 @@ function PublicNavigator() {
       <Stack.Screen
         component={ReservationDetails}
         name={RouteNames.ReservationDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={RecruitmentAdDetails}
+        name={RouteNames.RecruitmentAdDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={RecruitmentAdFilters}
+        name={RouteNames.RecruitmentAdFilters}
         options={{
           ...commonOptions,
           headerTitle: '',

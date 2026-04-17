@@ -33,6 +33,8 @@ import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
+import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
@@ -143,6 +145,7 @@ function RecruitmentAdDetails() {
   } = useTheme();
   const { t } = useTranslation();
   const { userData } = useAuth();
+  const isAuthenticated = Boolean(userData?.documentId);
   const { getClubInitials } = useClub();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -478,6 +481,14 @@ function RecruitmentAdDetails() {
     { flex: 0, width: '100%' },
   ]), [Alignments.rowReverse, ApplicationStyle.backgroundColor.transparent, ApplicationStyle.borderWidth0, Spaces.padding]);
 
+  const openRecruitmentAuthFlow = (source) => {
+    openPublicAuthFlow(navigation, {
+      adId: recruitmentAdDocumentId || adId,
+      origin: RouteNames.RecruitmentAdDetails,
+      source,
+    });
+  };
+
   if (!ad) {
     let adStatusTitle = 'Annonce introuvable';
     if (isLoading) {
@@ -507,6 +518,11 @@ function RecruitmentAdDetails() {
   }
 
   const handleApply = () => {
+    if (!isAuthenticated) {
+      openRecruitmentAuthFlow('recruitment-details-apply-login');
+      return;
+    }
+
     if (hasApplied) {
       if (effectiveApplicationStatus === 'accepted') {
         Alert.alert(
@@ -550,6 +566,11 @@ function RecruitmentAdDetails() {
   };
 
   const handleConfirmDetectionApply = () => {
+    if (!isAuthenticated) {
+      openRecruitmentAuthFlow('recruitment-details-detection-apply-login');
+      return;
+    }
+
     if (!hasAcceptedDetectionRiskDeclaration || !hasAcceptedDetectionConditions) return;
 
     applyMutation.mutate({
@@ -563,6 +584,11 @@ function RecruitmentAdDetails() {
   };
 
   const handleConfirmCoachApply = () => {
+    if (!isAuthenticated) {
+      openRecruitmentAuthFlow('recruitment-details-coach-apply-login');
+      return;
+    }
+
     if (!coachApplicationPhone && !coachApplicationEmail) {
       Alert.alert('Candidature', 'Ajoutez au moins un numero ou un email pour etre recontacte.');
       return;
@@ -584,9 +610,10 @@ function RecruitmentAdDetails() {
 
   const handleOpenDetection = () => {
     if (!ad?.event?.documentId) return;
-    navigation.navigate(RouteNames.EventStack, {
+    navigateToStackScreenOrScreen(navigation, {
       params: { eventId: ad.event.documentId },
       screen: RouteNames.EventDetails,
+      stack: RouteNames.EventStack,
     });
   };
 
@@ -595,6 +622,11 @@ function RecruitmentAdDetails() {
   };
 
   const handleCandidatePress = (candidateUser) => {
+    if (!isAuthenticated) {
+      openRecruitmentAuthFlow('recruitment-candidate-profile-login');
+      return;
+    }
+
     const candidateUserId = String(
       candidateUser?.documentId
       || candidateUser?.id

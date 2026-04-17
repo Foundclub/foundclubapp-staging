@@ -13,6 +13,10 @@ import CreateClubRequest from '@/views/club/CreateClubRequest';
 import RequestsDashboard from '@/views/club/RequestsDashboard';
 import FacilityForm from '@/views/facility/FacilityForm';
 import FacilityList from '@/views/facility/FacilityList';
+import ClubLicenseCampaignSettings from '@/views/license/ClubLicenseCampaignSettings';
+import ClubLicenseMemberDetail from '@/views/license/ClubLicenseMemberDetail';
+import ClubLicensePayments from '@/views/license/ClubLicensePayments';
+import ClubLicenses from '@/views/license/ClubLicenses';
 import MultisportClubEditDetails from '@/views/multisportClub/MultisportClubEditDetails';
 
 import { commonOptions } from '@/navigation/commonOptions';
@@ -126,6 +130,39 @@ function ClubStack() {
         options={{
           ...commonOptions,
           headerTitle: t('requests.title', 'Demandes'),
+        }}
+      />
+
+      <Stack.Screen
+        component={ClubLicenses}
+        name={RouteNames.ClubLicenses}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Cotisations',
+        }}
+      />
+      <Stack.Screen
+        component={ClubLicenseMemberDetail}
+        name={RouteNames.ClubLicenseMemberDetail}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Cotisation membre',
+        }}
+      />
+      <Stack.Screen
+        component={ClubLicenseCampaignSettings}
+        name={RouteNames.ClubLicenseCampaignSettings}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Parametres cotisations',
+        }}
+      />
+      <Stack.Screen
+        component={ClubLicensePayments}
+        name={RouteNames.ClubLicensePayments}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Paiements cotisations',
         }}
       />
 

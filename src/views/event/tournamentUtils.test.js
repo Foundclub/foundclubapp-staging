@@ -49,6 +49,18 @@ describe('tournamentUtils', () => {
     expect(summary.hasWarning).toBe(true);
   });
 
+  test('ignores minimum roster constraint for permanent club teams', () => {
+    const summary = getTournamentRosterSummary(
+      { ...baseTeam, sourceType: 'club_team' },
+      tournamentConfig,
+    );
+
+    expect(summary.totalCount).toBe(2);
+    expect(summary.meetsMinRoster).toBe(true);
+    expect(summary.hasWarning).toBe(false);
+    expect(isTournamentTeamNonCompliant({ ...baseTeam, sourceType: 'club_team' }, tournamentConfig)).toBe(false);
+  });
+
   test('flags only non-compliant teams in counters', () => {
     const teams = [
       baseTeam,

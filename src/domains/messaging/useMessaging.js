@@ -30,6 +30,7 @@ import {
 } from '@/services/chat/chatService';
 
 import { createLogger } from '@/utils/logger/logger';
+import { markMessagingPerf } from '@/utils/performance/messagingPerformance';
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import useSocket, { EVENTS } from '@/hooks/useSocket';
@@ -190,24 +191,54 @@ const useMessaging = (currentChatId) => {
     return Array.isArray(response?.data) ? response.data : [];
   }, [chatsLookupFilters, chatsLookupQueryKey, getCachedChatsForLookup, queryClient]);
 
+  const notifyChatsReadStatusChanged = useCallback(() => {
+    queryClient.setQueriesData({ queryKey: ['chats'] }, (oldData) => {
+      if (!oldData) return oldData;
+
+      if (Array.isArray(oldData?.pages)) {
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => ({ ...page })),
+        };
+      }
+
+      if (typeof oldData === 'object') {
+        return { ...oldData };
+      }
+
+      return oldData;
+    });
+  }, [queryClient]);
+
   /**
    * Update the last read message timestamp for a chat
    * @param {string} chatId - The chat ID
    */
   const updateLastReadMessage = useCallback((/** @type {string} */ chatId) => {
-    storage.set(getLastReadMessageKey(chatId), new Date().toISOString());
-    // Invalidate chats query to refetch with updated unread status
-    queryClient.invalidateQueries({ queryKey: ['chats'] });
-  }, [queryClient]);
+    const safeChatId = normalizeChatId(chatId);
+    if (!safeChatId) return;
+
+    storage.set(getLastReadMessageKey(safeChatId), new Date().toISOString());
+    // getUnreadStatus reads local storage; clone cached pages to re-render without a network refetch.
+    notifyChatsReadStatusChanged();
+  }, [notifyChatsReadStatusChanged]);
 
   /**
    * Handle new message received from socket
    * @param {ChatMessage} message - The received message
    */
   const handleNewMessage = useCallback((/** @type {ChatMessage} */ message) => {
+    const receivedChatId = normalizeChatId(message?.chat?.documentId || '');
+    markMessagingPerf('messaging_message_received', {
+      chatId: receivedChatId,
+      hasAttachments: Array.isArray(message?.attachments) && message.attachments.length > 0,
+      hasComposition: Boolean(message?.composition),
+      messageId: getMessageEntityId(message),
+    });
+
     // Add new message to chat messages cache
     queryClient.setQueriesData(
-      { queryKey: ['chat-messages', message.chat?.documentId] },
+      { queryKey: ['chat-messages', receivedChatId || message.chat?.documentId] },
       (/** @type {any} */ oldData) => {
         const formattedMessage = {
           attachments: message.attachments, // Handle attachments
@@ -449,13 +480,40 @@ const useMessaging = (currentChatId) => {
   }, [queryClient]);
 
   const handleJoined = useCallback((/** @type {JoinData} */ data) => {
-    const matchingQueries = queryClient.getQueriesData({ queryKey: ['chat-messages', data.chatDocumentId] });
-    const alreadyHasMessages = matchingQueries.some(([, queryData]) => hasCachedChatMessages(queryData));
+    const chatDocumentId = normalizeChatId(data?.chatDocumentId || '');
+    if (!chatDocumentId) return;
 
-    if (!alreadyHasMessages) {
-      queryClient.invalidateQueries({ queryKey: ['chat-messages', data.chatDocumentId] });
+    const matchingQueries = queryClient.getQueriesData({ queryKey: ['chat-messages', chatDocumentId] });
+    const alreadyHasMessages = matchingQueries.some(([, queryData]) => hasCachedChatMessages(queryData));
+    const isMessagesFetchInFlight = queryClient.isFetching({ queryKey: ['chat-messages', chatDocumentId] }) > 0;
+
+    if (!alreadyHasMessages && !isMessagesFetchInFlight) {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', chatDocumentId] });
+      markMessagingPerf('messaging_joined_messages_refetch_requested', {
+        chatId: chatDocumentId,
+      });
+      return;
     }
+
+    markMessagingPerf('messaging_joined_messages_refetch_skipped', {
+      chatId: chatDocumentId,
+      hasCachedMessages: alreadyHasMessages,
+      isFetchInFlight: isMessagesFetchInFlight,
+    });
   }, [queryClient]);
+
+  const handleSocketError = useCallback((error) => {
+    const safeCurrentChatId = normalizeChatId(currentChatId);
+    const errorPayload = {
+      chatId: safeCurrentChatId,
+      code: error?.code,
+      message: error?.message || error,
+    };
+    messagingLogger.error('Socket chat error', errorPayload);
+    if (isAttachmentDebugEnabled) {
+      messagingLogger.warn('[attachment-debug] socket error received', errorPayload);
+    }
+  }, [currentChatId]);
 
   // Subscribe to chat events when socket is available
   useEffect(() => {
@@ -471,27 +529,17 @@ const useMessaging = (currentChatId) => {
     socket.on(EVENTS.MESSAGE_UPDATED, handleMessageUpdated);
     socket.on(EVENTS.MESSAGE_READ, handleMessageRead);
     socket.on(EVENTS.JOINED, handleJoined);
-    socket.on(EVENTS.ERROR, (error) => {
-      const errorPayload = {
-        chatId: safeCurrentChatId,
-        code: error?.code,
-        message: error?.message || error,
-      };
-      messagingLogger.error('Socket chat error', errorPayload);
-      if (isAttachmentDebugEnabled) {
-        messagingLogger.warn('[attachment-debug] socket error received', errorPayload);
-      }
-    });
+    socket.on(EVENTS.ERROR, handleSocketError);
 
     // Cleanup: leave chat and remove listeners
     return () => {
       socket.emit(EVENTS.LEAVE_CHAT, { chatDocumentId: safeCurrentChatId });
-      socket.off(EVENTS.MESSAGE_RECEIVED);
-      socket.off(EVENTS.MESSAGE_DELETED);
-      socket.off(EVENTS.MESSAGE_UPDATED);
-      socket.off(EVENTS.MESSAGE_READ);
-      socket.off(EVENTS.JOINED);
-      socket.off(EVENTS.ERROR);
+      socket.off(EVENTS.MESSAGE_RECEIVED, handleNewMessage);
+      socket.off(EVENTS.MESSAGE_DELETED, handleMessageDeleted);
+      socket.off(EVENTS.MESSAGE_UPDATED, handleMessageUpdated);
+      socket.off(EVENTS.MESSAGE_READ, handleMessageRead);
+      socket.off(EVENTS.JOINED, handleJoined);
+      socket.off(EVENTS.ERROR, handleSocketError);
       updateLastReadMessage(safeCurrentChatId);
     };
   }, [socket,
@@ -500,6 +548,7 @@ const useMessaging = (currentChatId) => {
     handleMessageUpdated,
     handleMessageRead,
     handleJoined,
+    handleSocketError,
     currentChatId,
     isConnected,
     updateLastReadMessage,
@@ -557,17 +606,57 @@ const useMessaging = (currentChatId) => {
 
   const votePollMutation = useMutation({
     mutationFn: (payload) => votePollMessage(payload.messageId, payload.optionId),
-    onSuccess: (data) => {
-      if (data?.messageDocumentId) {
-        queryClient.invalidateQueries({ queryKey: ['chat-messages', currentChatId] });
+    onSuccess: (data, variables) => {
+      const chatDocumentId = normalizeChatId(
+        data?.chatDocumentId
+        || variables?.chatId
+        || currentChatId,
+      );
+      const messageDocumentId = normalizeChatId(data?.messageDocumentId || variables?.messageId);
+
+      if (chatDocumentId && messageDocumentId && data?.composition) {
+        handleMessageUpdated({
+          chatDocumentId,
+          message: {
+            composition: data.composition,
+            documentId: messageDocumentId,
+            updatedAt: data?.updatedAt,
+          },
+        });
+        markMessagingPerf('messaging_poll_vote_cache_updated', {
+          changed: Boolean(data?.changed),
+          chatId: chatDocumentId,
+          messageId: messageDocumentId,
+        });
       }
     },
   });
 
   const proposalResponseMutation = useMutation({
     mutationFn: (payload) => respondProposalMessage(payload.messageId, payload.status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chat-messages', currentChatId] });
+    onSuccess: (data, variables) => {
+      const chatDocumentId = normalizeChatId(
+        data?.chatDocumentId
+        || variables?.chatId
+        || currentChatId,
+      );
+      const messageDocumentId = normalizeChatId(data?.messageDocumentId || variables?.messageId);
+
+      if (chatDocumentId && messageDocumentId && data?.composition) {
+        handleMessageUpdated({
+          chatDocumentId,
+          message: {
+            composition: data.composition,
+            documentId: messageDocumentId,
+            updatedAt: data?.updatedAt,
+          },
+        });
+        markMessagingPerf('messaging_proposal_response_cache_updated', {
+          changed: Boolean(data?.changed),
+          chatId: chatDocumentId,
+          messageId: messageDocumentId,
+        });
+      }
     },
   });
 
@@ -624,15 +713,24 @@ const useMessaging = (currentChatId) => {
     if (isAttachmentDebugEnabled && attachmentCount > 0) {
       messagingLogger.warn('[attachment-debug] sendMessage called', payloadSummary);
     }
+    markMessagingPerf('messaging_send_started', payloadSummary);
 
     if (!safeChatId) {
       messagingLogger.warn('sendMessage skipped: missing chatId', payloadSummary);
+      markMessagingPerf('messaging_send_skipped', {
+        ...payloadSummary,
+        reason: 'missing_chat_id',
+      });
       return null;
     }
 
     // Check if socket is connected before sending
     if (!isConnected || !socket) {
       messagingLogger.warn('sendMessage skipped: socket disconnected', payloadSummary);
+      markMessagingPerf('messaging_send_skipped', {
+        ...payloadSummary,
+        reason: 'socket_disconnected',
+      });
       return null;
     }
 
@@ -684,6 +782,10 @@ const useMessaging = (currentChatId) => {
           };
         },
       );
+      markMessagingPerf('messaging_send_optimistic_rendered', {
+        ...payloadSummary,
+        tempId,
+      });
     }
 
     socket.emit(EVENTS.SEND_MESSAGE, {
@@ -704,6 +806,12 @@ const useMessaging = (currentChatId) => {
           failed: true,
           pending: false,
         });
+        markMessagingPerf('messaging_send_failed', {
+          ...payloadSummary,
+          code: ackError?.code,
+          reason: 'ack_error',
+          tempId,
+        });
         messagingLogger.warn('sendMessage ack error', {
           chatId: safeChatId,
           code: ackError?.code,
@@ -721,6 +829,11 @@ const useMessaging = (currentChatId) => {
             ackMessage?.clientMessageId || safeClientMessageId,
           ),
         });
+        markMessagingPerf('messaging_send_acknowledged', {
+          ...payloadSummary,
+          messageId: getMessageEntityId(ackMessage),
+          tempId,
+        });
       }
     });
     if (isAttachmentDebugEnabled && attachmentCount > 0) {
@@ -736,6 +849,11 @@ const useMessaging = (currentChatId) => {
       markMessageState(safeChatId, tempId, {
         failed: true,
         pending: false,
+      });
+      markMessagingPerf('messaging_send_failed', {
+        ...payloadSummary,
+        reason: 'timeout',
+        tempId,
       });
     }, 10000);
     pendingTimeoutsRef.current.set(tempId, timeoutId);
@@ -1022,14 +1140,16 @@ const useMessaging = (currentChatId) => {
   };
 
   const votePoll = useCallback((messageId, optionId) => votePollMutation.mutateAsync({
+    chatId: currentChatId,
     messageId,
     optionId,
-  }), [votePollMutation]);
+  }), [currentChatId, votePollMutation]);
 
   const respondToProposal = useCallback((messageId, status) => proposalResponseMutation.mutateAsync({
+    chatId: currentChatId,
     messageId,
     status,
-  }), [proposalResponseMutation]);
+  }), [currentChatId, proposalResponseMutation]);
 
   // Update last read message when entering/leaving chat
   useEffect(() => {

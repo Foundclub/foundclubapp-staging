@@ -36,6 +36,26 @@ import { joinReservation } from '@/services/reservation/reservationService';
 import { createLogger } from '@/utils/logger/logger';
 
 const participantEventListLogger = createLogger('participant-event-list');
+const FEATURED_PLANNING_SCOPES = ['SECTION', 'CM'];
+
+const isApprovedPlanningFeaturedEvent = (event) => (
+  Boolean(event?.isFeatured)
+  && event?.featuredRequestStatus === 'approved'
+  && FEATURED_PLANNING_SCOPES.includes(String(event?.featuredScope || '').toUpperCase())
+);
+
+const mergeUniqueEvents = (...collections) => {
+  const seen = new Set();
+
+  return collections
+    .flat()
+    .filter((event) => {
+      const eventId = String(event?.documentId || event?.id || '').trim();
+      if (!eventId || seen.has(eventId)) return false;
+      seen.add(eventId);
+      return true;
+    });
+};
 
 /**
  * Standard event list screen component for participants
@@ -102,6 +122,7 @@ function ParticipantEventList({ navigation }) {
 
   // Fetch SECTION/CM featured events for Mon Planning
   const featuredEventsQueryConfig = useMemo(() => ({
+    featuredRequestStatus: 'approved',
     featuredScope: ['SECTION', 'CM'],
     isFeatured: true,
     membershipClubIds: allClubIds.length ? allClubIds : undefined,
@@ -112,7 +133,7 @@ function ParticipantEventList({ navigation }) {
   const { data: featuredData } = useGetEvents(featuredEventsQueryConfig, { enabled: allClubIds.length > 0 });
 
   const featuredEvents = useMemo(
-    () => featuredData?.pages?.flatMap((page) => page.data) || [],
+    () => (featuredData?.pages?.flatMap((page) => page.data) || []).filter(isApprovedPlanningFeaturedEvent),
     [featuredData],
   );
   const selectedParticipationFlow = useMemo(
@@ -121,32 +142,20 @@ function ParticipantEventList({ navigation }) {
   );
 
   // Filter events for the list (starting from listStartDate)
-  const listEvents = useMemo(() => {
-    const myTeamIds = [
-      ...(userData?.myTeams || []),
-      ...(userData?.trainedTeams || []),
-    ].map((t) => t.documentId);
+  const listEvents = useMemo(() => (
+    mergeUniqueEvents(featuredEvents, events)
+      .filter((event) => {
+        if (!event || !event.date) return false;
+        const eventDate = new Date(event.date);
 
-    return events.filter((event) => {
-      if (!event || !event.date) return false;
-      const eventDate = new Date(event.date);
+        // Date Filter
+        const isDateValid = isSameDay(eventDate, listStartDate) || isAfter(eventDate, listStartDate);
+        if (!isDateValid) return false;
 
-      // Date Filter
-      const isDateValid = isSameDay(eventDate, listStartDate) || isAfter(eventDate, listStartDate);
-      if (!isDateValid) return false;
-
-      // Filter out Featured Events (they appear in the carousel)
-      // UNLESS they are events for my specific team.
-      if (event.isFeatured) {
-        const isMyTeamEvent = event.teams?.some((team) => myTeamIds.includes(team.documentId));
-        if (!isMyTeamEvent) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [events, listStartDate, userData]);
+        return true;
+      })
+      .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())
+  ), [events, featuredEvents, listStartDate]);
 
   const queryClient = useQueryClient();
 

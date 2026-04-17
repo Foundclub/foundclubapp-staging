@@ -12,7 +12,6 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Tag from '@/components/atoms/tag/Tag';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -46,18 +45,18 @@ import {
 
 const getMemberStatusMeta = (status, colors) => {
   const normalized = normalizeTournamentText(status);
-  if (normalized === 'present') return { label: 'Present', tone: colors.success500 };
+  if (normalized === 'present') return { label: 'Présent', tone: colors.success500 };
   if (normalized === 'absent') return { label: 'Absent', tone: colors.error500 };
   if (normalized === 'pending') return { label: 'En attente', tone: colors.warning500 };
-  if (normalized === 'invited') return { label: 'Invitation envoyee', tone: colors.primary500 };
-  if (normalized === 'requested') return { label: 'Demande recue', tone: colors.warning500 };
-  if (normalized === 'declined') return { label: 'Refuse', tone: colors.error500 };
+  if (normalized === 'invited') return { label: 'Invitation envoyée', tone: colors.primary500 };
+  if (normalized === 'requested') return { label: 'Demande reçue', tone: colors.warning500 };
+  if (normalized === 'declined') return { label: 'Refusé', tone: colors.error500 };
   return { label: 'Membre', tone: colors.neutral300 };
 };
 
 const getOriginLabel = (origin) => {
   const normalized = normalizeTournamentText(origin);
-  if (normalized === 'inherited_from_club') return 'Herite de l equipe club';
+  if (normalized === 'inherited_from_club') return 'Hérité de l\'équipe club';
   if (normalized === 'external_addition') return 'Ajout exceptionnel';
   if (normalized === 'join_request') return 'Demande de rejoindre';
   return 'Invitation tournoi';
@@ -127,6 +126,11 @@ function TournamentTeamDetails({ navigation, route }) {
     && isTournamentActiveMemberStatus(currentMember?.responseStatus)
     && !currentMemberIsCaptain
     && !teamIsLocked,
+  );
+  const canUpdateTournamentResponse = Boolean(
+    currentMember
+    && isTournamentActiveMemberStatus(currentMember?.responseStatus)
+    && !currentMemberIsCaptain,
   );
   const canRequestJoinTeam = Boolean(
     !teamIsLocked
@@ -214,7 +218,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const respondMutation = useMutation({
     mutationFn: (responseStatus) => respondToTournamentTeam(teamId, responseStatus),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre a jour votre reponse.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre à jour votre réponse.');
     },
     onSuccess: invalidate,
   });
@@ -222,7 +226,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const respondInvitationMutation = useMutation({
     mutationFn: (status) => respondToTournamentInvitation(teamId, status),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de repondre a cette invitation.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de répondre à cette invitation.');
     },
     onSuccess: invalidate,
   });
@@ -230,7 +234,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const requestJoinMutation = useMutation({
     mutationFn: ({ acceptRiskDeclaration }) => requestJoinTournamentTeam(teamId, { acceptRiskDeclaration }),
     onError: (mutationError) => {
-      setJoinRequestError(mutationError?.message || 'Impossible d envoyer cette demande.');
+      setJoinRequestError(mutationError?.message || 'Impossible d\'envoyer cette demande.');
     },
     onSuccess: async () => {
       setJoinRequestError('');
@@ -250,7 +254,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const transferCaptainMutation = useMutation({
     mutationFn: (memberId) => transferTournamentTeamCaptain(teamId, memberId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de transferer le capitanat.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de transférer le capitanat.');
     },
     onSuccess: invalidate,
   });
@@ -258,7 +262,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const inviteMemberMutation = useMutation({
     mutationFn: (userDocumentId) => inviteTournamentTeamMember(teamId, userDocumentId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible d inviter ce joueur.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible d\'inviter ce joueur.');
     },
     onSuccess: async () => {
       setMemberSearchQuery('');
@@ -277,7 +281,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const toggleOpenRequestsMutation = useMutation({
     mutationFn: (isOpenToJoinRequests) => toggleTournamentTeamOpenRequests(teamId, isOpenToJoinRequests),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre a jour cette option.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre à jour cette option.');
     },
     onSuccess: invalidate,
   });
@@ -285,7 +289,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const leaveTeamMutation = useMutation({
     mutationFn: () => leaveTournamentTeam(teamId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de quitter cette equipe.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de quitter cette équipe.');
     },
     onSuccess: async () => {
       await invalidate();
@@ -314,7 +318,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const handleRemoveMember = (memberId) => {
     Alert.alert(
       'Retirer ce membre',
-      'Cette action ne retire le joueur que de cette equipe de tournoi.',
+      'Cette action ne retire le joueur que de cette équipe de tournoi.',
       [
         { style: 'cancel', text: 'Annuler' },
         { onPress: () => removeMemberMutation.mutate(memberId), style: 'destructive', text: 'Retirer' },
@@ -325,7 +329,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const handleTransferCaptain = (memberId) => {
     Alert.alert(
       'Nommer capitaine',
-      'Le nouveau capitaine gerera cette equipe ephemere uniquement dans le cadre du tournoi.',
+      'Le nouveau capitaine gérera cette équipe éphémère uniquement dans le cadre du tournoi.',
       [
         { style: 'cancel', text: 'Annuler' },
         { onPress: () => transferCaptainMutation.mutate(memberId), text: 'Confirmer' },
@@ -335,8 +339,8 @@ function TournamentTeamDetails({ navigation, route }) {
 
   const handleLeaveTeam = () => {
     Alert.alert(
-      'Quitter cette equipe ?',
-      'Vous serez retire uniquement de cette equipe de tournoi. Votre equipe club restera intacte.',
+      'Quitter cette équipe ?',
+      'Vous serez retiré uniquement de cette équipe de tournoi. Votre équipe club restera intacte.',
       [
         { style: 'cancel', text: 'Annuler' },
         { onPress: () => leaveTeamMutation.mutate(), style: 'destructive', text: 'Quitter' },
@@ -412,7 +416,7 @@ function TournamentTeamDetails({ navigation, route }) {
             size="sm"
             style={{ alignSelf: 'flex-start', borderColor: `${Colors.neutral300}55` }}
             textStyle={{ color: Colors.neutral100 }}
-            title="Annuler l invitation"
+            title="Annuler l'invitation"
             variant="SecondaryLight"
           />
         ) : null}
@@ -435,18 +439,25 @@ function TournamentTeamDetails({ navigation, route }) {
   };
 
   return (
-    <ScreenContainer>
-      <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
-        <HeaderBackButton onPress={() => navigation.goBack()} />
-      </View>
-      <WithDataWrapper data={team} error={error} isLoading={isLoading} onRetry={refetch}>
-        <ScrollView contentContainerStyle={tournamentDs.styles.screenContent}>
+    <ScreenContainer bottomInsetMode="tab-scene">
+      <WithDataWrapper
+        data={team}
+        error={error}
+        isLoading={isLoading}
+        onRetry={refetch}
+        wrapperStyle={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={tournamentDs.styles.screenContent}
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1 }}
+        >
           <View style={tournamentDs.styles.screenIntro}>
-            <Text style={[Fonts.h2, Fonts.neutral00]}>{team?.name || 'Equipe tournoi'}</Text>
+            <Text style={[Fonts.h2, Fonts.neutral00]}>{team?.name || 'Équipe tournoi'}</Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
               {team?.sourceType === 'club_team'
-                ? `Equipe tournoi derivee de ${team?.sourceTeam?.name || 'l equipe club'}`
-                : 'Equipe ephemere creee pour ce tournoi'}
+                ? `Équipe tournoi dérivée de ${team?.sourceTeam?.name || 'l\'équipe club'}`
+                : 'Équipe éphémère créée pour ce tournoi'}
             </Text>
           </View>
 
@@ -457,11 +468,11 @@ function TournamentTeamDetails({ navigation, route }) {
                 { borderColor: teamIsArchived ? `${Colors.neutral300}33` : `${Colors.warning500}33` },
               ]}
             >
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{teamIsArchived ? 'Equipe archivee' : 'Tournoi cloture'}</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{teamIsArchived ? 'Équipe archivée' : 'Tournoi clôturé'}</Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {teamIsArchived
-                  ? 'Cette equipe ephemere est archivee. Le roster reste lisible mais n est plus modifiable.'
-                  : 'Le tournoi est ferme. Les modifications d equipe et les nouvelles reponses sont maintenant bloquees.'}
+                  ? 'Cette équipe éphémère est archivée. Le roster reste lisible mais n\'est plus modifiable.'
+                  : 'Le tournoi est fermé. Les modifications d\'équipe et les nouvelles réponses sont maintenant bloquées.'}
               </Text>
             </View>
           ) : null}
@@ -476,7 +487,7 @@ function TournamentTeamDetails({ navigation, route }) {
           >
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
               <View style={{ flex: 1 }}>
-                <Text style={[Fonts.p4Bold, Fonts.primary500]}>Statut equipe</Text>
+                <Text style={[Fonts.p4Bold, Fonts.primary500]}>Statut équipe</Text>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{teamStatusMeta.label}</Text>
               </View>
               {team?.captainUser ? (
@@ -506,20 +517,20 @@ function TournamentTeamDetails({ navigation, route }) {
             ) : null}
             {!rosterSummary.meetsMaxRoster ? (
               <Text style={[Fonts.p3, Fonts.error500]}>
-                {`Effectif maximum depasse: ${rosterSummary.totalCount}/${rosterSummary.maxRosterSize}`}
+                {`Effectif maximum dépassé: ${rosterSummary.totalCount}/${rosterSummary.maxRosterSize}`}
               </Text>
             ) : null}
             {rosterSummary.hasWarning && normalizeTournamentText(team?.status) === 'accepted' ? (
               <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-                Cette equipe reste acceptee, mais un warning roster est maintenant visible pour l organisateur.
+                {'Cette équipe reste acceptée, mais un warning roster est maintenant visible pour l\'organisateur.'}
               </Text>
             ) : null}
 
-            {currentMember && isTournamentActiveMemberStatus(currentMember?.responseStatus) ? (
+            {canUpdateTournamentResponse ? (
               <View style={Spaces.gap[12]}>
-                <Text style={[Fonts.p4Bold, Fonts.primary500]}>Ma reponse tournoi</Text>
+                <Text style={[Fonts.p4Bold, Fonts.primary500]}>Ma réponse tournoi</Text>
                 <View style={[Alignments.row, Spaces.gap[12]]}>
-                  <Button disabled={respondMutation.isPending || teamIsLocked} onPress={() => respondMutation.mutate('present')} size="sm" title="Present" variant={currentMemberStatus === 'present' ? 'Primary' : 'Secondary'} />
+                  <Button disabled={respondMutation.isPending || teamIsLocked} onPress={() => respondMutation.mutate('present')} size="sm" title="Présent" variant={currentMemberStatus === 'present' ? 'Primary' : 'Secondary'} />
                   <Button
                     disabled={respondMutation.isPending || teamIsLocked}
                     onPress={() => respondMutation.mutate('absent')}
@@ -540,23 +551,18 @@ function TournamentTeamDetails({ navigation, route }) {
                     size="sm"
                     style={{ alignSelf: 'flex-start', borderColor: `${Colors.neutral300}55` }}
                     textStyle={{ color: Colors.neutral100 }}
-                    title="Quitter l equipe"
+                    title="Quitter l'équipe"
                     variant="SecondaryLight"
                   />
-                ) : null}
-                {currentMemberIsCaptain ? (
-                  <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    Pour quitter cette equipe, transferez d abord le capitanat a un autre membre actif.
-                  </Text>
                 ) : null}
               </View>
             ) : null}
 
             {currentMemberStatus === 'invited' ? (
               <View style={Spaces.gap[12]}>
-                <Text style={[Fonts.p4Bold, Fonts.primary500]}>Invitation recue</Text>
+                <Text style={[Fonts.p4Bold, Fonts.primary500]}>Invitation reçue</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Cette invitation vous ajoute au roster tournoi uniquement si vous l acceptez.
+                  {'Cette invitation vous ajoute au roster tournoi uniquement si vous l\'acceptez.'}
                 </Text>
                 <View style={[Alignments.row, Spaces.gap[12]]}>
                   <Button disabled={respondInvitationMutation.isPending || teamIsLocked} onPress={() => respondInvitationMutation.mutate('accepted')} size="sm" title="Accepter" variant="Primary" />
@@ -575,18 +581,18 @@ function TournamentTeamDetails({ navigation, route }) {
 
             {currentMemberStatus === 'requested' ? (
               <View style={Spaces.gap[8]}>
-                <Text style={[Fonts.p4Bold, Fonts.warning500]}>Demande envoyee</Text>
+                <Text style={[Fonts.p4Bold, Fonts.warning500]}>Demande envoyée</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Votre demande est en attente de validation par le capitaine ou un admin de cette equipe tournoi.
+                  Votre demande est en attente de validation par le capitaine ou un admin de cette équipe tournoi.
                 </Text>
               </View>
             ) : null}
 
             {canRequestJoinTeam ? (
               <View style={Spaces.gap[12]}>
-                <Text style={[Fonts.p4Bold, Fonts.primary500]}>Rejoindre cette equipe</Text>
+                <Text style={[Fonts.p4Bold, Fonts.primary500]}>Rejoindre cette équipe</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Envoyez une demande de rejoindre. Le capitaine ou un admin pourra ensuite l accepter ou la refuser.
+                  {'Envoyez une demande de rejoindre. Le capitaine ou un admin pourra ensuite l\'accepter ou la refuser.'}
                 </Text>
                 <Button
                   disabled={requestJoinMutation.isPending}
@@ -597,7 +603,7 @@ function TournamentTeamDetails({ navigation, route }) {
                   }}
                   size="sm"
                   style={{ alignSelf: 'flex-start' }}
-                  title="Demander a rejoindre"
+                  title="Demander à rejoindre"
                   variant="Secondary"
                 />
               </View>
@@ -605,9 +611,9 @@ function TournamentTeamDetails({ navigation, route }) {
 
             {!canRequestJoinTeam && !currentMember && normalizeTournamentText(team?.sourceType) === 'custom_team' && team?.isOpenToJoinRequests !== true ? (
               <View style={Spaces.gap[8]}>
-                <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Demandes fermees</Text>
+                <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Demandes fermées</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Le capitaine ou un admin doit ouvrir cette equipe avant de recevoir de nouvelles demandes.
+                  Le capitaine ou un admin doit ouvrir cette équipe avant de recevoir de nouvelles demandes.
                 </Text>
               </View>
             ) : null}
@@ -616,7 +622,7 @@ function TournamentTeamDetails({ navigation, route }) {
           <View style={Spaces.gap[12]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Roster actif</Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
-              Les membres actifs composent l equipe tournoi. Cette composition ne modifie jamais l equipe club permanente.
+              {'Les membres actifs composent l\'équipe tournoi. Cette composition ne modifie jamais l\'équipe club permanente.'}
             </Text>
             {activeMembers.length === 0 ? (
               <View style={tournamentDs.styles.compactPanelCard}>
@@ -634,7 +640,7 @@ function TournamentTeamDetails({ navigation, route }) {
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
                     {allowCrossClubPlayers
                       ? 'Recherchez un profil FoundClub ou reprenez un joueur du club pour lui envoyer une invitation.'
-                      : 'Invitez un joueur du club sans toucher a l equipe club de base.'}
+                      : 'Invitez un joueur du club sans toucher à l\'équipe club de base.'}
                   </Text>
                 </View>
                 <Button onPress={() => setIsInviteOpen((current) => !current)} size="sm" title={isInviteOpen ? 'Fermer' : 'Inviter'} variant="Secondary" />
@@ -645,8 +651,8 @@ function TournamentTeamDetails({ navigation, route }) {
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>Demandes de rejoindre</Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
                     {team?.isOpenToJoinRequests === true
-                      ? 'Les joueurs peuvent envoyer une demande pour rejoindre cette equipe custom.'
-                      : 'Les demandes entrantes sont desactivees. Seules vos invitations manuelles sont possibles.'}
+                      ? 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe custom.'
+                      : 'Les demandes entrantes sont désactivées. Seules vos invitations manuelles sont possibles.'}
                   </Text>
                   <Button
                     isLoading={toggleOpenRequestsMutation.isPending}
@@ -676,8 +682,8 @@ function TournamentTeamDetails({ navigation, route }) {
                   {candidateUsers.length === 0 ? (
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
                       {searchTerm.length >= 2
-                        ? 'Aucun profil disponible a inviter pour cette recherche.'
-                        : 'Aucun autre joueur disponible a inviter pour le moment.'}
+                        ? 'Aucun profil disponible à inviter pour cette recherche.'
+                        : 'Aucun autre joueur disponible à inviter pour le moment.'}
                     </Text>
                   ) : (
                     candidateUsers.map((user) => (
@@ -709,7 +715,7 @@ function TournamentTeamDetails({ navigation, route }) {
             <View style={Spaces.gap[12]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Invitations en attente</Text>
               <Text style={[Fonts.p2, Fonts.primary100]}>
-                Ces profils ne font pas encore partie du roster actif tant qu ils n ont pas accepte.
+                {'Ces profils ne font pas encore partie du roster actif tant qu\'ils n\'ont pas accepté.'}
               </Text>
               {invitedMembers.map((member) => renderMemberCard(member, 'invited'))}
             </View>
@@ -719,7 +725,7 @@ function TournamentTeamDetails({ navigation, route }) {
             <View style={Spaces.gap[12]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Demandes de rejoindre</Text>
               <Text style={[Fonts.p2, Fonts.primary100]}>
-                Les demandes acceptees passent ensuite dans le roster actif avec un statut initial en attente.
+                Les demandes acceptées passent ensuite dans le roster actif avec un statut initial en attente.
               </Text>
               {requestedMembers.length === 0 ? (
                 <View style={tournamentDs.styles.compactPanelCard}>
@@ -736,7 +742,7 @@ function TournamentTeamDetails({ navigation, route }) {
         <JoinEventModal
           clubName={team?.event?.club?.name || team?.club?.name || ''}
           confirmLabel="Envoyer ma demande"
-          contextNote={`Equipe choisie : ${team?.name || 'Equipe tournoi'}.`}
+          contextNote={`Équipe choisie : ${team?.name || 'Équipe tournoi'}.`}
           errorMessage={joinRequestError || null}
           isSubmitting={requestJoinMutation.isPending}
           isVisible={isJoinRequestModalVisible}
@@ -751,7 +757,7 @@ function TournamentTeamDetails({ navigation, route }) {
                 acceptRiskDeclaration: acceptance?.acceptRiskDeclaration === true,
               });
             } catch (mutationError) {
-              setJoinRequestError(mutationError?.message || 'Impossible d envoyer cette demande.');
+              setJoinRequestError(mutationError?.message || 'Impossible d\'envoyer cette demande.');
             }
           }}
         />

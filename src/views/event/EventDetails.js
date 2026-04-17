@@ -1,11 +1,12 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  useCallback, useEffect, useLayoutEffect, useMemo, useState,
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  InteractionManager,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -65,10 +66,12 @@ import {
   createCustomTournamentTeam,
   registerClubTeamToTournament,
   requestJoinTournamentTeam,
+  respondToTournamentTeam,
   reviewTournamentTeamRegistration,
 } from '@/services/tournamentTeam/tournamentTeamService';
 
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
+import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
 
 import EventDetectionSlots from './components/EventDetectionSlots';
 import EventHeader from './components/EventHeader';
@@ -87,6 +90,8 @@ import {
 } from './tournamentUtils';
 
 const SharePlatform = require('@/platform/share').default;
+
+const EVENT_DETAILS_STALE_MS = 30_000;
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 /**
@@ -232,8 +237,16 @@ function EventDetails({ navigation, route }) {
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
   const [stageDetailsTab, setStageDetailsTab] = useState('overview');
   const [isMatchActionsOpen, setIsMatchActionsOpen] = useState(true);
+  const [isTournamentActionsOpen, setIsTournamentActionsOpen] = useState(true);
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
   const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
+  const [areDeferredQueriesEnabled, setAreDeferredQueriesEnabled] = useState(false);
+  const firstFocusRefreshRef = useRef(true);
+  const lastFocusRefreshAtRef = useRef(0);
+  const openedEventIdRef = useRef('');
+  const primaryCompletedEventIdRef = useRef('');
+  const firstRenderedEventIdRef = useRef('');
+  const secondaryCompletedEventIdRef = useRef('');
 
   const [isLateModalVisible, setIsLateModalVisible] = useState(false);
   const [lateModalMode, setLateModalMode] = useState(/** @type {'coach_mark' | 'coach_edit' | 'player_declare' | 'player_update'} */ ('coach_mark'));
@@ -259,8 +272,70 @@ function EventDetails({ navigation, route }) {
   const { sendMessage } = useMessaging();
 
   const {
-    data: event, error, isLoading, refetch,
-  } = useGetEvent(eventId || '');
+    data: event,
+    dataUpdatedAt: eventDataUpdatedAt,
+    error,
+    isFetching: isEventFetching,
+    isLoading,
+    refetch,
+  } = useGetEvent(eventId || '', {
+    refetchOnMount: false,
+    staleTime: EVENT_DETAILS_STALE_MS,
+  });
+  const hasLoadedEvent = Boolean(event);
+
+  useEffect(() => {
+    const safeEventId = String(eventId || '');
+    if (!safeEventId || openedEventIdRef.current === safeEventId) return;
+    openedEventIdRef.current = safeEventId;
+    primaryCompletedEventIdRef.current = '';
+    firstRenderedEventIdRef.current = '';
+    secondaryCompletedEventIdRef.current = '';
+    firstFocusRefreshRef.current = true;
+    markEventDetailsPerf('event_detail_open_started', {
+      eventId: safeEventId,
+    });
+  }, [eventId]);
+
+  useEffect(() => {
+    const safeEventId = String(eventId || '');
+    if (!safeEventId || !hasLoadedEvent || isLoading || primaryCompletedEventIdRef.current === safeEventId) return;
+    primaryCompletedEventIdRef.current = safeEventId;
+    markEventDetailsPerf('event_detail_primary_query_completed', {
+      eventId: safeEventId,
+      fromCache: !isEventFetching,
+      hasEvent: hasLoadedEvent,
+    });
+  }, [eventId, hasLoadedEvent, isEventFetching, isLoading]);
+
+  useEffect(() => {
+    const safeEventId = String(eventId || '');
+    if (!safeEventId || !hasLoadedEvent || isLoading || firstRenderedEventIdRef.current === safeEventId) return undefined;
+
+    const frameId = requestAnimationFrame(() => {
+      firstRenderedEventIdRef.current = safeEventId;
+      markEventDetailsPerf('event_detail_first_content_rendered', {
+        eventId: safeEventId,
+      });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [eventId, hasLoadedEvent, isLoading]);
+
+  useEffect(() => {
+    const safeEventId = String(eventId || '');
+    setAreDeferredQueriesEnabled(false);
+    if (!safeEventId || !hasLoadedEvent || isLoading) return undefined;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      setAreDeferredQueriesEnabled(true);
+      markEventDetailsPerf('event_detail_secondary_queries_enabled', {
+        eventId: safeEventId,
+      });
+    });
+
+    return () => task.cancel?.();
+  }, [event?.documentId, eventId, hasLoadedEvent, isLoading]);
   const externalMatchDisplay = useMemo(() => resolveExternalMatchDisplay(event), [event]);
   const isStageParentEvent = String(event?.eventFormat || '').toLowerCase() === 'stage_parent';
   const isStageDayEvent = String(event?.eventFormat || '').toLowerCase() === 'stage_day';
@@ -315,6 +390,16 @@ function EventDetails({ navigation, route }) {
       ))
     )) || null;
   }, [tournamentTeams, userData?.documentId]);
+  const currentUserTournamentMember = useMemo(() => {
+    const currentUserId = userData?.documentId;
+    if (!currentUserId || !currentUserTournamentTeam?.members) return null;
+
+    return currentUserTournamentTeam.members.find((member) => (
+      member?.user?.documentId === currentUserId
+      && isTournamentActiveMemberStatus(member?.responseStatus)
+    )) || null;
+  }, [currentUserTournamentTeam, userData?.documentId]);
+  const currentUserTournamentStatus = normalizeTournamentText(currentUserTournamentMember?.responseStatus);
   const currentUserPendingTournamentTeam = useMemo(
     () => getTournamentPendingMembershipForUser(tournamentTeams, userData?.documentId || ''),
     [tournamentTeams, userData?.documentId],
@@ -410,8 +495,8 @@ function EventDetails({ navigation, route }) {
     return resolvedDescription;
   }, [event?.description, externalMatchDisplay?.contextLabel, externalMatchDisplay?.title]);
   const canEdit = Boolean(canManageEvent(event));
-  const eventClubId = event?.team?.club?.documentId || '';
-  const eventMultisportId = event?.team?.club?.parentMultisport?.documentId || '';
+  const eventClubId = event?.team?.club?.documentId || event?.club?.documentId || '';
+  const eventMultisportId = event?.team?.club?.parentMultisport?.documentId || event?.club?.parentMultisport?.documentId || '';
   const userClubId = userData?.club?.documentId || '';
   const userMultisportIds = useMemo(
     () => (userData?.multisportClubs || []).map((club) => club?.documentId).filter(Boolean),
@@ -496,9 +581,15 @@ function EventDetails({ navigation, route }) {
     [canEdit, isCurrentUserParticipating, isTeamMember],
   );
 
-  const { data: attendancePayload, refetch: refetchAttendance } = useGetEventAttendance(
+  const {
+    data: attendancePayload,
+    isFetching: isAttendanceFetching,
+    refetch: refetchAttendance,
+  } = useGetEventAttendance(
     eventId || '',
-    { enabled: Boolean(eventId && canAccessAttendance) },
+    {
+      enabled: Boolean(eventId && canAccessAttendance && areDeferredQueriesEnabled),
+    },
   );
 
   const eventStartAt = useMemo(() => {
@@ -552,17 +643,21 @@ function EventDetails({ navigation, route }) {
     data: eventParticipations,
     fetchNextPage: fetchNextParticipationsPage,
     hasNextPage: hasNextParticipationsPage,
+    isFetching: isParticipationsFetching,
     isFetchingNextPage: isFetchingNextParticipationsPage,
     refetch: refetchParticipations,
   } = useGetEventParticipations(eventId || '', undefined, {
     includeInactive: true,
     pageSize: 100,
+  }, {
+    enabled: Boolean(eventId && areDeferredQueriesEnabled),
   });
 
   useEffect(() => {
-    if (!hasNextParticipationsPage || isFetchingNextParticipationsPage) return;
+    if (!areDeferredQueriesEnabled || !hasNextParticipationsPage || isFetchingNextParticipationsPage) return;
     fetchNextParticipationsPage();
   }, [
+    areDeferredQueriesEnabled,
     fetchNextParticipationsPage,
     hasNextParticipationsPage,
     isFetchingNextParticipationsPage,
@@ -659,6 +754,17 @@ function EventDetails({ navigation, route }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      refetch();
+    },
+  });
+  const respondTournamentPresenceMutation = useMutation({
+    mutationFn: ({ status, teamDocumentId }) => respondToTournamentTeam(teamDocumentId, status),
+    onError: (mutationError) => {
+      Alert.alert('Erreur', mutationError?.message || 'Impossible d enregistrer votre réponse tournoi.');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       refetch();
     },
   });
@@ -885,8 +991,17 @@ function EventDetails({ navigation, route }) {
 
   const allEventParticipations = useMemo(() => {
     const pages = /** @type {any[]} */ (eventParticipations?.pages || []);
+    const embeddedRequests = /** @type {EventParticipation[]} */ (
+      Array.isArray(event?.participationRequests) ? event.participationRequests : []
+    );
     /** @type {Map<string, EventParticipation>} */
     const deduped = new Map();
+    embeddedRequests.forEach((/** @type {EventParticipation} */ participation) => {
+      const key = participation?.documentId
+        || `${getUserKey(participation?.user) || 'user'}:${participation?.participationStatus || 'status'}:${participation?.updatedAt || ''}:${participation?.isActive === false ? 'inactive' : 'active'}`;
+      if (!key || deduped.has(key)) return;
+      deduped.set(key, participation);
+    });
     pages.forEach((page) => {
       (page?.data || []).forEach((/** @type {EventParticipation} */ participation) => {
         const key = participation?.documentId
@@ -896,7 +1011,7 @@ function EventDetails({ navigation, route }) {
       });
     });
     return /** @type {EventParticipation[]} */ (Array.from(deduped.values()));
-  }, [eventParticipations?.pages]);
+  }, [event?.participationRequests, eventParticipations?.pages]);
 
   const activeEventParticipations = useMemo(
     () => allEventParticipations.filter((participation) => participation?.isActive !== false),
@@ -1438,6 +1553,14 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId });
   }, [eventId, navigation]);
 
+  const handleRespondTournamentPresence = useCallback((status) => {
+    if (!currentUserTournamentTeam?.documentId) return;
+    respondTournamentPresenceMutation.mutate({
+      status,
+      teamDocumentId: currentUserTournamentTeam.documentId,
+    });
+  }, [currentUserTournamentTeam?.documentId, respondTournamentPresenceMutation]);
+
   const closeTournamentParticipationFlow = useCallback(() => {
     setIsTournamentParticipationModalVisible(false);
     setIsTournamentCreateModalVisible(false);
@@ -1924,6 +2047,43 @@ function EventDetails({ navigation, route }) {
     );
   }, [handleCancelEvent, handleEditEvent, t]);
 
+  const handleOpenTournamentActionsMenu = useCallback(() => {
+    const actions = [
+      { style: 'cancel', text: t('common.cancel', 'Annuler') },
+    ];
+
+    if (canEdit) {
+      actions.push({
+        onPress: handleOpenTournamentSettings,
+        text: 'Paramètres tournoi',
+      });
+      actions.push({
+        onPress: handleOpenEventActionsMenu,
+        text: 'Actions événement',
+      });
+    }
+
+    if (canManageFeatured && canRequestFeatured) {
+      actions.push({
+        onPress: () => setIsFeaturedModalVisible(true),
+        text: 'Mettre à la une',
+      });
+    }
+
+    Alert.alert(
+      'Actions tournoi',
+      'Choisissez ce que vous voulez gérer.',
+      actions,
+    );
+  }, [
+    canEdit,
+    canManageFeatured,
+    canRequestFeatured,
+    handleOpenEventActionsMenu,
+    handleOpenTournamentSettings,
+    t,
+  ]);
+
   const isMatchEvent = useMemo(() => {
     const typeName = String(event?.type?.name || '').trim().toLowerCase();
     return typeName.includes('match');
@@ -2005,7 +2165,7 @@ function EventDetails({ navigation, route }) {
     eventId || '',
     compositionTeamId || undefined,
     {
-      enabled: Boolean(eventId && isMatchEvent && compositionTeamId && canEdit),
+      enabled: Boolean(areDeferredQueriesEnabled && eventId && isMatchEvent && compositionTeamId && canEdit),
     },
   );
 
@@ -2017,7 +2177,13 @@ function EventDetails({ navigation, route }) {
     eventId || '',
     compositionTeamId || undefined,
     {
-      enabled: Boolean(eventId && isMatchEvent && compositionTeamId && (canEdit || isTeamMember)),
+      enabled: Boolean(
+        areDeferredQueriesEnabled
+          && eventId
+          && isMatchEvent
+          && compositionTeamId
+          && (canEdit || isTeamMember),
+      ),
     },
   );
 
@@ -2029,20 +2195,71 @@ function EventDetails({ navigation, route }) {
     eventId || '',
     compositionTeamId || undefined,
     {
-      enabled: Boolean(eventId && isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished),
+      enabled: Boolean(
+        areDeferredQueriesEnabled
+          && eventId
+          && isMatchEvent
+          && compositionTeamId
+          && isTeamMember
+          && isMatchFinished,
+      ),
     },
   );
 
   const {
     data: convocationPayload,
+    isFetching: isConvocationFetching,
     refetch: refetchConvocation,
   } = useGetEventConvocation(
     eventId || '',
     compositionTeamId || undefined,
     {
-      enabled: Boolean(eventId && isMatchEvent && compositionTeamId && isTeamMember),
+      enabled: Boolean(areDeferredQueriesEnabled && eventId && isMatchEvent && compositionTeamId && isTeamMember),
     },
   );
+
+  useEffect(() => {
+    const safeEventId = String(eventId || '');
+    if (
+      !safeEventId
+      || !areDeferredQueriesEnabled
+      || secondaryCompletedEventIdRef.current === safeEventId
+      || isAttendanceFetching
+      || isParticipationsFetching
+      || isStaffCompositionFetching
+      || isMatchStatsFetching
+      || isMyMatchResponseFetching
+      || isConvocationFetching
+    ) {
+      return;
+    }
+
+    secondaryCompletedEventIdRef.current = safeEventId;
+    markEventDetailsPerf('event_detail_secondary_queries_completed', {
+      eventId: safeEventId,
+      hasAttendance: Boolean(attendancePayload),
+      hasComposition: Boolean(staffCompositionPayload),
+      hasConvocation: Boolean(convocationPayload),
+      hasMatchStats: Boolean(matchStatsPayload),
+      hasMyMatchResponse: Boolean(myMatchResponsePayload),
+      participationPages: eventParticipations?.pages?.length || 0,
+    });
+  }, [
+    areDeferredQueriesEnabled,
+    attendancePayload,
+    convocationPayload,
+    eventId,
+    eventParticipations?.pages?.length,
+    isAttendanceFetching,
+    isConvocationFetching,
+    isMatchStatsFetching,
+    isMyMatchResponseFetching,
+    isParticipationsFetching,
+    isStaffCompositionFetching,
+    matchStatsPayload,
+    myMatchResponsePayload,
+    staffCompositionPayload,
+  ]);
 
   const matchStatsReport = matchStatsPayload?.report || null;
   const playerCollectiveRating = matchStatsPayload?.playerCollectiveRating || null;
@@ -2742,6 +2959,122 @@ function EventDetails({ navigation, route }) {
     );
   }, [eventId, eventStartAt, hasSelfArrived, mutations.selfArrivalMutation, t]);
 
+  const renderTournamentActionsPanel = () => {
+    if (!isTournamentEvent || isStageDayEvent) return null;
+    const primaryActionTitle = canEdit ? 'Gérer le tournoi' : 'Voir le tournoi';
+    const currentUserPendingTournamentMemberStatus = normalizeTournamentText(
+      currentUserPendingTournamentTeam?.members?.find(
+        (member) => member?.user?.documentId === userData?.documentId,
+      )?.responseStatus,
+    );
+    const canShowTournamentActions = canEdit || (canManageFeatured && canRequestFeatured);
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.backgroundColor.primary700,
+          ApplicationStyle.borderRadius24,
+          Spaces.paddingHorizontal[16],
+          {
+            borderColor: `${Colors.primary500}44`,
+            borderWidth: 1,
+            overflow: 'hidden',
+          },
+        ]}
+      >
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => setIsTournamentActionsOpen((previousValue) => !previousValue)}
+          style={[
+            Spaces.paddingTop[10],
+            Spaces.paddingBottom[12],
+            Spaces.gap[10],
+          ]}
+        >
+          <View style={[Alignments.alignCenter]}>
+            <View
+              style={{
+                backgroundColor: `${Colors.neutral00}55`,
+                borderRadius: 999,
+                height: 4,
+                width: 48,
+              }}
+            />
+          </View>
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Actions événement</Text>
+              <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[2]]}>
+                Gérez le tournoi, les équipes inscrites et les options de l’événement.
+              </Text>
+            </View>
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {isTournamentActionsOpen ? 'Fermer' : 'Ouvrir'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {isTournamentActionsOpen ? (
+          <View style={[Spaces.gap[12], Spaces.paddingBottom[16]]}>
+            <Button
+              onPress={handleOpenTournamentManagement}
+              title={primaryActionTitle}
+              variant={canEdit ? 'Primary' : 'Secondary'}
+            />
+
+            {managedTournamentTeam?.documentId ? (
+              <Button
+                onPress={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
+                title="Gérer mon équipe inscrite"
+                variant="Primary"
+              />
+            ) : null}
+
+            {!managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
+              <Button
+                onPress={() => handleOpenTournamentTeam(currentUserTournamentTeam.documentId)}
+                title="Voir mon équipe inscrite"
+                variant="Primary"
+              />
+            ) : null}
+
+            {!managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
+              <Button
+                onPress={() => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId)}
+                title={currentUserPendingTournamentMemberStatus === 'invited' ? 'Répondre à mon invitation' : 'Suivre ma demande'}
+                variant="Primary"
+              />
+            ) : null}
+
+            {canRegisterTournamentSourceTeam ? (
+              <Button
+                onPress={() => setIsTournamentRegisterModalVisible(true)}
+                title="Inscrire une équipe du club"
+                variant="Secondary"
+              />
+            ) : null}
+
+            {canCreateCustomTournamentTeam ? (
+              <Button
+                onPress={() => setIsTournamentCreateModalVisible(true)}
+                title="Créer une équipe pour ce tournoi"
+                variant="Secondary"
+              />
+            ) : null}
+
+            {canShowTournamentActions ? (
+              <Button
+                onPress={handleOpenTournamentActionsMenu}
+                title="Actions tournoi"
+                variant="Secondary"
+              />
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
   const renderTournamentSection = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
     let tournamentFormatLabel = 'Poules uniquement';
@@ -2752,132 +3085,158 @@ function EventDetails({ navigation, route }) {
     } else if (event?.tournamentConfig?.formatMode === 'round_robin') {
       tournamentFormatLabel = 'Championnat';
     }
-
+    const isCompetitionPublished = event?.tournamentConfig?.competitionState === 'published';
+    const competitionStateLabel = isCompetitionPublished
+      ? 'Compétition publiée'
+      : 'Compétition en brouillon';
+    let primaryActionHelper = 'Consultez le déroulé, les équipes et les résultats du tournoi.';
+    if (canEdit && isCompetitionPublished) {
+      primaryActionHelper = 'Calendrier, résultats et classement sont prêts à être pilotés.';
+    } else if (canEdit) {
+      primaryActionHelper = 'Finalisez les équipes et les paramètres avant de lancer le tournoi.';
+    }
+    const teamsSummary = `${tournamentTeamCounters.accepted} validée(s) · ${tournamentTeamCounters.pending} en attente`;
+    const tournamentScopeLabel = event?.tournamentScopeMode === 'autonomous'
+      ? 'Tournoi autonome'
+      : 'Équipe source';
+    const tournamentContextTags = [
+      tournamentScopeLabel,
+      event?.tournamentActivity?.name,
+      event?.tournamentSection?.name,
+      event?.tournamentCategory?.name,
+    ].filter(Boolean);
+    let playerTournamentStatusLabel = 'Réponse attendue';
+    let playerTournamentStatusTone = Colors.warning500;
+    if (currentUserTournamentStatus === 'present') {
+      playerTournamentStatusLabel = 'Présent';
+      playerTournamentStatusTone = Colors.success500;
+    } else if (currentUserTournamentStatus === 'absent') {
+      playerTournamentStatusLabel = 'Absent';
+      playerTournamentStatusTone = Colors.error500;
+    }
     return (
       <View style={Spaces.gap[16]}>
-        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Equipes du tournoi</Text>
-        <Text style={[Fonts.p2, Fonts.primary100]}>
-          Les equipes de tournoi restent ephemeres et ne modifient jamais les equipes club permanentes.
-        </Text>
-
         <View style={tournamentDs.styles.panelCard}>
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>Cadre du tournoi</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {`Validation des equipes: ${event?.tournamentConfig?.registrationMode === 'auto' ? 'Automatique' : 'Manuelle'}`}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {`Max equipes: ${event?.tournamentConfig?.maxTeams ?? 'Non limite'}`}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {`Effectif: ${event?.tournamentConfig?.minRosterSize ?? 'Libre'} - ${event?.tournamentConfig?.maxRosterSize ?? 'Libre'}`}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {`Equipes ephemeres: ${event?.tournamentConfig?.allowCustomTeams !== false ? 'Autorisees' : 'Desactivees'}`}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {`Mix clubs: ${event?.tournamentConfig?.allowCrossClubPlayers === true ? 'Autorise' : 'Non autorise'}`}
-          </Text>
+          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.p4Bold, Fonts.primary500]}>TOURNOI</Text>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginTop[4]]}>
+                {competitionStateLabel}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8], { lineHeight: 20 }]}>
+                {primaryActionHelper}
+              </Text>
+            </View>
+            <Tag
+              style={tournamentDs.getToneTagStyle(isCompetitionPublished ? Colors.success500 : Colors.warning500)}
+              text={isCompetitionPublished ? 'Publié' : 'Brouillon'}
+              textColor={isCompetitionPublished ? 'neutral00' : 'warning500'}
+              textStyle={isCompetitionPublished ? { color: Colors.success500 } : undefined}
+            />
+          </View>
+
+          <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+            {tournamentContextTags.map((label) => (
+              <Tag
+                key={label}
+                style={tournamentDs.getToneTagStyle(Colors.primary500)}
+                text={label}
+                textColor="primary500"
+              />
+            ))}
+            <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={tournamentFormatLabel} textColor="primary500" />
+            <Tag style={tournamentDs.getToneTagStyle(Colors.warning500)} text={teamsSummary} textColor="warning500" />
+            {event?.tournamentConfig?.knockoutSize ? (
+              <Tag
+                style={tournamentDs.getToneTagStyle(Colors.primary500)}
+                text={`Bracket ${event.tournamentConfig.knockoutSize}`}
+                textColor="primary500"
+              />
+            ) : null}
+          </View>
+
+          <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
+            <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
+              <Text style={[Fonts.p4, Fonts.neutral300]}>Équipes</Text>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{tournamentTeams.length}</Text>
+            </View>
+            <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
+              <Text style={[Fonts.p4, Fonts.neutral300]}>Validation</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {event?.tournamentConfig?.registrationMode === 'auto' ? 'Auto' : 'Manuelle'}
+              </Text>
+            </View>
+            <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
+              <Text style={[Fonts.p4, Fonts.neutral300]}>Points</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {`V${event?.tournamentConfig?.pointsWin ?? 3} N${event?.tournamentConfig?.pointsDraw ?? 1} D${event?.tournamentConfig?.pointsLoss ?? 0}`}
+              </Text>
+            </View>
+          </View>
+
           {event?.tournamentConfig?.rulesText ? (
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
+            <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
               {event.tournamentConfig.rulesText}
             </Text>
           ) : null}
-          <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-            <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={`${tournamentTeams.length} equipe(s)`} textColor="primary500" />
-            <Tag style={tournamentDs.getToneTagStyle(Colors.warning500)} text={`${tournamentTeamCounters.pending} en attente`} textColor="warning500" />
-            <Tag
-              style={tournamentDs.getToneTagStyle(Colors.success500)}
-              text={`${tournamentTeamCounters.accepted} validee(s)`}
-              textColor="neutral00"
-              textStyle={{ color: Colors.success500 }}
-            />
-            {tournamentTeamCounters.warning > 0 ? (
-              <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={`${tournamentTeamCounters.warning} warning(s)`} textColor="gold500" />
-            ) : null}
-          </View>
         </View>
+
+        {currentUserTournamentMember ? (
+          <View style={tournamentDs.styles.panelCard}>
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Ma réponse au tournoi</Text>
+                <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4], { lineHeight: 20 }]}>
+                  Votre réponse concerne votre équipe tournoi, pas le RSVP classique de l’événement.
+                </Text>
+              </View>
+              <Tag
+                style={tournamentDs.getToneTagStyle(playerTournamentStatusTone)}
+                text={playerTournamentStatusLabel}
+                textColor="neutral00"
+                textStyle={{ color: playerTournamentStatusTone }}
+              />
+            </View>
+
+            <View style={[Alignments.row, Spaces.gap[12]]}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  disabled={respondTournamentPresenceMutation.isPending || currentUserTournamentStatus === 'present'}
+                  isLoading={respondTournamentPresenceMutation.isPending}
+                  onPress={() => handleRespondTournamentPresence('present')}
+                  title={currentUserTournamentStatus === 'present' ? 'Présent confirmé' : 'Je suis présent'}
+                  variant={currentUserTournamentStatus === 'present' ? 'Primary' : 'Secondary'}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button
+                  disabled={respondTournamentPresenceMutation.isPending || currentUserTournamentStatus === 'absent'}
+                  isLoading={respondTournamentPresenceMutation.isPending}
+                  onPress={() => handleRespondTournamentPresence('absent')}
+                  title={currentUserTournamentStatus === 'absent' ? 'Absence confirmée' : 'Je suis absent'}
+                  variant={currentUserTournamentStatus === 'absent' ? 'Primary' : 'Secondary'}
+                />
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         <View style={tournamentDs.styles.panelCard}>
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>Structure sportive</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {`Format: ${tournamentFormatLabel}`}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {`Etat: ${event?.tournamentConfig?.competitionState === 'published' ? 'Competition publiee' : 'Competition en brouillon'}`}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {`Points: V ${event?.tournamentConfig?.pointsWin ?? 3} | N ${event?.tournamentConfig?.pointsDraw ?? 1} | D ${event?.tournamentConfig?.pointsLoss ?? 0}`}
-          </Text>
-          {event?.tournamentConfig?.knockoutSize ? (
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {`Bracket cible: ${event.tournamentConfig.knockoutSize}`}
-            </Text>
-          ) : null}
-        </View>
-
-        <Button
-          onPress={handleOpenTournamentManagement}
-          title={canEdit ? 'Piloter la competition' : 'Voir la competition'}
-          variant={canEdit ? 'Primary' : 'Secondary'}
-        />
-
-        {canEdit ? (
-          <View style={[Spaces.gap[12]]}>
-            <Button
-              onPress={handleOpenTournamentSettings}
-              title="Modifier les parametres"
-              variant="Secondary"
-            />
+          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Équipes tournoi</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>{teamsSummary}</Text>
+            </View>
+            {tournamentTeamCounters.warning > 0 ? (
+              <Tag
+                style={tournamentDs.getToneTagStyle(Colors.gold500)}
+                text={`${tournamentTeamCounters.warning} à vérifier`}
+                textColor="gold500"
+              />
+            ) : null}
           </View>
-        ) : null}
 
-        {managedTournamentTeam?.documentId ? (
-          <Button
-            onPress={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
-            title="Gerer mon equipe tournoi"
-            variant="Primary"
-          />
-        ) : null}
-
-        {!managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
-          <Button
-            onPress={() => handleOpenTournamentTeam(currentUserTournamentTeam.documentId)}
-            title="Voir mon equipe tournoi"
-            variant="Primary"
-          />
-        ) : null}
-
-        {!managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
-          <Button
-            onPress={() => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId)}
-            title={
-              normalizeTournamentText(
-                currentUserPendingTournamentTeam?.members?.find(
-                  (member) => member?.user?.documentId === userData?.documentId,
-                )?.responseStatus,
-              ) === 'invited'
-                ? 'Repondre a mon invitation'
-                : 'Suivre ma demande'
-            }
-            variant="Primary"
-          />
-        ) : null}
-
-        {canRegisterTournamentSourceTeam ? (
-          <Button
-            onPress={() => setIsTournamentRegisterModalVisible(true)}
-            title="Inscrire une de mes equipes"
-            variant="Secondary"
-          />
-        ) : null}
-
-        {canCreateCustomTournamentTeam ? (
-          <Button
-            onPress={() => setIsTournamentCreateModalVisible(true)}
-            title="Creer une equipe"
-            variant="Secondary"
-          />
-        ) : null}
+        </View>
 
         {tournamentTeams.length === 0 ? (
           <View style={tournamentDs.styles.panelCard}>
@@ -2999,6 +3358,10 @@ function EventDetails({ navigation, route }) {
       );
     }
 
+    if (isTournamentEvent && !isStageDayEvent) {
+      return null;
+    }
+
     const featuredActionNode = canManageFeatured && canRequestFeatured ? (
       <View style={{ marginTop: 12 }}>
         <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title={'Mettre \u00e0 la une'} variant="Secondary" />
@@ -3075,6 +3438,10 @@ function EventDetails({ navigation, route }) {
       </View>
     );
 
+    if (canEdit && isTournamentEvent && !isStageDayEvent) {
+      return null;
+    }
+
     if (canEdit && isMatchEvent) {
       return (
         <View>
@@ -3134,39 +3501,76 @@ function EventDetails({ navigation, route }) {
     );
   };
 
+  const refreshEventDetails = useCallback((options = {}) => {
+    const includeSecondary = options?.includeSecondary !== false;
+
+    refetch();
+    if (!includeSecondary || !areDeferredQueriesEnabled) return;
+
+    refetchParticipations();
+    if (canAccessAttendance) {
+      refetchAttendance();
+    }
+    if (isMatchEvent && canEdit && compositionTeamId) {
+      refetchTeamComposition();
+    }
+    if (isMatchEvent && compositionTeamId && (canManageMatchStats || isTeamMember)) {
+      refetchMatchStats();
+    }
+    if (isMatchEvent && isTeamMember && compositionTeamId) {
+      refetchMyMatchResponse();
+      refetchConvocation();
+    }
+  }, [
+    areDeferredQueriesEnabled,
+    canAccessAttendance,
+    canEdit,
+    canManageMatchStats,
+    compositionTeamId,
+    isMatchEvent,
+    isTeamMember,
+    refetch,
+    refetchAttendance,
+    refetchConvocation,
+    refetchMatchStats,
+    refetchMyMatchResponse,
+    refetchParticipations,
+    refetchTeamComposition,
+  ]);
+
   useFocusEffect(
     useCallback(() => {
-      refetch();
-      refetchParticipations();
-      if (canAccessAttendance) {
-        refetchAttendance();
+      if (firstFocusRefreshRef.current) {
+        firstFocusRefreshRef.current = false;
+        return undefined;
       }
-      if (isMatchEvent && canEdit && compositionTeamId) {
-        refetchTeamComposition();
+
+      const now = Date.now();
+      const hasFreshPrimaryData = Boolean(
+        eventDataUpdatedAt
+        && now - eventDataUpdatedAt < EVENT_DETAILS_STALE_MS,
+      );
+      const recentlyRefreshedOnFocus = Boolean(
+        lastFocusRefreshAtRef.current
+        && now - lastFocusRefreshAtRef.current < EVENT_DETAILS_STALE_MS,
+      );
+
+      if (hasFreshPrimaryData || recentlyRefreshedOnFocus) {
+        return undefined;
       }
-      if (isMatchEvent && compositionTeamId && (canManageMatchStats || isTeamMember)) {
-        refetchMatchStats();
-      }
-      if (isMatchEvent && isTeamMember && compositionTeamId) {
-        refetchMyMatchResponse();
-      }
-      if (isMatchEvent && isTeamMember && compositionTeamId) {
-        refetchConvocation();
-      }
+
+      lastFocusRefreshAtRef.current = now;
+      markEventDetailsPerf('event_detail_focus_refresh_requested', {
+        eventId,
+        includeSecondary: areDeferredQueriesEnabled,
+      });
+      refreshEventDetails({ includeSecondary: areDeferredQueriesEnabled });
+      return undefined;
     }, [
-      canAccessAttendance,
-      canEdit,
-      compositionTeamId,
-      isMatchEvent,
-      canManageMatchStats,
-      refetchMatchStats,
-      refetchMyMatchResponse,
-      isTeamMember,
-      refetch,
-      refetchAttendance,
-      refetchConvocation,
-      refetchTeamComposition,
-      refetchParticipations,
+      areDeferredQueriesEnabled,
+      eventDataUpdatedAt,
+      eventId,
+      refreshEventDetails,
     ]),
   );
 
@@ -3260,22 +3664,15 @@ function EventDetails({ navigation, route }) {
         contentContainerStyle={[Spaces.gap[32], Spaces.paddingBottom[40]]}
         refreshControl={(
           <RefreshControl
-            onRefresh={() => {
-              refetch();
-              refetchParticipations();
-              if (canAccessAttendance) refetchAttendance();
-              if (isMatchEvent && canEdit && compositionTeamId) refetchTeamComposition();
-              if (isMatchEvent && compositionTeamId && (canManageMatchStats || isTeamMember)) refetchMatchStats();
-              if (isMatchEvent && isTeamMember && compositionTeamId) refetchMyMatchResponse();
-              if (isMatchEvent && isTeamMember && compositionTeamId) refetchConvocation();
-            }}
-            refreshing={isLoading}
+            onRefresh={() => refreshEventDetails({ includeSecondary: true })}
+            refreshing={isLoading || isEventFetching}
           />
         )}
         showsVerticalScrollIndicator={false}
       >
         <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
           <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
+          {renderTournamentActionsPanel()}
           <View style={[Spaces.gap[24]]}>
 
             {isStageParentEvent ? (
@@ -3536,26 +3933,28 @@ function EventDetails({ navigation, route }) {
               />
             ) : null}
 
-            <EventParticipants
-              attendanceByUserId={attendanceByUserId}
-              canApprovePendingRequests={canApprovePendingRequests}
-              canEdit={canEdit}
-              event={event}
-              eventStartAt={eventStartAt}
-              externalParticipationSection={externalParticipationSection}
-              handleExportParticipants={handleExportParticipants}
-              handleRemindPlayers={handleRemindPlayers}
-              handleShare={() => setIsShareModalVisible(true)}
-              handleUpdateParticipation={handleUpdateParticipation}
-              handleUserPress={handleUserPress}
-              nowMs={serverNowMs}
-              onCoachEditLate={handleCoachEditLate}
-              onCoachMarkArrival={handleCoachMarkArrival}
-              participantsSummary={participantsSummary}
-              participationsByStatus={participationsByStatus}
-              pendingParticipations={pendingParticipations}
-              teamParticipationSections={teamParticipationSections}
-            />
+            {(!isTournamentEvent || isStageDayEvent) ? (
+              <EventParticipants
+                attendanceByUserId={attendanceByUserId}
+                canApprovePendingRequests={canApprovePendingRequests}
+                canEdit={canEdit}
+                event={event}
+                eventStartAt={eventStartAt}
+                externalParticipationSection={externalParticipationSection}
+                handleExportParticipants={handleExportParticipants}
+                handleRemindPlayers={handleRemindPlayers}
+                handleShare={() => setIsShareModalVisible(true)}
+                handleUpdateParticipation={handleUpdateParticipation}
+                handleUserPress={handleUserPress}
+                nowMs={serverNowMs}
+                onCoachEditLate={handleCoachEditLate}
+                onCoachMarkArrival={handleCoachMarkArrival}
+                participantsSummary={participantsSummary}
+                participationsByStatus={participationsByStatus}
+                pendingParticipations={pendingParticipations}
+                teamParticipationSections={teamParticipationSections}
+              />
+            ) : null}
 
             {isMatchEvent
           && compositionTeamId

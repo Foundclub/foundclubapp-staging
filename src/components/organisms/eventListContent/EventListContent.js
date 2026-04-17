@@ -12,8 +12,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Image,
   InteractionManager,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -27,13 +29,13 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
-import SearchMapFab from '@/components/atoms/searchMapFab/SearchMapFab';
 import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
+import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -51,6 +53,19 @@ import { markSearchPerf } from '@/utils/performance/searchPerformance';
 import JoinEventModal from '../joinEventModal/JoinEventModal';
 
 const eventListLogger = createLogger('event-list');
+const FEATURED_CLUB_SCOPES = ['SECTION', 'CM'];
+
+const isApprovedFeaturedEvent = (event, scopes = []) => {
+  if (!event?.isFeatured || event?.featuredRequestStatus !== 'approved') {
+    return false;
+  }
+
+  if (!Array.isArray(scopes) || !scopes.length) {
+    return true;
+  }
+
+  return scopes.includes(String(event?.featuredScope || '').toUpperCase());
+};
 
 const hasFiniteViewportBounds = (viewport) => (
   Number.isFinite(Number(viewport?.north))
@@ -164,7 +179,7 @@ function EventListContent({
   const { userData } = useAuth();
   const userDocumentId = userData?.documentId;
   const viewportSession = searchMapSessions?.events || {};
-  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
+  const { sceneBottomInset } = useBottomDockLayout();
 
   const emitTutorialLayout = useCallback((key, ref) => {
     if (!onTutorialLayout || !ref?.current) return;
@@ -213,6 +228,7 @@ function EventListContent({
     const config = /** @type {Record<string, any>} */ ({
       ...(showFilters ? eventFilters : {}),
       ...additionalFilters,
+      featuredRequestStatus: 'approved',
       isFeatured: true,
       pageSize: 5,
       sessionStatus: 'open',
@@ -394,9 +410,13 @@ function EventListContent({
     }, [])
     .filter((event) => {
       if (!event.date) return false;
-      return !isBefore(new Date(event.date), startOfDay(new Date()));
+      if (isBefore(new Date(event.date), startOfDay(new Date()))) return false;
+      return isApprovedFeaturedEvent(
+        event,
+        isPlanning ? FEATURED_CLUB_SCOPES : ['PUBLIC'],
+      );
     })
-    || [], [featuredPages]);
+    || [], [featuredPages, isPlanning]);
 
   const viewportMeta = viewportPages?.pages?.[0]?.meta || null;
   const viewportTotalInBounds = Number(viewportMeta?.totalInBounds);
@@ -427,9 +447,7 @@ function EventListContent({
     }
   }
   const shouldShowMapToggle = enableMapMode && events.length > 0;
-  const listBottomPadding = shouldShowMapToggle
-    ? Math.max(sceneBottomInset, floatingActionBottomOffset + 84)
-    : sceneBottomInset;
+  const listBottomPadding = sceneBottomInset;
   let isListFetchingNext = isFetchingNextPage;
   if (isViewportListMode) {
     isListFetchingNext = isFetchingViewportNextPage;
@@ -614,16 +632,19 @@ function EventListContent({
       eventListLogger.warn('Navigation blocked: missing event documentId');
       return;
     }
-    eventListLogger.debug('Navigating to event détails', { eventDocumentId: event.documentId });
-    /** @type {any} */ (navigation).navigate(RouteNames.EventStack, {
+    eventListLogger.debug('Navigating to event dÃ©tails', { eventDocumentId: event.documentId });
+    navigateToStackScreenOrScreen(/** @type {any} */ (navigation), {
       params: { eventId: event.documentId },
       screen: RouteNames.EventDetails,
+      stack: RouteNames.EventStack,
     });
   }, [navigation]);
 
   const handleOpenFilters = useCallback(() => {
-    // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventFilters });
+    navigateToStackScreenOrScreen(navigation, {
+      screen: RouteNames.EventFilters,
+      stack: RouteNames.EventStack,
+    });
   }, [navigation]);
 
   const handleFindEvent = () => {
@@ -633,7 +654,10 @@ function EventListContent({
 
   const handleSearchField = useCallback((/** @type {string} */ q) => {
     appDispatch({
-      payload: Object.assign(eventFilters || {}, { q }),
+      payload: {
+        ...(eventFilters || {}),
+        q,
+      },
       type: 'SET_EVENT_FILTERS',
     });
   }, [appDispatch, eventFilters]);
@@ -833,7 +857,7 @@ function EventListContent({
    * @returns {import('react').ReactElement} The rendered event item
    */
   const renderItem = ({ index, item }) => {
-    const isReservation = item?.type?.name === 'Réservation';
+    const isReservation = item?.type?.name === 'RÃ©servation';
     const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
     const showAbout = isPlanning || isManager;
     const card = isReservation ? (
@@ -842,7 +866,7 @@ function EventListContent({
         item={item}
         onDecline={() => {}}
         onJoin={() => {}}
-        onLogin={() => {}}
+        onLogin={handleGoLogin}
         onParticipate={() => (showAbout ? handleEventSelect(item) : handleParticipateToEvent(item))}
         onPress={() => handleEventSelect(item)}
       />
@@ -895,10 +919,51 @@ function EventListContent({
         <FeaturedEvents events={featuredEvents} />
       ) : null}
 
-      <View>
-        <Text style={[Fonts.p1, { color: Colors.neutral00, marginBottom: 8 }]}>
-          Événements à partir de
-        </Text>
+      <View style={[Spaces.gap[8]]}>
+        <View
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Alignments.justifySpaceBetween,
+            Spaces.gap[12],
+          ]}
+        >
+          <Text style={[Fonts.p1, { color: Colors.neutral00, flex: 1 }]}>
+            {'\u00C9v\u00E9nements \u00E0 partir de'}
+          </Text>
+
+          {shouldShowMapToggle ? (
+            <TouchableOpacity
+              accessibilityHint={'Ouvre la vue carte des \u00E9v\u00E9nements.'}
+              accessibilityLabel="Passer en mode carte"
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate(RouteNames.SearchMapScreen, { scope: 'events' })}
+              style={[
+                Alignments.alignCenter,
+                Alignments.justifyCenter,
+                ApplicationStyle.borderWidth1,
+                {
+                  backgroundColor: Colors.primary900,
+                  borderColor: Colors.primary500,
+                  borderRadius: 16,
+                  height: 40,
+                  width: 40,
+                },
+              ]}
+            >
+              <Image
+                resizeMode="contain"
+                source={Images.pin}
+                style={{
+                  height: 18,
+                  tintColor: Colors.primary500,
+                  width: 18,
+                }}
+              />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
         <DateSlider
           onDateSelected={handleDateSelected}
           selectedDate={selectedDate}
@@ -928,7 +993,7 @@ function EventListContent({
           </Text>
           {isViewportTruncated ? (
             <Text style={[Fonts.p4, Fonts.neutral200]}>
-              Zoomez sur la carte pour afficher tous les événements de cette zone.
+              Zoomez sur la carte pour afficher tous les Ã©vÃ©nements de cette zone.
             </Text>
           ) : null}
         </View>
@@ -989,13 +1054,6 @@ function EventListContent({
         onClose={handleCloseJoinModal}
         onConfirm={handleConfirmJoinEvent}
       />
-      {shouldShowMapToggle ? (
-        <SearchMapFab
-          mode="list"
-          onPress={() => navigation.navigate(RouteNames.SearchMapScreen, { scope: 'events' })}
-          scope="events"
-        />
-      ) : null}
     </View>
   );
 }

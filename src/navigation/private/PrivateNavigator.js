@@ -417,6 +417,22 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
+          getComponent={() => require('@/views/license/MyLicense').default}
+          name={RouteNames.MyLicense}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Ma cotisation',
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/license/LicenseCheckoutStatus').default}
+          name={RouteNames.LicenseCheckoutStatus}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Paiement cotisation',
+          }}
+        />
+        <Stack.Screen
           getComponent={() => require('@/views/requests/RequestsHub').default}
           name={RouteNames.RequestsHub}
           options={{

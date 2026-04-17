@@ -96,12 +96,16 @@ function EventHeader({ event, matchScoreSummary = null }) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
-  const clubName = toDisplayText(event?.team?.club?.name);
+  const clubName = toDisplayText(event?.team?.club?.name || event?.club?.name);
   const matchDisplay = resolveExternalMatchDisplay(event);
   const externalMatchLocation = resolveExternalMatchLocation(event);
   const eventTitle = matchDisplay.title;
-  const sectionName = toDisplayText(event?.team?.section?.name);
-  const logoUrl = event?.team?.club?.logo?.url;
+  const isTournamentEvent = normalizedTypeName.includes('tournoi');
+  const sectionName = toDisplayText(event?.team?.section?.name || event?.tournamentSection?.name);
+  const categoryName = toDisplayText(event?.team?.category?.name || event?.tournamentCategory?.name);
+  const levelName = toDisplayText(event?.team?.level?.name);
+  const activityName = toDisplayText(event?.team?.activities?.[0]?.name || event?.tournamentActivity?.name);
+  const logoUrl = event?.team?.club?.logo?.url || event?.club?.logo?.url;
   const locationDetails = event?.locationDetails;
   const isImportedExternalMatch = (
     event?.externalAutoSource === 'external_competition'
@@ -113,10 +117,20 @@ function EventHeader({ event, matchScoreSummary = null }) {
     || normalizedTypeName.includes('tournoi')
   ));
   const matchContextLabel = showMatchTitle ? matchDisplay.contextLabel : '';
-  const headerPrimaryTitle = showMatchTitle ? eventTitle : clubName;
-  const headerSecondaryTitle = showMatchTitle
-    ? [matchContextLabel, clubName].filter(Boolean).join(' - ')
-    : '';
+  const tournamentTitle = toDisplayText(event?.name) || 'Tournoi';
+  let headerPrimaryTitle = clubName;
+  if (showMatchTitle) {
+    headerPrimaryTitle = eventTitle;
+  } else if (isTournamentEvent) {
+    headerPrimaryTitle = tournamentTitle;
+  }
+
+  let headerSecondaryTitle = '';
+  if (showMatchTitle) {
+    headerSecondaryTitle = [matchContextLabel, clubName].filter(Boolean).join(' - ');
+  } else if (isTournamentEvent) {
+    headerSecondaryTitle = [clubName, activityName, categoryName].filter(Boolean).join(' - ');
+  }
   const invitedTeamNames = (event?.invitedTeams || [])
     .map((team) => toDisplayText(team?.name))
     .filter(Boolean);
@@ -323,13 +337,15 @@ function EventHeader({ event, matchScoreSummary = null }) {
 
             <View style={[{ height: 45, width: 1 }, ApplicationStyle.backgroundColor.neutral00]} />
 
-            {event?.team && (
+            {(categoryName || levelName || activityName) && (
               <View style={[Spaces.gap[8]]}>
+                {categoryName ? (
+                  <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
+                    {categoryName}
+                  </Text>
+                ) : null}
                 <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
-                  {event?.team?.category?.name}
-                </Text>
-                <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
-                  {event?.team?.level?.name}
+                  {levelName || activityName}
                 </Text>
               </View>
             )}

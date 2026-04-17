@@ -24,6 +24,7 @@ import {
   getEventWizardStageProgramStepIndex,
   getEventWizardStepCount,
   isTournamentEventType,
+  shouldSkipEventWizardLocationStep,
 } from './eventWizardDetectionUtils';
 
 const buildDateKey = (value) => format(new Date(value), 'yyyy-MM-dd');
@@ -93,6 +94,17 @@ const normalizeInitialSchedule = (rawSchedule = []) => rawSchedule.map((entry) =
   startTime: entry?.startTime ? new Date(entry.startTime) : new Date(),
 }));
 
+const serializeStageSchedule = (stageDays = []) => stageDays.map((day) => ({
+  date: new Date(day.date),
+  endTime: new Date(day.endTime),
+  facilityId: day.hasLocationOverride ? day.facilityId || null : null,
+  hasCustomTime: day.hasCustomTime,
+  hasLocationOverride: day.hasLocationOverride,
+  isActive: day.isActive !== false,
+  location: day.hasLocationOverride ? day.location || null : null,
+  startTime: new Date(day.startTime),
+}));
+
 function EventWizardStageProgram({ navigation }) {
   const {
     Alignments,
@@ -108,10 +120,6 @@ function EventWizardStageProgram({ navigation }) {
   const isTournament = isTournamentEventType(state.type?.name);
   const copyRoot = isTournament ? 'eventWizard.tournamentProgram' : 'eventWizard.stage';
   const copy = (key, fallback) => t(`${copyRoot}.${key}`, fallback);
-  const projectedWizardState = useMemo(() => ({
-    ...state,
-    isMultiDayTournament: isTournament ? true : state.isMultiDayTournament,
-  }), [isTournament, state]);
 
   const initialStartDate = state.stageStartDate ? new Date(state.stageStartDate) : new Date(state.date || new Date());
   const initialEndDate = state.stageEndDate ? new Date(state.stageEndDate) : new Date(initialStartDate);
@@ -218,6 +226,15 @@ function EventWizardStageProgram({ navigation }) {
     () => stageDays.filter((day) => day.isActive !== false),
     [stageDays],
   );
+  const stageSchedulePayload = useMemo(
+    () => serializeStageSchedule(stageDays),
+    [stageDays],
+  );
+  const projectedWizardState = useMemo(() => ({
+    ...state,
+    isMultiDayTournament: isTournament ? true : state.isMultiDayTournament,
+    stageSchedule: stageSchedulePayload,
+  }), [isTournament, stageSchedulePayload, state]);
 
   const handleAddFacility = () => {
     navigation.navigate(RouteNames.FacilityForm, {
@@ -259,34 +276,35 @@ function EventWizardStageProgram({ navigation }) {
     }
 
     const firstActiveDay = [...activeDays].sort((left, right) => left.date - right.date)[0];
+    const nextPayload = {
+      date: new Date(firstActiveDay.startTime),
+      endTime: new Date(firstActiveDay.endTime),
+      isMultiDayTournament: isTournament,
+      isRecurrent: false,
+      recurrenceDays: [],
+      recurrenceEndDate: null,
+      recurrenceStartDate: null,
+      stageDefaultEndTime: defaultEndTime,
+      stageDefaultStartTime: defaultStartTime,
+      stageEndDate,
+      stageSchedule: stageSchedulePayload,
+      stageStartDate,
+      startTime: new Date(firstActiveDay.startTime),
+    };
+    const nextWizardState = {
+      ...state,
+      ...nextPayload,
+    };
+
     dispatch({
-      payload: {
-        date: new Date(firstActiveDay.startTime),
-        endTime: new Date(firstActiveDay.endTime),
-        isMultiDayTournament: isTournament,
-        isRecurrent: false,
-        recurrenceDays: [],
-        recurrenceEndDate: null,
-        recurrenceStartDate: null,
-        stageDefaultEndTime: defaultEndTime,
-        stageDefaultStartTime: defaultStartTime,
-        stageEndDate,
-        stageSchedule: stageDays.map((day) => ({
-          date: new Date(day.date),
-          endTime: new Date(day.endTime),
-          facilityId: day.hasLocationOverride ? day.facilityId || null : null,
-          hasCustomTime: day.hasCustomTime,
-          hasLocationOverride: day.hasLocationOverride,
-          isActive: day.isActive !== false,
-          location: day.hasLocationOverride ? day.location || null : null,
-          startTime: new Date(day.startTime),
-        })),
-        stageStartDate,
-        startTime: new Date(firstActiveDay.startTime),
-      },
+      payload: nextPayload,
       type: 'SET_STAGE_PROGRAM',
     });
-    navigation.navigate(RouteNames.EventWizardLocation);
+    navigation.navigate(
+      shouldSkipEventWizardLocationStep(nextWizardState)
+        ? RouteNames.EventWizardTournamentSettings
+        : RouteNames.EventWizardLocation,
+    );
   };
 
   const cardSurfaceStyle = {

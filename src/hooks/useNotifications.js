@@ -63,6 +63,12 @@ import useSafeTimers from '@/hooks/useSafeTimers';
 
 const notificationsLogger = createLogger('notifications');
 
+const isNetworkError = (error) => {
+  const statusCode = error?.status || error?.response?.status;
+  const message = String(error?.message || error || '').toLowerCase();
+  return !statusCode && message.includes('network');
+};
+
 /**
  * @param {import('react').MutableRefObject<Set<string>>} ref
  * @param {string} key
@@ -240,6 +246,8 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       const statusCode = typedError?.status || typedError?.response?.status;
       if (statusCode === 401 || statusCode === 403) {
         notificationsLogger.warn('[FCM] Token registration denied by backend permissions/auth. Notifications disabled for this session.');
+      } else if (isNetworkError(typedError)) {
+        notificationsLogger.warn('[FCM] Failed to save token to backend: network unavailable. Token sync will retry later.');
       } else {
         notificationsLogger.error('[FCM] Failed to save token to backend:', typedError);
       }

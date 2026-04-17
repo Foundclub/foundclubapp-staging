@@ -12,10 +12,14 @@ import {
   getTeamPerformanceStats,
 } from './matchStatsService';
 
+const MATCH_STATS_STALE_MS = 30_000;
+
 export const useGetEventMatchResult = (eventId, teamId, options = {}) => useQuery({
   enabled: Boolean(eventId),
   queryFn: () => getEventMatchResult(eventId, teamId),
   queryKey: ['eventMatchResult', eventId, teamId || 'auto'],
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? MATCH_STATS_STALE_MS,
   ...options,
 });
 
@@ -23,6 +27,8 @@ export const useGetEventMatchStats = (eventId, teamId, options = {}) => useQuery
   enabled: Boolean(eventId),
   queryFn: () => getEventMatchStats(eventId, teamId),
   queryKey: ['eventMatchStats', eventId, teamId || 'auto'],
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? MATCH_STATS_STALE_MS,
   ...options,
 });
 
@@ -30,6 +36,8 @@ export const useGetEventMyMatchResponse = (eventId, teamId, options = {}) => use
   enabled: Boolean(eventId),
   queryFn: () => getEventMyMatchResponse(eventId, teamId),
   queryKey: ['eventMyMatchResponse', eventId, teamId || 'auto'],
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? MATCH_STATS_STALE_MS,
   ...options,
 });
 

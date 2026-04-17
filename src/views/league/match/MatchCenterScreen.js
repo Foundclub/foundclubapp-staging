@@ -1,5 +1,5 @@
 import Slider from '@react-native-community/slider';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
@@ -25,11 +25,11 @@ import { useMatchmakingStateMachine } from '@/views/league/match/hooks/useMatchm
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { shouldMaskOpponentIdentity, shouldShowNextMatchCard } from '@/views/league/match/utils/matchStatus';
 import { buildProposalDefaultsFromMatch, toHourMinute } from '@/views/league/match/utils/proposalDefaults';
+import { buildCanonicalLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames'; // Import RouteNames
 
-import { createChatMessage } from '@/services/chat/chatService';
-import { getMatchHistory, updateMatch } from '@/services/league/leagueMatchService';
+import { createLeagueProposal, getMatchHistory } from '@/services/league/leagueMatchService';
 import { createTeamSlot, getAvailableSlots } from '@/services/teamSlot/teamSlotService';
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
@@ -117,12 +117,72 @@ const resolveMediaUrl = (media) => {
 };
 
 /**
+ * @param {LeagueMatch | null | undefined} match
+ * @param {Team | null | undefined} team
+ * @returns {'a' | 'b' | null}
+ */
+const getLeagueMatchTeamSide = (match, team) => {
+  const teamId = getEntityDocumentId(team);
+  if (!match || !teamId) return null;
+  if (areSameEntityId(getEntityDocumentId(match.team_a), teamId)) return 'a';
+  if (areSameEntityId(getEntityDocumentId(match.team_b), teamId)) return 'b';
+  return null;
+};
+
+/**
+ * @param {LeagueMatch | null | undefined} match
+ * @returns {string}
+ */
+const getLatestLeagueProposalMessageId = (match) => String(
+  match?.proposalMessageId
+    || match?.latestProposalMessageId
+    || match?.automation_meta?.latest_proposal_message_id
+    || match?.currentProposal?.messageId
+    || '',
+).trim();
+
+/**
+ * @param {LeagueMatch | null | undefined} match
+ * @returns {'a' | 'b' | ''}
+ */
+const getLastLeagueProposalSide = (match) => {
+  const side = String(match?.automation_meta?.last_proposal_by_side || '').trim().toLowerCase();
+  return side === 'a' || side === 'b' ? side : '';
+};
+
+/**
+ * @param {LeagueMatch | null | undefined} match
+ * @returns {boolean}
+ */
+const hasPendingLeagueProposal = (match) => Boolean(
+  getLatestLeagueProposalMessageId(match)
+    || match?.proposed_time
+    || match?.proposed_venue
+    || match?.automation_meta?.last_proposal_at,
+);
+
+/**
+ * @param {LeagueMatch | null | undefined} match
+ * @param {Record<string, any> | null | undefined} payload
+ * @returns {LeagueMatch | null}
+ */
+const withLeagueMatchActionMetadata = (match, payload) => {
+  if (!match) return null;
+  return {
+    ...match,
+    actionState: payload?.actionType || payload?.state || match?.actionState || null,
+    proposalMessageId: payload?.proposalMessageId || match?.proposalMessageId || null,
+  };
+};
+
+/**
  *
  */
 function MatchCenterScreen() {
   const swordsIcon = '\u2694\uFE0F';
   const radarIcon = '\uD83D\uDCE1';
   const navigation = /** @type {any} */ (useNavigation());
+  const route = /** @type {any} */ (useRoute());
   const { userData } = useAuth();
   const { getClubInitials } = useClub();
   const {
@@ -191,6 +251,58 @@ function MatchCenterScreen() {
   const mySquadId = React.useMemo(() => getEntityDocumentId(mySquad), [mySquad]);
   const isOpponentAnonymous = React.useMemo(() => shouldMaskOpponentIdentity(currentMatch), [currentMatch]);
   const opponentChatTitle = isOpponentAnonymous ? 'Vs Adversaire' : `Vs ${opponentDetails?.name || 'Adversaire'}`;
+  const routeOpenProposalRequested = Boolean(route?.params?.openLeagueProposal || route?.params?.forceLeagueActionPrompt);
+  const routeOpenProposalToken = String(
+    route?.params?.openLeagueProposalToken
+      || route?.params?.forceLeagueActionPromptToken
+      || '',
+  );
+  const routeOpenProposalMatchId = String(route?.params?.matchId || '');
+  const matchTeamSide = React.useMemo(
+    () => getLeagueMatchTeamSide(currentMatch, mySquad),
+    [currentMatch, mySquad],
+  );
+  const matchLastProposalSide = React.useMemo(
+    () => getLastLeagueProposalSide(currentMatch),
+    [currentMatch],
+  );
+  const matchHasPendingProposal = React.useMemo(
+    () => hasPendingLeagueProposal(currentMatch),
+    [currentMatch],
+  );
+  const matchProposalAction = React.useMemo(() => {
+    const actionState = String(currentMatch?.actionState || currentMatch?.actionType || '').trim();
+
+    if (!currentMatch || !matchHasPendingProposal) {
+      return {
+        helper: 'Le match correspond \u00E0 vos crit\u00E8res. Envoyez une proposition de terrain et d\u2019horaire pour lancer la n\u00E9gociation.',
+        kind: 'create',
+        title: 'ENVOYER UNE PROPOSITION',
+      };
+    }
+
+    if (actionState === 'proposal_received' || (matchLastProposalSide && matchTeamSide && matchLastProposalSide !== matchTeamSide)) {
+      return {
+        helper: 'Une proposition adverse attend votre r\u00E9ponse. Ouvrez le chat pour accepter, refuser ou contre-proposer.',
+        kind: 'reply',
+        title: 'R\u00C9PONDRE',
+      };
+    }
+
+    if (actionState === 'proposal_sent_waiting' || (matchLastProposalSide && matchTeamSide && matchLastProposalSide === matchTeamSide)) {
+      return {
+        helper: 'Votre proposition a \u00E9t\u00E9 envoy\u00E9e. Ouvrez la discussion pour suivre la r\u00E9ponse adverse.',
+        kind: 'sent',
+        title: 'VOIR LA PROPOSITION',
+      };
+    }
+
+    return {
+      helper: 'Une proposition est d\u00E9j\u00E0 ouverte. Ouvrez la n\u00E9gociation pour continuer.',
+      kind: 'open',
+      title: 'OUVRIR LA N\u00C9GOCIATION',
+    };
+  }, [currentMatch, matchHasPendingProposal, matchLastProposalSide, matchTeamSide]);
 
   // DAY_MAP for display
   /** @type {Record<string, string>} */
@@ -297,6 +409,26 @@ function MatchCenterScreen() {
     () => new Set(['negotiating', 'provisionary', 'scheduled']),
     [],
   );
+  const shownInitialProposalMatchIdRef = useRef('');
+  const consumedRouteOpenProposalTokenRef = useRef('');
+
+  const shouldOpenInitialProposalModal = useCallback((match) => {
+    const normalizedStatus = String(match?.status || '').trim().toLowerCase();
+    if (!['negotiating', 'provisional', 'provisionary'].includes(normalizedStatus)) return false;
+    return !getLatestLeagueProposalMessageId(match)
+      && !match?.proposed_time
+      && !match?.proposed_venue
+      && !match?.automation_meta?.last_proposal_at
+      && !match?.automation_meta?.latest_proposal_message_id;
+  }, []);
+
+  const openInitialProposalModal = useCallback((match) => {
+    if (!shouldOpenInitialProposalModal(match)) return;
+    const matchId = getEntityDocumentId(match);
+    if (!matchId || shownInitialProposalMatchIdRef.current === matchId) return;
+    shownInitialProposalMatchIdRef.current = matchId;
+    setIsProposalModalVisible(true);
+  }, [shouldOpenInitialProposalModal]);
 
   const fetchMatchData = useCallback(async (
     /** @type {Team} */ squad,
@@ -321,10 +453,12 @@ function MatchCenterScreen() {
       if (activeReq && (effectiveLegacyState === 'searching' || effectiveLegacyState === 'matched')) {
         setMatchRequest(activeReq.request || null);
         if (effectiveLegacyState === 'matched') {
+          const activeMatch = withLeagueMatchActionMetadata(activeReq.match || null, activeReq);
           setViewState('match_found');
-          setCurrentMatch(activeReq.match || null);
+          setCurrentMatch(activeMatch);
           setOpponentDetails(activeReq.opponentDetails || activeReq.opponent || null);
-          lastMatchRef.current = activeReq.match || null; // Track match
+          lastMatchRef.current = activeMatch; // Track match
+          openInitialProposalModal(activeMatch);
         } else {
           setViewState('radar');
           setCurrentMatch(null);
@@ -370,7 +504,7 @@ function MatchCenterScreen() {
     } finally {
       setLoading(false);
     }
-  }, [cancellationLikeStatuses]);
+  }, [cancellationLikeStatuses, openInitialProposalModal]);
 
   const loadMatchCenter = useCallback(async () => {
     if (!userId) return;
@@ -501,7 +635,11 @@ function MatchCenterScreen() {
         const result = await MatchmakingService.triggerSearch(params.teamId, params.selectedSlotIds, params);
 
         if (result && 'status' in result && result.status === 'matched') {
-          Alert.alert('Match trouve !', 'Un adversaire a été trouve instantanement !');
+          const matchedResult = /** @type {any} */ (result);
+          const matchedMatch = withLeagueMatchActionMetadata(matchedResult.match || null, matchedResult);
+          setCurrentMatch(matchedMatch);
+          setOpponentDetails(matchedResult.opponentDetails || matchedResult.opponent || null);
+          openInitialProposalModal(matchedMatch);
           setViewState('match_found');
         } else {
           setMatchRequest(result);
@@ -544,7 +682,7 @@ function MatchCenterScreen() {
   }, []);
 
   const handleMatched = useCallback((/** @type {MatchmakingStatus} */ statusData, /** @type {{silent?: boolean}} */ options = {}) => {
-    const nextMatch = statusData?.match || null;
+    const nextMatch = withLeagueMatchActionMetadata(statusData?.match || null, statusData);
     const nextMatchId = getEntityDocumentId(nextMatch);
     const currentMatchId = getEntityDocumentId(currentMatch);
     const sameMatch = Boolean(nextMatchId && currentMatchId && areSameEntityId(nextMatchId, currentMatchId));
@@ -555,9 +693,9 @@ function MatchCenterScreen() {
     setOpponentDetails(statusData?.opponentDetails || null);
     setViewState('match_found');
     if (shouldAlert) {
-      Alert.alert('Match trouve', 'Un adversaire a été trouve.');
+      openInitialProposalModal(nextMatch);
     }
-  }, [currentMatch, viewState]);
+  }, [currentMatch, openInitialProposalModal, viewState]);
 
   const handleRecoverFromBackground = useCallback(() => {
     setViewState('radar');
@@ -691,79 +829,29 @@ function MatchCenterScreen() {
       if (!proposalData?.date) {
         throw new Error('Missing proposal date');
       }
-      const addressLabel = typeof proposalData?.address === 'string'
-        ? proposalData.address
-        : proposalData?.addressObject?.label
-                    || proposalData?.addressObject?.address
-                    || null;
+      const proposalPayload = buildCanonicalLeagueProposalPayload(proposalData);
+      if (!proposalPayload.venueLabel) {
+        throw new Error('Missing proposal venue');
+      }
 
-      const nextLocation = {
-        ...(currentMatch?.location && typeof currentMatch.location === 'object' ? currentMatch.location : {}),
-        ...(proposalData?.addressObject && typeof proposalData.addressObject === 'object' ? proposalData.addressObject : {}),
-        ...(addressLabel ? { address: addressLabel, label: addressLabel } : {}),
-        ...(proposalData?.endDate ? { proposed_end_time: proposalData.endDate } : {}),
-      };
+      const result = await createLeagueProposal(matchId, proposalPayload);
 
-      // 1. Update Match with Proposal
-      await updateMatch(matchId, {
-        location: nextLocation,
-        proposed_time: proposalData.date,
-        proposed_venue: proposalData.venue,
-      });
-
-      // 2. Refresh Match Data Locally (Optimistic or fetch)
-      const updatedMatch = {
+      const rawUpdatedMatch = result?.match || {
         ...currentMatch,
-        location: nextLocation,
-        proposed_time: proposalData.date,
-        proposed_venue: proposalData.venue,
+        proposed_time: proposalPayload.startAt,
+        proposed_venue: proposalPayload.venueLabel,
+        ...(proposalPayload.addressObject
+          ? { location: { ...(currentMatch?.location || {}), ...proposalPayload.addressObject } }
+          : {}),
       };
+      const updatedMatch = withLeagueMatchActionMetadata(rawUpdatedMatch, {
+        actionType: 'proposal_sent_waiting',
+        proposalMessageId: result?.proposalMessageId,
+      });
       setCurrentMatch(updatedMatch);
 
-      // 3. Send Formatted Message in Chat
-      if (currentMatch.chat) {
-        const chatId = getEntityDocumentId(currentMatch.chat);
-        if (!chatId) {
-          throw new Error('Missing chat id');
-        }
-        const proposalDate = String(proposalData.date);
-
-        const startDate = new Date(proposalDate);
-        const endDate = proposalData.endDate
-          ? new Date(proposalData.endDate)
-          : new Date(startDate.getTime() + (60 * 60 * 1000));
-
-        const dateStr = startDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', weekday: 'long' });
-        const startStr = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        const endStr = endDate ? endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '?';
-
-        const timeStr = `de ${startStr} a ${endStr}`;
-        const placeLine = addressLabel
-          ? `${proposalData.venue} (${addressLabel})`
-          : proposalData.venue;
-
-        const messageText = 'Proposition de match\n'
-                    + `${placeLine}\n`
-                    + `${dateStr}\n`
-                    + `${timeStr}\n\n`
-                    + 'Cela vous convient-il ?';
-
-        await createChatMessage(/** @type {any} */ ({
-          chatId,
-          composition: {
-            address: addressLabel,
-            addressObject: nextLocation,
-            date: proposalData.date,
-            endDate: endDate.toISOString(),
-            matchId,
-            status: 'pending',
-            type: 'proposal',
-            venue: proposalData.venue,
-          },
-          message: messageText,
-        }));
-
-        // 4. Navigate to Chat
+      const chatId = getEntityDocumentId(updatedMatch?.chat || currentMatch.chat);
+      if (chatId) {
         setIsProposalModalVisible(false);
         navigation.navigate(RouteNames.Conversation, {
           chatId,
@@ -772,12 +860,92 @@ function MatchCenterScreen() {
         });
       }
     } catch (error) {
-      console.error('Proposal Error:', error);
-      Alert.alert('Erreur', "Impossible d'envoyer la proposition.");
+      const apiMessage = error?.response?.data?.error?.message
+        || error?.response?.data?.message
+        || error?.message
+        || "Impossible d'envoyer la proposition.";
+      console.error('Proposal Error:', {
+        message: apiMessage,
+        status: error?.response?.status,
+      });
+      Alert.alert('Erreur', apiMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  const openLeagueNegotiation = useCallback((/** @type {LeagueMatch | null | undefined} */ match, options = {}) => {
+    if (!match) {
+      Alert.alert('Erreur', "Le match n'est pas encore pr\u00EAt. R\u00E9essayez dans quelques secondes.");
+      return;
+    }
+
+    const matchId = getEntityDocumentId(match);
+    const chatId = getEntityDocumentId(match?.chat);
+    const proposalMessageId = String(options?.proposalMessageId || getLatestLeagueProposalMessageId(match) || '').trim();
+
+    if (chatId) {
+      navigation.navigate(RouteNames.Conversation, {
+        chatId,
+        focusLatestProposal: Boolean(proposalMessageId),
+        focusProposalMessageId: proposalMessageId || undefined,
+        leagueNegotiationFocusToken: String(Date.now()),
+        subTitle: 'N\u00E9gociation du match en cours',
+        title: opponentChatTitle,
+      });
+      return;
+    }
+
+    navigation.navigate(RouteNames.LeagueMatchDetails, {
+      focusProposalMessageId: proposalMessageId || undefined,
+      focusSection: 'negotiation',
+      matchId,
+    });
+  }, [navigation, opponentChatTitle]);
+
+  const handleMatchFoundPrimaryAction = useCallback((/** @type {LeagueMatch | null | undefined} */ targetMatch = currentMatch) => {
+    const match = targetMatch || currentMatch;
+    if (!match) {
+      Alert.alert('Erreur', "Le match n'est pas encore pr\u00EAt. R\u00E9essayez dans quelques secondes.");
+      return;
+    }
+
+    if (!hasPendingLeagueProposal(match)) {
+      setCurrentMatch(match);
+      setIsProposalModalVisible(true);
+      return;
+    }
+
+    openLeagueNegotiation(match, {
+      proposalMessageId: getLatestLeagueProposalMessageId(match),
+    });
+  }, [currentMatch, openLeagueNegotiation]);
+
+  useEffect(() => {
+    if (!routeOpenProposalRequested) return;
+
+    const requestKey = routeOpenProposalToken || routeOpenProposalMatchId || 'route-open-proposal';
+    if (consumedRouteOpenProposalTokenRef.current === requestKey) return;
+    if (!currentMatch) return;
+
+    const currentMatchId = getEntityDocumentId(currentMatch);
+    if (
+      routeOpenProposalMatchId
+      && currentMatchId
+      && !areSameEntityId(routeOpenProposalMatchId, currentMatchId)
+    ) {
+      return;
+    }
+
+    consumedRouteOpenProposalTokenRef.current = requestKey;
+    handleMatchFoundPrimaryAction(currentMatch);
+  }, [
+    currentMatch,
+    handleMatchFoundPrimaryAction,
+    routeOpenProposalMatchId,
+    routeOpenProposalRequested,
+    routeOpenProposalToken,
+  ]);
 
   // --- RENDERERS ---
 
@@ -1411,22 +1579,13 @@ function MatchCenterScreen() {
                 Prochaine etape
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral00, lineHeight: 22 }]}>
-                Le match correspond à vos critères. Ouvrez le chat pour verrouiller le terrain, l&apos;horaire et le protocole de rencontre.
+                {matchProposalAction.helper}
               </Text>
             </View>
           </View>
 
           <Button
-            onPress={() => {
-              if (currentMatch) {
-                navigation.navigate(RouteNames.LeagueMatchDetails, {
-                  focusSection: currentMatch?.phase === 'waiting_proposal' ? 'negotiation' : undefined,
-                  matchId: getEntityDocumentId(currentMatch),
-                });
-              } else {
-                Alert.alert('Erreur', "Le match n'est pas encore pret. Reessayez dans quelques secondes.");
-              }
-            }}
+            onPress={() => handleMatchFoundPrimaryAction(currentMatch)}
             style={{
               backgroundColor: leagueGold,
               marginTop: 18,
@@ -1436,7 +1595,7 @@ function MatchCenterScreen() {
               width: '100%',
             }}
             textStyle={{ color: Colors.neutral900, fontSize: 16, fontWeight: 'bold' }}
-            title="OUVRIR LE MATCH"
+            title={matchProposalAction.title}
             variant="Primary"
           />
 
@@ -1795,23 +1954,14 @@ function MatchCenterScreen() {
             color: Colors.neutral300, marginBottom: 28, paddingHorizontal: 10, textAlign: 'center',
           }]}
           >
-            Le match correspond à vos critères. Discutez pour valider le terrain.
+            {matchProposalAction.helper}
           </Text>
 
           <Button
-            onPress={() => {
-              if (currentMatch) {
-                navigation.navigate(RouteNames.LeagueMatchDetails, {
-                  focusSection: currentMatch?.phase === 'waiting_proposal' ? 'negotiation' : undefined,
-                  matchId: getEntityDocumentId(currentMatch),
-                });
-              } else {
-                Alert.alert('Erreur', "Le match n'est pas encore prêt. Réessayez dans quelques secondes.");
-              }
-            }}
+            onPress={() => handleMatchFoundPrimaryAction(currentMatch)}
             style={{ backgroundColor: Colors.gold500, width: '100%' }}
             textStyle={{ color: Colors.neutral900, fontSize: 16, fontWeight: 'bold' }}
-            title="OUVRIR LE MATCH"
+            title={matchProposalAction.title}
             variant="Primary"
           />
 

@@ -61,7 +61,11 @@ export const eventSchema = Joi.object({
     documentId: Joi.string().allow(null).optional(),
     name: Joi.string().allow(null).optional(),
   }).allow(null).optional(),
+  tournamentActivity: Joi.object().unknown(true).allow(null).optional(),
+  tournamentCategory: Joi.object().unknown(true).allow(null).optional(),
   tournamentConfig: Joi.object().unknown(true).allow(null).optional(),
+  tournamentScopeMode: Joi.string().valid('team', 'autonomous').allow('', null).optional(),
+  tournamentSection: Joi.object().unknown(true).allow(null).optional(),
   tournamentTeams: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
   type: Joi.object({
     documentId: Joi.string().allow(null).optional(),
@@ -136,6 +140,79 @@ export const createEventsSequentially = async (payloads = []) => (
 );
 
 /**
+ * Create multiple events with bounded concurrency while preserving partial failure reporting.
+ * @param {FCEventForm[]} payloads
+ * @param {{ concurrency?: number, onProgress?: (progress: {
+ *   completed: number,
+ *   created: number,
+ *   failed: number,
+ *   total: number,
+ * }) => void }} [options]
+ * @returns {Promise<{created: Array<{payload: FCEventForm, response: any, documentId: string | null}>, failed: Array<{payload: FCEventForm, error: any}>}>}
+ */
+export const createEventsWithConcurrency = async (payloads = [], options = {}) => {
+  const total = payloads.length;
+  const concurrency = Math.max(1, Math.min(Number(options.concurrency || 1), total || 1));
+  /** @type {Array<{index: number, payload: FCEventForm, response: any, documentId: string | null}>} */
+  const created = [];
+  /** @type {Array<{index: number, payload: FCEventForm, error: any}>} */
+  const failed = [];
+  let nextIndex = 0;
+  let completed = 0;
+
+  const notifyProgress = () => {
+    options.onProgress?.({
+      completed,
+      created: created.length,
+      failed: failed.length,
+      total,
+    });
+  };
+
+  const runWorker = async () => {
+    while (nextIndex < total) {
+      const index = nextIndex;
+      nextIndex += 1;
+      const payload = payloads[index];
+
+      try {
+        // Each worker intentionally processes its own queue sequentially to cap network concurrency.
+        // eslint-disable-next-line no-await-in-loop
+        const response = await createEvent(payload);
+        const documentId = response?.data?.documentId || response?.documentId || null;
+        created.push({
+          documentId,
+          index,
+          payload,
+          response,
+        });
+      } catch (error) {
+        failed.push({
+          error,
+          index,
+          payload,
+        });
+      } finally {
+        completed += 1;
+        notifyProgress();
+      }
+    }
+  };
+
+  notifyProgress();
+  await Promise.all(Array.from({ length: concurrency }, () => runWorker()));
+
+  return {
+    created: created
+      .sort((left, right) => left.index - right.index)
+      .map(({ index, ...item }) => item),
+    failed: failed
+      .sort((left, right) => left.index - right.index)
+      .map(({ index, ...item }) => item),
+  };
+};
+
+/**
  * Rollback events by cancelling all provided documentIds.
  * @param {string[]} documentIds
  * @returns {Promise<PromiseSettledResult<any>[]>}
@@ -156,6 +233,8 @@ export const getEventById = async (documentId) => {
   const response = await client.get(`/events/${documentId}`, {
     params: {
       populate: ['team',
+        'club',
+        'club.parentMultisport',
         'team.club',
         'team.club.logo',
         'team.club.parentMultisport',
@@ -211,6 +290,9 @@ export const getEventById = async (documentId) => {
         'tournamentTeams.adminUsers',
         'tournamentTeams.sourceTeam',
         'tournamentTeams.sourceTeam.club',
+        'tournamentActivity',
+        'tournamentSection',
+        'tournamentCategory',
         'tournamentTeams.members',
         'tournamentTeams.members.user',
         'tournamentTeams.members.user.avatar',
@@ -509,41 +591,66 @@ export const getEvents = async (params = {}) => {
     filtersObj.validationMode = params.validationMode;
   }
 
-  if (club?.value || category || level || activity) {
-    filtersObj.team = filtersObj.team || {};
+  if (club?.value || typeof club === 'string' || category || level || activity) {
+    const clubDocumentId = club?.value || (typeof club === 'string' ? club : null);
+    const toDocumentIdFilter = (value) => (Array.isArray(value) ? { $in: value } : value);
+    const teamTaxonomyFilter = {};
+    const autonomousTournamentFilter = {
+      tournamentScopeMode: 'autonomous',
+    };
 
-    if (club?.value) {
-      filtersObj.team.club = {
-        documentId: club.value,
+    if (clubDocumentId) {
+      teamTaxonomyFilter.club = {
+        documentId: clubDocumentId,
+      };
+      autonomousTournamentFilter.club = {
+        documentId: clubDocumentId,
       };
     }
 
     if (category) {
-      filtersObj.team.category = {
-        documentId: Array.isArray(category) ? { $in: category } : category,
+      teamTaxonomyFilter.category = {
+        documentId: toDocumentIdFilter(category),
+      };
+      autonomousTournamentFilter.tournamentCategory = {
+        documentId: toDocumentIdFilter(category),
       };
     }
 
     if (level) {
-      filtersObj.team.level = {
-        documentId: Array.isArray(level) ? { $in: level } : level,
+      teamTaxonomyFilter.level = {
+        documentId: toDocumentIdFilter(level),
       };
     }
 
     if (activity) {
-      if (Array.isArray(activity)) {
-        filtersObj.team.activities = {
-          documentId: {
-            $in: activity,
-          },
-        };
-      } else {
-        filtersObj.team.activities = {
-          documentId: {
-            $containsi: activity,
-          },
-        };
-      }
+      teamTaxonomyFilter.activities = {
+        documentId: toDocumentIdFilter(activity),
+      };
+      autonomousTournamentFilter.tournamentActivity = {
+        documentId: toDocumentIdFilter(activity),
+      };
+    }
+
+    const canIncludeAutonomousTournamentFilter = !level && !teamIds?.length;
+
+    if (canIncludeAutonomousTournamentFilter) {
+      filtersObj.$and = [
+        ...(filtersObj.$and || []),
+        {
+          $or: [
+            {
+              team: teamTaxonomyFilter,
+            },
+            autonomousTournamentFilter,
+          ],
+        },
+      ];
+    } else {
+      filtersObj.team = {
+        ...(filtersObj.team || {}),
+        ...teamTaxonomyFilter,
+      };
     }
   }
 
@@ -617,6 +724,22 @@ export const getEvents = async (params = {}) => {
           },
         },
       },
+      {
+        club: {
+          documentId: {
+            $in: membershipClubIds,
+          },
+        },
+      },
+      {
+        club: {
+          parentMultisport: {
+            documentId: {
+              $in: membershipClubIds,
+            },
+          },
+        },
+      },
     ];
   }
 
@@ -642,6 +765,14 @@ export const getEvents = async (params = {}) => {
       'team.category',
       'team.level',
       'team.activities',
+      'tournamentActivity',
+      'tournamentSection',
+      'tournamentCategory',
+      'tournamentTeams',
+      'tournamentTeams.members',
+      'tournamentTeams.members.user',
+      'tournamentTeams.captainUser',
+      'tournamentTeams.adminUsers',
       'type',
       'participations',
       'missings',

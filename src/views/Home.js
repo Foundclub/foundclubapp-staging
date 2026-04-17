@@ -1,17 +1,12 @@
 import { useIsFocused } from '@react-navigation/native';
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
-  Image,
   View,
 } from 'react-native';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
-import ModeSwitch from '@/components/atoms/ModeSwitch/ModeSwitch';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingOverlay from '@/components/molecules/onboardingOverlay/OnboardingOverlay';
@@ -26,9 +21,9 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 
-const baseSearchOptions = [
+const publicSearchOptions = [
   {
-    label: 'Évènements',
+    label: '\u00C9v\u00E9nements',
     value: 'events',
   },
   {
@@ -36,9 +31,19 @@ const baseSearchOptions = [
     value: 'clubs',
   },
   {
-    label: 'Réservations',
+    label: 'Annonces',
+    value: 'recrutement',
+  },
+];
+
+const authenticatedSearchOptions = [
+  publicSearchOptions[0],
+  publicSearchOptions[1],
+  {
+    label: 'R\u00E9servations',
     value: 'reservations',
   },
+  publicSearchOptions[2],
 ];
 
 /**
@@ -46,10 +51,10 @@ const baseSearchOptions = [
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Home screen component
  */
-function Home(props) {
+function Home({ route }) {
   return (
     <OnboardingProvider flowId="home-search-onboarding-v1">
-      <HomeContent {...props} />
+      <HomeContent route={route} />
     </OnboardingProvider>
   );
 }
@@ -60,8 +65,8 @@ function Home(props) {
  * @param root0.navigation
  * @param root0.route
  */
-function HomeContent({ navigation, route }) {
-  const [searchType, setSearchType] = useState(baseSearchOptions[0].value);
+function HomeContent({ route }) {
+  const [searchType, setSearchType] = useState(publicSearchOptions[0].value);
 
   useEffect(() => {
     if (route.params?.initialSearchType) {
@@ -72,14 +77,10 @@ function HomeContent({ navigation, route }) {
 
   const {
     Alignments,
-    ApplicationStyle,
-    Colors,
-    Fonts,
-    Images,
     Spaces,
   } = useTheme();
   const { userData } = useAuth();
-  const { t } = useTranslation();
+  const isAuthenticated = Boolean(userData?.documentId);
   // removed duplicate useNotifications call
   const isFocused = useIsFocused();
   const { startOnboarding } = useOnboarding();
@@ -95,14 +96,15 @@ function HomeContent({ navigation, route }) {
   }, [startOnboarding, isFocused]);
 
   const searchOptions = useMemo(() => {
-    const options = [...baseSearchOptions];
-    // Recrutement tab is available for all users
-    options.push({
-      label: 'Recrutement',
-      value: 'recrutement',
-    });
-    return options;
-  }, []);
+    if (isAuthenticated) return authenticatedSearchOptions;
+    return publicSearchOptions;
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!searchOptions.some((option) => option.value === searchType)) {
+      setSearchType(searchOptions[0].value);
+    }
+  }, [searchOptions, searchType]);
 
   /**
    * Handle search type change
@@ -164,7 +166,7 @@ function HomeContent({ navigation, route }) {
       {/* SegmentedControl - Figma exact design */}
       <View style={[Alignments.alignCenter, Alignments.fullWidth, Spaces.marginBottom[24]]}>
         <OnboardingWrapper
-          description="Choisissez ici ce que vous cherchez : Événements, Clubs ou Profils."
+          description="Choisissez ici ce que vous cherchez : \u00C9v\u00E9nements, Clubs ou Annonces."
           id="search-tabs"
           order={1}
           style={Alignments.fullWidth}

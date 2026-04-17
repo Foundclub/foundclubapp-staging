@@ -19,6 +19,8 @@ import {
   normalizeMatchStatus,
   shouldMaskOpponentIdentity,
 } from '@/views/league/match/utils/matchStatus';
+import { getProposalLocationLabel } from '@/views/league/match/utils/proposalPayload';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 import { markVenueBooked as markEventVenueBooked, missingEvent } from '@/services/event/eventService';
@@ -44,9 +46,9 @@ const resolveAddressLabel = (match) => {
   const location = match?.location;
   if (typeof location === 'string') return location;
   if (location && typeof location === 'object') {
-    return location.address || location.label || location.city || '';
+    return getProposalLocationLabel(location);
   }
-  return match?.address || '';
+  return getProposalLocationLabel(match?.address);
 };
 
 /**
@@ -137,7 +139,9 @@ function NextMatchCard({
   const matchDate = new Date(event?.date || match?.date || new Date());
   const hoursUntilMatch = (matchDate.getTime() - now.getTime()) / (1000 * 60 * 60);
   const matchAddressLabel = resolveAddressLabel(match);
-  const venueLabel = match.venue || match.proposed_venue || 'Lieu à définir';
+  const venueLabel = getProposalLocationLabel(match.venue)
+    || getProposalLocationLabel(match.proposed_venue)
+    || 'Lieu à définir';
   const showAddressDetails = Boolean(
     matchAddressLabel
         && normalizeComparableLabel(matchAddressLabel) !== normalizeComparableLabel(venueLabel),

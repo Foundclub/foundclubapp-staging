@@ -73,6 +73,10 @@ import PollCreationModal from '@/components/organisms/pollCreationModal/PollCrea
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
+import {
+  buildCanonicalLeagueProposalPayload,
+  getProposalLocationLabel,
+} from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -104,6 +108,7 @@ import {
 } from '@/utils/documentAttachment';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { createLogger } from '@/utils/logger/logger';
+import { markMessagingPerf } from '@/utils/performance/messagingPerformance';
 import safeJsonParse from '@/utils/safeJsonParse';
 
 import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
@@ -334,7 +339,10 @@ function Conversation({ navigation, route }) {
 
   const promptAddMatchToCalendar = (/** @type {any} */ message) => {
     const startIso = message?.composition?.date || chatData?.league_match?.date;
-    const venue = message?.composition?.venue || chatData?.league_match?.venue || chatData?.league_match?.proposed_venue || '';
+    const venue = getProposalLocationLabel(message?.composition?.venue)
+      || getProposalLocationLabel(chatData?.league_match?.venue)
+      || getProposalLocationLabel(chatData?.league_match?.proposed_venue)
+      || '';
     if (!startIso) return;
 
     const startDate = new Date(startIso);
@@ -575,6 +583,8 @@ function Conversation({ navigation, route }) {
     data: messagesPages,
     fetchNextPage,
     hasNextPage,
+    isFetching: isMessagesFetching,
+    isLoading: isMessagesLoading,
   } = useGetChatMessages({ chatId });
   const { data: chatData } = useGetChatById(chatId);
   const isGroupChat = chatData?.type === 'group';
@@ -591,6 +601,7 @@ function Conversation({ navigation, route }) {
     setGroupNameDraft(String(chatData?.groupName || ''));
   }, [chatData?.groupName, isGroupChat]);
 
+  const [isEventShareModalVisible, setIsEventShareModalVisible] = useState(false);
   const {
     data: sharedEventsPages,
     isFetching: isLoadingSharedEvents,
@@ -602,7 +613,9 @@ function Conversation({ navigation, route }) {
       sort: 'date:asc',
     },
     {
-      enabled: isEventShareEnabled,
+      enabled: isEventShareEnabled && isEventShareModalVisible,
+      refetchOnMount: false,
+      staleTime: 30_000,
     },
   );
 
@@ -837,12 +850,12 @@ function Conversation({ navigation, route }) {
   const [isAttachmentMenuVisible, setIsAttachmentMenuVisible] = useState(false);
   const [isPollModalVisible, setIsPollModalVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
+  const [isProposalResponseSubmitting, setIsProposalResponseSubmitting] = useState(false);
   const [, setCounterProposalContext] = useState(
     /** @type {{ messageId: string; shouldDecline: boolean } | null} */ (null),
   );
   const [isLocationShareModalVisible, setIsLocationShareModalVisible] = useState(false);
   const [isContactShareModalVisible, setIsContactShareModalVisible] = useState(false);
-  const [isEventShareModalVisible, setIsEventShareModalVisible] = useState(false);
   const [selectedLocationOption, setSelectedLocationOption] = useState(/** @type {any} */ (undefined));
   const [selectedContactId, setSelectedContactId] = useState('');
   const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
@@ -851,6 +864,9 @@ function Conversation({ navigation, route }) {
   const handledSharedEventFromPickerRef = useRef('');
   const sharedEventPreviewByIdRef = useRef(new Map());
   const messageContainerRef = useRef(null);
+  const conversationOpenLoggedChatIdRef = useRef('');
+  const conversationPrimaryLoggedChatIdRef = useRef('');
+  const conversationFirstRenderedChatIdRef = useRef('');
   const swipeableMessageRefs = useRef(new Map());
   const consumedNegotiationFocusKeyRef = useRef('');
   const pendingAttachmentActionRef = useRef(
@@ -904,10 +920,13 @@ function Conversation({ navigation, route }) {
         t('common.error'),
       );
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
-      queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
+      markMessagingPerf('messaging_event_bubble_participation_completed', {
+        chatId,
+        eventId: variables?.event,
+      });
       setIsJoinModalVisible(false);
       setJoinModalError('');
       showSuccessBanner(t('eventDetails.participationSuccess'), t('common.success'));
@@ -921,12 +940,15 @@ function Conversation({ navigation, route }) {
         t('common.error'),
       );
     },
-    onSuccess: () => {
+    onSuccess: (_data, reservationId) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
-      queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       queryClient.invalidateQueries({ queryKey: ['featured-reservations'] });
+      markMessagingPerf('messaging_event_bubble_reservation_join_completed', {
+        chatId,
+        reservationId,
+      });
       setIsJoinModalVisible(false);
       setJoinModalError('');
       showSuccessBanner('Reservation rejointe.', t('common.success'));
@@ -2799,16 +2821,14 @@ function Conversation({ navigation, route }) {
       if (!matchId) {
         throw new Error('Missing match id');
       }
-      await createLeagueProposal(matchId, {
-        addressLabel: typeof proposalData?.address === 'string'
-          ? proposalData.address
-          : proposalData?.addressObject?.label
-            || proposalData?.addressObject?.address
-            || proposalData?.venue,
-        addressObject: proposalData?.addressObject,
-        startAt: proposalData?.date,
-        venueLabel: proposalData?.venue,
-      });
+      const proposalPayload = buildCanonicalLeagueProposalPayload(proposalData);
+      if (!proposalPayload.venueLabel) {
+        throw new Error('Missing proposal venue');
+      }
+      await createLeagueProposal(matchId, proposalPayload);
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] });
 
       setIsProposalModalVisible(false);
       setCounterProposalContext(null);
@@ -2835,22 +2855,26 @@ function Conversation({ navigation, route }) {
 
   const handleRespondProposal = async (/** @type {any} */ message, /** @type {string} */ status) => {
     const matchId = message?.composition?.matchId || getEntityDocumentId(chatData?.league_match);
+    const proposalMessageId = String(message?.documentId || message?._id || message?.id || '').trim();
 
-    if (!matchId && status === 'accepted') {
-      // If matchId is missing in composition, try fallback to chat's match
-      if (!chatData?.league_match) {
-        showErrorBanner('Impossible de retrouver le match associé.');
-        return;
-      }
+    if (isProposalResponseSubmitting) return;
+
+    if (!proposalMessageId) {
+      showErrorBanner('Impossible de retrouver la proposition.');
+      return;
     }
 
-    // Optimistic update of the message bubble
+    if (!matchId) {
+      showErrorBanner('Impossible de retrouver le match associe.');
+      return;
+    }
+
+    // Optimistic update of the message bubble.
     const updatedComposition = { ...message.composition, status };
 
-    // Update local cache immediately (Optimistic)
     queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, (/** @type {any} */ oldData) => {
       if (!oldData?.pages) return oldData;
-      const targetMessageId = String(message.documentId || message._id || message.id || '');
+      const targetMessageId = proposalMessageId;
       return {
         ...oldData,
         pages: oldData.pages.map((/** @type {any} */ page) => ({
@@ -2864,30 +2888,28 @@ function Conversation({ navigation, route }) {
     });
 
     try {
+      setIsProposalResponseSubmitting(true);
       if (status === 'accepted') {
         conversationLogger.debug('Accepting match proposal', { matchId });
-        await respondToLeagueProposal(
-          matchId,
-          String(message.documentId || message._id || message.id || ''),
-          'accept',
-        );
-        showSuccessBanner('Le match est validé !', 'Match confirmé', 'league');
+        await respondToLeagueProposal(matchId, proposalMessageId, 'accept');
+        showSuccessBanner('Le match est valide !', 'Match confirme', 'league');
         promptAddMatchToCalendar(message);
       } else {
-        await respondToLeagueProposal(
-          matchId,
-          String(message.documentId || message._id || message.id || ''),
-          'decline',
-        );
+        await respondToLeagueProposal(matchId, proposalMessageId, 'decline');
         conversationLogger.debug('Proposal declined');
+        showSuccessBanner('Votre refus a ete envoye.', 'Proposition refusee', 'league');
       }
 
-      // Invalidate to refresh match status elsewhere
+      queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
       queryClient.invalidateQueries({ queryKey: ['league-matches'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] });
     } catch (error) {
       conversationLogger.error('Proposal action failed', error);
-      showErrorBanner('Une erreur est survenue lors de la réponse.');
-      // Rollback could go here
+      showErrorBanner('Une erreur est survenue lors de la reponse.');
+    } finally {
+      setIsProposalResponseSubmitting(false);
     }
   };
 
@@ -2973,7 +2995,18 @@ function Conversation({ navigation, route }) {
     [chatData?.league_match],
   );
 
-  const isLeagueConversation = chatData?.type === 'league_match';
+  const isLeagueConversation = chatData?.type === 'league_match' || Boolean(chatData?.league_match);
+  const leagueConversationStatus = String(chatData?.league_match?.status || '').trim().toLowerCase();
+  const leagueConversationPhase = String(
+    chatData?.league_match?.phase
+    || chatData?.league_match?.workflow?.phase
+    || '',
+  ).trim().toLowerCase();
+  const canCreateLeagueProposalFromChat = isLeagueConversation
+    && (
+      ['negotiating', 'provisional', 'provisionary'].includes(leagueConversationStatus)
+      || leagueConversationPhase === 'waiting_proposal'
+    );
   const showCancelButton = isLeagueConversation && chatData?.league_match;
   conversationLogger.debug('Computed cancel button visibility', {
     hasLeagueMatch: Boolean(chatData?.league_match),
@@ -3114,6 +3147,59 @@ function Conversation({ navigation, route }) {
     return [...acc, ...formattedMessages];
   }, /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) : []), [messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
 
+  useEffect(() => {
+    const safeChatId = String(chatId || '').trim();
+    if (!safeChatId || conversationOpenLoggedChatIdRef.current === safeChatId) return;
+
+    conversationOpenLoggedChatIdRef.current = safeChatId;
+    conversationPrimaryLoggedChatIdRef.current = '';
+    conversationFirstRenderedChatIdRef.current = '';
+    markMessagingPerf('messaging_conversation_open_started', {
+      chatId: safeChatId,
+    });
+  }, [chatId]);
+
+  useEffect(() => {
+    const safeChatId = String(chatId || '').trim();
+    if (
+      !safeChatId
+      || !Array.isArray(messagesPages?.pages)
+      || isMessagesLoading
+      || conversationPrimaryLoggedChatIdRef.current === safeChatId
+    ) {
+      return;
+    }
+
+    conversationPrimaryLoggedChatIdRef.current = safeChatId;
+    markMessagingPerf('messaging_conversation_primary_query_completed', {
+      chatId: safeChatId,
+      fromCache: !isMessagesFetching,
+      messageCount: messages.length,
+    });
+  }, [chatId, isMessagesFetching, isMessagesLoading, messages.length, messagesPages?.pages]);
+
+  useEffect(() => {
+    const safeChatId = String(chatId || '').trim();
+    if (
+      !safeChatId
+      || !Array.isArray(messagesPages?.pages)
+      || isMessagesLoading
+      || conversationFirstRenderedChatIdRef.current === safeChatId
+    ) {
+      return undefined;
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      conversationFirstRenderedChatIdRef.current = safeChatId;
+      markMessagingPerf('messaging_conversation_first_messages_rendered', {
+        chatId: safeChatId,
+        messageCount: messages.length,
+      });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [chatId, isMessagesLoading, messages.length, messagesPages?.pages]);
+
   const latestMessageId = String(
     messages?.[0]?.documentId
     || messages?.[0]?._id
@@ -3151,7 +3237,10 @@ function Conversation({ navigation, route }) {
     const proposal = latestProposalMessage?.composition || null;
     const proposalDate = proposal?.date || leagueConversationMatch?.proposed_time || leagueConversationMatch?.date || null;
     const proposalEndDate = proposal?.endDate || leagueConversationMatch?.location?.proposed_end_time || null;
-    const proposalVenue = proposal?.venue || leagueConversationMatch?.proposed_venue || leagueConversationMatch?.venue || 'Lieu a definir';
+    const proposalVenue = getProposalLocationLabel(proposal?.venue)
+      || getProposalLocationLabel(leagueConversationMatch?.proposed_venue)
+      || getProposalLocationLabel(leagueConversationMatch?.venue)
+      || 'Lieu a definir';
     const proposalStatus = String(proposal?.status || '').trim().toLowerCase();
 
     let statusLabel = 'Negociation active';
@@ -3223,6 +3312,7 @@ function Conversation({ navigation, route }) {
     return {
       formattedDate,
       helper,
+      proposalStatus,
       scheduleLabel,
       statusLabel,
       title: summaryTitle,
@@ -4295,17 +4385,22 @@ function Conversation({ navigation, route }) {
       }
 
       if (currentMessage.composition.type === 'proposal') {
+        const proposalSenderId = String(currentMessage?.senderDocumentId || currentMessage?.user?._id || '').trim();
+        const isProposalFromMySide = isLeagueConversation
+          ? Boolean(proposalSenderId && myTeamMemberIds.has(proposalSenderId))
+          : !isLeft;
+
         return wrapWithMessageInteractions(
           currentMessage, (
             <View style={{ marginBottom, marginTop }}>
               <ProposalMessageBubble
-                allowResponseActions={!isLeagueConversation}
+                allowResponseActions
                 isHighlighted={latestProposalMessageId === String(currentMessage.documentId || currentMessage._id || '')}
-                isMe={!isLeft}
+                isMe={isProposalFromMySide}
                 onAccept={() => handleRespondProposal(currentMessage, 'accepted')}
                 onCounter={() => handleOpenCounterProposal(currentMessage, {
-                  isMine: !isLeft,
-                  shouldDecline: isLeft,
+                  isMine: isProposalFromMySide,
+                  shouldDecline: !isProposalFromMySide,
                 })}
                 onDecline={() => handleRespondProposal(currentMessage, 'declined')}
                 onViewMatch={handleOpenLeagueMatchDetails}
@@ -4648,7 +4743,7 @@ function Conversation({ navigation, route }) {
     if (!chatData || !userData) return false;
 
     // Whisper, Team, and League Match chats: All participants can write
-    if (chatData.type === 'whisper' || chatData.type === 'team' || chatData.type === 'league_match') return true;
+    if (chatData.type === 'whisper' || chatData.type === 'team' || isLeagueConversation) return true;
 
     // Club Chat: Only Club Admins can write
     if (chatData.type === 'club') {
@@ -4664,7 +4759,7 @@ function Conversation({ navigation, route }) {
     }
 
     return false;
-  }, [chatData, userData]);
+  }, [chatData, isLeagueConversation, userData]);
 
   /**
    * Render custom actions (attachment buttons)
@@ -4674,18 +4769,35 @@ function Conversation({ navigation, route }) {
     <View style={{ alignItems: 'center', flexDirection: 'row', height: 44 }}>
       {isLeagueConversation ? (
         <TouchableOpacity
-          onPress={handleOpenLeagueMatchDetails}
+          accessibilityLabel={canCreateLeagueProposalFromChat ? 'Envoyer une proposition League' : 'Ouvrir le match League'}
+          onPress={() => {
+            if (canCreateLeagueProposalFromChat) {
+              setIsProposalModalVisible(true);
+              return;
+            }
+            handleOpenLeagueMatchDetails();
+          }}
           style={{
             alignItems: 'center',
             backgroundColor: Colors.gold500,
+            borderColor: 'rgba(255,255,255,0.24)',
             borderRadius: 16,
+            borderWidth: 1,
             height: 32,
             justifyContent: 'center',
             marginHorizontal: 4,
+            overflow: 'hidden',
             width: 32,
           }}
         >
-          <Text style={{ fontSize: 16 }}>{'\uD83D\uDCC4'}</Text>
+          <Image
+            resizeMode="contain"
+            source={Images.logo}
+            style={{
+              height: 20,
+              width: 20,
+            }}
+          />
         </TouchableOpacity>
       ) : null}
       <TouchableOpacity
@@ -5231,15 +5343,20 @@ function Conversation({ navigation, route }) {
 
   const renderLeagueNegotiationBanner = () => {
     if (!isLeagueConversation || !leagueConversationMatch) return null;
+    const canRespondToLatestProposal = Boolean(
+      leagueNegotiationSummary.proposalStatus === 'pending'
+      && latestProposalMessage
+      && !isLatestProposalFromMySquad,
+    );
 
     return (
       <View
         style={[
-          ApplicationStyle.borderRadius16,
+          ApplicationStyle.borderRadius24,
           Spaces.marginHorizontal[16],
           Spaces.marginBottom[12],
-          Spaces.paddingHorizontal[16],
-          Spaces.paddingVertical[14],
+          Spaces.padding[24],
+          Spaces.gap[16],
           {
             backgroundColor: 'rgba(10, 28, 43, 0.92)',
             borderColor: 'rgba(1,179,244,0.28)',
@@ -5247,15 +5364,15 @@ function Conversation({ navigation, route }) {
           },
         ]}
       >
-        <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter]}>
+        <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, { columnGap: 12, rowGap: 10 }]}>
           <View
             style={{
               backgroundColor: 'rgba(1,179,244,0.14)',
               borderColor: 'rgba(1,179,244,0.36)',
               borderRadius: 999,
               borderWidth: 1,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
+              paddingHorizontal: 12,
+              paddingVertical: 7,
             }}
           >
             <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
@@ -5263,28 +5380,33 @@ function Conversation({ navigation, route }) {
             </Text>
           </View>
           {latestProposalMessageId ? (
-            <TouchableOpacity onPress={() => scrollToMessageByDocumentId(latestProposalMessageId)}>
+            <TouchableOpacity
+              onPress={() => scrollToMessageByDocumentId(latestProposalMessageId)}
+              style={{ paddingHorizontal: 4, paddingVertical: 6 }}
+            >
               <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Voir la proposition</Text>
             </TouchableOpacity>
           ) : null}
         </View>
 
-        <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 12 }]}>
-          {leagueNegotiationSummary.title}
-        </Text>
-        <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 6 }]}>
-          {leagueNegotiationSummary.helper}
-        </Text>
+        <View style={Spaces.gap[8]}>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, lineHeight: 22 }]}>
+            {leagueNegotiationSummary.title}
+          </Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20 }]}>
+            {leagueNegotiationSummary.helper}
+          </Text>
+        </View>
 
-        <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8, marginTop: 14 }]}>
+        <View style={[Alignments.row, { flexWrap: 'wrap', gap: 10 }]}>
           <View
             style={{
               backgroundColor: 'rgba(255,255,255,0.04)',
               borderColor: 'rgba(255,255,255,0.08)',
               borderRadius: 999,
               borderWidth: 1,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
+              paddingHorizontal: 14,
+              paddingVertical: 9,
             }}
           >
             <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
@@ -5297,8 +5419,8 @@ function Conversation({ navigation, route }) {
               borderColor: 'rgba(255,255,255,0.08)',
               borderRadius: 999,
               borderWidth: 1,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
+              paddingHorizontal: 14,
+              paddingVertical: 9,
             }}
           >
             <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
@@ -5307,7 +5429,43 @@ function Conversation({ navigation, route }) {
           </View>
         </View>
 
-        <View style={[Spaces.marginTop[14]]}>
+        {canRespondToLatestProposal ? (
+          <View style={Spaces.gap[12]}>
+            <View style={[Alignments.row, Spaces.gap[12]]}>
+              <Button
+                disabled={isProposalResponseSubmitting}
+                isLoading={isProposalResponseSubmitting}
+                onPress={() => handleRespondProposal(latestProposalMessage, 'accepted')}
+                size="sm"
+                style={{ flex: 1 }}
+                title="Accepter"
+                variant="Primary"
+              />
+              <Button
+                disabled={isProposalResponseSubmitting}
+                onPress={() => handleOpenCounterProposal(latestProposalMessage, {
+                  isMine: false,
+                  shouldDecline: true,
+                })}
+                size="sm"
+                style={{ flex: 1 }}
+                title="Contre-proposer"
+                variant="Secondary"
+              />
+            </View>
+            <Button
+              disabled={isProposalResponseSubmitting}
+              onPress={() => handleRespondProposal(latestProposalMessage, 'declined')}
+              size="sm"
+              style={{ borderColor: `${Colors.error500}66` }}
+              textStyle={{ color: Colors.error500 }}
+              title="Refuser"
+              variant="SecondaryLight"
+            />
+          </View>
+        ) : null}
+
+        <View>
           <Button
             onPress={handleOpenLeagueMatchDetails}
             title="Voir la fiche match"

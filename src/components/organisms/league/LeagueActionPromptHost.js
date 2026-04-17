@@ -18,7 +18,7 @@ import LeagueModalHeader from '@/components/molecules/header/LeagueModalHeader';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import { shouldMaskOpponentIdentity } from '@/views/league/match/utils/matchStatus';
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
-import { buildLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
+import { buildCanonicalLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
 
 import {
   getCurrentRouteName,
@@ -27,12 +27,12 @@ import {
 } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
-import { createChatMessage, respondProposalMessage } from '@/services/chat/chatService';
+import { respondProposalMessage } from '@/services/chat/chatService';
 import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
 import {
   confirmMatch,
+  createLeagueProposal,
   submitPostSlotResponse,
-  updateMatch,
 } from '@/services/league/leagueMatchService';
 
 import {
@@ -44,6 +44,12 @@ import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 
 const END_MATCH_ROUTE = RouteNames.EndMatchScreen;
+const LEAGUE_ACTION_PROMPT_STATES = new Set([
+  'opponent_found',
+  'post_slot_resolution',
+  'proposal_received',
+  'waiting_venue',
+]);
 
 const BLOCKED_ROUTES = new Set([
   END_MATCH_ROUTE,
@@ -135,7 +141,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     && nextAction
     && isNavigationReady
     && !isBlockedRoute
-    && ['post_slot_resolution', 'proposal_received', 'waiting_venue'].includes(String(nextAction?.state || ''))
+    && LEAGUE_ACTION_PROMPT_STATES.has(String(nextAction?.state || ''))
     && (dismissedActionKey !== (nextAction?.key || null) || isForcedForCurrentAction),
   );
   const leagueActionPopup = usePopupEligibility(
@@ -302,36 +308,53 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     }
   }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.proposalMessageId, showBanner]);
 
+  const handleOpenProposalComposer = useCallback(() => {
+    dismissForSession();
+    setIsCounterProposalVisible(true);
+  }, [dismissForSession]);
+
   const handleCounterProposalSend = useCallback(async (proposalData) => {
-    if (!nextAction?.matchId || !nextAction?.chatId || isSubmitting) return;
+    if (!nextAction?.matchId || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
-      const payload = buildLeagueProposalPayload(nextAction.matchId, proposalData);
-      await updateMatch(nextAction.matchId, payload.matchUpdate);
-      await createChatMessage({
-        chatId: nextAction.chatId,
-        composition: payload.message.composition,
-        message: payload.message.message,
-      });
+      const proposalPayload = buildCanonicalLeagueProposalPayload(proposalData);
+      if (!proposalPayload.venueLabel) {
+        throw new Error('Missing proposal venue');
+      }
+      const result = await createLeagueProposal(nextAction.matchId, proposalPayload);
       await invalidateLeagueQueries();
       setIsCounterProposalVisible(false);
       dismissForSession();
-      navigate(RouteNames.Conversation, {
-        chatId: nextAction.chatId,
-        focusLatestProposal: true,
-        leagueNegotiationFocusToken: String(Date.now()),
+      const chatId = nextAction?.chatId
+        || result?.match?.chat?.documentId
+        || result?.match?.chat?.id
+        || '';
+      if (chatId) {
+        navigate(RouteNames.Conversation, {
+          chatId,
+          focusLatestProposal: true,
+          leagueNegotiationFocusToken: String(Date.now()),
+        });
+        return;
+      }
+      navigate(RouteNames.LeagueMatchDetails, {
+        focusSection: 'negotiation',
+        matchId: nextAction.matchId,
       });
     } catch (error) {
+      const isInitialProposal = nextAction?.state === 'opponent_found';
       showBanner({
-        body: "Impossible d'envoyer la contre-proposition.",
+        body: isInitialProposal
+          ? "Impossible d'envoyer la proposition."
+          : "Impossible d'envoyer la contre-proposition.",
         title: 'Erreur',
         tone: 'error',
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [dismissForSession, invalidateLeagueQueries, isSubmitting, nextAction?.chatId, nextAction?.matchId, showBanner]);
+  }, [dismissForSession, invalidateLeagueQueries, isSubmitting, nextAction?.chatId, nextAction?.matchId, nextAction?.state, showBanner]);
 
   const handleVenueReminder = useCallback(() => {
     if (!nextAction?.matchId) return;
@@ -467,12 +490,18 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   }, [nextAction?.key, nextAction?.state]);
 
   const isWaitingVenue = nextAction?.state === 'waiting_venue';
+  const isOpponentFound = nextAction?.state === 'opponent_found';
   const isPostSlotResolution = nextAction?.state === 'post_slot_resolution';
   const effectivePostSlotStep = postSlotLocalStep || nextAction?.step || 'ask_happened';
-  let promptTitle = isWaitingVenue ? 'Terrain \u00E0 r\u00E9server' : 'Nouvelle proposition League';
-  let promptBody = isWaitingVenue
-    ? "Le match est confirm\u00E9, mais le terrain n'est pas encore r\u00E9serv\u00E9. Pensez \u00E0 finaliser l'organisation."
-    : "Une proposition de match attend une r\u00E9ponse de votre squad. Consultez les d\u00E9tails avant d'accepter ou de refuser.";
+  let promptTitle = 'Nouvelle proposition League';
+  let promptBody = "Une proposition de match attend une r\u00E9ponse de votre squad. Consultez les d\u00E9tails avant d'accepter ou de refuser.";
+  if (isWaitingVenue) {
+    promptTitle = 'Terrain \u00E0 r\u00E9server';
+    promptBody = "Le match est confirm\u00E9, mais le terrain n'est pas encore r\u00E9serv\u00E9. Pensez \u00E0 finaliser l'organisation.";
+  } else if (isOpponentFound) {
+    promptTitle = 'Adversaire trouv\u00E9';
+    promptBody = 'Un match compatible est cr\u00E9\u00E9. Envoyez la premi\u00E8re proposition de terrain et de cr\u00E9neau pour lancer la n\u00E9gociation.';
+  }
   if (isPostSlotResolution) {
     if (effectivePostSlotStep === 'confirm_reschedule') {
       promptTitle = 'Confirmer la replanification ?';
@@ -640,6 +669,25 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       ? 'Saisir le score'
       : 'Ouvrir le match';
 
+    if (state === 'opponent_found') {
+      return (
+        <View style={{ gap: 12 }}>
+          <Button
+            onPress={handleOpenProposalComposer}
+            style={ApplicationStyle.borderRadius24}
+            title={isSubmitting ? 'Envoi...' : 'Envoyer une proposition'}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => openMatchDetails('negotiation')}
+            style={ApplicationStyle.borderRadius24}
+            title="Voir le match"
+            variant="Secondary"
+          />
+        </View>
+      );
+    }
+
     return (
       <View style={{ gap: 12 }}>
         <Button
@@ -653,6 +701,8 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   }, [
     ApplicationStyle.borderRadius24,
     dismissForSession,
+    handleOpenProposalComposer,
+    isSubmitting,
     nextAction?.match?.phase,
     nextAction?.matchId,
     nextAction?.state,

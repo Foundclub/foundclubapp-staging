@@ -12,7 +12,6 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Tag from '@/components/atoms/tag/Tag';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -202,7 +201,7 @@ function TournamentManagement({ navigation, route }) {
   const renderSummaryCard = (label, value, accentColor) => (
     <View
       key={label}
-      style={tournamentDs.getMetricCardStyle(accentColor)}
+      style={[tournamentDs.getMetricCardStyle(accentColor), { width: '100%' }]}
     >
       <Text style={[Fonts.p4Bold, { color: accentColor }]}>{label}</Text>
       <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{String(value)}</Text>
@@ -530,12 +529,23 @@ function TournamentManagement({ navigation, route }) {
   };
 
   return (
-    <ScreenContainer>
-      <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
-        <HeaderBackButton onPress={() => navigation.goBack()} />
-      </View>
-      <WithDataWrapper data={dashboard} error={error} isLoading={isLoading} onRetry={refetch}>
-        <ScrollView contentContainerStyle={tournamentDs.styles.screenContent}>
+    <ScreenContainer bottomInsetMode="tab-scene">
+      <WithDataWrapper
+        data={dashboard}
+        error={error}
+        isLoading={isLoading}
+        onRetry={refetch}
+        wrapperStyle={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            Spaces.paddingTop[24],
+            Spaces.paddingBottom[40],
+            Spaces.gap[24],
+          ]}
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1 }}
+        >
           <View style={tournamentDs.styles.screenIntro}>
             <Text style={[Fonts.h2, Fonts.neutral00]}>Pilotage du tournoi</Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>

@@ -9,12 +9,16 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeamCard';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useGetActivities } from '@/services/activity/activityQueries';
+import { useGetCategories } from '@/services/category/categoryQueries';
+import { useGetSections } from '@/services/section/sectionQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
 
 import { sortTeamsForDisplay } from '@/utils/teamSort';
@@ -33,6 +37,7 @@ import {
  */
 function EventWizardTeam({ navigation }) {
   const {
+    Alignments,
     ApplicationStyle,
     Colors,
     Fonts,
@@ -43,6 +48,11 @@ function EventWizardTeam({ navigation }) {
   const { dispatch, state } = useEventWizard();
   const [searchQuery, setSearchQuery] = useState('');
   const isClubManager = userData?.role?.name === USER_ROLES.president;
+  const isTournament = isTournamentEventType(state?.type?.name);
+  const [tournamentMode, setTournamentMode] = useState(state.tournamentScopeMode || 'team');
+  const [selectedTournamentActivity, setSelectedTournamentActivity] = useState(state.tournamentActivity || null);
+  const [selectedTournamentSection, setSelectedTournamentSection] = useState(state.tournamentSection || null);
+  const [selectedTournamentCategory, setSelectedTournamentCategory] = useState(state.tournamentCategory || null);
 
   const trainedTeamIds = useMemo(() => new Set(
     (userData?.trainedTeams || [])
@@ -64,6 +74,9 @@ function EventWizardTeam({ navigation }) {
       enabled: Boolean(userData?.club?.documentId && (isClubManager || trainedTeamIds.size > 0)),
     },
   );
+  const activitiesQuery = useGetActivities({ enabled: isTournament });
+  const sectionsQuery = useGetSections({ enabled: isTournament });
+  const categoriesQuery = useGetCategories({ enabled: isTournament });
 
   const fetchedTeams = useMemo(
     () => teamsData?.pages?.flatMap((page) => page?.data || [])?.filter(Boolean) || [],
@@ -89,6 +102,26 @@ function EventWizardTeam({ navigation }) {
 
     return sortTeamsForDisplay(fallbackTeams);
   }, [fallbackTeams, fetchedTeams, isClubManager, trainedTeamIds, userData?.documentId]);
+
+  const organizerClub = useMemo(() => (
+    userData?.club
+    || (userData?.trainedTeams || []).find((team) => team?.club)?.club
+    || availableTeams.find((team) => team?.club)?.club
+    || null
+  ), [availableTeams, userData?.club, userData?.trainedTeams]);
+
+  const activityOptions = useMemo(
+    () => (activitiesQuery.data || []).filter((item) => item?.documentId && item?.name),
+    [activitiesQuery.data],
+  );
+  const sectionOptions = useMemo(
+    () => (sectionsQuery.data || []).filter((item) => item?.documentId && item?.name),
+    [sectionsQuery.data],
+  );
+  const categoryOptions = useMemo(
+    () => (categoriesQuery.data || []).filter((item) => item?.documentId && item?.name),
+    [categoriesQuery.data],
+  );
 
   const normalizeSearchText = (value) => String(value || '')
     .normalize('NFD')
@@ -148,8 +181,45 @@ function EventWizardTeam({ navigation }) {
       nextRoute = RouteNames.EventWizardLogistics;
     }
 
-    dispatch({ payload: team, type: 'SET_TEAM' });
+    if (isTournamentEventType(state?.type?.name)) {
+      dispatch({
+        payload: {
+          club: team?.club || organizerClub,
+          team,
+          tournamentActivity: team?.activities?.[0] || team?.sport || null,
+          tournamentCategory: team?.category || null,
+          tournamentScopeMode: 'team',
+          tournamentSection: team?.section || null,
+        },
+        type: 'SET_TOURNAMENT_CONTEXT',
+      });
+    } else {
+      dispatch({ payload: team, type: 'SET_TEAM' });
+    }
     navigation.navigate(nextRoute);
+  };
+
+  const canContinueAutonomousTournament = Boolean(
+    organizerClub?.documentId
+    && selectedTournamentActivity?.documentId
+    && selectedTournamentSection?.documentId
+    && selectedTournamentCategory?.documentId,
+  );
+
+  const handleContinueAutonomousTournament = () => {
+    if (!canContinueAutonomousTournament) return;
+    dispatch({
+      payload: {
+        club: organizerClub,
+        team: null,
+        tournamentActivity: selectedTournamentActivity,
+        tournamentCategory: selectedTournamentCategory,
+        tournamentScopeMode: 'autonomous',
+        tournamentSection: selectedTournamentSection,
+      },
+      type: 'SET_TOURNAMENT_CONTEXT',
+    });
+    navigation.navigate(RouteNames.EventWizardLogistics);
   };
 
   const renderTeamCard = (team) => (
@@ -159,6 +229,238 @@ function EventWizardTeam({ navigation }) {
       team={team}
     />
   );
+
+  const renderModeCard = ({ description, label, mode }) => {
+    const selected = tournamentMode === mode;
+    return (
+      <TouchableOpacity
+        onPress={() => setTournamentMode(mode)}
+        style={[
+          ApplicationStyle.card,
+          Spaces.padding[18],
+          Spaces.gap[8],
+          {
+            backgroundColor: selected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(4, 31, 44, 0.82)',
+            borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
+            borderWidth: 1,
+          },
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Bold, selected ? Fonts.primary500 : Fonts.neutral00, { flex: 1 }]}>
+            {label}
+          </Text>
+          <Text style={[Fonts.p2Bold, selected ? Fonts.primary500 : Fonts.neutral300]}>
+            {selected ? 'Sélectionné' : 'Choisir'}
+          </Text>
+        </View>
+        <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
+          {description}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderReferencePicker = ({
+    emptyLabel,
+    label,
+    onSelect,
+    options,
+    selected,
+  }) => (
+    <View style={[Spaces.gap[10]]}>
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{label}</Text>
+      {options.length === 0 ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>{emptyLabel}</Text>
+      ) : (
+        <View style={[Alignments.row, { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
+          {options.map((option) => {
+            const isSelected = option?.documentId === selected?.documentId;
+            return (
+              <TouchableOpacity
+                key={option.documentId}
+                onPress={() => onSelect(option)}
+                style={[
+                  ApplicationStyle.card,
+                  Spaces.paddingHorizontal[14],
+                  Spaces.paddingVertical[10],
+                  {
+                    backgroundColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.08)',
+                    borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
+                    borderRadius: 16,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, isSelected ? Fonts.neutral900 : Fonts.primary500]}>
+                  {option.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+
+  if (isTournament) {
+    const isReferenceLoading = activitiesQuery.isLoading || sectionsQuery.isLoading || categoriesQuery.isLoading;
+    const hasReferenceError = activitiesQuery.error || sectionsQuery.error || categoriesQuery.error;
+
+    return (
+      <WizardStepLayout
+        onBack={() => navigation.goBack()}
+        stepCount={getEventWizardStepCount(state)}
+        stepIndex={2}
+        subtitle="Choisissez si le tournoi part d'une équipe existante ou s'il est autonome."
+        title="Cadre du tournoi"
+      >
+        <View style={[Spaces.gap[18]]}>
+          <View style={[Spaces.gap[12]]}>
+            {renderModeCard({
+              description: "L'équipe est inscrite automatiquement. Ses joueurs répondent Présent ou Absent dans le roster tournoi.",
+              label: "Tournoi d'une équipe",
+              mode: 'team',
+            })}
+            {renderModeCard({
+              description: 'Aucune équipe n’est inscrite au départ. Le tournoi est défini par sport, section et catégorie.',
+              label: 'Tournoi autonome',
+              mode: 'autonomous',
+            })}
+          </View>
+
+          {tournamentMode === 'team' ? (
+            <View style={[Spaces.gap[16]]}>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Équipe source</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
+                Les membres de l’équipe choisie seront ajoutés au tournoi. Ils ne passeront pas par le RSVP événement classique.
+              </Text>
+
+              {hasTeams ? (
+                <Input
+                  density="compact"
+                  icon="search"
+                  onChangeText={setSearchQuery}
+                  placeholder={t('teamList.searchPlaceholder', 'Rechercher une equipe')}
+                  value={searchQuery}
+                />
+              ) : null}
+
+              {isLoading ? (
+                <View style={[ApplicationStyle.card, Spaces.padding[24], { backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55` }]}>
+                  <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
+                    {t('common.loading', 'Chargement...')}
+                  </Text>
+                </View>
+              ) : null}
+
+              {!isLoading && error ? (
+                <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[12], { backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55` }]}>
+                  <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
+                    {error?.message || t('eventWizard.errors.noTeams')}
+                  </Text>
+                  <Button onPress={() => refetch()} title="Recharger" variant="Secondary" />
+                </View>
+              ) : null}
+
+              {!isLoading && !error && !hasTeams ? (
+                <View style={[ApplicationStyle.card, Spaces.padding[24], { backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55` }]}>
+                  <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
+                    {t('eventWizard.errors.noTeams')}
+                  </Text>
+                </View>
+              ) : null}
+
+              {!isLoading && !error && hasTeams && !hasFilteredTeams ? (
+                <View style={[ApplicationStyle.card, Spaces.padding[24], { backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55` }]}>
+                  <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
+                    {t('teamList.noSearchResult', 'Aucune equipe trouvee pour cette recherche')}
+                  </Text>
+                </View>
+              ) : null}
+
+              {!isLoading && !error && hasFilteredTeams && !isClubManager ? filteredTeams.map(renderTeamCard) : null}
+
+              {!isLoading && !error && hasFilteredTeams && isClubManager ? (
+                <View style={[Spaces.gap[16]]}>
+                  {teamsByOwnership.myTeams.length > 0 ? (
+                    <>
+                      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>MES ÉQUIPES</Text>
+                      <View style={[Spaces.gap[12]]}>{teamsByOwnership.myTeams.map(renderTeamCard)}</View>
+                    </>
+                  ) : null}
+                  {teamsByOwnership.otherTeams.length > 0 ? (
+                    <>
+                      <Text style={[Fonts.p3Bold, Fonts.neutral200, Spaces.marginTop[8]]}>AUTRES ÉQUIPES DU CLUB</Text>
+                      <View style={[Spaces.gap[12]]}>{teamsByOwnership.otherTeams.map(renderTeamCard)}</View>
+                    </>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            <View style={[ApplicationStyle.card, Spaces.padding[18], Spaces.gap[18], {
+              backgroundColor: 'rgba(4, 31, 44, 0.82)',
+              borderColor: 'rgba(1, 179, 244, 0.24)',
+              borderWidth: 1,
+            }]}
+            >
+              <View style={[Spaces.gap[6]]}>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Qualification du tournoi</Text>
+                <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
+                  Ces informations remplacent l’équipe source pour classer le tournoi et guider les inscriptions.
+                </Text>
+              </View>
+
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Club organisateur</Text>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {organizerClub?.name || 'Aucun club disponible'}
+                </Text>
+              </View>
+
+              {isReferenceLoading ? (
+                <Text style={[Fonts.p3, Fonts.neutral300]}>Chargement des référentiels...</Text>
+              ) : null}
+              {hasReferenceError ? (
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  Impossible de charger tous les référentiels. Réessayez ou repassez par un tournoi d’équipe.
+                </Text>
+              ) : null}
+
+              {renderReferencePicker({
+                emptyLabel: 'Aucun sport disponible.',
+                label: 'Sport',
+                onSelect: setSelectedTournamentActivity,
+                options: activityOptions,
+                selected: selectedTournamentActivity,
+              })}
+              {renderReferencePicker({
+                emptyLabel: 'Aucune section disponible.',
+                label: 'Section',
+                onSelect: setSelectedTournamentSection,
+                options: sectionOptions,
+                selected: selectedTournamentSection,
+              })}
+              {renderReferencePicker({
+                emptyLabel: 'Aucune catégorie disponible.',
+                label: 'Catégorie',
+                onSelect: setSelectedTournamentCategory,
+                options: categoryOptions,
+                selected: selectedTournamentCategory,
+              })}
+
+              <Button
+                disabled={!canContinueAutonomousTournament}
+                onPress={handleContinueAutonomousTournament}
+                title="Continuer"
+                variant="Primary"
+              />
+            </View>
+          )}
+        </View>
+      </WizardStepLayout>
+    );
+  }
 
   return (
     <WizardStepLayout

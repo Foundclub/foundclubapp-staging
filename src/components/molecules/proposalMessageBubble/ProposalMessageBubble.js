@@ -13,11 +13,13 @@ import 'dayjs/locale/fr';
 
 import useTheme from '@/theme/themeContext';
 
+import { getProposalLocationLabel } from '@/views/league/match/utils/proposalPayload';
+
 const resolveAddressLabel = (address) => {
   if (!address) return '';
   if (typeof address === 'string') return address;
   if (typeof address === 'object') {
-    return address.label || address.address || address.city || '';
+    return getProposalLocationLabel(address);
   }
   return '';
 };
@@ -198,7 +200,8 @@ function ProposalMessageBubble({
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
   const statusColor = Colors[statusConfig.colorToken] || Colors.gold500;
   const proposalMeta = getProposalMeta({ isMe, status });
-  const addressLabel = resolveAddressLabel(address);
+  const venueLabel = getProposalLocationLabel(venue) || 'Lieu a definir';
+  const addressLabel = resolveAddressLabel(address) || getProposalLocationLabel(proposal?.addressObject);
 
   const formattedDate = date
     ? dayjs(date).locale('fr').format('dddd D MMMM')
@@ -218,7 +221,7 @@ function ProposalMessageBubble({
   };
 
   const openMaps = () => {
-    const addressToOpen = addressLabel || venue;
+    const addressToOpen = addressLabel || venueLabel;
     if (!addressToOpen) return;
 
     const encodedAddress = encodeURIComponent(addressToOpen);
@@ -301,7 +304,7 @@ function ProposalMessageBubble({
             numberOfLines={2}
             style={[Fonts.p2Bold, styles.fieldValue, { color: Colors.neutral00 }]}
           >
-            {venue}
+            {venueLabel}
           </Text>
         </View>
 

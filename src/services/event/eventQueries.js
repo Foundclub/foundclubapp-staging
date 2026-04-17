@@ -11,6 +11,9 @@ import {
   getEventTypes,
 } from './eventService';
 
+const EVENT_DETAIL_STALE_MS = 30_000;
+const EVENT_ATTENDANCE_STALE_MS = 15_000;
+
 /**
  * @param {Record<string, any> | undefined} params
  * @returns {[string, Record<string, any>]}
@@ -38,6 +41,8 @@ export const useGetEvent = (documentId, options = {}) => useQuery({
   enabled: !!documentId,
   queryFn: () => getEventById(documentId),
   queryKey: ['event', documentId],
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? EVENT_DETAIL_STALE_MS,
   ...options,
 });
 
@@ -51,6 +56,8 @@ export const useGetEventAttendance = (eventId, options = {}) => useQuery({
   enabled: !!eventId,
   queryFn: () => getEventAttendance(eventId),
   queryKey: ['eventAttendance', eventId],
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? EVENT_ATTENDANCE_STALE_MS,
   ...options,
 });
 
@@ -65,6 +72,8 @@ export const useGetEventTeamComposition = (eventId, teamId, options = {}) => use
   enabled: !!eventId,
   queryFn: () => getEventTeamComposition(eventId, teamId),
   queryKey: ['eventComposition', eventId, teamId || 'auto'],
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? EVENT_DETAIL_STALE_MS,
   ...options,
 });
 
@@ -79,6 +88,8 @@ export const useGetEventConvocation = (eventId, teamId, options = {}) => useQuer
   enabled: !!eventId,
   queryFn: () => getEventConvocation(eventId, teamId),
   queryKey: ['eventConvocation', eventId, teamId || 'auto'],
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? EVENT_DETAIL_STALE_MS,
   ...options,
 });
 

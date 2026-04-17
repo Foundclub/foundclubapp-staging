@@ -98,6 +98,53 @@ const chatListPopulate = {
   },
 };
 
+const buildChatDetailPopulate = ({ includeMessages = false } = {}) => {
+  const populate = {
+    archivedBy: {
+      populate: ['avatar'],
+    },
+    club: {
+      populate: {
+        logo: true,
+      },
+    },
+    groupAdmins: {
+      populate: ['avatar'],
+    },
+    league_match: {
+      populate: {
+        team_a: { populate: ['captain'] },
+        team_b: { populate: ['captain'] },
+        winner: true,
+      },
+    },
+    multisportClub: {
+      populate: {
+        admins: true,
+        logo: true,
+      },
+    },
+    participants: {
+      populate: ['avatar'],
+    },
+    pinnedBy: {
+      populate: ['avatar'],
+    },
+    team: {
+      populate: true,
+    },
+  };
+
+  if (includeMessages) {
+    populate.messages = {
+      populate: ['sender', 'sender.avatar', 'attachments', 'replyTo', 'replyTo.sender', 'replyTo.sender.avatar', 'event'],
+      sort: ['createdAt:desc'],
+    };
+  }
+
+  return populate;
+};
+
 /**
  * Get all chats for the current user
  * @param {number} [page] - The page number
@@ -170,6 +217,7 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
       filters: {
         $or: chatOrFilters,
       },
+      latestMessageOnly: true,
       pagination: {
         page,
         pageSize,
@@ -223,51 +271,16 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
 /**
  * Get a chat by id
  * @param {string} chatId - The chat id
+ * @param {{ includeMessages?: boolean }} [options] - Optional payload shape controls
  * @returns {Promise<Chat>}
  */
-export const getChatById = async (chatId) => {
+export const getChatById = async (chatId, options = {}) => {
   const response = await client.get(`/chats/${chatId}`, {
     params: {
       chat: chatId,
-      populate: {
-        archivedBy: {
-          populate: ['avatar'],
-        },
-        club: {
-          populate: {
-            logo: true,
-          },
-        },
-        groupAdmins: {
-          populate: ['avatar'],
-        },
-        league_match: {
-          populate: {
-            team_a: { populate: ['captain'] },
-            team_b: { populate: ['captain'] },
-            winner: true,
-          },
-        },
-        messages: {
-          populate: ['sender', 'sender.avatar', 'attachments', 'replyTo', 'replyTo.sender', 'replyTo.sender.avatar', 'event'],
-          sort: ['createdAt:desc'],
-        },
-        multisportClub: {
-          populate: {
-            admins: true,
-            logo: true,
-          },
-        },
-        participants: {
-          populate: ['avatar'],
-        },
-        pinnedBy: {
-          populate: ['avatar'],
-        },
-        team: {
-          populate: true,
-        },
-      },
+      populate: buildChatDetailPopulate({
+        includeMessages: options?.includeMessages === true,
+      }),
     },
   });
 
@@ -341,13 +354,30 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
         page,
         pageSize,
       },
+      payload: 'light',
       populate: {
         attachments: true,
-        chat: {
-          populate: ['participants'],
-        },
         event: {
-          populate: ['facility', 'league_match', 'league_match.team_a', 'league_match.team_b'],
+          fields: ['documentId', 'name', 'date', 'startTime', 'endTime', 'location', 'locationDetails'],
+          populate: {
+            club: {
+              fields: ['documentId', 'name'],
+              populate: {
+                logo: {
+                  fields: ['url'],
+                },
+              },
+            },
+            facility: {
+              fields: ['documentId', 'address', 'name'],
+            },
+            team: {
+              fields: ['documentId', 'externalTeamName', 'name'],
+            },
+            type: {
+              fields: ['documentId', 'name'],
+            },
+          },
         },
         replyTo: {
           populate: ['sender', 'sender.avatar'],
@@ -648,7 +678,7 @@ export const editMessage = async (messageId, data) => {
  * Vote on a poll message
  * @param {string} messageId
  * @param {string} optionId
- * @returns {Promise<{ success: boolean; changed: boolean; composition: any; messageDocumentId: string; updatedAt: string }>}
+ * @returns {Promise<{ success: boolean; chatDocumentId?: string; changed: boolean; composition: any; messageDocumentId: string; updatedAt: string }>}
  */
 export const votePollMessage = async (messageId, optionId) => {
   const response = await client.post(`/chat-messages/${messageId}/poll-vote`, {
@@ -661,7 +691,7 @@ export const votePollMessage = async (messageId, optionId) => {
  * Respond to a proposal message
  * @param {string} messageId
  * @param {'accepted' | 'declined'} status
- * @returns {Promise<{ success: boolean; changed: boolean; composition: any; messageDocumentId: string; updatedAt: string }>}
+ * @returns {Promise<{ success: boolean; chatDocumentId?: string; changed: boolean; composition: any; messageDocumentId: string; updatedAt: string }>}
  */
 export const respondProposalMessage = async (messageId, status) => {
   const response = await client.post(`/chat-messages/${messageId}/proposal-response`, {

@@ -25,6 +25,7 @@ import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile'
 import ClubSearchResultCard from '@/components/molecules/clubSearchResultCard/ClubSearchResultCard';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
+import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
@@ -444,22 +445,27 @@ function ClubListContent({
 
   const handleClubSelection = useCallback((/** @type {string | undefined} */ documentId) => {
     if (documentId) {
-      navigation.navigate(RouteNames.ClubStack, {
+      navigateToStackScreenOrScreen(navigation, {
         params: { clubId: documentId },
         screen: RouteNames.Club,
+        stack: RouteNames.ClubStack,
       });
     }
   }, [navigation]);
 
   const handleOpenFilters = useCallback(() => {
-    navigation.navigate(RouteNames.ClubStack, {
+    navigateToStackScreenOrScreen(navigation, {
       screen: RouteNames.ClubFilters,
+      stack: RouteNames.ClubStack,
     });
   }, [navigation]);
 
   const handleSearchField = useCallback((name) => {
     appDispatch({
-      payload: Object.assign(clubFilters || {}, { name }),
+      payload: {
+        ...(clubFilters || {}),
+        name,
+      },
       type: 'SET_CLUB_FILTERS',
     });
   }, [appDispatch, clubFilters]);
