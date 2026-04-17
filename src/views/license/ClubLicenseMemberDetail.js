@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react';
 import {
-  Alert, Modal, ScrollView, Text, TextInput, View,
+  Alert, ScrollView, Text, TextInput, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import {
@@ -51,46 +52,48 @@ function ActionModal({
   onClose, onSubmit, title, type,
 }) {
   const {
-    ApplicationStyle, Colors, Fonts, Spaces,
+    Colors, Fonts, Spaces,
   } = useTheme();
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   return (
-    <Modal animationType="fade" onRequestClose={onClose} transparent visible>
-      <View style={{ backgroundColor: `${Colors.neutral900}cc`, flex: 1, justifyContent: 'flex-end' }}>
-        <View style={[ApplicationStyle.card, Spaces.gap[16], {
-          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}66`, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 28, paddingHorizontal: 20, paddingTop: 24,
-        }]}
-        >
-          <Text style={[Fonts.h3, Fonts.neutral00]}>{title}</Text>
-          {type !== 'waive' ? (
-            <TextInput
-              keyboardType="decimal-pad"
-              onChangeText={setAmount}
-              placeholder="Montant en euros"
-              placeholderTextColor={Colors.neutral400}
-              style={{
-                borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12,
-              }}
-              value={amount}
-            />
-          ) : null}
+    <BottomModal
+      close={onClose}
+      hideCloseButton={false}
+      isVisible
+      scrollable={false}
+      snapPoints={['42%']}
+      webPresentation="dialog"
+    >
+      <View style={Spaces.gap[16]}>
+        <Text style={[Fonts.h3, Fonts.neutral00]}>{title}</Text>
+        {type !== 'waive' ? (
           <TextInput
-            onChangeText={setNote}
-            placeholder={type === 'waive' ? 'Motif obligatoire' : 'Note optionnelle'}
+            keyboardType="decimal-pad"
+            onChangeText={setAmount}
+            placeholder="Montant en euros"
             placeholderTextColor={Colors.neutral400}
             style={{
               borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12,
             }}
-            value={note}
+            value={amount}
           />
-          <View style={[Spaces.marginTop[8], { flexDirection: 'row', gap: 12 }]}>
-            <Button onPress={onClose} style={{ flex: 1 }} title="Annuler" variant="Secondary" />
-            <Button onPress={() => onSubmit({ amountCents: euroToCents(amount), note, reason: note })} style={{ flex: 1 }} title="Valider" />
-          </View>
+        ) : null}
+        <TextInput
+          onChangeText={setNote}
+          placeholder={type === 'waive' ? 'Motif obligatoire' : 'Note optionnelle'}
+          placeholderTextColor={Colors.neutral400}
+          style={{
+            borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12,
+          }}
+          value={note}
+        />
+        <View style={[Spaces.marginTop[8], { flexDirection: 'row', gap: 12 }]}>
+          <Button onPress={onClose} style={{ flex: 1 }} title="Annuler" variant="Secondary" />
+          <Button onPress={() => onSubmit({ amountCents: euroToCents(amount), note, reason: note })} style={{ flex: 1 }} title="Valider" />
         </View>
       </View>
-    </Modal>
+    </BottomModal>
   );
 }
 

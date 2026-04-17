@@ -48,7 +48,7 @@ import Input from '../input/Input';
  * @property {string} [modalTitle] - Optional modal title override.
  * @property {(string|number)[]} [modalSnapPoints] - Optional modal snap points override.
  * @property {string} [displayValue] - Optional custom display value for the closed state.
- * @property {'default' | 'card'} [displayVariant] - Optional closed state variant.
+ * @property {'default' | 'card' | 'compact-card'} [displayVariant] - Optional closed state variant.
  * @property {string} [description] - Optional helper copy displayed under the label.
  */
 
@@ -81,6 +81,8 @@ const AutocompleteSelect = forwardRef(
     const { t } = useTranslation();
     const hasLabel = Boolean(props.label);
     const isCardVariant = props.displayVariant === 'card';
+    const isCompactCardVariant = props.displayVariant === 'compact-card';
+    const isCardLikeVariant = isCardVariant || isCompactCardVariant;
 
     // local states
     const [areValuesVisible, setAreValuesVisible] = useState(false);
@@ -326,11 +328,25 @@ const AutocompleteSelect = forwardRef(
     } else if (areValuesVisible || hasValue) {
       cardBorderColor = Colors.primary500;
     }
-    const cardSurfaceColor = props.lightMode ? Colors.neutral00 : 'rgba(4, 31, 44, 0.82)';
+    let cardSurfaceColor = Colors.neutral00;
+    if (!props.lightMode) {
+      cardSurfaceColor = isCompactCardVariant ? Colors.primary700 : 'rgba(4, 31, 44, 0.82)';
+    }
+    let cardMinHeight = props.description ? 140 : 120;
+    if (isCompactCardVariant) {
+      cardMinHeight = props.description ? 104 : 82;
+    }
+    const valueTextStyle = hasValue
+      ? [
+        isCompactCardVariant ? Fonts.p2Bold : Fonts.p1Bold,
+        Fonts.neutral00,
+        { lineHeight: isCompactCardVariant ? 20 : 24 },
+      ]
+      : [Fonts.p2, Fonts.neutral300, { lineHeight: 20 }];
 
     return (
-      <View style={[Alignments.relative, isCardVariant ? props.wrapperStyle : null]}>
-        {isCardVariant ? (
+      <View style={[Alignments.relative, isCardLikeVariant ? props.wrapperStyle : null]}>
+        {isCardLikeVariant ? (
           <TouchableOpacity
             accessibilityHint={props.description}
             accessibilityRole="button"
@@ -339,19 +355,19 @@ const AutocompleteSelect = forwardRef(
             onPress={handleFocus}
             style={[
               ApplicationStyle.card,
-              Spaces.padding[24],
-              Spaces.gap[20],
+              isCompactCardVariant ? Spaces.padding[16] : Spaces.padding[24],
+              isCompactCardVariant ? Spaces.gap[8] : Spaces.gap[16],
               {
                 backgroundColor: cardSurfaceColor,
                 borderColor: cardBorderColor,
-                borderRadius: 20,
+                borderRadius: isCompactCardVariant ? 18 : 20,
                 borderWidth: areValuesVisible ? 1.5 : 1,
-                minHeight: props.description ? 140 : 120,
+                minHeight: cardMinHeight,
                 opacity: props.disabled ? 0.5 : 1,
               },
             ]}
           >
-            <View style={[Spaces.gap[10]]}>
+            <View style={[Spaces.gap[8]]}>
               {hasLabel ? (
                 <Text style={[Fonts.p3Bold, props.error ? Fonts.error500 : Fonts.primary500]}>
                   {props.label}
@@ -368,7 +384,7 @@ const AutocompleteSelect = forwardRef(
               <View style={[Alignments.fill, Spaces.gap[8]]}>
                 <Text
                   numberOfLines={2}
-                  style={hasValue ? [Fonts.p1Bold, Fonts.neutral00] : [Fonts.p2, Fonts.neutral300]}
+                  style={valueTextStyle}
                 >
                   {hasValue ? displayValue : props.placeholder}
                 </Text>

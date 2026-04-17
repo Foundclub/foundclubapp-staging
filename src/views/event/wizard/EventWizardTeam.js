@@ -10,6 +10,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeamCard';
@@ -29,6 +30,26 @@ import {
   isStageEventType,
   isTournamentEventType,
 } from './eventWizardDetectionUtils';
+
+const normalizeTournamentSearchText = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
+
+const toReferenceOptions = (items = [], searchValue = '') => {
+  const normalizedSearch = normalizeTournamentSearchText(searchValue);
+  return items
+    .map((item) => ({
+      label: item?.name || '',
+      value: item?.documentId || '',
+    }))
+    .filter((option) => option.label && option.value)
+    .filter((option) => (
+      !normalizedSearch
+      || normalizeTournamentSearchText(option.label).includes(normalizedSearch)
+    ));
+};
 
 /**
  *
@@ -53,6 +74,9 @@ function EventWizardTeam({ navigation }) {
   const [selectedTournamentActivity, setSelectedTournamentActivity] = useState(state.tournamentActivity || null);
   const [selectedTournamentSection, setSelectedTournamentSection] = useState(state.tournamentSection || null);
   const [selectedTournamentCategory, setSelectedTournamentCategory] = useState(state.tournamentCategory || null);
+  const [activitySearchValue, setActivitySearchValue] = useState('');
+  const [sectionSearchValue, setSectionSearchValue] = useState('');
+  const [categorySearchValue, setCategorySearchValue] = useState('');
 
   const trainedTeamIds = useMemo(() => new Set(
     (userData?.trainedTeams || [])
@@ -110,17 +134,29 @@ function EventWizardTeam({ navigation }) {
     || null
   ), [availableTeams, userData?.club, userData?.trainedTeams]);
 
-  const activityOptions = useMemo(
+  const activityReferences = useMemo(
     () => (activitiesQuery.data || []).filter((item) => item?.documentId && item?.name),
     [activitiesQuery.data],
   );
-  const sectionOptions = useMemo(
+  const sectionReferences = useMemo(
     () => (sectionsQuery.data || []).filter((item) => item?.documentId && item?.name),
     [sectionsQuery.data],
   );
-  const categoryOptions = useMemo(
+  const categoryReferences = useMemo(
     () => (categoriesQuery.data || []).filter((item) => item?.documentId && item?.name),
     [categoriesQuery.data],
+  );
+  const activityOptions = useMemo(
+    () => toReferenceOptions(activityReferences, activitySearchValue),
+    [activityReferences, activitySearchValue],
+  );
+  const sectionOptions = useMemo(
+    () => toReferenceOptions(sectionReferences, sectionSearchValue),
+    [sectionReferences, sectionSearchValue],
+  );
+  const categoryOptions = useMemo(
+    () => toReferenceOptions(categoryReferences, categorySearchValue),
+    [categoryReferences, categorySearchValue],
   );
 
   const normalizeSearchText = (value) => String(value || '')
@@ -234,73 +270,92 @@ function EventWizardTeam({ navigation }) {
     const selected = tournamentMode === mode;
     return (
       <TouchableOpacity
+        activeOpacity={0.9}
         onPress={() => setTournamentMode(mode)}
         style={[
           ApplicationStyle.card,
-          Spaces.padding[18],
-          Spaces.gap[8],
+          Spaces.padding[16],
+          Spaces.gap[12],
           {
-            backgroundColor: selected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(4, 31, 44, 0.82)',
+            backgroundColor: selected ? 'rgba(1, 179, 244, 0.18)' : Colors.primary700,
             borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
+            borderRadius: 20,
             borderWidth: 1,
+            minHeight: 112,
           },
         ]}
       >
-        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Bold, selected ? Fonts.primary500 : Fonts.neutral00, { flex: 1 }]}>
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignStart, { columnGap: 12, rowGap: 8 }]}>
+          <Text style={[Fonts.h4Bold, selected ? Fonts.primary500 : Fonts.neutral00, { flex: 1, lineHeight: 22, minWidth: 0 }]}>
             {label}
           </Text>
-          <Text style={[Fonts.p2Bold, selected ? Fonts.primary500 : Fonts.neutral300]}>
+          <Text
+            style={[
+              Fonts.p3Bold,
+              selected ? Fonts.neutral900 : Fonts.primary500,
+              Spaces.paddingHorizontal[12],
+              Spaces.paddingVertical[4],
+              {
+                backgroundColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.10)',
+                borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.32)',
+                borderRadius: 999,
+                borderWidth: 1,
+                overflow: 'hidden',
+              },
+            ]}
+          >
             {selected ? 'Sélectionné' : 'Choisir'}
           </Text>
         </View>
-        <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
+        <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20, paddingRight: 4 }]}>
           {description}
         </Text>
       </TouchableOpacity>
     );
   };
 
-  const renderReferencePicker = ({
+  const renderReferenceSelect = ({
     emptyLabel,
     label,
+    modalTitle,
     onSelect,
     options,
+    placeholder,
+    references,
+    searchValue,
     selected,
-  }) => (
-    <View style={[Spaces.gap[10]]}>
-      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{label}</Text>
-      {options.length === 0 ? (
-        <Text style={[Fonts.p3, Fonts.neutral300]}>{emptyLabel}</Text>
-      ) : (
-        <View style={[Alignments.row, { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
-          {options.map((option) => {
-            const isSelected = option?.documentId === selected?.documentId;
-            return (
-              <TouchableOpacity
-                key={option.documentId}
-                onPress={() => onSelect(option)}
-                style={[
-                  ApplicationStyle.card,
-                  Spaces.paddingHorizontal[14],
-                  Spaces.paddingVertical[10],
-                  {
-                    backgroundColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.08)',
-                    borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
-                    borderRadius: 16,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.p3Bold, isSelected ? Fonts.neutral900 : Fonts.primary500]}>
-                  {option.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
-    </View>
-  );
+    setSearchValue,
+  }) => {
+    const hasNoReference = references.length === 0;
+
+    return (
+      <View style={[Spaces.gap[8]]}>
+        <AutocompleteSelect
+          disabled={hasNoReference}
+          displayValue={selected?.name || ''}
+          displayVariant="compact-card"
+          isSearchable
+          label={label}
+          modalSnapPoints={['78%']}
+          modalTitle={modalTitle || label}
+          options={options}
+          placeholder={hasNoReference ? emptyLabel : placeholder}
+          searchValue={searchValue}
+          setSearchValue={setSearchValue}
+          setValue={(option) => {
+            const nextReference = references.find((item) => item?.documentId === option?.value) || null;
+            onSelect(nextReference);
+          }}
+          value={selected?.documentId || ''}
+        />
+        {hasNoReference ? (
+          <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
+            {emptyLabel}
+          </Text>
+        ) : null}
+      </View>
+    );
+  };
 
   if (isTournament) {
     const isReferenceLoading = activitiesQuery.isLoading || sectionsQuery.isLoading || categoriesQuery.isLoading;
@@ -314,8 +369,8 @@ function EventWizardTeam({ navigation }) {
         subtitle="Choisissez si le tournoi part d'une équipe existante ou s'il est autonome."
         title="Cadre du tournoi"
       >
-        <View style={[Spaces.gap[18]]}>
-          <View style={[Spaces.gap[12]]}>
+        <View style={[Spaces.gap[24]]}>
+          <View style={[Spaces.gap[16]]}>
             {renderModeCard({
               description: "L'équipe est inscrite automatiquement. Ses joueurs répondent Présent ou Absent dans le roster tournoi.",
               label: "Tournoi d'une équipe",
@@ -330,10 +385,12 @@ function EventWizardTeam({ navigation }) {
 
           {tournamentMode === 'team' ? (
             <View style={[Spaces.gap[16]]}>
-              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Équipe source</Text>
-              <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
-                Les membres de l’équipe choisie seront ajoutés au tournoi. Ils ne passeront pas par le RSVP événement classique.
-              </Text>
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Équipe source</Text>
+                <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 21 }]}>
+                  Les membres de l’équipe choisie seront ajoutés au tournoi. Ils ne passeront pas par le RSVP événement classique.
+                </Text>
+              </View>
 
               {hasTeams ? (
                 <Input
@@ -383,35 +440,36 @@ function EventWizardTeam({ navigation }) {
               {!isLoading && !error && hasFilteredTeams && isClubManager ? (
                 <View style={[Spaces.gap[16]]}>
                   {teamsByOwnership.myTeams.length > 0 ? (
-                    <>
+                    <View style={[Spaces.gap[12]]}>
                       <Text style={[Fonts.p3Bold, Fonts.neutral200]}>MES ÉQUIPES</Text>
-                      <View style={[Spaces.gap[12]]}>{teamsByOwnership.myTeams.map(renderTeamCard)}</View>
-                    </>
+                      <View>{teamsByOwnership.myTeams.map(renderTeamCard)}</View>
+                    </View>
                   ) : null}
                   {teamsByOwnership.otherTeams.length > 0 ? (
-                    <>
-                      <Text style={[Fonts.p3Bold, Fonts.neutral200, Spaces.marginTop[8]]}>AUTRES ÉQUIPES DU CLUB</Text>
-                      <View style={[Spaces.gap[12]]}>{teamsByOwnership.otherTeams.map(renderTeamCard)}</View>
-                    </>
+                    <View style={[Spaces.gap[12]]}>
+                      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>AUTRES ÉQUIPES DU CLUB</Text>
+                      <View>{teamsByOwnership.otherTeams.map(renderTeamCard)}</View>
+                    </View>
                   ) : null}
                 </View>
               ) : null}
             </View>
           ) : (
-            <View style={[ApplicationStyle.card, Spaces.padding[18], Spaces.gap[18], {
-              backgroundColor: 'rgba(4, 31, 44, 0.82)',
+            <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[16], {
+              backgroundColor: Colors.primary700,
               borderColor: 'rgba(1, 179, 244, 0.24)',
+              borderRadius: 20,
               borderWidth: 1,
             }]}
             >
-              <View style={[Spaces.gap[6]]}>
+              <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Qualification du tournoi</Text>
-                <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
+                <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 21 }]}>
                   Ces informations remplacent l’équipe source pour classer le tournoi et guider les inscriptions.
                 </Text>
               </View>
 
-              <View style={[Spaces.gap[4]]}>
+              <View style={[Spaces.gap[6]]}>
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>Club organisateur</Text>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                   {organizerClub?.name || 'Aucun club disponible'}
@@ -427,26 +485,41 @@ function EventWizardTeam({ navigation }) {
                 </Text>
               ) : null}
 
-              {renderReferencePicker({
+              {renderReferenceSelect({
                 emptyLabel: 'Aucun sport disponible.',
                 label: 'Sport',
+                modalTitle: 'Choisir un sport',
                 onSelect: setSelectedTournamentActivity,
                 options: activityOptions,
+                placeholder: 'Sélectionner un sport',
+                references: activityReferences,
+                searchValue: activitySearchValue,
                 selected: selectedTournamentActivity,
+                setSearchValue: setActivitySearchValue,
               })}
-              {renderReferencePicker({
+              {renderReferenceSelect({
                 emptyLabel: 'Aucune section disponible.',
                 label: 'Section',
+                modalTitle: 'Choisir une section',
                 onSelect: setSelectedTournamentSection,
                 options: sectionOptions,
+                placeholder: 'Sélectionner une section',
+                references: sectionReferences,
+                searchValue: sectionSearchValue,
                 selected: selectedTournamentSection,
+                setSearchValue: setSectionSearchValue,
               })}
-              {renderReferencePicker({
+              {renderReferenceSelect({
                 emptyLabel: 'Aucune catégorie disponible.',
                 label: 'Catégorie',
+                modalTitle: 'Choisir une catégorie',
                 onSelect: setSelectedTournamentCategory,
                 options: categoryOptions,
+                placeholder: 'Sélectionner une catégorie',
+                references: categoryReferences,
+                searchValue: categorySearchValue,
                 selected: selectedTournamentCategory,
+                setSearchValue: setCategorySearchValue,
               })}
 
               <Button

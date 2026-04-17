@@ -45,6 +45,7 @@ import {
 } from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
 import {
@@ -121,6 +122,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const queryClient = useQueryClient();
   const { Colors, Fonts, Images } = useTheme();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
+  const { floatingActionBottomOffset } = useBottomDockLayout();
   const leagueCardTextColor = Colors.primary500;
   const leagueAccentSurface = 'rgba(1, 179, 244, 0.12)';
   const leagueAccentSurfaceSoft = 'rgba(1, 179, 244, 0.07)';
@@ -241,6 +243,10 @@ function LeagueMatchDetails({ navigation, route }) {
   const isVenueBooked = useMemo(() => isVenueBookedForMatch(match), [match]);
   const isAnonymous = useMemo(() => shouldMaskOpponentIdentity(match), [match]);
   const matchPhase = useMemo(() => getMatchDerivedPhase(match), [match]);
+  const isScoreActionPhase = useMemo(
+    () => ['disputed', 'pending_validation', 'waiting_score'].includes(matchPhase),
+    [matchPhase],
+  );
   const leagueStatsReport = leagueMatchStatsPayload?.report || null;
   const leaguePlayerCollectiveRating = leagueMatchStatsPayload?.playerCollectiveRating || null;
   const leagueMyCoachReview = leagueMatchStatsPayload?.myCoachReview || null;
@@ -255,8 +261,8 @@ function LeagueMatchDetails({ navigation, route }) {
   const canManageLeagueStats = Boolean(leagueMatchStatsPayload?.permissions?.canManage);
   const canRespondMyLeagueStats = Boolean(leagueMyMatchResponsePayload?.permissions?.canRespond || teamSide);
   const canSubmitScore = useMemo(
-    () => isCaptain && ['disputed', 'pending_validation', 'waiting_score'].includes(matchPhase),
-    [isCaptain, matchPhase],
+    () => isCaptain && isScoreActionPhase,
+    [isCaptain, isScoreActionPhase],
   );
   const isScoreLockedByTime = useMemo(
     () => isCaptain && normalizedStatus === 'scheduled' && isVenueBooked && !canSubmitScore,
@@ -570,21 +576,54 @@ function LeagueMatchDetails({ navigation, route }) {
     teamSide && ['confirmed_upcoming', 'waiting_venue'].includes(String(matchPhase || '').trim()),
   );
   const hasBottomActionBar = Boolean(teamSide && (hasBottomPresenceBar || hasCaptainQuickActions));
+  const bottomBarFloatingStyle = useMemo(() => ({
+    bottom: floatingActionBottomOffset,
+  }), [floatingActionBottomOffset]);
   const scrollBottomPadding = useMemo(() => {
+    const dockOffset = hasBottomActionBar ? floatingActionBottomOffset : 0;
     if (!hasBottomActionBar) return 52;
-    if (hasBottomPresenceBar && hasCaptainQuickActions) return 344;
-    if (hasCaptainQuickActions) return 212;
-    if (canShowCaptainCancel) return 236;
-    return 192;
-  }, [canShowCaptainCancel, hasBottomActionBar, hasBottomPresenceBar, hasCaptainQuickActions]);
+    if (hasBottomPresenceBar && hasCaptainQuickActions) return dockOffset + 344;
+    if (hasCaptainQuickActions) return dockOffset + 212;
+    if (canShowCaptainCancel) return dockOffset + 236;
+    return dockOffset + 192;
+  }, [
+    canShowCaptainCancel,
+    floatingActionBottomOffset,
+    hasBottomActionBar,
+    hasBottomPresenceBar,
+    hasCaptainQuickActions,
+  ]);
   const isScoreToSubmitBadge = statusConfig.label === 'Score a saisir';
+  const scoreQuickActionMeta = useMemo(() => {
+    if (matchPhase === 'pending_validation') {
+      return {
+        helper: 'Un score attend une validation. Le capitaine peut confirmer ou contester le resultat.',
+        label: 'Score a valider',
+        title: 'Valider le score',
+      };
+    }
+
+    if (matchPhase === 'disputed') {
+      return {
+        helper: 'Un litige score est ouvert. Le capitaine doit le traiter pour finaliser le match.',
+        label: 'Litige score',
+        title: 'Traiter le litige',
+      };
+    }
+
+    return {
+      helper: 'Le match est joue. Le score officiel doit etre saisi pour lancer le bilan League.',
+      label: 'Score a saisir',
+      title: 'Saisir le score final',
+    };
+  }, [matchPhase]);
   const heroStatusMeta = useMemo(() => {
-    if (isScoreToSubmitBadge || canSubmitScore) {
+    if (isScoreActionPhase || isScoreToSubmitBadge) {
       return {
         accentColor: Colors.gold500,
         icon: Images.edit,
         label: 'Action capitaine',
-        text: 'Le score final doit etre saisi pour debloquer le bilan League.',
+        text: scoreQuickActionMeta.helper,
       };
     }
 
@@ -631,17 +670,18 @@ function LeagueMatchDetails({ navigation, route }) {
     Images.edit,
     Images.flag,
     Images.stadium,
-    canSubmitScore,
+    isScoreActionPhase,
     isScoreToSubmitBadge,
     isVenueBooked,
     normalizedStatus,
+    scoreQuickActionMeta.helper,
   ]);
   const heroSupportText = useMemo(() => {
     if (hasOfficialScore && normalizedStatus === 'valid') {
       return 'Score officiel enregistre pour cette affiche League.';
     }
-    if (isScoreToSubmitBadge || canSubmitScore) {
-      return 'Le score final doit etre saisi pour cloturer le match.';
+    if (isScoreActionPhase || isScoreToSubmitBadge) {
+      return scoreQuickActionMeta.helper;
     }
     if (normalizedStatus === 'scheduled' && !isVenueBooked) {
       return 'Le terrain doit encore \u00EAtre confirm\u00E9 avant le coup d envoi.';
@@ -651,12 +691,13 @@ function LeagueMatchDetails({ navigation, route }) {
     }
     return heroStatusMeta.text;
   }, [
-    canSubmitScore,
     hasOfficialScore,
     heroStatusMeta.text,
+    isScoreActionPhase,
     isScoreToSubmitBadge,
     isVenueBooked,
     normalizedStatus,
+    scoreQuickActionMeta.helper,
   ]);
   const captainQuickActionMeta = useMemo(() => {
     if (isPostSlotResolutionCurrentMatch) {
@@ -671,8 +712,8 @@ function LeagueMatchDetails({ navigation, route }) {
     if (canSubmitScore) {
       return {
         accentColor: Colors.gold500,
-        helper: 'Le match est joue. Saisissez maintenant le score officiel pour lancer le bilan League.',
-        label: 'Score a saisir',
+        helper: scoreQuickActionMeta.helper,
+        label: scoreQuickActionMeta.label,
         title: 'Score officiel',
       };
     }
@@ -699,6 +740,8 @@ function LeagueMatchDetails({ navigation, route }) {
     canSubmitScore,
     isPostSlotResolutionCurrentMatch,
     isScoreLockedByTime,
+    scoreQuickActionMeta.helper,
+    scoreQuickActionMeta.label,
   ]);
   const postSlotResolutionModalMeta = useMemo(() => {
     if (effectivePostSlotResolutionStep === 'confirm_reschedule') {
@@ -1535,6 +1578,61 @@ function LeagueMatchDetails({ navigation, route }) {
             <Text style={[Fonts.p3, styles.heroSummaryText, { color: leagueCardTextColor }]}>
               {heroSupportText}
             </Text>
+            {hasCaptainQuickActions ? (
+              <View style={styles.heroQuickActionArea}>
+                {isPostSlotResolutionCurrentMatch ? (
+                  <Button
+                    disabled={actionLoading}
+                    icon="flag"
+                    iconColor={Colors.primary900}
+                    iconPosition="before"
+                    onPress={handleOpenPostSlotResolution}
+                    size="small"
+                    style={{
+                      backgroundColor: Colors.warning500,
+                      borderColor: Colors.warning500,
+                    }}
+                    textStyle={{ color: Colors.primary900 }}
+                    title="Le match a-t-il eu lieu ?"
+                    variant="Primary"
+                  />
+                ) : null}
+                {canManageVenue ? (
+                  <Button
+                    disabled={actionLoading}
+                    icon="stadium"
+                    iconColor={Colors.primary900}
+                    iconPosition="before"
+                    onPress={handleMarkVenueBooked}
+                    size="small"
+                    style={{
+                      backgroundColor: Colors.gold500,
+                      borderColor: Colors.gold500,
+                    }}
+                    textStyle={{ color: Colors.primary900 }}
+                    title="Marquer terrain reserve"
+                    variant="Primary"
+                  />
+                ) : null}
+                {canSubmitScore || isScoreLockedByTime ? (
+                  <Button
+                    disabled={actionLoading}
+                    icon="edit"
+                    iconColor={isScoreLockedByTime ? Colors.neutral300 : Colors.primary900}
+                    iconPosition="before"
+                    onPress={handleGoToScoreEntry}
+                    size="small"
+                    style={{
+                      backgroundColor: isScoreLockedByTime ? 'rgba(1, 179, 244, 0.10)' : Colors.gold500,
+                      borderColor: isScoreLockedByTime ? 'rgba(1, 179, 244, 0.28)' : Colors.gold500,
+                    }}
+                    textStyle={{ color: isScoreLockedByTime ? Colors.neutral300 : Colors.primary900 }}
+                    title={isScoreLockedByTime ? 'Score verrouille (debut + 1 min)' : scoreQuickActionMeta.title}
+                    variant="Primary"
+                  />
+                ) : null}
+              </View>
+            ) : null}
           </LeagueCard>
 
           <LeagueCard style={styles.workflowCard}>
@@ -2276,7 +2374,7 @@ function LeagueMatchDetails({ navigation, route }) {
         </ScrollView>
 
         {hasBottomActionBar ? (
-          <View style={styles.bottomBar}>
+          <View style={[styles.bottomBar, bottomBarFloatingStyle]}>
             <View style={styles.bottomBarContent}>
               {hasBottomPresenceBar ? (
                 <>
@@ -2481,7 +2579,7 @@ function LeagueMatchDetails({ navigation, route }) {
                           borderColor: isScoreLockedByTime ? 'rgba(1, 179, 244, 0.28)' : Colors.primary500,
                         }}
                         textStyle={{ color: isScoreLockedByTime ? Colors.neutral300 : Colors.neutral00 }}
-                        title={isScoreLockedByTime ? 'Score verrouille (debut + 1 min)' : 'Saisir le score final'}
+                        title={isScoreLockedByTime ? 'Score verrouille (debut + 1 min)' : scoreQuickActionMeta.title}
                         variant="Primary"
                       />
                     ) : null}

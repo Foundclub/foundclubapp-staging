@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -102,6 +104,8 @@ const normalizeTypeName = (value) => String(value || '')
  */
 function EventDetails({ navigation, route }) {
   const { eventId } = route?.params || {};
+  const highlightedSection = route?.params?.focusSection || null;
+  const fromEventCreation = Boolean(route?.params?.fromEventCreation);
   const { width } = useWindowDimensions();
   const isDesktop = width >= BREAKPOINTS.desktop;
   const isTablet = width >= BREAKPOINTS.tablet;
@@ -210,6 +214,16 @@ function EventDetails({ navigation, route }) {
   const participationLabel = getParticipationLabel(
     participationState?.effectiveStatus,
   );
+
+  useEffect(() => {
+    if (!highlightedSection || isLoading) return;
+    const frameId = window.requestAnimationFrame(() => {
+      const section = document.querySelector(`[data-event-section="${highlightedSection}"]`);
+      section?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [highlightedSection, isLoading]);
 
   const invalidateEventQueries = useCallback(async () => {
     await Promise.all([
@@ -351,7 +365,39 @@ function EventDetails({ navigation, route }) {
       style={{ paddingBottom: 32 }}
     >
       <div style={{ color: textColor, display: 'grid', gap: 24 }}>
+        {fromEventCreation ? (
+          <section
+            style={{
+              background: 'rgba(1, 179, 244, 0.10)',
+              border: `1px solid ${accentColor}`,
+              borderRadius: 20,
+              color: textColor,
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 12,
+              justifyContent: 'space-between',
+              padding: 16,
+            }}
+          >
+            <span>Evenement cree. Verifie les derniers details avant de le partager.</span>
+            <button
+              onClick={() => navigation.navigate(RouteNames.MyEventList)}
+              style={{
+                background: 'transparent',
+                border: `1px solid ${borderColor}`,
+                borderRadius: 999,
+                color: textColor,
+                cursor: 'pointer',
+                padding: '8px 14px',
+              }}
+              type="button"
+            >
+              Voir mon planning
+            </button>
+          </section>
+        ) : null}
         <section
+          data-event-section="overview"
           style={{
             background: sectionBackground,
             border: `1px solid ${borderColor}`,
@@ -750,7 +796,7 @@ function EventDetails({ navigation, route }) {
               </div>
 
               {isTournamentEvent ? (
-                <div style={{
+                <div data-event-section="tournament" style={{
                   background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
                 }}
                 >

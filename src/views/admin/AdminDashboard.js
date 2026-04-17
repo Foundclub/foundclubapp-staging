@@ -2,7 +2,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import {
-  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -13,6 +13,7 @@ import AdminStateView from '@/views/admin/components/AdminStateView';
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  useGenerateTestTournament,
   useGetAdminStats,
   useGetLeagueDisputes,
   useGetPendingClubClaims,
@@ -20,6 +21,8 @@ import {
 } from '@/services/admin/adminQueries';
 import { getPendingFeaturedRequests } from '@/services/event/eventService';
 import { useGetInAppPopupCampaigns } from '@/services/inAppPopupCampaign/inAppPopupCampaignQueries';
+
+import { getErrorMessage } from '@/utils/errors/displayError';
 // We might need a useGetClubs hook. I'll assume it exists or I can use a generic fetch.
 // Checking imports in other files... useClub hook exists but it's for the user's club.
 // I'll check if there is a query for all clubs.
@@ -36,6 +39,7 @@ function AdminDashboard() {
     Spaces,
   } = useTheme();
   const navigation = useNavigation();
+  const generateTestTournamentMutation = useGenerateTestTournament();
 
   // 1. Featured Requests Count
   const {
@@ -142,6 +146,67 @@ function AdminDashboard() {
     || isLeagueDisputesLoading
     || isPopupCampaignsLoading
   );
+
+  const openGeneratedTournament = useCallback((eventDocumentId) => {
+    if (!eventDocumentId) return;
+    navigation.navigate(RouteNames.EventStack, {
+      params: {
+        eventId: eventDocumentId,
+      },
+      screen: RouteNames.EventDetails,
+    });
+  }, [navigation]);
+
+  const handleGenerateTestTournament = useCallback(() => {
+    if (generateTestTournamentMutation.isPending) return;
+
+    Alert.alert(
+      'Generer un tournoi fictif ?',
+      'Cela cree un tournoi autonome [TEST] avec 8 equipes, des joueurs fictifs, des poules et des matchs brouillons. En production, cette action est bloquee sauf flag explicite.',
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: () => {
+            generateTestTournamentMutation.mutate(
+              {
+                generateCompetition: true,
+                membersPerTeam: 5,
+                teamCount: 8,
+              },
+              {
+                onError: (error) => {
+                  Alert.alert(
+                    'Generation impossible',
+                    getErrorMessage(error, 'generic') || 'Impossible de generer le tournoi fictif.',
+                  );
+                },
+                onSuccess: (response) => {
+                  const result = response?.data || response;
+                  const event = result?.event || {};
+                  const eventDocumentId = event?.documentId;
+                  const warnings = Array.isArray(result?.warnings) && result.warnings.length > 0
+                    ? `\n\nAttention: ${result.warnings.join(' | ')}`
+                    : '';
+
+                  Alert.alert(
+                    'Tournoi fictif cree',
+                    `${event?.name || 'Le tournoi de test'} est pret avec ${result?.generated?.teams || 0} equipes.${warnings}`,
+                    [
+                      { text: 'OK' },
+                      eventDocumentId
+                        ? { onPress: () => openGeneratedTournament(eventDocumentId), text: 'Ouvrir' }
+                        : null,
+                    ].filter(Boolean),
+                  );
+                },
+              },
+            );
+          },
+          text: 'Generer',
+        },
+      ],
+    );
+  }, [generateTestTournamentMutation, openGeneratedTournament]);
 
   if (isBootstrapping) {
     return (
@@ -250,6 +315,46 @@ function AdminDashboard() {
       </View>
 
       <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[32]]}>
+        <View
+          style={[
+            styles.testToolsCard,
+            {
+              backgroundColor: Colors.primary700,
+              borderColor: `${Colors.primary500}55`,
+            },
+          ]}
+        >
+          <View style={styles.testToolsContent}>
+            <Text style={[Fonts.label, styles.cardChipText, { color: Colors.primary500 }]}>
+              Outils de test
+            </Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00, styles.testToolsTitle]}>
+              Tournoi fictif complet
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200, styles.testToolsDescription]}>
+              Cree un tournoi sandbox avec equipes, effectifs fictifs, poules et matchs pour valider le flux de bout en bout.
+            </Text>
+          </View>
+          <TouchableOpacity
+            accessibilityRole="button"
+            activeOpacity={0.84}
+            disabled={generateTestTournamentMutation.isPending}
+            onPress={handleGenerateTestTournament}
+            style={[
+              styles.testToolsButton,
+              {
+                backgroundColor: generateTestTournamentMutation.isPending
+                  ? `${Colors.primary500}66`
+                  : Colors.primary500,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral900]}>
+              {generateTestTournamentMutation.isPending ? 'Generation...' : 'Generer'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.dashboardGrid}>
 
           {/* CA Généré */}
@@ -427,6 +532,32 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 4,
     textTransform: 'uppercase',
+  },
+  testToolsButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    justifyContent: 'center',
+    minHeight: 46,
+    paddingHorizontal: 20,
+  },
+  testToolsCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
+    padding: 18,
+  },
+  testToolsContent: {
+    flex: 1,
+  },
+  testToolsDescription: {
+    lineHeight: 18,
+  },
+  testToolsTitle: {
+    marginBottom: 8,
+    marginTop: 6,
   },
 });
 

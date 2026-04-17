@@ -46,7 +46,7 @@ function EventWizardTeamCard({
   const isCompactScreen = width <= 375;
 
   const sportLabel = team?.activities?.[0]?.name || team?.sport;
-  const cardPadding = isCompactScreen ? 14 : 18;
+  const cardPadding = isCompactScreen ? 16 : 20;
   const sectionLabel = team?.section?.name;
   const categoryLabel = team?.category?.name || team?.category;
   const levelLabel = team?.level?.name || team?.level;
@@ -130,7 +130,7 @@ function EventWizardTeamCard({
         disabled={disabled}
         onPress={onPress}
         style={[
-          Spaces.marginVertical[12],
+          Spaces.marginVertical[8],
           {
             borderRadius: 24,
             opacity: disabled && !isLoading ? 0.5 : 1,
@@ -144,7 +144,7 @@ function EventWizardTeamCard({
             borderRadius: 24,
             borderWidth: isSelected ? 1.5 : 1,
             justifyContent: 'center',
-            minHeight: isCompactScreen ? 138 : 150,
+            minHeight: isCompactScreen ? 146 : 156,
             padding: cardPadding,
           }}
         >
@@ -161,13 +161,13 @@ function EventWizardTeamCard({
               style={[
                 Alignments.row,
                 Alignments.alignCenter,
-                Spaces.gap[8],
-                { flex: 1, paddingRight: 8 },
+                Spaces.gap[12],
+                { flex: 1, paddingRight: 10 },
               ]}
             >
               <View>{identityAvatar}</View>
               <View style={[Alignments.fill]}>
-                <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { lineHeight: 22 }]}>
                   {team?.name || '-'}
                 </Text>
               </View>
@@ -232,7 +232,7 @@ function EventWizardTeamCard({
                             showTitle={false}
                             width={40}
                           />
-                          <Text numberOfLines={1} style={[Fonts.p3Bold, Fonts.neutral100, Alignments.fill]}>
+                          <Text numberOfLines={1} style={[Fonts.p3Bold, Fonts.neutral100, Alignments.fill, { lineHeight: 18 }]}>
                             {sponsor?.title || sponsor?.name}
                           </Text>
                         </View>
@@ -251,8 +251,8 @@ function EventWizardTeamCard({
                   key={`${team?.documentId || team?.id || team?.name}-${meta.label}`}
                   style={{ minWidth: isCompactScreen ? 128 : 144, width: '47%' }}
                 >
-                  <Text style={[Fonts.p3, Fonts.neutral300]}>{meta.label}</Text>
-                  <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>{meta.label}</Text>
+                  <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { lineHeight: 20 }]}>
                     {meta.value}
                   </Text>
                 </View>

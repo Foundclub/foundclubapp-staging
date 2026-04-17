@@ -17,7 +17,7 @@ const CTA_BY_PHASE = {
   disputed: {
     focusSection: 'timeline',
     helper: 'Un litige est en cours. Ouvrez la fiche pour consulter les elements du match.',
-    primaryCta: 'Saisir le score',
+    primaryCta: 'Traiter le litige',
   },
   forfeit: {
     focusSection: 'timeline',
@@ -32,12 +32,12 @@ const CTA_BY_PHASE = {
   pending_validation: {
     focusSection: 'timeline',
     helper: 'Le score adverse a ete soumis. Ouvrez la fiche pour confirmer ou contester.',
-    primaryCta: 'Saisir le score',
+    primaryCta: 'Valider le score',
   },
   post_slot_resolution: {
     focusSection: 'timeline',
     helper: 'Le match a commence sans terrain confirme. Dites si le match a eu lieu.',
-    primaryCta: 'Ouvrir le match',
+    primaryCta: 'Le match a-t-il eu lieu ?',
   },
   valid: {
     focusSection: 'timeline',
@@ -57,7 +57,7 @@ const CTA_BY_PHASE = {
   waiting_venue: {
     focusSection: 'venueBooking',
     helper: 'Le terrain doit maintenant etre confirme dans la fiche match.',
-    primaryCta: 'Voir le match',
+    primaryCta: 'Marquer terrain reserve',
   },
 };
 
@@ -91,7 +91,7 @@ export const buildLeagueWorkflowViewModel = (match, pendingAction = null, viewer
     helper: workflow?.primaryAction === 'open_negotiation' && pendingAction?.proposalMessageId
       ? 'Une proposition League attend votre attention dans la fiche match.'
       : config.helper,
-    isBlockingAction: ['waiting_proposal', 'waiting_venue', 'post_slot_resolution', 'waiting_score', 'pending_validation', 'disputed'].includes(phase),
+    isBlockingAction: ['disputed', 'pending_validation', 'post_slot_resolution', 'waiting_proposal', 'waiting_score', 'waiting_venue'].includes(phase),
     owner: workflow?.owner || OWNER_BY_PHASE[phase] || 'system',
     phase,
     primaryCta: config.primaryCta,

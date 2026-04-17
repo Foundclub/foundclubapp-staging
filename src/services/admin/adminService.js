@@ -25,6 +25,11 @@ export const getNotificationsHealth = async () => {
   return result.data;
 };
 
+export const generateTestTournament = async (payload = {}) => {
+  const result = await client.post('/admin-dashboard/test-data/tournament', payload);
+  return result.data;
+};
+
 export const sendNotificationsHealthTest = async (payload = {}) => {
   const result = await client.post('/notifications/health/test', payload);
   return result.data;

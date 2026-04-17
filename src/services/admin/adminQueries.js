@@ -4,6 +4,7 @@ import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import {
   approveClubClaim,
+  generateTestTournament,
   getAdminClub,
   getAdminClubs,
   getAdminReports,
@@ -119,6 +120,18 @@ export const useGetNotificationsHealth = () => useQuery({
   queryKey: ['admin', 'notifications-health'],
   refetchInterval: 30000,
 });
+
+export const useGenerateTestTournament = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: generateTestTournament,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning'] });
+    },
+  });
+};
 
 export const useSendNotificationsHealthTest = () => {
   const queryClient = useQueryClient();

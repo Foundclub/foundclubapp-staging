@@ -45,9 +45,12 @@ import { usePopupEligibility } from '@/context/PopupManagerContext';
 
 const END_MATCH_ROUTE = RouteNames.EndMatchScreen;
 const LEAGUE_ACTION_PROMPT_STATES = new Set([
+  'disputed',
   'opponent_found',
+  'pending_validation',
   'post_slot_resolution',
   'proposal_received',
+  'waiting_score',
   'waiting_venue',
 ]);
 
@@ -489,13 +492,30 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     setPostSlotLocalStep(null);
   }, [nextAction?.key, nextAction?.state]);
 
-  const isWaitingVenue = nextAction?.state === 'waiting_venue';
-  const isOpponentFound = nextAction?.state === 'opponent_found';
-  const isPostSlotResolution = nextAction?.state === 'post_slot_resolution';
+  const promptState = String(nextAction?.state || '').trim().toLowerCase();
+  const promptPhase = String(nextAction?.match?.phase || '').trim().toLowerCase();
+  const promptScoreActionKey = ['disputed', 'pending_validation', 'waiting_score'].includes(promptState)
+    ? promptState
+    : promptPhase;
+  const isScorePrompt = ['disputed', 'pending_validation', 'waiting_score'].includes(promptScoreActionKey);
+  const isWaitingVenue = promptState === 'waiting_venue';
+  const isOpponentFound = promptState === 'opponent_found';
+  const isPostSlotResolution = promptState === 'post_slot_resolution';
   const effectivePostSlotStep = postSlotLocalStep || nextAction?.step || 'ask_happened';
   let promptTitle = 'Nouvelle proposition League';
   let promptBody = "Une proposition de match attend une r\u00E9ponse de votre squad. Consultez les d\u00E9tails avant d'accepter ou de refuser.";
-  if (isWaitingVenue) {
+  if (isScorePrompt) {
+    if (promptScoreActionKey === 'pending_validation') {
+      promptTitle = 'Score a valider';
+      promptBody = 'Un score attend votre validation. Confirmez ou contestez le resultat pour finaliser le match League.';
+    } else if (promptScoreActionKey === 'disputed') {
+      promptTitle = 'Litige score';
+      promptBody = 'Un litige est ouvert sur le score. Traitez le score pour debloquer la suite League.';
+    } else {
+      promptTitle = 'Score a saisir';
+      promptBody = 'Le match est joue. Saisissez le score final pour lancer la validation League.';
+    }
+  } else if (isWaitingVenue) {
     promptTitle = 'Terrain \u00E0 r\u00E9server';
     promptBody = "Le match est confirm\u00E9, mais le terrain n'est pas encore r\u00E9serv\u00E9. Pensez \u00E0 finaliser l'organisation.";
   } else if (isOpponentFound) {
@@ -641,12 +661,14 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   ]);
 
   const renderPromptActions = useCallback(() => {
-    const state = String(nextAction?.state || '').trim();
+    const state = String(nextAction?.state || '').trim().toLowerCase();
     const phase = String(nextAction?.match?.phase || '').trim().toLowerCase();
+    const scoreActionKey = ['disputed', 'pending_validation', 'waiting_score'].includes(state) ? state : phase;
+    const isScoreAction = ['disputed', 'pending_validation', 'waiting_score'].includes(scoreActionKey);
 
     const goToCanonicalScreen = () => {
       if (!nextAction?.matchId) return;
-      if (phase === 'waiting_score' || phase === 'pending_validation' || phase === 'disputed') {
+      if (isScoreAction) {
         dismissForSession();
         openLeagueScoreFlow(nextAction.matchId);
         return;
@@ -665,9 +687,22 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       openMatchDetails('timeline');
     };
 
-    const primaryTitle = phase === 'waiting_score' || phase === 'pending_validation' || phase === 'disputed'
-      ? 'Saisir le score'
-      : 'Ouvrir le match';
+    let primaryTitle = 'Ouvrir le match';
+    if (scoreActionKey === 'pending_validation') {
+      primaryTitle = 'Valider le score';
+    } else if (scoreActionKey === 'disputed') {
+      primaryTitle = 'Traiter le litige';
+    } else if (scoreActionKey === 'waiting_score') {
+      primaryTitle = 'Saisir le score';
+    }
+
+    if (state === 'post_slot_resolution') {
+      return (
+        <View style={{ gap: 12 }}>
+          {renderPostSlotActions()}
+        </View>
+      );
+    }
 
     if (state === 'opponent_found') {
       return (
@@ -680,6 +715,55 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
           />
           <Button
             onPress={() => openMatchDetails('negotiation')}
+            style={ApplicationStyle.borderRadius24}
+            title="Voir le match"
+            variant="Secondary"
+          />
+        </View>
+      );
+    }
+
+    if (state === 'proposal_received') {
+      return (
+        <View style={{ gap: 12 }}>
+          <Button
+            disabled={isSubmitting}
+            onPress={handleAcceptProposal}
+            style={ApplicationStyle.borderRadius24}
+            title={isSubmitting ? 'Validation...' : 'Accepter'}
+            variant="Primary"
+          />
+          <Button
+            disabled={isSubmitting}
+            onPress={handleDeclineProposal}
+            style={ApplicationStyle.borderRadius24}
+            title="Refuser"
+            variant="Secondary"
+          />
+          <Button
+            disabled={isSubmitting}
+            onPress={openChat}
+            style={ApplicationStyle.borderRadius24}
+            title="Ouvrir le chat"
+            variant="Secondary"
+          />
+        </View>
+      );
+    }
+
+    if (state === 'waiting_venue') {
+      return (
+        <View style={{ gap: 12 }}>
+          <Button
+            disabled={isSubmitting}
+            onPress={handleVenueReminder}
+            style={ApplicationStyle.borderRadius24}
+            title="Marquer terrain reserve"
+            variant="Primary"
+          />
+          <Button
+            disabled={isSubmitting}
+            onPress={() => openMatchDetails('venueBooking')}
             style={ApplicationStyle.borderRadius24}
             title="Voir le match"
             variant="Secondary"
@@ -701,13 +785,18 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   }, [
     ApplicationStyle.borderRadius24,
     dismissForSession,
+    handleAcceptProposal,
+    handleDeclineProposal,
     handleOpenProposalComposer,
+    handleVenueReminder,
     isSubmitting,
     nextAction?.match?.phase,
     nextAction?.matchId,
     nextAction?.state,
+    openChat,
     openLeagueScoreFlow,
     openMatchDetails,
+    renderPostSlotActions,
   ]);
 
   if (!nextAction) return null;

@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import {
-  Alert, Linking, ScrollView, Share, Text, View,
+  Alert, ScrollView, Text, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -9,6 +9,8 @@ import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+import { openUrl } from '@/platform/links';
+import { share } from '@/platform/share';
 
 import {
   createLicenseCheckout,
@@ -66,7 +68,7 @@ function MyLicense({ navigation, route }) {
       onError: (error) => Alert.alert('Paiement indisponible', error?.message || 'Aucun lien de paiement configure.'),
       onSuccess: async (result) => {
         if (result?.checkoutUrl) {
-          await Linking.openURL(result.checkoutUrl);
+          await openUrl(result.checkoutUrl);
           navigation.navigate(RouteNames.LicenseCheckoutStatus, { assignmentId, provider });
         }
       },
@@ -78,9 +80,11 @@ function MyLicense({ navigation, route }) {
       Alert.alert('Lien indisponible', 'Le lien de paiement externe sera disponible apres generation par le club.');
       return;
     }
-    Share.share({
+    share({
       message: `Paiement cotisation FoundClub: ${payerLink}`,
       url: payerLink,
+    }).catch((error) => {
+      Alert.alert('Partage indisponible', error?.message || 'Impossible de partager le lien depuis ce navigateur.');
     });
   }, [payerLink]);
 

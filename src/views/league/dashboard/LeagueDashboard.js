@@ -19,7 +19,8 @@ import CompetitiveHero from '@/components/organisms/league/CompetitiveHero';
 import MatchHistory from '@/components/organisms/league/MatchHistory';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
-import { shouldMaskOpponentIdentity } from '@/views/league/match/utils/matchStatus';
+import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
+import { getMatchDerivedPhase, shouldMaskOpponentIdentity } from '@/views/league/match/utils/matchStatus';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -83,11 +84,17 @@ const formatLeagueDashboardDate = (value) => {
 };
 
 const LEAGUE_ACTION_META = {
-  confirm\u00E9d_upcoming: {
+  confirmed_upcoming: {
     accent: 'success',
     actionLabel: 'Voir le match',
     helper: 'Le match est confirm\u00E9. Retrouvez les informations de preparation dans votre espace Match.',
     title: 'Match confirm\u00E9',
+  },
+  disputed: {
+    accent: 'warning',
+    actionLabel: 'Traiter le litige',
+    helper: 'Un litige est ouvert sur le score. Ouvrez le match pour le traiter.',
+    title: 'Litige score',
   },
   idle: {
     accent: 'neutral',
@@ -100,6 +107,18 @@ const LEAGUE_ACTION_META = {
     actionLabel: 'Envoyer une proposition',
     helper: 'Un adversaire a ete trouve. Il reste a vous accorder sur la proposition de match.',
     title: 'Adversaire trouve',
+  },
+  pending_validation: {
+    accent: 'warning',
+    actionLabel: 'Valider le score',
+    helper: 'Un score attend une validation. Confirmez ou contestez le resultat.',
+    title: 'Score a valider',
+  },
+  post_slot_resolution: {
+    accent: 'warning',
+    actionLabel: 'Le match a-t-il eu lieu ?',
+    helper: 'Le creneau est depasse sans terrain confirme. Le capitaine doit dire si le match a eu lieu.',
+    title: 'Confirmation match',
   },
   proposal_received: {
     accent: 'warning',
@@ -119,12 +138,53 @@ const LEAGUE_ACTION_META = {
     helper: 'La recherche est en cours. Les meilleures correspondances continuent a etre analysees.',
     title: 'Recherche en cours',
   },
+  valid: {
+    accent: 'success',
+    actionLabel: 'Voir le resultat',
+    helper: 'Le score est valide. Consultez le recapitulatif du match.',
+    title: 'Resultat valide',
+  },
+  waiting_score: {
+    accent: 'gold',
+    actionLabel: 'Saisir le score',
+    helper: 'Le match est joue. Saisissez le score final pour lancer la validation League.',
+    title: 'Score a saisir',
+  },
   waiting_venue: {
     accent: 'warning',
-    actionLabel: 'Reserver le terrain',
+    actionLabel: 'Marquer terrain reserve',
     helper: "Le match est confirm\u00E9, mais le terrain n'est pas encore r\u00E9serv\u00E9. Finalisez l'organisation d\u00E8s que possible.",
     title: 'Terrain \u00E0 r\u00E9server',
   },
+};
+
+LEAGUE_ACTION_META.confirm\u00E9d_upcoming = LEAGUE_ACTION_META.confirmed_upcoming;
+
+const SCORE_ACTION_STATES = new Set(['disputed', 'pending_validation', 'waiting_score']);
+
+const resolveLeagueActionMatchId = (leagueActionState) => (
+  leagueActionState?.matchId
+  || leagueActionState?.match?.documentId
+  || leagueActionState?.match?.id
+  || ''
+);
+
+const resolveLeagueActionStateKey = (leagueActionState) => {
+  const directState = String(
+    leagueActionState?.state
+    || leagueActionState?.phase
+    || leagueActionState?.match?.phase
+    || '',
+  ).trim();
+
+  if (LEAGUE_ACTION_META[directState]) return directState;
+
+  const derivedPhase = leagueActionState?.match
+    ? getMatchDerivedPhase(leagueActionState.match, leagueActionState.match?.event)
+    : '';
+
+  if (LEAGUE_ACTION_META[derivedPhase]) return derivedPhase;
+  return directState || 'idle';
 };
 
 /**
@@ -294,41 +354,59 @@ function LeagueDashboard() {
   }, [navigation]);
 
   const handlePrimaryLeagueAction = useCallback(() => {
-    const state = String(leagueActionState?.state || 'idle');
+    const state = resolveLeagueActionStateKey(leagueActionState);
+    const matchId = resolveLeagueActionMatchId(leagueActionState);
 
     if (state === 'searching') {
       navigation.navigate(RouteNames.LeagueMatchTab);
       return;
     }
 
+    if (SCORE_ACTION_STATES.has(state)) {
+      if (!navigateToEndMatchScreen(navigation, matchId)) {
+        openLeagueMatchDetails(matchId);
+      }
+      return;
+    }
+
+    if (state === 'post_slot_resolution') {
+      openLeagueMatchDetails(matchId, 'timeline');
+      return;
+    }
+
+    if (state === 'valid') {
+      openLeagueMatchDetails(matchId);
+      return;
+    }
+
     if (state === 'waiting_venue') {
-      openLeagueMatchDetails(leagueActionState?.matchId || leagueActionState?.match?.documentId, 'venueBooking');
+      openLeagueMatchDetails(matchId, 'venueBooking');
       return;
     }
 
     if (state === 'opponent_found') {
-      openLeagueProposalComposer(leagueActionState?.matchId || leagueActionState?.match?.documentId);
+      openLeagueProposalComposer(matchId);
       return;
     }
 
     if (state === 'proposal_received') {
       openLeagueConversation({
         chatId: leagueActionState?.chatId,
-        matchId: leagueActionState?.matchId || leagueActionState?.match?.documentId,
+        matchId,
         proposalMessageId: leagueActionState?.proposalMessageId,
       });
       return;
     }
 
-    if (['confirm\u00E9d_upcoming', 'proposal_sent_waiting'].includes(state)) {
+    if (['confirmed_upcoming', 'confirm\u00E9d_upcoming', 'proposal_sent_waiting'].includes(state)) {
       if (state === 'proposal_sent_waiting') {
         openLeagueConversation({
           chatId: leagueActionState?.chatId,
-          matchId: leagueActionState?.matchId || leagueActionState?.match?.documentId,
+          matchId,
           proposalMessageId: leagueActionState?.proposalMessageId,
         });
       } else {
-        openLeagueMatchDetails(leagueActionState?.matchId || leagueActionState?.match?.documentId);
+        openLeagueMatchDetails(matchId);
       }
       return;
     }
@@ -337,31 +415,39 @@ function LeagueDashboard() {
   }, [leagueActionState, navigation, openLeagueConversation, openLeagueMatchDetails, openLeagueProposalComposer]);
 
   const handleSecondaryLeagueAction = useCallback(() => {
-    const state = String(leagueActionState?.state || '');
+    const state = resolveLeagueActionStateKey(leagueActionState);
+    const matchId = resolveLeagueActionMatchId(leagueActionState);
 
     if (state === 'proposal_received') {
       openLeagueConversation({
         chatId: leagueActionState?.chatId,
-        matchId: leagueActionState?.matchId || leagueActionState?.match?.documentId,
+        matchId,
         proposalMessageId: leagueActionState?.proposalMessageId,
       });
       return;
     }
 
     if (state === 'opponent_found' || state === 'proposal_sent_waiting') {
-      openLeagueMatchDetails(leagueActionState?.matchId || leagueActionState?.match?.documentId);
+      openLeagueMatchDetails(matchId);
       return;
     }
 
-    if (state === 'waiting_venue') {
-      openLeagueMatchDetails(leagueActionState?.matchId || leagueActionState?.match?.documentId);
+    if ([
+      'disputed',
+      'pending_validation',
+      'post_slot_resolution',
+      'valid',
+      'waiting_score',
+      'waiting_venue',
+    ].includes(state)) {
+      openLeagueMatchDetails(matchId);
     }
   }, [leagueActionState, openLeagueConversation, openLeagueMatchDetails]);
 
   const leagueActionMeta = useMemo(() => {
-    const state = String(leagueActionState?.state || 'idle');
+    const state = resolveLeagueActionStateKey(leagueActionState);
     return LEAGUE_ACTION_META[state] || LEAGUE_ACTION_META.idle;
-  }, [leagueActionState?.state]);
+  }, [leagueActionState]);
 
   // --- Components ---
 
@@ -591,7 +677,7 @@ function LeagueDashboard() {
   };
 
   const renderLeagueActionCard = () => {
-    const state = String(leagueActionState?.state || 'idle');
+    const state = resolveLeagueActionStateKey(leagueActionState);
     const accentPalette = (() => {
       switch (leagueActionMeta.accent) {
         case 'gold':
@@ -631,11 +717,29 @@ function LeagueDashboard() {
     const opponentName = shouldHideOpponentName
       ? 'Adversaire'
       : leagueActionState?.opponent?.name || leagueActionState?.opponentDetails?.name || 'Adversaire';
-    const actionRequired = state === 'proposal_received' || state === 'waiting_venue';
-    const hasSecondaryAction = ['opponent_found', 'proposal_received', 'proposal_sent_waiting', 'waiting_venue'].includes(state);
+    const actionRequired = [
+      'disputed',
+      'pending_validation',
+      'post_slot_resolution',
+      'proposal_received',
+      'waiting_score',
+      'waiting_venue',
+    ].includes(state);
+    const hasSecondaryAction = [
+      'disputed',
+      'opponent_found',
+      'pending_validation',
+      'post_slot_resolution',
+      'proposal_received',
+      'proposal_sent_waiting',
+      'waiting_score',
+      'waiting_venue',
+    ].includes(state);
     let secondaryActionLabel = 'Voir le chat';
-    if (state === 'proposal_sent_waiting' || state === 'waiting_venue') {
+    if (state === 'proposal_sent_waiting' || state === 'waiting_venue' || state === 'post_slot_resolution') {
       secondaryActionLabel = 'Voir le match';
+    } else if (SCORE_ACTION_STATES.has(state)) {
+      secondaryActionLabel = 'Voir la fiche match';
     }
 
     return (

@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   useCallback,
   useEffect,
@@ -27,6 +27,7 @@ import { createChatMessage } from '@/services/chat/chatService'
 import client from '@/services/client'
 import { useGetEvents } from '@/services/event/eventQueries'
 import { confirmMatch, updateMatch } from '@/services/league/leagueMatchService'
+import { createMessageReport } from '@/services/messageReport/messageReportService'
 import useTheme from '@/theme/themeContext'
 import {
   getDocumentDisplayName,
@@ -172,6 +173,7 @@ function Conversation({ navigation, route }) {
     joinChat,
     leaveChat,
     respondToProposal,
+    retryFailedMessage,
     sendMessage,
     sendReadReceipt,
     sendTypingStart,
@@ -196,6 +198,7 @@ function Conversation({ navigation, route }) {
   const [isStoppingVoice, setIsStoppingVoice] = useState(false)
   const [isSubmittingPoll, setIsSubmittingPoll] = useState(false)
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false)
+  const [reportedMessageId, setReportedMessageId] = useState('')
   const messagePaneRef = useRef(null)
   const typingTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
   const handledSharedEventFromPickerRef = useRef('')
@@ -223,6 +226,16 @@ function Conversation({ navigation, route }) {
     sort: 'date:asc',
   }, {
     enabled: Boolean(chatId),
+  })
+  const reportMessageMutation = useMutation({
+    mutationFn: createMessageReport,
+    onError: (error) => {
+      window.alert(getErrorMessage(error, 'Impossible de signaler ce message pour le moment.'))
+    },
+    onSuccess: () => {
+      window.alert('Signalement envoye. Merci, notre equipe va verifier ce message.')
+      setReportedMessageId('')
+    },
   })
 
   const messages = useMemo(
@@ -838,6 +851,19 @@ function Conversation({ navigation, route }) {
     ])
   }, [refetchChat, refetchMessages])
 
+  const handleRetryFailedMessage = useCallback((message) => {
+    if (!chatId || !message) return
+    retryFailedMessage(chatId, message)
+  }, [chatId, retryFailedMessage])
+
+  const handleReportMessage = useCallback((message) => {
+    const messageId = getMessageId(message)
+    if (!messageId || reportMessageMutation.isPending) return
+    if (!window.confirm('Signaler ce message a la moderation FoundClub ?')) return
+    setReportedMessageId(messageId)
+    reportMessageMutation.mutate({ message: messageId })
+  }, [reportMessageMutation])
+
   const renderAttachments = useCallback((attachments = []) => (
     <div style={{ display: 'grid', gap: 10 }}>
       {attachments.map((attachment, index) => {
@@ -1217,20 +1243,61 @@ function Conversation({ navigation, route }) {
               {message?.pending ? ' • envoi...' : ''}
               {message?.failed ? ' • a renvoyer' : ''}
             </span>
-            <button
-              onClick={() => setReplyTarget(message)}
-              style={{
-                background: 'transparent',
-                border: 0,
-                color: primaryColor,
-                cursor: 'pointer',
-                fontFamily: 'Montserrat-Bold, sans-serif',
-                padding: 0,
-              }}
-              type="button"
+            <div style={{
+              alignItems: 'center',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
             >
-              Repondre
-            </button>
+              {message?.failed ? (
+                <button
+                  onClick={() => handleRetryFailedMessage(message)}
+                  style={{
+                    background: 'transparent',
+                    border: 0,
+                    color: primaryColor,
+                    cursor: 'pointer',
+                    fontFamily: 'Montserrat-Bold, sans-serif',
+                    padding: 0,
+                  }}
+                  type="button"
+                >
+                  Renvoyer
+                </button>
+              ) : null}
+              {!isMine ? (
+                <button
+                  disabled={reportMessageMutation.isPending && reportedMessageId === getMessageId(message)}
+                  onClick={() => handleReportMessage(message)}
+                  style={{
+                    background: 'transparent',
+                    border: 0,
+                    color: mutedTextColor,
+                    cursor: reportMessageMutation.isPending ? 'wait' : 'pointer',
+                    fontFamily: 'Montserrat-Bold, sans-serif',
+                    padding: 0,
+                  }}
+                  type="button"
+                >
+                  {reportMessageMutation.isPending && reportedMessageId === getMessageId(message) ? 'Signalement...' : 'Signaler'}
+                </button>
+              ) : null}
+              <button
+                onClick={() => setReplyTarget(message)}
+                style={{
+                  background: 'transparent',
+                  border: 0,
+                  color: primaryColor,
+                  cursor: 'pointer',
+                  fontFamily: 'Montserrat-Bold, sans-serif',
+                  padding: 0,
+                }}
+                type="button"
+              >
+                Repondre
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1238,11 +1305,15 @@ function Conversation({ navigation, route }) {
   }, [
     baseTextColor,
     borderColor,
+    handleReportMessage,
+    handleRetryFailedMessage,
     isDesktop,
     mutedTextColor,
     primaryColor,
+    reportMessageMutation.isPending,
     renderAttachments,
     renderComposition,
+    reportedMessageId,
     userData?.documentId,
   ])
 
