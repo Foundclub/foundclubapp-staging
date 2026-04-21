@@ -64,4 +64,23 @@ describe('runtimeUrls.shared', () => {
     expect(runtime.errors).toContain('API_URL is required for staging/production builds.');
     expect(runtime.errors).toContain('SOCKET_URL is required for staging/production builds.');
   });
+
+  it('fails clearly when a native release build resolves to local app env', () => {
+    const runtime = buildRuntimeEndpoints({
+      apiPublicUrlEnv: '',
+      apiUrlEnv: 'http://10.0.2.2:1337/api',
+      appEnv: 'local',
+      isDev: false,
+      isEmulator: true,
+      platformOs: 'android',
+      socketUrlEnv: 'http://10.0.2.2:1337',
+    });
+
+    expect(runtime.errors).toContain(
+      'Release builds cannot use APP_ENV=local. Build this app with staging or production runtime configuration.',
+    );
+    expect(runtime.errors).toContain(
+      'Release builds cannot point API_URL to a loopback host such as localhost or 10.0.2.2.',
+    );
+  });
 });

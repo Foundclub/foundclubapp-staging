@@ -198,6 +198,7 @@ export const buildRuntimeEndpoints = ({
   const missingApiUrl = !apiUrl;
   const missingSocketUrl = !socketUrl;
   const isStrictEnv = normalizedEnv === 'staging' || normalizedEnv === 'production';
+  const isNativeReleaseBuild = !isDev && (platformOs === 'android' || platformOs === 'ios');
 
   if (missingApiUrl) {
     errors.push(
@@ -216,6 +217,14 @@ export const buildRuntimeEndpoints = ({
   }
 
   const resolvedApiHost = getHostname(apiUrl);
+  if (isNativeReleaseBuild && normalizedEnv === 'local') {
+    errors.push('Release builds cannot use APP_ENV=local. Build this app with staging or production runtime configuration.');
+  }
+
+  if (isNativeReleaseBuild && resolvedApiHost && LOOPBACK_HOSTS.has(resolvedApiHost)) {
+    errors.push('Release builds cannot point API_URL to a loopback host such as localhost or 10.0.2.2.');
+  }
+
   if (resolvedApiHost && LOOPBACK_HOSTS.has(resolvedApiHost) && isDev && !isEmulator) {
     errors.push('API_URL points to a loopback host on a physical device. Use a LAN or remote backend URL.');
   }

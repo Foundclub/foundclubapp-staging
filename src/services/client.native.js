@@ -9,7 +9,9 @@ import {
 
 import { trackBootNetworkRequest } from '@/utils/performance/bootPerformance';
 
-import { getApiBaseUrl } from '@/config/runtimeUrls';
+import { assertRuntimeEndpointsReady, getApiBaseUrl } from '@/config/runtimeUrls';
+
+assertRuntimeEndpointsReady();
 
 const instance = axios.create({
   baseURL: getApiBaseUrl() || undefined,
