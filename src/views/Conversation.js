@@ -112,8 +112,10 @@ import { markMessagingPerf } from '@/utils/performance/messagingPerformance';
 import safeJsonParse from '@/utils/safeJsonParse';
 
 import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
+import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 import useAudioPlayback from '@/hooks/useAudioPlayback';
+import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 import useSafeTimers from '@/hooks/useSafeTimers';
 import { EVENTS } from '@/hooks/useSocket';
 import shareApi from '@/platform/share';
@@ -298,6 +300,7 @@ function Conversation({ navigation, route }) {
   const { t } = useTranslationCompat();
   const { userData } = useAuth();
   const { showBanner } = useAppFeedback();
+  const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const { clearSafeTimer, setSafeTimeout } = useSafeTimers();
 
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -587,6 +590,11 @@ function Conversation({ navigation, route }) {
     isLoading: isMessagesLoading,
   } = useGetChatMessages({ chatId });
   const { data: chatData } = useGetChatById(chatId);
+  const leagueLegalMatchLabel = useMemo(() => {
+    const match = chatData?.league_match;
+    if (!match) return 'Match FoundClub League';
+    return `${match?.team_a?.name || 'Equipe A'} VS ${match?.team_b?.name || 'Adversaire'}`;
+  }, [chatData?.league_match]);
   const isGroupChat = chatData?.type === 'group';
   const groupAdminIds = useMemo(() => {
     if (!Array.isArray(chatData?.groupAdmins)) return [];
@@ -2825,7 +2833,21 @@ function Conversation({ navigation, route }) {
       if (!proposalPayload.venueLabel) {
         throw new Error('Missing proposal venue');
       }
-      await createLeagueProposal(matchId, proposalPayload);
+      const legalAcceptance = await requestLeagueLegalAcceptance({
+        metadata: {
+          chatId,
+          matchLabel: leagueLegalMatchLabel,
+          venueLabel: proposalPayload.venueLabel,
+        },
+        scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
+        sourceScreen: 'conversation_league_proposal',
+        targetDocumentId: matchId,
+        targetLabel: leagueLegalMatchLabel,
+        targetType: 'league_match',
+      });
+      if (!legalAcceptance) return;
+
+      await createLeagueProposal(matchId, proposalPayload, { legalAcceptance });
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
       queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] });
@@ -2891,7 +2913,24 @@ function Conversation({ navigation, route }) {
       setIsProposalResponseSubmitting(true);
       if (status === 'accepted') {
         conversationLogger.debug('Accepting match proposal', { matchId });
-        await respondToLeagueProposal(matchId, proposalMessageId, 'accept');
+        const legalAcceptance = await requestLeagueLegalAcceptance({
+          metadata: {
+            chatId,
+            matchLabel: leagueLegalMatchLabel,
+            proposalMessageId,
+          },
+          scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE,
+          sourceScreen: 'conversation_league_proposal_accept',
+          targetDocumentId: matchId,
+          targetLabel: leagueLegalMatchLabel,
+          targetType: 'league_match',
+        });
+        if (!legalAcceptance) {
+          queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
+          return;
+        }
+
+        await respondToLeagueProposal(matchId, proposalMessageId, 'accept', { legalAcceptance });
         showSuccessBanner('Le match est valide !', 'Match confirme', 'league');
         promptAddMatchToCalendar(message);
       } else {
@@ -6278,6 +6317,7 @@ function Conversation({ navigation, route }) {
             setIsProposalModalVisible(false);
           }}
         />
+        {leagueLegalAcceptanceModal}
       </View>
     </ImageBackground>
   );

@@ -1,9 +1,12 @@
 import { Platform } from 'react-native';
 
-import { getUploadEndpoint } from '@/config/runtimeUrls';
+import { getAuthTokens } from '@/domains/auth/authUseCases';
+
 import client from '@/services/client';
 
 import { clampLeagueDivision } from '@/utils/league/division';
+
+import { getUploadEndpoint } from '@/config/runtimeUrls';
 
 /**
  * @typedef {object} LeagueTeamData
@@ -51,11 +54,15 @@ import { clampLeagueDivision } from '@/utils/league/division';
 /**
  * Create a new league team
  * @param {LeagueTeamMutationData} teamData
+ * @param {{ legalAcceptance?: object }} [options]
  * @returns {Promise<object>}
  */
-export const createLeagueTeam = async (teamData) => {
+export const createLeagueTeam = async (teamData, options = {}) => {
   const { cover, logo, ...baseData } = teamData;
-  const data = /** @type {Record<string, unknown>} */ ({ ...baseData });
+  const data = /** @type {Record<string, unknown>} */ ({
+    ...baseData,
+    ...(options.legalAcceptance ? { legalAcceptance: options.legalAcceptance } : {}),
+  });
 
   try {
     // 1. Handle File Uploads first
@@ -216,7 +223,6 @@ const uploadFile = async (file) => {
     }));
 
     // Get token for upload
-    const { getAuthTokens } = require('../../domains/auth/authUseCases');
     const token = getAuthTokens()?.token;
     const uploadEndpoint = getUploadEndpoint();
     if (!uploadEndpoint) {
@@ -671,7 +677,8 @@ export const searchSquads = async (filters) => {
     }
 
     if (conditions.length === 1) {
-      query.filters = conditions[0];
+      const [singleCondition] = conditions;
+      query.filters = singleCondition;
     } else if (conditions.length > 1) {
       query.filters = { $and: conditions };
     }
@@ -734,11 +741,13 @@ export const searchSquads = async (filters) => {
  * Request to join a squad
  * @param {string} teamId
  * @param {string} userId
+ * @param {{ legalAcceptance?: object }} [options]
  */
-export const requestToJoinSquad = async (teamId, userId) => {
+export const requestToJoinSquad = async (teamId, userId, options = {}) => {
   try {
     await client.post(`/league-teams/${teamId}/request-join`, {
       data: {
+        ...(options.legalAcceptance ? { legalAcceptance: options.legalAcceptance } : {}),
         userId,
       },
     });
@@ -809,12 +818,14 @@ export const respondToJoinRequest = async (teamId, userId, accept) => {
  * @param {string} teamId
  * @param {string} userId
  * @param {boolean} accept
+ * @param {{ legalAcceptance?: object }} [options]
  */
-export const respondToSquadInvite = async (teamId, userId, accept) => {
+export const respondToSquadInvite = async (teamId, userId, accept, options = {}) => {
   try {
     await client.post(`/league-teams/${teamId}/respond-invitation`, {
       data: {
         accept,
+        ...(options.legalAcceptance ? { legalAcceptance: options.legalAcceptance } : {}),
         userId,
       },
     });

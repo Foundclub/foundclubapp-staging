@@ -6,11 +6,17 @@ import { areSameEntityId, getEntityDocumentId, requireDocumentId } from '@/utils
  * Generic partial update for a league match (proposal, metadata, etc.)
  * @param {string} matchId
  * @param {object} data
+ * @param {{ legalAcceptance?: object }} [options]
  * @returns {Promise<LeagueMatch>}
  */
-export const updateMatch = async (matchId, data) => {
+export const updateMatch = async (matchId, data, options = {}) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
-  const response = await client.put(`/league-matches/${normalizedMatchId}`, { data });
+  const response = await client.put(`/league-matches/${normalizedMatchId}`, {
+    data: {
+      ...data,
+      ...(options.legalAcceptance ? { legalAcceptance: options.legalAcceptance } : {}),
+    },
+  });
   return response.data;
 };
 
@@ -23,10 +29,14 @@ export const updateMatch = async (matchId, data) => {
  *  addressLabel?: string,
  *  addressObject?: Record<string, unknown>,
  * }} payload
+ * @param {{ legalAcceptance?: object }} [options]
  */
-export const createLeagueProposal = async (matchId, payload) => {
+export const createLeagueProposal = async (matchId, payload, options = {}) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
-  const response = await client.post(`/league-matches/${normalizedMatchId}/proposals`, payload);
+  const response = await client.post(`/league-matches/${normalizedMatchId}/proposals`, {
+    ...payload,
+    ...(options.legalAcceptance ? { legalAcceptance: options.legalAcceptance } : {}),
+  });
   if (response.data?.data) {
     return {
       match: response.data.data,
@@ -41,13 +51,17 @@ export const createLeagueProposal = async (matchId, payload) => {
  * @param {string} matchId
  * @param {string} proposalMessageId
  * @param {'accept' | 'decline'} decision
+ * @param {{ legalAcceptance?: object }} [options]
  */
-export const respondToLeagueProposal = async (matchId, proposalMessageId, decision) => {
+export const respondToLeagueProposal = async (matchId, proposalMessageId, decision, options = {}) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
   const normalizedProposalMessageId = requireDocumentId(proposalMessageId, 'proposalMessage');
   const response = await client.post(
     `/league-matches/${normalizedMatchId}/proposals/${normalizedProposalMessageId}/respond`,
-    { decision },
+    {
+      decision,
+      ...(options.legalAcceptance ? { legalAcceptance: options.legalAcceptance } : {}),
+    },
   );
   return response.data?.data || response.data;
 };
@@ -56,10 +70,12 @@ export const respondToLeagueProposal = async (matchId, proposalMessageId, decisi
  * Confirm participation for a match
  * @param {string} matchId - The match documentId
  * @param {'a' | 'b'} teamSide - Which team the user is part of
+ * @param {{ legalAcceptance?: object }} [options]
  */
-export const confirmParticipation = async (matchId, teamSide) => {
+export const confirmParticipation = async (matchId, teamSide, options = {}) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
   const response = await client.post(`/league-matches/${normalizedMatchId}/confirm-participation`, {
+    ...(options.legalAcceptance ? { legalAcceptance: options.legalAcceptance } : {}),
     teamSide,
   });
   return response.data;
@@ -81,10 +97,13 @@ export const declineParticipation = async (matchId, teamSide) => {
 /**
  * Mark venue as booked (captain only)
  * @param {string} matchId - The match documentId
+ * @param {{ legalAcceptance?: object }} [options]
  */
-export const markVenueBooked = async (matchId) => {
+export const markVenueBooked = async (matchId, options = {}) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
-  const response = await client.post(`/league-matches/${normalizedMatchId}/venue-booked`);
+  const response = await client.post(`/league-matches/${normalizedMatchId}/venue-booked`, {
+    ...(options.legalAcceptance ? { legalAcceptance: options.legalAcceptance } : {}),
+  });
   return response.data;
 };
 
@@ -102,10 +121,13 @@ export const submitPostSlotResponse = async (matchId, payload) => {
 /**
  * Confirm a match proposal (schedule it)
  * @param {string} matchId - The match documentId
+ * @param {{ legalAcceptance?: object }} [options]
  */
-export const confirmMatch = async (matchId) => {
+export const confirmMatch = async (matchId, options = {}) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
-  const response = await client.post(`/league-matches/${normalizedMatchId}/confirm`);
+  const response = await client.post(`/league-matches/${normalizedMatchId}/confirm`, {
+    ...(options.legalAcceptance ? { legalAcceptance: options.legalAcceptance } : {}),
+  });
   return response.data;
 };
 

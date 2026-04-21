@@ -75,25 +75,25 @@ function SearchCountdown({ createdAt, serverNow = null }) {
 
       <View style={styles.timerRow}>
         <View style={styles.timerBlock}>
-          <Text style={[styles.timerValue, { color: Colors.primary500 }]}>
+          <Text style={[styles.timerValue, { color: Colors.gold500 }]}>
             {displayHours}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>H</Text>
         </View>
 
-        <Text style={[styles.separator, { color: Colors.primary500 }]}>:</Text>
+        <Text style={[styles.separator, { color: Colors.gold500 }]}>:</Text>
 
         <View style={styles.timerBlock}>
-          <Text style={[styles.timerValue, { color: Colors.primary500 }]}>
+          <Text style={[styles.timerValue, { color: Colors.gold500 }]}>
             {displayMinutes}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>M</Text>
         </View>
 
-        <Text style={[styles.separator, { color: Colors.primary500 }]}>:</Text>
+        <Text style={[styles.separator, { color: Colors.gold500 }]}>:</Text>
 
         <View style={styles.timerBlock}>
-          <Text style={[styles.timerValue, { color: Colors.primary500 }]}>
+          <Text style={[styles.timerValue, { color: Colors.gold500 }]}>
             {displaySeconds}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>S</Text>

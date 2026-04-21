@@ -49,6 +49,8 @@ import {
   buildShareMessageWithUrl,
 } from '@/utils/shareLinks';
 
+import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
+import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 import SharePlatform from '@/platform/share';
 
 const slotDayLabels = {
@@ -189,6 +191,7 @@ function SquadDetailsScreen({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { userData: currentUser } = /** @type {{ userData: User | null }} */ (useAuth());
+  const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const currentUserId = getEntityDocumentId(currentUser);
   const currentRoleType = String(currentUser?.role?.type || '').trim().toLowerCase();
   const currentRoleName = String(currentUser?.role?.name || '').trim().toLowerCase();
@@ -370,22 +373,59 @@ function SquadDetailsScreen({ navigation, route }) {
     return { label: 'Squad ouverte', tone: 'blue' };
   }, [hasInvitation, hasPendingRequest, isCaptain, isMember]);
   const heroSummaryLine = useMemo(() => {
-    const memberLabel = `${rosterCount} membre${rosterCount > 1 ? 's' : ''}`;
-    const slotLabel = slotCount > 0
-      ? `${slotCount} cr\u00E9neau${slotCount > 1 ? 'x' : ''} actif${slotCount > 1 ? 's' : ''}`
-      : 'Aucun cr\u00E9neau programm\u00E9';
-    return `${memberLabel} · ${slotLabel}`;
-  }, [rosterCount, slotCount]);
+    const slotLabel = slotCount > 0 ? (
+      <>
+        <Text style={{ color: Colors.gold500 }}>{slotCount}</Text>
+        {' '}
+        cr\u00E9neau
+        {slotCount > 1 ? 'x' : ''}
+        {' '}
+        actif
+        {slotCount > 1 ? 's' : ''}
+      </>
+    ) : 'Aucun cr\u00E9neau programm\u00E9';
+
+    return (
+      <>
+        <Text style={{ color: Colors.gold500 }}>{rosterCount}</Text>
+        {' '}
+        membre
+        {rosterCount > 1 ? 's' : ''}
+        {' · '}
+        {slotLabel}
+      </>
+    );
+  }, [Colors.gold500, rosterCount, slotCount]);
   const heroSupportingLine = useMemo(() => {
     if (isCaptain && pendingRequestsCount > 0) {
-      return `${pendingRequestsCount} demande${pendingRequestsCount > 1 ? 's' : ''} attend${pendingRequestsCount > 1 ? 'ent' : ''} votre validation.`;
+      return (
+        <>
+          <Text style={{ color: Colors.gold500 }}>{pendingRequestsCount}</Text>
+          {' '}
+          demande
+          {pendingRequestsCount > 1 ? 's' : ''}
+          {' '}
+          attend
+          {pendingRequestsCount > 1 ? 'ent' : ''}
+          {' '}
+          votre validation.
+        </>
+      );
     }
-    if (nextSlot) return `Prochain rendez-vous ${nextSlotLongLabel}`;
+    if (nextSlot) {
+      return (
+        <>
+          Prochain rendez-vous
+          {' '}
+          <Text style={{ color: Colors.gold500 }}>{nextSlotLongLabel}</Text>
+        </>
+      );
+    }
     if (hasInvitation) return 'Acceptez votre invitation pour rejoindre la squad et participer aux prochains cr\u00E9neaux.';
     if (hasPendingRequest) return 'Votre demande est envoy\u00E9e. Le capitaine peut encore vous valider.';
     if (isMember) return 'Confirmez votre pr\u00E9sence pour aider la squad a se mettre en action.';
     return 'Rejoignez cette squad pour participer aux cr\u00E9neaux et au matchmaking.';
-  }, [hasInvitation, hasPendingRequest, isCaptain, isMember, nextSlot, nextSlotLongLabel, pendingRequestsCount]);
+  }, [Colors.gold500, hasInvitation, hasPendingRequest, isCaptain, isMember, nextSlot, nextSlotLongLabel, pendingRequestsCount]);
   const nextSlotParticipantsCount = Number(nextSlot?.participants?.length || 0);
   const nextSlotRemainingCount = Math.max(0, 5 - nextSlotParticipantsCount);
   const nextSlotStatus = useMemo(() => {
@@ -601,8 +641,20 @@ function SquadDetailsScreen({ navigation, route }) {
         Alert.alert(t('common.error'), t('squad.join.error', 'Impossible d\'envoyer la demande.'));
         return;
       }
+      const legalAcceptance = await requestLeagueLegalAcceptance({
+        metadata: {
+          teamName: team?.name || null,
+        },
+        scope: LEAGUE_LEGAL_SCOPES.TEAM_JOIN_REQUEST,
+        sourceScreen: 'squad_details_join_request',
+        targetDocumentId: safeTeamId,
+        targetLabel: team?.name || 'Squad League',
+        targetType: 'league_team',
+      });
+      if (!legalAcceptance) return;
+
       setIsUpdating(true);
-      await requestToJoinSquad(safeTeamId, currentUserId || '');
+      await requestToJoinSquad(safeTeamId, currentUserId || '', { legalAcceptance });
       await refetch();
       Alert.alert(t('squad.join.successTitle', 'Demande envoyée'), t('squad.join.successMessage', 'Le capitaine a recu votre demande.'));
     } catch (error) {
@@ -611,7 +663,7 @@ function SquadDetailsScreen({ navigation, route }) {
     } finally {
       setIsUpdating(false);
     }
-  }, [currentUserId, refetch, safeTeamId, t]);
+  }, [currentUserId, refetch, requestLeagueLegalAcceptance, safeTeamId, t, team?.name]);
 
   const handleCancelJoinRequest = useCallback(async () => {
     try {
@@ -641,8 +693,23 @@ function SquadDetailsScreen({ navigation, route }) {
         return;
       }
 
+      let legalAcceptance = null;
+      if (accept) {
+        legalAcceptance = await requestLeagueLegalAcceptance({
+          metadata: {
+            teamName: team?.name || null,
+          },
+          scope: LEAGUE_LEGAL_SCOPES.TEAM_INVITATION_ACCEPT,
+          sourceScreen: 'squad_details_invitation_accept',
+          targetDocumentId: safeTeamId,
+          targetLabel: team?.name || 'Squad League',
+          targetType: 'league_team',
+        });
+        if (!legalAcceptance) return;
+      }
+
       setIsUpdating(true);
-      await respondToSquadInvite(safeTeamId, currentUserId || '', accept);
+      await respondToSquadInvite(safeTeamId, currentUserId || '', accept, { legalAcceptance });
       await refetch();
       Alert.alert(
         accept
@@ -658,7 +725,7 @@ function SquadDetailsScreen({ navigation, route }) {
     } finally {
       setIsUpdating(false);
     }
-  }, [currentUserId, refetch, safeTeamId, t]);
+  }, [currentUserId, refetch, requestLeagueLegalAcceptance, safeTeamId, t, team?.name]);
 
   const handleInvitePlayer = useCallback(async (user) => {
     const invitedUserId = getEntityDocumentId(user);
@@ -1064,7 +1131,19 @@ function SquadDetailsScreen({ navigation, route }) {
     if (isCaptain) {
       let description = 'Ajoutez un premier cr\u00E9neau pour rendre la squad active.';
       if (pendingRequestsCount > 0) {
-        description = `${pendingRequestsCount} demande${pendingRequestsCount > 1 ? 's' : ''} attend${pendingRequestsCount > 1 ? 'ent' : ''} votre validation.`;
+        description = (
+          <>
+            <Text style={{ color: Colors.gold500 }}>{pendingRequestsCount}</Text>
+            {' '}
+            demande
+            {pendingRequestsCount > 1 ? 's' : ''}
+            {' '}
+            attend
+            {pendingRequestsCount > 1 ? 'ent' : ''}
+            {' '}
+            votre validation.
+          </>
+        );
       } else if (slotCount > 0) {
         description = `Prochain cr\u00E9neau: ${nextSlotLongLabel}`;
       }
@@ -1146,6 +1225,7 @@ function SquadDetailsScreen({ navigation, route }) {
     slotCount,
     canViewStatistics,
     handleOpenStatisticsScreen,
+    Colors.gold500,
   ]);
 
   const sectionShortcuts = useMemo(() => {
@@ -1175,13 +1255,13 @@ function SquadDetailsScreen({ navigation, route }) {
     if (isCaptain) {
       shortcuts.push({
         key: 'requests',
-        label: pendingRequestsCount > 0 ? `Demandes (${pendingRequestsCount})` : 'Demandes',
+        label: 'Demandes',
         onPress: openRequests,
       });
     }
 
     return shortcuts;
-  }, [canViewStatistics, handleOpenStatisticsScreen, handleScrollToSection, isCaptain, openRequests, pendingRequestsCount]);
+  }, [canViewStatistics, handleOpenStatisticsScreen, handleScrollToSection, isCaptain, openRequests]);
 
   const heroAnimatedStyle = useMemo(() => ({
     opacity: heroEntry,
@@ -1543,7 +1623,7 @@ function SquadDetailsScreen({ navigation, route }) {
                     paddingVertical: 6,
                   }}
                   >
-                    <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+                    <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
                       {team.elo}
                       {' '}
                       PTS
@@ -1646,9 +1726,16 @@ function SquadDetailsScreen({ navigation, route }) {
                       {team?.captain ? 'Capitaine et effectif visibles' : 'Communaute en construction'}
                     </Text>
                     <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                      {rosterCount > 1
-                        ? `${rosterCount - 1} membre${rosterCount - 1 > 1 ? 's' : ''} autour du capitaine`
-                        : 'Ajoutez des membres pour faire vivre la squad'}
+                      {rosterCount > 1 ? (
+                        <>
+                          <Text style={{ color: Colors.gold500 }}>{rosterCount - 1}</Text>
+                          {' '}
+                          membre
+                          {rosterCount - 1 > 1 ? 's' : ''}
+                          {' '}
+                          autour du capitaine
+                        </>
+                      ) : 'Ajoutez des membres pour faire vivre la squad'}
                     </Text>
                   </View>
                 </View>
@@ -1674,7 +1761,12 @@ function SquadDetailsScreen({ navigation, route }) {
                   }}
                 >
                   <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>{item.label}</Text>
-                  <Text numberOfLines={2} style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{item.value}</Text>
+                  <Text
+                    numberOfLines={2}
+                    style={[Fonts.h4Bold, { color: Colors.gold500 }]}
+                  >
+                    {item.value}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -1788,7 +1880,12 @@ function SquadDetailsScreen({ navigation, route }) {
                     }}
                   >
                     <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>{item.label}</Text>
-                    <Text numberOfLines={2} style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{item.value}</Text>
+                    <Text
+                      numberOfLines={2}
+                      style={[Fonts.h4Bold, { color: Colors.gold500 }]}
+                    >
+                      {item.value}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -1834,7 +1931,7 @@ function SquadDetailsScreen({ navigation, route }) {
                               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
                                 {`vs ${matchItem?.opponent?.name || 'Adversaire'}`}
                               </Text>
-                              <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
+                              <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                                 {formatLeagueMatchDate(matchItem?.date)}
                               </Text>
                             </View>
@@ -1850,13 +1947,13 @@ function SquadDetailsScreen({ navigation, route }) {
                               >
                                 <Text style={[Fonts.p4Bold, { color: resultMeta.textColor }]}>{resultMeta.label}</Text>
                               </View>
-                              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>
                                 {`${Number(matchItem?.scoreFor || 0)} - ${Number(matchItem?.scoreAgainst || 0)}`}
                               </Text>
                             </View>
                           </View>
                           {matchItem?.eloChange ? (
-                            <Text style={[Fonts.p4Bold, { color: matchItem.eloChange > 0 ? Colors.success500 : Colors.error500 }]}>
+                            <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
                               {`${matchItem.eloChange > 0 ? '+' : ''}${matchItem.eloChange} ELO`}
                             </Text>
                           ) : null}
@@ -1896,7 +1993,7 @@ function SquadDetailsScreen({ navigation, route }) {
                     }}
                     >
                       <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Matchs</Text>
-                      <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{Number(leaguePerformanceSummary.matches || recentLeagueMatches.length || 0)}</Text>
+                      <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{Number(leaguePerformanceSummary.matches || recentLeagueMatches.length || 0)}</Text>
                     </View>
                     <View style={{
                       backgroundColor: `${Colors.primary500}10`,
@@ -1908,7 +2005,7 @@ function SquadDetailsScreen({ navigation, route }) {
                     }}
                     >
                       <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Score cumule</Text>
-                      <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{`${leaguePerformanceSummary.scoreForTotal} - ${leaguePerformanceSummary.scoreAgainstTotal}`}</Text>
+                      <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{`${leaguePerformanceSummary.scoreForTotal} - ${leaguePerformanceSummary.scoreAgainstTotal}`}</Text>
                     </View>
                     <View style={{
                       backgroundColor: `${Colors.primary500}10`,
@@ -1948,7 +2045,7 @@ function SquadDetailsScreen({ navigation, route }) {
                         }}
                       >
                         <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>{stat.label}</Text>
-                        <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{stat.value}</Text>
+                        <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{stat.value}</Text>
                       </View>
                     ))}
                   </View>
@@ -1961,10 +2058,10 @@ function SquadDetailsScreen({ navigation, route }) {
                     padding: 14,
                   }}
                   >
-                    <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
+                    <Text style={[Fonts.p2Bold, { color: Colors.gold500, marginBottom: 4 }]}>
                       {`Score cumule: ${leaguePerformanceSummary.scoreForTotal} - ${leaguePerformanceSummary.scoreAgainstTotal}`}
                     </Text>
-                    <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
+                    <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
                       {`${leaguePerformanceSummary.cleanSheets} clean sheets - ${leaguePerformanceSummary.scoreAgainstTotal} buts encaisses`}
                     </Text>
                   </View>
@@ -1984,7 +2081,7 @@ function SquadDetailsScreen({ navigation, route }) {
                           }}
                         >
                           <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>Capitaine</Text>
-                          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{`${leaguePerformanceSummary.averageCollectiveRating}/10`}</Text>
+                          <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{`${leaguePerformanceSummary.averageCollectiveRating}/10`}</Text>
                         </View>
                       ) : null}
                       {leaguePerformanceSummary.playerCollectiveRatingAverage !== null ? (
@@ -2000,8 +2097,8 @@ function SquadDetailsScreen({ navigation, route }) {
                           }}
                         >
                           <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>Joueurs</Text>
-                          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{`${leaguePerformanceSummary.playerCollectiveRatingAverage}/10`}</Text>
-                          <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
+                          <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{`${leaguePerformanceSummary.playerCollectiveRatingAverage}/10`}</Text>
+                          <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                             {`${leaguePerformanceSummary.playerCollectiveRatingCount} note${leaguePerformanceSummary.playerCollectiveRatingCount > 1 ? 's' : ''}`}
                           </Text>
                         </View>
@@ -2030,7 +2127,7 @@ function SquadDetailsScreen({ navigation, route }) {
                               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
                                 {pendingMatch?.matchLabel || 'Match League'}
                               </Text>
-                              <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
+                              <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                                 {`${Number(pendingMatch?.submittedResponses || 0)}/${Number(pendingMatch?.eligibleCount || 0)} joueurs ont repondu`}
                               </Text>
                             </View>
@@ -2049,7 +2146,7 @@ function SquadDetailsScreen({ navigation, route }) {
                             </View>
                           </View>
                           {pendingMatch?.lastSubmittedAt ? (
-                            <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
+                            <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                               {`Derni\u00E8re r\u00E9ponse le ${new Date(pendingMatch.lastSubmittedAt).toLocaleString('fr-FR')}`}
                             </Text>
                           ) : null}
@@ -2079,7 +2176,7 @@ function SquadDetailsScreen({ navigation, route }) {
                               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
                                 {report?.matchLabel || 'Match League'}
                               </Text>
-                              <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
+                              <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                                 {`${Number(report?.scoreFor || 0)} - ${Number(report?.scoreAgainst || 0)}`}
                               </Text>
                             </View>
@@ -2093,7 +2190,7 @@ function SquadDetailsScreen({ navigation, route }) {
                                 paddingVertical: 4,
                               }}
                               >
-                                <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
+                                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
                                   {report?.finalizedAt ? new Date(report.finalizedAt).toLocaleDateString('fr-FR') : 'Publie'}
                                 </Text>
                               </View>
@@ -2107,7 +2204,7 @@ function SquadDetailsScreen({ navigation, route }) {
                                   paddingVertical: 4,
                                 }}
                                 >
-                                  <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>
+                                  <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
                                     {report?.newResponsesCount > 1 ? `${report.newResponsesCount} nouvelles r\u00E9ponses` : 'Nouvelle r\u00E9ponse'}
                                   </Text>
                                 </View>
@@ -2125,7 +2222,7 @@ function SquadDetailsScreen({ navigation, route }) {
                                 paddingVertical: 4,
                               }}
                               >
-                                <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>{`Capitaine ${report.collectiveRating}/10`}</Text>
+                                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>{`Capitaine ${report.collectiveRating}/10`}</Text>
                               </View>
                             ) : null}
                             {report?.playerCollectiveRatingAverage !== null && report?.playerCollectiveRatingAverage !== undefined ? (
@@ -2138,11 +2235,11 @@ function SquadDetailsScreen({ navigation, route }) {
                                 paddingVertical: 4,
                               }}
                               >
-                                <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>{`Joueurs ${report.playerCollectiveRatingAverage}/10`}</Text>
+                                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>{`Joueurs ${report.playerCollectiveRatingAverage}/10`}</Text>
                               </View>
                             ) : null}
                           </View>
-                          <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
+                          <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                             {`${Number(report?.responseCompletionCount || 0)}/${Number(report?.responseEligibleCount || 0)} joueurs ont repondu`}
                           </Text>
                         </TouchableOpacity>
@@ -2177,10 +2274,10 @@ function SquadDetailsScreen({ navigation, route }) {
                               paddingVertical: 4,
                             }}
                             >
-                              <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>{`${Number(player?.matches || 0)} matchs`}</Text>
+                              <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>{`${Number(player?.matches || 0)} matchs`}</Text>
                             </View>
                           </View>
-                          <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
+                          <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
                             {`${Number(player?.goals || 0)} buts - ${Number(player?.assists || 0)} passes - ${Number(player?.minutesPlayed || 0)} min`}
                           </Text>
                         </View>
@@ -2231,10 +2328,10 @@ function SquadDetailsScreen({ navigation, route }) {
                   <Text style={[Fonts.p3Bold, { color: Colors.primary100 }]}>{nextSlotStatus.badge}</Text>
                 </View>
               </View>
-              <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
+              <Text style={[Fonts.h3Bold, { color: Colors.gold500, marginBottom: 4 }]}>
                 {nextSlot ? nextSlotLongLabel : 'Aucun cr\u00E9neau programm\u00E9'}
               </Text>
-              <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 14 }]}>
+              <Text style={[Fonts.p3, { color: Colors.gold500, marginBottom: 14 }]}>
                 {nextSlotStatus.helper}
               </Text>
               <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
@@ -2248,7 +2345,7 @@ function SquadDetailsScreen({ navigation, route }) {
                 }}
                 >
                   <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Confirmes</Text>
-                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                  <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>
                     {nextSlotParticipantsCount}
                     /5
                   </Text>
@@ -2263,7 +2360,7 @@ function SquadDetailsScreen({ navigation, route }) {
                 }}
                 >
                   <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Manquants</Text>
-                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{nextSlot ? nextSlotRemainingCount : '-'}</Text>
+                  <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{nextSlot ? nextSlotRemainingCount : '-'}</Text>
                 </View>
                 <View style={{
                   backgroundColor: `${Colors.primary500}10`,
@@ -2302,7 +2399,7 @@ function SquadDetailsScreen({ navigation, route }) {
               <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>
                 {t('squadDetails.roster.title', 'Effectif')}
                 {' ('}
-                {rosterCount}
+                <Text style={{ color: Colors.gold500 }}>{rosterCount}</Text>
                 )
               </Text>
             </View>
@@ -2312,22 +2409,25 @@ function SquadDetailsScreen({ navigation, route }) {
                 : 'Voyez qui compose d\u00E9j\u00E0 la squad et identifiez rapidement le capitaine.'}
             </Text>
             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12], { marginBottom: 14 }]}>
-              {rosterSignals.map((item) => (
-                <View
-                  key={item.key}
-                  style={{
-                    backgroundColor: uiTone.insightCardBg,
-                    borderColor: uiTone.insightCardBorder,
-                    borderRadius: 14,
-                    borderWidth: 1,
-                    minWidth: '30%',
-                    padding: 10,
-                  }}
-                >
-                  <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 6 }]}>{item.label}</Text>
-                  <Text numberOfLines={2} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{item.value}</Text>
-                </View>
-              ))}
+              {rosterSignals.map((item) => {
+                const isNumericSignal = ['invitations', 'members', 'requests'].includes(item.key);
+                return (
+                  <View
+                    key={item.key}
+                    style={{
+                      backgroundColor: uiTone.insightCardBg,
+                      borderColor: uiTone.insightCardBorder,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      minWidth: '30%',
+                      padding: 10,
+                    }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 6 }]}>{item.label}</Text>
+                    <Text numberOfLines={2} style={[Fonts.p2Bold, { color: isNumericSignal ? Colors.gold500 : Colors.neutral00 }]}>{item.value}</Text>
+                  </View>
+                );
+              })}
             </View>
             {isCaptain ? (
               <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 14 }]}>
@@ -2601,6 +2701,8 @@ function SquadDetailsScreen({ navigation, route }) {
           }}
         />
       </BottomModal>
+
+      {leagueLegalAcceptanceModal}
 
       <ProfilePicturePreviewOverlay
         imageUrl={team?.cover?.url ? (getImageUrl(team.cover.url) || '') : ''}

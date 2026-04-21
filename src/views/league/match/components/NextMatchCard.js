@@ -36,6 +36,9 @@ import {
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { getImageUrl } from '@/utils/imageUrl';
 
+import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
+import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
+
 const BG_MATCH = require('@/assets/background-card-event/card-match.png');
 
 /**
@@ -85,6 +88,7 @@ function NextMatchCard({
   const { Colors, Fonts, Images: ThemeImages } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
+  const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -105,6 +109,7 @@ function NextMatchCard({
   const normalizedStatus = normalizeMatchStatus(match?.status);
   const derivedPhase = getMatchDerivedPhase(match, event, now);
   const isAnonymous = shouldMaskOpponentIdentity(match, event);
+  const matchLegalLabel = `${myTeam?.name || 'Votre squad'} VS ${isAnonymous ? 'Adversaire' : opponent?.name || 'Adversaire'}`;
   const isTerminalStatus = ['cancelled', 'forfeit', 'no_show', 'valid'].includes(normalizedStatus);
   const isVenueBooked = event?.venueBooked === true || match?.venueBooked === true || match?.venue_booked === true;
   const hasMatchEnded = isMatchPastEnd(match, event, now);
@@ -233,7 +238,21 @@ function NextMatchCard({
         });
       } else {
         // League Match Mode
-        await confirmParticipation(getEntityDocumentId(match), isTeamA ? 'a' : 'b');
+        const matchId = getEntityDocumentId(match);
+        const legalAcceptance = await requestLeagueLegalAcceptance({
+          metadata: {
+            matchLabel: matchLegalLabel,
+            teamName: myTeam?.name || null,
+          },
+          scope: LEAGUE_LEGAL_SCOPES.MATCH_PLAYER_PARTICIPATION,
+          sourceScreen: 'next_match_card_participation',
+          targetDocumentId: matchId,
+          targetLabel: matchLegalLabel,
+          targetType: 'league_match',
+        });
+        if (!legalAcceptance) return;
+
+        await confirmParticipation(matchId, isTeamA ? 'a' : 'b', { legalAcceptance });
       }
       Alert.alert('Succès', 'Présence confirmée !');
       onRefresh && onRefresh();
@@ -274,7 +293,21 @@ function NextMatchCard({
         }
         await markEventVenueBooked(eventId);
       } else {
-        await markLeagueMatchVenueBooked(getEntityDocumentId(match));
+        const matchId = getEntityDocumentId(match);
+        const legalAcceptance = await requestLeagueLegalAcceptance({
+          metadata: {
+            matchLabel: matchLegalLabel,
+            teamName: myTeam?.name || null,
+          },
+          scope: LEAGUE_LEGAL_SCOPES.MATCH_VENUE_BOOKING,
+          sourceScreen: 'next_match_card_venue_booked',
+          targetDocumentId: matchId,
+          targetLabel: matchLegalLabel,
+          targetType: 'league_match',
+        });
+        if (!legalAcceptance) return;
+
+        await markLeagueMatchVenueBooked(matchId, { legalAcceptance });
       }
       Alert.alert('Terrain Réservé ✅', 'Le terrain est confirmé !');
       onRefresh && onRefresh();
@@ -320,6 +353,7 @@ function NextMatchCard({
   if (!myTeam || !opponent) return null;
 
   return (
+    <>
     <TouchableOpacity
       activeOpacity={0.9}
       onPress={onPress}
@@ -406,10 +440,10 @@ function NextMatchCard({
             ) : (
               <>
                 {opponent.crest?.url ? (
-                      <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={{ height: 50, resizeMode: 'contain', width: 50 }} />
-                    ) : (
-                      <TeamShield initials={opponent.name?.substring(0, 2) || '??'} isGold size={50} />
-                    )}
+                  <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={{ height: 50, resizeMode: 'contain', width: 50 }} />
+                ) : (
+                  <TeamShield initials={opponent.name?.substring(0, 2) || '??'} isGold size={50} />
+                )}
                 <Text numberOfLines={1} style={styles.teamName}>{opponent.name}</Text>
               </>
             )}
@@ -420,7 +454,7 @@ function NextMatchCard({
         <View style={styles.details}>
           <View style={styles.row}>
             <Image source={ThemeImages.calendar} style={styles.icon} />
-            <Text style={styles.detailText}>
+            <Text style={[styles.detailText, { color: Colors.gold500 }]}>
               {`${format(new Date(event?.date || match?.date || new Date()), 'EEEE d MMMM', { locale: fr }).toUpperCase()} • ${startTimeLabel}-${endTimeLabel}`}
             </Text>
           </View>
@@ -443,12 +477,14 @@ function NextMatchCard({
         <View style={styles.attendance}>
           <Text style={styles.attendanceTitle}>
             Presences joueurs confirmees (
-            {confirmedCount}
-            /
-            {requiredPlayers}
+            <Text style={{ color: Colors.gold500 }}>
+              {confirmedCount}
+              /
+              {requiredPlayers}
+            </Text>
             )
           </Text>
-          <Text style={styles.attendanceHint}>
+          <Text style={[styles.attendanceHint, { color: Colors.gold500 }]}>
             {isQuorumReached
               ? 'Quorum atteint. Équipe prête.'
               : `Minimum requis: ${requiredPlayers} joueurs. Il manque ${Math.max(requiredPlayers - confirmedCount, 0)} joueur(s).`}
@@ -479,6 +515,8 @@ function NextMatchCard({
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
+      {leagueLegalAcceptanceModal}
+    </>
   );
 }
 
@@ -712,4 +750,3 @@ const styles = StyleSheet.create({
 });
 
 export default NextMatchCard;
-

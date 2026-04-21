@@ -393,9 +393,9 @@ function PastMatchDetails() {
                   </Text>
                 </View>
                 <View style={styles.scoreBlock}>
-                  <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{match?.score_a ?? '-'}</Text>
-                  <Text style={[Fonts.h2, { color: Colors.neutral300, marginHorizontal: 10 }]}>-</Text>
-                  <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{match?.score_b ?? '-'}</Text>
+                  <Text style={[Fonts.h1Bold, { color: Colors.gold500 }]}>{match?.score_a ?? '-'}</Text>
+                  <Text style={[Fonts.h2, { color: Colors.gold500, marginHorizontal: 10 }]}>-</Text>
+                  <Text style={[Fonts.h1Bold, { color: Colors.gold500 }]}>{match?.score_b ?? '-'}</Text>
                 </View>
                 <Text style={[Fonts.p4Bold, { color: resultConfig.color, marginTop: 8 }]}>Score officialise</Text>
               </View>
@@ -429,7 +429,7 @@ function PastMatchDetails() {
                 </View>
                 <View style={styles.infoTextWrap}>
                   <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Date et heure</Text>
-                  <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>{formattedDate}</Text>
+                  <Text style={[Fonts.p3, { color: Colors.gold500 }]}>{formattedDate}</Text>
                 </View>
               </View>
 
@@ -447,9 +447,9 @@ function PastMatchDetails() {
                 </View>
                 <View style={styles.infoTextWrap}>
                   <Text style={[Fonts.p4Bold, { color: leagueCardTextColor, marginBottom: 4 }]}>Lieu du match</Text>
-                  <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>{venueLabel}</Text>
+                  <Text style={[Fonts.p3, { color: Colors.gold500 }]}>{venueLabel}</Text>
                   {showAddressLine ? (
-                    <Text style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 4 }]}>{addressLabel}</Text>
+                    <Text style={[Fonts.p4, { color: Colors.gold500, marginTop: 4 }]}>{addressLabel}</Text>
                   ) : null}
                 </View>
               </View>
@@ -470,7 +470,7 @@ function PastMatchDetails() {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: leagueCardTextColor }]}>Avant</Text>
-                <Text style={[Fonts.h3, { color: Colors.neutral100, marginTop: 6 }]}>{eloInfo.before}</Text>
+                <Text style={[Fonts.h3, { color: Colors.gold500, marginTop: 6 }]}>{eloInfo.before}</Text>
               </View>
 
               <View
@@ -483,7 +483,7 @@ function PastMatchDetails() {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: leagueCardTextColor, marginBottom: 4 }]}>Delta</Text>
-                <Text style={[Fonts.h3, { color: resultConfig.color }]}>
+                <Text style={[Fonts.h3, { color: Colors.gold500 }]}>
                   {eloInfo.delta > 0 ? '+' : ''}
                   {eloInfo.delta}
                 </Text>
@@ -500,7 +500,7 @@ function PastMatchDetails() {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Apres</Text>
-                <Text style={[Fonts.h3, { color: Colors.neutral100, marginTop: 6 }]}>{eloInfo.after}</Text>
+                <Text style={[Fonts.h3, { color: Colors.gold500, marginTop: 6 }]}>{eloInfo.after}</Text>
               </View>
             </View>
           </LeagueCard>
@@ -526,7 +526,7 @@ function PastMatchDetails() {
                       {playerId.slice(0, 8)}
                       ...
                     </Text>
-                    <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>{goals}</Text>
+                    <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>{goals}</Text>
                   </View>
                 ))}
               </LeagueCard>

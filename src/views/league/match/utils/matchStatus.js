@@ -267,7 +267,7 @@ export const getMatchStatusBadgeConfig = (match, colors = {}, event = null, now 
     post_slot_resolution: { bg: withAlpha(palette.warning), color: palette.warning, label: 'Confirmation match' },
     valid: { bg: withAlpha(palette.success), color: palette.success, label: 'Validé' },
     waiting_proposal: { bg: withAlpha(palette.warning), color: palette.warning, label: 'En attente accord' },
-    waiting_score: { bg: withAlpha(palette.gold), color: palette.gold, label: 'Score a saisir' },
+    waiting_score: { bg: withAlpha(palette.gold), color: palette.gold, label: 'Score à saisir' },
     waiting_venue: { bg: withAlpha(palette.warning), color: palette.warning, label: 'En attente terrain' },
   };
 

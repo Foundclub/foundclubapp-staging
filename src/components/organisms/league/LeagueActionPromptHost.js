@@ -35,6 +35,7 @@ import {
   submitPostSlotResponse,
 } from '@/services/league/leagueMatchService';
 
+import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import {
   POPUP_DISMISS_SCOPES,
   POPUP_IDS,
@@ -42,6 +43,7 @@ import {
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
+import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 
 const END_MATCH_ROUTE = RouteNames.EndMatchScreen;
 const LEAGUE_ACTION_PROMPT_STATES = new Set([
@@ -110,6 +112,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const [isCounterProposalVisible, setIsCounterProposalVisible] = useState(false);
   const [postSlotLocalStep, setPostSlotLocalStep] = useState(/** @type {string | null} */ (null));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const appStateRef = useRef(AppState.currentState);
   const shownActionPromptKeyRef = useRef(/** @type {string | null} */ (null));
   const shownCounterProposalKeyRef = useRef(/** @type {string | null} */ (null));
@@ -174,6 +177,14 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     counterProposalPopup.descriptor.priority,
   );
   const isVisible = Boolean(shouldShowPrompt && leagueActionPopup.canShow && canShowLeagueActionPrompt);
+  const shouldHideOpponentName = useMemo(
+    () => shouldMaskOpponentIdentity(nextAction?.match || null),
+    [nextAction?.match],
+  );
+  const promptMatchLabel = useMemo(() => {
+    const opponent = shouldHideOpponentName ? 'Adversaire' : (nextAction?.opponent?.name || 'Adversaire');
+    return `Votre squad VS ${opponent}`;
+  }, [nextAction?.opponent?.name, shouldHideOpponentName]);
 
   const dismissForSession = useCallback(() => {
     if (currentForcedPromptKey) {
@@ -257,9 +268,21 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
 
   const handleAcceptProposal = useCallback(async () => {
     if (!nextAction?.matchId || isSubmitting) return;
-    setIsSubmitting(true);
     try {
-      await confirmMatch(nextAction.matchId);
+      const legalAcceptance = await requestLeagueLegalAcceptance({
+        metadata: {
+          matchLabel: promptMatchLabel,
+        },
+        scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE,
+        sourceScreen: 'league_action_prompt_accept_proposal',
+        targetDocumentId: nextAction.matchId,
+        targetLabel: promptMatchLabel,
+        targetType: 'league_match',
+      });
+      if (!legalAcceptance) return;
+
+      setIsSubmitting(true);
+      await confirmMatch(nextAction.matchId, { legalAcceptance });
       if (nextAction?.proposalMessageId) {
         await respondProposalMessage(nextAction.proposalMessageId, 'accepted');
       }
@@ -282,7 +305,17 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.matchId, nextAction?.proposalMessageId, showBanner]);
+  }, [
+    dismissForSession,
+    handleResolvedElsewhere,
+    invalidateLeagueQueries,
+    isSubmitting,
+    nextAction?.matchId,
+    nextAction?.proposalMessageId,
+    promptMatchLabel,
+    requestLeagueLegalAcceptance,
+    showBanner,
+  ]);
 
   const handleDeclineProposal = useCallback(async () => {
     if (!nextAction?.proposalMessageId || isSubmitting) {
@@ -319,13 +352,26 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const handleCounterProposalSend = useCallback(async (proposalData) => {
     if (!nextAction?.matchId || isSubmitting) return;
 
-    setIsSubmitting(true);
     try {
       const proposalPayload = buildCanonicalLeagueProposalPayload(proposalData);
       if (!proposalPayload.venueLabel) {
         throw new Error('Missing proposal venue');
       }
-      const result = await createLeagueProposal(nextAction.matchId, proposalPayload);
+      const legalAcceptance = await requestLeagueLegalAcceptance({
+        metadata: {
+          matchLabel: promptMatchLabel,
+          venueLabel: proposalPayload.venueLabel,
+        },
+        scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
+        sourceScreen: 'league_action_prompt_counter_proposal',
+        targetDocumentId: nextAction.matchId,
+        targetLabel: promptMatchLabel,
+        targetType: 'league_match',
+      });
+      if (!legalAcceptance) return;
+
+      setIsSubmitting(true);
+      const result = await createLeagueProposal(nextAction.matchId, proposalPayload, { legalAcceptance });
       await invalidateLeagueQueries();
       setIsCounterProposalVisible(false);
       dismissForSession();
@@ -357,7 +403,17 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [dismissForSession, invalidateLeagueQueries, isSubmitting, nextAction?.chatId, nextAction?.matchId, nextAction?.state, showBanner]);
+  }, [
+    dismissForSession,
+    invalidateLeagueQueries,
+    isSubmitting,
+    nextAction?.chatId,
+    nextAction?.matchId,
+    nextAction?.state,
+    promptMatchLabel,
+    requestLeagueLegalAcceptance,
+    showBanner,
+  ]);
 
   const handleVenueReminder = useCallback(() => {
     if (!nextAction?.matchId) return;
@@ -547,7 +603,6 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     () => buildProposalDefaultsFromMatch(nextAction?.match || null),
     [nextAction?.match],
   );
-  const shouldHideOpponentName = shouldMaskOpponentIdentity(nextAction?.match || null);
   const opponentResponseLabel = useMemo(
     () => getOpponentResponseLabel(nextAction?.opponentResponse, nextAction?.opponentNextAction),
     [nextAction?.opponentNextAction, nextAction?.opponentResponse],
@@ -870,12 +925,12 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
               <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
                 Date
                 {' : '}
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{formatActionDate(nextAction?.date)}</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{formatActionDate(nextAction?.date)}</Text>
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
                 Terrain
                 {' : '}
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{nextAction?.venue || '\u00C0 d\u00E9finir'}</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{nextAction?.venue || '\u00C0 d\u00E9finir'}</Text>
               </Text>
               {nextAction?.currentProposal?.status ? (
                 <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
@@ -940,6 +995,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
           }
         }}
       />
+      {leagueLegalAcceptanceModal}
     </>
   );
 }

@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -25,10 +24,10 @@ function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
 
   const getResultStyle = (result) => {
     switch (result) {
-      case 'draw': return { bg: 'rgba(255, 193, 7, 0.15)', icon: '➖', text: Colors.warning500 || '#ffc107' };
-      case 'loss': return { bg: 'rgba(244, 67, 54, 0.15)', icon: '❌', text: Colors.error500 || '#f44336' };
-      case 'win': return { bg: 'rgba(76, 175, 80, 0.15)', icon: '✅', text: Colors.success500 || '#4caf50' };
-      default: return { bg: 'rgba(255,255,255,0.05)', icon: '⏳', text: Colors.neutral300 };
+      case 'draw': return { bg: 'rgba(255, 193, 7, 0.15)', icon: '=', text: Colors.warning500 || '#ffc107' };
+      case 'loss': return { bg: 'rgba(244, 67, 54, 0.15)', icon: 'x', text: Colors.error500 || '#f44336' };
+      case 'win': return { bg: 'rgba(76, 175, 80, 0.15)', icon: '+', text: Colors.success500 || '#4caf50' };
+      default: return { bg: 'rgba(255,255,255,0.05)', icon: '-', text: Colors.neutral300 };
     }
   };
 
@@ -48,9 +47,9 @@ function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
       <View style={{ marginBottom: 24 }}>
         <SectionHeader subtitle="HISTORIQUE" title="DERNIERS MATCHS" />
         <LeagueCard style={{ alignItems: 'center', paddingVertical: 32, ...leagueSurface }}>
-          <Text style={{ fontSize: 40, marginBottom: 12 }}>🏆</Text>
+          <Text style={{ color: Colors.gold500, fontSize: 40, marginBottom: 12 }}>-</Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-            Aucun match joué pour l'instant.
+            Aucun match joue pour le moment.
             {'\n'}
             Lance une recherche !
           </Text>
@@ -81,52 +80,48 @@ function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
                 },
               ]}
             >
-              {/* Result Icon */}
-              <Text style={styles.resultIcon}>{result.icon}</Text>
+              <Text style={[styles.resultIcon, { color: result.text }]}>{result.icon}</Text>
 
-              {/* Match Info */}
               <View style={styles.matchInfo}>
                 <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                  vs 
-{' '}
+                  vs
+                  {' '}
                   {match.opponent?.name || 'Adversaire'}
                 </Text>
-                <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>
+                <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 2 }]}>
                   {formatDate(match.date)}
-                  {' '}
-                  •{match.score_a}
-                  -{match.score_b}
+                  {' | '}
+                  {match.score_a}
+                  {' - '}
+                  {match.score_b}
                 </Text>
               </View>
 
-              {/* ELO Change */}
-              {eloChange && (
-              <View style={[styles.eloBadge, { backgroundColor: result.bg }]}>
-                <Text style={[Fonts.p2Bold, { color: result.text }]}>
-                        {eloChange}
-                      </Text>
-              </View>
-              )}
+              {eloChange ? (
+                <View style={[styles.eloBadge, { backgroundColor: result.bg }]}>
+                  <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+                    {eloChange}
+                  </Text>
+                </View>
+              ) : null}
 
-              {/* Arrow */}
-              <Text style={{ color: Colors.neutral500, fontSize: 18 }}>›</Text>
+              <Text style={{ color: Colors.neutral500, fontSize: 18 }}>{'>'}</Text>
             </TouchableOpacity>
           );
         })}
 
-        {/* View All Button */}
-        {matches.length > 5 && (
-        <TouchableOpacity
-          onPress={onViewAll}
-          style={[styles.viewAllButton, { backgroundColor: 'rgba(255,255,255,0.04)' }]}
-        >
-          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-            VOIR TOUT L'HISTORIQUE (
-            {matches.length}
-            )
-          </Text>
-        </TouchableOpacity>
-        )}
+        {matches.length > 5 ? (
+          <TouchableOpacity
+            onPress={onViewAll}
+            style={[styles.viewAllButton, { backgroundColor: 'rgba(255,255,255,0.04)' }]}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+              VOIR TOUT HISTORIQUE (
+              <Text style={{ color: Colors.gold500 }}>{matches.length}</Text>
+              )
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </LeagueCard>
     </View>
   );

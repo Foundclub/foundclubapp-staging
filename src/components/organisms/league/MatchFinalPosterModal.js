@@ -151,12 +151,14 @@ function MatchFinalPosterModal({
             <View style={styles.eloHeader}>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
                 ELO avant:
-                {eloBefore}
+                {' '}
+                <Text style={{ color: Colors.gold500 }}>{eloBefore}</Text>
               </Text>
-              <Text style={[Fonts.h4Bold, { color: Number(recap?.eloDelta) >= 0 ? Colors.success500 : Colors.error500 }]}>{delta}</Text>
+              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{delta}</Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
                 ELO après:
-                {eloAfter}
+                {' '}
+                <Text style={{ color: Colors.gold500 }}>{eloAfter}</Text>
               </Text>
             </View>
             <View style={[styles.eloTrack, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
@@ -178,7 +180,7 @@ function MatchFinalPosterModal({
               size={72}
             />
             <View style={{ alignItems: 'center' }}>
-              <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{divisionLabel}</Text>
+              <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>{divisionLabel}</Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>{divisionStatusLabel}</Text>
             </View>
           </View>

@@ -92,7 +92,7 @@ function PlayerGoalsModal({
           keyboardType="numeric"
           maxLength={2}
           onChangeText={(val) => handleGoalChange(item.documentId, val)}
-          style={[styles.goalInput, { borderColor: Colors.neutral700, color: Colors.primary500 }]}
+          style={[styles.goalInput, { borderColor: Colors.neutral700, color: Colors.gold500 }]}
           value={String(goals[item.documentId] || 0)}
         />
         <TouchableOpacity
@@ -132,7 +132,7 @@ function PlayerGoalsModal({
             borderColor: isValid ? '#4CAF50' : '#FFC107',
           }]}
           >
-            <Text style={{ color: isValid ? '#4CAF50' : '#FFC107', fontWeight: 'bold' }}>
+            <Text style={{ color: Colors.gold500, fontWeight: 'bold' }}>
               {currentTotal}
               {' '}
               /

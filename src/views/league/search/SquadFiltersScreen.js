@@ -219,7 +219,7 @@ function SquadFiltersScreen({ navigation }) {
             {t('squad.filters.title', 'Filtres Squad')}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>
-            {activeFiltersCount}
+            <Text style={{ color: Colors.gold500 }}>{activeFiltersCount}</Text>
             {' '}
             filtre
             {activeFiltersCount > 1 ? 's' : ''}
@@ -272,7 +272,13 @@ function SquadFiltersScreen({ navigation }) {
           render={({ field: { onChange, value } }) => (
             <View style={{ gap: 8 }}>
               <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                {`Dans un rayon de ${value || DEFAULT_RADIUS_KM} km`}
+                Dans un rayon de
+                {' '}
+                <Text style={{ color: Colors.gold500 }}>
+                  {value || DEFAULT_RADIUS_KM}
+                  {' '}
+                  km
+                </Text>
               </Text>
               <Slider
                 disabled={!hasCity}
@@ -442,7 +448,7 @@ function SquadFiltersScreen({ navigation }) {
                         paddingVertical: 7,
                       }}
                     >
-                      <Text style={[Fonts.p2Bold, { color: isActive ? Colors.gold500 : Colors.neutral200 }]}>
+                      <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
                         DIV
                         {' '}
                         {divisionOption}
@@ -470,7 +476,7 @@ function SquadFiltersScreen({ navigation }) {
         <Button
           onPress={handleSubmit(handleApplyFilters)}
           style={{ width: '100%' }}
-          title={`Appliquer les filtres${activeFiltersCount ? ` (${activeFiltersCount})` : ''}`}
+          title="Appliquer les filtres"
           variant="Primary"
         />
       </View>

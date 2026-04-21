@@ -320,7 +320,7 @@ function SquadEditScreen({ navigation, route }) {
           <View>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Spaces.marginBottom[8]]}>
               <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Rayon de déplacement</Text>
-              <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+              <Text style={[Fonts.p1Bold, { color: Colors.gold500 }]}>
                 {radiusValue}
                 {' '}
                 km

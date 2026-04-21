@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+/* global globalThis */
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
@@ -23,6 +23,9 @@ import { createTeamSlot } from '@/services/teamSlot/teamSlotService';
 
 import { buildHomeBasePayload, normalizeLocationInput } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
+
+import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
+import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 
 const CREATE_SQUAD_STORAGE_KEY = 'fc:web:create-squad-wizard';
 
@@ -128,9 +131,9 @@ const clearPersistedWizardState = () => {
 };
 
 function CreateSquadWizard({ navigation }) {
-  const { Colors, Fonts, Spaces } = useTheme();
   // @ts-ignore - useAuth returns extended user object
   const { userData: user } = useAuth();
+  const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const persistedState = loadPersistedWizardState();
 
   const [step, setStep] = useState(persistedState.step);
@@ -173,11 +176,10 @@ function CreateSquadWizard({ navigation }) {
   };
 
   const handleSubmit = async () => {
-    setIsLoading(true);
     setSubmitError('');
     try {
       if (!user?.documentId) {
-        throw new Error("Session introuvable. Rechargez la page avant de creer une squad.");
+        throw new Error('Session introuvable. Rechargez la page avant de creer une squad.');
       }
       console.log('DEBUG: User object:', user);
       console.log('DEBUG: User DocumentId:', user?.documentId);
@@ -240,8 +242,21 @@ function CreateSquadWizard({ navigation }) {
 
       console.log('DEBUG: League Team Payload:', JSON.stringify(leagueTeamPayload, null, 2));
 
+      const legalAcceptance = await requestLeagueLegalAcceptance({
+        metadata: {
+          teamName: leagueTeamPayload.name,
+        },
+        scope: LEAGUE_LEGAL_SCOPES.TEAM_CREATE,
+        sourceScreen: 'create_squad_wizard',
+        targetLabel: leagueTeamPayload.name,
+        targetType: 'league_team',
+      });
+      if (!legalAcceptance) return;
+
+      setIsLoading(true);
+
       // 2. Create League Team
-      const createdTeam = await createLeagueTeam(leagueTeamPayload);
+      const createdTeam = await createLeagueTeam(leagueTeamPayload, { legalAcceptance });
       const teamId = createdTeam?.documentId || createdTeam?.id;
 
       if (!teamId) throw new Error('Failed to create league team');
@@ -410,6 +425,7 @@ function CreateSquadWizard({ navigation }) {
       <View style={{ flex: 1, paddingBottom: 20, paddingTop: 60 }}>
         {renderStep()}
       </View>
+      {leagueLegalAcceptanceModal}
     </ScreenContainer>
   );
 }

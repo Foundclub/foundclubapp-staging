@@ -37,6 +37,10 @@ import {
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId'
 import getImageUrl from '@/utils/imageUrl'
 import { buildLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload'
+import {
+  buildLeagueLegalAcceptancePayload,
+  LEAGUE_LEGAL_SCOPES,
+} from '@/constants/leagueLegalAcceptance'
 
 const EMPTY_POLL_OPTIONS = ['', '', '']
 
@@ -268,6 +272,11 @@ function Conversation({ navigation, route }) {
 
   const latestMessageId = messages.length > 0 ? getMessageId(messages[messages.length - 1]) : ''
   const leagueMatchId = getEntityDocumentId(chatData?.league_match)
+  const leagueLegalMatchLabel = useMemo(() => {
+    const match = chatData?.league_match
+    if (!match) return 'Match FoundClub League'
+    return `${match?.team_a?.name || 'Equipe A'} VS ${match?.team_b?.name || 'Adversaire'}`
+  }, [chatData?.league_match])
   const isLeagueConversation = chatData?.type === 'league_match'
   const canUseConversationActions = Boolean(chatId && chatData)
   const isVoiceRecordingSupported = typeof window !== 'undefined'
@@ -284,6 +293,20 @@ function Conversation({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['league-matches'] }),
     ])
   }, [chatId, queryClient])
+
+  const requestWebLeagueLegalAcceptance = useCallback((scope, targetDocumentId, metadata = {}) => {
+    const confirmed = window.confirm(
+      'FoundClub League met en relation les equipes mais n organise pas la rencontre. Confirmez-vous accepter les risques sportifs, verifier votre assurance et respecter les regles du lieu ?',
+    )
+    if (!confirmed) return null
+    return buildLeagueLegalAcceptancePayload({
+      metadata,
+      scope,
+      sourceScreen: 'conversation_web_league',
+      targetDocumentId,
+      targetType: 'league_match',
+    })
+  }, [])
 
   useEffect(() => {
     if (!chatId) return undefined
@@ -725,7 +748,16 @@ function Conversation({ navigation, route }) {
       }, chatData?.league_match?.location)
 
       if (leagueMatchId) {
-        await updateMatch(leagueMatchId, payload.matchUpdate)
+        const legalAcceptance = requestWebLeagueLegalAcceptance(
+          LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
+          leagueMatchId,
+          {
+            matchLabel: leagueLegalMatchLabel,
+            venueLabel: proposalVenue || 'Lieu a definir',
+          },
+        )
+        if (!legalAcceptance) return
+        await updateMatch(leagueMatchId, payload.matchUpdate, { legalAcceptance })
       }
 
       await sendChatPayload({
@@ -739,12 +771,14 @@ function Conversation({ navigation, route }) {
     }
   }, [
     chatData?.league_match?.location,
+    leagueLegalMatchLabel,
     leagueMatchId,
     proposalAddress,
     proposalDate,
     proposalEndTime,
     proposalStartTime,
     proposalVenue,
+    requestWebLeagueLegalAcceptance,
     sendChatPayload,
   ])
 
@@ -754,14 +788,29 @@ function Conversation({ navigation, route }) {
 
     try {
       if (status === 'accepted' && matchId) {
-        await confirmMatch(matchId)
+        const legalAcceptance = requestWebLeagueLegalAcceptance(
+          LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE,
+          matchId,
+          {
+            matchLabel: leagueLegalMatchLabel,
+            proposalMessageId: messageId,
+          },
+        )
+        if (!legalAcceptance) return
+        await confirmMatch(matchId, { legalAcceptance })
       }
       await respondToProposal(messageId, status)
       await invalidateConversationQueries()
     } catch (error) {
       window.alert(error?.message || 'Impossible de repondre a cette proposition.')
     }
-  }, [invalidateConversationQueries, leagueMatchId, respondToProposal])
+  }, [
+    invalidateConversationQueries,
+    leagueLegalMatchLabel,
+    leagueMatchId,
+    requestWebLeagueLegalAcceptance,
+    respondToProposal,
+  ])
 
   const updatePollOption = useCallback((index, value) => {
     setPollOptions((current) => current.map((option, optionIndex) => (

@@ -121,14 +121,14 @@ function MatchHistoryScreen() {
         </View>
 
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={[Fonts.h3, { color: result.text }]}>
+          <Text style={[Fonts.h3, { color: Colors.gold500 }]}>
             {item.score_a}
             {' '}
             -
             {item.score_b}
           </Text>
           {item.eloChange && (
-          <Text style={[Fonts.p3Bold, { color: result.text }]}>
+          <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
             {item.eloChange > 0 ? '+' : ''}
             {item.eloChange}
             {' '}

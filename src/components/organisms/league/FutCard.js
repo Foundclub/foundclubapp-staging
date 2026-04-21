@@ -1,5 +1,4 @@
 import PropTypes from 'prop-types';
-import React from 'react';
 import {
   Image, StyleSheet, Text, View,
 } from 'react-native';
@@ -18,7 +17,6 @@ function FutCard({ team, variant = 'classic' }) {
   // Determine colors based on variant
   const isGold = variant === 'gold';
   const BorderColor = isGold ? Colors.gold500 : Colors.primary500;
-  const AccentColor = isGold ? Colors.gold500 : Colors.neutral00;
   const GoldColor = Colors.gold500;
   const GoldDarkColor = Colors.gold700;
   const CardBg = Colors.neutral900; // Keep dark background for contrast
@@ -38,7 +36,7 @@ function FutCard({ team, variant = 'classic' }) {
         </View>
 
         <View style={[styles.divisionBox, { borderColor: BorderColor }]}>
-          <Text style={[Fonts.h2, { color: AccentColor }]}>
+          <Text style={[Fonts.h2, { color: GoldColor }]}>
             D
             {team.division || 5}
           </Text>
@@ -81,8 +79,12 @@ FutCard.propTypes = {
       address: PropTypes.string,
     }),
     name: PropTypes.string,
-  }),
+  }).isRequired,
   variant: PropTypes.oneOf(['classic', 'gold']),
+};
+
+FutCard.defaultProps = {
+  variant: 'classic',
 };
 
 const styles = StyleSheet.create({

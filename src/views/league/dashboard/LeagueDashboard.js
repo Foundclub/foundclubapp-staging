@@ -470,7 +470,7 @@ function LeagueDashboard() {
       : 'Votre demande a bien \u00E9t\u00E9 envoy\u00E9e. Le capitaine doit encore r\u00E9pondre.';
     const ctaLabel = isInvitation ? 'Voir l invitation' : 'Voir la demande';
     const squadName = squad?.name || 'Squad League';
-    const divisionLabel = `Division ${clampLeagueDivision(squad?.division)}`;
+    const divisionValue = clampLeagueDivision(squad?.division);
     const sportLabel = String(squad?.sport || 'Sport').trim();
 
     return (
@@ -532,7 +532,9 @@ function LeagueDashboard() {
             <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
               {sportLabel}
               {' · '}
-              {divisionLabel}
+              Division
+              {' '}
+              <Text style={{ color: Colors.gold500 }}>{divisionValue}</Text>
             </Text>
           </View>
 
@@ -657,7 +659,7 @@ function LeagueDashboard() {
           VALIDATION CAPITAINE
         </Text>
         <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
-          {dashboardPendingRequestsCount}
+          <Text style={{ color: Colors.gold500 }}>{dashboardPendingRequestsCount}</Text>
           {' '}
           demande
           {dashboardPendingRequestsCount > 1 ? 's' : ''}
@@ -799,7 +801,7 @@ function LeagueDashboard() {
               <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
                 Date
                 {' : '}
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
+                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
                   {formatLeagueDashboardDate(leagueActionState.date)}
                 </Text>
               </Text>
@@ -808,7 +810,7 @@ function LeagueDashboard() {
               <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
                 Lieu
                 {' : '}
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{leagueActionState.venue}</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{leagueActionState.venue}</Text>
               </Text>
             ) : null}
           </View>
@@ -840,17 +842,17 @@ function LeagueDashboard() {
     <LeagueCard style={leagueSurface}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{userTeam?.wins || 0}</Text>
+          <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{userTeam?.wins || 0}</Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>VICTOIRES</Text>
         </View>
         <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', width: 1 }} />
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{userTeam?.streak || 0}</Text>
+          <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{userTeam?.streak || 0}</Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>SÉRIE</Text>
         </View>
         <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', width: 1 }} />
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{/** @type {any} */ (userTeam)?.losses || 0}</Text>
+          <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{/** @type {any} */ (userTeam)?.losses || 0}</Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>DÉFAITES</Text>
         </View>
       </View>
@@ -910,7 +912,13 @@ function LeagueDashboard() {
     return (
       <View>
         <SectionHeader
-          subtitle={`DIVISION ${clampLeagueDivision(userTeam?.division)}`}
+          subtitle={(
+            <>
+              DIVISION
+              {' '}
+              <Text style={{ color: Colors.gold500 }}>{clampLeagueDivision(userTeam?.division)}</Text>
+            </>
+          )}
           title="LEADERBOARD"
         />
 
@@ -953,7 +961,7 @@ function LeagueDashboard() {
                   padding: 16,
                 }}
               >
-                <Text style={[Fonts.h4, { color: rankedTeam.rank <= 3 ? Colors.gold500 : Colors.neutral300, width: 35 }]}>
+                <Text style={[Fonts.h4, { color: Colors.gold500, width: 35 }]}>
                   #
                   {rankedTeam.rank}
                 </Text>
@@ -961,12 +969,12 @@ function LeagueDashboard() {
                   <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{rankedTeam.name}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+                  <Text style={[Fonts.p1Bold, { color: Colors.gold500 }]}>
                     {rankedTeam.points}
                     {' '}
                     pts
                   </Text>
-                  <Text style={{ color: Colors.neutral300, fontSize: 10, marginTop: 2 }}>{rankedTeam.form}</Text>
+                  <Text style={{ color: Colors.gold500, fontSize: 10, marginTop: 2 }}>{rankedTeam.form}</Text>
                 </View>
               </View>
             );

@@ -99,7 +99,7 @@ function RankingScreen() {
       ]}
     >
       <View style={styles.rankCol}>
-        <Text style={[Fonts.h3, { color: index < 3 ? Colors.gold500 : Colors.neutral300 }]}>
+        <Text style={[Fonts.h3, { color: Colors.gold500 }]}>
           {index + 1}
         </Text>
       </View>
@@ -114,7 +114,7 @@ function RankingScreen() {
         </View>
         <View>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{item.name}</Text>
-          <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+          <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
             {item.wins}
             V -
             {item.draws}
@@ -126,8 +126,8 @@ function RankingScreen() {
       </View>
 
       <View style={styles.pointsCol}>
-        <Text style={[Fonts.h3, { color: Colors.primary500 }]}>{item.elo}</Text>
-        <Text style={[Fonts.p3, { color: Colors.primary500, opacity: 0.75 }]}>PTS</Text>
+        <Text style={[Fonts.h3, { color: Colors.gold500 }]}>{item.elo}</Text>
+        <Text style={[Fonts.p3, { color: Colors.gold500, opacity: 0.85 }]}>PTS</Text>
       </View>
     </TouchableOpacity>
   );
@@ -171,7 +171,7 @@ function RankingScreen() {
           <Text style={[Fonts.h2, { color: Colors.neutral00, marginHorizontal: 20 }]}>
             DIVISION
             {' '}
-            {division}
+            <Text style={{ color: Colors.gold500 }}>{division}</Text>
           </Text>
           <TouchableOpacity onPress={() => changeDivision(1)} style={styles.divisionArrow}>
             <Text style={[Fonts.h2, { color: Colors.gold500 }]}>{'>'}</Text>

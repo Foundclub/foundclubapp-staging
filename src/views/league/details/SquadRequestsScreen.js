@@ -298,7 +298,13 @@ function SquadRequestsScreen({ navigation, route }) {
         </View>
 
         <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-          {requests.length > 0 ? `${requests.length} demande(s) en attente` : 'Aucune demande en attente'}
+          {requests.length > 0 ? (
+            <>
+              <Text style={{ color: Colors.gold500 }}>{requests.length}</Text>
+              {' '}
+              demande(s) en attente
+            </>
+          ) : 'Aucune demande en attente'}
         </Text>
 
         {feedback ? (

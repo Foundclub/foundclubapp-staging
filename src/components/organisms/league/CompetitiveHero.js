@@ -73,10 +73,10 @@ function CompetitiveHero({
         </View>
 
         <View style={[styles.centered, { marginVertical: 12 }]}>
-          <Text style={[Fonts.h1Bold, { color: Colors.neutral00, fontSize: 48, lineHeight: 56 }]}>
+          <Text style={[Fonts.h1Bold, { color: Colors.gold500, fontSize: 48, lineHeight: 56 }]}>
             {elo}
           </Text>
-          <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textTransform: 'uppercase' }]}>
+          <Text style={[Fonts.p3Bold, { color: Colors.gold500, textTransform: 'uppercase' }]}>
             POINTS ELO
           </Text>
         </View>

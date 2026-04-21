@@ -549,7 +549,7 @@ function SquadSearchScreen() {
             <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
               Filtres actifs:
               {' '}
-              {activeFiltersLabel}
+              <Text style={{ color: Colors.gold500 }}>{activeFiltersLabel}</Text>
             </Text>
           </View>
         ) : null}
@@ -568,7 +568,7 @@ function SquadSearchScreen() {
             <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
               Statuts detectes:
               {' '}
-              {statusSummary}
+              <Text style={{ color: Colors.gold500 }}>{statusSummary}</Text>
             </Text>
             <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 6 }]}>
               Les invitations et demandes en attente remontent en premier.

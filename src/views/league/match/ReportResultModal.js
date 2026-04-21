@@ -65,7 +65,7 @@ function ReportResultModal({
                 style={{
                   backgroundColor: Colors.neutral700,
                   borderRadius: 8,
-                  color: Colors.neutral00,
+                  color: Colors.gold500,
                   padding: 10,
                   textAlign: 'center',
                   ...Fonts.h1,
@@ -73,7 +73,7 @@ function ReportResultModal({
                 value={scoreA}
               />
             </View>
-            <Text style={[Fonts.h2, { alignSelf: 'center', color: Colors.neutral00 }]}>-</Text>
+            <Text style={[Fonts.h2, { alignSelf: 'center', color: Colors.gold500 }]}>-</Text>
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 5 }]}>Opponent</Text>
               <TextInput
@@ -84,7 +84,7 @@ function ReportResultModal({
                 style={{
                   backgroundColor: Colors.neutral700,
                   borderRadius: 8,
-                  color: Colors.neutral00,
+                  color: Colors.gold500,
                   padding: 10,
                   textAlign: 'center',
                   ...Fonts.h1,

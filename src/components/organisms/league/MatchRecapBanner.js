@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import {
   Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -78,7 +78,7 @@ function MatchRecapBanner({
         <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>Recap match</Text>
         <View style={styles.row}>
           <Text numberOfLines={1} style={[Fonts.h4, { color: Colors.neutral00 }]}>{resultLabel}</Text>
-          <Text style={[Fonts.h4Bold, { color: Colors.primary500 }]}>{scoreLabel}</Text>
+          <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{scoreLabel}</Text>
         </View>
         <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
           Touchez pour voir le detail complet.

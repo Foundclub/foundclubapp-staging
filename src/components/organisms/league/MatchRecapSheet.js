@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -49,7 +48,7 @@ function MatchRecapSheet({
           ]}
         >
           <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center' }]}>Recap de fin de match</Text>
-          <Text style={[Fonts.h2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>{scoreLabel}</Text>
+          <Text style={[Fonts.h2Bold, { color: Colors.gold500, textAlign: 'center' }]}>{scoreLabel}</Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
             {recap.resultLabel || recap.result || 'Résultat validé'}
           </Text>
@@ -57,15 +56,15 @@ function MatchRecapSheet({
           <View style={[styles.statRow, { borderColor: 'rgba(255,255,255,0.12)' }]}>
             <View style={styles.statBlock}>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO avant</Text>
-              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{recap.eloBefore ?? '-'}</Text>
+              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{recap.eloBefore ?? '-'}</Text>
             </View>
             <View style={styles.statBlock}>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Delta</Text>
-              <Text style={[Fonts.h4Bold, { color: recap.eloDelta >= 0 ? Colors.success500 : Colors.error500 }]}>{eloDeltaLabel}</Text>
+              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{eloDeltaLabel}</Text>
             </View>
             <View style={styles.statBlock}>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO après</Text>
-              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{recap.eloAfter ?? '-'}</Text>
+              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{recap.eloAfter ?? '-'}</Text>
             </View>
           </View>
 
@@ -121,4 +120,3 @@ const styles = StyleSheet.create({
 });
 
 export default MatchRecapSheet;
-

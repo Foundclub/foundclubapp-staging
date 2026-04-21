@@ -391,6 +391,28 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     };
   }
 
+  const leagueScoreActionTypes = new Set([
+    NOTIFICATION_TYPES.LEAGUE_SCORE_ADMIN_ESCALATED,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_DEADLINE_WARNING,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_DUE,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_END_DUE,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_REMINDER_2H,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_DISPUTED_BY_OPPONENT,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_SUBMITTED_BY_OPPONENT,
+    NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED,
+  ]);
+
+  if (leagueScoreActionTypes.has(type) && payload.matchId) {
+    return {
+      params: {
+        matchId: String(payload.matchId),
+        scoreFlowState: payload.scoreFlowState || payload.phase || undefined,
+      },
+      route: RouteNames.EndMatchScreen,
+    };
+  }
+
   const leagueTabTypes = new Set([
     NOTIFICATION_TYPES.LEAGUE_AUTOMATION,
     NOTIFICATION_TYPES.LEAGUE_POST_SLOT_CANCELLED,

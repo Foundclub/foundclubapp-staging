@@ -42,6 +42,9 @@ import {
 } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
 
+import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
+import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
+
 import ClockIcon from '../../../assets/icons/clock.png';
 import LocationIcon from '../../../assets/icons/location.png';
 import Button from '../../../components/atoms/button/Button';
@@ -188,6 +191,7 @@ function MatchCenterScreen() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
+  const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
 
   /**
    * Keep shield initials consistent with Squad cards (TeamListContent).
@@ -237,6 +241,11 @@ function MatchCenterScreen() {
   const [loadError, setLoadError] = useState('');
   const [isSquadSelectorVisible, setIsSquadSelectorVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
+  const currentMatchLegalLabel = React.useMemo(() => {
+    const left = currentMatch?.team_a?.name || mySquad?.name || 'Votre squad';
+    const right = currentMatch?.team_b?.name || opponentDetails?.name || 'Adversaire';
+    return `${left} VS ${right}`;
+  }, [currentMatch?.team_a?.name, currentMatch?.team_b?.name, mySquad?.name, opponentDetails?.name]);
 
   // Search Config State
   const [searchRadius, setSearchRadius] = useState(20);
@@ -823,7 +832,6 @@ function MatchCenterScreen() {
 
   const handleSendProposal = async (/** @type {VenueProposalPayload} */ proposalData) => {
     if (!currentMatch) return;
-    setLoading(true);
     try {
       const matchId = getEntityDocumentId(currentMatch);
       if (!proposalData?.date) {
@@ -834,7 +842,22 @@ function MatchCenterScreen() {
         throw new Error('Missing proposal venue');
       }
 
-      const result = await createLeagueProposal(matchId, proposalPayload);
+      const legalAcceptance = await requestLeagueLegalAcceptance({
+        metadata: {
+          matchLabel: currentMatchLegalLabel,
+          teamName: mySquad?.name || null,
+          venueLabel: proposalPayload.venueLabel,
+        },
+        scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
+        sourceScreen: 'match_center_proposal',
+        targetDocumentId: matchId,
+        targetLabel: currentMatchLegalLabel,
+        targetType: 'league_match',
+      });
+      if (!legalAcceptance) return;
+
+      setLoading(true);
+      const result = await createLeagueProposal(matchId, proposalPayload, { legalAcceptance });
 
       const rawUpdatedMatch = result?.match || {
         ...currentMatch,
@@ -1485,7 +1508,7 @@ function MatchCenterScreen() {
                   Zone
                 </Text>
                 <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>{opponentCity}</Text>
-                <Text style={[Fonts.p3, { color: Colors.primary500 }]}>{radiusDisplay}</Text>
+                <Text style={[Fonts.p3, { color: Colors.gold500 }]}>{radiusDisplay}</Text>
               </View>
 
               <View style={{
@@ -1518,7 +1541,7 @@ function MatchCenterScreen() {
                   Créneau phare
                 </Text>
                 <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>{recurringDayLabel}</Text>
-                <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
+                <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
                   {recurringStart}
                   {' - '}
                   {recurringEnd}
@@ -1552,7 +1575,7 @@ function MatchCenterScreen() {
                         paddingVertical: 6,
                       }}
                     >
-                      <Text style={[Fonts.p3, { color: Colors.primary500 }]}>{slotLabel}</Text>
+                      <Text style={[Fonts.p3, { color: Colors.gold500 }]}>{slotLabel}</Text>
                     </View>
                   ))}
                 </View>
@@ -1840,8 +1863,10 @@ function MatchCenterScreen() {
                 </Text>
               </View>
               <View style={{
-                backgroundColor: Colors.gold500,
+                backgroundColor: 'rgba(255, 209, 0, 0.10)',
+                borderColor: Colors.gold500,
                 borderRadius: 999,
+                borderWidth: 1,
                 bottom: 6,
                 paddingHorizontal: 10,
                 paddingVertical: 2,
@@ -1849,7 +1874,7 @@ function MatchCenterScreen() {
                 right: -8,
               }}
               >
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
+                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
                   DIV
                   {division}
                 </Text>
@@ -1891,7 +1916,7 @@ function MatchCenterScreen() {
                   <Text style={[Fonts.p2Bold, { color: 'white' }]}>
                     {city}
                   </Text>
-                  <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{radiusDisplay}</Text>
+                  <Text style={[Fonts.p3, { color: Colors.gold500 }]}>{radiusDisplay}</Text>
                 </View>
                 <View style={{ backgroundColor: Colors.neutral700, height: '100%', width: 1 }} />
                 <View style={{ alignItems: 'center', flex: 1 }}>
@@ -1913,7 +1938,7 @@ function MatchCenterScreen() {
                       return dayMap[rDay] || rDay || 'Date Inconnue';
                     })()}
                   </Text>
-                  <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                  <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
                     {recurringStart}
                     {' '}
                     -
@@ -1940,7 +1965,7 @@ function MatchCenterScreen() {
                 Créneaux en commun
               </Text>
               {commonSlotsSummary.map((/** @type {string} */ slotLabel) => (
-                <Text key={slotLabel} style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 4 }]}>
+                <Text key={slotLabel} style={[Fonts.p3, { color: Colors.gold500, marginBottom: 4 }]}>
                   -
                   {' '}
                   {slotLabel}
@@ -2148,7 +2173,7 @@ function MatchCenterScreen() {
                           <Text style={[Fonts.h2, { color: Colors.neutral00, textTransform: 'uppercase' }]}>
                             {dayLabel}
                           </Text>
-                          <Text style={[Fonts.p1, { color: Colors.primary500, marginTop: 2 }]}>
+                          <Text style={[Fonts.p1, { color: Colors.gold500, marginTop: 2 }]}>
                             {rangeLabel}
                           </Text>
                         </View>
@@ -2176,8 +2201,10 @@ function MatchCenterScreen() {
                     <Text style={[Fonts.p3, { color: Colors.neutral300, textTransform: 'uppercase' }]}>
                       EFFECTIF
                       {' '}
-                      {item.rsvp_count || 0}
-                      /5
+                      <Text style={{ color: Colors.gold500 }}>
+                        {item.rsvp_count || 0}
+                        /5
+                      </Text>
                     </Text>
                     <VisualRoster rsvpCount={item.rsvp_count || 0} />
                   </View>
@@ -2232,7 +2259,7 @@ function MatchCenterScreen() {
                 <Text style={[Fonts.p2, { color: Colors.neutral00, marginBottom: 12 }]}>
                   Il manque
                   {' '}
-                  {5 - (activeSlot.rsvp_count || 0)}
+                  <Text style={{ color: Colors.gold500 }}>{5 - (activeSlot.rsvp_count || 0)}</Text>
                   {' '}
                   joueurs pour être au complet.
                 </Text>
@@ -2359,7 +2386,7 @@ function MatchCenterScreen() {
                   size={34}
                 />
               </View>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+              <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
                 {mySquad?.elo || 1200}
                 {' '}
                 PTS
@@ -2397,12 +2424,12 @@ function MatchCenterScreen() {
         <LeagueCard style={{ marginBottom: 6, marginTop: 8, ...leagueSurface }}>
           <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{mySquad?.wins || 0}</Text>
+              <Text style={[Fonts.h1Bold, { color: Colors.gold500 }]}>{mySquad?.wins || 0}</Text>
               <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>VICTOIRES</Text>
             </View>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', height: 40, width: 1 }} />
             <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{streakValue}</Text>
+              <Text style={[Fonts.h1Bold, { color: Colors.gold500 }]}>{streakValue}</Text>
               <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>SERIE</Text>
             </View>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', height: 40, width: 1 }} />
@@ -2516,12 +2543,12 @@ function MatchCenterScreen() {
                         {' '}
                         {item.opponent?.name || 'Adversaire'}
                       </Text>
-                      <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>
+                      <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 2 }]}>
                         {dateLabel}
                       </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                      <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
                         {item.score_a ?? '-'}
                         {' '}
                         -
@@ -2628,9 +2655,11 @@ function MatchCenterScreen() {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Rayon de recherche</Text>
             <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
-              {searchRadius}
-              {' '}
-              km
+              <Text style={{ color: Colors.gold500 }}>
+                {searchRadius}
+                {' '}
+                km
+              </Text>
             </Text>
           </View>
           <Slider
@@ -2645,8 +2674,8 @@ function MatchCenterScreen() {
             value={searchRadius}
           />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>5 km</Text>
-            <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>100 km</Text>
+            <Text style={[Fonts.p3, { color: Colors.gold500 }]}>5 km</Text>
+            <Text style={[Fonts.p3, { color: Colors.gold500 }]}>100 km</Text>
           </View>
         </View>
 
@@ -2658,9 +2687,9 @@ function MatchCenterScreen() {
           >
             <Text style={[Fonts.p2, { color: Colors.neutral300, flex: 1 }]}>
               Vos disponibilités (
-              {selectedSlotIds.length}
+              <Text style={{ color: Colors.gold500 }}>{selectedSlotIds.length}</Text>
               /
-              {squadSlots.length || 0}
+              <Text style={{ color: Colors.gold500 }}>{squadSlots.length || 0}</Text>
               )
             </Text>
             <TouchableOpacity
@@ -2809,7 +2838,7 @@ function MatchCenterScreen() {
             backgroundColor: Colors.neutral800, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4,
           }}
           >
-            <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>60 min</Text>
+            <Text style={[Fonts.p1Bold, { color: Colors.gold500 }]}>60 min</Text>
           </View>
         </View>
 
@@ -2955,7 +2984,7 @@ function MatchCenterScreen() {
                   {squad?.sport || 'Sport'}
                   {' '}
                   - Div
-                  {squad?.division || 5}
+                  <Text style={{ color: Colors.gold500 }}>{squad?.division || 5}</Text>
                 </Text>
               </View>
             </TouchableOpacity>
@@ -3033,6 +3062,7 @@ function MatchCenterScreen() {
           }
         }}
       />
+      {leagueLegalAcceptanceModal}
     </ScreenContainer>
   );
 }
