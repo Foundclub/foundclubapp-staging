@@ -137,6 +137,14 @@ const hasSubmissionPayload = (submission) => Boolean(
       && (submission.score_a !== undefined || submission.score_b !== undefined),
 );
 
+const FINAL_RECAP_POLL_DELAYS_MS = [250, 500, 900, 1300, 1800];
+
+const wait = (durationMs) => new Promise((resolve) => {
+  setTimeout(resolve, durationMs);
+});
+
+const hasNumericRecapValue = (value) => Number.isFinite(Number(value));
+
 /**
  * @param {unknown} value
  * @returns {string}
@@ -351,9 +359,50 @@ function EndMatchScreen() {
     queryClient.invalidateQueries({ queryKey: ['league-matches'] });
   };
 
+  const getFinalRecapForCurrentTeam = (sourceMatch) => {
+    const automationMeta = sourceMatch?.automation_meta && typeof sourceMatch.automation_meta === 'object'
+      ? sourceMatch.automation_meta
+      : {};
+    const recapByTeam = automationMeta.recap && typeof automationMeta.recap === 'object'
+      ? automationMeta.recap
+      : null;
+    const finalRecapByTeam = automationMeta.final_recap && typeof automationMeta.final_recap === 'object'
+      ? automationMeta.final_recap
+      : null;
+    const source = recapByTeam || finalRecapByTeam || {};
+    return isCaptainB ? source.teamB : source.teamA;
+  };
+
+  const hasReadyFinalRecap = (sourceMatch) => {
+    const recap = getFinalRecapForCurrentTeam(sourceMatch);
+    return Boolean(
+      recap
+      && hasNumericRecapValue(recap.eloBefore)
+      && hasNumericRecapValue(recap.eloAfter)
+      && hasNumericRecapValue(recap.divisionBefore)
+      && hasNumericRecapValue(recap.divisionAfter),
+    );
+  };
+
+  const fetchMatchWithReadyFinalRecap = async (initialMatch, attemptIndex = 0) => {
+    let sourceMatch = initialMatch || match;
+    if (hasReadyFinalRecap(sourceMatch)) {
+      return sourceMatch;
+    }
+
+    const delayMs = FINAL_RECAP_POLL_DELAYS_MS[attemptIndex];
+    if (!delayMs) {
+      return sourceMatch;
+    }
+
+    await wait(delayMs);
+    sourceMatch = await fetchMatch(matchId);
+    return fetchMatchWithReadyFinalRecap(sourceMatch, attemptIndex + 1);
+  };
+
   const buildFinalPosterPayload = (sourceMatch) => {
-    const recapByTeam = sourceMatch?.automation_meta?.recap || {};
-    const recap = isCaptainB ? recapByTeam.teamB : recapByTeam.teamA;
+    const recap = getFinalRecapForCurrentTeam(sourceMatch);
+    const recapPending = !hasReadyFinalRecap(sourceMatch);
     return {
       finalStatus: 'valid',
       matchId,
@@ -365,16 +414,14 @@ function EndMatchScreen() {
           ? `${sourceMatch?.score_b ?? '-'}-${sourceMatch?.score_a ?? '-'}`
           : `${sourceMatch?.score_a ?? '-'}-${sourceMatch?.score_b ?? '-'}`,
       },
+      recapPending,
     };
   };
 
   const showValidatedRecap = async (responseMatch = null) => {
     let sourceMatch = responseMatch || match;
     try {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 650);
-      });
-      sourceMatch = await fetchMatch(matchId);
+      sourceMatch = await fetchMatchWithReadyFinalRecap(sourceMatch);
       queryClient.invalidateQueries({ queryKey: ['league-match', matchId] });
       queryClient.invalidateQueries({ queryKey: ['league-matches'] });
     } catch (_error) {
@@ -850,7 +897,7 @@ function EndMatchScreen() {
                 .
               </Text>
               <Text style={[Fonts.p4, { color: Colors.neutral400, marginTop: 8 }]}>
-                Vous pouvez encore corriger votre saisie tant que le match n'est pas validé.
+                Vous pouvez encore corriger votre saisie tant que le match n&apos;est pas validé.
               </Text>
             </LeagueCard>
           ) : null}
@@ -885,8 +932,7 @@ function EndMatchScreen() {
               <Text
                 style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
               >
-                Confirmez ce score si vous êtes d'accord, sinon ouvrez un
-                litige.
+                Confirmez ce score si vous êtes d&apos;accord, sinon ouvrez un litige.
               </Text>
               <View style={styles.opponentScoreActions}>
                 <Button
@@ -1249,13 +1295,7 @@ function EndMatchScreen() {
                 },
               ]}
               textStyle={{ color: Colors.neutral00 }}
-              title={
-                submitMutation.isPending
-                  ? 'Envoi en cours...'
-                  : hasOwnSubmission
-                    ? 'Corriger le score'
-                    : 'Valider le score'
-              }
+              title={submitButtonTitle}
               variant="Primary"
             />
           ) : null}

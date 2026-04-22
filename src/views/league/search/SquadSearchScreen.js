@@ -117,10 +117,10 @@ const getStatusConfig = (status, Colors) => {
 
   return {
     accentColor: Colors.primary500,
-    actionLabel: 'Voir la squad',
+    actionLabel: 'Demander a rejoindre',
     badgeLabel: 'DISPONIBLE',
     badgeTextColor: Colors.primary500,
-    helperLabel: 'Squad ouverte aux nouveaux joueurs.',
+    helperLabel: 'Squad ouverte aux demandes de nouveaux joueurs.',
     surfaceColor: `${Colors.primary500}14`,
   };
 };
@@ -144,7 +144,7 @@ const getStatusFooterLabel = (status) => {
   if (status === 'joined') return 'Acces rapide a votre squad League';
   if (status === 'invited') return 'Invitation a traiter en priorite';
   if (status === 'pending') return 'Le capitaine doit encore vous repondre';
-  return 'Ouvrez la fiche pour voir les details et rejoindre';
+  return 'Ouvrez la fiche pour envoyer votre demande';
 };
 
 /**
@@ -257,14 +257,12 @@ function SquadSearchScreen() {
     const chips = [];
     const city = readFilterValue(squadFilters?.city);
     const sport = readFilterValue(squadFilters?.sport);
-    const category = readFilterValue(squadFilters?.category);
     const section = readFilterValue(squadFilters?.section);
     const division = readFilterValue(squadFilters?.division);
     const radius = squadFilters?.radius;
 
     if (city) chips.push(city);
     if (sport) chips.push(sport);
-    if (category) chips.push(category);
     if (section) chips.push(section);
     if (division) chips.push(`Div ${division}`);
     if (city && radius) chips.push(`${radius} km`);

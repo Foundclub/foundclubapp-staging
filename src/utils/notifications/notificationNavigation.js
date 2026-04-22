@@ -392,15 +392,16 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
   }
 
   const leagueScoreActionTypes = new Set([
+    NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED,
     NOTIFICATION_TYPES.LEAGUE_SCORE_ADMIN_ESCALATED,
     NOTIFICATION_TYPES.LEAGUE_SCORE_DEADLINE_WARNING,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_DISPUTED_BY_OPPONENT,
     NOTIFICATION_TYPES.LEAGUE_SCORE_DUE,
     NOTIFICATION_TYPES.LEAGUE_SCORE_END_DUE,
     NOTIFICATION_TYPES.LEAGUE_SCORE_REMINDER_2H,
     NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO,
-    NOTIFICATION_TYPES.LEAGUE_SCORE_DISPUTED_BY_OPPONENT,
     NOTIFICATION_TYPES.LEAGUE_SCORE_SUBMITTED_BY_OPPONENT,
-    NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_VALIDATION_REQUIRED,
   ]);
 
   if (leagueScoreActionTypes.has(type) && payload.matchId) {
@@ -415,17 +416,23 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
 
   const leagueTabTypes = new Set([
     NOTIFICATION_TYPES.LEAGUE_AUTOMATION,
+    NOTIFICATION_TYPES.LEAGUE_MATCH_CANCELLED_NEGOTIATION_TIMEOUT,
     NOTIFICATION_TYPES.LEAGUE_POST_SLOT_CANCELLED,
     NOTIFICATION_TYPES.LEAGUE_POST_SLOT_CHECK,
     NOTIFICATION_TYPES.LEAGUE_POST_SLOT_CONFIRMATION,
     NOTIFICATION_TYPES.LEAGUE_POST_SLOT_RESCHEDULED,
+    NOTIFICATION_TYPES.LEAGUE_QUORUM_REACHED,
+    NOTIFICATION_TYPES.LEAGUE_QUORUM_REMINDER,
     NOTIFICATION_TYPES.LEAGUE_SCORE_ADMIN_ESCALATED,
     NOTIFICATION_TYPES.LEAGUE_SCORE_DEADLINE_WARNING,
     NOTIFICATION_TYPES.LEAGUE_SCORE_DUE,
     NOTIFICATION_TYPES.LEAGUE_SCORE_END_DUE,
     NOTIFICATION_TYPES.LEAGUE_SCORE_REMINDER_2H,
     NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_VALIDATION_REQUIRED,
     NOTIFICATION_TYPES.LEAGUE_SEARCH_RELAUNCH_PROMPT,
+    NOTIFICATION_TYPES.LEAGUE_SEARCH_STARTED,
+    NOTIFICATION_TYPES.LEAGUE_SEARCH_STILL_RUNNING,
     NOTIFICATION_TYPES.REMATCH_REQUEST,
     NOTIFICATION_TYPES.RSVP_ALERT,
   ]);
@@ -532,6 +539,18 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         return notificationDetailsDestination(payload);
       }
       return eventDetailsDestination(payload.eventId);
+    case NOTIFICATION_TYPES.LEAGUE_COUNTER_PROPOSAL_RECEIVED:
+      return {
+        params: {
+          params: {
+            matchId: payload.matchId ? String(payload.matchId) : undefined,
+            openLeagueProposal: true,
+            openLeagueProposalToken: String(payload.notificationId || payload.dedupeKey || payload.matchId || 'counter-proposal'),
+          },
+          screen: RouteNames.LeagueMatchTab,
+        },
+        route: RouteNames.LeagueHomeTab,
+      };
     case NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED:
       return chatDestination(payload.chatId || payload.conversationId)
         || { params: {}, route: RouteNames.LeagueMatchTab };
@@ -581,6 +600,16 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           route: RouteNames.LeagueMatchDetails,
         }
         : { params: {}, route: RouteNames.LeagueMatchTab };
+    case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_DECLINED:
+      return payload.matchId
+        ? {
+          params: {
+            focusSection: 'negotiation',
+            matchId: String(payload.matchId),
+          },
+          route: RouteNames.LeagueMatchDetails,
+        }
+        : { params: {}, route: RouteNames.LeagueMatchTab };
     case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED:
       return {
         params: {
@@ -593,8 +622,20 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         },
         route: RouteNames.LeagueHomeTab,
       };
+    case NOTIFICATION_TYPES.LEAGUE_QUORUM_REACHED:
+    case NOTIFICATION_TYPES.LEAGUE_QUORUM_REMINDER:
+      return payload.matchId
+        ? {
+          params: {
+            focusSection: 'presence',
+            matchId: String(payload.matchId),
+          },
+          route: RouteNames.LeagueMatchDetails,
+        }
+        : { params: {}, route: RouteNames.LeagueMatchTab };
     case NOTIFICATION_TYPES.LEAGUE_SCORE_DISPUTED_BY_OPPONENT:
     case NOTIFICATION_TYPES.LEAGUE_SCORE_SUBMITTED_BY_OPPONENT:
+    case NOTIFICATION_TYPES.LEAGUE_SCORE_VALIDATION_REQUIRED:
       return payload.matchId
         ? {
           params: { matchId: String(payload.matchId) },

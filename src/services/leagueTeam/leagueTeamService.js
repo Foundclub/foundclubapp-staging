@@ -16,7 +16,7 @@ import { getUploadEndpoint } from '@/config/runtimeUrls';
  * @property {number} [elo]
  */
 /**
- * @typedef {{ uri: string, filename?: string, mime?: string }} UploadAsset
+ * @typedef {{ uri?: string, path?: string, filename?: string, fileName?: string, mime?: string, type?: string }} UploadAsset
  */
 /**
  * @typedef {LeagueTeamData & {
@@ -211,23 +211,33 @@ export const checkTeamNameUnique = async (name) => {
  * @returns {Promise<number>} - The uploaded file ID
  */
 const uploadFile = async (file) => {
+  const uploadEndpoint = getUploadEndpoint();
   try {
+    if (!uploadEndpoint) {
+      throw new Error('Upload endpoint is missing');
+    }
+
+    const rawUri = file?.path || file?.uri;
+    if (!rawUri) {
+      throw new Error('Invalid file object provided for upload');
+    }
+
+    const uriWithoutQuery = String(rawUri).split('?')[0];
+    const extension = uriWithoutQuery.includes('.') ? uriWithoutQuery.split('.').pop() : 'jpg';
+    const fileName = file.filename || file.fileName || `league_upload_${Date.now()}.${extension || 'jpg'}`;
+    const mimeType = file.mime || file.type || 'image/jpeg';
+    const uri = Platform.OS === 'ios' ? String(rawUri).replace(/^file:\/\//, '') : String(rawUri);
+
     const formData = new FormData();
 
-    const uri = Platform.OS === 'android' ? file.uri : file.uri.replace('file://', '');
-
     formData.append('files', /** @type {any} */ ({
-      name: file.filename || 'upload.jpg',
-      type: file.mime || 'image/jpeg',
+      name: fileName,
+      type: mimeType,
       uri,
     }));
 
     // Get token for upload
     const token = getAuthTokens()?.token;
-    const uploadEndpoint = getUploadEndpoint();
-    if (!uploadEndpoint) {
-      throw new Error('Upload endpoint is missing');
-    }
 
     const response = await fetch(uploadEndpoint, {
       body: formData,
@@ -240,7 +250,14 @@ const uploadFile = async (file) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Upload failed: ${response.status} ${errorText}`);
+      let errorMessage = errorText;
+      try {
+        const errorPayload = JSON.parse(errorText);
+        errorMessage = errorPayload?.error?.message || errorPayload?.message || errorText;
+      } catch (_error) {
+        // Keep raw response text when the server does not return JSON.
+      }
+      throw new Error(`Upload failed: ${response.status} ${errorMessage}`);
     }
 
     const data = await response.json();
@@ -250,6 +267,9 @@ const uploadFile = async (file) => {
     throw new Error('No ID received from upload');
   } catch (e) {
     console.error('File upload error:', e);
+    if (e instanceof TypeError && String(e.message || '').includes('Network request failed')) {
+      throw new Error(`Impossible de joindre l'upload Strapi (${uploadEndpoint}). Verifiez que l'API locale est lancee et accessible depuis l'emulateur.`);
+    }
     throw e;
   }
 };
@@ -649,7 +669,7 @@ export const searchSquads = async (filters) => {
     const conditions = [];
     const cityRaw = safeFilters?.city;
     const requestedSportToken = resolveSportToken(normalizeFilterValue(safeFilters?.sport));
-    const category = normalizeFilterValue(safeFilters?.category);
+    const category = 'Senior';
     const section = normalizeSectionFilter(normalizeFilterValue(safeFilters?.section));
     const divisionRaw = normalizeFilterValue(safeFilters?.division);
     const searchQuery = String(safeFilters?.query || '').trim();
@@ -659,9 +679,7 @@ export const searchSquads = async (filters) => {
       : null;
     const centerCoordinates = parseCoordinates(cityAsRecord?.value || safeFilters?.city);
 
-    if (category) {
-      conditions.push({ category: { $eq: category } });
-    }
+    conditions.push({ category: { $eq: category } });
 
     if (section) {
       conditions.push({ section: { $eq: section } });

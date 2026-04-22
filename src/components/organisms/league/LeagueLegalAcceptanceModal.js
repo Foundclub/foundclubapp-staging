@@ -14,6 +14,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
 import {
   buildLeagueLegalAcceptancePayload,
+  LEAGUE_ADULT_REQUIRED_SCOPES,
   LEAGUE_LEGAL_SCOPES,
 } from '@/constants/leagueLegalAcceptance';
 
@@ -76,6 +77,7 @@ function LeagueLegalAcceptanceModal({
   const [acceptedContext, setAcceptedContext] = useState(false);
   const [acceptedRisk, setAcceptedRisk] = useState(false);
   const [acceptedRules, setAcceptedRules] = useState(false);
+  const [acceptedAdult, setAcceptedAdult] = useState(false);
   const [acceptedExtra, setAcceptedExtra] = useState(false);
   const {
     Alignments,
@@ -90,15 +92,21 @@ function LeagueLegalAcceptanceModal({
     LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE,
     LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
   ].includes(scope);
+  const needsAdultConfirmation = LEAGUE_ADULT_REQUIRED_SCOPES.includes(scope);
   const needsVenueResponsibility = scope === LEAGUE_LEGAL_SCOPES.MATCH_VENUE_BOOKING;
   const hasExtra = needsCaptainResponsibility || needsVenueResponsibility;
-  const canConfirm = acceptedContext && acceptedRisk && acceptedRules && (!hasExtra || acceptedExtra);
+  const canConfirm = acceptedContext
+    && acceptedRisk
+    && acceptedRules
+    && (!needsAdultConfirmation || acceptedAdult)
+    && (!hasExtra || acceptedExtra);
 
   useEffect(() => {
     if (!isVisible) {
       setAcceptedContext(false);
       setAcceptedRisk(false);
       setAcceptedRules(false);
+      setAcceptedAdult(false);
       setAcceptedExtra(false);
     }
   }, [isVisible]);
@@ -205,6 +213,16 @@ function LeagueLegalAcceptanceModal({
               type="square"
               wrapperStyle={checkableWrapperStyle}
             />
+            {needsAdultConfirmation ? (
+              <Checkable
+                fontStyle={[Fonts.p2, Fonts.neutral00]}
+                isChecked={acceptedAdult}
+                setIsChecked={() => setAcceptedAdult((previous) => !previous)}
+                text="Je certifie avoir 18 ans ou plus pour creer ou rejoindre une squad FoundClub League."
+                type="square"
+                wrapperStyle={checkableWrapperStyle}
+              />
+            ) : null}
             {hasExtra ? (
               <Checkable
                 fontStyle={[Fonts.p2, Fonts.neutral00]}

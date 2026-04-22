@@ -27,11 +27,10 @@ import {
 } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
-import { respondProposalMessage } from '@/services/chat/chatService';
 import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
 import {
-  confirmMatch,
   createLeagueProposal,
+  respondToLeagueProposal,
   submitPostSlotResponse,
 } from '@/services/league/leagueMatchService';
 
@@ -267,7 +266,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   }, [dismissForSession, invalidateLeagueQueries, nextAction?.chatId, nextAction?.matchId, nextAction?.state, refetch]);
 
   const handleAcceptProposal = useCallback(async () => {
-    if (!nextAction?.matchId || isSubmitting) return;
+    if (!nextAction?.matchId || !nextAction?.proposalMessageId || isSubmitting) return;
     try {
       const legalAcceptance = await requestLeagueLegalAcceptance({
         metadata: {
@@ -282,10 +281,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       if (!legalAcceptance) return;
 
       setIsSubmitting(true);
-      await confirmMatch(nextAction.matchId, { legalAcceptance });
-      if (nextAction?.proposalMessageId) {
-        await respondProposalMessage(nextAction.proposalMessageId, 'accepted');
-      }
+      await respondToLeagueProposal(nextAction.matchId, nextAction.proposalMessageId, 'accept', { legalAcceptance });
       await invalidateLeagueQueries();
       dismissForSession();
       navigate(RouteNames.LeagueMatchDetails, {
@@ -318,14 +314,14 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   ]);
 
   const handleDeclineProposal = useCallback(async () => {
-    if (!nextAction?.proposalMessageId || isSubmitting) {
+    if (!nextAction?.proposalMessageId || !nextAction?.matchId || isSubmitting) {
       setIsCounterProposalVisible(true);
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await respondProposalMessage(nextAction.proposalMessageId, 'declined');
+      await respondToLeagueProposal(nextAction.matchId, nextAction.proposalMessageId, 'decline');
       await invalidateLeagueQueries();
       dismissForSession();
       setIsCounterProposalVisible(true);
@@ -342,7 +338,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.proposalMessageId, showBanner]);
+  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.matchId, nextAction?.proposalMessageId, showBanner]);
 
   const handleOpenProposalComposer = useCallback(() => {
     dismissForSession();

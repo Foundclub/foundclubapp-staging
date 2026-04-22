@@ -1857,15 +1857,20 @@ export default {
   },
   squadDetails: {
     actions: {
-      deleteTeam: 'Supprimer l\'équipe',
-      deleteTeamError: 'Impossible de supprimer l\'équipe.',
+      deleteTeam: 'Supprimer la squad',
+      deleteTeamError: 'Impossible de supprimer la squad.',
       edit: 'Modifier',
-      editTeam: 'Modifier l\'équipe',
+      editTeam: 'Modifier la squad',
       menuDescription: 'Choisissez une action.',
-      menuTitle: 'Actions équipe',
+      menuTitle: 'Actions squad',
       openRequests: 'Voir les demandes',
       requests: 'Demandes',
       unavailableTitle: 'Action non disponible',
+    },
+    defaultName: 'Squad',
+    delete: {
+      confirmationWithName: 'Etes-vous sur de vouloir supprimer la squad "{{teamName}}" ? Cette action est irreversible.',
+      title: 'Supprimer la squad',
     },
     join: {
       pending: 'Demande en attente...',

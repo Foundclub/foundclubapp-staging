@@ -404,6 +404,7 @@ const useAuth = () => {
     });
     const installUrl = buildInstallLandingUrl({
       id: clubId,
+      invite: true,
       source: 'sms',
       type: 'club',
     });
@@ -436,6 +437,7 @@ const useAuth = () => {
   const inviteTeamPlayers = ({ clubName, teamId, teamName }) => {
     const installUrl = buildInstallLandingUrl({
       id: teamId,
+      invite: true,
       source: 'sms',
       type: 'team',
     });

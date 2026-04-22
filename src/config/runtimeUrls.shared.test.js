@@ -14,6 +14,7 @@ describe('runtimeUrls.shared', () => {
 
     expect(runtime.apiUrl).toBe('http://10.0.2.2:1337/api');
     expect(runtime.socketUrl).toBe('http://10.0.2.2:1337');
+    expect(runtime.uploadUrl).toBe('http://10.0.2.2:1337/api/upload');
     expect(runtime.errors).toEqual([]);
   });
 
@@ -30,6 +31,7 @@ describe('runtimeUrls.shared', () => {
 
     expect(runtime.apiUrl).toBe('http://localhost:1337/api');
     expect(runtime.socketUrl).toBe('http://localhost:1337');
+    expect(runtime.uploadUrl).toBe('http://localhost:1337/api/upload');
     expect(runtime.source).toBe('ios-simulator-fallback');
     expect(runtime.errors).toEqual([]);
   });

@@ -1,10 +1,9 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import Slider from '@react-native-community/slider';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -18,11 +17,8 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-
-import { useGetCategories } from '@/services/category/categoryQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
@@ -41,7 +37,6 @@ const SECTION_OPTIONS = [
 ];
 
 const filtersSchema = Joi.object({
-  category: Joi.object().allow(null),
   city: Joi.object().allow(''),
   division: Joi.number().allow(null),
   radius: Joi.number().allow(''),
@@ -108,12 +103,10 @@ const buildCleanFilters = (rawData) => {
 
   const sport = normalizeObjectFilter(data.sport);
   const section = normalizeObjectFilter(data.section);
-  const category = normalizeObjectFilter(data.category);
   const division = toDivisionValue(data.division);
 
   if (sport) cleanPayload.sport = sport;
   if (section) cleanPayload.section = section;
-  if (category) cleanPayload.category = category;
   if (division) cleanPayload.division = division;
 
   return cleanPayload;
@@ -129,34 +122,8 @@ function SquadFiltersScreen({ navigation }) {
   } = useTheme();
   const [{ squadFilters }, appDispatch] = useAppContext();
   const insets = useSafeAreaInsets();
-  const {
-    data: categoriesData,
-    error: categoriesError,
-    isLoading: isCategoriesLoading,
-    refetch: refetchCategories,
-  } = useGetCategories();
-  const [categorySearchValue, setCategorySearchValue] = useState('');
-
-  const categoryOptions = useMemo(() => {
-    const apiOptions = (categoriesData || []).map((item) => ({
-      label: item?.name || '',
-      value: item?.name || '',
-    })).filter((item) => item.label && item.value);
-
-    if (!apiOptions.length) {
-      return [{ label: 'Senior', value: 'Senior' }];
-    }
-
-    if (!categorySearchValue.trim()) {
-      return apiOptions;
-    }
-
-    const query = categorySearchValue.trim().toLowerCase();
-    return apiOptions.filter((item) => item.label.toLowerCase().includes(query));
-  }, [categoriesData, categorySearchValue]);
 
   const initialValues = useMemo(() => ({
-    category: normalizeObjectFilter(squadFilters?.category),
     city: normalizeCityFilter(squadFilters?.city),
     division: toDivisionValue(squadFilters?.division),
     radius: Number.parseInt(String(squadFilters?.radius || ''), 10) || DEFAULT_RADIUS_KM,
@@ -182,7 +149,6 @@ function SquadFiltersScreen({ navigation }) {
     if (watchedValues?.city?.value) count += 1;
     if (watchedValues?.sport?.value) count += 1;
     if (watchedValues?.section?.value) count += 1;
-    if (watchedValues?.category?.value) count += 1;
     if (toDivisionValue(watchedValues?.division)) count += 1;
     const radius = Number.parseInt(String(watchedValues?.radius || ''), 10);
     if (watchedValues?.city?.value && Number.isFinite(radius) && radius !== DEFAULT_RADIUS_KM) count += 1;
@@ -368,63 +334,22 @@ function SquadFiltersScreen({ navigation }) {
           )}
         />
 
-        {/* eslint-disable no-nested-ternary */}
-        <Controller
-          control={control}
-          name="category"
-          render={({ field: { onChange, value } }) => (
-            <View style={{ gap: 8 }}>
-              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Catégorie</Text>
-              {isCategoriesLoading ? (
-                <View style={[Alignments.row, Alignments.alignCenter, { gap: 10 }]}>
-                  <ActivityIndicator color={Colors.primary500} size="small" />
-                  <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>Chargement des catégories...</Text>
-                </View>
-              ) : categoriesError ? (
-                <View
-                  style={{
-                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                    borderColor: 'rgba(239, 68, 68, 0.40)',
-                    borderRadius: 14,
-                    borderWidth: 1,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                  }}
-                >
-                  <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-                    Impossible de charger les categories League.
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => refetchCategories()}
-                    style={{ alignSelf: 'flex-start', marginTop: 8 }}
-                  >
-                    <Text style={[Fonts.p3Bold, { color: Colors.error500, textDecorationLine: 'underline' }]}>
-                      Réessayer
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <AutocompleteSelect
-                  error={getFieldError({ errors: formErrors, fieldName: 'category' })}
-                  isSearchable
-                  options={categoryOptions}
-                  placeholder="Sélectionner une catégorie"
-                  searchValue={categorySearchValue}
-                  setSearchValue={setCategorySearchValue}
-                  setValue={(/** @type {{label?: string, value?: string} | null} */ option) => {
-                    if (!option) {
-                      onChange(null);
-                      return;
-                    }
-                    onChange({ label: option.label, value: option.value });
-                  }}
-                  value={value?.label || ''}
-                />
-              )}
-            </View>
-          )}
-        />
-        {/* eslint-enable no-nested-ternary */}
+        <View
+          style={{
+            backgroundColor: 'rgba(250, 204, 21, 0.10)',
+            borderColor: 'rgba(250, 204, 21, 0.38)',
+            borderRadius: 16,
+            borderWidth: 1,
+            gap: 6,
+            padding: 14,
+          }}
+        >
+          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Catégorie</Text>
+          <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>Senior uniquement</Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+            Les squads FoundClub League sont filtrées automatiquement sur la catégorie Senior.
+          </Text>
+        </View>
 
         <Controller
           control={control}

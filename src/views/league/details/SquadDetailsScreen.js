@@ -26,6 +26,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import {
@@ -191,6 +192,7 @@ function SquadDetailsScreen({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { userData: currentUser } = /** @type {{ userData: User | null }} */ (useAuth());
+  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const currentUserId = getEntityDocumentId(currentUser);
   const currentRoleType = String(currentUser?.role?.type || '').trim().toLowerCase();
@@ -259,7 +261,9 @@ function SquadDetailsScreen({ navigation, route }) {
   const hasInvitation = useMemo(() => team?.invitations?.some((/** @type {User} */ u) => u.documentId === currentUser?.documentId), [team, currentUser]);
   const shouldShowFixedJoinButton = !isCaptain && !isMember && !hasInvitation;
   const fixedJoinButtonTitle = hasPendingRequest ? 'Demande en attente' : 'Demander a rejoindre';
-  const scrollBottomPadding = shouldShowFixedJoinButton ? 120 : 28;
+  const scrollBottomPadding = shouldShowFixedJoinButton
+    ? Math.max(sceneBottomInset, floatingActionBottomOffset + 92)
+    : sceneBottomInset;
 
   const {
     data: inviteSearchResults,
@@ -617,23 +621,29 @@ function SquadDetailsScreen({ navigation, route }) {
 
   const handleShare = useCallback(() => {
     const squadId = team?.documentId || safeTeamId;
+    const inviterName = [currentUser?.firstname, currentUser?.lastname].filter(Boolean).join(' ').trim();
+    const squadName = String(team?.name || '').trim();
+    const intro = inviterName
+      ? `${inviterName} vous invite a rejoindre sa squad${squadName ? ` ${squadName}` : ''} sur FoundClub League.`
+      : `Rejoins${squadName ? ` la squad ${squadName}` : ' une squad'} sur FoundClub League.`;
     const shareUrl = buildInstallLandingUrl({
       id: squadId,
+      invite: true,
       source: 'share',
       type: 'squad',
     });
     const message = buildShareMessageWithUrl({
-      intro: `Rejoins ma squad ${team?.name || ''} sur FoundClub League !`,
+      intro,
       linkLabel: 'Ouvrir dans FoundClub',
       url: shareUrl,
     });
 
     SharePlatform.share({
       message,
-      title: `Rejoins ${team?.name || 'ma squad'} !`,
+      title: inviterName ? `${inviterName} vous invite` : `Rejoins ${squadName || 'une squad'}`,
       url: shareUrl,
     }).catch(() => undefined);
-  }, [safeTeamId, team?.documentId, team?.name]);
+  }, [currentUser?.firstname, currentUser?.lastname, safeTeamId, team?.documentId, team?.name]);
 
   const handleRequestJoin = useCallback(async () => {
     try {
@@ -1029,11 +1039,11 @@ function SquadDetailsScreen({ navigation, route }) {
   }, [canViewStatistics, focusSection, navigation, sectionOffsets]);
 
   const handleDeleteTeam = useCallback(() => {
-    const teamDisplayName = String(team?.name || '').trim() || t('squadDetails.defaultName', 'Équipe');
+    const teamDisplayName = String(team?.name || '').trim() || t('squadDetails.defaultName', 'Squad');
     Alert.alert(
-      t('squadDetails.delete.title', "Supprimer l'équipe"),
+      t('squadDetails.delete.title', 'Supprimer la squad'),
       t('squadDetails.delete.confirmationWithName', {
-        defaultValue: `Êtes-vous sûr de vouloir supprimer l'équipe "${teamDisplayName}" ? Cette action est irréversible.`,
+        defaultValue: `Êtes-vous sûr de vouloir supprimer la squad "${teamDisplayName}" ? Cette action est irréversible.`,
         teamName: teamDisplayName,
       }),
       [
@@ -1048,14 +1058,14 @@ function SquadDetailsScreen({ navigation, route }) {
               console.error(error);
               Alert.alert(
                 t('common.error', 'Erreur'),
-                t('squadDetails.actions.deleteTeamError', 'Impossible de supprimer l\'équipe.'),
+                t('squadDetails.actions.deleteTeamError', 'Impossible de supprimer la squad.'),
               );
             } finally {
               setIsUpdating(false);
             }
           },
           style: 'destructive',
-          text: t('common.delete', 'Supprimer'),
+          text: t('squadDetails.actions.deleteTeam', 'Supprimer la squad'),
         },
       ],
     );
@@ -1086,7 +1096,7 @@ function SquadDetailsScreen({ navigation, route }) {
         {
           onPress: handleDeleteTeam,
           style: 'destructive',
-          text: t('squadDetails.actions.deleteTeam', 'Supprimer l\'équipe'),
+          text: t('squadDetails.actions.deleteTeam', 'Supprimer la squad'),
         },
       ],
     );
@@ -1205,14 +1215,15 @@ function SquadDetailsScreen({ navigation, route }) {
       description: slotCount > 0
         ? `La squad vit d\u00E9j\u00E0 autour de ${nextSlotLongLabel}. Rejoignez-la pour participer.`
         : "Rejoignez cette squad pour acc\u00E9der aux cr\u00E9neaux et \u00E0 l'effectif complet.",
-      primaryLabel: 'Voir les cr\u00E9neaux',
-      primaryPress: () => handleScrollToSection('slots'),
-      secondaryLabel: "Voir l'effectif",
-      secondaryPress: () => handleScrollToSection('effectif'),
+      primaryLabel: 'Demander a rejoindre',
+      primaryPress: handleRequestJoin,
+      secondaryLabel: slotCount > 0 ? 'Voir les cr\u00E9neaux' : "Voir l'effectif",
+      secondaryPress: () => handleScrollToSection(slotCount > 0 ? 'slots' : 'effectif'),
       title: 'Rejoignez cette squad',
     };
   }, [
     handleCancelJoinRequest,
+    handleRequestJoin,
     handleRespondToInvitation,
     handleScrollToSection,
     hasInvitation,
@@ -2525,18 +2536,39 @@ function SquadDetailsScreen({ navigation, route }) {
 
       </ScrollView>
       {shouldShowFixedJoinButton ? (
-        <Button
-          disabled={hasPendingRequest}
-          isLoading={!hasPendingRequest && isUpdating}
-          onPress={handleRequestJoin}
-          style={[
-            Spaces.marginTop[12],
-            Spaces.marginBottom[24],
-            hasPendingRequest ? { opacity: 0.7 } : null,
-          ]}
-          title={fixedJoinButtonTitle}
-          variant="Primary"
-        />
+        <View
+          style={{
+            backgroundColor: 'rgba(3, 15, 25, 0.94)',
+            borderColor: `${Colors.primary500}33`,
+            borderRadius: 24,
+            borderWidth: 1,
+            bottom: floatingActionBottomOffset,
+            elevation: 12,
+            left: 0,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            position: 'absolute',
+            right: 0,
+            shadowColor: Colors.primary900,
+            shadowOffset: { height: 8, width: 0 },
+            shadowOpacity: 0.28,
+            shadowRadius: 18,
+          }}
+        >
+          <Text style={[Fonts.p4Bold, { color: Colors.primary100, marginBottom: 8, textAlign: 'center' }]}>
+            {hasPendingRequest
+              ? 'Votre demande attend la validation du capitaine'
+              : 'Envoyer une demande au capitaine de la squad'}
+          </Text>
+          <Button
+            disabled={hasPendingRequest}
+            isLoading={!hasPendingRequest && isUpdating}
+            onPress={handleRequestJoin}
+            style={hasPendingRequest ? { opacity: 0.75 } : null}
+            title={fixedJoinButtonTitle}
+            variant="Primary"
+          />
+        </View>
       ) : null}
       <BottomModal
         close={() => setIsInviteModalVisible(false)}

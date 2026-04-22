@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  RefreshControl, ScrollView, Text, TouchableOpacity, View,
+  Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -10,6 +10,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
@@ -33,7 +34,8 @@ import {
   getRanking,
 } from '@/services/leagueTeam/leagueTeamService';
 
-import { getEntityDocumentId } from '@/utils/entityId';
+import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+import { getImageUrl } from '@/utils/imageUrl';
 import { clampLeagueDivision, getNextDivisionTargetElo } from '@/utils/league/division';
 
 /**
@@ -82,6 +84,50 @@ const formatLeagueDashboardDate = (value) => {
     return 'Date \u00E0 d\u00E9finir';
   }
 };
+
+/**
+ * Resolve Strapi media URL from the common nested media shapes.
+ * @param {unknown} media
+ * @returns {string | undefined}
+ */
+const resolveMediaUrl = (media) => {
+  if (!media) return undefined;
+  if (typeof media === 'string') return media;
+  if (typeof media !== 'object') return undefined;
+
+  const source = /** @type {Record<string, any>} */ (media);
+  const direct = [source.url, source.uri, source.path].find(
+    (value) => typeof value === 'string' && value.length > 0,
+  );
+  if (direct) return direct;
+
+  const attributes = source.attributes && typeof source.attributes === 'object'
+    ? /** @type {Record<string, any>} */ (source.attributes)
+    : null;
+  return attributes
+    ? [attributes.url, attributes.uri, attributes.path].find(
+      (value) => typeof value === 'string' && value.length > 0,
+    )
+    : undefined;
+};
+
+/**
+ * @param {Team | null | undefined} squad
+ * @returns {string | undefined}
+ */
+const getSquadLogoUri = (squad) => {
+  const media = squad?.crest || squad?.logo || squad?.club?.logo;
+  return getImageUrl(resolveMediaUrl(media));
+};
+
+/**
+ * @param {string | undefined | null} squadName
+ * @returns {string}
+ */
+const getSquadShieldInitials = (squadName) => String(squadName || 'SQ')
+  .trim()
+  .slice(0, 2)
+  .toUpperCase();
 
 const LEAGUE_ACTION_META = {
   confirmed_upcoming: {
@@ -192,18 +238,21 @@ const resolveLeagueActionStateKey = (leagueActionState) => {
  */
 function LeagueDashboard() {
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const navigation = /** @type {any} */ (useNavigation());
 
   const [userTeam, setUserTeam] = useState(/** @type {Team | null} */ (null));
+  const [allSquads, setAllSquads] = useState(/** @type {Team[]} */ ([]));
+  const [activeSquadId, setActiveSquadId] = useState('');
   const [matchHistory, setMatchHistory] = useState(/** @type {MatchHistoryEntry[]} */ ([]));
   const [rankingData, setRankingData] = useState(/** @type {Team[]} */ ([]));
   const [invitedSquads, setInvitedSquads] = useState(/** @type {Team[]} */ ([]));
   const [pendingSquads, setPendingSquads] = useState(/** @type {Team[]} */ ([]));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [isSquadSelectorVisible, setIsSquadSelectorVisible] = useState(false);
   const [leagueActionState, setLeagueActionState] = useState(/** @type {any | null} */ (null));
   const [conversationFallbackState, setConversationFallbackState] = useState(/** @type {any | null} */ (null));
   const leagueSurface = {
@@ -211,53 +260,65 @@ function LeagueDashboard() {
     borderColor: 'rgba(1, 179, 244, 0.22)',
   };
 
+  const hydrateSquadDashboard = useCallback(async (/** @type {Team | null} */ team) => {
+    setUserTeam(team);
+    setLeagueActionState(null);
+    setMatchHistory([]);
+    setRankingData([]);
+
+    if (!team) return;
+
+    const teamId = getEntityDocumentId(team);
+    try {
+      if (teamId) {
+        const searchState = await MatchmakingService.getActiveRequest(teamId);
+        setLeagueActionState(searchState || null);
+      }
+
+      const [history, rankings] = await Promise.all([
+        teamId ? getMatchHistory(teamId, 5) : Promise.resolve([]),
+        getRanking(clampLeagueDivision(team?.division)),
+      ]);
+      setMatchHistory(Array.isArray(history) ? history : []);
+      setRankingData(Array.isArray(rankings) ? rankings : []);
+    } catch (historyErr) {
+      console.log('Data fetch error:', historyErr);
+      setMatchHistory([]);
+      setRankingData([]);
+      setLeagueActionState(null);
+    }
+  }, []);
+
   const loadDashboard = useCallback(async () => {
     if (!userData) return;
     setLoading(true);
     setLoadError('');
     try {
       const userId = getEntityDocumentId(userData);
-      const [squads, invitationResults, pendingResults] = await Promise.all([
+      const [squadsResult, invitationResults, pendingResults] = await Promise.all([
         getMyLeagueTeam(userId),
         getInvitedLeagueTeams(userId),
         getPendingLeagueTeams(userId),
       ]);
 
+      const squads = Array.isArray(squadsResult) ? squadsResult : [];
+      setAllSquads(squads);
       setInvitedSquads(Array.isArray(invitationResults) ? invitationResults : []);
       setPendingSquads(Array.isArray(pendingResults) ? pendingResults : []);
 
-      // 1. Get User Team
-      const team = squads && squads.length > 0 ? squads[0] : null;
-      setUserTeam(team);
-      setLeagueActionState(null);
-      setMatchHistory([]);
-      setRankingData([]);
-
-      // 2. Load match history & Rankings if team exists
-      if (team) {
-        try {
-          const teamId = getEntityDocumentId(team);
-          if (teamId) {
-            const searchState = await MatchmakingService.getActiveRequest(teamId);
-            setLeagueActionState(searchState || null);
-          }
-
-          const history = await getMatchHistory(getEntityDocumentId(team), 5);
-          setMatchHistory(Array.isArray(history) ? history : []);
-
-          // Fetch Ranking for current division
-          const division = clampLeagueDivision(team?.division);
-          const rankings = await getRanking(division);
-          setRankingData(Array.isArray(rankings) ? rankings : []);
-        } catch (historyErr) {
-          console.log('Data fetch error:', historyErr);
-          setMatchHistory([]);
-          setRankingData([]);
-          setLeagueActionState(null);
-        }
+      const selectedSquad = activeSquadId
+        ? squads.find((squad) => areSameEntityId(getEntityDocumentId(squad), activeSquadId))
+        : null;
+      const team = selectedSquad || squads[0] || null;
+      const teamId = getEntityDocumentId(team);
+      if (teamId && !activeSquadId) {
+        setActiveSquadId(teamId);
       }
+
+      await hydrateSquadDashboard(team);
     } catch (error) {
       console.error('Dashboard Load Error:', error);
+      setAllSquads([]);
       setInvitedSquads([]);
       setPendingSquads([]);
       setUserTeam(null);
@@ -268,13 +329,28 @@ function LeagueDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [userData]);
+  }, [activeSquadId, hydrateSquadDashboard, userData]);
 
   useFocusEffect(
     useCallback(() => {
       loadDashboard();
     }, [loadDashboard]),
   );
+
+  const handleSquadSwitch = useCallback(async (/** @type {Team} */ squad) => {
+    setIsSquadSelectorVisible(false);
+    const squadId = getEntityDocumentId(squad);
+    if (!squadId || areSameEntityId(squadId, getEntityDocumentId(userTeam))) return;
+
+    setActiveSquadId(squadId);
+    setLoading(true);
+    setLoadError('');
+    try {
+      await hydrateSquadDashboard(squad);
+    } finally {
+      setLoading(false);
+    }
+  }, [hydrateSquadDashboard, userTeam]);
 
   const isCaptainOnDashboard = getEntityDocumentId(userTeam?.captain) === getEntityDocumentId(userData);
   const dashboardPendingRequestsCount = Array.isArray(userTeam?.join_requests)
@@ -459,6 +535,237 @@ function LeagueDashboard() {
         <ProfileButton />
       </View>
     </View>
+  );
+
+  const renderSquadSwitcherBar = () => {
+    if (!userTeam) return null;
+
+    const squadLogoUri = getSquadLogoUri(userTeam);
+    const canSwitchSquad = allSquads.length > 1;
+
+    return (
+      <LeagueCard
+        style={{
+          ...leagueSurface,
+          marginBottom: 16,
+          paddingHorizontal: 14,
+          paddingVertical: 14,
+        }}
+      >
+        <View style={{ alignItems: 'center', flexDirection: 'row', width: '100%' }}>
+          <View
+            style={{
+              alignItems: 'center',
+              backgroundColor: 'rgba(0, 18, 24, 0.74)',
+              borderColor: squadLogoUri ? 'rgba(1, 179, 244, 0.48)' : 'rgba(255, 215, 0, 0.55)',
+              borderRadius: 26,
+              borderWidth: 1,
+              height: 52,
+              justifyContent: 'center',
+              marginRight: 12,
+              overflow: 'hidden',
+              width: 52,
+            }}
+          >
+            {squadLogoUri ? (
+              <Image
+                resizeMode="cover"
+                source={{ uri: squadLogoUri }}
+                style={{ height: 48, width: 48 }}
+              />
+            ) : (
+              <TeamShield
+                initials={getSquadShieldInitials(userTeam?.name)}
+                isGold
+                size={44}
+              />
+            )}
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
+            <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4, textTransform: 'uppercase' }]}>
+              Vue squad active
+            </Text>
+            <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+              {userTeam?.name || 'Votre squad'}
+            </Text>
+            <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 3 }]}>
+              {userTeam?.sport || 'Sport'}
+              {' - Div '}
+              <Text style={{ color: Colors.gold500 }}>{clampLeagueDivision(userTeam?.division)}</Text>
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            accessibilityHint="Ouvre la liste des squads League"
+            accessibilityLabel="Changer de squad"
+            accessibilityRole="button"
+            activeOpacity={canSwitchSquad ? 0.8 : 1}
+            disabled={!canSwitchSquad}
+            onPress={() => setIsSquadSelectorVisible(true)}
+            style={{
+              alignItems: 'center',
+              backgroundColor: canSwitchSquad ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255,255,255,0.04)',
+              borderColor: canSwitchSquad ? 'rgba(1, 179, 244, 0.58)' : 'rgba(255,255,255,0.08)',
+              borderRadius: 999,
+              borderWidth: 1,
+              flexDirection: 'row',
+              minHeight: 34,
+              opacity: canSwitchSquad ? 1 : 0.72,
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: canSwitchSquad ? Colors.primary500 : Colors.neutral300, marginRight: canSwitchSquad ? 6 : 0 }]}>
+              {canSwitchSquad ? 'Changer' : 'Unique'}
+            </Text>
+            {canSwitchSquad ? (
+              <Image
+                source={Images.chevronDown}
+                style={{ height: 12, tintColor: Colors.primary500, width: 12 }}
+              />
+            ) : null}
+          </TouchableOpacity>
+        </View>
+      </LeagueCard>
+    );
+  };
+
+  const renderSquadSelectorModal = () => (
+    <BottomModal
+      close={() => setIsSquadSelectorVisible(false)}
+      closeIconTintColor="primary200"
+      contentContainerStyle={{ paddingBottom: 18 }}
+      headerComponent={(
+        <View style={{ alignItems: 'center' }}>
+          <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
+            Changer de squad
+          </Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
+            Selectionnez la squad active pour votre dashboard League.
+          </Text>
+        </View>
+      )}
+      isVisible={isSquadSelectorVisible}
+      snapPoints={['48%', '76%']}
+      style={{
+        backgroundColor: Colors.primary900,
+        borderColor: 'rgba(1, 179, 244, 0.30)',
+        borderWidth: 1,
+      }}
+    >
+      <View style={{ paddingBottom: 24 }}>
+        {allSquads.length === 0 ? (
+          <LeagueCard
+            style={{
+              ...leagueSurface,
+              alignItems: 'center',
+              marginBottom: 0,
+              paddingHorizontal: 16,
+              paddingVertical: 18,
+            }}
+          >
+            <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+              Aucune squad disponible.
+            </Text>
+          </LeagueCard>
+        ) : null}
+
+        {allSquads.map((/** @type {Team} */ squad) => {
+          const squadId = getEntityDocumentId(squad);
+          const isActiveSquad = areSameEntityId(squadId, getEntityDocumentId(userTeam));
+          const squadLogoUri = getSquadLogoUri(squad);
+          const hasSquadLogo = Boolean(squadLogoUri);
+
+          return (
+            <TouchableOpacity
+              activeOpacity={0.82}
+              key={squadId || squad?.id || squad?.name}
+              onPress={() => handleSquadSwitch(squad)}
+              style={{
+                alignItems: 'center',
+                backgroundColor: isActiveSquad ? 'rgba(1, 179, 244, 0.18)' : 'rgba(23, 56, 68, 0.52)',
+                borderColor: isActiveSquad ? 'rgba(1, 179, 244, 0.78)' : 'rgba(1, 179, 244, 0.35)',
+                borderRadius: 16,
+                borderWidth: 1,
+                flexDirection: 'row',
+                marginBottom: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+              }}
+            >
+              <View
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(0, 18, 24, 0.72)',
+                  borderColor: hasSquadLogo ? 'rgba(1, 179, 244, 0.48)' : 'rgba(255, 215, 0, 0.55)',
+                  borderRadius: 28,
+                  borderWidth: 1,
+                  height: 56,
+                  justifyContent: 'center',
+                  marginRight: 12,
+                  overflow: 'hidden',
+                  padding: 2,
+                  width: 56,
+                }}
+              >
+                {hasSquadLogo ? (
+                  <Image
+                    resizeMode="cover"
+                    source={{ uri: squadLogoUri }}
+                    style={{ height: 52, width: 52 }}
+                  />
+                ) : (
+                  <TeamShield
+                    initials={getSquadShieldInitials(squad?.name)}
+                    isGold
+                    size={48}
+                  />
+                )}
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, marginRight: 8 }]}>
+                    {squad?.name || 'Squad'}
+                  </Text>
+                  {isActiveSquad ? (
+                    <View
+                      style={{
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(1, 179, 244, 0.14)',
+                        borderColor: 'rgba(1, 179, 244, 0.45)',
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        flexDirection: 'row',
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                      }}
+                    >
+                      <Image
+                        source={Images.check}
+                        style={{
+                          height: 12,
+                          marginRight: 4,
+                          tintColor: Colors.primary500,
+                          width: 12,
+                        }}
+                      />
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Actif</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
+                  {squad?.sport || 'Sport'}
+                  {' - Div '}
+                  <Text style={{ color: Colors.gold500 }}>{clampLeagueDivision(squad?.division)}</Text>
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </BottomModal>
   );
 
   const renderSquadSignalCard = (/** @type {Team} */ squad, /** @type {'invited' | 'pending'} */ state) => {
@@ -1026,6 +1333,8 @@ function LeagueDashboard() {
           renderNoTeamState()
         ) : (
           <>
+            {renderSquadSwitcherBar()}
+
             <CompetitiveHero
               division={userTeam.division}
               elo={userTeam.elo}
@@ -1069,6 +1378,7 @@ function LeagueDashboard() {
         )}
 
       </ScrollView>
+      {renderSquadSelectorModal()}
       <BottomModal
         close={() => setConversationFallbackState(null)}
         isVisible={Boolean(conversationFallbackState)}

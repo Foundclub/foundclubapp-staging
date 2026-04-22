@@ -311,8 +311,8 @@ function LeagueMatchDetails({ navigation, route }) {
     if (teamSide && lastProposalSide) {
       return lastProposalSide === teamSide ? 'proposal_sent_waiting' : 'proposal_received';
     }
-    return match?.chat ? 'opponent_found' : null;
-  }, [lastProposalSide, match?.chat, matchPhase, teamSide]);
+    return 'opponent_found';
+  }, [lastProposalSide, matchPhase, teamSide]);
   const negotiationState = useMemo(() => {
     const nextState = String(pendingLeagueAction?.state || '').trim();
     if (
@@ -333,6 +333,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const negotiationProposalMessageId = String(pendingLeagueAction?.proposalMessageId || '').trim();
   const hasNegotiationConversation = Boolean(getEntityDocumentId(match?.chat));
   const canReplyFromNegotiationCard = negotiationState === 'proposal_received' && Boolean(negotiationProposalMessageId);
+  const canCreateFirstProposalFromNegotiationCard = negotiationState === 'opponent_found';
   const canCounterProposeFromNegotiationCard = Boolean(
     hasNegotiationConversation && ['proposal_received', 'proposal_sent_waiting'].includes(String(negotiationState || '')),
   );
@@ -355,7 +356,7 @@ function LeagueMatchDetails({ navigation, route }) {
       origin = 'Envoy\u00E9e par votre squad';
     } else if (negotiationState === 'opponent_found') {
       title = 'Adversaire trouve';
-      helper = 'Le match est cree. Lancez la conversation pour envoyer la premiere proposition.';
+      helper = 'Le match est cree. Envoyez une proposition de date et de terrain pour lancer la negociation.';
       origin = 'Aucune proposition d\u00E9finitive pour le moment';
     }
 
@@ -376,6 +377,21 @@ function LeagueMatchDetails({ navigation, route }) {
     };
   }, [negotiationProposalDate, negotiationState]);
   const renderNegotiationActions = useCallback(() => {
+    if (canCreateFirstProposalFromNegotiationCard && !hasNegotiationConversation) {
+      return (
+        <View style={{ gap: 10, marginTop: 16 }}>
+          <Button
+            disabled={actionLoading}
+            onPress={handleOpenCounterProposal}
+            style={{ backgroundColor: Colors.gold500 }}
+            textStyle={{ color: Colors.primary900 }}
+            title="Envoyer une proposition"
+            variant="Primary"
+          />
+        </View>
+      );
+    }
+
     if (canReplyFromNegotiationCard) {
       return (
         <View style={{ gap: 10, marginTop: 16 }}>
@@ -417,11 +433,15 @@ function LeagueMatchDetails({ navigation, route }) {
     return null;
   }, [
     actionLoading,
+    canCreateFirstProposalFromNegotiationCard,
     canCounterProposeFromNegotiationCard,
     canReplyFromNegotiationCard,
+    Colors.gold500,
+    Colors.primary900,
+    handleOpenCounterProposal,
+    hasNegotiationConversation,
     handleAcceptNegotiationProposal,
     handleDeclineNegotiationProposal,
-    handleOpenCounterProposal,
   ]);
   const renderPostSlotResolutionActions = useCallback(() => {
     if (effectivePostSlotResolutionStep === 'choose_not_played_action') {
@@ -1344,7 +1364,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
   const handleSendCounterProposal = useCallback(async (proposalData) => {
     const chatId = getEntityDocumentId(match?.chat);
-    if (!matchId || !chatId || actionLoading) return;
+    if (!matchId || actionLoading) return;
 
     try {
       const proposalPayload = buildCanonicalLeagueProposalPayload(proposalData);
@@ -1366,20 +1386,23 @@ function LeagueMatchDetails({ navigation, route }) {
       if (!legalAcceptance) return;
 
       setActionLoading(true);
-      await createLeagueProposal(matchId, proposalPayload, { legalAcceptance });
+      const result = await createLeagueProposal(matchId, proposalPayload, { legalAcceptance });
       invalidateLeagueQueries();
       await refetchPendingLeagueAction();
       await loadMatch();
       setIsNegotiationModalVisible(false);
-      navigation.navigate(RouteNames.Conversation, {
-        chatId,
-        focusLatestProposal: true,
-        leagueNegotiationFocusToken: String(Date.now()),
-        subTitle: 'Negociation du match en cours',
-        title: isAnonymous
-          ? `${myTeam?.name || 'Votre squad'} vs Adversaire`
-          : `${match?.team_a?.name} vs ${match?.team_b?.name}`,
-      });
+      const nextChatId = getEntityDocumentId(result?.match?.chat) || chatId;
+      if (nextChatId) {
+        navigation.navigate(RouteNames.Conversation, {
+          chatId: nextChatId,
+          focusLatestProposal: true,
+          leagueNegotiationFocusToken: String(Date.now()),
+          subTitle: 'Negociation du match en cours',
+          title: isAnonymous
+            ? `${myTeam?.name || 'Votre squad'} vs Adversaire`
+            : `${match?.team_a?.name} vs ${match?.team_b?.name}`,
+        });
+      }
     } catch (error) {
       if (isAlreadyResolvedError(error)) {
         invalidateLeagueQueries();
@@ -1844,10 +1867,10 @@ function LeagueMatchDetails({ navigation, route }) {
                   <View style={{ gap: 10, marginTop: 16 }}>
                     <Button
                       disabled={actionLoading}
-                      onPress={handleOpenChat}
+                      onPress={canCreateFirstProposalFromNegotiationCard ? handleOpenCounterProposal : handleOpenChat}
                       style={{ backgroundColor: Colors.gold500 }}
                       textStyle={{ color: Colors.primary900 }}
-                      title="Repondre"
+                      title={canCreateFirstProposalFromNegotiationCard ? 'Envoyer une proposition' : 'Repondre'}
                       variant="Primary"
                     />
                     <Button

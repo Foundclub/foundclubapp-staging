@@ -7,7 +7,11 @@ import useTheme from '@/theme/themeContext';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 
-import { clampLeagueDivision, getNextDivisionTargetElo, isMaxDivision } from '@/utils/league/division';
+import {
+  clampLeagueDivision,
+  getDivisionProgressState,
+  getNextDivisionTargetElo,
+} from '@/utils/league/division';
 
 /**
  * Hero component for League Dashboard.
@@ -35,12 +39,12 @@ function CompetitiveHero({
   const targetElo = Number.isFinite(Number(nextDivisionElo))
     ? Number(nextDivisionElo)
     : getNextDivisionTargetElo(normalizedDivision);
-  const maxDivisionReached = isMaxDivision(normalizedDivision);
-  const range = 200;
-  const minElo = Number.isFinite(targetElo) ? targetElo - range : elo;
-  const progress = Number.isFinite(targetElo)
-    ? Math.min(Math.max(((elo - minElo) / range) * 100, 0), 100)
-    : 100;
+  const progressState = getDivisionProgressState(elo, normalizedDivision, { targetElo });
+  const {
+    maxDivisionReached,
+    pointsToPromotion,
+    progressPercent: progress,
+  } = progressState;
 
   return (
     <LeagueCard
@@ -106,7 +110,7 @@ function CompetitiveHero({
               <Text style={{ color: Colors.gold500 }}>Tu es déjà au plus haut niveau.</Text>
             ) : (
               <>
-                <Text style={{ color: Colors.gold500 }}>{Math.max((targetElo || elo) - elo, 0)}</Text>
+                <Text style={{ color: Colors.gold500 }}>{Math.round(pointsToPromotion)}</Text>
                 {' '}
                 points pour la promotion
               </>

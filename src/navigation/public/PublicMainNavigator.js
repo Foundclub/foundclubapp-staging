@@ -6,6 +6,7 @@ import ClubDetails from '@/views/club/ClubDetails';
 import ClubFilters from '@/views/club/ClubFilters';
 import EventDetails from '@/views/event/EventDetails';
 import EventFilters from '@/views/event/EventFilters';
+import SquadDetailsScreen from '@/views/league/details/SquadDetailsScreen';
 import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
 import RecruitmentAdFilters from '@/views/recruitment/RecruitmentAdFilters';
 import ReservationDetails from '@/views/reservation/ReservationDetails';
@@ -68,6 +69,14 @@ function PublicNavigator() {
         options={{
           ...commonOptions,
           headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={SquadDetailsScreen}
+        name={RouteNames.SquadDetails}
+        options={{
+          ...commonOptions,
+          headerShown: false,
         }}
       />
       <Stack.Screen

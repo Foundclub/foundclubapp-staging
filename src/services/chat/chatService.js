@@ -113,8 +113,8 @@ const buildChatDetailPopulate = ({ includeMessages = false } = {}) => {
     },
     league_match: {
       populate: {
-        team_a: { populate: ['captain'] },
-        team_b: { populate: ['captain'] },
+        team_a: { populate: ['captain', 'roster'] },
+        team_b: { populate: ['captain', 'roster'] },
         winner: true,
       },
     },
@@ -298,8 +298,8 @@ export const getChatById = async (chatId, options = {}) => {
             },
           },
           populate: {
-            team_a: { populate: ['captain'] },
-            team_b: { populate: ['captain'] },
+            team_a: { populate: ['captain', 'roster'] },
+            team_b: { populate: ['captain', 'roster'] },
             winner: true,
           },
         },

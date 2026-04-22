@@ -193,6 +193,49 @@ const NON_EDITABLE_MESSAGE_COMPOSITION_TYPES = new Set([
   'voice_note',
 ]);
 
+const normalizeLeagueTeamSide = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'a' || normalized === 'b' ? normalized : '';
+};
+
+const addLeagueTeamUserId = (ids, userLike) => {
+  [
+    getEntityDocumentId(userLike),
+    userLike?.documentId,
+    userLike?.id,
+  ].forEach((candidateId) => {
+    const normalizedId = String(candidateId || '').trim();
+    if (normalizedId) ids.add(normalizedId);
+  });
+};
+
+const collectLeagueTeamUserIds = (team) => {
+  const ids = new Set();
+  addLeagueTeamUserId(ids, team?.captain);
+
+  ['roster', 'members', 'players'].forEach((key) => {
+    if (!Array.isArray(team?.[key])) return;
+    team[key].forEach((member) => addLeagueTeamUserId(ids, member));
+  });
+
+  return ids;
+};
+
+const getMessageEntityId = (message) => String(
+  message?.documentId
+  || message?._id
+  || message?.id
+  || '',
+).trim();
+
+const getMessageSenderId = (message) => String(
+  message?.senderDocumentId
+  || message?.sender?.documentId
+  || message?.sender?.id
+  || message?.user?._id
+  || '',
+).trim();
+
 let clipboardModule;
 const getClipboardModule = () => {
   if (clipboardModule !== undefined) return clipboardModule;
@@ -3156,10 +3199,11 @@ function Conversation({ navigation, route }) {
 
       const senderAvatarUrl = msg.sender?.avatar?.url || '';
       const avatarUrl = resolveMediaUri(senderAvatarUrl);
+      const senderEntityId = getEntityDocumentId(msg.sender);
       const stableMessageId = String(
         msg?.documentId
         || msg?.id
-        || `${msg?.createdAt || 'message'}-${msg?.sender?.documentId || msg?.sender?.id || 'system'}`,
+        || `${msg?.createdAt || 'message'}-${senderEntityId || 'system'}`,
       ).trim();
 
       return {
@@ -3174,10 +3218,10 @@ function Conversation({ navigation, route }) {
         pending: msg.pending,
         readBy: msg.readBy,
         replyTo: msg.replyTo,
-        senderDocumentId: msg.sender?.documentId || '',
+        senderDocumentId: senderEntityId,
         text: msg.message,
         user: {
-          _id: msg.sender?.documentId || '',
+          _id: senderEntityId,
           avatar: avatarUrl,
           name: getAnonymizedName(msg.sender),
         },
@@ -3258,19 +3302,78 @@ function Conversation({ navigation, route }) {
   ).trim();
   const leagueConversationMatch = chatData?.league_match || null;
   const leagueConversationMatchId = getEntityDocumentId(leagueConversationMatch);
-  const latestProposalSenderId = String(latestProposalMessage?.senderDocumentId || latestProposalMessage?.user?._id || '').trim();
+  const teamAUserIds = useMemo(
+    () => collectLeagueTeamUserIds(leagueConversationMatch?.team_a),
+    [leagueConversationMatch?.team_a],
+  );
+  const teamBUserIds = useMemo(
+    () => collectLeagueTeamUserIds(leagueConversationMatch?.team_b),
+    [leagueConversationMatch?.team_b],
+  );
+  const currentUserLeagueSide = useMemo(() => {
+    const currentUserIds = new Set();
+    addLeagueTeamUserId(currentUserIds, userData);
+    const currentUserBelongsToTeamA = Array.from(currentUserIds).some((userId) => teamAUserIds.has(userId));
+    if (currentUserBelongsToTeamA) return 'a';
+
+    const currentUserBelongsToTeamB = Array.from(currentUserIds).some((userId) => teamBUserIds.has(userId));
+    if (currentUserBelongsToTeamB) return 'b';
+
+    return '';
+  }, [teamAUserIds, teamBUserIds, userData]);
   const myTeamMemberIds = useMemo(() => {
-    const ids = new Set();
+    let ownSideIds = [];
+    if (currentUserLeagueSide === 'a') {
+      ownSideIds = teamAUserIds;
+    } else if (currentUserLeagueSide === 'b') {
+      ownSideIds = teamBUserIds;
+    }
+
+    const ids = new Set(ownSideIds);
     const members = Array.isArray(chatData?.myTeamMembers) ? chatData.myTeamMembers : [];
-    members.forEach((member) => {
-      const memberId = getEntityDocumentId(member);
-      if (memberId) ids.add(memberId);
-    });
-    if (userData?.documentId) ids.add(String(userData.documentId));
+    members.forEach((member) => addLeagueTeamUserId(ids, member));
+    addLeagueTeamUserId(ids, userData);
     return ids;
-  }, [chatData?.myTeamMembers, userData?.documentId]);
-  const isLatestProposalFromMySquad = Boolean(
-    latestProposalSenderId && myTeamMemberIds.has(latestProposalSenderId),
+  }, [chatData?.myTeamMembers, currentUserLeagueSide, teamAUserIds, teamBUserIds, userData]);
+  const getLeagueSideForUserId = useCallback((userId) => {
+    const safeUserId = String(userId || '').trim();
+    if (!safeUserId) return '';
+    if (teamAUserIds.has(safeUserId)) return 'a';
+    if (teamBUserIds.has(safeUserId)) return 'b';
+    return '';
+  }, [teamAUserIds, teamBUserIds]);
+  const getProposalAuthorSide = useCallback((message) => {
+    const proposal = message?.composition || {};
+    const explicitSide = normalizeLeagueTeamSide(
+      proposal.proposalSide
+      || proposal.senderTeamSide
+      || proposal.teamSide
+      || proposal.authorSide,
+    );
+    if (explicitSide) return explicitSide;
+
+    const messageId = getMessageEntityId(message);
+    if (messageId && latestProposalMessageId && messageId === latestProposalMessageId) {
+      const latestProposalSide = normalizeLeagueTeamSide(
+        leagueConversationMatch?.automation_meta?.last_proposal_by_side,
+      );
+      if (latestProposalSide) return latestProposalSide;
+    }
+
+    return getLeagueSideForUserId(getMessageSenderId(message));
+  }, [getLeagueSideForUserId, latestProposalMessageId, leagueConversationMatch?.automation_meta]);
+  const isProposalMessageFromMySquad = useCallback((message) => {
+    const proposalAuthorSide = getProposalAuthorSide(message);
+    if (proposalAuthorSide && currentUserLeagueSide) {
+      return proposalAuthorSide === currentUserLeagueSide;
+    }
+
+    const proposalSenderId = getMessageSenderId(message);
+    return Boolean(proposalSenderId && myTeamMemberIds.has(proposalSenderId));
+  }, [currentUserLeagueSide, getProposalAuthorSide, myTeamMemberIds]);
+  const isLatestProposalFromMySquad = useMemo(
+    () => isProposalMessageFromMySquad(latestProposalMessage),
+    [isProposalMessageFromMySquad, latestProposalMessage],
   );
   const leagueNegotiationSummary = useMemo(() => {
     const proposal = latestProposalMessage?.composition || null;
@@ -4424,9 +4527,8 @@ function Conversation({ navigation, route }) {
       }
 
       if (currentMessage.composition.type === 'proposal') {
-        const proposalSenderId = String(currentMessage?.senderDocumentId || currentMessage?.user?._id || '').trim();
         const isProposalFromMySide = isLeagueConversation
-          ? Boolean(proposalSenderId && myTeamMemberIds.has(proposalSenderId))
+          ? isProposalMessageFromMySquad(currentMessage)
           : !isLeft;
 
         return wrapWithMessageInteractions(

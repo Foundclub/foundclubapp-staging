@@ -1,11 +1,10 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import Slider from '@react-native-community/slider';
 import Joi from 'joi';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View,
+  Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -20,7 +19,6 @@ import LeagueStateView from '@/views/league/components/LeagueStateView';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
-import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import { updateLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
 
@@ -47,7 +45,6 @@ function SquadEditScreen({ navigation, route }) {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
-  const { t } = useTranslation();
 
   const {
     data: team,
@@ -61,16 +58,9 @@ function SquadEditScreen({ navigation, route }) {
     isLoading: activitiesLoading,
     refetch: refetchActivities,
   } = useGetActivities();
-  const {
-    data: allCategories,
-    error: categoriesError,
-    isLoading: categoriesLoading,
-    refetch: refetchCategories,
-  } = useGetCategories();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sportSearchValue, setSportSearchValue] = useState('');
-  const [categorySearchValue, setCategorySearchValue] = useState('');
 
   const {
     control, formState: { errors }, handleSubmit, reset, watch,
@@ -89,8 +79,8 @@ function SquadEditScreen({ navigation, route }) {
   });
 
   const radiusValue = watch('radius');
-  const setupError = teamError || activitiesError || categoriesError;
-  const isBootstrapping = isTeamLoading || activitiesLoading || categoriesLoading;
+  const setupError = teamError || activitiesError;
+  const isBootstrapping = isTeamLoading || activitiesLoading;
   const missingTeam = Boolean(safeTeamId) && !isTeamLoading && !teamError && !team;
 
   // Format Activities for AutocompleteSelect
@@ -107,19 +97,6 @@ function SquadEditScreen({ navigation, route }) {
     }
     return formatted;
   }, [allActivities, sportSearchValue]);
-
-  // Format Categories for AutocompleteSelect
-  const categories = useMemo(() => {
-    const formatted = allCategories?.map(({ name }) => ({
-      label: name,
-      value: name,
-    })) || [];
-
-    if (categorySearchValue) {
-      return formatted.filter((c) => c.label.toLowerCase().includes(categorySearchValue.toLowerCase()));
-    }
-    return formatted;
-  }, [allCategories, categorySearchValue]);
 
   const sections = useMemo(() => [
     { label: 'Masculin', value: 'Male' },
@@ -138,7 +115,7 @@ function SquadEditScreen({ navigation, route }) {
       const normalizedHomeBase = normalizeLocationInput(team.home_base);
       reset({
         address: /** @type {any} */ (normalizedHomeBase || null),
-        category: team.category || 'Senior',
+        category: 'Senior',
         division: team.division ? String(team.division) : '',
         elo: team.elo ? String(team.elo) : '',
         name: team.name || '',
@@ -160,7 +137,7 @@ function SquadEditScreen({ navigation, route }) {
       }
 
       await updateLeagueTeam(/** @type {any} */ ({
-        category: data.category,
+        category: 'Senior',
         documentId: teamId,
         home_base: homeBasePayload,
         name: data.name,
@@ -202,11 +179,10 @@ function SquadEditScreen({ navigation, route }) {
     return (
       <LeagueStateView
         actionLabel="Recharger"
-        description={setupError?.message || "Impossible de charger cette squad pour le moment."}
+        description={setupError?.message || 'Impossible de charger cette squad pour le moment.'}
         onAction={() => {
           refetchTeam();
           refetchActivities();
-          refetchCategories();
         }}
         title="Chargement impossible"
       />
@@ -286,23 +262,21 @@ function SquadEditScreen({ navigation, route }) {
             </View>
           </View>
 
-          <Controller
-            control={control}
-            name="category"
-            render={({ field: { onChange, value } }) => (
-              <AutocompleteSelect
-                error={errors.category?.message}
-                isSearchable
-                label="Catégorie"
-                options={categories}
-                placeholder="Ex: Senior"
-                searchValue={categorySearchValue}
-                setSearchValue={setCategorySearchValue}
-                setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
-                value={value}
-              />
-            )}
-          />
+          <View
+            style={{
+              backgroundColor: 'rgba(250, 204, 21, 0.10)',
+              borderColor: 'rgba(250, 204, 21, 0.38)',
+              borderRadius: 16,
+              borderWidth: 1,
+              padding: 14,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.gold500, marginBottom: 4 }]}>Catégorie</Text>
+            <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Senior</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
+              FoundClub League est réservé aux squads Senior.
+            </Text>
+          </View>
 
           <Controller
             control={control}
@@ -343,7 +317,9 @@ function SquadEditScreen({ navigation, route }) {
                 />
               )}
             />
-            <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>Distance max pour vos matchs à l'extérieur</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>
+              {'Distance max pour vos matchs à l\'extérieur'}
+            </Text>
           </View>
 
           <View style={{ marginTop: 24 }}>

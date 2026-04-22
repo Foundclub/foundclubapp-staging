@@ -1,12 +1,9 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
-
-import { getCategories } from '@/services/category/categoryService';
 
 /**
  *
@@ -21,61 +18,37 @@ function SquadCategoryStep({
 }) {
   const { Colors, Fonts } = useTheme();
 
-  const [categories, setCategories] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [loadError, setLoadError] = React.useState('');
-
   React.useEffect(() => {
-    const fetchCategories = async () => {
-      setLoading(true);
-      setLoadError('');
-      try {
-        const result = await getCategories();
-        // Map to format { label: name, value: documentId }
-        const options = result.map((c) => ({
-          label: c.name,
-          value: c.documentId,
-        }));
-        setCategories(options);
-      } catch (error) {
-        setLoadError("Impossible de charger les categories League pour le moment.");
-        setCategories([]);
-        console.error('Error fetching catégories:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  const isValid = useMemo(() => !!data.category, [data.category]);
+    if (data.category?.label !== 'Senior') {
+      updateData('category', { label: 'Senior', value: 'Senior' });
+    }
+  }, [data.category?.label, updateData]);
 
   return (
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
-          Dans quelle catégorie ?
+          Catégorie League
         </Text>
 
-        <AutocompleteSelect
-          isLoading={loading}
-          isSearchable={false}
-          options={categories}
-          placeholder="Sélectionner une catégorie"
-          setValue={(item) => updateData('category', item)}
-          value={data.category?.label}
-        />
-        {loadError ? (
-          <Text style={[Fonts.p3, { color: Colors.error500, marginTop: 12, textAlign: 'center' }]}>
-            {loadError}
+        <View
+          style={{
+            backgroundColor: 'rgba(250, 204, 21, 0.12)',
+            borderColor: 'rgba(250, 204, 21, 0.45)',
+            borderRadius: 18,
+            borderWidth: 1,
+            padding: 18,
+          }}
+        >
+          <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center' }]}>Senior</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral100, marginTop: 10, textAlign: 'center' }]}>
+            FoundClub League est réservé aux squads Senior. Les catégories jeunes ne sont pas disponibles dans ce mode.
           </Text>
-        ) : null}
+        </View>
       </View>
 
       <View style={{ gap: 10, marginBottom: 20 }}>
         <Button
-          disabled={!isValid}
           onPress={onNext}
           title="Continuer"
           variant="Primary"

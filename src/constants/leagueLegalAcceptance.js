@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
-export const LEAGUE_LEGAL_VERSION = 'league-risk-v1-2026-04-21';
-export const LEAGUE_LEGAL_TEXT_HASH = '55050747496a7e95a206b758e37612fea02d407a6e608f55399aa51fc40e7369';
+export const LEAGUE_LEGAL_VERSION = 'league-risk-v2-2026-04-22';
+export const LEAGUE_LEGAL_TEXT_HASH = '940176fac04b4e292d6cc2bef04770ddbe6417220a3fede745f420cb6d8d730a';
 
 export const LEAGUE_LEGAL_SCOPES = Object.freeze({
   GLOBAL: 'league_global',
@@ -14,6 +14,12 @@ export const LEAGUE_LEGAL_SCOPES = Object.freeze({
   TEAM_JOIN_REQUEST: 'league_team_join_request',
 });
 
+export const LEAGUE_ADULT_REQUIRED_SCOPES = Object.freeze([
+  LEAGUE_LEGAL_SCOPES.TEAM_CREATE,
+  LEAGUE_LEGAL_SCOPES.TEAM_INVITATION_ACCEPT,
+  LEAGUE_LEGAL_SCOPES.TEAM_JOIN_REQUEST,
+]);
+
 export const buildLeagueLegalAcceptancePayload = ({
   metadata = {},
   scope,
@@ -23,6 +29,7 @@ export const buildLeagueLegalAcceptancePayload = ({
 } = {}) => ({
   accepted: true,
   consentFlags: {
+    adultAgeConfirmation: LEAGUE_ADULT_REQUIRED_SCOPES.includes(scope),
     captainResponsibility: [
       LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE,
       LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,

@@ -23,9 +23,10 @@ describe('shareLinks utils', () => {
       apiUrl: 'https://impressive-bat-b03c2eeb7d.strapiapp.com/api',
       env: 'staging',
       id: 'team-doc-123',
+      invite: true,
       source: 'sms',
       type: 'team',
-    })).toBe('https://impressive-bat-b03c2eeb7d.strapiapp.com/install.html?env=staging&id=team-doc-123&source=sms&type=team');
+    })).toBe('https://impressive-bat-b03c2eeb7d.strapiapp.com/install.html?env=staging&id=team-doc-123&invite=true&source=sms&type=team');
   });
 
   test('buildFoundClubDeepLink appends invite query only for invite flows', () => {
@@ -39,6 +40,12 @@ describe('shareLinks utils', () => {
       id: 'event-doc-55',
       type: 'event',
     })).toBe('foundclub://event/event-doc-55');
+
+    expect(buildFoundClubDeepLink({
+      id: 'squad-doc-9',
+      invite: true,
+      type: 'league-team',
+    })).toBe('foundclub://squad/squad-doc-9?invite=true');
   });
 
   test('buildShareMessageWithUrl keeps intro and readable link section', () => {

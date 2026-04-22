@@ -229,6 +229,13 @@ export const buildRuntimeEndpoints = ({
     errors.push('API_URL points to a loopback host on a physical device. Use a LAN or remote backend URL.');
   }
 
+  let uploadUrl = '';
+  if (apiUrl) {
+    uploadUrl = `${apiUrl}/upload`;
+  } else if (publicOrigin) {
+    uploadUrl = `${publicOrigin}/api/upload`;
+  }
+
   return {
     apiUrl,
     appEnv: normalizedEnv,
@@ -239,7 +246,7 @@ export const buildRuntimeEndpoints = ({
     publicOrigin: publicOrigin || DEFAULT_PUBLIC_ORIGIN,
     socketUrl,
     source,
-    uploadUrl: publicOrigin ? `${publicOrigin}/upload` : '',
+    uploadUrl,
     warnings,
   };
 };

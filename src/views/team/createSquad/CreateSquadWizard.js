@@ -79,7 +79,7 @@ const canUseWizardStorage = () => (
  */
 const createInitialSquadData = () => /** @type {SquadData} */ ({
   address: null,
-  category: null,
+  category: { label: 'Senior', value: 'Senior' },
   city: '',
   cover: null,
   level: null,
@@ -89,6 +89,11 @@ const createInitialSquadData = () => /** @type {SquadData} */ ({
   section: null,
   slots: [],
   sport: null,
+});
+
+const withSeniorCategory = (data) => ({
+  ...data,
+  category: { label: 'Senior', value: 'Senior' },
 });
 
 const loadPersistedWizardState = () => {
@@ -109,10 +114,10 @@ const loadPersistedWizardState = () => {
     if (!parsed || typeof parsed !== 'object') return initialState;
 
     return {
-      squadData: {
+      squadData: withSeniorCategory({
         ...initialState.squadData,
         ...(parsed.squadData && typeof parsed.squadData === 'object' ? parsed.squadData : {}),
-      },
+      }),
       step: Number.isInteger(parsed.step) && parsed.step > 0 ? parsed.step : 1,
     };
   } catch (_error) {
@@ -224,7 +229,7 @@ function CreateSquadWizard({ navigation }) {
 
       const leagueTeamPayload = {
         captain: user?.documentId ? { connect: [{ documentId: user.documentId }] } : undefined,
-        category: squadData.category?.label || 'Senior',
+        category: 'Senior',
         name: squadData.name,
         roster: user?.documentId ? { connect: [{ documentId: user.documentId }] } : [],
         section: genderEnumMap[squadData.section?.value] || 'Male',

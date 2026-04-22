@@ -21,17 +21,27 @@ export const resolveShareEnvironment = (appEnv = process.env.APP_ENV || process.
 export const buildFoundClubDeepLink = ({ id, invite = false, type }) => {
   if (!type || !id) return null;
 
+  const normalizedType = String(type).trim().toLowerCase();
+  const routeTypeMap = {
+    league_squad: 'squad',
+    league_team: 'squad',
+    'league-squad': 'squad',
+    'league-team': 'squad',
+    squad: 'squad',
+  };
+  const routeType = routeTypeMap[normalizedType] || normalizedType;
   const query = buildQueryString({
     invite: invite ? 'true' : undefined,
   });
 
-  return `foundclub://${encodeURIComponent(type)}/${encodeURIComponent(String(id))}${query ? `?${query}` : ''}`;
+  return `foundclub://${encodeURIComponent(routeType)}/${encodeURIComponent(String(id))}${query ? `?${query}` : ''}`;
 };
 
 export const buildInstallLandingUrl = ({
   apiUrl,
   env = resolveShareEnvironment(),
   id,
+  invite = false,
   source = 'share',
   type,
 }) => {
@@ -39,6 +49,7 @@ export const buildInstallLandingUrl = ({
   const query = buildQueryString({
     env,
     id,
+    invite: invite ? 'true' : undefined,
     source,
     type,
   });

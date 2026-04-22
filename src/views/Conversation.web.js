@@ -26,7 +26,10 @@ import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesC
 import { createChatMessage } from '@/services/chat/chatService'
 import client from '@/services/client'
 import { useGetEvents } from '@/services/event/eventQueries'
-import { confirmMatch, updateMatch } from '@/services/league/leagueMatchService'
+import {
+  createLeagueProposal,
+  respondToLeagueProposal,
+} from '@/services/league/leagueMatchService'
 import { createMessageReport } from '@/services/messageReport/messageReportService'
 import useTheme from '@/theme/themeContext'
 import {
@@ -36,7 +39,10 @@ import {
 } from '@/utils/documentAttachment'
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId'
 import getImageUrl from '@/utils/imageUrl'
-import { buildLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload'
+import {
+  buildCanonicalLeagueProposalPayload,
+  buildLeagueProposalPayload,
+} from '@/views/league/match/utils/proposalPayload'
 import {
   buildLeagueLegalAcceptancePayload,
   LEAGUE_LEGAL_SCOPES,
@@ -757,13 +763,17 @@ function Conversation({ navigation, route }) {
           },
         )
         if (!legalAcceptance) return
-        await updateMatch(leagueMatchId, payload.matchUpdate, { legalAcceptance })
+        await createLeagueProposal(
+          leagueMatchId,
+          buildCanonicalLeagueProposalPayload(payload.message.composition),
+          { legalAcceptance },
+        )
+      } else {
+        await sendChatPayload({
+          composition: payload.message.composition,
+          message: payload.message.message,
+        })
       }
-
-      await sendChatPayload({
-        composition: payload.message.composition,
-        message: payload.message.message,
-      })
     } catch (error) {
       window.alert(error?.message || 'Impossible d envoyer cette proposition.')
     } finally {
@@ -797,9 +807,12 @@ function Conversation({ navigation, route }) {
           },
         )
         if (!legalAcceptance) return
-        await confirmMatch(matchId, { legalAcceptance })
+        await respondToLeagueProposal(matchId, messageId, 'accept', { legalAcceptance })
+      } else if (matchId) {
+        await respondToLeagueProposal(matchId, messageId, 'decline')
+      } else {
+        await respondToProposal(messageId, status)
       }
-      await respondToProposal(messageId, status)
       await invalidateConversationQueries()
     } catch (error) {
       window.alert(error?.message || 'Impossible de repondre a cette proposition.')
