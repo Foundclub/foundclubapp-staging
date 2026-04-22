@@ -11,6 +11,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import {
   addManualLicensePayment,
+  approveExternalLicensePayment,
+  rejectExternalLicensePayment,
   sendLicenseReminder,
   updateLicenseAssignmentAmount,
   useLicenseAssignment,
@@ -18,11 +20,17 @@ import {
   waiveLicenseAssignment,
 } from '@/services/license/licenseQueries';
 
-const money = (value = 0) => new Intl.NumberFormat('fr-FR', { currency: 'EUR', style: 'currency' }).format((value || 0) / 100);
+import {
+  formatLicenseMoney,
+  LicenseCard,
+  LicenseInstallmentList,
+  LicenseMetricRow,
+  LicenseSectionHeader,
+  licenseSpacing,
+  LicenseStatusChip,
+} from './licenseDesignSystem';
+
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
-const statusLabel = {
-  manual_review: 'A valider', overdue: 'En retard', paid: 'Payee', partial: 'Partiel', pending: 'En attente', waived: 'Exemptee',
-};
 
 /**
  *
@@ -56,6 +64,7 @@ function ActionModal({
   } = useTheme();
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const needsAmount = ['amount', 'payment'].includes(type);
   return (
     <BottomModal
       close={onClose}
@@ -67,7 +76,7 @@ function ActionModal({
     >
       <View style={Spaces.gap[16]}>
         <Text style={[Fonts.h3, Fonts.neutral00]}>{title}</Text>
-        {type !== 'waive' ? (
+        {needsAmount ? (
           <TextInput
             keyboardType="decimal-pad"
             onChangeText={setAmount}
@@ -81,14 +90,14 @@ function ActionModal({
         ) : null}
         <TextInput
           onChangeText={setNote}
-          placeholder={type === 'waive' ? 'Motif obligatoire' : 'Note optionnelle'}
+          placeholder={['reject', 'waive'].includes(type) ? 'Motif obligatoire' : 'Note optionnelle'}
           placeholderTextColor={Colors.neutral400}
           style={{
             borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12,
           }}
           value={note}
         />
-        <View style={[Spaces.marginTop[8], { flexDirection: 'row', gap: 12 }]}>
+        <View style={[Spaces.marginTop[8], { flexDirection: 'row', gap: licenseSpacing.actionGap }]}>
           <Button onPress={onClose} style={{ flex: 1 }} title="Annuler" variant="Secondary" />
           <Button onPress={() => onSubmit({ amountCents: euroToCents(amount), note, reason: note })} style={{ flex: 1 }} title="Valider" />
         </View>
@@ -104,7 +113,7 @@ function ActionModal({
  */
 function ClubLicenseMemberDetail({ route }) {
   const {
-    ApplicationStyle, Colors, Fonts, Spaces,
+    Fonts, Spaces,
   } = useTheme();
   const assignmentId = route?.params?.assignmentId;
   const campaignId = route?.params?.campaignId;
@@ -112,87 +121,100 @@ function ClubLicenseMemberDetail({ route }) {
   const assignment = query.data;
   const [modal, setModal] = useState(null);
   const manualPaymentMutation = useLicenseMutation((payload) => addManualLicensePayment(assignmentId, { ...payload, method: 'cash' }), campaignId);
+  const approvePaymentMutation = useLicenseMutation(({ paymentId, ...payload }) => approveExternalLicensePayment(paymentId, payload), campaignId);
+  const rejectPaymentMutation = useLicenseMutation(({ paymentId, ...payload }) => rejectExternalLicensePayment(paymentId, payload), campaignId);
   const amountMutation = useLicenseMutation((payload) => updateLicenseAssignmentAmount(assignmentId, payload), campaignId);
   const waiveMutation = useLicenseMutation((payload) => waiveLicenseAssignment(assignmentId, payload), campaignId);
   const reminderMutation = useLicenseMutation((payload) => sendLicenseReminder(assignmentId, payload), campaignId);
 
   const memberName = [assignment?.user?.firstname, assignment?.user?.lastname].filter(Boolean).join(' ') || assignment?.user?.username || 'Membre';
+  const modalType = modal?.type;
   const modalTitle = {
     amount: 'Modifier le montant',
     payment: 'Valider un paiement',
+    reject: 'Rejeter la declaration',
     waive: 'Exempter la cotisation',
-  }[modal];
+  }[modalType];
+  const pendingReviewPayments = (assignment?.payments || []).filter((payment) => payment.status === 'manual_review');
+  const currency = assignment?.currency || assignment?.campaign?.currency || 'EUR';
 
   const submitModal = useCallback((payload) => {
     const common = { onSuccess: () => { setModal(null); query.refetch(); } };
-    if (modal === 'payment') manualPaymentMutation.mutate(payload, common);
-    if (modal === 'amount') amountMutation.mutate({ amountDueCents: payload.amountCents, note: payload.note }, common);
-    if (modal === 'waive') waiveMutation.mutate({ reason: payload.reason }, common);
-  }, [amountMutation, manualPaymentMutation, modal, query, waiveMutation]);
+    if (modalType === 'payment') manualPaymentMutation.mutate(payload, common);
+    if (modalType === 'amount') amountMutation.mutate({ amountDueCents: payload.amountCents, note: payload.note }, common);
+    if (modalType === 'waive') waiveMutation.mutate({ reason: payload.reason }, common);
+    if (modalType === 'reject') rejectPaymentMutation.mutate({ paymentId: modal.paymentId, reason: payload.reason }, common);
+  }, [amountMutation, manualPaymentMutation, modal, modalType, query, rejectPaymentMutation, waiveMutation]);
 
   const remind = useCallback(() => {
     reminderMutation.mutate({}, { onSuccess: () => Alert.alert('Relance envoyee') });
   }, [reminderMutation]);
 
+  const approvePayment = useCallback((paymentId) => {
+    Alert.alert('Valider le paiement declare', 'Confirmer que le club a bien recu ce paiement ?', [
+      { style: 'cancel', text: 'Annuler' },
+      {
+        onPress: () => approvePaymentMutation.mutate({ paymentId }, {
+          onSuccess: () => query.refetch(),
+        }),
+        text: 'Valider',
+      },
+    ]);
+  }, [approvePaymentMutation, query]);
+
   return (
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-      <ScrollView contentContainerStyle={[Spaces.gap[24], { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
         <View>
           <Text style={[Fonts.h2, Fonts.neutral00]}>{memberName}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
-            {assignment?.team?.name || 'Sans equipe'}
-            {' '}
-            -
-            {' '}
-            {statusLabel[assignment?.status] || assignment?.status || ''}
-          </Text>
-        </View>
-        <View style={[ApplicationStyle.card, {
-          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}66`, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 20,
-        }]}
-        >
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <InfoRow label="Total" value={money(assignment?.amountDueCents)} />
-            <InfoRow label="Paye" value={money(assignment?.amountPaidCents)} />
-            <InfoRow label="Reste" value={money(assignment?.amountRemainingCents)} />
+          <View style={[Spaces.marginTop[8], Spaces.gap[licenseSpacing.titleGap]]}>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>{assignment?.team?.name || 'Sans equipe'}</Text>
+            <LicenseStatusChip status={assignment?.status} />
           </View>
         </View>
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Echeancier</Text>
-        {(assignment?.installments || []).map((installment) => (
-          <View
-            key={installment.id}
-            style={[ApplicationStyle.card, {
-              backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}44`, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 18,
-            }]}
-          >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              Echeance
-              {installment.order}
-              {' '}
-              -
-              {money(installment.amountDueCents)}
-            </Text>
-            <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
-              {installment.dueDate || 'Date non definie'}
-              {' '}
-              -
-              {' '}
-              {statusLabel[installment.status] || installment.status}
-            </Text>
-          </View>
-        ))}
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Actions</Text>
-        <Button onPress={() => setModal('payment')} title="Valider un paiement" />
+        <LicenseCard>
+          <LicenseMetricRow
+            items={[
+              { label: 'Total', value: formatLicenseMoney(assignment?.amountDueCents, currency) },
+              { label: 'Paye', value: formatLicenseMoney(assignment?.amountPaidCents, currency) },
+              { label: 'Reste', value: formatLicenseMoney(assignment?.amountRemainingCents, currency) },
+            ]}
+          />
+        </LicenseCard>
+        {pendingReviewPayments.length ? (
+          <>
+            <LicenseSectionHeader
+              description="Ces declarations viennent du joueur ou d un payeur externe et doivent etre controlees."
+              title="Paiements a valider"
+            />
+            {pendingReviewPayments.map((payment) => (
+              <LicenseCard key={payment.documentId || payment.id}>
+                <View style={Spaces.gap[licenseSpacing.actionGap]}>
+                  <InfoRow label="Montant declare" value={formatLicenseMoney(payment.amountCents, payment.currency || currency)} />
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>{payment.note || payment.externalPaymentId || 'Aucune reference fournie.'}</Text>
+                  <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
+                    <Button isLoading={approvePaymentMutation.isPending} onPress={() => approvePayment(payment.documentId || payment.id)} style={{ flex: 1 }} title="Valider" />
+                    <Button onPress={() => setModal({ paymentId: payment.documentId || payment.id, type: 'reject' })} style={{ flex: 1 }} title="Rejeter" variant="Secondary" />
+                  </View>
+                </View>
+              </LicenseCard>
+            ))}
+          </>
+        ) : null}
+        <LicenseSectionHeader title="Echeancier" />
+        <LicenseInstallmentList currency={currency} installments={assignment?.installments || []} />
+        <LicenseSectionHeader title="Actions" />
+        <Button onPress={() => setModal({ type: 'payment' })} title="Valider un paiement" />
         <Button isLoading={reminderMutation.isPending} onPress={remind} title="Relancer" variant="Secondary" />
-        <Button onPress={() => setModal('amount')} title="Modifier le montant" variant="Secondary" />
-        <Button onPress={() => setModal('waive')} title="Exempter la cotisation" variant="Secondary" />
+        <Button onPress={() => setModal({ type: 'amount' })} title="Modifier le montant" variant="Secondary" />
+        <Button onPress={() => setModal({ type: 'waive' })} title="Exempter la cotisation" variant="Secondary" />
       </ScrollView>
       {modal ? (
         <ActionModal
           onClose={() => setModal(null)}
           onSubmit={submitModal}
           title={modalTitle}
-          type={modal}
+          type={modalType}
         />
       ) : null}
     </ScreenContainer>

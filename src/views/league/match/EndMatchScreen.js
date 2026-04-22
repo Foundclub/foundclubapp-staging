@@ -38,6 +38,8 @@ import MatchmakingService from '@/services/league/MatchmakingService';
 import { getAvailableSlots } from '@/services/teamSlot/teamSlotService';
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+import { buildPadelScorePayload, getSubmissionScoreLabel } from '@/utils/leagueScoreDetails';
+import { getMatchLeagueSportConfig, LEAGUE_SPORT_KEYS } from '@/utils/leagueSportConfig';
 import { getLocationCoordinates, normalizeRadius } from '@/utils/location';
 
 /**
@@ -134,7 +136,11 @@ const DISPUTE_TYPES = [
 const hasSubmissionPayload = (submission) => Boolean(
   submission
       && typeof submission === 'object'
-      && (submission.score_a !== undefined || submission.score_b !== undefined),
+      && (
+        submission.score_a !== undefined
+        || submission.score_b !== undefined
+        || submission.score_details !== undefined
+      ),
 );
 
 const FINAL_RECAP_POLL_DELAYS_MS = [250, 500, 900, 1300, 1800];
@@ -182,6 +188,10 @@ function EndMatchScreen() {
 
   const [scoreA, setScoreA] = useState('0');
   const [scoreB, setScoreB] = useState('0');
+  const [padelSets, setPadelSets] = useState([
+    { a: '', b: '', superTieBreak: false },
+    { a: '', b: '', superTieBreak: false },
+  ]);
   const [dispute, setDispute] = useState(false);
   const [proof, setProof] = useState(/** @type {ProofPayload | null} */ (null));
   const [disputeType, setDisputeType] = useState('score_mismatch');
@@ -200,6 +210,12 @@ function EndMatchScreen() {
     queryKey: ['league-match', matchId],
   });
   const match = /** @type {LeagueMatch | null} */ (matchData || null);
+  const sportConfig = useMemo(() => getMatchLeagueSportConfig(match), [match]);
+  const isPadelMatch = sportConfig.key === LEAGUE_SPORT_KEYS.PADEL;
+  const padelScorePayload = useMemo(
+    () => (isPadelMatch ? buildPadelScorePayload(padelSets) : null),
+    [isPadelMatch, padelSets],
+  );
 
   const currentUserId = getEntityDocumentId(userData);
   const isCaptainA = areSameEntityId(
@@ -237,6 +253,11 @@ function EndMatchScreen() {
   const hasOpponentSubmission = hasSubmissionPayload(opponentSubmission);
   const opponentScoreA = parseScore(opponentSubmission?.score_a);
   const opponentScoreB = parseScore(opponentSubmission?.score_b);
+  const ownScoreLabel = getSubmissionScoreLabel(ownSubmission);
+  const opponentScoreLabel = getSubmissionScoreLabel(opponentSubmission);
+  const heroScoreLabel = isPadelMatch
+    ? (padelScorePayload?.scoreDetails?.scoreLabel || 'Sets')
+    : `${scoreA || '0'} - ${scoreB || '0'}`;
   const [manualEntryEnabled, setManualEntryEnabled] = useState(true);
   const canShowManualForms = !hasOpponentSubmission || manualEntryEnabled || hasOwnSubmission;
   const shouldShowGuidedState = hasOpponentSubmission && !canShowManualForms;
@@ -432,7 +453,7 @@ function EndMatchScreen() {
 
   const submitMutation = useMutation({
     mutationFn: (
-      /** @type {{scoreA: number, scoreB: number, dispute: boolean, proof: ProofPayload | null, disputeType: string | null, disputeComment: string | null}} */ data,
+      /** @type {{scoreA: number, scoreB: number, dispute: boolean, proof: ProofPayload | null, disputeType: string | null, disputeComment: string | null, scoreDetails?: object | null}} */ data,
     ) => submitMatchScore(
       matchId,
       data.scoreA,
@@ -442,6 +463,7 @@ function EndMatchScreen() {
       {
         disputeComment: data.disputeComment,
         disputeType: data.disputeType,
+        scoreDetails: data.scoreDetails || null,
       },
     ),
     onError: async (error, variables) => {
@@ -576,12 +598,40 @@ function EndMatchScreen() {
     });
   };
 
+  const updatePadelSet = (index, side, value) => {
+    const sanitized = sanitizeScoreInput(value);
+    setPadelSets((current) => current.map((set, setIndex) => (
+      setIndex === index ? { ...set, [side]: sanitized } : set
+    )));
+  };
+
+  const togglePadelSuperTieBreak = (index) => {
+    setPadelSets((current) => current.map((set, setIndex) => (
+      setIndex === index ? { ...set, superTieBreak: !set.superTieBreak } : set
+    )));
+  };
+
+  const addPadelDecisionSet = () => {
+    setPadelSets((current) => (
+      current.length >= 3 ? current : [...current, { a: '', b: '', superTieBreak: true }]
+    ));
+  };
+
+  const removePadelDecisionSet = () => {
+    setPadelSets((current) => current.slice(0, 2));
+  };
+
   const handleSubmit = () => {
     if (!isScoreSubmissionAllowed) {
       Alert.alert('Action impossible', scoreSubmissionBlockReason);
       return;
     }
-    if (!scoreA || !scoreB) {
+    const nextPadelScore = isPadelMatch ? buildPadelScorePayload(padelSets) : null;
+    if (isPadelMatch && nextPadelScore?.error) {
+      Alert.alert('Score padel invalide', nextPadelScore.error);
+      return;
+    }
+    if (!isPadelMatch && (!scoreA || !scoreB)) {
       Alert.alert('Erreur', 'Veuillez saisir les scores.');
       return;
     }
@@ -598,8 +648,9 @@ function EndMatchScreen() {
       disputeComment: dispute ? disputeComment?.trim() : null,
       disputeType: dispute ? disputeType : null,
       proof,
-      scoreA: Number.parseInt(scoreA, 10),
-      scoreB: Number.parseInt(scoreB, 10),
+      scoreA: isPadelMatch ? nextPadelScore.scoreA : Number.parseInt(scoreA, 10),
+      scoreB: isPadelMatch ? nextPadelScore.scoreB : Number.parseInt(scoreB, 10),
+      scoreDetails: isPadelMatch ? nextPadelScore.scoreDetails : null,
     });
   };
 
@@ -615,12 +666,21 @@ function EndMatchScreen() {
       proof: null,
       scoreA: opponentScoreA,
       scoreB: opponentScoreB,
+      scoreDetails: opponentSubmission?.score_details || opponentSubmission?.scoreDetails || null,
     });
   };
 
   const handleDisputeOpponentScore = () => {
     if (opponentScoreA !== null) setScoreA(String(opponentScoreA));
     if (opponentScoreB !== null) setScoreB(String(opponentScoreB));
+    const opponentDetails = opponentSubmission?.score_details || opponentSubmission?.scoreDetails;
+    if (Array.isArray(opponentDetails?.sets) && opponentDetails.sets.length >= 2) {
+      setPadelSets(opponentDetails.sets.map((set) => ({
+        a: String(set?.a ?? ''),
+        b: String(set?.b ?? ''),
+        superTieBreak: set?.superTieBreak === true,
+      })));
+    }
     setManualEntryEnabled(true);
     setDispute(true);
     setDisputeType('score_mismatch');
@@ -810,10 +870,7 @@ function EndMatchScreen() {
                   MATCH
                 </Text>
                 <Text style={[Fonts.h1Bold, { color: Colors.gold500 }]}>
-                  {scoreA || '0'}
-                  {' '}
-                  -
-                  {scoreB || '0'}
+                  {heroScoreLabel}
                 </Text>
               </View>
 
@@ -888,7 +945,7 @@ function EndMatchScreen() {
                 </Text>
               </View>
               <Text style={[Fonts.h3, { color: Colors.neutral100, marginTop: 4 }]}>
-                {`${ownSubmission?.score_a ?? '-'} - ${ownSubmission?.score_b ?? '-'}`}
+                {ownScoreLabel}
               </Text>
               <Text style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}>
                 En attente de validation adverse. Sans réponse, ce score sera validé automatiquement dans
@@ -927,7 +984,7 @@ function EndMatchScreen() {
               <Text
                 style={[Fonts.h3, { color: Colors.gold500, marginTop: 4 }]}
               >
-                {`${opponentScoreA ?? '-'} - ${opponentScoreB ?? '-'}`}
+                {opponentScoreLabel}
               </Text>
               <Text
                 style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
@@ -994,145 +1051,249 @@ function EndMatchScreen() {
                   Saisie du score final
                 </Text>
               </View>
-              <View style={styles.scoreContainer}>
-                <View
-                  style={[
-                    styles.teamColumn,
-                    styles.scoreTeamCard,
-                    {
-                      backgroundColor: leagueAccentSurface,
-                      borderColor: 'rgba(1, 179, 244, 0.24)',
-                    },
-                  ]}
-                >
-                  <TeamShield
-                    initials={String(teamA?.name?.substring(0, 2) || '?')}
-                    isGold
-                    size={64}
-                  />
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      Fonts.h4,
-                      styles.teamName,
-                      { color: Colors.neutral100 },
-                    ]}
-                  >
-                    {teamA?.name}
+              {isPadelMatch ? (
+                <View style={styles.padelSetsContainer}>
+                  <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>
+                    Saisis les jeux de chaque set. Le vainqueur doit gagner 2 sets.
                   </Text>
-                  <TextInput
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    onChangeText={handleScoreChange(setScoreA)}
-                    placeholder="0"
-                    placeholderTextColor={Colors.neutral500}
+                  {padelSets.map((set, index) => (
+                    <View
+                      // eslint-disable-next-line react/no-array-index-key
+                      key={`padel-set-${index}`}
+                      style={[
+                        styles.padelSetCard,
+                        {
+                          backgroundColor: index % 2 === 0 ? leagueAccentSurface : leagueGoldSurface,
+                          borderColor: index % 2 === 0 ? 'rgba(1, 179, 244, 0.24)' : 'rgba(255, 215, 0, 0.24)',
+                        },
+                      ]}
+                    >
+                      <View style={styles.padelSetHeader}>
+                        <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
+                          {index === 2 ? 'Set décisif' : `Set ${index + 1}`}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => togglePadelSuperTieBreak(index)}
+                          style={[
+                            styles.padelTieBreakChip,
+                            {
+                              backgroundColor: set.superTieBreak ? 'rgba(1,179,244,0.16)' : 'rgba(255,255,255,0.06)',
+                              borderColor: set.superTieBreak ? Colors.primary500 : Colors.neutral600,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              Fonts.p4Bold,
+                              { color: set.superTieBreak ? Colors.primary500 : Colors.neutral300 },
+                            ]}
+                          >
+                            Super tie-break
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.padelSetScoreRow}>
+                        <View style={styles.padelSetTeamInput}>
+                          <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral300 }]}>
+                            {teamA?.name || 'Equipe A'}
+                          </Text>
+                          <TextInput
+                            keyboardType="number-pad"
+                            maxLength={2}
+                            onChangeText={(value) => updatePadelSet(index, 'a', value)}
+                            placeholder="0"
+                            placeholderTextColor={Colors.neutral500}
+                            style={[
+                              styles.padelSetInput,
+                              {
+                                borderColor: 'rgba(1, 179, 244, 0.35)',
+                                color: Colors.gold500,
+                              },
+                            ]}
+                            value={set.a}
+                          />
+                        </View>
+                        <Text style={[Fonts.h3, { color: Colors.gold500 }]}>-</Text>
+                        <View style={styles.padelSetTeamInput}>
+                          <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral300 }]}>
+                            {teamB?.name || 'Equipe B'}
+                          </Text>
+                          <TextInput
+                            keyboardType="number-pad"
+                            maxLength={2}
+                            onChangeText={(value) => updatePadelSet(index, 'b', value)}
+                            placeholder="0"
+                            placeholderTextColor={Colors.neutral500}
+                            style={[
+                              styles.padelSetInput,
+                              {
+                                borderColor: 'rgba(255, 215, 0, 0.35)',
+                                color: Colors.gold500,
+                              },
+                            ]}
+                            value={set.b}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                  {padelSets.length < 3 ? (
+                    <Button
+                      onPress={addPadelDecisionSet}
+                      style={{ borderColor: Colors.primary500 }}
+                      title="Ajouter un set décisif"
+                      variant="Secondary"
+                    />
+                  ) : (
+                    <Button
+                      onPress={removePadelDecisionSet}
+                      style={{ borderColor: Colors.neutral500 }}
+                      title="Retirer le set décisif"
+                      variant="Secondary"
+                    />
+                  )}
+                </View>
+              ) : (
+                <View style={styles.scoreContainer}>
+                  <View
                     style={[
-                      styles.scoreInput,
+                      styles.teamColumn,
+                      styles.scoreTeamCard,
                       {
-                        backgroundColor: 'rgba(255,255,255,0.08)',
-                        borderColor: 'rgba(255,255,255,0.22)',
-                        color: Colors.gold500,
+                        backgroundColor: leagueAccentSurface,
+                        borderColor: 'rgba(1, 179, 244, 0.24)',
                       },
                     ]}
-                    value={scoreA}
-                  />
-                  <View style={styles.scoreActions}>
-                    <TouchableOpacity
-                      onPress={() => decrementScore(scoreA, setScoreA)}
-                      style={[
-                        styles.scoreStepper,
-                        { borderColor: Colors.primary500 },
-                      ]}
-                    >
-                      <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
-                        -
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => incrementScore(scoreA, setScoreA)}
-                      style={[
-                        styles.scoreStepper,
-                        { borderColor: Colors.primary500 },
-                      ]}
-                    >
-                      <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
-                        +
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.scoreSeparatorWrap}>
-                  <Text style={[Fonts.h2, { color: Colors.gold500 }]}>VS</Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.teamColumn,
-                    styles.scoreTeamCard,
-                    {
-                      backgroundColor: leagueGoldSurface,
-                      borderColor: 'rgba(255, 215, 0, 0.24)',
-                    },
-                  ]}
-                >
-                  <TeamShield
-                    initials={String(teamB?.name?.substring(0, 2) || '?')}
-                    isGold
-                    size={64}
-                  />
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      Fonts.h4,
-                      styles.teamName,
-                      { color: Colors.neutral100 },
-                    ]}
                   >
-                    {teamB?.name}
-                  </Text>
-                  <TextInput
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    onChangeText={handleScoreChange(setScoreB)}
-                    placeholder="0"
-                    placeholderTextColor={Colors.neutral500}
+                    <TeamShield
+                      initials={String(teamA?.name?.substring(0, 2) || '?')}
+                      isGold
+                      size={64}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        Fonts.h4,
+                        styles.teamName,
+                        { color: Colors.neutral100 },
+                      ]}
+                    >
+                      {teamA?.name}
+                    </Text>
+                    <TextInput
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      onChangeText={handleScoreChange(setScoreA)}
+                      placeholder="0"
+                      placeholderTextColor={Colors.neutral500}
+                      style={[
+                        styles.scoreInput,
+                        {
+                          backgroundColor: 'rgba(255,255,255,0.08)',
+                          borderColor: 'rgba(255,255,255,0.22)',
+                          color: Colors.gold500,
+                        },
+                      ]}
+                      value={scoreA}
+                    />
+                    <View style={styles.scoreActions}>
+                      <TouchableOpacity
+                        onPress={() => decrementScore(scoreA, setScoreA)}
+                        style={[
+                          styles.scoreStepper,
+                          { borderColor: Colors.primary500 },
+                        ]}
+                      >
+                        <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                          -
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => incrementScore(scoreA, setScoreA)}
+                        style={[
+                          styles.scoreStepper,
+                          { borderColor: Colors.primary500 },
+                        ]}
+                      >
+                        <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                          +
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.scoreSeparatorWrap}>
+                    <Text style={[Fonts.h2, { color: Colors.gold500 }]}>VS</Text>
+                  </View>
+
+                  <View
                     style={[
-                      styles.scoreInput,
+                      styles.teamColumn,
+                      styles.scoreTeamCard,
                       {
-                        backgroundColor: 'rgba(255,255,255,0.08)',
-                        borderColor: 'rgba(255,255,255,0.22)',
-                        color: Colors.gold500,
+                        backgroundColor: leagueGoldSurface,
+                        borderColor: 'rgba(255, 215, 0, 0.24)',
                       },
                     ]}
-                    value={scoreB}
-                  />
-                  <View style={styles.scoreActions}>
-                    <TouchableOpacity
-                      onPress={() => decrementScore(scoreB, setScoreB)}
+                  >
+                    <TeamShield
+                      initials={String(teamB?.name?.substring(0, 2) || '?')}
+                      isGold
+                      size={64}
+                    />
+                    <Text
+                      numberOfLines={1}
                       style={[
-                        styles.scoreStepper,
-                        { borderColor: Colors.primary500 },
+                        Fonts.h4,
+                        styles.teamName,
+                        { color: Colors.neutral100 },
                       ]}
                     >
-                      <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
-                        -
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => incrementScore(scoreB, setScoreB)}
+                      {teamB?.name}
+                    </Text>
+                    <TextInput
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      onChangeText={handleScoreChange(setScoreB)}
+                      placeholder="0"
+                      placeholderTextColor={Colors.neutral500}
                       style={[
-                        styles.scoreStepper,
-                        { borderColor: Colors.primary500 },
+                        styles.scoreInput,
+                        {
+                          backgroundColor: 'rgba(255,255,255,0.08)',
+                          borderColor: 'rgba(255,255,255,0.22)',
+                          color: Colors.gold500,
+                        },
                       ]}
-                    >
-                      <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
-                        +
-                      </Text>
-                    </TouchableOpacity>
+                      value={scoreB}
+                    />
+                    <View style={styles.scoreActions}>
+                      <TouchableOpacity
+                        onPress={() => decrementScore(scoreB, setScoreB)}
+                        style={[
+                          styles.scoreStepper,
+                          { borderColor: Colors.primary500 },
+                        ]}
+                      >
+                        <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                          -
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => incrementScore(scoreB, setScoreB)}
+                        style={[
+                          styles.scoreStepper,
+                          { borderColor: Colors.primary500 },
+                        ]}
+                      >
+                        <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                          +
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
-              </View>
+              )}
             </LeagueCard>
           ) : null}
 
@@ -1455,6 +1616,47 @@ const styles = StyleSheet.create({
   },
   ownScoreCard: {
     marginBottom: 18,
+  },
+  padelSetCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  padelSetHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  padelSetInput: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
+    borderWidth: 1,
+    fontSize: 28,
+    fontWeight: '700',
+    height: 58,
+    textAlign: 'center',
+    width: 66,
+  },
+  padelSetsContainer: {
+    gap: 14,
+  },
+  padelSetScoreRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  padelSetTeamInput: {
+    flex: 1,
+    gap: 8,
+  },
+  padelTieBreakChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   proofPreview: {
     borderRadius: 10,

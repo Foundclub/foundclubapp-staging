@@ -2,16 +2,25 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   addManualLicensePayment,
+  approveExternalLicensePayment,
+  bulkCreateCMLicenseCampaigns,
+  bulkGenerateCMLicenseAssignments,
   createLicenseCampaign,
   createLicenseCheckout,
   declareExternalLicensePayment,
   generateLicenseAssignments,
+  getCMLicenseAssignments,
+  getCMLicenseCampaigns,
+  getCMLicenseDashboard,
+  getCMLicensePaymentReviews,
   getCurrentLicenseCampaign,
   getLicenseAssignment,
   getLicenseAssignments,
   getLicenseDashboard,
+  getLicensePaymentReviews,
   getMyLicenseAssignment,
   getMyLicenses,
+  rejectExternalLicensePayment,
   sendBulkLicenseReminder,
   sendLicenseReminder,
   updateLicenseAssignmentAmount,
@@ -23,10 +32,15 @@ export const licenseKeys = {
   all: ['licenses'],
   assignment: (assignmentId) => ['licenses', 'assignment', assignmentId],
   assignments: (campaignId, params) => ['licenses', 'campaign', campaignId, 'assignments', params],
+  cmAssignments: (cmId, params) => ['licenses', 'cm', cmId, 'assignments', params],
+  cmCampaigns: (cmId, params) => ['licenses', 'cm', cmId, 'campaigns', params],
+  cmDashboard: (cmId, params) => ['licenses', 'cm', cmId, 'dashboard', params],
+  cmPaymentReviews: (cmId, params) => ['licenses', 'cm', cmId, 'payment-reviews', params],
   currentCampaign: (params) => ['licenses', 'campaign', 'current', params],
   dashboard: (campaignId) => ['licenses', 'campaign', campaignId, 'dashboard'],
   mine: ['licenses', 'mine'],
   mineAssignment: (assignmentId) => ['licenses', 'mine', assignmentId],
+  paymentReviews: (campaignId, params) => ['licenses', 'campaign', campaignId, 'payment-reviews', params],
 };
 
 export const useCurrentLicenseCampaign = (params = {}, options = {}) => useQuery({
@@ -48,6 +62,46 @@ export const useLicenseAssignments = (campaignId, params = {}, options = {}) => 
   enabled: Boolean(campaignId) && (options.enabled ?? true),
   queryFn: () => getLicenseAssignments(campaignId, params),
   queryKey: licenseKeys.assignments(campaignId, params),
+  staleTime: 20_000,
+  ...options,
+});
+
+export const useLicensePaymentReviews = (campaignId, params = {}, options = {}) => useQuery({
+  enabled: Boolean(campaignId) && (options.enabled ?? true),
+  queryFn: () => getLicensePaymentReviews(campaignId, params),
+  queryKey: licenseKeys.paymentReviews(campaignId, params),
+  staleTime: 20_000,
+  ...options,
+});
+
+export const useCMLicenseDashboard = (cmId, params = {}, options = {}) => useQuery({
+  enabled: Boolean(cmId) && (options.enabled ?? true),
+  queryFn: () => getCMLicenseDashboard(cmId, params),
+  queryKey: licenseKeys.cmDashboard(cmId, params),
+  staleTime: 20_000,
+  ...options,
+});
+
+export const useCMLicenseCampaigns = (cmId, params = {}, options = {}) => useQuery({
+  enabled: Boolean(cmId) && (options.enabled ?? true),
+  queryFn: () => getCMLicenseCampaigns(cmId, params),
+  queryKey: licenseKeys.cmCampaigns(cmId, params),
+  staleTime: 20_000,
+  ...options,
+});
+
+export const useCMLicenseAssignments = (cmId, params = {}, options = {}) => useQuery({
+  enabled: Boolean(cmId) && (options.enabled ?? true),
+  queryFn: () => getCMLicenseAssignments(cmId, params),
+  queryKey: licenseKeys.cmAssignments(cmId, params),
+  staleTime: 20_000,
+  ...options,
+});
+
+export const useCMLicensePaymentReviews = (cmId, params = {}, options = {}) => useQuery({
+  enabled: Boolean(cmId) && (options.enabled ?? true),
+  queryFn: () => getCMLicensePaymentReviews(cmId, params),
+  queryKey: licenseKeys.cmPaymentReviews(cmId, params),
   staleTime: 20_000,
   ...options,
 });
@@ -92,10 +146,15 @@ export const useLicenseMutation = (mutationFn, campaignId) => {
 
 export {
   addManualLicensePayment,
+  approveExternalLicensePayment,
+  bulkCreateCMLicenseCampaigns,
+  bulkGenerateCMLicenseAssignments,
   createLicenseCampaign,
   createLicenseCheckout,
   declareExternalLicensePayment,
   generateLicenseAssignments,
+  getLicensePaymentReviews,
+  rejectExternalLicensePayment,
   sendBulkLicenseReminder,
   sendLicenseReminder,
   updateLicenseAssignmentAmount,

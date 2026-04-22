@@ -25,7 +25,10 @@ import {
   POPUP_DISMISS_SCOPES,
   POPUP_IDS,
 } from '@/constants/popupRegistry';
-import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import {
+  useBlockingOverlayLifecycle,
+  useBlockingOverlayPrompt,
+} from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 
 /**
@@ -151,6 +154,9 @@ function ExternalCompetitionPromptGate({
     externalCompetitionPopup.descriptor.priority,
   );
   const visible = Boolean(isPromptReady && externalCompetitionPopup.canShow && canShowPrompt);
+  useBlockingOverlayLifecycle(externalCompetitionPopup.descriptor.id, visible, {
+    releaseDelayMs: 320,
+  });
 
   useEffect(() => {
     if (!visible) return;

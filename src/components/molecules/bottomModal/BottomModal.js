@@ -17,6 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
 
+import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
+
 /**
  * Bottom modal component using @gorhom/bottom-sheet.
  * @param {object} props - Component props
@@ -30,6 +32,7 @@ import useTheme from '@/theme/themeContext';
  * @param {boolean} [props.hideCloseButton] - Whether to hide the close button
  * @param {boolean} props.isVisible - Whether the modal is visible
  * @param {() => void} [props.onDismissed] - Optional callback fired when modal is fully dismissed
+ * @param {boolean} [props.preventStartupPresentation] - Prevent presenting until startup is stable
  * @param {boolean} [props.scrollable] - Whether the content should be scrollable (default: true)
  * @param {boolean} [props.closeOnBackdropPress] - Whether backdrop press closes modal
  * @param {boolean} [props.enableContentPanningGesture] - Enables content panning gesture
@@ -60,6 +63,7 @@ function BottomModal({
   isVisible,
   keyboardBehavior = 'interactive',
   onDismissed,
+  preventStartupPresentation = false,
   scrollable = true,
   scrollViewProps,
   scrollViewRef,
@@ -72,29 +76,61 @@ function BottomModal({
    */
   const modalRef = useRef(null);
   const visibilityRef = useRef(false);
+  const sheetStateRef = useRef('hidden');
+  const presentRecoveryTimerRef = useRef(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const insets = useSafeAreaInsets();
+  const { phase: startupPhase } = useStartupPhase();
   const {
     Alignments, ApplicationStyle, Colors, Images, Spaces,
   } = useTheme();
+  const canPresentDuringStartup = !preventStartupPresentation
+    || startupPhase === STARTUP_PHASES.SCREEN_LOCAL_PROMPTS
+    || startupPhase === STARTUP_PHASES.STEADY_STATE;
 
   useEffect(() => {
     if (!modalRef.current) return;
-    if (visibilityRef.current === isVisible) return;
+    if (isVisible && !canPresentDuringStartup) return;
 
-    if (isVisible) {
+    if (isVisible && sheetStateRef.current === 'hidden') {
       visibilityRef.current = true;
+      sheetStateRef.current = 'presenting';
       modalRef.current.present();
+      if (presentRecoveryTimerRef.current) {
+        clearTimeout(presentRecoveryTimerRef.current);
+      }
+      presentRecoveryTimerRef.current = setTimeout(() => {
+        if (sheetStateRef.current === 'presenting') {
+          sheetStateRef.current = 'visible';
+        }
+        presentRecoveryTimerRef.current = 0;
+      }, 260);
       return;
     }
 
-    // Keep visibilityRef=true until onDismiss is actually fired.
-    // This allows handleDismiss to trigger callbacks such as onDismissed.
-    modalRef.current.dismiss();
-  }, [isVisible]);
+    if (
+      !isVisible
+      && sheetStateRef.current !== 'hidden'
+      && sheetStateRef.current !== 'dismissing'
+    ) {
+      sheetStateRef.current = 'dismissing';
+      if (presentRecoveryTimerRef.current) {
+        clearTimeout(presentRecoveryTimerRef.current);
+        presentRecoveryTimerRef.current = 0;
+      }
+      // Keep visibilityRef=true until onDismiss is actually fired.
+      // This allows handleDismiss to trigger callbacks such as onDismissed.
+      modalRef.current.dismiss();
+    }
+  }, [canPresentDuringStartup, isVisible]);
 
   useEffect(() => () => {
     visibilityRef.current = false;
+    sheetStateRef.current = 'hidden';
+    if (presentRecoveryTimerRef.current) {
+      clearTimeout(presentRecoveryTimerRef.current);
+      presentRecoveryTimerRef.current = 0;
+    }
     modalRef.current?.dismiss();
   }, []);
 
@@ -132,6 +168,11 @@ function BottomModal({
   const handleDismiss = useCallback(() => {
     if (!visibilityRef.current) return;
     visibilityRef.current = false;
+    sheetStateRef.current = 'hidden';
+    if (presentRecoveryTimerRef.current) {
+      clearTimeout(presentRecoveryTimerRef.current);
+      presentRecoveryTimerRef.current = 0;
+    }
     close?.();
     onDismissed?.();
   }, [close, onDismissed]);

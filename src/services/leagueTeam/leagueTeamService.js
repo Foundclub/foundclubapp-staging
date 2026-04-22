@@ -669,7 +669,9 @@ export const searchSquads = async (filters) => {
     const conditions = [];
     const cityRaw = safeFilters?.city;
     const requestedSportToken = resolveSportToken(normalizeFilterValue(safeFilters?.sport));
-    const category = 'Senior';
+    // Older league squads were created with the French accent while the current
+    // creation flow normalizes the category to "Senior".
+    const seniorCategoryValues = ['Senior', 'Sénior', 'senior', 'sénior'];
     const section = normalizeSectionFilter(normalizeFilterValue(safeFilters?.section));
     const divisionRaw = normalizeFilterValue(safeFilters?.division);
     const searchQuery = String(safeFilters?.query || '').trim();
@@ -679,7 +681,7 @@ export const searchSquads = async (filters) => {
       : null;
     const centerCoordinates = parseCoordinates(cityAsRecord?.value || safeFilters?.city);
 
-    conditions.push({ category: { $eq: category } });
+    conditions.push({ category: { $in: seniorCategoryValues } });
 
     if (section) {
       conditions.push({ section: { $eq: section } });

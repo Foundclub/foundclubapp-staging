@@ -20,6 +20,12 @@ import {
   useLicenseMutation,
 } from '@/services/license/licenseQueries';
 
+import {
+  LicenseEmptyState,
+  licenseRadius,
+  licenseSpacing,
+} from './licenseDesignSystem';
+
 const money = (value = 0) => new Intl.NumberFormat('fr-FR', { currency: 'EUR', style: 'currency' }).format((value || 0) / 100);
 const statusLabel = {
   manual_review: 'A valider', overdue: 'En retard', paid: 'Payee', partial: 'Partiel', pending: 'En attente', waived: 'Exemptee',
@@ -46,7 +52,7 @@ function StatCard({ label, tone, value }) {
   } = useTheme();
   return (
     <View style={[ApplicationStyle.card, {
-      backgroundColor: Colors.primary700, borderColor: `${tone || Colors.primary500}88`, borderRadius: 18, flex: 1, minHeight: 88, paddingHorizontal: 16, paddingVertical: 18,
+      backgroundColor: Colors.primary700, borderColor: `${tone || Colors.primary500}88`, borderRadius: licenseRadius.card, flex: 1, minHeight: 88, paddingHorizontal: licenseSpacing.cardPadding, paddingVertical: licenseSpacing.cardPadding,
     }]}
     >
       <Text style={[Fonts.p3, Fonts.neutral200]}>{label}</Text>
@@ -70,13 +76,13 @@ function AssignmentCard({ item, onPress }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}>
       <View style={[ApplicationStyle.card, Spaces.marginBottom[12], {
-        backgroundColor: Colors.primary700, borderColor: `${tone}88`, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 18,
+        backgroundColor: Colors.primary700, borderColor: `${tone}88`, borderRadius: licenseRadius.hero, paddingHorizontal: licenseSpacing.cardPadding, paddingVertical: licenseSpacing.cardPadding,
       }]}
       >
         <View style={{
           alignItems: 'flex-start',
           flexDirection: 'row',
-          gap: 12,
+          gap: licenseSpacing.actionGap,
           justifyContent: 'space-between',
         }}
         >
@@ -98,6 +104,9 @@ function AssignmentCard({ item, onPress }) {
   );
 }
 
+/**
+ *
+ */
 function LicenseSetupIntro() {
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
@@ -108,9 +117,9 @@ function LicenseSetupIntro() {
       <View style={[ApplicationStyle.card, Spaces.gap[12], {
         backgroundColor: Colors.primary700,
         borderColor: `${Colors.primary500}77`,
-        borderRadius: 24,
-        paddingHorizontal: 18,
-        paddingVertical: 22,
+        borderRadius: licenseRadius.panel,
+        paddingHorizontal: licenseSpacing.heroPadding,
+        paddingVertical: licenseSpacing.heroPadding,
       }]}
       >
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Avant de suivre les paiements</Text>
@@ -120,7 +129,7 @@ function LicenseSetupIntro() {
         </Text>
       </View>
 
-      <View style={Spaces.gap[12]}>
+      <View style={Spaces.gap[licenseSpacing.listGap]}>
         <SetupStep
           description="Choisis la saison, le montant par defaut et les regles de relance."
           index="1"
@@ -141,6 +150,13 @@ function LicenseSetupIntro() {
   );
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.description
+ * @param root0.index
+ * @param root0.title
+ */
 function SetupStep({ description, index, title }) {
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
@@ -149,19 +165,19 @@ function SetupStep({ description, index, title }) {
     <View style={[ApplicationStyle.card, {
       backgroundColor: Colors.primary800,
       borderColor: `${Colors.primary500}55`,
-      borderRadius: 18,
-      paddingHorizontal: 16,
-      paddingVertical: 18,
+      borderRadius: licenseRadius.card,
+      paddingHorizontal: licenseSpacing.cardPadding,
+      paddingVertical: licenseSpacing.cardPadding,
     }]}
     >
-      <View style={{ alignItems: 'flex-start', flexDirection: 'row', gap: 12 }}>
+      <View style={{ alignItems: 'flex-start', flexDirection: 'row', gap: licenseSpacing.actionGap }}>
         <View style={{
           alignItems: 'center',
           backgroundColor: Colors.primary500,
-          borderRadius: 18,
-          height: 28,
+          borderRadius: licenseRadius.card,
+          height: 32,
           justifyContent: 'center',
-          width: 28,
+          width: 32,
         }}
         >
           <Text style={[Fonts.p3Bold, Fonts.neutral900]}>{index}</Text>
@@ -199,6 +215,8 @@ function ClubLicenses({ navigation, route }) {
   const reminderMutation = useLicenseMutation((payload) => sendBulkLicenseReminder(campaignId, payload), campaignId);
 
   const totals = dashboardQuery.data?.totals || {};
+  const scope = dashboardQuery.data?.scope;
+  const canManageLicenses = scope !== 'coach';
   const assignments = assignmentsQuery.data?.data || [];
   const isLoading = campaignQuery.isLoading || (Boolean(campaignId) && dashboardQuery.isLoading);
   const hasGeneratedAssignments = Number(totals.total || 0) > 0;
@@ -210,6 +228,11 @@ function ClubLicenses({ navigation, route }) {
         'Parametrage requis',
         'Commence par definir la campagne de cotisation avant de creer les cotisations des membres.',
       );
+      return;
+    }
+
+    if (!canManageLicenses) {
+      Alert.alert('Action reservee', 'Seuls les dirigeants peuvent generer les cotisations.');
       return;
     }
 
@@ -235,7 +258,7 @@ function ClubLicenses({ navigation, route }) {
         },
       ],
     );
-  }, [campaignId, generateMutation]);
+  }, [campaignId, canManageLicenses, generateMutation]);
 
   const handleSetupContinue = useCallback(() => {
     if (campaignId) {
@@ -271,24 +294,42 @@ function ClubLicenses({ navigation, route }) {
     }
 
     if (shouldShowSetup) {
+      if (!canManageLicenses) {
+        return (
+          <LicenseEmptyState
+            description="Un dirigeant doit d abord creer et activer une campagne de cotisation."
+            title="Aucune campagne active"
+          />
+        );
+      }
       return <LicenseSetupIntro />;
     }
 
     return (
       <>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
           <StatCard label="Attendu" tone={Colors.primary500} value={money(totals.expectedCents)} />
           <StatCard label="Encaisse" tone={Colors.success500} value={money(totals.paidCents)} />
         </View>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
           <StatCard label="Reste" tone={Colors.warning500} value={money(totals.remainingCents)} />
           <StatCard label="Retards" tone={Colors.error500} value={String(totals.overdueCount || 0)} />
         </View>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Button onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { campaignId, clubId })} style={{ flex: 1 }} title="Parametres" variant="Secondary" />
-          <Button isLoading={generateMutation.isPending} onPress={handleGenerate} style={{ flex: 1 }} title="+ Nouveaux" variant="Secondary" />
-        </View>
-        <Button isLoading={reminderMutation.isPending} onPress={handleBulkReminder} title="Relancer les non-payeurs" />
+        {canManageLicenses ? (
+          <>
+            <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
+              <Button onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { campaignId, clubId })} style={{ flex: 1 }} title="Parametres" variant="Secondary" />
+              <Button isLoading={generateMutation.isPending} onPress={handleGenerate} style={{ flex: 1 }} title="+ Nouveaux" variant="Secondary" />
+            </View>
+            <Button isLoading={reminderMutation.isPending} onPress={handleBulkReminder} title="Relancer les non-payeurs" />
+            <Button onPress={() => navigation.navigate(RouteNames.ClubLicensePayments, { campaignId, clubId })} title={`Paiements a valider (${totals.manualReviewCount || 0})`} variant="Secondary" />
+          </>
+        ) : (
+          <LicenseEmptyState
+            description="Vue limitee aux equipes que vous entrainez. Les actions financieres restent reservees aux dirigeants."
+            title="Vue entraineur"
+          />
+        )}
         <TextInput
           onChangeText={setSearch}
           placeholder="Rechercher un membre"
@@ -309,14 +350,14 @@ function ClubLicenses({ navigation, route }) {
     );
   };
 
-  const isSetupMode = !isLoading && shouldShowSetup;
+  const isSetupMode = !isLoading && shouldShowSetup && canManageLicenses;
   const scrollBottomPadding = isSetupMode ? (setupFooterHeight || 96) + 28 : 96;
 
   return (
     <ScreenContainer bottomInsetMode={isSetupMode ? 'none' : 'tab-scene'} withHeaderPadding>
       <View style={[Alignments.fill, Alignments.relative]}>
         <ScrollView
-          contentContainerStyle={[Spaces.gap[24], { paddingBottom: scrollBottomPadding }]}
+          contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: scrollBottomPadding }]}
           showsVerticalScrollIndicator={false}
           style={Alignments.fill}
         >

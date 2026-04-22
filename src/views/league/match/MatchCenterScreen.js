@@ -267,6 +267,12 @@ function MatchCenterScreen() {
       || '',
   );
   const routeOpenProposalMatchId = String(route?.params?.matchId || '');
+  const routeActiveSquadId = String(
+    route?.params?.activeSquadId
+      || route?.params?.teamId
+      || route?.params?.squadId
+      || '',
+  );
   const matchTeamSide = React.useMemo(
     () => getLeagueMatchTeamSide(currentMatch, mySquad),
     [currentMatch, mySquad],
@@ -531,11 +537,15 @@ function MatchCenterScreen() {
         return;
       }
 
-      // Select initial squad (either currently selected or first one)
+      // Select initial squad. Route params win so a dashboard switch opens the
+      // Match tab on the exact squad the user just chose.
+      const matchedRouteSquad = routeActiveSquadId
+        ? squads.find((/** @type {Team} */ s) => areSameEntityId(getEntityDocumentId(s), routeActiveSquadId))
+        : null;
       const matchedCurrentSquad = mySquadId
         ? squads.find((/** @type {Team} */ s) => areSameEntityId(getEntityDocumentId(s), mySquadId))
         : null;
-      const initialSquad = matchedCurrentSquad || squads[0];
+      const initialSquad = matchedRouteSquad || matchedCurrentSquad || squads[0];
 
       // Allow fetchMatchData to set mySquad and viewState
       await fetchMatchData(initialSquad);
@@ -545,7 +555,7 @@ function MatchCenterScreen() {
       setLoadError('Impossible de charger le Match Center League.');
       setLoading(false);
     }
-  }, [userId, mySquadId, fetchMatchData]);
+  }, [fetchMatchData, mySquadId, routeActiveSquadId, userId]);
 
   // 1. Load Squads & State on Focus
   useFocusEffect(
@@ -556,7 +566,12 @@ function MatchCenterScreen() {
 
   const handleSquadSwitch = async (/** @type {Team} */ squad) => {
     setIsSquadSelectorVisible(false);
-    if (!areSameEntityId(getEntityDocumentId(squad), getEntityDocumentId(mySquad))) {
+    const squadId = getEntityDocumentId(squad);
+    if (!areSameEntityId(squadId, getEntityDocumentId(mySquad))) {
+      navigation.setParams?.({
+        activeSquadId: squadId,
+        squadSwitchToken: String(Date.now()),
+      });
       await fetchMatchData(squad);
     }
   };

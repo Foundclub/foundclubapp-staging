@@ -1,3 +1,4 @@
+/* eslint-disable indent */
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -166,6 +167,10 @@ function CMDashboard({ navigation, route }) {
     navigation.navigate(RouteNames.AdWizardStack);
   }, [navigation]);
 
+  const handleOpenLicenses = useCallback(() => {
+    navigation.navigate(RouteNames.CMLicensesDashboard, { cmId });
+  }, [cmId, navigation]);
+
   const handleCreateSection = useCallback(() => {
     navigation.navigate(RouteNames.CreateSection, { cmId });
   }, [cmId, navigation]);
@@ -209,13 +214,22 @@ function CMDashboard({ navigation, route }) {
     });
   }, [navigation]);
 
-  const actionItems = useMemo(() => ([
+  const actionItems = useMemo(() => {
+    /** @type {Array<{ key: string; title: string; subtitle: string; icon: keyof import('@/theme/types').AllImages; onPress?: () => void; disabled?: boolean }>} */
+    const items = [
     {
       icon: 'users',
       key: 'manage-club',
       onPress: handleOpenManageClub,
       subtitle: t('multisport.actions.manageClub.subtitle', 'Modifier les informations et réglages du club.'),
       title: t('multisport.actions.manageClub.title', 'Gérer mon club'),
+    },
+    {
+      icon: 'euroCircle',
+      key: 'licenses',
+      onPress: handleOpenLicenses,
+      subtitle: t('multisport.actions.licenses.subtitle', 'Piloter les cotisations et paiements de toutes les sections.'),
+      title: t('multisport.actions.licenses.title', 'Cotisations multisport'),
     },
     {
       icon: 'bell',
@@ -238,9 +252,12 @@ function CMDashboard({ navigation, route }) {
       subtitle: t('multisport.actions.addAd.subtitle', 'Publier une annonce de recherche de profil.'),
       title: t('multisport.actions.addAd.title', 'Ajouter une annonce'),
     },
-  ]), [
+    ];
+    return items;
+  }, [
     handleAddEvent,
     handleAddRecruitmentAd,
+    handleOpenLicenses,
     handleOpenManageClub,
     handleOpenRequestsHub,
     t,

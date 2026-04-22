@@ -20,6 +20,13 @@ import {
 } from '@/services/license/licenseQueries';
 import { connectLicenseHelloAsso, connectLicenseStripe, saveLicenseExternalLink } from '@/services/license/licenseService';
 
+import {
+  licenseRadius,
+  licenseSpacing,
+  normalizePaymentModes,
+  paymentModeLabels,
+} from './licenseDesignSystem';
+
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
 const centsToEuro = (value) => String(((value || 0) / 100).toFixed(2)).replace('.', ',');
 const normalizeReminderAutomation = (campaign) => {
@@ -31,6 +38,15 @@ const normalizeReminderAutomation = (campaign) => {
     startDate: automation.startDate || '',
   };
 };
+const defaultPaymentModes = {
+  bank_transfer: true,
+  card_physical: false,
+  cash: true,
+  check: true,
+  external_link: false,
+  helloasso: false,
+  stripe: false,
+};
 
 /**
  *
@@ -39,15 +55,17 @@ const normalizeReminderAutomation = (campaign) => {
  * @param root0.onChangeText
  * @param root0.placeholder
  * @param root0.value
+ * @param root0.multiline
  */
 function Field({
-  label, onChangeText, placeholder, value,
+  label, multiline = false, onChangeText, placeholder, value,
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
   return (
     <View style={Spaces.gap[8]}>
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{label}</Text>
       <TextInput
+        multiline={multiline}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={Colors.neutral400}
@@ -56,6 +74,26 @@ function Field({
         }}
         value={value}
       />
+    </View>
+  );
+}
+
+/**
+ *
+ * @param root0
+ * @param root0.enabled
+ * @param root0.label
+ * @param root0.onChange
+ */
+function PaymentModeToggle({ enabled, label, onChange }) {
+  const {
+    Alignments, Fonts,
+  } = useTheme();
+
+  return (
+    <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+      <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>{label}</Text>
+      <Switch onValueChange={onChange} value={enabled} />
     </View>
   );
 }
@@ -81,6 +119,12 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const [allowInstallments, setAllowInstallments] = useState(Boolean(campaign?.allowInstallments));
   const [installmentCount, setInstallmentCount] = useState(String(campaign?.installmentCount || 3));
   const [externalUrl, setExternalUrl] = useState(campaign?.externalPaymentUrl || '');
+  const [paymentModes, setPaymentModes] = useState({ ...defaultPaymentModes, ...normalizePaymentModes(campaign?.paymentModes) });
+  const [paymentOwner, setPaymentOwner] = useState(campaign?.paymentOwner || 'section');
+  const [bankTransferInstructions, setBankTransferInstructions] = useState(campaign?.bankTransferInstructions || '');
+  const [cashInstructions, setCashInstructions] = useState(campaign?.cashInstructions || '');
+  const [checkInstructions, setCheckInstructions] = useState(campaign?.checkInstructions || '');
+  const [cardPhysicalInstructions, setCardPhysicalInstructions] = useState(campaign?.cardPhysicalInstructions || '');
   const [reminderMessage, setReminderMessage] = useState(campaign?.reminderMessage || '');
   const initialAutomation = normalizeReminderAutomation(campaign);
   const [autoReminderEnabled, setAutoReminderEnabled] = useState(initialAutomation.enabled);
@@ -97,6 +141,12 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     setAllowInstallments(Boolean(campaign.allowInstallments));
     setInstallmentCount(String(campaign.installmentCount || 3));
     setExternalUrl(campaign.externalPaymentUrl || '');
+    setPaymentModes({ ...defaultPaymentModes, ...normalizePaymentModes(campaign.paymentModes) });
+    setPaymentOwner(campaign.paymentOwner || 'section');
+    setBankTransferInstructions(campaign.bankTransferInstructions || '');
+    setCashInstructions(campaign.cashInstructions || '');
+    setCheckInstructions(campaign.checkInstructions || '');
+    setCardPhysicalInstructions(campaign.cardPhysicalInstructions || '');
     setReminderMessage(campaign.reminderMessage || '');
     setAutoReminderEnabled(automation.enabled);
     setReminderFrequencyDays(automation.frequencyDays);
@@ -109,14 +159,21 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     const maxCount = Math.max(1, Number(reminderMaxCount) || 5);
     const payload = {
       allowInstallments,
+      bankTransferInstructions,
+      cardPhysicalInstructions,
+      cashInstructions,
+      checkInstructions,
       clubId,
       defaultAmountCents: euroToCents(amount),
       dueDate: overdueAfterDate.trim() || null,
       externalPaymentUrl: externalUrl,
       installmentCount: Number(installmentCount) || 1,
       paymentModes: {
-        bank_transfer: true, cash: true, check: true, external_link: Boolean(externalUrl), helloasso: Boolean(externalUrl), stripe: false,
+        ...paymentModes,
+        external_link: paymentModes.external_link || Boolean(externalUrl),
+        helloasso: paymentModes.helloasso && Boolean(externalUrl),
       },
+      paymentOwner,
       reminderAutomation: {
         enabled: autoReminderEnabled,
         frequencyDays,
@@ -131,6 +188,13 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     if (campaignId) return updateLicenseCampaign(campaignId, payload);
     return createLicenseCampaign(payload);
   }, campaignId);
+
+  const togglePaymentMode = useCallback((mode) => {
+    setPaymentModes((currentModes) => ({
+      ...currentModes,
+      [mode]: !currentModes[mode],
+    }));
+  }, []);
 
   const providerMutation = useLicenseMutation(async () => {
     if (externalUrl) await saveLicenseExternalLink({ clubId, externalPaymentUrl: externalUrl, status: 'active' });
@@ -149,13 +213,13 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
   return (
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-      <ScrollView contentContainerStyle={[Spaces.gap[24], { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
         <View>
           <Text style={[Fonts.h2, Fonts.neutral00]}>Parametres cotisations</Text>
           <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>Definis le prix, les relances automatiques et les moyens de paiement.</Text>
         </View>
         <View style={[ApplicationStyle.card, Spaces.gap[16], {
-          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55`, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 20,
+          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55`, borderRadius: licenseRadius.hero, paddingHorizontal: licenseSpacing.heroPadding, paddingVertical: licenseSpacing.heroPadding,
         }]}
         >
           <Field label="Saison" onChangeText={setSeasonLabel} placeholder="2026-2027" value={seasonLabel} />
@@ -163,7 +227,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         </View>
 
         <View style={[ApplicationStyle.card, Spaces.gap[16], {
-          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55`, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 20,
+          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55`, borderRadius: licenseRadius.hero, paddingHorizontal: licenseSpacing.heroPadding, paddingVertical: licenseSpacing.heroPadding,
         }]}
         >
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
@@ -188,7 +252,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         </View>
 
         <View style={[ApplicationStyle.card, Spaces.gap[16], {
-          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55`, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 20,
+          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55`, borderRadius: licenseRadius.hero, paddingHorizontal: licenseSpacing.heroPadding, paddingVertical: licenseSpacing.heroPadding,
         }]}
         >
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
@@ -199,6 +263,36 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             <Switch onValueChange={setAllowInstallments} value={allowInstallments} />
           </View>
           {allowInstallments ? <Field label="Nombre d'echeances" onChangeText={setInstallmentCount} placeholder="3" value={installmentCount} /> : null}
+        </View>
+
+        <View style={[ApplicationStyle.card, Spaces.gap[licenseSpacing.fieldGap], {
+          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55`, borderRadius: licenseRadius.hero, paddingHorizontal: licenseSpacing.heroPadding, paddingVertical: licenseSpacing.heroPadding,
+        }]}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Paiements acceptes</Text>
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+            <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Encaissement multisport</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                Active si les paiements en ligne doivent utiliser le compte central du club multisport.
+              </Text>
+            </View>
+            <Switch
+              onValueChange={(enabled) => setPaymentOwner(enabled ? 'multisport' : 'section')}
+              value={paymentOwner === 'multisport'}
+            />
+          </View>
+          <PaymentModeToggle enabled={paymentModes.bank_transfer} label={paymentModeLabels.bank_transfer} onChange={() => togglePaymentMode('bank_transfer')} />
+          {paymentModes.bank_transfer ? <Field label="Instructions virement" multiline onChangeText={setBankTransferInstructions} placeholder="IBAN, reference a indiquer..." value={bankTransferInstructions} /> : null}
+          <PaymentModeToggle enabled={paymentModes.cash} label={paymentModeLabels.cash} onChange={() => togglePaymentMode('cash')} />
+          {paymentModes.cash ? <Field label="Instructions especes" multiline onChangeText={setCashInstructions} placeholder="Lieu, horaires, personne a contacter..." value={cashInstructions} /> : null}
+          <PaymentModeToggle enabled={paymentModes.check} label={paymentModeLabels.check} onChange={() => togglePaymentMode('check')} />
+          {paymentModes.check ? <Field label="Instructions cheque" multiline onChangeText={setCheckInstructions} placeholder="Ordre, depot, reference..." value={checkInstructions} /> : null}
+          <PaymentModeToggle enabled={paymentModes.card_physical} label={paymentModeLabels.card_physical} onChange={() => togglePaymentMode('card_physical')} />
+          {paymentModes.card_physical ? <Field label="Instructions carte au club" multiline onChangeText={setCardPhysicalInstructions} placeholder="Terminal, permanences..." value={cardPhysicalInstructions} /> : null}
+          <PaymentModeToggle enabled={paymentModes.stripe} label={paymentModeLabels.stripe} onChange={() => togglePaymentMode('stripe')} />
+          <PaymentModeToggle enabled={paymentModes.external_link} label={paymentModeLabels.external_link} onChange={() => togglePaymentMode('external_link')} />
+          <PaymentModeToggle enabled={paymentModes.helloasso} label={paymentModeLabels.helloasso} onChange={() => togglePaymentMode('helloasso')} />
           <Field label="Lien externe / HelloAsso" onChangeText={setExternalUrl} placeholder="https://..." value={externalUrl} />
         </View>
         <View style={Spaces.gap[12]}>

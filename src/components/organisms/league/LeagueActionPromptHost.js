@@ -39,8 +39,12 @@ import {
   POPUP_DISMISS_SCOPES,
   POPUP_IDS,
 } from '@/constants/popupRegistry';
+import { ENABLE_LEAGUE_ACTION_PROMPTS } from '@/constants/runtimeFlags';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
-import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import {
+  useBlockingOverlayLifecycle,
+  useBlockingOverlayPrompt,
+} from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 
@@ -125,7 +129,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     data: pendingActionPayload,
     refetch,
   } = usePendingLeagueAction(undefined, {
-    enabled: Boolean(auth?.token) && !skipInitialFetch,
+    enabled: ENABLE_LEAGUE_ACTION_PROMPTS && Boolean(auth?.token) && !skipInitialFetch,
     refetchInterval: 60000,
     refetchIntervalInBackground: false,
   });
@@ -142,7 +146,8 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     currentForcedPromptKey && consumedForcedPromptKey !== currentForcedPromptKey,
   );
   const shouldShowPrompt = Boolean(
-    auth?.token
+    ENABLE_LEAGUE_ACTION_PROMPTS
+    && auth?.token
     && nextAction
     && isNavigationReady
     && !isBlockedRoute
@@ -176,6 +181,16 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     counterProposalPopup.descriptor.priority,
   );
   const isVisible = Boolean(shouldShowPrompt && leagueActionPopup.canShow && canShowLeagueActionPrompt);
+  useBlockingOverlayLifecycle(leagueActionPopup.descriptor.id, isVisible, {
+    releaseDelayMs: 360,
+  });
+  useBlockingOverlayLifecycle(
+    counterProposalPopup.descriptor.id,
+    Boolean(isCounterProposalVisible && counterProposalPopup.canShow && canShowCounterProposalModal),
+    {
+      releaseDelayMs: 360,
+    },
+  );
   const shouldHideOpponentName = useMemo(
     () => shouldMaskOpponentIdentity(nextAction?.match || null),
     [nextAction?.match],
@@ -850,7 +865,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     renderPostSlotActions,
   ]);
 
-  if (!nextAction) return null;
+  if (!ENABLE_LEAGUE_ACTION_PROMPTS || !nextAction) return null;
 
   return (
     <>
@@ -858,6 +873,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
         contentBottomPaddingOverride={6}
         isVisible={isVisible}
         onClose={dismissForSession}
+        preventStartupPresentation
         snapPoint={modalSnapPoint}
       >
         <View style={{ gap: sectionGap, paddingBottom: isCompactMobile ? 4 : 8 }}>

@@ -1,13 +1,15 @@
-import React from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
+import React from 'react';
+
+import { AppProvider } from '@/store/appContext';
+import { ThemeProvider } from '@/theme/themeContext';
 
 import { AppFeedbackProvider } from '@/context/AppFeedbackContext';
 import { AppModeProvider } from '@/context/AppModeContext';
 import { BlockingOverlayProvider } from '@/context/BlockingOverlayContext';
 import { PopupManagerProvider } from '@/context/PopupManagerContext';
 import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
-import { AppProvider } from '@/store/appContext';
-import { ThemeProvider } from '@/theme/themeContext';
+import { StartupPhaseProvider } from '@/context/StartupPhaseContext';
 
 /**
  * Shared provider stack used by native and web runtimes.
@@ -30,15 +32,19 @@ function SharedAppProviders({ children, queryClient }) {
           AppFeedbackProvider,
           null,
           React.createElement(
-            PopupManagerProvider,
+            StartupPhaseProvider,
             null,
             React.createElement(
-              SmartNotificationProvider,
+              PopupManagerProvider,
               null,
               React.createElement(
-                BlockingOverlayProvider,
+                SmartNotificationProvider,
                 null,
-                React.createElement(QueryClientProvider, { client: queryClient }, children),
+                React.createElement(
+                  BlockingOverlayProvider,
+                  null,
+                  React.createElement(QueryClientProvider, { client: queryClient }, children),
+                ),
               ),
             ),
           ),

@@ -224,7 +224,7 @@ function Messaging({ navigation, route }) {
             width: 48,
           }}
           >
-            <Text style={{ fontSize: 20 }}>ðŸ†</Text>
+            <Text style={{ fontSize: 20 }}>{'\uD83C\uDFC6'}</Text>
           </View>
         );
       case 'multisport':

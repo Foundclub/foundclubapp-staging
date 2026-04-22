@@ -25,7 +25,10 @@ import {
   POPUP_IDS,
 } from '@/constants/popupRegistry';
 import { ENABLE_SMART_NOTIFICATIONS } from '@/constants/runtimeFlags';
-import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import {
+  useBlockingOverlayLifecycle,
+  useBlockingOverlayPrompt,
+} from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 import { useSmartNotifications } from '@/context/SmartNotificationContext';
 
@@ -73,6 +76,12 @@ function SmartNotificationHost() {
   const isLineupReminderVisible = Boolean(activeSnackbar && isLineupReminder && lineupReminderPopup.canShow && canShowLineupReminderModal);
   const isRecapVisible = Boolean(activeRecap && recapPopup.canShow && canShowRecapModal);
   const shouldRenderNativeLineupReminder = isLineupReminderVisible && Platform.OS !== 'web';
+  useBlockingOverlayLifecycle(lineupReminderPopup.descriptor.id, isLineupReminderVisible, {
+    releaseDelayMs: 320,
+  });
+  useBlockingOverlayLifecycle(recapPopup.descriptor.id, isRecapVisible, {
+    releaseDelayMs: 320,
+  });
 
   useEffect(() => {
     if (!activeSnackbar || isLineupReminder) return undefined;

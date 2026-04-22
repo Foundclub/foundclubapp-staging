@@ -9,7 +9,9 @@ import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 
 import OnboardingOverlay from '@/components/molecules/onboardingOverlay/OnboardingOverlay';
 
+import { ENABLE_STARTUP_TUTORIALS } from '@/constants/runtimeFlags';
 import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
+import { useStartupPhase } from '@/context/StartupPhaseContext';
 
 /**
  * @param {{
@@ -44,6 +46,7 @@ function TutorialFlowBoundaryInner({
     startOnboarding,
     totalSteps,
   } = useOnboarding();
+  const { canShowLocalScreenPrompt, hasRecentStartupPrompt } = useStartupPhase();
   const wasActiveRef = useRef(false);
   const hasStartedRef = useRef(false);
   const hasMarkedSeenRef = useRef(false);
@@ -64,6 +67,8 @@ function TutorialFlowBoundaryInner({
   useEffect(() => {
     if (!totalSteps || isActive || hasStartedRef.current) return undefined;
     if (!shouldAutoStart && !shouldForceStart) return undefined;
+    if (!ENABLE_STARTUP_TUTORIALS) return undefined;
+    if (!canShowLocalScreenPrompt || hasRecentStartupPrompt) return undefined;
     if (shouldForceStart && forceStartKey && handledForceStartKeyRef.current === forceStartKey) {
       return undefined;
     }
@@ -93,6 +98,8 @@ function TutorialFlowBoundaryInner({
     isActive,
     markSeen,
     onForceStartHandled,
+    canShowLocalScreenPrompt,
+    hasRecentStartupPrompt,
     shouldAutoStart,
     shouldForceStart,
     startDelayMs,

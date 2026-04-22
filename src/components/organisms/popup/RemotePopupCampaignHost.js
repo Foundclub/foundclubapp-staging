@@ -26,8 +26,12 @@ import {
 
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
+import { ENABLE_REMOTE_POPUP_CAMPAIGNS } from '@/constants/runtimeFlags';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
-import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import {
+  useBlockingOverlayLifecycle,
+  useBlockingOverlayPrompt,
+} from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 
 const getPopupId = (campaign) => `remote-campaign:${String(campaign?.documentId || '').trim()}`;
@@ -84,6 +88,7 @@ function RemotePopupCampaignHost({
 
     return {
       allowedRoutes: activeCampaign.allowedRoutes,
+      allowedStartupPhases: ['startup_prompt_window'],
       blockedRoutes: activeCampaign.blockedRoutes,
       blocking: true,
       id: getPopupId(activeCampaign),
@@ -107,9 +112,17 @@ function RemotePopupCampaignHost({
     popup.descriptor.priority,
   );
   const isVisible = Boolean(activeCampaign && popup.canShow && canShowCampaign);
+  useBlockingOverlayLifecycle(popup.descriptor.id, isVisible, {
+    releaseDelayMs: 320,
+  });
 
   const fetchCampaigns = useCallback(async (trigger) => {
-    if (!auth?.token || !auth?.user?.documentId || fetchInFlightRef.current) return;
+    if (
+      !ENABLE_REMOTE_POPUP_CAMPAIGNS
+      || !auth?.token
+      || !auth?.user?.documentId
+      || fetchInFlightRef.current
+    ) return;
 
     fetchInFlightRef.current = true;
     try {
@@ -137,7 +150,7 @@ function RemotePopupCampaignHost({
   }, [auth?.token, auth?.user?.documentId]);
 
   useEffect(() => {
-    if (!auth?.token || !auth?.user?.documentId) {
+    if (!ENABLE_REMOTE_POPUP_CAMPAIGNS || !auth?.token || !auth?.user?.documentId) {
       setActiveCampaign(null);
       return undefined;
     }

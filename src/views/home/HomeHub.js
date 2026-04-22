@@ -50,11 +50,16 @@ import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorial
 import { markBootStep } from '@/utils/performance/bootPerformance';
 
 import { POPUP_IDS } from '@/constants/popupRegistry';
+import { ENABLE_STARTUP_TUTORIALS } from '@/constants/runtimeFlags';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 import { useAppMode } from '@/context/AppModeContext';
-import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import {
+  useBlockingOverlayLifecycle,
+  useBlockingOverlayPrompt,
+} from '@/context/BlockingOverlayContext';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
+import { useStartupPhase } from '@/context/StartupPhaseContext';
 
 /* eslint-disable perfectionist/sort-modules */
 /**
@@ -139,8 +144,8 @@ function HomeSection({
               onPress={card.onPress}
               subtitle={card.subtitle}
               subtitleLines={card.subtitleLines}
-              tutorialTargetRef={card.tutorial ? assignTutorialTargetRef : undefined}
               title={card.title}
+              tutorialTargetRef={card.tutorial ? assignTutorialTargetRef : undefined}
             />
           );
 
@@ -267,6 +272,11 @@ function HomeHubContent({ auth, navigation, route }) {
     refreshCurrentStep,
     startOnboarding,
   } = useOnboarding();
+  const {
+    canShowLocalScreenPrompt,
+    hasRecentStartupPrompt,
+    isStartupStable,
+  } = useStartupPhase();
   const { logoutMutation, userData } = auth;
   const { showBanner } = useAppFeedback();
 
@@ -349,8 +359,14 @@ function HomeHubContent({ auth, navigation, route }) {
     && homeHubEntryPopup.canShow
     && canShowEntryGatePrompt,
   );
+  useBlockingOverlayLifecycle(homeHubEntryPopup.descriptor.id, isHomeHubEntryGateVisible, {
+    releaseDelayMs: 320,
+  });
   const shouldRenderLegacyEntryGate = false;
   const isExternalCompetitionPromptEnabled = isFocused
+    && isStartupStable
+    && canShowLocalScreenPrompt
+    && !hasRecentStartupPrompt
     && !isOnboardingActive
     && !homeHubTutorial.shouldForceStart
     && activeTutorialModal === null
@@ -406,6 +422,10 @@ function HomeHubContent({ auth, navigation, route }) {
       setIsEntryGateVisible(false);
       return;
     }
+    if (!ENABLE_STARTUP_TUTORIALS || !isStartupStable || !canShowLocalScreenPrompt || hasRecentStartupPrompt) {
+      setIsEntryGateVisible(false);
+      return;
+    }
     if (isOnboardingActive || homeHubTutorial.shouldForceStart) {
       setIsEntryGateVisible(false);
       return;
@@ -417,6 +437,9 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [
     homeHubTutorial.entryGateChoice,
     homeHubTutorial.shouldForceStart,
+    canShowLocalScreenPrompt,
+    hasRecentStartupPrompt,
+    isStartupStable,
     isFocused,
     isOnboardingActive,
     userData?.documentId,
@@ -615,12 +638,11 @@ function HomeHubContent({ auth, navigation, route }) {
           setTimeout(resolve, FINAL_REFRESH_DELAY + 40);
         });
         return;
-      } else {
-        scrollRef.current?.scrollTo({
-          animated: true,
-          y: 0,
-        });
       }
+      scrollRef.current?.scrollTo({
+        animated: true,
+        y: 0,
+      });
       REFRESH_DELAYS.forEach((delay) => {
         setTimeout(() => {
           refreshCurrentStepRef.current?.();
@@ -642,9 +664,12 @@ function HomeHubContent({ auth, navigation, route }) {
       || (typeof getTargetNode === 'function' ? getTargetNode() : null)
     );
     const targetNode = resolveTargetNode();
-    const targetNodeSource = tutorialTargetNodesRef.current[targetStepId]
-      ? 'homehub-registry'
-      : (typeof getTargetNode === 'function' ? 'step-registry' : 'unresolved');
+    let targetNodeSource = 'unresolved';
+    if (tutorialTargetNodesRef.current[targetStepId]) {
+      targetNodeSource = 'homehub-registry';
+    } else if (typeof getTargetNode === 'function') {
+      targetNodeSource = 'step-registry';
+    }
 
     tutorialDebugLog('homehub.scrollToTutorialTarget', {
       fallbackSectionKey,
@@ -679,9 +704,9 @@ function HomeHubContent({ auth, navigation, route }) {
     return scrollTutorialTargetIntoViewOnWeb(resolveTargetNode, {
       bottomInset: Math.max(tabBarHeight + insets.bottom, 112) + 16,
       preferredPlacement: 'above',
-      topInset: Math.max(insets.top, 16) + 88,
       tooltipGap: 24,
       tooltipHeight: 220,
+      topInset: Math.max(insets.top, 16) + 88,
     }).then((resolvedLayout) => {
       if (!resolvedLayout) {
         setTutorialDebugState({

@@ -15,6 +15,7 @@ import StartupPromptBoundary from '@/components/organisms/popup/StartupPromptBou
 import ErrorScreen from '@/views/Error';
 
 import AppNavigator from '@/navigation/appNavigator';
+import { navigationRef } from '@/navigation/navigationService';
 
 import { isInSentryExceptionsAllowList } from '@/services/sentryAllowList';
 
@@ -30,10 +31,14 @@ import BootGate from '@/app/BootGate';
 import buildFoundClubQueryClient from '@/app/queryClient';
 import { getRuntimeEndpointsLog } from '@/config/runtimeUrls';
 import { POPUP_IDS } from '@/constants/popupRegistry';
-import { NOTIFICATIONS_RUNTIME_CONFIG } from '@/constants/runtimeFlags';
+import { APP_RUNTIME_ENV, NOTIFICATIONS_RUNTIME_CONFIG } from '@/constants/runtimeFlags';
 import useAuth from '@/domains/auth/useAuth';
-import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import {
+  useBlockingOverlayLifecycle,
+  useBlockingOverlayPrompt,
+} from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
+import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
 
 import { formatBootMeta, markBootStep } from '@/utils/performance/bootPerformance';
 
@@ -160,6 +165,7 @@ const queryClient = buildFoundClubQueryClient({
  */
 function BootErrorAlertHost() {
   const [pendingBootError, setPendingBootError] = useState(null);
+  const { phase } = useStartupPhase();
   const popup = usePopupEligibility(
     POPUP_IDS.BOOT_ERROR_ALERT,
     Boolean(pendingBootError),
@@ -168,6 +174,10 @@ function BootErrorAlertHost() {
   useEffect(() => {
     const previousBootError = readPersistedBootError();
     if (!previousBootError) return;
+    if (APP_RUNTIME_ENV === 'production' && !previousBootError?.isFatal) {
+      clearPersistedBootError();
+      return;
+    }
 
     console.warn(`[BOOT] BOOT_PREVIOUS_JS_ERROR_VISIBLE ${formatBootMeta(previousBootError)}`);
     setPendingBootError(previousBootError);
@@ -183,7 +193,12 @@ function BootErrorAlertHost() {
     popup.canShow,
     popup.descriptor.priority,
   );
-  const isVisible = popup.canShow && canShowBootError;
+  const isVisible = popup.canShow
+    && canShowBootError
+    && phase === STARTUP_PHASES.STARTUP_PROMPT_WINDOW;
+  useBlockingOverlayLifecycle(popup.descriptor.id, isVisible, {
+    releaseDelayMs: 320,
+  });
 
   useEffect(() => {
     if (!pendingBootError || !isVisible || !bootErrorPromptKey) return;
@@ -257,29 +272,35 @@ function DeferredStartupHosts() {
  * @returns {import('react').ReactElement} App root component.
  */
 function App() {
-  const [isNavigationReady, setIsNavigationReady] = useState(false);
-  const [isDeferredStartupReady, setIsDeferredStartupReady] = useState(false);
+  const {
+    markInteractionsSettled,
+    markNavigationReady,
+    notifyRouteChanged,
+    phase,
+  } = useStartupPhase();
+  const isDeferredStartupReady = phase !== STARTUP_PHASES.BOOT_CORE
+    && phase !== STARTUP_PHASES.NAV_READY
+    && phase !== STARTUP_PHASES.ROUTE_STABLE;
 
   useEffect(() => {
     markBootStep('app_component_mounted');
   }, []);
 
   useEffect(() => {
-    if (!isNavigationReady) {
-      setIsDeferredStartupReady(false);
+    if (phase !== STARTUP_PHASES.ROUTE_STABLE) {
       return undefined;
     }
 
     markBootStep('navigation_ready');
     const task = InteractionManager.runAfterInteractions(() => {
       markBootStep('deferred_startup_tasks_ready');
-      setIsDeferredStartupReady(true);
+      markInteractionsSettled();
     });
 
     return () => {
       task?.cancel?.();
     };
-  }, [isNavigationReady]);
+  }, [markInteractionsSettled, phase]);
 
   return (
     <AppProvidersNative queryClient={queryClient}>
@@ -298,7 +319,14 @@ function App() {
             <AppBannerHost />
             <AppNavigator
               navigationIntegration={navigationIntegration}
-              onReady={() => setIsNavigationReady(true)}
+              onReady={() => {
+                const routeName = navigationRef.getCurrentRoute()?.name || null;
+                markNavigationReady(routeName);
+                notifyRouteChanged(routeName);
+              }}
+              onStateChange={(routeName) => {
+                notifyRouteChanged(routeName);
+              }}
             />
             {isDeferredStartupReady ? <DeferredStartupHosts /> : null}
           </BootGate>

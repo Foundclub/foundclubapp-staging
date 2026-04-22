@@ -1,3 +1,4 @@
+/* eslint-disable import/order, perfectionist/sort-imports, perfectionist/sort-named-imports */
 import { useCallback, useMemo } from 'react';
 import {
   Alert, ScrollView, Text, View,
@@ -9,8 +10,6 @@ import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
-import { openUrl } from '@/platform/links';
-import { share } from '@/platform/share';
 
 import {
   createLicenseCheckout,
@@ -20,18 +19,24 @@ import {
   useMyLicenses,
 } from '@/services/license/licenseQueries';
 
-import { getApiBaseUrl } from '@/config/runtimeUrls';
-
-const money = (value = 0) => new Intl.NumberFormat('fr-FR', { currency: 'EUR', style: 'currency' }).format((value || 0) / 100);
-const statusLabel = {
-  manual_review: 'En attente de validation', overdue: 'Paiement en retard', paid: 'Cotisation payee', partial: 'Paiement partiel', pending: 'Reste a payer', waived: 'Cotisation exemptee',
-};
-const statusColor = (Colors, status) => ({
-  manual_review: Colors.primary200,
-  overdue: Colors.error500,
-  paid: Colors.success500,
-  partial: Colors.warning500,
-}[status] || Colors.primary500);
+import { getPublicApiOrigin } from '@/config/runtimeUrls';
+import {
+  formatLicenseMoney,
+  getLicenseStatusTone,
+  LicenseCard,
+  LicenseEmptyState,
+  LicenseInstallmentList,
+  LicenseMetricRow,
+  LicenseSectionHeader,
+  licenseRadius,
+  licenseSpacing,
+  LicenseStatusChip,
+  normalizePaymentModes,
+  paymentInstructionFields,
+  paymentModeLabels,
+} from './licenseDesignSystem';
+import LinksPlatform from '@/platform/links';
+import SharePlatform from '@/platform/share';
 
 /**
  *
@@ -58,17 +63,34 @@ function MyLicense({ navigation, route }) {
   const assignmentId = current?.documentId || current?.id;
   const checkoutMutation = useLicenseMutation((provider) => createLicenseCheckout(assignmentId, { provider }), current?.campaign?.documentId || current?.campaign?.id);
   const declareMutation = useLicenseMutation(() => declareExternalLicensePayment(assignmentId, { amountCents: current?.amountRemainingCents, provider: 'external' }), current?.campaign?.documentId || current?.campaign?.id);
-  const apiBaseUrl = getApiBaseUrl();
-  const payerLink = current?.securePaymentToken && apiBaseUrl
-    ? `${apiBaseUrl}/licenses/pay/${current.securePaymentToken}`
-    : null;
+  const paymentModes = normalizePaymentModes(current?.campaign?.paymentModes);
+  const payerLink = useMemo(() => {
+    if (!current?.securePaymentToken) return null;
+    const configuredWebUrl = String(process.env.WEB_APP_URL || process.env.FRONTEND_URL || '').trim().replace(/\/+$/g, '');
+    if (configuredWebUrl) {
+      return `${configuredWebUrl}/licenses/pay/${current.securePaymentToken}`;
+    }
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return `${window.location.origin}/licenses/pay/${current.securePaymentToken}`;
+    }
+    const publicOrigin = getPublicApiOrigin();
+    return publicOrigin ? `${publicOrigin}/licenses/pay/${current.securePaymentToken}` : null;
+  }, [current?.securePaymentToken]);
+  const offlineInstructions = Object.entries(paymentInstructionFields)
+    .map(([mode, field]) => ({
+      label: paymentModeLabels[mode],
+      mode,
+      value: current?.campaign?.[field],
+    }))
+    .filter((item) => paymentModes[item.mode] || item.value)
+    .filter((item) => item.value);
 
   const openCheckout = useCallback((provider) => {
     checkoutMutation.mutate(provider, {
       onError: (error) => Alert.alert('Paiement indisponible', error?.message || 'Aucun lien de paiement configure.'),
       onSuccess: async (result) => {
         if (result?.checkoutUrl) {
-          await openUrl(result.checkoutUrl);
+          await LinksPlatform.openUrl(result.checkoutUrl);
           navigation.navigate(RouteNames.LicenseCheckoutStatus, { assignmentId, provider });
         }
       },
@@ -80,7 +102,7 @@ function MyLicense({ navigation, route }) {
       Alert.alert('Lien indisponible', 'Le lien de paiement externe sera disponible apres generation par le club.');
       return;
     }
-    share({
+    SharePlatform.share({
       message: `Paiement cotisation FoundClub: ${payerLink}`,
       url: payerLink,
     }).catch((error) => {
@@ -91,25 +113,31 @@ function MyLicense({ navigation, route }) {
   if (!current) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-        <View style={Spaces.gap[16]}>
-          <Text style={[Fonts.h2, Fonts.neutral00]}>Ma cotisation</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Aucune cotisation n est encore disponible pour ton compte.
-          </Text>
-        </View>
+        <LicenseEmptyState
+          description="Aucune cotisation n est encore disponible pour ton compte."
+          title="Ma cotisation"
+        />
       </ScreenContainer>
     );
   }
 
-  const tone = statusColor(Colors, current.status);
+  const tone = getLicenseStatusTone(Colors, current.status);
+  const currency = current.currency || current?.campaign?.currency || 'EUR';
   return (
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-      <ScrollView contentContainerStyle={[Spaces.gap[24], { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
         <View style={[ApplicationStyle.card, {
-          backgroundColor: Colors.primary700, borderColor: `${tone}99`, borderRadius: 26, paddingHorizontal: 20, paddingVertical: 22,
+          backgroundColor: Colors.primary700,
+          borderColor: `${tone}99`,
+          borderRadius: licenseRadius.hero,
+          paddingHorizontal: licenseSpacing.heroPadding,
+          paddingVertical: licenseSpacing.heroPadding,
         }]}
         >
-          <Text style={[Fonts.h2, { color: tone }]}>{statusLabel[current.status] || current.status}</Text>
+          <View style={Spaces.gap[licenseSpacing.titleGap]}>
+            <LicenseStatusChip status={current.status} />
+            <Text style={[Fonts.h2, Fonts.neutral00]}>Ma cotisation</Text>
+          </View>
           <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
             {current?.club?.name || current?.campaign?.club?.name || 'Ton club'}
             {' '}
@@ -118,55 +146,37 @@ function MyLicense({ navigation, route }) {
             {current?.campaign?.seasonLabel}
           </Text>
         </View>
-        <View style={[ApplicationStyle.card, {
-          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55`, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 20,
-        }]}
-        >
-          <View style={{ flexDirection: 'row', gap: 14 }}>
-            <View style={[Spaces.gap[4], { flex: 1 }]}>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>Total</Text>
-              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{money(current.amountDueCents)}</Text>
-            </View>
-            <View style={[Spaces.gap[4], { flex: 1 }]}>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>Paye</Text>
-              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{money(current.amountPaidCents)}</Text>
-            </View>
-            <View style={[Spaces.gap[4], { flex: 1 }]}>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>Reste</Text>
-              <Text style={[Fonts.p1Bold, { color: tone }]}>{money(current.amountRemainingCents)}</Text>
-            </View>
-          </View>
-        </View>
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Echeancier</Text>
-        {(current.installments || []).map((installment) => (
-          <View
-            key={installment.id}
-            style={[ApplicationStyle.card, {
-              backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}44`, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 18,
-            }]}
-          >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              Echeance
-              {installment.order}
-              {' '}
-              -
-              {money(installment.amountDueCents)}
-            </Text>
-            <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
-              {installment.dueDate || 'Date non definie'}
-              {' '}
-              -
-              {' '}
-              {statusLabel[installment.status] || installment.status}
-            </Text>
-          </View>
-        ))}
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Payer ou regulariser</Text>
-        <Button isLoading={checkoutMutation.isPending} onPress={() => openCheckout('stripe')} title="Payer en ligne" />
-        <Button onPress={() => openCheckout('external')} title="Ouvrir HelloAsso / lien club" variant="Secondary" />
+        <LicenseCard>
+          <LicenseMetricRow
+            items={[
+              { label: 'Total', value: formatLicenseMoney(current.amountDueCents, currency) },
+              { label: 'Paye', value: formatLicenseMoney(current.amountPaidCents, currency) },
+              { label: 'Reste', tone, value: formatLicenseMoney(current.amountRemainingCents, currency) },
+            ]}
+          />
+        </LicenseCard>
+        <LicenseSectionHeader title="Echeancier" />
+        <LicenseInstallmentList currency={currency} installments={current.installments || []} />
+        <LicenseSectionHeader
+          description="Les actions ci-dessous suivent les moyens de paiement actives par ton club."
+          title="Payer ou regulariser"
+        />
+        {paymentModes.stripe ? <Button isLoading={checkoutMutation.isPending} onPress={() => openCheckout('stripe')} title="Payer en ligne" /> : null}
+        {paymentModes.external_link || paymentModes.helloasso ? <Button onPress={() => openCheckout(paymentModes.helloasso ? 'helloasso' : 'external')} title="Ouvrir le lien club" variant="Secondary" /> : null}
         <Button isLoading={declareMutation.isPending} onPress={() => declareMutation.mutate(undefined, { onSuccess: () => Alert.alert('Declaration envoyee', 'Le club devra valider ce paiement.') })} title="J'ai paye hors app" variant="Secondary" />
         <Button onPress={sharePayerLink} title="Partager le lien payeur" variant="Secondary" />
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Relances</Text>
+        {offlineInstructions.length ? (
+          <>
+            <LicenseSectionHeader title="Instructions du club" />
+            {offlineInstructions.map((instruction) => (
+              <LicenseCard key={instruction.label} variant="muted">
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{instruction.label}</Text>
+                <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[licenseSpacing.titleGap]]}>{instruction.value}</Text>
+              </LicenseCard>
+            ))}
+          </>
+        ) : null}
+        <LicenseSectionHeader title="Relances" />
         <Text style={[Fonts.p2, Fonts.neutral200]}>
           {current.reminderCount || (current.reminders || []).length || 0}
           {' '}

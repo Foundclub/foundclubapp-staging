@@ -375,7 +375,7 @@ export const submitMatchProof = async (matchId, proof) => {
  * @param {number | string} scoreB
  * @param {boolean} [dispute]
  * @param {{uri: string, name?: string, type?: string, source?: string} | null} [proof]
- * @param {{disputeType?: string | null, disputeComment?: string | null}} [extras]
+ * @param {{disputeType?: string | null, disputeComment?: string | null, scoreDetails?: object | null}} [extras]
  * @returns {Promise<object>}
  */
 export const submitMatchScore = async (
@@ -408,6 +408,9 @@ export const submitMatchScore = async (
   }
   if (extras?.disputeComment) {
     payload.dispute_comment = extras.disputeComment;
+  }
+  if (extras?.scoreDetails) {
+    payload.score_details = extras.scoreDetails;
   }
 
   const normalizedMatchId = requireDocumentId(matchId, 'match');

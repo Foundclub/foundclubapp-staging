@@ -7,6 +7,7 @@ import ClubFilters from '@/views/club/ClubFilters';
 import EventDetails from '@/views/event/EventDetails';
 import EventFilters from '@/views/event/EventFilters';
 import SquadDetailsScreen from '@/views/league/details/SquadDetailsScreen';
+import PublicLicensePayment from '@/views/license/PublicLicensePayment';
 import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
 import RecruitmentAdFilters from '@/views/recruitment/RecruitmentAdFilters';
 import ReservationDetails from '@/views/reservation/ReservationDetails';
@@ -123,6 +124,14 @@ function PublicNavigator() {
         component={SearchMapScreen}
         name={RouteNames.SearchMapScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        component={PublicLicensePayment}
+        name={RouteNames.PublicLicensePayment}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Paiement cotisation',
+        }}
       />
 
     </Stack.Navigator>

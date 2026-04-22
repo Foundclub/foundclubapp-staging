@@ -24,6 +24,7 @@ import {
   serializePopupDismissalRecord,
   shouldDeferStartupPopup,
 } from '@/context/popupManagerUtils';
+import { useStartupPhase } from '@/context/StartupPhaseContext';
 
 const popupManagerLogger = createLogger('popup-manager');
 export const STARTUP_QUIET_WINDOW_MS = 10000;
@@ -51,6 +52,12 @@ export function PopupManagerProvider({ children }) {
   const [popupStateVersion, bumpPopupStateVersion] = useReducer((value) => value + 1, 0);
   const [isStartupWindowActive, setIsStartupWindowActive] = useState(true);
   const [shownStartupBlockingPopupId, setShownStartupBlockingPopupId] = useState(null);
+  const {
+    currentRouteName,
+    markStartupPromptDismissed,
+    markStartupPromptShown,
+    phase: startupPhase,
+  } = useStartupPhase();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -75,8 +82,10 @@ export function PopupManagerProvider({ children }) {
       ...meta,
       eventName,
       popupId,
+      routeName: currentRouteName,
+      startupPhase,
     });
-  }, []);
+  }, [currentRouteName, startupPhase]);
 
   const isPopupDismissed = useCallback((popupId, options = {}) => {
     const descriptor = getPopupDescriptor(popupId);
@@ -112,12 +121,15 @@ export function PopupManagerProvider({ children }) {
     }
 
     bumpPopupStateVersion();
+    if (descriptor.kind === 'startup_blocking') {
+      markStartupPromptDismissed(descriptor.id);
+    }
     recordPopupEvent(descriptor.id, 'dismissed', {
       cooldownKey,
       dismissScope,
       stateKey: options.stateKey,
     });
-  }, [recordPopupEvent]);
+  }, [markStartupPromptDismissed, recordPopupEvent]);
 
   const clearDismissal = useCallback((popupId, options = {}) => {
     const descriptor = getPopupDescriptor(popupId);
@@ -140,8 +152,16 @@ export function PopupManagerProvider({ children }) {
       setShownStartupBlockingPopupId(descriptor.id);
     }
 
+    if (descriptor.kind === 'startup_blocking') {
+      markStartupPromptShown(descriptor.id);
+    }
     recordPopupEvent(descriptor.id, 'shown', options);
-  }, [isStartupWindowActive, recordPopupEvent, shownStartupBlockingPopupId]);
+  }, [
+    isStartupWindowActive,
+    markStartupPromptShown,
+    recordPopupEvent,
+    shownStartupBlockingPopupId,
+  ]);
 
   const value = useMemo(() => ({
     clearDismissal,
@@ -213,6 +233,11 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     recordPopupEvent,
     shownStartupBlockingPopupId,
   } = usePopupManager();
+  const {
+    canShowGlobalStartupPrompt,
+    canShowLocalScreenPrompt,
+    phase: startupPhase,
+  } = useStartupPhase();
   const dismissalStateRef = useRef('');
   const normalizedCooldownKey = String(options.cooldownKey || 'default');
   const dismissScope = options.dismissScope || descriptor.dismissScope || POPUP_DISMISS_SCOPES.SESSION;
@@ -235,7 +260,39 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     isStartupWindowActive,
     shownStartupBlockingPopupId,
   });
-  const canShow = Boolean(enabled && isRouteAllowed && !isRouteBlocked && !isDismissed && !isDeferred);
+  const isGlobalPhaseEligible = Boolean(
+    startupPhase === 'startup_prompt_window'
+    && descriptor.allowedStartupPhases?.includes('startup_prompt_window'),
+  );
+  const isLocalPhaseEligible = Boolean(
+    (
+      startupPhase === 'screen_local_prompts'
+      || startupPhase === 'steady_state'
+    )
+    && (
+      descriptor.allowedStartupPhases?.includes('screen_local_prompts')
+      || descriptor.allowedStartupPhases?.includes('steady_state')
+    ),
+  );
+  const isBlockedByStartupPhase = Array.isArray(descriptor.allowedStartupPhases)
+    && descriptor.allowedStartupPhases.length > 0
+    && !descriptor.allowedStartupPhases.includes(startupPhase);
+  const isBlockedByStartupGate = Boolean(
+    descriptor.kind === 'startup_blocking'
+    && (
+      (isGlobalPhaseEligible && !canShowGlobalStartupPrompt)
+      || (isLocalPhaseEligible && !canShowLocalScreenPrompt)
+    ),
+  );
+  const canShow = Boolean(
+    enabled
+    && isRouteAllowed
+    && !isRouteBlocked
+    && !isDismissed
+    && !isDeferred
+    && !isBlockedByStartupPhase
+    && !isBlockedByStartupGate,
+  );
 
   useEffect(() => {
     if (!enabled) {
@@ -250,6 +307,8 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
       nextState = 'skipped_due_to_priority';
     } else if (isRouteBlocked) {
       nextState = 'blocked_by_route';
+    } else if (isBlockedByStartupPhase || isBlockedByStartupGate) {
+      nextState = 'blocked_by_startup_phase';
     } else if (isDismissed) {
       nextState = 'dismissed';
     }
@@ -268,6 +327,7 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
       dismissScope,
       popupStateVersion,
       routeName,
+      startupPhase,
       stateKey: options.stateKey,
     });
   }, [
@@ -275,6 +335,8 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     descriptor.id,
     dismissScope,
     enabled,
+    isBlockedByStartupGate,
+    isBlockedByStartupPhase,
     isDeferred,
     isDismissed,
     isRouteBlocked,
@@ -283,6 +345,7 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     popupStateVersion,
     recordPopupEvent,
     routeName,
+    startupPhase,
   ]);
 
   return useMemo(() => ({
@@ -294,6 +357,7 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
       dismissScope: overrideScope,
       stateKey: options.stateKey,
     }),
+    isBlockedByStartupPhase,
     isDeferred,
     isDismissed,
     isRouteBlocked,
@@ -310,6 +374,7 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     isDismissed,
     isRouteBlocked,
     isStartupWindowActive,
+    isBlockedByStartupPhase,
     markPopupShown,
     normalizedCooldownKey,
     options.stateKey,

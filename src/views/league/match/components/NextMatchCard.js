@@ -294,20 +294,7 @@ function NextMatchCard({
         await markEventVenueBooked(eventId);
       } else {
         const matchId = getEntityDocumentId(match);
-        const legalAcceptance = await requestLeagueLegalAcceptance({
-          metadata: {
-            matchLabel: matchLegalLabel,
-            teamName: myTeam?.name || null,
-          },
-          scope: LEAGUE_LEGAL_SCOPES.MATCH_VENUE_BOOKING,
-          sourceScreen: 'next_match_card_venue_booked',
-          targetDocumentId: matchId,
-          targetLabel: matchLegalLabel,
-          targetType: 'league_match',
-        });
-        if (!legalAcceptance) return;
-
-        await markLeagueMatchVenueBooked(matchId, { legalAcceptance });
+        await markLeagueMatchVenueBooked(matchId);
       }
       Alert.alert('Terrain Réservé ✅', 'Le terrain est confirmé !');
       onRefresh && onRefresh();

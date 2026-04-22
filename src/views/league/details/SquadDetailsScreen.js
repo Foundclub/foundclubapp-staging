@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -191,6 +191,7 @@ function SquadDetailsScreen({ navigation, route }) {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { userData: currentUser } = /** @type {{ userData: User | null }} */ (useAuth());
   const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
@@ -1038,6 +1039,40 @@ function SquadDetailsScreen({ navigation, route }) {
     };
   }, [canViewStatistics, focusSection, navigation, sectionOffsets]);
 
+  const refreshLeagueTeamCachesAfterDelete = useCallback(async () => {
+    queryClient.removeQueries({ queryKey: ['leagueTeam', safeTeamId] });
+    queryClient.removeQueries({ queryKey: ['leagueTeamPerformanceStats', safeTeamId] });
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['leagueTeam'] }),
+      queryClient.invalidateQueries({ queryKey: ['myLeagueTeam'] }),
+      queryClient.invalidateQueries({ queryKey: ['pendingLeagueTeams'] }),
+      queryClient.invalidateQueries({ queryKey: ['invitedLeagueTeams'] }),
+      queryClient.invalidateQueries({ queryKey: ['league-matches'] }),
+      queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] }),
+      currentUserId
+        ? queryClient.invalidateQueries({ queryKey: ['myLeagueTeam', currentUserId] })
+        : Promise.resolve(),
+    ]);
+  }, [currentUserId, queryClient, safeTeamId]);
+
+  const resetToLeagueHome = useCallback(() => {
+    let rootNavigation = navigation;
+    while (rootNavigation?.getParent?.()) {
+      rootNavigation = rootNavigation.getParent();
+    }
+
+    if (rootNavigation?.reset) {
+      rootNavigation.reset({
+        index: 0,
+        routes: [{ name: RouteNames.LeagueHomeTab }],
+      });
+      return;
+    }
+
+    navigation.navigate(RouteNames.LeagueHomeTab, { screen: RouteNames.LeagueDashboard });
+  }, [navigation]);
+
   const handleDeleteTeam = useCallback(() => {
     const teamDisplayName = String(team?.name || '').trim() || t('squadDetails.defaultName', 'Squad');
     Alert.alert(
@@ -1053,7 +1088,8 @@ function SquadDetailsScreen({ navigation, route }) {
             try {
               setIsUpdating(true);
               await deleteLeagueTeam(safeTeamId);
-              navigation.navigate(RouteNames.LeagueHomeTab, { screen: RouteNames.LeagueDashboard });
+              await refreshLeagueTeamCachesAfterDelete();
+              resetToLeagueHome();
             } catch (error) {
               console.error(error);
               Alert.alert(
@@ -1069,7 +1105,7 @@ function SquadDetailsScreen({ navigation, route }) {
         },
       ],
     );
-  }, [navigation, safeTeamId, t, team?.name]);
+  }, [refreshLeagueTeamCachesAfterDelete, resetToLeagueHome, safeTeamId, t, team?.name]);
 
   const openRequests = useCallback(() => {
     navigation.navigate(RouteNames.SquadRequests, { teamId: safeTeamId });

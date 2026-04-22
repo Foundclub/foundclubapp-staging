@@ -26,9 +26,25 @@ const explicitSmartNotificationsEnabled = parseBooleanFlag(
 const explicitNotificationTestTriggerEnabled = parseBooleanFlag(
   process.env.FC_ENABLE_NOTIFICATION_TEST_TRIGGER,
 );
+const explicitStartupTutorialsEnabled = parseBooleanFlag(
+  process.env.FC_ENABLE_STARTUP_TUTORIALS,
+);
+const explicitLeagueActionPromptsEnabled = parseBooleanFlag(
+  process.env.FC_ENABLE_LEAGUE_ACTION_PROMPTS,
+);
+const explicitMatchStatsPromptsEnabled = parseBooleanFlag(
+  process.env.FC_ENABLE_MATCH_STATS_PROMPTS,
+);
+const explicitRemotePopupCampaignsEnabled = parseBooleanFlag(
+  process.env.FC_ENABLE_REMOTE_POPUP_CAMPAIGNS,
+);
 
 const hasExplicitPushFlag = hasExplicitFlagValue(process.env.FC_ENABLE_PUSH_NOTIFICATIONS);
 const hasExplicitSmartFlag = hasExplicitFlagValue(process.env.FC_ENABLE_SMART_NOTIFICATIONS);
+const hasExplicitStartupTutorialsFlag = hasExplicitFlagValue(process.env.FC_ENABLE_STARTUP_TUTORIALS);
+const hasExplicitLeagueActionPromptsFlag = hasExplicitFlagValue(process.env.FC_ENABLE_LEAGUE_ACTION_PROMPTS);
+const hasExplicitMatchStatsPromptsFlag = hasExplicitFlagValue(process.env.FC_ENABLE_MATCH_STATS_PROMPTS);
+const hasExplicitRemotePopupCampaignsFlag = hasExplicitFlagValue(process.env.FC_ENABLE_REMOTE_POPUP_CAMPAIGNS);
 
 let enablePushNotifications = false;
 let notificationsBootstrapPolicy = 'disabled-by-default-local';
@@ -64,10 +80,26 @@ if (hasExplicitSmartFlag) {
 
 const enableNotificationTestTrigger = appRuntimeEnv === 'local'
   && explicitNotificationTestTriggerEnabled;
+const enableStartupTutorials = hasExplicitStartupTutorialsFlag
+  ? explicitStartupTutorialsEnabled
+  : true;
+const enableLeagueActionPrompts = hasExplicitLeagueActionPromptsFlag
+  ? explicitLeagueActionPromptsEnabled
+  : true;
+const enableMatchStatsPrompts = hasExplicitMatchStatsPromptsFlag
+  ? explicitMatchStatsPromptsEnabled
+  : true;
+const enableRemotePopupCampaigns = hasExplicitRemotePopupCampaignsFlag
+  ? explicitRemotePopupCampaignsEnabled
+  : true;
 
 export const ENABLE_PUSH_NOTIFICATIONS = enablePushNotifications;
 export const ENABLE_SMART_NOTIFICATIONS = enableSmartNotifications;
 export const ENABLE_NOTIFICATION_TEST_TRIGGER = enableNotificationTestTrigger;
+export const ENABLE_STARTUP_TUTORIALS = enableStartupTutorials;
+export const ENABLE_LEAGUE_ACTION_PROMPTS = enableLeagueActionPrompts;
+export const ENABLE_MATCH_STATS_PROMPTS = enableMatchStatsPrompts;
+export const ENABLE_REMOTE_POPUP_CAMPAIGNS = enableRemotePopupCampaigns;
 export const DISABLE_NOTIFICATIONS_BOOTSTRAP = !enablePushNotifications;
 export const NOTIFICATIONS_BOOTSTRAP_POLICY = notificationsBootstrapPolicy;
 export const APP_RUNTIME_ENV = appRuntimeEnv || 'unknown';
@@ -82,6 +114,12 @@ export const NOTIFICATIONS_RUNTIME_CONFIG = {
   smart: {
     enabled: enableSmartNotifications,
     policy: smartNotificationsPolicy,
+  },
+  startupGuards: {
+    leagueActionPrompts: enableLeagueActionPrompts,
+    matchStatsPrompts: enableMatchStatsPrompts,
+    remotePopupCampaigns: enableRemotePopupCampaigns,
+    tutorials: enableStartupTutorials,
   },
   testTrigger: {
     enabled: enableNotificationTestTrigger,

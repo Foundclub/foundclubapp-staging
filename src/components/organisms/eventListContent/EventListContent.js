@@ -632,7 +632,7 @@ function EventListContent({
       eventListLogger.warn('Navigation blocked: missing event documentId');
       return;
     }
-    eventListLogger.debug('Navigating to event dÃ©tails', { eventDocumentId: event.documentId });
+    eventListLogger.debug('Navigating to event details', { eventDocumentId: event.documentId });
     navigateToStackScreenOrScreen(/** @type {any} */ (navigation), {
       params: { eventId: event.documentId },
       screen: RouteNames.EventDetails,
@@ -857,7 +857,7 @@ function EventListContent({
    * @returns {import('react').ReactElement} The rendered event item
    */
   const renderItem = ({ index, item }) => {
-    const isReservation = item?.type?.name === 'RÃ©servation';
+    const isReservation = item?.type?.name === 'Réservation';
     const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
     const showAbout = isPlanning || isManager;
     const card = isReservation ? (
@@ -993,7 +993,7 @@ function EventListContent({
           </Text>
           {isViewportTruncated ? (
             <Text style={[Fonts.p4, Fonts.neutral200]}>
-              Zoomez sur la carte pour afficher tous les Ã©vÃ©nements de cette zone.
+              Zoomez sur la carte pour afficher tous les événements de cette zone.
             </Text>
           ) : null}
         </View>

@@ -147,6 +147,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const [isNegotiationModalVisible, setIsNegotiationModalVisible] = useState(false);
   const [isPostSlotResolutionVisible, setIsPostSlotResolutionVisible] = useState(false);
   const [postSlotResolutionStep, setPostSlotResolutionStep] = useState(/** @type {string | null} */ (null));
+  const [isActionDockExpanded, setIsActionDockExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const userId = getEntityDocumentId(userData);
@@ -179,6 +180,10 @@ function LeagueMatchDetails({ navigation, route }) {
       loadMatch();
     }, [loadMatch]),
   );
+
+  useEffect(() => {
+    setIsActionDockExpanded(false);
+  }, [matchId]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -347,7 +352,7 @@ function LeagueMatchDetails({ navigation, route }) {
     let origin = 'Discussion League active';
 
     if (negotiationState === 'proposal_received') {
-      title = 'Proposition reÃƒÆ’Ã‚Â§ue';
+      title = 'Proposition reçue';
       helper = 'Une proposition adverse attend votre r\u00E9ponse. Vous pouvez accepter, refuser ou contre-proposer.';
       origin = "Envoy\u00E9e par l'adversaire";
     } else if (negotiationState === 'proposal_sent_waiting') {
@@ -622,6 +627,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const scrollBottomPadding = useMemo(() => {
     const dockOffset = hasBottomActionBar ? floatingActionBottomOffset : 0;
     if (!hasBottomActionBar) return 52;
+    if (!isActionDockExpanded) return dockOffset + 124;
     if (hasBottomPresenceBar && hasCaptainQuickActions) return dockOffset + 344;
     if (hasCaptainQuickActions) return dockOffset + 212;
     if (canShowCaptainCancel) return dockOffset + 236;
@@ -632,6 +638,7 @@ function LeagueMatchDetails({ navigation, route }) {
     hasBottomActionBar,
     hasBottomPresenceBar,
     hasCaptainQuickActions,
+    isActionDockExpanded,
   ]);
   const isScoreToSubmitBadge = String(statusConfig.label || '').toLowerCase().includes('saisir');
   const scoreQuickActionMeta = useMemo(() => {
@@ -669,8 +676,8 @@ function LeagueMatchDetails({ navigation, route }) {
     }
 
     return {
-      helper: 'Le match est jouÃƒÆ’Ã‚Â©. Le score officiel doit ÃƒÆ’Ã‚Âªtre saisi pour lancer le bilan League.',
-      label: 'Score ÃƒÆ’Ã‚Â  saisir',
+      helper: 'Le match est joué. Le score officiel doit être saisi pour lancer le bilan League.',
+      label: 'Score à saisir',
       title: 'Saisir le score final',
     };
   }, [matchPhase, scoreFlow.remainingSeconds, scoreFlow.state]);
@@ -689,7 +696,7 @@ function LeagueMatchDetails({ navigation, route }) {
         accentColor: Colors.warning500,
         icon: Images.stadium,
         label: 'Organisation \u00E9quipe',
-        text: "Le terrain doit encore ÃƒÆ’Ã‚Âªtre confirmÃƒÆ’Ã‚Â© avant le coup d'envoi.",
+        text: "Le terrain doit encore être confirmé avant le coup d'envoi.",
       };
     }
 
@@ -706,7 +713,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         accentColor: Colors.success500,
         icon: Images.check,
-        label: 'RÃƒÆ’Ã‚Â©sultat validÃƒÆ’Ã‚Â©',
+        label: 'Résultat validé',
         text: 'Le match est verrouill\u00E9 avec son score officiel.',
       };
     }
@@ -735,13 +742,13 @@ function LeagueMatchDetails({ navigation, route }) {
   ]);
   const heroSupportText = useMemo(() => {
     if (hasOfficialScore && normalizedStatus === 'valid') {
-      return 'Score officiel enregistrÃƒÆ’Ã‚Â© pour cette affiche League.';
+      return 'Score officiel enregistré pour cette affiche League.';
     }
     if (isScoreActionPhase || isScoreToSubmitBadge) {
       return scoreQuickActionMeta.helper;
     }
     if (normalizedStatus === 'scheduled' && !isVenueBooked) {
-      return "Le terrain doit encore ÃƒÆ’Ã‚Âªtre confirmÃƒÆ’Ã‚Â© avant le coup d'envoi.";
+      return "Le terrain doit encore être confirmé avant le coup d'envoi.";
     }
     if (normalizedStatus === 'scheduled') {
       return 'Les confirmations de pr\u00E9sence restent ouvertes avant le d\u00E9but.';
@@ -778,16 +785,16 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isScoreLockedByTime) {
       return {
         accentColor: Colors.primary500,
-        helper: "Le score se dÃƒÆ’Ã‚Â©bloque automatiquement ÃƒÆ’Ã‚Â  l'heure de dÃƒÆ’Ã‚Â©but du match + 1 minute.",
-        label: 'Score bientÃƒÆ’Ã‚Â´t disponible',
-        title: 'Score verrouillÃƒÆ’Ã‚Â©',
+        helper: "Le score se débloque automatiquement à l'heure de début du match + 1 minute.",
+        label: 'Score bientôt disponible',
+        title: 'Score verrouillé',
       };
     }
 
     return {
       accentColor: Colors.gold500,
-      helper: "Le terrain doit ÃƒÆ’Ã‚Âªtre confirmÃƒÆ’Ã‚Â© avant le coup d'envoi pour garder le workflow League propre.",
-      label: 'Terrain ÃƒÆ’Ã‚Â  confirmer',
+      helper: "Le terrain doit être confirmé avant le coup d'envoi pour garder le workflow League propre.",
+      label: 'Terrain à confirmer',
       title: 'Organisation du match',
     };
   }, [
@@ -799,6 +806,45 @@ function LeagueMatchDetails({ navigation, route }) {
     isScoreLockedByTime,
     scoreQuickActionMeta.helper,
     scoreQuickActionMeta.label,
+  ]);
+  const actionDockMeta = useMemo(() => {
+    if (hasBottomPresenceBar) {
+      return {
+        accentColor: hasConfirm\u00E9d ? Colors.success500 : Colors.primary500,
+        helper: pr\u00E9senceCompactHelperText,
+        label: `${participationCount}/${requiredPlayers}`,
+        title: hasConfirm\u00E9d ? 'Présence confirmée' : 'Disponibilité',
+      };
+    }
+
+    if (hasCaptainQuickActions) {
+      return {
+        accentColor: captainQuickActionMeta.accentColor,
+        helper: captainQuickActionMeta.helper,
+        label: captainQuickActionMeta.label,
+        title: captainQuickActionMeta.title,
+      };
+    }
+
+    return {
+      accentColor: Colors.primary500,
+      helper: '',
+      label: '',
+      title: 'Actions du match',
+    };
+  }, [
+    Colors.primary500,
+    Colors.success500,
+    captainQuickActionMeta.accentColor,
+    captainQuickActionMeta.helper,
+    captainQuickActionMeta.label,
+    captainQuickActionMeta.title,
+    hasBottomPresenceBar,
+    hasCaptainQuickActions,
+    hasConfirm\u00E9d,
+    participationCount,
+    pr\u00E9senceCompactHelperText,
+    requiredPlayers,
   ]);
   const postSlotResolutionModalMeta = useMemo(() => {
     if (effectivePostSlotResolutionStep === 'confirm_reschedule') {
@@ -853,7 +899,7 @@ function LeagueMatchDetails({ navigation, route }) {
       },
       {
         key: 'presence',
-        label: 'PrÃƒÆ’Ã‚Â©sences',
+        label: 'Présences',
         state: hasEnoughPlayers ? 'done' : 'active',
       },
       {
@@ -1134,22 +1180,9 @@ function LeagueMatchDetails({ navigation, route }) {
   };
 
   const handleMarkVenueBooked = async () => {
-    const legalAcceptance = await requestLeagueLegalAcceptance({
-      metadata: {
-        matchLabel: matchLegalLabel,
-        teamName: myTeam?.name || null,
-      },
-      scope: LEAGUE_LEGAL_SCOPES.MATCH_VENUE_BOOKING,
-      sourceScreen: 'league_match_details_venue_booked',
-      targetDocumentId: matchId,
-      targetLabel: matchLegalLabel,
-      targetType: 'league_match',
-    });
-    if (!legalAcceptance) return;
-
     setActionLoading(true);
     try {
-      await markVenueBooked(matchId, { legalAcceptance });
+      await markVenueBooked(matchId);
       invalidateLeagueQueries();
       await refetchPendingLeagueAction();
       Alert.alert('Succes', 'Terrain marque comme reserve.');
@@ -1207,7 +1240,7 @@ function LeagueMatchDetails({ navigation, route }) {
         || error?.message
         || '',
       ).trim();
-      Alert.alert('Erreur', serverMessage || "Impossible d'enregistrer cette rÃƒÆ’Ã‚Â©ponse.");
+      Alert.alert('Erreur', serverMessage || "Impossible d'enregistrer cette réponse.");
     } finally {
       setActionLoading(false);
     }
@@ -1562,7 +1595,7 @@ function LeagueMatchDetails({ navigation, route }) {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>Details du match</Text>
+          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.neutral00 }]}>Détails du match</Text>
           <View style={[styles.headerSide, styles.headerSideRight]}>
             {match.chat ? (
               <TouchableOpacity onPress={handleOpenChat} style={styles.chatButton}>
@@ -1610,7 +1643,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
             <View style={styles.heroMatchupRow}>
               <View style={styles.heroTeamBlock}>
-                <TeamShield initials={String(match.team_a?.initials || match.team_a?.name || '?')} isGold size={86} />
+                <TeamShield initials={String(match.team_a?.initials || match.team_a?.name || '?')} isGold size={68} />
                 <Text numberOfLines={2} style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral00 }]}>
                   {match.team_a?.name || '\u00C9quipe A'}
                 </Text>
@@ -1656,7 +1689,7 @@ function LeagueMatchDetails({ navigation, route }) {
                   </>
                 ) : (
                   <>
-                    <TeamShield initials={String(match.team_b?.initials || match.team_b?.name || '?')} isGold size={86} />
+                    <TeamShield initials={String(match.team_b?.initials || match.team_b?.name || '?')} isGold size={68} />
                     <Text numberOfLines={2} style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral00 }]}>
                       {match.team_b?.name || '\u00C9quipe B'}
                     </Text>
@@ -1732,20 +1765,38 @@ function LeagueMatchDetails({ navigation, route }) {
                     variant="Primary"
                   />
                 ) : null}
-                {canSubmitScore || isScoreLockedByTime ? (
+                {isScoreLockedByTime && !canSubmitScore ? (
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.bottomLockedInfo,
+                      {
+                        backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                        borderColor: 'rgba(1, 179, 244, 0.24)',
+                        marginTop: 10,
+                      },
+                    ]}
+                  >
+                    <Image source={Images.clock} style={{ height: 16, tintColor: Colors.primary500, width: 16 }} />
+                    <Text style={[Fonts.p4Bold, { color: Colors.neutral200, flex: 1 }]}>
+                      Score disponible au debut du match + 1 min.
+                    </Text>
+                  </View>
+                ) : null}
+                {canSubmitScore ? (
                   <Button
                     disabled={actionLoading}
                     icon="edit"
-                    iconColor={isScoreLockedByTime ? Colors.neutral300 : Colors.primary900}
+                    iconColor={Colors.primary900}
                     iconPosition="before"
                     onPress={handleGoToScoreEntry}
                     size="small"
                     style={{
-                      backgroundColor: isScoreLockedByTime ? 'rgba(1, 179, 244, 0.10)' : Colors.gold500,
-                      borderColor: isScoreLockedByTime ? 'rgba(1, 179, 244, 0.28)' : Colors.gold500,
+                      backgroundColor: Colors.gold500,
+                      borderColor: Colors.gold500,
                     }}
-                    textStyle={{ color: isScoreLockedByTime ? Colors.neutral300 : Colors.primary900 }}
-                    title={isScoreLockedByTime ? 'Score verrouillÃƒÆ’Ã‚Â© (dÃƒÆ’Ã‚Â©but + 1 min)' : scoreQuickActionMeta.title}
+                    textStyle={{ color: Colors.primary900 }}
+                    title={scoreQuickActionMeta.title}
                     variant="Primary"
                   />
                 ) : null}
@@ -2268,7 +2319,7 @@ function LeagueMatchDetails({ navigation, route }) {
                       }}
                     >
                       <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
-                        {`${leagueStatsReport?.responseCompletionCount ?? leaguePlayerCollectiveRating?.count ?? 0}/${leagueStatsReport?.responseEligibleCount ?? leaguePlayerCollectiveRating?.eligibleCount ?? 0} joueurs ont rÃƒÆ’Ã‚Â©pondu`}
+                        {`${leagueStatsReport?.responseCompletionCount ?? leaguePlayerCollectiveRating?.count ?? 0}/${leagueStatsReport?.responseEligibleCount ?? leaguePlayerCollectiveRating?.eligibleCount ?? 0} joueurs ont répondu`}
                       </Text>
                       {leaguePlayerCollectiveRating?.count ? (
                         <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
@@ -2472,7 +2523,7 @@ function LeagueMatchDetails({ navigation, route }) {
                 </View>
                 {canShowCaptainPrimary ? (
                   <Text style={[Fonts.p3, { color: leagueCardTextColor, marginBottom: canShowCaptainCancel ? 12 : 0 }]}>
-                    Les actions rapides terrain, score et rÃƒÆ’Ã‚Â©solution restent visibles dans la barre du bas pour agir sans quitter la fiche.
+                    Les actions rapides terrain, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.
                   </Text>
                 ) : null}
                 {canShowCaptainCancel ? (
@@ -2492,11 +2543,87 @@ function LeagueMatchDetails({ navigation, route }) {
         </ScrollView>
 
         {hasBottomActionBar ? (
-          <View style={[styles.bottomBar, bottomBarFloatingStyle]}>
-            <View style={styles.bottomBarContent}>
-              {hasBottomPresenceBar ? (
+          <View pointerEvents="box-none" style={[styles.bottomBar, bottomBarFloatingStyle]}>
+            <View pointerEvents="box-none" style={styles.bottomBarContent}>
+              <TouchableOpacity
+                activeOpacity={0.86}
+                onPress={() => setIsActionDockExpanded((value) => !value)}
+                style={styles.bottomDockHandle}
+              >
+                <View style={styles.bottomDockTitleRow}>
+                  <View style={[styles.bottomCaptainDot, { backgroundColor: actionDockMeta.accentColor }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{actionDockMeta.title}</Text>
+                    {actionDockMeta.helper ? (
+                      <Text numberOfLines={1} style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 2 }]}>
+                        {actionDockMeta.helper}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+                <View style={styles.bottomDockRightRow}>
+                  {actionDockMeta.label ? (
+                    <View
+                      style={[
+                        styles.bottomCaptainPill,
+                        {
+                          backgroundColor: `${actionDockMeta.accentColor}16`,
+                          borderColor: `${actionDockMeta.accentColor}2E`,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: actionDockMeta.accentColor }]}>
+                        {actionDockMeta.label}
+                      </Text>
+                    </View>
+                  ) : null}
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                    {isActionDockExpanded ? 'Fermer' : 'Actions'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {!isActionDockExpanded && hasBottomPresenceBar && !hasConfirm\u00E9d ? (
+                <View pointerEvents="box-none" style={styles.pr\u00E9senceActionsRow}>
+                  <Button
+                    disabled={actionLoading}
+                    icon="close"
+                    iconColor={Colors.error500}
+                    iconPosition="before"
+                    onPress={handleDeclineParticipation}
+                    size="small"
+                    style={{
+                      backgroundColor: 'transparent',
+                      borderColor: Colors.error500,
+                      flex: 0.92,
+                    }}
+                    textStyle={{ color: Colors.error500 }}
+                    title="Absent"
+                    variant="Secondary"
+                  />
+                  <Button
+                    disabled={actionLoading || isRosterFull}
+                    icon="check"
+                    iconColor={isRosterFull ? Colors.neutral300 : Colors.neutral00}
+                    iconPosition="before"
+                    onPress={handleConfirmParticipation}
+                    size="small"
+                    style={{
+                      backgroundColor: isRosterFull ? 'rgba(1, 179, 244, 0.10)' : Colors.primary500,
+                      borderColor: isRosterFull ? 'rgba(1, 179, 244, 0.28)' : Colors.primary500,
+                      flex: 1.08,
+                    }}
+                    textStyle={{ color: isRosterFull ? Colors.neutral300 : Colors.neutral00 }}
+                    title={pr\u00E9sencePrimaryTitle}
+                    variant="Primary"
+                  />
+                </View>
+              ) : null}
+
+              {isActionDockExpanded && hasBottomPresenceBar ? (
                 <>
                   <View
+                    pointerEvents="none"
                     style={[
                       styles.pr\u00E9senceSummaryCard,
                       hasConfirm\u00E9d
@@ -2541,7 +2668,7 @@ function LeagueMatchDetails({ navigation, route }) {
                         <Text
                           style={[
                             Fonts.p4Bold,
-                            { color: Colors.gold500 },
+                            { color: Colors.primary500 },
                           ]}
                         >
                           {participationCount}
@@ -2555,7 +2682,7 @@ function LeagueMatchDetails({ navigation, route }) {
                     </Text>
                   </View>
                   {hasConfirm\u00E9d ? (
-                    <View style={styles.confirmedActionsRow}>
+                    <View pointerEvents="box-none" style={styles.confirmedActionsRow}>
                       <Button
                         disabled={actionLoading}
                         icon="close"
@@ -2574,7 +2701,7 @@ function LeagueMatchDetails({ navigation, route }) {
                       />
                     </View>
                   ) : (
-                    <View style={styles.pr\u00E9senceActionsRow}>
+                    <View pointerEvents="box-none" style={styles.pr\u00E9senceActionsRow}>
                       <Button
                         disabled={actionLoading}
                         icon="close"
@@ -2599,11 +2726,11 @@ function LeagueMatchDetails({ navigation, route }) {
                         onPress={handleConfirmParticipation}
                         size="small"
                         style={{
-                          backgroundColor: isRosterFull ? 'rgba(1, 179, 244, 0.10)' : Colors.gold500,
-                          borderColor: isRosterFull ? 'rgba(1, 179, 244, 0.28)' : Colors.gold500,
+                          backgroundColor: isRosterFull ? 'rgba(1, 179, 244, 0.10)' : Colors.primary500,
+                          borderColor: isRosterFull ? 'rgba(1, 179, 244, 0.28)' : Colors.primary500,
                           flex: 1.08,
                         }}
-                        textStyle={{ color: isRosterFull ? Colors.neutral300 : Colors.primary900 }}
+                        textStyle={{ color: isRosterFull ? Colors.neutral300 : Colors.neutral00 }}
                         title={pr\u00E9sencePrimaryTitle}
                         variant="Primary"
                       />
@@ -2611,8 +2738,9 @@ function LeagueMatchDetails({ navigation, route }) {
                   )}
                 </>
               ) : null}
-              {hasCaptainQuickActions ? (
+              {isActionDockExpanded && hasCaptainQuickActions ? (
                 <View
+                  pointerEvents="box-none"
                   style={[
                     styles.bottomCaptainCard,
                     {
@@ -2621,7 +2749,7 @@ function LeagueMatchDetails({ navigation, route }) {
                     },
                   ]}
                 >
-                  <View style={styles.bottomCaptainHeaderRow}>
+                  <View pointerEvents="none" style={styles.bottomCaptainHeaderRow}>
                     <View style={styles.bottomCaptainTitleRow}>
                       <View
                         style={[
@@ -2645,9 +2773,9 @@ function LeagueMatchDetails({ navigation, route }) {
                       </Text>
                     </View>
                   </View>
-                  <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{captainQuickActionMeta.title}</Text>
-                  <Text style={[Fonts.p4, { color: leagueCardTextColor }]}>{captainQuickActionMeta.helper}</Text>
-                  <View style={styles.bottomCaptainButtonsStack}>
+                  <Text pointerEvents="none" style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{captainQuickActionMeta.title}</Text>
+                  <Text pointerEvents="none" style={[Fonts.p4, { color: leagueCardTextColor }]}>{captainQuickActionMeta.helper}</Text>
+                  <View pointerEvents="box-none" style={styles.bottomCaptainButtonsStack}>
                     {isPostSlotResolutionCurrentMatch ? (
                       <Button
                         disabled={actionLoading}
@@ -2682,20 +2810,37 @@ function LeagueMatchDetails({ navigation, route }) {
                         variant="Primary"
                       />
                     ) : null}
-                    {canSubmitScore || isScoreLockedByTime ? (
+                    {isScoreLockedByTime && !canSubmitScore ? (
+                      <View
+                        pointerEvents="none"
+                        style={[
+                          styles.bottomLockedInfo,
+                          {
+                            backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                            borderColor: 'rgba(1, 179, 244, 0.24)',
+                          },
+                        ]}
+                      >
+                        <Image source={Images.clock} style={{ height: 16, tintColor: Colors.primary500, width: 16 }} />
+                        <Text style={[Fonts.p4Bold, { color: Colors.neutral200, flex: 1 }]}>
+                          Score disponible au debut du match + 1 min.
+                        </Text>
+                      </View>
+                    ) : null}
+                    {canSubmitScore ? (
                       <Button
                         disabled={actionLoading}
                         icon="edit"
-                        iconColor={isScoreLockedByTime ? Colors.neutral300 : Colors.neutral00}
+                        iconColor={Colors.neutral00}
                         iconPosition="before"
                         onPress={handleGoToScoreEntry}
                         size="small"
                         style={{
-                          backgroundColor: isScoreLockedByTime ? 'rgba(1, 179, 244, 0.10)' : Colors.primary500,
-                          borderColor: isScoreLockedByTime ? 'rgba(1, 179, 244, 0.28)' : Colors.primary500,
+                          backgroundColor: Colors.primary500,
+                          borderColor: Colors.primary500,
                         }}
-                        textStyle={{ color: isScoreLockedByTime ? Colors.neutral300 : Colors.neutral00 }}
-                        title={isScoreLockedByTime ? 'Score verrouillÃƒÆ’Ã‚Â© (dÃƒÆ’Ã‚Â©but + 1 min)' : scoreQuickActionMeta.title}
+                        textStyle={{ color: Colors.neutral00 }}
+                        title={scoreQuickActionMeta.title}
                         variant="Primary"
                       />
                     ) : null}
@@ -2722,7 +2867,7 @@ function LeagueMatchDetails({ navigation, route }) {
             </View>
 
             <LeagueCard style={styles.leagueCardSurface}>
-              <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>ÃƒÆ’Ã¢â‚¬Â°quipe concernÃƒÆ’Ã‚Â©e</Text>
+              <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>Équipe concernée</Text>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 6 }]}>
                 {myTeam?.name || 'Mon \u00E9quipe'}
               </Text>
@@ -2796,15 +2941,15 @@ const styles = StyleSheet.create({
   bottomBar: {
     backgroundColor: 'rgba(3, 22, 33, 0.97)',
     borderTopColor: 'rgba(1, 179, 244, 0.34)',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderTopWidth: 1,
     bottom: 0,
     elevation: 12,
     left: 0,
-    paddingBottom: 20,
-    paddingHorizontal: 18,
-    paddingTop: 14,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    paddingTop: 10,
     position: 'absolute',
     right: 0,
     shadowColor: '#000',
@@ -2813,7 +2958,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   bottomBarContent: {
-    gap: 14,
+    gap: 10,
     width: '100%',
   },
   bottomCaptainButtonsStack: {
@@ -2826,6 +2971,38 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 18,
     paddingVertical: 16,
+  },
+  bottomDockHandle: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+    borderColor: 'rgba(1, 179, 244, 0.22)',
+    borderRadius: 20,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  bottomDockRightRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    marginLeft: 12,
+  },
+  bottomDockTitleRow: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  bottomLockedInfo: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   bottomCaptainDot: {
     borderRadius: 999,
@@ -2943,12 +3120,12 @@ const styles = StyleSheet.create({
   heroCard: {
     backgroundColor: 'rgba(7, 24, 36, 0.94)',
     borderColor: 'rgba(1, 179, 244, 0.28)',
-    borderRadius: 24,
+    borderRadius: 22,
     borderWidth: 1,
-    marginBottom: 24,
-    marginTop: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 24,
+    marginBottom: 18,
+    marginTop: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
   },
   heroContextPill: {
     borderRadius: 999,
@@ -2961,35 +3138,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 215, 0, 0.08)',
     borderColor: 'rgba(255, 215, 0, 0.28)',
-    borderRadius: 26,
+    borderRadius: 22,
     borderWidth: 1,
-    height: 86,
+    height: 68,
     justifyContent: 'center',
-    width: 86,
+    width: 68,
   },
   heroMatchupRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     justifyContent: 'space-between',
   },
   heroMetaRow: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 12,
   },
   heroScorePanel: {
     alignItems: 'center',
-    borderRadius: 24,
+    borderRadius: 20,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 126,
-    paddingHorizontal: 14,
-    paddingVertical: 20,
-    width: '34%',
+    minHeight: 96,
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+    width: '32%',
   },
   heroScoreValue: {
-    fontSize: 32,
-    lineHeight: 36,
+    fontSize: 28,
+    lineHeight: 32,
     textAlign: 'center',
   },
   heroStatusSupportCard: {
@@ -3001,22 +3178,22 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   heroSummaryText: {
-    marginTop: 12,
+    marginTop: 10,
     textAlign: 'center',
   },
   heroTeamBlock: {
     alignItems: 'center',
-    width: '31%',
+    width: '30%',
   },
   heroTeamName: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 10,
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 8,
     textAlign: 'center',
   },
   heroVsValue: {
-    fontSize: 28,
-    lineHeight: 32,
+    fontSize: 24,
+    lineHeight: 28,
     textAlign: 'center',
   },
   infoIconWrap: {

@@ -902,6 +902,7 @@ function Conversation({ navigation, route }) {
   const [isPollModalVisible, setIsPollModalVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
   const [isProposalResponseSubmitting, setIsProposalResponseSubmitting] = useState(false);
+  const [isLeagueNegotiationBannerCollapsed, setIsLeagueNegotiationBannerCollapsed] = useState(false);
   const [, setCounterProposalContext] = useState(
     /** @type {{ messageId: string; shouldDecline: boolean } | null} */ (null),
   );
@@ -4183,6 +4184,10 @@ function Conversation({ navigation, route }) {
   }, [leagueConversationMatchId, navigation]);
 
   useEffect(() => {
+    setIsLeagueNegotiationBannerCollapsed(false);
+  }, [chatId, latestProposalMessageId, leagueConversationMatchId]);
+
+  useEffect(() => {
     const focusToken = String(route?.params?.leagueNegotiationFocusToken || '').trim();
     const explicitMessageId = String(route?.params?.focusProposalMessageId || '').trim();
     const shouldFocusLatestProposal = Boolean(route?.params?.focusLatestProposal);
@@ -5490,6 +5495,48 @@ function Conversation({ navigation, route }) {
       && !isLatestProposalFromMySquad,
     );
 
+    if (isLeagueNegotiationBannerCollapsed) {
+      return (
+        <View
+          style={[
+            ApplicationStyle.borderRadius24,
+            Spaces.marginHorizontal[16],
+            Spaces.marginBottom[12],
+            Spaces.padding[16],
+            {
+              backgroundColor: 'rgba(10, 28, 43, 0.92)',
+              borderColor: 'rgba(1,179,244,0.28)',
+              borderWidth: 1,
+            },
+          ]}
+        >
+          <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, { columnGap: 12 }]}>
+            <View style={{ flex: 1 }}>
+              <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                {leagueNegotiationSummary.statusLabel}
+              </Text>
+              <Text numberOfLines={1} style={[Fonts.p3Bold, { color: Colors.neutral00, marginTop: 2 }]}>
+                {leagueNegotiationSummary.title}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setIsLeagueNegotiationBannerCollapsed(false)}
+              style={{
+                backgroundColor: 'rgba(1,179,244,0.14)',
+                borderColor: 'rgba(1,179,244,0.36)',
+                borderRadius: 999,
+                borderWidth: 1,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Ouvrir</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View
         style={[
@@ -5505,7 +5552,7 @@ function Conversation({ navigation, route }) {
           },
         ]}
       >
-        <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, { columnGap: 12, rowGap: 10 }]}>
+        <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, { columnGap: 12, flexWrap: 'wrap', rowGap: 10 }]}>
           <View
             style={{
               backgroundColor: 'rgba(1,179,244,0.14)',
@@ -5520,14 +5567,22 @@ function Conversation({ navigation, route }) {
               {leagueNegotiationSummary.statusLabel}
             </Text>
           </View>
-          {latestProposalMessageId ? (
+          <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 12, flexWrap: 'wrap', rowGap: 8 }]}>
+            {latestProposalMessageId ? (
+              <TouchableOpacity
+                onPress={() => scrollToMessageByDocumentId(latestProposalMessageId)}
+                style={{ paddingHorizontal: 4, paddingVertical: 6 }}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Voir la proposition</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
-              onPress={() => scrollToMessageByDocumentId(latestProposalMessageId)}
+              onPress={() => setIsLeagueNegotiationBannerCollapsed(true)}
               style={{ paddingHorizontal: 4, paddingVertical: 6 }}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Voir la proposition</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.neutral200 }]}>Fermer</Text>
             </TouchableOpacity>
-          ) : null}
+          </View>
         </View>
 
         <View style={Spaces.gap[8]}>

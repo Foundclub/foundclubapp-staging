@@ -15,7 +15,10 @@ import {
   NOTIFICATIONS_BOOTSTRAP_POLICY,
   NOTIFICATIONS_RUNTIME_CONFIG,
 } from '@/constants/runtimeFlags';
-import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import {
+  useBlockingOverlayLifecycle,
+  useBlockingOverlayPrompt,
+} from '@/context/BlockingOverlayContext';
 import { useSmartNotifications } from '@/context/SmartNotificationContext';
 import useNotifications from '@/hooks/useNotifications';
 
@@ -71,6 +74,12 @@ function NotificationBootstrapEnabled() {
   );
   const isCalendarPromptVisible = Boolean(calendarPrompt.canShow && canShowCalendarPrompt);
   const isPushPromptVisible = Boolean(pushPermissionPrompt.canShow && canShowPushPrompt);
+  useBlockingOverlayLifecycle(calendarPrompt.descriptor.id, isCalendarPromptVisible, {
+    releaseDelayMs: 320,
+  });
+  useBlockingOverlayLifecycle(pushPermissionPrompt.descriptor.id, isPushPromptVisible, {
+    releaseDelayMs: 320,
+  });
 
   React.useEffect(() => {
     if (!isCalendarPromptVisible) return;

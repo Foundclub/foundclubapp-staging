@@ -1,3 +1,5 @@
+import { getSubmissionScoreLabel } from '@/utils/leagueScoreDetails';
+
 import {
   getMatchDerivedPhase,
   getMatchStartDate,
@@ -16,7 +18,12 @@ const ensureObject = (value) => {
 
 export const hasScoreSubmission = (submission) => {
   const value = ensureObject(submission);
-  return value.score_a !== undefined || value.score_b !== undefined || value.submittedAt !== undefined;
+  return (
+    value.score_a !== undefined
+    || value.score_b !== undefined
+    || value.score_details !== undefined
+    || value.submittedAt !== undefined
+  );
 };
 
 const parseScore = (value) => {
@@ -51,6 +58,8 @@ const formatSubmission = (submission, side) => {
     disputeType: value.dispute_type || value.disputeType || null,
     scoreA: parseScore(value.score_a),
     scoreB: parseScore(value.score_b),
+    scoreDetails: value.score_details || value.scoreDetails || null,
+    scoreLabel: getSubmissionScoreLabel(value),
     side,
     submittedAt: toIso(value.submittedAt || value.submitted_at),
   };
@@ -60,8 +69,12 @@ const getPrimaryCta = (state, isCaptain) => {
   if (!isCaptain) return null;
   if (state === 'ready_to_submit') return { label: 'Saisir le score' };
   if (state === 'opponent_score_pending') return { label: 'Valider le score adverse' };
-  if (state === 'submitted_waiting_opponent' || state === 'auto_validation_pending') return { label: 'Score saisi' };
-  if (state === 'disputed' || state === 'admin_resolution') return { label: 'Traiter le litige' };
+  if (state === 'submitted_waiting_opponent' || state === 'auto_validation_pending') {
+    return { label: 'Score saisi' };
+  }
+  if (state === 'disputed' || state === 'admin_resolution') {
+    return { label: 'Traiter le litige' };
+  }
   if (state === 'locked_before_start') return { label: 'Score verrouillé' };
   if (state === 'locked_no_venue') return { label: 'Confirmer le terrain' };
   if (state === 'valid') return { label: 'Résultat validé' };
@@ -74,26 +87,42 @@ export const buildLocalScoreFlow = (match, options = {}) => {
   const phase = getMatchDerivedPhase(match);
   const isCaptainA = Boolean(options.isCaptainA);
   const isCaptainB = Boolean(options.isCaptainB);
-  const viewerSide = isCaptainA ? 'a' : isCaptainB ? 'b' : options.teamSide || null;
   const isCaptain = isCaptainA || isCaptainB || Boolean(options.isCaptain);
-  const ownSubmission = viewerSide === 'a'
-    ? formatSubmission(match?.submitted_score_team_a, 'a')
-    : viewerSide === 'b'
-      ? formatSubmission(match?.submitted_score_team_b, 'b')
-      : null;
-  const opponentSide = viewerSide === 'a' ? 'b' : viewerSide === 'b' ? 'a' : null;
-  const opponentSubmission = opponentSide === 'a'
-    ? formatSubmission(match?.submitted_score_team_a, 'a')
-    : opponentSide === 'b'
-      ? formatSubmission(match?.submitted_score_team_b, 'b')
-      : null;
+
+  let viewerSide = options.teamSide || null;
+  if (isCaptainA) viewerSide = 'a';
+  if (isCaptainB) viewerSide = 'b';
+
+  let ownSubmission = null;
+  if (viewerSide === 'a') {
+    ownSubmission = formatSubmission(match?.submitted_score_team_a, 'a');
+  } else if (viewerSide === 'b') {
+    ownSubmission = formatSubmission(match?.submitted_score_team_b, 'b');
+  }
+
+  let opponentSide = null;
+  if (viewerSide === 'a') {
+    opponentSide = 'b';
+  } else if (viewerSide === 'b') {
+    opponentSide = 'a';
+  }
+
+  let opponentSubmission = null;
+  if (opponentSide === 'a') {
+    opponentSubmission = formatSubmission(match?.submitted_score_team_a, 'a');
+  } else if (opponentSide === 'b') {
+    opponentSubmission = formatSubmission(match?.submitted_score_team_b, 'b');
+  }
+
   const submissionA = formatSubmission(match?.submitted_score_team_a, 'a');
   const submissionB = formatSubmission(match?.submitted_score_team_b, 'b');
   const deadlineAt = getScoreDeadlineAt(match);
   const remainingSeconds = deadlineAt
     ? Math.max(0, Math.ceil((deadlineAt.getTime() - Date.now()) / 1000))
     : null;
-  const postSlotResolution = String(match?.automation_meta?.post_slot_resolution?.resolution || '').toLowerCase();
+  const postSlotResolution = String(
+    match?.automation_meta?.post_slot_resolution?.resolution || '',
+  ).toLowerCase();
   const venueValidated = isVenueBookedForMatch(match) || postSlotResolution === 'score_flow';
   const scoreWindowOpen = isScoreWindowOpen(match);
 
@@ -101,11 +130,17 @@ export const buildLocalScoreFlow = (match, options = {}) => {
   if (status === 'valid') {
     state = 'valid';
   } else if (status === 'disputed') {
-    state = match?.automation_meta?.score_admin_escalated_at ? 'admin_resolution' : 'disputed';
+    state = match?.automation_meta?.score_admin_escalated_at
+      ? 'admin_resolution'
+      : 'disputed';
   } else if (status === 'pending_validation') {
-    if (opponentSubmission && !ownSubmission) state = 'opponent_score_pending';
-    else if (ownSubmission && !opponentSubmission) state = 'submitted_waiting_opponent';
-    else state = 'auto_validation_pending';
+    if (opponentSubmission && !ownSubmission) {
+      state = 'opponent_score_pending';
+    } else if (ownSubmission && !opponentSubmission) {
+      state = 'submitted_waiting_opponent';
+    } else {
+      state = 'auto_validation_pending';
+    }
   } else if (phase === 'waiting_score') {
     state = 'ready_to_submit';
   } else if (status === 'scheduled' && venueValidated && !scoreWindowOpen) {
@@ -116,10 +151,21 @@ export const buildLocalScoreFlow = (match, options = {}) => {
 
   return {
     ...backendFlow,
-    actionRequired: isCaptain && ['ready_to_submit', 'opponent_score_pending', 'disputed', 'admin_resolution'].includes(state),
-    autoValidationAt: backendFlow.autoValidationAt || (status === 'pending_validation' ? toIso(deadlineAt) : null),
-    canDispute: isCaptain && ['opponent_score_pending', 'disputed', 'admin_resolution'].includes(state),
-    canSubmit: isCaptain && ['ready_to_submit', 'opponent_score_pending', 'submitted_waiting_opponent', 'disputed', 'admin_resolution'].includes(state),
+    actionRequired: isCaptain
+      && ['admin_resolution', 'disputed', 'opponent_score_pending', 'ready_to_submit'].includes(state),
+    autoValidationAt:
+      backendFlow.autoValidationAt
+      || (status === 'pending_validation' ? toIso(deadlineAt) : null),
+    canDispute: isCaptain
+      && ['admin_resolution', 'disputed', 'opponent_score_pending'].includes(state),
+    canSubmit: isCaptain
+      && [
+        'admin_resolution',
+        'disputed',
+        'opponent_score_pending',
+        'ready_to_submit',
+        'submitted_waiting_opponent',
+      ].includes(state),
     canValidate: isCaptain && state === 'opponent_score_pending',
     deadlineAt: backendFlow.deadlineAt || toIso(deadlineAt),
     isCaptain,
@@ -142,7 +188,7 @@ export const buildLocalScoreFlow = (match, options = {}) => {
 
 export const formatScoreFlowCountdown = (seconds) => {
   const value = Number(seconds);
-  if (!Number.isFinite(value) || value <= 0) return 'moins d’une minute';
+  if (!Number.isFinite(value) || value <= 0) return "moins d'une minute";
   const hours = Math.floor(value / 3600);
   const minutes = Math.ceil((value % 3600) / 60);
   if (hours >= 24) {

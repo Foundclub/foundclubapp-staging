@@ -28,7 +28,11 @@ import {
   POPUP_DISMISS_SCOPES,
   POPUP_IDS,
 } from '@/constants/popupRegistry';
-import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import { ENABLE_MATCH_STATS_PROMPTS } from '@/constants/runtimeFlags';
+import {
+  useBlockingOverlayLifecycle,
+  useBlockingOverlayPrompt,
+} from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 
 const BLOCKED_ROUTES = new Set([
@@ -171,7 +175,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     data: pendingPromptsPayload,
     refetch,
   } = useGetPendingMatchStatsPrompts({
-    enabled: Boolean(auth?.token) && !skipInitialFetch,
+    enabled: ENABLE_MATCH_STATS_PROMPTS && Boolean(auth?.token) && !skipInitialFetch,
     refetchInterval: auth?.token ? 60000 : false,
     refetchIntervalInBackground: false,
   });
@@ -183,7 +187,8 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   const statusMeta = useMemo(() => getPromptStatusMeta(nextPrompt, Colors), [Colors, nextPrompt]);
   const modalSnapPoint = isCompactMobile ? '88%' : '82%';
   const shouldShowPrompt = Boolean(
-    auth?.token
+    ENABLE_MATCH_STATS_PROMPTS
+    && auth?.token
     && nextPrompt
     && isNavigationReady
     && !isBlockedRoute
@@ -203,6 +208,9 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     matchStatsPopup.descriptor.priority,
   );
   const isVisible = Boolean(shouldShowPrompt && matchStatsPopup.canShow && canShowPrompt);
+  useBlockingOverlayLifecycle(matchStatsPopup.descriptor.id, isVisible, {
+    releaseDelayMs: 360,
+  });
   const sectionGap = isCompactMobile ? 16 : 24;
   const titleGap = isCompactMobile ? 12 : 16;
   const cardPadding = isCompactMobile ? 16 : 24;
@@ -345,7 +353,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     return () => subscription.remove();
   }, [auth?.token, queryClient, refetch]);
 
-  if (!auth?.token || !nextPrompt) {
+  if (!ENABLE_MATCH_STATS_PROMPTS || !auth?.token || !nextPrompt) {
     return null;
   }
 
@@ -365,6 +373,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
         />
       )}
       isVisible={isVisible}
+      preventStartupPresentation
       snapPoints={[modalSnapPoint]}
     >
       <View style={[Spaces.gap[sectionGap], Spaces.paddingBottom[isCompactMobile ? 20 : 24]]}>

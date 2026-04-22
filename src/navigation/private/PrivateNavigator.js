@@ -274,6 +274,14 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
+          getComponent={() => require('@/views/license/CMLicensesDashboard').default}
+          name={RouteNames.CMLicensesDashboard}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Cotisations multisport',
+          }}
+        />
+        <Stack.Screen
           getComponent={() => require('@/views/club/AddSponsor').default}
           name={RouteNames.AddSponsor}
           options={{
@@ -427,6 +435,14 @@ function PrivateNavigator() {
         <Stack.Screen
           getComponent={() => require('@/views/license/LicenseCheckoutStatus').default}
           name={RouteNames.LicenseCheckoutStatus}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Paiement cotisation',
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/license/PublicLicensePayment').default}
+          name={RouteNames.PublicLicensePayment}
           options={{
             ...commonOptions,
             headerTitle: 'Paiement cotisation',

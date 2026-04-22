@@ -186,9 +186,9 @@ const LEAGUE_ACTION_META = {
   },
   valid: {
     accent: 'success',
-    actionLabel: 'Voir le resultat',
+    actionLabel: 'Voir le résultat',
     helper: 'Le score est valide. Consultez le recapitulatif du match.',
-    title: 'Resultat valide',
+    title: 'Résultat validé',
   },
   waiting_score: {
     accent: 'gold',
@@ -347,10 +347,14 @@ function LeagueDashboard() {
     setLoadError('');
     try {
       await hydrateSquadDashboard(squad);
+      navigation.navigate(RouteNames.LeagueMatchTab, {
+        activeSquadId: squadId,
+        squadSwitchToken: String(Date.now()),
+      });
     } finally {
       setLoading(false);
     }
-  }, [hydrateSquadDashboard, userTeam]);
+  }, [hydrateSquadDashboard, navigation, userTeam]);
 
   const isCaptainOnDashboard = getEntityDocumentId(userTeam?.captain) === getEntityDocumentId(userData);
   const dashboardPendingRequestsCount = Array.isArray(userTeam?.join_requests)

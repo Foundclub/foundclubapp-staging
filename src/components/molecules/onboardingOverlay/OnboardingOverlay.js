@@ -22,7 +22,10 @@ import useTheme from '@/theme/themeContext';
 import { tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 
 import { POPUP_IDS } from '@/constants/popupRegistry';
-import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import {
+  useBlockingOverlayLifecycle,
+  useBlockingOverlayPrompt,
+} from '@/context/BlockingOverlayContext';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 
@@ -106,8 +109,8 @@ function OnboardingOverlay({ onVisible } = {}) {
   const {
     canGoBack,
     currentStep,
-    currentStepLayout,
     currentStepIndex,
+    currentStepLayout,
     isActive,
     isStepReady,
     isTransitioning,
@@ -120,6 +123,8 @@ function OnboardingOverlay({ onVisible } = {}) {
   const refreshStepRef = useRef(refreshCurrentStep);
   const lastStepLogRef = useRef('');
   const lastShownStepRef = useRef('');
+  const lastLayoutSignatureRef = useRef('');
+  const [hasStableLayout, setHasStableLayout] = useState(false);
 
   useEffect(() => {
     refreshStepRef.current = refreshCurrentStep;
@@ -140,18 +145,19 @@ function OnboardingOverlay({ onVisible } = {}) {
     && currentStep
     && currentStepLayout
     && isStepReady
-    && !isTransitioning
+    && !isTransitioning,
   );
+  const shouldEnqueueOverlay = Boolean(shouldShowOverlay && hasStableLayout);
   const onboardingPopup = usePopupEligibility(
     POPUP_IDS.ONBOARDING_OVERLAY,
-    shouldShowOverlay,
+    shouldEnqueueOverlay,
   );
   const canShowOverlay = useBlockingOverlayPrompt(
     onboardingPopup.descriptor.id,
     onboardingPopup.canShow,
     onboardingPopup.descriptor.priority,
   );
-  const isVisible = Boolean(shouldShowOverlay && onboardingPopup.canShow && canShowOverlay);
+  const isVisible = Boolean(shouldEnqueueOverlay && onboardingPopup.canShow && canShowOverlay);
 
   useEffect(() => {
     if (!isVisible) {
@@ -173,10 +179,37 @@ function OnboardingOverlay({ onVisible } = {}) {
     setTooltipMeasuredHeight(0);
   }, [currentStep?.id, safeViewportHeight, safeViewportWidth]);
 
-  if (!isVisible) return null;
+  useEffect(() => {
+    if (!isActive || !currentStep?.id || !currentStepLayout) {
+      lastLayoutSignatureRef.current = '';
+      setHasStableLayout(false);
+      return;
+    }
+
+    const nextSignature = [
+      currentStep.id,
+      Math.round(toSafeNumber(currentStepLayout.x)),
+      Math.round(toSafeNumber(currentStepLayout.y)),
+      Math.round(toSafeNumber(currentStepLayout.width)),
+      Math.round(toSafeNumber(currentStepLayout.height)),
+    ].join(':');
+
+    if (lastLayoutSignatureRef.current === nextSignature) {
+      setHasStableLayout(true);
+      return;
+    }
+
+    lastLayoutSignatureRef.current = nextSignature;
+    setHasStableLayout(false);
+  }, [
+    currentStep?.id,
+    currentStepLayout,
+    isActive,
+    setHasStableLayout,
+  ]);
 
   const stepLogKey = `${currentStep?.id || 'none'}:${currentStepIndex}`;
-  if (lastStepLogRef.current !== stepLogKey) {
+  if (isVisible && lastStepLogRef.current !== stepLogKey) {
     lastStepLogRef.current = stepLogKey;
     tutorialDebugLog('overlay.step', {
       currentStepId: currentStep?.id,
@@ -185,14 +218,36 @@ function OnboardingOverlay({ onVisible } = {}) {
     });
   }
 
-  const {
-    description, spotlight, title,
-  } = currentStep;
-  const focusLayout = buildFocusLayout(currentStepLayout, spotlight, {
-    height: safeViewportHeight,
-    width: safeViewportWidth,
+  const description = currentStep?.description;
+  const spotlight = currentStep?.spotlight;
+  const title = currentStep?.title;
+  const focusLayout = currentStepLayout
+    ? buildFocusLayout(currentStepLayout, spotlight, {
+      height: safeViewportHeight,
+      width: safeViewportWidth,
+    })
+    : {
+      borderRadius: 0,
+      height: 0,
+      width: 0,
+      x: 0,
+      y: 0,
+    };
+  const hasRenderableFocus = (
+    focusLayout.width >= 24
+    && focusLayout.height >= 24
+    && focusLayout.x >= 0
+    && focusLayout.y >= 0
+    && (focusLayout.x + focusLayout.width) <= safeViewportWidth
+    && (focusLayout.y + focusLayout.height) <= safeViewportHeight
+  );
+  const shouldRenderOverlay = Boolean(isVisible && hasStableLayout && hasRenderableFocus);
+  useBlockingOverlayLifecycle(onboardingPopup.descriptor.id, shouldRenderOverlay, {
+    releaseDelayMs: 320,
   });
-  const hasRenderableFocus = focusLayout.width > 0 && focusLayout.height > 0;
+  if (!shouldRenderOverlay) {
+    return null;
+  }
   const overlayOpacity = clamp(
     toSafeNumber(spotlight?.overlayOpacity, DEFAULT_OVERLAY_OPACITY),
     MIN_OVERLAY_OPACITY,
@@ -304,7 +359,11 @@ function OnboardingOverlay({ onVisible } = {}) {
     nextStep();
   };
 
-  if (Platform.OS === 'web' && !hasRenderableFocus) {
+  if (Platform.OS === 'web' && !shouldRenderOverlay) {
+    return null;
+  }
+
+  if (!shouldRenderOverlay) {
     return null;
   }
 
