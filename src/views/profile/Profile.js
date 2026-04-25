@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
@@ -67,6 +67,9 @@ function Profile({ navigation, route }) {
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
   const [switchingAccountId, setSwitchingAccountId] = useState(/** @type {string | null} */ (null));
   const safeAuthSessions = authSessions || [];
+  const currentRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  const isPresident = currentRoleKey === 'president';
+  const isSuperAdmin = currentRoleKey === 'superAdmin';
   const multisportClubs = useMemo(
     () => userData?.multisportClubs || [],
     [userData?.multisportClubs],
@@ -330,7 +333,7 @@ function Profile({ navigation, route }) {
       );
     }
 
-    if (canJoinClub || userData?.role?.name === USER_ROLES.president) {
+    if (canJoinClub || isPresident) {
       return (
         <Button
           isOption
@@ -408,63 +411,83 @@ function Profile({ navigation, route }) {
   const isProfileMainTutorial = activeProfileTutorialId === TutorialIds.PROFILE_MAIN;
   const isAccountSwitcherTutorial = activeProfileTutorialId === TutorialIds.ACCOUNT_SWITCHER_MODAL;
   const isLogoutTutorial = activeProfileTutorialId === TutorialIds.LOGOUT_CONFIRMATION;
+  const profileSectionTitleStyle = [Fonts.label, Fonts.neutral300];
 
   const profileActionsContent = (
     <View style={[
-      Spaces.gap[16],
+      Spaces.gap[18],
       { marginTop: 4 }]}
     >
-      <TabButton
-        isActive={false}
-        onPress={handleViewProfile}
-        title={t('profile.actions.view', 'Voir mon profil')}
-      />
-      <TabButton
-        isActive={false}
-        onPress={handleEditUser}
-        title={t('profile.actions.edit')}
-      />
-      {canManageClub ? (
+      <View style={[Spaces.gap[12]]}>
+        {isSuperAdmin ? (
+          <Text style={profileSectionTitleStyle}>
+            {t('profile.sections.classicAccount', 'Compte classique')}
+          </Text>
+        ) : null}
         <TabButton
           isActive={false}
-          onPress={handleOpenClub}
-          title={t('profile.actions.manageClub')}
+          onPress={handleViewProfile}
+          title={t('profile.actions.view', 'Voir mon profil')}
         />
-      ) : null}
-      {canManageMultisportClub && firstMultisportClub ? (
         <TabButton
           isActive={false}
-          onPress={() => handleOpenMultisportClub(firstMultisportClub.documentId)}
-          title={t('profile.actions.manageClub', 'G\u00e9rer mon club')}
+          onPress={handleEditUser}
+          title={t('profile.actions.edit')}
         />
-      ) : null}
-      <TabButton
-        isActive={false}
-        onPress={() => navigation.navigate(RouteNames.SearchAlerts)}
-        title={t('profile.actions.manageAlerts', 'G\u00e9rer mes alertes')}
-      />
-      {canManageTeam ? (
+        {canManageClub ? (
+          <TabButton
+            isActive={false}
+            onPress={handleOpenClub}
+            title={t('profile.actions.manageClub')}
+          />
+        ) : null}
+        {canManageMultisportClub && firstMultisportClub ? (
+          <TabButton
+            isActive={false}
+            onPress={() => handleOpenMultisportClub(firstMultisportClub.documentId)}
+            title={t('profile.actions.manageClub', 'G\u00e9rer mon club')}
+          />
+        ) : null}
         <TabButton
           isActive={false}
-          onPress={handleOpenRequestsHub}
-          title={t('profile.actions.manageRequests', 'Gerer mes demandes')}
+          onPress={() => navigation.navigate(RouteNames.SearchAlerts)}
+          title={t('profile.actions.manageAlerts', 'G\u00e9rer mes alertes')}
         />
-      ) : null}
-      {userData?.role?.name === USER_ROLES.superAdmin ? (
+        {canManageTeam ? (
+          <TabButton
+            isActive={false}
+            onPress={handleOpenRequestsHub}
+            title={t('profile.actions.manageRequests', 'Gerer mes demandes')}
+          />
+        ) : null}
         <TabButton
           isActive={false}
-          onPress={() => navigation.navigate(RouteNames.AdminStack, {
-            screen: RouteNames.AdminDashboard,
-          })}
-          title="Espace Administration"
+          onPress={handleToggleAccountSwitcher}
+          title={t('profile.actions.switchAccount', 'Changer de compte')}
         />
-      ) : null}
+      </View>
 
-      <TabButton
-        isActive={false}
-        onPress={handleToggleAccountSwitcher}
-        title={t('profile.actions.switchAccount', 'Changer de compte')}
-      />
+      {isSuperAdmin ? (
+        <View style={[Spaces.gap[12]]}>
+          <Text style={profileSectionTitleStyle}>
+            {t('profile.sections.superAdmin', 'Administration')}
+          </Text>
+          <TabButton
+            isActive={false}
+            onPress={() => navigation.navigate(RouteNames.AdminStack, {
+              screen: RouteNames.AdminDashboard,
+            })}
+            title={t('profile.actions.adminDashboardClassic', 'Dashboard admin classique')}
+          />
+          <TabButton
+            isActive={false}
+            onPress={() => navigation.navigate(RouteNames.AdminStack, {
+              screen: RouteNames.SuperAdminHome,
+            })}
+            title={t('profile.actions.superAdminLeagueDashboard', 'Dashboard League')}
+          />
+        </View>
+      ) : null}
     </View>
   );
 
@@ -553,6 +576,20 @@ function Profile({ navigation, route }) {
       {accountSwitcherContent}
     </View>
   );
+
+  const accountSwitcherTutorialContent = isAccountSwitcherTutorial ? (
+    <OnboardingWrapper
+      description="Choisissez un compte actif ou ajoutez un nouveau compte connecte."
+      id="profile-account-switcher-modal"
+      order={1}
+      spotlight={{
+        borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
+      }}
+      title="Changer de compte"
+    >
+      {accountSwitcherPanel}
+    </OnboardingWrapper>
+  ) : accountSwitcherPanel;
 
   return (
     <TutorialFlowBoundary
@@ -668,21 +705,7 @@ function Profile({ navigation, route }) {
               {profileActionsContent}
             </OnboardingWrapper>
           ) : profileActionsContent}
-          {Platform.OS === 'web' && isAccountModalVisible ? (
-            isAccountSwitcherTutorial ? (
-              <OnboardingWrapper
-                description="Choisissez un compte actif ou ajoutez un nouveau compte connecte."
-                id="profile-account-switcher-modal"
-                order={1}
-                spotlight={{
-                  borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
-                }}
-                title="Changer de compte"
-              >
-                {accountSwitcherPanel}
-              </OnboardingWrapper>
-            ) : accountSwitcherPanel
-          ) : null}
+          {Platform.OS === 'web' && isAccountModalVisible ? accountSwitcherTutorialContent : null}
 
           {isLogoutTutorial ? (
             <OnboardingWrapper

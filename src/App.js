@@ -28,6 +28,7 @@ import { displayErrorAlert } from '@/utils/errors/displayError';
 import AppErrorBoundary from '@/app/AppErrorBoundary';
 import AppProvidersNative from '@/app/AppProviders.native';
 import BootGate from '@/app/BootGate';
+import LeaguePlatformGate from '@/app/LeaguePlatformGate';
 import buildFoundClubQueryClient from '@/app/queryClient';
 import { getRuntimeEndpointsLog } from '@/config/runtimeUrls';
 import { POPUP_IDS } from '@/constants/popupRegistry';
@@ -317,18 +318,20 @@ function App() {
             <BootErrorAlertHost />
             <SessionManager />
             <AppBannerHost />
-            <AppNavigator
-              navigationIntegration={navigationIntegration}
-              onReady={() => {
-                const routeName = navigationRef.getCurrentRoute()?.name || null;
-                markNavigationReady(routeName);
-                notifyRouteChanged(routeName);
-              }}
-              onStateChange={(routeName) => {
-                notifyRouteChanged(routeName);
-              }}
-            />
-            {isDeferredStartupReady ? <DeferredStartupHosts /> : null}
+            <LeaguePlatformGate>
+              <AppNavigator
+                navigationIntegration={navigationIntegration}
+                onReady={() => {
+                  const routeName = navigationRef.getCurrentRoute()?.name || null;
+                  markNavigationReady(routeName);
+                  notifyRouteChanged(routeName);
+                }}
+                onStateChange={(routeName) => {
+                  notifyRouteChanged(routeName);
+                }}
+              />
+              {isDeferredStartupReady ? <DeferredStartupHosts /> : null}
+            </LeaguePlatformGate>
           </BootGate>
         </StartupPromptBoundary>
       </AppErrorBoundary>

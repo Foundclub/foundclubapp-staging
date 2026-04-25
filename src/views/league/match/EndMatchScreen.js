@@ -34,6 +34,14 @@ import {
   fetchMatch,
   submitMatchScore,
 } from '@/services/league/leagueMatchService';
+import { useLeaguePlatformRuntime } from '@/services/league/leaguePlatformQueries';
+import {
+  getLeagueClosedMessage,
+  getLeaguePlatformRestrictionCode,
+  getLeagueRestrictionScope,
+  getLeagueRuntimeFromError,
+  isLeaguePlatformRestrictedError,
+} from '@/services/league/leaguePlatformService';
 import MatchmakingService from '@/services/league/MatchmakingService';
 import { getAvailableSlots } from '@/services/teamSlot/teamSlotService';
 
@@ -143,7 +151,7 @@ const hasSubmissionPayload = (submission) => Boolean(
       ),
 );
 
-const FINAL_RECAP_POLL_DELAYS_MS = [250, 500, 900, 1300, 1800];
+const FINAL_RECAP_POLL_DELAYS_MS = [400, 800, 1400, 2200, 3500, 5500, 8000, 12000];
 
 const wait = (durationMs) => new Promise((resolve) => {
   setTimeout(resolve, durationMs);
@@ -184,6 +192,8 @@ function EndMatchScreen() {
   const route = /** @type {any} */ (useRoute());
   const queryClient = useQueryClient();
   const { userData } = /** @type {{userData: User | null}} */ (useAuth());
+  const leaguePlatformRuntimeQuery = useLeaguePlatformRuntime();
+  const leaguePlatformRuntime = leaguePlatformRuntimeQuery.data || null;
   const matchId = route.params?.matchId ? String(route.params.matchId) : '';
 
   const [scoreA, setScoreA] = useState('0');
@@ -230,6 +240,16 @@ function EndMatchScreen() {
     () => buildLocalScoreFlow(match, { isCaptainA, isCaptainB }),
     [isCaptainA, isCaptainB, match],
   );
+  const showLeagueRestrictionAlert = (errorLike = null) => {
+    const restrictionCode = getLeaguePlatformRestrictionCode(errorLike);
+    const runtime = getLeagueRuntimeFromError(errorLike) || leaguePlatformRuntime;
+    const scope = restrictionCode ? getLeagueRestrictionScope(errorLike) : 'matchmaking';
+    const title = scope === 'platform'
+      ? 'Found Club League fermée'
+      : 'Recherche de match fermée';
+
+    Alert.alert(title, getLeagueClosedMessage(runtime, scope));
+  };
   const isScoreSubmissionAllowed = Boolean(scoreFlow.canSubmit);
   const scoreSubmissionBlockReason = (() => {
     if (scoreFlow.state === 'locked_no_venue') {
@@ -344,6 +364,14 @@ function EndMatchScreen() {
   };
 
   const relaunchSearchNow = async () => {
+    if (leaguePlatformRuntime?.effectiveMatchmakingIsOpen === false) {
+      showLeagueRestrictionAlert({
+        code: 'LEAGUE_MATCHMAKING_CLOSED',
+        details: { runtime: leaguePlatformRuntime },
+      });
+      return;
+    }
+
     const myTeam = getMyTeamFromMatch();
     if (!myTeam) {
       throw new Error("Impossible d'identifier votre squad.");
@@ -439,16 +467,24 @@ function EndMatchScreen() {
     };
   };
 
-  const showValidatedRecap = async (responseMatch = null) => {
-    let sourceMatch = responseMatch || match;
-    try {
-      sourceMatch = await fetchMatchWithReadyFinalRecap(sourceMatch);
+  const showValidatedRecap = (responseMatch = null) => {
+    const sourceMatch = responseMatch || match;
+    setFinalPosterPayload(buildFinalPosterPayload(sourceMatch));
+    if (hasReadyFinalRecap(sourceMatch)) {
       queryClient.invalidateQueries({ queryKey: ['league-match', matchId] });
       queryClient.invalidateQueries({ queryKey: ['league-matches'] });
-    } catch (_error) {
-      sourceMatch = responseMatch || match;
+      return;
     }
-    setFinalPosterPayload(buildFinalPosterPayload(sourceMatch));
+
+    fetchMatchWithReadyFinalRecap(sourceMatch)
+      .then((readyMatch) => {
+        queryClient.invalidateQueries({ queryKey: ['league-match', matchId] });
+        queryClient.invalidateQueries({ queryKey: ['league-matches'] });
+        if (hasReadyFinalRecap(readyMatch)) {
+          setFinalPosterPayload(buildFinalPosterPayload(readyMatch));
+        }
+      })
+      .catch(() => {});
   };
 
   const submitMutation = useMutation({
@@ -1474,7 +1510,11 @@ function EndMatchScreen() {
               Alert.alert('Recherche relancée', "La recherche d'un nouvel adversaire a été lancée.");
             } catch (error) {
               const apiError = /** @type {any} */ (error);
-              Alert.alert('Relance impossible', apiError?.message || 'Relance impossible.');
+              if (isLeaguePlatformRestrictedError(apiError)) {
+                showLeagueRestrictionAlert(apiError);
+              } else {
+                Alert.alert('Relance impossible', apiError?.message || 'Relance impossible.');
+              }
             }
           }}
           payload={finalPosterPayload}

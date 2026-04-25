@@ -53,7 +53,7 @@ const formatDelta = (value) => {
 const getStatusUi = (status, colors) => {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'valid') {
-    return { chip: 'Résultat validé', color: colors.success500 };
+    return { chip: 'Resultat valide', color: colors.success500 };
   }
   if (normalized === 'forfeit') {
     return { chip: 'Forfait', color: colors.warning500 };
@@ -61,7 +61,7 @@ const getStatusUi = (status, colors) => {
   if (normalized === 'no_show') {
     return { chip: 'No-show', color: colors.error500 };
   }
-  return { chip: 'Match annulé', color: colors.error500 };
+  return { chip: 'Match annule', color: colors.error500 };
 };
 
 const getStageLabels = (division) => {
@@ -328,13 +328,15 @@ function MatchFinalPosterModal({
       });
     }
 
-    const autoHideDelay = Math.max(
-      AUTO_HIDE_MS,
-      animationModel.totalDuration + 2200,
-    );
-    timers.push(setTimeout(() => {
-      onClose?.();
-    }, autoHideDelay));
+    if (animationModel.hasEloRecap) {
+      const autoHideDelay = Math.max(
+        AUTO_HIDE_MS,
+        animationModel.totalDuration + 2200,
+      );
+      timers.push(setTimeout(() => {
+        onClose?.();
+      }, autoHideDelay));
+    }
 
     return () => {
       timers.forEach((timer) => clearTimeout(timer));
@@ -445,7 +447,7 @@ function MatchFinalPosterModal({
                 <Text style={[Fonts.h4Bold, { color: isNegativeDelta ? Colors.error500 : Colors.success500 }]}>{delta}</Text>
               </View>
               <View style={styles.alignEnd}>
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO après</Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO apres</Text>
                 <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{formatElo(eloAfter)}</Text>
               </View>
             </View>

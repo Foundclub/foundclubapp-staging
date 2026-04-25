@@ -810,6 +810,8 @@ function Conversation({ navigation, route }) {
         await respondToLeagueProposal(matchId, messageId, 'accept', { legalAcceptance })
       } else if (matchId) {
         await respondToLeagueProposal(matchId, messageId, 'decline')
+      } else if (message?.composition?.type === 'proposal' && chatData?.type === 'league_match') {
+        throw new Error('Proposition League incomplete. Rechargez la conversation avant de repondre.')
       } else {
         await respondToProposal(messageId, status)
       }
@@ -819,6 +821,7 @@ function Conversation({ navigation, route }) {
     }
   }, [
     invalidateConversationQueries,
+    chatData?.type,
     leagueLegalMatchLabel,
     leagueMatchId,
     requestWebLeagueLegalAcceptance,

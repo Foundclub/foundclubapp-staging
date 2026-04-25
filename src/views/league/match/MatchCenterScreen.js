@@ -1,3 +1,4 @@
+/* eslint-disable import/order, perfectionist/sort-imports */
 import Slider from '@react-native-community/slider';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import React, {
@@ -30,6 +31,14 @@ import { buildCanonicalLeagueProposalPayload } from '@/views/league/match/utils/
 import { RouteNames } from '@/navigation/routeNames'; // Import RouteNames
 
 import { createLeagueProposal, getMatchHistory } from '@/services/league/leagueMatchService';
+import { useLeaguePlatformRuntime } from '@/services/league/leaguePlatformQueries';
+import {
+  getLeagueClosedMessage,
+  getLeaguePlatformRestrictionCode,
+  getLeagueRestrictionScope,
+  getLeagueRuntimeFromError,
+  isLeaguePlatformRestrictedError,
+} from '@/services/league/leaguePlatformService';
 import { createTeamSlot, getAvailableSlots } from '@/services/teamSlot/teamSlotService';
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
@@ -42,9 +51,6 @@ import {
 } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
 
-import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
-import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
-
 import ClockIcon from '../../../assets/icons/clock.png';
 import LocationIcon from '../../../assets/icons/location.png';
 import Button from '../../../components/atoms/button/Button';
@@ -55,7 +61,10 @@ import useAuth from '../../../domains/auth/useAuth';
 import MatchmakingService from '../../../services/league/MatchmakingService';
 import { getMyLeagueTeam } from '../../../services/leagueTeam/leagueTeamService';
 import { formatDateWithDayPrefix as formatDate } from '../../../utils/date';
+import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
+import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 import NextMatchCard from './components/NextMatchCard';
+/* eslint-enable import/order, perfectionist/sort-imports */
 
 /**
  * @typedef {'loading' | 'initializing' | 'no_squad' | 'locker_room' | 'lobby' | 'radar' | 'match_found' | 'connection_error' | 'searching_start'} MatchCenterViewState
@@ -192,6 +201,8 @@ function MatchCenterScreen() {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
+  const leaguePlatformRuntimeQuery = useLeaguePlatformRuntime();
+  const leaguePlatformRuntime = leaguePlatformRuntimeQuery.data || null;
 
   /**
    * Keep shield initials consistent with Squad cards (TeamListContent).
@@ -273,6 +284,27 @@ function MatchCenterScreen() {
       || route?.params?.squadId
       || '',
   );
+  const showLeagueRestrictionAlert = useCallback((errorLike = null) => {
+    const restrictionCode = getLeaguePlatformRestrictionCode(errorLike);
+    const runtime = getLeagueRuntimeFromError(errorLike) || leaguePlatformRuntime;
+    const scope = restrictionCode ? getLeagueRestrictionScope(errorLike) : 'matchmaking';
+    const title = scope === 'platform'
+      ? 'Found Club League fermée'
+      : 'Recherche de match fermée';
+
+    Alert.alert(title, getLeagueClosedMessage(runtime, scope));
+  }, [leaguePlatformRuntime]);
+  const ensureMatchmakingIsOpen = useCallback(() => {
+    if (leaguePlatformRuntime?.effectiveMatchmakingIsOpen === false) {
+      showLeagueRestrictionAlert({
+        code: 'LEAGUE_MATCHMAKING_CLOSED',
+        details: { runtime: leaguePlatformRuntime },
+      });
+      return false;
+    }
+
+    return true;
+  }, [leaguePlatformRuntime, showLeagueRestrictionAlert]);
   const matchTeamSide = React.useMemo(
     () => getLeagueMatchTeamSide(currentMatch, mySquad),
     [currentMatch, mySquad],
@@ -330,6 +362,7 @@ function MatchCenterScreen() {
     const currentUserId = getEntityDocumentId(userData);
     return Boolean(captainId && currentUserId && areSameEntityId(captainId, currentUserId));
   }, [mySquad?.captain, userData]);
+  const squadDocumentId = getEntityDocumentId(mySquad);
 
   /**
    * @param {string} routeName
@@ -410,7 +443,7 @@ function MatchCenterScreen() {
         setTempSearchLocation(normalizedUserLocation);
       }
     }
-  }, [homeBase, userData]);
+  }, [homeBase, tempSearchLocation, userData]);
 
   // Initialize searchRadius from homeBase
   useEffect(() => {
@@ -597,6 +630,9 @@ function MatchCenterScreen() {
       );
       return;
     }
+    if (!ensureMatchmakingIsOpen()) {
+      return;
+    }
 
     // 1. Show Loading Screen immediately (closes modal)
     setViewState('searching_start');
@@ -611,19 +647,14 @@ function MatchCenterScreen() {
           userData?.location,
         ];
 
-        let normalizedLocation = null;
-        for (const candidate of locationCandidates) {
-          const current = normalizeLocationInput(candidate);
-          if (current && hasValidLocationCoordinates(current)) {
-            normalizedLocation = current;
-            break;
-          }
-        }
+        const normalizedLocation = locationCandidates
+          .map((candidate) => normalizeLocationInput(candidate))
+          .find((current) => current && hasValidLocationCoordinates(current)) || null;
 
         if (!normalizedLocation) {
           Alert.alert(
             'Localisation requise',
-            'Ajoutez une adresse de squad validé (coordonnées GPS) avant de lancer la recherche.',
+            'Ajoutez une adresse de squad validée (coordonnées GPS) avant de lancer la recherche.',
           );
           setViewState('lobby');
           return;
@@ -632,7 +663,7 @@ function MatchCenterScreen() {
         const coordinates = getLocationCoordinates(normalizedLocation);
         if (!coordinates) {
           Alert.alert(
-            'Localisation invalid\u00E9',
+            'Localisation invalide',
             'Impossible de lire les coordonnées de votre localisation.',
           );
           setViewState('lobby');
@@ -673,12 +704,14 @@ function MatchCenterScreen() {
       } catch (error) {
         console.error(error);
         const apiError = /** @type {any} */ (error);
-        const backendCode = apiError?.response?.data?.code;
-        const backendMessage = apiError?.response?.data?.message;
+        const backendCode = apiError?.code;
+        const backendMessage = apiError?.message;
         if (backendCode === 'SEARCH_ALREADY_ACTIVE') {
           Alert.alert('Recherche déjà active', 'Une recherche est déjà en cours pour cette squad.');
         } else if (backendCode === 'UNAUTHORIZED_TEAM_ACTION') {
           promptCaptainSearchRequirements();
+        } else if (isLeaguePlatformRestrictedError(apiError)) {
+          showLeagueRestrictionAlert(apiError);
         } else {
           Alert.alert('Erreur', backendMessage || 'Recherche echouee');
         }
@@ -747,7 +780,7 @@ function MatchCenterScreen() {
   // Search is manual: no silent preselection of all slots.
   useEffect(() => {
     setSelectedSlotIds([]);
-  }, [getEntityDocumentId(mySquad)]);
+  }, [squadDocumentId]);
 
   useEffect(() => {
     const allowedIds = new Set(
@@ -1091,12 +1124,12 @@ function MatchCenterScreen() {
     const renderMissionState = ({
       accentColor,
       actions,
+      children,
       eyebrow,
       helper,
       renderIcon,
       subtitle,
       title,
-      children,
     }) => (
       <View style={{ alignItems: 'center', paddingVertical: 10, width: '100%' }}>
         <View style={{
@@ -1663,6 +1696,10 @@ function MatchCenterScreen() {
                                 if (fallbackSlotIds.length === 0) {
                                   throw new Error('Ajoutez puis s\u00E9lectionnez au moins un cr\u00E9neau pour relancer la recherche.');
                                 }
+                                if (!ensureMatchmakingIsOpen()) {
+                                  loadMatchCenter();
+                                  return;
+                                }
                                 await MatchmakingService.triggerSearch(
                                   getEntityDocumentId(mySquad),
                                   fallbackSlotIds,
@@ -1671,7 +1708,11 @@ function MatchCenterScreen() {
                                 loadMatchCenter();
                               } catch (error) {
                                 console.error('Restart search failed', error);
-                                Alert.alert('Erreur', 'Match annule mais impossible de relancer la recherche.');
+                                if (isLeaguePlatformRestrictedError(error)) {
+                                  showLeagueRestrictionAlert(error);
+                                } else {
+                                  Alert.alert('Erreur', 'Match annule mais impossible de relancer la recherche.');
+                                }
                                 loadMatchCenter();
                               }
                             }, 500);
@@ -2036,6 +2077,10 @@ function MatchCenterScreen() {
                               if (fallbackSlotIds.length === 0) {
                                 throw new Error('Ajoutez puis sélectionnez au moins un créneau pour relancer la recherche.');
                               }
+                              if (!ensureMatchmakingIsOpen()) {
+                                loadMatchCenter();
+                                return;
+                              }
                               await MatchmakingService.triggerSearch(
                                 getEntityDocumentId(mySquad),
                                 fallbackSlotIds,
@@ -2044,7 +2089,11 @@ function MatchCenterScreen() {
                               loadMatchCenter(); // Refresh state to show searching
                             } catch (e) {
                               console.error('Restart search failed', e);
-                              Alert.alert('Erreur', 'Match annulé mais impossible de relancer la recherche.');
+                              if (isLeaguePlatformRestrictedError(e)) {
+                                showLeagueRestrictionAlert(e);
+                              } else {
+                                Alert.alert('Erreur', 'Match annulé mais impossible de relancer la recherche.');
+                              }
                               loadMatchCenter();
                             }
                           }, 500);
@@ -2858,12 +2907,17 @@ function MatchCenterScreen() {
         </View>
 
         <Button
-          disabled={loading || selectedSlotIds.length === 0}
+          disabled={loading || selectedSlotIds.length === 0 || leaguePlatformRuntime?.effectiveMatchmakingIsOpen === false}
           onPress={handleConfirmSearch}
           style={{ marginBottom: 16 }}
           title={loading ? 'Lancement...' : 'CONFIRMER & SCANNER'}
           variant="Primary"
         />
+        {leaguePlatformRuntime?.effectiveMatchmakingIsOpen === false ? (
+          <Text style={[Fonts.p3, { color: Colors.warning500, marginBottom: 12, textAlign: 'center' }]}>
+            {getLeagueClosedMessage(leaguePlatformRuntime, 'matchmaking')}
+          </Text>
+        ) : null}
         <Button
           onPress={() => setViewState('locker_room')}
           title="Annuler"

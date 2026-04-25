@@ -1,5 +1,5 @@
-import { useHeaderHeight } from '@react-navigation/elements';
-import { useMemo } from 'react';
+import { HeaderHeightContext } from '@react-navigation/elements';
+import { useContext, useMemo } from 'react';
 import { ImageBackground, useWindowDimensions, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,7 +39,7 @@ function ScreenContainer({
     Alignments, Images,
   } = useTheme();
   const insets = useSafeAreaInsets();
-  const headerHeightNative = useHeaderHeight();
+  const headerHeightNative = useContext(HeaderHeightContext) || 0;
   const { width } = useWindowDimensions();
   const isResponsivePaddingEnabled = responsivePadding ?? responsiveHorizontalPadding;
   const horizontalPadding = isResponsivePaddingEnabled && width <= 375 ? 16 : 24;

@@ -72,6 +72,7 @@ import {
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
+import { useAppFeedback } from '@/context/AppFeedbackContext';
 import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 
 /**
@@ -131,6 +132,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const queryClient = useQueryClient();
   const { Colors, Fonts, Images } = useTheme();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
+  const { showBanner } = useAppFeedback();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const { floatingActionBottomOffset } = useBottomDockLayout();
   const leagueCardTextColor = Colors.primary500;
@@ -775,7 +777,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
     if (canSubmitScore) {
       return {
-        accentColor: Colors.gold500,
+        accentColor: Colors.primary500,
         helper: scoreQuickActionMeta.helper,
         label: scoreQuickActionMeta.label,
         title: 'Score officiel',
@@ -792,13 +794,12 @@ function LeagueMatchDetails({ navigation, route }) {
     }
 
     return {
-      accentColor: Colors.gold500,
+      accentColor: Colors.primary500,
       helper: "Le terrain doit être confirmé avant le coup d'envoi pour garder le workflow League propre.",
       label: 'Terrain à confirmer',
       title: 'Organisation du match',
     };
   }, [
-    Colors.gold500,
     Colors.primary500,
     Colors.warning500,
     canSubmitScore,
@@ -1154,11 +1155,19 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       const result = await confirmParticipation(matchId, teamSide, { legalAcceptance });
-      Alert.alert('Confirm\u00E9', result.message || 'Pr\u00E9sence confirm\u00E9e');
+      showBanner({
+        body: result.message || 'Presence confirmee',
+        title: 'Presence confirmee',
+        tone: 'league',
+      });
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Echec confirmation');
+      showBanner({
+        body: 'Echec confirmation',
+        title: 'Erreur',
+        tone: 'error',
+      });
     } finally {
       setActionLoading(false);
     }
@@ -1169,11 +1178,19 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       await declineParticipation(matchId, teamSide);
-      Alert.alert('Participation annulee', 'Votre participation a ete annulee');
+      showBanner({
+        body: 'Votre participation a ete annulee',
+        title: 'Participation annulee',
+        tone: 'league',
+      });
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Echec annulation');
+      showBanner({
+        body: 'Echec annulation',
+        title: 'Erreur',
+        tone: 'error',
+      });
     } finally {
       setActionLoading(false);
     }
@@ -1196,6 +1213,7 @@ function LeagueMatchDetails({ navigation, route }) {
   };
 
   const handleOpenPostSlotResolution = useCallback(() => {
+    setIsActionDockExpanded(false);
     setPostSlotResolutionStep(null);
     setIsPostSlotResolutionVisible(true);
   }, []);
@@ -1220,9 +1238,12 @@ function LeagueMatchDetails({ navigation, route }) {
       await loadMatch();
       handleClosePostSlotResolution();
 
-      const resolution = String(response?.resolution || '').trim().toLowerCase();
+      const resolution = String(response?.resolution || response?.data?.resolution || '').trim().toLowerCase();
       if (resolution === 'score_flow') {
-        handleGoToScoreEntry();
+        const didNavigate = navigateToEndMatchScreen(navigation, matchId);
+        if (!didNavigate) {
+          handleGoToScoreEntry();
+        }
         return;
       }
 
@@ -1231,7 +1252,14 @@ function LeagueMatchDetails({ navigation, route }) {
         if (chatId) {
           navigation.navigate(RouteNames.Conversation, { chatId });
         }
+        return;
       }
+
+      showBanner({
+        body: 'Votre reponse a ete enregistree.',
+        title: 'Resolution mise a jour',
+        tone: 'league',
+      });
     } catch (error) {
       console.error(error);
       const serverMessage = String(
@@ -1254,6 +1282,7 @@ function LeagueMatchDetails({ navigation, route }) {
     matchId,
     navigation,
     refetchPendingLeagueAction,
+    showBanner,
   ]);
 
   const handleCancelMatch = () => {
@@ -1729,7 +1758,7 @@ function LeagueMatchDetails({ navigation, route }) {
             <Text style={[Fonts.p3, styles.heroSummaryText, { color: leagueCardTextColor }]}>
               {heroSupportText}
             </Text>
-            {hasCaptainQuickActions ? (
+            {hasCaptainQuickActions && !hasBottomActionBar ? (
               <View style={styles.heroQuickActionArea}>
                 {isPostSlotResolutionCurrentMatch ? (
                   <Button
@@ -1752,15 +1781,15 @@ function LeagueMatchDetails({ navigation, route }) {
                   <Button
                     disabled={actionLoading}
                     icon="stadium"
-                    iconColor={Colors.primary900}
+                    iconColor={Colors.neutral00}
                     iconPosition="before"
                     onPress={handleMarkVenueBooked}
                     size="small"
                     style={{
-                      backgroundColor: Colors.gold500,
-                      borderColor: Colors.gold500,
+                      backgroundColor: Colors.primary500,
+                      borderColor: Colors.primary500,
                     }}
-                    textStyle={{ color: Colors.primary900 }}
+                    textStyle={{ color: Colors.neutral00 }}
                     title="Marquer terrain reserve"
                     variant="Primary"
                   />
@@ -1787,15 +1816,15 @@ function LeagueMatchDetails({ navigation, route }) {
                   <Button
                     disabled={actionLoading}
                     icon="edit"
-                    iconColor={Colors.primary900}
+                    iconColor={Colors.neutral00}
                     iconPosition="before"
                     onPress={handleGoToScoreEntry}
                     size="small"
                     style={{
-                      backgroundColor: Colors.gold500,
-                      borderColor: Colors.gold500,
+                      backgroundColor: Colors.primary500,
+                      borderColor: Colors.primary500,
                     }}
-                    textStyle={{ color: Colors.primary900 }}
+                    textStyle={{ color: Colors.neutral00 }}
                     title={scoreQuickActionMeta.title}
                     variant="Primary"
                   />
@@ -1807,7 +1836,7 @@ function LeagueMatchDetails({ navigation, route }) {
           <LeagueCard style={styles.workflowCard}>
             <View style={styles.workflowHeaderRow}>
               <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>Suivi League</Text>
-              <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
                 {participationCount}
                 /
                 {requiredPlayers}
@@ -1827,9 +1856,9 @@ function LeagueMatchDetails({ navigation, route }) {
                   stepBackgroundColor = 'rgba(34, 197, 94, 0.12)';
                   stepBorderColor = 'rgba(34, 197, 94, 0.30)';
                 } else if (isActive) {
-                  tone = Colors.gold500;
-                  stepBackgroundColor = 'rgba(255, 215, 0, 0.10)';
-                  stepBorderColor = 'rgba(255, 215, 0, 0.28)';
+                  tone = Colors.primary500;
+                  stepBackgroundColor = 'rgba(1, 179, 244, 0.12)';
+                  stepBorderColor = 'rgba(1, 179, 244, 0.36)';
                 }
                 return (
                   <View
@@ -2542,7 +2571,7 @@ function LeagueMatchDetails({ navigation, route }) {
           ) : null}
         </ScrollView>
 
-        {hasBottomActionBar ? (
+        {hasBottomActionBar && !isPostSlotResolutionVisible ? (
           <View pointerEvents="box-none" style={[styles.bottomBar, bottomBarFloatingStyle]}>
             <View pointerEvents="box-none" style={styles.bottomBarContent}>
               <TouchableOpacity
@@ -2620,123 +2649,62 @@ function LeagueMatchDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {isActionDockExpanded && hasBottomPresenceBar ? (
-                <>
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.pr\u00E9senceSummaryCard,
-                      hasConfirm\u00E9d
-                        ? {
-                          backgroundColor: 'rgba(34, 197, 94, 0.12)',
-                          borderColor: 'rgba(34, 197, 94, 0.28)',
-                        }
-                        : {
-                          backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                          borderColor: 'rgba(1, 179, 244, 0.22)',
-                        },
-                    ]}
-                  >
-                    <View style={styles.pr\u00E9senceSummaryHeader}>
-                      <View style={styles.pr\u00E9senceSummaryTitleRow}>
-                        <View
-                          style={[
-                            styles.pr\u00E9senceSummaryDot,
-                            { backgroundColor: hasConfirm\u00E9d ? Colors.success500 : Colors.primary500 },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            Fonts.p2Bold,
-                            {
-                              color: hasConfirm\u00E9d ? Colors.success500 : Colors.neutral00,
-                            },
-                          ]}
-                        >
-                          {hasConfirm\u00E9d ? 'Pr\u00E9sence confirm\u00E9e' : 'Disponibilit\u00E9'}
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.pr\u00E9senceCountPill,
-                          {
-                            backgroundColor: hasConfirm\u00E9d ? 'rgba(34, 197, 94, 0.14)' : 'rgba(1, 179, 244, 0.14)',
-                            borderColor: hasConfirm\u00E9d ? 'rgba(34, 197, 94, 0.24)' : 'rgba(1, 179, 244, 0.24)',
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            Fonts.p4Bold,
-                            { color: Colors.primary500 },
-                          ]}
-                        >
-                          {participationCount}
-                          /
-                          {requiredPlayers}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[Fonts.p4, { color: leagueCardTextColor }]}>
-                      {pr\u00E9senceCompactHelperText}
-                    </Text>
-                  </View>
-                  {hasConfirm\u00E9d ? (
-                    <View pointerEvents="box-none" style={styles.confirmedActionsRow}>
-                      <Button
-                        disabled={actionLoading}
-                        icon="close"
-                        iconColor={Colors.error500}
-                        iconPosition="before"
-                        onPress={handleDeclineParticipation}
-                        size="small"
-                        style={{
-                          backgroundColor: 'transparent',
-                          borderColor: Colors.error500,
-                          width: '100%',
-                        }}
-                        textStyle={{ color: Colors.error500 }}
-                        title="Passer absent"
-                        variant="Secondary"
-                      />
-                    </View>
-                  ) : (
-                    <View pointerEvents="box-none" style={styles.pr\u00E9senceActionsRow}>
-                      <Button
-                        disabled={actionLoading}
-                        icon="close"
-                        iconColor={Colors.error500}
-                        iconPosition="before"
-                        onPress={handleDeclineParticipation}
-                        size="small"
-                        style={{
-                          backgroundColor: 'transparent',
-                          borderColor: Colors.error500,
-                          flex: 0.92,
-                        }}
-                        textStyle={{ color: Colors.error500 }}
-                        title="Absent"
-                        variant="Secondary"
-                      />
-                      <Button
-                        disabled={actionLoading || isRosterFull}
-                        icon="check"
-                        iconColor={isRosterFull ? Colors.neutral300 : Colors.primary900}
-                        iconPosition="before"
-                        onPress={handleConfirmParticipation}
-                        size="small"
-                        style={{
-                          backgroundColor: isRosterFull ? 'rgba(1, 179, 244, 0.10)' : Colors.primary500,
-                          borderColor: isRosterFull ? 'rgba(1, 179, 244, 0.28)' : Colors.primary500,
-                          flex: 1.08,
-                        }}
-                        textStyle={{ color: isRosterFull ? Colors.neutral300 : Colors.neutral00 }}
-                        title={pr\u00E9sencePrimaryTitle}
-                        variant="Primary"
-                      />
-                    </View>
-                  )}
-                </>
+              {isActionDockExpanded && hasBottomPresenceBar && hasConfirm\u00E9d ? (
+                <View pointerEvents="box-none" style={styles.confirmedActionsRow}>
+                  <Button
+                    disabled={actionLoading}
+                    icon="close"
+                    iconColor={Colors.error500}
+                    iconPosition="before"
+                    onPress={handleDeclineParticipation}
+                    size="small"
+                    style={{
+                      backgroundColor: 'transparent',
+                      borderColor: Colors.error500,
+                      width: '100%',
+                    }}
+                    textStyle={{ color: Colors.error500 }}
+                    title="Passer absent"
+                    variant="Secondary"
+                  />
+                </View>
+              ) : null}
+
+              {isActionDockExpanded && hasBottomPresenceBar && !hasConfirm\u00E9d ? (
+                <View pointerEvents="box-none" style={styles.pr\u00E9senceActionsRow}>
+                  <Button
+                    disabled={actionLoading}
+                    icon="close"
+                    iconColor={Colors.error500}
+                    iconPosition="before"
+                    onPress={handleDeclineParticipation}
+                    size="small"
+                    style={{
+                      backgroundColor: 'transparent',
+                      borderColor: Colors.error500,
+                      flex: 0.92,
+                    }}
+                    textStyle={{ color: Colors.error500 }}
+                    title="Absent"
+                    variant="Secondary"
+                  />
+                  <Button
+                    disabled={actionLoading || isRosterFull}
+                    icon="check"
+                    iconColor={isRosterFull ? Colors.neutral300 : Colors.neutral00}
+                    iconPosition="before"
+                    onPress={handleConfirmParticipation}
+                    size="small"
+                    style={{
+                      backgroundColor: isRosterFull ? 'rgba(1, 179, 244, 0.10)' : Colors.primary500,
+                      borderColor: isRosterFull ? 'rgba(1, 179, 244, 0.28)' : Colors.primary500,
+                      flex: 1.08,
+                    }}
+                    textStyle={{ color: isRosterFull ? Colors.neutral300 : Colors.neutral00 }}
+                    title={pr\u00E9sencePrimaryTitle}
+                    variant="Primary"
+                  />
+                </View>
               ) : null}
               {isActionDockExpanded && hasCaptainQuickActions ? (
                 <View
@@ -2797,15 +2765,15 @@ function LeagueMatchDetails({ navigation, route }) {
                       <Button
                         disabled={actionLoading}
                         icon="stadium"
-                        iconColor={Colors.primary900}
+                        iconColor={Colors.neutral00}
                         iconPosition="before"
                         onPress={handleMarkVenueBooked}
                         size="small"
                         style={{
-                          backgroundColor: Colors.gold500,
-                          borderColor: Colors.gold500,
+                          backgroundColor: Colors.primary500,
+                          borderColor: Colors.primary500,
                         }}
-                        textStyle={{ color: Colors.primary900 }}
+                        textStyle={{ color: Colors.neutral00 }}
                         title="Marquer terrain reserve"
                         variant="Primary"
                       />
@@ -2972,6 +2940,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 16,
   },
+  bottomCaptainDot: {
+    borderRadius: 999,
+    height: 8,
+    width: 8,
+  },
+  bottomCaptainHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  bottomCaptainPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  bottomCaptainTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
   bottomDockHandle: {
     alignItems: 'center',
     backgroundColor: 'rgba(1, 179, 244, 0.08)',
@@ -3003,27 +2992,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-  },
-  bottomCaptainDot: {
-    borderRadius: 999,
-    height: 8,
-    width: 8,
-  },
-  bottomCaptainHeaderRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  bottomCaptainPill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  bottomCaptainTitleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
   },
   captainHeroCard: {
     borderRadius: 20,
@@ -3252,28 +3220,6 @@ const styles = StyleSheet.create({
     minWidth: 56,
     paddingHorizontal: 10,
     paddingVertical: 4,
-  },
-  pr\u00E9senceSummaryCard: {
-    borderRadius: 22,
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-  },
-  pr\u00E9senceSummaryDot: {
-    borderRadius: 999,
-    height: 8,
-    width: 8,
-  },
-  pr\u00E9senceSummaryHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  pr\u00E9senceSummaryTitleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
   },
   progressChip: {
     borderRadius: 999,

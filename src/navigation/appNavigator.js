@@ -36,12 +36,25 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
   const linking = {
     config: {
       screens: {
+        [RouteNames.AdminStack]: {
+          screens: {
+            [RouteNames.SuperAdminDashboard]: 'superadmin/dashboard',
+            [RouteNames.SuperAdminHome]: 'superadmin',
+            [RouteNames.SuperAdminLeagueDisputes]: 'superadmin/disputes',
+            [RouteNames.SuperAdminLeagueDivisions]: 'superadmin/divisions',
+            [RouteNames.SuperAdminLeagueMatches]: 'superadmin/matches',
+            [RouteNames.SuperAdminLeagueSquads]: 'superadmin/squads',
+            [RouteNames.SuperAdminSettings]: 'superadmin/settings',
+          },
+        },
         [RouteNames.Club]: 'club/:clubId',
         [RouteNames.EventStack]: {
           screens: {
             [RouteNames.EventDetails]: 'event/:eventId',
           },
         },
+        [RouteNames.Login]: 'login',
+        [RouteNames.Register]: 'register',
         [RouteNames.SquadDetails]: 'squad/:teamId',
         [RouteNames.TeamDetails]: 'team/:teamId',
       },

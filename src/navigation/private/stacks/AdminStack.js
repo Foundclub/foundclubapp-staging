@@ -22,6 +22,12 @@ import SuperAdminContentExplorer from '@/views/admin/SuperAdminContentExplorer';
 import SuperAdminEntryDetail from '@/views/admin/SuperAdminEntryDetail';
 import SuperAdminEntryForm from '@/views/admin/SuperAdminEntryForm';
 import SuperAdminEntryList from '@/views/admin/SuperAdminEntryList';
+import SuperAdminLeagueDashboard from '@/views/admin/SuperAdminLeagueDashboard';
+import SuperAdminLeagueDisputes from '@/views/admin/SuperAdminLeagueDisputes';
+import SuperAdminLeagueDivisions from '@/views/admin/SuperAdminLeagueDivisions';
+import SuperAdminLeagueMatches from '@/views/admin/SuperAdminLeagueMatches';
+import SuperAdminLeagueSettings from '@/views/admin/SuperAdminLeagueSettings';
+import SuperAdminLeagueSquads from '@/views/admin/SuperAdminLeagueSquads';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -35,9 +41,65 @@ function AdminStack() {
   return (
     <Stack.Navigator
       id={undefined}
-      initialRouteName={RouteNames.AdminDashboard}
+      initialRouteName={RouteNames.SuperAdminHome}
       screenOptions={commonOptions}
     >
+      <Stack.Screen
+        component={SuperAdminLeagueDashboard}
+        name={RouteNames.SuperAdminHome}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminLeagueDashboard}
+        name={RouteNames.SuperAdminDashboard}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminLeagueSettings}
+        name={RouteNames.SuperAdminSettings}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminLeagueSquads}
+        name={RouteNames.SuperAdminLeagueSquads}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminLeagueMatches}
+        name={RouteNames.SuperAdminLeagueMatches}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminLeagueDisputes}
+        name={RouteNames.SuperAdminLeagueDisputes}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminLeagueDivisions}
+        name={RouteNames.SuperAdminLeagueDivisions}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
       <Stack.Screen
         component={AdminDashboard}
         name={RouteNames.AdminDashboard}

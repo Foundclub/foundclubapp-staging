@@ -25,6 +25,14 @@ const getStyle = (colors) => ({
   buttonDisabled: {
     opacity: 0.5,
   },
+  buttonGhost: {
+    ...buttonCommonStyle,
+    backgroundColor: 'transparent',
+  },
+  buttonGhostOption: {
+    ...buttonOptionStyle,
+    backgroundColor: 'transparent',
+  },
   buttonIcon: {
     borderRadius: 47,
     height: 47,
@@ -81,6 +89,9 @@ const getStyle = (colors) => ({
     backgroundColor: 'transparent',
     borderColor: colors.primary500,
     borderWidth: 1,
+  },
+  buttonTextGhost: {
+    color: colors.neutral300,
   },
   buttonTextPrimary: {
     color: colors.neutral00,

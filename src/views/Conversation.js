@@ -398,30 +398,23 @@ function Conversation({ navigation, route }) {
     const endParam = formatDateForGoogleCalendar(endDate);
     if (!startParam || !endParam) return;
 
-    openConversationPrompt({
-      body: 'Ajouter ce match à votre agenda ?',
-      primaryAction: {
-        label: 'Ajouter',
-        onPress: async () => {
-          closeConversationPrompt();
-          const text = encodeURIComponent('Match FoundClub League');
-          const details = encodeURIComponent('Match confirmé depuis la messagerie League');
-          const location = encodeURIComponent(venue);
-          const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
-          try {
-            await Linking.openURL(url);
-          } catch (error) {
-            conversationLogger.warn('Failed to open calendar URL', error);
-            showErrorBanner("Impossible d'ouvrir votre agenda.", 'Agenda');
-          }
-        },
+    showBanner({
+      actionLabel: 'Agenda',
+      body: 'Match confirme. Vous pouvez l ajouter a votre agenda.',
+      durationMs: 7000,
+      onAction: async () => {
+        const text = encodeURIComponent('Match FoundClub League');
+        const details = encodeURIComponent('Match confirme depuis la messagerie League');
+        const location = encodeURIComponent(venue);
+        const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
+        try {
+          await Linking.openURL(url);
+        } catch (error) {
+          conversationLogger.warn('Failed to open calendar URL', error);
+          showErrorBanner("Impossible d'ouvrir votre agenda.", 'Agenda');
+        }
       },
-      secondaryAction: {
-        label: 'Plus tard',
-        onPress: closeConversationPrompt,
-        variant: 'Secondary',
-      },
-      title: 'Match confirmé ?',
+      title: 'Match confirme',
       tone: 'league',
     });
   };

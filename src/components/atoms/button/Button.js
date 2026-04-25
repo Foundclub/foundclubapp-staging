@@ -12,7 +12,7 @@ import Loader from '@/components/atoms/loader/Loader';
  * @param {boolean} [props.isLoading]
  * @param {boolean} [props.disabled]
  * @param {string} [props.title]
- * @param {'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight' } [props.variant]
+ * @param {'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight' | 'Ghost'} [props.variant]
  * @param {import('react-native').ViewStyle | import('react-native').ViewStyle[]} [props.style]
  * @param {import('react-native').TextStyle | import('react-native').TextStyle[]} [props.textStyle]
  * @param {keyof import('../../../theme/types').AllImages} [props.icon]

@@ -4,7 +4,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
@@ -45,6 +45,7 @@ function PrivateNavigator() {
   } = useAuth();
   const { isGold } = useAppMode();
   const { t } = useTranslation();
+  const isSuperAdmin = getUserRoleKey(userData?.role?.type || userData?.role?.name) === 'superAdmin';
 
   const getStepNumber = (routeName) => onboardingViews?.views?.find((view) => view.route === routeName)?.index || 0;
   const getTotalSteps = () => onboardingViews?.totalViews || 0;
@@ -163,7 +164,7 @@ function PrivateNavigator() {
           options={{ headerShown: false }}
         />
 
-        {userData?.role?.name === USER_ROLES.superAdmin ? (
+        {isSuperAdmin ? (
           <Stack.Screen
             getComponent={() => require('./stacks/AdminStack').default}
             name={RouteNames.AdminStack}

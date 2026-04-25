@@ -155,7 +155,12 @@ export const buildLocalScoreFlow = (match, options = {}) => {
       && ['admin_resolution', 'disputed', 'opponent_score_pending', 'ready_to_submit'].includes(state),
     autoValidationAt:
       backendFlow.autoValidationAt
-      || (status === 'pending_validation' ? toIso(deadlineAt) : null),
+      || (
+        status === 'pending_validation'
+        || ['submitted_waiting_opponent', 'opponent_score_pending', 'auto_validation_pending'].includes(state)
+          ? toIso(deadlineAt)
+          : null
+      ),
     canDispute: isCaptain
       && ['admin_resolution', 'disputed', 'opponent_score_pending'].includes(state),
     canSubmit: isCaptain

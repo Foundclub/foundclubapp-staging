@@ -63,6 +63,31 @@ const resolveAddressLabel = (match) => (
     || ''
 );
 
+const readNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getAutomationMeta = (match) => (
+  match?.automation_meta && typeof match.automation_meta === 'object'
+    ? match.automation_meta
+    : {}
+);
+
+const getTeamRecap = (match, isTeamA) => {
+  const meta = getAutomationMeta(match);
+  const recap = meta.recap && typeof meta.recap === 'object' ? meta.recap : null;
+  const finalRecap = meta.final_recap && typeof meta.final_recap === 'object' ? meta.final_recap : null;
+  const source = recap || finalRecap || {};
+  return isTeamA ? source.teamA : source.teamB;
+};
+
+const getTeamSnapshot = (match, isTeamA) => {
+  const meta = getAutomationMeta(match);
+  const snapshot = meta.elo_snapshot && typeof meta.elo_snapshot === 'object' ? meta.elo_snapshot : null;
+  return snapshot ? (isTeamA ? snapshot.teamA : snapshot.teamB) : null;
+};
+
 /**
  * @returns {import('react').ReactElement}
  */
@@ -198,20 +223,19 @@ function PastMatchDetails() {
     }), [Colors.gold500, Colors.primary500, isTeamA]);
 
   const eloInfo = useMemo(() => {
-    const current = Number(myTeam?.elo || 1200);
-    const opponentElo = Number(opponent?.elo || 1200);
-    const expectedWin = 1 / (1 + 10 ** ((opponentElo - current) / 400));
-    let actualScore = 0.5;
-    if (myScoreValue > oppScoreValue) actualScore = 1;
-    if (myScoreValue < oppScoreValue) actualScore = 0;
-    const delta = Math.round(32 * (actualScore - expectedWin));
+    const recap = getTeamRecap(match, isTeamA);
+    const snapshot = getTeamSnapshot(match, isTeamA);
+    const before = readNumber(recap?.eloBefore ?? snapshot?.before);
+    const after = readNumber(recap?.eloAfter ?? snapshot?.after);
+    const delta = readNumber(recap?.eloDelta ?? snapshot?.delta);
 
     return {
-      after: current,
-      before: current - delta,
+      after,
+      available: before !== null && after !== null && delta !== null,
+      before,
       delta,
     };
-  }, [myScoreValue, myTeam?.elo, oppScoreValue, opponent?.elo]);
+  }, [isTeamA, match]);
 
   const resultSummaryText = useMemo(() => {
     if (myScoreValue > oppScoreValue) return 'Tu remportes ce duel League.';
@@ -470,7 +494,9 @@ function PastMatchDetails() {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: leagueCardTextColor }]}>Avant</Text>
-                <Text style={[Fonts.h3, { color: Colors.gold500, marginTop: 6 }]}>{eloInfo.before}</Text>
+                <Text style={[Fonts.h3, { color: Colors.gold500, marginTop: 6 }]}>
+                  {eloInfo.available ? eloInfo.before : '-'}
+                </Text>
               </View>
 
               <View
@@ -484,8 +510,7 @@ function PastMatchDetails() {
               >
                 <Text style={[Fonts.p4Bold, { color: leagueCardTextColor, marginBottom: 4 }]}>Delta</Text>
                 <Text style={[Fonts.h3, { color: Colors.gold500 }]}>
-                  {eloInfo.delta > 0 ? '+' : ''}
-                  {eloInfo.delta}
+                  {eloInfo.available ? `${eloInfo.delta > 0 ? '+' : ''}${eloInfo.delta}` : 'Indisponible'}
                 </Text>
               </View>
 
@@ -500,7 +525,9 @@ function PastMatchDetails() {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Apres</Text>
-                <Text style={[Fonts.h3, { color: Colors.gold500, marginTop: 6 }]}>{eloInfo.after}</Text>
+                <Text style={[Fonts.h3, { color: Colors.gold500, marginTop: 6 }]}>
+                  {eloInfo.available ? eloInfo.after : '-'}
+                </Text>
               </View>
             </View>
           </LeagueCard>

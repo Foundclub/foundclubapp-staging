@@ -2,6 +2,33 @@ import client from '@/services/client';
 
 import { areSameEntityId, getEntityDocumentId, requireDocumentId } from '@/utils/entityId';
 
+const getAutomationMeta = (match) => (
+  match?.automation_meta && typeof match.automation_meta === 'object'
+    ? match.automation_meta
+    : {}
+);
+
+const getTeamRecap = (match, isTeamA) => {
+  const meta = getAutomationMeta(match);
+  const recap = meta.recap && typeof meta.recap === 'object' ? meta.recap : null;
+  const finalRecap = meta.final_recap && typeof meta.final_recap === 'object' ? meta.final_recap : null;
+  const source = recap || finalRecap || {};
+  return isTeamA ? source.teamA : source.teamB;
+};
+
+const getTeamEloSnapshot = (match, isTeamA) => {
+  const meta = getAutomationMeta(match);
+  const snapshot = meta.elo_snapshot && typeof meta.elo_snapshot === 'object'
+    ? meta.elo_snapshot
+    : null;
+  return snapshot ? (isTeamA ? snapshot.teamA : snapshot.teamB) : null;
+};
+
+const readNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 /**
  * Generic partial update for a league match (proposal, metadata, etc.)
  * @param {string} matchId
@@ -115,7 +142,18 @@ export const markVenueBooked = async (matchId, options = {}) => {
 export const submitPostSlotResponse = async (matchId, payload) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
   const response = await client.post(`/league-matches/${normalizedMatchId}/post-slot-response`, payload);
-  return response.data;
+  const responseBody = response.data || {};
+  const responseData = responseBody.data;
+
+  if (responseData && typeof responseData === 'object' && !Array.isArray(responseData)) {
+    return {
+      ...responseBody,
+      ...responseData,
+      data: responseData,
+    };
+  }
+
+  return responseBody;
 };
 
 /**
@@ -269,16 +307,21 @@ export const getMatchHistory = async (teamId, limit = 10) => {
         : 'loss';
     }
 
-    let eloChange = 0;
-    if (result === 'win') {
-      eloChange = 25;
-    } else if (result === 'loss') {
-      eloChange = -25;
-    }
+    const recap = getTeamRecap(match, isTeamA);
+    const snapshot = getTeamEloSnapshot(match, isTeamA);
+    const eloBefore = readNumber(recap?.eloBefore ?? snapshot?.before);
+    const eloAfter = readNumber(recap?.eloAfter ?? snapshot?.after);
+    const eloChange = readNumber(recap?.eloDelta ?? snapshot?.delta);
+    const divisionBefore = readNumber(recap?.divisionBefore);
+    const divisionAfter = readNumber(recap?.divisionAfter);
 
     return {
       date: match.date,
-      eloChange, // Approximation, real value in lifecycle
+      divisionAfter,
+      divisionBefore,
+      eloAfter,
+      eloBefore,
+      eloChange,
       id: getEntityDocumentId(match),
       opponent,
       result,
