@@ -13,6 +13,8 @@ import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 
 import { useGetMyLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
+
+import { isLeagueCaptain } from '@/utils/league/captains';
 // screens
 import MatchCenterScreen from '@/views/league/match/MatchCenterScreen';
 import Messaging from '@/views/Messaging';
@@ -52,9 +54,7 @@ export default function LeagueTabNavigator() {
 
   const squadRequestsBadge = Array.isArray(myLeagueTeams)
     ? myLeagueTeams.reduce((total, squad) => {
-      const isCaptain = String(squad?.captain?.documentId || '')
-        === String(userData?.documentId || '');
-      if (!isCaptain) return total;
+      if (!isLeagueCaptain(squad, userData)) return total;
       return total + Number(squad?.join_requests?.length || 0);
     }, 0)
     : 0;

@@ -45,7 +45,8 @@ import {
 import MatchmakingService from '@/services/league/MatchmakingService';
 import { getAvailableSlots } from '@/services/teamSlot/teamSlotService';
 
-import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+import { getEntityDocumentId } from '@/utils/entityId';
+import { isLeagueCaptain, isLeagueMember } from '@/utils/league/captains';
 import { buildPadelScorePayload, getSubmissionScoreLabel } from '@/utils/leagueScoreDetails';
 import { getMatchLeagueSportConfig, LEAGUE_SPORT_KEYS } from '@/utils/leagueSportConfig';
 import { getLocationCoordinates, normalizeRadius } from '@/utils/location';
@@ -228,14 +229,8 @@ function EndMatchScreen() {
   );
 
   const currentUserId = getEntityDocumentId(userData);
-  const isCaptainA = areSameEntityId(
-    getEntityDocumentId(match?.team_a?.captain),
-    currentUserId,
-  );
-  const isCaptainB = areSameEntityId(
-    getEntityDocumentId(match?.team_b?.captain),
-    currentUserId,
-  );
+  const isCaptainA = isLeagueCaptain(match?.team_a, currentUserId);
+  const isCaptainB = isLeagueCaptain(match?.team_b, currentUserId);
   const scoreFlow = useMemo(
     () => buildLocalScoreFlow(match, { isCaptainA, isCaptainB }),
     [isCaptainA, isCaptainB, match],
@@ -344,19 +339,13 @@ function EndMatchScreen() {
     const currentActorId = String(getEntityDocumentId(userData) || '');
     if (!match || !currentActorId) return null;
 
-    const isActorCaptainA = areSameEntityId(
-      getEntityDocumentId(match?.team_a?.captain),
-      currentActorId,
-    );
-    const isActorCaptainB = areSameEntityId(
-      getEntityDocumentId(match?.team_b?.captain),
-      currentActorId,
-    );
+    const isActorCaptainA = isLeagueCaptain(match?.team_a, currentActorId);
+    const isActorCaptainB = isLeagueCaptain(match?.team_b, currentActorId);
     if (isActorCaptainA) return match.team_a;
     if (isActorCaptainB) return match.team_b;
 
-    const inRosterA = (match?.team_a?.roster || []).some((member) => areSameEntityId(getEntityDocumentId(member), currentActorId));
-    const inRosterB = (match?.team_b?.roster || []).some((member) => areSameEntityId(getEntityDocumentId(member), currentActorId));
+    const inRosterA = isLeagueMember(match?.team_a, currentActorId);
+    const inRosterB = isLeagueMember(match?.team_b, currentActorId);
     if (inRosterA) return match.team_a;
     if (inRosterB) return match.team_b;
 

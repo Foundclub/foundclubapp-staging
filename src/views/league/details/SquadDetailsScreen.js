@@ -5,7 +5,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Animated, Image, ImageBackground, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View,
+  Alert, Animated, Image, ImageBackground, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
@@ -25,25 +25,35 @@ import TeamSlotCreationForm from '@/components/organisms/teamSlotCreationForm/Te
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
 
+import {
+  clearPendingSquadInviteLink,
+  savePendingSquadInviteLink,
+} from '@/navigation/pendingSquadInviteLink';
+import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import {
+  assignSquadCaptain,
   cancelJoinRequest,
   deleteLeagueTeam,
   getRanking,
-  inviteUserToSquad,
+  joinSquadViaInviteLink,
   requestToJoinSquad,
   respondToSquadInvite,
   updateLeagueTeam,
 } from '@/services/leagueTeam/leagueTeamService';
 import { useGetLeagueTeamPerformanceStats } from '@/services/matchStats/matchStatsQueries';
 import { createTeamSlot, deleteTeamSlot, updateTeamSlot } from '@/services/teamSlot/teamSlotService';
-import { searchScopedUsers } from '@/services/user/userService';
 
 import { getEntityDocumentId } from '@/utils/entityId';
 import { getImageUrl } from '@/utils/imageUrl';
+import {
+  getLeagueCaptainMembers,
+  isLeagueCaptain,
+  isLeagueMember,
+} from '@/utils/league/captains';
 import { normalizeLocationInput } from '@/utils/location';
 import {
   buildInstallLandingUrl,
@@ -180,6 +190,12 @@ const getLeagueResultMeta = (result, Colors) => {
   }
 };
 
+const isTruthyRouteParam = (value) => {
+  if (value === true || value === 1) return true;
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'yes';
+};
+
 /**
  * Squad Details Screen for FC League
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
@@ -187,6 +203,7 @@ const getLeagueResultMeta = (result, Colors) => {
 function SquadDetailsScreen({ navigation, route }) {
   const safeTeamId = String(route?.params?.teamId || '').trim();
   const focusSection = route?.params?.focusSection || null;
+  const isShareInviteLink = isTruthyRouteParam(route?.params?.invite);
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
@@ -196,11 +213,6 @@ function SquadDetailsScreen({ navigation, route }) {
   const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const currentUserId = getEntityDocumentId(currentUser);
-  const currentRoleType = String(currentUser?.role?.type || '').trim().toLowerCase();
-  const currentRoleName = String(currentUser?.role?.name || '').trim().toLowerCase();
-  const isSuperAdminUser = currentRoleType === 'superadmin' || currentRoleName === 'superadmin';
-  const inviteScopeClubId = currentUser?.club?.documentId;
-  const inviteScopeMultisportId = currentUser?.multisportClubs?.[0]?.documentId || currentUser?.club?.parentMultisport?.documentId;
   const { getClubInitials } = useClub();
 
   // Use League Team Hook
@@ -212,9 +224,8 @@ function SquadDetailsScreen({ navigation, route }) {
   } = useGetLeagueTeam(safeTeamId);
 
   const [isSlotModalVisible, setIsSlotModalVisible] = useState(false);
-  const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
-  const [inviteSearchValue, setInviteSearchValue] = useState('');
-  const [inviteActionUserId, setInviteActionUserId] = useState('');
+  const [captainAssignmentTarget, setCaptainAssignmentTarget] = useState(null);
+  const [captainAssignmentMode, setCaptainAssignmentMode] = useState('');
 
   const [isUpdating, setIsUpdating] = useState(false);
   const [editingSlot, setEditingSlot] = useState(/** @type {LeagueSlot | null} */ (null));
@@ -224,6 +235,8 @@ function SquadDetailsScreen({ navigation, route }) {
   const [sectionOffsets, setSectionOffsets] = useState({ effectif: 0, slots: 0, statistics: 0 });
   const heroEntry = useRef(new Animated.Value(0)).current;
   const bodyEntry = useRef(new Animated.Value(0)).current;
+  const acceptedShareInviteKeyRef = useRef(null);
+  const promptedShareInviteAuthKeyRef = useRef(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -250,37 +263,59 @@ function SquadDetailsScreen({ navigation, route }) {
   }, [bodyEntry, heroEntry, team?.documentId]);
 
   const snapPoints = useMemo(() => ['85%'], []);
-  const inviteSnapPoints = useMemo(() => ['82%'], []);
+  const captainAssignmentSnapPoints = useMemo(() => ['58%'], []);
 
-  // Calculate isCaptain
-  const isCaptain = useMemo(() => team?.captain?.documentId === currentUser?.documentId, [team, currentUser]);
+  const captainMembers = useMemo(() => getLeagueCaptainMembers(team), [team]);
+  const captainIds = useMemo(() => {
+    const ids = new Set();
+    captainMembers.forEach((captain) => {
+      const captainId = getEntityDocumentId(captain);
+      if (captainId) ids.add(String(captainId));
+    });
+    return ids;
+  }, [captainMembers]);
+  const rosterDisplayMembers = useMemo(() => {
+    const seenIds = new Set();
+    const members = [];
+    const pushMember = (member) => {
+      const memberId = getEntityDocumentId(member);
+      if (!memberId || seenIds.has(String(memberId))) return;
+      seenIds.add(String(memberId));
+      members.push(member);
+    };
 
-  const isMember = useMemo(() => team?.roster?.some((/** @type {User} */ p) => p.documentId === currentUser?.documentId) || isCaptain, [team, currentUser, isCaptain]);
+    captainMembers.forEach(pushMember);
+    (team?.roster || []).forEach(pushMember);
+    return members;
+  }, [captainMembers, team?.roster]);
+  const captainCount = captainMembers.length;
+
+  const isCaptain = useMemo(() => isLeagueCaptain(team, currentUserId), [currentUserId, team]);
+
+  const isMember = useMemo(() => isLeagueMember(team, currentUserId), [currentUserId, team]);
   const canViewStatistics = Boolean(isMember);
 
   const hasPendingRequest = useMemo(() => team?.join_requests?.some((/** @type {User} */ u) => u.documentId === currentUser?.documentId), [team, currentUser]);
   const hasInvitation = useMemo(() => team?.invitations?.some((/** @type {User} */ u) => u.documentId === currentUser?.documentId), [team, currentUser]);
   const shouldShowFixedJoinButton = !isCaptain && !isMember && !hasInvitation;
-  const fixedJoinButtonTitle = hasPendingRequest ? 'Demande en attente' : 'Demander a rejoindre';
+  const fixedJoinButtonTitle = (() => {
+    if (isShareInviteLink) return 'Rejoindre la squad';
+    if (hasPendingRequest) return 'Demande en attente';
+    return 'Demander a rejoindre';
+  })();
+  const fixedJoinButtonHelperText = (() => {
+    if (isShareInviteLink) {
+      return 'Ce lien vous permet de rejoindre directement la squad';
+    }
+    if (hasPendingRequest) {
+      return 'Votre demande attend la validation du capitaine';
+    }
+    return 'Envoyer une demande au capitaine de la squad';
+  })();
+  const isFixedJoinButtonDisabled = hasPendingRequest && !isShareInviteLink;
   const scrollBottomPadding = shouldShowFixedJoinButton
     ? Math.max(sceneBottomInset, floatingActionBottomOffset + 92)
     : sceneBottomInset;
-
-  const {
-    data: inviteSearchResults,
-    isFetching: isInviteSearchLoading,
-  } = useQuery({
-    enabled: isCaptain && isInviteModalVisible && Boolean(isSuperAdminUser || inviteScopeClubId || inviteScopeMultisportId),
-    queryFn: () => searchScopedUsers({
-      clubId: inviteScopeClubId,
-      isSuperAdmin: isSuperAdminUser,
-      limit: 80,
-      multisportId: inviteScopeMultisportId,
-      query: inviteSearchValue,
-    }),
-    queryKey: ['leagueSquadInviteSearch', safeTeamId, inviteScopeClubId, inviteScopeMultisportId, isSuperAdminUser, inviteSearchValue],
-    staleTime: 15_000,
-  });
 
   const {
     data: leaguePerformanceStats,
@@ -301,14 +336,7 @@ function SquadDetailsScreen({ navigation, route }) {
     staleTime: 60_000,
   });
 
-  const rosterCount = useMemo(() => {
-    const uniqueIds = new Set();
-    if (team?.captain?.documentId) uniqueIds.add(String(team.captain.documentId));
-    (team?.roster || []).forEach((/** @type {User} */ player) => {
-      if (player?.documentId) uniqueIds.add(String(player.documentId));
-    });
-    return uniqueIds.size;
-  }, [team]);
+  const rosterCount = rosterDisplayMembers.length;
 
   const normalizedHomeBase = useMemo(
     () => normalizeLocationInput(team?.home_base),
@@ -329,28 +357,6 @@ function SquadDetailsScreen({ navigation, route }) {
   }, [team?.slots]);
   const nextSlot = useMemo(() => resolveUpcomingSlot(team?.slots || []), [team?.slots]);
   const pendingRequestsCount = Number(team?.join_requests?.length || 0);
-  const inviteCandidateIdsToSkip = useMemo(() => new Set([
-    team?.captain?.documentId,
-    ...(Array.isArray(team?.roster) ? team.roster.map((player) => player?.documentId) : []),
-    ...(Array.isArray(team?.join_requests) ? team.join_requests.map((player) => player?.documentId) : []),
-    ...(Array.isArray(team?.invitations) ? team.invitations.map((player) => player?.documentId) : []),
-  ].filter((documentId) => typeof documentId === 'string' && documentId.length > 0)), [
-    team?.captain?.documentId,
-    team?.invitations,
-    team?.join_requests,
-    team?.roster,
-  ]);
-  const inviteCandidates = useMemo(() => {
-    const seenIds = new Set();
-    return (Array.isArray(inviteSearchResults) ? inviteSearchResults : [])
-      .filter(Boolean)
-      .filter((user) => {
-        const userId = getEntityDocumentId(user);
-        if (!userId || inviteCandidateIdsToSkip.has(userId) || seenIds.has(userId)) return false;
-        seenIds.add(userId);
-        return true;
-      });
-  }, [inviteCandidateIdsToSkip, inviteSearchResults]);
   const nextSlotShortLabel = useMemo(() => {
     if (!nextSlot) return '\u00C0 d\u00E9finir';
     return `${slotDayShortLabels[nextSlot.recurrenceDay] || 'A venir'} · ${formatSlotHour(nextSlot?.start_hour)}`;
@@ -359,17 +365,6 @@ function SquadDetailsScreen({ navigation, route }) {
     if (!nextSlot) return 'Ajoutez un cr\u00E9neau pour lancer votre rythme.';
     return `${slotDayLabels[nextSlot.recurrenceDay] || 'Jour'} · ${formatSlotHour(nextSlot?.start_hour)} - ${formatSlotHour(nextSlot?.end_hour)}`;
   }, [nextSlot]);
-  const rosterPreviewMembers = useMemo(() => {
-    const preview = [];
-    if (team?.captain) preview.push(team.captain);
-    (team?.roster || []).forEach((player) => {
-      if (!player?.documentId || player.documentId === team?.captain?.documentId) return;
-      if (preview.some((entry) => entry?.documentId === player.documentId)) return;
-      preview.push(player);
-    });
-    return preview.slice(0, 4);
-  }, [team?.captain, team?.roster]);
-  const extraRosterCount = Math.max(0, rosterCount - rosterPreviewMembers.length);
   const squadStatusChip = useMemo(() => {
     if (isCaptain) return { label: 'Capitaine', tone: 'gold' };
     if (hasInvitation) return { label: 'Invitation recue', tone: 'blue' };
@@ -377,60 +372,6 @@ function SquadDetailsScreen({ navigation, route }) {
     if (isMember) return { label: 'Membre', tone: 'blue' };
     return { label: 'Squad ouverte', tone: 'blue' };
   }, [hasInvitation, hasPendingRequest, isCaptain, isMember]);
-  const heroSummaryLine = useMemo(() => {
-    const slotLabel = slotCount > 0 ? (
-      <>
-        <Text style={{ color: Colors.gold500 }}>{slotCount}</Text>
-        {' '}
-        cr\u00E9neau
-        {slotCount > 1 ? 'x' : ''}
-        {' '}
-        actif
-        {slotCount > 1 ? 's' : ''}
-      </>
-    ) : 'Aucun cr\u00E9neau programm\u00E9';
-
-    return (
-      <>
-        <Text style={{ color: Colors.gold500 }}>{rosterCount}</Text>
-        {' '}
-        membre
-        {rosterCount > 1 ? 's' : ''}
-        {' · '}
-        {slotLabel}
-      </>
-    );
-  }, [Colors.gold500, rosterCount, slotCount]);
-  const heroSupportingLine = useMemo(() => {
-    if (isCaptain && pendingRequestsCount > 0) {
-      return (
-        <>
-          <Text style={{ color: Colors.gold500 }}>{pendingRequestsCount}</Text>
-          {' '}
-          demande
-          {pendingRequestsCount > 1 ? 's' : ''}
-          {' '}
-          attend
-          {pendingRequestsCount > 1 ? 'ent' : ''}
-          {' '}
-          votre validation.
-        </>
-      );
-    }
-    if (nextSlot) {
-      return (
-        <>
-          Prochain rendez-vous
-          {' '}
-          <Text style={{ color: Colors.gold500 }}>{nextSlotLongLabel}</Text>
-        </>
-      );
-    }
-    if (hasInvitation) return 'Acceptez votre invitation pour rejoindre la squad et participer aux prochains cr\u00E9neaux.';
-    if (hasPendingRequest) return 'Votre demande est envoy\u00E9e. Le capitaine peut encore vous valider.';
-    if (isMember) return 'Confirmez votre pr\u00E9sence pour aider la squad a se mettre en action.';
-    return 'Rejoignez cette squad pour participer aux cr\u00E9neaux et au matchmaking.';
-  }, [Colors.gold500, hasInvitation, hasPendingRequest, isCaptain, isMember, nextSlot, nextSlotLongLabel, pendingRequestsCount]);
   const nextSlotParticipantsCount = Number(nextSlot?.participants?.length || 0);
   const nextSlotRemainingCount = Math.max(0, 5 - nextSlotParticipantsCount);
   const nextSlotStatus = useMemo(() => {
@@ -480,8 +421,13 @@ function SquadDetailsScreen({ navigation, route }) {
     } else {
       signals.push({
         key: 'captain',
-        label: 'Capitaine',
-        value: team?.captain ? `${team.captain.firstname || ''} ${team.captain.lastname || ''}`.trim() : '\u00C0 d\u00E9finir',
+        label: captainCount > 1 ? 'Capitaines' : 'Capitaine',
+        value: captainMembers.length > 0
+          ? captainMembers
+            .map((captain) => `${captain?.firstname || ''} ${captain?.lastname || ''}`.trim() || captain?.username || 'Capitaine')
+            .filter(Boolean)
+            .join(', ')
+          : '\u00C0 d\u00E9finir',
       });
       signals.push({
         key: 'status',
@@ -491,7 +437,7 @@ function SquadDetailsScreen({ navigation, route }) {
     }
 
     return signals;
-  }, [isCaptain, pendingRequestsCount, rosterCount, squadStatusChip.label, team?.captain, team?.invitations?.length]);
+  }, [captainCount, captainMembers, isCaptain, pendingRequestsCount, rosterCount, squadStatusChip.label, team?.invitations?.length]);
   const nextSlotActionLabel = useMemo(() => {
     if (isCaptain) return 'Animer la squad';
     if (isMember) return 'Confirmer ma pr\u00E9sence';
@@ -587,38 +533,70 @@ function SquadDetailsScreen({ navigation, route }) {
     };
   }, [leaguePerformanceStats?.sport, leaguePerformanceStats?.totals, normalizedLeagueSport]);
 
-  const competitionCards = useMemo(() => ([
-    {
-      key: 'division',
-      label: 'Division',
-      value: team?.division ? `DIV ${team.division}` : '\u00C0 d\u00E9finir',
-    },
-    {
-      key: 'elo',
-      label: 'ELO',
-      value: `${Number(team?.elo || 0)} pts`,
-    },
-    {
-      key: 'rank',
-      label: 'Classement',
-      value: squadRank ? `#${squadRank}` : 'En attente',
-    },
-    {
-      key: 'record',
-      label: 'Bilan',
-      value: `${Number(team?.wins || 0)}V ${Number(team?.draws || 0)}N ${Number(team?.losses || 0)}D`,
-    },
-    {
-      key: 'streak',
-      label: 'Serie',
-      value: Number(team?.streak || 0) === 0 ? 'Stable' : `${Number(team?.streak || 0) > 0 ? '+' : ''}${Number(team?.streak || 0)}`,
-    },
-    {
-      key: 'reliability',
-      label: 'Fiabilite',
-      value: `${Number(team?.reliability_score || 0)}%`,
-    },
-  ]), [squadRank, team?.division, team?.draws, team?.elo, team?.losses, team?.reliability_score, team?.streak, team?.wins]);
+  const competitionCards = useMemo(() => {
+    const divisionPoints = Number(team?.division_points ?? team?.divisionPoints ?? 0);
+    const highestStreak = Number(team?.highest_streak ?? team?.highestStreak ?? 0);
+    const streak = Number(team?.streak || 0);
+    let streakLabel = 'Stable';
+    if (streak > 0) {
+      streakLabel = `x${streak}`;
+    } else if (streak < 0) {
+      streakLabel = 'Defaite';
+    }
+
+    return [
+      {
+        key: 'division',
+        label: 'Division',
+        value: team?.division ? `DIV ${team.division}` : '\u00C0 d\u00E9finir',
+      },
+      {
+        key: 'divisionPoints',
+        label: 'Points',
+        value: `${divisionPoints}/100`,
+      },
+      {
+        key: 'elo',
+        label: 'ELO matchmaking',
+        value: `${Number(team?.elo || 0)} pts`,
+      },
+      {
+        key: 'rank',
+        label: 'Classement',
+        value: squadRank ? `#${squadRank}` : 'En attente',
+      },
+      {
+        key: 'record',
+        label: 'Bilan',
+        value: `${Number(team?.wins || 0)}V ${Number(team?.draws || 0)}N ${Number(team?.losses || 0)}D`,
+      },
+      {
+        key: 'streak',
+        label: 'Serie',
+        value: streakLabel,
+      },
+      {
+        key: 'highestStreak',
+        label: 'Meilleure serie',
+        value: `x${highestStreak}`,
+      },
+      {
+        key: 'reliability',
+        label: 'Fiabilite',
+        value: `${Number(team?.reliability_score || 0)}%`,
+      },
+    ];
+  }, [squadRank, team?.division, team?.divisionPoints, team?.division_points, team?.draws, team?.elo, team?.highestStreak, team?.highest_streak, team?.losses, team?.reliability_score, team?.streak, team?.wins]);
+
+  const getPlayerDisplayName = useCallback((player) => {
+    const fullName = `${player?.firstname || ''} ${player?.lastname || ''}`.trim();
+    return fullName || player?.username || t('squadDetails.roster.unknownPlayer', 'Joueur');
+  }, [t]);
+
+  const captainAssignmentTargetName = useMemo(
+    () => getPlayerDisplayName(captainAssignmentTarget),
+    [captainAssignmentTarget, getPlayerDisplayName],
+  );
 
   const handleShare = useCallback(() => {
     const squadId = team?.documentId || safeTeamId;
@@ -645,6 +623,130 @@ function SquadDetailsScreen({ navigation, route }) {
       url: shareUrl,
     }).catch(() => undefined);
   }, [currentUser?.firstname, currentUser?.lastname, safeTeamId, team?.documentId, team?.name]);
+
+  const promptShareInviteAuthentication = useCallback(() => {
+    if (!safeTeamId) return;
+
+    savePendingSquadInviteLink(safeTeamId);
+    Alert.alert(
+      t('squad.inviteLink.loginTitle', 'Connexion requise'),
+      t('squad.inviteLink.loginMessage', 'Connecte-toi ou cree ton compte pour rejoindre cette squad avec le lien d invitation.'),
+      [
+        {
+          style: 'cancel',
+          text: t('common.actions.later', 'Plus tard'),
+        },
+        {
+          onPress: () => openPublicAuthFlow(navigation, {
+            invite: true,
+            origin: RouteNames.SquadDetails,
+            source: 'squad-invite-link',
+            teamId: safeTeamId,
+          }),
+          text: t('common.actions.login', 'Se connecter'),
+        },
+      ],
+    );
+  }, [navigation, safeTeamId, t]);
+
+  const handleAcceptShareInviteLink = useCallback(async () => {
+    try {
+      if (!safeTeamId) return;
+
+      if (!currentUserId) {
+        promptShareInviteAuthentication();
+        return;
+      }
+
+      if (isCaptain || isMember) {
+        clearPendingSquadInviteLink();
+        navigation.setParams?.({ invite: undefined });
+        return;
+      }
+
+      const legalAcceptance = await requestLeagueLegalAcceptance({
+        metadata: {
+          inviteLink: true,
+          teamName: team?.name || null,
+        },
+        scope: LEAGUE_LEGAL_SCOPES.TEAM_INVITATION_ACCEPT,
+        sourceScreen: 'squad_details_share_invite_accept',
+        targetDocumentId: safeTeamId,
+        targetLabel: team?.name || 'Squad League',
+        targetType: 'league_team',
+      });
+      if (!legalAcceptance) return;
+
+      setIsUpdating(true);
+      await joinSquadViaInviteLink(safeTeamId, currentUserId || '', { legalAcceptance });
+      await Promise.all([
+        refetch(),
+        queryClient.invalidateQueries({ queryKey: ['myLeagueTeam', currentUserId] }),
+        queryClient.invalidateQueries({ queryKey: ['pendingLeagueTeams', currentUserId] }),
+        queryClient.invalidateQueries({ queryKey: ['invitedLeagueTeams', currentUserId] }),
+        queryClient.invalidateQueries({ queryKey: ['get-me'] }),
+        queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] }),
+      ]);
+      clearPendingSquadInviteLink();
+      navigation.setParams?.({ invite: undefined });
+      Alert.alert(
+        t('squad.inviteLink.acceptTitle', 'Squad rejointe'),
+        t('squad.inviteLink.acceptMessage', 'Vous avez rejoint la squad.'),
+      );
+    } catch (error) {
+      console.error(error);
+      Alert.alert(t('common.error'), t('squad.inviteLink.error', 'Impossible de rejoindre la squad avec ce lien.'));
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [
+    currentUserId,
+    isCaptain,
+    isMember,
+    navigation,
+    promptShareInviteAuthentication,
+    queryClient,
+    refetch,
+    requestLeagueLegalAcceptance,
+    safeTeamId,
+    t,
+    team?.name,
+  ]);
+
+  useEffect(() => {
+    if (!isShareInviteLink || !safeTeamId || isLoading || !team?.documentId) return;
+
+    const inviteKey = `${safeTeamId}:${currentUserId || 'guest'}`;
+    if (!currentUserId) {
+      savePendingSquadInviteLink(safeTeamId);
+      if (promptedShareInviteAuthKeyRef.current === inviteKey) return;
+
+      promptedShareInviteAuthKeyRef.current = inviteKey;
+      promptShareInviteAuthentication();
+      return;
+    }
+
+    if (isCaptain || isMember) {
+      clearPendingSquadInviteLink();
+      navigation.setParams?.({ invite: undefined });
+      return;
+    }
+
+    if (acceptedShareInviteKeyRef.current === inviteKey) return;
+    acceptedShareInviteKeyRef.current = inviteKey;
+    handleAcceptShareInviteLink();
+  }, [
+    currentUserId,
+    handleAcceptShareInviteLink,
+    isCaptain,
+    isLoading,
+    isMember,
+    isShareInviteLink,
+    navigation,
+    promptShareInviteAuthentication,
+    safeTeamId,
+    team?.documentId,
+  ]);
 
   const handleRequestJoin = useCallback(async () => {
     try {
@@ -738,28 +840,58 @@ function SquadDetailsScreen({ navigation, route }) {
     }
   }, [currentUserId, refetch, requestLeagueLegalAcceptance, safeTeamId, t, team?.name]);
 
-  const handleInvitePlayer = useCallback(async (user) => {
-    const invitedUserId = getEntityDocumentId(user);
-    if (!safeTeamId || !invitedUserId) return;
+  const handleOpenCaptainAssignment = useCallback((player) => {
+    if (!player || captainAssignmentMode) return;
+    setCaptainAssignmentTarget(player);
+  }, [captainAssignmentMode]);
+
+  const handleCloseCaptainAssignment = useCallback(() => {
+    if (captainAssignmentMode) return;
+    setCaptainAssignmentTarget(null);
+  }, [captainAssignmentMode]);
+
+  const handleAssignCaptain = useCallback(async (mode) => {
+    const targetId = getEntityDocumentId(captainAssignmentTarget);
+    if (!safeTeamId || !targetId) {
+      Alert.alert(t('common.error', 'Erreur'), t('squadDetails.captains.assignError', 'Impossible de mettre a jour les capitaines.'));
+      return;
+    }
 
     try {
-      setInviteActionUserId(invitedUserId);
-      await inviteUserToSquad(safeTeamId, invitedUserId);
-      await refetch();
+      setCaptainAssignmentMode(mode);
+      await assignSquadCaptain(safeTeamId, targetId, mode);
+      await Promise.allSettled([
+        refetch(),
+        queryClient.invalidateQueries({ queryKey: ['leagueTeam', safeTeamId] }),
+        queryClient.invalidateQueries({ queryKey: ['myLeagueTeam'] }),
+        queryClient.invalidateQueries({ queryKey: ['league-matches'] }),
+        queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] }),
+        currentUserId
+          ? queryClient.invalidateQueries({ queryKey: ['myLeagueTeam', currentUserId] })
+          : Promise.resolve(),
+      ]);
+      setCaptainAssignmentTarget(null);
       Alert.alert(
-        t('squad.invitation.sentTitle', 'Invitation envoy\u00E9e'),
-        t('squad.invitation.sentMessage', 'Le joueur a bien ete invite a rejoindre la squad.'),
+        t('squadDetails.captains.assignSuccessTitle', 'Capitaines mis a jour'),
+        mode === 'transfer'
+          ? t('squadDetails.captains.transferSuccess', '{{name}} devient le seul capitaine de la squad.', { name: captainAssignmentTargetName })
+          : t('squadDetails.captains.addSuccess', '{{name}} est maintenant capitaine avec vous.', { name: captainAssignmentTargetName }),
       );
     } catch (error) {
       console.error(error);
-      Alert.alert(
-        t('common.error'),
-        t('squad.invitation.sendError', 'Impossible d inviter ce joueur pour le moment.'),
-      );
+      Alert.alert(t('common.error', 'Erreur'), t('squadDetails.captains.assignError', 'Impossible de mettre a jour les capitaines.'));
     } finally {
-      setInviteActionUserId('');
+      setCaptainAssignmentMode('');
     }
-  }, [refetch, safeTeamId, t]);
+  }, [
+    captainAssignmentTarget,
+    captainAssignmentTargetName,
+    currentUserId,
+    queryClient,
+    refetch,
+    safeTeamId,
+    t,
+  ]);
 
   /**
    * @param {'logo' | 'cover'} type
@@ -1118,7 +1250,7 @@ function SquadDetailsScreen({ navigation, route }) {
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
-          onPress: () => setIsInviteModalVisible(true),
+          onPress: handleShare,
           text: t('squadDetails.actions.invitePlayer', 'Inviter un joueur'),
         },
         {
@@ -1136,7 +1268,7 @@ function SquadDetailsScreen({ navigation, route }) {
         },
       ],
     );
-  }, [handleDeleteTeam, navigation, openRequests, safeTeamId, t]);
+  }, [handleDeleteTeam, handleShare, navigation, openRequests, safeTeamId, t]);
 
   const dynamicSummaryLabel = useMemo(() => {
     if (isCaptain) return 'Demandes';
@@ -1200,12 +1332,14 @@ function SquadDetailsScreen({ navigation, route }) {
       const secondaryLabel = pendingRequestsCount > 0 ? 'Voir les demandes' : 'Inviter un joueur';
       const secondaryPress = pendingRequestsCount > 0
         ? openRequests
-        : () => setIsInviteModalVisible(true);
+        : handleShare;
+      const secondaryIsShareAction = pendingRequestsCount <= 0;
 
       return {
         description,
         primaryLabel,
         primaryPress,
+        secondaryIsShareAction,
         secondaryLabel,
         secondaryPress,
         title: pendingRequestsCount > 0 ? 'Votre squad attend votre validation' : 'Pilotez votre squad',
@@ -1236,6 +1370,17 @@ function SquadDetailsScreen({ navigation, route }) {
       };
     }
 
+    if (isShareInviteLink) {
+      return {
+        description: 'Ce lien vous invite a rejoindre directement la squad. Confirmez pour etre ajoute a l effectif.',
+        primaryLabel: 'Rejoindre la squad',
+        primaryPress: handleAcceptShareInviteLink,
+        secondaryLabel: slotCount > 0 ? 'Voir les cr\u00E9neaux' : "Voir l'effectif",
+        secondaryPress: () => handleScrollToSection(slotCount > 0 ? 'slots' : 'effectif'),
+        title: 'Invitation squad',
+      };
+    }
+
     if (hasPendingRequest) {
       return {
         description: "Votre demande est bien envoy\u00E9e. Vous pouvez d\u00E9j\u00E0 consulter les cr\u00E9neaux et l'effectif.",
@@ -1258,14 +1403,17 @@ function SquadDetailsScreen({ navigation, route }) {
       title: 'Rejoignez cette squad',
     };
   }, [
+    handleAcceptShareInviteLink,
     handleCancelJoinRequest,
     handleRequestJoin,
     handleRespondToInvitation,
     handleScrollToSection,
+    handleShare,
     hasInvitation,
     hasPendingRequest,
     isCaptain,
     isMember,
+    isShareInviteLink,
     nextSlotLongLabel,
     openRequests,
     pendingRequestsCount,
@@ -1553,9 +1701,13 @@ function SquadDetailsScreen({ navigation, route }) {
               source={team?.cover?.url ? { uri: getImageUrl(team.cover.url) } : undefined}
               style={[
                 !team?.cover?.url && { backgroundColor: leagueCardBg },
-                Spaces.padding[20],
                 Alignments.alignCenter,
-                { justifyContent: 'center', minHeight: 204 },
+                {
+                  justifyContent: 'center',
+                  minHeight: 158,
+                  paddingHorizontal: 20,
+                  paddingVertical: 18,
+                },
               ]}
             >
               {/* Overlay for better readability if image exists */}
@@ -1571,17 +1723,26 @@ function SquadDetailsScreen({ navigation, route }) {
               {/* Edit Cover Button (If simple card or captain) */}
               {isCaptain && (
               <View style={{
-                left: 16, position: 'absolute', top: 16, zIndex: 10,
+                left: 12, position: 'absolute', top: 12, zIndex: 10,
               }}
               >
-                <TouchableOpacity onPress={() => handleImageUpload('cover')} style={{ alignItems: 'center' }}>
+                <TouchableOpacity
+                  hitSlop={{
+                    bottom: 8, left: 8, right: 8, top: 8,
+                  }}
+                  onPress={() => handleImageUpload('cover')}
+                  style={{ alignItems: 'center' }}
+                >
                   {/* Plus icon */}
                   <View style={{
+                    alignItems: 'center',
                     backgroundColor: uiTone.editButtonBg,
                     borderColor: uiTone.editButtonBorder,
-                    borderRadius: 20,
+                    borderRadius: 18,
                     borderWidth: 1,
-                    padding: 8,
+                    height: 34,
+                    justifyContent: 'center',
+                    width: 34,
                   }}
                   >
                     <Image
@@ -1593,198 +1754,109 @@ function SquadDetailsScreen({ navigation, route }) {
               </View>
               )}
 
-              <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 16 }}>
-                {/* Logo or Shield (Using CREST for League Squad) */}
-                <View>
-                  {team?.crest?.url ? (
-                    <ProfileAvatar
-                      imageUrl={team.crest.url}
-                      size={80}
-                      style={{ borderColor: Colors.primary200, borderRadius: 80, borderWidth: 2 }}
-                      variant="logo"
-                    />
-                  ) : (
-                    <TeamShield
-                      initials={getClubInitials(team?.name || '')}
-                      isGold
-                      size={80}
-                    />
-                  )}
+              <View style={{ alignItems: 'center', width: '100%' }}>
+                <View style={{ alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  {/* Logo or Shield (Using CREST for League Squad) */}
+                  <View>
+                    {team?.crest?.url ? (
+                      <ProfileAvatar
+                        imageUrl={team.crest.url}
+                        size={72}
+                        style={{ borderColor: Colors.primary200, borderRadius: 72, borderWidth: 2 }}
+                        variant="logo"
+                      />
+                    ) : (
+                      <TeamShield
+                        initials={getClubInitials(team?.name || '')}
+                        isGold
+                        size={72}
+                      />
+                    )}
 
-                  {/* Add Logo Button (Next to shield as requested) */}
-                  {isCaptain && !team?.crest?.url && (
-                  <TouchableOpacity
-                    onPress={() => handleImageUpload('logo')}
-                    style={{
-                      backgroundColor: uiTone.editButtonBg,
-                      borderColor: uiTone.editButtonBorder,
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      bottom: 0,
-                      padding: 6,
-                      position: 'absolute',
-                      right: -10,
-                    }}
-                  >
-                    <Image
-                      source={Images.plus}
-                      style={[ApplicationStyle.icon16, { height: 12, tintColor: Colors.primary500, width: 12 }]}
-                    />
-                  </TouchableOpacity>
-                  )}
+                    {/* Add Logo Button (Next to shield as requested) */}
+                    {isCaptain && !team?.crest?.url && (
+                      <TouchableOpacity
+                        hitSlop={{
+                          bottom: 8, left: 8, right: 8, top: 8,
+                        }}
+                        onPress={() => handleImageUpload('logo')}
+                        style={{
+                          alignItems: 'center',
+                          backgroundColor: uiTone.editButtonBg,
+                          borderColor: uiTone.editButtonBorder,
+                          borderRadius: 15,
+                          borderWidth: 1,
+                          bottom: -1,
+                          height: 30,
+                          justifyContent: 'center',
+                          position: 'absolute',
+                          right: -8,
+                          width: 30,
+                        }}
+                      >
+                        <Image
+                          source={Images.plus}
+                          style={[ApplicationStyle.icon16, { height: 12, tintColor: Colors.primary500, width: 12 }]}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
-              </View>
 
-              {/* League badges */}
-              <View style={[Alignments.row, Alignments.wrap, Alignments.justifyCenter, Spaces.gap[12], { marginTop: 4 }]}>
-                {team?.activities?.[0]?.name ? (
-                  <View style={{
-                    backgroundColor: uiTone.chipInfoBg,
-                    borderColor: uiTone.chipInfoBorder,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                  }}
-                  >
-                    <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-                      {String(team.activities[0].name).toUpperCase()}
-                    </Text>
-                  </View>
-                ) : null}
-                {team?.division ? (
-                  <DivisionBadge
-                    division={team.division}
-                    showChrome={false}
-                    showLabel={false}
-                    size={44}
-                  />
-                ) : null}
-                {team?.elo ? (
-                  <View style={{
-                    backgroundColor: uiTone.chipInfoBg,
-                    borderColor: uiTone.chipInfoBorder,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                  }}
-                  >
-                    <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
-                      {team.elo}
-                      {' '}
-                      PTS
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-
-              <View style={{ alignItems: 'center', marginTop: 16, width: '100%' }}>
-                <View style={[Alignments.row, Alignments.wrap, Alignments.justifyCenter, Spaces.gap[8], { marginBottom: 10 }]}>
-                  <View style={{
-                    alignItems: 'center',
-                    alignSelf: 'center',
-                    backgroundColor: squadStatusChip.tone === 'gold' ? uiTone.captainBadgeBg : uiTone.chipInfoBg,
-                    borderColor: squadStatusChip.tone === 'gold' ? uiTone.captainBadgeBorder : uiTone.chipInfoBorder,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    paddingHorizontal: 11,
-                    paddingVertical: 6,
-                  }}
-                  >
-                    <Text style={[Fonts.p3Bold, { color: squadStatusChip.tone === 'gold' ? Colors.gold500 : Colors.primary100 }]}>
-                      {squadStatusChip.label}
-                    </Text>
-                  </View>
-                  {pendingRequestsCount > 0 && isCaptain ? (
-                    <TouchableOpacity
-                      onPress={openRequests}
-                      style={{
-                        alignItems: 'center',
-                        backgroundColor: `${Colors.error500}12`,
-                        borderColor: `${Colors.error500}36`,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        paddingHorizontal: 11,
-                        paddingVertical: 6,
-                      }}
+                {/* League badges */}
+                <View style={[
+                  Alignments.row,
+                  Alignments.wrap,
+                  Alignments.justifyCenter,
+                  Alignments.alignCenter,
+                  Spaces.gap[10],
+                  { marginBottom: 12, minHeight: 40 },
+                ]}
+                >
+                  {team?.division ? (
+                    <DivisionBadge
+                      division={team.division}
+                      showChrome={false}
+                      showLabel={false}
+                      size={42}
+                    />
+                  ) : null}
+                  {team?.elo ? (
+                    <View style={{
+                      alignItems: 'center',
+                      backgroundColor: uiTone.chipInfoBg,
+                      borderColor: uiTone.chipInfoBorder,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      justifyContent: 'center',
+                      minHeight: 36,
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                    }}
                     >
-                      <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-                        {pendingRequestsCount}
+                      <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+                        {team.elo}
                         {' '}
-                        demande
-                        {pendingRequestsCount > 1 ? 's' : ''}
+                        PTS
                       </Text>
-                    </TouchableOpacity>
+                    </View>
                   ) : null}
                 </View>
 
-                <Text style={[Fonts.p2Bold, { color: Colors.neutral100, marginBottom: 4, textAlign: 'center' }]}>
-                  {heroSummaryLine}
-                </Text>
-                <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 14, textAlign: 'center' }]}>
-                  {heroSupportingLine}
-                </Text>
-
-                <View style={[Alignments.row, Alignments.alignCenter]}>
-                  <View style={[Alignments.row, Alignments.alignCenter]}>
-                    {rosterPreviewMembers.map((member, index) => (
-                      <View
-                        key={member?.documentId || `${index}`}
-                        style={{
-                          marginLeft: index === 0 ? 0 : -10,
-                        }}
-                      >
-                        <ProfileAvatar
-                          imageUrl={member?.avatar?.url}
-                          size={32}
-                          style={{
-                            backgroundColor: Colors.primary800,
-                            borderColor: Colors.primary700,
-                            borderWidth: 2,
-                          }}
-                        />
-                      </View>
-                    ))}
-                    {extraRosterCount > 0 ? (
-                      <View style={{
-                        alignItems: 'center',
-                        backgroundColor: `${Colors.primary500}12`,
-                        borderColor: `${Colors.primary500}36`,
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        height: 32,
-                        justifyContent: 'center',
-                        marginLeft: 8,
-                        minWidth: 32,
-                        paddingHorizontal: 8,
-                      }}
-                      >
-                        <Text style={[Fonts.p3Bold, { color: Colors.primary100 }]}>
-                          +
-                          {extraRosterCount}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-
-                  <View style={{ marginLeft: 12 }}>
-                    <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>
-                      {team?.captain ? 'Capitaine et effectif visibles' : 'Communaute en construction'}
-                    </Text>
-                    <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                      {rosterCount > 1 ? (
-                        <>
-                          <Text style={{ color: Colors.gold500 }}>{rosterCount - 1}</Text>
-                          {' '}
-                          membre
-                          {rosterCount - 1 > 1 ? 's' : ''}
-                          {' '}
-                          autour du capitaine
-                        </>
-                      ) : 'Ajoutez des membres pour faire vivre la squad'}
-                    </Text>
-                  </View>
+                <View style={{
+                  alignItems: 'center',
+                  alignSelf: 'center',
+                  backgroundColor: squadStatusChip.tone === 'gold' ? uiTone.captainBadgeBg : uiTone.chipInfoBg,
+                  borderColor: squadStatusChip.tone === 'gold' ? uiTone.captainBadgeBorder : uiTone.chipInfoBorder,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: squadStatusChip.tone === 'gold' ? Colors.gold500 : Colors.primary100 }]}>
+                    {squadStatusChip.label}
+                  </Text>
                 </View>
               </View>
             </ImageBackground>
@@ -1838,7 +1910,7 @@ function SquadDetailsScreen({ navigation, route }) {
                   variant="Primary"
                 />
                 <Button
-                  isLoading={isUpdating}
+                  isLoading={actionCard.secondaryIsShareAction ? false : isUpdating}
                   onPress={actionCard.secondaryPress}
                   size="sm"
                   style={{ flex: 1 }}
@@ -2452,8 +2524,8 @@ function SquadDetailsScreen({ navigation, route }) {
             </View>
             <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 14 }]}>
               {isCaptain
-                ? 'Retrouvez le capitaine, les membres actifs et gerez plus facilement la vie de la squad.'
-                : 'Voyez qui compose d\u00E9j\u00E0 la squad et identifiez rapidement le capitaine.'}
+                ? 'Retrouvez les capitaines, les membres actifs et ajustez la responsabilite de la squad.'
+                : 'Voyez qui compose d\u00E9j\u00E0 la squad et identifiez rapidement les capitaines.'}
             </Text>
             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12], { marginBottom: 14 }]}>
               {rosterSignals.map((item) => {
@@ -2484,89 +2556,61 @@ function SquadDetailsScreen({ navigation, route }) {
               </Text>
             ) : null}
 
-            {/* Captain */}
-            {team?.captain && (
-            <View
-              key={team.captain.documentId}
-              style={[
-                Alignments.row, Alignments.alignCenter, Spaces.gap[12],
-                Spaces.padding[12],
-                Spaces.marginBottom[12],
-                {
-                  backgroundColor: uiTone.rosterCaptainBg,
-                  borderColor: uiTone.rosterCaptainBorder,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              <ProfileAvatar imageUrl={team.captain.avatar?.url} size={40} />
-              <View>
-                <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                  {team.captain.firstname}
-                  {' '}
-                  {team.captain.lastname}
-                </Text>
-                <View style={{
-                  alignSelf: 'flex-start',
-                  backgroundColor: uiTone.captainBadgeBg,
-                  borderColor: uiTone.captainBadgeBorder,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  marginTop: 4,
-                  paddingHorizontal: 10,
-                  paddingVertical: 3,
-                }}
-                >
-                  <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
-                    {t('squadDetails.roster.captain', 'Capitaine')}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            )}
+            {rosterDisplayMembers.map((/** @type {User} */ player) => {
+              const playerId = getEntityDocumentId(player);
+              const playerIsCaptain = Boolean(playerId && captainIds.has(String(playerId)));
+              const canAssignCaptain = Boolean(isCaptain && playerId && !playerIsCaptain);
 
-            {/* Roster Players */}
-            {team?.roster?.filter((/** @type {User} */ p) => p.documentId !== team?.captain?.documentId).map((/** @type {User} */ player) => (
-              <View
-                key={player.documentId}
-                style={[
-                  Alignments.row, Alignments.alignCenter, Spaces.gap[12],
-                  Spaces.padding[12],
-                  Spaces.marginBottom[12],
-                  {
-                    backgroundColor: uiTone.rosterPlayerBg,
-                    borderColor: uiTone.rosterPlayerBorder,
-                    borderRadius: 14,
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <ProfileAvatar imageUrl={player.avatar?.url} size={40} />
-                <View>
-                  <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                    {player.firstname}
-                    {' '}
-                    {player.lastname}
-                  </Text>
-                  <View style={{
-                    alignSelf: 'flex-start',
-                    backgroundColor: uiTone.playerBadgeBg,
-                    borderColor: uiTone.playerBadgeBorder,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    marginTop: 4,
-                    paddingHorizontal: 10,
-                    paddingVertical: 3,
-                  }}
-                  >
-                    <Text style={[Fonts.p3Bold, { color: Colors.primary100 }]}>
-                      {t('squadDetails.roster.player', 'Joueur')}
+              return (
+                <View
+                  key={playerId || getPlayerDisplayName(player)}
+                  style={[
+                    Alignments.row, Alignments.alignCenter, Spaces.gap[12],
+                    Spaces.padding[12],
+                    Spaces.marginBottom[12],
+                    {
+                      backgroundColor: playerIsCaptain ? uiTone.rosterCaptainBg : uiTone.rosterPlayerBg,
+                      borderColor: playerIsCaptain ? uiTone.rosterCaptainBorder : uiTone.rosterPlayerBorder,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <ProfileAvatar imageUrl={player.avatar?.url} size={40} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+                      {getPlayerDisplayName(player)}
                     </Text>
+                    <View style={{
+                      alignSelf: 'flex-start',
+                      backgroundColor: playerIsCaptain ? uiTone.captainBadgeBg : uiTone.playerBadgeBg,
+                      borderColor: playerIsCaptain ? uiTone.captainBadgeBorder : uiTone.playerBadgeBorder,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      marginTop: 4,
+                      paddingHorizontal: 10,
+                      paddingVertical: 3,
+                    }}
+                    >
+                      <Text style={[Fonts.p3Bold, { color: playerIsCaptain ? Colors.gold500 : Colors.primary100 }]}>
+                        {playerIsCaptain
+                          ? t('squadDetails.roster.captain', 'Capitaine')
+                          : t('squadDetails.roster.player', 'Joueur')}
+                      </Text>
+                    </View>
                   </View>
+                  {canAssignCaptain ? (
+                    <Button
+                      onPress={() => handleOpenCaptainAssignment(player)}
+                      size="sm"
+                      style={{ minWidth: 98 }}
+                      title={t('squadDetails.captains.assignButton', 'Nommer')}
+                      variant="Secondary"
+                    />
+                  ) : null}
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </Animated.View>
 
@@ -2592,144 +2636,97 @@ function SquadDetailsScreen({ navigation, route }) {
           }}
         >
           <Text style={[Fonts.p4Bold, { color: Colors.primary100, marginBottom: 8, textAlign: 'center' }]}>
-            {hasPendingRequest
-              ? 'Votre demande attend la validation du capitaine'
-              : 'Envoyer une demande au capitaine de la squad'}
+            {fixedJoinButtonHelperText}
           </Text>
           <Button
-            disabled={hasPendingRequest}
-            isLoading={!hasPendingRequest && isUpdating}
-            onPress={handleRequestJoin}
-            style={hasPendingRequest ? { opacity: 0.75 } : null}
+            disabled={isFixedJoinButtonDisabled}
+            isLoading={!isFixedJoinButtonDisabled && isUpdating}
+            onPress={isShareInviteLink ? handleAcceptShareInviteLink : handleRequestJoin}
+            style={isFixedJoinButtonDisabled ? { opacity: 0.75 } : null}
             title={fixedJoinButtonTitle}
             variant="Primary"
           />
         </View>
       ) : null}
       <BottomModal
-        close={() => setIsInviteModalVisible(false)}
+        close={handleCloseCaptainAssignment}
         headerComponent={(
           <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
-            {t('squadDetails.invitation.modalTitle', 'Inviter un joueur')}
+            {t('squadDetails.captains.modalTitle', 'Assigner capitaine')}
           </Text>
         )}
-        isVisible={isInviteModalVisible}
-        snapPoints={inviteSnapPoints}
+        isVisible={Boolean(captainAssignmentTarget)}
+        snapPoints={captainAssignmentSnapPoints}
       >
-        <View style={{ paddingBottom: 8 }}>
-          <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 12, textAlign: 'center' }]}>
-            {t('squadDetails.invitation.modalDescription', 'Recherchez un joueur de votre perimetre FoundClub puis envoyez-lui une invitation a rejoindre la squad.')}
+        <View style={{ paddingHorizontal: 4, paddingTop: 6 }}>
+          <Text
+            style={[
+              Fonts.p2,
+              {
+                color: Colors.neutral200,
+                lineHeight: 22,
+                marginBottom: 16,
+                textAlign: 'center',
+              },
+            ]}
+          >
+            {t('squadDetails.captains.modalDescription', 'Choisissez comment donner le role de capitaine a {{name}}.', {
+              name: captainAssignmentTargetName,
+            })}
           </Text>
 
           <View
             style={{
-              alignItems: 'center',
-              backgroundColor: Colors.primary900,
-              borderColor: `${Colors.primary500}33`,
-              borderRadius: 18,
+              backgroundColor: uiTone.panelBg,
+              borderColor: uiTone.panelBorder,
+              borderRadius: 14,
               borderWidth: 1,
-              flexDirection: 'row',
-              marginBottom: 16,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
+              marginBottom: 12,
+              padding: 14,
             }}
           >
-            <TextInput
-              onChangeText={setInviteSearchValue}
-              placeholder={t('squadDetails.invitation.searchPlaceholder', 'Rechercher un joueur...')}
-              placeholderTextColor={Colors.neutral300}
-              style={[Fonts.p2, { color: Colors.neutral00, flex: 1, padding: 0 }]}
-              value={inviteSearchValue}
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
+              {t('squadDetails.captains.addTitle', 'Ajouter un capitaine')}
+            </Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20, marginBottom: 12 }]}>
+              {t('squadDetails.captains.addHint', 'Vous gardez votre role et la squad peut avoir plusieurs capitaines.')}
+            </Text>
+            <Button
+              disabled={Boolean(captainAssignmentMode)}
+              isLoading={captainAssignmentMode === 'add'}
+              onPress={() => handleAssignCaptain('add')}
+              title={t('squadDetails.captains.addAction', 'Ajouter comme capitaine')}
+              variant="Primary"
             />
           </View>
 
-          {Array.isArray(team?.invitations) && team.invitations.length > 0 ? (
-            <View
-              style={{
-                backgroundColor: `${Colors.gold500}14`,
-                borderColor: `${Colors.gold500}33`,
-                borderRadius: 16,
-                borderWidth: 1,
-                marginBottom: 16,
-                padding: 14,
-              }}
-            >
-              <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
-                {t('squadDetails.invitation.pendingCount', '{{count}} invitation(s) en cours', { count: team.invitations.length })}
-              </Text>
-            </View>
-          ) : null}
-
-          {isInviteSearchLoading ? (
-            <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
-              {t('common.loading', 'Chargement...')}
+          <View
+            style={{
+              backgroundColor: uiTone.panelBg,
+              borderColor: uiTone.panelBorder,
+              borderRadius: 14,
+              borderWidth: 1,
+              padding: 14,
+            }}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
+              {t('squadDetails.captains.transferTitle', 'Laisser ma place')}
             </Text>
-          ) : null}
-
-          {!isInviteSearchLoading && inviteCandidates.length === 0 ? (
-            <View
-              style={{
-                backgroundColor: Colors.primary900,
-                borderColor: `${Colors.primary500}24`,
-                borderRadius: 18,
-                borderWidth: 1,
-                padding: 18,
-              }}
-            >
-              <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 6, textAlign: 'center' }]}>
-                {t('squadDetails.invitation.emptyTitle', 'Aucun joueur a inviter')}
-              </Text>
-              <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
-                {t('squadDetails.invitation.emptyBody', 'Tous les profils visibles sont d\u00E9j\u00E0 membres, d\u00E9j\u00E0 invites ou ont d\u00E9j\u00E0 une demande en attente.')}
-              </Text>
-            </View>
-          ) : null}
-
-          {inviteCandidates.map((user) => {
-            const userId = getEntityDocumentId(user);
-            const userName = [
-              user?.firstname,
-              user?.lastname,
-            ].filter((part) => typeof part === 'string' && part.trim().length > 0).join(' ').trim()
-              || user?.username
-              || 'Joueur';
-
-            return (
-              <View
-                key={userId}
-                style={{
-                  alignItems: 'center',
-                  backgroundColor: Colors.primary900,
-                  borderColor: `${Colors.primary500}24`,
-                  borderRadius: 18,
-                  borderWidth: 1,
-                  flexDirection: 'row',
-                  marginBottom: 12,
-                  padding: 14,
-                }}
-              >
-                <ProfileAvatar imageUrl={user?.avatar?.url} size={44} />
-                <View style={{ flex: 1, marginLeft: 12, paddingRight: 12 }}>
-                  <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-                    {userName}
-                  </Text>
-                  <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
-                    {user?.role?.name || t('common.member', 'Membre')}
-                  </Text>
-                </View>
-                <Button
-                  isLoading={inviteActionUserId === userId}
-                  onPress={() => handleInvitePlayer(user)}
-                  size="sm"
-                  title={t('squadDetails.invitation.inviteAction', 'Inviter')}
-                  variant="Secondary"
-                />
-              </View>
-            );
-          })}
+            <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20, marginBottom: 12 }]}>
+              {t('squadDetails.captains.transferHint', '{{name}} devient le seul capitaine de la squad.', {
+                name: captainAssignmentTargetName,
+              })}
+            </Text>
+            <Button
+              disabled={Boolean(captainAssignmentMode)}
+              isLoading={captainAssignmentMode === 'transfer'}
+              onPress={() => handleAssignCaptain('transfer')}
+              title={t('squadDetails.captains.transferAction', 'Transferer le capitanat')}
+              variant="Secondary"
+            />
+          </View>
         </View>
       </BottomModal>
-
       <BottomModal
         close={() => setIsSlotModalVisible(false)}
         headerComponent={(

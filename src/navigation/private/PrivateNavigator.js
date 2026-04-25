@@ -1,6 +1,8 @@
 /* eslint-disable global-require */
 import { createStackNavigator } from '@react-navigation/stack';
-import { useCallback, useMemo } from 'react';
+import {
+  useCallback, useEffect, useMemo, useRef,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, View } from 'react-native';
 
@@ -27,6 +29,8 @@ import UserSportHistory from '@/views/onboarding/UserSportHistory';
 import Welcome from '@/views/onboarding/Welcome';
 
 import { commonOptions } from '@/navigation/commonOptions';
+import { navigate as navigateRoot } from '@/navigation/navigationService';
+import { readPendingSquadInviteLink } from '@/navigation/pendingSquadInviteLink';
 import { RouteNames } from '@/navigation/routeNames';
 
 import PrivateTabNavigator from './PrivateTabNavigator';
@@ -46,6 +50,7 @@ function PrivateNavigator() {
   const { isGold } = useAppMode();
   const { t } = useTranslation();
   const isSuperAdmin = getUserRoleKey(userData?.role?.type || userData?.role?.name) === 'superAdmin';
+  const pendingSquadInviteNavigationKeyRef = useRef(null);
 
   const getStepNumber = (routeName) => onboardingViews?.views?.find((view) => view.route === routeName)?.index || 0;
   const getTotalSteps = () => onboardingViews?.totalViews || 0;
@@ -70,6 +75,37 @@ function PrivateNavigator() {
     if (isGold) return RouteNames.LeagueHomeTab;
     return RouteNames.HomeTab;
   }, [onboardingViews, isGold]);
+
+  useEffect(() => {
+    if (!userData?.documentId || userDataLoading || userDataError) return undefined;
+
+    const pendingInvite = readPendingSquadInviteLink();
+    if (!pendingInvite?.teamId) return undefined;
+
+    const navigationKey = `${userData.documentId}:${pendingInvite.teamId}:${pendingInvite.createdAt}`;
+    if (pendingSquadInviteNavigationKeyRef.current === navigationKey) return undefined;
+    pendingSquadInviteNavigationKeyRef.current = navigationKey;
+
+    let attemptCount = 0;
+    let retryTimeout;
+    const openPendingInvite = () => {
+      attemptCount += 1;
+      const didNavigate = navigateRoot(RouteNames.SquadDetails, {
+        invite: true,
+        source: 'pending-squad-invite-link',
+        teamId: pendingInvite.teamId,
+      });
+
+      if (!didNavigate && attemptCount < 6) {
+        retryTimeout = setTimeout(openPendingInvite, 250);
+      }
+    };
+
+    retryTimeout = setTimeout(openPendingInvite, 250);
+    return () => {
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
+  }, [userData?.documentId, userDataError, userDataLoading]);
 
   const canShowView = useCallback((routeName) => {
     const view = onboardingViews?.views?.find((item) => item.route === routeName);

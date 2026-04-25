@@ -29,6 +29,7 @@ import { buildProposalDefaultsFromMatch, toHourMinute } from '@/views/league/mat
 import { buildCanonicalLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames'; // Import RouteNames
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { createLeagueProposal, getMatchHistory } from '@/services/league/leagueMatchService';
 import { useLeaguePlatformRuntime } from '@/services/league/leaguePlatformQueries';
@@ -43,6 +44,8 @@ import { createTeamSlot, getAvailableSlots } from '@/services/teamSlot/teamSlotS
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { getImageUrl } from '@/utils/imageUrl';
+import { isLeagueCaptain } from '@/utils/league/captains';
+import { getDivisionProgressState, getNextStreakBonus } from '@/utils/league/division';
 import {
   getLocationCoordinates,
   hasValidLocationCoordinates,
@@ -81,6 +84,64 @@ import NextMatchCard from './components/NextMatchCard';
 /**
  * @typedef {{address?: string, addressObject?: {label?: string, address?: string} | null, date?: string, endDate?: string, venue?: string}} VenueProposalPayload
  */
+
+/**
+ * @param {{
+ *  Colors: Record<string, any>,
+ *  Images: Record<string, any>,
+ *  rsvpCount?: number,
+ *  total?: number,
+ * }} props
+ * @returns {React.ReactElement}
+ */
+function VisualRoster({
+  Colors,
+  Images,
+  rsvpCount = 0,
+  total = 5,
+}) {
+  const slotKeys = Array.from(
+    { length: total },
+    (unused, slotIndex) => `roster-slot-${slotIndex + 1}`,
+  );
+
+  return (
+    <View style={{
+      alignItems: 'center', flexDirection: 'row', marginVertical: 12, paddingLeft: 8,
+    }}
+    >
+      {slotKeys.map((slotKey, slotIndex) => {
+        const isFilled = slotIndex < rsvpCount;
+        return (
+          <View
+            key={slotKey}
+            style={{
+              alignItems: 'center',
+              backgroundColor: Colors.neutral800,
+              borderColor: 'rgba(255,255,255,0.14)',
+              borderRadius: 18,
+              borderWidth: 2,
+              height: 36,
+              justifyContent: 'center',
+              marginRight: -8,
+              overflow: 'hidden',
+              width: 36,
+            }}
+          >
+            {isFilled ? (
+              <Image source={Images.roundAvatar} style={{ height: '100%', width: '100%' }} />
+            ) : (
+              <View style={{
+                backgroundColor: Colors.neutral700, borderRadius: 4, height: 8, width: 8,
+              }}
+              />
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 /**
  * Resolve Strapi media URL from multiple payload shapes.
@@ -195,6 +256,7 @@ function MatchCenterScreen() {
   const radarIcon = '\uD83D\uDCE1';
   const navigation = /** @type {any} */ (useNavigation());
   const route = /** @type {any} */ (useRoute());
+  const { sceneBottomInset } = useBottomDockLayout();
   const { userData } = useAuth();
   const { getClubInitials } = useClub();
   const {
@@ -203,6 +265,7 @@ function MatchCenterScreen() {
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const leaguePlatformRuntimeQuery = useLeaguePlatformRuntime();
   const leaguePlatformRuntime = leaguePlatformRuntimeQuery.data || null;
+  const scrollBottomPadding = Math.max(sceneBottomInset, 80);
 
   /**
    * Keep shield initials consistent with Squad cards (TeamListContent).
@@ -357,11 +420,10 @@ function MatchCenterScreen() {
     friday: 'Vendredi', monday: 'Lundi', saturday: 'Samedi', sunday: 'Dimanche', thursday: 'Jeudi', tuesday: 'Mardi', wednesday: 'Mercredi',
   };
 
-  const isCurrentUserCaptain = React.useMemo(() => {
-    const captainId = getEntityDocumentId(mySquad?.captain);
-    const currentUserId = getEntityDocumentId(userData);
-    return Boolean(captainId && currentUserId && areSameEntityId(captainId, currentUserId));
-  }, [mySquad?.captain, userData]);
+  const isCurrentUserCaptain = React.useMemo(
+    () => isLeagueCaptain(mySquad, userData),
+    [mySquad, userData],
+  );
   const squadDocumentId = getEntityDocumentId(mySquad);
 
   /**
@@ -1026,7 +1088,7 @@ function MatchCenterScreen() {
     }}
     >
       <LeagueCard style={{ alignItems: 'center', paddingVertical: 40, width: '100%' }}>
-        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>Prêt À l'ACTION ?</Text>
+        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>Prêt À l&apos;ACTION ?</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
           Crée ton équipe pour rejoindre la compétition officielle.
         </Text>
@@ -1051,53 +1113,6 @@ function MatchCenterScreen() {
       </LeagueCard>
     </View>
   );
-
-  /**
-   *
-   * @param root0
-   * @param root0.rsvpCount
-   * @param root0.total
-   */
-  function VisualRoster({ rsvpCount = 0, total = 5 }) {
-    const slots = [];
-    for (let i = 0; i < total; i++) {
-      const isFilled = i < rsvpCount;
-      slots.push(
-        <View
-          key={i}
-          style={{
-            alignItems: 'center',
-            backgroundColor: Colors.neutral800,
-            borderColor: 'rgba(255,255,255,0.14)',
-            borderRadius: 18,
-            borderWidth: 2,
-            height: 36,
-            justifyContent: 'center',
-            marginRight: -8,
-            overflow: 'hidden',
-            width: 36,
-          }}
-        >
-          {isFilled ? (
-            <Image source={Images.roundAvatar} style={{ height: '100%', width: '100%' }} />
-          ) : (
-            <View style={{
-              backgroundColor: Colors.neutral700, borderRadius: 4, height: 8, width: 8,
-            }}
-            />
-          )}
-        </View>,
-      );
-    }
-    return (
-      <View style={{
-        alignItems: 'center', flexDirection: 'row', marginVertical: 12, paddingLeft: 8,
-      }}
-      >
-        {slots}
-      </View>
-    );
-  }
 
   const renderMatchCardContent = () => {
     const leagueGold = Colors.gold500 || '#D4AF37';
@@ -1670,7 +1685,7 @@ function MatchCenterScreen() {
             variant="Primary"
           />
 
-          {areSameEntityId(getEntityDocumentId(mySquad?.captain), getEntityDocumentId(userData)) && (
+          {isCurrentUserCaptain && (
             <TouchableOpacity
               onPress={() => {
                 Alert.alert(
@@ -1783,10 +1798,6 @@ function MatchCenterScreen() {
         );
       }
       // Helpers for display
-      /** @type {Record<string, string>} */
-      const DAY_MAP = {
-        friday: 'Vendredi', monday: 'Lundi', saturday: 'Samedi', sunday: 'Dimanche', thursday: 'Jeudi', tuesday: 'Mardi', wednesday: 'Mercredi',
-      };
       const formatHour = (/** @type {string | undefined | null} */ h) => (h ? h.substring(0, 5) : '?');
       const cleanLabel = (/** @type {unknown} */ value) => {
         if (typeof value !== 'string') return null;
@@ -1804,29 +1815,27 @@ function MatchCenterScreen() {
       const getOpponentCity = (/** @type {OpponentDetails | null} */ details) => {
         if (!details) return 'Zone inconnue';
 
-        const homeBase = parseMaybeJson(details.home_base);
+        const opponentHomeBase = parseMaybeJson(details.home_base);
         const location = parseMaybeJson(details.location);
-        const homeBaseAddress = parseMaybeJson(homeBase?.address);
+        const opponentHomeBaseAddress = parseMaybeJson(opponentHomeBase?.address);
 
         const candidates = [
-          homeBase?.city,
-          homeBaseAddress?.city,
-          homeBaseAddress?.properties?.city,
-          homeBaseAddress?.properties?.context,
-          homeBaseAddress?.label,
-          homeBaseAddress?.address,
-          homeBase?.label,
+          opponentHomeBase?.city,
+          opponentHomeBaseAddress?.city,
+          opponentHomeBaseAddress?.properties?.city,
+          opponentHomeBaseAddress?.properties?.context,
+          opponentHomeBaseAddress?.label,
+          opponentHomeBaseAddress?.address,
+          opponentHomeBase?.label,
           location?.city,
           location?.label,
           details?.city,
         ];
 
-        for (const candidate of candidates) {
-          const cleaned = cleanLabel(candidate);
-          if (cleaned) return cleaned;
-        }
+        const cleanedCandidate = candidates.map(cleanLabel).find(Boolean);
+        if (cleanedCandidate) return cleanedCandidate;
 
-        if (homeBase?.lat || homeBase?.lng || location?.lat || location?.lng) {
+        if (opponentHomeBase?.lat || opponentHomeBase?.lng || location?.lat || location?.lng) {
           return 'Zone approximative';
         }
 
@@ -2047,7 +2056,7 @@ function MatchCenterScreen() {
           />
 
           {/* Cancel Button - Captain Only */}
-          {areSameEntityId(getEntityDocumentId(mySquad?.captain), getEntityDocumentId(userData)) && (
+          {isCurrentUserCaptain && (
           <TouchableOpacity
             onPress={() => {
               Alert.alert(
@@ -2153,7 +2162,10 @@ function MatchCenterScreen() {
 
     // DEFAULT: Locker Room / Ticket View
     /** @type {LeagueSlot[]} */
-    const displayedSlots = squadSlots.length > 0 ? squadSlots : (activeSlot ? [activeSlot] : []);
+    let displayedSlots = squadSlots;
+    if (displayedSlots.length === 0 && activeSlot) {
+      displayedSlots = [activeSlot];
+    }
 
     return (
       <View>
@@ -2177,7 +2189,11 @@ function MatchCenterScreen() {
             decelerationRate="fast"
             disableIntervalMomentum
             horizontal
-            keyExtractor={(item, index) => getEntityDocumentId(item) || `slot-${index}`}
+            keyExtractor={(item) => getEntityDocumentId(item) || [
+              item?.recurrence_day || item?.day || 'slot',
+              item?.start_hour || item?.start_time || item?.date || 'start',
+              item?.end_hour || item?.endHour || 'end',
+            ].join('-')}
             ListEmptyComponent={(
               <View style={{ width: slotCardWidth }}>
                 <View>
@@ -2211,38 +2227,37 @@ function MatchCenterScreen() {
             renderItem={({ index, item }) => {
               if (!item) return null;
               const isLast = index === displayedSlots.length - 1;
+              const baseDate = item.start_time || item.date || '';
+              const recurringStart = item.start_hour ? item.start_hour.substring(0, 5) : null;
+              const recurringEnd = item.end_hour ? item.end_hour.substring(0, 5) : null;
+              const fallbackStart = baseDate
+                ? new Date(baseDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '?';
+              const fallbackEnd = baseDate
+                ? new Date(new Date(baseDate).getTime() + 60 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '?';
+              const rangeLabel = recurringStart && recurringEnd
+                ? `${recurringStart} - ${recurringEnd}`
+                : `${fallbackStart} - ${fallbackEnd}`;
+              const recurrenceKey = String(item.recurrence_day || '').toLowerCase();
+              let dayLabel = 'Date';
+              if (recurrenceKey) {
+                dayLabel = DAY_MAP[recurrenceKey] || recurrenceKey;
+              } else if (baseDate) {
+                [dayLabel] = formatDate(baseDate).split(' ');
+              }
 
               return (
                 <View style={{ marginRight: isLast ? 0 : slotCardGap, width: slotCardWidth }}>
                   <View style={{ marginBottom: 8 }}>
-                    {(() => {
-                      const baseDate = item.start_time || item.date || '';
-                      const recurringStart = item.start_hour ? item.start_hour.substring(0, 5) : null;
-                      const recurringEnd = item.end_hour ? item.end_hour.substring(0, 5) : null;
-                      const fallbackStart = baseDate
-                        ? new Date(baseDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : '?';
-                      const fallbackEnd = baseDate
-                        ? new Date(new Date(baseDate).getTime() + 60 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : '?';
-                      const rangeLabel = recurringStart && recurringEnd
-                        ? `${recurringStart} - ${recurringEnd}`
-                        : `${fallbackStart} - ${fallbackEnd}`;
-                      const recurrenceKey = String(item.recurrence_day || '').toLowerCase();
-                      const dayLabel = recurrenceKey
-                        ? (DAY_MAP[recurrenceKey] || recurrenceKey)
-                        : (baseDate ? formatDate(baseDate).split(' ')[0] : 'Date');
-                      return (
-                        <View>
-                          <Text style={[Fonts.h2, { color: Colors.neutral00, textTransform: 'uppercase' }]}>
-                            {dayLabel}
-                          </Text>
-                          <Text style={[Fonts.p1, { color: Colors.gold500, marginTop: 2 }]}>
-                            {rangeLabel}
-                          </Text>
-                        </View>
-                      );
-                    })()}
+                    <View>
+                      <Text style={[Fonts.h2, { color: Colors.neutral00, textTransform: 'uppercase' }]}>
+                        {dayLabel}
+                      </Text>
+                      <Text style={[Fonts.p1, { color: Colors.gold500, marginTop: 2 }]}>
+                        {rangeLabel}
+                      </Text>
+                    </View>
                   </View>
                   {/* Status Chip */}
                   <View style={{
@@ -2270,24 +2285,35 @@ function MatchCenterScreen() {
                         /5
                       </Text>
                     </Text>
-                    <VisualRoster rsvpCount={item.rsvp_count || 0} />
+                    <VisualRoster
+                      Colors={Colors}
+                      Images={Images}
+                      rsvpCount={item.rsvp_count || 0}
+                    />
                   </View>
 
                   {/* Navigation Indicators (Dots) */}
                   {squadSlots.length > 1 && (
                   <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
-                    {squadSlots.map((_, i) => (
-                      <View
-                        key={i}
-                        style={{
-                          backgroundColor: i === index ? Colors.gold500 : Colors.neutral700,
-                          borderRadius: 3,
-                          height: 6,
-                          marginHorizontal: 4,
-                          width: 6,
-                        }}
-                      />
-                    ))}
+                    {squadSlots.map((slot, dotIndex) => {
+                      const dotKey = getEntityDocumentId(slot) || [
+                        slot?.recurrence_day || slot?.day || 'slot',
+                        slot?.start_hour || slot?.start_time || slot?.date || 'start',
+                        slot?.end_hour || slot?.endHour || 'end',
+                      ].join('-');
+                      return (
+                        <View
+                          key={`dot-${dotKey}`}
+                          style={{
+                            backgroundColor: dotIndex === index ? Colors.gold500 : Colors.neutral700,
+                            borderRadius: 3,
+                            height: 6,
+                            marginHorizontal: 4,
+                            width: 6,
+                          }}
+                        />
+                      );
+                    })}
                   </View>
                   )}
                 </View>
@@ -2361,14 +2387,36 @@ function MatchCenterScreen() {
 
   const renderLockerRoom = () => {
     const rawStreak = Number(mySquad?.streak || 0);
-    const streakValue = Number.isFinite(rawStreak) && rawStreak !== 0
-      ? `${rawStreak > 0 ? '+' : ''}${rawStreak}`
-      : '-';
+    let streakValue = 'Stable';
+    if (Number.isFinite(rawStreak) && rawStreak > 0) {
+      streakValue = `x${rawStreak}`;
+    } else if (Number.isFinite(rawStreak) && rawStreak < 0) {
+      streakValue = 'Defaite';
+    }
+    const divisionPoints = Number(mySquad?.division_points ?? mySquad?.divisionPoints ?? 0);
+    const highestStreak = Number(mySquad?.highest_streak ?? mySquad?.highestStreak ?? 0);
+    const divisionProgress = getDivisionProgressState(divisionPoints, mySquad?.division);
+    const nextStreakBonus = rawStreak > 0 ? getNextStreakBonus(rawStreak) : 0;
+    let streakHelper = 'Prochaine victoire: +20 pts';
+    if (rawStreak > 0) {
+      streakHelper = `Prochain bonus: +${nextStreakBonus}`;
+    } else if (rawStreak < 0) {
+      streakHelper = 'Dernier resultat: defaite';
+    }
+    const promotionHelper = divisionProgress.maxDivisionReached
+      ? 'Division 1 prestige'
+      : `${Math.round(divisionProgress.pointsToPromotion)} pts avant promotion`;
     const showEmptyHistoryCta = !currentMatch && viewState !== 'radar' && viewState !== 'searching_start';
     const leagueSurface = {
       backgroundColor: 'rgba(10, 28, 43, 0.82)',
       borderColor: 'rgba(1, 179, 244, 0.22)',
     };
+    let nextMatchSectionTitle = 'PROCHAIN MATCH';
+    if (viewState === 'radar') {
+      nextMatchSectionTitle = 'RECHERCHE...';
+    } else if (viewState === 'match_found') {
+      nextMatchSectionTitle = 'ACTION REQUISE';
+    }
 
     return (
       <View style={styles.container}>
@@ -2459,7 +2507,7 @@ function MatchCenterScreen() {
           </View>
         </View>
 
-        <SectionHeader title={viewState === 'radar' ? 'RECHERCHE...' : (viewState === 'match_found' ? 'ACTION REQUISE' : 'PROCHAIN MATCH')} />
+        <SectionHeader title={nextMatchSectionTitle} />
 
         {shouldShowNextMatchCard(currentMatch, currentMatch?.event) ? (
           <View style={{ marginBottom: 26, marginTop: 8 }}>
@@ -2517,6 +2565,26 @@ function MatchCenterScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          <View
+            style={{
+              borderTopColor: 'rgba(255,255,255,0.08)',
+              borderTopWidth: 1,
+              marginTop: 16,
+              paddingTop: 14,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.gold500, textAlign: 'center' }]}>
+              {divisionPoints}
+              /100 pts
+              {' - '}
+              {promotionHelper}
+            </Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
+              {streakHelper}
+              {' | Meilleure serie: x'}
+              {highestStreak}
+            </Text>
+          </View>
         </LeagueCard>
 
         <View style={{ marginTop: 14 }}>
@@ -2567,18 +2635,20 @@ function MatchCenterScreen() {
             </View>
           ) : (
             recentMatches.map((/** @type {MatchHistoryEntry} */ item, /** @type {number} */ index) => {
-              const resultColor = item.result === 'win'
-                ? Colors.success500
-                : item.result === 'loss'
-                  ? Colors.error500
-                  : Colors.neutral300;
-              const resultLabel = item.result === 'win'
-                ? 'Victoire'
-                : item.result === 'loss'
-                  ? 'Defaite'
-                  : item.result === 'draw'
-                    ? 'Nul'
-                    : item.status;
+              let resultColor = Colors.neutral300;
+              if (item.result === 'win') {
+                resultColor = Colors.success500;
+              } else if (item.result === 'loss') {
+                resultColor = Colors.error500;
+              }
+              let resultLabel = String(item.status || '');
+              if (item.result === 'win') {
+                resultLabel = 'Victoire';
+              } else if (item.result === 'loss') {
+                resultLabel = 'Defaite';
+              } else if (item.result === 'draw') {
+                resultLabel = 'Nul';
+              }
               const matchDate = item.date ? new Date(item.date) : null;
               const dateLabel = matchDate && !Number.isNaN(matchDate.getTime())
                 ? matchDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -2821,14 +2891,19 @@ function MatchCenterScreen() {
             <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
               - Autres créneaux communs possibles :
             </Text>
-            {currentMatch.common_slots.map((/** @type {LeagueSlot} */ slot, /** @type {number} */ index) => {
+            {currentMatch.common_slots.map((/** @type {LeagueSlot} */ slot) => {
               // Skip the currently selected slot
               if (slot.day === (currentMatch.recurring_day || opponentDetails?.recurring_day)) return null;
 
               const dayKey = String(slot.day || '').toLowerCase();
               const dayName = DAY_MAP[dayKey] || slot.day;
+              const slotKey = getEntityDocumentId(slot) || [
+                slot.day || 'slot',
+                slot.startHour || slot.start_hour || 'start',
+                slot.endHour || slot.end_hour || 'end',
+              ].join('-');
               return (
-                <View key={index} style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 4 }}>
+                <View key={slotKey} style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 4 }}>
                   <Text style={{ fontSize: 14 }}>-</Text>
                   <Text style={[Fonts.p2, { color: Colors.neutral100, marginLeft: 8 }]}>
                     {dayName}
@@ -3068,7 +3143,7 @@ function MatchCenterScreen() {
   if (loadError && !mySquad && viewState !== 'no_squad') {
     return (
       <LeagueStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={loadError}
         onAction={() => loadMatchCenter()}
         title="Match Center indisponible"
@@ -3090,7 +3165,7 @@ function MatchCenterScreen() {
   return (
     <ScreenContainer bgImage="bg2">
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
         refreshControl={
           <RefreshControl colors={[Colors.primary500]} onRefresh={() => loadMatchCenter()} refreshing={loading} tintColor={Colors.primary500} />
              }

@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import {
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -40,10 +47,11 @@ const getRemainingParts = (targetDate) => {
 };
 
 /**
- *
- * @param root0
- * @param root0.label
- * @param root0.value
+ * Renders one countdown value.
+ * @param {{ label: string, value: string }} root0
+ * @param {string} root0.label
+ * @param {string} root0.value
+ * @returns {import('react').ReactElement}
  */
 function CountdownCell({ label, value }) {
   const { Colors, Fonts, Spaces } = useTheme();
@@ -70,15 +78,18 @@ function CountdownCell({ label, value }) {
 }
 
 /**
- *
- * @param root0
- * @param root0.runtime
+ * Renders the closed League state with a safe exit to classic mode.
+ * @param {{ onGoClassic?: () => void, runtime?: Record<string, any> }} root0
+ * @param {() => void} [root0.onGoClassic]
+ * @param {Record<string, any>} [root0.runtime]
+ * @returns {import('react').ReactElement}
  */
-function ComingSoonLeagueScreen({ runtime }) {
+function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
   const {
     Alignments,
     Colors,
     Fonts,
+    Images,
     Spaces,
   } = useTheme();
   const openingDate = runtime?.platform?.countdownTarget || runtime?.platform?.openingDate || null;
@@ -103,51 +114,106 @@ function ComingSoonLeagueScreen({ runtime }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[
-        Alignments.fill,
-        Alignments.justifyCenter,
-        Spaces.paddingVertical[32],
-      ]}
+      contentContainerStyle={[Alignments.fill]}
       responsivePadding
       withHeaderPadding={false}
     >
-      <View style={[Spaces.gap[20], { alignSelf: 'center', maxWidth: 560, width: '100%' }]}>
-        <View style={[Spaces.gap[10], { alignItems: 'center' }]}>
-          <Text style={[Fonts.label, { color: Colors.primary500, letterSpacing: 1.2 }]}>
-            FOUND CLUB LEAGUE
-          </Text>
-          <Text style={[Fonts.h1, Fonts.neutral00, { textAlign: 'center' }]}>
-            Found Club League arrive bientôt.
-          </Text>
-          <Text style={[Fonts.p1, Fonts.neutral100, { lineHeight: 26, textAlign: 'center' }]}>
-            Crée ta squad. Défie ta ville. Joue ton prochain match.
-          </Text>
-        </View>
+      <ScrollView
+        contentContainerStyle={[
+          Alignments.grow1,
+          Alignments.justifyCenter,
+          Spaces.paddingVertical[28],
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[Spaces.gap[20], { alignSelf: 'center', maxWidth: 560, width: '100%' }]}>
+          {onGoClassic ? (
+            <TouchableOpacity
+              accessibilityHint="Retourne vers FoundClub classique"
+              accessibilityLabel="Retour"
+              accessibilityRole="button"
+              onPress={onGoClassic}
+              style={{
+                alignItems: 'center',
+                alignSelf: 'flex-start',
+                backgroundColor: 'rgba(9, 24, 35, 0.86)',
+                borderColor: `${Colors.primary500}66`,
+                borderRadius: 999,
+                borderWidth: 1,
+                height: 42,
+                justifyContent: 'center',
+                width: 42,
+              }}
+            >
+              <Image
+                source={Images.arrowLeft}
+                style={{ height: 18, tintColor: Colors.primary500, width: 18 }}
+              />
+            </TouchableOpacity>
+          ) : null}
 
-        <LeagueCard style={{ marginBottom: 0 }}>
-          <View style={[Spaces.gap[12]]}>
-            {messageLines.map((line) => (
-              <Text key={line} style={[Fonts.p1, Fonts.neutral00, { lineHeight: 24 }]}>
-                {line}
+          <View style={[Spaces.gap[10], { alignItems: 'center' }]}>
+            <View
+              style={{
+                backgroundColor: `${Colors.gold500}18`,
+                borderColor: `${Colors.gold500}55`,
+                borderRadius: 999,
+                borderWidth: 1,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+              }}
+            >
+              <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+                Accès League fermé
               </Text>
-            ))}
-          </View>
-        </LeagueCard>
-
-        {remaining ? (
-          <View style={[Spaces.gap[12]]}>
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral200, textAlign: 'center' }]}>
-              Compte à rebours avant ouverture
-            </Text>
-            <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
-              <CountdownCell label="Jours" value={remaining.days} />
-              <CountdownCell label="Heures" value={remaining.hours} />
-              <CountdownCell label="Minutes" value={remaining.minutes} />
-              <CountdownCell label="Secondes" value={remaining.seconds} />
             </View>
+
+            <Text style={[Fonts.label, { color: Colors.primary500, letterSpacing: 1.2 }]}>
+              FOUND CLUB LEAGUE
+            </Text>
+            <Text style={[Fonts.h1, Fonts.neutral00, { textAlign: 'center' }]}>
+              Found Club League arrive bientôt.
+            </Text>
+            <Text style={[Fonts.p1, Fonts.neutral100, { lineHeight: 26, textAlign: 'center' }]}>
+              Le mode League est momentanément fermé. FoundClub classique reste disponible.
+            </Text>
           </View>
-        ) : null}
-      </View>
+
+          <LeagueCard style={{ marginBottom: 0 }}>
+            <View style={[Spaces.gap[12]]}>
+              {messageLines.map((line) => (
+                <Text key={line} style={[Fonts.p1, Fonts.neutral00, { lineHeight: 24 }]}>
+                  {line}
+                </Text>
+              ))}
+            </View>
+          </LeagueCard>
+
+          {remaining ? (
+            <View style={[Spaces.gap[12]]}>
+              <Text style={[Fonts.p2Bold, { color: Colors.neutral200, textAlign: 'center' }]}>
+                Compte à rebours avant ouverture
+              </Text>
+              <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
+                <CountdownCell label="Jours" value={remaining.days} />
+                <CountdownCell label="Heures" value={remaining.hours} />
+                <CountdownCell label="Minutes" value={remaining.minutes} />
+                <CountdownCell label="Secondes" value={remaining.seconds} />
+              </View>
+            </View>
+          ) : null}
+
+          {onGoClassic ? (
+            <Button
+              onPress={onGoClassic}
+              style={{ backgroundColor: Colors.gold500, borderColor: `${Colors.gold500}66` }}
+              textStyle={{ color: Colors.primary900 }}
+              title="Retour à FoundClub classique"
+              variant="Primary"
+            />
+          ) : null}
+        </View>
+      </ScrollView>
     </ScreenContainer>
   );
 }

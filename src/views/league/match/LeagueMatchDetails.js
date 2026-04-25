@@ -70,6 +70,7 @@ import {
 } from '@/services/matchStats/matchStatsQueries';
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+import { isLeagueCaptain, isLeagueMember } from '@/utils/league/captains';
 
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -134,7 +135,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const { showBanner } = useAppFeedback();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
-  const { floatingActionBottomOffset } = useBottomDockLayout();
+  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const leagueCardTextColor = Colors.primary500;
   const leagueAccentSurface = 'rgba(1, 179, 244, 0.12)';
   const leagueAccentSurfaceSoft = 'rgba(1, 179, 244, 0.07)';
@@ -195,22 +196,18 @@ function LeagueMatchDetails({ navigation, route }) {
   }, [loadMatch]);
 
   const isInTeamA = useMemo(() => {
-    const rosterA = match?.team_a?.roster || [];
     const membersA = match?.team_a?.members || [];
     return (
-      rosterA.some((/** @type {User} */ m) => areSameEntityId(getEntityDocumentId(m), userId))
+      isLeagueMember(match?.team_a, userId)
       || membersA.some((/** @type {User} */ m) => areSameEntityId(getEntityDocumentId(m), userId))
-      || areSameEntityId(getEntityDocumentId(match?.team_a?.captain), userId)
     );
   }, [match, userId]);
 
   const isInTeamB = useMemo(() => {
-    const rosterB = match?.team_b?.roster || [];
     const membersB = match?.team_b?.members || [];
     return (
-      rosterB.some((/** @type {User} */ m) => areSameEntityId(getEntityDocumentId(m), userId))
+      isLeagueMember(match?.team_b, userId)
       || membersB.some((/** @type {User} */ m) => areSameEntityId(getEntityDocumentId(m), userId))
-      || areSameEntityId(getEntityDocumentId(match?.team_b?.captain), userId)
     );
   }, [match, userId]);
 
@@ -247,8 +244,8 @@ function LeagueMatchDetails({ navigation, route }) {
     enabled: Boolean(matchId && myTeamId && String(match?.status || '').toLowerCase() === 'valid'),
   });
 
-  const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), userId);
-  const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), userId);
+  const isCaptainA = isLeagueCaptain(match?.team_a, userId);
+  const isCaptainB = isLeagueCaptain(match?.team_b, userId);
   const isCaptain = isCaptainA || isCaptainB;
 
   const participations = teamSide === 'a' ? (match?.participations_a || []) : (match?.participations_b || []);
@@ -628,7 +625,7 @@ function LeagueMatchDetails({ navigation, route }) {
   }), [floatingActionBottomOffset]);
   const scrollBottomPadding = useMemo(() => {
     const dockOffset = hasBottomActionBar ? floatingActionBottomOffset : 0;
-    if (!hasBottomActionBar) return 52;
+    if (!hasBottomActionBar) return Math.max(sceneBottomInset, 52);
     if (!isActionDockExpanded) return dockOffset + 124;
     if (hasBottomPresenceBar && hasCaptainQuickActions) return dockOffset + 344;
     if (hasCaptainQuickActions) return dockOffset + 212;
@@ -641,6 +638,7 @@ function LeagueMatchDetails({ navigation, route }) {
     hasBottomPresenceBar,
     hasCaptainQuickActions,
     isActionDockExpanded,
+    sceneBottomInset,
   ]);
   const isScoreToSubmitBadge = String(statusConfig.label || '').toLowerCase().includes('saisir');
   const scoreQuickActionMeta = useMemo(() => {
@@ -1984,7 +1982,7 @@ function LeagueMatchDetails({ navigation, route }) {
                           refetchPendingLeagueAction();
                           loadMatch();
                         }}
-                        title="R\u00E9essayer"
+                        title="Réessayer"
                         variant="SecondaryLight"
                       />
                     </View>

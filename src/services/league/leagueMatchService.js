@@ -239,10 +239,10 @@ export const fetchMatch = async (matchId) => {
         participations_a: true,
         participations_b: true,
         team_a: {
-          populate: ['captain', 'crest', 'roster'],
+          populate: ['captain', 'co_captains', 'crest', 'roster'],
         },
         team_b: {
-          populate: ['captain', 'crest', 'roster'],
+          populate: ['captain', 'co_captains', 'crest', 'roster'],
         },
         winner: true,
       },
@@ -341,7 +341,7 @@ export const getMatch = async (matchId) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
   const response = await client.get(`/league-matches/${normalizedMatchId}`, {
     params: {
-      populate: ['team_a', 'team_a.captain', 'team_a.crest', 'team_b', 'team_b.captain', 'team_b.crest', 'winner', 'chat'],
+      populate: ['team_a', 'team_a.captain', 'team_a.co_captains', 'team_a.crest', 'team_b', 'team_b.captain', 'team_b.co_captains', 'team_b.crest', 'winner', 'chat'],
     },
   });
   return response.data?.data || response.data;

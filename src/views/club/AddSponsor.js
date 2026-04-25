@@ -160,7 +160,7 @@ function AddSponsor({ navigation, route }) {
   if (currentTargetError && !currentTarget) {
     return (
       <ClubStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={isMultisportFlow
           ? "Impossible de charger cette structure multisport pour le moment."
           : "Impossible de charger ce club pour le moment."}

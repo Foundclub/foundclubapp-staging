@@ -123,11 +123,17 @@
  * @property {string} [description] - The description of the team
  * @property {string} [sport] - Team sport for league flows
  * @property {number} [division] - League division
+ * @property {number} [division_points] - League visible progression points
+ * @property {number} [divisionPoints] - League visible progression points
  * @property {number} [elo] - League elo rating
+ * @property {number} [season_points] - League season points
+ * @property {number} [seasonPoints] - League season points
  * @property {number} [wins] - League wins
  * @property {number} [draws] - League draws
  * @property {number} [losses] - League losses
  * @property {number} [streak] - Current streak
+ * @property {number} [highest_streak] - Best positive streak
+ * @property {number} [highestStreak] - Best positive streak
  * @property {number} [radius] - Search radius preference
  * @property {boolean} [isLeague]
  * @property {string} [city] - Team city

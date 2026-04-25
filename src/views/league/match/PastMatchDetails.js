@@ -28,11 +28,13 @@ import LeagueStateView from '@/views/league/components/LeagueStateView';
 import { getProposalLocationLabel } from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { getMatch, requestRematch } from '@/services/league/leagueMatchService';
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { getImageUrl } from '@/utils/imageUrl';
+import { isLeagueCaptain, isLeagueMember } from '@/utils/league/captains';
 
 /**
  * @param {unknown} value
@@ -98,7 +100,9 @@ function PastMatchDetails() {
   const leagueGoldSurface = 'rgba(255, 215, 0, 0.08)';
   const route = /** @type {any} */ (useRoute());
   const navigation = /** @type {any} */ (useNavigation());
+  const { sceneBottomInset } = useBottomDockLayout();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
+  const scrollBottomPadding = Math.max(sceneBottomInset, 44);
 
   const routeParams = /** @type {{ matchId?: string | number, myTeamId?: string | number } | undefined } */ (
     route.params
@@ -147,10 +151,7 @@ function PastMatchDetails() {
 
   const isUserInTeamA = useMemo(() => {
     if (!teamA || !currentUserId) return false;
-    return areSameEntityId(getEntityDocumentId(teamA?.captain), currentUserId)
-      || (teamA?.roster || []).some(
-        (/** @type {User} */ member) => areSameEntityId(getEntityDocumentId(member), currentUserId),
-      );
+    return isLeagueMember(teamA, currentUserId);
   }, [currentUserId, teamA]);
 
   const isTeamA = useMemo(() => {
@@ -244,9 +245,9 @@ function PastMatchDetails() {
   }, [myScoreValue, oppScoreValue]);
 
   const canRematch = useMemo(() => {
-    const isCaptain = areSameEntityId(getEntityDocumentId(myTeam?.captain), currentUserId);
+    const isCaptain = isLeagueCaptain(myTeam, currentUserId);
     return Boolean(isCaptain && match?.status === 'valid');
-  }, [currentUserId, match?.status, myTeam?.captain]);
+  }, [currentUserId, match?.status, myTeam]);
 
   const renderSectionHeader = useCallback((title, accentColor = leagueCardTextColor) => (
     <View style={styles.sectionHeaderRow}>
@@ -355,7 +356,7 @@ function PastMatchDetails() {
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}
           refreshControl={(
             <RefreshControl
               onRefresh={() => {

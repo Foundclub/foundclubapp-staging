@@ -23,6 +23,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import {
   useGetEventMyMatchResponse,
@@ -152,6 +153,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { width } = useWindowDimensions();
+  const { sceneBottomInset } = useBottomDockLayout();
   const queryClient = useQueryClient();
   const sourceType = route?.params?.sourceType === 'league' ? 'league' : 'event';
   const eventId = route?.params?.eventId || null;
@@ -182,6 +184,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
   const isCompactMobile = width < 390;
   const sectionPadding = isCompactMobile ? 16 : 24;
   const sectionGap = isCompactMobile ? 12 : 16;
+  const scrollBottomPadding = Math.max(sceneBottomInset, 32);
   const heroSurfaceColor = `${Colors.primary700}F2`;
   const cardSurfaceColor = `${Colors.primary700}E8`;
   const insetSurfaceColor = `${Colors.primary700}C7`;
@@ -532,7 +535,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {String(responseQuery.error?.message || 'Une erreur est survenue.')}
           </Text>
-          <Button onPress={() => responseQuery.refetch()} title="R\u00E9essayer" variant="Primary" />
+          <Button onPress={() => responseQuery.refetch()} title="Réessayer" variant="Primary" />
         </View>
       </ScreenContainer>
     );
@@ -589,7 +592,11 @@ function PlayerMatchResponseScreen({ navigation, route }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[32], Spaces.gap[24]]}
+        contentContainerStyle={[
+          Spaces.paddingHorizontal[16],
+          { paddingBottom: scrollBottomPadding },
+          Spaces.gap[24],
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -657,7 +664,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
           <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[8], { backgroundColor: cardSurfaceColor }]}>
             <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Impossible de charger ce questionnaire.</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>{String(responseQuery.error?.message || 'Une erreur est survenue.')}</Text>
-            <Button onPress={() => responseQuery.refetch()} title="R\u00E9essayer" variant="Secondary" />
+            <Button onPress={() => responseQuery.refetch()} title="Réessayer" variant="Secondary" />
           </View>
         ) : null}
 

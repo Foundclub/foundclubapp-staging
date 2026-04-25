@@ -60,7 +60,7 @@ function AdminLeagueDisputes() {
   if (error && !disputes.length) {
     return (
       <AdminStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={getErrorMessage(error, 'generic') || 'Impossible de charger les litiges League.'}
         onAction={refetch}
         title="Chargement impossible"

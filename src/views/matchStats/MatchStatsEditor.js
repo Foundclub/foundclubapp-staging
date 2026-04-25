@@ -24,6 +24,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import {
   useGetEventMatchStats,
@@ -342,6 +343,7 @@ function MatchStatsEditor({ navigation, route }) {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { height, width } = useWindowDimensions();
+  const { sceneBottomInset } = useBottomDockLayout();
   const queryClient = useQueryClient();
   const sourceType = route?.params?.sourceType === 'league' ? 'league' : 'event';
   const eventId = route?.params?.eventId || null;
@@ -372,6 +374,7 @@ function MatchStatsEditor({ navigation, route }) {
   const sectionGap = isCompactMobile ? 10 : 12;
   const scoreInputHeight = isCompactMobile ? 64 : 72;
   const statInputHeight = isCompactMobile ? 48 : 52;
+  const scrollBottomPadding = Math.max(sceneBottomInset, 24);
   const teamName = statsPayload?.team?.name || route?.params?.teamName || '';
   const headerSurfaceColor = `${Colors.primary700}D9`;
   const heroSurfaceColor = `${Colors.primary700}F0`;
@@ -875,7 +878,11 @@ function MatchStatsEditor({ navigation, route }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[24], Spaces.gap[isCompactMobile ? 12 : 16]]}
+        contentContainerStyle={[
+          Spaces.paddingHorizontal[16],
+          { paddingBottom: scrollBottomPadding },
+          Spaces.gap[isCompactMobile ? 12 : 16],
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -960,7 +967,7 @@ function MatchStatsEditor({ navigation, route }) {
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {String(statsQuery.error?.message || 'Une erreur est survenue.')}
             </Text>
-            <Button onPress={() => statsQuery.refetch()} title="R\u00E9essayer" variant="Secondary" />
+            <Button onPress={() => statsQuery.refetch()} title="Réessayer" variant="Secondary" />
           </View>
         ) : null}
 

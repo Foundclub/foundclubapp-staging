@@ -24,6 +24,7 @@ import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavig
 import { getMatchDerivedPhase, shouldMaskOpponentIdentity } from '@/views/league/match/utils/matchStatus';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { getMatch, getMatchHistory } from '@/services/league/leagueMatchService';
 import MatchmakingService from '@/services/league/MatchmakingService';
@@ -36,7 +37,13 @@ import {
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { getImageUrl } from '@/utils/imageUrl';
-import { clampLeagueDivision, getNextDivisionTargetElo } from '@/utils/league/division';
+import { isLeagueCaptain } from '@/utils/league/captains';
+import {
+  clampLeagueDivision,
+  getDivisionProgressState,
+  getDivisionPromotionTargetPoints,
+  getNextStreakBonus,
+} from '@/utils/league/division';
 
 /**
  * @typedef {{ rank: number, name: string, points: number, form: string, isMe: boolean }} LeaderboardEntry
@@ -48,6 +55,10 @@ import { clampLeagueDivision, getNextDivisionTargetElo } from '@/utils/league/di
  * @typedef {LeaderboardEntry | LeaderboardSeparator} LeaderboardRow
  */
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const normalizeFormResult = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (['v', 'victoire', 'w', 'win', 'won'].includes(normalized)) return 'V';
@@ -56,6 +67,10 @@ const normalizeFormResult = (value) => {
   return '-';
 };
 
+/**
+ * @param {any} team
+ * @returns {string}
+ */
 const computeTeamForm = (team) => {
   let rawSeries = [];
   if (Array.isArray(team?.recentResults)) {
@@ -71,6 +86,27 @@ const computeTeamForm = (team) => {
   return rawSeries.slice(0, 3).map(normalizeFormResult).join('');
 };
 
+/** @param {any} team @returns {number} */
+const getTeamDivisionPoints = (team) => Number(team?.division_points ?? team?.divisionPoints ?? 0);
+/** @param {any} team @returns {number} */
+const getTeamSeasonPoints = (team) => Number(team?.season_points ?? team?.seasonPoints ?? 0);
+/** @param {any} team @returns {number} */
+const getTeamHighestStreak = (team) => Number(team?.highest_streak ?? team?.highestStreak ?? 0);
+
+/**
+ * @param {unknown} streak
+ * @returns {string}
+ */
+const formatPositiveStreak = (streak) => {
+  const value = Number(streak || 0);
+  if (!Number.isFinite(value) || value <= 0) return 'Stable';
+  return `x${value}`;
+};
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const formatLeagueDashboardDate = (value) => {
   if (!value) return 'Date \u00E0 d\u00E9finir';
   try {
@@ -242,6 +278,8 @@ function LeagueDashboard() {
   } = useTheme();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const navigation = /** @type {any} */ (useNavigation());
+  const { sceneBottomInset } = useBottomDockLayout();
+  const scrollBottomPadding = Math.max(sceneBottomInset, 100);
 
   const [userTeam, setUserTeam] = useState(/** @type {Team | null} */ (null));
   const [allSquads, setAllSquads] = useState(/** @type {Team[]} */ ([]));
@@ -356,7 +394,7 @@ function LeagueDashboard() {
     }
   }, [hydrateSquadDashboard, navigation, userTeam]);
 
-  const isCaptainOnDashboard = getEntityDocumentId(userTeam?.captain) === getEntityDocumentId(userData);
+  const isCaptainOnDashboard = isLeagueCaptain(userTeam, userData);
   const dashboardPendingRequestsCount = Array.isArray(userTeam?.join_requests)
     ? userTeam.join_requests.length
     : 0;
@@ -1149,46 +1187,72 @@ function LeagueDashboard() {
     );
   };
 
-  const renderStats = () => (
-    <LeagueCard style={leagueSurface}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{userTeam?.wins || 0}</Text>
-          <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>VICTOIRES</Text>
-        </View>
-        <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', width: 1 }} />
-        <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{userTeam?.streak || 0}</Text>
-          <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>SÉRIE</Text>
-        </View>
-        <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', width: 1 }} />
-        <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{/** @type {any} */ (userTeam)?.losses || 0}</Text>
-          <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>DÉFAITES</Text>
-        </View>
-      </View>
+  const renderStats = () => {
+    const divisionProgress = getDivisionProgressState(
+      getTeamDivisionPoints(userTeam),
+      userTeam?.division,
+    );
+    const rawStreak = Number(userTeam?.streak || 0);
+    const nextStreakBonus = rawStreak > 0 ? getNextStreakBonus(rawStreak) : 0;
+    let streakHelper = 'Prochaine victoire: +20 pts';
+    if (rawStreak > 0) {
+      streakHelper = `Prochain bonus: +${nextStreakBonus}`;
+    } else if (rawStreak < 0) {
+      streakHelper = 'Dernier resultat: defaite';
+    }
+    const promotionHelper = divisionProgress.maxDivisionReached
+      ? 'Division 1 prestige'
+      : `${Math.round(divisionProgress.pointsToPromotion)} pts avant promotion`;
 
-      <View
-        style={{
-          alignItems: 'center',
-          borderTopColor: 'rgba(255,255,255,0.08)',
-          borderTopWidth: 1,
-          marginTop: 16,
-          paddingTop: 16,
-        }}
-      >
-        <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 12, textAlign: 'center' }]}>
-          Retrouvez le classement League, les matchs recents et les statistiques post-match de votre squad.
-        </Text>
-        <Button
-          onPress={handleOpenSquadStatistics}
-          size="small"
-          title="VOIR LES STATISTIQUES DE LA SQUAD"
-          variant="Secondary"
-        />
-      </View>
-    </LeagueCard>
-  );
+    return (
+      <LeagueCard style={leagueSurface}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View style={{ alignItems: 'center', flex: 1 }}>
+            <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{userTeam?.wins || 0}</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>VICTOIRES</Text>
+          </View>
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', width: 1 }} />
+          <View style={{ alignItems: 'center', flex: 1 }}>
+            <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{formatPositiveStreak(userTeam?.streak)}</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>SÉRIE</Text>
+          </View>
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', width: 1 }} />
+          <View style={{ alignItems: 'center', flex: 1 }}>
+            <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{/** @type {any} */ (userTeam)?.losses || 0}</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>DÉFAITES</Text>
+          </View>
+        </View>
+
+        <View
+          style={{
+            alignItems: 'center',
+            borderTopColor: 'rgba(255,255,255,0.08)',
+            borderTopWidth: 1,
+            marginTop: 16,
+            paddingTop: 16,
+          }}
+        >
+          <Text style={[Fonts.p3Bold, { color: Colors.gold500, marginBottom: 4, textAlign: 'center' }]}>
+            {getTeamDivisionPoints(userTeam)}
+            /100 pts
+            {' - '}
+            {promotionHelper}
+          </Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 12, textAlign: 'center' }]}>
+            {streakHelper}
+            {' | Meilleure serie: x'}
+            {getTeamHighestStreak(userTeam)}
+          </Text>
+          <Button
+            onPress={handleOpenSquadStatistics}
+            size="small"
+            title="VOIR LES STATISTIQUES DE LA SQUAD"
+            variant="Secondary"
+          />
+        </View>
+      </LeagueCard>
+    );
+  };
 
   // Real "Top of League" + User logic
   const renderLeaderboard = () => {
@@ -1199,7 +1263,7 @@ function LeagueDashboard() {
       form: computeTeamForm(t),
       isMe: getEntityDocumentId(t) === getEntityDocumentId(userTeam),
       name: t.name || 'Équipe',
-      points: Number(t.elo || 0),
+      points: getTeamDivisionPoints(t),
       rank: i + 1,
     })));
 
@@ -1215,7 +1279,7 @@ function LeagueDashboard() {
         form: computeTeamForm(userTeam),
         isMe: true,
         name: userTeam.name || 'Équipe',
-        points: Number(userTeam.elo || 0),
+        points: getTeamDivisionPoints(userTeam),
         rank: userIndex + 1,
       });
     }
@@ -1315,7 +1379,7 @@ function LeagueDashboard() {
   if (loadError && !userTeam) {
     return (
       <LeagueStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={loadError}
         onAction={() => loadDashboard()}
         title="Dashboard indisponible"
@@ -1326,7 +1390,7 @@ function LeagueDashboard() {
   return (
     <ScreenContainer bgImage="bg2">
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 100, paddingVertical: 24 }}
+        contentContainerStyle={{ paddingBottom: scrollBottomPadding, paddingVertical: 24 }}
         refreshControl={
           <RefreshControl colors={[Colors.gold500]} onRefresh={loadDashboard} refreshing={loading} tintColor={Colors.gold500} />
                 }
@@ -1341,12 +1405,14 @@ function LeagueDashboard() {
 
             <CompetitiveHero
               division={userTeam.division}
+              divisionPoints={getTeamDivisionPoints(userTeam)}
               elo={userTeam.elo}
-              nextDivisionElo={getNextDivisionTargetElo(userTeam?.division)}
+              nextDivisionPoints={getDivisionPromotionTargetPoints(userTeam?.division)}
               rank={(() => {
                 const index = rankingData.findIndex((/** @type {Team} */ t) => getEntityDocumentId(t) === getEntityDocumentId(userTeam));
                 return index >= 0 ? index + 1 : '-';
               })()}
+              seasonPoints={getTeamSeasonPoints(userTeam)}
               teamName={userTeam.name}
             />
 

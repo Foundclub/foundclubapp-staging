@@ -10,7 +10,7 @@ import LeagueCard from '@/components/atoms/league/LeagueCard';
 import {
   clampLeagueDivision,
   getDivisionProgressState,
-  getNextDivisionTargetElo,
+  getDivisionPromotionTargetPoints,
 } from '@/utils/league/division';
 
 /**
@@ -18,16 +18,20 @@ import {
  * @param {object} props
  * @param {number} [props.elo]
  * @param {number|string} [props.division]
+ * @param {number|string} [props.divisionPoints]
  * @param {number|string} [props.rank]
+ * @param {number|string} [props.seasonPoints]
  * @param {string} [props.teamName]
- * @param {number | null} [props.nextDivisionElo]
+ * @param {number | null} [props.nextDivisionPoints]
  * @returns {import('react').ReactElement}
  */
 function CompetitiveHero({
   division = 5,
+  divisionPoints = 0,
   elo = 1200,
-  nextDivisionElo = null,
+  nextDivisionPoints = null,
   rank = '-',
+  seasonPoints = 0,
   teamName,
 }) {
   const { Colors, Fonts, Images } = useTheme();
@@ -36,10 +40,10 @@ function CompetitiveHero({
   const progressTrackColor = 'rgba(173, 177, 178, 0.26)';
 
   const normalizedDivision = clampLeagueDivision(division);
-  const targetElo = Number.isFinite(Number(nextDivisionElo))
-    ? Number(nextDivisionElo)
-    : getNextDivisionTargetElo(normalizedDivision);
-  const progressState = getDivisionProgressState(elo, normalizedDivision, { targetElo });
+  const targetPoints = Number.isFinite(Number(nextDivisionPoints))
+    ? Number(nextDivisionPoints)
+    : getDivisionPromotionTargetPoints(normalizedDivision);
+  const progressState = getDivisionProgressState(divisionPoints, normalizedDivision, { targetPoints });
   const {
     maxDivisionReached,
     pointsToPromotion,
@@ -78,10 +82,19 @@ function CompetitiveHero({
 
         <View style={[styles.centered, { marginVertical: 12 }]}>
           <Text style={[Fonts.h1Bold, { color: Colors.gold500, fontSize: 48, lineHeight: 56 }]}>
-            {elo}
+            {progressState.points}
           </Text>
           <Text style={[Fonts.p3Bold, { color: Colors.gold500, textTransform: 'uppercase' }]}>
-            POINTS ELO
+            POINTS LEAGUE
+          </Text>
+          <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 2 }]}>
+            ELO matchmaking:
+            {' '}
+            {elo}
+            {' '}
+            | Saison:
+            {' '}
+            {seasonPoints}
           </Text>
         </View>
 
@@ -92,7 +105,7 @@ function CompetitiveHero({
               <Text style={[Fonts.p3, { color: Colors.gold500 }]}>Division max</Text>
             ) : (
               <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-                {targetElo}
+                {targetPoints}
                 {' '}
                 PTS
                 {' '}
@@ -107,7 +120,7 @@ function CompetitiveHero({
           </View>
           <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
             {maxDivisionReached ? (
-              <Text style={{ color: Colors.gold500 }}>Tu es déjà au plus haut niveau.</Text>
+              <Text style={{ color: Colors.gold500 }}>Division 1 prestige.</Text>
             ) : (
               <>
                 <Text style={{ color: Colors.gold500 }}>{Math.round(pointsToPromotion)}</Text>

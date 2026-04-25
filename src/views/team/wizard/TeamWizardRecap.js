@@ -229,7 +229,7 @@ function TeamWizardRecap({ navigation }) {
                   void clubQuery.refetch();
                 }
               }}
-              title="R\u00E9essayer"
+              title="Réessayer"
               variant="Secondary"
             />
           </View>

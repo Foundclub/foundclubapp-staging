@@ -14,6 +14,9 @@ import { getUploadEndpoint } from '@/config/runtimeUrls';
  * @property {string} captain - User ID
  * @property {object} home_base
  * @property {number} [elo]
+ * @property {number} [division_points]
+ * @property {number} [season_points]
+ * @property {number} [highest_streak]
  */
 /**
  * @typedef {{ uri?: string, path?: string, filename?: string, fileName?: string, mime?: string, type?: string }} UploadAsset
@@ -102,6 +105,13 @@ export const getMyLeagueTeam = async (userId) => {
           $or: [
             {
               captain: {
+                documentId: {
+                  $eq: userId,
+                },
+              },
+            },
+            {
+              co_captains: {
                 documentId: {
                   $eq: userId,
                 },
@@ -323,6 +333,7 @@ export const getLeagueTeamById = async (id) => {
       params: {
         populate: {
           captain: { populate: ['avatar'] },
+          co_captains: { populate: ['avatar'] },
           cover: true,
           crest: true,
           invitations: { populate: ['avatar'] },
@@ -352,7 +363,7 @@ export const getRanking = async (division = 5) => {
           division: { $eq: normalizedDivision },
         },
         populate: ['crest'],
-        sort: ['elo:desc', 'wins:desc'], // Sort by ELO, then Wins
+        sort: ['division_points:desc', 'season_points:desc', 'wins:desc', 'elo:desc'],
       },
     });
     return response.data?.data || [];
@@ -796,6 +807,26 @@ export const inviteUserToSquad = async (teamId, userId) => {
 };
 
 /**
+ * Join a squad from a shared invite link
+ * @param {string} teamId
+ * @param {string} userId
+ * @param {{ legalAcceptance?: object }} [options]
+ */
+export const joinSquadViaInviteLink = async (teamId, userId, options = {}) => {
+  try {
+    await client.post(`/league-teams/${teamId}/join-invite-link`, {
+      data: {
+        ...(options.legalAcceptance ? { legalAcceptance: options.legalAcceptance } : {}),
+        userId,
+      },
+    });
+  } catch (error) {
+    console.error('Error joining squad from invite link:', error);
+    throw error;
+  }
+};
+
+/**
  * Cancel a pending join request for a squad
  * @param {string} teamId
  * @param {string} userId
@@ -851,6 +882,27 @@ export const respondToSquadInvite = async (teamId, userId, accept, options = {})
     });
   } catch (error) {
     console.error('Error responding to squad invitation:', error);
+    throw error;
+  }
+};
+
+/**
+ * Assign a squad member as captain.
+ * @param {string} teamId
+ * @param {string} userId
+ * @param {'add' | 'transfer'} mode
+ */
+export const assignSquadCaptain = async (teamId, userId, mode = 'add') => {
+  try {
+    const response = await client.post(`/league-teams/${teamId}/assign-captain`, {
+      data: {
+        mode,
+        userId,
+      },
+    });
+    return response.data?.data || response.data;
+  } catch (error) {
+    console.error('Error assigning squad captain:', error);
     throw error;
   }
 };

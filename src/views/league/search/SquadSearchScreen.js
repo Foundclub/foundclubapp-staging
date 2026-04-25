@@ -22,6 +22,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import {
   useGetInvitedLeagueTeams,
@@ -154,6 +155,7 @@ function SquadSearchScreen() {
   const { Colors, Fonts, Images } = useTheme();
   const { t } = useTranslation();
   const navigation = /** @type {any} */ (useNavigation());
+  const { sceneBottomInset } = useBottomDockLayout();
   const { userData } = useAuth();
 
   const [{ squadFilters }] = useAppContext();
@@ -164,6 +166,7 @@ function SquadSearchScreen() {
   const [errorMessage, setErrorMessage] = useState('');
 
   const currentUserId = String(userData?.documentId || '').trim();
+  const listBottomPadding = Math.max(sceneBottomInset, 28);
 
   const {
     data: joinedSquads,
@@ -633,7 +636,7 @@ function SquadSearchScreen() {
           </View>
         ) : (
           <FlatList
-            contentContainerStyle={{ paddingBottom: 28, paddingTop: 16 }}
+            contentContainerStyle={{ paddingBottom: listBottomPadding, paddingTop: 16 }}
             data={decoratedSquads}
             keyboardShouldPersistTaps="handled"
             keyExtractor={(item, index) => String(item?.documentId || item?.id || `squad-${index}`)}

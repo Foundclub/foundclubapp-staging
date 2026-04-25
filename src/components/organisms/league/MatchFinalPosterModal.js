@@ -27,22 +27,56 @@ const SEGMENT_GAP_MS = 300;
 const SEGMENT_MIN_MS = 560;
 const SEGMENT_MAX_MS = 1120;
 
+/**
+ * @typedef {'down' | 'neutral' | 'up'} ProgressMovement
+ */
+
+/**
+ * @typedef {{
+ *  banner: string,
+ *  division: number,
+ *  duration: number,
+ *  floorLabel: string,
+ *  fromRatio: number,
+ *  movement: ProgressMovement,
+ *  targetLabel: string,
+ *  toRatio: number,
+ * }} ProgressSegment
+ */
+
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
 const clampRatio = (value) => {
   'worklet';
 
-  return Math.max(0, Math.min(1, value));
+  const parsed = Number(value);
+  return Math.max(0, Math.min(1, Number.isFinite(parsed) ? parsed : 0));
 };
 
+/**
+ * @param {unknown} value
+ * @returns {number | null}
+ */
 const asFiniteNumber = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const formatElo = (value) => {
   const parsed = asFiniteNumber(value);
   return parsed === null ? '-' : String(Math.round(parsed));
 };
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const formatDelta = (value) => {
   const parsed = asFiniteNumber(value);
   if (parsed === null) return '-';
@@ -50,6 +84,11 @@ const formatDelta = (value) => {
   return `${rounded >= 0 ? '+' : ''}${rounded}`;
 };
 
+/**
+ * @param {unknown} status
+ * @param {Record<string, any>} colors
+ * @returns {{chip: string, color: string}}
+ */
 const getStatusUi = (status, colors) => {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'valid') {
@@ -64,6 +103,10 @@ const getStatusUi = (status, colors) => {
   return { chip: 'Match annule', color: colors.error500 };
 };
 
+/**
+ * @param {unknown} division
+ * @returns {{floorLabel: string, targetLabel: string}}
+ */
 const getStageLabels = (division) => {
   const progress = getDivisionProgressState(0, division);
   if (progress.maxDivisionReached) {
@@ -74,16 +117,31 @@ const getStageLabels = (division) => {
   }
 
   return {
-    floorLabel: `${Math.round(progress.minElo)} pts`,
-    targetLabel: `${Math.round(progress.targetElo)} pts - D${progress.nextDivision}`,
+    floorLabel: `${Math.round(Number(progress.minElo ?? 0))} pts`,
+    targetLabel: `${Math.round(Number(progress.targetElo ?? 0))} pts - D${progress.nextDivision}`,
   };
 };
 
+/**
+ * @param {unknown} fromRatio
+ * @param {unknown} toRatio
+ * @returns {number}
+ */
 const getSegmentDuration = (fromRatio, toRatio) => {
-  const distance = Math.abs(toRatio - fromRatio);
+  const distance = Math.abs(Number(toRatio) - Number(fromRatio));
   return Math.round(SEGMENT_MIN_MS + ((SEGMENT_MAX_MS - SEGMENT_MIN_MS) * Math.max(distance, 0.35)));
 };
 
+/**
+ * @param {{
+ *  banner: string,
+ *  division: unknown,
+ *  fromRatio: unknown,
+ *  movement: ProgressMovement,
+ *  toRatio: unknown,
+ * }} input
+ * @returns {ProgressSegment}
+ */
 const buildSegment = ({
   banner,
   division,
@@ -106,6 +164,15 @@ const buildSegment = ({
   };
 };
 
+/**
+ * @param {{
+ *  afterProgress: Record<string, any>,
+ *  beforeProgress: Record<string, any>,
+ *  divisionAfter: number,
+ *  divisionBefore: number,
+ * }} input
+ * @returns {ProgressSegment[]}
+ */
 const buildProgressSegments = ({
   afterProgress,
   beforeProgress,
@@ -116,7 +183,7 @@ const buildProgressSegments = ({
   if (divisionBefore === divisionAfter) {
     return [
       buildSegment({
-        banner: movement === 'up' ? 'Progression ELO' : 'Perte ELO',
+        banner: movement === 'up' ? 'Progression League' : 'Perte League',
         division: divisionAfter,
         fromRatio: beforeProgress.progressRatio,
         movement,
@@ -172,16 +239,24 @@ const buildProgressSegments = ({
   return segments;
 };
 
+/**
+ * @param {any} payload
+ * @returns {Record<string, any>}
+ */
 const getRecapFromPayload = (payload) => {
   if (payload?.recap && typeof payload.recap === 'object') return payload.recap;
   if (payload?.teamRecap && typeof payload.teamRecap === 'object') return payload.teamRecap;
   return {};
 };
 
+/**
+ * @param {any} payload
+ * @returns {Record<string, any>}
+ */
 const buildAnimationModel = (payload) => {
   const recap = getRecapFromPayload(payload);
-  const eloBefore = asFiniteNumber(recap?.eloBefore);
-  const eloAfter = asFiniteNumber(recap?.eloAfter);
+  const eloBefore = asFiniteNumber(recap?.divisionPointsBefore);
+  const eloAfter = asFiniteNumber(recap?.divisionPointsAfter);
   const parsedDivisionBefore = asFiniteNumber(recap?.divisionBefore);
   const parsedDivisionAfter = asFiniteNumber(recap?.divisionAfter);
   const divisionBefore = parsedDivisionBefore !== null
@@ -282,7 +357,7 @@ function MatchFinalPosterModal({
   const entry = useSharedValue(0);
   const eloProgress = useSharedValue(0);
   const [stage, setStage] = useState(() => buildSegment({
-    banner: 'Progression ELO',
+    banner: 'Progression League',
     division: MAX_LEAGUE_DIVISION,
     fromRatio: 0,
     movement: 'neutral',
@@ -302,8 +377,10 @@ function MatchFinalPosterModal({
   useEffect(() => {
     if (!visible || !payload) return undefined;
 
+    /** @type {ReturnType<typeof setTimeout>[]} */
     const timers = [];
-    const firstSegment = animationModel.segments[0];
+    const segments = /** @type {ProgressSegment[]} */ (animationModel.segments || []);
+    const firstSegment = segments[0];
 
     entry.value = 0;
     entry.value = withTiming(1, { duration: ENTRY_ANIMATION_MS, easing: Easing.out(Easing.cubic) });
@@ -312,7 +389,7 @@ function MatchFinalPosterModal({
 
     if (animationModel.hasEloRecap) {
       let elapsed = ENTRY_ANIMATION_MS;
-      animationModel.segments.forEach((segment, index) => {
+      segments.forEach((segment, index) => {
         const segmentStartAt = index === 0 ? elapsed : elapsed + SEGMENT_GAP_MS;
         timers.push(setTimeout(() => {
           setStage(segment);
@@ -370,8 +447,11 @@ function MatchFinalPosterModal({
     hasEloRecap,
   } = animationModel;
   const computedDelta = eloBefore !== null && eloAfter !== null ? eloAfter - eloBefore : null;
-  const deltaValue = asFiniteNumber(recap?.eloDelta) ?? computedDelta;
+  const deltaValue = asFiniteNumber(recap?.divisionPointsDelta) ?? computedDelta;
   const delta = formatDelta(deltaValue);
+  const basePointsDelta = asFiniteNumber(recap?.basePointsDelta);
+  const streakBonus = asFiniteNumber(recap?.streakBonus) ?? 0;
+  const streakAfter = asFiniteNumber(recap?.streakAfter);
   const isNegativeDelta = Number(deltaValue) < 0;
   const divisionLabel = divisionChanged
     ? `Division ${divisionBefore} -> ${divisionAfter}`
@@ -393,10 +473,11 @@ function MatchFinalPosterModal({
     if (afterProgress?.maxDivisionReached) {
       return 'Tu es déjà dans la division la plus haute.';
     }
-    if (afterProgress?.pointsToPromotion <= 0) {
+    const pointsToPromotion = Number(afterProgress?.pointsToPromotion ?? 0);
+    if (pointsToPromotion <= 0) {
       return `Seuil D${afterProgress?.nextDivision} atteint.`;
     }
-    return `${Math.round(afterProgress?.pointsToPromotion || 0)} pts avant la D${afterProgress?.nextDivision}.`;
+    return `${Math.round(pointsToPromotion)} pts avant la D${afterProgress?.nextDivision}.`;
   })();
 
   return (
@@ -429,6 +510,26 @@ function MatchFinalPosterModal({
             {recap?.resultLabel || recap?.result || 'Résultat enregistré'}
           </Text>
 
+          <View style={styles.breakdownRow}>
+            <View style={styles.breakdownItem}>
+              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>Resultat</Text>
+              <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>{formatDelta(basePointsDelta)}</Text>
+            </View>
+            <View style={styles.breakdownItem}>
+              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                Bonus serie
+                {streakAfter && streakAfter > 1 ? ` x${streakAfter}` : ''}
+              </Text>
+              <Text style={[Fonts.p2Bold, { color: streakBonus > 0 ? Colors.success500 : Colors.neutral300 }]}>
+                {formatDelta(streakBonus)}
+              </Text>
+            </View>
+            <View style={styles.breakdownItem}>
+              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>Total</Text>
+              <Text style={[Fonts.p2Bold, { color: isNegativeDelta ? Colors.error500 : Colors.success500 }]}>{delta}</Text>
+            </View>
+          </View>
+
           <View
             style={[
               styles.eloCard,
@@ -440,14 +541,14 @@ function MatchFinalPosterModal({
           >
             <View style={styles.eloHeader}>
               <View>
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO avant</Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points avant</Text>
                 <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{formatElo(eloBefore)}</Text>
               </View>
               <View style={[styles.deltaPill, { backgroundColor: `${isNegativeDelta ? Colors.error500 : Colors.success500}24` }]}>
                 <Text style={[Fonts.h4Bold, { color: isNegativeDelta ? Colors.error500 : Colors.success500 }]}>{delta}</Text>
               </View>
               <View style={styles.alignEnd}>
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO apres</Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points apres</Text>
                 <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{formatElo(eloAfter)}</Text>
               </View>
             </View>
@@ -506,6 +607,16 @@ const styles = StyleSheet.create({
   },
   alignEnd: {
     alignItems: 'flex-end',
+  },
+  breakdownItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  breakdownRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
   },
   deltaPill: {
     borderRadius: 999,

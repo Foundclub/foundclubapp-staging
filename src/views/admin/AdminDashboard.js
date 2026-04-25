@@ -221,7 +221,7 @@ function AdminDashboard() {
   if (dashboardError) {
     return (
       <AdminStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={dashboardError?.message || 'Impossible de charger les indicateurs admin.'}
         onAction={() => {
           refetchFeatured();

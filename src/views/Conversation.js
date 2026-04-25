@@ -106,7 +106,8 @@ import {
   getPrimaryDocumentAttachment,
   isDocumentAttachment,
 } from '@/utils/documentAttachment';
-import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+import { getEntityDocumentId } from '@/utils/entityId';
+import { isLeagueCaptain } from '@/utils/league/captains';
 import { createLogger } from '@/utils/logger/logger';
 import { markMessagingPerf } from '@/utils/performance/messagingPerformance';
 import safeJsonParse from '@/utils/safeJsonParse';
@@ -212,6 +213,9 @@ const addLeagueTeamUserId = (ids, userLike) => {
 const collectLeagueTeamUserIds = (team) => {
   const ids = new Set();
   addLeagueTeamUserId(ids, team?.captain);
+  if (Array.isArray(team?.co_captains)) {
+    team.co_captains.forEach((captain) => addLeagueTeamUserId(ids, captain));
+  }
 
   ['roster', 'members', 'players'].forEach((key) => {
     if (!Array.isArray(team?.[key])) return;
@@ -3000,9 +3004,9 @@ function Conversation({ navigation, route }) {
     const teamA = chatData?.league_match?.team_a;
     const teamB = chatData?.league_match?.team_b;
 
-    if (areSameEntityId(teamA?.captain?.documentId, userId)) {
+    if (isLeagueCaptain(teamA, userId)) {
       teamId = getEntityDocumentId(teamA);
-    } else if (areSameEntityId(teamB?.captain?.documentId, userId)) {
+    } else if (isLeagueCaptain(teamB, userId)) {
       teamId = getEntityDocumentId(teamB);
     } else {
       teamId = userData?.team?.documentId || null;
@@ -3121,8 +3125,8 @@ function Conversation({ navigation, route }) {
     }
 
     // This is an opponent - anonymize
-    const isCaptain = areSameEntityId(chatData?.league_match?.team_a?.captain?.documentId, sender?.documentId)
-      || areSameEntityId(chatData?.league_match?.team_b?.captain?.documentId, sender?.documentId);
+    const isCaptain = isLeagueCaptain(chatData?.league_match?.team_a, sender)
+      || isLeagueCaptain(chatData?.league_match?.team_b, sender);
 
     return isCaptain ? 'Capitaine Adverse' : 'Joueur Adverse';
   }, [chatData, userData?.documentId]);

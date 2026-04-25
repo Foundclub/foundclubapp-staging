@@ -33,6 +33,7 @@ function LeagueStateView({
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="tab-scene"
       contentContainerStyle={[
         Alignments.fill,
         Alignments.justifyCenter,

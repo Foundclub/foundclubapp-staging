@@ -35,6 +35,7 @@ import {
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { getImageUrl } from '@/utils/imageUrl';
+import { isLeagueCaptain } from '@/utils/league/captains';
 
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
@@ -104,7 +105,7 @@ function NextMatchCard({
   const opponent = isTeamA ? match.team_b : match.team_a;
 
   // Check if current user is captain
-  const isCaptain = areSameEntityId(getEntityDocumentId(myTeam?.captain), getEntityDocumentId(userData));
+  const isCaptain = isLeagueCaptain(myTeam, userData);
 
   const normalizedStatus = normalizeMatchStatus(match?.status);
   const derivedPhase = getMatchDerivedPhase(match, event, now);

@@ -2242,7 +2242,7 @@ function TeamDetails({ navigation, route }) {
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {getErrorMessage(error, 'Reessayez dans quelques instants.')}
           </Text>
-          <Button onPress={() => refetch()} title="R\u00E9essayer" variant="Primary" />
+          <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
           <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux équipes" variant="Secondary" />
         </View>
       </ScreenContainer>
@@ -2272,7 +2272,7 @@ function TeamDetails({ navigation, route }) {
           </Text>
           <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux équipes" variant="Secondary" />
           {!isMissingTeamId ? (
-            <Button onPress={() => refetch()} title="R\u00E9essayer" variant="Primary" />
+            <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
           ) : null}
         </View>
       </ScreenContainer>

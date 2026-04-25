@@ -112,7 +112,7 @@ function TeamWizardActivity({ navigation }) {
               onPress={() => {
                 activitiesQuery.refetch();
               }}
-              title="R\u00E9essayer"
+              title="Réessayer"
               variant="Secondary"
             />
           </View>

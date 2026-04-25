@@ -7,13 +7,14 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 
 /**
- *
- * @param root0
- * @param root0.onClose
- * @param root0.onOpenMatch
- * @param root0.onRelaunchSearch
- * @param root0.payload
- * @param root0.visible
+ * @param {{
+ *  onClose?: () => void,
+ *  onOpenMatch?: () => void,
+ *  onRelaunchSearch?: () => void,
+ *  payload?: any,
+ *  visible: boolean,
+ * }} props
+ * @returns {React.ReactElement | null}
  */
 function MatchRecapSheet({
   onClose,
@@ -27,7 +28,10 @@ function MatchRecapSheet({
 
   const recap = payload.recap || {};
   const scoreLabel = recap.scoreLabel || `${recap.myScore ?? '-'} - ${recap.opponentScore ?? '-'}`;
-  const eloDeltaLabel = recap.eloDeltaLabel || `${recap.eloDelta >= 0 ? '+' : ''}${recap.eloDelta ?? 0}`;
+  const pointsDelta = Number(recap.divisionPointsDelta ?? recap.eloDelta ?? 0);
+  const pointsDeltaLabel = `${pointsDelta >= 0 ? '+' : ''}${pointsDelta}`;
+  const baseDelta = Number(recap.basePointsDelta ?? 0);
+  const streakBonus = Number(recap.streakBonus ?? 0);
 
   return (
     <Modal
@@ -55,18 +59,28 @@ function MatchRecapSheet({
 
           <View style={[styles.statRow, { borderColor: 'rgba(255,255,255,0.12)' }]}>
             <View style={styles.statBlock}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO avant</Text>
-              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{recap.eloBefore ?? '-'}</Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points avant</Text>
+              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{recap.divisionPointsBefore ?? '-'}</Text>
             </View>
             <View style={styles.statBlock}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Delta</Text>
-              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{eloDeltaLabel}</Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Total</Text>
+              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{pointsDeltaLabel}</Text>
             </View>
             <View style={styles.statBlock}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO après</Text>
-              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{recap.eloAfter ?? '-'}</Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points apres</Text>
+              <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{recap.divisionPointsAfter ?? '-'}</Text>
             </View>
           </View>
+
+          <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
+            Resultat
+            {' '}
+            {baseDelta >= 0 ? '+' : ''}
+            {baseDelta}
+            {' | Bonus serie '}
+            {streakBonus >= 0 ? '+' : ''}
+            {streakBonus}
+          </Text>
 
           <View style={styles.buttons}>
             <Button

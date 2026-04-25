@@ -59,7 +59,7 @@ function AdminClubOnboardingList() {
   if (error && !requests.length) {
     return (
       <AdminStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={getErrorMessage(error, 'generic') || 'Impossible de charger les demandes d\'onboarding.'}
         onAction={refetch}
         title="Chargement impossible"

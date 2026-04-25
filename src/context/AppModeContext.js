@@ -1,10 +1,10 @@
-import React from 'react';
-import {
+import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
 
-import { storageBackend } from '@/platform/storage';
 import useTheme from '@/theme/themeContext';
+
+import { storageBackend } from '@/platform/storage';
 
 export const storage = {
   getString: (key) => storageBackend.getString(key),
@@ -19,7 +19,12 @@ const STORAGE_KEY = 'user.app_mode';
 
 /**
  * App Mode Context
- * @type {React.Context<{mode: AppMode, toggleMode: () => void, isGold: boolean}>}
+ * @type {React.Context<{
+ *   mode: AppMode,
+ *   setMode: (mode: AppMode) => void,
+ *   toggleMode: () => void,
+ *   isGold: boolean
+ * }>}
  */
 const AppModeContext = createContext({});
 
@@ -27,6 +32,7 @@ const AppModeContext = createContext({});
  * AppModeProvider component
  * @param {object} props
  * @param {React.ReactNode} props.children
+ * @returns {React.ReactElement}
  */
 export function AppModeProvider({ children }) {
   const { changeTheme } = useTheme();
@@ -37,7 +43,7 @@ export function AppModeProvider({ children }) {
   };
 
   // Persisted mode between app restarts
-  const [mode, setMode] = useState(getInitialMode);
+  const [mode, setModeState] = useState(getInitialMode);
 
   // Sync theme with mode
   useEffect(() => {
@@ -48,8 +54,14 @@ export function AppModeProvider({ children }) {
     }
   }, [mode, changeTheme]);
 
+  const setMode = useCallback((nextMode) => {
+    const normalizedMode = nextMode === 'gold' ? 'gold' : 'classic';
+    storage.set(STORAGE_KEY, normalizedMode);
+    setModeState(normalizedMode);
+  }, []);
+
   const toggleMode = useCallback(() => {
-    setMode((prev) => {
+    setModeState((prev) => {
       const newMode = prev === 'classic' ? 'gold' : 'classic';
       storage.set(STORAGE_KEY, newMode);
       return newMode;
@@ -59,8 +71,9 @@ export function AppModeProvider({ children }) {
   const contextValue = useMemo(() => ({
     isGold: mode === 'gold',
     mode,
+    setMode,
     toggleMode,
-  }), [mode, toggleMode]);
+  }), [mode, setMode, toggleMode]);
 
   return React.createElement(
     AppModeContext.Provider,
@@ -70,6 +83,7 @@ export function AppModeProvider({ children }) {
 }
 
 /**
- * Hook to use App Mode
+ * Hook to use App Mode.
+ * @returns {React.ContextType<typeof AppModeContext>}
  */
 export const useAppMode = () => useContext(AppModeContext);

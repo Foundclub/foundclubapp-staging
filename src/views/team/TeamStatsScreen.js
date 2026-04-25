@@ -197,7 +197,7 @@ function TeamStatsScreen({ navigation, route }) {
           <Text style={[Fonts.p1, { color: Colors.error500 }]}>
             {error?.message || t('common.errors.generic', 'Une erreur est survenue')}
           </Text>
-          <Button onPress={() => refetch()} title="R\u00E9essayer" variant="Secondary" />
+          <Button onPress={() => refetch()} title="Réessayer" variant="Secondary" />
         </View>
       </ScreenContainer>
     );

@@ -267,7 +267,7 @@ function RequestsDashboard({ navigation, route }) {
               </Text>
               <Button
                 onPress={() => refetch()}
-                title="R\u00E9essayer"
+                title="Réessayer"
                 variant="Secondary"
               />
             </View>

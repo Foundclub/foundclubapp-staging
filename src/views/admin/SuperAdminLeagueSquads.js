@@ -83,6 +83,13 @@ function SquadChip({ label, tone = 'neutral' }) {
   );
 }
 
+const getSquadCaptainsLabel = (squad) => {
+  const captains = Array.isArray(squad?.captains) && squad.captains.length > 0
+    ? squad.captains
+    : [squad?.captain].filter(Boolean);
+  return captains.map((captain) => captain?.name).filter(Boolean).join(', ') || 'Inconnu';
+};
+
 /**
  *
  */
@@ -189,9 +196,9 @@ function SuperAdminLeagueSquads() {
                     </Text>
                   </View>
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    Capitaine :
+                    {Array.isArray(squad?.captains) && squad.captains.length > 1 ? 'Capitaines :' : 'Capitaine :'}
                     {' '}
-                    {squad?.captain?.name || 'Inconnu'}
+                    {getSquadCaptainsLabel(squad)}
                   </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     <SquadChip label={squad?.sport || 'Sport inconnu'} />
@@ -231,9 +238,9 @@ function SuperAdminLeagueSquads() {
               {selectedSquad?.sport || 'Inconnu'}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Capitaine :
+              {Array.isArray(selectedSquad?.captains) && selectedSquad.captains.length > 1 ? 'Capitaines :' : 'Capitaine :'}
               {' '}
-              {selectedSquad?.captain?.name || 'Inconnu'}
+              {getSquadCaptainsLabel(selectedSquad)}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               Dynamique :

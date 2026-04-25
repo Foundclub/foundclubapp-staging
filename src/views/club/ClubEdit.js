@@ -159,7 +159,7 @@ function ClubEdit({ navigation, route }) {
           </Text>
           <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
           {!isMissingClubId ? (
-            <Button onPress={() => refetch()} title="R\u00E9essayer" variant="Primary" />
+            <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
           ) : null}
         </View>
       </ScreenContainer>
@@ -189,7 +189,7 @@ function ClubEdit({ navigation, route }) {
           <Text style={{ color: '#c9d3dd', fontSize: 15 }}>
             {error?.message || 'Reessayez dans quelques instants.'}
           </Text>
-          <Button onPress={() => refetch()} title="R\u00E9essayer" variant="Primary" />
+          <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
           <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
         </View>
       </ScreenContainer>

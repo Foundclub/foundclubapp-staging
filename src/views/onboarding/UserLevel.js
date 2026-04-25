@@ -68,7 +68,7 @@ function UserLevel({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous r\u00E9cup\u00E9rons ton profil avant de choisir ton niveau."
+        description="Nous récupérons ton profil avant de choisir ton niveau."
         isLoading
         title="Chargement du profil"
       />
@@ -78,7 +78,7 @@ function UserLevel({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={userDataError?.message || 'Impossible de charger ton profil.'}
         onAction={refetchUserData}
         title="Chargement impossible"
@@ -99,7 +99,7 @@ function UserLevel({ navigation }) {
   if (levelsError && !levels?.length) {
     return (
       <OnboardingStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={levelsError?.message || 'Impossible de charger les niveaux.'}
         onAction={refetchLevels}
         title="Chargement impossible"

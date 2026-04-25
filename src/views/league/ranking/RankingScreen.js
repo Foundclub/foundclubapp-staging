@@ -18,6 +18,8 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
 
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
+
 import { getMyLeagueTeam, getRanking } from '@/services/leagueTeam/leagueTeamService';
 
 import { getEntityDocumentId } from '@/utils/entityId';
@@ -29,7 +31,9 @@ import { clampLeagueDivision } from '@/utils/league/division';
 function RankingScreen() {
   const { Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
+  const { sceneBottomInset } = useBottomDockLayout();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
+  const listBottomPadding = Math.max(sceneBottomInset, 12);
 
   const [division, setDivision] = useState(5);
   const [loadError, setLoadError] = useState('');
@@ -145,7 +149,7 @@ function RankingScreen() {
   if (loadError && ranking.length === 0) {
     return (
       <LeagueStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={loadError}
         onAction={() => loadData()}
         title="Classement indisponible"
@@ -186,7 +190,7 @@ function RankingScreen() {
           </View>
 
           <FlatList
-            contentContainerStyle={{ paddingBottom: 12 }}
+            contentContainerStyle={{ paddingBottom: listBottomPadding }}
             data={ranking}
             keyExtractor={(/** @type {Team} */ item) => String(getEntityDocumentId(item) || '')}
             ListEmptyComponent={(

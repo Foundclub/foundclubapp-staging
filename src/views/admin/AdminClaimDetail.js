@@ -203,7 +203,7 @@ function AdminClaimDetail() {
   if (error && !request) {
     return (
       <AdminStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={getErrorMessage(error, 'generic') || 'Impossible de charger cette demande.'}
         onAction={refetch}
         title="Chargement impossible"

@@ -15,6 +15,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { getMatchHistory } from '@/services/league/leagueMatchService';
 import { getMyLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
@@ -27,7 +28,9 @@ import { getEntityDocumentId } from '@/utils/entityId';
 function MatchHistoryScreen() {
   const { Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
+  const { sceneBottomInset } = useBottomDockLayout();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
+  const listBottomPadding = Math.max(sceneBottomInset, 40);
 
   const [matches, setMatches] = useState(/** @type {MatchHistoryEntry[]} */ ([]));
   const [loading, setLoading] = useState(true);
@@ -193,7 +196,7 @@ function MatchHistoryScreen() {
         </View>
 
         <FlatList
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: listBottomPadding }}
           data={matches}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           keyExtractor={(/** @type {MatchHistoryEntry} */ item) => String(item.id || '')}

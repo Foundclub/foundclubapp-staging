@@ -614,8 +614,10 @@ export const getLeagueDisputes = async (params = {}) => {
     populate: [
       'team_a',
       'team_a.captain',
+      'team_a.co_captains',
       'team_b',
       'team_b.captain',
+      'team_b.co_captains',
       'chat',
     ],
     sort: ['updatedAt:desc'],

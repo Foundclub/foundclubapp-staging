@@ -218,7 +218,7 @@ function PendingMatchStatsScreen({ navigation }) {
           </Text>
           <Button
             onPress={() => refetch()}
-            title="R\u00E9essayer"
+            title="Réessayer"
             variant="Primary"
           />
         </View>

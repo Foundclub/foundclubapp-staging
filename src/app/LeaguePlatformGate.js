@@ -12,6 +12,8 @@ import { buildWebPath } from '@/navigation/webRoutes';
 
 import { useLeaguePlatformRuntime } from '@/services/league/leaguePlatformQueries';
 
+import { useAppMode } from '@/context/AppModeContext';
+
 const getCurrentWebPath = () => {
   if (Platform.OS !== 'web' || typeof window === 'undefined') {
     return '';
@@ -26,10 +28,18 @@ const navigateWebTo = (targetPath) => {
   window.location.assign(targetPath);
 };
 
+/**
+ * Gates League-only surfaces while keeping FoundClub classic reachable.
+ * @param {{ children: import('react').ReactNode }} root0
+ * @param {import('react').ReactNode} root0.children
+ * @returns {import('react').ReactElement}
+ */
 function LeaguePlatformGate({ children }) {
   const [{ auth }] = useAppContext();
+  const { isGold, setMode } = useAppMode();
   const currentWebPath = getCurrentWebPath();
   const isSuperAdminPath = currentWebPath.startsWith('/superadmin');
+  const isLeaguePath = currentWebPath === '/league' || currentWebPath.startsWith('/league/');
   const currentRoleKey = getUserRoleKey(auth?.user?.role?.type || auth?.user?.role?.name);
   const isSuperAdmin = currentRoleKey === 'superAdmin';
 
@@ -45,8 +55,14 @@ function LeaguePlatformGate({ children }) {
     navigateWebTo(buildWebPath(RouteNames.HomeTab));
   }, []);
 
+  const handleGoToClassic = useCallback(() => {
+    setMode?.('classic');
+    navigateWebTo(buildWebPath(RouteNames.HomeTab));
+  }, [setMode]);
+
   const runtime = runtimeQuery.data || null;
-  const shouldShowLoadingState = !isSuperAdmin
+  const shouldCheckLeagueRuntime = !isSuperAdmin && (isGold || isLeaguePath);
+  const shouldShowLoadingState = shouldCheckLeagueRuntime
     && runtimeQuery.isLoading
     && !runtime;
 
@@ -58,9 +74,14 @@ function LeaguePlatformGate({ children }) {
     }
 
     if (isSuperAdmin) return 'allowed';
-    if (runtime?.effectivePlatformIsOpen === false) return 'platform-closed';
+    if (
+      (isGold || isLeaguePath)
+      && runtime?.effectivePlatformIsOpen === false
+    ) {
+      return 'platform-closed';
+    }
     return 'allowed';
-  }, [auth?.token, isSuperAdmin, isSuperAdminPath, runtime]);
+  }, [auth?.token, isGold, isLeaguePath, isSuperAdmin, isSuperAdminPath, runtime]);
 
   useEffect(() => {
     if (isSuperAdminPath && !auth?.token) {
@@ -101,7 +122,7 @@ function LeaguePlatformGate({ children }) {
   }
 
   if (gateState === 'platform-closed') {
-    return <ComingSoonLeagueScreen runtime={runtime} />;
+    return <ComingSoonLeagueScreen onGoClassic={handleGoToClassic} runtime={runtime} />;
   }
 
   return children;

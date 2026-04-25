@@ -114,7 +114,7 @@ function TeamWizardTrainers({ navigation }) {
               <Text style={{ marginBottom: 12 }}>
                 Impossible de charger les membres du club. Reessayez pour continuer.
               </Text>
-              <Button onPress={() => refetchClubData()} title="R\u00E9essayer" variant="Secondary" />
+              <Button onPress={() => refetchClubData()} title="Réessayer" variant="Secondary" />
             </View>
           ) : null}
 

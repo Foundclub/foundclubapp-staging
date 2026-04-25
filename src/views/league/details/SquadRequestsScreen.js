@@ -15,6 +15,8 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
 
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
+
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import { respondToJoinRequest } from '@/services/leagueTeam/leagueTeamService';
 
@@ -49,6 +51,8 @@ function SquadRequestsScreen({ navigation, route }) {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const { sceneBottomInset } = useBottomDockLayout();
+  const listBottomPadding = Math.max(sceneBottomInset, 32);
 
   const {
     data: team,
@@ -256,7 +260,7 @@ function SquadRequestsScreen({ navigation, route }) {
   if (error) {
     return (
       <LeagueStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description="Impossible de charger les demandes d'adhesion pour cette squad. Verifiez la connexion puis relancez."
         onAction={() => refetch()}
         title="Chargement impossible"
@@ -342,7 +346,7 @@ function SquadRequestsScreen({ navigation, route }) {
       </View>
 
       <FlashList
-        contentContainerStyle={{ paddingBottom: 32, paddingTop: 4 }}
+        contentContainerStyle={{ paddingBottom: listBottomPadding, paddingTop: 4 }}
         data={requests}
         estimatedItemSize={200}
         keyExtractor={(item, index) => String(getEntityDocumentId(item) || item?.id || `request-${index}`)}

@@ -73,7 +73,7 @@ function TeamWizardSection({ navigation }) {
             <Text style={{ marginBottom: 12 }}>
               Impossible de charger les sections. Reessayez pour continuer.
             </Text>
-            <Button onPress={() => sectionsQuery.refetch()} title="R\u00E9essayer" variant="Secondary" />
+            <Button onPress={() => sectionsQuery.refetch()} title="Réessayer" variant="Secondary" />
           </View>
         ) : null}
 

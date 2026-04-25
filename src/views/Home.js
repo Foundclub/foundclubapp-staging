@@ -166,7 +166,7 @@ function HomeContent({ route }) {
       {/* SegmentedControl - Figma exact design */}
       <View style={[Alignments.alignCenter, Alignments.fullWidth, Spaces.marginBottom[24]]}>
         <OnboardingWrapper
-          description="Choisissez ici ce que vous cherchez : \u00C9v\u00E9nements, Clubs ou Annonces."
+          description="Choisissez ici ce que vous cherchez : Événements, Clubs ou Annonces."
           id="search-tabs"
           order={1}
           style={Alignments.fullWidth}

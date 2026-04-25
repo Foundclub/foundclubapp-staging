@@ -14,12 +14,13 @@ import useTheme from '@/theme/themeContext';
 const AUTO_HIDE_MS = 4000;
 
 /**
- *
- * @param root0
- * @param root0.onDismiss
- * @param root0.onOpenDetails
- * @param root0.payload
- * @param root0.visible
+ * @param {{
+ *  onDismiss?: () => void,
+ *  onOpenDetails?: () => void,
+ *  payload?: any,
+ *  visible: boolean,
+ * }} props
+ * @returns {React.ReactElement | null}
  */
 function MatchRecapBanner({
   onDismiss,
@@ -62,6 +63,8 @@ function MatchRecapBanner({
   const scoreLabel = typeof recap.scoreLabel === 'string'
     ? recap.scoreLabel
     : `${recap.myScore ?? '-'} - ${recap.opponentScore ?? '-'}`;
+  const pointsDelta = Number(recap.divisionPointsDelta ?? 0);
+  const pointsLabel = `${pointsDelta >= 0 ? '+' : ''}${pointsDelta} pts League`;
 
   return (
     <Animated.View style={[styles.wrapper, containerStyle]}>
@@ -81,7 +84,9 @@ function MatchRecapBanner({
           <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{scoreLabel}</Text>
         </View>
         <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
-          Touchez pour voir le detail complet.
+          {pointsLabel}
+          {' - '}
+          {recap.progressLabel || 'Touchez pour voir le detail complet.'}
         </Text>
         <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
           <Animated.View style={[styles.progressFill, progressStyle, { backgroundColor: Colors.primary500 }]} />

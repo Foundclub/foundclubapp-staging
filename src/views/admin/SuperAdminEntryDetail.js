@@ -176,7 +176,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
   if ((error || metadataQuery.error) && !entry) {
     return (
       <AdminStateView
-        actionLabel="R\u00E9essayer"
+        actionLabel="Réessayer"
         description={getErrorMessage(error || metadataQuery.error, 'generic') || 'Impossible de charger cette entree.'}
         onAction={() => {
           metadataQuery.refetch();
