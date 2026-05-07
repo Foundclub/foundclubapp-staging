@@ -415,6 +415,127 @@ export const getEventTypes = async () => {
   }
 };
 
+const COMPACT_EVENT_CARD_FIELDS = [
+  'bookingStatus',
+  'capacity',
+  'currentPlayers',
+  'date',
+  'description',
+  'documentId',
+  'endTime',
+  'eventFormat',
+  'externalAutoSource',
+  'featuredRequestStatus',
+  'featuredScope',
+  'isActive',
+  'isFeatured',
+  'isLastMinuteAlert',
+  'location',
+  'locationDetails',
+  'missingPlayers',
+  'name',
+  'pricePerPerson',
+  'reservationMode',
+  'sessionStatus',
+  'stageEndDate',
+  'stageStartDate',
+  'startTime',
+  'totalPlayers',
+];
+
+const COMPACT_EVENT_CARD_POPULATE = {
+  club: {
+    fields: ['documentId', 'name', 'addressDetails'],
+    populate: {
+      logo: {
+        fields: ['url'],
+      },
+      sponsor: {
+        fields: ['link', 'title'],
+        populate: {
+          logo: {
+            fields: ['url'],
+          },
+        },
+      },
+    },
+  },
+  facility: {
+    fields: ['documentId', 'name'],
+  },
+  invitedTeams: {
+    fields: ['documentId', 'name'],
+  },
+  league_match: {
+    fields: ['documentId'],
+  },
+  missings: {
+    fields: ['documentId'],
+  },
+  parentEvent: {
+    fields: ['documentId'],
+  },
+  participationRequests: {
+    fields: ['createdAt', 'documentId', 'isActive', 'participationStatus', 'updatedAt'],
+    populate: {
+      sourceTeam: {
+        fields: ['documentId', 'name'],
+      },
+      user: {
+        fields: ['documentId'],
+      },
+    },
+  },
+  participations: {
+    fields: ['documentId'],
+  },
+  team: {
+    fields: ['documentId', 'name'],
+    populate: {
+      activities: {
+        fields: ['documentId', 'name'],
+      },
+      category: {
+        fields: ['documentId', 'name'],
+      },
+      club: {
+        fields: ['documentId', 'name', 'addressDetails'],
+        populate: {
+          logo: {
+            fields: ['url'],
+          },
+          sponsor: {
+            fields: ['link', 'title'],
+            populate: {
+              logo: {
+                fields: ['url'],
+              },
+            },
+          },
+        },
+      },
+      level: {
+        fields: ['documentId', 'name'],
+      },
+      section: {
+        fields: ['documentId', 'name'],
+      },
+    },
+  },
+  tournamentActivity: {
+    fields: ['documentId', 'name'],
+  },
+  tournamentCategory: {
+    fields: ['documentId', 'name'],
+  },
+  tournamentSection: {
+    fields: ['documentId', 'name'],
+  },
+  type: {
+    fields: ['documentId', 'name'],
+  },
+};
+
 /**
  * Get events
  * @param {{
@@ -446,6 +567,7 @@ export const getEventTypes = async () => {
  *   validationMode?: 'auto' | 'manual';
  *   facility?: {documentId?: string, name?: string};
  *   myTeams?: string[];
+ *   compact?: boolean;
  *  }} params - The parameters for filtering events
  * @returns {Promise<{data: FCEvent[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
@@ -455,6 +577,7 @@ export const getEvents = async (params = {}) => {
     activity,
     category,
     club,
+    compact = false,
     excludeType,
     featuredRequestStatus,
     featuredScope,
@@ -746,12 +869,13 @@ export const getEvents = async (params = {}) => {
   const filters = {
     _q: q,
     filters: filtersObj,
+    ...(compact ? { fields: COMPACT_EVENT_CARD_FIELDS } : {}),
     myTeams: params.myTeams, // Pass myTeams filter to backend
     pagination: {
       page: page || 1,
       pageSize: pageSize || 10,
     },
-    populate: [
+    populate: compact ? COMPACT_EVENT_CARD_POPULATE : [
       'club',
       'club.sponsor',
       'club.sponsor.logo',

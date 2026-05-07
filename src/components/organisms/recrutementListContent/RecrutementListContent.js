@@ -29,6 +29,7 @@ import { useAppContext } from '@/store/appContext';
 import {
   applyToRecruitmentAd,
   buildDetectionApplicationStatusMap,
+  filterVisibleRecruitmentAds,
   getMyApplications,
   getMyRecruitmentAds,
   getRecruitmentAds,
@@ -44,12 +45,12 @@ import { markSearchPerf } from '@/utils/performance/searchPerformance';
  * @typedef {{ id?: string | number; level?: LevelRef; [key: string]: any }} RecruitmentAdItem
  */
 
-const normalizeComparableValue = (value) => {
+const normalizeComparableValue = (/** @type {any} */ value) => {
   if (value === null || value === undefined) return '';
   return String(value).trim().toLowerCase();
 };
 
-const extractComparableValue = (value) => {
+const extractComparableValue = (/** @type {any} */ value) => {
   if (!value) return '';
   if (typeof value === 'string' || typeof value === 'number') {
     return normalizeComparableValue(value);
@@ -68,13 +69,13 @@ const extractComparableValue = (value) => {
   return '';
 };
 
-const getUserCity = (userData) => extractComparableValue(
+const getUserCity = (/** @type {any} */ userData) => extractComparableValue(
   userData?.city
   || userData?.address?.city
   || userData?.address?.label,
 );
 
-const getProfileMatchInfo = (ad, userData) => {
+const getProfileMatchInfo = (/** @type {any} */ ad, /** @type {any} */ userData) => {
   if (!ad || !userData) {
     return {
       isMatch: false,
@@ -94,7 +95,7 @@ const getProfileMatchInfo = (ad, userData) => {
   const userCity = getUserCity(userData);
   const adCity = extractComparableValue(ad?.city || ad?.team?.club?.city || ad?.address?.city);
 
-  const reasons = [];
+  const reasons = /** @type {string[]} */ ([]);
   let score = 0;
   let hardMismatch = false;
   let hardMatches = 0;
@@ -146,12 +147,12 @@ const getProfileMatchInfo = (ad, userData) => {
   };
 };
 
-const getSortTimestamp = (value) => {
+const getSortTimestamp = (/** @type {any} */ value) => {
   const timestamp = value ? new Date(value).getTime() : 0;
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
 
-const sortPlayerAds = (left, right) => {
+const sortPlayerAds = (/** @type {any} */ left, /** @type {any} */ right) => {
   const rightScore = right?.profileMatchMeta?.score || 0;
   const leftScore = left?.profileMatchMeta?.score || 0;
   if (rightScore !== leftScore) return rightScore - leftScore;
@@ -163,6 +164,9 @@ const sortPlayerAds = (left, right) => {
   return getSortTimestamp(right?.createdAt || right?.publishedAt) - getSortTimestamp(left?.createdAt || left?.publishedAt);
 };
 
+/**
+ * @param {{ matchingAds: Array<any>, otherAds: Array<any>, showMatchingOnly: boolean }} args
+ */
 const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
   /** @type {Array<any>} */
   const items = [];
@@ -174,7 +178,7 @@ const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
       title: 'Correspondent \u00e0 ton profil',
       type: 'section',
     });
-    matchingAds.forEach((ad) => {
+    matchingAds.forEach((/** @type {any} */ ad) => {
       items.push({
         ad,
         key: `ad-matching-${String(ad.documentId || ad.id)}`,
@@ -190,7 +194,7 @@ const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
       title: matchingAds.length > 0 ? 'Autres annonces' : 'Toutes les annonces',
       type: 'section',
     });
-    otherAds.forEach((ad) => {
+    otherAds.forEach((/** @type {any} */ ad) => {
       items.push({
         ad,
         key: `ad-other-${String(ad.documentId || ad.id)}`,
@@ -202,20 +206,20 @@ const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
   return items;
 };
 
-const formatAdsCountLabel = (count) => `${count} annonce${count > 1 ? 's' : ''}`;
-const normalizeAudienceType = (value) => (
+const formatAdsCountLabel = (/** @type {number} */ count) => `${count} annonce${count > 1 ? 's' : ''}`;
+const normalizeAudienceType = (/** @type {any} */ value) => (
   String(value || '').trim().toLowerCase() === 'coach' ? 'coach' : 'player'
 );
 
-const getManagedTeamKey = (team) => String(team?.documentId || team?.id || '').trim();
-const getRecruitmentAdKey = (ad) => String(ad?.documentId || ad?.id || '').trim();
-const normalizeTypeLabel = (value = '') => String(value || '')
+const getManagedTeamKey = (/** @type {any} */ team) => String(team?.documentId || team?.id || '').trim();
+const getRecruitmentAdKey = (/** @type {any} */ ad) => String(ad?.documentId || ad?.id || '').trim();
+const normalizeTypeLabel = (/** @type {any} */ value = '') => String(value || '')
   .toLowerCase()
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
 
-const mergeManagedTeamSummary = (previousTeam, nextTeam) => ({
+const mergeManagedTeamSummary = (/** @type {any} */ previousTeam, /** @type {any} */ nextTeam) => ({
   ...previousTeam,
   ...nextTeam,
   activities: nextTeam?.activities?.length ? nextTeam.activities : previousTeam?.activities,
@@ -225,10 +229,10 @@ const mergeManagedTeamSummary = (previousTeam, nextTeam) => ({
   section: nextTeam?.section || previousTeam?.section,
 });
 
-const dedupeManagedTeams = (teams) => {
+const dedupeManagedTeams = (/** @type {any[]} */ teams) => {
   const teamsByKey = new Map();
 
-  teams.forEach((team) => {
+  teams.forEach((/** @type {any} */ team) => {
     const teamKey = getManagedTeamKey(team);
     if (!teamKey) return;
 
@@ -260,7 +264,7 @@ function RecrutementListContent({
   useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
-  } = useTheme();
+  } = /** @type {any} */ (useTheme());
   const recruitmentSurface = `${Colors.primary900}F0`;
   const recruitmentSurfaceStrong = `${Colors.primary700}70`;
   const recruitmentSurfaceSoft = `${Colors.primary500}14`;
@@ -270,9 +274,9 @@ function RecrutementListContent({
   const recruitmentMutedText = `${Colors.neutral100}C4`;
   const navigation = useNavigation();
   const nav = /** @type {any} */ (navigation);
-  const { userData } = useAuth();
+  const { userData } = /** @type {any} */ (useAuth());
   const isAuthenticated = Boolean(userData?.documentId);
-  const [{ recruitmentAdFilters }] = useAppContext();
+  const [{ recruitmentAdFilters }] = /** @type {any} */ (useAppContext());
   const recruitmentMode = getRecruitmentRoleMode(userData);
   const isCoachOrAdmin = recruitmentMode === 'staff';
   const managedTeams = React.useMemo(() => dedupeManagedTeams([
@@ -332,8 +336,8 @@ function RecrutementListContent({
 
     try {
       const searchTerm = adSearchValue?.trim();
-      let newAds = [];
-      let meta = {};
+      let newAds = /** @type {RecruitmentAdItem[]} */ ([]);
+      let meta = /** @type {any} */ ({});
       if ((searchTerm && searchTerm.length >= 2) || hasAdFilters) {
         const response = await searchRecruitment({
           ...recruitmentAdFilters,
@@ -341,7 +345,7 @@ function RecrutementListContent({
           pageSize: 10,
           ...(searchTerm && searchTerm.length >= 2 ? { q: searchTerm, sort: 'relevance' } : { sort: 'date' }),
         });
-        newAds = mapSearchPayload(response);
+        newAds = filterVisibleRecruitmentAds(mapSearchPayload(response));
         meta = response.meta || {};
       } else {
         const response = await getRecruitmentAds({
@@ -357,7 +361,7 @@ function RecrutementListContent({
         setAds((prev) => {
           const seen = new Set(prev.map((item) => String(item.documentId || item.id)));
           const merged = [...prev];
-          newAds.forEach((item) => {
+          newAds.forEach((/** @type {RecruitmentAdItem} */ item) => {
             const key = String(item.documentId || item.id);
             if (!seen.has(key)) {
               seen.add(key);
@@ -406,7 +410,7 @@ function RecrutementListContent({
           pageSize: 30,
           ...(searchTerm && searchTerm.length >= 2 ? { q: searchTerm, sort: 'relevance' } : { sort: 'date' }),
         });
-        data = mapSearchPayload(response);
+        data = filterVisibleRecruitmentAds(mapSearchPayload(response));
       } else {
         data = await getMyRecruitmentAds(ownerFilters);
       }
@@ -492,7 +496,7 @@ function RecrutementListContent({
     [myApplications, userData],
   );
 
-  const matchesAudienceFilter = useCallback((ad) => (
+  const matchesAudienceFilter = useCallback((/** @type {any} */ ad) => (
     audienceFilter === 'all' || normalizeAudienceType(ad?.audienceType) === audienceFilter
   ), [audienceFilter]);
 
@@ -561,7 +565,7 @@ function RecrutementListContent({
     nav.navigate(RouteNames.RecruitmentAdDetails, { ad, isOwner: isOwnerContext });
   }, [nav]);
 
-  const openRecruitmentAuthFlow = useCallback((source, ad) => {
+  const openRecruitmentAuthFlow = useCallback((/** @type {string} */ source, /** @type {RecruitmentAdItem} */ ad) => {
     openPublicAuthFlow(nav, {
       adId: getRecruitmentAdKey(ad),
       origin: RouteNames.RecruitmentAdDetails,
@@ -621,7 +625,7 @@ function RecrutementListContent({
     setApplyingAdId(adId);
 
     try {
-      const result = await applyToRecruitmentAd(adId, {});
+      const result = /** @type {any} */ (await applyToRecruitmentAd(adId, {}));
       await Promise.all([
         fetchAdsForPlayer(1, false, true),
         fetchMyApplicationsSilently(),
@@ -631,9 +635,10 @@ function RecrutementListContent({
         result?.message || 'Ta candidature a bien ete envoyee.',
       );
     } catch (error) {
-      const message = error?.response?.data?.error?.message
-        || error?.response?.data?.message
-        || error?.message
+      const requestError = /** @type {any} */ (error);
+      const message = requestError?.response?.data?.error?.message
+        || requestError?.response?.data?.message
+        || requestError?.message
         || 'Impossible d envoyer la candidature pour le moment.';
       Alert.alert('Candidature', message);
     } finally {
@@ -649,13 +654,13 @@ function RecrutementListContent({
     userData,
   ]);
 
-  const renderSegmentedTab = (key, label) => {
+  const renderSegmentedTab = (/** @type {string} */ key, /** @type {string} */ label) => {
     const isActive = activeTab === key;
 
     return (
       <TouchableOpacity
         key={key}
-        onPress={() => setActiveTab(key)}
+        onPress={() => setActiveTab(/** @type {any} */ (key))}
         style={[
           Alignments.alignCenter,
           Alignments.justifyCenter,
@@ -977,7 +982,7 @@ function RecrutementListContent({
     );
   };
 
-  const renderPlayerSectionHeader = (title, count, variant = 'default') => {
+  const renderPlayerSectionHeader = (/** @type {string} */ title, /** @type {number} */ count, variant = 'default') => {
     const isMatching = variant === 'matching';
     return (
       <View

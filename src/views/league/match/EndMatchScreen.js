@@ -231,9 +231,16 @@ function EndMatchScreen() {
   const currentUserId = getEntityDocumentId(userData);
   const isCaptainA = isLeagueCaptain(match?.team_a, currentUserId);
   const isCaptainB = isLeagueCaptain(match?.team_b, currentUserId);
+  const scoreTeamSide = useMemo(() => {
+    if (isCaptainA) return 'a';
+    if (isCaptainB) return 'b';
+    if (isLeagueMember(match?.team_a, currentUserId)) return 'a';
+    if (isLeagueMember(match?.team_b, currentUserId)) return 'b';
+    return null;
+  }, [currentUserId, isCaptainA, isCaptainB, match?.team_a, match?.team_b]);
   const scoreFlow = useMemo(
-    () => buildLocalScoreFlow(match, { isCaptainA, isCaptainB }),
-    [isCaptainA, isCaptainB, match],
+    () => buildLocalScoreFlow(match, { isCaptainA, isCaptainB, teamSide: scoreTeamSide }),
+    [isCaptainA, isCaptainB, match, scoreTeamSide],
   );
   const showLeagueRestrictionAlert = (errorLike = null) => {
     const restrictionCode = getLeaguePlatformRestrictionCode(errorLike);
@@ -257,10 +264,10 @@ function EndMatchScreen() {
   })();
   let ownSubmission = null;
   let opponentSubmission = null;
-  if (isCaptainA) {
+  if (scoreTeamSide === 'a') {
     ownSubmission = match?.submitted_score_team_a || null;
     opponentSubmission = match?.submitted_score_team_b || null;
-  } else if (isCaptainB) {
+  } else if (scoreTeamSide === 'b') {
     ownSubmission = match?.submitted_score_team_b || null;
     opponentSubmission = match?.submitted_score_team_a || null;
   }
@@ -280,9 +287,9 @@ function EndMatchScreen() {
   const leagueCardTextColor = Colors.primary500;
   const leagueAccentSurface = 'rgba(1, 179, 244, 0.12)';
   const leagueGoldSurface = 'rgba(255, 215, 0, 0.08)';
-  let captainSideLabel = 'CAPITAINE';
-  if (isCaptainA) captainSideLabel = 'DOMICILE';
-  if (isCaptainB) captainSideLabel = 'EXTERIEUR';
+  let captainSideLabel = 'SQUAD';
+  if (scoreTeamSide === 'a') captainSideLabel = 'DOMICILE';
+  if (scoreTeamSide === 'b') captainSideLabel = 'EXTERIEUR';
   const heroStatusMeta = useMemo(() => {
     if (!isScoreSubmissionAllowed) {
       return {

@@ -18,19 +18,19 @@ export const REQUEST_HUB_FILTERS = /** @type {const} */ (['all', 'team', 'club',
 
 const fallbackRequesterName = 'Utilisateur';
 
-const normalizeString = (value) => {
+const normalizeString = (/** @type {any} */ value) => {
   if (typeof value !== 'string') return '';
   return value.trim();
 };
 
-const toIsoString = (value) => {
+const toIsoString = (/** @type {any} */ value) => {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString();
 };
 
-const resolveRequesterName = (requester = {}) => {
+const resolveRequesterName = (/** @type {any} */ requester = {}) => {
   const firstname = normalizeString(
     requester?.firstname || requester?.firstName || requester?.requesterFirstname,
   );
@@ -45,13 +45,13 @@ const resolveRequesterName = (requester = {}) => {
   ) || fallbackRequesterName;
 };
 
-const toStableTime = (value) => {
+const toStableTime = (/** @type {any} */ value) => {
   const date = value ? new Date(value) : null;
   if (!date || Number.isNaN(date.getTime())) return Number.NEGATIVE_INFINITY;
   return date.getTime();
 };
 
-const resolveRequesterAvatarUrl = (requester = {}) => {
+const resolveRequesterAvatarUrl = (/** @type {any} */ requester = {}) => {
   const directAvatar = requester?.avatar;
 
   if (typeof directAvatar === 'string' && directAvatar.trim()) {
@@ -218,17 +218,17 @@ export const mapEventParticipationRequestToHubItem = (event = {}, request = {}) 
   };
 };
 
-export const mapFeaturedRequestToHubItem = (event = {}) => {
+export const mapFeaturedRequestToHubItem = (/** @type {Record<string, any>} */ event = {}) => {
   const requestId = String(event?.documentId || event?.id || '');
   const requestKind = normalizeString(event?.kind).toUpperCase();
   const eventEntity = event?.event || {};
   const eventId = String(eventEntity?.documentId || eventEntity?.id || '');
   const eventName = normalizeString(eventEntity?.name || eventEntity?.type?.name) || 'Evenement';
   const clubName = normalizeString(eventEntity?.team?.club?.name) || 'Club';
-  const scopeLabelByKind = {
+  const scopeLabelByKind = /** @type {Record<string, string>} */ ({
     CM: 'Multisport',
     PUBLIC: 'Public',
-  };
+  });
   const scopeLabel = scopeLabelByKind[requestKind] || 'Club';
   const targetName = normalizeString(event?.targetClub?.name || event?.multisportClub?.name || clubName);
   const requester = event?.requester || {};
@@ -259,7 +259,7 @@ export const mapFeaturedRequestToHubItem = (event = {}) => {
   };
 };
 
-export const mapFacilityOverrideRequestToHubItem = (request = {}) => {
+export const mapFacilityOverrideRequestToHubItem = (/** @type {Record<string, any>} */ request = {}) => {
   const requestId = String(request?.documentId || request?.id || '');
   const requester = request?.requestedBy || {};
   const requesterName = resolveRequesterName(requester);

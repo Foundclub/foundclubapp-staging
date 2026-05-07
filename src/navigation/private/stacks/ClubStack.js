@@ -142,6 +142,14 @@ function ClubStack() {
         }}
       />
       <Stack.Screen
+        component={ClubLicenses}
+        name={RouteNames.ClubLicenseCampaignDetail}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Campagne cotisation',
+        }}
+      />
+      <Stack.Screen
         component={ClubLicenseMemberDetail}
         name={RouteNames.ClubLicenseMemberDetail}
         options={{

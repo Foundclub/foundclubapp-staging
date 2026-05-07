@@ -9,7 +9,7 @@ import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
 
 /**
  * Match History Component
- * Displays recent matches with results and ELO changes
+ * Displays recent matches with results and matchmaking ELO changes
  * @param root0
  * @param root0.matches
  * @param root0.onViewAll
@@ -39,7 +39,7 @@ function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
   const getEloChange = (match) => {
     if (!match.eloChange) return null;
     const sign = match.eloChange > 0 ? '+' : '';
-    return `${sign}${match.eloChange}`;
+    return `${sign}${match.eloChange} ELO matchmaking`;
   };
 
   if (!matches || matches.length === 0) {
@@ -99,7 +99,7 @@ function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
 
               {eloChange ? (
                 <View style={[styles.eloBadge, { backgroundColor: result.bg }]}>
-                  <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+                  <Text adjustsFontSizeToFit minimumFontScale={0.72} numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
                     {eloChange}
                   </Text>
                 </View>
@@ -131,6 +131,7 @@ const styles = StyleSheet.create({
   eloBadge: {
     borderRadius: 12,
     marginRight: 8,
+    maxWidth: 112,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },

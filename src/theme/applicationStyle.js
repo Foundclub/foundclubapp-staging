@@ -1,6 +1,7 @@
+import { Platform } from 'react-native';
+
 import ButtonStyle from '@/theme/components/buttonStyle';
 import NavigationStyle from '@/theme/components/navigationStyle';
-import { Platform } from 'react-native';
 
 /**
  * Generate classes defining background color for every colors defined : [colorName]Background
@@ -75,6 +76,10 @@ export const resizeModes = /** @type {const} */ ({
   cover: 'cover',
 });
 
+/**
+ * @param {{ elevation: number, opacity: number }} shadow
+ * @returns {import('react-native').ViewStyle}
+ */
 const buildShadowStyle = ({ elevation, opacity }) => (
   Platform.OS === 'web'
     ? { boxShadow: `0 5px 20px rgba(0, 0, 0, ${opacity})` }
@@ -113,6 +118,9 @@ export const staticStyle = {
   },
   borderRadius2: {
     borderRadius: 2,
+  },
+  borderRadius20: {
+    borderRadius: 20,
   },
   borderRadius24: {
     borderRadius: 24,

@@ -23,15 +23,19 @@ export const colors = {
 
   primary100: '#e6f7fe',
   primary200: '#99e1fb',
+  primary300: '#66d2f9',
   primary500: '#01b3f4',
+  primary600: '#0096d1',
 
   primary700: '#173844',
+  primary800: '#0b2530',
   primary900: '#001218',
   success100: '#d4fcf0',
   success500: '#27d6a3',
 
   success700: '#399379',
   warning100: '#fff4e5',
+  warning400: '#ffbc4d',
   warning500: '#ffa115',
   warning700: '#cc7a00',
   warning900: '#8a4f00',

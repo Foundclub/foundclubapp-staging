@@ -1356,7 +1356,9 @@ function LeagueDashboard() {
           })}
 
           <TouchableOpacity
-            onPress={() => navigation.navigate(RouteNames.LeagueRanking)}
+            onPress={() => navigation.navigate(RouteNames.LeagueRanking, {
+              division: userTeam?.division,
+            })}
             style={{ alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', padding: 12 }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>VOIR LE CLASSEMENT COMPLET</Text>

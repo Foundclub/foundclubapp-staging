@@ -83,7 +83,7 @@ function PrivateTabNavigator() {
             ...(Platform.OS === 'web'
               ? { boxShadow: '0 2px 4px rgba(0, 0, 0, 0.22)' }
               : {
-                shadowColor: '#000',
+                shadowColor: 'black',
                 shadowOffset: { height: 2, width: 0 },
                 shadowOpacity: 0.22,
                 shadowRadius: 4,

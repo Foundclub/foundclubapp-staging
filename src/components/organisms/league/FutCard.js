@@ -30,8 +30,13 @@ function FutCard({ team, variant = 'classic' }) {
           <Text style={[Fonts.h1, { color: GoldColor, fontSize: 32 }]}>
             {team.elo || 1200}
           </Text>
-          <Text style={[Fonts.p3, { color: Colors.neutral300, textTransform: 'uppercase' }]}>
-            ELO
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.72}
+            numberOfLines={1}
+            style={[Fonts.p3, { color: Colors.neutral300, textTransform: 'uppercase' }]}
+          >
+            ELO matchmaking
           </Text>
         </View>
 

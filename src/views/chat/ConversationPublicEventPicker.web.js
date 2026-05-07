@@ -50,6 +50,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
     error: publicEventsError,
     isLoading: isPublicLoading,
   } = useGetEvents({
+    compact: true,
     excludeType: 'Reservation',
     pageSize: 24,
     sessionStatus: 'open',

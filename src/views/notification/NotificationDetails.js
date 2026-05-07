@@ -141,7 +141,7 @@ function NotificationDetails() {
             <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
               {t('notifications.details.participationDeclined.labels.status')}
             </Text>
-            <Text style={[Fonts.p2Bold, { color: Colors.error500 || '#EF4444', marginTop: 4 }]}>
+            <Text style={[Fonts.p2Bold, { color: Colors.error500, marginTop: 4 }]}>
               {statusText}
             </Text>
           </View>

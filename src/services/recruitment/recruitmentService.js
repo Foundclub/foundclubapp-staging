@@ -1,6 +1,6 @@
 import client from '@/services/client';
 
-const normalizeApplicationStatus = (value) => {
+const normalizeApplicationStatus = (/** @type {any} */ value) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (normalized === 'accepted') return 'accepted';
   if (normalized === 'declined') return 'declined';
@@ -9,11 +9,11 @@ const normalizeApplicationStatus = (value) => {
   return 'pending';
 };
 
-const normalizeAudienceType = (value) => (
+const normalizeAudienceType = (/** @type {any} */ value) => (
   String(value || '').trim().toLowerCase() === 'coach' ? 'coach' : 'player'
 );
 
-const normalizeRecruitmentApplication = (application) => {
+const normalizeRecruitmentApplication = (/** @type {any} */ application) => {
   if (!application || typeof application !== 'object') return application;
   return {
     ...application,
@@ -21,7 +21,7 @@ const normalizeRecruitmentApplication = (application) => {
   };
 };
 
-const mapApplicationToRecruitmentAd = (application) => {
+const mapApplicationToRecruitmentAd = (/** @type {any} */ application) => {
   const normalizedApplication = normalizeRecruitmentApplication(application);
   const normalizedAd = normalizeRecruitmentAd(normalizedApplication?.recruitmentAd || {});
   return {
@@ -32,13 +32,13 @@ const mapApplicationToRecruitmentAd = (application) => {
   };
 };
 
-const normalizeRecruitmentAd = (ad) => {
+const normalizeRecruitmentAd = (/** @type {any} */ ad) => {
   if (!ad || typeof ad !== 'object') {
     return ad;
   }
 
   const applications = Array.isArray(ad.applications)
-    ? ad.applications.map((application) => normalizeRecruitmentApplication(application))
+    ? ad.applications.map((/** @type {any} */ application) => normalizeRecruitmentApplication(application))
     : [];
   let candidates = [];
   if (Array.isArray(ad.candidates)) {
@@ -55,11 +55,13 @@ const normalizeRecruitmentAd = (ad) => {
   };
 };
 
-const normalizeRecruitmentCollection = (items) => (
-  Array.isArray(items) ? items.map((item) => normalizeRecruitmentAd(item)) : []
+const normalizeRecruitmentCollection = (/** @type {any} */ items) => (
+  filterVisibleRecruitmentAds(
+    Array.isArray(items) ? items.map((/** @type {any} */ item) => normalizeRecruitmentAd(item)) : [],
+  )
 );
 
-const normalizeUserReference = (userRef) => {
+const normalizeUserReference = (/** @type {any} */ userRef) => {
   if (!userRef) {
     return { documentId: undefined, id: undefined };
   }
@@ -92,18 +94,42 @@ const normalizeUserReference = (userRef) => {
   };
 };
 
-const normalizeParticipationStatus = (value) => String(value || '').trim().toLowerCase();
+const normalizeParticipationStatus = (/** @type {any} */ value) => String(value || '').trim().toLowerCase();
 
-const normalizeTypeLabel = (value = '') => String(value || '')
+const normalizeTypeLabel = (/** @type {any} */ value = '') => String(value || '')
   .toLowerCase()
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
 
-const normalizeDocumentIds = (values) => {
+const getRecruitmentEventTimestamp = (/** @type {any} */ ad) => {
+  const rawDate = ad?.event?.date;
+  if (!rawDate) return 0;
+  const timestamp = new Date(rawDate).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+export const isExpiredDetectionRecruitmentAd = (/** @type {any} */ ad, now = new Date()) => {
+  if (!ad?.event?.documentId) return false;
+  if (!normalizeTypeLabel(ad?.event?.type?.name).includes('detection')) return false;
+  if (ad?.event?.isActive === false) return true;
+  if (String(ad?.event?.sessionStatus || '').trim().toLowerCase() === 'closed') return true;
+
+  const eventTimestamp = getRecruitmentEventTimestamp(ad);
+  const nowTimestamp = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  return Boolean(eventTimestamp && Number.isFinite(nowTimestamp) && eventTimestamp <= nowTimestamp);
+};
+
+export const filterVisibleRecruitmentAds = (/** @type {any[]} */ ads) => (
+  Array.isArray(ads)
+    ? ads.filter((/** @type {any} */ ad) => !isExpiredDetectionRecruitmentAd(ad))
+    : []
+);
+
+const normalizeDocumentIds = (/** @type {any} */ values) => {
   const sourceValues = Array.isArray(values) ? values : [values];
 
-  return Array.from(new Set(sourceValues.map((value) => {
+  return Array.from(new Set(sourceValues.map((/** @type {any} */ value) => {
     if (!value) return undefined;
 
     if (typeof value === 'object') {
@@ -117,7 +143,7 @@ const normalizeDocumentIds = (values) => {
   }).filter(Boolean)));
 };
 
-const buildCandidateFilter = (userRef) => {
+const buildCandidateFilter = (/** @type {any} */ userRef) => {
   const { documentId, id } = normalizeUserReference(userRef);
   if (documentId) {
     return {
@@ -138,7 +164,7 @@ const buildCandidateFilter = (userRef) => {
   return undefined;
 };
 
-const userMatchesReference = (candidate, userRef) => {
+const userMatchesReference = (/** @type {any} */ candidate, /** @type {any} */ userRef) => {
   const normalizedUserRef = normalizeUserReference(userRef);
   const candidateDocumentId = typeof candidate?.documentId === 'string' ? candidate.documentId.trim() : '';
   const candidateId = Number(candidate?.id);
@@ -154,37 +180,37 @@ const userMatchesReference = (candidate, userRef) => {
   return false;
 };
 
-const getRecruitmentEventDocumentId = (ad) => {
+const getRecruitmentEventDocumentId = (/** @type {any} */ ad) => {
   const value = ad?.event?.documentId || ad?.event?.id;
   return typeof value === 'string' ? value.trim() : String(value || '').trim();
 };
 
-const isDetectionRecruitmentAd = (ad) => normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
+const isDetectionRecruitmentAd = (/** @type {any} */ ad) => normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
 
-const getActiveDetectionParticipation = (ad, userRef) => {
+const getActiveDetectionParticipation = (/** @type {any} */ ad, /** @type {any} */ userRef) => {
   if (!isDetectionRecruitmentAd(ad)) return null;
 
   const eventParticipations = Array.isArray(ad?.event?.participationRequests)
     ? ad.event.participationRequests
     : [];
 
-  return eventParticipations.find((participation) => (
+  return eventParticipations.find((/** @type {any} */ participation) => (
     participation?.isActive !== false
     && ['accepted', 'pending'].includes(normalizeParticipationStatus(participation?.participationStatus))
     && userMatchesReference(participation?.user, userRef)
   )) || null;
 };
 
-const hasDirectCandidateApplication = (ad, userRef) => (
+const hasDirectCandidateApplication = (/** @type {any} */ ad, /** @type {any} */ userRef) => (
   Array.isArray(ad?.applications)
-    ? ad.applications.some((application) => (
+    ? ad.applications.some((/** @type {any} */ application) => (
       ['accepted', 'pending'].includes(normalizeApplicationStatus(application?.status))
       && userMatchesReference(application?.applicant, userRef)
     ))
     : false
 ) || (
   Array.isArray(ad?.candidates)
-    ? ad.candidates.some((candidate) => userMatchesReference(candidate, userRef))
+    ? ad.candidates.some((/** @type {any} */ candidate) => userMatchesReference(candidate, userRef))
     : false
 );
 
@@ -197,7 +223,7 @@ const hasDirectCandidateApplication = (ad, userRef) => (
 export const buildDetectionApplicationStatusMap = (ads, userRef) => {
   if (!Array.isArray(ads) || ads.length === 0) return {};
 
-  return ads.reduce((accumulator, ad) => {
+  return ads.reduce((/** @type {Record<string, any>} */ accumulator, /** @type {any} */ ad) => {
     const eventDocumentId = getRecruitmentEventDocumentId(ad);
     if (!eventDocumentId || !isDetectionRecruitmentAd(ad) || accumulator[eventDocumentId]) {
       return accumulator;
@@ -266,13 +292,15 @@ export const resolveRecruitmentAdApplicationState = (ad, userRef, sharedDetectio
 
   if (hasDirectCandidateApplication(ad, userRef)) {
     const matchingApplication = Array.isArray(ad?.applications)
-      ? ad.applications.find((application) => userMatchesReference(application?.applicant, userRef))
+      ? ad.applications.find((/** @type {any} */ application) => userMatchesReference(application?.applicant, userRef))
       : null;
     const nextStatus = normalizeApplicationStatus(matchingApplication?.status);
     return {
       hasApplied: true,
       linkedRecruitmentAdDocumentId: String(ad?.documentId || ad?.id || '').trim(),
-      status: ['accepted', 'pending'].includes(nextStatus) ? nextStatus : 'pending',
+      status: ['accepted', 'pending'].includes(nextStatus)
+        ? /** @type {'accepted' | 'pending'} */ (nextStatus)
+        : 'pending',
     };
   }
 
@@ -299,7 +327,7 @@ export const resolveRecruitmentAdApplicationState = (ad, userRef, sharedDetectio
 export const getRecruitmentAds = async (filters = {}) => {
   try {
     const { page = 1, pageSize = 20 } = filters;
-    const params = {
+    const params = /** @type {any} */ ({
       filters: {
         isActive: true,
       },
@@ -328,7 +356,7 @@ export const getRecruitmentAds = async (filters = {}) => {
         'level',
       ],
       sort: ['createdAt:desc'],
-    };
+    });
 
     // Apply filters
     if (filters.sport) {
@@ -405,7 +433,7 @@ export const getRecruitmentAd = async (adId) => {
  *  authorDocumentId?: string,
  *  teamIds?: Array<string | number | { documentId?: string, id?: string | number }>
  * }} [filters]
- * @returns {Promise<Array>} Array of my ads
+ * @returns {Promise<Array<any>>} Array of my ads
  */
 export const getMyRecruitmentAds = async (filters = {}) => {
   try {
@@ -413,7 +441,7 @@ export const getMyRecruitmentAds = async (filters = {}) => {
       ? filters.authorDocumentId.trim()
       : '';
     const normalizedTeamIds = normalizeDocumentIds(filters.teamIds);
-    const requestFilters = {};
+    const requestFilters = /** @type {any} */ ({});
 
     if (normalizedTeamIds.length > 0) {
       requestFilters.team = {
@@ -479,14 +507,15 @@ export const createRecruitmentAd = async (adData) => {
     });
     return response.data?.data;
   } catch (error) {
-    console.error('[recruitmentService] Error creating ad:', JSON.stringify(error, null, 2));
-    if (error.response) {
-      console.error('[recruitmentService] Response Data:', JSON.stringify(error.response.data, null, 2));
-      console.error('[recruitmentService] Response Status:', error.response.status);
+    const requestError = /** @type {any} */ (error);
+    console.error('[recruitmentService] Error creating ad:', JSON.stringify(requestError, null, 2));
+    if (requestError.response) {
+      console.error('[recruitmentService] Response Data:', JSON.stringify(requestError.response.data, null, 2));
+      console.error('[recruitmentService] Response Status:', requestError.response.status);
     }
-    const backendMessage = error?.response?.data?.error?.message
-      || error?.response?.data?.message
-      || error?.message
+    const backendMessage = requestError?.response?.data?.error?.message
+      || requestError?.response?.data?.message
+      || requestError?.message
       || "Impossible de creer l'annonce";
     throw new Error(backendMessage);
   }
@@ -503,39 +532,40 @@ export const applyToRecruitmentAd = async (adId, payload = {}) => {
     const response = await client.post(`/recruitment-ads/${adId}/apply`, payload);
     return response.data;
   } catch (error) {
-    const status = Number(error?.response?.status || error?.status || 0);
+    const requestError = /** @type {any} */ (error);
+    const status = Number(requestError?.response?.status || requestError?.status || 0);
     const backendMessage = String(
-      error?.response?.data?.error?.message
-      || error?.response?.data?.message
-      || error?.message
+      requestError?.response?.data?.error?.message
+      || requestError?.response?.data?.message
+      || requestError?.message
       || '',
     ).trim();
     const isExpectedBusinessRejection = status === 400
       && /deja candidate|deja une candidature en attente|deja postule|deja validee|deja acceptee|declaration de responsabilite|poste est deja complet|candidature active|detection fermee/i.test(backendMessage);
 
     if (!isExpectedBusinessRejection) {
-      console.error('[recruitmentService] Error applying to ad:', error);
+      console.error('[recruitmentService] Error applying to ad:', requestError);
     }
 
-    throw error;
+    throw requestError;
   }
 };
 
-export const getRecruitmentApplications = async (adId) => {
+export const getRecruitmentApplications = async (/** @type {any} */ adId) => {
   const response = await client.get(`/recruitment-ads/${adId}/applications`);
   return Array.isArray(response.data?.data)
-    ? response.data.data.map((application) => normalizeRecruitmentApplication(application))
+    ? response.data.data.map((/** @type {any} */ application) => normalizeRecruitmentApplication(application))
     : [];
 };
 
-export const updateRecruitmentApplicationStatus = async (applicationId, payload) => {
+export const updateRecruitmentApplicationStatus = async (/** @type {any} */ applicationId, /** @type {any} */ payload) => {
   const response = await client.patch(`/recruitment-applications/${applicationId}/status`, {
     data: payload,
   });
   return normalizeRecruitmentApplication(response.data?.data);
 };
 
-export const withdrawRecruitmentApplication = async (applicationId) => {
+export const withdrawRecruitmentApplication = async (/** @type {any} */ applicationId) => {
   const response = await client.post(`/recruitment-applications/${applicationId}/withdraw`);
   return normalizeRecruitmentApplication(response.data?.data);
 };
@@ -589,19 +619,20 @@ export const deleteRecruitmentAd = async (adId) => {
 /**
  * Get applications for the current user (ads they applied to)
  * @param {string | number | { id?: string | number, documentId?: string }} userRef - Current user reference
- * @returns {Promise<Array>} Array of ads
+ * @returns {Promise<Array<any>>} Array of ads
  */
 export const getMyApplications = async (userRef) => {
   try {
     const response = await client.get('/me/recruitment-applications');
     const applications = Array.isArray(response.data?.data) ? response.data.data : [];
-    return applications.map((application) => mapApplicationToRecruitmentAd(application));
+    return applications.map((/** @type {any} */ application) => mapApplicationToRecruitmentAd(application));
   } catch (error) {
-    const status = Number(error?.response?.status || error?.status || 0);
+    const requestError = /** @type {any} */ (error);
+    const status = Number(requestError?.response?.status || requestError?.status || 0);
     const isExpectedFallbackStatus = status === 403 || status === 404;
 
     if (!isExpectedFallbackStatus) {
-      console.error('[recruitmentService] Error fetching applications via dedicated endpoint, falling back:', error);
+      console.error('[recruitmentService] Error fetching applications via dedicated endpoint, falling back:', requestError);
     }
 
     const candidateFilter = buildCandidateFilter(userRef);

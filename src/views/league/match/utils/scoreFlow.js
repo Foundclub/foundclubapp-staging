@@ -11,11 +11,19 @@ import {
 const HOURS = 60 * 60 * 1000;
 const SCORE_DEADLINE_HOURS = 48;
 
+/**
+ * @param {unknown} value
+ * @returns {Record<string, any>}
+ */
 const ensureObject = (value) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return value;
 };
 
+/**
+ * @param {unknown} submission
+ * @returns {boolean}
+ */
 export const hasScoreSubmission = (submission) => {
   const value = ensureObject(submission);
   return (
@@ -26,29 +34,50 @@ export const hasScoreSubmission = (submission) => {
   );
 };
 
+/**
+ * @param {unknown} value
+ * @returns {number | null}
+ */
 const parseScore = (value) => {
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? null : parsed;
 };
 
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
 const toIso = (value) => {
   if (!value) return null;
   const parsed = value instanceof Date ? value : new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 };
 
+/**
+ * @param {any} match
+ * @returns {Date | null}
+ */
 export const getScoreDeadlineAt = (match) => {
   const start = getMatchStartDate(match);
   if (!start) return null;
   return new Date(start.getTime() + (SCORE_DEADLINE_HOURS * HOURS));
 };
 
+/**
+ * @param {any} match
+ * @returns {Date | null}
+ */
 const getUnlockAt = (match) => {
   const start = getMatchStartDate(match);
   if (!start) return null;
   return new Date(start.getTime() + (60 * 1000));
 };
 
+/**
+ * @param {unknown} submission
+ * @param {string} side
+ * @returns {Record<string, any> | null}
+ */
 const formatSubmission = (submission, side) => {
   if (!hasScoreSubmission(submission)) return null;
   const value = ensureObject(submission);
@@ -65,8 +94,13 @@ const formatSubmission = (submission, side) => {
   };
 };
 
-const getPrimaryCta = (state, isCaptain) => {
-  if (!isCaptain) return null;
+/**
+ * @param {string} state
+ * @param {boolean} canActOnScore
+ * @returns {{ label: string } | null}
+ */
+const getPrimaryCta = (state, canActOnScore) => {
+  if (!canActOnScore) return null;
   if (state === 'ready_to_submit') return { label: 'Saisir le score' };
   if (state === 'opponent_score_pending') return { label: 'Valider le score adverse' };
   if (state === 'submitted_waiting_opponent' || state === 'auto_validation_pending') {
@@ -81,6 +115,11 @@ const getPrimaryCta = (state, isCaptain) => {
   return null;
 };
 
+/**
+ * @param {any} match
+ * @param {{ isCaptain?: boolean, isCaptainA?: boolean, isCaptainB?: boolean, teamSide?: string | null }} [options]
+ * @returns {Record<string, any>}
+ */
 export const buildLocalScoreFlow = (match, options = {}) => {
   const backendFlow = ensureObject(match?.scoreFlow);
   const status = normalizeMatchStatus(match?.status);
@@ -125,6 +164,14 @@ export const buildLocalScoreFlow = (match, options = {}) => {
   ).toLowerCase();
   const venueValidated = isVenueBookedForMatch(match) || postSlotResolution === 'score_flow';
   const scoreWindowOpen = isScoreWindowOpen(match);
+  const canActOnScore = Boolean(
+    backendFlow.canActOnScore
+    || backendFlow.canSubmit
+    || backendFlow.canValidate
+    || backendFlow.canDispute
+    || isCaptain
+    || viewerSide,
+  );
 
   let state = backendFlow.state || 'locked_no_venue';
   if (status === 'valid') {
@@ -151,19 +198,20 @@ export const buildLocalScoreFlow = (match, options = {}) => {
 
   return {
     ...backendFlow,
-    actionRequired: isCaptain
+    actionRequired: canActOnScore
       && ['admin_resolution', 'disputed', 'opponent_score_pending', 'ready_to_submit'].includes(state),
     autoValidationAt:
       backendFlow.autoValidationAt
       || (
         status === 'pending_validation'
-        || ['submitted_waiting_opponent', 'opponent_score_pending', 'auto_validation_pending'].includes(state)
+        || ['auto_validation_pending', 'opponent_score_pending', 'submitted_waiting_opponent'].includes(state)
           ? toIso(deadlineAt)
           : null
       ),
-    canDispute: isCaptain
+    canActOnScore,
+    canDispute: canActOnScore
       && ['admin_resolution', 'disputed', 'opponent_score_pending'].includes(state),
-    canSubmit: isCaptain
+    canSubmit: canActOnScore
       && [
         'admin_resolution',
         'disputed',
@@ -171,13 +219,13 @@ export const buildLocalScoreFlow = (match, options = {}) => {
         'ready_to_submit',
         'submitted_waiting_opponent',
       ].includes(state),
-    canValidate: isCaptain && state === 'opponent_score_pending',
+    canValidate: canActOnScore && state === 'opponent_score_pending',
     deadlineAt: backendFlow.deadlineAt || toIso(deadlineAt),
     isCaptain,
     mySubmission: ownSubmission,
     opponentSubmission,
     phase,
-    primaryCta: backendFlow.primaryCta || getPrimaryCta(state, isCaptain),
+    primaryCta: backendFlow.primaryCta || getPrimaryCta(state, canActOnScore),
     remainingSeconds,
     scoreWindowOpen,
     state,
@@ -191,6 +239,10 @@ export const buildLocalScoreFlow = (match, options = {}) => {
   };
 };
 
+/**
+ * @param {number | string | null | undefined} seconds
+ * @returns {string}
+ */
 export const formatScoreFlowCountdown = (seconds) => {
   const value = Number(seconds);
   if (!Number.isFinite(value) || value <= 0) return "moins d'une minute";

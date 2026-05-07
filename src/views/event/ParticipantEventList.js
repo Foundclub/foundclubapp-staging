@@ -1,11 +1,10 @@
-import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAfter, isSameDay } from 'date-fns';
 import {
-  useCallback, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
-  Alert, FlatList, Image, Text, TouchableOpacity, View,
+  Alert, FlatList, Image, InteractionManager, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -80,11 +79,13 @@ function ParticipantEventList({ navigation }) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [joinModalError, setJoinModalError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(undefined);
+  const [shouldLoadEventFeed, setShouldLoadEventFeed] = useState(false);
   const flatListRef = useRef(null);
 
   // Hooks
 
   const myEventsQueryConfig = useMemo(() => ({
+    compact: true,
     // @ts-ignore
     myTeams: true,
     sort: 'date:asc',
@@ -96,8 +97,10 @@ function ParticipantEventList({ navigation }) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    refetch,
-  } = useGetEvents(myEventsQueryConfig);
+    isLoading: isEventsLoading,
+  } = useGetEvents(myEventsQueryConfig, {
+    enabled: shouldLoadEventFeed,
+  });
 
   const events = useMemo(() => eventsData?.pages.flatMap((page) => page.data) || [], [eventsData]);
 
@@ -122,6 +125,7 @@ function ParticipantEventList({ navigation }) {
 
   // Fetch SECTION/CM featured events for Mon Planning
   const featuredEventsQueryConfig = useMemo(() => ({
+    compact: true,
     featuredRequestStatus: 'approved',
     featuredScope: ['SECTION', 'CM'],
     isFeatured: true,
@@ -130,7 +134,12 @@ function ParticipantEventList({ navigation }) {
     sessionStatus: 'open',
   }), [allClubIds]);
 
-  const { data: featuredData } = useGetEvents(featuredEventsQueryConfig, { enabled: allClubIds.length > 0 });
+  const {
+    data: featuredData,
+    isLoading: isFeaturedLoading,
+  } = useGetEvents(featuredEventsQueryConfig, {
+    enabled: allClubIds.length > 0 && shouldLoadEventFeed,
+  });
 
   const featuredEvents = useMemo(
     () => (featuredData?.pages?.flatMap((page) => page.data) || []).filter(isApprovedPlanningFeaturedEvent),
@@ -140,6 +149,16 @@ function ParticipantEventList({ navigation }) {
     () => resolveParticipationFlow(selectedEvent, { user: userData }),
     [selectedEvent, userData],
   );
+
+  useEffect(() => {
+    const interactions = InteractionManager.runAfterInteractions(() => {
+      setShouldLoadEventFeed(true);
+    });
+
+    return () => {
+      interactions.cancel?.();
+    };
+  }, []);
 
   // Filter events for the list (starting from listStartDate)
   const listEvents = useMemo(() => (
@@ -171,7 +190,6 @@ function ParticipantEventList({ navigation }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
-      refetch();
       setIsJoinModalVisible(false);
       setJoinModalError('');
     },
@@ -187,7 +205,6 @@ function ParticipantEventList({ navigation }) {
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       queryClient.invalidateQueries({ queryKey: ['featured-reservations'] });
-      refetch();
       setIsJoinModalVisible(false);
       setJoinModalError('');
     },
@@ -295,12 +312,6 @@ function ParticipantEventList({ navigation }) {
     userData,
   ]);
 
-  useFocusEffect(
-    useCallback(() => {
-      refetch();
-    }, [refetch]),
-  );
-
   /**
    * Handle event press
    * @param {import('@/domains/event/types').FCEvent} event
@@ -377,7 +388,9 @@ function ParticipantEventList({ navigation }) {
     }
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
   const keyExtractor = useCallback(
-    (item) => item.documentId || Math.random().toString(),
+    (item, index) => item.documentId
+      || item.id
+      || `${item?.date || 'event'}-${item?.name || item?.title || index}`,
     [],
   );
 
@@ -439,6 +452,11 @@ function ParticipantEventList({ navigation }) {
             onDateSelected={handleDateConfirm}
             selectedDate={listStartDate}
           />
+          {(!shouldLoadEventFeed || isEventsLoading || isFeaturedLoading) && (
+            <Text style={[Fonts.body4, Fonts.neutral300, Spaces.marginTop[8]]}>
+              Mise a jour des evenements...
+            </Text>
+          )}
         </View>
       </View>
     );
@@ -453,11 +471,15 @@ function ParticipantEventList({ navigation }) {
         // @ts-ignore
         contentContainerStyle={{ paddingBottom: listBottomPadding }}
         extraData={userData}
+        initialNumToRender={6}
         keyExtractor={keyExtractor}
         ListHeaderComponent={<ListHeader />}
+        maxToRenderPerBatch={8}
         onEndReached={handleListEndReached}
         onEndReachedThreshold={0.5}
         showsVerticalScrollIndicator={false}
+        updateCellsBatchingPeriod={50}
+        windowSize={7}
       />
       {canManageEvents && (
         <View style={{

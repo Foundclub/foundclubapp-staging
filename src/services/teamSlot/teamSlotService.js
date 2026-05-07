@@ -46,6 +46,7 @@ export const getAvailableSlots = async (teamId) => {
       'filters[status][$in][0]': 'open',
       'filters[status][$in][1]': 'matchmaking',
       'pagination[limit]': 20,
+      'populate[participants]': true,
     },
   });
 
@@ -53,7 +54,11 @@ export const getAvailableSlots = async (teamId) => {
   const DAY_ORDER = {
     friday: 5, monday: 1, saturday: 6, sunday: 7, thursday: 4, tuesday: 2, wednesday: 3,
   };
-  const slots = data.data || [];
+  const slots = (data.data || []).map((slot) => ({
+    ...slot,
+    // Compute rsvp_count from populated participants relation
+    rsvp_count: Array.isArray(slot.participants) ? slot.participants.length : (slot.rsvp_count || 0),
+  }));
   slots.sort((a, b) => {
     const dayA = DAY_ORDER[a.recurrence_day?.toLowerCase()] || 8;
     const dayB = DAY_ORDER[b.recurrence_day?.toLowerCase()] || 8;

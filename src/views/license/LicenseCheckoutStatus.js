@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -6,6 +7,19 @@ import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { useLicensePaymentStatus } from '@/services/license/licenseQueries';
+
+import {
+  formatLicenseMoney,
+  LicenseCard,
+  LicenseEmptyState,
+  LicenseMetricRow,
+  licenseRadius,
+  LicenseSectionHeader,
+  licenseSpacing,
+  LicenseStatusChip,
+} from './licenseDesignSystem';
 
 /**
  *
@@ -18,23 +32,72 @@ function LicenseCheckoutStatus({ navigation, route }) {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const provider = route?.params?.provider || 'paiement';
+  const paymentId = route?.params?.paymentId;
+  const paymentQuery = useLicensePaymentStatus(paymentId, {
+    enabled: Boolean(paymentId),
+    refetchInterval: (query) => {
+      const status = query?.state?.data?.status;
+      return ['manual_review', 'pending'].includes(status) ? 5000 : false;
+    },
+    refetchIntervalInBackground: false,
+  });
+  const payment = paymentQuery.data;
+  const currency = payment?.currency || 'EUR';
+  const message = useMemo(() => {
+    if (!paymentId) {
+      return `Le paiement ${provider} s est ouvert dans une page securisee. Si tu viens de payer, le statut sera mis a jour automatiquement ou apres validation du club.`;
+    }
+    if (paymentQuery.isLoading) {
+      return 'On verifie le retour du paiement et la confirmation transmise au club.';
+    }
+    if (payment?.status === 'confirmed') {
+      return 'Le paiement est confirme. Ton recu apparaitra des qu il sera genere par le club ou automatiquement.';
+    }
+    if (payment?.status === 'manual_review') {
+      return 'Le paiement est en attente de verification par le club.';
+    }
+    if (payment?.status === 'rejected' || payment?.status === 'failed') {
+      return 'Le paiement n a pas abouti. Tu peux revenir a ta cotisation pour relancer un reglement.';
+    }
+    return `Le paiement ${provider} est encore en cours de synchronisation.`;
+  }, [payment?.status, paymentId, paymentQuery.isLoading, provider]);
+
   return (
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-      <View style={Spaces.gap[24]}>
-        <View style={[ApplicationStyle.card, Spaces.gap[12], {
-          backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55`, borderRadius: 24, paddingHorizontal: 20, paddingVertical: 22,
+      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+        <View style={[ApplicationStyle.card, Spaces.gap[licenseSpacing.actionGap], {
+          backgroundColor: Colors.primary700,
+          borderColor: `${Colors.primary500}55`,
+          borderRadius: licenseRadius.hero,
+          paddingHorizontal: 20,
+          paddingVertical: 22,
         }]}
         >
-          <Text style={[Fonts.h2, Fonts.neutral00]}>Paiement ouvert</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Le paiement
-            {' '}
-            {provider}
-            {' '}
-            s est ouvert dans une page securisee. Si tu viens de payer, le statut sera mis a jour
-            automatiquement ou apres validation du club.
-          </Text>
+          {payment?.status ? <LicenseStatusChip status={payment.status} /> : null}
+          <Text style={[Fonts.h2, Fonts.neutral00]}>Suivi du paiement</Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>{message}</Text>
         </View>
+        {paymentQuery.isError ? (
+          <LicenseEmptyState
+            action={<Button onPress={paymentQuery.refetch} title="Reessayer" variant="Secondary" />}
+            description="Impossible de verifier le statut du paiement pour le moment."
+            title="Statut indisponible"
+          />
+        ) : null}
+        {payment ? (
+          <>
+            <LicenseSectionHeader title="Etat actuel" />
+            <LicenseCard variant="muted">
+              <LicenseMetricRow
+                items={[
+                  { label: 'Montant', value: formatLicenseMoney(payment.amountCents, currency) },
+                  { label: 'Methode', value: provider },
+                  { label: 'Statut', value: payment.status || '-' },
+                ]}
+              />
+            </LicenseCard>
+          </>
+        ) : null}
         <Button onPress={() => navigation.navigate(RouteNames.MyLicense)} title="Retour a ma cotisation" />
       </View>
     </ScreenContainer>

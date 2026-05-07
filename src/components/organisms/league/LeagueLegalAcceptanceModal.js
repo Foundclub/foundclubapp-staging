@@ -18,6 +18,9 @@ import {
   LEAGUE_LEGAL_SCOPES,
 } from '@/constants/leagueLegalAcceptance';
 
+/**
+ * @type {Record<string, { action: string, description: string, title: string }>}
+ */
 const SCOPE_CONTENT = {
   [LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE]: {
     action: 'Confirmer le match',
@@ -26,7 +29,7 @@ const SCOPE_CONTENT = {
   },
   [LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL]: {
     action: 'Envoyer la proposition',
-    description: 'En tant que capitaine, vous proposez une rencontre entre equipes. FoundClub facilite la mise en relation mais n organise pas le match.',
+    description: 'Vous proposez une rencontre au nom de votre equipe. FoundClub facilite la mise en relation mais n organise pas le match.',
     title: 'Proposition League',
   },
   [LEAGUE_LEGAL_SCOPES.MATCH_PLAYER_PARTICIPATION]: {
@@ -56,18 +59,39 @@ const SCOPE_CONTENT = {
   },
 };
 
-const getScopeContent = (scope) => SCOPE_CONTENT[scope] || {
+/**
+ * @param {unknown} scope
+ */
+const getScopeContent = (scope) => SCOPE_CONTENT[String(scope || '')] || {
   action: 'Continuer',
   description: 'Confirmez le cadre FoundClub League avant de continuer.',
   title: 'FoundClub League',
 };
 
+/**
+ * @typedef {object} LeagueLegalAcceptanceModalProps
+ * @property {boolean} [isSubmitting]
+ * @property {boolean} isVisible
+ * @property {Record<string, unknown>} [metadata]
+ * @property {(payload: ReturnType<typeof buildLeagueLegalAcceptancePayload>) => void} [onAccept]
+ * @property {() => void} [onClose]
+ * @property {any} scope
+ * @property {string} [sourceScreen]
+ * @property {string} [targetDocumentId]
+ * @property {string} [targetLabel]
+ * @property {string} [targetType]
+ */
+
+/**
+ * @param {LeagueLegalAcceptanceModalProps} props
+ * @returns {import('react').ReactElement}
+ */
 function LeagueLegalAcceptanceModal({
   isSubmitting = false,
   isVisible,
   metadata,
   onAccept,
-  onClose,
+  onClose = () => {},
   scope,
   sourceScreen,
   targetDocumentId,
@@ -88,13 +112,13 @@ function LeagueLegalAcceptanceModal({
   } = useTheme();
 
   const content = useMemo(() => getScopeContent(scope), [scope]);
-  const needsCaptainResponsibility = [
+  const needsTeamResponsibility = [
     LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE,
     LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
   ].includes(scope);
   const needsAdultConfirmation = LEAGUE_ADULT_REQUIRED_SCOPES.includes(scope);
   const needsVenueResponsibility = scope === LEAGUE_LEGAL_SCOPES.MATCH_VENUE_BOOKING;
-  const hasExtra = needsCaptainResponsibility || needsVenueResponsibility;
+  const hasExtra = needsTeamResponsibility || needsVenueResponsibility;
   const canConfirm = acceptedContext
     && acceptedRisk
     && acceptedRules
@@ -151,10 +175,10 @@ function LeagueLegalAcceptanceModal({
         </View>
       )}
       headerComponent={(
-        <View style={[Spaces.gap[6]]}>
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[6]]}>
+        <View style={{ gap: 6 }}>
+          <View style={[Alignments.row, Alignments.alignCenter, { gap: 6 }]}>
             <Text style={[Fonts.p3Bold, { color: Colors.primary200, letterSpacing: 1.1 }]}>FOUNDCLUB</Text>
-            <Text style={[Fonts.p3Bold, { color: '#FFD400', letterSpacing: 1.1 }]}>LEAGUE</Text>
+            <Text style={[Fonts.p3Bold, { color: Colors.gold500, letterSpacing: 1.1 }]}>LEAGUE</Text>
           </View>
           <Text style={[Fonts.p1Black, Fonts.neutral00]}>{content.title}</Text>
         </View>
@@ -162,7 +186,7 @@ function LeagueLegalAcceptanceModal({
       isVisible={isVisible}
       snapPoints={['82%']}
     >
-      <View style={[Spaces.gap[20]]}>
+      <View style={{ gap: 20 }}>
         <Text style={[Fonts.p2, Fonts.neutral00]}>
           {content.description}
         </Text>
@@ -176,7 +200,7 @@ function LeagueLegalAcceptanceModal({
           ]}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary200 }]}>Concerne</Text>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[6]]}>{targetLabel}</Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 6 }]}>{targetLabel}</Text>
           </View>
         ) : null}
 
@@ -188,7 +212,7 @@ function LeagueLegalAcceptanceModal({
         ]}
         >
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginBottom[12]]}>A confirmer</Text>
-          <View style={[Spaces.gap[14]]}>
+          <View style={{ gap: 14 }}>
             <Checkable
               fontStyle={[Fonts.p2, Fonts.neutral00]}
               isChecked={acceptedContext}
@@ -230,7 +254,7 @@ function LeagueLegalAcceptanceModal({
                 setIsChecked={() => setAcceptedExtra((previous) => !previous)}
                 text={needsVenueResponsibility
                   ? 'Je confirme que le terrain, les horaires et les conditions du lieu ont ete verifies par les participants concernes.'
-                  : 'Je confirme agir comme capitaine/referent de mon equipe pour cette proposition ou confirmation de match.'}
+                  : 'Je confirme agir comme membre referent de mon equipe pour cette proposition ou confirmation de match.'}
                 type="square"
                 wrapperStyle={checkableWrapperStyle}
               />

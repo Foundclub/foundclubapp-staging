@@ -285,12 +285,12 @@ function LeagueMatchDetails({ navigation, route }) {
   const canManageLeagueStats = Boolean(leagueMatchStatsPayload?.permissions?.canManage);
   const canRespondMyLeagueStats = Boolean(leagueMyMatchResponsePayload?.permissions?.canRespond || teamSide);
   const canSubmitScore = useMemo(
-    () => isCaptain && Boolean(scoreFlow.canSubmit),
-    [isCaptain, scoreFlow.canSubmit],
+    () => Boolean(teamSide && scoreFlow.canSubmit),
+    [scoreFlow.canSubmit, teamSide],
   );
   const isScoreLockedByTime = useMemo(
-    () => isCaptain && scoreFlow.state === 'locked_before_start',
-    [isCaptain, scoreFlow.state],
+    () => Boolean(teamSide && scoreFlow.state === 'locked_before_start'),
+    [scoreFlow.state, teamSide],
   );
   const pendingLeagueAction = pendingLeagueActionPayload?.nextAction || null;
   const workflowViewModel = useMemo(
@@ -610,9 +610,12 @@ function LeagueMatchDetails({ navigation, route }) {
     };
   }, [match]);
 
-  const canManageVenue = Boolean(isCaptain && teamSide && matchPhase === 'waiting_venue');
+  const canManageVenue = Boolean(teamSide && matchPhase === 'waiting_venue');
   const hasCaptainQuickActions = Boolean(
-    isCaptain && (canManageVenue || canSubmitScore || isScoreLockedByTime || isPostSlotResolutionCurrentMatch),
+    canManageVenue
+      || canSubmitScore
+      || isScoreLockedByTime
+      || (isCaptain && isPostSlotResolutionCurrentMatch),
   );
   const canShowCaptainPrimary = hasCaptainQuickActions;
   const canShowCaptainCancel = isCaptain && normalizedStatus === 'scheduled';
@@ -645,7 +648,7 @@ function LeagueMatchDetails({ navigation, route }) {
     const countdown = formatScoreFlowCountdown(scoreFlow.remainingSeconds);
     if (scoreFlow.state === 'opponent_score_pending') {
       return {
-        helper: `Le capitaine adverse a saisi un score. Confirmez ou contestez avant auto-validation dans ${countdown}.`,
+        helper: `La squad adverse a saisi un score. Confirmez ou contestez avant auto-validation dans ${countdown}.`,
         label: 'Score adverse',
         title: 'Valider le score adverse',
       };
@@ -686,7 +689,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         accentColor: Colors.gold500,
         icon: Images.edit,
-        label: 'Action capitaine',
+        label: isCaptain ? 'Action capitaine' : 'Action equipe',
         text: scoreQuickActionMeta.helper,
       };
     }
@@ -738,6 +741,7 @@ function LeagueMatchDetails({ navigation, route }) {
     isScoreToSubmitBadge,
     isVenueBooked,
     normalizedStatus,
+    isCaptain,
     scoreQuickActionMeta.helper,
   ]);
   const heroSupportText = useMemo(() => {
@@ -2053,7 +2057,7 @@ function LeagueMatchDetails({ navigation, route }) {
                 <View style={[styles.separator, { backgroundColor: 'rgba(1, 179, 244, 0.16)' }]} />
                 <View style={styles.eloContainer}>
                   <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 8, textAlign: 'center' }]}>
-                    ENJEUX DU MATCH (ELO)
+                    ENJEUX DU MATCH (ELO matchmaking)
                   </Text>
                   <View style={styles.eloRow}>
                     <View
@@ -2543,9 +2547,7 @@ function LeagueMatchDetails({ navigation, route }) {
                     {isCaptain ? 'PRIORITE MATCH' : 'ACTION EQUIPE'}
                   </Text>
                   <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-                    {isCaptain
-                      ? captainQuickActionMeta.helper
-                      : "Le terrain doit \u00EAtre confirm\u00E9 pour finaliser l'organisation du match."}
+                    {captainQuickActionMeta.helper}
                   </Text>
                 </View>
                 {canShowCaptainPrimary ? (
@@ -2723,7 +2725,9 @@ function LeagueMatchDetails({ navigation, route }) {
                           { backgroundColor: captainQuickActionMeta.accentColor },
                         ]}
                       />
-                      <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>Actions capitaine</Text>
+                      <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                        {isCaptain ? 'Actions capitaine' : 'Actions equipe'}
+                      </Text>
                     </View>
                     <View
                       style={[
@@ -2918,7 +2922,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     position: 'absolute',
     right: 0,
-    shadowColor: '#000',
+    shadowColor: 'black',
     shadowOffset: { height: -8, width: 0 },
     shadowOpacity: 0.16,
     shadowRadius: 10,

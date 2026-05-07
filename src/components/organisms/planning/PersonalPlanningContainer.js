@@ -1,6 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { addDays, addMonths, addWeeks } from 'date-fns';
+import {
+  useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Text,
@@ -18,6 +21,7 @@ import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelin
 import { RouteNames } from '@/navigation/routeNames';
 
 import { getMyPlanning } from '@/services/event/eventService';
+import { keepPreviousPageData } from '@/services/queryOptions';
 
 import {
   getPlanningDefaultDate,
@@ -25,7 +29,19 @@ import {
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 
-const PERSONAL_PLANNING_STALE_MS = 15 * 1000;
+const PERSONAL_PLANNING_STALE_MS = 60 * 1000;
+
+const shiftPlanningAnchorDate = (currentDate, viewMode, direction) => {
+  if (viewMode === 'month') {
+    return addMonths(currentDate, direction);
+  }
+
+  if (viewMode === '3days') {
+    return addDays(currentDate, direction * 3);
+  }
+
+  return addWeeks(currentDate, direction);
+};
 
 /**
  * Personal planning content.
@@ -34,6 +50,7 @@ const PERSONAL_PLANNING_STALE_MS = 15 * 1000;
  */
 function PersonalPlanningContainer({ onSummaryPress }) {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const {
     Alignments,
@@ -49,10 +66,23 @@ function PersonalPlanningContainer({ onSummaryPress }) {
     [currentDate, viewMode],
   );
   const { data: eventsData, isLoading } = useQuery({
+    placeholderData: keepPreviousPageData,
     queryFn: () => getMyPlanning(planningRange),
     queryKey: ['planning', 'personal', planningRange.from, planningRange.to],
     staleTime: PERSONAL_PLANNING_STALE_MS,
   });
+
+  useEffect(() => {
+    [-1, 1].forEach((direction) => {
+      const nextAnchorDate = shiftPlanningAnchorDate(currentDate, viewMode, direction);
+      const nextRange = getPlanningRange(nextAnchorDate, viewMode);
+      queryClient.prefetchQuery({
+        queryFn: () => getMyPlanning(nextRange),
+        queryKey: ['planning', 'personal', nextRange.from, nextRange.to],
+        staleTime: PERSONAL_PLANNING_STALE_MS,
+      });
+    });
+  }, [currentDate, queryClient, viewMode]);
 
   const viewOptions = useMemo(() => ([
     { label: 'Semaine', value: 'week' },
@@ -72,7 +102,7 @@ function PersonalPlanningContainer({ onSummaryPress }) {
     return t('planning.mode.threeDaysDescription', 'Vue condensee sur 3 jours');
   }, [t, viewMode]);
 
-  if (isLoading) {
+  if (isLoading && !eventsData) {
     return <Loader />;
   }
 

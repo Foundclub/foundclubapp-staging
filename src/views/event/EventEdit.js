@@ -21,11 +21,10 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
-import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
+import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
 import DayPicker from '@/components/molecules/dayPicker/DayPicker';
 import Input from '@/components/molecules/input/Input';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
-import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import FacilitySelector from '@/components/organisms/facilitySelector/FacilitySelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -100,6 +99,31 @@ const getEventLocationLabel = (locationDetails) => {
     return String(address?.description || address?.label || '').trim();
   }
   return String(address || '').trim();
+};
+
+const getDatePickerValue = (value, getDateFromDateInput) => {
+  const parsedDate = typeof getDateFromDateInput === 'function' ? getDateFromDateInput(value) : null;
+  if (parsedDate instanceof Date && !Number.isNaN(parsedDate.getTime())) {
+    return parsedDate;
+  }
+  return new Date();
+};
+
+const getTimePickerValue = (value) => {
+  const baseDate = new Date();
+  baseDate.setSeconds(0, 0);
+  const [hours, minutes] = String(value || '').split(':').map((part) => Number(part));
+  baseDate.setHours(Number.isFinite(hours) ? hours : 0);
+  baseDate.setMinutes(Number.isFinite(minutes) ? minutes : 0);
+  return baseDate;
+};
+
+const clampDateToToday = (value) => {
+  const normalizedDate = value instanceof Date && !Number.isNaN(value.getTime()) ? new Date(value) : new Date();
+  normalizedDate.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return normalizedDate < today ? today : normalizedDate;
 };
 
 const eventSchema = Joi.object({
@@ -917,13 +941,29 @@ function EventEdit({ navigation, route }) {
                   name, onChange, value,
                 },
               }) => (
-                <DatePickerInput
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('eventEdit.fields.date.label')}
-                  minimumDate={new Date()}
-                  onChange={onChange}
-                  value={value}
-                />
+                <View style={Spaces.gap[4]}>
+                  <DateTimeSelector
+                    buttonStyle={{
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                    }}
+                    buttonTextStyle={{
+                      textTransform: 'none',
+                    }}
+                    display="modal"
+                    label={t('eventEdit.fields.date.label')}
+                    mode="date"
+                    onChange={(nextDate) => {
+                      onChange(format(clampDateToToday(nextDate), 'dd/MM/yyyy'));
+                    }}
+                    value={getDatePickerValue(value, getDateFromDateInput)}
+                  />
+                  {getFieldError({ errors: formErrors, fieldName: name }) ? (
+                    <Text style={[Fonts.p3, { color: Colors.error500 }]}>
+                      {getFieldError({ errors: formErrors, fieldName: name })}
+                    </Text>
+                  ) : null}
+                </View>
               )}
             />
 
@@ -935,12 +975,29 @@ function EventEdit({ navigation, route }) {
                   name, onChange, value,
                 },
               }) => (
-                <TimePickerInput
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('eventEdit.fields.startTime.label')}
-                  onChange={onChange}
-                  value={value}
-                />
+                <View style={Spaces.gap[4]}>
+                  <DateTimeSelector
+                    buttonStyle={{
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                    }}
+                    buttonTextStyle={{
+                      textTransform: 'none',
+                    }}
+                    display="modal"
+                    label={t('eventEdit.fields.startTime.label')}
+                    mode="time"
+                    onChange={(nextDate) => {
+                      onChange(format(nextDate, 'HH:mm'));
+                    }}
+                    value={getTimePickerValue(value)}
+                  />
+                  {getFieldError({ errors: formErrors, fieldName: name }) ? (
+                    <Text style={[Fonts.p3, { color: Colors.error500 }]}>
+                      {getFieldError({ errors: formErrors, fieldName: name })}
+                    </Text>
+                  ) : null}
+                </View>
               )}
             />
 
@@ -952,12 +1009,29 @@ function EventEdit({ navigation, route }) {
                   name, onChange, value,
                 },
               }) => (
-                <TimePickerInput
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('eventEdit.fields.endTime.label')}
-                  onChange={onChange}
-                  value={value}
-                />
+                <View style={Spaces.gap[4]}>
+                  <DateTimeSelector
+                    buttonStyle={{
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                    }}
+                    buttonTextStyle={{
+                      textTransform: 'none',
+                    }}
+                    display="modal"
+                    label={t('eventEdit.fields.endTime.label')}
+                    mode="time"
+                    onChange={(nextDate) => {
+                      onChange(format(nextDate, 'HH:mm'));
+                    }}
+                    value={getTimePickerValue(value)}
+                  />
+                  {getFieldError({ errors: formErrors, fieldName: name }) ? (
+                    <Text style={[Fonts.p3, { color: Colors.error500 }]}>
+                      {getFieldError({ errors: formErrors, fieldName: name })}
+                    </Text>
+                  ) : null}
+                </View>
               )}
             />
 

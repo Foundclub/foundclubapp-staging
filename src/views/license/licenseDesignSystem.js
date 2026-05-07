@@ -26,14 +26,27 @@ export const licenseStatusLabels = {
   active: 'Active',
   cancelled: 'Annulee',
   closed: 'Cloturee',
+  confirmed: 'Valide',
+  disputed: 'Litige',
   draft: 'Brouillon',
+  failed: 'Echoue',
+  issued: 'Emis',
   manual_review: 'A valider',
+  missing: 'Manquant',
   not_configured: 'A configurer',
   not_due: 'Non due',
   overdue: 'En retard',
   paid: 'Payee',
   partial: 'Partiel',
+  partially_refunded: 'Remboursement partiel',
   pending: 'En attente',
+  refunded: 'Remboursee',
+  refused: 'Refuse',
+  rejected: 'Rejete',
+  scheduled: 'Programmee',
+  submitted: 'Depose',
+  to_replace: 'A remplacer',
+  validated: 'Valide',
   waived: 'Exemptee',
 };
 
@@ -42,6 +55,7 @@ export const paymentModeLabels = {
   card_physical: 'Carte au club',
   cash: 'Especes',
   check: 'Cheque',
+  custom: 'Autre moyen',
   external_link: 'Lien club',
   helloasso: 'HelloAsso',
   stripe: 'Carte en ligne',
@@ -54,6 +68,8 @@ export const paymentInstructionFields = {
   check: 'checkInstructions',
 };
 
+export const manualPaymentMethods = ['cash', 'check', 'bank_transfer', 'card_physical', 'custom'];
+
 export const formatLicenseMoney = (value = 0, currency = 'EUR') => new Intl.NumberFormat('fr-FR', {
   currency,
   style: 'currency',
@@ -61,26 +77,47 @@ export const formatLicenseMoney = (value = 0, currency = 'EUR') => new Intl.Numb
 
 export const getInstallmentOrder = (installment = {}) => installment.installmentOrder || installment.order || 1;
 
-export const normalizePaymentModes = (raw = {}) => ({
-  bank_transfer: raw.bank_transfer !== false,
-  card_physical: Boolean(raw.card_physical),
-  cash: raw.cash !== false,
-  check: raw.check !== false,
-  external_link: Boolean(raw.external_link),
-  helloasso: Boolean(raw.helloasso),
-  stripe: Boolean(raw.stripe),
-});
+export const normalizePaymentModes = (raw = {}) => {
+  const modes = raw || {};
+  return {
+    bank_transfer: modes.bank_transfer !== false,
+    card_physical: Boolean(modes.card_physical),
+    cash: modes.cash !== false,
+    check: modes.check !== false,
+    custom: Boolean(modes.custom),
+    external_link: Boolean(modes.external_link),
+    helloasso: Boolean(modes.helloasso),
+    stripe: Boolean(modes.stripe),
+  };
+};
+
+export const getEnabledManualPaymentMethods = (raw = {}) => {
+  const modes = normalizePaymentModes(raw);
+  return manualPaymentMethods
+    .filter((mode) => modes[mode])
+    .map((mode) => ({ label: paymentModeLabels[mode], mode }));
+};
 
 export const getLicenseStatusTone = (Colors, status) => ({
   active: Colors.success500,
   closed: Colors.neutral200,
+  confirmed: Colors.success500,
   draft: Colors.primary200,
+  failed: Colors.error500,
+  issued: Colors.primary200,
   manual_review: Colors.warning500,
+  missing: Colors.error500,
   not_configured: Colors.neutral300,
   overdue: Colors.error500,
   paid: Colors.success500,
   partial: Colors.primary200,
+  partially_refunded: Colors.warning500,
   pending: Colors.primary500,
+  refused: Colors.error500,
+  rejected: Colors.error500,
+  submitted: Colors.primary500,
+  to_replace: Colors.warning500,
+  validated: Colors.success500,
   waived: Colors.neutral200,
 }[status] || Colors.primary500);
 

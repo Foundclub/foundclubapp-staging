@@ -60,6 +60,19 @@ const MatchmakingService = {
       return false;
     }
   },
+
+  /**
+   * Answer an optional widened matchmaking suggestion.
+   * @param {string} suggestionId
+   * @param {'accept' | 'decline'} decision
+   */
+  respondSuggestion: async (suggestionId, decision) => {
+    const normalizedSuggestionId = requireDocumentId(suggestionId, 'matchmakingSuggestion');
+    const response = await axiosInstance.post(`/matchmaking-suggestions/${normalizedSuggestionId}/respond`, {
+      decision,
+    });
+    return response.data;
+  },
 };
 
 export default MatchmakingService;

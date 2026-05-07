@@ -81,7 +81,7 @@ const getSectionLabel = (value) => {
  */
 const getStatusConfig = (status, Colors) => {
   const warningColor = Colors.warning500 || Colors.gold500;
-  const successColor = Colors.success500 || '#2ED47A';
+  const successColor = Colors.success500;
 
   if (status === 'joined') {
     return {

@@ -115,7 +115,7 @@ export const getDivisionProgressState = (points, division, options = {}) => {
 export const getNextStreakBonus = (streak) => {
   const current = Math.max(0, Number.parseInt(String(streak || 0), 10) || 0);
   const next = current + 1;
-  if (next >= 4) return 10;
+  if (next >= 4) return 11;
   if (next === 3) return 6;
   if (next === 2) return 3;
   return 0;

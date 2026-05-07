@@ -28,7 +28,7 @@ const BG_TRAINING = require('@/assets/background-card-event/card-entrainement.pn
 const BG_MATCH = require('@/assets/background-card-event/card-match.png');
 const BG_RESERVATION = require('@/assets/background-card-event/card-reservation.png');
 
-const getBackgroundImage = (typeName) => {
+const getBackgroundImage = (/** @type {any} */ typeName) => {
   const normalizedType = (typeName?.toLowerCase() || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
@@ -58,36 +58,43 @@ const toDisplayText = (value) => {
     return '';
   }
 
-  if (typeof value.description === 'string') {
-    return value.description.trim();
+  const entity = /** @type {any} */ (value);
+  if (typeof entity.description === 'string') {
+    return entity.description.trim();
   }
-  if (typeof value.label === 'string') {
-    return value.label.trim();
+  if (typeof entity.label === 'string') {
+    return entity.label.trim();
   }
-  if (value.label && typeof value.label === 'object') {
-    return toDisplayText(value.label);
+  if (entity.label && typeof entity.label === 'object') {
+    return toDisplayText(entity.label);
   }
-  if (typeof value.address === 'string') {
-    return value.address.trim();
+  if (typeof entity.address === 'string') {
+    return entity.address.trim();
   }
-  if (typeof value.name === 'string') {
-    return value.name.trim();
+  if (typeof entity.name === 'string') {
+    return entity.name.trim();
   }
-  if (value.address && typeof value.address === 'object') {
-    return toDisplayText(value.address);
+  if (entity.address && typeof entity.address === 'object') {
+    return toDisplayText(entity.address);
   }
   return '';
 };
 
 /**
- *
- * @param root0
- * @param root0.event
+ * @param {{
+ *   event: any;
+ *   matchScoreSummary?: {
+ *     badgeLabel: string;
+ *     helperText?: string | null;
+ *     value: string;
+ *   } | null;
+ * }} props
  */
 function EventHeader({ event, matchScoreSummary = null }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
+  const SpacesAny = /** @type {any} */ (Spaces);
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
 
@@ -132,7 +139,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
     headerSecondaryTitle = [clubName, activityName, categoryName].filter(Boolean).join(' - ');
   }
   const invitedTeamNames = (event?.invitedTeams || [])
-    .map((team) => toDisplayText(team?.name))
+    .map((/** @type {any} */ team) => toDisplayText(team?.name))
     .filter(Boolean);
 
   const getParsedLocationDetails = () => {
@@ -199,7 +206,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
     <ImageBackground
       imageStyle={{ borderRadius: 24 }}
       resizeMode="cover"
-      source={backgroundImage}
+      source={/** @type {any} */ (backgroundImage)}
       style={[
         ApplicationStyle.borderRadius24,
         Alignments.alignCenter,
@@ -254,7 +261,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
             ApplicationStyle.borderRadius24,
             Alignments.alignCenter,
             Spaces.paddingVertical[12],
-            Spaces.paddingHorizontal[18],
+            SpacesAny.paddingHorizontal[18],
             Spaces.gap[8],
             {
               backgroundColor: `${Colors.primary500}18`,

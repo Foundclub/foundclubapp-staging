@@ -22,6 +22,9 @@ import { respondToJoinRequest } from '@/services/leagueTeam/leagueTeamService';
 
 import { getEntityDocumentId } from '@/utils/entityId';
 
+/**
+ * @param {unknown} value
+ */
 const isPhoneLike = (value) => {
   const normalized = String(value || '').replace(/\s+/g, '');
   if (!normalized) return false;
@@ -207,7 +210,6 @@ function SquadRequestsScreen({ navigation, route }) {
     <View
       style={[
         Spaces.paddingHorizontal[16],
-        Spaces.paddingVertical[20],
         Spaces.marginTop[24],
         Alignments.alignCenter,
         ApplicationStyle.backgroundColor.primary900,
@@ -215,6 +217,7 @@ function SquadRequestsScreen({ navigation, route }) {
         {
           borderColor: Colors.neutral700,
           borderWidth: 1,
+          paddingVertical: 20,
         },
       ]}
     >
@@ -231,7 +234,6 @@ function SquadRequestsScreen({ navigation, route }) {
     Fonts.p1Bold,
     Spaces.marginTop,
     Spaces.paddingHorizontal,
-    Spaces.paddingVertical,
     isLoading,
     t,
   ]);
@@ -316,7 +318,6 @@ function SquadRequestsScreen({ navigation, route }) {
             style={[
               Spaces.marginTop[12],
               Spaces.paddingHorizontal[12],
-              Spaces.paddingVertical[10],
               ApplicationStyle.borderRadius12,
               {
                 alignItems: 'center',
@@ -327,6 +328,7 @@ function SquadRequestsScreen({ navigation, route }) {
                   ? 'rgba(34, 197, 94, 0.5)'
                   : 'rgba(239, 68, 68, 0.5)',
                 borderWidth: 1,
+                paddingVertical: 10,
               },
             ]}
           >
@@ -334,7 +336,7 @@ function SquadRequestsScreen({ navigation, route }) {
               style={[
                 Fonts.p2Bold,
                 {
-                  color: feedback.type === 'success' ? '#4ADE80' : Colors.error500,
+                  color: feedback.type === 'success' ? Colors.success500 : Colors.error500,
                   textAlign: 'center',
                 },
               ]}

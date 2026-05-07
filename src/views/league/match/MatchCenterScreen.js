@@ -272,7 +272,7 @@ function MatchCenterScreen() {
    * @param {string | undefined | null} squadName
    * @returns {string}
    */
-  const getSquadShieldInitials = useCallback((squadName) => {
+  const getSquadShieldInitials = useCallback((/** @type {string | undefined | null} */ squadName) => {
     const normalizedName = typeof squadName === 'string' ? squadName : '';
     const fromClubRules = getClubInitials(normalizedName);
     return fromClubRules || String(normalizedName || '??').substring(0, 2).toUpperCase();
@@ -283,7 +283,7 @@ function MatchCenterScreen() {
    * @param {Team | null | undefined} squad
    * @returns {string | undefined}
    */
-  const getSquadLogoUri = useCallback((squad) => {
+  const getSquadLogoUri = useCallback((/** @type {Team | null | undefined} */ squad) => {
     const media = squad?.crest || squad?.logo || squad?.club?.logo;
     return getImageUrl(resolveMediaUrl(media));
   }, []);
@@ -295,6 +295,7 @@ function MatchCenterScreen() {
   const [activeSlot, setActiveSlot] = useState(/** @type {LeagueSlot | null} */ (null));
   const [squadSlots, setSquadSlots] = useState(/** @type {LeagueSlot[]} */ ([])); // Store all available slots for carousel
   const [matchRequest, setMatchRequest] = useState(/** @type {MatchRequest | null} */ (null));
+  const [softSuggestion, setSoftSuggestion] = useState(/** @type {Record<string, any> | null} */ (null));
   const [currentMatch, setCurrentMatch] = useState(/** @type {LeagueMatch | null} */ (null));
   const [opponentDetails, setOpponentDetails] = useState(/** @type {OpponentDetails | null} */ (null)); // Add state
   const [recentMatches, setRecentMatches] = useState(/** @type {MatchHistoryEntry[]} */ ([]));
@@ -315,6 +316,7 @@ function MatchCenterScreen() {
   const [loadError, setLoadError] = useState('');
   const [isSquadSelectorVisible, setIsSquadSelectorVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
+  const [suggestionActionLoading, setSuggestionActionLoading] = useState(false);
   const currentMatchLegalLabel = React.useMemo(() => {
     const left = currentMatch?.team_a?.name || mySquad?.name || 'Votre squad';
     const right = currentMatch?.team_b?.name || opponentDetails?.name || 'Adversaire';
@@ -347,7 +349,7 @@ function MatchCenterScreen() {
       || route?.params?.squadId
       || '',
   );
-  const showLeagueRestrictionAlert = useCallback((errorLike = null) => {
+  const showLeagueRestrictionAlert = useCallback((/** @type {any} */ errorLike = null) => {
     const restrictionCode = getLeaguePlatformRestrictionCode(errorLike);
     const runtime = getLeagueRuntimeFromError(errorLike) || leaguePlatformRuntime;
     const scope = restrictionCode ? getLeagueRestrictionScope(errorLike) : 'matchmaking';
@@ -430,7 +432,7 @@ function MatchCenterScreen() {
    * @param {string} routeName
    * @returns {any}
    */
-  const findNavigatorWithRoute = useCallback((routeName) => {
+  const findNavigatorWithRoute = useCallback((/** @type {string} */ routeName) => {
     let cursor = navigation;
     while (cursor) {
       const routeNames = cursor?.getState?.()?.routeNames || [];
@@ -445,17 +447,17 @@ function MatchCenterScreen() {
    * @param {Record<string, any>} [params]
    * @returns {boolean}
    */
-  const safeNavigate = useCallback((routeName, params) => {
+  const safeNavigate = useCallback((/** @type {string} */ routeName, /** @type {Record<string, any> | undefined} */ params) => {
     const targetNavigator = findNavigatorWithRoute(routeName);
     if (!targetNavigator) return false;
     targetNavigator.navigate(routeName, params);
     return true;
   }, [findNavigatorWithRoute]);
 
-  const promptCaptainSearchRequirements = useCallback(() => {
+  const promptSquadSearchRequirements = useCallback(() => {
     Alert.alert(
-      'Recherche r\u00E9serv\u00E9e au capitaine',
-      'Seul le capitaine peut lancer une recherche manuelle. La recherche demarre aussi automatiquement quand 5 membres sont prêts sur un créneau.',
+      'Recherche reservee a la squad',
+      'Vous devez etre membre de cette squad pour lancer une recherche manuelle. La recherche demarre aussi automatiquement quand le quorum est pret sur un creneau.',
       [
         {
           style: 'cancel',
@@ -522,7 +524,7 @@ function MatchCenterScreen() {
   const shownInitialProposalMatchIdRef = useRef('');
   const consumedRouteOpenProposalTokenRef = useRef('');
 
-  const shouldOpenInitialProposalModal = useCallback((match) => {
+  const shouldOpenInitialProposalModal = useCallback((/** @type {LeagueMatch | null | undefined} */ match) => {
     const normalizedStatus = String(match?.status || '').trim().toLowerCase();
     if (!['negotiating', 'provisional', 'provisionary'].includes(normalizedStatus)) return false;
     return !getLatestLeagueProposalMessageId(match)
@@ -532,7 +534,7 @@ function MatchCenterScreen() {
       && !match?.automation_meta?.latest_proposal_message_id;
   }, []);
 
-  const openInitialProposalModal = useCallback((match) => {
+  const openInitialProposalModal = useCallback((/** @type {LeagueMatch | null | undefined} */ match) => {
     if (!shouldOpenInitialProposalModal(match)) return;
     const matchId = getEntityDocumentId(match);
     if (!matchId || shownInitialProposalMatchIdRef.current === matchId) return;
@@ -562,10 +564,12 @@ function MatchCenterScreen() {
       // activeReq is { state: 'idle' | 'searching' | 'matched', request?, match? }
       if (activeReq && (effectiveLegacyState === 'searching' || effectiveLegacyState === 'matched')) {
         setMatchRequest(activeReq.request || null);
+        setSoftSuggestion(activeReq.softSuggestion || null);
         if (effectiveLegacyState === 'matched') {
           const activeMatch = withLeagueMatchActionMetadata(activeReq.match || null, activeReq);
           setViewState('match_found');
           setCurrentMatch(activeMatch);
+          setSoftSuggestion(null);
           setOpponentDetails(activeReq.opponentDetails || activeReq.opponent || null);
           lastMatchRef.current = activeMatch; // Track match
           openInitialProposalModal(activeMatch);
@@ -584,6 +588,7 @@ function MatchCenterScreen() {
       } else {
         // No active request/match
         setMatchmakingServerNow(null);
+        setSoftSuggestion(null);
         if (lastMatchRef.current) {
           // Only show cancellation if previous status was in cancellable pre-result phases.
           const previousStatus = String(lastMatchRef.current.status || '').toLowerCase();
@@ -596,10 +601,14 @@ function MatchCenterScreen() {
 
         // C. Check Next Available Slot
         const slots = await getAvailableSlots(getEntityDocumentId(squad));
-        setSquadSlots(slots || []);
+        // Sort by participant count descending so the most filled slot shows first
+        const sortedSlots = Array.isArray(slots) && slots.length > 0
+          ? [...slots].sort((a, b) => (b.rsvp_count || 0) - (a.rsvp_count || 0))
+          : (slots || []);
+        setSquadSlots(sortedSlots);
 
-        if (slots && slots.length > 0) {
-          setActiveSlot(slots[0]);
+        if (sortedSlots.length > 0) {
+          setActiveSlot(sortedSlots[0]);
           setViewState('locker_room');
         } else {
           // No slots available
@@ -632,8 +641,7 @@ function MatchCenterScreen() {
         return;
       }
 
-      // Select initial squad. Route params win so a dashboard switch opens the
-      // Match tab on the exact squad the user just chose.
+      // Select initial squad
       const matchedRouteSquad = routeActiveSquadId
         ? squads.find((/** @type {Team} */ s) => areSameEntityId(getEntityDocumentId(s), routeActiveSquadId))
         : null;
@@ -652,7 +660,43 @@ function MatchCenterScreen() {
     }
   }, [fetchMatchData, mySquadId, routeActiveSquadId, userId]);
 
-  // 1. Load Squads & State on Focus
+  const refreshMatchmakingStatus = useCallback(async () => {
+    if (!mySquad || viewState === 'no_squad' || viewState === 'connection_error') return;
+    
+    try {
+      const squadId = getEntityDocumentId(mySquad);
+      const status = await MatchmakingService.getActiveRequest(squadId);
+      
+      if (status && status.state === 'searching') {
+        const wasSearching = viewState === 'radar' || viewState === 'searching_start';
+        if (!wasSearching) {
+          Alert.alert(
+            'Matchmaking lancé !',
+            'Votre squad est complète. La recherche de match a démarré automatiquement.',
+            [{ text: 'OK', onPress: () => setViewState('radar') }]
+          );
+        }
+        setMatchRequest(status.request);
+        setViewState('radar');
+      } else if (viewState === 'radar' && status && status.state === 'matched') {
+        // Handle match found transition if needed
+        await fetchMatchData(mySquad);
+      } else if (viewState === 'radar' && (!status || status.state === 'idle')) {
+        // Search was cancelled or expired
+        setViewState('locker_room');
+      }
+    } catch (error) {
+      console.warn('[MATCHMAKING] Polling failed:', error);
+    }
+  }, [mySquad, viewState, fetchMatchData]);
+
+  // 1. Polling for status updates
+  useEffect(() => {
+    const interval = setInterval(refreshMatchmakingStatus, 5000);
+    return () => clearInterval(interval);
+  }, [refreshMatchmakingStatus]);
+
+  // 2. Load Squads & State on Focus
   useFocusEffect(
     useCallback(() => {
       loadMatchCenter();
@@ -672,19 +716,11 @@ function MatchCenterScreen() {
   };
 
   const handleLaunchLobby = () => {
-    if (!isCurrentUserCaptain) {
-      promptCaptainSearchRequirements();
-      return;
-    }
     setViewState('lobby');
   };
 
   const handleConfirmSearch = async () => {
     if (!mySquad) return;
-    if (!isCurrentUserCaptain) {
-      promptCaptainSearchRequirements();
-      return;
-    }
     if (!Array.isArray(selectedSlotIds) || selectedSlotIds.length === 0) {
       Alert.alert(
         'Créneau requis',
@@ -756,10 +792,12 @@ function MatchCenterScreen() {
           const matchedMatch = withLeagueMatchActionMetadata(matchedResult.match || null, matchedResult);
           setCurrentMatch(matchedMatch);
           setOpponentDetails(matchedResult.opponentDetails || matchedResult.opponent || null);
+          setSoftSuggestion(null);
           openInitialProposalModal(matchedMatch);
           setViewState('match_found');
         } else {
           setMatchRequest(result);
+          setSoftSuggestion(result?.softSuggestion || null);
           setMatchmakingServerNow(result?.serverNow || null);
           setViewState('radar');
         }
@@ -771,7 +809,7 @@ function MatchCenterScreen() {
         if (backendCode === 'SEARCH_ALREADY_ACTIVE') {
           Alert.alert('Recherche déjà active', 'Une recherche est déjà en cours pour cette squad.');
         } else if (backendCode === 'UNAUTHORIZED_TEAM_ACTION') {
-          promptCaptainSearchRequirements();
+          promptSquadSearchRequirements();
         } else if (isLeaguePlatformRestrictedError(apiError)) {
           showLeagueRestrictionAlert(apiError);
         } else {
@@ -783,6 +821,7 @@ function MatchCenterScreen() {
   };
   const handleAutoSearchingDetected = useCallback((/** @type {MatchmakingStatus} */ statusData) => {
     setMatchRequest(statusData?.request || null);
+    setSoftSuggestion(statusData?.softSuggestion || null);
     setMatchmakingServerNow(statusData?.serverNow || null);
     setViewState('radar');
   }, []);
@@ -791,6 +830,7 @@ function MatchCenterScreen() {
     if (statusData?.request) {
       setMatchRequest(statusData.request);
     }
+    setSoftSuggestion(statusData?.softSuggestion || null);
     if (statusData?.serverNow) {
       setMatchmakingServerNow(statusData.serverNow);
     }
@@ -809,12 +849,52 @@ function MatchCenterScreen() {
     setMatchRequest(statusData?.request || null);
     setMatchmakingServerNow(statusData?.serverNow || null);
     setCurrentMatch(nextMatch);
+    setSoftSuggestion(null);
     setOpponentDetails(statusData?.opponentDetails || null);
     setViewState('match_found');
     if (shouldAlert) {
       openInitialProposalModal(nextMatch);
     }
   }, [currentMatch, openInitialProposalModal, viewState]);
+
+  const handleSuggestionResponse = useCallback(async (/** @type {'accept' | 'decline'} */ decision) => {
+    const suggestionId = getEntityDocumentId(softSuggestion);
+    if (!suggestionId || suggestionActionLoading) return;
+
+    setSuggestionActionLoading(true);
+    try {
+      const result = await MatchmakingService.respondSuggestion(suggestionId, decision);
+      if (result?.state === 'matched' && result?.match) {
+        const matchedMatch = withLeagueMatchActionMetadata(result.match, result);
+        setCurrentMatch(matchedMatch);
+        setMatchRequest(null);
+        setSoftSuggestion(null);
+        setOpponentDetails(result?.opponentDetails || null);
+        setViewState('match_found');
+        openInitialProposalModal(matchedMatch);
+        return;
+      }
+
+      if (decision === 'decline') {
+        setSoftSuggestion(null);
+        Alert.alert('Piste ignoree', 'La recherche continue dans votre rayon.');
+        return;
+      }
+
+      setSoftSuggestion(result?.suggestion || softSuggestion);
+      Alert.alert('Piste acceptee', 'On attend l accord de la squad adverse. La recherche continue en parallele.');
+    } catch (error) {
+      console.error('Suggestion response error:', error);
+      const apiError = /** @type {any} */ (error);
+      const message = apiError?.response?.data?.error?.message
+        || apiError?.message
+        || 'Impossible de traiter cette piste. La recherche continue.';
+      Alert.alert('Piste indisponible', message);
+      setSoftSuggestion(null);
+    } finally {
+      setSuggestionActionLoading(false);
+    }
+  }, [openInitialProposalModal, softSuggestion, suggestionActionLoading]);
 
   const handleRecoverFromBackground = useCallback(() => {
     setViewState('radar');
@@ -871,7 +951,7 @@ function MatchCenterScreen() {
   ) => {
     if (!mySquad || isSavingSearchSlot) return;
 
-    let slotsToCreate = [];
+    let slotsToCreate = /** @type {AddSearchSlotPayload[]} */ ([]);
     if (Array.isArray(slotInput)) {
       slotsToCreate = slotInput.filter(Boolean);
     } else if (slotInput) {
@@ -929,6 +1009,7 @@ function MatchCenterScreen() {
       const reqId = getEntityDocumentId(matchRequest);
       await MatchmakingService.cancelRequest(reqId);
       setMatchRequest(null);
+      setSoftSuggestion(null);
       // Refresh data to ensure consistent state
       await loadMatchCenter();
       setViewState('locker_room');
@@ -1231,6 +1312,68 @@ function MatchCenterScreen() {
       </View>
     );
 
+    const renderSoftSuggestionCard = () => {
+      if (!softSuggestion) return null;
+
+      const opponent = softSuggestion.opponent || {};
+      const distanceKm = Number(softSuggestion.distanceKm);
+      const extraDistanceKm = Number(softSuggestion.extraDistanceKm || 0);
+      const eloDiff = Number(softSuggestion.eloDiff);
+      const division = opponent?.division != null ? `D${opponent.division}` : 'Division inconnue';
+      const statusForTeam = String(softSuggestion.statusForTeam || softSuggestion.status || '').trim();
+      const acceptedByMe = Boolean(softSuggestion.acceptedByMe);
+      const acceptedByOpponent = Boolean(softSuggestion.acceptedByOpponent);
+      let statusLabel = 'Piste optionnelle disponible.';
+      if (acceptedByMe && !acceptedByOpponent) {
+        statusLabel = 'Vous avez accepte. En attente de l autre squad.';
+      } else if (!acceptedByMe && acceptedByOpponent) {
+        statusLabel = 'La squad adverse est partante.';
+      }
+
+      return (
+        <View style={{
+          backgroundColor: 'rgba(212, 175, 55, 0.10)',
+          borderColor: 'rgba(212, 175, 55, 0.45)',
+          borderRadius: 12,
+          borderWidth: 1,
+          marginTop: 14,
+          padding: 14,
+        }}
+        >
+          <Text style={[Fonts.p3Bold, { color: Colors.gold500, marginBottom: 6 }]}>
+            PISTE OPTIONNELLE
+          </Text>
+          <Text style={[Fonts.p1Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
+            {opponent?.name || 'Squad compatible'}
+          </Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral300, lineHeight: 20 }]}>
+            {Number.isFinite(distanceKm) ? `A ${Math.round(distanceKm)} km de vous` : 'Distance en verification'}
+            {extraDistanceKm > 0 ? `, +${Math.round(extraDistanceKm)} km hors rayon` : ', dans votre zone'}
+            {Number.isFinite(eloDiff) ? ` - ${eloDiff} pts ELO matchmaking d'ecart` : ''}
+            {` - ${division}`}
+          </Text>
+          <Text style={[Fonts.p3Bold, { color: Colors.primary500, marginTop: 8 }]}>
+            {statusLabel}
+          </Text>
+
+          <View style={{ gap: 10, marginTop: 12 }}>
+            <Button
+              disabled={suggestionActionLoading || acceptedByMe || statusForTeam === 'waiting_opponent'}
+              onPress={() => handleSuggestionResponse('accept')}
+              title={acceptedByMe ? 'ACCEPTE - EN ATTENTE' : 'ACCEPTER CETTE PISTE'}
+              variant="Primary"
+            />
+            <Button
+              disabled={suggestionActionLoading || acceptedByMe}
+              onPress={() => handleSuggestionResponse('decline')}
+              title="CONTINUER DANS MON RAYON"
+              variant="Secondary"
+            />
+          </View>
+        </View>
+      );
+    };
+
     if (viewState === 'initializing') {
       return renderMissionState({
         accentColor: leagueGold,
@@ -1311,6 +1454,7 @@ function MatchCenterScreen() {
               onExpired={handleCancelSearch}
               serverNow={pollingServerNow || matchmakingServerNow}
             />
+            {renderSoftSuggestionCard()}
           </>
         ),
         eyebrow: 'RADAR ACTIF',
@@ -2260,20 +2404,25 @@ function MatchCenterScreen() {
                     </View>
                   </View>
                   {/* Status Chip */}
-                  <View style={{
-                    backgroundColor: 'rgba(1, 179, 244, 0.1)',
-                    borderRadius: 12,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    position: 'absolute',
-                    right: 10,
-                    top: 0,
-                  }}
-                  >
-                    <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                      OUVERT
-                    </Text>
-                  </View>
+                  {(() => {
+                    const isSlotFull = (item.rsvp_count || 0) >= 5;
+                    return (
+                      <View style={{
+                        backgroundColor: isSlotFull ? 'rgba(76, 175, 80, 0.15)' : 'rgba(1, 179, 244, 0.1)',
+                        borderRadius: 12,
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        position: 'absolute',
+                        right: 10,
+                        top: 0,
+                      }}
+                      >
+                        <Text style={[Fonts.p3Bold, { color: isSlotFull ? '#4CAF50' : Colors.primary500 }]}>
+                          {isSlotFull ? 'COMPLET' : 'OUVERT'}
+                        </Text>
+                      </View>
+                    );
+                  })()}
 
                   {/* Visual Roster */}
                   <View style={{ marginTop: 16 }}>
@@ -2387,11 +2536,11 @@ function MatchCenterScreen() {
 
   const renderLockerRoom = () => {
     const rawStreak = Number(mySquad?.streak || 0);
-    let streakValue = 'Stable';
+    let streakValue = '0';
     if (Number.isFinite(rawStreak) && rawStreak > 0) {
       streakValue = `x${rawStreak}`;
     } else if (Number.isFinite(rawStreak) && rawStreak < 0) {
-      streakValue = 'Defaite';
+      streakValue = 'DEFAITE';
     }
     const divisionPoints = Number(mySquad?.division_points ?? mySquad?.divisionPoints ?? 0);
     const highestStreak = Number(mySquad?.highest_streak ?? mySquad?.highestStreak ?? 0);
@@ -2498,10 +2647,10 @@ function MatchCenterScreen() {
                   size={34}
                 />
               </View>
-              <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+              <Text adjustsFontSizeToFit minimumFontScale={0.72} numberOfLines={1} style={[Fonts.p3Bold, { color: Colors.gold500, flexShrink: 1 }]}>
                 {mySquad?.elo || 1200}
                 {' '}
-                PTS
+                ELO matchmaking
               </Text>
             </View>
           </View>
@@ -2541,13 +2690,23 @@ function MatchCenterScreen() {
             </View>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', height: 40, width: 1 }} />
             <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text style={[Fonts.h1Bold, { color: Colors.gold500 }]}>{streakValue}</Text>
+              <Text 
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
+                numberOfLines={1} 
+                style={[Fonts.h1Bold, { color: Colors.gold500 }]}
+              >
+                {streakValue}
+              </Text>
               <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>SERIE</Text>
             </View>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', height: 40, width: 1 }} />
             <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
               <TouchableOpacity
-                onPress={() => navigation.navigate(RouteNames.LeagueRanking)}
+                onPress={() => navigation.navigate(RouteNames.LeagueDashboard, {
+                  params: { division: mySquad?.division },
+                  screen: RouteNames.LeagueRanking,
+                })}
                 style={{
                   alignItems: 'center',
                   backgroundColor: 'rgba(1, 179, 244, 0.14)',
@@ -2561,7 +2720,19 @@ function MatchCenterScreen() {
                   width: '100%',
                 }}
               >
-                <Text style={[Fonts.p3Bold, { color: Colors.primary500, lineHeight: 16 }]}>CLASSEMENT</Text>
+                <Text
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.78}
+                  numberOfLines={1}
+                  style={[Fonts.p3Bold, {
+                    color: Colors.primary500,
+                    lineHeight: 16,
+                    textAlign: 'center',
+                    width: '100%',
+                  }]}
+                >
+                  CLASSEMENT
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3181,6 +3352,7 @@ function MatchCenterScreen() {
         </View>
 
         {renderLockerRoom()}
+        <View style={{ height: scrollBottomPadding }} />
       </ScrollView>
 
       {/* MODALS OUTSIDE SCROLLVIEW */}

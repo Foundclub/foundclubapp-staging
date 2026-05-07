@@ -1,5 +1,5 @@
 /* eslint-disable import/order, perfectionist/sort-imports, perfectionist/sort-named-imports */
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert, ScrollView, Text, View,
 } from 'react-native';
@@ -7,6 +7,7 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -14,6 +15,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   createLicenseCheckout,
   declareExternalLicensePayment,
+  generateLicenseReceipt,
+  submitLicenseDocument,
   useLicenseMutation,
   useMyLicenseAssignment,
   useMyLicenses,
@@ -22,6 +25,7 @@ import {
 import { getPublicApiOrigin } from '@/config/runtimeUrls';
 import {
   formatLicenseMoney,
+  getEnabledManualPaymentMethods,
   getLicenseStatusTone,
   LicenseCard,
   LicenseEmptyState,
@@ -36,7 +40,54 @@ import {
   paymentModeLabels,
 } from './licenseDesignSystem';
 import LinksPlatform from '@/platform/links';
+import MediaPlatform from '@/platform/media';
 import SharePlatform from '@/platform/share';
+import { resolveMediaUrl } from '@/utils/mediaUrl';
+
+const paymentDate = (payment = {}) => String(payment.validatedAt || payment.paidAt || payment.createdAt || '').slice(0, 10);
+const documentDate = (submission = {}) => String(submission.validatedAt || submission.submittedAt || submission.createdAt || '').slice(0, 10);
+const isPickerCancelError = (error) => String(error?.code || error?.message || '')
+  .toLowerCase()
+  .includes('cancel');
+
+/**
+ *
+ * @param root0
+ * @param root0.isLoading
+ * @param root0.methods
+ * @param root0.onClose
+ * @param root0.onSelect
+ */
+function DeclarePaymentModal({
+  isLoading, methods, onClose, onSelect,
+}) {
+  const { Fonts, Spaces } = useTheme();
+
+  return (
+    <BottomModal
+      close={onClose}
+      hideCloseButton={false}
+      isVisible
+      scrollable={false}
+      snapPoints={['58%']}
+      webPresentation="dialog"
+    >
+      <View style={Spaces.gap[licenseSpacing.fieldGap]}>
+        <Text style={[Fonts.h3, Fonts.neutral00]}>Paiement hors app</Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>Choisis le moyen utilise pour prevenir le club.</Text>
+        {methods.map((method) => (
+          <Button
+            isLoading={isLoading}
+            key={method.mode}
+            onPress={() => onSelect(method.mode)}
+            title={method.label}
+            variant="Secondary"
+          />
+        ))}
+      </View>
+    </BottomModal>
+  );
+}
 
 /**
  *
@@ -48,6 +99,7 @@ function MyLicense({ navigation, route }) {
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const [declareModalVisible, setDeclareModalVisible] = useState(false);
   const query = useMyLicenses();
   const routeAssignmentId = route?.params?.assignmentId;
   const assignmentQuery = useMyLicenseAssignment(routeAssignmentId, {
@@ -62,8 +114,26 @@ function MyLicense({ navigation, route }) {
   const current = assignmentQuery.data || fallbackAssignment;
   const assignmentId = current?.documentId || current?.id;
   const checkoutMutation = useLicenseMutation((provider) => createLicenseCheckout(assignmentId, { provider }), current?.campaign?.documentId || current?.campaign?.id);
-  const declareMutation = useLicenseMutation(() => declareExternalLicensePayment(assignmentId, { amountCents: current?.amountRemainingCents, provider: 'external' }), current?.campaign?.documentId || current?.campaign?.id);
+  const declareMutation = useLicenseMutation((method) => declareExternalLicensePayment(assignmentId, { amountCents: current?.amountRemainingCents, method }), current?.campaign?.documentId || current?.campaign?.id);
+  const documentMutation = useLicenseMutation((payload) => submitLicenseDocument(assignmentId, payload), current?.campaign?.documentId || current?.campaign?.id);
+  const receiptMutation = useLicenseMutation((paymentId) => generateLicenseReceipt(paymentId), current?.campaign?.documentId || current?.campaign?.id);
   const paymentModes = normalizePaymentModes(current?.campaign?.paymentModes);
+  const offlinePaymentMethods = useMemo(() => getEnabledManualPaymentMethods(current?.campaign?.paymentModes), [current?.campaign?.paymentModes]);
+  const documentSubmissionByRequestId = useMemo(() => new Map(
+    (current?.documentSubmissions || [])
+      .map((submission) => [
+        String(submission?.documentRequest?.documentId || submission?.documentRequest?.id || ''),
+        submission,
+      ])
+      .filter(([key]) => key),
+  ), [current?.documentSubmissions]);
+  const receipts = current?.receipts || [];
+  const paymentHistory = (current?.payments || []).slice(0, 8);
+  const isCampaignPaused = current?.campaign?.status === 'paused';
+  const canDeclareOfflinePayment = offlinePaymentMethods.length > 0
+    && Number(current?.amountRemainingCents || 0) > 0
+    && !isCampaignPaused
+    && !['cancelled', 'paid', 'waived'].includes(current?.status);
   const payerLink = useMemo(() => {
     if (!current?.securePaymentToken) return null;
     const configuredWebUrl = String(process.env.WEB_APP_URL || process.env.FRONTEND_URL || '').trim().replace(/\/+$/g, '');
@@ -86,16 +156,24 @@ function MyLicense({ navigation, route }) {
     .filter((item) => item.value);
 
   const openCheckout = useCallback((provider) => {
+    if (isCampaignPaused) {
+      Alert.alert('Campagne en pause', 'Cette campagne est temporairement suspendue. Le paiement reprendra quand le club la rouvrira.');
+      return;
+    }
     checkoutMutation.mutate(provider, {
       onError: (error) => Alert.alert('Paiement indisponible', error?.message || 'Aucun lien de paiement configure.'),
       onSuccess: async (result) => {
         if (result?.checkoutUrl) {
           await LinksPlatform.openUrl(result.checkoutUrl);
-          navigation.navigate(RouteNames.LicenseCheckoutStatus, { assignmentId, provider });
+          navigation.navigate(RouteNames.LicenseCheckoutStatus, {
+            assignmentId,
+            paymentId: result?.payment?.documentId || result?.payment?.id,
+            provider,
+          });
         }
       },
     });
-  }, [assignmentId, checkoutMutation, navigation]);
+  }, [assignmentId, checkoutMutation, isCampaignPaused, navigation]);
 
   const sharePayerLink = useCallback(() => {
     if (!payerLink) {
@@ -109,6 +187,84 @@ function MyLicense({ navigation, route }) {
       Alert.alert('Partage indisponible', error?.message || 'Impossible de partager le lien depuis ce navigateur.');
     });
   }, [payerLink]);
+
+  const declareOfflinePayment = useCallback((method) => {
+    declareMutation.mutate(method, {
+      onSuccess: () => {
+        setDeclareModalVisible(false);
+        query.refetch();
+        if (routeAssignmentId) assignmentQuery.refetch();
+        Alert.alert('Declaration envoyee', 'Le club devra valider ce paiement.');
+      },
+    });
+  }, [assignmentQuery, declareMutation, query, routeAssignmentId]);
+
+  const refreshCurrent = useCallback(() => {
+    query.refetch();
+    if (routeAssignmentId) assignmentQuery.refetch();
+  }, [assignmentQuery, query, routeAssignmentId]);
+
+  const uploadDocument = useCallback(async (request) => {
+    if (!assignmentId) return;
+    try {
+      const picked = await MediaPlatform.pickDocument({ accept: '*/*', mode: 'open', type: ['*/*'] });
+      const file = Array.isArray(picked) ? picked[0] : picked;
+      if (!file) return;
+      documentMutation.mutate({
+        documentRequestId: request?.documentId || request?.id,
+        file,
+      }, {
+        onSuccess: () => {
+          refreshCurrent();
+          Alert.alert('Document envoye', 'Le club pourra maintenant verifier cette piece.');
+        },
+      });
+    } catch (error) {
+      if (isPickerCancelError(error)) return;
+      Alert.alert('Upload impossible', error?.message || 'Le document n a pas pu etre envoye.');
+    }
+  }, [assignmentId, documentMutation, refreshCurrent]);
+
+  const openUploadedDocument = useCallback(async (submission) => {
+    const url = resolveMediaUrl(submission?.file?.url || submission?.file?.formats?.thumbnail?.url || '');
+    if (!url) {
+      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattache a ce depot.');
+      return;
+    }
+    await LinksPlatform.openUrl(url);
+  }, []);
+
+  const generateReceiptForPayment = useCallback((paymentId) => {
+    receiptMutation.mutate(paymentId, {
+      onSuccess: () => {
+        refreshCurrent();
+        Alert.alert('Recu genere', 'Le recu est maintenant disponible dans ta cotisation.');
+      },
+    });
+  }, [receiptMutation, refreshCurrent]);
+
+  if (query.isLoading || assignmentQuery.isLoading) {
+    return (
+      <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
+        <LicenseEmptyState
+          description="On recupere tes cotisations disponibles."
+          title="Chargement"
+        />
+      </ScreenContainer>
+    );
+  }
+
+  if (query.isError || assignmentQuery.isError) {
+    return (
+      <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
+        <LicenseEmptyState
+          action={<Button onPress={() => { query.refetch(); if (routeAssignmentId) assignmentQuery.refetch(); }} title="Reessayer" variant="Secondary" />}
+          description="Impossible de charger ta cotisation pour le moment."
+          title="Cotisation indisponible"
+        />
+      </ScreenContainer>
+    );
+  }
 
   if (!current) {
     return (
@@ -155,16 +311,43 @@ function MyLicense({ navigation, route }) {
             ]}
           />
         </LicenseCard>
+        <LicenseSectionHeader title="Campagne" />
+        <LicenseCard variant="muted">
+          <View style={Spaces.gap[licenseSpacing.actionGap]}>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{current?.campaign?.name || 'Cotisation FoundClub'}</Text>
+            {current?.campaign?.description ? <Text style={[Fonts.p2, Fonts.neutral200]}>{current.campaign.description}</Text> : null}
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              Date limite:
+              {' '}
+              {current?.dueDate || current?.campaign?.dueDate || 'Non definie'}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              Club:
+              {' '}
+              {current?.club?.name || current?.campaign?.club?.name || 'Non precise'}
+            </Text>
+          </View>
+        </LicenseCard>
         <LicenseSectionHeader title="Echeancier" />
         <LicenseInstallmentList currency={currency} installments={current.installments || []} />
+        {isCampaignPaused ? (
+          <LicenseCard variant="muted">
+            <View style={Spaces.gap[licenseSpacing.actionGap]}>
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Campagne temporairement suspendue</Text>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>
+                Ta cotisation reste visible, mais le club a mis cette campagne en pause. Les paiements et declarations reprendront apres reouverture.
+              </Text>
+            </View>
+          </LicenseCard>
+        ) : null}
         <LicenseSectionHeader
           description="Les actions ci-dessous suivent les moyens de paiement actives par ton club."
           title="Payer ou regulariser"
         />
-        {paymentModes.stripe ? <Button isLoading={checkoutMutation.isPending} onPress={() => openCheckout('stripe')} title="Payer en ligne" /> : null}
-        {paymentModes.external_link || paymentModes.helloasso ? <Button onPress={() => openCheckout(paymentModes.helloasso ? 'helloasso' : 'external')} title="Ouvrir le lien club" variant="Secondary" /> : null}
-        <Button isLoading={declareMutation.isPending} onPress={() => declareMutation.mutate(undefined, { onSuccess: () => Alert.alert('Declaration envoyee', 'Le club devra valider ce paiement.') })} title="J'ai paye hors app" variant="Secondary" />
-        <Button onPress={sharePayerLink} title="Partager le lien payeur" variant="Secondary" />
+        {!isCampaignPaused && paymentModes.stripe ? <Button isLoading={checkoutMutation.isPending} onPress={() => openCheckout('stripe')} title="Payer en ligne" /> : null}
+        {!isCampaignPaused && (paymentModes.external_link || paymentModes.helloasso) ? <Button onPress={() => openCheckout(paymentModes.helloasso ? 'helloasso' : 'external')} title="Ouvrir le lien club" variant="Secondary" /> : null}
+        {!isCampaignPaused && canDeclareOfflinePayment ? <Button onPress={() => setDeclareModalVisible(true)} title="J'ai paye hors app" variant="Secondary" /> : null}
+        {!isCampaignPaused ? <Button onPress={sharePayerLink} title="Partager le lien payeur" variant="Secondary" /> : null}
         {offlineInstructions.length ? (
           <>
             <LicenseSectionHeader title="Instructions du club" />
@@ -176,6 +359,120 @@ function MyLicense({ navigation, route }) {
             ))}
           </>
         ) : null}
+        <LicenseSectionHeader title="Documents a fournir" />
+        {(current?.campaign?.documentRequests || []).length ? (
+          <View style={Spaces.gap[licenseSpacing.listGap]}>
+            {(current?.campaign?.documentRequests || []).map((request) => {
+              const requestKey = String(request?.documentId || request?.id || '');
+              const submission = documentSubmissionByRequestId.get(requestKey);
+              const submissionStatus = submission?.status || 'missing';
+              return (
+                <LicenseCard key={requestKey || request?.name} variant="muted">
+                  <View style={Spaces.gap[licenseSpacing.actionGap]}>
+                    <View style={{
+                      alignItems: 'flex-start',
+                      flexDirection: 'row',
+                      gap: licenseSpacing.actionGap,
+                      justifyContent: 'space-between',
+                    }}
+                    >
+                      <View style={[Spaces.gap[4], { flex: 1 }]}>
+                        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{request?.name || 'Document'}</Text>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>
+                          {request?.required === false ? 'Facultatif' : 'Obligatoire'}
+                          {request?.dueDate ? ` - Depot avant ${request.dueDate}` : ''}
+                        </Text>
+                      </View>
+                      <LicenseStatusChip status={submissionStatus} />
+                    </View>
+                    {request?.description ? <Text style={[Fonts.p3, Fonts.neutral200]}>{request.description}</Text> : null}
+                    {submission?.refusalReason ? <Text style={[Fonts.p3, { color: '#fda4af' }]}>{submission.refusalReason}</Text> : null}
+                    <Text style={[Fonts.p3, Fonts.neutral200]}>
+                      {submission ? `Dernier depot ${documentDate(submission) || '-'}` : 'Aucun fichier envoye'}
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
+                      <Button
+                        isLoading={documentMutation.isPending}
+                        onPress={() => uploadDocument(request)}
+                        style={{ flex: 1 }}
+                        title={submission ? 'Remplacer' : 'Deposer'}
+                      />
+                      {submission?.file?.url ? (
+                        <Button
+                          onPress={() => openUploadedDocument(submission)}
+                          style={{ flex: 1 }}
+                          title="Ouvrir"
+                          variant="Secondary"
+                        />
+                      ) : null}
+                    </View>
+                  </View>
+                </LicenseCard>
+              );
+            })}
+          </View>
+        ) : (
+          <LicenseEmptyState
+            description="Aucune piece supplementaire n est demandee pour cette campagne."
+            title="Aucun document"
+          />
+        )}
+        <LicenseSectionHeader title="Historique des paiements" />
+        {paymentHistory.length ? (
+          <View style={Spaces.gap[licenseSpacing.listGap]}>
+            {paymentHistory.map((payment) => (
+              <LicenseCard key={payment.documentId || payment.id} variant="muted">
+                <View style={Spaces.gap[licenseSpacing.actionGap]}>
+                  <LicenseMetricRow
+                    items={[
+                      { label: 'Statut', value: payment.status || '-' },
+                      { label: 'Montant', value: formatLicenseMoney(payment.amountCents, payment.currency || currency) },
+                      { label: 'Date', value: paymentDate(payment) || '-' },
+                    ]}
+                  />
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {paymentModeLabels[payment.method] || payment.method || 'Methode non precisee'}
+                    {payment?.note ? ` - ${payment.note}` : ''}
+                  </Text>
+                  {!payment?.receipt && ['confirmed', 'partially_refunded'].includes(payment?.status) ? (
+                    <Button
+                      isLoading={receiptMutation.isPending}
+                      onPress={() => generateReceiptForPayment(payment.documentId || payment.id)}
+                      title="Generer mon recu"
+                      variant="Secondary"
+                    />
+                  ) : null}
+                </View>
+              </LicenseCard>
+            ))}
+          </View>
+        ) : (
+          <LicenseEmptyState
+            description="Aucun paiement n est encore rattache a ta cotisation."
+            title="Pas d historique"
+          />
+        )}
+        <LicenseSectionHeader title="Recus" />
+        {receipts.length ? (
+          <View style={Spaces.gap[licenseSpacing.listGap]}>
+            {receipts.map((receipt) => (
+              <LicenseCard key={receipt.documentId || receipt.id} variant="muted">
+                <LicenseMetricRow
+                  items={[
+                    { label: 'Numero', value: receipt.receiptNumber || '-' },
+                    { label: 'Montant', value: formatLicenseMoney(receipt.amountCents, receipt.currency || currency) },
+                    { label: 'Emission', value: String(receipt.issuedAt || '').slice(0, 10) || '-' },
+                  ]}
+                />
+              </LicenseCard>
+            ))}
+          </View>
+        ) : (
+          <LicenseEmptyState
+            description="Les recus apparaitront ici apres validation d un paiement."
+            title="Pas encore de recu"
+          />
+        )}
         <LicenseSectionHeader title="Relances" />
         <Text style={[Fonts.p2, Fonts.neutral200]}>
           {current.reminderCount || (current.reminders || []).length || 0}
@@ -183,6 +480,14 @@ function MyLicense({ navigation, route }) {
           relance(s) recue(s).
         </Text>
       </ScrollView>
+      {declareModalVisible && canDeclareOfflinePayment ? (
+        <DeclarePaymentModal
+          isLoading={declareMutation.isPending}
+          methods={offlinePaymentMethods}
+          onClose={() => setDeclareModalVisible(false)}
+          onSelect={declareOfflinePayment}
+        />
+      ) : null}
     </ScreenContainer>
   );
 }

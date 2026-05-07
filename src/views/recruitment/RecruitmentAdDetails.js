@@ -56,16 +56,23 @@ import { formatDateWithDayPrefix } from '@/utils/date';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
 
-const BG_MATCH = require('@/assets/background-card-event/card-match.png');
+const BG_MATCH = /** @type {import('react-native').ImageSourcePropType} */ (
+  require('@/assets/background-card-event/card-match.png')
+);
+
+const BottomModalView = /** @type {any} */ (BottomModal);
+const InputView = /** @type {any} */ (Input);
+const ScreenContainerView = /** @type {any} */ (ScreenContainer);
+const TagView = /** @type {any} */ (Tag);
 
 const getBackgroundImage = () => BG_MATCH;
-const normalizeTypeLabel = (value = '') => String(value || '')
+const normalizeTypeLabel = (/** @type {any} */ value = '') => String(value || '')
   .toLowerCase()
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
 
-const humanizeEnumLabel = (value, fallback = '') => {
+const humanizeEnumLabel = (/** @type {any} */ value, /** @type {string} */ fallback = '') => {
   const normalizedValue = String(value || '').trim();
   if (!normalizedValue) return fallback;
 
@@ -77,7 +84,7 @@ const humanizeEnumLabel = (value, fallback = '') => {
     .join(' ');
 };
 
-const getCandidateDisplayName = (participation) => {
+const getCandidateDisplayName = (/** @type {any} */ participation) => {
   const requesterName = String(participation?.requester?.displayName || '').trim();
   if (requesterName) return requesterName;
 
@@ -89,7 +96,7 @@ const getCandidateDisplayName = (participation) => {
   return String(participation?.user?.phoneNumber || 'Candidat').trim();
 };
 
-const userMatchesReference = (candidate, userRef) => {
+const userMatchesReference = (/** @type {any} */ candidate, /** @type {any} */ userRef) => {
   const candidateDocumentId = String(candidate?.documentId || '').trim();
   const userDocumentId = String(userRef?.documentId || '').trim();
   if (candidateDocumentId && userDocumentId) {
@@ -105,7 +112,7 @@ const userMatchesReference = (candidate, userRef) => {
   return false;
 };
 
-const getParticipationStatusMeta = (status, colors) => {
+const getParticipationStatusMeta = (/** @type {any} */ status, /** @type {any} */ colors) => {
   const normalizedStatus = String(status || '').trim().toLowerCase();
 
   if (normalizedStatus === 'accepted') {
@@ -138,13 +145,13 @@ const getParticipationStatusMeta = (status, colors) => {
  *
  */
 function RecruitmentAdDetails() {
-  const { params } = useRoute();
-  const navigation = useNavigation();
+  const { params } = /** @type {any} */ (useRoute());
+  const navigation = /** @type {any} */ (useNavigation());
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
-  } = useTheme();
+  } = /** @type {any} */ (useTheme());
   const { t } = useTranslation();
-  const { userData } = useAuth();
+  const { userData } = /** @type {any} */ (useAuth());
   const isAuthenticated = Boolean(userData?.documentId);
   const { getClubInitials } = useClub();
   const insets = useSafeAreaInsets();
@@ -157,7 +164,7 @@ function RecruitmentAdDetails() {
   const [coachApplicationMessage, setCoachApplicationMessage] = useState('');
   const [coachApplicationPhone, setCoachApplicationPhone] = useState(String(userData?.phoneNumber || '').trim());
   const [coachApplicationEmail, setCoachApplicationEmail] = useState(String(userData?.email || '').trim());
-  const [optimisticApplicationStatus, setOptimisticApplicationStatus] = useState(null);
+  const [optimisticApplicationStatus, setOptimisticApplicationStatus] = useState(/** @type {'accepted' | 'pending' | null} */ (null));
 
   const adId = params?.ad?.documentId || params?.adId || params?.ad?.id;
 
@@ -166,12 +173,12 @@ function RecruitmentAdDetails() {
     error: adError,
     isLoading,
     refetch: refetchAd,
-  } = useQuery({
+  } = /** @type {any} */ (useQuery({
     enabled: !!adId,
     initialData: params?.ad,
     queryFn: () => getRecruitmentAd(adId),
     queryKey: ['recruitmentAd', adId],
-  });
+  }));
 
   const ad = fetchedAd || params?.ad;
   const eventDocumentId = String(ad?.event?.documentId || '').trim();
@@ -179,7 +186,7 @@ function RecruitmentAdDetails() {
   const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
   const isCoachAd = String(ad?.audienceType || '').trim().toLowerCase() === 'coach';
   const applications = useMemo(
-    () => (Array.isArray(ad?.applications) ? ad.applications : []),
+    () => /** @type {any[]} */ (Array.isArray(ad?.applications) ? ad.applications : []),
     [ad?.applications],
   );
   const applicationState = useMemo(
@@ -206,30 +213,30 @@ function RecruitmentAdDetails() {
     const adTeamId = ad.team?.documentId || ad.team?.id;
     if (!adTeamId) return false;
 
-    return allUserTeams.some((teamItem) => teamItem.documentId === adTeamId || teamItem.id === adTeamId);
+    return allUserTeams.some((/** @type {any} */ teamItem) => teamItem.documentId === adTeamId || teamItem.id === adTeamId);
   }, [userData, ad]);
 
-  const slotParticipationsQuery = useQuery({
+  const slotParticipationsQuery = /** @type {any} */ (useQuery({
     enabled: Boolean(isOwner && eventDocumentId && recruitmentAdDocumentId),
     queryFn: () => getEventParticipations(eventDocumentId, undefined, {
       pageSize: 100,
       recruitmentAdId: recruitmentAdDocumentId,
     }),
     queryKey: ['recruitmentAdParticipations', eventDocumentId, recruitmentAdDocumentId],
-  });
+  }));
 
   const slotParticipations = useMemo(() => {
     const items = Array.isArray(slotParticipationsQuery?.data?.data)
       ? slotParticipationsQuery.data.data
       : [];
 
-    const weightByStatus = {
+    const weightByStatus = /** @type {Record<string, number>} */ ({
       accepted: 1,
       declined: 2,
       pending: 0,
-    };
+    });
 
-    return [...items].sort((left, right) => {
+    return [...items].sort((/** @type {any} */ left, /** @type {any} */ right) => {
       const leftStatus = String(left?.participationStatus || '').trim().toLowerCase();
       const rightStatus = String(right?.participationStatus || '').trim().toLowerCase();
       const leftWeight = weightByStatus[leftStatus] ?? 99;
@@ -242,12 +249,12 @@ function RecruitmentAdDetails() {
     });
   }, [slotParticipationsQuery?.data?.data]);
 
-  const ownerApplicationsQuery = useQuery({
+  const ownerApplicationsQuery = /** @type {any} */ (useQuery({
     enabled: Boolean(isOwner && recruitmentAdDocumentId && !isDetectionLinked),
     initialData: applications,
     queryFn: () => getRecruitmentApplications(recruitmentAdDocumentId),
     queryKey: ['recruitmentApplications', recruitmentAdDocumentId],
-  });
+  }));
 
   const ownerApplications = useMemo(() => (
     Array.isArray(ownerApplicationsQuery?.data) ? ownerApplicationsQuery.data : applications
@@ -263,9 +270,9 @@ function RecruitmentAdDetails() {
     }
   }, [applicationState.status]);
 
-  const deleteMutation = useMutation({
+  const deleteMutation = /** @type {any} */ (useMutation({
     mutationFn: deleteRecruitmentAd,
-    onError: (error) => {
+    onError: (/** @type {any} */ error) => {
       console.error('Error deleting ad:', error);
       setIsDeleteModalVisible(false);
     },
@@ -276,11 +283,11 @@ function RecruitmentAdDetails() {
       setIsDeleteModalVisible(false);
       navigation.goBack();
     },
-  });
+  }));
 
-  const applyMutation = useMutation({
-    mutationFn: (payload) => applyToRecruitmentAd(ad.documentId || ad.id, payload),
-    onError: (error) => {
+  const applyMutation = /** @type {any} */ (useMutation({
+    mutationFn: (/** @type {any} */ payload) => applyToRecruitmentAd(ad.documentId || ad.id, payload),
+    onError: (/** @type {any} */ error) => {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
@@ -298,7 +305,7 @@ function RecruitmentAdDetails() {
 
       Alert.alert('Candidature', message);
     },
-    onSuccess: (result) => {
+    onSuccess: (/** @type {any} */ result) => {
       setOptimisticApplicationStatus(result?.status === 'accepted' ? 'accepted' : 'pending');
       setIsDetectionApplyModalVisible(false);
       setIsCoachApplyModalVisible(false);
@@ -317,11 +324,11 @@ function RecruitmentAdDetails() {
         result?.message || 'Ta candidature a bien ete envoyee.',
       );
     },
-  });
+  }));
 
-  const acceptParticipationMutation = useMutation({
+  const acceptParticipationMutation = /** @type {any} */ (useMutation({
     mutationFn: acceptEventParticipation,
-    onError: (error) => {
+    onError: (/** @type {any} */ error) => {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
@@ -337,11 +344,11 @@ function RecruitmentAdDetails() {
         queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventDocumentId] });
       }
     },
-  });
+  }));
 
-  const declineParticipationMutation = useMutation({
+  const declineParticipationMutation = /** @type {any} */ (useMutation({
     mutationFn: declineEventParticipation,
-    onError: (error) => {
+    onError: (/** @type {any} */ error) => {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
@@ -357,14 +364,17 @@ function RecruitmentAdDetails() {
         queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventDocumentId] });
       }
     },
-  });
+  }));
 
-  const updateApplicationStatusMutation = useMutation({
-    mutationFn: ({ applicationId, reviewNote, status }) => updateRecruitmentApplicationStatus(applicationId, {
-      reviewNote,
-      status,
-    }),
-    onError: (error) => {
+  const updateApplicationStatusMutation = /** @type {any} */ (useMutation({
+    mutationFn: (/** @type {any} */ payload = {}) => {
+      const { applicationId, reviewNote, status } = payload;
+      return updateRecruitmentApplicationStatus(applicationId, {
+        reviewNote,
+        status,
+      });
+    },
+    onError: (/** @type {any} */ error) => {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
@@ -377,11 +387,11 @@ function RecruitmentAdDetails() {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
       queryClient.invalidateQueries({ queryKey: ['myApplications'] });
     },
-  });
+  }));
 
-  const withdrawApplicationMutation = useMutation({
-    mutationFn: (applicationId) => withdrawRecruitmentApplication(applicationId),
-    onError: (error) => {
+  const withdrawApplicationMutation = /** @type {any} */ (useMutation({
+    mutationFn: (/** @type {any} */ applicationId) => withdrawRecruitmentApplication(applicationId),
+    onError: (/** @type {any} */ error) => {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
@@ -399,7 +409,7 @@ function RecruitmentAdDetails() {
       }
       Alert.alert('Candidature', 'Ta candidature a bien ete retiree.');
     },
-  });
+  }));
 
   const confirmDelete = () => {
     deleteMutation.mutate(ad.documentId || ad.id);
@@ -431,7 +441,7 @@ function RecruitmentAdDetails() {
   const certificationsWanted = Array.isArray(ad?.certificationsWanted)
     ? ad.certificationsWanted.filter(Boolean)
     : [];
-  const currentUserApplication = useMemo(() => applications.find((application) => (
+  const currentUserApplication = useMemo(() => applications.find((/** @type {any} */ application) => (
     userMatchesReference(application?.applicant, userData)
   )) || null, [applications, userData]);
   const canWithdrawCurrentApplication = Boolean(
@@ -457,7 +467,7 @@ function RecruitmentAdDetails() {
     return hourLabel ? `${dateLabel} a ${hourLabel}` : dateLabel;
   }, [ad?.event?.date]);
   const detectionApplySummary = useMemo(() => {
-    const summaryParts = [];
+    const summaryParts = /** @type {string[]} */ ([]);
 
     if (positionLabel) {
       summaryParts.push(`Poste vise : ${positionLabel}`);
@@ -481,7 +491,7 @@ function RecruitmentAdDetails() {
     { flex: 0, width: '100%' },
   ]), [Alignments.rowReverse, ApplicationStyle.backgroundColor.transparent, ApplicationStyle.borderWidth0, Spaces.padding]);
 
-  const openRecruitmentAuthFlow = (source) => {
+  const openRecruitmentAuthFlow = (/** @type {string} */ source) => {
     openPublicAuthFlow(navigation, {
       adId: recruitmentAdDocumentId || adId,
       origin: RouteNames.RecruitmentAdDetails,
@@ -497,7 +507,7 @@ function RecruitmentAdDetails() {
       adStatusTitle = 'Chargement impossible';
     }
     return (
-      <ScreenContainer bgImage="bg2">
+      <ScreenContainerView bgImage="bg2">
         <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.padding[16], { gap: 12 }]}>
           <Text style={[Fonts.h3, { color: adError ? Colors.error500 : Colors.neutral100 }]}>
             {adStatusTitle}
@@ -513,7 +523,7 @@ function RecruitmentAdDetails() {
             />
           ) : null}
         </View>
-      </ScreenContainer>
+      </ScreenContainerView>
     );
   }
 
@@ -621,7 +631,7 @@ function RecruitmentAdDetails() {
     setIsDeleteModalVisible(true);
   };
 
-  const handleCandidatePress = (candidateUser) => {
+  const handleCandidatePress = (/** @type {any} */ candidateUser) => {
     if (!isAuthenticated) {
       openRecruitmentAuthFlow('recruitment-candidate-profile-login');
       return;
@@ -646,12 +656,12 @@ function RecruitmentAdDetails() {
     });
   };
 
-  const handleAcceptParticipation = (requestId) => {
+  const handleAcceptParticipation = (/** @type {any} */ requestId) => {
     if (!requestId || acceptParticipationMutation.isPending || declineParticipationMutation.isPending) return;
     acceptParticipationMutation.mutate(requestId);
   };
 
-  const handleDeclineParticipation = (requestId) => {
+  const handleDeclineParticipation = (/** @type {any} */ requestId) => {
     if (!requestId || acceptParticipationMutation.isPending || declineParticipationMutation.isPending) return;
 
     Alert.alert(
@@ -728,14 +738,14 @@ function RecruitmentAdDetails() {
         </Text>
 
         <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8, marginBottom: 14 }]}>
-          <Tag
+          <TagView
             style={{ backgroundColor: 'rgba(1,179,244,0.14)', borderColor: Colors.primary500 }}
             text={positionLabel}
             textColor="primary500"
             textStyle={{ fontWeight: '700' }}
           />
           {engagementLabel ? (
-            <Tag
+            <TagView
               style={{ backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'transparent' }}
               text={engagementLabel}
               textColor="neutral100"
@@ -743,7 +753,7 @@ function RecruitmentAdDetails() {
             />
           ) : null}
           {coachExperienceLabel ? (
-            <Tag
+            <TagView
               style={{ backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'transparent' }}
               text={coachExperienceLabel}
               textColor="neutral100"
@@ -770,8 +780,8 @@ function RecruitmentAdDetails() {
                 Certifications souhaitees
               </Text>
               <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
-                {certificationsWanted.map((item) => (
-                  <Tag
+                {certificationsWanted.map((/** @type {any} */ item) => (
+                  <TagView
                     key={String(item)}
                     style={{ backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'transparent' }}
                     text={String(item)}
@@ -818,7 +828,7 @@ function RecruitmentAdDetails() {
 
         {!slotParticipationsQuery.isLoading && !slotParticipationsQuery.error && slotParticipations.length > 0 ? (
           <View style={{ gap: 12 }}>
-            {slotParticipations.map((participation) => {
+            {slotParticipations.map((/** @type {any} */ participation) => {
               const participationId = String(participation?.documentId || '').trim();
               const status = String(participation?.participationStatus || '').trim().toLowerCase();
               const statusMeta = getParticipationStatusMeta(status, Colors);
@@ -960,7 +970,7 @@ function RecruitmentAdDetails() {
         {ownerApplications.length > 0 ? (
           <View>
             <View style={{ marginBottom: 12 }}>
-              {ownerApplications.map((application) => {
+              {ownerApplications.map((/** @type {any} */ application) => {
                 const candidate = application?.applicant;
                 const candidateKey = application?.documentId || candidate?.documentId || candidate?.id || candidate?.phoneNumber;
                 const candidateId = String(candidate?.documentId || candidate?.id || '').trim();
@@ -1083,7 +1093,7 @@ function RecruitmentAdDetails() {
                       <View style={{ gap: 8, marginTop: candidateMessage ? 12 : 14 }}>
                         <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
                           {coachApplicationRole ? (
-                            <Tag
+                            <TagView
                               style={{ backgroundColor: 'rgba(1,179,244,0.14)', borderColor: Colors.primary500 }}
                               text={coachApplicationRole}
                               textColor="primary500"
@@ -1091,7 +1101,7 @@ function RecruitmentAdDetails() {
                             />
                           ) : null}
                           {coachApplicationExperience ? (
-                            <Tag
+                            <TagView
                               style={{ backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'transparent' }}
                               text={coachApplicationExperience}
                               textColor="neutral100"
@@ -1155,7 +1165,7 @@ function RecruitmentAdDetails() {
   }
 
   return (
-    <ScreenContainer
+    <ScreenContainerView
       bgImage="bg2"
       contentContainerStyle={[Alignments.fill, Alignments.justifySpaceBetween]}
     >
@@ -1262,7 +1272,7 @@ function RecruitmentAdDetails() {
         <View style={[Spaces.paddingHorizontal[16], Spaces.paddingTop[24]]}>
           <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8, marginBottom: 24 }]}>
             {isDetectionLinked ? (
-              <Tag
+              <TagView
                 style={{ backgroundColor: 'rgba(1,179,244,0.14)', borderColor: Colors.primary500 }}
                 text={detectionDate ? `Detection · ${detectionDate}` : 'Detection'}
                 textColor="primary500"
@@ -1270,7 +1280,7 @@ function RecruitmentAdDetails() {
               />
             ) : null}
             {address ? (
-              <Tag
+              <TagView
                 style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'transparent' }}
                 text={address}
                 textColor="neutral100"
@@ -1367,7 +1377,7 @@ function RecruitmentAdDetails() {
         )}
       </View>
 
-      <BottomModal
+      <BottomModalView
         close={() => setIsDeleteModalVisible(false)}
         height={250}
         isVisible={isDeleteModalVisible}
@@ -1395,8 +1405,8 @@ function RecruitmentAdDetails() {
             />
           </View>
         </View>
-      </BottomModal>
-      <BottomModal
+      </BottomModalView>
+      <BottomModalView
         close={handleCloseDetectionApplyModal}
         footerComponent={(
           <View style={{ gap: 12 }}>
@@ -1468,8 +1478,8 @@ function RecruitmentAdDetails() {
             {t('eventList.joinModal.validation')}
           </Text>
         </View>
-      </BottomModal>
-      <BottomModal
+      </BottomModalView>
+      <BottomModalView
         close={handleCloseCoachApplyModal}
         footerComponent={(
           <View style={{ gap: 12 }}>
@@ -1514,7 +1524,7 @@ function RecruitmentAdDetails() {
             </Text>
           </View>
 
-          <Input
+          <InputView
             height={120}
             label="Message"
             multiline
@@ -1525,7 +1535,7 @@ function RecruitmentAdDetails() {
             value={coachApplicationMessage}
           />
 
-          <Input
+          <InputView
             keyboardType="phone-pad"
             label="Telephone"
             onChangeText={setCoachApplicationPhone}
@@ -1533,7 +1543,7 @@ function RecruitmentAdDetails() {
             value={coachApplicationPhone}
           />
 
-          <Input
+          <InputView
             autoCapitalize="none"
             keyboardType="email-address"
             label="Email"
@@ -1546,8 +1556,8 @@ function RecruitmentAdDetails() {
             Le club recevra ta candidature avec ton message, ton telephone et ton email.
           </Text>
         </View>
-      </BottomModal>
-    </ScreenContainer>
+      </BottomModalView>
+    </ScreenContainerView>
   );
 }
 

@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
+import { getPlaceholderDataOption } from '@/services/queryOptions';
+
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import { getClubById, getClubs, getMultisportClubs } from './clubService';
@@ -22,7 +24,7 @@ export const useGetClubs = (params, options) => useInfiniteQuery({
     const { meta: { pagination } } = lastPage;
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },
-  placeholderData: options?.placeholderData ?? ((previousData) => previousData),
+  placeholderData: getPlaceholderDataOption(options),
   queryFn: ({ pageParam = 1 }) => getClubs({ ...params, page: pageParam }),
   queryKey: buildNormalizedQueryKey('clubs', params),
   refetchOnMount: options?.refetchOnMount ?? false,
@@ -40,7 +42,7 @@ export const useGetMultisportClubs = (params, options) => useInfiniteQuery({
     const { meta: { pagination } } = lastPage;
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },
-  placeholderData: options?.placeholderData ?? ((previousData) => previousData),
+  placeholderData: getPlaceholderDataOption(options),
   queryFn: ({ pageParam = 1 }) => getMultisportClubs({ ...params, page: pageParam }),
   queryKey: buildNormalizedQueryKey('multisport-clubs', params),
   refetchOnMount: options?.refetchOnMount ?? false,

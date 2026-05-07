@@ -77,6 +77,9 @@ const alignements = {
     alignSelf: positions.stretch,
   },
   // justify-content
+  justifyBetween: {
+    justifyContent: positions.between,
+  },
   justifyCenter: {
     justifyContent: positions.center,
   },
@@ -91,6 +94,11 @@ const alignements = {
   },
   justifyStart: {
     justifyContent: positions.start,
+  },
+  rowBetween: {
+    alignItems: positions.center,
+    flexDirection: directions.row,
+    justifyContent: positions.between,
   },
   spaceBetween: {
     justifyContent: positions.between,

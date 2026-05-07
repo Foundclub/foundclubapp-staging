@@ -7,13 +7,13 @@ import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
 
 /**
  * @param {'events' | 'clubs' | 'reservations'} scope
- * @returns {'calendar' | 'stadium'}
+ * @returns {keyof import('../../../theme/types').AllImages}
  */
 const getScopeListIcon = (scope) => {
   if (scope === 'clubs') {
-    return /** @type {import('../../../theme/types').AllImages} */ ('stadium');
+    return 'stadium';
   }
-  return /** @type {import('../../../theme/types').AllImages} */ ('calendar');
+  return 'calendar';
 };
 
 /**
@@ -75,7 +75,7 @@ function SearchMapFab({
             elevation: 8,
             height: 64,
             justifyContent: 'center',
-            shadowColor: '#000',
+            shadowColor: 'black',
             shadowOffset: {
               height: 6,
               width: 0,

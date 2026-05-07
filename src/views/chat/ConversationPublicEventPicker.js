@@ -49,6 +49,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
     data: publicEventsPages,
     isLoading: isLoadingPublicEvents,
   } = useGetEvents({
+    compact: true,
     excludeType: 'R\u00E9servation',
     pageSize: 20,
     sessionStatus: 'open',

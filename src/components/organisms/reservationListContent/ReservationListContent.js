@@ -147,6 +147,7 @@ function ReservationListContent({
     refetch,
   } = useGetReservations({ ...activeFilters, pageSize: 15 }, {
     enabled: screenActive && !isSmartSearchEnabled,
+    placeholderData: undefined,
   });
   const {
     data: smartPages,
@@ -172,6 +173,7 @@ function ReservationListContent({
     startDateBefore: activeFilters?.startDateBefore,
   }, {
     enabled: screenActive && isSmartSearchEnabled,
+    placeholderData: undefined,
   });
 
   const {

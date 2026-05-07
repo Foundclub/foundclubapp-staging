@@ -1,13 +1,15 @@
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Animated, Image, ImageBackground, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
@@ -33,6 +35,7 @@ import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
+import MatchmakingService from '@/services/league/MatchmakingService';
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import {
   assignSquadCaptain,
@@ -40,6 +43,8 @@ import {
   deleteLeagueTeam,
   getRanking,
   joinSquadViaInviteLink,
+  leaveSquad,
+  removeSquadMember,
   requestToJoinSquad,
   respondToSquadInvite,
   updateLeagueTeam,
@@ -190,10 +195,46 @@ const getLeagueResultMeta = (result, Colors) => {
   }
 };
 
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
 const isTruthyRouteParam = (value) => {
   if (value === true || value === 1) return true;
   const normalized = String(value || '').trim().toLowerCase();
   return normalized === 'true' || normalized === '1' || normalized === 'yes';
+};
+
+/**
+ * @param {any} status
+ * @returns {string}
+ */
+const resolveMatchmakingStatusState = (status) => String(
+  status?.legacyState
+  || status?.state
+  || status?.status
+  || '',
+).trim().toLowerCase();
+
+/**
+ * @param {any} status
+ * @returns {string}
+ */
+const resolveMatchmakingStatusMatchId = (status) => (
+  getEntityDocumentId(status?.match)
+  || status?.matchId
+  || ''
+);
+
+/**
+ * @param {any} status
+ * @returns {boolean}
+ */
+const shouldRevealMatchmakingStatus = (status) => {
+  const statusState = resolveMatchmakingStatusState(status);
+  return statusState === 'searching'
+    || statusState === 'matched'
+    || Boolean(resolveMatchmakingStatusMatchId(status));
 };
 
 /**
@@ -210,7 +251,14 @@ function SquadDetailsScreen({ navigation, route }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { userData: currentUser } = /** @type {{ userData: User | null }} */ (useAuth());
-  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useContext(BottomTabBarHeightContext);
+  const { floatingActionBottomOffset, sceneBottomInset: dockSceneBottomInset } = useBottomDockLayout();
+  
+  const bottomInset = insets.bottom || 0;
+  const hasTabBar = (tabBarHeight || 0) > 0;
+  const fixedButtonBottomOffset = hasTabBar ? floatingActionBottomOffset : Math.max(bottomInset + 16, 24);
+  const sceneBottomInset = hasTabBar ? dockSceneBottomInset : Math.max(bottomInset, 16);
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const currentUserId = getEntityDocumentId(currentUser);
   const { getClubInitials } = useClub();
@@ -314,7 +362,7 @@ function SquadDetailsScreen({ navigation, route }) {
   })();
   const isFixedJoinButtonDisabled = hasPendingRequest && !isShareInviteLink;
   const scrollBottomPadding = shouldShowFixedJoinButton
-    ? Math.max(sceneBottomInset, floatingActionBottomOffset + 92)
+    ? Math.max(sceneBottomInset, fixedButtonBottomOffset + 92)
     : sceneBottomInset;
 
   const {
@@ -1066,6 +1114,46 @@ function SquadDetailsScreen({ navigation, route }) {
     setIsSlotModalVisible(true);
   };
 
+  const navigateToLeagueMatchCenter = useCallback((params = {}) => {
+    let targetNavigation = navigation;
+    let leagueHomeNavigation = null;
+
+    while (targetNavigation) {
+      const routeNames = targetNavigation.getState?.()?.routeNames || [];
+      if (routeNames.includes(RouteNames.LeagueMatchTab)) {
+        targetNavigation.navigate(RouteNames.LeagueMatchTab, params);
+        return;
+      }
+      if (routeNames.includes(RouteNames.LeagueHomeTab)) {
+        leagueHomeNavigation = targetNavigation;
+      }
+      targetNavigation = targetNavigation.getParent?.();
+    }
+
+    (leagueHomeNavigation || navigation).navigate(RouteNames.LeagueHomeTab, {
+      params,
+      screen: RouteNames.LeagueMatchTab,
+    });
+  }, [navigation]);
+
+  const refreshMatchmakingStatusAfterCheckIn = useCallback(async () => {
+    if (!safeTeamId) return;
+
+    try {
+      const status = await MatchmakingService.getActiveRequest(safeTeamId);
+      if (!shouldRevealMatchmakingStatus(status)) return;
+
+      const matchId = resolveMatchmakingStatusMatchId(status);
+      navigateToLeagueMatchCenter({
+        activeSquadId: safeTeamId,
+        ...(matchId ? { matchId } : {}),
+        squadSwitchToken: String(Date.now()),
+      });
+    } catch {
+      // The check-in itself succeeded; Match Center will refresh again on focus.
+    }
+  }, [navigateToLeagueMatchCenter, safeTeamId]);
+
   const handleCheckIn = async (/** @type {LeagueSlot} */ slot) => {
     try {
       if (!currentUserId) return;
@@ -1092,11 +1180,15 @@ function SquadDetailsScreen({ navigation, route }) {
       }
       await updateTeamSlot(slotId, payload);
       await refetch(); // Refresh UI
+      if (!isCheckedIn) {
+        await refreshMatchmakingStatusAfterCheckIn();
+      }
     } catch (e) {
       console.error(e);
-      const backendCode = e?.response?.data?.code
-            || e?.response?.data?.error?.details?.code
-            || e?.response?.data?.error?.code;
+      const errorLike = /** @type {any} */ (e);
+      const backendCode = errorLike?.response?.data?.code
+            || errorLike?.response?.data?.error?.details?.code
+            || errorLike?.response?.data?.error?.code;
       if (backendCode === 'SQUAD_MEMBERSHIP_REQUIRED') {
         Alert.alert(
           t('squadDetails.actions.unavailableTitle', 'Action non disponible'),
@@ -1239,6 +1331,92 @@ function SquadDetailsScreen({ navigation, route }) {
     );
   }, [refreshLeagueTeamCachesAfterDelete, resetToLeagueHome, safeTeamId, t, team?.name]);
 
+  const handleLeaveSquad = useCallback(() => {
+    const teamDisplayName = String(team?.name || '').trim() || t('squadDetails.defaultName', 'Squad');
+    Alert.alert(
+      t('squadDetails.leave.title', 'Quitter la squad'),
+      t('squadDetails.leave.confirmationWithName', {
+        defaultValue: `Voulez-vous quitter la squad "${teamDisplayName}" ? Si vous etes le dernier membre, elle sera archivee apres 7 jours.`,
+        teamName: teamDisplayName,
+      }),
+      [
+        { style: 'cancel', text: t('common.cancel', 'Annuler') },
+        {
+          onPress: async () => {
+            try {
+              setIsUpdating(true);
+              await leaveSquad(safeTeamId);
+              await refreshLeagueTeamCachesAfterDelete();
+              resetToLeagueHome();
+            } catch (error) {
+              console.error(error);
+              Alert.alert(
+                t('common.error', 'Erreur'),
+                t('squadDetails.actions.leaveTeamError', 'Impossible de quitter la squad.'),
+              );
+            } finally {
+              setIsUpdating(false);
+            }
+          },
+          style: 'destructive',
+          text: t('squadDetails.actions.leaveTeam', 'Quitter la squad'),
+        },
+      ],
+    );
+  }, [refreshLeagueTeamCachesAfterDelete, resetToLeagueHome, safeTeamId, t, team?.name]);
+
+  const handleRemoveMember = useCallback((/** @type {User} */ player) => {
+    const targetId = getEntityDocumentId(player);
+    if (!targetId) return;
+
+    const playerName = getPlayerDisplayName(player);
+    Alert.alert(
+      t('squadDetails.roster.removeTitle', 'Retirer le joueur'),
+      t('squadDetails.roster.removeConfirmation', {
+        defaultValue: `Retirer ${playerName} de la squad ?`,
+        playerName,
+      }),
+      [
+        { style: 'cancel', text: t('common.cancel', 'Annuler') },
+        {
+          onPress: async () => {
+            try {
+              setIsUpdating(true);
+              await removeSquadMember(safeTeamId, targetId);
+              await Promise.allSettled([
+                refetch(),
+                queryClient.invalidateQueries({ queryKey: ['leagueTeam', safeTeamId] }),
+                queryClient.invalidateQueries({ queryKey: ['myLeagueTeam'] }),
+                queryClient.invalidateQueries({ queryKey: ['league-matches'] }),
+                queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] }),
+                currentUserId
+                  ? queryClient.invalidateQueries({ queryKey: ['myLeagueTeam', currentUserId] })
+                  : Promise.resolve(),
+              ]);
+            } catch (error) {
+              console.error(error);
+              Alert.alert(
+                t('common.error', 'Erreur'),
+                t('squadDetails.roster.removeError', 'Impossible de retirer ce joueur.'),
+              );
+            } finally {
+              setIsUpdating(false);
+            }
+          },
+          style: 'destructive',
+          text: t('squadDetails.roster.removeAction', 'Retirer'),
+        },
+      ],
+    );
+  }, [
+    currentUserId,
+    getPlayerDisplayName,
+    queryClient,
+    refetch,
+    safeTeamId,
+    t,
+  ]);
+
   const openRequests = useCallback(() => {
     navigation.navigate(RouteNames.SquadRequests, { teamId: safeTeamId });
   }, [navigation, safeTeamId]);
@@ -1262,24 +1440,29 @@ function SquadDetailsScreen({ navigation, route }) {
           text: t('squadDetails.actions.openRequests', 'Voir les demandes'),
         },
         {
+          onPress: handleLeaveSquad,
+          style: 'destructive',
+          text: t('squadDetails.actions.leaveTeam', 'Quitter la squad'),
+        },
+        {
           onPress: handleDeleteTeam,
           style: 'destructive',
           text: t('squadDetails.actions.deleteTeam', 'Supprimer la squad'),
         },
       ],
     );
-  }, [handleDeleteTeam, handleShare, navigation, openRequests, safeTeamId, t]);
+  }, [handleDeleteTeam, handleLeaveSquad, handleShare, navigation, openRequests, safeTeamId, t]);
 
   const dynamicSummaryLabel = useMemo(() => {
     if (isCaptain) return 'Demandes';
     if (team?.division) return 'Division';
-    return 'PTS';
+    return 'ELO matchmaking';
   }, [isCaptain, team?.division]);
 
   const dynamicSummaryValue = useMemo(() => {
     if (isCaptain) return `${pendingRequestsCount}`;
     if (team?.division) return `DIV ${team.division}`;
-    return `${team?.elo || 0} PTS`;
+    return `${team?.elo || 0}`;
   }, [isCaptain, pendingRequestsCount, team?.division, team?.elo]);
 
   const summaryCards = useMemo(() => [
@@ -1834,10 +2017,10 @@ function SquadDetailsScreen({ navigation, route }) {
                       paddingVertical: 7,
                     }}
                     >
-                      <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+                      <Text adjustsFontSizeToFit minimumFontScale={0.72} numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
                         {team.elo}
                         {' '}
-                        PTS
+                        ELO matchmaking
                       </Text>
                     </View>
                   ) : null}
@@ -2073,7 +2256,7 @@ function SquadDetailsScreen({ navigation, route }) {
                           </View>
                           {matchItem?.eloChange ? (
                             <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
-                              {`${matchItem.eloChange > 0 ? '+' : ''}${matchItem.eloChange} ELO`}
+                              {`${matchItem.eloChange > 0 ? '+' : ''}${matchItem.eloChange} ELO matchmaking`}
                             </Text>
                           ) : null}
                         </TouchableOpacity>
@@ -2560,6 +2743,11 @@ function SquadDetailsScreen({ navigation, route }) {
               const playerId = getEntityDocumentId(player);
               const playerIsCaptain = Boolean(playerId && captainIds.has(String(playerId)));
               const canAssignCaptain = Boolean(isCaptain && playerId && !playerIsCaptain);
+              const isCurrentUserPlayer = Boolean(
+                playerId && currentUserId && String(playerId) === String(currentUserId),
+              );
+              const canRemoveMember = Boolean(isCaptain && playerId && !isCurrentUserPlayer);
+              const canLeaveFromRoster = Boolean(isMember && isCurrentUserPlayer);
 
               return (
                 <View
@@ -2599,14 +2787,36 @@ function SquadDetailsScreen({ navigation, route }) {
                       </Text>
                     </View>
                   </View>
-                  {canAssignCaptain ? (
-                    <Button
-                      onPress={() => handleOpenCaptainAssignment(player)}
-                      size="sm"
-                      style={{ minWidth: 98 }}
-                      title={t('squadDetails.captains.assignButton', 'Nommer')}
-                      variant="Secondary"
-                    />
+                  {canAssignCaptain || canRemoveMember || canLeaveFromRoster ? (
+                    <View style={{ gap: 8, minWidth: 98 }}>
+                      {canAssignCaptain ? (
+                        <Button
+                          disabled={isUpdating}
+                          onPress={() => handleOpenCaptainAssignment(player)}
+                          size="sm"
+                          title={t('squadDetails.captains.assignButton', 'Nommer')}
+                          variant="Secondary"
+                        />
+                      ) : null}
+                      {canRemoveMember ? (
+                        <Button
+                          disabled={isUpdating}
+                          onPress={() => handleRemoveMember(player)}
+                          size="sm"
+                          title={t('squadDetails.roster.removeAction', 'Retirer')}
+                          variant="Secondary"
+                        />
+                      ) : null}
+                      {canLeaveFromRoster ? (
+                        <Button
+                          disabled={isUpdating}
+                          onPress={handleLeaveSquad}
+                          size="sm"
+                          title={t('squadDetails.actions.leaveTeam', 'Quitter')}
+                          variant="Secondary"
+                        />
+                      ) : null}
+                    </View>
                   ) : null}
                 </View>
               );
@@ -2622,7 +2832,7 @@ function SquadDetailsScreen({ navigation, route }) {
             borderColor: `${Colors.primary500}33`,
             borderRadius: 24,
             borderWidth: 1,
-            bottom: floatingActionBottomOffset,
+            bottom: fixedButtonBottomOffset,
             elevation: 12,
             left: 0,
             paddingHorizontal: 12,

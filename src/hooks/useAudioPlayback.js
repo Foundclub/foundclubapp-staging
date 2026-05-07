@@ -12,7 +12,7 @@ import { canLoadNitroSoundModule } from '@/utils/audio/nitroSoundRuntime';
 import { createLogger } from '@/utils/logger/logger';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
-const playbackLogger = createLogger('audio-playback');
+const playbackLogger = /** @type {any} */ (createLogger('audio-playback'));
 const isPlaybackDiagnosticsEnabled = __DEV__;
 
 /** @type {any | null | undefined} */
@@ -20,24 +20,24 @@ let cachedAudioModule;
 /** @type {{ ownerId: string; stop: null | (() => Promise<void>) }} */
 let activePlayback = { ownerId: '', stop: null };
 
-const safeRead = (resolver, context, fallback = null) => {
+const safeRead = (/** @type {() => any} */ resolver, /** @type {string} */ context, /** @type {any} */ fallback = null) => {
   try {
     return resolver();
   } catch (error) {
     if (context) {
-      playbackLogger.warn(context, { message: error?.message });
+      playbackLogger.warn(context, { message: /** @type {any} */ (error)?.message });
     }
     return fallback;
   }
 };
 
-const safeCall = (fn, thisArg, args, context, fallback = null) => {
+const safeCall = (/** @type {any} */ fn, /** @type {any} */ thisArg, /** @type {any} */ args, /** @type {string} */ context, /** @type {any} */ fallback = null) => {
   if (typeof fn !== 'function') return fallback;
   try {
     return fn.apply(thisArg, Array.isArray(args) ? args : []);
   } catch (error) {
     if (context) {
-      playbackLogger.warn(context, { message: error?.message });
+      playbackLogger.warn(context, { message: /** @type {any} */ (error)?.message });
     }
     return fallback;
   }
@@ -58,13 +58,13 @@ const getAudioModule = () => {
     // eslint-disable-next-line global-require
     cachedAudioModule = require('react-native-nitro-sound');
   } catch (error) {
-    playbackLogger.warn('Audio player module unavailable', { message: error?.message });
+    playbackLogger.warn('Audio player module unavailable', { message: /** @type {any} */ (error)?.message });
     cachedAudioModule = null;
   }
   return cachedAudioModule;
 };
 
-const hasPlayerMethods = (candidate) => {
+const hasPlayerMethods = (/** @type {any} */ candidate) => {
   if (!candidate) return false;
   const startPlayer = safeRead(
     () => candidate.startPlayer,
@@ -123,13 +123,13 @@ const resolvePlayerFactory = () => {
   return /** @type {null | (() => any)} */ (null);
 };
 
-const toMs = (value) => {
+const toMs = (/** @type {any} */ value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
   return Math.max(0, numeric);
 };
 
-const removePlaybackListeners = (player) => {
+const removePlaybackListeners = (/** @type {any} */ player) => {
   if (!player) return;
   safeCall(
     safeRead(() => player.removePlayBackListener, 'Audio player removePlayBackListener unavailable'),
@@ -145,7 +145,7 @@ const removePlaybackListeners = (player) => {
   );
 };
 
-const addPlaybackListener = (player, listener) => {
+const addPlaybackListener = (/** @type {any} */ player, /** @type {any} */ listener) => {
   if (!player || typeof listener !== 'function') return;
   safeCall(
     safeRead(() => player.addPlayBackListener, 'Audio player addPlayBackListener unavailable'),
@@ -155,7 +155,7 @@ const addPlaybackListener = (player, listener) => {
   );
 };
 
-const addPlaybackEndListener = (player, listener) => {
+const addPlaybackEndListener = (/** @type {any} */ player, /** @type {any} */ listener) => {
   if (!player || typeof listener !== 'function') return;
   safeCall(
     safeRead(() => player.addPlaybackEndListener, 'Audio player addPlaybackEndListener unavailable'),
@@ -165,7 +165,7 @@ const addPlaybackEndListener = (player, listener) => {
   );
 };
 
-const setPlayerSpeed = (player, speed) => {
+const setPlayerSpeed = (/** @type {any} */ player, /** @type {number} */ speed) => {
   if (!player) return;
   if (typeof player.setPlaybackSpeed === 'function') {
     player.setPlaybackSpeed(speed);
@@ -176,17 +176,17 @@ const setPlayerSpeed = (player, speed) => {
   }
 };
 
-const isHttpUrl = (value) => /^https?:\/\//i.test(String(value || '').trim());
+const isHttpUrl = (/** @type {any} */ value) => /^https?:\/\//i.test(String(value || '').trim());
 
-const stripFileScheme = (value) => String(value || '').replace(/^file:\/\//i, '');
+const stripFileScheme = (/** @type {any} */ value) => String(value || '').replace(/^file:\/\//i, '');
 
-const withFileScheme = (value) => {
+const withFileScheme = (/** @type {any} */ value) => {
   const normalized = String(value || '').trim();
   if (!normalized) return '';
   return normalized.startsWith('file://') ? normalized : `file://${normalized}`;
 };
 
-const hashString = (value) => {
+const hashString = (/** @type {any} */ value) => {
   const source = String(value || '');
   let hash = 0;
   for (let i = 0; i < source.length; i += 1) {
@@ -195,7 +195,7 @@ const hashString = (value) => {
   return String(Math.abs(hash));
 };
 
-const extractAudioFileExtension = (value) => {
+const extractAudioFileExtension = (/** @type {any} */ value) => {
   const rawValue = String(value || '').trim();
   if (!rawValue) return 'm4a';
 
@@ -215,12 +215,12 @@ const extractAudioFileExtension = (value) => {
   return match?.[1]?.toLowerCase() || 'm4a';
 };
 
-const buildPlaybackSourceCandidates = (rawSourceUrl) => {
+const buildPlaybackSourceCandidates = (/** @type {any} */ rawSourceUrl) => {
   const source = String(rawSourceUrl || '').trim();
   if (!source) return [];
 
-  const candidates = [];
-  const pushCandidate = (value) => {
+  const candidates = /** @type {string[]} */ ([]);
+  const pushCandidate = (/** @type {any} */ value) => {
     const normalized = String(value || '').trim();
     if (!normalized || candidates.includes(normalized)) return;
     candidates.push(normalized);
@@ -237,11 +237,11 @@ const buildPlaybackSourceCandidates = (rawSourceUrl) => {
   return candidates;
 };
 
-const waitFor = (delayMs) => new Promise((resolve) => {
-  setTimeout(resolve, Math.max(0, Number(delayMs) || 0));
+const waitFor = (/** @type {any} */ delayMs) => new Promise((resolve) => {
+  setTimeout(() => resolve(undefined), Math.max(0, Number(delayMs) || 0));
 });
 
-const formatDiagnosticMeta = (meta) => {
+const formatDiagnosticMeta = (/** @type {any} */ meta) => {
   if (!meta || typeof meta !== 'object') return '';
   try {
     const serialized = JSON.stringify(meta);
@@ -251,14 +251,14 @@ const formatDiagnosticMeta = (meta) => {
   }
 };
 
-const logPlaybackDiagnostic = (stage, meta = undefined) => {
+const logPlaybackDiagnostic = (/** @type {string} */ stage, /** @type {any} */ meta = undefined) => {
   if (!isPlaybackDiagnosticsEnabled) return;
   playbackLogger.warn(`[voice-diag] ${stage}${formatDiagnosticMeta(meta)}`);
 };
 
-const getPlaybackErrorCode = (error) => String(error?.message || error || '').trim().toUpperCase();
+const getPlaybackErrorCode = (/** @type {any} */ error) => String(error?.message || error || '').trim().toUpperCase();
 
-const shouldRetryRemoteAudioWithoutHeaders = (error, requestHeaders) => {
+const shouldRetryRemoteAudioWithoutHeaders = (/** @type {any} */ error, /** @type {any} */ requestHeaders) => {
   const hasHeaders = requestHeaders && Object.keys(requestHeaders).length > 0;
   if (!hasHeaders) return false;
 
@@ -272,7 +272,7 @@ const shouldRetryRemoteAudioWithoutHeaders = (error, requestHeaders) => {
   );
 };
 
-const toPlaybackErrorMessage = (error) => {
+const toPlaybackErrorMessage = (/** @type {any} */ error) => {
   const errorCode = getPlaybackErrorCode(error);
 
   if (errorCode === 'AUDIO_HTTP_401') return 'Audio refuse (401)';
@@ -290,7 +290,7 @@ const toPlaybackErrorMessage = (error) => {
   return 'Lecture audio indisponible';
 };
 
-const claimPlaybackSlot = async (ownerId, stopCurrentOwner) => {
+const claimPlaybackSlot = async (/** @type {string} */ ownerId, /** @type {() => Promise<void>} */ stopCurrentOwner) => {
   if (
     activePlayback.ownerId
     && activePlayback.ownerId !== ownerId
@@ -309,7 +309,7 @@ const claimPlaybackSlot = async (ownerId, stopCurrentOwner) => {
   };
 };
 
-const releasePlaybackSlot = (ownerId) => {
+const releasePlaybackSlot = (/** @type {string} */ ownerId) => {
   if (activePlayback.ownerId !== ownerId) return;
   activePlayback = { ownerId: '', stop: null };
 };
@@ -357,7 +357,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
   const normalizedSourceUrl = useMemo(() => resolveMediaUrl(sourceUrl), [sourceUrl]);
   const isPlayerAvailable = Boolean(playerFactory);
 
-  const safeSetState = useCallback((setter, value) => {
+  const safeSetState = useCallback((/** @type {(value: any) => void} */ setter, /** @type {any} */ value) => {
     if (!mountedRef.current) return;
     setter(value);
   }, []);
@@ -437,7 +437,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     const targetExtension = extractAudioFileExtension(rawSource);
     const safeHeaders = headers && typeof headers === 'object' ? headers : {};
 
-    const downloadRemoteSource = async (requestHeaders = {}) => {
+    const downloadRemoteSource = async (/** @type {Record<string, string>} */ requestHeaders = {}) => {
       const targetPath = `${cacheDir}/voice-playback-${Date.now()}-${hashString(`${rawSource}-${JSON.stringify(requestHeaders)}`)}.${targetExtension}`;
 
       logPlaybackDiagnostic('playback-download-start', {
@@ -517,7 +517,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     return withFileScheme(downloadedPath);
   }, [cleanupDownloadedSource, headers, normalizedSourceUrl]);
 
-  const runPlayerTeardown = useCallback(async (options = {}) => {
+  const runPlayerTeardown = useCallback(async (/** @type {any} */ options = {}) => {
     const {
       cleanupSource = false,
       disposePlayer = false,
@@ -561,7 +561,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     }
   }, [cleanupDownloadedSource, safeSetState]);
 
-  const enqueuePlayerTeardown = useCallback(async (options = {}) => {
+  const enqueuePlayerTeardown = useCallback(async (/** @type {any} */ options = {}) => {
     const scheduledTeardown = teardownChainRef.current
       .catch(() => {})
       .then(() => runPlayerTeardown(options));
@@ -570,7 +570,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     await scheduledTeardown;
   }, [runPlayerTeardown]);
 
-  const stopPlayback = useCallback(async (options = {}) => {
+  const stopPlayback = useCallback(async (/** @type {any} */ options = {}) => {
     await enqueuePlayerTeardown(options);
   }, [enqueuePlayerTeardown]);
 
@@ -591,7 +591,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
       safeSetState(setLastError, '');
     } catch (error) {
       playbackLogger.warn('Failed to open external audio URL', {
-        message: error?.message,
+        message: /** @type {any} */ (error)?.message,
         sourceUrl: rawSource,
       });
       safeSetState(setLastError, 'Lecture audio indisponible');
@@ -679,7 +679,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
       removePlaybackListeners(player);
       let hasLoggedProgress = false;
-      addPlaybackListener(player, (event) => {
+      addPlaybackListener(player, (/** @type {any} */ event) => {
         const nextPosition = toMs(event?.currentPosition ?? event?.position ?? event?.current_position);
         const nextDuration = toMs(event?.duration ?? event?.durationMs ?? event?.duration_ms);
         playbackSessionRef.current = {
@@ -730,12 +730,12 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
       });
     } catch (error) {
       playbackLogger.warn('Failed to start playback', {
-        message: error?.message,
+        message: /** @type {any} */ (error)?.message,
         normalizedSourceUrl: rawSource,
       });
       logPlaybackDiagnostic('playback-start-failed', {
         errorCode: getPlaybackErrorCode(error),
-        message: error?.message,
+        message: /** @type {any} */ (error)?.message,
         normalizedSourceUrl: rawSource,
       });
       safeSetState(setLastError, toPlaybackErrorMessage(error));
@@ -797,7 +797,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
       await startPlayback();
     } catch (error) {
-      playbackLogger.warn('Failed to toggle playback', { message: error?.message });
+      playbackLogger.warn('Failed to toggle playback', { message: /** @type {any} */ (error)?.message });
       safeSetState(setLastError, 'Lecture audio indisponible');
       await stopPlayback();
     } finally {
@@ -819,7 +819,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
   const cycleSpeed = useCallback(() => {
     const speeds = [1, 1.5, 2];
-    const currentIndex = speeds.findIndex((value) => value === speed);
+    const currentIndex = speeds.findIndex((/** @type {number} */ value) => value === speed);
     const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
 
     safeSetState(setSpeed, nextSpeed);

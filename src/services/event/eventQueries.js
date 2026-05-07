@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
+import { getPlaceholderDataOption } from '@/services/queryOptions';
+
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import {
@@ -16,14 +18,14 @@ const EVENT_ATTENDANCE_STALE_MS = 15_000;
 
 /**
  * @param {Record<string, any> | undefined} params
- * @returns {[string, Record<string, any>]}
+ * @returns {any[]}
  */
 export const getEventsQueryKey = (params) => buildNormalizedQueryKey('events', params || {});
 
 /**
  * React Query hook to fetch event types
  * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
- * @returns {import('@tanstack/react-query').UseQueryResult<FCEventType[]>}
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[]>}
  */
 export const useGetEventTypes = (options = {}) => useQuery({
   queryFn: () => getEventTypes(),
@@ -35,7 +37,7 @@ export const useGetEventTypes = (options = {}) => useQuery({
  * React Query hook to fetch an event
  * @param {string} documentId - The event ID
  * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
- * @returns {import('@tanstack/react-query').UseQueryResult<FCEvent>}
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>}
  */
 export const useGetEvent = (documentId, options = {}) => useQuery({
   enabled: !!documentId,
@@ -100,10 +102,13 @@ export const useGetEventConvocation = (eventId, teamId, options = {}) => useQuer
  *   clubId?: string;
  *   name?: string;
  *   type?: string;
+ *   excludeType?: string;
+ *   myTeams?: boolean | string[];
+ *   sort?: string;
  * }} [params]
  * @param {any} [options]
  * @returns {import('@tanstack/react-query').UseInfiniteQueryResult<{
- * pages: { data: FCEvent[];
+ * pages: { data: any[];
  * meta: { pagination: { page: number; pageCount: number; total: number } } }[] }>}
  */
 export const useGetEvents = (params, options) => useInfiniteQuery({
@@ -112,8 +117,8 @@ export const useGetEvents = (params, options) => useInfiniteQuery({
     const { meta: { pagination } } = lastPage;
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },
-  placeholderData: options?.placeholderData ?? ((previousData) => previousData),
-  queryFn: ({ pageParam = 1 }) => getEvents({ ...params, page: pageParam }),
+  placeholderData: getPlaceholderDataOption(options),
+  queryFn: ({ pageParam = 1 }) => getEvents(/** @type {any} */ ({ ...params, page: pageParam })),
   queryKey: getEventsQueryKey(params),
   refetchOnMount: options?.refetchOnMount ?? false,
   staleTime: 30 * 1000,

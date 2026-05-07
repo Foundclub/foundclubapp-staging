@@ -37,6 +37,10 @@ import {
   submitLeagueMatchStats,
 } from '@/services/matchStats/matchStatsService';
 
+/**
+ * @typedef {Record<string, any>} MatchStatsLine
+ */
+
 const FOOTBALL_FIELDS = [
   { key: 'goals', label: 'Buts' },
   { key: 'assists', label: 'Passes D' },
@@ -50,50 +54,50 @@ const BASKETBALL_FIELDS = [
   { key: 'threePointsMade', label: '3 pts' },
 ];
 
-const normalizeSport = (value) => {
+const normalizeSport = (/** @type {any} */ value) => {
   const raw = String(value || '').toLowerCase();
   if (raw.includes('basket')) return 'basketball';
   return 'football';
 };
 
-const getSportLabel = (sport) => (normalizeSport(sport) === 'basketball' ? 'Basketball' : 'Football');
+const getSportLabel = (/** @type {any} */ sport) => (normalizeSport(sport) === 'basketball' ? 'Basketball' : 'Football');
 
-const getFieldConfig = (sport) => (normalizeSport(sport) === 'basketball'
+const getFieldConfig = (/** @type {any} */ sport) => (normalizeSport(sport) === 'basketball'
   ? BASKETBALL_FIELDS
   : FOOTBALL_FIELDS);
 
-const sanitizeNumericInput = (value) => String(value || '').replace(/[^\d]/g, '');
+const sanitizeNumericInput = (/** @type {any} */ value) => String(value || '').replace(/[^\d]/g, '');
 
-const shiftNumericStringValue = (value, delta, max = 999) => {
+const shiftNumericStringValue = (/** @type {any} */ value, /** @type {number} */ delta, max = 999) => {
   const parsed = Number.parseInt(String(value || '0'), 10) || 0;
   const nextValue = Math.max(0, Math.min(max, parsed + delta));
   return String(nextValue);
 };
 
-const getLineKey = (line) => (
+const getLineKey = (/** @type {any} */ line) => (
   line?.userDocumentId
   || line?.documentId
   || (line?.manualPlayerName ? `manual:${line.manualPlayerName}` : null)
   || (line?.key ? String(line.key) : null)
 );
 
-const buildInitialLines = (players, report, sport) => {
+const buildInitialLines = (/** @type {any[]} */ players, /** @type {any} */ report, /** @type {any} */ sport) => {
   const fields = getFieldConfig(sport);
   const existingLines = Array.isArray(report?.playerLines) ? report.playerLines : [];
-  const existingMap = new Map(existingLines.map((line) => [getLineKey(line), line]));
+  const existingMap = new Map(existingLines.map((/** @type {any} */ line) => [getLineKey(line), line]));
 
-  return (Array.isArray(players) ? players : []).map((player) => {
+  return (Array.isArray(players) ? players : []).map((/** @type {any} */ player) => {
     const playerKey = getLineKey(player);
     const existing = existingMap.get(playerKey) || null;
     const suggestedPayload = player?.suggestedStats?.sportPayload || {};
     const payload = existing?.sportPayload || suggestedPayload;
-    const baseLine = {
+    const baseLine = /** @type {MatchStatsLine} */ ({
       key: playerKey || `player:${Math.random().toString(36).slice(2)}`,
       label: player?.label || [player?.firstname, player?.lastname].filter(Boolean).join(' ').trim() || player?.manualPlayerName || 'Joueur',
       manualPlayerName: player?.isManual ? (player?.label || player?.manualPlayerName || '') : (existing?.manualPlayerName || null),
       minutesPlayed: String(existing?.minutesPlayed ?? player?.suggestedStats?.minutesPlayed ?? 0),
       userDocumentId: player?.documentId || existing?.userDocumentId || null,
-    };
+    });
 
     fields.forEach((field) => {
       baseLine[field.key] = String(payload?.[field.key] ?? 0);
@@ -107,12 +111,12 @@ const buildInitialLines = (players, report, sport) => {
   });
 };
 
-const serializeLine = (line, sport) => {
-  const serialized = {
+const serializeLine = (/** @type {MatchStatsLine} */ line, /** @type {any} */ sport) => {
+  const serialized = /** @type {MatchStatsLine} */ ({
     manualPlayerName: line?.manualPlayerName || undefined,
     minutesPlayed: Number.parseInt(String(line?.minutesPlayed || '0'), 10) || 0,
     userDocumentId: line?.userDocumentId || undefined,
-  };
+  });
 
   getFieldConfig(sport).forEach((field) => {
     serialized[field.key] = Number.parseInt(String(line?.[field.key] || '0'), 10) || 0;
@@ -125,16 +129,16 @@ const serializeLine = (line, sport) => {
   return serialized;
 };
 
-const buildInitialCoachReviews = (players, report) => {
+const buildInitialCoachReviews = (/** @type {any[]} */ players, /** @type {any} */ report) => {
   const existingReviews = Array.isArray(report?.coachPlayerReviews) ? report.coachPlayerReviews : [];
   const existingReviewMap = new Map(
-    existingReviews.map((review) => [
+    existingReviews.map((/** @type {any} */ review) => [
       review?.userDocumentId || review?.manualPlayerName || review?.label,
       review,
     ]),
   );
 
-  return (Array.isArray(players) ? players : []).map((player) => {
+  return (Array.isArray(players) ? players : []).map((/** @type {any} */ player) => {
     const reviewKey = player?.documentId || player?.manualPlayerName || player?.label;
     const existing = existingReviewMap.get(reviewKey) || null;
     return {
@@ -142,7 +146,7 @@ const buildInitialCoachReviews = (players, report) => {
       key: reviewKey,
       label: player?.label || 'Joueur',
       playerResponse: Array.isArray(report?.playerResponses)
-        ? report.playerResponses.find((entry) => entry?.userDocumentId === player?.documentId) || null
+        ? report.playerResponses.find((/** @type {any} */ entry) => entry?.userDocumentId === player?.documentId) || null
         : null,
       rating: existing?.rating ?? null,
       userDocumentId: player?.documentId || null,
@@ -150,7 +154,7 @@ const buildInitialCoachReviews = (players, report) => {
   });
 };
 
-const serializeCoachReview = (review) => {
+const serializeCoachReview = (/** @type {any} */ review) => {
   if (!review?.comment && (review?.rating === null || review?.rating === undefined)) return null;
   return {
     comment: String(review?.comment || '').trim() || null,
@@ -159,7 +163,7 @@ const serializeCoachReview = (review) => {
   };
 };
 
-const isLineCompleted = (line, sport) => {
+const isLineCompleted = (/** @type {MatchStatsLine} */ line, /** @type {any} */ sport) => {
   if ((Number.parseInt(String(line?.minutesPlayed || '0'), 10) || 0) > 0) {
     return true;
   }
@@ -167,14 +171,14 @@ const isLineCompleted = (line, sport) => {
   return getFieldConfig(sport).some((field) => (Number.parseInt(String(line?.[field.key] || '0'), 10) || 0) > 0);
 };
 
-const buildScoreSummary = (score) => {
+const buildScoreSummary = (/** @type {any} */ score) => {
   if (score?.scoreFor === null || score?.scoreAgainst === null || score?.scoreFor === undefined || score?.scoreAgainst === undefined) {
     return 'Score a completer';
   }
   return `${score.scoreFor} - ${score.scoreAgainst}`;
 };
 
-const chunkFields = (fields, size = 2) => {
+const chunkFields = (/** @type {any[]} */ fields, size = 2) => {
   const rows = [];
   for (let index = 0; index < fields.length; index += size) {
     rows.push(fields.slice(index, index + size));
@@ -182,9 +186,9 @@ const chunkFields = (fields, size = 2) => {
   return rows;
 };
 
-const getNumericStatValue = (value) => Number.parseInt(String(value || '0'), 10) || 0;
+const getNumericStatValue = (/** @type {any} */ value) => Number.parseInt(String(value || '0'), 10) || 0;
 
-const getNullableNumericStatValue = (value) => {
+const getNullableNumericStatValue = (/** @type {any} */ value) => {
   if (value === null || value === undefined) return null;
   const raw = String(value).trim();
   if (!raw) return null;
@@ -193,27 +197,31 @@ const getNullableNumericStatValue = (value) => {
   return Math.max(0, parsed);
 };
 
-const clampNumericInput = (value, max = 999) => {
+const clampNumericInput = (/** @type {any} */ value, max = 999) => {
   const sanitized = sanitizeNumericInput(value);
   if (!sanitized) return '';
   const parsed = Number.parseInt(sanitized, 10) || 0;
   return String(Math.max(0, Math.min(max, parsed)));
 };
 
-const getApiErrorMessage = (error, fallbackMessage) => (
+const getApiErrorMessage = (/** @type {any} */ error, /** @type {string} */ fallbackMessage) => (
   error?.response?.data?.error?.message
   || error?.response?.data?.message
   || error?.message
   || fallbackMessage
 );
 
-const getScoreSourceLabel = (score) => {
+const getScoreSourceLabel = (/** @type {any} */ score) => {
   if (score?.source === 'league_validated') return 'Score ligue valide';
   if (score?.source === 'external_sync') return 'Score officiel synchronise';
   if (score?.source === 'manual') return 'Score saisi dans FoundClub';
   return 'Score en attente';
 };
 
+/**
+ * @param {{ isFinalized?: boolean; isReviewRequired?: boolean; isWaitingOfficial?: boolean }} status
+ * @param {Record<string, any>} Colors
+ */
 const getReportStatusMeta = ({ isFinalized, isReviewRequired, isWaitingOfficial }, Colors) => {
   if (isReviewRequired) {
     return {
@@ -250,6 +258,14 @@ const getReportStatusMeta = ({ isFinalized, isReviewRequired, isWaitingOfficial 
   };
 };
 
+/**
+ * @param {{
+ *   playerLines?: MatchStatsLine[];
+ *   scoreAgainst?: any;
+ *   scoreFor?: any;
+ *   sport?: any;
+ * }} params
+ */
 const buildMatchStatsConsistencyIssues = ({
   playerLines,
   scoreAgainst,
@@ -266,11 +282,11 @@ const buildMatchStatsConsistencyIssues = ({
 
   if (normalizedSport === 'basketball') {
     const totalPoints = lines.reduce(
-      (accumulator, line) => accumulator + getNumericStatValue(line?.points),
+      (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.points),
       0,
     );
     const totalThreePointPoints = lines.reduce(
-      (accumulator, line) => accumulator + (getNumericStatValue(line?.threePointsMade) * 3),
+      (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + (getNumericStatValue(line?.threePointsMade) * 3),
       0,
     );
 
@@ -282,7 +298,7 @@ const buildMatchStatsConsistencyIssues = ({
       issues.push('Les tirs a 3 points saisis depassent le total des points marques.');
     }
 
-    const invalidThreePointLine = lines.find((line) => (
+    const invalidThreePointLine = lines.find((/** @type {MatchStatsLine} */ line) => (
       (getNumericStatValue(line?.threePointsMade) * 3) > getNumericStatValue(line?.points)
     ));
     if (invalidThreePointLine) {
@@ -293,11 +309,11 @@ const buildMatchStatsConsistencyIssues = ({
   }
 
   const totalGoals = lines.reduce(
-    (accumulator, line) => accumulator + getNumericStatValue(line?.goals),
+    (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.goals),
     0,
   );
   const totalAssists = lines.reduce(
-    (accumulator, line) => accumulator + getNumericStatValue(line?.assists),
+    (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.assists),
     0,
   );
 
@@ -310,19 +326,19 @@ const buildMatchStatsConsistencyIssues = ({
   }
 
   if (resolvedScoreAgainst !== null) {
-    const invalidConcededLine = lines.find((line) => (
+    const invalidConcededLine = lines.find((/** @type {MatchStatsLine} */ line) => (
       getNumericStatValue(line?.goalsConceded) > resolvedScoreAgainst
     ));
     if (invalidConcededLine) {
       issues.push(`Les buts encaisses de ${invalidConcededLine?.label || 'ce joueur'} depassent le score adverse (${resolvedScoreAgainst}).`);
     }
 
-    if (resolvedScoreAgainst > 0 && lines.some((line) => Boolean(line?.cleanSheet))) {
+    if (resolvedScoreAgainst > 0 && lines.some((/** @type {MatchStatsLine} */ line) => Boolean(line?.cleanSheet))) {
       issues.push('Le clean sheet n est possible que si le score adverse est a 0.');
     }
   }
 
-  const invalidCleanSheetLine = lines.find((line) => (
+  const invalidCleanSheetLine = lines.find((/** @type {MatchStatsLine} */ line) => (
     Boolean(line?.cleanSheet) && getNumericStatValue(line?.goalsConceded) > 0
   ));
   if (invalidCleanSheetLine) {
@@ -333,15 +349,13 @@ const buildMatchStatsConsistencyIssues = ({
 };
 
 /**
- *
- * @param root0
- * @param root0.navigation
- * @param root0.route
+ * @param {{ navigation: any; route: any }} props
  */
 function MatchStatsEditor({ navigation, route }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const SpacesAny = /** @type {any} */ (Spaces);
   const { height, width } = useWindowDimensions();
   const { sceneBottomInset } = useBottomDockLayout();
   const queryClient = useQueryClient();
@@ -350,7 +364,7 @@ function MatchStatsEditor({ navigation, route }) {
   const matchId = route?.params?.matchId || null;
   const requestedTeamId = route?.params?.teamId || null;
   const initialTitle = route?.params?.title || 'Stats du match';
-  const hydratedReportKeyRef = useRef(null);
+  const hydratedReportKeyRef = useRef(/** @type {string | null} */ (null));
 
   const eventStatsQuery = useGetEventMatchStats(eventId || '', requestedTeamId || undefined, {
     enabled: Boolean(sourceType === 'event' && eventId),
@@ -361,7 +375,7 @@ function MatchStatsEditor({ navigation, route }) {
   });
 
   const statsQuery = sourceType === 'event' ? eventStatsQuery : leagueStatsQuery;
-  const statsPayload = statsQuery.data || null;
+  const statsPayload = /** @type {any} */ (statsQuery.data || null);
   const sport = normalizeSport(statsPayload?.sport || route?.params?.sport || 'football');
   const isScoreLocked = Boolean(statsPayload?.score?.locked);
   const isWaitingOfficial = Boolean(statsPayload?.score?.waitingOfficial);
@@ -396,10 +410,10 @@ function MatchStatsEditor({ navigation, route }) {
 
   const [scoreFor, setScoreFor] = useState('');
   const [scoreAgainst, setScoreAgainst] = useState('');
-  const [playerLines, setPlayerLines] = useState([]);
-  const [collectiveRating, setCollectiveRating] = useState(null);
+  const [playerLines, setPlayerLines] = useState(/** @type {MatchStatsLine[]} */ ([]));
+  const [collectiveRating, setCollectiveRating] = useState(/** @type {number | null} */ (null));
   const [collectiveComment, setCollectiveComment] = useState('');
-  const [coachReviews, setCoachReviews] = useState([]);
+  const [coachReviews, setCoachReviews] = useState(/** @type {any[]} */ ([]));
 
   useEffect(() => {
     const reportKey = [
@@ -590,22 +604,22 @@ function MatchStatsEditor({ navigation, route }) {
     },
   });
 
-  const updateLineValue = useCallback((lineKey, field, value) => {
+  const updateLineValue = useCallback((/** @type {string} */ lineKey, /** @type {string} */ field, /** @type {any} */ value) => {
     setPlayerLines((current) => current.map((line) => (line.key === lineKey
       ? { ...line, [field]: value }
       : line)));
   }, []);
 
-  const updateCoachReview = useCallback((reviewKey, field, value) => {
+  const updateCoachReview = useCallback((/** @type {string} */ reviewKey, /** @type {string} */ field, /** @type {any} */ value) => {
     setCoachReviews((current) => current.map((review) => (review.key === reviewKey
       ? { ...review, [field]: value }
       : review)));
   }, []);
 
-  const getLineFieldMaxValue = useCallback((currentLines, lineKey, field) => {
+  const getLineFieldMaxValue = useCallback((/** @type {MatchStatsLine[]} */ currentLines, /** @type {string} */ lineKey, /** @type {string} */ field) => {
     const lines = Array.isArray(currentLines) ? currentLines : [];
-    const currentLine = lines.find((line) => line.key === lineKey) || null;
-    const otherLines = lines.filter((line) => line.key !== lineKey);
+    const currentLine = lines.find((/** @type {MatchStatsLine} */ line) => line.key === lineKey) || null;
+    const otherLines = lines.filter((/** @type {MatchStatsLine} */ line) => line.key !== lineKey);
     const resolvedScoreFor = getNullableNumericStatValue(scoreFor);
     const resolvedScoreAgainst = getNullableNumericStatValue(scoreAgainst);
 
@@ -613,7 +627,7 @@ function MatchStatsEditor({ navigation, route }) {
       if (field === 'points') {
         if (resolvedScoreFor === null) return 999;
         const otherPoints = otherLines.reduce(
-          (accumulator, line) => accumulator + getNumericStatValue(line?.points),
+          (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.points),
           0,
         );
         return Math.max(0, resolvedScoreFor - otherPoints);
@@ -625,7 +639,7 @@ function MatchStatsEditor({ navigation, route }) {
           return maxByLinePoints;
         }
         const otherThreePointPoints = otherLines.reduce(
-          (accumulator, line) => accumulator + (getNumericStatValue(line?.threePointsMade) * 3),
+          (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + (getNumericStatValue(line?.threePointsMade) * 3),
           0,
         );
         const maxByScore = Math.floor(Math.max(0, resolvedScoreFor - otherThreePointPoints) / 3);
@@ -638,7 +652,7 @@ function MatchStatsEditor({ navigation, route }) {
     if (field === 'goals') {
       if (resolvedScoreFor === null) return 999;
       const otherGoals = otherLines.reduce(
-        (accumulator, line) => accumulator + getNumericStatValue(line?.goals),
+        (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.goals),
         0,
       );
       return Math.max(0, resolvedScoreFor - otherGoals);
@@ -646,11 +660,11 @@ function MatchStatsEditor({ navigation, route }) {
 
     if (field === 'assists') {
       const totalGoals = lines.reduce(
-        (accumulator, line) => accumulator + getNumericStatValue(line?.goals),
+        (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.goals),
         0,
       );
       const assistsWithoutCurrent = otherLines.reduce(
-        (accumulator, line) => accumulator + getNumericStatValue(line?.assists),
+        (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.assists),
         0,
       );
       const maxByGoals = Math.max(0, totalGoals - assistsWithoutCurrent);
@@ -666,7 +680,7 @@ function MatchStatsEditor({ navigation, route }) {
     return 999;
   }, [scoreAgainst, scoreFor, sport]);
 
-  const updateLineNumericValue = useCallback((lineKey, field, value) => {
+  const updateLineNumericValue = useCallback((/** @type {string} */ lineKey, /** @type {string} */ field, /** @type {any} */ value) => {
     setPlayerLines((current) => current.map((line) => {
       if (line.key !== lineKey) return line;
       const maxValue = getLineFieldMaxValue(current, lineKey, field);
@@ -677,7 +691,7 @@ function MatchStatsEditor({ navigation, route }) {
     }));
   }, [getLineFieldMaxValue]);
 
-  const adjustLineValue = useCallback((lineKey, field, delta) => {
+  const adjustLineValue = useCallback((/** @type {string} */ lineKey, /** @type {string} */ field, /** @type {number} */ delta) => {
     setPlayerLines((current) => current.map((line) => {
       if (line.key !== lineKey) return line;
       const maxValue = getLineFieldMaxValue(current, lineKey, field);
@@ -691,11 +705,23 @@ function MatchStatsEditor({ navigation, route }) {
     }));
   }, [getLineFieldMaxValue]);
 
-  const adjustScoreValue = useCallback((field, delta) => {
+  const adjustScoreValue = useCallback((/** @type {string} */ field, /** @type {number} */ delta) => {
     const setter = field === 'scoreFor' ? setScoreFor : setScoreAgainst;
     setter((current) => shiftNumericStringValue(current, delta));
   }, []);
 
+  /**
+   * @param {{
+   *   containerStyle?: any;
+   *   disabled?: boolean;
+   *   label?: string;
+   *   large?: boolean;
+   *   onChangeText: (value: string) => void;
+   *   onDecrement: () => void;
+   *   onIncrement: () => void;
+   *   value: any;
+   * }} props
+   */
   const renderCounterField = ({
     containerStyle,
     disabled = false,
@@ -718,7 +744,7 @@ function MatchStatsEditor({ navigation, route }) {
     return (
       <View style={containerStyle}>
         {label ? (
-          <Text style={[Fonts.p4Bold, Fonts.neutral100, Spaces.marginBottom[8]]}>{label}</Text>
+          <Text style={[Fonts.p4Bold, Fonts.neutral100, SpacesAny.marginBottom[8]]}>{label}</Text>
         ) : null}
         <View
           style={[
@@ -850,15 +876,15 @@ function MatchStatsEditor({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[Spaces.paddingBottom[24], Spaces.paddingTop[0], Alignments.fill]}
+      contentContainerStyle={[SpacesAny.paddingBottom[24], SpacesAny.paddingTop[0], Alignments.fill]}
     >
       <View
         style={[
-          Spaces.marginHorizontal[16],
-          Spaces.marginTop[isCompactMobile ? 8 : 12],
-          Spaces.marginBottom[8],
-          Spaces.paddingHorizontal[12],
-          Spaces.paddingVertical[10],
+          SpacesAny.marginHorizontal[16],
+          SpacesAny.marginTop[isCompactMobile ? 8 : 12],
+          SpacesAny.marginBottom[8],
+          SpacesAny.paddingHorizontal[12],
+          SpacesAny.paddingVertical[10],
           Alignments.row,
           Alignments.alignCenter,
           {
@@ -870,7 +896,7 @@ function MatchStatsEditor({ navigation, route }) {
         ]}
       >
         <HeaderBackButton onPress={() => navigation.goBack()} />
-        <View style={[Alignments.alignCenter, { flex: 1 }, Spaces.gap[4]]}>
+        <View style={[Alignments.alignCenter, { flex: 1 }, SpacesAny.gap[4]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{initialTitle}</Text>
           {teamName ? <Text style={[Fonts.p2, Fonts.neutral100]}>{teamName}</Text> : null}
         </View>
@@ -879,9 +905,9 @@ function MatchStatsEditor({ navigation, route }) {
 
       <ScrollView
         contentContainerStyle={[
-          Spaces.paddingHorizontal[16],
+          SpacesAny.paddingHorizontal[16],
           { paddingBottom: scrollBottomPadding },
-          Spaces.gap[isCompactMobile ? 12 : 16],
+          SpacesAny.gap[isCompactMobile ? 12 : 16],
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -889,8 +915,8 @@ function MatchStatsEditor({ navigation, route }) {
         <View
           style={[
             ApplicationStyle.borderRadius24,
-            Spaces.padding[sectionPadding],
-            Spaces.gap[sectionGap],
+            SpacesAny.padding[sectionPadding],
+            SpacesAny.gap[sectionGap],
             {
               backgroundColor: heroSurfaceColor,
               borderColor: counterBorderColor,
@@ -898,7 +924,7 @@ function MatchStatsEditor({ navigation, route }) {
             },
           ]}
         >
-          <View style={[Spaces.gap[4]]}>
+          <View style={[SpacesAny.gap[4]]}>
             <Text style={[Fonts.p4Bold, Fonts.primary500]}>Bilan equipe</Text>
             <Text style={[Fonts.h2Bold, Fonts.neutral00]}>{matchLabel}</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
@@ -906,11 +932,11 @@ function MatchStatsEditor({ navigation, route }) {
             </Text>
           </View>
 
-          <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+          <View style={[Alignments.row, SpacesAny.gap[8], { flexWrap: 'wrap' }]}>
             <View
               style={[
-                Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[6],
+                SpacesAny.paddingHorizontal[12],
+                SpacesAny.paddingVertical[6],
                 {
                   backgroundColor: statusMeta.backgroundColor,
                   borderColor: statusMeta.borderColor,
@@ -921,13 +947,13 @@ function MatchStatsEditor({ navigation, route }) {
             >
               <Text style={[Fonts.p4Bold, { color: statusMeta.textColor }]}>{statusMeta.label}</Text>
             </View>
-            <View style={[ApplicationStyle.backgroundColor.primary500, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[12], Spaces.paddingVertical[6]]}>
+            <View style={[ApplicationStyle.backgroundColor.primary500, ApplicationStyle.borderRadius16, SpacesAny.paddingHorizontal[12], SpacesAny.paddingVertical[6]]}>
               <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{buildScoreSummary(statsPayload?.score)}</Text>
             </View>
             <View
               style={[
-                Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[6],
+                SpacesAny.paddingHorizontal[12],
+                SpacesAny.paddingVertical[6],
                 {
                   backgroundColor: pillSurfaceColor,
                   borderColor: counterBorderColor,
@@ -940,8 +966,8 @@ function MatchStatsEditor({ navigation, route }) {
             </View>
             <View
               style={[
-                Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[6],
+                SpacesAny.paddingHorizontal[12],
+                SpacesAny.paddingVertical[6],
                 {
                   backgroundColor: pillSurfaceColor,
                   borderColor: counterBorderColor,
@@ -956,13 +982,13 @@ function MatchStatsEditor({ navigation, route }) {
         </View>
 
         {statsQuery.isLoading ? (
-          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24]]}>
+          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[24]]}>
             <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>Chargement des stats du match...</Text>
           </View>
         ) : null}
 
         {statsQuery.error ? (
-          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[8]]}>
+          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[24], SpacesAny.gap[8]]}>
             <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Impossible de charger ce rapport.</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {String(statsQuery.error?.message || 'Une erreur est survenue.')}
@@ -977,8 +1003,8 @@ function MatchStatsEditor({ navigation, route }) {
               <View
                 style={[
                   ApplicationStyle.borderRadius24,
-                  Spaces.padding[sectionPadding],
-                  Spaces.gap[8],
+                  SpacesAny.padding[sectionPadding],
+                  SpacesAny.gap[8],
                   {
                     backgroundColor: `${Colors.warning500}14`,
                     borderColor: `${Colors.warning500}45`,
@@ -997,8 +1023,8 @@ function MatchStatsEditor({ navigation, route }) {
               <View
                 style={[
                   ApplicationStyle.borderRadius24,
-                  Spaces.padding[sectionPadding],
-                  Spaces.gap[8],
+                  SpacesAny.padding[sectionPadding],
+                  SpacesAny.gap[8],
                   {
                     backgroundColor: `${Colors.warning500}14`,
                     borderColor: `${Colors.warning500}45`,
@@ -1015,16 +1041,16 @@ function MatchStatsEditor({ navigation, route }) {
               </View>
             ) : null}
 
-            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap]]}>
-              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, SpacesAny.gap[12]]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Score final</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>{getScoreSourceLabel(statsPayload?.score)}</Text>
                 </View>
                 <View
                   style={[
-                    Spaces.paddingHorizontal[12],
-                    Spaces.paddingVertical[8],
+                    SpacesAny.paddingHorizontal[12],
+                    SpacesAny.paddingVertical[8],
                     {
                       backgroundColor: pillSurfaceColor,
                       borderColor: counterBorderColor,
@@ -1045,7 +1071,7 @@ function MatchStatsEditor({ navigation, route }) {
                 </Text>
               ) : null}
 
-              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+              <View style={[Alignments.row, Alignments.alignCenter, SpacesAny.gap[12]]}>
                 {renderCounterField({
                   containerStyle: { flex: 1 },
                   disabled: isScoreLocked || isReadOnly,
@@ -1076,14 +1102,14 @@ function MatchStatsEditor({ navigation, route }) {
               ) : null}
             </View>
 
-            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap]]}>
-              <View style={[Spaces.gap[4]]}>
+            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
+              <View style={[SpacesAny.gap[4]]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Bilan collectif</Text>
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
                   Donne une note d equipe sur 10 et un commentaire collectif visible par ton groupe.
                 </Text>
               </View>
-              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+              <View style={[Alignments.row, Alignments.wrap, SpacesAny.gap[8]]}>
                 {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => {
                   const isActive = collectiveRating === value;
                   return (
@@ -1091,8 +1117,8 @@ function MatchStatsEditor({ navigation, route }) {
                       key={value}
                       onPress={() => setCollectiveRating(value)}
                       style={[
-                        Spaces.paddingHorizontal[12],
-                        Spaces.paddingVertical[10],
+                        SpacesAny.paddingHorizontal[12],
+                        SpacesAny.paddingVertical[10],
                         {
                           backgroundColor: isActive ? `${Colors.primary500}24` : pillSurfaceColor,
                           borderColor: isActive ? `${Colors.primary200}CC` : counterBorderColor,
@@ -1120,7 +1146,7 @@ function MatchStatsEditor({ navigation, route }) {
                   Fonts.neutral00,
                   ApplicationStyle.backgroundColor.primary900,
                   { borderRadius: 20 },
-                  Spaces.padding[16],
+                  SpacesAny.padding[16],
                   {
                     borderColor: counterBorderColor,
                     borderWidth: 1,
@@ -1134,7 +1160,7 @@ function MatchStatsEditor({ navigation, route }) {
                 style={[
                   ApplicationStyle.backgroundColor.primary900,
                   { borderRadius: 20 },
-                  Spaces.padding[12],
+                  SpacesAny.padding[12],
                   {
                     borderColor: counterBorderColor,
                     borderWidth: 1,
@@ -1147,8 +1173,8 @@ function MatchStatsEditor({ navigation, route }) {
               </View>
             </View>
 
-            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap]]}>
-              <View style={[Spaces.gap[4]]}>
+            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
+              <View style={[SpacesAny.gap[4]]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Retours individuels optionnels</Text>
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
                   Tu peux ajouter une note et un commentaire prive a chaque joueur si tu le souhaites.
@@ -1158,8 +1184,8 @@ function MatchStatsEditor({ navigation, route }) {
                 <View
                   key={review.key}
                   style={[
-                    Spaces.padding[sectionPadding],
-                    Spaces.gap[12],
+                    SpacesAny.padding[sectionPadding],
+                    SpacesAny.gap[12],
                     {
                       backgroundColor: playerCardSurfaceColor,
                       borderColor: counterBorderColor,
@@ -1168,14 +1194,14 @@ function MatchStatsEditor({ navigation, route }) {
                     },
                   ]}
                 >
-                  <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                  <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, SpacesAny.gap[12]]}>
                     <View style={{ flex: 1 }}>
                       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{review.label}</Text>
                       <Text style={[Fonts.p4, Fonts.neutral100]}>
                         {review?.playerResponse?.stateLabel || 'Pas encore de retour joueur'}
                       </Text>
                     </View>
-                    <View style={[Alignments.row, Alignments.wrap, Spaces.gap[6], { justifyContent: 'flex-end', maxWidth: 180 }]}>
+                    <View style={[Alignments.row, Alignments.wrap, SpacesAny.gap[6], { justifyContent: 'flex-end', maxWidth: 180 }]}>
                       {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => {
                         const isActive = review.rating === value;
                         return (
@@ -1183,8 +1209,8 @@ function MatchStatsEditor({ navigation, route }) {
                             key={`${review.key}-${value}`}
                             onPress={() => updateCoachReview(review.key, 'rating', value)}
                             style={[
-                              Spaces.paddingHorizontal[10],
-                              Spaces.paddingVertical[6],
+                              SpacesAny.paddingHorizontal[10],
+                              SpacesAny.paddingVertical[6],
                               {
                                 backgroundColor: isActive ? `${Colors.primary500}24` : pillSurfaceColor,
                                 borderColor: isActive ? `${Colors.primary200}CC` : counterBorderColor,
@@ -1213,7 +1239,7 @@ function MatchStatsEditor({ navigation, route }) {
                       Fonts.neutral00,
                       ApplicationStyle.backgroundColor.primary900,
                       { borderRadius: 20 },
-                      Spaces.padding[14],
+                      SpacesAny.padding[14],
                       {
                         borderColor: counterBorderColor,
                         borderWidth: 1,
@@ -1225,7 +1251,7 @@ function MatchStatsEditor({ navigation, route }) {
                   />
                 </View>
               )) : (
-                <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, Spaces.padding[20], Spaces.gap[8]]}>
+                <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, SpacesAny.padding[20], SpacesAny.gap[8]]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible.</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
                     Les retours individuels apparaitront ici des que la liste joueur sera disponible.
@@ -1239,8 +1265,8 @@ function MatchStatsEditor({ navigation, route }) {
                 style={[
                   ApplicationStyle.backgroundColor.primary700,
                   ApplicationStyle.borderRadius24,
-                  Spaces.padding[sectionPadding],
-                  Spaces.gap[12],
+                  SpacesAny.padding[sectionPadding],
+                  SpacesAny.gap[12],
                   {
                     borderColor: `${Colors.warning500}40`,
                     borderWidth: 1,
@@ -1251,13 +1277,13 @@ function MatchStatsEditor({ navigation, route }) {
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
                   Ces joueurs restent visibles pour le coach, mais ils ne sont pas inclus dans les stats tant que leur attendance n&apos;a pas ete corrigee.
                 </Text>
-                <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
-                  {excludedNoShowPlayers.map((player) => (
+                <View style={[Alignments.row, Alignments.wrap, SpacesAny.gap[8]]}>
+                  {excludedNoShowPlayers.map((/** @type {any} */ player) => (
                     <View
                       key={player?.documentId || player?.label || player?.manualPlayerName}
                       style={[
-                        Spaces.paddingHorizontal[10],
-                        Spaces.paddingVertical[6],
+                        SpacesAny.paddingHorizontal[10],
+                        SpacesAny.paddingVertical[6],
                         {
                           backgroundColor: `${Colors.warning500}18`,
                           borderColor: `${Colors.warning500}3A`,
@@ -1275,9 +1301,9 @@ function MatchStatsEditor({ navigation, route }) {
               </View>
             ) : null}
 
-            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap]]}>
-              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                <View style={[Spaces.gap[4], { flex: 1 }]}>
+            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, SpacesAny.gap[12]]}>
+                <View style={[SpacesAny.gap[4], { flex: 1 }]}>
                   <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Stats joueurs</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>
                     Temps de jeu et statistiques cles adaptees au sport du match.
@@ -1285,8 +1311,8 @@ function MatchStatsEditor({ navigation, route }) {
                 </View>
                 <View
                   style={[
-                    Spaces.paddingHorizontal[10],
-                    Spaces.paddingVertical[6],
+                    SpacesAny.paddingHorizontal[10],
+                    SpacesAny.paddingVertical[6],
                     {
                       backgroundColor: pillSurfaceColor,
                       borderColor: counterBorderColor,
@@ -1312,8 +1338,8 @@ function MatchStatsEditor({ navigation, route }) {
                   <View
                     key={line.key}
                     style={[
-                      Spaces.padding[sectionPadding],
-                      Spaces.gap[14],
+                      SpacesAny.padding[sectionPadding],
+                      SpacesAny.gap[14],
                       {
                         backgroundColor: playerCardSurfaceColor,
                         borderColor: counterBorderColor,
@@ -1322,7 +1348,7 @@ function MatchStatsEditor({ navigation, route }) {
                       },
                     ]}
                   >
-                    <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                    <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, SpacesAny.gap[12]]}>
                       <View style={{ flex: 1 }}>
                         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{line.label}</Text>
                         <Text style={[Fonts.p4, Fonts.neutral100]}>
@@ -1334,8 +1360,8 @@ function MatchStatsEditor({ navigation, route }) {
                           disabled={lineInputsDisabled}
                           onPress={() => updateLineValue(line.key, 'cleanSheet', !line.cleanSheet)}
                           style={[
-                            Spaces.paddingHorizontal[10],
-                            Spaces.paddingVertical[6],
+                            SpacesAny.paddingHorizontal[10],
+                            SpacesAny.paddingVertical[6],
                             {
                               backgroundColor: line.cleanSheet ? `${Colors.primary500}2B` : pillSurfaceColor,
                               borderColor: line.cleanSheet ? `${Colors.primary200}C7` : counterBorderColor,
@@ -1355,8 +1381,8 @@ function MatchStatsEditor({ navigation, route }) {
                         style={[
                           ApplicationStyle.backgroundColor.primary900,
                           ApplicationStyle.borderRadius16,
-                          Spaces.padding[12],
-                          Spaces.gap[4],
+                          SpacesAny.padding[12],
+                          SpacesAny.gap[4],
                           {
                             borderColor: counterBorderColor,
                             borderWidth: 1,
@@ -1375,7 +1401,7 @@ function MatchStatsEditor({ navigation, route }) {
                         containerStyle: { flex: 1 },
                         disabled: lineInputsDisabled,
                         label: 'Minutes jouees',
-                        onChangeText: (value) => updateLineNumericValue(line.key, 'minutesPlayed', value),
+                        onChangeText: (/** @type {string} */ value) => updateLineNumericValue(line.key, 'minutesPlayed', value),
                         onDecrement: () => adjustLineValue(line.key, 'minutesPlayed', -1),
                         onIncrement: () => adjustLineValue(line.key, 'minutesPlayed', 1),
                         value: line.minutesPlayed,
@@ -1383,14 +1409,14 @@ function MatchStatsEditor({ navigation, route }) {
                     </View>
 
                     {playerStatRows.map((row) => (
-                      <View key={row.map((field) => field.key).join(':')} style={[Alignments.row, Spaces.gap[12]]}>
+                      <View key={row.map((field) => field.key).join(':')} style={[Alignments.row, SpacesAny.gap[12]]}>
                         {row.map((field) => (
                           <View key={field.key} style={{ flex: 1 }}>
                             {renderCounterField({
                               containerStyle: { flex: 1 },
                               disabled: lineInputsDisabled,
                               label: field.label,
-                              onChangeText: (value) => updateLineNumericValue(line.key, field.key, value),
+                              onChangeText: (/** @type {string} */ value) => updateLineNumericValue(line.key, field.key, value),
                               onDecrement: () => adjustLineValue(line.key, field.key, -1),
                               onIncrement: () => adjustLineValue(line.key, field.key, 1),
                               value: line[field.key],
@@ -1402,7 +1428,7 @@ function MatchStatsEditor({ navigation, route }) {
                   </View>
                 );
               }) : (
-                <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, Spaces.padding[20], Spaces.gap[8]]}>
+                <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, SpacesAny.padding[20], SpacesAny.gap[8]]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible pour ce rapport.</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
                     Publie d abord la convocation ou verifie le roster de l equipe pour alimenter cette liste.
@@ -1411,7 +1437,7 @@ function MatchStatsEditor({ navigation, route }) {
               )}
             </View>
 
-            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap]]}>
+            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions</Text>
               <Button
                 disabled={isReadOnly || isReviewRequired || hasConsistencyIssues || saveDraftMutation.isPending || submitMutation.isPending}

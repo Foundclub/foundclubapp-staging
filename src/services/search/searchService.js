@@ -3,14 +3,16 @@ import client from '@/services/client';
 const DEFAULT_PAGE_SIZE = 15;
 const MAX_PAGE_SIZE = 30;
 const MIN_QUERY_LENGTH = 2;
+const MAP_EVENT_PAGE_SIZE = 120;
+const MAP_CLUB_PAGE_SIZE = 300;
 
-const toStringOrUndefined = (value) => {
+const toStringOrUndefined = (/** @type {any} */ value) => {
   if (value === null || value === undefined) return undefined;
   const normalized = String(value).trim();
   return normalized.length ? normalized : undefined;
 };
 
-const extractDocumentId = (value) => {
+const extractDocumentId = (/** @type {any} */ value) => {
   if (!value) return undefined;
   if (typeof value === 'string') return toStringOrUndefined(value);
   if (typeof value === 'object') {
@@ -19,28 +21,28 @@ const extractDocumentId = (value) => {
   return undefined;
 };
 
-const toArray = (value) => {
+const toArray = (/** @type {any} */ value) => {
   if (!value) return [];
   if (Array.isArray(value)) return value.filter(Boolean);
   return [value];
 };
 
-const normalizeArrayIds = (value) => toArray(value)
-  .map((item) => extractDocumentId(item) || toStringOrUndefined(item))
+const normalizeArrayIds = (/** @type {any} */ value) => toArray(value)
+  .map((/** @type {any} */ item) => extractDocumentId(item) || toStringOrUndefined(item))
   .filter(Boolean);
 
-const normalizeCategoryOrLevel = (value) => {
+const normalizeCategoryOrLevel = (/** @type {any} */ value) => {
   const values = normalizeArrayIds(value);
   return values.length ? values : undefined;
 };
 
-const normalizeActivity = (value) => {
+const normalizeActivity = (/** @type {any} */ value) => {
   const values = normalizeArrayIds(value);
   if (!values.length) return undefined;
   return values.length === 1 ? values[0] : values;
 };
 
-const sanitizeBaseParams = (params = {}) => {
+const sanitizeBaseParams = (/** @type {any} */ params = {}) => {
   const q = toStringOrUndefined(params.q);
   if (!q || q.length < MIN_QUERY_LENGTH) {
     return null;
@@ -65,7 +67,7 @@ const sanitizeBaseParams = (params = {}) => {
   return requestParams;
 };
 
-const sanitizeOptionalBaseParams = (params = {}) => {
+const sanitizeOptionalBaseParams = (/** @type {any} */ params = {}) => {
   const q = toStringOrUndefined(params.q);
   const page = Number(params.page) || 1;
   const pageSize = Math.max(1, Math.min(MAX_PAGE_SIZE, Number(params.pageSize) || DEFAULT_PAGE_SIZE));
@@ -88,7 +90,7 @@ const sanitizeOptionalBaseParams = (params = {}) => {
   return requestParams;
 };
 
-const sanitizeMapBounds = (params = {}) => {
+const sanitizeMapBounds = (/** @type {any} */ params = {}) => {
   const north = Number(params.north);
   const south = Number(params.south);
   const east = Number(params.east);
@@ -123,14 +125,18 @@ const sanitizeMapBounds = (params = {}) => {
   };
 };
 
-const cleanParams = (params) => Object.entries(params).reduce((acc, [key, value]) => {
+const cleanParams = (/** @type {Record<string, any>} */ params) => Object.entries(params).reduce((/** @type {Record<string, any>} */ acc, [key, value]) => {
   if (value === undefined || value === null || value === '') return acc;
   if (Array.isArray(value) && value.length === 0) return acc;
   acc[key] = value;
   return acc;
 }, {});
 
-const requestSearch = async (path, params = {}, options = {}) => {
+const requestSearch = async (
+  /** @type {string} */ path,
+  /** @type {Record<string, any>} */ params = {},
+  /** @type {{ signal?: any }} */ options = {},
+) => {
   const response = await client.get(path, {
     params: cleanParams(params),
     signal: options.signal,
@@ -230,8 +236,8 @@ export const searchEventsMap = async (params = {}, options = {}) => {
 
   const baseParams = sanitizeOptionalBaseParams(params);
   const view = params.view === 'list' ? 'list' : 'map';
-  const maxPageSize = view === 'map' ? 500 : MAX_PAGE_SIZE;
-  const defaultPageSize = view === 'map' ? 500 : DEFAULT_PAGE_SIZE;
+  const maxPageSize = view === 'map' ? MAP_EVENT_PAGE_SIZE : MAX_PAGE_SIZE;
+  const defaultPageSize = view === 'map' ? MAP_EVENT_PAGE_SIZE : DEFAULT_PAGE_SIZE;
   const page = Number(params.page) || 1;
   const pageSize = Math.max(1, Math.min(maxPageSize, Number(params.pageSize) || defaultPageSize));
 
@@ -312,8 +318,8 @@ export const searchClubsMap = async (params = {}, options = {}) => {
 
   const q = toStringOrUndefined(params.q);
   const view = params.view === 'list' ? 'list' : 'map';
-  const maxPageSize = view === 'map' ? 1500 : MAX_PAGE_SIZE;
-  const defaultPageSize = view === 'map' ? 1500 : DEFAULT_PAGE_SIZE;
+  const maxPageSize = view === 'map' ? MAP_CLUB_PAGE_SIZE : MAX_PAGE_SIZE;
+  const defaultPageSize = view === 'map' ? MAP_CLUB_PAGE_SIZE : DEFAULT_PAGE_SIZE;
   const page = Number(params.page) || 1;
   const pageSize = Math.max(1, Math.min(maxPageSize, Number(params.pageSize) || defaultPageSize));
 

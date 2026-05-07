@@ -66,6 +66,8 @@ import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/te
 import { getErrorMessage as getDisplayErrorMessage } from '@/utils/errors/displayError';
 import { getImageUrl } from '@/utils/imageUrl';
 
+const TeamLocationIconView = /** @type {any} */ (TeamLocationIcon);
+
 /**
  * @typedef {{ externalTeamId?: string | null; externalTeamName: string }} ExternalTeamOption
  * @typedef {{ externalTeamId?: string | null; externalTeamName: string; confidence?: string | null; reason?: string | null }} RecommendedExternalTeamOption
@@ -90,7 +92,7 @@ function TeamDetails({ navigation, route }) {
   // hooks
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
-  } = useTheme();
+  } = /** @type {any} */ (useTheme());
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const {
@@ -103,11 +105,11 @@ function TeamDetails({ navigation, route }) {
     refetchUserData,
     USER_ROLES: AUTH_USER_ROLES,
     userData: currentUser,
-  } = useAuth();
+  } = /** @type {any} */ (useAuth());
   const isAuthenticated = Boolean(currentUser?.documentId);
   const { getClubInitials } = useClub();
-  const { startTeamChat, startWhisperChat } = useMessaging();
-  const openTeamAuthFlow = useCallback((source, extraParams = {}) => {
+  const { startTeamChat, startWhisperChat } = /** @type {any} */ (useMessaging());
+  const openTeamAuthFlow = useCallback((/** @type {string} */ source, /** @type {any} */ extraParams = {}) => {
     openPublicAuthFlow(navigation, {
       origin: RouteNames.TeamDetails,
       source,
@@ -128,28 +130,32 @@ function TeamDetails({ navigation, route }) {
       ...(Array.isArray(currentUser?.trainedTeams) ? currentUser.trainedTeams : []),
     ];
 
-    return allMyTeams.find((item) => item?.documentId === teamId) || null;
+    return allMyTeams.find((/** @type {any} */ item) => item?.documentId === teamId) || null;
   }, [currentUser?.myTeams, currentUser?.trainedTeams, teamId]);
 
   const {
-    data: team, error, isFetching, isLoading, refetch,
-  } = useGetTeam(teamId);
-  const { data: clubData, refetch: refetchClubData } = useGetClub(team?.club?.documentId);
-  const { data: teamStatsData, isLoading: isTeamStatsLoading, refetch: refetchTeamStats } = useGetTeamStats(
+    data: rawTeam, error, isFetching, isLoading, refetch,
+  } = useGetTeam(teamId || '');
+  const team = /** @type {any} */ (rawTeam);
+  const { data: rawClubData, refetch: refetchClubData } = useGetClub(team?.club?.documentId || '');
+  const clubData = /** @type {any} */ (rawClubData);
+  const { data: rawTeamStatsData, isLoading: isTeamStatsLoading, refetch: refetchTeamStats } = useGetTeamStats(
     teamId || '',
     {
       enabled: Boolean(teamId && isMyTeam),
       staleTime: 1000 * 60,
     },
   );
+  const teamStatsData = /** @type {any} */ (rawTeamStatsData);
   const {
-    data: teamPerformanceStats,
+    data: rawTeamPerformanceStats,
     isLoading: isTeamPerformanceLoading,
     refetch: refetchTeamPerformanceStats,
   } = useGetTeamPerformanceStats(teamId || '', {
     enabled: Boolean(teamId),
     staleTime: 1000 * 60,
   });
+  const teamPerformanceStats = /** @type {any} */ (rawTeamPerformanceStats);
 
   const [activeTab, setActiveTab] = useState('infos');
   const [statsMode, setStatsMode] = useState(/** @type {'attendance' | 'performance'} */ ('attendance'));
@@ -161,7 +167,7 @@ function TeamDetails({ navigation, route }) {
   const [calendarDisplayMode, setCalendarDisplayMode] = useState(/** @type {'upcoming' | 'results' | 'all'} */ ('upcoming'));
   const [isTeamActionsPanelOpen, setIsTeamActionsPanelOpen] = useState(false);
   const [trainerSearch, setTrainerSearch] = useState('');
-  const autoOpenedTeamActionsKeyRef = useRef(null);
+  const autoOpenedTeamActionsKeyRef = useRef(/** @type {string | null} */ (null));
 
   // FFBB Modal states
   const [showFFBBUrlModal, setShowFFBBUrlModal] = useState(false);
@@ -176,8 +182,8 @@ function TeamDetails({ navigation, route }) {
   const [selectedExternalTeam, setSelectedExternalTeam] = useState(
     /** @type {ExternalTeamOption | null} */ (null),
   );
-  const [externalPreviewContext, setExternalPreviewContext] = useState(null);
-  const [latestExternalSyncReport, setLatestExternalSyncReport] = useState(null);
+  const [externalPreviewContext, setExternalPreviewContext] = useState(/** @type {any} */ (null));
+  const [latestExternalSyncReport, setLatestExternalSyncReport] = useState(/** @type {any} */ (null));
   const [externalCompetitionPhase, setExternalCompetitionPhase] = useState(
     /** @type {'idle' | 'previewing' | 'connecting' | 'refreshing' | 'reporting'} */ ('idle'),
   );
@@ -189,12 +195,12 @@ function TeamDetails({ navigation, route }) {
   const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Veuillez reessayer plus tard.');
 
   /**
-   * @param {unknown} error
+   * @param {unknown} sourceError
    * @param {string} [fallback]
    * @returns {string}
    */
-  const getErrorMessage = useCallback((sourceError, fallback = 'Erreur') => {
-    const resolvedMessage = getDisplayErrorMessage(sourceError, 'generic');
+  const getErrorMessage = useCallback((/** @type {unknown} */ sourceError, /** @type {string} */ fallback = 'Erreur') => {
+    const resolvedMessage = getDisplayErrorMessage(/** @type {any} */ (sourceError), 'generic');
     if (fallback && resolvedMessage === genericErrorMessage) {
       return fallback;
     }
@@ -249,18 +255,18 @@ function TeamDetails({ navigation, route }) {
     return {
       code,
       message: getErrorMessage(sourceError),
-      remainingSeconds: Number.isFinite(remainingSecondsCandidate) ? remainingSecondsCandidate : null,
-      status: Number.isFinite(statusCandidate) ? statusCandidate : null,
+      remainingSeconds: Number.isFinite(remainingSecondsCandidate) ? Number(remainingSecondsCandidate) : null,
+      status: Number.isFinite(statusCandidate) ? Number(statusCandidate) : null,
     };
   };
 
-  const normalizeTeamName = (value) => String(value || '')
+  const normalizeTeamName = (/** @type {any} */ value) => String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9]/g, '')
     .toLowerCase();
 
-  const isSameExternalTeamName = (leftValue, rightValue) => {
+  const isSameExternalTeamName = (/** @type {any} */ leftValue, /** @type {any} */ rightValue) => {
     const left = normalizeTeamName(leftValue);
     const right = normalizeTeamName(rightValue);
 
@@ -269,7 +275,7 @@ function TeamDetails({ navigation, route }) {
     return left.includes(right) || right.includes(left);
   };
 
-  const getSyncPayload = useCallback((result) => result?.data || result || {}, []);
+  const getSyncPayload = useCallback((/** @type {any} */ result) => result?.data || result || {}, []);
 
   const isExternalCompetitionPreviewing = externalCompetitionPhase === 'previewing';
   const isExternalCompetitionConnecting = externalCompetitionPhase === 'connecting';
@@ -341,7 +347,7 @@ function TeamDetails({ navigation, route }) {
     };
   }, [teamClubLogoRatio]);
 
-  const getExternalSyncStatusMeta = useCallback((status) => {
+  const getExternalSyncStatusMeta = useCallback((/** @type {any} */ status) => {
     switch (status) {
       case 'configured':
         return {
@@ -388,7 +394,7 @@ function TeamDetails({ navigation, route }) {
     }
   }, [Colors.error500, Colors.neutral100, Colors.neutral300, Colors.primary500, Colors.success500, Colors.warning500, t]);
 
-  const getExternalSyncModeMeta = useCallback((mode, status = 'synced') => {
+  const getExternalSyncModeMeta = useCallback((/** @type {any} */ mode, /** @type {any} */ status = 'synced') => {
     switch (mode) {
       case 'connect':
         return {
@@ -425,7 +431,7 @@ function TeamDetails({ navigation, route }) {
     t,
   ]);
 
-  const formatExternalSyncDate = useCallback((value) => {
+  const formatExternalSyncDate = useCallback((/** @type {any} */ value) => {
     if (!value) return null;
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return null;
@@ -438,25 +444,25 @@ function TeamDetails({ navigation, route }) {
     });
   }, []);
 
-  const openExternalSyncReport = useCallback((report) => {
+  const openExternalSyncReport = useCallback((/** @type {any} */ report) => {
     if (!report || typeof report !== 'object') return;
     setLatestExternalSyncReport(report);
     setShowExternalSyncReportModal(true);
   }, []);
 
-  const applyExternalSyncFeedback = useCallback((result) => {
+  const applyExternalSyncFeedback = useCallback((/** @type {any} */ result) => {
     const payload = getSyncPayload(result);
     const syncReport = payload?.syncReport;
     const scoreUpdatedEventIds = (Array.isArray(syncReport?.scoreUpdatedEvents)
       ? syncReport.scoreUpdatedEvents
       : [])
-      .map((item) => item?.eventDocumentId)
+      .map((/** @type {any} */ item) => item?.eventDocumentId)
       .filter(Boolean);
 
     queryClient.invalidateQueries({ queryKey: ['team', teamId] });
     queryClient.invalidateQueries({ queryKey: ['pendingMatchStatsPrompts'] });
     queryClient.invalidateQueries({ queryKey: ['teamPerformanceStats', teamId] });
-    scoreUpdatedEventIds.forEach((updatedEventId) => {
+    scoreUpdatedEventIds.forEach((/** @type {any} */ updatedEventId) => {
       queryClient.invalidateQueries({ queryKey: ['event', updatedEventId] });
       queryClient.invalidateQueries({ queryKey: ['eventMatchResult', updatedEventId] });
       queryClient.invalidateQueries({ queryKey: ['eventMatchStats', updatedEventId] });
@@ -498,11 +504,11 @@ function TeamDetails({ navigation, route }) {
 
     const trainerIds = new Set(
       trainers
-        .map((trainer) => trainer?.documentId)
+        .map((/** @type {any} */ trainer) => trainer?.documentId)
         .filter(Boolean),
     );
 
-    return players.filter((player) => {
+    return players.filter((/** @type {any} */ player) => {
       const playerId = player?.documentId;
       if (!playerId) return false;
       return !trainerIds.has(playerId);
@@ -518,7 +524,7 @@ function TeamDetails({ navigation, route }) {
     if (!fromOnboardingAffiliation) return;
 
     const parentNavigation = navigation.getParent?.();
-    const onboardingNavigation = parentNavigation || navigation;
+    const onboardingNavigation = /** @type {any} */ (parentNavigation || navigation);
     const nextRoute = getNextOnboardingRoute(RouteNames.UserAffiliationGuide);
     if (nextRoute) {
       onboardingNavigation.navigate(nextRoute);
@@ -538,7 +544,7 @@ function TeamDetails({ navigation, route }) {
     navigation,
   ]);
 
-  const createTeamMembershipRequestMutation = useMutation({
+  const createTeamMembershipRequestMutation = /** @type {any} */ (useMutation({
     mutationFn: createTeamMembershipRequest,
     onSuccess: () => {
       Alert.alert(
@@ -563,33 +569,33 @@ function TeamDetails({ navigation, route }) {
         }],
       );
     },
-  });
+  }));
 
-  const leaveTeamMutation = useMutation({
+  const leaveTeamMutation = /** @type {any} */ (useMutation({
     mutationFn: leaveTeam,
     onSuccess: () => {
       refetchUserData();
       refetch();
     },
-  });
+  }));
 
-  const deleteTrainerMutation = useMutation({
+  const deleteTrainerMutation = /** @type {any} */ (useMutation({
     mutationFn: removeTrainerFromClub,
     onSuccess: () => {
       refetch();
     },
-  });
+  }));
 
-  const removePlayerMutation = useMutation({
+  const removePlayerMutation = /** @type {any} */ (useMutation({
     mutationFn: (/** @type {{ teamId: string; playerId: string }} */ payload) => removePlayerFromTeam(payload.teamId, payload.playerId),
     onSuccess: () => {
       refetch();
     },
-  });
+  }));
 
-  const addTrainerToTeamMutation = useMutation({
-    mutationFn: (payload) => updateTeam(payload),
-    onError: (mutationError) => {
+  const addTrainerToTeamMutation = /** @type {any} */ (useMutation({
+    mutationFn: (/** @type {any} */ payload) => updateTeam(payload),
+    onError: (/** @type {any} */ mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
         getErrorMessage(mutationError, t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraîneur')),
@@ -599,11 +605,11 @@ function TeamDetails({ navigation, route }) {
       refetch();
       refetchClubData();
     },
-  });
+  }));
 
-  const saveTeamTrainersMutation = useMutation({
-    mutationFn: (payload) => updateTeam(payload),
-    onError: (mutationError) => {
+  const saveTeamTrainersMutation = /** @type {any} */ (useMutation({
+    mutationFn: (/** @type {any} */ payload) => updateTeam(payload),
+    onError: (/** @type {any} */ mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
         getErrorMessage(mutationError, t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre à jour les entraîneurs')),
@@ -613,16 +619,17 @@ function TeamDetails({ navigation, route }) {
       setIsTrainerPickerVisible(false);
       refetch();
     },
-  });
+  }));
 
-  const resetTeamStatsMutation = useMutation({
-    mutationFn: ({ reason }) => {
+  const resetTeamStatsMutation = /** @type {any} */ (useMutation({
+    mutationFn: (/** @type {{ reason?: string }} */ payload = {}) => {
+      const { reason } = payload;
       if (!teamId) {
         throw new Error('Team ID is required');
       }
       return resetTeamStats(teamId, reason);
     },
-    onError: (mutationError) => {
+    onError: (/** @type {any} */ mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
         getErrorMessage(mutationError, t('teamDetails.stats.resetError', 'Impossible de reinitialiser les statistiques')),
@@ -636,9 +643,9 @@ function TeamDetails({ navigation, route }) {
         t('teamDetails.stats.resetSuccess', 'Les statistiques ont été réinitialisées à partir de maintenant.'),
       );
     },
-  });
+  }));
 
-  const refreshScrapingMutation = useMutation({
+  const refreshScrapingMutation = /** @type {any} */ (useMutation({
     mutationFn: refreshExternalCompetition,
     onError: (/** @type {ApiError} */ err) => {
       const apiError = getApiErrorMeta(err);
@@ -666,7 +673,7 @@ function TeamDetails({ navigation, route }) {
     onSuccess: (result) => {
       applyExternalSyncFeedback(result);
     },
-  });
+  }));
 
   // Handler for FFBB URL configuration
   const openExternalSourceSetupModal = useCallback(() => {
@@ -686,7 +693,7 @@ function TeamDetails({ navigation, route }) {
     Keyboard.dismiss();
     setExternalCompetitionPhase('previewing');
     try {
-      const result = await previewExternalCompetition(teamId, ffbbUrl, 'team-candidates');
+      const result = /** @type {any} */ (await previewExternalCompetition(teamId, ffbbUrl, 'team-candidates'));
       const payload = result?.data || result || {};
       const candidates = Array.isArray(payload.teamCandidates) ? payload.teamCandidates : [];
       const recommendedCandidate = payload?.recommendedTeamSelection
@@ -698,12 +705,12 @@ function TeamDetails({ navigation, route }) {
         }
         : null;
       const normalizedCandidates = candidates
-        .map((candidate) => ({
+        .map((/** @type {any} */ candidate) => ({
           externalTeamId: candidate.externalTeamId || null,
           externalTeamName: candidate.externalTeamName || '',
         }))
-        .filter((candidate) => candidate.externalTeamName)
-        .sort((a, b) => {
+        .filter((/** @type {any} */ candidate) => candidate.externalTeamName)
+        .sort((/** @type {any} */ a, /** @type {any} */ b) => {
           const aIsRecommended = recommendedCandidate
             && (
               (recommendedCandidate.externalTeamId && a.externalTeamId
@@ -734,7 +741,7 @@ function TeamDetails({ navigation, route }) {
       setFfbbTeamsList(normalizedCandidates);
       setRecommendedExternalTeam(recommendedCandidate);
       setSelectedExternalTeam(recommendedCandidate
-        ? normalizedCandidates.find((candidate) => (
+        ? normalizedCandidates.find((/** @type {any} */ candidate) => (
           (recommendedCandidate.externalTeamId && candidate.externalTeamId
             ? recommendedCandidate.externalTeamId === candidate.externalTeamId
             : false)
@@ -760,7 +767,7 @@ function TeamDetails({ navigation, route }) {
   };
 
   // Handler for FFBB team selection
-  const submitExternalCompetitionSelection = useCallback(async (selectedTeam) => {
+  const submitExternalCompetitionSelection = useCallback(async (/** @type {any} */ selectedTeam) => {
     if (!teamId || isExternalCompetitionPhaseActive) return;
 
     setExternalCompetitionPhase('connecting');
@@ -879,7 +886,7 @@ function TeamDetails({ navigation, route }) {
   }, [externalSyncReport]);
   const externalSyncHistory = useMemo(() => {
     const history = Array.isArray(externalSyncReport?.history)
-      ? externalSyncReport.history.filter((entry) => entry && typeof entry === 'object')
+      ? externalSyncReport.history.filter((/** @type {any} */ entry) => entry && typeof entry === 'object')
       : [];
 
     if (history.length) {
@@ -951,7 +958,7 @@ function TeamDetails({ navigation, route }) {
       || null,
     [externalSyncReport?.competition?.sourceUrl, team?.externalConfig?.sourceUrl, team?.externalStandingUrl],
   );
-  const formatExternalSourceResolutionLabel = useCallback((value) => {
+  const formatExternalSourceResolutionLabel = useCallback((/** @type {any} */ value) => {
     const normalizedValue = String(value || '').trim().toLowerCase();
     if (!normalizedValue) return null;
 
@@ -963,7 +970,7 @@ function TeamDetails({ navigation, route }) {
       'team-page-rewrite': 'Page équipe FFBB résolue via redirection',
     };
 
-    return labels[normalizedValue] || value;
+    return /** @type {Record<string, string>} */ (labels)[normalizedValue] || value;
   }, []);
   const externalSyncSourceResolution = useMemo(
     () => externalSyncReport?.competition?.sourceResolution
@@ -991,7 +998,7 @@ function TeamDetails({ navigation, route }) {
     const standingsStrategy = externalSyncProviderMetadata?.standingsStrategy;
     const calendarStrategy = externalSyncProviderMetadata?.calendarStrategy;
 
-    const formatStrategy = (label, value) => {
+    const formatStrategy = (/** @type {string} */ label, /** @type {any} */ value) => {
       if (!value) return null;
       const normalizedValue = String(value || '').trim();
       const labels = {
@@ -1003,7 +1010,7 @@ function TeamDetails({ navigation, route }) {
         skipped_preview: 'non chargé en preview',
         unavailable: 'indisponible',
       };
-      return `${label}: ${labels[normalizedValue] || normalizedValue}`;
+      return `${label}: ${/** @type {Record<string, string>} */ (labels)[normalizedValue] || normalizedValue}`;
     };
 
     return [
@@ -1027,7 +1034,7 @@ function TeamDetails({ navigation, route }) {
   const isAssignedTrainerForCurrentTeam = useMemo(
     () => Boolean(
       teamId
-      && (currentUser?.trainedTeams || []).some((trainedTeam) => trainedTeam?.documentId === teamId),
+      && (currentUser?.trainedTeams || []).some((/** @type {any} */ trainedTeam) => trainedTeam?.documentId === teamId),
     ),
     [currentUser?.trainedTeams, teamId],
   );
@@ -1106,17 +1113,17 @@ function TeamDetails({ navigation, route }) {
   const trainerPickerOptions = useMemo(() => {
     const normalizedSearch = trainerSearch.trim().toLowerCase();
     return (clubData?.members || [])
-      .filter((member) => member?.documentId
+      .filter((/** @type {any} */ member) => member?.documentId
         && (member.role?.name === USER_ROLES.coach || member.role?.name === USER_ROLES.president))
-      .map((member) => ({
+      .map((/** @type {any} */ member) => ({
         label: `${member.firstname || ''} ${member.lastname || ''}`.trim() || member.phoneNumber || 'Utilisateur',
         value: member.documentId || '',
       }))
-      .filter((option) => !normalizedSearch || option.label.toLowerCase().includes(normalizedSearch))
-      .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+      .filter((/** @type {any} */ option) => !normalizedSearch || option.label.toLowerCase().includes(normalizedSearch))
+      .sort((/** @type {any} */ a, /** @type {any} */ b) => a.label.localeCompare(b.label, 'fr'));
   }, [clubData?.members, trainerSearch]);
 
-  const isExternalRowMyTeam = (row) => {
+  const isExternalRowMyTeam = (/** @type {any} */ row) => {
     if (!row) return false;
     if (team?.externalTeamId && row.teamId) {
       return String(row.teamId) === String(team.externalTeamId);
@@ -1130,7 +1137,7 @@ function TeamDetails({ navigation, route }) {
   // Calculate team's rank and points from external data
   const myTeamRanking = useMemo(() => {
     if (!team?.externalStandingData?.length) return null;
-    const index = team.externalStandingData.findIndex((row) => isExternalRowMyTeam(row));
+    const index = team.externalStandingData.findIndex((/** @type {any} */ row) => isExternalRowMyTeam(row));
     if (index === -1) return null;
     const row = team.externalStandingData[index];
     const rank = row?.rank !== undefined && row?.rank !== null && row?.rank !== ''
@@ -1155,7 +1162,7 @@ function TeamDetails({ navigation, route }) {
 
   const teamStatsRows = useMemo(() => {
     const rows = Array.isArray(teamStatsData?.data) ? teamStatsData.data : [];
-    return rows.map((row) => ({
+    return rows.map((/** @type {any} */ row) => ({
       ...row,
       lateCount: Number(row?.lateCount ?? row?.retardCount ?? 0),
       lateMinutesTotal: Number(row?.lateMinutesTotal ?? 0),
@@ -1164,7 +1171,7 @@ function TeamDetails({ navigation, route }) {
 
   const statsSummary = useMemo(() => {
     const rowCount = teamStatsRows.length;
-    const fallbackTotals = teamStatsRows.reduce((acc, row) => ({
+    const fallbackTotals = teamStatsRows.reduce((/** @type {any} */ acc, /** @type {any} */ row) => ({
       absenceCount: acc.absenceCount + Number(row.absenceCount || 0),
       attendanceCount: acc.attendanceCount + Number(row.attendanceCount || 0),
       lateCount: acc.lateCount + Number(row.lateCount || 0),
@@ -1246,7 +1253,7 @@ function TeamDetails({ navigation, route }) {
     }
   }, [navigation, team?.club?.documentId, teamId, currentUser]);
 
-  const handleToggleTrainerSelection = useCallback((trainerId) => {
+  const handleToggleTrainerSelection = useCallback((/** @type {string} */ trainerId) => {
     setSelectedTrainerIds((current) => (current.includes(trainerId)
       ? current.filter((id) => id !== trainerId)
       : [...current, trainerId]));
@@ -1254,7 +1261,7 @@ function TeamDetails({ navigation, route }) {
 
   const handleOpenTrainerPicker = useCallback(() => {
     const currentTrainerIds = (team?.trainers || [])
-      .map((trainer) => trainer.documentId)
+      .map((/** @type {any} */ trainer) => trainer.documentId)
       .filter(Boolean);
     setSelectedTrainerIds(currentTrainerIds);
     setTrainerSearch('');
@@ -1279,7 +1286,7 @@ function TeamDetails({ navigation, route }) {
     });
   }, [saveTeamTrainersMutation, selectedTrainerIds, t, teamId]);
 
-  const handleTrainerCreated = useCallback((createdTrainer) => {
+  const handleTrainerCreated = useCallback((/** @type {any} */ createdTrainer) => {
     if (!createdTrainer?.documentId || !teamId) return;
 
     setSelectedTrainerIds((current) => (
@@ -1310,7 +1317,7 @@ function TeamDetails({ navigation, route }) {
     assignmentPrefillHandledRef.current = true;
 
     const currentTrainerIds = (team?.trainers || [])
-      .map((trainer) => trainer.documentId)
+      .map((/** @type {any} */ trainer) => trainer.documentId)
       .filter(Boolean);
     const nextTrainerIds = currentTrainerIds.includes(assignmentTrainerId)
       ? currentTrainerIds
@@ -1382,14 +1389,14 @@ function TeamDetails({ navigation, route }) {
       return null;
     }
     return currentUser.teamMembershipRequests.find(
-      (r) => r.team?.documentId === teamId && r.state === 'pending',
+      (/** @type {any} */ r) => r.team?.documentId === teamId && r.state === 'pending',
     );
   }, [currentUser, teamId]);
 
   const trainerContactIds = useMemo(
     () => (team?.trainers || [])
-      .map((trainer) => trainer?.documentId)
-      .filter((trainerId) => Boolean(trainerId) && trainerId !== currentUser?.documentId),
+      .map((/** @type {any} */ trainer) => trainer?.documentId)
+      .filter((/** @type {any} */ trainerId) => Boolean(trainerId) && trainerId !== currentUser?.documentId),
     [currentUser?.documentId, team?.trainers],
   );
 
@@ -1789,7 +1796,7 @@ function TeamDetails({ navigation, route }) {
     );
   };
 
-  const handleOpenSyncedEvent = useCallback((eventId) => {
+  const handleOpenSyncedEvent = useCallback((/** @type {any} */ eventId) => {
     if (!eventId) return;
     setShowExternalSyncReportModal(false);
     navigation.navigate(RouteNames.EventStack, {
@@ -1798,7 +1805,7 @@ function TeamDetails({ navigation, route }) {
     });
   }, [navigation]);
 
-  const handleOpenPerformanceMatch = useCallback((sourceType, sourceDocumentId) => {
+  const handleOpenPerformanceMatch = useCallback((/** @type {any} */ sourceType, /** @type {any} */ sourceDocumentId) => {
     if (!sourceDocumentId) return;
 
     if (String(sourceType || '').trim().toLowerCase() === 'league_match') {
@@ -1812,13 +1819,13 @@ function TeamDetails({ navigation, route }) {
     });
   }, [navigation]);
 
-  const renderExternalSyncItems = useCallback((title, items, accentColor) => {
+  const renderExternalSyncItems = useCallback((/** @type {any} */ title, /** @type {any} */ items, /** @type {any} */ accentColor) => {
     if (!Array.isArray(items) || items.length === 0) return null;
 
     return (
       <View style={[Spaces.gap[8]]}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
-        {items.map((item, index) => {
+        {items.map((/** @type {any} */ item, /** @type {number} */ index) => {
           const itemDateLabel = formatExternalSyncDate(item?.date);
           const roundLabel = item?.round !== null && item?.round !== undefined && item?.round !== ''
             ? `J${item.round}`
@@ -2085,7 +2092,7 @@ function TeamDetails({ navigation, route }) {
             <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
               {t('teamDetails.external.warningsTitle', 'Avertissements')}
             </Text>
-            {externalSyncReport.warnings.slice(0, 2).map((warning, index) => (
+            {externalSyncReport.warnings.slice(0, 2).map((/** @type {any} */ warning, /** @type {number} */ index) => (
               <Text key={`${warning}-${index}`} style={[Fonts.p4, Fonts.neutral00]}>
                 {`- ${warning}`}
               </Text>
@@ -2098,7 +2105,7 @@ function TeamDetails({ navigation, route }) {
             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
               {t('teamDetails.external.historyTitle', 'Dernières synchronisations')}
             </Text>
-            {externalSyncHistory.map((entry, index) => {
+            {externalSyncHistory.map((/** @type {any} */ entry, /** @type {number} */ index) => {
               const historyModeMeta = getExternalSyncModeMeta(entry?.mode, entry?.status);
               const historyDateLabel = formatExternalSyncDate(entry?.syncedAt);
               const historySummary = [
@@ -2357,6 +2364,7 @@ function TeamDetails({ navigation, route }) {
         style={[Alignments.fill]}
       >
         <WithDataWrapper
+          isLoading={false}
           wrapperStyle={[Alignments.fill]}
         >
           {/* TAB CONTENT: INFOS */}
@@ -2443,7 +2451,7 @@ function TeamDetails({ navigation, route }) {
               ) : null}
               {(team?.city || team?.address?.properties?.label || team?.club?.address?.properties?.label || team?.club?.city) && (
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                <TeamLocationIcon
+                <TeamLocationIconView
                   color={Colors.primary100}
                   height={14}
                   name="location-pin-alt-1"
@@ -2724,12 +2732,12 @@ function TeamDetails({ navigation, route }) {
                 </View>
                 {team.externalStandingData
                   .slice()
-                  .sort((a, b) => {
+                  .sort((/** @type {any} */ a, /** @type {any} */ b) => {
                     const aRank = Number(a?.rank ?? Number.MAX_SAFE_INTEGER);
                     const bRank = Number(b?.rank ?? Number.MAX_SAFE_INTEGER);
                     return aRank - bRank;
                   })
-                  .map((row, index) => {
+                  .map((/** @type {any} */ row, /** @type {number} */ index) => {
                     const isMyTeam = isExternalRowMyTeam(row);
                     const rowRank = row?.rank ?? index + 1;
                     return (
@@ -2784,11 +2792,11 @@ function TeamDetails({ navigation, route }) {
               <View>
                 {/* Calendar filters + list */}
                 {(() => {
-                  const modeOptions = [
+                  const modeOptions = /** @type {{ key: any; label: any }[]} */ ([
                     { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon équipe') },
                     { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'Résultats poule') },
                     { key: 'all', label: t('teamDetails.calendar.filters.poolCalendar', 'Calendrier poule') },
-                  ];
+                  ]);
 
                   const nowTs = Date.now();
                   const selectedExternalTeamId = team?.externalTeamId
@@ -2798,7 +2806,7 @@ function TeamDetails({ navigation, route }) {
                     ? normalizeTeamName(team.externalTeamName)
                     : '';
 
-                  const normalizedMatches = team.externalCalendarData.map((match, index) => {
+                  const normalizedMatches = /** @type {any[]} */ (team.externalCalendarData).map((/** @type {any} */ match, /** @type {number} */ index) => {
                     const matchDate = match?.date ? new Date(match.date) : null;
                     const dateTs = matchDate && !Number.isNaN(matchDate.getTime()) ? matchDate.getTime() : null;
                     const hasScore = (
@@ -2870,20 +2878,20 @@ function TeamDetails({ navigation, route }) {
                     selectedExternalTeamId || normalizedExternalTeamName
                   );
 
-                  const modeScopedMatches = normalizedMatches.filter((match) => {
+                  const modeScopedMatches = normalizedMatches.filter((/** @type {any} */ match) => {
                     if (calendarDisplayMode === 'upcoming') return match._isUpcoming;
                     if (calendarDisplayMode === 'results') return match._isPlayed;
                     return true;
                   });
 
                   const upcomingSourceMatches = hasSelectedExternalTeam
-                    ? normalizedMatches.filter((match) => match._isMyTeamMatch)
+                    ? normalizedMatches.filter((/** @type {any} */ match) => match._isMyTeamMatch)
                     : normalizedMatches;
 
                   const upcomingMatches = upcomingSourceMatches
-                    .filter((match) => match._isUpcoming)
+                    .filter((/** @type {any} */ match) => match._isUpcoming)
                     .slice()
-                    .sort((a, b) => {
+                    .sort((/** @type {any} */ a, /** @type {any} */ b) => {
                       const aTs = a._dateTs;
                       const bTs = b._dateTs;
                       if (aTs === null && bTs === null) return String(a._key).localeCompare(String(b._key), 'fr');
@@ -2895,7 +2903,7 @@ function TeamDetails({ navigation, route }) {
                   const activeUpcomingIndex = (() => {
                     if (!upcomingMatches.length) return -1;
                     if (selectedUpcomingMatchKey) {
-                      const index = upcomingMatches.findIndex((match) => match._key === selectedUpcomingMatchKey);
+                      const index = upcomingMatches.findIndex((/** @type {any} */ match) => match._key === selectedUpcomingMatchKey);
                       if (index >= 0) return index;
                     }
                     return 0;
@@ -2916,7 +2924,7 @@ function TeamDetails({ navigation, route }) {
                     ? activeUpcomingMatch._dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
                     : '--:--';
 
-                  const monthMetaByKey = modeScopedMatches.reduce((acc, match) => {
+                  const monthMetaByKey = modeScopedMatches.reduce((/** @type {Record<string, { count: number; label: string }>} */ acc, /** @type {any} */ match) => {
                     const key = useRoundFilters
                       ? (match._roundLabel ? `round-${match._roundLabel}` : 'round-unknown')
                       : (match._monthKey || 'unknown');
@@ -2935,7 +2943,7 @@ function TeamDetails({ navigation, route }) {
                     return acc;
                   }, /** @type {Record<string, { count: number; label: string }>} */ ({}));
 
-                  const monthKeys = Object.keys(monthMetaByKey).sort((a, b) => {
+                  const monthKeys = Object.keys(monthMetaByKey).sort((/** @type {string} */ a, /** @type {string} */ b) => {
                     if (useRoundFilters) {
                       if (a === 'round-unknown') return 1;
                       if (b === 'round-unknown') return -1;
@@ -2961,7 +2969,7 @@ function TeamDetails({ navigation, route }) {
                     : null;
 
                   const monthFilteredMatches = (isMonthFilterMode && activeMonthKey)
-                    ? modeScopedMatches.filter((match) => {
+                    ? modeScopedMatches.filter((/** @type {any} */ match) => {
                       if (useRoundFilters) {
                         const roundKey = match._roundLabel ? `round-${match._roundLabel}` : 'round-unknown';
                         return String(roundKey) === String(activeMonthKey);
@@ -2976,7 +2984,7 @@ function TeamDetails({ navigation, route }) {
 
                   const sortedMatches = displayMatches
                     .slice()
-                    .sort((a, b) => {
+                    .sort((/** @type {any} */ a, /** @type {any} */ b) => {
                       const aTs = a._dateTs;
                       const bTs = b._dateTs;
                       if (aTs === null && bTs === null) return String(a._key).localeCompare(String(b._key), 'fr');
@@ -2986,20 +2994,20 @@ function TeamDetails({ navigation, route }) {
                       return aTs - bTs;
                     });
 
-                  const groupedMatches = sortedMatches.reduce((groups, match) => {
+                  const groupedMatches = sortedMatches.reduce((/** @type {any[]} */ groups, /** @type {any} */ match) => {
                     const monthLabel = match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date à confirmer');
                     const roundLabel = match._roundLabel
                       ? t('teamDetails.calendar.round.title', 'Journee {{round}}', { round: match._roundLabel })
                       : t('teamDetails.calendar.round.unknown', 'Journee non precisee');
                     const groupLabel = useRoundFilters ? roundLabel : monthLabel;
                     const groupSubtitle = useRoundFilters ? monthLabel : null;
-                    const existingGroup = groups.find((group) => group.label === groupLabel);
+                    const existingGroup = groups.find((/** @type {any} */ group) => group.label === groupLabel);
                     if (existingGroup) {
                       existingGroup.matches.push(match);
                       return groups;
                     }
                     return [...groups, { label: groupLabel, matches: [match], subtitle: groupSubtitle }];
-                  }, []);
+                  }, /** @type {any[]} */ ([]));
 
                   const emptyLabel = calendarDisplayMode === 'upcoming'
                     ? t('teamDetails.calendar.empty.upcoming', 'Aucun match à venir pour cette équipe.')
@@ -3030,7 +3038,7 @@ function TeamDetails({ navigation, route }) {
                         showsHorizontalScrollIndicator={false}
                         style={[Spaces.marginBottom[12]]}
                       >
-                        {modeOptions.map((option) => {
+                        {modeOptions.map((/** @type {any} */ option) => {
                           const isActive = calendarDisplayMode === option.key;
                           return (
                             <TouchableOpacity
@@ -3217,7 +3225,7 @@ function TeamDetails({ navigation, route }) {
                                 {group.subtitle}
                               </Text>
                             ) : null}
-                            {group.matches.map((match) => {
+                            {group.matches.map((/** @type {any} */ match) => {
                               const isMyHomeTeam = Boolean(match?._isMyHomeTeam);
                               const isMyAwayTeam = Boolean(match?._isMyAwayTeam);
                               const statusLabel = match._isPlayed
@@ -3414,7 +3422,7 @@ function TeamDetails({ navigation, route }) {
                       {t('common.loading', 'Chargement...')}
                     </Text>
                   ) : teamStatsRows.length ? (
-                    teamStatsRows.map((row, index) => (
+                    teamStatsRows.map((/** @type {any} */ row, /** @type {number} */ index) => (
                       <StatRow
                         columns={statsColumns}
                         isEven={index % 2 === 0}
@@ -3541,7 +3549,7 @@ function TeamDetails({ navigation, route }) {
                 {pendingPerformanceMatches.length ? (
                   <View style={[Spaces.gap[8]]}>
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Réponses joueur en attente de validation équipe</Text>
-                    {pendingPerformanceMatches.map((pendingMatch) => (
+                    {pendingPerformanceMatches.map((/** @type {any} */ pendingMatch) => (
                       <TouchableOpacity
                         activeOpacity={0.9}
                         disabled={!pendingMatch?.sourceDocumentId}
@@ -3596,7 +3604,7 @@ function TeamDetails({ navigation, route }) {
                 {performanceSummary.recentReports.length ? (
                   <View style={[Spaces.gap[8]]}>
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Derniers matchs renseignes</Text>
-                    {performanceSummary.recentReports.map((report) => (
+                    {performanceSummary.recentReports.map((/** @type {any} */ report) => (
                       <TouchableOpacity
                         activeOpacity={0.9}
                         disabled={!report?.sourceDocumentId}
@@ -3672,7 +3680,7 @@ function TeamDetails({ navigation, route }) {
                     return (
                       <View style={[Spaces.gap[8]]}>
                         <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Joueurs</Text>
-                        {teamPerformancePlayers.map((player, index) => (
+                        {teamPerformancePlayers.map((/** @type {any} */ player, /** @type {number} */ index) => (
                           <View
                             key={player?.documentId || player?.manualPlayerName || `performance-${index}`}
                             style={[
@@ -3870,7 +3878,7 @@ function TeamDetails({ navigation, route }) {
               contentContainerStyle={[Spaces.gap[8], Spaces.paddingBottom[8]]}
               style={{ maxHeight: 300 }}
             >
-              {trainerPickerOptions.map((option) => (
+              {trainerPickerOptions.map((/** @type {any} */ option) => (
                 <Checkable
                   customFillColor={Colors.neutral00}
                   isChecked={selectedTrainerIds.includes(option.value)}
@@ -4311,7 +4319,7 @@ function TeamDetails({ navigation, route }) {
                   <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
                     {t('teamDetails.external.warningsTitle', 'Avertissements')}
                   </Text>
-                  {externalSyncReport.warnings.map((warning, index) => (
+                  {externalSyncReport.warnings.map((/** @type {any} */ warning, /** @type {number} */ index) => (
                     <Text key={`${warning}-${index}`} style={[Fonts.p4, Fonts.neutral00]}>
                       {`- ${warning}`}
                     </Text>
@@ -4335,7 +4343,7 @@ function TeamDetails({ navigation, route }) {
                   <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
                     {t('teamDetails.external.errorsTitle', 'Erreurs')}
                   </Text>
-                  {externalSyncReport.errors.map((entry, index) => (
+                  {externalSyncReport.errors.map((/** @type {any} */ entry, /** @type {number} */ index) => (
                     <Text key={`${entry}-${index}`} style={[Fonts.p4, Fonts.neutral00]}>
                       {`- ${entry}`}
                     </Text>

@@ -1,4 +1,4 @@
-const normalizeString = (value) => {
+const normalizeString = (/** @type {any} */ value) => {
   if (typeof value !== 'string') {
     return null;
   }
@@ -7,20 +7,20 @@ const normalizeString = (value) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const normalizeIdList = (values) => (
+const normalizeIdList = (/** @type {any} */ values) => (
   Array.isArray(values)
     ? values.filter(Boolean).sort()
     : []
 );
 
-const sanitizeImageSummary = (image) => {
+const sanitizeImageSummary = (/** @type {any} */ image) => {
   if (!image) return null;
   return {
     url: normalizeString(image?.url),
   };
 };
 
-const sanitizeEntitySummary = (entity) => {
+const sanitizeEntitySummary = (/** @type {any} */ entity) => {
   if (!entity) return null;
   return {
     documentId: normalizeString(entity?.documentId),
@@ -29,7 +29,7 @@ const sanitizeEntitySummary = (entity) => {
   };
 };
 
-const sanitizeMultisportClubSummary = (club) => {
+const sanitizeMultisportClubSummary = (/** @type {any} */ club) => {
   if (!club) return null;
   return {
     documentId: normalizeString(club?.documentId),
@@ -42,7 +42,7 @@ const sanitizeMultisportClubSummary = (club) => {
   };
 };
 
-const sanitizeClubSummary = (club) => {
+const sanitizeClubSummary = (/** @type {any} */ club) => {
   if (!club) return null;
   return {
     documentId: normalizeString(club?.documentId),
@@ -53,7 +53,7 @@ const sanitizeClubSummary = (club) => {
   };
 };
 
-const sanitizeTeamSummary = (team) => {
+const sanitizeTeamSummary = (/** @type {any} */ team) => {
   if (!team) return null;
   return {
     activities: Array.isArray(team?.activities)
@@ -75,7 +75,7 @@ const sanitizeTeamSummary = (team) => {
   };
 };
 
-const sanitizeTeamMembershipRequest = (request) => {
+const sanitizeTeamMembershipRequest = (/** @type {any} */ request) => {
   if (!request) return null;
   return {
     documentId: normalizeString(request?.documentId),
@@ -85,7 +85,7 @@ const sanitizeTeamMembershipRequest = (request) => {
   };
 };
 
-const sanitizeClubMembershipRequest = (request) => {
+const sanitizeClubMembershipRequest = (/** @type {any} */ request) => {
   if (!request) return null;
   return {
     club: sanitizeClubSummary(request?.club),
@@ -95,7 +95,7 @@ const sanitizeClubMembershipRequest = (request) => {
   };
 };
 
-const buildUserSignature = (user) => JSON.stringify({
+const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
   address: normalizeString(user?.address),
   avatarUrl: normalizeString(user?.avatar?.url),
   bestLevel: normalizeString(user?.bestLevel),
@@ -103,7 +103,7 @@ const buildUserSignature = (user) => JSON.stringify({
   category: normalizeString(user?.category),
   clubId: normalizeString(user?.club?.documentId),
   clubMembershipRequestIds: normalizeIdList(
-    user?.clubMembershipRequests?.map((request) => normalizeString(request?.documentId)),
+    user?.clubMembershipRequests?.map((/** @type {any} */ request) => normalizeString(request?.documentId)),
   ),
   documentId: normalizeString(user?.documentId),
   firstname: normalizeString(user?.firstname),
@@ -115,10 +115,10 @@ const buildUserSignature = (user) => JSON.stringify({
     : null,
   lastname: normalizeString(user?.lastname),
   multisportIds: normalizeIdList(
-    user?.multisportClubs?.map((club) => normalizeString(club?.documentId)),
+    user?.multisportClubs?.map((/** @type {any} */ club) => normalizeString(club?.documentId)),
   ),
   myTeamIds: normalizeIdList(
-    user?.myTeams?.map((team) => normalizeString(team?.documentId)),
+    user?.myTeams?.map((/** @type {any} */ team) => normalizeString(team?.documentId)),
   ),
   parentAccountDocumentId: normalizeString(user?.parentAccount?.documentId),
   position: normalizeString(user?.position),
@@ -127,18 +127,18 @@ const buildUserSignature = (user) => JSON.stringify({
   sectionId: normalizeString(user?.section?.documentId),
   sportsHistory: normalizeString(user?.sportsHistory),
   teamMembershipRequestIds: normalizeIdList(
-    user?.teamMembershipRequests?.map((request) => normalizeString(request?.documentId)),
+    user?.teamMembershipRequests?.map((/** @type {any} */ request) => normalizeString(request?.documentId)),
   ),
   trainedTeamIds: normalizeIdList(
-    user?.trainedTeams?.map((team) => normalizeString(team?.documentId)),
+    user?.trainedTeams?.map((/** @type {any} */ team) => normalizeString(team?.documentId)),
   ),
   weight: user?.weight ?? null,
 });
 
 /**
  * Sanitize user object to prevent storage overflow while keeping boot-critical data.
- * @param {User} user
- * @returns {Partial<User> | undefined}
+ * @param {any} user
+ * @returns {any | undefined}
  */
 export const sanitizeUser = (user) => {
   if (!user) return undefined;

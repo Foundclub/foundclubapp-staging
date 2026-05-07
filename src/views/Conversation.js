@@ -123,11 +123,27 @@ import shareApi from '@/platform/share';
 
 const conversationLogger = createLogger('conversation');
 
+/**
+ * @typedef {{
+ *   fileName?: string;
+ *   fileSize?: number;
+ *   name?: string;
+ *   size?: number;
+ *   type?: string;
+ *   uri?: string | null;
+ * }} AttachmentAsset
+ */
+
 const useTranslationCompat = (
   typeof ReactI18next.useTranslation === 'function'
     ? ReactI18next.useTranslation
-    : () => ({ i18n, t: (key, options) => i18n.t(key, options) })
+    : () => ({ i18n, t: (/** @type {string} */ key, /** @type {any} */ options) => i18n.t(key, options) })
 );
+/**
+ * @param {unknown} rawValue
+ * @param {boolean} [defaultValue]
+ * @returns {boolean}
+ */
 const isFlagEnabled = (rawValue, defaultValue = false) => {
   if (rawValue === undefined || rawValue === null || rawValue === '') return defaultValue;
   const normalized = String(rawValue || '').trim().toLowerCase();
@@ -158,8 +174,20 @@ const VOICE_RECORDING_STATES = {
   sending: 'sending',
 };
 
+/**
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
 const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
 
+/**
+ * @param {unknown} metering
+ * @param {number} [durationMs]
+ * @param {number} [index]
+ * @returns {number}
+ */
 const toVoiceWaveBarHeight = (metering, durationMs = 0, index = 0) => {
   const parsedMetering = Number(metering);
   if (Number.isFinite(parsedMetering)) {
@@ -194,11 +222,19 @@ const NON_EDITABLE_MESSAGE_COMPOSITION_TYPES = new Set([
   'voice_note',
 ]);
 
+/**
+ * @param {unknown} value
+ * @returns {'a' | 'b' | ''}
+ */
 const normalizeLeagueTeamSide = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   return normalized === 'a' || normalized === 'b' ? normalized : '';
 };
 
+/**
+ * @param {Set<string>} ids
+ * @param {any} userLike
+ */
 const addLeagueTeamUserId = (ids, userLike) => {
   [
     getEntityDocumentId(userLike),
@@ -210,21 +246,29 @@ const addLeagueTeamUserId = (ids, userLike) => {
   });
 };
 
+/**
+ * @param {any} team
+ * @returns {Set<string>}
+ */
 const collectLeagueTeamUserIds = (team) => {
-  const ids = new Set();
+  const ids = /** @type {Set<string>} */ (new Set());
   addLeagueTeamUserId(ids, team?.captain);
   if (Array.isArray(team?.co_captains)) {
-    team.co_captains.forEach((captain) => addLeagueTeamUserId(ids, captain));
+    team.co_captains.forEach((/** @type {any} */ captain) => addLeagueTeamUserId(ids, captain));
   }
 
   ['roster', 'members', 'players'].forEach((key) => {
     if (!Array.isArray(team?.[key])) return;
-    team[key].forEach((member) => addLeagueTeamUserId(ids, member));
+    team[key].forEach((/** @type {any} */ member) => addLeagueTeamUserId(ids, member));
   });
 
   return ids;
 };
 
+/**
+ * @param {any} message
+ * @returns {string}
+ */
 const getMessageEntityId = (message) => String(
   message?.documentId
   || message?._id
@@ -232,6 +276,10 @@ const getMessageEntityId = (message) => String(
   || '',
 ).trim();
 
+/**
+ * @param {any} message
+ * @returns {string}
+ */
 const getMessageSenderId = (message) => String(
   message?.senderDocumentId
   || message?.sender?.documentId
@@ -240,6 +288,7 @@ const getMessageSenderId = (message) => String(
   || '',
 ).trim();
 
+/** @type {any | null | undefined} */
 let clipboardModule;
 const getClipboardModule = () => {
   if (clipboardModule !== undefined) return clipboardModule;
@@ -256,8 +305,9 @@ const getClipboardModule = () => {
 
 /**
  *
- * @param root0
- * @param root0.color
+ * @param {object} props
+ * @param {string} [props.color]
+ * @returns {import('react').ReactElement}
  */
 function MicrophoneGlyph({ color = '#ffffff' }) {
   return (
@@ -277,12 +327,20 @@ const MAX_ATTACHMENT_BYTES = {
   video: 80 * BYTES_PER_MB,
 };
 
+/**
+ * @param {unknown} rawApiUrl
+ * @returns {string}
+ */
 const toPublicApiOrigin = (rawApiUrl) => {
   const raw = String(rawApiUrl || '').trim();
   if (!raw) return 'http://10.0.2.2:1337';
   return raw.replace(/\/api\/?$/i, '');
 };
 
+/**
+ * @param {unknown} rawApiUrl
+ * @returns {string}
+ */
 const toApiBaseUrl = (rawApiUrl) => {
   const raw = String(rawApiUrl || '').trim();
   if (!raw) return 'http://10.0.2.2:1337/api';
@@ -291,9 +349,17 @@ const toApiBaseUrl = (rawApiUrl) => {
   return `${withoutTrailingSlash}/api`;
 };
 
+/**
+ * @param {unknown} host
+ * @returns {boolean}
+ */
 const isLoopbackHost = (host) => ['10.0.2.2', '127.0.0.1', 'localhost']
   .includes(String(host || '').trim().toLowerCase());
 
+/**
+ * @param {unknown} meta
+ * @returns {string}
+ */
 const formatDiagnosticMeta = (meta) => {
   if (!meta || typeof meta !== 'object') return '';
   try {
@@ -313,7 +379,7 @@ const getDocumentPickerModule = () => {
   try {
     // Lazy load to avoid boot-time crashes when native module is missing on a stale build.
     // eslint-disable-next-line global-require
-    const pickerModule = require('@react-native-documents/picker');
+    const pickerModule = /** @type {any} */ (require('@react-native-documents/picker'));
     cachedDocumentPickerModule = pickerModule?.default || pickerModule;
     return cachedDocumentPickerModule;
   } catch (_error) {
@@ -322,6 +388,11 @@ const getDocumentPickerModule = () => {
   }
 };
 
+/**
+ * @param {any} documentPicker
+ * @param {any} error
+ * @returns {boolean}
+ */
 const isDocumentPickerCancellation = (documentPicker, error) => (
   (
     typeof documentPicker?.isErrorWithCode === 'function'
@@ -344,7 +415,7 @@ function Conversation({ navigation, route }) {
     || route?.params?.id
     || '',
   ).trim();
-  const { t } = useTranslationCompat();
+  const { t } = /** @type {{ t: (key: string, options?: any) => string }} */ (useTranslationCompat());
   const { userData } = useAuth();
   const { showBanner } = useAppFeedback();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
@@ -356,24 +427,32 @@ function Conversation({ navigation, route }) {
   const closeConversationPrompt = useCallback(() => {
     setConversationPrompt(null);
   }, []);
-  const openConversationPrompt = useCallback((promptConfig) => {
+  const openConversationPrompt = useCallback((/** @type {any} */ promptConfig) => {
     setConversationPrompt(promptConfig);
   }, []);
-  const showErrorBanner = useCallback((body, title = 'Erreur') => {
+  const showErrorBanner = useCallback((/** @type {unknown} */ body, /** @type {string} */ title = 'Erreur') => {
     showBanner({
       body: String(body || '').trim() || 'Une erreur est survenue.',
       title,
       tone: 'error',
     });
   }, [showBanner]);
-  const showSuccessBanner = useCallback((body, title = 'Succès', tone = 'success') => {
+  const showSuccessBanner = useCallback((
+    /** @type {unknown} */ body,
+    /** @type {string} */ title = 'Succès',
+    /** @type {'success' | 'info' | 'error' | 'league'} */ tone = 'success',
+  ) => {
     showBanner({
       body: String(body || '').trim(),
       title,
       tone,
     });
   }, [showBanner]);
-  const showInfoBanner = useCallback((body, title = 'Information', tone = 'info') => {
+  const showInfoBanner = useCallback((
+    /** @type {unknown} */ body,
+    /** @type {string} */ title = 'Information',
+    /** @type {'success' | 'info' | 'error' | 'league'} */ tone = 'info',
+  ) => {
     showBanner({
       body: String(body || '').trim(),
       title,
@@ -439,17 +518,17 @@ function Conversation({ navigation, route }) {
     votePoll,
   } = useMessaging(chatId);
 
-  const logAttachmentDebug = useCallback((message, meta = undefined) => {
+  const logAttachmentDebug = useCallback((/** @type {string} */ message, /** @type {any} */ meta = undefined) => {
     if (!isAttachmentDebugEnabled) return;
     conversationLogger.debug(`[attachment-debug] ${message}`, meta);
   }, []);
 
-  const logVoiceDiagnostic = useCallback((stage, meta = undefined) => {
+  const logVoiceDiagnostic = useCallback((/** @type {string} */ stage, /** @type {any} */ meta = undefined) => {
     if (!isVoiceDiagnosticsEnabled) return;
     conversationLogger.warn(`[voice-diag] ${stage}${formatDiagnosticMeta(meta)}`);
   }, []);
 
-  const describeAsset = useCallback((asset) => {
+  const describeAsset = useCallback((/** @type {any} */ asset) => {
     const uri = String(asset?.uri || '');
     const uriScheme = uri.includes(':') ? uri.split(':')[0] : 'unknown';
     return {
@@ -461,9 +540,9 @@ function Conversation({ navigation, route }) {
     };
   }, []);
 
-  const describeUploadItems = useCallback((items) => (
+  const describeUploadItems = useCallback((/** @type {any[] | undefined | null} */ items) => (
     Array.isArray(items)
-      ? items.map((item) => ({
+      ? items.map((/** @type {any} */ item) => ({
         documentId: item?.documentId ?? null,
         id: item?.id ?? null,
         mime: item?.mime ?? null,
@@ -474,7 +553,7 @@ function Conversation({ navigation, route }) {
       : []
   ), []);
 
-  const isTransientNetworkUploadError = useCallback((error) => {
+  const isTransientNetworkUploadError = useCallback((/** @type {any} */ error) => {
     const rawErrorMessage = (
       typeof error === 'string'
         ? error
@@ -496,7 +575,7 @@ function Conversation({ navigation, route }) {
       );
   }, []);
 
-  const buildAttachmentUploadErrorMessage = useCallback((error) => {
+  const buildAttachmentUploadErrorMessage = useCallback((/** @type {any} */ error) => {
     const responseStatus = Number(error?.response?.status || 0);
     const rawErrorMessage = String(
       error?.response?.data?.error?.message
@@ -534,12 +613,12 @@ function Conversation({ navigation, route }) {
     return "Impossible d'envoyer cette pièce jointe.";
   }, [isTransientNetworkUploadError]);
 
-  const getAttachmentExtensionFromAsset = useCallback((asset) => {
+  const getAttachmentExtensionFromAsset = useCallback((/** @type {any} */ asset) => {
     const rawFileName = String(asset?.fileName || '').trim();
     const rawUri = String(asset?.uri || '').trim();
     const rawType = String(asset?.type || '').trim().toLowerCase();
 
-    const extractExtension = (value) => {
+    const extractExtension = (/** @type {unknown} */ value) => {
       const sanitized = String(value || '').split('?')[0].split('#')[0];
       const lastDotIndex = sanitized.lastIndexOf('.');
       if (lastDotIndex < 0) return '';
@@ -560,7 +639,7 @@ function Conversation({ navigation, route }) {
     return 'bin';
   }, []);
 
-  const getAttachmentSizeLimit = useCallback((assetType) => {
+  const getAttachmentSizeLimit = useCallback((/** @type {unknown} */ assetType) => {
     const normalizedType = String(assetType || '').toLowerCase();
     if (normalizedType.startsWith('image/')) return MAX_ATTACHMENT_BYTES.image;
     if (normalizedType.startsWith('video/')) return MAX_ATTACHMENT_BYTES.video;
@@ -568,7 +647,7 @@ function Conversation({ navigation, route }) {
     return MAX_ATTACHMENT_BYTES.default;
   }, []);
 
-  const validateAttachmentAsset = useCallback((asset) => {
+  const validateAttachmentAsset = useCallback((/** @type {any} */ asset) => {
     const hasUri = Boolean(String(asset?.uri || '').trim());
     const normalizedType = String(asset?.type || '').trim().toLowerCase();
     const normalizedSize = Number(asset?.fileSize || asset?.size || 0) || 0;
@@ -616,20 +695,22 @@ function Conversation({ navigation, route }) {
   const [isEditMessageSubmitting, setIsEditMessageSubmitting] = useState(false);
   const [isEditMessageUploadingAttachment, setIsEditMessageUploadingAttachment] = useState(false);
   const [editMessageText, setEditMessageText] = useState('');
-  const [editMessageAttachments, setEditMessageAttachments] = useState([]);
+  const [editMessageAttachments, setEditMessageAttachments] = useState(/** @type {any[]} */ ([]));
   const [selectedMessage, setSelectedMessage] = useState(
     /**
      * @type {import('react-native-gifted-chat').IMessage & {documentId: string} | undefined}
      */ (undefined),
   );
   const {
-    data: messagesPages,
+    data: rawMessagesPages,
     fetchNextPage,
     hasNextPage,
     isFetching: isMessagesFetching,
     isLoading: isMessagesLoading,
   } = useGetChatMessages({ chatId });
-  const { data: chatData } = useGetChatById(chatId);
+  const messagesPages = /** @type {any} */ (rawMessagesPages);
+  const { data: rawChatData } = useGetChatById(chatId);
+  const chatData = /** @type {any} */ (rawChatData);
   const leagueLegalMatchLabel = useMemo(() => {
     const match = chatData?.league_match;
     if (!match) return 'Match FoundClub League';
@@ -639,7 +720,7 @@ function Conversation({ navigation, route }) {
   const groupAdminIds = useMemo(() => {
     if (!Array.isArray(chatData?.groupAdmins)) return [];
     return chatData.groupAdmins
-      .map((admin) => String(admin?.documentId || admin?.id || ''))
+      .map((/** @type {any} */ admin) => String(admin?.documentId || admin?.id || ''))
       .filter(Boolean);
   }, [chatData?.groupAdmins]);
   const isGroupAdmin = isGroupChat && groupAdminIds.includes(String(userData?.documentId || ''));
@@ -651,10 +732,11 @@ function Conversation({ navigation, route }) {
 
   const [isEventShareModalVisible, setIsEventShareModalVisible] = useState(false);
   const {
-    data: sharedEventsPages,
+    data: rawSharedEventsPages,
     isFetching: isLoadingSharedEvents,
   } = useGetEvents(
     {
+      compact: true,
       excludeType: 'R\u00E9servation',
       myTeams: true,
       pageSize: 20,
@@ -666,6 +748,7 @@ function Conversation({ navigation, route }) {
       staleTime: 30_000,
     },
   );
+  const sharedEventsPages = /** @type {any} */ (rawSharedEventsPages);
 
   const shareableEvents = useMemo(() => {
     if (!Array.isArray(sharedEventsPages?.pages)) return [];
@@ -673,9 +756,9 @@ function Conversation({ navigation, route }) {
     /** @type {any[]} */
     const events = [];
 
-    sharedEventsPages.pages.forEach((page) => {
+    sharedEventsPages.pages.forEach((/** @type {{ data?: any[] }} */ page) => {
       if (!Array.isArray(page?.data)) return;
-      page.data.forEach((event) => {
+      page.data.forEach((/** @type {any} */ event) => {
         const eventId = String(event?.documentId || event?.id || '');
         if (!eventId || seen.has(eventId)) return;
         seen.add(eventId);
@@ -689,8 +772,8 @@ function Conversation({ navigation, route }) {
   const shareableContacts = useMemo(() => {
     const participants = Array.isArray(chatData?.participants) ? chatData.participants : [];
     return participants
-      .filter((participant) => participant?.documentId && participant.documentId !== userData?.documentId)
-      .map((participant) => ({
+      .filter((/** @type {any} */ participant) => participant?.documentId && participant.documentId !== userData?.documentId)
+      .map((/** @type {any} */ participant) => ({
         avatar: participant?.avatar,
         documentId: participant?.documentId,
         firstname: participant?.firstname || '',
@@ -704,8 +787,9 @@ function Conversation({ navigation, route }) {
     try {
       return isVoiceNoteRecordingSupported();
     } catch (error) {
+      const safeError = /** @type {any} */ (error);
       conversationLogger.warn('Voice note capability check failed', {
-        message: error?.message,
+        message: safeError?.message,
       });
       return false;
     }
@@ -728,7 +812,7 @@ function Conversation({ navigation, route }) {
   const apiBaseUrl = useMemo(() => toApiBaseUrl(getApiBaseUrl()), []);
   const publicApiOrigin = useMemo(() => toPublicApiOrigin(getPublicApiOrigin()), []);
   const HEADER_SIDE_WIDTH = 56;
-  const resolveMediaUri = useCallback((rawUri) => {
+  const resolveMediaUri = useCallback((/** @type {unknown} */ rawUri) => {
     const uri = String(rawUri || '').trim();
     if (!uri) return '';
 
@@ -755,7 +839,7 @@ function Conversation({ navigation, route }) {
     return `${publicApiOrigin}${normalizedPath}`;
   }, [publicApiOrigin]);
 
-  const fetchAttachmentUrlById = useCallback(async (attachmentId) => {
+  const fetchAttachmentUrlById = useCallback(async (/** @type {string | number} */ attachmentId) => {
     const numericId = Number(attachmentId);
     if (!Number.isInteger(numericId) || numericId <= 0) return '';
 
@@ -776,16 +860,17 @@ function Conversation({ navigation, route }) {
         if (resolved) return resolved;
       }
     } catch (error) {
+      const safeError = /** @type {any} */ (error);
       logAttachmentDebug('fetchAttachmentUrlById failed', {
         attachmentId: numericId,
-        error: error?.message || error,
+        error: safeError?.message || safeError,
       });
     }
 
     return '';
   }, [logAttachmentDebug, resolveMediaUri]);
 
-  const normalizeAttachmentItem = useCallback((item) => {
+  const normalizeAttachmentItem = useCallback((/** @type {any} */ item) => {
     if (!item || typeof item !== 'object') return null;
     if (item?.attributes && typeof item.attributes === 'object') {
       return {
@@ -796,16 +881,16 @@ function Conversation({ navigation, route }) {
     return item;
   }, []);
 
-  const normalizeMessageAttachments = useCallback((rawAttachments) => {
+  const normalizeMessageAttachments = useCallback((/** @type {any} */ rawAttachments) => {
     if (Array.isArray(rawAttachments)) {
       return rawAttachments
-        .map((item) => normalizeAttachmentItem(item))
+        .map((/** @type {any} */ item) => normalizeAttachmentItem(item))
         .filter(Boolean);
     }
 
     if (rawAttachments && Array.isArray(rawAttachments?.data)) {
       return rawAttachments.data
-        .map((item) => normalizeAttachmentItem(item))
+        .map((/** @type {any} */ item) => normalizeAttachmentItem(item))
         .filter(Boolean);
     }
 
@@ -822,7 +907,7 @@ function Conversation({ navigation, route }) {
     return [];
   }, [normalizeAttachmentItem]);
 
-  const isImageAttachmentMessage = useCallback((message) => {
+  const isImageAttachmentMessage = useCallback((/** @type {any} */ message) => {
     const attachment = normalizeMessageAttachments(message?.attachments)?.[0] || {};
     const attachmentUrl = String(attachment?.url || '').toLowerCase();
     const attachmentMime = String(attachment?.mime || '').toLowerCase();
@@ -837,7 +922,7 @@ function Conversation({ navigation, route }) {
       || imageUri.startsWith('data:image/');
   }, [normalizeMessageAttachments]);
 
-  const getPrimaryImageUriFromMessage = useCallback((message) => {
+  const getPrimaryImageUriFromMessage = useCallback((/** @type {any} */ message) => {
     const attachment = normalizeMessageAttachments(message?.attachments)?.[0] || {};
     const candidates = [
       message?.image,
@@ -874,7 +959,7 @@ function Conversation({ navigation, route }) {
   const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
   const [composerText, setComposerText] = useState('');
   const [pendingMediaDraft, setPendingMediaDraft] = useState(
-    /** @type {{ asset: { fileName?: string; type?: string; uri?: string | null } } | null} */ (null),
+    /** @type {{ asset: AttachmentAsset } | null} */ (null),
   );
   const [pendingVoiceDraft, setPendingVoiceDraft] = useState(
     /** @type {{
@@ -982,7 +1067,7 @@ function Conversation({ navigation, route }) {
     },
   });
   const joinReservationMutation = useMutation({
-    mutationFn: (reservationId) => joinReservation(reservationId),
+    mutationFn: (/** @type {string} */ reservationId) => joinReservation(reservationId),
     onError: (error) => {
       showErrorBanner(
         getParticipationErrorMessage(error, t('common.errorOccurred')),
@@ -1173,7 +1258,10 @@ function Conversation({ navigation, route }) {
     [],
   );
 
-  const buildLocalPendingAttachment = useCallback((asset, attachmentId) => ({
+  const buildLocalPendingAttachment = useCallback((
+    /** @type {AttachmentAsset} */ asset,
+    /** @type {string} */ attachmentId,
+  ) => ({
     documentId: attachmentId,
     id: attachmentId,
     mime: String(asset?.type || 'application/octet-stream'),
@@ -1181,35 +1269,54 @@ function Conversation({ navigation, route }) {
     uri: String(asset?.uri || ''),
   }), []);
 
-  const buildLocalPendingMessage = useCallback(({
-    attachments = [],
-    clientMessageId = '',
-    composition = undefined,
-    createdAt = new Date().toISOString(),
-    event = undefined,
-    message = '',
-    replyTo = null,
-  }) => ({
-    attachments: Array.isArray(attachments) ? attachments : [],
-    chat: { documentId: chatId },
-    clientMessageId: String(clientMessageId || '').trim(),
-    composition,
-    createdAt,
-    event,
-    failed: false,
-    message: String(message || ''),
-    pending: true,
-    readBy: [],
-    replyTo,
-    sender: {
-      avatar: userData?.avatar,
-      documentId: userData?.documentId || 'me',
-      firstname: userData?.firstname || '',
-      lastname: userData?.lastname || '',
-    },
-  }), [chatId, userData?.avatar, userData?.documentId, userData?.firstname, userData?.lastname]);
+  const buildLocalPendingMessage = useCallback((
+    /** @type {{
+     *  attachments?: any[];
+     *  clientMessageId?: string;
+     *  composition?: any;
+     *  createdAt?: string;
+     *  event?: any;
+     *  message?: string;
+     *  replyTo?: { documentId?: string } | null;
+     * }} */ payload = {},
+  ) => {
+    const safePayload = /** @type {any} */ (payload || {});
+    const {
+      attachments: rawAttachments = [],
+      clientMessageId = '',
+      composition = undefined,
+      createdAt = new Date().toISOString(),
+      event = undefined,
+      message = '',
+      replyTo = null,
+    } = safePayload;
+    const attachments = Array.isArray(rawAttachments) ? rawAttachments : [];
 
-  const upsertLocalPendingMessage = useCallback((messageId, messagePayload) => {
+    return {
+      attachments: Array.isArray(attachments) ? attachments : [],
+      chat: { documentId: chatId },
+      clientMessageId: String(clientMessageId || '').trim(),
+      composition,
+      createdAt,
+      event,
+      failed: false,
+      message: String(message || ''),
+      pending: true,
+      readBy: [],
+      replyTo,
+      sender: {
+        avatar: userData?.avatar,
+        documentId: userData?.documentId || 'me',
+        firstname: userData?.firstname || '',
+        lastname: userData?.lastname || '',
+      },
+    };
+  }, [chatId, userData?.avatar, userData?.documentId, userData?.firstname, userData?.lastname]);
+
+  const upsertLocalPendingMessage = useCallback((
+    /** @type {string} */ messageId,
+    /** @type {any} */ messagePayload,
+  ) => {
     const safeMessageId = String(messageId || '').trim();
     if (!safeMessageId || !chatId) return;
 
@@ -1231,9 +1338,9 @@ function Conversation({ navigation, route }) {
       }
 
       let hasUpdatedExistingMessage = false;
-      const nextPages = oldData.pages.map((page) => {
+      const nextPages = oldData.pages.map((/** @type {any} */ page) => {
         const pageData = Array.isArray(page?.data) ? page.data : [];
-        const nextData = pageData.map((message) => {
+        const nextData = pageData.map((/** @type {any} */ message) => {
           const currentId = String(message?.documentId || message?.id || '').trim();
           if (currentId !== safeMessageId) return message;
           hasUpdatedExistingMessage = true;
@@ -1263,7 +1370,7 @@ function Conversation({ navigation, route }) {
     });
   }, [chatId, queryClient]);
 
-  const removeLocalPendingMessage = useCallback((messageId) => {
+  const removeLocalPendingMessage = useCallback((/** @type {string} */ messageId) => {
     const safeMessageId = String(messageId || '').trim();
     if (!safeMessageId || !chatId) return;
 
@@ -1271,10 +1378,10 @@ function Conversation({ navigation, route }) {
       if (!oldData?.pages) return oldData;
       return {
         ...oldData,
-        pages: oldData.pages.map((page) => ({
+        pages: oldData.pages.map((/** @type {any} */ page) => ({
           ...page,
           data: Array.isArray(page?.data)
-            ? page.data.filter((message) => {
+            ? page.data.filter((/** @type {any} */ message) => {
               const currentId = String(message?.documentId || message?.id || '').trim();
               return currentId !== safeMessageId;
             })
@@ -1285,7 +1392,7 @@ function Conversation({ navigation, route }) {
   }, [chatId, queryClient]);
 
   const uploadAttachmentAssetWithFetch = useCallback(async (
-    /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
+    /** @type {AttachmentAsset} */ asset,
   ) => {
     if (!asset?.uri) return [];
 
@@ -1303,7 +1410,7 @@ function Conversation({ navigation, route }) {
     }));
 
     const token = getAuthTokens()?.token;
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const headers = /** @type {any} */ (token ? { Authorization: `Bearer ${token}` } : {});
     const response = await fetch(`${apiBaseUrl}/upload`, {
       body: formData,
       headers,
@@ -1331,7 +1438,7 @@ function Conversation({ navigation, route }) {
     return uploadItems;
   }, [apiBaseUrl, chatId, describeAsset, describeUploadItems, logAttachmentDebug]);
 
-  const uploadAttachmentAsset = useCallback(async (/** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset) => {
+  const uploadAttachmentAsset = useCallback(async (/** @type {AttachmentAsset} */ asset) => {
     if (!asset?.uri) {
       logAttachmentDebug('uploadAttachmentAsset skipped: missing uri', {
         chatId,
@@ -1349,9 +1456,13 @@ function Conversation({ navigation, route }) {
     const isAudio = typeof asset.type === 'string' && asset.type.startsWith('audio/');
     const defaultExtension = getAttachmentExtensionFromAsset(asset) || 'jpg';
     const maxAttempts = 3;
-    const wait = (ms) => new Promise((resolve) => {
+    const wait = (/** @type {number} */ ms) => new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
+    /**
+     * @param {number} attempt
+     * @returns {Promise<any[]>}
+     */
     const attemptUpload = async (attempt) => {
       try {
         if (Platform.OS === 'android' && attempt === 1) {
@@ -1361,10 +1472,11 @@ function Conversation({ navigation, route }) {
               return androidFetchItems;
             }
           } catch (androidFetchError) {
+            const safeAndroidFetchError = /** @type {any} */ (androidFetchError);
             logAttachmentDebug('uploadAttachmentAsset fetch-first failed', {
               attempt,
               chatId,
-              error: androidFetchError?.message || androidFetchError,
+              error: safeAndroidFetchError?.message || safeAndroidFetchError,
             });
           }
         }
@@ -1388,18 +1500,19 @@ function Conversation({ navigation, route }) {
         });
         return uploadItems;
       } catch (error) {
+        const safeError = /** @type {any} */ (error);
         const rawErrorMessage = (
-          typeof error === 'string'
-            ? error
-            : String(error?.message || error || '')
+          typeof safeError === 'string'
+            ? safeError
+            : String(safeError?.message || safeError || '')
         );
-        const errorCode = typeof error === 'object' && error !== null
-          ? error?.code
+        const errorCode = typeof safeError === 'object' && safeError !== null
+          ? safeError?.code
           : undefined;
-        const responseStatus = typeof error === 'object' && error !== null
-          ? error?.response?.status
+        const responseStatus = typeof safeError === 'object' && safeError !== null
+          ? safeError?.response?.status
           : undefined;
-        const isTransientNetworkError = isTransientNetworkUploadError(error);
+        const isTransientNetworkError = isTransientNetworkUploadError(safeError);
         const shouldRetry = attempt < maxAttempts && isTransientNetworkError;
 
         logAttachmentDebug('uploadAttachmentAsset attempt failed', {
@@ -1423,10 +1536,11 @@ function Conversation({ navigation, route }) {
               return fallbackItems;
             }
           } catch (fetchFallbackError) {
+            const safeFetchFallbackError = /** @type {any} */ (fetchFallbackError);
             logAttachmentDebug('uploadAttachmentAsset audio fetch fallback failed', {
               attempt,
               chatId,
-              error: fetchFallbackError?.message || fetchFallbackError,
+              error: safeFetchFallbackError?.message || safeFetchFallbackError,
             });
           }
         } else if (isTransientNetworkError && !isAudio) {
@@ -1436,10 +1550,11 @@ function Conversation({ navigation, route }) {
               return fallbackItems;
             }
           } catch (fetchFallbackError) {
+            const safeFetchFallbackError = /** @type {any} */ (fetchFallbackError);
             logAttachmentDebug('uploadAttachmentAsset fetch fallback failed', {
               attempt,
               chatId,
-              error: fetchFallbackError?.message || fetchFallbackError,
+              error: safeFetchFallbackError?.message || safeFetchFallbackError,
             });
           }
         }
@@ -1457,7 +1572,7 @@ function Conversation({ navigation, route }) {
   }, [chatId, describeAsset, describeUploadItems, getAttachmentExtensionFromAsset, isSocketConnected, isTransientNetworkUploadError, logAttachmentDebug, uploadAttachmentAssetWithFetch]);
 
   const uploadAndSendAttachment = async (
-    /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
+    /** @type {AttachmentAsset} */ asset,
     /** @type {{
      *  caption?: string;
      *  clientMessageId?: string;
@@ -1535,15 +1650,16 @@ function Conversation({ navigation, route }) {
       });
       return true;
     } catch (error) {
+      const safeError = /** @type {any} */ (error);
       logAttachmentDebug('uploadAndSendAttachment exception', {
         chatId,
-        code: error?.code,
-        error: error?.message || error,
-        responseData: error?.response?.data,
-        responseStatus: error?.response?.status,
+        code: safeError?.code,
+        error: safeError?.message || safeError,
+        responseData: safeError?.response?.data,
+        responseStatus: safeError?.response?.status,
       });
       conversationLogger.warn('Attachment upload failed', error);
-      showErrorBanner(buildAttachmentUploadErrorMessage(error));
+      showErrorBanner(buildAttachmentUploadErrorMessage(safeError));
       return false;
     } finally {
       uploadInFlightRef.current = false;
@@ -1552,7 +1668,7 @@ function Conversation({ navigation, route }) {
   };
 
   const uploadAndSendAttachmentWithPlaceholder = async (
-    /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
+    /** @type {AttachmentAsset} */ asset,
     /** @type {{
      *  caption?: string;
      *  clientMessageId?: string;
@@ -1643,18 +1759,19 @@ function Conversation({ navigation, route }) {
       });
       return true;
     } catch (error) {
+      const safeError = /** @type {any} */ (error);
       if (safeOptimisticMessageId) {
         removeLocalPendingMessage(safeOptimisticMessageId);
       }
       logAttachmentDebug('uploadAndSendAttachmentWithPlaceholder exception', {
         chatId,
-        code: error?.code,
-        error: error?.message || error,
-        responseData: error?.response?.data,
-        responseStatus: error?.response?.status,
+        code: safeError?.code,
+        error: safeError?.message || safeError,
+        responseData: safeError?.response?.data,
+        responseStatus: safeError?.response?.status,
       });
       conversationLogger.warn('Attachment upload failed', error);
-      showErrorBanner(buildAttachmentUploadErrorMessage(error));
+      showErrorBanner(buildAttachmentUploadErrorMessage(safeError));
       return false;
     } finally {
       uploadInFlightRef.current = false;
@@ -1663,7 +1780,7 @@ function Conversation({ navigation, route }) {
   };
 
   const normalizePickedAsset = useCallback((
-    /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ selectedAsset,
+    /** @type {AttachmentAsset} */ selectedAsset,
   ) => {
     const rawType = String(selectedAsset?.type || '').trim().toLowerCase();
     const safeType = rawType || 'application/octet-stream';
@@ -1684,7 +1801,7 @@ function Conversation({ navigation, route }) {
   }, [getAttachmentExtensionFromAsset]);
 
   const queueOrSendPickedAsset = async (
-    /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ selectedAsset,
+    /** @type {AttachmentAsset} */ selectedAsset,
   ) => {
     const normalizedAsset = normalizePickedAsset(selectedAsset);
     const validationError = validateAttachmentAsset(normalizedAsset);
@@ -1759,10 +1876,11 @@ function Conversation({ navigation, route }) {
 
       await queueOrSendPickedAsset(selectedAsset);
     } catch (error) {
+      const safeError = /** @type {any} */ (error);
       logAttachmentDebug('handlePickMedia exception', {
-        error: error?.message || error,
-        responseData: error?.response?.data,
-        responseStatus: error?.response?.status,
+        error: safeError?.message || safeError,
+        responseData: safeError?.response?.data,
+        responseStatus: safeError?.response?.status,
       });
       conversationLogger.warn('Media picker failed', error);
       showErrorBanner('Impossible d\'ouvrir la galerie.');
@@ -1848,10 +1966,11 @@ function Conversation({ navigation, route }) {
 
       await queueOrSendPickedAsset(selectedAsset);
     } catch (error) {
+      const safeError = /** @type {any} */ (error);
       logAttachmentDebug('handleTakePhoto exception', {
-        error: error?.message || error,
-        responseData: error?.response?.data,
-        responseStatus: error?.response?.status,
+        error: safeError?.message || safeError,
+        responseData: safeError?.response?.data,
+        responseStatus: safeError?.response?.status,
       });
       conversationLogger.warn('Camera open failed', error);
       showErrorBanner('Impossible de prendre la photo.');
@@ -1910,7 +2029,7 @@ function Conversation({ navigation, route }) {
     }
   };
 
-  const appendEditAttachmentsFromAsset = useCallback(async (selectedAsset) => {
+  const appendEditAttachmentsFromAsset = useCallback(async (/** @type {AttachmentAsset} */ selectedAsset) => {
     const normalizedAsset = normalizePickedAsset(selectedAsset || {});
     const validationError = validateAttachmentAsset(normalizedAsset);
     if (validationError) {
@@ -2139,7 +2258,7 @@ function Conversation({ navigation, route }) {
     setIsPollModalVisible(false);
   }, [chatId, sendMessage, t, userData]);
 
-  const parseCoordinatesFromOption = (option) => {
+  const parseCoordinatesFromOption = (/** @type {any} */ option) => {
     const rawValue = String(option?.value || '');
     const [lngRaw, latRaw] = rawValue.split('|');
     const lat = Number(latRaw);
@@ -2152,7 +2271,7 @@ function Conversation({ navigation, route }) {
     return { lat, lng };
   };
 
-  const resolveEventLocationLabel = useCallback((event) => {
+  const resolveEventLocationLabel = useCallback((/** @type {any} */ event) => {
     const fallback = event?.location?.label || event?.facility?.address || event?.facility?.name || '';
     if (!event?.locationDetails) return fallback;
 
@@ -2183,7 +2302,7 @@ function Conversation({ navigation, route }) {
 
   const handleShareContact = () => {
     if (!chatId || !selectedContactId) return;
-    const selectedContact = shareableContacts.find((contact) => contact.documentId === selectedContactId);
+    const selectedContact = shareableContacts.find((/** @type {any} */ contact) => contact.documentId === selectedContactId);
     if (!selectedContact) return;
 
     const composition = {
@@ -2203,7 +2322,10 @@ function Conversation({ navigation, route }) {
     setIsContactShareModalVisible(false);
   };
 
-  const handleShareEvent = useCallback((event, options = {}) => {
+  const handleShareEvent = useCallback((
+    /** @type {any} */ event,
+    /** @type {{ closeModal?: boolean }} */ options = {},
+  ) => {
     const { closeModal = true } = options;
     const eventDocumentId = String(event?.documentId || event?.id || '').trim();
     if (!chatId || !eventDocumentId) return;
@@ -2233,8 +2355,8 @@ function Conversation({ navigation, route }) {
         ? {
           activities: Array.isArray(event?.team?.activities)
             ? event.team.activities
-              .map((activity) => ({ name: activity?.name || '' }))
-              .filter((activity) => activity?.name)
+              .map((/** @type {any} */ activity) => ({ name: activity?.name || '' }))
+              .filter((/** @type {any} */ activity) => activity?.name)
             : [],
           category: event?.team?.category || null,
           club: event?.team?.club
@@ -2279,7 +2401,7 @@ function Conversation({ navigation, route }) {
     }
   }, [chatId, resolveEventLocationLabel, sendMessage, userData]);
 
-  const hasMeaningfulEventValue = useCallback((value) => {
+  const hasMeaningfulEventValue = useCallback((/** @type {any} */ value) => {
     if (value == null) return false;
     if (typeof value === 'string') return value.trim().length > 0;
     if (Array.isArray(value)) return value.length > 0;
@@ -2287,11 +2409,11 @@ function Conversation({ navigation, route }) {
     return true;
   }, []);
 
-  const preferEventValue = useCallback((primaryValue, fallbackValue) => (
+  const preferEventValue = useCallback((/** @type {any} */ primaryValue, /** @type {any} */ fallbackValue) => (
     hasMeaningfulEventValue(primaryValue) ? primaryValue : fallbackValue
   ), [hasMeaningfulEventValue]);
 
-  const mergeNamedEventEntity = useCallback((previewEntity, payloadEntity) => {
+  const mergeNamedEventEntity = useCallback((/** @type {any} */ previewEntity, /** @type {any} */ payloadEntity) => {
     if (!hasMeaningfulEventValue(previewEntity) && !hasMeaningfulEventValue(payloadEntity)) return null;
     if (!hasMeaningfulEventValue(previewEntity)) return payloadEntity;
     if (!hasMeaningfulEventValue(payloadEntity) || typeof payloadEntity !== 'object') return previewEntity;
@@ -2302,7 +2424,7 @@ function Conversation({ navigation, route }) {
     };
   }, [hasMeaningfulEventValue]);
 
-  const mergeSharedEventPayload = useCallback((previewEvent, payloadEvent) => {
+  const mergeSharedEventPayload = useCallback((/** @type {any} */ previewEvent, /** @type {any} */ payloadEvent) => {
     if (!hasMeaningfulEventValue(previewEvent) && !hasMeaningfulEventValue(payloadEvent)) return null;
     if (!hasMeaningfulEventValue(previewEvent)) return payloadEvent;
     if (!hasMeaningfulEventValue(payloadEvent) || typeof payloadEvent !== 'object') return previewEvent;
@@ -2339,7 +2461,7 @@ function Conversation({ navigation, route }) {
     preferEventValue,
   ]);
 
-  const resolveMessageEventPayload = useCallback((message) => {
+  const resolveMessageEventPayload = useCallback((/** @type {any} */ message) => {
     const composition = message?.composition;
     const eventPayload = message?.event;
     const eventDocumentId = String(
@@ -2449,7 +2571,7 @@ function Conversation({ navigation, route }) {
     });
   };
 
-  const handleRemoveGroupMember = (member) => {
+  const handleRemoveGroupMember = (/** @type {any} */ member) => {
     const memberId = String(member?.documentId || member?.id || '').trim();
     if (!chatId || !memberId) return;
 
@@ -2540,11 +2662,12 @@ function Conversation({ navigation, route }) {
       setVoiceRecordingState(VOICE_RECORDING_STATES.recording);
       logVoiceDiagnostic('record-start-succeeded', { chatId });
     } catch (error) {
-      const code = String(error?.message || '');
+      const safeError = /** @type {any} */ (error);
+      const code = String(safeError?.message || '');
       logVoiceDiagnostic('record-start-failed', {
         chatId,
         code,
-        message: error?.message || error,
+        message: safeError?.message || safeError,
       });
       if (code === 'VOICE_ALREADY_RECORDING') return;
       conversationLogger.warn('Failed to start voice recording', error);
@@ -2641,14 +2764,15 @@ function Conversation({ navigation, route }) {
       });
       resetVoiceRecordingState();
     } catch (error) {
+      const safeError = /** @type {any} */ (error);
       conversationLogger.warn('Failed to finalize voice note draft', error);
       logVoiceDiagnostic('record-stop-failed', {
         chatId,
-        code: String(error?.message || ''),
-        message: error?.message || error,
+        code: String(safeError?.message || ''),
+        message: safeError?.message || safeError,
       });
       setVoiceRecordingState(VOICE_RECORDING_STATES.error);
-      const code = String(error?.message || '');
+      const code = String(safeError?.message || '');
       let errorMessage = t(
         'conversation.voice.sendErrorDescription',
         'Impossible d\'envoyer la note vocale. Réessayez.',
@@ -2720,7 +2844,7 @@ function Conversation({ navigation, route }) {
     t,
   ]);
 
-  const openSharedContact = (userDocumentId) => {
+  const openSharedContact = (/** @type {string} */ userDocumentId) => {
     if (!userDocumentId) return;
     navigation.navigate(RouteNames.ProfileStack, {
       params: { userId: userDocumentId },
@@ -2728,7 +2852,7 @@ function Conversation({ navigation, route }) {
     });
   };
 
-  const openSharedEvent = (eventDocumentId) => {
+  const openSharedEvent = (/** @type {string} */ eventDocumentId) => {
     if (!eventDocumentId) return;
     navigation.navigate(RouteNames.EventStack, {
       params: { eventId: eventDocumentId },
@@ -2835,7 +2959,7 @@ function Conversation({ navigation, route }) {
     t,
   ]);
 
-  const handleAttachmentSheetAction = (actionKey) => {
+  const handleAttachmentSheetAction = (/** @type {string} */ actionKey) => {
     switch (actionKey) {
       case 'camera':
         runAttachmentAction(handleTakePhoto);
@@ -2888,7 +3012,7 @@ function Conversation({ navigation, route }) {
       });
       if (!legalAcceptance) return;
 
-      await createLeagueProposal(matchId, proposalPayload, { legalAcceptance });
+      await createLeagueProposal(matchId, /** @type {any} */ (proposalPayload), { legalAcceptance });
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
       queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] });
@@ -2902,7 +3026,10 @@ function Conversation({ navigation, route }) {
     }
   };
 
-  const handleOpenCounterProposal = useCallback((message, options = {}) => {
+  const handleOpenCounterProposal = useCallback((
+    /** @type {any} */ message,
+    /** @type {{ isMine?: boolean; shouldDecline?: boolean }} */ options = {},
+  ) => {
     const proposalMessageId = String(
       message?.documentId
       || message?._id
@@ -3117,7 +3244,7 @@ function Conversation({ navigation, route }) {
 
     // Get my team's members to determine if sender is opponent
     const myTeamMembers = chatData?.myTeamMembers || [];
-    const isMyTeamMember = myTeamMembers.some((m) => m.documentId === sender?.documentId);
+    const isMyTeamMember = myTeamMembers.some((/** @type {any} */ m) => m.documentId === sender?.documentId);
 
     if (isMyTeamMember) {
       // Show real name for teammates
@@ -3150,13 +3277,13 @@ function Conversation({ navigation, route }) {
     registerUser(userData);
 
     if (Array.isArray(chatData?.participants)) {
-      chatData.participants.forEach((participant) => registerUser(participant));
+      chatData.participants.forEach((/** @type {any} */ participant) => registerUser(participant));
     }
 
     if (Array.isArray(messagesPages?.pages)) {
-      messagesPages.pages.forEach((page) => {
+      messagesPages.pages.forEach((/** @type {any} */ page) => {
         if (!Array.isArray(page?.data)) return;
-        page.data.forEach((msg) => registerUser(msg?.sender));
+        page.data.forEach((/** @type {any} */ msg) => registerUser(msg?.sender));
       });
     }
 
@@ -3168,8 +3295,9 @@ function Conversation({ navigation, route }) {
     return voterNameDirectory.get(String(voterId)) || 'Membre';
   };
 
-  const messages = useMemo(() => (messagesPages ? messagesPages?.pages?.reduce((acc, page) => {
-    const formattedMessages = page.data.map((msg) => {
+  /** @type {any[]} */
+  const messages = useMemo(() => (messagesPages ? messagesPages?.pages?.reduce((/** @type {any[]} */ acc, /** @type {any} */ page) => {
+    const formattedMessages = page.data.map((/** @type {any} */ msg) => {
       const rawAttachments = msg.attachments;
       const normalizedAttachments = normalizeMessageAttachments(msg.attachments);
       const messageKey = String(msg?.documentId || msg?.id || '');
@@ -3226,7 +3354,7 @@ function Conversation({ navigation, route }) {
       };
     });
     return [...acc, ...formattedMessages];
-  }, /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) : []), [messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
+  }, /** @type {any[]} */ ([])) : []), [messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
 
   useEffect(() => {
     const safeChatId = String(chatId || '').trim();
@@ -3288,8 +3416,8 @@ function Conversation({ navigation, route }) {
   ).trim();
   const latestProposalMessage = useMemo(() => (
     Array.isArray(messages)
-      ? messages.find((message) => message?.composition?.type === 'proposal' && message?.composition?.status === 'pending')
-        || messages.find((message) => message?.composition?.type === 'proposal')
+      ? messages.find((/** @type {any} */ message) => message?.composition?.type === 'proposal' && message?.composition?.status === 'pending')
+        || messages.find((/** @type {any} */ message) => message?.composition?.type === 'proposal')
         || null
       : null
   ), [messages]);
@@ -3320,7 +3448,8 @@ function Conversation({ navigation, route }) {
     return '';
   }, [teamAUserIds, teamBUserIds, userData]);
   const myTeamMemberIds = useMemo(() => {
-    let ownSideIds = [];
+    /** @type {Set<string>} */
+    let ownSideIds = new Set();
     if (currentUserLeagueSide === 'a') {
       ownSideIds = teamAUserIds;
     } else if (currentUserLeagueSide === 'b') {
@@ -3329,18 +3458,18 @@ function Conversation({ navigation, route }) {
 
     const ids = new Set(ownSideIds);
     const members = Array.isArray(chatData?.myTeamMembers) ? chatData.myTeamMembers : [];
-    members.forEach((member) => addLeagueTeamUserId(ids, member));
+    members.forEach((/** @type {any} */ member) => addLeagueTeamUserId(ids, member));
     addLeagueTeamUserId(ids, userData);
     return ids;
   }, [chatData?.myTeamMembers, currentUserLeagueSide, teamAUserIds, teamBUserIds, userData]);
-  const getLeagueSideForUserId = useCallback((userId) => {
+  const getLeagueSideForUserId = useCallback((/** @type {string} */ userId) => {
     const safeUserId = String(userId || '').trim();
     if (!safeUserId) return '';
     if (teamAUserIds.has(safeUserId)) return 'a';
     if (teamBUserIds.has(safeUserId)) return 'b';
     return '';
   }, [teamAUserIds, teamBUserIds]);
-  const getProposalAuthorSide = useCallback((message) => {
+  const getProposalAuthorSide = useCallback((/** @type {any} */ message) => {
     const proposal = message?.composition || {};
     const explicitSide = normalizeLeagueTeamSide(
       proposal.proposalSide
@@ -4290,16 +4419,16 @@ function Conversation({ navigation, route }) {
     }));
   }, []);
 
-  const toEditAttachmentPayload = useCallback((attachments) => (
-    (Array.isArray(attachments) ? attachments : [])
-      .map((attachment) => {
+  const toEditAttachmentPayload = useCallback((/** @type {any[]} */ attachments) => (
+    /** @type {{ id?: number; documentId?: string }[]} */ ((Array.isArray(attachments) ? attachments : [])
+      .map((/** @type {any} */ attachment) => {
         const numericId = Number(attachment?.id);
         if (Number.isInteger(numericId) && numericId > 0) return { id: numericId };
         const attachmentDocumentId = String(attachment?.documentId || '').trim();
         if (attachmentDocumentId) return { documentId: attachmentDocumentId };
         return null;
       })
-      .filter(Boolean)
+      .filter(Boolean))
   ), []);
 
   const handleDeleteSelectedMessage = useCallback(() => {

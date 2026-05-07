@@ -7,7 +7,7 @@
  */
 
 /**
- * @typedef {'waiting_proposal' | 'waiting_venue' | 'confirmed_upcoming' | 'waiting_score' | 'pending_validation' | 'disputed' | 'valid' | 'cancelled' | 'forfeit' | 'no_show' | 'unknown'} LeagueMatchPhase
+ * @typedef {'waiting_proposal' | 'waiting_venue' | 'confirmed_upcoming' | 'post_slot_resolution' | 'waiting_score' | 'pending_validation' | 'disputed' | 'valid' | 'cancelled' | 'forfeit' | 'no_show' | 'unknown'} LeagueMatchPhase
  */
 
 /**
@@ -88,6 +88,13 @@
  * @property {object} [event]
  * @property {number} [rsvp_count]
  * @property {Record<string, number>} [player_goals]
+ * @property {Record<string, any>} [automation_meta]
+ * @property {Record<string, any>} [workflow]
+ * @property {string | null} [proposalMessageId]
+ * @property {string | null} [latestProposalMessageId]
+ * @property {{messageId?: string | null, [key: string]: any}} [currentProposal]
+ * @property {string | null} [actionState]
+ * @property {string | null} [actionType]
  * @property {string} [createdAt]
  */
 
@@ -99,6 +106,8 @@
  * @property {string | object} [location]
  * @property {number} [radius]
  * @property {string} [state]
+ * @property {Record<string, any> | null} [softSuggestion]
+ * @property {string | null} [serverNow]
  */
 
 /**
@@ -108,7 +117,11 @@
  * @property {MatchRequest | null} [request]
  * @property {LeagueMatch | null} [match]
  * @property {OpponentDetails | null} [opponentDetails]
+ * @property {OpponentDetails | null} [opponent]
  * @property {object | null} [searchInsights]
+ * @property {Record<string, any> | null} [softSuggestion]
+ * @property {string | null} [serverNow]
+ * @property {string | null} [legacyState]
  */
 
 /**

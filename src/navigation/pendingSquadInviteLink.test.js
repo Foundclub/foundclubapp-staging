@@ -1,11 +1,11 @@
-const storageMock = {
+const mockStorage = {
   delete: jest.fn(),
   getString: jest.fn(),
   set: jest.fn(),
 };
 
 jest.mock('@/store/appContext', () => ({
-  storage: storageMock,
+  storage: mockStorage,
 }));
 
 const {
@@ -27,7 +27,7 @@ describe('pendingSquadInviteLink', () => {
   test('saves a normalized pending squad invite', () => {
     savePendingSquadInviteLink(' squad-doc-1 ');
 
-    expect(storageMock.set).toHaveBeenCalledWith(
+    expect(mockStorage.set).toHaveBeenCalledWith(
       'pendingLeagueSquadInviteLink',
       JSON.stringify({
         createdAt: 1_700_000_000_000,
@@ -39,11 +39,11 @@ describe('pendingSquadInviteLink', () => {
   test('does not save an empty squad id', () => {
     savePendingSquadInviteLink('   ');
 
-    expect(storageMock.set).not.toHaveBeenCalled();
+    expect(mockStorage.set).not.toHaveBeenCalled();
   });
 
   test('reads a recent pending invite', () => {
-    storageMock.getString.mockReturnValue(JSON.stringify({
+    mockStorage.getString.mockReturnValue(JSON.stringify({
       createdAt: 1_700_000_000_000,
       teamId: 'squad-doc-1',
     }));
@@ -52,22 +52,22 @@ describe('pendingSquadInviteLink', () => {
       createdAt: 1_700_000_000_000,
       teamId: 'squad-doc-1',
     });
-    expect(storageMock.delete).not.toHaveBeenCalled();
+    expect(mockStorage.delete).not.toHaveBeenCalled();
   });
 
   test('drops an expired pending invite', () => {
-    storageMock.getString.mockReturnValue(JSON.stringify({
+    mockStorage.getString.mockReturnValue(JSON.stringify({
       createdAt: 1_700_000_000_000 - (8 * 24 * 60 * 60 * 1000),
       teamId: 'squad-doc-1',
     }));
 
     expect(readPendingSquadInviteLink()).toBeNull();
-    expect(storageMock.delete).toHaveBeenCalledWith('pendingLeagueSquadInviteLink');
+    expect(mockStorage.delete).toHaveBeenCalledWith('pendingLeagueSquadInviteLink');
   });
 
   test('clears the pending invite', () => {
     clearPendingSquadInviteLink();
 
-    expect(storageMock.delete).toHaveBeenCalledWith('pendingLeagueSquadInviteLink');
+    expect(mockStorage.delete).toHaveBeenCalledWith('pendingLeagueSquadInviteLink');
   });
 });

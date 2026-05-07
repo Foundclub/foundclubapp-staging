@@ -389,6 +389,41 @@ export const deleteLeagueTeam = async (documentId) => {
 };
 
 /**
+ * Leave a squad as the authenticated member.
+ * @param {string} teamId
+ * @returns {Promise<object>}
+ */
+export const leaveSquad = async (teamId) => {
+  try {
+    const response = await client.post(`/league-teams/${teamId}/leave`);
+    return response.data?.data || response.data;
+  } catch (error) {
+    console.error('Error leaving squad:', error);
+    throw error;
+  }
+};
+
+/**
+ * Remove a member from a squad.
+ * @param {string} teamId
+ * @param {string} userId
+ * @returns {Promise<object>}
+ */
+export const removeSquadMember = async (teamId, userId) => {
+  try {
+    const response = await client.post(`/league-teams/${teamId}/remove-member`, {
+      data: {
+        userId,
+      },
+    });
+    return response.data?.data || response.data;
+  } catch (error) {
+    console.error('Error removing squad member:', error);
+    throw error;
+  }
+};
+
+/**
  * Search squads with filters
  * @param {SquadSearchFilters} filters
  * @returns {Promise<any[]>}

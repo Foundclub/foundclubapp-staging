@@ -15,6 +15,7 @@ import {
   approveExternalLicensePayment,
   rejectExternalLicensePayment,
   useCurrentLicenseCampaign,
+  useLicenseDashboard,
   useLicenseMutation,
   useLicensePaymentReviews,
 } from '@/services/license/licenseQueries';
@@ -31,6 +32,11 @@ import {
 
 const memberName = (user = {}) => [user.firstname, user.lastname].filter(Boolean).join(' ') || user.username || 'Membre';
 const reviewPayments = (assignment = {}) => (assignment.payments || []).filter((payment) => payment.status === 'manual_review');
+const resolveCanManageLicenses = (scope, routeCanManageLicenses) => {
+  if (scope === 'coach') return false;
+  if (typeof routeCanManageLicenses === 'boolean') return routeCanManageLicenses;
+  return Boolean(scope && scope !== 'coach');
+};
 
 /**
  *
@@ -88,13 +94,20 @@ function ClubLicensePayments({ navigation, route }) {
   const { Fonts, Spaces } = useTheme();
   const clubId = route?.params?.clubId;
   const routeCampaignId = route?.params?.campaignId;
+  const routeCanManageLicenses = route?.params?.canManageLicenses;
+  const routeScope = route?.params?.scope;
   const campaignQuery = useCurrentLicenseCampaign(
     useMemo(() => ({ clubId, includeDraft: true }), [clubId]),
     { enabled: Boolean(clubId && !routeCampaignId) },
   );
   const campaign = campaignQuery.data;
   const campaignId = routeCampaignId || campaign?.documentId || campaign?.id;
-  const reviewsQuery = useLicensePaymentReviews(campaignId, { pageSize: 50 }, { enabled: Boolean(campaignId) });
+  const permissionQuery = useLicenseDashboard(campaignId, {
+    enabled: Boolean(campaignId && routeCanManageLicenses === undefined && !routeScope),
+  });
+  const scope = routeScope || permissionQuery.data?.scope;
+  const canManageLicenses = resolveCanManageLicenses(scope, routeCanManageLicenses);
+  const reviewsQuery = useLicensePaymentReviews(campaignId, { pageSize: 50 }, { enabled: Boolean(campaignId && canManageLicenses) });
   const approveMutation = useLicenseMutation(({ paymentId, ...payload }) => approveExternalLicensePayment(paymentId, payload), campaignId);
   const rejectMutation = useLicenseMutation(({ paymentId, ...payload }) => rejectExternalLicensePayment(paymentId, payload), campaignId);
   const [paymentToReject, setPaymentToReject] = useState(null);
@@ -104,8 +117,16 @@ function ClubLicensePayments({ navigation, route }) {
   const totalReviewCents = assignments.reduce((sum, assignment) => (
     sum + reviewPayments(assignment).reduce((paymentSum, payment) => paymentSum + (Number(payment.amountCents) || 0), 0)
   ), 0);
+  const isLoading = campaignQuery.isLoading || (
+    Boolean(campaignId)
+    && routeCanManageLicenses === undefined
+    && !routeScope
+    && permissionQuery.isLoading
+  ) || (canManageLicenses && reviewsQuery.isLoading);
+  const hasError = campaignQuery.isError || permissionQuery.isError || reviewsQuery.isError;
 
   const approvePayment = useCallback((paymentId) => {
+    if (!canManageLicenses) return;
     Alert.alert('Valider le paiement declare', 'Confirmer que le club a bien recu ce paiement ?', [
       { style: 'cancel', text: 'Annuler' },
       {
@@ -115,17 +136,25 @@ function ClubLicensePayments({ navigation, route }) {
         text: 'Valider',
       },
     ]);
-  }, [approveMutation, reviewsQuery]);
+  }, [approveMutation, canManageLicenses, reviewsQuery]);
 
   const rejectPayment = useCallback((reason) => {
-    if (!paymentToReject) return;
+    if (!paymentToReject || !canManageLicenses) return;
     rejectMutation.mutate({ paymentId: paymentToReject, reason }, {
       onSuccess: () => {
         setPaymentToReject(null);
         reviewsQuery.refetch();
       },
     });
-  }, [paymentToReject, rejectMutation, reviewsQuery]);
+  }, [canManageLicenses, paymentToReject, rejectMutation, reviewsQuery]);
+
+  const retryData = useCallback(() => {
+    campaignQuery.refetch();
+    if (campaignId) {
+      permissionQuery.refetch();
+      reviewsQuery.refetch();
+    }
+  }, [campaignId, campaignQuery, permissionQuery, reviewsQuery]);
 
   const renderAssignment = ({ item }) => {
     const payments = reviewPayments(item);
@@ -168,6 +197,8 @@ function ClubLicensePayments({ navigation, route }) {
             onPress={() => navigation.navigate(RouteNames.ClubLicenseMemberDetail, {
               assignmentId: item.documentId || item.id,
               campaignId,
+              canManageLicenses,
+              scope,
             })}
             title="Ouvrir la fiche membre"
             variant="Secondary"
@@ -186,32 +217,55 @@ function ClubLicensePayments({ navigation, route }) {
             Controle les declarations externes avant de les passer en encaisse.
           </Text>
         </View>
-        <LicenseCard>
-          <LicenseMetricRow
-            items={[
-              { label: 'Dossiers', value: String(assignments.length) },
-              { label: 'Declarations', value: String(totalReviewPayments) },
-              { label: 'Montant', value: formatLicenseMoney(totalReviewCents) },
-            ]}
+        {isLoading ? (
+          <LicenseEmptyState
+            description="On charge les declarations en attente."
+            title="Chargement"
           />
-        </LicenseCard>
-        <LicenseSectionHeader title="A traiter" />
-        <FlatList
-          contentContainerStyle={{ gap: licenseSpacing.listGap, paddingBottom: 40 }}
-          data={assignments}
-          keyExtractor={(item) => String(item.documentId || item.id)}
-          ListEmptyComponent={(
-            <LicenseEmptyState
-              description="Aucune declaration de paiement n attend de validation."
-              title="Tout est propre"
+        ) : null}
+        {!isLoading && !hasError && !canManageLicenses ? (
+          <LicenseEmptyState
+            description="La validation des paiements est reservee aux dirigeants."
+            title="Action reservee"
+          />
+        ) : null}
+        {!isLoading && hasError ? (
+          <LicenseEmptyState
+            action={<Button onPress={retryData} title="Reessayer" variant="Secondary" />}
+            description="Impossible de charger les paiements a valider."
+            title="Paiements indisponibles"
+          />
+        ) : null}
+        {!isLoading && canManageLicenses && !hasError ? (
+          <>
+            <LicenseCard>
+              <LicenseMetricRow
+                items={[
+                  { label: 'Dossiers', value: String(assignments.length) },
+                  { label: 'Declarations', value: String(totalReviewPayments) },
+                  { label: 'Montant', value: formatLicenseMoney(totalReviewCents) },
+                ]}
+              />
+            </LicenseCard>
+            <LicenseSectionHeader title="A traiter" />
+            <FlatList
+              contentContainerStyle={{ gap: licenseSpacing.listGap, paddingBottom: 40 }}
+              data={assignments}
+              keyExtractor={(item) => String(item.documentId || item.id)}
+              ListEmptyComponent={(
+                <LicenseEmptyState
+                  description="Aucune declaration de paiement n attend de validation."
+                  title="Tout est propre"
+                />
+              )}
+              onRefresh={reviewsQuery.refetch}
+              refreshing={reviewsQuery.isRefetching}
+              renderItem={renderAssignment}
             />
-          )}
-          onRefresh={reviewsQuery.refetch}
-          refreshing={reviewsQuery.isRefetching}
-          renderItem={renderAssignment}
-        />
+          </>
+        ) : null}
       </View>
-      {paymentToReject ? (
+      {paymentToReject && canManageLicenses ? (
         <RejectPaymentModal
           isLoading={rejectMutation.isPending}
           onClose={() => setPaymentToReject(null)}

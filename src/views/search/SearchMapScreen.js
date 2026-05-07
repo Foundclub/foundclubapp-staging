@@ -57,12 +57,15 @@ import {
 import { navigateToSearchMapDetail } from '@/platform/maps/searchMapDetailNavigation';
 
 const logger = createLogger('search-map-screen');
+const SearchMapView = /** @type {any} */ (SearchMap);
 const DEFAULT_RADIUS = 20;
 const MIN_CLUB_MAP_QUERY_ZOOM = 9;
 const MIN_EVENT_MAP_QUERY_ZOOM = 10;
 const MOVE_THRESHOLD = 0.005;
 const DEFAULT_MAP_ASPECT_RATIO = 0.58;
 const EVENT_VIEWPORT_AUTO_SEARCH_DEBOUNCE_MS = 300;
+const MAP_CLUB_VIEWPORT_PAGE_SIZE = 300;
+const MAP_EVENT_VIEWPORT_PAGE_SIZE = 120;
 const CLUB_VIEWPORT_MOVE_OPTIONS = Object.freeze({
   boundsTolerance: 0.08,
   zoomTolerance: 0.35,
@@ -72,22 +75,28 @@ const EVENT_VIEWPORT_MOVE_OPTIONS = Object.freeze({
   zoomTolerance: 0.2,
 });
 
-const sanitizeScope = (value) => (
+/**
+ * @typedef {{ lat?: number; lng?: number; zoom?: number; north?: number; south?: number; east?: number; west?: number; latitudeDelta?: number; longitudeDelta?: number }} SearchViewport
+ * @typedef {Record<string, any>} SearchFilters
+ * @typedef {Record<string, any>} SearchMapQuery
+ */
+
+const sanitizeScope = (/** @type {any} */ value) => (
   value === 'clubs' || value === 'reservations' ? value : 'events'
 );
 
-const readLabel = (value) => {
+const readLabel = (/** @type {any} */ value) => {
   if (!value) return '';
   if (typeof value === 'string') return value.trim();
   return String(value.label || value.name || value.title || value.value || '').trim();
 };
 
-const humanize = (value) => String(value || '')
+const humanize = (/** @type {any} */ value) => String(value || '')
   .trim()
   .replace(/[-_]+/g, ' ')
   .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-const parseAddressCoordinates = (address) => {
+const parseAddressCoordinates = (/** @type {any} */ address) => {
   const lat = Number.parseFloat(String(address?.lat ?? ''));
   const lng = Number.parseFloat(String(address?.lng ?? address?.lon ?? ''));
 
@@ -104,7 +113,7 @@ const parseAddressCoordinates = (address) => {
     : null;
 };
 
-const parseAddressBbox = (address) => {
+const parseAddressBbox = (/** @type {any} */ address) => {
   const safeBbox = address?.bbox;
   if (!safeBbox || typeof safeBbox !== 'object') {
     return null;
@@ -127,12 +136,12 @@ const parseAddressBbox = (address) => {
   return null;
 };
 
-const roundViewportMetric = (value, precision = 6) => {
+const roundViewportMetric = (/** @type {any} */ value, precision = 6) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Number(parsed.toFixed(precision)) : undefined;
 };
 
-const getAddressZoomHeuristic = (address) => {
+const getAddressZoomHeuristic = (/** @type {any} */ address) => {
   const type = String(address?.type || '').trim().toLowerCase();
   const postcode = String(address?.postcode || '').trim();
   if (type === 'housenumber') return 16;
@@ -142,7 +151,7 @@ const getAddressZoomHeuristic = (address) => {
   return 11;
 };
 
-const toRegionHintFromAddress = (address) => {
+const toRegionHintFromAddress = (/** @type {any} */ address) => {
   const coordinates = parseAddressCoordinates(address);
   if (!coordinates) {
     return null;
@@ -165,7 +174,7 @@ const toRegionHintFromAddress = (address) => {
   };
 };
 
-const parseFilterCoordinates = (filters) => {
+const parseFilterCoordinates = (/** @type {SearchFilters} */ filters) => {
   const lat = Number.parseFloat(String(filters?.lat ?? ''));
   const lng = Number.parseFloat(String(filters?.lon ?? ''));
   const zoom = Number.parseFloat(String(filters?.zoom ?? ''));
@@ -174,7 +183,7 @@ const parseFilterCoordinates = (filters) => {
     : null;
 };
 
-const resolvePreferredRegion = (filters, fallbackRegion = null) => {
+const resolvePreferredRegion = (/** @type {SearchFilters} */ filters, /** @type {SearchViewport | null} */ fallbackRegion = null) => {
   const directRegion = parseFilterCoordinates(filters);
   if (directRegion) {
     return directRegion;
@@ -188,15 +197,15 @@ const resolvePreferredRegion = (filters, fallbackRegion = null) => {
   return fallbackRegion;
 };
 
-const areRegionsEquivalent = (left, right) => {
+const areRegionsEquivalent = (/** @type {SearchViewport | null} */ left, /** @type {SearchViewport | null} */ right) => {
   if (!left && !right) return true;
   if (!left || !right) return false;
 
   const leftZoom = Number.isFinite(Number(left.zoom)) ? Number(left.zoom) : undefined;
   const rightZoom = Number.isFinite(Number(right.zoom)) ? Number(right.zoom) : undefined;
-  const compareOptional = (key, epsilon = 0.0001) => {
-    const leftValue = Number(left?.[key]);
-    const rightValue = Number(right?.[key]);
+  const compareOptional = (/** @type {string} */ key, epsilon = 0.0001) => {
+    const leftValue = Number(/** @type {any} */ (left)?.[key]);
+    const rightValue = Number(/** @type {any} */ (right)?.[key]);
     if (!Number.isFinite(leftValue) && !Number.isFinite(rightValue)) {
       return true;
     }
@@ -226,14 +235,14 @@ const areRegionsEquivalent = (left, right) => {
   );
 };
 
-const hasFiniteViewportBounds = (viewport) => (
+const hasFiniteViewportBounds = (/** @type {SearchViewport | null | undefined} */ viewport) => (
   Number.isFinite(Number(viewport?.north))
   && Number.isFinite(Number(viewport?.south))
   && Number.isFinite(Number(viewport?.east))
   && Number.isFinite(Number(viewport?.west))
 );
 
-const resolveViewportZoom = (viewport) => {
+const resolveViewportZoom = (/** @type {SearchViewport | null | undefined} */ viewport) => {
   const explicitZoom = Number(viewport?.zoom);
   if (Number.isFinite(explicitZoom)) {
     return explicitZoom;
@@ -247,7 +256,7 @@ const resolveViewportZoom = (viewport) => {
   return 11;
 };
 
-const normalizeViewport = (viewport) => {
+const normalizeViewport = (/** @type {SearchViewport | null | undefined} */ viewport) => {
   if (!viewport) {
     return null;
   }
@@ -271,17 +280,17 @@ const normalizeViewport = (viewport) => {
   };
 };
 
-const canSearchClubViewport = (viewport) => (
+const canSearchClubViewport = (/** @type {SearchViewport | null | undefined} */ viewport) => (
   hasFiniteViewportBounds(viewport)
   && resolveViewportZoom(viewport) >= MIN_CLUB_MAP_QUERY_ZOOM
 );
 
-const canSearchEventViewport = (viewport) => (
+const canSearchEventViewport = (/** @type {SearchViewport | null | undefined} */ viewport) => (
   hasFiniteViewportBounds(viewport)
   && resolveViewportZoom(viewport) >= MIN_EVENT_MAP_QUERY_ZOOM
 );
 
-const buildViewportFromRegionCandidate = (region, aspectRatio = DEFAULT_MAP_ASPECT_RATIO) => {
+const buildViewportFromRegionCandidate = (/** @type {SearchViewport | null | undefined} */ region, aspectRatio = DEFAULT_MAP_ASPECT_RATIO) => {
   if (!region) {
     return null;
   }
@@ -332,8 +341,8 @@ const buildViewportFromRegionCandidate = (region, aspectRatio = DEFAULT_MAP_ASPE
 };
 
 const areViewportsEquivalent = (
-  left,
-  right,
+  /** @type {SearchViewport | null | undefined} */ left,
+  /** @type {SearchViewport | null | undefined} */ right,
   {
     boundsTolerance = CLUB_VIEWPORT_MOVE_OPTIONS.boundsTolerance,
     zoomTolerance = CLUB_VIEWPORT_MOVE_OPTIONS.zoomTolerance,
@@ -358,8 +367,8 @@ const areViewportsEquivalent = (
     Math.abs(Number(normalizedRight.east) - Number(normalizedRight.west)),
     0.01,
   );
-  const compare = (key, epsilon) => (
-    Math.abs(Number(normalizedLeft?.[key]) - Number(normalizedRight?.[key])) <= epsilon
+  const compare = (/** @type {string} */ key, /** @type {number} */ epsilon) => (
+    Math.abs(Number(/** @type {any} */ (normalizedLeft)?.[key]) - Number(/** @type {any} */ (normalizedRight)?.[key])) <= epsilon
   );
 
   return (
@@ -377,29 +386,29 @@ const areViewportsEquivalent = (
   );
 };
 
-const hasMeaningfulMove = (nextRegion, appliedCenter) => (
+const hasMeaningfulMove = (/** @type {SearchViewport | null | undefined} */ nextRegion, /** @type {SearchViewport | null | undefined} */ appliedCenter) => (
   !!nextRegion
   && !!appliedCenter
   && (
-    Math.abs(nextRegion.lat - appliedCenter.lat) >= MOVE_THRESHOLD
-    || Math.abs(nextRegion.lng - appliedCenter.lng) >= MOVE_THRESHOLD
+    Math.abs(Number(nextRegion.lat) - Number(appliedCenter.lat)) >= MOVE_THRESHOLD
+    || Math.abs(Number(nextRegion.lng) - Number(appliedCenter.lng)) >= MOVE_THRESHOLD
   )
 );
 
-const hasMeaningfulViewportMove = (nextViewport, executedViewport, options) => (
+const hasMeaningfulViewportMove = (/** @type {SearchViewport | null | undefined} */ nextViewport, /** @type {SearchViewport | null | undefined} */ executedViewport, /** @type {any} */ options) => (
   !!nextViewport
   && !!executedViewport
   && !areViewportsEquivalent(nextViewport, executedViewport, options)
 );
 
-const formatDateChip = (value, prefix) => {
+const formatDateChip = (/** @type {any} */ value, /** @type {string} */ prefix) => {
   if (!value) return '';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '';
   return `${prefix} ${format(parsed, 'd MMM', { locale: fr })}`;
 };
 
-const getFilterActionType = (isClubScope, isReservationScope) => {
+const getFilterActionType = (/** @type {boolean} */ isClubScope, /** @type {boolean} */ isReservationScope) => {
   if (isClubScope) {
     return 'SET_CLUB_FILTERS';
   }
@@ -411,7 +420,7 @@ const getFilterActionType = (isClubScope, isReservationScope) => {
   return 'SET_EVENT_FILTERS';
 };
 
-const buildClubMapViewportQuery = (filters, viewport, view = 'map') => {
+const buildClubMapViewportQuery = (/** @type {SearchFilters} */ filters, /** @type {SearchViewport | null | undefined} */ viewport, view = 'map') => {
   const normalizedViewport = normalizeViewport(viewport);
   if (!normalizedViewport || !canSearchClubViewport(normalizedViewport)) {
     return null;
@@ -426,7 +435,7 @@ const buildClubMapViewportQuery = (filters, viewport, view = 'map') => {
     east: normalizedViewport.east,
     includeMultisport: true,
     north: normalizedViewport.north,
-    pageSize: view === 'map' ? 1500 : 30,
+    pageSize: view === 'map' ? MAP_CLUB_VIEWPORT_PAGE_SIZE : 30,
     q: q.length >= 2 ? q : undefined,
     south: normalizedViewport.south,
     view,
@@ -435,7 +444,7 @@ const buildClubMapViewportQuery = (filters, viewport, view = 'map') => {
   };
 };
 
-const buildEventMapViewportQuery = (filters, viewport, view = 'map') => {
+const buildEventMapViewportQuery = (/** @type {SearchFilters} */ filters, /** @type {SearchViewport | null | undefined} */ viewport, view = 'map') => {
   const normalizedViewport = normalizeViewport(viewport);
   if (!normalizedViewport || !canSearchEventViewport(normalizedViewport)) {
     return null;
@@ -453,7 +462,7 @@ const buildEventMapViewportQuery = (filters, viewport, view = 'map') => {
     excludeType: filters?.excludeType,
     level: filters?.level,
     north: normalizedViewport.north,
-    pageSize: view === 'map' ? 500 : 30,
+    pageSize: view === 'map' ? MAP_EVENT_VIEWPORT_PAGE_SIZE : 30,
     q: q.length >= 2 ? q : undefined,
     sessionStatus: filters?.sessionStatus,
     south: normalizedViewport.south,
@@ -467,9 +476,9 @@ const buildEventMapViewportQuery = (filters, viewport, view = 'map') => {
   };
 };
 
-const buildClubMapFilterSignature = (filters) => JSON.stringify({
+const buildClubMapFilterSignature = (/** @type {SearchFilters} */ filters) => JSON.stringify({
   activity: Array.isArray(filters?.activity)
-    ? filters.activity.map((item) => (
+    ? filters.activity.map((/** @type {any} */ item) => (
       item?.value
       || item?.documentId
       || item?.id
@@ -487,9 +496,9 @@ const buildClubMapFilterSignature = (filters) => JSON.stringify({
     : '',
 });
 
-const buildEventMapFilterSignature = (filters) => JSON.stringify({
+const buildEventMapFilterSignature = (/** @type {SearchFilters} */ filters) => JSON.stringify({
   activity: Array.isArray(filters?.activity)
-    ? filters.activity.map((item) => (
+    ? filters.activity.map((/** @type {any} */ item) => (
       item?.value
       || item?.documentId
       || item?.id
@@ -503,12 +512,12 @@ const buildEventMapFilterSignature = (filters) => JSON.stringify({
       || null
     ),
   category: Array.isArray(filters?.category)
-    ? filters.category.map((item) => item?.value || item?.documentId || item?.id || String(item || ''))
+    ? filters.category.map((/** @type {any} */ item) => item?.value || item?.documentId || item?.id || String(item || ''))
     : (filters?.category?.value || filters?.category?.documentId || filters?.category?.id || filters?.category || null),
   club: filters?.club?.value || filters?.club?.documentId || filters?.club?.id || filters?.club || null,
   excludeType: filters?.excludeType || null,
   level: Array.isArray(filters?.level)
-    ? filters.level.map((item) => item?.value || item?.documentId || item?.id || String(item || ''))
+    ? filters.level.map((/** @type {any} */ item) => item?.value || item?.documentId || item?.id || String(item || ''))
     : (filters?.level?.value || filters?.level?.documentId || filters?.level?.id || filters?.level || null),
   q: typeof filters?.q === 'string' && filters.q.trim().length >= 2
     ? filters.q.trim()
@@ -518,10 +527,14 @@ const buildEventMapFilterSignature = (filters) => JSON.stringify({
   startDateBefore: filters?.startDateBefore || null,
   teamIds: Array.isArray(filters?.teamIds) ? [...filters.teamIds].sort() : [],
   type: Array.isArray(filters?.type)
-    ? filters.type.map((item) => item?.value || item?.documentId || item?.id || String(item || ''))
+    ? filters.type.map((/** @type {any} */ item) => item?.value || item?.documentId || item?.id || String(item || ''))
     : (filters?.type?.value || filters?.type?.documentId || filters?.type?.id || filters?.type || null),
 });
 
+/**
+ * @param {any} value
+ * @returns {any}
+ */
 const buildStableSignature = (value) => {
   if (Array.isArray(value)) {
     return value.map((item) => buildStableSignature(item));
@@ -530,21 +543,21 @@ const buildStableSignature = (value) => {
   if (value && typeof value === 'object') {
     return Object.keys(value)
       .sort()
-      .reduce((acc, key) => {
+      .reduce((/** @type {Record<string, any>} */ acc, /** @type {string} */ key) => {
         const nextValue = buildStableSignature(value[key]);
         if (nextValue !== undefined) {
           acc[key] = nextValue;
         }
         return acc;
-      }, {});
+      }, /** @type {Record<string, any>} */ ({}));
   }
 
   return value;
 };
 
-const toStableJson = (value) => JSON.stringify(buildStableSignature(value));
+const toStableJson = (/** @type {any} */ value) => JSON.stringify(buildStableSignature(value));
 
-const logClubMapLifecycle = (event, payload = {}) => {
+const logClubMapLifecycle = (/** @type {string} */ event, /** @type {Record<string, any>} */ payload = {}) => {
   if (!__DEV__) {
     return;
   }
@@ -552,7 +565,7 @@ const logClubMapLifecycle = (event, payload = {}) => {
   logger.info(`[clubs-map] ${event}`, payload);
 };
 
-const logEventMapLifecycle = (event, payload = {}) => {
+const logEventMapLifecycle = (/** @type {string} */ event, /** @type {Record<string, any>} */ payload = {}) => {
   if (!__DEV__) {
     return;
   }
@@ -561,48 +574,48 @@ const logEventMapLifecycle = (event, payload = {}) => {
 };
 
 const getActiveQueryItems = (
-  isSmartSearchEnabled,
-  regularQuery,
-  searchedQuery,
+  /** @type {boolean} */ isSmartSearchEnabled,
+  /** @type {any} */ regularQuery,
+  /** @type {any} */ searchedQuery,
 ) => (
   isSmartSearchEnabled
     ? searchedQuery.data?.pages?.reduce(
-      (acc, page) => acc.concat(mapSearchPayload(page)),
+      (/** @type {any[]} */ acc, /** @type {any} */ page) => acc.concat(mapSearchPayload(page)),
       [],
     ) || []
     : regularQuery.data?.pages?.reduce(
-      (acc, page) => acc.concat(page?.data || []),
+      (/** @type {any[]} */ acc, /** @type {any} */ page) => acc.concat(page?.data || []),
       [],
     ) || []
 );
 
 const getActiveQueryError = (
-  isSmartSearchEnabled,
-  regularQuery,
-  searchedQuery,
+  /** @type {boolean} */ isSmartSearchEnabled,
+  /** @type {any} */ regularQuery,
+  /** @type {any} */ searchedQuery,
 ) => (
   isSmartSearchEnabled ? searchedQuery.error : regularQuery.error
 );
 
 const getActiveQueryLoadingState = (
-  isSmartSearchEnabled,
-  regularQuery,
-  searchedQuery,
+  /** @type {boolean} */ isSmartSearchEnabled,
+  /** @type {any} */ regularQuery,
+  /** @type {any} */ searchedQuery,
 ) => (
   isSmartSearchEnabled ? searchedQuery.isLoading : regularQuery.isLoading
 );
 
 const getActiveQueryTotalCount = (
-  isSmartSearchEnabled,
-  regularQuery,
-  searchedQuery,
+  /** @type {boolean} */ isSmartSearchEnabled,
+  /** @type {any} */ regularQuery,
+  /** @type {any} */ searchedQuery,
 ) => {
   const activeQuery = isSmartSearchEnabled ? searchedQuery : regularQuery;
   const total = Number(activeQuery?.data?.pages?.[0]?.meta?.pagination?.total);
   return Number.isFinite(total) && total > 0 ? total : 0;
 };
 
-const getUnavailableMessage = (scope) => {
+const getUnavailableMessage = (/** @type {string} */ scope) => {
   if (scope === 'clubs') {
     return 'Impossible de mettre à jour les clubs pour le moment.';
   }
@@ -614,7 +627,7 @@ const getUnavailableMessage = (scope) => {
   return 'Impossible de mettre à jour les événements pour le moment.';
 };
 
-const getMapHeading = (scope) => {
+const getMapHeading = (/** @type {string} */ scope) => {
   if (scope === 'clubs') {
     return 'Clubs';
   }
@@ -626,7 +639,7 @@ const getMapHeading = (scope) => {
   return 'Evenements';
 };
 
-const resolveScopedMapAddressSelection = (scope, filters, session) => {
+const resolveScopedMapAddressSelection = (/** @type {string} */ scope, /** @type {SearchFilters} */ filters, /** @type {any} */ session) => {
   if (scope === 'events' || scope === 'clubs') {
     return session?.addressSelection || filters?.city || undefined;
   }
@@ -634,7 +647,7 @@ const resolveScopedMapAddressSelection = (scope, filters, session) => {
   return filters?.city || undefined;
 };
 
-const resolveScopedPreferredRegion = (scope, filters, fallbackRegion = null) => {
+const resolveScopedPreferredRegion = (/** @type {string} */ scope, /** @type {SearchFilters} */ filters, /** @type {SearchViewport | null} */ fallbackRegion = null) => {
   if (scope === 'events') {
     return fallbackRegion || resolvePreferredRegion(filters, null);
   }
@@ -642,10 +655,11 @@ const resolveScopedPreferredRegion = (scope, filters, fallbackRegion = null) => 
   return resolvePreferredRegion(filters, fallbackRegion);
 };
 
-const buildChips = (scope, filters, options = {}) => {
+const buildChips = (/** @type {string} */ scope, /** @type {SearchFilters} */ filters, /** @type {{ isViewportMode?: boolean }} */ options = {}) => {
+  /** @type {string[]} */
   const chips = [];
   const isViewportMode = Boolean(options?.isViewportMode);
-  const push = (value) => {
+  const push = (/** @type {any} */ value) => {
     const safeValue = String(value || '').trim();
     if (safeValue) {
       chips.push(safeValue);
@@ -717,6 +731,7 @@ function SearchMapScreen({ navigation, route }) {
     Images,
     Spaces,
   } = useTheme();
+  const SpacesAny = /** @type {any} */ (Spaces);
   const { userData } = useAuth();
   const { getGeohashForPointAndRadius } = usePlaces();
   const [{
@@ -728,20 +743,20 @@ function SearchMapScreen({ navigation, route }) {
 
   const [topOverlayHeight, setTopOverlayHeight] = useState(156);
   const [topBannerHeight, setTopBannerHeight] = useState(0);
-  const [addressSelection, setAddressSelection] = useState(undefined);
-  const [appliedCenter, setAppliedCenter] = useState(null);
+  const [addressSelection, setAddressSelection] = useState(/** @type {any} */ (undefined));
+  const [appliedCenter, setAppliedCenter] = useState(/** @type {SearchViewport | null} */ (null));
   const [isAddressSearchActive, setIsAddressSearchActive] = useState(false);
-  const [renderStats, setRenderStats] = useState(null);
+  const [renderStats, setRenderStats] = useState(/** @type {Record<string, any> | null} */ (null));
   // visible viewport currently displayed by the map runtime
-  const [currentViewport, setCurrentViewport] = useState(null);
+  const [currentViewport, setCurrentViewport] = useState(/** @type {SearchViewport | null} */ (null));
   // searched viewport last explicitly searched against a viewport map endpoint
-  const [executedViewport, setExecutedViewport] = useState(null);
-  const [executedClubMapQuery, setExecutedClubMapQuery] = useState(null);
-  const [executedEventMapQuery, setExecutedEventMapQuery] = useState(null);
-  const [clubMapLastResultMeta, setClubMapLastResultMeta] = useState(null);
-  const [eventMapLastResultMeta, setEventMapLastResultMeta] = useState(null);
+  const [executedViewport, setExecutedViewport] = useState(/** @type {SearchViewport | null} */ (null));
+  const [executedClubMapQuery, setExecutedClubMapQuery] = useState(/** @type {SearchMapQuery | null} */ (null));
+  const [executedEventMapQuery, setExecutedEventMapQuery] = useState(/** @type {SearchMapQuery | null} */ (null));
+  const [clubMapLastResultMeta, setClubMapLastResultMeta] = useState(/** @type {Record<string, any> | null} */ (null));
+  const [eventMapLastResultMeta, setEventMapLastResultMeta] = useState(/** @type {Record<string, any> | null} */ (null));
   // viewport moved by the user but not yet committed via "Rechercher dans cette zone"
-  const [pendingRegion, setPendingRegion] = useState(null);
+  const [pendingRegion, setPendingRegion] = useState(/** @type {SearchViewport | null} */ (null));
   const [showSearchThisArea, setShowSearchThisArea] = useState(false);
   const [isSubmittingRegionSearch, setIsSubmittingRegionSearch] = useState(false);
 
@@ -752,13 +767,13 @@ function SearchMapScreen({ navigation, route }) {
   const isAuthenticated = Boolean(userData?.documentId);
   const isViewportSearchScope = isClubScope || isEventScope;
 
-  const activeFilters = useMemo(() => {
+  const activeFilters = /** @type {SearchFilters} */ (useMemo(() => {
     if (isClubScope) return clubFilters || {};
     if (isReservationScope) return reservationFilters || {};
     return eventFilters || {};
-  }, [clubFilters, eventFilters, isClubScope, isReservationScope, reservationFilters]);
+  }, [clubFilters, eventFilters, isClubScope, isReservationScope, reservationFilters]));
 
-  const persistedSession = searchMapSessions?.[scope] || {};
+  const persistedSession = /** @type {Record<string, any>} */ ((/** @type {Record<string, any>} */ (searchMapSessions || {}))?.[scope] || {});
   const persistedExecutedQuery = persistedSession?.executedQuery
     || persistedSession?.executedClubMapQuery
     || null;
@@ -767,15 +782,15 @@ function SearchMapScreen({ navigation, route }) {
     activeFilters,
     persistedSession?.region || null,
   );
-  const hydratedScopeRef = useRef(null);
+  const hydratedScopeRef = useRef(/** @type {string | null} */ (null));
   const isBootstrappingViewportRef = useRef(false);
   const shouldAutoSubmitViewportRef = useRef(false);
-  const pendingAddressViewportTimeoutRef = useRef(null);
-  const pendingEventViewportSearchTimeoutRef = useRef(null);
-  const pendingVisibleViewportTimeoutRef = useRef(null);
-  const clubMapFilterSignatureRef = useRef(null);
-  const eventMapFilterSignatureRef = useRef(null);
-  const persistedRegionTimeoutRef = useRef(null);
+  const pendingAddressViewportTimeoutRef = useRef(/** @type {any} */ (null));
+  const pendingEventViewportSearchTimeoutRef = useRef(/** @type {any} */ (null));
+  const pendingVisibleViewportTimeoutRef = useRef(/** @type {any} */ (null));
+  const clubMapFilterSignatureRef = useRef(/** @type {string | null} */ (null));
+  const eventMapFilterSignatureRef = useRef(/** @type {string | null} */ (null));
+  const persistedRegionTimeoutRef = useRef(/** @type {any} */ (null));
   const focusMetricsRef = useRef({ geolocatableCount: 0, totalCount: 0 });
   const focusRefreshConfigRef = useRef({
     isClubScope: false,
@@ -784,22 +799,22 @@ function SearchMapScreen({ navigation, route }) {
     isReservationScope: false,
     isReservationSmartSearchEnabled: false,
   });
-  const eventRefetchRef = useRef(() => Promise.resolve());
-  const searchedEventRefetchRef = useRef(() => Promise.resolve());
-  const reservationRefetchRef = useRef(() => Promise.resolve());
-  const searchedReservationRefetchRef = useRef(() => Promise.resolve());
+  const eventRefetchRef = useRef(/** @type {any} */ (() => Promise.resolve()));
+  const searchedEventRefetchRef = useRef(/** @type {any} */ (() => Promise.resolve()));
+  const reservationRefetchRef = useRef(/** @type {any} */ (() => Promise.resolve()));
+  const searchedReservationRefetchRef = useRef(/** @type {any} */ (() => Promise.resolve()));
   const clubMapHasResolvedRef = useRef(false);
   const eventMapHasResolvedRef = useRef(false);
   const lastCommittedClubMapQuerySignatureRef = useRef('');
   const lastCommittedEventMapQuerySignatureRef = useRef('');
   const lastPersistedRegionMetaSignatureRef = useRef('');
   const lastPersistedRenderStatsSignatureRef = useRef('');
-  const lastPersistedRegionRef = useRef(initialViewportRegion);
-  const lastPersistedVisibleViewportRef = useRef(null);
+  const lastPersistedRegionRef = useRef(/** @type {SearchViewport | null} */ (initialViewportRegion));
+  const lastPersistedVisibleViewportRef = useRef(/** @type {SearchViewport | null} */ (null));
   const [selectedMapItemId, setSelectedMapItemId] = useState(
     persistedSession?.selectedItemId || '',
   );
-  const [regionHint, setRegionHint] = useState(initialViewportRegion);
+  const [regionHint, setRegionHint] = useState(/** @type {SearchViewport | null} */ (initialViewportRegion));
   const persistedExecutedViewport = persistedSession?.searchedViewport
     || persistedSession?.executedViewport
     || null;
@@ -810,14 +825,14 @@ function SearchMapScreen({ navigation, route }) {
   const persistedLastResultMeta = persistedSession?.lastResultMeta || null;
   const persistedLastRenderStats = persistedSession?.lastRenderStats || null;
 
-  const persistSessionState = useCallback((state) => {
+  const persistSessionState = useCallback((/** @type {Record<string, any>} */ state) => {
     appDispatch({
       payload: { scope, state },
       type: 'SET_SEARCH_MAP_SESSION_STATE',
     });
   }, [appDispatch, scope]);
 
-  const dispatchFilters = useCallback((payload) => {
+  const dispatchFilters = useCallback((/** @type {SearchFilters} */ payload) => {
     appDispatch({
       payload,
       type: getFilterActionType(isClubScope, isReservationScope),
@@ -936,7 +951,7 @@ function SearchMapScreen({ navigation, route }) {
     }
   }, [clearSafeTimer]);
 
-  const persistViewportRegion = useCallback((nextRegion) => {
+  const persistViewportRegion = useCallback((/** @type {SearchViewport | null} */ nextRegion) => {
     if (!nextRegion || !Number.isFinite(nextRegion.lat) || !Number.isFinite(nextRegion.lng)) {
       return;
     }
@@ -957,7 +972,7 @@ function SearchMapScreen({ navigation, route }) {
     }, 180);
   }, [clearSafeTimer, persistSessionState, setSafeTimeout]);
 
-  const persistVisibleViewport = useCallback((nextViewport) => {
+  const persistVisibleViewport = useCallback((/** @type {SearchViewport | null} */ nextViewport) => {
     const normalizedViewport = normalizeViewport(nextViewport);
     if (!isViewportSearchScope || !normalizedViewport || !hasFiniteViewportBounds(normalizedViewport)) {
       return;
@@ -979,7 +994,7 @@ function SearchMapScreen({ navigation, route }) {
     }, 180);
   }, [clearSafeTimer, isViewportSearchScope, persistSessionState, setSafeTimeout]);
 
-  const executeClubViewportSearch = useCallback((viewport, view = 'map') => {
+  const executeClubViewportSearch = useCallback((/** @type {SearchViewport | null} */ viewport, view = 'map') => {
     const normalizedViewport = normalizeViewport(viewport);
     if (!isClubScope || !normalizedViewport || !hasFiniteViewportBounds(normalizedViewport)) {
       return;
@@ -1082,7 +1097,7 @@ function SearchMapScreen({ navigation, route }) {
     lastPersistedVisibleViewportRef.current = normalizedViewport;
   }, [activeFilters, clearSafeTimer, executedViewport, isClubScope, persistSessionState]);
 
-  const executeEventViewportSearch = useCallback((viewport, view = 'map') => {
+  const executeEventViewportSearch = useCallback((/** @type {SearchViewport | null} */ viewport, view = 'map') => {
     const normalizedViewport = normalizeViewport(viewport);
     if (!isEventScope || !normalizedViewport || !hasFiniteViewportBounds(normalizedViewport)) {
       return;
@@ -1188,7 +1203,7 @@ function SearchMapScreen({ navigation, route }) {
     lastPersistedVisibleViewportRef.current = normalizedViewport;
   }, [activeFilters, clearSafeTimer, executedViewport, isEventScope, persistSessionState]);
 
-  const scheduleEventViewportRefresh = useCallback((viewport, reason = 'user') => {
+  const scheduleEventViewportRefresh = useCallback((/** @type {SearchViewport | null} */ viewport, reason = 'user') => {
     const normalizedViewport = normalizeViewport(viewport);
     if (!isEventScope || !normalizedViewport || !hasFiniteViewportBounds(normalizedViewport)) {
       return;
@@ -1222,14 +1237,14 @@ function SearchMapScreen({ navigation, route }) {
     }, reason === 'bootstrap' ? 120 : EVENT_VIEWPORT_AUTO_SEARCH_DEBOUNCE_MS);
   }, [clearSafeTimer, executeEventViewportSearch, isEventScope, setSafeTimeout]);
 
-  const eventConfig = useMemo(() => ({
+  const eventConfig = /** @type {SearchFilters} */ (useMemo(() => ({
     ...(eventFilters || {}),
     excludeType: 'Réservation',
     pageSize: 15,
     sessionStatus: 'open',
-  }), [eventFilters]);
+  }), [eventFilters]));
 
-  const reservationConfig = useMemo(() => {
+  const reservationConfig = /** @type {SearchFilters} */ (useMemo(() => {
     const nextConfig = {
       ...(reservationFilters || {}),
       pageSize: 15,
@@ -1238,7 +1253,7 @@ function SearchMapScreen({ navigation, route }) {
       nextConfig.startDateAfter = new Date().toISOString();
     }
     return nextConfig;
-  }, [reservationFilters]);
+  }, [reservationFilters]));
 
   const activeEventSearchText = typeof eventConfig?.q === 'string'
     ? eventConfig.q.trim()
@@ -1251,7 +1266,10 @@ function SearchMapScreen({ navigation, route }) {
   const isReservationSmartSearchEnabled = activeReservationSearchText.length >= 2;
   const isEventViewportMode = isEventScope;
 
-  const eventQuery = useGetEvents(eventConfig, {
+  const eventQuery = useGetEvents({
+    ...eventConfig,
+    compact: true,
+  }, {
     enabled: isEventScope && !isEventViewportMode && !isEventSmartSearchEnabled,
   });
   const searchedEventQuery = useSearchEvents({
@@ -1305,7 +1323,7 @@ function SearchMapScreen({ navigation, route }) {
   const eventItems = useMemo(() => {
     if (isEventViewportMode) {
       return eventMapQuery.data?.pages?.reduce(
-        (acc, page) => acc.concat(mapSearchPayload(page)),
+        (/** @type {any[]} */ acc, /** @type {any} */ page) => acc.concat(mapSearchPayload(page)),
         [],
       ) || [];
     }
@@ -1320,7 +1338,7 @@ function SearchMapScreen({ navigation, route }) {
 
   const clubItems = useMemo(
     () => clubMapQuery.data?.pages?.reduce(
-      (acc, page) => acc.concat(mapSearchPayload(page)),
+      (/** @type {any[]} */ acc, /** @type {any} */ page) => acc.concat(mapSearchPayload(page)),
       [],
     ) || [],
     [clubMapQuery.data?.pages],
@@ -1454,7 +1472,7 @@ function SearchMapScreen({ navigation, route }) {
   ]);
 
   useEffect(() => {
-    if (!selectedMapItemId || mapItems.some((item) => item.id === selectedMapItemId)) {
+    if (!selectedMapItemId || mapItems.some((/** @type {any} */ item) => item.id === selectedMapItemId)) {
       return;
     }
 
@@ -1699,9 +1717,10 @@ function SearchMapScreen({ navigation, route }) {
             : eventRefetchRef.current?.()
         );
       } catch (error) {
+        const safeError = /** @type {any} */ (error);
         if (!isCancelled) {
           logger.warn('search map refetch failed on focus', {
-            message: error?.message,
+            message: safeError?.message,
             scope,
           });
         }
@@ -1788,7 +1807,10 @@ function SearchMapScreen({ navigation, route }) {
     });
   }, [isClubScope, isReservationScope, navigation, scope]);
 
-  const handleAddressSelect = useCallback((nextAddress) => {
+  const mapHeight = Math.max(480, viewportHeight - insets.top - insets.bottom - 24);
+  const mapAspectRatio = Math.max(0.42, Math.min(1.15, viewportWidth / mapHeight));
+
+  const handleAddressSelect = useCallback((/** @type {any} */ nextAddress) => {
     setAddressSelection(nextAddress);
     const coordinates = parseAddressCoordinates(nextAddress);
     if (!coordinates) {
@@ -1936,7 +1958,7 @@ function SearchMapScreen({ navigation, route }) {
     setSafeTimeout,
   ]);
 
-  const handleRegionChangeComplete = useCallback((nextRegion) => {
+  const handleRegionChangeComplete = useCallback((/** @type {SearchViewport | null} */ nextRegion) => {
     if (!nextRegion || !Number.isFinite(nextRegion.lat) || !Number.isFinite(nextRegion.lng)) {
       return;
     }
@@ -2141,12 +2163,12 @@ function SearchMapScreen({ navigation, route }) {
     dispatchFilters({
       ...activeFilters,
       geohash: getGeohashForPointAndRadius(
-        pendingRegion.lat,
-        pendingRegion.lng,
+        Number(pendingRegion.lat),
+        Number(pendingRegion.lng),
         radius,
       ),
-      lat: pendingRegion.lat,
-      lon: pendingRegion.lng,
+      lat: Number(pendingRegion.lat),
+      lon: Number(pendingRegion.lng),
       radius,
       zoom: pendingRegion.zoom,
     });
@@ -2174,7 +2196,7 @@ function SearchMapScreen({ navigation, route }) {
     persistSessionState,
   ]);
 
-  const handleOpenItem = useCallback((item) => {
+  const handleOpenItem = useCallback((/** @type {any} */ item) => {
     const rawItem = item?.raw;
     logger.info('search map item opened', {
       itemId: item?.id,
@@ -2189,12 +2211,12 @@ function SearchMapScreen({ navigation, route }) {
     });
   }, [isAuthenticated, navigation, scope]);
 
-  const handleSelectMapItem = useCallback((itemId) => {
+  const handleSelectMapItem = useCallback((/** @type {string} */ itemId) => {
     setSelectedMapItemId(itemId);
     persistSessionState({ selectedItemId: itemId });
   }, [persistSessionState]);
 
-  const handleMapRenderStats = useCallback((nextStats) => {
+  const handleMapRenderStats = useCallback((/** @type {Record<string, any> | null | undefined} */ nextStats) => {
     const normalizedStats = nextStats || null;
     const nextSignature = toStableJson(normalizedStats);
 
@@ -2211,8 +2233,6 @@ function SearchMapScreen({ navigation, route }) {
   );
   const hasActiveFilters = filterChips.length > 0;
   const title = t(`search.map.heading.${scope}`, getMapHeading(scope));
-  const mapHeight = Math.max(480, viewportHeight - insets.top - insets.bottom - 24);
-  const mapAspectRatio = Math.max(0.42, Math.min(1.15, viewportWidth / mapHeight));
   const searchAreaTop = topOverlayHeight + 14;
   const mapHudTop = topOverlayHeight + topBannerHeight + 24;
   const overlayInsets = useMemo(() => ({
@@ -2266,7 +2286,7 @@ function SearchMapScreen({ navigation, route }) {
               <View style={styles.mapPauseVeil} />
             </View>
           ) : (
-            <SearchMap
+            <SearchMapView
               focusedViewport={executedViewport || currentViewport || null}
               height={mapHeight}
               isLoadingResults={Boolean(isLoading || isSubmittingRegionSearch)}
@@ -2361,7 +2381,7 @@ function SearchMapScreen({ navigation, route }) {
               topHighlightHeight={1}
             >
               <View style={styles.searchSurface}>
-                <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[10]]}>
+                <View style={[Alignments.row, Alignments.alignCenter, SpacesAny.gap[10]]}>
                   <View style={styles.searchIconBadge}>
                     <Image
                       source={Images.search}
@@ -2518,7 +2538,7 @@ function SearchMapScreen({ navigation, route }) {
               <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
                 Recherche indisponible
               </Text>
-              <Text style={[Fonts.p4, Fonts.neutral200, Spaces.marginTop[6]]}>
+              <Text style={[Fonts.p4, Fonts.neutral200, SpacesAny.marginTop[6]]}>
                 {activeError?.message || getUnavailableMessage(scope)}
               </Text>
             </View>

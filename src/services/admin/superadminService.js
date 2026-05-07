@@ -31,6 +31,25 @@ export const listSuperadminEntries = async (uid, payload = {}) => {
 };
 
 /**
+ * Set a SuperAdmin user suspension state.
+ * @param {string} documentId
+ * @param {{ suspended: boolean; reason: string }} payload
+ * @returns {Promise<any>}
+ */
+export const setSuperadminUserSuspension = async (documentId, payload) => {
+  const response = await client.post(
+    `/superadmin/users/${encodeDocumentId(documentId)}/suspension`,
+    {
+      data: {
+        suspended: payload?.suspended === true,
+      },
+      reason: payload?.reason,
+    },
+  );
+  return unwrap(response);
+};
+
+/**
  * @param {string} uid
  * @param {string} documentId
  * @param {Record<string, any>} [params]

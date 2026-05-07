@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Image, NativeModules, StyleSheet, Text, UIManager, View,
 } from 'react-native';
@@ -46,7 +46,8 @@ const hasSvgNativeSupport = () => {
     return managerNames.some((name) => Boolean(UIManager.getViewManagerConfig(name)));
   }
 
-  return managerNames.some((name) => Boolean(UIManager?.[name]));
+  const managerLookup = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (UIManager || {}));
+  return managerNames.some((name) => Boolean(managerLookup[name]));
 };
 
 const SVG_NATIVE_READY = hasSvgNativeSupport();
@@ -57,20 +58,30 @@ const SVG_NATIVE_READY = hasSvgNativeSupport();
  */
 const getBadgeComponent = (division) => BADGE_COMPONENTS[division] || BADGE_COMPONENTS[5];
 
+/**
+ * @param {import('../../../theme/types').Images} images
+ * @param {number} division
+ * @returns {import('react-native').ImageSourcePropType}
+ */
 const getLegacyImageForDivision = (images, division) => {
   const key = `division${String(division).padStart(2, '0')}`;
-  return images?.[key] || images?.division05 || images?.shield;
+  const imageLookup = /** @type {Record<string, import('react-native').ImageSourcePropType>} */ (images || {});
+  return imageLookup[key] || imageLookup.division05 || imageLookup.shield;
 };
 
 /**
- *
- * @param root0
- * @param root0.division
- * @param root0.logoScale
- * @param root0.preferRaster
- * @param root0.showChrome
- * @param root0.showLabel
- * @param root0.size
+ * @typedef {object} DivisionBadgeProps
+ * @property {number} [division]
+ * @property {number} [logoScale]
+ * @property {boolean} [preferRaster]
+ * @property {boolean} [showChrome]
+ * @property {boolean} [showLabel]
+ * @property {number} [size]
+ */
+
+/**
+ * @param {DivisionBadgeProps} props
+ * @returns {import('react').ReactElement}
  */
 function DivisionBadge({
   division = 5,
@@ -200,7 +211,7 @@ const styles = StyleSheet.create({
     elevation: 6,
     justifyContent: 'center',
     overflow: 'hidden',
-    shadowColor: '#000000',
+    shadowColor: 'black',
     shadowOffset: { height: 2, width: 0 },
     shadowOpacity: 0.24,
     shadowRadius: 8,

@@ -65,6 +65,12 @@ function MatchRecapBanner({
     : `${recap.myScore ?? '-'} - ${recap.opponentScore ?? '-'}`;
   const pointsDelta = Number(recap.divisionPointsDelta ?? 0);
   const pointsLabel = `${pointsDelta >= 0 ? '+' : ''}${pointsDelta} pts League`;
+  let movementLabel = null;
+  if (recap.promotion) {
+    movementLabel = `Promotion D${recap.divisionAfter}`;
+  } else if (recap.relegation) {
+    movementLabel = `Relegation D${recap.divisionAfter}`;
+  }
 
   return (
     <Animated.View style={[styles.wrapper, containerStyle]}>
@@ -86,7 +92,7 @@ function MatchRecapBanner({
         <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
           {pointsLabel}
           {' - '}
-          {recap.progressLabel || 'Touchez pour voir le detail complet.'}
+          {movementLabel || recap.progressLabel || 'Touchez pour voir le detail complet.'}
         </Text>
         <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
           <Animated.View style={[styles.progressFill, progressStyle, { backgroundColor: Colors.primary500 }]} />

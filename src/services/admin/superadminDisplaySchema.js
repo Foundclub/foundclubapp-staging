@@ -105,30 +105,30 @@ const SORT_OPTIONS = [
   },
 ];
 
-const normalizeString = (value) => String(value || '').trim();
+const normalizeString = (/** @type {any} */ value) => String(value || '').trim();
 
-const toLabel = (rawKey) => normalizeString(rawKey)
+const toLabel = (/** @type {any} */ rawKey) => normalizeString(rawKey)
   .replace(/_/g, ' ')
   .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
   .replace(/\s+/g, ' ')
   .trim()
-  .replace(/^./, (char) => char.toUpperCase());
+  .replace(/^./, (/** @type {string} */ char) => char.toUpperCase());
 
-const truncate = (value, maxLength = 52) => {
+const truncate = (/** @type {any} */ value, maxLength = 52) => {
   const normalized = normalizeString(value);
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, maxLength - 1)}...`;
 };
 
-const normalizeComparisonValue = (value) => normalizeString(value).toLowerCase();
+const normalizeComparisonValue = (/** @type {any} */ value) => normalizeString(value).toLowerCase();
 
-const isDateLikeField = (key = '') => (
+const isDateLikeField = (/** @type {string} */ key = '') => (
   /date$/i.test(key)
   || /at$/i.test(key)
   || /time$/i.test(key)
 );
 
-const formatDate = (value) => {
+const formatDate = (/** @type {any} */ value) => {
   const normalized = normalizeString(value);
   if (!normalized) return '';
   const parsed = new Date(normalized);
@@ -142,14 +142,14 @@ const formatDate = (value) => {
   });
 };
 
-const getRule = (uid = '') => OVERRIDE_RULES.find((candidate) => candidate.match(uid)) || null;
+const getRule = (/** @type {string} */ uid = '') => OVERRIDE_RULES.find((candidate) => candidate.match(uid)) || null;
 
-const getScalarAttributeNames = (attributes = []) => attributes
-  .filter((attribute) => SCALAR_TYPES.has(String(attribute?.type || '')))
-  .map((attribute) => normalizeString(attribute?.name))
+const getScalarAttributeNames = (/** @type {any[]} */ attributes = []) => attributes
+  .filter((/** @type {any} */ attribute) => SCALAR_TYPES.has(String(attribute?.type || '')))
+  .map((/** @type {any} */ attribute) => normalizeString(attribute?.name))
   .filter(Boolean);
 
-const getListFieldNames = (uid, attributes = []) => {
+const getListFieldNames = (/** @type {string} */ uid, /** @type {any[]} */ attributes = []) => {
   const scalarNames = getScalarAttributeNames(attributes);
   const rule = getRule(uid);
   const selected = [
@@ -174,7 +174,7 @@ const getListFieldNames = (uid, attributes = []) => {
   return Array.from(new Set(selected)).slice(0, 18);
 };
 
-const getAlphaSortField = (uid, attributes = []) => {
+const getAlphaSortField = (/** @type {string} */ uid, /** @type {any[]} */ attributes = []) => {
   const scalarNames = getScalarAttributeNames(attributes);
   const rule = getRule(uid);
   const candidates = [
@@ -189,7 +189,7 @@ const getAlphaSortField = (uid, attributes = []) => {
   return first || 'documentId';
 };
 
-const getSortValue = (sortMode, alphaField) => {
+const getSortValue = (/** @type {string} */ sortMode, /** @type {string} */ alphaField) => {
   if (sortMode === SORT_MODES.created) {
     return ['createdAt:desc'];
   }
@@ -199,7 +199,7 @@ const getSortValue = (sortMode, alphaField) => {
   return ['updatedAt:desc'];
 };
 
-const resolveRawFieldValue = (entry = {}, fieldName = '') => {
+const resolveRawFieldValue = (/** @type {Record<string, any>} */ entry = {}, /** @type {string} */ fieldName = '') => {
   if (fieldName === 'fullname') {
     const firstname = normalizeString(entry?.firstname);
     const lastname = normalizeString(entry?.lastname);
@@ -208,7 +208,7 @@ const resolveRawFieldValue = (entry = {}, fieldName = '') => {
   return entry?.[fieldName];
 };
 
-const summarizeComplex = (value) => {
+const summarizeComplex = (/** @type {any} */ value) => {
   if (Array.isArray(value)) {
     if (!value.length) return '0 element';
     const first = value[0];
@@ -240,7 +240,7 @@ const summarizeComplex = (value) => {
   return '';
 };
 
-const normalizeFieldValue = (fieldName, value) => {
+const normalizeFieldValue = (/** @type {string} */ fieldName, /** @type {any} */ value) => {
   if (value === null || value === undefined) return '';
 
   if (typeof value === 'boolean') {
@@ -261,7 +261,7 @@ const normalizeFieldValue = (fieldName, value) => {
   return summarizeComplex(value);
 };
 
-const getTitle = (entry, uid) => {
+const getTitle = (/** @type {Record<string, any>} */ entry, /** @type {string} */ uid) => {
   const rule = getRule(uid);
   const candidates = [
     ...(rule?.titleFields || []),
@@ -283,7 +283,7 @@ const getTitle = (entry, uid) => {
   return 'Sans titre';
 };
 
-const getBadgeTone = (fieldName, rawValue) => {
+const getBadgeTone = (/** @type {string} */ fieldName, /** @type {any} */ rawValue) => {
   const key = normalizeString(fieldName).toLowerCase();
   const value = normalizeString(rawValue).toLowerCase();
 
@@ -297,7 +297,7 @@ const getBadgeTone = (fieldName, rawValue) => {
   return 'neutral';
 };
 
-const getBadges = (entry, uid) => {
+const getBadges = (/** @type {Record<string, any>} */ entry, /** @type {string} */ uid) => {
   const rule = getRule(uid);
   const candidates = [...(rule?.badgeFields || []), ...DEFAULT_BADGE_FIELDS];
   const deduped = Array.from(new Set(candidates));
@@ -317,13 +317,13 @@ const getBadges = (entry, uid) => {
     .slice(0, 3);
 };
 
-const getKeyFields = (entry, uid, maxFields = 3) => {
+const getKeyFields = (/** @type {Record<string, any>} */ entry, /** @type {string} */ uid, maxFields = 3) => {
   const rule = getRule(uid);
   const explicit = [...(rule?.keyFields || []), ...DEFAULT_KEY_FIELDS];
   const allEntryFields = Object.keys(entry || {});
   const candidates = [...explicit, ...allEntryFields];
   const used = new Set();
-  const result = [];
+  const result = /** @type {Array<any>} */ ([]);
 
   candidates.forEach((fieldName) => {
     if (result.length >= maxFields) return;
@@ -345,19 +345,20 @@ const getKeyFields = (entry, uid, maxFields = 3) => {
   return result;
 };
 
-const getShortDocumentId = (documentId) => {
+const getShortDocumentId = (/** @type {any} */ documentId) => {
   const normalized = normalizeString(documentId);
   if (!normalized) return '';
   if (normalized.length <= 14) return normalized;
   return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
 };
 
-const getComplexFields = (entry = {}, attributes = []) => {
-  const attributeMap = new Map(
-    (attributes || [])
-      .map((attribute) => [normalizeString(attribute?.name), attribute])
-      .filter(([name]) => Boolean(name)),
-  );
+const getComplexFields = (/** @type {Record<string, any>} */ entry = {}, /** @type {any[]} */ attributes = []) => {
+  const attributePairs = (attributes || []).reduce((/** @type {Array<[string, any]>} */ pairs, /** @type {any} */ attribute) => {
+    const name = normalizeString(attribute?.name);
+    if (name) pairs.push([name, attribute]);
+    return pairs;
+  }, /** @type {Array<[string, any]>} */ ([]));
+  const attributeMap = new Map(attributePairs);
 
   return Object.entries(entry || {})
     .filter(([key, value]) => {
@@ -382,7 +383,7 @@ const getComplexFields = (entry = {}, attributes = []) => {
 export const SUPERADMIN_SORT_MODES = SORT_MODES;
 export const SUPERADMIN_SORT_OPTIONS = SORT_OPTIONS;
 
-export const getListRequestConfig = ({ attributes, sortMode, uid }) => {
+export const getListRequestConfig = (/** @type {{ attributes: any[], sortMode: string, uid: string }} */ { attributes, sortMode, uid }) => {
   const alphaField = getAlphaSortField(uid, attributes);
 
   return {
@@ -391,7 +392,7 @@ export const getListRequestConfig = ({ attributes, sortMode, uid }) => {
   };
 };
 
-export const getEntryCardViewModel = ({ entry, uid }) => {
+export const getEntryCardViewModel = (/** @type {{ entry: Record<string, any>, uid: string }} */ { entry, uid }) => {
   const title = getTitle(entry, uid);
   const titleComparison = normalizeComparisonValue(title);
   const filteredFields = getKeyFields(entry, uid, 5)
@@ -412,7 +413,7 @@ export const getEntryCardViewModel = ({ entry, uid }) => {
   };
 };
 
-export const getEntryDetailViewModel = ({ attributes, entry, uid }) => ({
+export const getEntryDetailViewModel = (/** @type {{ attributes: any[], entry: Record<string, any>, uid: string }} */ { attributes, entry, uid }) => ({
   badges: getBadges(entry, uid),
   complexFields: getComplexFields(entry, attributes),
   createdAt: formatDate(entry?.createdAt || ''),
@@ -423,7 +424,7 @@ export const getEntryDetailViewModel = ({ attributes, entry, uid }) => ({
   updatedAt: formatDate(entry?.updatedAt || ''),
 });
 
-export const formatJsonPreview = (value, maxLength = 9000) => {
+export const formatJsonPreview = (/** @type {any} */ value, maxLength = 9000) => {
   try {
     const serialized = JSON.stringify(value, null, 2);
     if (serialized.length <= maxLength) {

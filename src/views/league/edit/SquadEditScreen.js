@@ -28,7 +28,7 @@ const schema = Joi.object({
   address: Joi.object().allow(null).optional().label('Adresse'),
   category: Joi.string().optional().allow('', null).label('Catégorie'),
   division: Joi.number().optional().allow(null, '').label('Division'),
-  elo: Joi.number().optional().allow(null, '').label('ELO'),
+  elo: Joi.number().optional().allow(null, '').label('ELO matchmaking'),
   name: Joi.string().required().min(3).label('Nom'),
   radius: Joi.number().min(5).max(100).default(20)
     .label('Rayon'),

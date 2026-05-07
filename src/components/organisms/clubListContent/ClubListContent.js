@@ -147,6 +147,7 @@ function ClubListContent({
     pageSize: 30,
   }, {
     enabled: screenActive && !isViewportListMode && !isSmartSearchEnabled,
+    placeholderData: undefined,
   });
 
   const {
@@ -161,6 +162,7 @@ function ClubListContent({
       && !isViewportListMode
       && !isSmartSearchEnabled
       && isMultisportDeferredEnabled,
+    placeholderData: undefined,
   });
 
   const {
@@ -180,6 +182,7 @@ function ClubListContent({
     radius: clubFilters?.radius,
   }, {
     enabled: screenActive && !isViewportListMode && isSmartSearchEnabled,
+    placeholderData: undefined,
   });
 
   const {
@@ -192,6 +195,7 @@ function ClubListContent({
     refetch: refetchViewport,
   } = useSearchClubsMap(viewportListParams || {}, {
     enabled: screenActive && isViewportListMode && Boolean(viewportListParams),
+    placeholderData: undefined,
   });
 
   const clubs = useMemo(() => clubPages?.pages

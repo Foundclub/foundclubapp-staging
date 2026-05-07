@@ -32,6 +32,23 @@ function MatchRecapSheet({
   const pointsDeltaLabel = `${pointsDelta >= 0 ? '+' : ''}${pointsDelta}`;
   const baseDelta = Number(recap.basePointsDelta ?? 0);
   const streakBonus = Number(recap.streakBonus ?? 0);
+  const divisionBefore = Number(recap.divisionBefore);
+  const divisionAfter = Number(recap.divisionAfter);
+  const hasDivisionMovement = Boolean(
+    recap.divisionChanged
+      && Number.isFinite(divisionBefore)
+      && Number.isFinite(divisionAfter)
+      && divisionBefore !== divisionAfter,
+  );
+  let divisionMovementType = 'Changement';
+  if (recap.promotion) {
+    divisionMovementType = 'Promotion';
+  } else if (recap.relegation) {
+    divisionMovementType = 'Relegation';
+  }
+  const divisionMovementLabel = hasDivisionMovement
+    ? `${divisionMovementType} DIV ${divisionBefore} -> DIV ${divisionAfter}`
+    : '';
 
   return (
     <Modal
@@ -57,6 +74,12 @@ function MatchRecapSheet({
             {recap.resultLabel || recap.result || 'Résultat validé'}
           </Text>
 
+          {hasDivisionMovement ? (
+            <Text style={[Fonts.p2Bold, { color: recap.promotion ? Colors.success500 : Colors.gold500, textAlign: 'center' }]}>
+              {divisionMovementLabel}
+            </Text>
+          ) : null}
+
           <View style={[styles.statRow, { borderColor: 'rgba(255,255,255,0.12)' }]}>
             <View style={styles.statBlock}>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points avant</Text>
@@ -80,6 +103,8 @@ function MatchRecapSheet({
             {' | Bonus serie '}
             {streakBonus >= 0 ? '+' : ''}
             {streakBonus}
+            {' | Total points League '}
+            {pointsDeltaLabel}
           </Text>
 
           <View style={styles.buttons}>

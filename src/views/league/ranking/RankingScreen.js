@@ -1,4 +1,4 @@
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
@@ -25,17 +25,29 @@ import { getMyLeagueTeam, getRanking } from '@/services/leagueTeam/leagueTeamSer
 import { getEntityDocumentId } from '@/utils/entityId';
 import { clampLeagueDivision } from '@/utils/league/division';
 
+const getLeaguePoints = (team) => Number(team?.division_points ?? team?.divisionPoints ?? 0);
+const getHighestStreak = (team) => Math.max(0, Number(team?.highest_streak ?? team?.highestStreak ?? 0));
+
+const formatCurrentStreak = (value) => {
+  const streak = Number(value || 0);
+  if (!Number.isFinite(streak) || streak === 0) return 'Stable';
+  if (streak > 0) return `x${streak}`;
+  return 'Defaite';
+};
+
 /**
  *
  */
 function RankingScreen() {
   const { Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
+  const route = /** @type {any} */ (useRoute());
   const { sceneBottomInset } = useBottomDockLayout();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const listBottomPadding = Math.max(sceneBottomInset, 12);
+  const routeDivision = route?.params?.division;
 
-  const [division, setDivision] = useState(5);
+  const [division, setDivision] = useState(() => clampLeagueDivision(routeDivision || 5));
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [ranking, setRanking] = useState(/** @type {Team[]} */ ([]));
@@ -46,6 +58,13 @@ function RankingScreen() {
   };
 
   useEffect(() => {
+    if (routeDivision !== undefined && routeDivision !== null) {
+      setDivision(clampLeagueDivision(routeDivision));
+    }
+  }, [routeDivision]);
+
+  useEffect(() => {
+    if (routeDivision !== undefined && routeDivision !== null) return;
     const init = async () => {
       if (!userData) return;
       try {
@@ -58,7 +77,7 @@ function RankingScreen() {
       }
     };
     init();
-  }, [userData]);
+  }, [routeDivision, userData]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -116,9 +135,9 @@ function RankingScreen() {
             <TeamShield initials={String(item.name || '??').substring(0, 2)} isGold size={32} />
           )}
         </View>
-        <View>
+        <View style={styles.teamTextWrap}>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{item.name}</Text>
-          <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
+          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.gold500 }]}>
             {item.wins}
             V -
             {item.draws}
@@ -126,11 +145,18 @@ function RankingScreen() {
             {item.losses}
             D
           </Text>
+          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
+            Serie
+            {' '}
+            {formatCurrentStreak(item.streak)}
+            {' | Best x'}
+            {getHighestStreak(item)}
+          </Text>
         </View>
       </View>
 
       <View style={styles.pointsCol}>
-        <Text style={[Fonts.h3, { color: Colors.gold500 }]}>{item.elo}</Text>
+        <Text style={[Fonts.h3, { color: Colors.gold500 }]}>{getLeaguePoints(item)}</Text>
         <Text style={[Fonts.p3, { color: Colors.gold500, opacity: 0.85 }]}>PTS</Text>
       </View>
     </TouchableOpacity>
@@ -186,7 +212,7 @@ function RankingScreen() {
           <View style={[styles.headerRow, { borderBottomColor: 'rgba(255,255,255,0.12)' }]}>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 40 }]}>#</Text>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1 }]}>Équipe</Text>
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 60 }]}>ELO</Text>
+            <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 68 }]}>PTS</Text>
           </View>
 
           <FlatList
@@ -252,7 +278,7 @@ const styles = StyleSheet.create({
   },
   pointsCol: {
     alignItems: 'center',
-    width: 60,
+    width: 68,
   },
   rankCol: {
     alignItems: 'center',
@@ -275,6 +301,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     flexDirection: 'row',
+  },
+  teamTextWrap: {
+    flex: 1,
+    minWidth: 0,
   },
   topBar: {
     alignItems: 'center',

@@ -36,6 +36,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AddSponsor]: '/clubs/:clubId?/sponsors/add',
   [RouteNames.AssignCoachTeams]: '/clubs/:clubId/coaches/:trainerId/assign',
   [RouteNames.ClubLicenses]: '/licenses/clubs/:clubId',
+  [RouteNames.ClubLicenseCampaignDetail]: '/licenses/clubs/:clubId/campaigns/:campaignId',
   [RouteNames.ClubLicenseCampaignSettings]: '/licenses/clubs/:clubId/settings/:campaignId?',
   [RouteNames.ClubLicenseMemberDetail]: '/licenses/members/:assignmentId',
   [RouteNames.ClubLicensePayments]: '/licenses/clubs/:clubId/payments/:campaignId?',

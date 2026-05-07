@@ -66,6 +66,29 @@ describe('scoreFlow utils', () => {
     }
   });
 
+  test('buildLocalScoreFlow unlocks score actions for a roster member side', () => {
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(
+      new Date('2026-04-20T10:05:00.000Z').getTime(),
+    );
+
+    try {
+      const scoreFlow = buildLocalScoreFlow(createBaseMatch({
+        phase: 'waiting_score',
+        venueBooked: true,
+      }), {
+        teamSide: 'a',
+      });
+
+      expect(scoreFlow.isCaptain).toBe(false);
+      expect(scoreFlow.canActOnScore).toBe(true);
+      expect(scoreFlow.canSubmit).toBe(true);
+      expect(scoreFlow.actionRequired).toBe(true);
+      expect(scoreFlow.primaryCta?.label).toBe('Saisir le score');
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   test('formatScoreFlowCountdown keeps score deadline copy readable', () => {
     expect(formatScoreFlowCountdown(0)).toBe("moins d'une minute");
     expect(formatScoreFlowCountdown(65 * 60)).toBe('1h 5min');

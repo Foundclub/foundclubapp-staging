@@ -42,17 +42,19 @@
 /**
  * Chat message type definition based on Strapi schema
  * @typedef {object} ChatMessage
- * @property {string} id - The unique identifier of the message
- * @property {string} message - The content of the message
- * @property {User} sender - The user who sent the message
- * @property {Chat} chat - The chat this message belongs to
- * @property {string} documentId - The ID of the document this message belongs to
- * @property {Date} createdAt - When the message was sent
- * @property {Date} updatedAt - When the message was last updated
+ * @property {string | number} [id] - The unique identifier of the message
+ * @property {string} [message] - The content of the message
+ * @property {User | Record<string, any>} [sender] - The user who sent the message
+ * @property {Chat | { documentId?: string } | string} [chat] - The chat this message belongs to
+ * @property {string} [documentId] - The ID of the document this message belongs to
+ * @property {string | Date} [createdAt] - When the message was sent
+ * @property {string | Date} [updatedAt] - When the message was last updated
  * @property {boolean} [isRead] - Whether the message has been read
  * @property {MessageAttachment[]} [attachments] - Message attachments
  * @property {object} [event] - Event payload in message
  * @property {MessageComposition} [composition] - Composition/proposal payload
+ * @property {string} [clientMessageId] - Client-side optimistic id
+ * @property {boolean} [failed] - Optimistic send failed marker
  * @property {boolean} [pending] - Optimistic message marker
  * @property {ChatMessage | null} [replyTo] - Reply target
  * @property {User[]} [readBy] - Users who read the message
@@ -69,8 +71,11 @@
 /**
  * Handle message deletion data type
  * @typedef {{
- *   chatDocumentId: string;
- *   messageId: string;
+ *   chatDocumentId?: string;
+ *   messageId?: string;
+ *   chat?: { documentId?: string };
+ *   documentId?: string;
+ *   messageDocumentId?: string;
  * }} MessageDeletionData
  */
 

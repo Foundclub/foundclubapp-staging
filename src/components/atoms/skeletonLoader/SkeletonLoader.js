@@ -15,18 +15,22 @@ import useTheme from '@/theme/themeContext';
 import { lightenColor } from '@/utils/colors/colorsOperations';
 import { addBackgroundOnDeepTextChildren } from '@/utils/elements/elementOperations';
 
+const isHexColor = (color) => typeof color === 'string' && /^#[\dA-F]{6}$/i.test(color.trim());
+
 /**
  * Skeleton loader component.
  * @param {object} props
  * @param {import('react').ReactNode} props.children
  * @param {boolean} props.isActive
  * @param {string} [props.backgroundColor]
+ * @param {string} [props.highlightColor]
  * @param {Array<import('react-native').ViewStyle>} [props.wrapperStyle]
  * @returns {import('react').ReactElement}
  */
 function SkeletonLoader({
-  backgroundColor = '#808080',
+  backgroundColor,
   children,
+  highlightColor,
   isActive,
   wrapperStyle = [],
 }) {
@@ -36,7 +40,14 @@ function SkeletonLoader({
   // reanimated variables
   const shared = useSharedValue(0);
   // hooks
-  const { Alignments } = useTheme();
+  const { Alignments, Colors } = useTheme();
+  const resolvedBackgroundColor = isHexColor(backgroundColor) ? backgroundColor : Colors.primary800;
+  let resolvedHighlightColor = Colors.primary700;
+  if (isHexColor(highlightColor)) {
+    resolvedHighlightColor = highlightColor;
+  } else if (isHexColor(resolvedBackgroundColor)) {
+    resolvedHighlightColor = lightenColor(resolvedBackgroundColor, 0.22);
+  }
 
   useEffect(() => {
     shared.value = withRepeat(withTiming(1, { duration: 1000 }), Infinity);
@@ -82,7 +93,7 @@ function SkeletonLoader({
         style={[
           Alignments.grow1,
           Alignments.overflowHidden,
-          { backgroundColor },
+          { backgroundColor: resolvedBackgroundColor },
         ]}
       />
       <Reanimated.View style={[StyleSheet.absoluteFill, animatedStyle]}>
@@ -100,7 +111,7 @@ function SkeletonLoader({
           <View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: lightenColor(backgroundColor, 0.5) },
+              { backgroundColor: resolvedHighlightColor },
             ]}
           />
         </MaskedView>

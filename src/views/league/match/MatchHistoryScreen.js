@@ -131,11 +131,11 @@ function MatchHistoryScreen() {
             {item.score_b}
           </Text>
           {item.eloChange && (
-          <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+          <Text adjustsFontSizeToFit minimumFontScale={0.72} numberOfLines={1} style={[Fonts.p3Bold, { color: Colors.gold500, maxWidth: 128 }]}>
             {item.eloChange > 0 ? '+' : ''}
             {item.eloChange}
             {' '}
-            ELO
+            ELO matchmaking
           </Text>
           )}
         </View>

@@ -59,9 +59,13 @@ export default function LeagueTabNavigator() {
     }, 0)
     : 0;
 
-  // Gold badge renderer (reused logic, updated style)
+  /**
+   * Gold badge renderer (reused logic, updated style).
+   * @param {{ badge?: number, color: string, source: import('react-native').ImageSourcePropType }} props
+   * @returns {import('react').ReactElement}
+   */
   const renderTabBarIcon = ({
-    badge,
+    badge = 0,
     color,
     source,
   }) => (
@@ -84,7 +88,7 @@ export default function LeagueTabNavigator() {
           ...(Platform.OS === 'web'
             ? { boxShadow: '0 2px 4px rgba(0, 0, 0, 0.22)' }
             : {
-              shadowColor: '#000',
+              shadowColor: 'black',
               shadowOffset: { height: 2, width: 0 },
               shadowOpacity: 0.22,
               shadowRadius: 4,
@@ -101,18 +105,20 @@ export default function LeagueTabNavigator() {
     </View>
   );
 
+  const screenOptions = /** @type {any} */ ({
+    ...commonOptions,
+    sceneContainerStyle: {
+      backgroundColor: 'transparent',
+      paddingBottom: floatingScenePaddingBottom,
+    },
+    // tabBarBackground removed to eliminate gradient
+  });
+
   return (
     <Tab.Navigator
       id={undefined}
       initialRouteName={RouteNames.LeagueDashboard}
-      screenOptions={{
-        ...commonOptions,
-        sceneContainerStyle: {
-          backgroundColor: 'transparent',
-          paddingBottom: floatingScenePaddingBottom,
-        },
-        // tabBarBackground removed to eliminate gradient
-      }}
+      screenOptions={screenOptions}
     >
       {/* 1. Home / Dashboard */}
       <Tab.Screen
@@ -138,7 +144,7 @@ export default function LeagueTabNavigator() {
             headerShown: false,
             ...baseOptions,
             tabBarStyle: hideTabBar
-              ? { ...baseOptions.tabBarStyle, display: 'none' }
+              ? { ...(/** @type {Record<string, any>} */ (baseOptions.tabBarStyle || {})), display: 'none' }
               : baseOptions.tabBarStyle,
           };
         }}

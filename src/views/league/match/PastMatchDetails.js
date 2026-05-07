@@ -481,7 +481,7 @@ function PastMatchDetails() {
             </View>
           </LeagueCard>
 
-          {renderSectionHeader('Impact ELO')}
+          {renderSectionHeader('Impact ELO matchmaking')}
           <LeagueCard style={styles.eloCard}>
             <View style={styles.eloRow}>
               <View

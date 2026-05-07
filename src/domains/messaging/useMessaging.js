@@ -37,12 +37,21 @@ import useSocket, { EVENTS } from '@/hooks/useSocket';
 
 const messagingLogger = createLogger('messaging');
 const isAttachmentDebugEnabled = ['1', 'true', 'yes'].includes(String(process.env.FC_CHAT_ATTACHMENT_DEBUG || 'true').trim().toLowerCase());
+const LEGACY_ID_KEY = '_id';
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const normalizeChatId = (value) => {
   if (typeof value !== 'string') return '';
   return value.trim();
 };
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const normalizeClientMessageId = (value) => {
   if (typeof value !== 'string') return '';
   return value.trim();
@@ -50,6 +59,10 @@ const normalizeClientMessageId = (value) => {
 
 const generateClientMessageId = () => `cmid-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
+/**
+ * @param {MessageAttachment[]} [attachments]
+ * @returns {string}
+ */
 const getAttachmentSignature = (attachments = []) => attachments
   .map((attachment) => String(
     attachment?.documentId
@@ -61,6 +74,10 @@ const getAttachmentSignature = (attachments = []) => attachments
   .filter(Boolean)
   .join('|');
 
+/**
+ * @param {ChatMessage | Record<string, any> | null | undefined} message
+ * @returns {string}
+ */
 const getMessageSignature = (message) => {
   const clientMessageId = normalizeClientMessageId(message?.clientMessageId || '');
   const text = String(message?.message || '').trim();
@@ -72,21 +89,49 @@ const getMessageSignature = (message) => {
   return `${clientMessageId}::${text}::${compositionType}::${eventRef}::${replyRef}::${attachmentSignature}`;
 };
 
+/**
+ * @param {ChatMessage | Record<string, any> | null | undefined} message
+ * @returns {string}
+ */
 const getMessageEntityId = (message) => (
   // eslint-disable-next-line no-underscore-dangle
-  String(message?.documentId || message?.id || message?._id || '')
+  String(/** @type {Record<string, any>} */ (message || {})?.documentId
+    || /** @type {Record<string, any>} */ (message || {})?.id
+    || /** @type {Record<string, any>} */ (message || {})?.[LEGACY_ID_KEY]
+    || '')
 );
 
+/**
+ * @param {ChatMessage | Record<string, any> | null | undefined} message
+ * @returns {string}
+ */
 const getSenderEntityId = (message) => (
   // eslint-disable-next-line no-underscore-dangle
-  normalizeChatId(message?.sender?.documentId || message?.sender?.id || message?.user?._id || '')
+  normalizeChatId(/** @type {Record<string, any>} */ (message || {})?.sender?.documentId
+    || /** @type {Record<string, any>} */ (message || {})?.sender?.id
+    || /** @type {Record<string, any>} */ (message || {})?.user?.[LEGACY_ID_KEY]
+    || '')
 );
 
+/**
+ * @param {ChatMessage | Record<string, any> | null | undefined} message
+ * @returns {string}
+ */
+const getMessageChatDocumentId = (message) => {
+  const chat = /** @type {Record<string, any> | string | undefined} */ (message?.chat);
+  if (typeof chat === 'string') return normalizeChatId(chat);
+  return normalizeChatId(chat?.documentId || '');
+};
+
+/**
+ * @param {any} queryData
+ * @returns {boolean}
+ */
 const hasCachedChatMessages = (queryData) => (
   Boolean(
     queryData
     && Array.isArray(queryData?.pages)
-    && queryData.pages.some((page) => Array.isArray(page?.data) && page.data.length > 0),
+    && queryData.pages.some((/** @type {{ data?: unknown[] }} */ page) => Array.isArray(page?.data) && page.data.length > 0),
   )
 );
 
@@ -99,7 +144,9 @@ const useMessaging = (currentChatId) => {
   const queryClient = useQueryClient();
   const { isConnected, socket } = useSocket();
   const { allMyTeams, userData } = useAuth();
-  const pendingTimeoutsRef = useRef(new Map());
+  const pendingTimeoutsRef = useRef(
+    /** @type {Map<string, ReturnType<typeof setTimeout>>} */ (new Map()),
+  );
   const safeTeamIds = useMemo(() => Array.from(
     new Set(
       (Array.isArray(allMyTeams) ? allMyTeams : [])
@@ -117,7 +164,7 @@ const useMessaging = (currentChatId) => {
     [chatsLookupFilters],
   );
 
-  const clearPendingTimeout = useCallback((tempMessageId) => {
+  const clearPendingTimeout = useCallback((/** @type {string} */ tempMessageId) => {
     const timeoutId = pendingTimeoutsRef.current.get(tempMessageId);
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -125,15 +172,19 @@ const useMessaging = (currentChatId) => {
     }
   }, []);
 
-  const markMessageState = useCallback((chatId, messageId, patch) => {
-    queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, (oldData) => {
+  const markMessageState = useCallback((
+    /** @type {string} */ chatId,
+    /** @type {string} */ messageId,
+    /** @type {Record<string, any>} */ patch,
+  ) => {
+    queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, (/** @type {any} */ oldData) => {
       if (!oldData?.pages) return oldData;
       return {
         ...oldData,
-        pages: oldData.pages.map((page) => ({
+        pages: oldData.pages.map((/** @type {{ data?: ChatMessage[] }} */ page) => ({
           ...page,
           data: Array.isArray(page?.data)
-            ? page.data.map((msg) => {
+            ? page.data.map((/** @type {ChatMessage} */ msg) => {
               const currentId = getMessageEntityId(msg);
               if (currentId !== String(messageId)) return msg;
               return { ...msg, ...patch };
@@ -152,19 +203,20 @@ const useMessaging = (currentChatId) => {
   const getCachedChatsForLookup = useCallback(() => {
     const queryEntries = queryClient.getQueriesData({ queryKey: ['chats'] });
     const seenChatIds = new Set();
-    const chats = [];
+    const chats = /** @type {Chat[]} */ ([]);
 
     queryEntries.forEach(([, value]) => {
+      const queryData = /** @type {any} */ (value);
       let pages = [];
-      if (Array.isArray(value?.pages)) {
-        pages = value.pages;
-      } else if (Array.isArray(value?.data)) {
-        pages = [{ data: value.data }];
+      if (Array.isArray(queryData?.pages)) {
+        pages = queryData.pages;
+      } else if (Array.isArray(queryData?.data)) {
+        pages = [{ data: queryData.data }];
       }
 
-      pages.forEach((page) => {
+      pages.forEach((/** @type {{ data?: Chat[] }} */ page) => {
         const pageChats = Array.isArray(page?.data) ? page.data : [];
-        pageChats.forEach((chat) => {
+        pageChats.forEach((/** @type {Chat} */ chat) => {
           const chatId = normalizeChatId(chat?.documentId || '');
           if (!chatId || seenChatIds.has(chatId)) return;
           seenChatIds.add(chatId);
@@ -192,13 +244,13 @@ const useMessaging = (currentChatId) => {
   }, [chatsLookupFilters, chatsLookupQueryKey, getCachedChatsForLookup, queryClient]);
 
   const notifyChatsReadStatusChanged = useCallback(() => {
-    queryClient.setQueriesData({ queryKey: ['chats'] }, (oldData) => {
+    queryClient.setQueriesData({ queryKey: ['chats'] }, (/** @type {any} */ oldData) => {
       if (!oldData) return oldData;
 
       if (Array.isArray(oldData?.pages)) {
         return {
           ...oldData,
-          pages: oldData.pages.map((page) => ({ ...page })),
+          pages: oldData.pages.map((/** @type {any} */ page) => ({ ...page })),
         };
       }
 
@@ -228,7 +280,7 @@ const useMessaging = (currentChatId) => {
    * @param {ChatMessage} message - The received message
    */
   const handleNewMessage = useCallback((/** @type {ChatMessage} */ message) => {
-    const receivedChatId = normalizeChatId(message?.chat?.documentId || '');
+    const receivedChatId = getMessageChatDocumentId(message);
     markMessagingPerf('messaging_message_received', {
       chatId: receivedChatId,
       hasAttachments: Array.isArray(message?.attachments) && message.attachments.length > 0,
@@ -238,7 +290,7 @@ const useMessaging = (currentChatId) => {
 
     // Add new message to chat messages cache
     queryClient.setQueriesData(
-      { queryKey: ['chat-messages', receivedChatId || message.chat?.documentId] },
+      { queryKey: ['chat-messages', receivedChatId] },
       (/** @type {any} */ oldData) => {
         const formattedMessage = {
           attachments: message.attachments, // Handle attachments
@@ -267,12 +319,12 @@ const useMessaging = (currentChatId) => {
         }
 
         // Deep clone pages to avoid mutating unexpected references, or map safely
-        const cleanPages = oldData.pages.map((page) => {
+        const cleanPages = oldData.pages.map((/** @type {{ data?: ChatMessage[] }} */ page) => {
           // Ensure page.data is an array
           const data = Array.isArray(page?.data) ? page.data : [];
           const confirmedSignature = getMessageSignature(formattedMessage);
           // Filter out pending messages that look identical to the confirmed one
-          const filteredData = data.filter((msg) => {
+          const filteredData = data.filter((/** @type {ChatMessage} */ msg) => {
             if (!msg?.pending && !msg?.failed) return true;
             const confirmedClientMessageId = normalizeClientMessageId(
               formattedMessage?.clientMessageId || '',
@@ -308,7 +360,7 @@ const useMessaging = (currentChatId) => {
         const formattedMessageId = normalizeChatId(getMessageEntityId(formattedMessage));
 
         const messageExists = firstPageData.some(
-          (msg) => normalizeChatId(getMessageEntityId(msg)) === formattedMessageId,
+          (/** @type {ChatMessage} */ msg) => normalizeChatId(getMessageEntityId(msg)) === formattedMessageId,
         );
 
         if (messageExists) {
@@ -338,7 +390,7 @@ const useMessaging = (currentChatId) => {
           pages: oldData.pages.map((page) => ({
             ...page,
             data: Array.isArray(page.data) ? page.data.map((chat) => {
-              if (chat.documentId === message.chat?.documentId) {
+              if (chat.documentId === receivedChatId) {
                 return {
                   ...chat,
                   archivedBy: [], // Force unarchive locally
@@ -385,7 +437,7 @@ const useMessaging = (currentChatId) => {
     );
   }, [queryClient]);
 
-  const handleMessageUpdated = useCallback((payload) => {
+  const handleMessageUpdated = useCallback((/** @type {any} */ payload) => {
     const updatedMessage = payload?.message && typeof payload.message === 'object'
       ? payload.message
       : payload;
@@ -401,14 +453,14 @@ const useMessaging = (currentChatId) => {
 
     queryClient.setQueriesData(
       { queryKey: ['chat-messages', chatDocumentId] },
-      (oldData) => {
+      (/** @type {any} */ oldData) => {
         if (!oldData?.pages) return oldData;
         return {
           ...oldData,
-          pages: oldData.pages.map((page) => ({
+          pages: oldData.pages.map((/** @type {{ data?: ChatMessage[] }} */ page) => ({
             ...page,
             data: Array.isArray(page?.data)
-              ? page.data.map((message) => {
+              ? page.data.map((/** @type {ChatMessage} */ message) => {
                 const existingId = normalizeChatId(getMessageEntityId(message));
                 if (existingId !== messageDocumentId) return message;
                 return {
@@ -425,21 +477,21 @@ const useMessaging = (currentChatId) => {
     );
   }, [queryClient]);
 
-  const handleMessageRead = useCallback((payload) => {
+  const handleMessageRead = useCallback((/** @type {any} */ payload) => {
     const chatDocumentId = normalizeChatId(payload?.chatDocumentId);
     const readerId = normalizeChatId(payload?.userDocumentId);
     if (!chatDocumentId || !readerId) return;
 
-    queryClient.setQueriesData({ queryKey: ['chat-messages', chatDocumentId] }, (oldData) => {
+    queryClient.setQueriesData({ queryKey: ['chat-messages', chatDocumentId] }, (/** @type {any} */ oldData) => {
       if (!oldData?.pages) return oldData;
 
       const lastSeenMessageId = normalizeChatId(payload?.lastSeenMessageId || '');
-      let cutoffTime = null;
+      let cutoffTime = /** @type {number | null} */ (null);
 
       if (lastSeenMessageId) {
         const foundMessage = oldData.pages
-          .flatMap((page) => (Array.isArray(page?.data) ? page.data : []))
-          .find((message) => {
+          .flatMap((/** @type {{ data?: ChatMessage[] }} */ page) => (Array.isArray(page?.data) ? page.data : []))
+          .find((/** @type {ChatMessage} */ message) => {
             const id = normalizeChatId(getMessageEntityId(message));
             return id === lastSeenMessageId;
           });
@@ -450,10 +502,10 @@ const useMessaging = (currentChatId) => {
 
       return {
         ...oldData,
-        pages: oldData.pages.map((page) => ({
+        pages: oldData.pages.map((/** @type {{ data?: ChatMessage[] }} */ page) => ({
           ...page,
           data: Array.isArray(page?.data)
-            ? page.data.map((message) => {
+            ? page.data.map((/** @type {ChatMessage} */ message) => {
               const senderId = getSenderEntityId(message);
               if (!senderId || senderId === readerId) return message;
 
@@ -465,7 +517,7 @@ const useMessaging = (currentChatId) => {
               }
 
               const readBy = Array.isArray(message?.readBy) ? message.readBy : [];
-              const alreadyRead = readBy.some((entry) => normalizeChatId(entry?.documentId || entry?.id) === readerId);
+              const alreadyRead = readBy.some((/** @type {User | Record<string, any>} */ entry) => normalizeChatId(entry?.documentId || entry?.id) === readerId);
               if (alreadyRead) return message;
 
               return {
@@ -502,7 +554,7 @@ const useMessaging = (currentChatId) => {
     });
   }, [queryClient]);
 
-  const handleSocketError = useCallback((error) => {
+  const handleSocketError = useCallback((/** @type {any} */ error) => {
     const safeCurrentChatId = normalizeChatId(currentChatId);
     const errorPayload = {
       chatId: safeCurrentChatId,
@@ -577,7 +629,7 @@ const useMessaging = (currentChatId) => {
   });
 
   const editMessageMutation = useMutation({
-    mutationFn: ({ data, messageId }) => editMessage(messageId, data),
+    mutationFn: (/** @type {{ chatId?: string, data: { message?: string, attachments?: Array<{ id?: number, documentId?: string }> }, messageId: string }} */ { data, messageId }) => editMessage(messageId, data),
     onSuccess: (updatedMessage, variables) => {
       handleMessageUpdated({
         chatDocumentId: variables?.chatId || currentChatId,
@@ -605,7 +657,7 @@ const useMessaging = (currentChatId) => {
   });
 
   const votePollMutation = useMutation({
-    mutationFn: (payload) => votePollMessage(payload.messageId, payload.optionId),
+    mutationFn: (/** @type {{ chatId?: string, messageId: string, optionId: string }} */ payload) => votePollMessage(payload.messageId, payload.optionId),
     onSuccess: (data, variables) => {
       const chatDocumentId = normalizeChatId(
         data?.chatDocumentId
@@ -633,7 +685,7 @@ const useMessaging = (currentChatId) => {
   });
 
   const proposalResponseMutation = useMutation({
-    mutationFn: (payload) => respondProposalMessage(payload.messageId, payload.status),
+    mutationFn: (/** @type {{ chatId?: string, messageId: string, status: 'accepted' | 'declined' }} */ payload) => respondProposalMessage(payload.messageId, payload.status),
     onSuccess: (data, variables) => {
       const chatDocumentId = normalizeChatId(
         data?.chatDocumentId
@@ -661,7 +713,7 @@ const useMessaging = (currentChatId) => {
   });
 
   const addGroupMembersMutation = useMutation({
-    mutationFn: ({ chatId, memberIds }) => addGroupMembers(chatId, memberIds),
+    mutationFn: (/** @type {{ chatId: string, memberIds: string[] }} */ { chatId, memberIds }) => addGroupMembers(chatId, memberIds),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['chat', variables?.chatId] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
@@ -669,7 +721,7 @@ const useMessaging = (currentChatId) => {
   });
 
   const removeGroupMemberMutation = useMutation({
-    mutationFn: ({ chatId, userId }) => removeGroupMember(chatId, userId),
+    mutationFn: (/** @type {{ chatId: string, userId: string }} */ { chatId, userId }) => removeGroupMember(chatId, userId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['chat', variables?.chatId] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
@@ -677,7 +729,7 @@ const useMessaging = (currentChatId) => {
   });
 
   const updateGroupMetaMutation = useMutation({
-    mutationFn: ({ chatId, data }) => updateGroupMeta(chatId, data),
+    mutationFn: (/** @type {{ chatId: string, data: { groupName?: string, addAdminIds?: string[], removeAdminIds?: string[] } }} */ { chatId, data }) => updateGroupMeta(chatId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['chat', variables?.chatId] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
@@ -688,13 +740,13 @@ const useMessaging = (currentChatId) => {
    * Send a message
    * @param {string} chatId - The chat id
    * @param {string} message - The message text
-   * @param {object} [extraData] - Extra data (e.g. { event: eventId })
-   * @returns {void}
+   * @param {Record<string, any>} [extraData] - Extra data (e.g. { event: eventId })
+   * @returns {string | null}
    */
   const sendMessage = useCallback((
     /** @type {string} */ chatId,
     /** @type {string} */ message,
-    /** @type {object} */ extraData = {},
+    /** @type {Record<string, any>} */ extraData = {},
   ) => {
     const safeChatId = normalizeChatId(chatId);
     const safeClientMessageId = normalizeClientMessageId(extraData?.clientMessageId)
@@ -796,7 +848,7 @@ const useMessaging = (currentChatId) => {
       event: extraData.event,
       message,
       replyTo: extraData.replyTo || null,
-    }, (ackPayload) => {
+    }, (/** @type {any} */ ackPayload) => {
       const ackError = ackPayload?.ok === false ? ackPayload?.error : null;
       const ackMessage = ackPayload?.ok ? ackPayload?.message : null;
 
@@ -887,17 +939,17 @@ const useMessaging = (currentChatId) => {
     return tempId;
   }, [socket, isConnected, queryClient, markMessageState, clearPendingTimeout, handleNewMessage]);
 
-  const sendTypingStart = useCallback((chatId) => {
+  const sendTypingStart = useCallback((/** @type {string} */ chatId) => {
     const safeChatId = normalizeChatId(chatId);
     if (socket && safeChatId) socket.emit(EVENTS.TYPING_START, { chatDocumentId: safeChatId });
   }, [socket]);
 
-  const sendTypingStop = useCallback((chatId) => {
+  const sendTypingStop = useCallback((/** @type {string} */ chatId) => {
     const safeChatId = normalizeChatId(chatId);
     if (socket && safeChatId) socket.emit(EVENTS.TYPING_STOP, { chatDocumentId: safeChatId });
   }, [socket]);
 
-  const sendReadReceipt = useCallback((chatId, lastSeenMessageId) => {
+  const sendReadReceipt = useCallback((/** @type {string} */ chatId, /** @type {string | undefined} */ lastSeenMessageId) => {
     const safeChatId = normalizeChatId(chatId);
     const safeLastSeenId = normalizeChatId(lastSeenMessageId || '');
     if (socket && safeChatId) {
@@ -932,7 +984,7 @@ const useMessaging = (currentChatId) => {
     }
   }, [socket]);
 
-  const retryFailedMessage = useCallback((chatId, failedMessage) => {
+  const retryFailedMessage = useCallback((/** @type {string} */ chatId, /** @type {ChatMessage | Record<string, any>} */ failedMessage) => {
     const safeChatId = normalizeChatId(chatId);
     if (!safeChatId || !failedMessage) return;
 
@@ -940,20 +992,20 @@ const useMessaging = (currentChatId) => {
       failedMessage.documentId
       || failedMessage.id
       // eslint-disable-next-line no-underscore-dangle
-      || failedMessage._id
+      || /** @type {Record<string, any>} */ (failedMessage)?._id
       || '',
     );
 
     if (failedMessageId) {
       clearPendingTimeout(failedMessageId);
-      queryClient.setQueriesData({ queryKey: ['chat-messages', safeChatId] }, (oldData) => {
+      queryClient.setQueriesData({ queryKey: ['chat-messages', safeChatId] }, (/** @type {any} */ oldData) => {
         if (!oldData?.pages) return oldData;
         return {
           ...oldData,
-          pages: oldData.pages.map((page) => ({
+          pages: oldData.pages.map((/** @type {{ data?: ChatMessage[] }} */ page) => ({
             ...page,
             data: Array.isArray(page?.data)
-              ? page.data.filter((message) => {
+              ? page.data.filter((/** @type {ChatMessage} */ message) => {
                 const messageId = normalizeChatId(getMessageEntityId(message));
                 return messageId !== failedMessageId;
               })
@@ -1007,7 +1059,7 @@ const useMessaging = (currentChatId) => {
           if (!chat?.participants || !Array.isArray(chat.participants)) return false;
 
           const chatParticipants = chat.participants
-            .filter((p) => p && (p.documentId || p)) // Filter out nulls
+            .filter((/** @type {any} */ p) => p && (p.documentId || p)) // Filter out nulls
             .map((/** @type {any} */ p) => (p.documentId || p))
             .sort();
 
@@ -1025,13 +1077,13 @@ const useMessaging = (currentChatId) => {
           const isArchived = existingChat.archivedBy?.some((u) => u.documentId === userData?.documentId);
           if (isArchived) {
             // 1. Optimistic Update (Force Visible)
-            queryClient.setQueriesData({ queryKey: ['chats'] }, (oldData) => {
+            queryClient.setQueriesData({ queryKey: ['chats'] }, (/** @type {any} */ oldData) => {
               if (!oldData?.pages) return oldData;
               return {
                 ...oldData,
-                pages: oldData.pages.map((page) => ({
+                pages: oldData.pages.map((/** @type {{ data?: Chat[] }} */ page) => ({
                   ...page,
-                  data: Array.isArray(page.data) ? page.data.map((chat) => {
+                  data: Array.isArray(page.data) ? page.data.map((/** @type {Chat} */ chat) => {
                     if (chat.documentId === existingChat.documentId) {
                       return { ...chat, archivedBy: [] };
                     }
@@ -1045,14 +1097,16 @@ const useMessaging = (currentChatId) => {
             try {
               await unarchiveChatMutation.mutateAsync(existingChat.documentId);
             } catch (e) {
-              messagingLogger.warn('Failed to unarchive chat on open', e?.message || e);
+              const safeError = /** @type {any} */ (e);
+              messagingLogger.warn('Failed to unarchive chat on open', safeError?.message || safeError);
             }
           }
           return existingChat;
         }
       }
     } catch (error) {
-      messagingLogger.warn('Error checking existing chats', error?.message || error);
+      const safeError = /** @type {any} */ (error);
+      messagingLogger.warn('Error checking existing chats', safeError?.message || safeError);
     }
 
     // If no existing chat found, create a new one
@@ -1077,7 +1131,8 @@ const useMessaging = (currentChatId) => {
         if (existingChat) return existingChat;
       }
     } catch (error) {
-      messagingLogger.warn('Error checking existing team chats', error?.message || error);
+      const safeError = /** @type {any} */ (error);
+      messagingLogger.warn('Error checking existing team chats', safeError?.message || safeError);
     }
 
     // If no existing chat found, create a new one
@@ -1102,7 +1157,8 @@ const useMessaging = (currentChatId) => {
         if (existingChat) return existingChat;
       }
     } catch (error) {
-      messagingLogger.warn('Error checking existing club chats', error?.message || error);
+      const safeError = /** @type {any} */ (error);
+      messagingLogger.warn('Error checking existing club chats', safeError?.message || safeError);
     }
 
     // If no existing chat found, create a new one
@@ -1110,7 +1166,7 @@ const useMessaging = (currentChatId) => {
     return result;
   };
 
-  const startGroupChat = async ({ groupName, participants }) => {
+  const startGroupChat = async (/** @type {{ groupName: string, participants: string[] }} */ { groupName, participants }) => {
     const currentUserId = normalizeChatId(userData?.documentId || '');
     if (!currentUserId) return undefined;
 
@@ -1139,13 +1195,13 @@ const useMessaging = (currentChatId) => {
     });
   };
 
-  const votePoll = useCallback((messageId, optionId) => votePollMutation.mutateAsync({
+  const votePoll = useCallback((/** @type {string} */ messageId, /** @type {string} */ optionId) => votePollMutation.mutateAsync({
     chatId: currentChatId,
     messageId,
     optionId,
   }), [currentChatId, votePollMutation]);
 
-  const respondToProposal = useCallback((messageId, status) => proposalResponseMutation.mutateAsync({
+  const respondToProposal = useCallback((/** @type {string} */ messageId, /** @type {'accepted' | 'declined'} */ status) => proposalResponseMutation.mutateAsync({
     chatId: currentChatId,
     messageId,
     status,

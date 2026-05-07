@@ -62,42 +62,45 @@ import { usePopupEligibility } from '@/context/PopupManagerContext';
 import { useStartupPhase } from '@/context/StartupPhaseContext';
 
 /* eslint-disable perfectionist/sort-modules */
+const ScreenContainerView = /** @type {any} */ (ScreenContainer);
+
 /**
  * @typedef {{
  *  id: string;
  *  order: number;
- *  title: string;
- *  description: string;
- *  nextAction?: 'default' | 'scrollDown';
- *  nextLabel?: string;
- *  nextTargetStepId?: string;
- *  onNext?: () => void;
+ *  title: any;
+ *  description: any;
+ *  nextAction?: any;
+ *  nextLabel?: any;
+ *  nextTargetStepId?: any;
+ *  onNext?: any;
  * }} HomeCardTutorial
  */
 
 /**
  * @typedef {{
  *  key: string;
- *  title: string;
- *  subtitle: string;
+ *  title: any;
+ *  subtitle: any;
  *  onPress: () => void;
  *  disabled?: boolean;
- *  icon?: keyof import('@/theme/types').AllImages;
+ *  icon?: any;
  *  accentColor?: string;
  *  layout?: 'half' | 'full';
  *  emphasis?: 'default' | 'primary';
  *  subtitleLines?: 1 | 2;
- *  tutorial?: HomeCardTutorial;
+ *  tutorial?: any;
  * }} HomeCard
  */
 
 /**
  * @param {{
- *  title: string;
+ *  title: any;
  *  cards: HomeCard[];
- *  Fonts: import('@/theme/types').Fonts;
+ *  Fonts: any;
  *  Spaces: import('@/theme/types').Spaces;
- *  Alignments: import('@/theme/types').Alignments;
+ *  Alignments: any;
+ *  registerTutorialTargetNode?: (stepId: string, node: any) => void;
  * }} props
  */
 // eslint-disable-next-line perfectionist/sort-modules
@@ -110,7 +113,7 @@ function HomeSection({
   title,
 }) {
   const { width: screenWidth } = useWindowDimensions();
-  const tutorialTargetRefs = useRef({});
+  const tutorialTargetRefs = useRef(/** @type {Record<string, any>} */ ({}));
   if (!cards.length) return null;
   const isSingleCardSection = cards.length === 1;
   const isCompactScreen = screenWidth <= 340;
@@ -121,13 +124,13 @@ function HomeSection({
       <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
         {cards.map((card) => {
           const isFullCard = isCompactScreen || isSingleCardSection || card.layout === 'full';
-          const cardContainerStyle = {
+          const cardContainerStyle = /** @type {import('react-native').ViewStyle} */ ({
             flexBasis: isFullCard ? '100%' : '48.5%',
             marginBottom: 12,
             maxWidth: isFullCard ? '100%' : '48.5%',
             width: isFullCard ? '100%' : '48.5%',
-          };
-          const assignTutorialTargetRef = (node) => {
+          });
+          const assignTutorialTargetRef = (/** @type {any} */ node) => {
             tutorialTargetRefs.current[card.key] = node;
             if (typeof registerTutorialTargetNode === 'function' && card.tutorial?.id) {
               registerTutorialTargetNode(card.tutorial.id, node);
@@ -190,6 +193,15 @@ function HomeSection({
   );
 }
 
+/**
+ * @param {{
+ *  actionLabel?: string;
+ *  description: any;
+ *  isLoading?: boolean;
+ *  onAction?: () => void;
+ *  title: any;
+ * }} props
+ */
 function HomeHubStateView({
   actionLabel,
   description,
@@ -205,7 +217,7 @@ function HomeHubStateView({
   } = useTheme();
 
   return (
-    <ScreenContainer
+    <ScreenContainerView
       bgImage="bg2"
       contentContainerStyle={[
         Alignments.fill,
@@ -245,7 +257,7 @@ function HomeHubStateView({
           />
         ) : null}
       </View>
-    </ScreenContainer>
+    </ScreenContainerView>
   );
 }
 
@@ -271,7 +283,7 @@ function HomeHubContent({ auth, navigation, route }) {
     isActive: isOnboardingActive,
     refreshCurrentStep,
     startOnboarding,
-  } = useOnboarding();
+  } = /** @type {any} */ (useOnboarding());
   const {
     canShowLocalScreenPrompt,
     hasRecentStartupPrompt,
@@ -294,26 +306,26 @@ function HomeHubContent({ auth, navigation, route }) {
   const { height: viewportHeight } = useWindowDimensions();
   const isFocused = useIsFocused();
   const scrollRef = useRef(/** @type {import('react-native').ScrollView | null} */ (null));
-  const tutorialTargetNodesRef = useRef({});
+  const tutorialTargetNodesRef = useRef(/** @type {Record<string, any>} */ ({}));
   const refreshCurrentStepRef = useRef(refreshCurrentStep);
   const pendingNavigationActionRef = useRef(/** @type {null | (() => void)} */ (null));
   const previousTutorialStepRef = useRef(/** @type {{ id?: string; index?: number } | null} */ (null));
-  const sectionAnchorsRef = useRef({
+  const sectionAnchorsRef = useRef(/** @type {Record<string, { height: number; y: number }>} */ ({
     account: { height: 0, y: 0 },
     league: { height: 0, y: 0 },
     manage: { height: 0, y: 0 },
     profile: { height: 0, y: 0 },
     quick: { height: 0, y: 0 },
     search: { height: 0, y: 0 },
-  });
-  const sectionViewRefs = useRef({
+  }));
+  const sectionViewRefs = useRef(/** @type {Record<string, any>} */ ({
     account: null,
     league: null,
     manage: null,
     profile: null,
     quick: null,
     search: null,
-  });
+  }));
 
   const roleName = userData?.role?.name;
   const roleKey = getUserRoleKey(roleName);
@@ -329,7 +341,9 @@ function HomeHubContent({ auth, navigation, route }) {
   const entryGateMaxHeight = Math.max(260, viewportHeight - entryGateTopInset - entryGateBottomInset);
 
   const trainedTeamIds = useMemo(
-    () => (userData?.trainedTeams || []).map((team) => team?.documentId).filter(Boolean),
+    () => (userData?.trainedTeams || [])
+      .map((/** @type {any} */ team) => team?.documentId)
+      .filter(Boolean),
     [userData?.trainedTeams],
   );
   const clubId = userData?.club?.documentId;
@@ -339,7 +353,7 @@ function HomeHubContent({ auth, navigation, route }) {
   const closeContextualPrompt = useCallback(() => {
     setContextualPrompt(null);
   }, []);
-  const openContextualPrompt = useCallback((promptConfig) => {
+  const openContextualPrompt = useCallback((/** @type {any} */ promptConfig) => {
     setContextualPrompt(promptConfig);
   }, []);
   const homeHubEntryPopup = usePopupEligibility(
@@ -447,12 +461,12 @@ function HomeHubContent({ auth, navigation, route }) {
 
   useEffect(() => {
     if (!isHomeHubEntryGateVisible) return;
-    homeHubEntryPopup.markShown({
+    homeHubEntryPopup.markShown(/** @type {any} */ ({
       userId: userData?.documentId || 'anonymous',
-    });
+    }));
   }, [homeHubEntryPopup, isHomeHubEntryGateVisible, userData?.documentId]);
 
-  const registerSectionAnchor = useCallback((sectionKey, event) => {
+  const registerSectionAnchor = useCallback((/** @type {string} */ sectionKey, /** @type {any} */ event) => {
     const nextY = event?.nativeEvent?.layout?.y ?? 0;
     const nextHeight = event?.nativeEvent?.layout?.height ?? 0;
     const previous = sectionAnchorsRef.current[sectionKey];
@@ -468,11 +482,11 @@ function HomeHubContent({ auth, navigation, route }) {
     };
   }, []);
 
-  const registerSectionViewRef = useCallback((sectionKey, node) => {
+  const registerSectionViewRef = useCallback((/** @type {string} */ sectionKey, /** @type {any} */ node) => {
     sectionViewRefs.current[sectionKey] = node;
   }, []);
 
-  const registerTutorialTargetNode = useCallback((stepId, node) => {
+  const registerTutorialTargetNode = useCallback((/** @type {string} */ stepId, /** @type {any} */ node) => {
     if (!stepId) return;
     if (node) {
       tutorialTargetNodesRef.current[stepId] = node;
@@ -481,9 +495,9 @@ function HomeHubContent({ auth, navigation, route }) {
     delete tutorialTargetNodesRef.current[stepId];
   }, []);
 
-  const waitForWebScrollSettle = useCallback((targetTop) => new Promise((resolve) => {
+  const waitForWebScrollSettle = useCallback((/** @type {number} */ targetTop) => new Promise((resolve) => {
     if (Platform.OS !== 'web') {
-      resolve();
+      resolve(undefined);
       return;
     }
 
@@ -506,7 +520,7 @@ function HomeHubContent({ auth, navigation, route }) {
       }
 
       if (stableFrameCount >= 2 || (Date.now() - startTime) >= maxWaitMs) {
-        resolve();
+        resolve(undefined);
         return;
       }
 
@@ -517,7 +531,7 @@ function HomeHubContent({ auth, navigation, route }) {
     requestAnimationFrame(checkScroll);
   }), []);
 
-  const scrollToSection = useCallback((sectionKey) => {
+  const scrollToSection = useCallback((/** @type {string} */ sectionKey) => {
     const SECTION_TARGET_TOP = 170;
     const REFRESH_DELAYS = Platform.OS === 'web'
       ? [140, 320, 560]
@@ -534,7 +548,7 @@ function HomeHubContent({ auth, navigation, route }) {
             refreshCurrentStepRef.current?.();
           }, delay);
         });
-        setTimeout(resolve, FINAL_REFRESH_DELAY + 40);
+        setTimeout(() => resolve(undefined), FINAL_REFRESH_DELAY + 40);
       };
 
       const tryScroll = () => {
@@ -547,7 +561,7 @@ function HomeHubContent({ auth, navigation, route }) {
               if (attempts < maxAttempts) {
                 setTimeout(tryScroll, 120);
               } else {
-                resolve();
+                resolve(undefined);
               }
               return;
             }
@@ -565,12 +579,17 @@ function HomeHubContent({ auth, navigation, route }) {
           }
 
           if (typeof sectionView?.measureInWindow === 'function') {
-            sectionView.measureInWindow((_measuredX, measuredY, width, height) => {
+            sectionView.measureInWindow((
+              /** @type {number} */ _measuredX,
+              /** @type {number} */ measuredY,
+              /** @type {number} */ width,
+              /** @type {number} */ height,
+            ) => {
               if (!width || !height) {
                 if (attempts < maxAttempts) {
                   setTimeout(tryScroll, 120);
                 } else {
-                  resolve();
+                  resolve(undefined);
                 }
                 return;
               }
@@ -594,7 +613,7 @@ function HomeHubContent({ auth, navigation, route }) {
           if (attempts < maxAttempts) {
             setTimeout(tryScroll, 120);
           } else {
-            resolve();
+            resolve(undefined);
           }
           return;
         }
@@ -635,7 +654,7 @@ function HomeHubContent({ auth, navigation, route }) {
               refreshCurrentStepRef.current?.();
             }, delay);
           });
-          setTimeout(resolve, FINAL_REFRESH_DELAY + 40);
+          setTimeout(() => resolve(undefined), FINAL_REFRESH_DELAY + 40);
         });
         return;
       }
@@ -648,16 +667,19 @@ function HomeHubContent({ auth, navigation, route }) {
           refreshCurrentStepRef.current?.();
         }, delay);
       });
-      setTimeout(resolve, FINAL_REFRESH_DELAY + 40);
+      setTimeout(() => resolve(undefined), FINAL_REFRESH_DELAY + 40);
     });
   }, [waitForWebScrollSettle]);
 
-  const scrollToTutorialTarget = useCallback((targetStepId, fallbackSectionKey = null) => {
+  const scrollToTutorialTarget = useCallback((
+    /** @type {string} */ targetStepId,
+    /** @type {string | null} */ fallbackSectionKey = null,
+  ) => {
     const runFallbackScroll = () => (
       fallbackSectionKey ? scrollToSection(fallbackSectionKey) : Promise.resolve(null)
     );
 
-    const targetStep = getStepById(targetStepId);
+    const targetStep = /** @type {any} */ (getStepById(targetStepId));
     const getTargetNode = targetStep?.getTargetNode;
     const resolveTargetNode = () => (
       tutorialTargetNodesRef.current[targetStepId]
@@ -748,7 +770,7 @@ function HomeHubContent({ auth, navigation, route }) {
     scrollToTutorialTarget('homehub-accountSwitch', 'account')
   ), [scrollToTutorialTarget]);
 
-  const getHomeHubSectionForStepId = useCallback((stepId) => {
+  const getHomeHubSectionForStepId = useCallback((/** @type {string | undefined | null} */ stepId) => {
     if (!stepId || typeof stepId !== 'string') return null;
     if (!stepId.startsWith('homehub-')) return null;
     if (stepId === 'homehub-header') return 'top';
@@ -775,8 +797,8 @@ function HomeHubContent({ auth, navigation, route }) {
     const currentIndex = currentStepIndex;
     const previous = previousTutorialStepRef.current;
 
-    const hasPrevious = typeof previous?.index === 'number';
-    const isBackward = hasPrevious && typeof currentIndex === 'number' && currentIndex < previous.index;
+    const previousIndex = typeof previous?.index === 'number' ? previous.index : null;
+    const isBackward = previousIndex !== null && typeof currentIndex === 'number' && currentIndex < previousIndex;
 
     if (isBackward) {
       const previousSection = getHomeHubSectionForStepId(previous?.id);
@@ -786,7 +808,7 @@ function HomeHubContent({ auth, navigation, route }) {
         tutorialDebugLog('homehub.backwardScroll', {
           currentId,
           currentIndex,
-          fromIndex: previous?.index,
+          fromIndex: previousIndex,
           fromSection: previousSection,
           toSection: currentSection,
         });
@@ -836,7 +858,7 @@ function HomeHubContent({ auth, navigation, route }) {
     setActiveTutorialModal(null);
   }, []);
 
-  const runPendingNavigation = useCallback((delayMs) => {
+  const runPendingNavigation = useCallback((/** @type {number} */ delayMs) => {
     if (!isFocused) return undefined;
     const navigateAction = pendingNavigationActionRef.current;
     if (!navigateAction) return undefined;
@@ -855,7 +877,7 @@ function HomeHubContent({ auth, navigation, route }) {
     return () => clearTimeout(timer);
   }, [isFocused]);
 
-  const navigateAfterClosingModals = useCallback((navigateAction) => {
+  const navigateAfterClosingModals = useCallback((/** @type {() => void} */ navigateAction) => {
     pendingNavigationActionRef.current = navigateAction;
     tutorialDebugLog('homehub.navigateAfterClosingModals', {
       activeTutorialModal,
@@ -880,7 +902,7 @@ function HomeHubContent({ auth, navigation, route }) {
 
     const tryStart = () => {
       attempts += 1;
-      const didStart = startOnboarding({ forceFromStart: true });
+      const didStart = /** @type {any} */ (startOnboarding)({ forceFromStart: true });
 
       if (didStart) {
         homeHubTutorial.markSeen('manual');
@@ -906,7 +928,7 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [closeTutorialModals, homeHubTutorial, launchHomeTutorialFlow, scrollToTop]);
 
   const handleEntryStartTutorial = useCallback(() => {
-    homeHubEntryPopup.trackEvent('accepted', { action: 'start_tutorial' });
+    homeHubEntryPopup.trackEvent('accepted', /** @type {any} */ ({ action: 'start_tutorial' }));
     homeHubTutorial.setEntryChoice('start');
     homeHubTutorial.setAutoEnabled(true);
     setIsEntryGateVisible(false);
@@ -926,7 +948,7 @@ function HomeHubContent({ auth, navigation, route }) {
     closeTutorialModals();
   }, [closeTutorialModals, homeHubEntryPopup, homeHubTutorial]);
 
-  const navigateToTutorial = useCallback((tutorialId) => {
+  const navigateToTutorial = useCallback((/** @type {string} */ tutorialId) => {
     const tutorialParams = {
       startTutorial: true,
       tutorialId,
@@ -1164,7 +1186,7 @@ function HomeHubContent({ auth, navigation, route }) {
     navigation.navigate(RouteNames.MyLicense);
   }, [navigation]);
 
-  const handleOpenRequestsHub = useCallback((initialFilter = 'all') => {
+  const handleOpenRequestsHub = useCallback((/** @type {any} */ initialFilter = 'all') => {
     const hasRequestsContext = Boolean(clubId || cmId || trainedTeamIds.length);
     if (!hasRequestsContext) {
       showBanner({
@@ -1277,6 +1299,7 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [isCoach, isPresident, t]);
 
   const tutorialOptions = useMemo(() => {
+    /** @type {{ id: any; label: any }[]} */
     const options = [
       { id: TutorialIds.SEARCH_EVENTS, label: t('homeHub.cards.search.events.title', 'Événement') },
       { id: TutorialIds.SEARCH_CLUBS, label: t('homeHub.cards.search.clubs.title', 'Club') },
@@ -1303,7 +1326,13 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [isCoach, isPresident, t]);
 
   const scrollDownLabel = t('homeHubTutorial.actions.scrollDown', 'Descendre');
-  const makeTutorial = useCallback((id, order, fallbackTitle, fallbackDesc, options = {}) => ({
+  const makeTutorial = useCallback((
+    /** @type {string} */ id,
+    /** @type {number} */ order,
+    /** @type {any} */ fallbackTitle,
+    /** @type {any} */ fallbackDesc,
+    /** @type {any} */ options = {},
+  ) => ({
     description: t(`homeHubTutorial.steps.${id}.description`, fallbackDesc),
     id: `homehub-${id}`,
     nextAction: options.nextAction,
@@ -1821,7 +1850,7 @@ function HomeHubContent({ auth, navigation, route }) {
   ]);
 
   return (
-    <ScreenContainer
+    <ScreenContainerView
       bgImage="bg2"
       contentContainerStyle={[Spaces.paddingBottom[24], Alignments.column, Alignments.fill]}
       contentWidth="wide"
@@ -1931,7 +1960,7 @@ function HomeHubContent({ auth, navigation, route }) {
             Alignments.justifyCenter,
             Alignments.alignCenter,
             Spaces.paddingHorizontal[24],
-            {
+            /** @type {any} */ ({
               backgroundColor: 'rgba(0, 18, 24, 0.88)',
               bottom: 0,
               left: 0,
@@ -1941,7 +1970,7 @@ function HomeHubContent({ auth, navigation, route }) {
               right: 0,
               top: 0,
               zIndex: 60,
-            },
+            }),
           ]}
         >
           <View
@@ -2050,15 +2079,12 @@ function HomeHubContent({ auth, navigation, route }) {
         enabled={isExternalCompetitionPromptEnabled}
         userData={userData}
       />
-    </ScreenContainer>
+    </ScreenContainerView>
   );
 }
 
 /**
- *
- * @param root0
- * @param root0.navigation
- * @param root0.route
+ * @param {{ navigation: any; route: any }} props
  */
 function HomeHub({ navigation, route }) {
   const auth = useAuth();

@@ -2,12 +2,20 @@ import client from '@/services/client';
 
 import { areSameEntityId, getEntityDocumentId, requireDocumentId } from '@/utils/entityId';
 
+/**
+ * @param {LeagueMatch | null | undefined} match
+ * @returns {Record<string, any>}
+ */
 const getAutomationMeta = (match) => (
   match?.automation_meta && typeof match.automation_meta === 'object'
     ? match.automation_meta
     : {}
 );
 
+/**
+ * @param {LeagueMatch} match
+ * @param {boolean} isTeamA
+ */
 const getTeamRecap = (match, isTeamA) => {
   const meta = getAutomationMeta(match);
   const recap = meta.recap && typeof meta.recap === 'object' ? meta.recap : null;
@@ -16,14 +24,22 @@ const getTeamRecap = (match, isTeamA) => {
   return isTeamA ? source.teamA : source.teamB;
 };
 
+/**
+ * @param {LeagueMatch} match
+ * @param {boolean} isTeamA
+ */
 const getTeamEloSnapshot = (match, isTeamA) => {
   const meta = getAutomationMeta(match);
   const snapshot = meta.elo_snapshot && typeof meta.elo_snapshot === 'object'
     ? meta.elo_snapshot
     : null;
-  return snapshot ? (isTeamA ? snapshot.teamA : snapshot.teamB) : null;
+  if (!snapshot) return null;
+  return isTeamA ? snapshot.teamA : snapshot.teamB;
 };
 
+/**
+ * @param {unknown} value
+ */
 const readNumber = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -122,7 +138,7 @@ export const declineParticipation = async (matchId, teamSide) => {
 };
 
 /**
- * Mark venue as booked (captain only)
+ * Mark venue as booked (squad member)
  * @param {string} matchId - The match documentId
  * @param {{ legalAcceptance?: object }} [options]
  */
@@ -207,13 +223,13 @@ export const getCancellationPenalty = (hoursUntilMatch) => {
   if (hoursUntilMatch < 24) {
     return {
       isSevere: true,
-      message: 'ATTENTION: Forfait. Penalite de -200 ELO et defaite attribuee.',
+      message: 'ATTENTION: Forfait. Penalite de -200 ELO matchmaking et defaite attribuee.',
       penalty: 200,
     };
   } if (hoursUntilMatch < 48) {
     return {
       isSevere: false,
-      message: 'Penalite de -50 ELO applicable.',
+      message: 'Penalite de -50 ELO matchmaking applicable.',
       penalty: 50,
     };
   }

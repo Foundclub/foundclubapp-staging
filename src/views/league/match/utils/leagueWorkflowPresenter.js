@@ -3,6 +3,9 @@ import {
   shouldMaskOpponentIdentity,
 } from '@/views/league/match/utils/matchStatus';
 
+/**
+ * @type {Record<string, { focusSection: string, helper: string, primaryCta: string }>}
+ */
 const CTA_BY_PHASE = {
   cancelled: {
     focusSection: 'timeline',
@@ -61,14 +64,17 @@ const CTA_BY_PHASE = {
   },
 };
 
+/**
+ * @type {Record<string, string>}
+ */
 const OWNER_BY_PHASE = {
   confirmed_upcoming: 'either',
-  disputed: 'captain',
-  pending_validation: 'captain',
+  disputed: 'team',
+  pending_validation: 'team',
   post_slot_resolution: 'captain',
-  waiting_proposal: 'captain',
-  waiting_score: 'captain',
-  waiting_venue: 'captain',
+  waiting_proposal: 'team',
+  waiting_score: 'team',
+  waiting_venue: 'team',
 };
 
 /**

@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
+import { getPlaceholderDataOption } from '@/services/queryOptions';
+
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import {
@@ -36,7 +38,7 @@ export const useGetReservations = (filters = {}, options = {}) => useInfiniteQue
     return undefined;
   },
   initialPageParam: 1,
-  placeholderData: options?.placeholderData ?? ((previousData) => previousData),
+  placeholderData: getPlaceholderDataOption(options),
   queryFn: ({ pageParam = 1 }) => getReservations({ ...filters, page: pageParam }),
   queryKey: buildNormalizedQueryKey('reservations', filters),
   refetchOnMount: options?.refetchOnMount ?? false,

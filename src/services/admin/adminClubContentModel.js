@@ -42,39 +42,44 @@ export const CLUB_TABS = [
   { key: 'danger', label: 'Danger zone' },
 ];
 
-export const normalizeText = (value) => String(value || '').trim();
+/** @typedef {Record<string, any>} AdminClubRecord */
 
-export const normalizeNumber = (value, fallback = 0) => {
+export const normalizeText = (/** @type {any} */ value) => String(value || '').trim();
+
+export const normalizeNumber = (/** @type {any} */ value, /** @type {number | null} */ fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-export const normalizeRelationArray = (value) => {
+export const normalizeRelationArray = (/** @type {any} */ value) => {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.data)) {
-    return value.data.map((item) => item?.attributes || item).filter(Boolean);
+    return value.data.map((/** @type {any} */ item) => item?.attributes || item).filter(Boolean);
   }
   return [];
 };
 
-export const normalizeSingleRelation = (value) => {
+export const normalizeSingleRelation = (/** @type {any} */ value) => {
   if (!value) return null;
   if (value?.data) return value.data?.attributes || value.data;
   return value;
 };
 
-export const getDocumentId = (value) => normalizeText(value?.documentId || value?.id);
+export const getDocumentId = (/** @type {any} */ value) => normalizeText(value?.documentId || value?.id);
 
 export const getAddressObject = (club = {}) => (
-  club?.address && typeof club.address === 'object' && !Array.isArray(club.address)
-    ? club.address
+  /** @type {AdminClubRecord} */ (club)?.address
+  && typeof /** @type {AdminClubRecord} */ (club).address === 'object'
+  && !Array.isArray(/** @type {AdminClubRecord} */ (club).address)
+    ? /** @type {AdminClubRecord} */ (club).address
     : {}
 );
 
 export const getClubCity = (club = {}) => {
+  const typedClub = /** @type {AdminClubRecord} */ (club);
   const address = getAddressObject(club);
   return normalizeText(
-    club?.city
+    typedClub?.city
     || address?.city
     || address?.town
     || address?.locality
@@ -84,13 +89,14 @@ export const getClubCity = (club = {}) => {
 };
 
 export const getClubAddressLabel = (club = {}) => {
+  const typedClub = /** @type {AdminClubRecord} */ (club);
   const address = getAddressObject(club);
   return normalizeText(
     address?.label
     || address?.description
     || address?.address
     || address?.street
-    || club?.addressDetails,
+    || typedClub?.addressDetails,
   );
 };
 
@@ -115,27 +121,33 @@ export const getClubCoordinates = (club = {}) => {
   return { lat, lng };
 };
 
-export const getClubActivities = (club = {}) => normalizeRelationArray(club?.activites);
+export const getClubActivities = (club = {}) => normalizeRelationArray(
+  /** @type {AdminClubRecord} */ (club)?.activites,
+);
 
 export const getClubActivityLabel = (club = {}) => {
   const firstActivity = getClubActivities(club)[0] || null;
   return normalizeText(firstActivity?.name || firstActivity?.label || firstActivity?.title);
 };
 
-export const getClubRelationLabel = (value = {}) => normalizeText(
-  value?.name
-  || value?.title
-  || value?.label
-  || value?.fullname
-  || [value?.firstname, value?.lastname].filter(Boolean).join(' ')
-  || value?.email
-  || value?.phoneNumber
-  || value?.documentId
-  || value?.id,
-);
+export const getClubRelationLabel = (value = {}) => {
+  const typedValue = /** @type {AdminClubRecord} */ (value);
+  return normalizeText(
+    typedValue?.name
+    || typedValue?.title
+    || typedValue?.label
+    || typedValue?.fullname
+    || [typedValue?.firstname, typedValue?.lastname].filter(Boolean).join(' ')
+    || typedValue?.email
+    || typedValue?.phoneNumber
+    || typedValue?.documentId
+    || typedValue?.id,
+  );
+};
 
 export const getClubInitials = (club = {}) => {
-  const name = normalizeText(club?.name);
+  const typedClub = /** @type {AdminClubRecord} */ (club);
+  const name = normalizeText(typedClub?.name);
   if (!name) return 'FC';
 
   const words = name.split(/\s+/).filter(Boolean);
@@ -143,7 +155,7 @@ export const getClubInitials = (club = {}) => {
   return `${words[0][0]}${words[1][0]}`.toUpperCase();
 };
 
-export const parseJsonObject = (value, fallback = {}) => {
+export const parseJsonObject = (/** @type {any} */ value, /** @type {AdminClubRecord} */ fallback = {}) => {
   if (!normalizeText(value)) return fallback;
   try {
     const parsed = JSON.parse(value);
@@ -153,7 +165,7 @@ export const parseJsonObject = (value, fallback = {}) => {
   }
 };
 
-export const stringifyJson = (value) => {
+export const stringifyJson = (/** @type {any} */ value) => {
   try {
     return JSON.stringify(value || {}, null, 2);
   } catch (_error) {
@@ -161,16 +173,16 @@ export const stringifyJson = (value) => {
   }
 };
 
-export const formatJsonPreview = (value, maxLength = 2400) => {
+export const formatJsonPreview = (/** @type {any} */ value, /** @type {number} */ maxLength = 2400) => {
   const serialized = stringifyJson(value);
   if (serialized.length <= maxLength) return serialized;
   return `${serialized.slice(0, maxLength)}\n...`;
 };
 
-export const toRelationSet = (value, isMany = false) => {
+export const toRelationSet = (/** @type {any} */ value, /** @type {boolean} */ isMany = false) => {
   const source = Array.isArray(value) ? value : [value];
   const set = source
-    .map((item) => {
+    .map((/** @type {any} */ item) => {
       const documentId = typeof item === 'string' ? normalizeText(item) : getDocumentId(item);
       return documentId ? { documentId } : null;
     })
@@ -179,13 +191,14 @@ export const toRelationSet = (value, isMany = false) => {
   return { set: isMany ? set : set.slice(0, 1) };
 };
 
-export const buildClubListFilters = ({
-  activityDocumentId,
-  isCustomer,
-  isReservationProvider,
-  parentMultisportDocumentId,
-} = {}) => {
-  const filters = {};
+export const buildClubListFilters = (params = {}) => {
+  const {
+    activityDocumentId,
+    isCustomer,
+    isReservationProvider,
+    parentMultisportDocumentId,
+  } = /** @type {AdminClubRecord} */ (params);
+  const filters = /** @type {AdminClubRecord} */ ({});
 
   if (isCustomer === true || isCustomer === false) {
     filters.isCustomer = isCustomer;
@@ -207,68 +220,71 @@ export const buildClubListFilters = ({
 };
 
 export const buildAddressFromForm = (form = {}) => {
-  const advanced = parseJsonObject(form.addressJson, {});
+  const typedForm = /** @type {AdminClubRecord} */ (form);
+  const advanced = parseJsonObject(typedForm.addressJson, {});
   return {
     ...advanced,
-    address: normalizeText(form.addressLabel) || advanced.address,
-    city: normalizeText(form.city) || advanced.city,
-    description: normalizeText(form.addressLabel) || advanced.description,
-    label: normalizeText(form.addressLabel) || advanced.label,
-    lat: normalizeText(form.latitude) ? normalizeNumber(form.latitude, null) : advanced.lat,
-    lng: normalizeText(form.longitude) ? normalizeNumber(form.longitude, null) : advanced.lng,
-    postcode: normalizeText(form.postcode) || advanced.postcode,
+    address: normalizeText(typedForm.addressLabel) || advanced.address,
+    city: normalizeText(typedForm.city) || advanced.city,
+    description: normalizeText(typedForm.addressLabel) || advanced.description,
+    label: normalizeText(typedForm.addressLabel) || advanced.label,
+    lat: normalizeText(typedForm.latitude) ? normalizeNumber(typedForm.latitude, null) : advanced.lat,
+    lng: normalizeText(typedForm.longitude) ? normalizeNumber(typedForm.longitude, null) : advanced.lng,
+    postcode: normalizeText(typedForm.postcode) || advanced.postcode,
   };
 };
 
 export const buildClubWritePayload = (form = {}) => {
-  const payload = {
+  const typedForm = /** @type {AdminClubRecord} */ (form);
+  const payload = /** @type {AdminClubRecord} */ ({
     address: buildAddressFromForm(form),
-    addressDetails: normalizeText(form.addressDetails),
-    email: normalizeText(form.email),
-    geohash: normalizeText(form.geohash),
-    isCustomer: Boolean(form.isCustomer),
-    isReservationProvider: Boolean(form.isReservationProvider),
-    maxTeamNumber: normalizeNumber(form.maxTeamNumber, 0),
-    name: normalizeText(form.name),
-    phoneNumber: normalizeText(form.phoneNumber),
-    sponsor: Array.isArray(form.sponsor) ? form.sponsor : [],
-    subscriptionValue: normalizeNumber(form.subscriptionValue, 0),
-  };
+    addressDetails: normalizeText(typedForm.addressDetails),
+    email: normalizeText(typedForm.email),
+    geohash: normalizeText(typedForm.geohash),
+    isCustomer: Boolean(typedForm.isCustomer),
+    isReservationProvider: Boolean(typedForm.isReservationProvider),
+    maxTeamNumber: normalizeNumber(typedForm.maxTeamNumber, 0),
+    name: normalizeText(typedForm.name),
+    phoneNumber: normalizeText(typedForm.phoneNumber),
+    sponsor: Array.isArray(typedForm.sponsor) ? typedForm.sponsor : [],
+    subscriptionValue: normalizeNumber(typedForm.subscriptionValue, 0),
+  });
 
-  if (form.logo) {
-    payload.logo = toRelationSet(form.logo, false);
+  if (typedForm.logo) {
+    payload.logo = toRelationSet(typedForm.logo, false);
   }
 
-  payload.activites = toRelationSet(form.activites || [], true);
-  payload.parentMultisport = form.parentMultisport
-    ? toRelationSet(form.parentMultisport, false)
+  payload.activites = toRelationSet(typedForm.activites || [], true);
+  payload.parentMultisport = typedForm.parentMultisport
+    ? toRelationSet(typedForm.parentMultisport, false)
     : { set: [] };
 
   return payload;
 };
 
 export const buildClubFormInitialValues = (club = {}) => {
+  const typedClub = /** @type {AdminClubRecord} */ (club);
   const address = getAddressObject(club);
   const coordinates = getClubCoordinates(club);
   return {
     activites: getClubActivities(club),
-    addressDetails: normalizeText(club?.addressDetails),
+    addressDetails: normalizeText(typedClub?.addressDetails),
     addressJson: stringifyJson(address),
     addressLabel: getClubAddressLabel(club),
     city: getClubCity(club),
-    email: normalizeText(club?.email),
-    geohash: normalizeText(club?.geohash),
-    isCustomer: Boolean(club?.isCustomer),
-    isReservationProvider: Boolean(club?.isReservationProvider),
+    email: normalizeText(typedClub?.email),
+    geohash: normalizeText(typedClub?.geohash),
+    isCustomer: Boolean(typedClub?.isCustomer),
+    isReservationProvider: Boolean(typedClub?.isReservationProvider),
     latitude: coordinates.lat === null ? '' : String(coordinates.lat),
-    logo: normalizeSingleRelation(club?.logo),
+    logo: normalizeSingleRelation(typedClub?.logo),
     longitude: coordinates.lng === null ? '' : String(coordinates.lng),
-    maxTeamNumber: String(club?.maxTeamNumber ?? 0),
-    name: normalizeText(club?.name),
-    parentMultisport: normalizeSingleRelation(club?.parentMultisport),
-    phoneNumber: normalizeText(club?.phoneNumber),
+    maxTeamNumber: String(typedClub?.maxTeamNumber ?? 0),
+    name: normalizeText(typedClub?.name),
+    parentMultisport: normalizeSingleRelation(typedClub?.parentMultisport),
+    phoneNumber: normalizeText(typedClub?.phoneNumber),
     postcode: normalizeText(address?.postcode || address?.zipCode),
-    sponsor: Array.isArray(club?.sponsor) ? club.sponsor : [],
-    subscriptionValue: String(club?.subscriptionValue ?? 0),
+    sponsor: Array.isArray(typedClub?.sponsor) ? typedClub.sponsor : [],
+    subscriptionValue: String(typedClub?.subscriptionValue ?? 0),
   };
 };

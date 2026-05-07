@@ -11,11 +11,14 @@ import { MMKV } from 'react-native-mmkv';
 
 import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 
+/** @typedef {{ height: number; width: number; x: number; y: number }} TutorialLayout */
+/** @typedef {Record<string, any>} TutorialStepMap */
+
 const defaultOnboardingContextValue = {
   canGoBack: false,
   currentStep: undefined,
-  currentStepLayout: null,
   currentStepIndex: 0,
+  currentStepLayout: null,
   getStepById: () => undefined,
   isActive: false,
   isStepReady: false,
@@ -25,22 +28,22 @@ const defaultOnboardingContextValue = {
   refreshCurrentStep: () => {},
   registerStep: () => {},
   skipOnboarding: () => {},
-  startOnboarding: () => {},
+  startOnboarding: () => false,
   totalSteps: 0,
   unregisterStep: () => {},
 };
 
-const OnboardingContext = createContext(defaultOnboardingContextValue);
+const OnboardingContext = createContext(/** @type {any} */ (defaultOnboardingContextValue));
 const inMemoryStorageMap = new Map();
 const fallbackStorage = {
-  getString: (key) => {
+  getString: (/** @type {string} */ key) => {
     const value = inMemoryStorageMap.get(key);
     return typeof value === 'string' ? value : undefined;
   },
-  set: (key, value) => inMemoryStorageMap.set(key, value),
+  set: (/** @type {string} */ key, /** @type {string} */ value) => inMemoryStorageMap.set(key, value),
 };
 
-let storageInstance = null;
+let storageInstance = /** @type {any} */ (null);
 const getOnboardingStorage = () => {
   if (storageInstance) return storageInstance;
   try {
@@ -53,27 +56,27 @@ const getOnboardingStorage = () => {
 };
 
 const storage = {
-  getString: (key) => getOnboardingStorage().getString(key),
-  set: (key, value) => getOnboardingStorage().set(key, value),
+  getString: (/** @type {string} */ key) => getOnboardingStorage().getString(key),
+  set: (/** @type {string} */ key, /** @type {string} */ value) => getOnboardingStorage().set(key, value),
 };
 const ONBOARDING_PROGRESS_PREFIX = 'onboarding-progress-v1';
 
-const getCompletedStepsKey = (flowId) => `${ONBOARDING_PROGRESS_PREFIX}:${flowId}:completed`;
+const getCompletedStepsKey = (/** @type {string} */ flowId) => `${ONBOARDING_PROGRESS_PREFIX}:${flowId}:completed`;
 
-const parseCompletedSteps = (rawValue) => {
+const parseCompletedSteps = (/** @type {any} */ rawValue) => {
   if (!rawValue || typeof rawValue !== 'string') return [];
   try {
     const parsed = JSON.parse(rawValue);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((id) => typeof id === 'string' && id.trim().length > 0);
+    return parsed.filter((/** @type {any} */ id) => typeof id === 'string' && id.trim().length > 0);
   } catch (_error) {
     return [];
   }
 };
 
-const mergeStepIds = (existingStepIds, incomingStepIds) => {
+const mergeStepIds = (/** @type {any[]} */ existingStepIds, /** @type {any[]} */ incomingStepIds) => {
   const merged = new Set(existingStepIds || []);
-  (incomingStepIds || []).forEach((id) => {
+  (incomingStepIds || []).forEach((/** @type {any} */ id) => {
     if (typeof id === 'string' && id.trim().length > 0) {
       merged.add(id);
     }
@@ -81,20 +84,20 @@ const mergeStepIds = (existingStepIds, incomingStepIds) => {
   return Array.from(merged);
 };
 
-const isNearlyEqual = (left, right) => {
+const isNearlyEqual = (/** @type {any} */ left, /** @type {any} */ right) => {
   const a = typeof left === 'number' && Number.isFinite(left) ? left : 0;
   const b = typeof right === 'number' && Number.isFinite(right) ? right : 0;
   return Math.abs(a - b) < 2;
 };
 
-const isSameLayout = (left, right) => (
+const isSameLayout = (/** @type {any} */ left, /** @type {any} */ right) => (
   isNearlyEqual(left?.x, right?.x)
   && isNearlyEqual(left?.y, right?.y)
   && isNearlyEqual(left?.width, right?.width)
   && isNearlyEqual(left?.height, right?.height)
 );
 
-const isSameSpotlight = (left, right) => (
+const isSameSpotlight = (/** @type {any} */ left, /** @type {any} */ right) => (
   (left?.paddingX ?? undefined) === (right?.paddingX ?? undefined)
   && (left?.paddingY ?? undefined) === (right?.paddingY ?? undefined)
   && (left?.borderRadius ?? undefined) === (right?.borderRadius ?? undefined)
@@ -108,23 +111,20 @@ const isSameSpotlight = (left, right) => (
 );
 
 /**
- *
- * @param root0
- * @param root0.children
- * @param root0.flowId
+ * @param {{ children: import('react').ReactNode; flowId?: string }} props
  */
 export function OnboardingProvider({ children, flowId = 'default' }) {
-  const [steps, setSteps] = useState({});
+  const [steps, setSteps] = useState(/** @type {TutorialStepMap} */ ({}));
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isActive, setIsActive] = useState(false);
-  const [currentStepLayout, setCurrentStepLayout] = useState(null);
+  const [currentStepLayout, setCurrentStepLayout] = useState(/** @type {TutorialLayout | null} */ (null));
   const [isStepReady, setIsStepReady] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const registrationCounterRef = useRef(0);
-  const nextStepTimerRef = useRef(0);
+  const nextStepTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | 0} */ (0));
   const isAdvancingRef = useRef(false);
   const activeMeasureRequestRef = useRef(0);
-  const prefetchedStepLayoutRef = useRef(null);
+  const prefetchedStepLayoutRef = useRef(/** @type {{ layout: TutorialLayout; stepId: string } | null} */ (null));
   const registerStatsRef = useRef({
     count: 0,
     lastWarnAt: 0,
@@ -164,7 +164,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     }
     prefetchedStepLayoutRef.current = null;
     isAdvancingRef.current = false;
-  }, []);
+  }, [flowId]);
 
   useEffect(() => {
     if (!__DEV__) return;
@@ -184,21 +184,21 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     console.warn(`[OnboardingProvider] Duplicate step orders detected in flow "${flowId}": ${details}`);
   }, [flowId, orderedSteps]);
 
-  const persistCompletedSteps = useCallback((nextCompletedStepIds) => {
+  const persistCompletedSteps = useCallback((/** @type {string[]} */ nextCompletedStepIds) => {
     storage.set(getCompletedStepsKey(flowId), JSON.stringify(nextCompletedStepIds));
   }, [flowId]);
 
   const registerStep = useCallback((
-    id,
-    layout,
-    order,
-    title,
-    description,
-    spotlight = undefined,
-    onNext = undefined,
-    measure = undefined,
-    getTargetNode = undefined,
-    navigationMeta = undefined,
+    /** @type {string} */ id,
+    /** @type {any} */ layout,
+    /** @type {number} */ order,
+    /** @type {any} */ title,
+    /** @type {any} */ description,
+    /** @type {any} */ spotlight = undefined,
+    /** @type {any} */ onNext = undefined,
+    /** @type {any} */ measure = undefined,
+    /** @type {any} */ getTargetNode = undefined,
+    /** @type {any} */ navigationMeta = undefined,
   ) => {
     const now = Date.now();
     const stats = registerStatsRef.current;
@@ -225,6 +225,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
       const previousStep = prev[id];
       const nextStep = {
         description,
+        getTargetNode,
         id,
         layout,
         measure,
@@ -236,7 +237,6 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
         registrationIndex: previousStep?.registrationIndex ?? (registrationCounterRef.current += 1),
         spotlight,
         title,
-        getTargetNode,
       };
       if (
         previousStep
@@ -269,11 +269,11 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
         order,
       });
     }
-  }, []);
+  }, [flowId]);
 
-  const getStepById = useCallback((id) => steps[id], [steps]);
+  const getStepById = useCallback((/** @type {string} */ id) => steps[id], [steps]);
 
-  const resolveStepLayout = useCallback(async (step, reason = 'resolve') => {
+  const resolveStepLayout = useCallback(async (/** @type {any} */ step, /** @type {string} */ reason = 'resolve') => {
     if (!step) return null;
 
     let nextLayout = step.layout || null;
@@ -303,7 +303,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     };
   }, [flowId]);
 
-  const unregisterStep = useCallback((id) => {
+  const unregisterStep = useCallback((/** @type {string} */ id) => {
     setSteps((prev) => {
       if (!Object.prototype.hasOwnProperty.call(prev, id)) {
         return prev;
@@ -314,9 +314,9 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     });
   }, []);
 
-  const startOnboarding = useCallback((options = {}) => {
+  const startOnboarding = useCallback((/** @type {any} */ options = {}) => {
     const forceFromStart = Boolean(options?.forceFromStart);
-    if (isActive || orderedSteps.length === 0) return;
+    if (isActive || orderedSteps.length === 0) return false;
     if (forceFromStart) {
       setCompletedStepIds([]);
       persistCompletedSteps([]);
@@ -341,7 +341,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
       totalSteps: orderedSteps.length,
     });
     return true;
-  }, [completedStepIds, isActive, orderedSteps, persistCompletedSteps]);
+  }, [completedStepIds, flowId, isActive, orderedSteps, persistCompletedSteps]);
 
   const stopOnboarding = useCallback(() => {
     if (nextStepTimerRef.current) {
@@ -381,7 +381,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     }
 
     const currentStep = orderedSteps[currentStepIndex];
-    const finalizeStepProgression = (prefetchedLayout = null) => {
+    const finalizeStepProgression = (/** @type {TutorialLayout | null} */ prefetchedLayout = null) => {
       const mergedCompletedStepIds = mergeStepIds(completedStepIds, [currentStep?.id]);
       const completedSet = new Set(mergedCompletedStepIds);
 
@@ -401,26 +401,26 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
         });
         stopOnboarding();
       } else {
-        const nextStep = orderedSteps[nextPendingIndex];
+        const nextPendingStep = orderedSteps[nextPendingIndex];
         const matchedPrefetchedLayout = (
           prefetchedLayout
-          && nextStep?.id
-          && currentStep?.nextTargetStepId === nextStep.id
+          && nextPendingStep?.id
+          && currentStep?.nextTargetStepId === nextPendingStep.id
         )
           ? prefetchedLayout
           : null;
         setTutorialDebugState({
           lastAdvanceFromStepId: currentStep?.id || null,
           lastAdvancePhase: 'finalize',
-          lastAdvanceToStepId: nextStep?.id || null,
+          lastAdvanceToStepId: nextPendingStep?.id || null,
         });
         prefetchedStepLayoutRef.current = (
           matchedPrefetchedLayout
-          && nextStep?.id
+          && nextPendingStep?.id
         )
           ? {
             layout: matchedPrefetchedLayout,
-            stepId: nextStep.id,
+            stepId: nextPendingStep.id,
           }
           : null;
         setCurrentStepLayout(matchedPrefetchedLayout);
@@ -498,6 +498,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
   }, [
     completedStepIds,
     currentStepIndex,
+    flowId,
     orderedSteps,
     persistCompletedSteps,
     stopOnboarding,
@@ -509,7 +510,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     setIsTransitioning(true);
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
     tutorialDebugLog('previousStep', { flowId });
-  }, []);
+  }, [flowId]);
 
   const refreshCurrentStep = useCallback(() => {
     const activeStep = orderedSteps[currentStepIndex];
@@ -568,8 +569,9 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     let cancelled = false;
     const requestId = activeMeasureRequestRef.current + 1;
     activeMeasureRequestRef.current = requestId;
-    const prefetchedLayout = prefetchedStepLayoutRef.current?.stepId === activeStep.id
-      ? prefetchedStepLayoutRef.current.layout
+    const prefetchedStepLayout = prefetchedStepLayoutRef.current;
+    const prefetchedLayout = prefetchedStepLayout && prefetchedStepLayout.stepId === activeStep.id
+      ? prefetchedStepLayout.layout
       : null;
 
     if (!prefetchedLayout) {
@@ -647,6 +649,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
       cancelled = true;
     };
   }, [
+    activeStep,
     activeStep?.id,
     activeStep?.measure,
     activeStepLayoutKey,
@@ -658,8 +661,8 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
   const contextValue = useMemo(() => ({
     canGoBack: currentStepIndex > 0,
     currentStep: orderedSteps[currentStepIndex],
-    currentStepLayout,
     currentStepIndex,
+    currentStepLayout,
     getStepById,
     isActive,
     isStepReady,

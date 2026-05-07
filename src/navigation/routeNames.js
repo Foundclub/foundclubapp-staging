@@ -27,6 +27,7 @@ export const RouteNames = /** @type {const} */ ({
   Club: 'Club',
   ClubEdit: 'ClubEditPage',
   ClubFilters: 'ClubFilters',
+  ClubLicenseCampaignDetail: 'ClubLicenseCampaignDetail',
   ClubLicenseCampaignSettings: 'ClubLicenseCampaignSettings',
   ClubLicenseMemberDetail: 'ClubLicenseMemberDetail',
   ClubLicensePayments: 'ClubLicensePayments',

@@ -12,6 +12,7 @@ import {
   getSuperadminEntry,
   listSuperadminEntries,
   searchSuperadminRelations,
+  setSuperadminUserSuspension,
   updateSuperadminEntry,
 } from './superadminService';
 
@@ -86,6 +87,33 @@ export const useUpdateSuperadminEntry = () => {
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['superadmin', 'content', variables.uid, 'list'] });
       queryClient.invalidateQueries({ queryKey: detailKey(variables.uid, variables.documentId) });
+    },
+  });
+};
+
+/**
+ * Mutate the explicit SuperAdmin user suspension endpoint.
+ * @returns {import('@tanstack/react-query').UseMutationResult<
+ *   any,
+ *   Error,
+ *   { documentId: string; suspended: boolean; reason: string }
+ * >}
+ */
+export const useSetSuperadminUserSuspension = () => {
+  const queryClient = useQueryClient();
+  const userUid = 'plugin::users-permissions.user';
+
+  return useMutation({
+    mutationFn: ({ documentId, reason, suspended }) => (
+      setSuperadminUserSuspension(documentId, { reason, suspended })
+    ),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['superadmin', 'content', userUid, 'list'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: detailKey(userUid, variables.documentId),
+      });
     },
   });
 };

@@ -257,22 +257,22 @@ function CMLicensesDashboard({ navigation, route }) {
 
   const handleBulkGenerate = useCallback(() => {
     if (!campaignIds.length) {
-      Alert.alert('Aucune campagne', 'Cree au moins une campagne avant de generer les cotisations.');
+      Alert.alert('Aucune campagne', 'Cree au moins une campagne avant de relancer une synchronisation de secours.');
       return;
     }
     Alert.alert(
-      'Generer les cotisations',
-      'Les cotisations manquantes seront creees sans dupliquer les dossiers existants.',
+      'Resynchroniser les campagnes',
+      'Operation de maintenance: les cotisations manquantes seront rattachees sans dupliquer les dossiers deja existants.',
       [
         { style: 'cancel', text: 'Annuler' },
         {
           onPress: () => bulkGenerateMutation.mutate({ campaignIds, mode: 'missing_only' }, {
             onSuccess: (result) => Alert.alert(
-              'Generation terminee',
+              'Synchronisation terminee',
               `${result?.summary?.created || 0} creee(s), ${result?.summary?.skipped || 0} deja existante(s).`,
             ),
           }),
-          text: 'Generer',
+          text: 'Resynchroniser',
         },
       ],
     );
@@ -378,7 +378,7 @@ function CMLicensesDashboard({ navigation, route }) {
           />
           <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
             <Button isLoading={bulkCreateMutation.isPending} onPress={handleBulkCreate} style={{ flex: 1 }} title="Creer manquantes" variant="Secondary" />
-            <Button isLoading={bulkGenerateMutation.isPending} onPress={handleBulkGenerate} style={{ flex: 1 }} title="Generer cotisations" />
+            <Button isLoading={bulkGenerateMutation.isPending} onPress={handleBulkGenerate} style={{ flex: 1 }} title="Resynchroniser" />
           </View>
         </View>
 

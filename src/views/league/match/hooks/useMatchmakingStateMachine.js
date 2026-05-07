@@ -41,7 +41,7 @@ const computeRemainingExpansionSec = (searchInsights, updatedAtMs, nowMs = Date.
 const hasTierBlocking = (searchInsights) => {
   const blockedCriteria = searchInsights?.blockedCriteria;
   const blocked = Array.isArray(blockedCriteria) ? blockedCriteria : [];
-  return blocked.includes('elo') || blocked.includes('division');
+  return blocked.includes('elo');
 };
 
 /**
@@ -49,11 +49,13 @@ const hasTierBlocking = (searchInsights) => {
  * @returns {string | null}
  */
 const pickFirstText = (...values) => {
-  for (const value of values) {
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      if (trimmed) return trimmed;
-    }
+  const value = values.find((candidate) => {
+    if (typeof candidate !== 'string') return false;
+    return Boolean(candidate.trim());
+  });
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
   }
   return null;
 };
@@ -103,7 +105,6 @@ const extractSearchZone = (matchRequest, mySquad) => {
 
 /**
  * @typedef {{
- *  division?: number,
  *  searchInsights?: Record<string, any> | null,
  *  nextExpansionInSec?: number,
  *  cityLabel?: string | null,
@@ -116,21 +117,40 @@ const extractSearchZone = (matchRequest, mySquad) => {
  */
 const buildSearchStatusLabel = ({
   cityLabel,
-  division,
   nextExpansionInSec,
   radiusKm,
   searchInsights,
 }) => {
-  const divisionLabel = division ? `Division ${division}` : 'votre niveau';
-  const tier = Number(searchInsights?.tier || 0) || 1;
-  const geoRelaxationKm = Number(searchInsights?.geoRelaxationKm || 0);
+  const autoEloCap = Number(searchInsights?.autoEloCap || 25);
+  const softSuggestionCaps = searchInsights?.softSuggestionCaps || null;
   const safeNextExpansionInSec = Number(nextExpansionInSec ?? 0);
   const nextExpansion = Number.isFinite(safeNextExpansionInSec)
     ? Math.max(0, safeNextExpansionInSec)
-    : Number(searchInsights?.nextExpansionInSec || 0);
+    : Number(searchInsights?.nextAutoExpansionInSec || searchInsights?.nextExpansionInSec || 0);
 
+  const zoneLineV3 = formatZoneLine(cityLabel || null, radiusKm);
+  const criteriaLineV3 = `Critere prioritaire: ELO matchmaking similaire, ecart max actuel ${autoEloCap} pts.`;
+
+  if (searchInsights?.candidateFound && hasTierBlocking(searchInsights)) {
+    if (nextExpansion > 0) {
+      return `Statut: adversaire potentiel repere.\n${criteriaLineV3}\n${zoneLineV3}\nSuite: elargissement ELO matchmaking dans ${formatSecondsCompact(nextExpansion)}.`;
+    }
+    return `Statut: adversaire potentiel repere.\n${criteriaLineV3}\n${zoneLineV3}\nSuite: recherche ELO matchmaking elargie en cours.`;
+  }
+
+  if (softSuggestionCaps?.extraDistanceKm) {
+    return `Statut: recherche active.\n${criteriaLineV3}\nRayon conserve pour le match auto; pistes opt-in possibles jusqu'a +${softSuggestionCaps.extraDistanceKm} km.\n${zoneLineV3}`;
+  }
+
+  if (nextExpansion > 0) {
+    return `Statut: recherche precise en cours.\n${criteriaLineV3}\nProchain elargissement ELO matchmaking dans ${formatSecondsCompact(nextExpansion)}.\n${zoneLineV3}`;
+  }
+
+  return `Statut: recherche large en cours.\n${criteriaLineV3}\nRayon auto conserve; les grands ecarts passent en opt-in.\n${zoneLineV3}`;
+};
+/*
   const zoneLine = formatZoneLine(cityLabel || null, radiusKm);
-  const criteriaLine = `Critère prioritaire: ${divisionLabel} avec un ELO similaire.`;
+  const criteriaLine = `Critère prioritaire: ${divisionLabel} avec un ELO matchmaking similaire.`;
 
   if (searchInsights?.candidateFound && hasTierBlocking(searchInsights)) {
     if (nextExpansion > 0) {
@@ -144,7 +164,7 @@ const buildSearchStatusLabel = ({
   }
 
   if (tier === 2) {
-    return `Statut: recherche élargie niveau 1.\nCritère actuel: ${divisionLabel} +/-1 avec un ELO proche.\n${zoneLine}`;
+    return `Statut: recherche élargie niveau 1.\nCritère actuel: ${divisionLabel} +/-1 avec un ELO matchmaking proche.\n${zoneLine}`;
   }
 
   if (tier === 3) {
@@ -153,6 +173,8 @@ const buildSearchStatusLabel = ({
 
   return `Statut: recherche large.\nObjectif: trouver un match rapidement avec les meilleures compatibilités restantes.\nZone étendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
 };
+
+*/
 
 /**
  * @typedef {object} UseMatchmakingStateMachineParams
@@ -249,7 +271,6 @@ export const useMatchmakingStateMachine = ({
       const zone = extractSearchZone(matchRequest, mySquad);
       setSearchStatus(buildSearchStatusLabel({
         cityLabel: zone.cityLabel,
-        division: mySquad?.division,
         nextExpansionInSec,
         radiusKm: zone.radiusKm,
         searchInsights,
@@ -261,7 +282,7 @@ export const useMatchmakingStateMachine = ({
       clearInterval(statusTextInterval);
     };
   }, [
-    matchRequest?.createdAt,
+    matchRequest,
     mySquad,
     onAutoSearchingDetected,
     onConnectionError,

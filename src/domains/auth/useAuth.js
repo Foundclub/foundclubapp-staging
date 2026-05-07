@@ -44,18 +44,23 @@ import { UNREAD_COUNT_QUERY_KEY } from '@/hooks/useNotificationController';
 /* eslint-enable import/order, perfectionist/sort-imports */
 
 const authLogger = createLogger('auth');
+/** @type {string | null} */
 let lastBootstrapErrorLogKey = null;
+/** @type {string | null} */
 let lastBootstrapLoadedLogKey = null;
+/** @type {string | null} */
 let lastBootstrapRequestLogKey = null;
+/** @type {string | null} */
 let lastBootstrapSyncedKey = null;
+/** @type {string | null} */
 let lastFullUserSyncedKey = null;
 
-const getBootstrapErrorStatus = (error) => {
+const getBootstrapErrorStatus = (/** @type {any} */ error) => {
   const parsedStatus = Number(error?.status || error?.response?.status || error?.error?.status);
   return Number.isFinite(parsedStatus) ? parsedStatus : null;
 };
 
-const getBootstrapErrorMessage = (error) => String(
+const getBootstrapErrorMessage = (/** @type {any} */ error) => String(
   error?.response?.data?.error?.message
   || error?.response?.data?.message
   || error?.details?.message
@@ -64,7 +69,7 @@ const getBootstrapErrorMessage = (error) => String(
   || 'unknown',
 ).trim();
 
-const getBootstrapSessionKey = (auth) => String(
+const getBootstrapSessionKey = (/** @type {any} */ auth) => String(
   auth?.user?.documentId
   || auth?.user?.id
   || auth?.token
@@ -84,7 +89,7 @@ const useAuth = () => {
   const [isFullUserFetchReady, setIsFullUserFetchReady] = useState(false);
 
   // hooks
-  const [appState, appDispatch] = useAppContext();
+  const [appState, appDispatch] = /** @type {any} */ (useAppContext());
   const { isGold } = useAppMode();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -92,20 +97,20 @@ const useAuth = () => {
   // api calls
   const otpMutation = useMutation({
     mutationFn: signInWithPhoneNumber,
-    onError: (error) => {
+    onError: (/** @type {any} */ error) => {
       displayErrorAlert(error, 'OTP_ERROR');
     },
-    onSuccess: (data) => {
+    onSuccess: (/** @type {any} */ data) => {
       setConfirm(data);
     },
   });
 
   const loginMutation = useMutation({
     mutationFn: login,
-    onError: (error) => {
+    onError: (/** @type {any} */ error) => {
       displayErrorAlert(error, 'OTP_ERROR');
     },
-    onSuccess: async (data) => {
+    onSuccess: async (/** @type {any} */ data) => {
       authLogger.debug('Login mutation succeeded', { userDocumentId: data?.user?.documentId });
       // Ensure OTP confirmation state cannot leak to another account flow
       setConfirm(undefined);
@@ -124,7 +129,8 @@ const useAuth = () => {
           await deleteDeviceToken(token);
         }
       } catch (error) {
-        authLogger.warn('Failed to delete device token on logout', error?.message || error);
+        const requestError = /** @type {any} */ (error);
+        authLogger.warn('Failed to delete device token on logout', requestError?.message || requestError);
       } finally {
         appDispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
       }
@@ -135,7 +141,7 @@ const useAuth = () => {
       queryClient.clear();
       // Clear all read message data
       const allKeys = storage.getAllKeys();
-      allKeys.forEach((key) => {
+      allKeys.forEach((/** @type {string} */ key) => {
         if (key.startsWith('chat_')) {
           storage.delete(key);
         }
@@ -144,9 +150,9 @@ const useAuth = () => {
     },
   });
 
-  const { auth, authSessions, isAddingAccount } = useAppContext()[0];
+  const { auth, authSessions, isAddingAccount } = /** @type {any} */ (useAppContext()[0]);
 
-  const switchAccount = useCallback(async (session) => {
+  const switchAccount = useCallback(async (/** @type {any} */ session) => {
     authLogger.debug('Switching account', { userDocumentId: session?.user?.documentId || session?.user?.id });
     setConfirm(undefined);
     queryClient.clear();
@@ -172,7 +178,7 @@ const useAuth = () => {
 
     // Sign out from Firebase SDK to ensure a clean slate for the new account
     // This does NOT remove the saved app session from authSessions.
-    await logout().catch((error) => {
+    await logout().catch((/** @type {any} */ error) => {
       authLogger.warn(
         'Logout failed before add-account flow',
         error?.message || 'Unknown error',
@@ -402,12 +408,12 @@ const useAuth = () => {
       clubName,
       coachName: firstname,
     });
-    const installUrl = buildInstallLandingUrl({
+    const installUrl = buildInstallLandingUrl(/** @type {any} */ ({
       id: clubId,
       invite: true,
       source: 'sms',
       type: 'club',
-    });
+    }));
     const encodedMessage = buildShareMessageWithUrl({
       intro: shareMessage,
       linkLabel: t('teamDetails.alerts.invitePlayers.downloadApp', 'Telecharge l\'application ici'),
@@ -435,12 +441,12 @@ const useAuth = () => {
    * @returns {void}
    */
   const inviteTeamPlayers = ({ clubName, teamId, teamName }) => {
-    const installUrl = buildInstallLandingUrl({
+    const installUrl = buildInstallLandingUrl(/** @type {any} */ ({
       id: teamId,
       invite: true,
       source: 'sms',
       type: 'team',
-    });
+    }));
     const shareMessage = t('teamDetails.alerts.invitePlayers.message', {
       clubName,
       teamName,
@@ -482,11 +488,11 @@ const useAuth = () => {
   const canEditEvent = useCallback(
     (/** @type {string} */teamId) => (userData?.role.name
       === USER_ROLES.coach || userData?.role.name === USER_ROLES.president)
-      && userData?.trainedTeams?.map(({ documentId }) => documentId)?.includes(teamId),
+      && userData?.trainedTeams?.map((/** @type {any} */ { documentId }) => documentId)?.includes(teamId),
     [userData],
   );
 
-  const canManageEvent = useCallback((event) => {
+  const canManageEvent = useCallback((/** @type {any} */ event) => {
     const roleName = userData?.role?.name;
     if (roleName !== USER_ROLES.coach && roleName !== USER_ROLES.president) {
       return false;
@@ -514,12 +520,12 @@ const useAuth = () => {
       return true;
     }
 
-    const trainedTeamIds = new Set((userData?.trainedTeams || []).map(({ documentId }) => documentId));
+    const trainedTeamIds = new Set((userData?.trainedTeams || []).map((/** @type {any} */ { documentId }) => documentId));
     const organizerTeamId = event?.team?.documentId;
-    const invitedTeamIds = (event?.invitedTeams || []).map((team) => team?.documentId).filter(Boolean);
+    const invitedTeamIds = (event?.invitedTeams || []).map((/** @type {any} */ team) => team?.documentId).filter(Boolean);
 
     if (organizerTeamId && trainedTeamIds.has(organizerTeamId)) return true;
-    return invitedTeamIds.some((teamId) => trainedTeamIds.has(teamId));
+    return invitedTeamIds.some((/** @type {any} */ teamId) => trainedTeamIds.has(teamId));
   }, [userData]);
 
   const canJoinClub = useMemo(() => {
@@ -538,7 +544,7 @@ const useAuth = () => {
 
   const canJoinTeam = useCallback((/** @type {string} */teamId) => {
     if (userData?.role.name === USER_ROLES.player) {
-      return !userData?.myTeams?.some(({ documentId }) => documentId === teamId);
+      return !userData?.myTeams?.some((/** @type {any} */ { documentId }) => documentId === teamId);
     }
     return false;
   }, [userData]);
@@ -566,13 +572,13 @@ const useAuth = () => {
 
     const myTeams = (userData?.myTeams || [])
       ?.concat(userData?.trainedTeams || [])
-      ?.map(({ documentId }) => documentId);
+      ?.map((/** @type {any} */ { documentId }) => documentId);
 
     const userToContactTeams = (userToContact?.myTeams || [])
       ?.concat(userToContact?.trainedTeams || [])
-      ?.map(({ documentId }) => documentId);
+      ?.map((/** @type {any} */ { documentId }) => documentId);
 
-    return myTeams?.some((teamId) => userToContactTeams?.includes(teamId));
+    return myTeams?.some((/** @type {any} */ teamId) => userToContactTeams?.includes(teamId));
   }, [userData]);
 
   const cancelAddAccount = useCallback(() => {

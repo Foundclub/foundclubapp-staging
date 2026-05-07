@@ -14,11 +14,10 @@ import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
-import AdminStateView from '@/views/admin/components/AdminStateView';
-
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -30,6 +29,7 @@ import {
   useDeleteSuperadminEntry,
   useGetSuperadminContentMetadata,
   useGetSuperadminEntry,
+  useSetSuperadminUserSuspension,
 } from '@/services/admin/superadminQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
@@ -88,6 +88,8 @@ function SuperAdminEntryDetail({ navigation, route }) {
 
   const [reason, setReason] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isSuspensionModalOpen, setIsSuspensionModalOpen] = useState(false);
+  const [suspensionReason, setSuspensionReason] = useState('');
   const [showJson, setShowJson] = useState(false);
   const [isContacting, setIsContacting] = useState(false);
 
@@ -105,6 +107,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
   );
 
   const deleteMutation = useDeleteSuperadminEntry();
+  const suspensionMutation = useSetSuperadminUserSuspension();
   const pageHorizontalPadding = DETAIL_LAYOUT.pageHorizontal;
 
   const entry = data?.data || null;
@@ -112,6 +115,12 @@ function SuperAdminEntryDetail({ navigation, route }) {
   const currentUserDocumentId = String(userData?.documentId || '').trim();
   const isUsersPermissionsEntry = uid === 'plugin::users-permissions.user';
   const canContactEntryUser = Boolean(isUsersPermissionsEntry && entryDocumentId);
+  const isEntrySuspended = entry?.blocked === true;
+  const canSuspendEntryUser = Boolean(
+    canContactEntryUser
+      && entryDocumentId
+      && entryDocumentId !== currentUserDocumentId,
+  );
   const auditLogs = useMemo(() => data?.meta?.audit || [], [data?.meta?.audit]);
   const viewModel = useMemo(() => getEntryDetailViewModel({
     attributes,
@@ -222,10 +231,10 @@ function SuperAdminEntryDetail({ navigation, route }) {
       });
       closeDeleteModal();
       navigation.goBack();
-    } catch (error) {
+    } catch (deleteError) {
       Alert.alert(
         t('superAdminContentManager.alerts.deleteFailedTitle', 'Suppression impossible'),
-        getErrorMessage(error, 'generic') || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+        getErrorMessage(deleteError, 'generic') || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
       );
     }
   };
@@ -252,20 +261,76 @@ function SuperAdminEntryDetail({ navigation, route }) {
         return;
       }
       navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
-    } catch (error) {
+    } catch (contactError) {
       Alert.alert(
         t('common.errors.error', 'Erreur'),
-        getErrorMessage(error, 'generic') || t('messaging.errors.failedToCreateConversation', 'Impossible de creer la conversation.'),
+        getErrorMessage(contactError, 'generic') || t('messaging.errors.failedToCreateConversation', 'Impossible de creer la conversation.'),
       );
     } finally {
       setIsContacting(false);
     }
   };
 
+  const closeSuspensionModal = () => {
+    if (suspensionMutation.isPending) return;
+    setIsSuspensionModalOpen(false);
+    setSuspensionReason('');
+  };
+
+  const handleUserSuspension = async () => {
+    if (!canSuspendEntryUser) return;
+
+    const normalizedReason = suspensionReason.trim();
+    if (normalizedReason.length < 3) {
+      Alert.alert(
+        t('superAdminContentManager.alerts.reasonRequiredTitle', 'Raison requise'),
+        t('superAdminContentManager.alerts.reasonRequiredMessage', 'Minimum 3 caracteres.'),
+      );
+      return;
+    }
+
+    const nextSuspendedState = !isEntrySuspended;
+    try {
+      await suspensionMutation.mutateAsync({
+        documentId: entryDocumentId,
+        reason: normalizedReason,
+        suspended: nextSuspendedState,
+      });
+      closeSuspensionModal();
+      refetch();
+      Alert.alert(
+        t('common.info', 'Info'),
+        nextSuspendedState
+          ? t('superAdminContentManager.feedback.userSuspended', 'Compte suspendu.')
+          : t('superAdminContentManager.feedback.userUnsuspended', 'Compte reactive.'),
+      );
+    } catch (suspensionError) {
+      Alert.alert(
+        t('common.errors.error', 'Erreur'),
+        getErrorMessage(suspensionError, 'generic')
+          || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+      );
+    }
+  };
+
+  const suspensionActionLabel = isEntrySuspended
+    ? t('superAdminContentManager.actions.unsuspendUser', 'Reactiver le compte')
+    : t('superAdminContentManager.actions.suspendUser', 'Suspendre le compte');
+
   return (
     <ScreenContainer bgImage="bg2">
-      <ScrollView contentContainerStyle={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.paddingBottom[48]]}>
-        <View style={[Spaces.marginTop[DETAIL_LAYOUT.pageTop], { marginBottom: DETAIL_LAYOUT.sectionGap }]}>
+      <ScrollView
+        contentContainerStyle={[
+          { paddingHorizontal: pageHorizontalPadding },
+          Spaces.paddingBottom[48],
+        ]}
+      >
+        <View
+          style={[
+            Spaces.marginTop[DETAIL_LAYOUT.pageTop],
+            { marginBottom: DETAIL_LAYOUT.sectionGap },
+          ]}
+        >
           <Text numberOfLines={1} style={[Fonts.h2, Fonts.neutral00]}>
             {uidDisplayName}
           </Text>
@@ -358,6 +423,23 @@ function SuperAdminEntryDetail({ navigation, route }) {
               onPress={handleContactEntryUser}
               style={[Spaces.marginTop[8]]}
               title={t('userDetails.actions.contact', 'Contacter')}
+              variant="Secondary"
+            />
+          ) : null}
+          {canSuspendEntryUser ? (
+            <Button
+              isLoading={suspensionMutation.isPending}
+              onPress={() => setIsSuspensionModalOpen(true)}
+              style={[
+                Spaces.marginTop[8],
+                isEntrySuspended
+                  ? { borderColor: Colors.primary300, borderWidth: 1 }
+                  : { borderColor: Colors.error500, borderWidth: 1 },
+              ]}
+              textStyle={{
+                color: isEntrySuspended ? Colors.primary200 : Colors.error500,
+              }}
+              title={suspensionActionLabel}
               variant="Secondary"
             />
           ) : null}
@@ -519,7 +601,13 @@ function SuperAdminEntryDetail({ navigation, route }) {
           </TouchableOpacity>
 
           {showJson ? (
-            <Text style={[Fonts.p3, { color: Colors.neutral200, fontFamily: 'monospace' }, Spaces.marginTop[8]]}>
+            <Text
+              style={[
+                Fonts.p3,
+                { color: Colors.neutral200, fontFamily: 'monospace' },
+                Spaces.marginTop[8],
+              ]}
+            >
               {jsonPreview}
             </Text>
           ) : (
@@ -531,7 +619,11 @@ function SuperAdminEntryDetail({ navigation, route }) {
 
         <Button
           onPress={() => setIsDeleteModalOpen(true)}
-          style={[{ backgroundColor: 'rgba(255, 40, 79, 0.14)', borderColor: Colors.error500, borderWidth: 1 }]}
+          style={[{
+            backgroundColor: 'rgba(255, 40, 79, 0.14)',
+            borderColor: Colors.error500,
+            borderWidth: 1,
+          }]}
           textStyle={{ color: Colors.error500 }}
           title={t('superAdminContentManager.actions.deleteEntry', 'Supprimer l\'entrée')}
           variant="Secondary"
@@ -548,14 +640,22 @@ function SuperAdminEntryDetail({ navigation, route }) {
           {t('superAdminContentManager.deleteModal.title', 'Supprimer l\'entrée')}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
-          {t('superAdminContentManager.deleteModal.description', 'Action definitive. Une raison d\'audit est obligatoire.')}
+          {t(
+            'superAdminContentManager.deleteModal.description',
+            "Action definitive. Une raison d'audit est obligatoire.",
+          )}
         </Text>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[10], Spaces.marginTop[10]]}>
+        <View
+          style={[ApplicationStyle.card, Spaces.padding[10], Spaces.marginTop[10]]}
+        >
           <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
             {viewModel.title}
           </Text>
-          <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[4]]}>
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[4]]}
+          >
             {viewModel.documentId}
           </Text>
         </View>
@@ -563,7 +663,10 @@ function SuperAdminEntryDetail({ navigation, route }) {
         <TextInput
           multiline
           onChangeText={setReason}
-          placeholder={t('superAdminContentManager.deleteModal.reasonPlaceholder', 'Raison obligatoire (minimum 3 caracteres)')}
+          placeholder={t(
+            'superAdminContentManager.deleteModal.reasonPlaceholder',
+            'Raison obligatoire (minimum 3 caracteres)',
+          )}
           placeholderTextColor={Colors.neutral400}
           style={[
             ApplicationStyle.borderRadius12,
@@ -608,6 +711,93 @@ function SuperAdminEntryDetail({ navigation, route }) {
               {deleteMutation.isPending
                 ? t('superAdminContentManager.actions.deleting', 'Suppression...')
                 : t('superAdminContentManager.actions.delete', 'Supprimer')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </BottomModal>
+
+      <BottomModal
+        close={closeSuspensionModal}
+        isVisible={isSuspensionModalOpen}
+        scrollable={false}
+        snapPoints={['45%']}
+      >
+        <Text style={[Fonts.h3, Fonts.neutral00]}>
+          {isEntrySuspended
+            ? t('superAdminContentManager.suspensionModal.unsuspendTitle', 'Reactiver le compte')
+            : t('superAdminContentManager.suspensionModal.suspendTitle', 'Suspendre le compte')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
+          {t(
+            'superAdminContentManager.suspensionModal.description',
+            "Une raison support est obligatoire et sera ajoutee a l'audit.",
+          )}
+        </Text>
+
+        <View style={[ApplicationStyle.card, Spaces.padding[10], Spaces.marginTop[10]]}>
+          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {viewModel.title}
+          </Text>
+          <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[4]]}>
+            {viewModel.documentId}
+          </Text>
+        </View>
+
+        <TextInput
+          multiline
+          onChangeText={setSuspensionReason}
+          placeholder={t(
+            'superAdminContentManager.suspensionModal.reasonPlaceholder',
+            'Raison obligatoire (minimum 3 caracteres)',
+          )}
+          placeholderTextColor={Colors.neutral400}
+          style={[
+            ApplicationStyle.borderRadius12,
+            Fonts.p2,
+            Spaces.marginTop[10],
+            {
+              backgroundColor: 'rgba(255,255,255,0.06)',
+              borderColor: Colors.neutral600,
+              borderWidth: 1,
+              color: Colors.neutral00,
+              minHeight: 84,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              textAlignVertical: 'top',
+            },
+          ]}
+          value={suspensionReason}
+        />
+
+        <View style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[12]]}>
+          <Button
+            onPress={closeSuspensionModal}
+            style={{ flex: 1 }}
+            title={t('superAdminContentManager.actions.cancel', 'Annuler')}
+            variant="Secondary"
+          />
+          <TouchableOpacity
+            disabled={suspensionMutation.isPending}
+            onPress={handleUserSuspension}
+            style={[
+              ApplicationStyle.borderRadius12,
+              Spaces.paddingVertical[12],
+              {
+                alignItems: 'center',
+                backgroundColor: suspensionMutation.isPending
+                  ? Colors.neutral700
+                  : Colors.error500,
+                flex: 1,
+                justifyContent: 'center',
+              },
+            ]}
+          >
+            <Text
+              style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}
+            >
+              {suspensionMutation.isPending
+                ? t('superAdminContentManager.actions.saving', 'Enregistrement...')
+                : suspensionActionLabel}
             </Text>
           </TouchableOpacity>
         </View>

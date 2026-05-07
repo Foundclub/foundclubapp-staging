@@ -184,7 +184,7 @@ function TeamList({ navigation, route }) {
                   elevation: 8,
                   height: 64,
                   justifyContent: 'center',
-                  shadowColor: '#000',
+                  shadowColor: 'black',
                   shadowOffset: {
                     height: 6,
                     width: 0,

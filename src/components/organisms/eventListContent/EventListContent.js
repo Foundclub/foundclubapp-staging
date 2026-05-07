@@ -199,6 +199,7 @@ function EventListContent({
   const eventsConfig = useMemo(() => ({
     ...(showFilters ? eventFilters : {}),
     ...additionalFilters,
+    compact: true,
     pageSize: 15,
   }), [showFilters, eventFilters, additionalFilters]);
   const viewportExecutedQuery = viewportSession?.executedQuery || null;
@@ -228,6 +229,7 @@ function EventListContent({
     const config = /** @type {Record<string, any>} */ ({
       ...(showFilters ? eventFilters : {}),
       ...additionalFilters,
+      compact: true,
       featuredRequestStatus: 'approved',
       isFeatured: true,
       pageSize: 5,
@@ -260,6 +262,7 @@ function EventListContent({
     refetch,
   } = useGetEvents(eventsConfig, {
     enabled: screenActive && !propEvents && !isViewportListMode && !isSmartSearchEnabled,
+    placeholderData: undefined,
   });
   const {
     data: searchPages,
@@ -287,6 +290,7 @@ function EventListContent({
     type: eventsConfig?.type,
   }, {
     enabled: screenActive && !propEvents && !isViewportListMode && isSmartSearchEnabled,
+    placeholderData: undefined,
   });
   const {
     data: viewportPages,
@@ -298,6 +302,7 @@ function EventListContent({
     refetch: refetchViewport,
   } = useSearchEventsMap(viewportListParams || {}, {
     enabled: screenActive && !propEvents && isViewportListMode && Boolean(viewportListParams),
+    placeholderData: undefined,
   });
 
   const {
