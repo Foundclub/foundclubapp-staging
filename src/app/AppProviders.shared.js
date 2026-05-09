@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/theme/themeContext';
 import { AppFeedbackProvider } from '@/context/AppFeedbackContext';
 import { AppModeProvider } from '@/context/AppModeContext';
 import { BlockingOverlayProvider } from '@/context/BlockingOverlayContext';
+import { GuidanceProvider } from '@/context/GuidanceContext';
 import { PopupManagerProvider } from '@/context/PopupManagerContext';
 import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 import { StartupPhaseProvider } from '@/context/StartupPhaseContext';
@@ -43,7 +44,11 @@ function SharedAppProviders({ children, queryClient }) {
                 React.createElement(
                   BlockingOverlayProvider,
                   null,
-                  React.createElement(QueryClientProvider, { client: queryClient }, children),
+                  React.createElement(
+                    QueryClientProvider,
+                    { client: queryClient },
+                    React.createElement(GuidanceProvider, null, children),
+                  ),
                 ),
               ),
             ),

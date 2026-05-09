@@ -15,7 +15,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useAppMode } from '@/context/AppModeContext';
 
 /**
- *
+ * Toggle between the classic FoundClub home and the League home.
+ * @returns {import('react').ReactElement}
  */
 function LeagueHeaderSwitch() {
   const { Colors, Fonts, Images } = useTheme();
@@ -24,6 +25,9 @@ function LeagueHeaderSwitch() {
   const logoWidth = isGold ? 100 : 140;
   const logoHeight = isGold ? 18 : 26;
   const leagueSectionWidth = isGold ? 118 : 92;
+  const leagueTextColor = Colors.gold500;
+  const leagueTextOpacity = isGold ? 1 : 0.72;
+  const leagueIndicatorColor = Colors.gold500;
 
   const handleSwitch = React.useCallback(() => {
     const targetRoute = isGold ? RouteNames.HomeTab : RouteNames.LeagueHomeTab;
@@ -69,10 +73,10 @@ function LeagueHeaderSwitch() {
             styles.leagueTitle,
             isGold
               ? {
-                color: Colors.gold500, fontSize: 24, letterSpacing: 2, opacity: 1,
+                color: leagueTextColor, fontSize: 24, letterSpacing: 2, opacity: leagueTextOpacity,
               }
               : {
-                color: Colors.gold500, fontSize: 14, letterSpacing: 1, opacity: 0.4,
+                color: leagueTextColor, fontSize: 14, letterSpacing: 1, opacity: leagueTextOpacity,
               },
           ]}
           >
@@ -98,8 +102,8 @@ function LeagueHeaderSwitch() {
             style={[
               styles.modeDot,
               {
-                backgroundColor: isGold ? Colors.gold500 : 'transparent',
-                borderColor: Colors.gold500,
+                backgroundColor: isGold ? leagueIndicatorColor : 'transparent',
+                borderColor: leagueIndicatorColor,
               },
             ]}
           />

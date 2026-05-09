@@ -470,6 +470,13 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
+          getComponent={() => require('@/views/guidance/MissionCenter').default}
+          name={RouteNames.MissionCenter}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           getComponent={() => require('@/views/license/LicenseCheckoutStatus').default}
           name={RouteNames.LicenseCheckoutStatus}
           options={{

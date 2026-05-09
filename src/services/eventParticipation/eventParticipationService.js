@@ -1,5 +1,7 @@
 import Joi from 'joi';
 
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
+
 import client from '../client';
 
 export const eventParticipationSchema = Joi.object({
@@ -29,6 +31,9 @@ export const eventParticipationSchema = Joi.object({
 export const createEventParticipation = async (eventParticipationData) => {
   const response = await client.post('/event-participations', {
     data: eventParticipationData,
+  });
+  emitGuidanceAction('event.participation.created', {
+    eventId: eventParticipationData?.event || null,
   });
   return response.data;
 };

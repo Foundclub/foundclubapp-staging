@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 
 import client from '@/services/client';
 
@@ -83,6 +84,9 @@ export const createEvent = async (eventData) => {
   const response = await client.post('/events', {
     data: eventData,
   });
+  emitGuidanceAction('event.created', {
+    eventType: eventData?.type || null,
+  });
   return response.data;
 };
 
@@ -101,6 +105,9 @@ export const updateEvent = async ({ documentId, eventData, recurrenceMode }) => 
   }
   const response = await client.put(`/events/${documentId}`, {
     data,
+  });
+  emitGuidanceAction('event.updated', {
+    eventId: documentId,
   });
   return response.data;
 };

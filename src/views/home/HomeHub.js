@@ -33,6 +33,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import MissionHomeCard from '@/components/molecules/guidance/MissionHomeCard';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
@@ -126,7 +127,7 @@ function HomeSection({
           const isFullCard = isCompactScreen || isSingleCardSection || card.layout === 'full';
           const cardContainerStyle = /** @type {import('react-native').ViewStyle} */ ({
             flexBasis: isFullCard ? '100%' : '48.5%',
-            marginBottom: 12,
+            marginBottom: 14,
             maxWidth: isFullCard ? '100%' : '48.5%',
             width: isFullCard ? '100%' : '48.5%',
           });
@@ -1889,6 +1890,8 @@ function HomeHubContent({ auth, navigation, route }) {
             <Text style={[Fonts.p2Bold, Fonts.primary500]}>{roleLabel.toUpperCase()}</Text>
           </View>
         </OnboardingWrapper>
+
+        <MissionHomeCard />
 
         <View onLayout={(event) => registerSectionAnchor('manage', event)} ref={(node) => registerSectionViewRef('manage', node)}>
           <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.manageClub')} />

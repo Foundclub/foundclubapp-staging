@@ -12,6 +12,7 @@ import LeagueCard from '@/components/atoms/league/LeagueCard';
 import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import MissionDock from '@/components/molecules/guidance/MissionDock';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -1398,6 +1399,7 @@ function LeagueDashboard() {
                 }
       >
         {renderHeader()}
+        <MissionDock style={{ marginBottom: 20 }} />
 
         {!userTeam ? (
           renderNoTeamState()

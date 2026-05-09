@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import {
   getDefaultRecruitmentTab,
   sanitizeRecruitmentTabForRole,
@@ -123,6 +124,7 @@ function SearchHubScreen({ navigation, route }) {
     const sanitizedType = coerceSearchHubType(nextType);
     if (sanitizedType === activeType) return;
 
+    emitGuidanceInteraction(`search.tab.${sanitizedType}`);
     setVisitedTypes((previousVisited) => {
       const nextVisited = new Set(previousVisited);
       nextVisited.add(sanitizedType);

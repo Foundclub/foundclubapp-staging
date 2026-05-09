@@ -36,8 +36,8 @@ function HomeActionCard({
   onPress,
   subtitle,
   subtitleLines = 2,
-  tutorialTargetRef,
   title,
+  tutorialTargetRef,
 }) {
   const {
     Alignments,
@@ -49,10 +49,12 @@ function HomeActionCard({
   } = useTheme();
 
   const resolvedAccentColor = accentColor || Colors.primary500;
-  const accentBorderColor = emphasis === 'primary' ? resolvedAccentColor : `${resolvedAccentColor}CC`;
+  const accentBorderColor = emphasis === 'primary'
+    ? resolvedAccentColor
+    : `${resolvedAccentColor}CC`;
   const borderColor = disabled ? `${resolvedAccentColor}66` : accentBorderColor;
-  const minHeight = layout === 'full' ? 136 : 154;
-  const cardBackgroundColor = disabled ? `${Colors.primary700}99` : Colors.primary700;
+  const minHeight = layout === 'full' ? 148 : 172;
+  const cardBackgroundColor = disabled ? 'rgba(23, 56, 68, 0.62)' : 'rgba(23, 56, 68, 0.96)';
 
   return (
     <Pressable
@@ -86,7 +88,8 @@ function HomeActionCard({
             borderWidth: 1,
             justifyContent: 'space-between',
             minHeight,
-            padding: 12,
+            paddingHorizontal: 16,
+            paddingVertical: 16,
           },
         ]}
       >
@@ -98,9 +101,9 @@ function HomeActionCard({
               borderColor: `${resolvedAccentColor}66`,
               borderRadius: 12,
               borderWidth: 1,
-              height: 36,
+              height: 38,
               justifyContent: 'center',
-              width: 36,
+              width: 38,
             }}
           >
             <Image
@@ -116,9 +119,9 @@ function HomeActionCard({
               borderColor: `${resolvedAccentColor}55`,
               borderRadius: 10,
               borderWidth: 1,
-              height: 24,
+              height: 26,
               justifyContent: 'center',
-              width: 24,
+              width: 26,
             }}
           >
             <Image
@@ -129,7 +132,7 @@ function HomeActionCard({
           </View>
         </View>
 
-        <View style={[Spaces.marginTop[12], Spaces.gap[6]]}>
+        <View style={[Spaces.marginTop[16], Spaces.gap[8]]}>
           <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
           <Text numberOfLines={subtitleLines} style={[Fonts.p3, Fonts.neutral200]}>{subtitle}</Text>
         </View>

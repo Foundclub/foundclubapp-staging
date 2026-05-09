@@ -1,5 +1,7 @@
 import Joi from 'joi';
 
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
+
 import { createLogger } from '@/utils/logger/logger';
 
 import client from '../client';
@@ -460,6 +462,9 @@ export const createChatMessage = async ({
     },
   });
 
+  emitGuidanceAction('message.sent', {
+    chatId,
+  });
   return response.data;
 };
 

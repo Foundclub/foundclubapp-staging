@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import {
   REQUEST_HUB_FILTERS,
 } from '@/domains/requests/requestMappers';
@@ -22,6 +23,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import MissionDock from '@/components/molecules/guidance/MissionDock';
 import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedItem';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -164,6 +166,10 @@ function RequestsHub({ navigation, route }) {
       setActiveFilter('all');
     }
   }, [activeFilter, availableFilters]);
+
+  useEffect(() => {
+    emitGuidanceInteraction(`requests.filter.${activeFilter}`);
+  }, [activeFilter]);
 
   const filteredItems = useMemo(() => {
     const items = requestsQuery?.data?.items || [];
@@ -348,6 +354,9 @@ function RequestsHub({ navigation, route }) {
       }
 
       await invalidateRequests();
+      emitGuidanceAction('requests.processed', {
+        requestType: item?.type || 'unknown',
+      });
       if (item?.type === 'installation' && action === 'reject') {
         closeInstallationRefusalModal();
       }
@@ -549,6 +558,7 @@ function RequestsHub({ navigation, route }) {
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
           {t('requestsHub.title', 'Demandes')}
         </Text>
+        <MissionDock />
         <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginBottom[8]]}>
           {filterChips.map((chip) => {
             const isActive = chip.key === activeFilter;

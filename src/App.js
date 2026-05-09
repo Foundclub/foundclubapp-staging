@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { InteractionManager } from 'react-native';
 
 import SessionManager from '@/components/atoms/sessionManager/SessionManager';
+import MissionCelebrationHost from '@/components/organisms/guidance/MissionCelebrationHost';
 import LeagueActionPromptHost from '@/components/organisms/league/LeagueActionPromptHost';
 import MatchStatsPromptHost from '@/components/organisms/matchStats/MatchStatsPromptHost';
 import NotificationBootstrap from '@/components/organisms/notifications/NotificationBootstrap';
@@ -34,6 +35,7 @@ import { getRuntimeEndpointsLog } from '@/config/runtimeUrls';
 import { POPUP_IDS } from '@/constants/popupRegistry';
 import { APP_RUNTIME_ENV, NOTIFICATIONS_RUNTIME_CONFIG } from '@/constants/runtimeFlags';
 import useAuth from '@/domains/auth/useAuth';
+import { emitGuidanceRouteVisit } from '@/domains/guidance/guidanceRuntime';
 import {
   useBlockingOverlayLifecycle,
   useBlockingOverlayPrompt,
@@ -317,6 +319,7 @@ function App() {
           <BootGate>
             <BootErrorAlertHost />
             <SessionManager />
+            <MissionCelebrationHost />
             <AppBannerHost />
             <LeaguePlatformGate>
               <AppNavigator
@@ -325,9 +328,11 @@ function App() {
                   const routeName = navigationRef.getCurrentRoute()?.name || null;
                   markNavigationReady(routeName);
                   notifyRouteChanged(routeName);
+                  emitGuidanceRouteVisit(routeName);
                 }}
                 onStateChange={(routeName) => {
                   notifyRouteChanged(routeName);
+                  emitGuidanceRouteVisit(routeName);
                 }}
               />
               {isDeferredStartupReady ? <DeferredStartupHosts /> : null}
