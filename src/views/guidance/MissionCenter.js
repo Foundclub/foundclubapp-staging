@@ -105,7 +105,6 @@ function ProgressLine({ color, completedCount, totalCount }) {
           backgroundColor: color,
           borderRadius: 999,
           height: '100%',
-          minWidth: totalCount > 0 ? 12 : 0,
           width: `${ratio * 100}%`,
         }}
       />

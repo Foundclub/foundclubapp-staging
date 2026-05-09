@@ -33,11 +33,12 @@ const statePredicates = {
   hasClubAffiliation: (context) => Boolean(context?.hasClub),
   hasManagedClub: (context) => Boolean(context?.hasManagedClub),
   hasRequestsContext: (context) => Boolean(context?.hasRequestsContext),
-  profileBasicsComplete: (context) => Boolean(
-    context?.userData?.firstname
-    && context?.userData?.lastname
-    && (context?.userData?.avatar?.url || context?.userData?.avatar?.documentId || true)
-  ),
+  profileBasicsComplete: (context) => {
+    const userData = context?.userData || {};
+    const hasName = Boolean(userData.firstname && userData.lastname);
+    const hasAvatar = Boolean(userData.avatar?.url || userData.avatar?.documentId);
+    return hasName && hasAvatar;
+  },
 };
 
 export const buildGuidanceAudienceContext = ({

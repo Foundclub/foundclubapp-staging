@@ -33,6 +33,32 @@ describe('guidanceEngine', () => {
     expect(snapshot.currentMission?.id).toBe('player_profile_basics');
   });
 
+  it('keeps profile basics open until identity and avatar are complete', () => {
+    const state = createEmptyGuidanceState();
+    const withoutAvatarSnapshot = buildGuidanceSnapshot({
+      config: undefined,
+      context: createPlayerContext({
+        firstname: 'Ada',
+        lastname: 'Lovelace',
+      }),
+      state,
+    });
+    const withAvatarSnapshot = buildGuidanceSnapshot({
+      config: undefined,
+      context: createPlayerContext({
+        avatar: { url: 'https://example.com/avatar.png' },
+        firstname: 'Ada',
+        lastname: 'Lovelace',
+      }),
+      state,
+    });
+
+    expect(withoutAvatarSnapshot.currentMission?.id).toBe('player_profile_basics');
+    expect(withoutAvatarSnapshot.preparedState.completedMissionIds).not.toContain('player_profile_basics');
+    expect(withAvatarSnapshot.preparedState.completedMissionIds).toContain('player_profile_basics');
+    expect(withAvatarSnapshot.currentMission?.id).toBe('player_open_planning');
+  });
+
   it('auto-completes route-based missions and advances to the next unlocked mission', () => {
     const state = {
       ...createEmptyGuidanceState(),

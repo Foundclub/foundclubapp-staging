@@ -47,7 +47,7 @@ function ProgressLine({ color, completedCount, totalCount }) {
           backgroundColor: color,
           borderRadius: 999,
           height: '100%',
-          width: `${Math.max(10, ratio * 100)}%`,
+          width: `${ratio * 100}%`,
         }}
       />
     </View>
