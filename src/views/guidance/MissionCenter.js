@@ -368,6 +368,7 @@ function MissionCenter({ navigation, route }) {
 
   const currentProgram = programs[0] || null;
   const visiblePrograms = programs.length > 0 ? programs : snapshot.programs;
+  const atlasPrograms = visiblePrograms;
   const selectedMissionStatus = selectedMission
     ? getMissionStatus(selectedMission, currentMission?.id)
     : 'ready';
@@ -489,7 +490,7 @@ function MissionCenter({ navigation, route }) {
 
         {activeTab === 'packs' ? (
           <View style={[Spaces.gap[16]]}>
-            {visiblePrograms.map((program) => (
+            {atlasPrograms.map((program) => (
               <View key={program.id} style={[Spaces.gap[12]]}>
                 <SectionHeader subtitle={program.description} title={program.title} />
                 {program.packs.map((pack) => (
@@ -511,7 +512,7 @@ function MissionCenter({ navigation, route }) {
               subtitle="Retrouvez toute la cartographie des missions disponibles, meme en dehors de la suite immediate."
               title="Toutes les missions"
             />
-            {visiblePrograms.map((program) => (
+            {atlasPrograms.map((program) => (
               <View key={program.id} style={[Spaces.gap[12]]}>
                 <SectionHeader subtitle={program.description} title={program.title} />
                 {program.packs.map((pack) => (

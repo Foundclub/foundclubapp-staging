@@ -25,11 +25,21 @@ const profileTarget = tutorialTarget(TutorialIds.PROFILE_MAIN, RouteNames.Profil
 const profileEditTarget = tutorialTarget(TutorialIds.PROFILE_EDIT, RouteNames.ProfileStack, {
   screen: RouteNames.ProfileEdit,
 });
-const messagingTarget = tutorialTarget(TutorialIds.MESSAGING, RouteNames.Chat);
-const searchEventsTarget = tutorialTarget(TutorialIds.SEARCH_EVENTS, RouteNames.SearchEvents);
-const searchClubsTarget = tutorialTarget(TutorialIds.SEARCH_CLUBS, RouteNames.SearchClubs);
-const searchRecruitmentTarget = tutorialTarget(TutorialIds.SEARCH_RECRUITMENT, RouteNames.SearchRecruitment);
-const searchReservationsTarget = tutorialTarget(TutorialIds.SEARCH_RESERVATIONS, RouteNames.SearchReservations);
+const messagingTarget = tutorialTarget(TutorialIds.MESSAGING, RouteNames.HomeTab, {
+  screen: RouteNames.Chat,
+});
+const searchHubTarget = (tutorialId, activeType, params = undefined) => tutorialTarget(
+  tutorialId,
+  RouteNames.SearchHub,
+  {
+    activeType,
+    ...(params || {}),
+  },
+);
+const searchEventsTarget = searchHubTarget(TutorialIds.SEARCH_EVENTS, 'events');
+const searchClubsTarget = searchHubTarget(TutorialIds.SEARCH_CLUBS, 'clubs');
+const searchRecruitmentTarget = searchHubTarget(TutorialIds.SEARCH_RECRUITMENT, 'recruitment');
+const searchReservationsTarget = searchHubTarget(TutorialIds.SEARCH_RESERVATIONS, 'reservations');
 const requestsTarget = tutorialTarget(TutorialIds.REQUESTS_DASHBOARD, RouteNames.RequestsHub, {
   initialFilter: 'all',
   source: 'guidance',
@@ -237,7 +247,7 @@ export const guidanceCatalog = Object.freeze({
       actionsToTry: ['Ouvrir Rechercher', 'Basculer sur les événements'],
       audience: { roleKeys: ['player'] },
       completionMode: 'auto',
-      completionSignal: { routeName: RouteNames.SearchEvents, type: 'route' },
+      completionSignal: { key: 'search.tab.events', type: 'interaction' },
       id: 'player_search_events',
       longDescription: 'La recherche événements est le point d’entrée naturel pour découvrir entraînements, matchs ouverts, détections et opportunités proches de vous.',
       module: 'search',
@@ -290,7 +300,7 @@ export const guidanceCatalog = Object.freeze({
       actionsToTry: ['Ouvrir les annonces recrutement', 'Repérer les profils recherchés'],
       audience: { roleKeys: ['player'] },
       completionMode: 'auto',
-      completionSignal: { routeName: RouteNames.SearchRecruitment, type: 'route' },
+      completionSignal: { key: 'search.tab.recruitment', type: 'interaction' },
       id: 'player_search_recruitment',
       longDescription: 'Les annonces de recrutement et détections complètent la recherche classique. Elles montrent les besoins explicites des équipes et clubs.',
       module: 'recruitment',
@@ -522,7 +532,7 @@ export const guidanceCatalog = Object.freeze({
       actionsToTry: ['Ouvrir la recherche événement', 'Repérer les filtres coach'],
       audience: { roleKeys: ['coach'] },
       completionMode: 'auto',
-      completionSignal: { routeName: RouteNames.SearchEvents, type: 'route' },
+      completionSignal: { key: 'search.tab.events', type: 'interaction' },
       id: 'coach_search_events',
       longDescription: 'La recherche événement n’est pas réservée aux joueurs. Côté coach, elle sert aussi à surveiller des opportunités, détections et contextes extérieurs.',
       module: 'search',
@@ -538,7 +548,7 @@ export const guidanceCatalog = Object.freeze({
     }),
     mission({
       actionsToTry: ['Changer le filtre du hub demandes', 'Comprendre la segmentation disponible'],
-      audience: { requiresRequestsContext: true, roleKeys: ['coach'] },
+      audience: { requiresRequestFilter: 'team', requiresRequestsContext: true, roleKeys: ['coach'] },
       completionMode: 'auto',
       completionSignal: { key: 'requests.filter.team', type: 'interaction' },
       id: 'coach_filter_requests',
@@ -560,7 +570,7 @@ export const guidanceCatalog = Object.freeze({
       actionsToTry: ['Ouvrir les annonces de recrutement', 'Voir les besoins publiés par les clubs et équipes'],
       audience: { roleKeys: ['coach'] },
       completionMode: 'auto',
-      completionSignal: { routeName: RouteNames.SearchRecruitment, type: 'route' },
+      completionSignal: { key: 'search.tab.recruitment', type: 'interaction' },
       id: 'coach_search_recruitment',
       longDescription: 'La recherche recrutement vous permet d’observer le marché et de mieux comprendre comment l’app structure les besoins de profils.',
       module: 'recruitment',
@@ -635,7 +645,7 @@ export const guidanceCatalog = Object.freeze({
       actionsToTry: ['Ouvrir les réservations', 'Voir comment le module s’organise'],
       audience: { roleKeys: ['coach'] },
       completionMode: 'manual_fallback',
-      completionSignal: { routeName: RouteNames.SearchReservations, type: 'route' },
+      completionSignal: { key: 'search.tab.reservations', type: 'interaction' },
       id: 'coach_open_reservations',
       longDescription: 'Le module réservations complète le paysage coach quand des créneaux ou installations doivent être consultés.',
       module: 'reservation',
@@ -832,7 +842,7 @@ export const guidanceCatalog = Object.freeze({
     }),
     mission({
       actionsToTry: ['Ouvrir les demandes filtrées côté équipe'],
-      audience: { requiresRequestsContext: true, roleKeys: ['president'] },
+      audience: { requiresRequestFilter: 'team', requiresRequestsContext: true, roleKeys: ['president'] },
       completionMode: 'auto',
       completionSignal: { key: 'requests.filter.team', type: 'interaction' },
       id: 'president_filter_team_requests',
@@ -852,7 +862,7 @@ export const guidanceCatalog = Object.freeze({
     }),
     mission({
       actionsToTry: ['Ouvrir les demandes filtrées côté club ou événement'],
-      audience: { requiresRequestsContext: true, roleKeys: ['president'] },
+      audience: { requiresRequestFilter: 'event', requiresRequestsContext: true, roleKeys: ['president'] },
       completionMode: 'auto',
       completionSignal: { key: 'requests.filter.event', type: 'interaction' },
       id: 'president_filter_event_requests',
@@ -874,7 +884,7 @@ export const guidanceCatalog = Object.freeze({
       actionsToTry: ['Ouvrir le recrutement', 'Lire les annonces existantes'],
       audience: { roleKeys: ['president'] },
       completionMode: 'auto',
-      completionSignal: { routeName: RouteNames.SearchRecruitment, type: 'route' },
+      completionSignal: { key: 'search.tab.recruitment', type: 'interaction' },
       id: 'president_open_recruitment',
       longDescription: 'Le recrutement est un levier de pilotage club, pas seulement une découverte joueur. Cette mission vous connecte à cette surface produit.',
       module: 'recruitment',
@@ -965,8 +975,8 @@ export const guidanceCatalog = Object.freeze({
     mission({
       actionsToTry: ['Ouvrir les réservations', 'Observer le module créneaux / réservations'],
       audience: { roleKeys: ['president'] },
-      completionMode: 'manual_fallback',
-      completionSignal: { routeName: RouteNames.SearchReservations, type: 'route' },
+      completionMode: 'auto',
+      completionSignal: { key: 'search.tab.reservations', type: 'interaction' },
       id: 'president_open_reservations',
       longDescription: 'Le module réservations complète souvent les besoins d’un dirigeant autour des créneaux, besoins d’occupation et coordination des espaces.',
       module: 'reservation',
@@ -984,7 +994,7 @@ export const guidanceCatalog = Object.freeze({
       actionsToTry: ['Ouvrir la recherche clubs', 'Comparer comment le club ressort publiquement'],
       audience: { roleKeys: ['president'] },
       completionMode: 'auto',
-      completionSignal: { routeName: RouteNames.SearchClubs, type: 'route' },
+      completionSignal: { key: 'search.tab.clubs', type: 'interaction' },
       id: 'president_open_public_club_search',
       longDescription: 'La recherche clubs donne au dirigeant une lecture plus “vitrine” de l’écosystème FoundClub et de la place de son club dans cet ensemble.',
       module: 'search',

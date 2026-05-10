@@ -71,7 +71,7 @@ function AdWizardValidation({ navigation }) {
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
         {state.event ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[20], cardSurfaceStyle]}>
+          <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], cardSurfaceStyle]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
               {'Annonce li\u00E9e \u00E0 une d\u00E9tection'}
             </Text>
@@ -106,8 +106,8 @@ function AdWizardValidation({ navigation }) {
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[16]]}>
                 <View
                   style={[
-                    Spaces.paddingHorizontal[10],
-                    Spaces.paddingVertical[6],
+                    Spaces.paddingHorizontal[12],
+                    Spaces.paddingVertical[8],
                     {
                       backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.20)' : 'rgba(255, 255, 255, 0.06)',
                       borderColor: isSelected ? 'rgba(1, 179, 244, 0.36)' : 'rgba(255, 255, 255, 0.08)',
@@ -151,7 +151,7 @@ function AdWizardValidation({ navigation }) {
                     key={highlight}
                     style={[
                       ApplicationStyle.card,
-                      Spaces.paddingHorizontal[10],
+                      Spaces.paddingHorizontal[12],
                       Spaces.paddingVertical[8],
                       {
                         backgroundColor: 'rgba(1, 179, 244, 0.08)',
@@ -171,14 +171,14 @@ function AdWizardValidation({ navigation }) {
           style={[
             ApplicationStyle.card,
             Spaces.padding[24],
-            Spaces.gap[20],
+            Spaces.gap[16],
             {
-              backgroundColor: 'rgba(255, 219, 102, 0.08)',
-              borderColor: 'rgba(255, 219, 102, 0.24)',
+              backgroundColor: 'rgba(1, 179, 244, 0.08)',
+              borderColor: 'rgba(1, 179, 244, 0.18)',
             },
           ]}
         >
-          <Text style={[Fonts.p3Bold, Fonts.gold500]}>{'\u00C0 retenir'}</Text>
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>{'\u00C0 retenir'}</Text>
           <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
             {"Vous pourrez toujours consulter les profils re\u00E7us ensuite dans le d\u00E9tail de l'annonce."}
           </Text>

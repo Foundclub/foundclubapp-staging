@@ -15,7 +15,6 @@ import StrapiImage from '@/components/atoms/strapiImage/StrapiImage';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -30,6 +29,7 @@ import { useAdWizard } from './AdWizardContext';
 import {
   getAdWizardInfoStepIndex,
   getAdWizardStepCount,
+  isAdWizardSportProfileComplete,
   isCoachAdWizard,
 } from './adWizardStepUtils';
 /* eslint-enable perfectionist/sort-imports */
@@ -93,21 +93,16 @@ function AdWizardInfo({ navigation }) {
   ), [allSections]);
 
   const handleNext = () => {
-    if (!state.address) {
+    if (!isAdWizardSportProfileComplete(state)) {
       showBanner({
-        body: 'Ajoutez un lieu pr\u00E9cis pour que les joueurs comprennent o\u00F9 se d\u00E9roule le recrutement.',
-        title: 'Lieu requis',
+        body: 'Completez la section, la categorie et le niveau minimum pour qualifier clairement votre annonce.',
+        title: 'Profil requis',
         tone: 'error',
       });
       return;
     }
 
-    if (state.event && !isCoachAdWizard(state)) {
-      navigation.navigate(RouteNames.AdWizardValidation);
-      return;
-    }
-
-    navigation.navigate(RouteNames.AdWizardDescription);
+    navigation.navigate(RouteNames.AdWizardLocation);
   };
 
   const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non d\u00E9fini';
@@ -183,16 +178,16 @@ function AdWizardInfo({ navigation }) {
 
   return (
     <WizardStepLayout
-      isNextDisabled={!state.address}
+      isNextDisabled={!isAdWizardSportProfileComplete(state)}
       nextLabel="Suivant"
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardInfoStepIndex(state)}
       subtitle={isCoachAdWizard(state)
-        ? 'Affinez le contexte de votre annonce coach et le lieu de publication.'
-        : 'Affinez le profil recherch\u00E9 et le lieu de publication.'}
-      title="Informations de l'annonce"
+        ? 'Precisez le cadre sportif dans lequel vous recherchez un profil coach.'
+        : 'Precisez la cible sportive recherchee avant de passer au lieu de publication.'}
+      title="Ciblage sportif"
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[40]]}>
         {isTaxonomyLoading ? (
@@ -303,13 +298,13 @@ function AdWizardInfo({ navigation }) {
                 </TouchableOpacity>
 
                 {teamSummaryMeta.length > 0 ? (
-                  <View style={[Alignments.row, Alignments.wrap, Spaces.gap[14], Spaces.marginTop[8]]}>
+                  <View style={[Alignments.row, Alignments.wrap, Spaces.gap[16], Spaces.marginTop[8]]}>
                     {teamSummaryMeta.map((item) => (
                       <View
                         key={item.label}
                         style={[
-                          Spaces.paddingHorizontal[14],
-                          Spaces.paddingVertical[10],
+                          Spaces.paddingHorizontal[16],
+                          Spaces.paddingVertical[8],
                           {
                             backgroundColor: 'rgba(1, 179, 244, 0.10)',
                             borderColor: 'rgba(1, 179, 244, 0.18)',
@@ -331,7 +326,7 @@ function AdWizardInfo({ navigation }) {
         ) : null}
 
         <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], cardSurfaceStyle]}>
-          <View style={[Spaces.gap[20]]}>
+          <View style={[Spaces.gap[24]]}>
             <View style={[Spaces.gap[12]]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>
                 {isCoachAdWizard(state) ? 'Contexte du role recherche' : 'Profil recherche'}
@@ -360,10 +355,10 @@ function AdWizardInfo({ navigation }) {
             </View>
           </View>
 
-          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[20], Spaces.marginTop[20]]}>
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[24], Spaces.marginTop[24]]}>
             <AutocompleteSelect
               displayVariant="card"
-              label="Section"
+              label="Section *"
               options={sections}
               placeholder={'S\u00E9lectionner une section'}
               setValue={handleSectionChange}
@@ -373,7 +368,7 @@ function AdWizardInfo({ navigation }) {
 
             <AutocompleteSelect
               displayVariant="card"
-              label={'Cat\u00E9gorie'}
+              label={'Cat\u00E9gorie *'}
               options={categories}
               placeholder={'S\u00E9lectionner une cat\u00E9gorie'}
               setValue={handleCategoryChange}
@@ -384,65 +379,13 @@ function AdWizardInfo({ navigation }) {
             <AutocompleteSelect
               description={'D\u00E9finissez le niveau minimum attendu pour candidater.'}
               displayVariant="card"
-              label={'Niveau minimum recherch\u00E9'}
+              label={'Niveau minimum recherch\u00E9 *'}
               options={levels}
               placeholder={'S\u00E9lectionner un niveau'}
               setValue={handleLevelChange}
               value={currentLevelValue}
               wrapperStyle={{ width: '100%' }}
             />
-          </View>
-        </View>
-
-        <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], cardSurfaceStyle]}>
-          <View style={[Spaces.gap[20]]}>
-            <Text style={[Fonts.h4, Fonts.neutral00]}>
-              Lieu de l&apos;annonce
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
-              Ajoutez un lieu clair pour situer rapidement votre recrutement.
-            </Text>
-          </View>
-
-          <AutocompleteAddressInput
-            address={state.address}
-            label={(
-              <Text>
-                Lieu (stade, ville, gymnase...)
-                {' '}
-                <Text style={{ color: Colors.error500 }}>*</Text>
-              </Text>
-            )}
-            placeholder="Rechercher une adresse"
-            setAddress={(address) => dispatch({ payload: address, type: 'SET_ADDRESS' })}
-          />
-
-          <View
-            style={[
-              Alignments.row,
-              Alignments.alignCenter,
-              Spaces.gap[14],
-              Spaces.paddingHorizontal[16],
-              Spaces.paddingVertical[12],
-              {
-                backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                borderColor: 'rgba(1, 179, 244, 0.16)',
-                borderRadius: 16,
-                borderWidth: 1,
-              },
-            ]}
-          >
-            <View
-              style={{
-                backgroundColor: Colors.primary500,
-                borderRadius: 999,
-                height: 8,
-                width: 8,
-              }}
-            />
-            <Text style={[Fonts.p3, Fonts.neutral100, { flex: 1, lineHeight: 22 }]}>
-              {'Conseil publication : gardez un lieu pr\u00E9cis et un niveau coh\u00E9rent pour attirer les bons profils d\u00E8s les premiers r\u00E9sultats.'}
-            </Text>
           </View>
         </View>
       </View>

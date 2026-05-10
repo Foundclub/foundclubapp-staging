@@ -92,7 +92,9 @@ export function GuidanceProvider({ children }) {
 
   const lastSyncedSignatureRef = useRef('');
   const previousCompletedMissionIdsRef = useRef(null);
+  const remoteSyncDisabledRef = useRef(false);
   const syncInFlightRef = useRef(false);
+  const syncWarningKeyRef = useRef('');
   const currentUserIdRef = useRef(currentUserId);
 
   const audienceContext = useMemo(() => buildGuidanceAudienceContext({
@@ -177,6 +179,8 @@ export function GuidanceProvider({ children }) {
       setNeedsSync(false);
       lastSyncedSignatureRef.current = '';
       previousCompletedMissionIdsRef.current = null;
+      remoteSyncDisabledRef.current = false;
+      syncWarningKeyRef.current = '';
       return;
     }
 
@@ -203,6 +207,8 @@ export function GuidanceProvider({ children }) {
     setActiveCelebration(null);
     persistGuidanceState(currentUserId, nextState);
     lastSyncedSignatureRef.current = remoteSignature;
+    remoteSyncDisabledRef.current = false;
+    syncWarningKeyRef.current = '';
     setNeedsSync(nextSignature !== remoteSignature);
     setIsHydrated(true);
     previousCompletedMissionIdsRef.current = nextState.completedMissionIds;
@@ -260,7 +266,13 @@ export function GuidanceProvider({ children }) {
   }, [applyPreparedState, guidanceConfig.programVersion, isHydrated]);
 
   useEffect(() => {
-    if (!currentUserId || !isHydrated || !needsSync || syncInFlightRef.current) {
+    if (
+      !currentUserId
+      || !isHydrated
+      || !needsSync
+      || syncInFlightRef.current
+      || remoteSyncDisabledRef.current
+    ) {
       return undefined;
     }
 
@@ -286,12 +298,35 @@ export function GuidanceProvider({ children }) {
           remoteState,
         });
         const syncedSignature = serializeState(mergedState, responseConfig.programVersion);
+        remoteSyncDisabledRef.current = false;
+        syncWarningKeyRef.current = '';
         applyPreparedState(mergedState, {
           markDirty: false,
           syncedSignature,
         });
       } catch (error) {
-        console.warn('[GuidanceContext] sync failed', error);
+        const status = Number(error?.status || error?.response?.status || 0);
+        const errorName = String(error?.name || '');
+        const isPermissionError = status === 401
+          || status === 403
+          || errorName === 'ForbiddenError'
+          || errorName === 'UnauthorizedError';
+
+        if (isPermissionError) {
+          remoteSyncDisabledRef.current = true;
+          setNeedsSync(false);
+          if (syncWarningKeyRef.current !== 'guidance-sync-disabled') {
+            syncWarningKeyRef.current = 'guidance-sync-disabled';
+            console.info('[GuidanceContext] remote sync disabled for this session', {
+              message: error?.message || 'Permission denied',
+              name: errorName || null,
+              status: status || null,
+            });
+          }
+        } else if (syncWarningKeyRef.current !== `${status}:${error?.message || errorName}`) {
+          syncWarningKeyRef.current = `${status}:${error?.message || errorName}`;
+          console.warn('[GuidanceContext] sync failed', error);
+        }
       } finally {
         syncInFlightRef.current = false;
       }

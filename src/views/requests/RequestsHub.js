@@ -17,6 +17,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import {
+  getAvailableRequestHubFilters,
   REQUEST_HUB_FILTERS,
 } from '@/domains/requests/requestMappers';
 import useTheme from '@/theme/themeContext';
@@ -151,15 +152,12 @@ function RequestsHub({ navigation, route }) {
     enabled: canManageTeam,
   });
 
-  const availableFilters = useMemo(() => {
-    /** @type {('all' | 'team' | 'club' | 'event' | 'featured' | 'installation')[]} */
-    const filters = ['all'];
-    if (trainedTeamIds.length || clubId) filters.push('team');
-    if (clubId) filters.push('club', 'event');
-    if (clubId || cmId) filters.push('featured');
-    if (canManageInstallationRequests) filters.push('installation');
-    return filters;
-  }, [canManageInstallationRequests, clubId, cmId, trainedTeamIds.length]);
+  const availableFilters = useMemo(() => getAvailableRequestHubFilters({
+    canManageInstallationRequests,
+    clubId,
+    cmId,
+    teamIds: trainedTeamIds,
+  }), [canManageInstallationRequests, clubId, cmId, trainedTeamIds]);
 
   useEffect(() => {
     if (!availableFilters.includes(activeFilter)) {

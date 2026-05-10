@@ -135,7 +135,6 @@ function AdWizardTeam({ navigation, route }) {
       dispatch({ payload: fullTeam || team, type: 'SET_TEAM' });
       navigation.navigate(isCoachAdWizard(state) ? RouteNames.AdWizardCoachProfile : RouteNames.AdWizardPositions);
     } catch (error) {
-      console.error('[AdWizardTeam] Error fetching team:', error);
       dispatch({ payload: team, type: 'SET_TEAM' });
       navigation.navigate(isCoachAdWizard(state) ? RouteNames.AdWizardCoachProfile : RouteNames.AdWizardPositions);
     } finally {
@@ -204,7 +203,7 @@ function AdWizardTeam({ navigation, route }) {
       subtitle="Sélectionnez l'équipe qui recrute"
       title="Pour quelle équipe ?"
     >
-      <View style={[Spaces.gap[20], Spaces.paddingBottom[8]]}>
+      <View style={[Spaces.gap[24], Spaces.paddingBottom[8]]}>
         {userTeams.map((team) => {
           const teamKey = getTeamKey(team) || `${team.name}-${team.club?.name || 'team'}`;
           const teamId = String(team?.documentId || '').trim();
@@ -225,7 +224,7 @@ function AdWizardTeam({ navigation, route }) {
         })}
       </View>
 
-      <View style={[Spaces.marginTop[20]]}>
+      <View style={[Spaces.marginTop[24]]}>
         <Text style={[Fonts.p2, { color: Colors.neutral400, textAlign: 'center' }]}>
           {userTeams.length}
           {' '}

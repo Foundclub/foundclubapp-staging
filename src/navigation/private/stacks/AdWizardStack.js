@@ -1,11 +1,11 @@
 import { createStackNavigator } from '@react-navigation/stack';
-import { useTranslation } from 'react-i18next';
 
-import { AdWizardProvider } from '@/views/recruitment/wizard/AdWizardContext';
 import AdWizardAudienceType from '@/views/recruitment/wizard/AdWizardAudienceType';
 import AdWizardCoachProfile from '@/views/recruitment/wizard/AdWizardCoachProfile';
+import { AdWizardProvider } from '@/views/recruitment/wizard/AdWizardContext';
 import AdWizardDescription from '@/views/recruitment/wizard/AdWizardDescription';
 import AdWizardInfo from '@/views/recruitment/wizard/AdWizardInfo';
+import AdWizardLocation from '@/views/recruitment/wizard/AdWizardLocation';
 import AdWizardPositions from '@/views/recruitment/wizard/AdWizardPositions';
 import AdWizardRecap from '@/views/recruitment/wizard/AdWizardRecap';
 import AdWizardTeam from '@/views/recruitment/wizard/AdWizardTeam';
@@ -17,11 +17,10 @@ import { RouteNames } from '@/navigation/routeNames';
 const Stack = createStackNavigator();
 
 /**
- *
+ * Recruitment ad creation wizard stack.
+ * @returns {import('react').ReactElement}
  */
 function AdWizardStack() {
-  const { t } = useTranslation();
-
   return (
     <AdWizardProvider>
       <Stack.Navigator
@@ -47,6 +46,11 @@ function AdWizardStack() {
         <Stack.Screen
           component={AdWizardInfo}
           name={RouteNames.AdWizardInfo}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdWizardLocation}
+          name={RouteNames.AdWizardLocation}
           options={{ headerShown: false }}
         />
         <Stack.Screen

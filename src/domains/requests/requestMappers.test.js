@@ -1,4 +1,7 @@
-import { mapEventParticipationRequestToHubItem } from './requestMappers';
+import {
+  getAvailableRequestHubFilters,
+  mapEventParticipationRequestToHubItem,
+} from '@/domains/requests/requestMappers';
 
 describe('requestMappers', () => {
   test('maps an event participation request with requester identity', () => {
@@ -58,5 +61,28 @@ describe('requestMappers', () => {
     );
 
     expect(item.meta.requesterName).toBe('+33600000000');
+  });
+
+  test('returns the team filter for training-team contexts', () => {
+    expect(getAvailableRequestHubFilters({
+      teamIds: ['team-1'],
+    })).toEqual(['all', 'team']);
+  });
+
+  test('returns club and event filters only when a club context exists', () => {
+    expect(getAvailableRequestHubFilters({
+      clubId: 'club-1',
+    })).toEqual(['all', 'team', 'club', 'event', 'featured']);
+    expect(getAvailableRequestHubFilters({
+      cmId: 'cm-1',
+    })).toEqual(['all', 'featured']);
+  });
+
+  test('adds the installation filter only for installation managers', () => {
+    expect(getAvailableRequestHubFilters({
+      canManageInstallationRequests: true,
+      clubId: 'club-1',
+      teamIds: ['team-1'],
+    })).toEqual(['all', 'team', 'club', 'event', 'featured', 'installation']);
   });
 });

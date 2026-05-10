@@ -7,6 +7,7 @@ import {
   normalizeGuidanceConfig,
   normalizeGuidanceState,
 } from '@/domains/guidance/guidanceState';
+import { getAvailableRequestHubFilters } from '@/domains/requests/requestMappers';
 import { guidanceCatalog, GuidanceProgramIds } from '@/domains/guidance/guidanceCatalog';
 
 const isNonEmptyObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
@@ -50,21 +51,35 @@ export const buildGuidanceAudienceContext = ({
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
   const clubId = userData?.club?.documentId || '';
   const cmId = userData?.multisportClubs?.[0]?.documentId || '';
+  const trainedTeamIds = (userData?.trainedTeams || []).map((team) => team?.documentId).filter(Boolean);
   const hasTrainingTeam = Array.isArray(userData?.trainedTeams) && userData.trainedTeams.length > 0;
   const hasPlayerTeam = Array.isArray(userData?.myTeams) && userData.myTeams.length > 0;
   const hasTeam = hasTrainingTeam || hasPlayerTeam;
   const hasManagedClub = Boolean(clubId && typeof canEditClub === 'function' && canEditClub(clubId))
     || roleKey === 'president'
     || Boolean(cmId);
+  const canManageInstallationRequests = Boolean(
+    clubId
+      && typeof canEditClub === 'function'
+      && canEditClub(clubId),
+  );
+  const availableRequestFilters = getAvailableRequestHubFilters({
+    canManageInstallationRequests,
+    clubId,
+    cmId,
+    teamIds: trainedTeamIds,
+  });
 
   return {
+    availableRequestFilters,
+    canManageInstallationRequests,
     canManageTeam: Boolean(canManageTeam),
     clubId,
     cmId,
     hasClub: Boolean(clubId || cmId),
     hasManagedClub,
     hasPlayerTeam,
-    hasRequestsContext: Boolean(clubId || cmId || hasTrainingTeam),
+    hasRequestsContext: availableRequestFilters.some((filterKey) => filterKey !== 'all'),
     hasTeamAffiliation: hasTeam,
     hasTrainingTeam,
     isGold: Boolean(isGold),
@@ -86,6 +101,12 @@ const isMissionVisible = (mission, context) => {
   if (audience.requiresTeamAffiliation && !context.hasTeamAffiliation) return false;
   if (audience.requiresTrainingTeam && !context.hasTrainingTeam) return false;
   if (audience.requiresRequestsContext && !context.hasRequestsContext) return false;
+  if (
+    typeof audience.requiresRequestFilter === 'string'
+    && !context.availableRequestFilters?.includes(audience.requiresRequestFilter)
+  ) {
+    return false;
+  }
   if (audience.requiresLeagueMode && !context.isGold) return false;
   return true;
 };

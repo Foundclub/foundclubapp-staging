@@ -14,7 +14,11 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useAdWizard } from './AdWizardContext';
-import { getAdWizardStepCount } from './adWizardStepUtils';
+import {
+  getAdWizardNeedsStepIndex,
+  getAdWizardStepCount,
+  isAdWizardCoachProfileComplete,
+} from './adWizardStepUtils';
 
 const COACH_ROLE_OPTIONS = [
   { label: 'Entraineur principal', value: 'entraineur_principal' },
@@ -67,10 +71,11 @@ function AdWizardCoachProfile({ navigation }) {
   );
 
   const handleNext = () => {
+    if (!isAdWizardCoachProfileComplete(state)) return;
     navigation.navigate(RouteNames.AdWizardInfo);
   };
 
-  const isValid = Boolean(state.coachRole && (state.coachRole !== 'other' || state.coachRoleOther?.trim()));
+  const isValid = isAdWizardCoachProfileComplete(state);
 
   return (
     <WizardStepLayout
@@ -79,7 +84,7 @@ function AdWizardCoachProfile({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
-      stepIndex={3}
+      stepIndex={getAdWizardNeedsStepIndex(state)}
       subtitle="Definissez le role encadrement recherche et le cadre de la mission."
       title="Profil entraineur recherche"
     >
@@ -91,7 +96,7 @@ function AdWizardCoachProfile({ navigation }) {
         >
           <AutocompleteSelect
             displayVariant="card"
-            label="Role principal"
+            label="Role principal *"
             options={COACH_ROLE_OPTIONS}
             placeholder="Selectionner un role"
             setValue={(option) => {
@@ -111,7 +116,7 @@ function AdWizardCoachProfile({ navigation }) {
                 placeholderTextColor={Colors.neutral500}
                 style={[
                   Fonts.p1,
-                  Spaces.paddingHorizontal[18],
+                  Spaces.paddingHorizontal[16],
                   Spaces.paddingVertical[16],
                   {
                     backgroundColor: 'rgba(255, 255, 255, 0.03)',
@@ -128,7 +133,7 @@ function AdWizardCoachProfile({ navigation }) {
 
           <AutocompleteSelect
             displayVariant="card"
-            label="Experience attendue"
+            label="Experience attendue *"
             options={EXPERIENCE_OPTIONS}
             placeholder="Selectionner un niveau d'experience"
             setValue={(option) => {
@@ -141,7 +146,7 @@ function AdWizardCoachProfile({ navigation }) {
 
           <AutocompleteSelect
             displayVariant="card"
-            label="Type d'engagement"
+            label="Type d'engagement *"
             options={ENGAGEMENT_OPTIONS}
             placeholder="Selectionner un cadre"
             setValue={(option) => {
@@ -178,7 +183,7 @@ function AdWizardCoachProfile({ navigation }) {
               placeholderTextColor={Colors.neutral500}
               style={[
                 Fonts.p1,
-                Spaces.paddingHorizontal[18],
+                Spaces.paddingHorizontal[16],
                 Spaces.paddingVertical[16],
                 {
                   backgroundColor: 'rgba(255, 255, 255, 0.03)',
@@ -201,7 +206,7 @@ function AdWizardCoachProfile({ navigation }) {
               placeholderTextColor={Colors.neutral500}
               style={[
                 Fonts.p1,
-                Spaces.paddingHorizontal[18],
+                Spaces.paddingHorizontal[16],
                 Spaces.paddingVertical[16],
                 {
                   backgroundColor: 'rgba(255, 255, 255, 0.03)',

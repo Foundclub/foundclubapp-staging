@@ -16,6 +16,42 @@
 
 export const REQUEST_HUB_FILTERS = /** @type {const} */ (['all', 'team', 'club', 'event', 'featured', 'installation']);
 
+/**
+ * @param {{
+ *  canManageInstallationRequests?: boolean;
+ *  clubId?: string;
+ *  cmId?: string;
+ *  teamIds?: string[];
+ * }} context
+ * @returns {RequestHubFilter[]}
+ */
+export const getAvailableRequestHubFilters = (context = {}) => {
+  const {
+    canManageInstallationRequests = false,
+    clubId = '',
+    cmId = '',
+    teamIds = [],
+  } = context;
+
+  /** @type {RequestHubFilter[]} */
+  const filters = ['all'];
+
+  if ((Array.isArray(teamIds) && teamIds.length > 0) || clubId) {
+    filters.push('team');
+  }
+  if (clubId) {
+    filters.push('club', 'event');
+  }
+  if (clubId || cmId) {
+    filters.push('featured');
+  }
+  if (canManageInstallationRequests) {
+    filters.push('installation');
+  }
+
+  return filters;
+};
+
 const fallbackRequesterName = 'Utilisateur';
 
 const normalizeString = (/** @type {any} */ value) => {

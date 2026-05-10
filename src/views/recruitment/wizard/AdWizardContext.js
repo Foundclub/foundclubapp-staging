@@ -1,4 +1,6 @@
-import React, {
+/* global globalThis */
+
+import {
   createContext, useContext, useEffect, useMemo, useReducer,
 } from 'react';
 
@@ -8,34 +10,30 @@ const AdWizardContext = createContext();
 const AD_WIZARD_STORAGE_KEY = 'fc:web:ad-wizard';
 
 const createInitialState = () => ({
+  // Team-related info (pre-filled from team, but editable)
+  address: null, // Address object { label, city, geohash, context, ... }
   audienceType: 'player',
+  availabilityText: '',
+  category: null, // Category object { documentId, name } (U20, Senior, etc.)
+  certificationsWanted: [],
+  coachExperienceLevel: '',
+  coachQuantity: 1,
+  coachRole: '',
+  coachRoleOther: '',
+  description: '',
+  engagementType: '',
 
   // Source
   event: null, // Event object (null = classic ad)
-  team: null, // Team object
-
-  // Team-related info (pre-filled from team, but editable)
-  address: null, // Address object { label, city, geohash, context, ... }
-  category: null, // Category object { documentId, name } (U20, Senior, etc.)
+  facility: null, // Club facility object used to enrich the selected location
   minLevel: null, // Level object { documentId, name } (Departemental, Regional, etc.)
-  section: null, // Section object { documentId, name } (Masculine, Feminine)
-  sport: null, // Activity object { documentId, name } (Football, Basketball, etc.)
+  missions: '',
 
   // Positions with quantities: [{ name: 'Gardien', quantity: 1 }, ...]
   positions: [],
-
-  // Coach profile
-  coachRole: '',
-  coachRoleOther: '',
-  coachExperienceLevel: '',
-  engagementType: '',
-  certificationsWanted: [],
-  availabilityText: '',
-  missions: '',
-  coachQuantity: 1,
-
-  // Options
-  description: '',
+  section: null, // Section object { documentId, name } (Masculine, Feminine)
+  sport: null, // Activity object { documentId, name } (Football, Basketball, etc.)
+  team: null, // Team object
   validationMode: 'auto', // Only used when event != null
 });
 
@@ -79,23 +77,27 @@ function adWizardReducer(state, action) {
     case 'RESET':
       return createInitialState();
     case 'SET_ADDRESS':
-      return { ...state, address: action.payload };
+      return { ...state, address: action.payload, facility: null };
     case 'SET_AUDIENCE_TYPE':
       return {
         ...state,
         audienceType: action.payload === 'coach' ? 'coach' : 'player',
-        coachRole: action.payload === 'coach' ? state.coachRole : '',
-        coachRoleOther: action.payload === 'coach' ? state.coachRoleOther : '',
         coachExperienceLevel: action.payload === 'coach' ? state.coachExperienceLevel : '',
         coachQuantity: action.payload === 'coach' ? state.coachQuantity : 1,
+        coachRole: action.payload === 'coach' ? state.coachRole : '',
+        coachRoleOther: action.payload === 'coach' ? state.coachRoleOther : '',
         engagementType: action.payload === 'coach' ? state.engagementType : '',
         event: action.payload === 'coach' ? null : state.event,
         missions: action.payload === 'coach' ? state.missions : '',
         positions: action.payload === 'coach' ? [] : state.positions,
         validationMode: action.payload === 'coach' ? 'manual' : state.validationMode,
       };
+    case 'SET_AVAILABILITY_TEXT':
+      return { ...state, availabilityText: action.payload };
     case 'SET_CATEGORY':
       return { ...state, category: action.payload };
+    case 'SET_CERTIFICATIONS_WANTED':
+      return { ...state, certificationsWanted: Array.isArray(action.payload) ? action.payload : [] };
     case 'SET_COACH_EXPERIENCE_LEVEL':
       return { ...state, coachExperienceLevel: action.payload };
     case 'SET_COACH_QUANTITY':
@@ -104,16 +106,18 @@ function adWizardReducer(state, action) {
       return { ...state, coachRole: action.payload };
     case 'SET_COACH_ROLE_OTHER':
       return { ...state, coachRoleOther: action.payload };
-    case 'SET_CERTIFICATIONS_WANTED':
-      return { ...state, certificationsWanted: Array.isArray(action.payload) ? action.payload : [] };
     case 'SET_DESCRIPTION':
       return { ...state, description: action.payload };
     case 'SET_ENGAGEMENT_TYPE':
       return { ...state, engagementType: action.payload };
     case 'SET_EVENT':
       return { ...state, audienceType: 'player', event: action.payload };
-    case 'SET_AVAILABILITY_TEXT':
-      return { ...state, availabilityText: action.payload };
+    case 'SET_LOCATION_SELECTION':
+      return {
+        ...state,
+        address: action.payload?.address || null,
+        facility: action.payload?.facility || null,
+      };
     case 'SET_MIN_LEVEL':
       return { ...state, minLevel: action.payload };
     case 'SET_MISSIONS':
@@ -122,7 +126,9 @@ function adWizardReducer(state, action) {
       const { name, quantity } = action.payload;
       return {
         ...state,
-        positions: state.positions.map((p) => (p.name === name ? { ...p, quantity: Math.max(1, Math.min(10, quantity)) } : p)),
+        positions: state.positions.map(
+          (p) => (p.name === name ? { ...p, quantity: Math.max(1, Math.min(10, quantity)) } : p),
+        ),
       };
     }
     case 'SET_POSITIONS':
@@ -138,6 +144,7 @@ function adWizardReducer(state, action) {
         ...state,
         address: team?.address || team?.club?.address || null, // Pre-fill address from Team > Club
         category: team?.category || null,
+        facility: null,
         minLevel: team?.level || null,
         positions: [], // Reset positions when team changes
         section: team?.section || null,

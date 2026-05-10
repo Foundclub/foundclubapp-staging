@@ -16,7 +16,11 @@ import { getPositionValuesForSport } from '@/constants/positions';
 
 /* eslint-disable perfectionist/sort-imports */
 import { useAdWizard } from './AdWizardContext';
-import { getAdWizardStepCount } from './adWizardStepUtils';
+import {
+  getAdWizardNeedsStepIndex,
+  getAdWizardStepCount,
+  isAdWizardNeedsComplete,
+} from './adWizardStepUtils';
 /* eslint-enable perfectionist/sort-imports */
 
 const MAX_POSITION_QUANTITY = 10;
@@ -98,17 +102,18 @@ function AdWizardPositions({ navigation }) {
   };
 
   const handleNext = () => {
+    if (!isAdWizardNeedsComplete(state)) return;
     navigation.navigate(RouteNames.AdWizardInfo);
   };
 
   return (
     <WizardStepLayout
-      isNextDisabled={state.positions.length === 0}
+      isNextDisabled={!isAdWizardNeedsComplete(state)}
       nextLabel="Suivant"
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
-      stepIndex={3}
+      stepIndex={getAdWizardNeedsStepIndex(state)}
       subtitle={'D\u00E9finissez les postes \u00E0 ouvrir et le volume de recrutement associ\u00E9.'}
       title={'Postes recherch\u00E9s'}
     >
@@ -154,7 +159,7 @@ function AdWizardPositions({ navigation }) {
             </View>
           </View>
 
-          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[14]]}>
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[16]]}>
             <View
               style={[
                 Spaces.paddingHorizontal[12],
@@ -196,11 +201,11 @@ function AdWizardPositions({ navigation }) {
             style={[
               ApplicationStyle.card,
               Spaces.padding[24],
-              Spaces.gap[20],
+              Spaces.gap[24],
               cardSurfaceStyle,
             ]}
           >
-            <View style={[Spaces.gap[10]]}>
+            <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 {'Appliquer \u00E0 tous les postes'}
               </Text>

@@ -25,6 +25,8 @@ import { useAdWizard } from './AdWizardContext';
 import {
   getAdWizardRecapStepIndex,
   getAdWizardStepCount,
+  isAdWizardCoachProfileComplete,
+  isAdWizardSportProfileComplete,
 } from './adWizardStepUtils';
 /* eslint-enable import/order, perfectionist/sort-imports */
 
@@ -51,18 +53,27 @@ function OverviewMetric({
     <View
       style={[
         ApplicationStyle.card,
-        Spaces.paddingHorizontal[14],
-        Spaces.paddingVertical[14],
-        Spaces.gap[12],
+        Spaces.paddingHorizontal[16],
+        Spaces.paddingVertical[16],
         {
+          alignItems: 'center',
           backgroundColor: 'rgba(1, 179, 244, 0.08)',
-          borderColor: complete ? 'rgba(1, 179, 244, 0.22)' : 'rgba(255, 219, 102, 0.26)',
-          flexBasis: '48%',
+          borderColor: complete ? 'rgba(1, 179, 244, 0.22)' : 'rgba(1, 179, 244, 0.16)',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          minHeight: 76,
         },
       ]}
     >
       <Text style={[Fonts.p4Bold, Fonts.neutral300]}>{label}</Text>
-      <Text numberOfLines={2} style={[Fonts.p3Bold, complete ? Fonts.neutral00 : Fonts.gold500]}>
+      <Text
+        numberOfLines={2}
+        style={[
+          Fonts.p3Bold,
+          complete ? Fonts.neutral00 : Fonts.primary100,
+          { flex: 1, textAlign: 'right' },
+        ]}
+      >
         {value}
       </Text>
     </View>
@@ -96,15 +107,23 @@ function RecapSection({
       style={[
         ApplicationStyle.card,
         Spaces.padding[24],
-        Spaces.gap[24],
+        Spaces.gap[12],
         {
           backgroundColor: 'rgba(4, 31, 44, 0.82)',
           borderColor: 'rgba(1, 179, 244, 0.24)',
         },
       ]}
     >
-      <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[16]]}>
-        <View style={[Spaces.gap[12], { flex: 1 }]}>
+      <View
+        style={[
+          Alignments.row,
+          Alignments.alignCenter,
+          Alignments.justifySpaceBetween,
+          Spaces.gap[16],
+          { flexWrap: 'wrap' },
+        ]}
+      >
+        <View style={[Spaces.gap[8], { flex: 1 }]}>
           {eyebrow ? <Text style={[Fonts.p4Bold, Fonts.primary500]}>{eyebrow}</Text> : null}
           <Text style={[Fonts.h4, Fonts.neutral00]}>{title}</Text>
         </View>
@@ -152,23 +171,26 @@ function AdWizardRecap({ navigation }) {
   const displayAddress = state.address
     ? (state.address.label || getShortAddress(state.address))
     : getShortAddress(state.team?.club?.address || state.team?.club?.addressDetails);
+  const selectedFacilityName = state.address?.facilityName || state.facility?.name || '';
+  const shortAddress = state.address ? getShortAddress(state.address) : '';
+  const overviewLocationLabel = selectedFacilityName || shortAddress || displayAddress || '\u00C0 compl\u00E9ter';
 
   const missingRequiredItems = useMemo(() => {
     const items = [];
 
     if (!state.team) items.push('une \u00E9quipe');
     if (!displayAddress) items.push('un lieu');
+    if (!state.section) items.push('une section');
+    if (!state.category) items.push('une cat\u00E9gorie');
+    if (!state.minLevel) items.push('un niveau minimum');
     if (isCoachAd) {
-      if (!state.coachRole) items.push('un role entraineur');
-      if (state.coachRole === 'other' && !String(state.coachRoleOther || '').trim()) {
-        items.push('un role precise');
-      }
+      if (!isAdWizardCoachProfileComplete(state)) items.push('un profil entraineur complet');
     } else if (!state.positions?.length) {
       items.push('au moins un poste');
     }
 
     return items;
-  }, [displayAddress, isCoachAd, state.coachRole, state.coachRoleOther, state.positions, state.team]);
+  }, [displayAddress, isCoachAd, state]);
 
   const isReadyToSubmit = missingRequiredItems.length === 0;
   const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non d\u00E9fini';
@@ -209,17 +231,17 @@ function AdWizardRecap({ navigation }) {
       value: state.team?.name || '\u00C0 compl\u00E9ter',
     },
     {
-      complete: Boolean(profileLabel),
+      complete: isAdWizardSportProfileComplete(state),
       label: 'Profil',
       value: profileLabel || '\u00C0 pr\u00E9ciser',
     },
     {
       complete: Boolean(displayAddress),
       label: 'Lieu',
-      value: displayAddress || '\u00C0 compl\u00E9ter',
+      value: overviewLocationLabel,
     },
     {
-      complete: isCoachAd ? Boolean(state.coachRole) : state.positions.length > 0,
+      complete: isCoachAd ? isAdWizardCoachProfileComplete(state) : state.positions.length > 0,
       label: isCoachAd ? 'Role' : 'Postes',
       value: positionsLabel,
     },
@@ -243,8 +265,8 @@ function AdWizardRecap({ navigation }) {
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{coachRoleLabel}</Text>
       <View
         style={[
-          Spaces.paddingHorizontal[10],
-          Spaces.paddingVertical[6],
+          Spaces.paddingHorizontal[12],
+          Spaces.paddingVertical[8],
           {
             backgroundColor: Colors.primary500,
             borderRadius: 999,
@@ -277,8 +299,8 @@ function AdWizardRecap({ navigation }) {
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{position.name}</Text>
       <View
         style={[
-          Spaces.paddingHorizontal[10],
-          Spaces.paddingVertical[6],
+          Spaces.paddingHorizontal[12],
+          Spaces.paddingVertical[8],
           {
             backgroundColor: Colors.primary500,
             borderRadius: 999,
@@ -292,7 +314,7 @@ function AdWizardRecap({ navigation }) {
       </View>
     </View>
   )) : (
-    <Text style={[Fonts.p2, Fonts.gold500]}>
+    <Text style={[Fonts.p2, Fonts.primary100]}>
       {'Ajoutez au moins un poste pour publier l\'annonce.'}
     </Text>
   );
@@ -439,14 +461,22 @@ function AdWizardRecap({ navigation }) {
           style={[
             ApplicationStyle.card,
             Spaces.padding[24],
-            Spaces.gap[24],
+            Spaces.gap[16],
             {
               backgroundColor: 'rgba(4, 31, 44, 0.82)',
-              borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.30)' : 'rgba(255, 219, 102, 0.26)',
+              borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.30)' : 'rgba(1, 179, 244, 0.18)',
             },
           ]}
         >
-          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[16]]}>
+          <View
+            style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              Alignments.justifySpaceBetween,
+              Spaces.gap[16],
+              { flexWrap: 'wrap' },
+            ]}
+          >
             <View style={[Spaces.gap[12], { flex: 1 }]}>
               <Text style={[Fonts.p2Bold, Fonts.primary500]}>
                 {'Vue d\'ensemble'}
@@ -459,23 +489,23 @@ function AdWizardRecap({ navigation }) {
             </View>
             <View
               style={[
-                Spaces.paddingHorizontal[10],
-                Spaces.paddingVertical[6],
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[8],
                 {
-                  backgroundColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255, 219, 102, 0.16)',
-                  borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.28)' : 'rgba(255, 219, 102, 0.30)',
+                  backgroundColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.14)' : 'rgba(1, 179, 244, 0.10)',
+                  borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.28)' : 'rgba(1, 179, 244, 0.18)',
                   borderRadius: 999,
                   borderWidth: 1,
                 },
               ]}
             >
-              <Text style={[Fonts.p4Bold, isReadyToSubmit ? Fonts.primary500 : Fonts.gold500]}>
+              <Text style={[Fonts.p4Bold, isReadyToSubmit ? Fonts.primary500 : Fonts.primary100]}>
                 {isReadyToSubmit ? 'Pr\u00EAt \u00E0 publier' : '\u00C0 compl\u00E9ter'}
               </Text>
             </View>
           </View>
 
-          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[16]]}>
+          <View style={[Spaces.gap[12]]}>
             {quickOverviewItems.map((item) => (
               <OverviewMetric
                 ApplicationStyle={ApplicationStyle}
@@ -501,10 +531,10 @@ function AdWizardRecap({ navigation }) {
               team={state.team}
             />
           ) : (
-            <Text style={[Fonts.p2, Fonts.gold500]}>{'Aucune \u00E9quipe s\u00E9lectionn\u00E9e'}</Text>
+            <Text style={[Fonts.p2, Fonts.primary100]}>{'Aucune \u00E9quipe s\u00E9lectionn\u00E9e'}</Text>
           )}
 
-          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[14]]}>
+          <View style={[Spaces.gap[12]]}>
             <OverviewMetric
               ApplicationStyle={ApplicationStyle}
               complete={Boolean(sportName && sportName !== 'Non d\u00E9fini')}
@@ -539,36 +569,61 @@ function AdWizardRecap({ navigation }) {
         <RecapSection
           eyebrow="Publication"
           onEdit={() => navigation.navigate(RouteNames.AdWizardInfo)}
-          title={'Informations cl\u00E9s'}
+          title="Ciblage sportif"
         >
           <View style={[Spaces.gap[16]]}>
-            <View style={[Spaces.gap[10]]}>
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>Sport</Text>
+              <Text style={[Fonts.p2, Fonts.neutral00]}>{sportName}</Text>
+            </View>
+
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>Profil</Text>
+              <Text style={[Fonts.p2, profileLabel ? Fonts.neutral00 : Fonts.primary100]}>
+                {profileLabel || '\u00C0 pr\u00E9ciser'}
+              </Text>
+            </View>
+
+            <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p3, Fonts.neutral300]}>
                 {'Type d\'annonce'}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral00]}>{resolvedAdTypeLabel}</Text>
             </View>
 
-            <View style={[Spaces.gap[10]]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>Lieu</Text>
-              <Text style={[Fonts.p2, displayAddress ? Fonts.neutral00 : Fonts.gold500]}>
-                {displayAddress || '\u00C0 compl\u00E9ter'}
-              </Text>
-            </View>
-
-            <View style={[Spaces.gap[10]]}>
+            <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p3, Fonts.neutral300]}>Validation</Text>
               <Text style={[Fonts.p2, Fonts.neutral00]}>{validationLabel}</Text>
             </View>
 
             {state.event ? (
-              <View style={[Spaces.gap[10]]}>
+              <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>{'D\u00E9tection li\u00E9e'}</Text>
                 <Text style={[Fonts.p2, Fonts.neutral00]}>
                   {state.event.name || state.event.type?.name || '\u00C9v\u00E9nement'}
                 </Text>
               </View>
             ) : null}
+          </View>
+        </RecapSection>
+
+        <RecapSection
+          eyebrow="Lieu"
+          onEdit={() => navigation.navigate(RouteNames.AdWizardLocation)}
+          title="Lieu de publication"
+        >
+          {selectedFacilityName ? (
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>Installation selectionnee</Text>
+              <Text style={[Fonts.p2, Fonts.neutral00]}>{selectedFacilityName}</Text>
+            </View>
+          ) : null}
+
+          <View style={[Spaces.gap[8]]}>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>{selectedFacilityName ? 'Adresse' : 'Lieu'}</Text>
+            <Text style={[Fonts.p2, displayAddress ? Fonts.neutral00 : Fonts.primary100]}>
+              {displayAddress || '\u00C0 compl\u00E9ter'}
+            </Text>
           </View>
         </RecapSection>
 

@@ -5,6 +5,10 @@ import { RouteNames } from '@/navigation/routeNames';
 const CANONICAL_SEARCH_TYPES = new Set(['clubs', 'events', 'recruitment', 'reservations']);
 
 /**
+ * @typedef {'events' | 'clubs' | 'reservations' | 'recruitment'} SearchHubType
+ */
+
+/**
  * @param {unknown} tab
  * @param {'annonces' | 'candidatures' | 'profils'} [fallback]
  * @returns {'annonces' | 'candidatures' | 'profils'}
@@ -21,7 +25,7 @@ export function normalizeRecruitmentTab(tab, fallback = 'annonces') {
 
 /**
  * @param {unknown} searchType
- * @returns {'events' | 'clubs' | 'reservations' | 'recruitment'}
+ * @returns {SearchHubType}
  */
 export function normalizeSearchType(searchType) {
   if (typeof searchType !== 'string') return 'events';
@@ -41,7 +45,7 @@ export function normalizeSearchType(searchType) {
 
 /**
  * @param {unknown} searchType
- * @returns {'events' | 'clubs' | 'reservations' | 'recruitment'}
+ * @returns {SearchHubType}
  */
 export function coerceSearchHubType(searchType) {
   if (typeof searchType === 'string' && CANONICAL_SEARCH_TYPES.has(searchType)) {
@@ -53,13 +57,43 @@ export function coerceSearchHubType(searchType) {
 
 /**
  * @param {string | undefined} routeName
- * @returns {'events' | 'clubs' | 'reservations' | 'recruitment'}
+ * @returns {SearchHubType}
  */
 export function getSearchTypeFromRouteName(routeName) {
   if (routeName === RouteNames.SearchClubs) return 'clubs';
   if (routeName === RouteNames.SearchReservations) return 'reservations';
   if (routeName === RouteNames.SearchRecruitment) return 'recruitment';
   return 'events';
+}
+
+/**
+ * @param {SearchHubType | unknown} searchType
+ * @returns {`search.tab.${SearchHubType}`}
+ */
+export function getSearchHubGuidanceSignalKey(searchType) {
+  const normalizedType = coerceSearchHubType(searchType);
+  return `search.tab.${normalizedType}`;
+}
+
+/**
+ * Returns a guidance signal key only the first time a tab is exposed for the current
+ * SearchHub screen instance.
+ * @param {SearchHubType | unknown} searchType
+ * @param {Set<SearchHubType>} exposedTypes
+ * @returns {`search.tab.${SearchHubType}` | null}
+ */
+export function consumeSearchHubGuidanceSignal(searchType, exposedTypes) {
+  const normalizedType = coerceSearchHubType(searchType);
+  if (!(exposedTypes instanceof Set)) {
+    return getSearchHubGuidanceSignalKey(normalizedType);
+  }
+
+  if (exposedTypes.has(normalizedType)) {
+    return null;
+  }
+
+  exposedTypes.add(normalizedType);
+  return getSearchHubGuidanceSignalKey(normalizedType);
 }
 
 /**

@@ -51,11 +51,11 @@ function MissionHomeCard() {
       ? snapshot.missions.slice(0, missionIndex).filter((mission) => mission.isCompleted)
       : snapshot.missions.filter((mission) => mission.isCompleted);
     const recentCompleted = isExpanded ? completedBeforeCurrent.slice(-2) : [];
-    const upcomingMissions = missionIndex >= 0
+    const upcomingMissions = isExpanded && missionIndex >= 0
       ? snapshot.missions
         .slice(missionIndex + 1)
         .filter((mission) => !mission.isCompleted && !mission.isLocked)
-        .slice(0, isExpanded ? 2 : 1)
+        .slice(0, 2)
       : [];
 
     return {
@@ -79,7 +79,7 @@ function MissionHomeCard() {
         ApplicationStyle.borderRadius16,
         ApplicationStyle.borderWidth1,
         Spaces.padding[16],
-        Spaces.gap[12],
+        isExpanded ? Spaces.gap[12] : Spaces.gap[8],
         {
           backgroundColor: 'rgba(7, 26, 38, 0.96)',
           borderColor: `${Colors.primary500}66`,
@@ -87,7 +87,7 @@ function MissionHomeCard() {
       ]}
     >
       <TouchableOpacity activeOpacity={0.9} onPress={() => setIsExpanded((value) => !value)}>
-        <View style={[Spaces.gap[12]]}>
+        <View style={[isExpanded ? Spaces.gap[12] : Spaces.gap[8]]}>
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
             <View style={[Spaces.gap[4], { flex: 1 }]}>
               <Text style={[Fonts.p4Bold, Fonts.primary200]}>MA PROGRESSION FOUNDCLUB</Text>
@@ -114,7 +114,7 @@ function MissionHomeCard() {
         </View>
       </TouchableOpacity>
 
-      <View style={[Spaces.gap[8]]}>
+      <View style={[isExpanded ? Spaces.gap[8] : Spaces.gap[4]]}>
         {missionPreview.recentCompleted.map((mission) => (
           <MissionStatusRow
             description={mission.shortDescription}
@@ -246,8 +246,8 @@ function MissionStatusRow({
         ApplicationStyle.borderRadius16,
         ApplicationStyle.borderWidth1,
         Spaces.paddingHorizontal[12],
-        Spaces.paddingVertical[12],
-        Spaces.gap[8],
+        isCompact ? Spaces.paddingVertical[8] : Spaces.paddingVertical[12],
+        isCompact ? Spaces.gap[4] : Spaces.gap[8],
         {
           backgroundColor: isCurrent ? 'rgba(1, 179, 244, 0.10)' : 'rgba(255,255,255,0.02)',
           borderColor: isCurrent ? `${Colors.primary500}52` : 'rgba(255,255,255,0.08)',

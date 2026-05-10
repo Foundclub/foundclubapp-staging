@@ -131,8 +131,8 @@ function RecruitmentAdCard({
   } else if (applicationState.status === 'pending') {
     playerCtaLabel = 'Demande en attente';
     playerCtaBackgroundColor = 'rgba(255,255,255,0.06)';
-    playerCtaBorderColor = `${Colors.warning500}35`;
-    playerCtaTextColor = Colors.warning500;
+    playerCtaBorderColor = `${Colors.primary500}35`;
+    playerCtaTextColor = Colors.primary100;
     playerCtaBorderWidth = 1;
   } else if (isApplying) {
     playerCtaLabel = 'Envoi...';
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   container: {
     backgroundColor: '#173844',
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(1,179,244,0.18)',
     borderRadius: 24,
     borderWidth: 1,
     minHeight: 200,
@@ -371,9 +371,9 @@ const styles = StyleSheet.create({
   contentContainer: {
     backgroundColor: 'rgba(0, 0, 0, 0.56)',
     flex: 1,
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
   ctaBadge: {
     alignItems: 'center',
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   ctaContainer: {
-    marginTop: 14,
+    marginTop: 16,
     width: '100%',
   },
   detailItem: {
@@ -406,13 +406,13 @@ const styles = StyleSheet.create({
   detailRow: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
     justifyContent: 'space-between',
     width: '100%',
   },
   detailsContainer: {
-    gap: 8,
-    marginTop: 2,
+    gap: 12,
+    marginTop: 4,
   },
   detailText: {
     color: '#D6E7EE',
@@ -431,10 +431,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
     marginTop: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   headerContainer: {
     alignItems: 'center',
@@ -462,13 +462,13 @@ const styles = StyleSheet.create({
   ownerStatusContainer: {
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.30)',
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(1,179,244,0.14)',
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    height: 42,
+    height: 44,
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
   },
   ownerStatusDot: {
     borderRadius: 999,
@@ -483,8 +483,8 @@ const styles = StyleSheet.create({
   sportBadge: {
     backgroundColor: 'rgba(1, 179, 244, 0.16)',
     borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   sportBadgeText: {
     color: '#01B3F4',
@@ -500,8 +500,8 @@ const styles = StyleSheet.create({
   typeBadge: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   typeBadgeText: {
     color: '#FFFFFF',

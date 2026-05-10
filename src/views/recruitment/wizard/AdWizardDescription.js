@@ -95,7 +95,7 @@ function AdWizardDescription({ navigation }) {
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
         {contextualHighlights.length > 0 ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[20], cardSurfaceStyle]}>
+          <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[16], cardSurfaceStyle]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
               {'Contexte de l\'annonce'}
             </Text>
@@ -110,7 +110,14 @@ function AdWizardDescription({ navigation }) {
         ) : null}
 
         <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], cardSurfaceStyle]}>
-          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
+          <View
+            style={[
+              Alignments.row,
+              Alignments.justifySpaceBetween,
+              Spaces.gap[16],
+              { alignItems: 'flex-start', flexWrap: 'wrap' },
+            ]}
+          >
             <View style={[Spaces.gap[12], { flex: 1 }]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>{'Pr\u00E9sentez votre besoin'}</Text>
               <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
@@ -122,8 +129,8 @@ function AdWizardDescription({ navigation }) {
 
             <View
               style={[
-                Spaces.paddingHorizontal[10],
-                Spaces.paddingVertical[6],
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[8],
                 {
                   backgroundColor: 'rgba(1, 179, 244, 0.14)',
                   borderColor: 'rgba(1, 179, 244, 0.32)',
@@ -166,7 +173,7 @@ function AdWizardDescription({ navigation }) {
             <Text
               style={[
                 Fonts.p3Bold,
-                state.description.length >= 450 ? Fonts.gold500 : Fonts.neutral300,
+                state.description.length >= 450 ? Fonts.primary100 : Fonts.neutral300,
               ]}
             >
               {state.description.length}
@@ -206,11 +213,11 @@ function AdWizardDescription({ navigation }) {
           </View>
         ) : null}
 
-        <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[20], cardSurfaceStyle]}>
+        <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[16], cardSurfaceStyle]}>
           <Text style={[Fonts.h4, Fonts.neutral00]}>{'Id\u00E9es \u00E0 inclure'}</Text>
           <View style={[Spaces.gap[16]]}>
             {descriptionTips.map((tip) => (
-              <View key={tip} style={[Alignments.row, Spaces.gap[14]]}>
+              <View key={tip} style={[Alignments.row, Spaces.gap[16]]}>
                 <View
                   style={{
                     backgroundColor: Colors.primary500,

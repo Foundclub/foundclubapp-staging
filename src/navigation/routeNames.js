@@ -182,6 +182,7 @@ export const RouteNames = /** @type {const} */ ({
   AdWizardCoachProfile: 'AdWizardCoachProfile',
   AdWizardDescription: 'AdWizardDescription',
   AdWizardInfo: 'AdWizardInfo',
+  AdWizardLocation: 'AdWizardLocation',
   AdWizardPositions: 'AdWizardPositions',
   AdWizardRecap: 'AdWizardRecap',
   AdWizardStack: 'AdWizardStack',

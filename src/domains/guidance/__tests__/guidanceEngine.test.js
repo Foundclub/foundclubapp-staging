@@ -21,6 +21,24 @@ describe('guidanceEngine', () => {
       ...userData,
     },
   });
+  const createCoachContext = (userData = {}) => buildGuidanceAudienceContext({
+    canEditClub: () => false,
+    canManageTeam: true,
+    isGold: false,
+    userData: {
+      role: { name: 'Entraineur' },
+      ...userData,
+    },
+  });
+  const createPresidentContext = (userData = {}, canEditClub = () => false) => buildGuidanceAudienceContext({
+    canEditClub,
+    canManageTeam: true,
+    isGold: false,
+    userData: {
+      role: { name: 'Dirigeant' },
+      ...userData,
+    },
+  });
 
   it('selects the player profile mission first for a new player', () => {
     const snapshot = buildGuidanceSnapshot({
@@ -78,6 +96,91 @@ describe('guidanceEngine', () => {
       expect.arrayContaining(['player_profile_basics', 'player_open_planning']),
     );
     expect(snapshot.currentMission?.id).toBe('player_open_messages');
+  });
+
+  it('auto-completes search hub tab missions from interaction signals', () => {
+    const state = {
+      ...createEmptyGuidanceState(),
+      interactionSignals: {
+        'search.tab.events': '2026-05-09T10:00:00.000Z',
+      },
+      manuallyConfirmedMissionIds: ['player_profile_basics', 'player_open_planning', 'player_open_messages'],
+    };
+
+    const snapshot = buildGuidanceSnapshot({
+      config: undefined,
+      context: createPlayerContext(),
+      state,
+    });
+
+    expect(snapshot.preparedState.completedMissionIds).toEqual(
+      expect.arrayContaining(['player_search_events']),
+    );
+    expect(snapshot.currentMission?.id).toBe('player_event_filters');
+  });
+
+  it('unblocks the coach recruitment chain after the real search hub recruitment tab', () => {
+    const state = {
+      ...createEmptyGuidanceState(),
+      interactionSignals: {
+        'search.tab.recruitment': '2026-05-09T10:00:00.000Z',
+      },
+      manuallyConfirmedMissionIds: [
+        'coach_profile_basics',
+        'coach_open_planning',
+        'coach_open_teams',
+        'coach_open_messages',
+        'coach_open_requests',
+        'coach_create_event',
+        'coach_edit_event',
+        'coach_search_events',
+        'coach_filter_requests',
+      ],
+    };
+
+    const snapshot = buildGuidanceSnapshot({
+      config: undefined,
+      context: createCoachContext({
+        club: { documentId: 'club-1' },
+        trainedTeams: [{ documentId: 'team-1' }],
+      }),
+      state,
+    });
+
+    expect(snapshot.preparedState.completedMissionIds).toContain('coach_search_recruitment');
+    expect(snapshot.currentMission?.id).toBe('coach_open_ad_wizard');
+  });
+
+  it('skips hidden request-filter missions when the current president context cannot expose them', () => {
+    const state = {
+      ...createEmptyGuidanceState(),
+      manuallyConfirmedMissionIds: [
+        'president_open_club',
+        'president_open_requests',
+        'president_open_profile',
+        'president_open_messages',
+        'president_open_planning',
+        'president_create_event',
+        'president_edit_event',
+        'president_open_structure',
+      ],
+    };
+
+    const snapshot = buildGuidanceSnapshot({
+      config: undefined,
+      context: createPresidentContext({
+        multisportClubs: [{ documentId: 'cm-1' }],
+      }),
+      state,
+    });
+
+    expect(
+      snapshot.missions.find((mission) => mission.id === 'president_filter_team_requests'),
+    ).toBeUndefined();
+    expect(
+      snapshot.missions.find((mission) => mission.id === 'president_filter_event_requests'),
+    ).toBeUndefined();
+    expect(snapshot.currentMission?.id).toBe('president_open_recruitment');
   });
 
   it('merges local and remote state using union and latest-timestamp rules', () => {

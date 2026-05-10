@@ -117,6 +117,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AdWizardAudienceType]: '/recruitment/wizard/audience',
   [RouteNames.AdWizardCoachProfile]: '/recruitment/wizard/coach-profile',
   [RouteNames.AdWizardInfo]: '/recruitment/wizard/info',
+  [RouteNames.AdWizardLocation]: '/recruitment/wizard/location',
   [RouteNames.AdWizardPositions]: '/recruitment/wizard/positions',
   [RouteNames.AdWizardValidation]: '/recruitment/wizard/validation',
   [RouteNames.AdWizardDescription]: '/recruitment/wizard/description',

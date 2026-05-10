@@ -25,7 +25,7 @@ import ReservationListContent from '@/components/organisms/reservationListConten
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
 import SearchScreenShell from './components/SearchScreenShell';
-import { coerceSearchHubType } from './searchRouteHelpers';
+import { coerceSearchHubType, consumeSearchHubGuidanceSignal } from './searchRouteHelpers';
 
 const SEARCH_TAB_TYPES = /** @type {const} */ ([
   'events',
@@ -58,6 +58,7 @@ function SearchHubScreen({ navigation, route }) {
   const appStateRef = useRef(AppState.currentState);
   const backgroundedAtRef = useRef(0);
   const activeTypeRef = useRef(requestedType);
+  const guidanceTabsRef = useRef(new Set());
   const loggedTabsRef = useRef(new Set());
 
   const initialRecruitmentTab = useMemo(
@@ -93,6 +94,12 @@ function SearchHubScreen({ navigation, route }) {
   }, [activeType]);
 
   useEffect(() => {
+    const guidanceSignalKey = consumeSearchHubGuidanceSignal(activeType, guidanceTabsRef.current);
+    if (!guidanceSignalKey) return;
+    emitGuidanceInteraction(guidanceSignalKey);
+  }, [activeType]);
+
+  useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (appStateRef.current === nextAppState) {
         return;
@@ -124,7 +131,6 @@ function SearchHubScreen({ navigation, route }) {
     const sanitizedType = coerceSearchHubType(nextType);
     if (sanitizedType === activeType) return;
 
-    emitGuidanceInteraction(`search.tab.${sanitizedType}`);
     setVisitedTypes((previousVisited) => {
       const nextVisited = new Set(previousVisited);
       nextVisited.add(sanitizedType);
