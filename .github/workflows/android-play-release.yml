@@ -68,7 +68,6 @@ jobs:
           test -n "${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}" || (echo "Missing secret: ANDROID_RELEASE_KEY_PASSWORD" && exit 1)
           test -n "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}" || (echo "Missing secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64" && exit 1)
           test -n "${{ secrets.TOMTOM_API_KEY_PRODUCTION }}" || (echo "Missing secret: TOMTOM_API_KEY_PRODUCTION" && exit 1)
-          test -n "${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION }}" || (echo "Missing secret: GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION" && exit 1)
           echo "All Android Play release secrets are present."
 
       - name: Validate release inputs
@@ -182,8 +181,6 @@ jobs:
 
       - name: Build production AAB
         shell: bash
-        env:
-          GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION }}
         run: |
           set -a
           . ./.env.production
