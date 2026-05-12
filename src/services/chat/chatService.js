@@ -155,11 +155,15 @@ const buildChatDetailPopulate = ({ includeMessages = false } = {}) => {
  *   currentUserId?: string;
  *   currentUserClubId?: string;
  *   currentUserTeamIds?: string[];
+ *   chatScope?: 'all' | 'classic' | 'league';
  * }} [filters] - Optional filters for the chats
  * @returns {Promise<{data: Chat[],
  * meta: { pagination: { page: number, pageCount: number, total: number }}}>}
  */
 export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
+  const chatScope = ['classic', 'league'].includes(filters.chatScope)
+    ? filters.chatScope
+    : 'all';
   const safeTeamIds = Array.isArray(filters.currentUserTeamIds)
     ? Array.from(
       new Set(
@@ -173,7 +177,7 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
   /** @type {Array<Record<string, any>>} */
   const chatOrFilters = [];
 
-  if (filters.currentUserId) {
+  if (chatScope !== 'league' && filters.currentUserId) {
     chatOrFilters.push({
       participants: {
         documentId: filters.currentUserId,
@@ -182,7 +186,7 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
     });
   }
 
-  if (filters.currentUserClubId) {
+  if (chatScope !== 'league' && filters.currentUserClubId) {
     chatOrFilters.push({
       club: {
         documentId: filters.currentUserClubId,
@@ -191,7 +195,7 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
     });
   }
 
-  if (safeTeamIds.length > 0) {
+  if (chatScope !== 'league' && safeTeamIds.length > 0) {
     // Compact form: one filter for both whisper and team chats tied to any of my teams.
     chatOrFilters.push({
       team: {
@@ -205,7 +209,7 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
     });
   }
 
-  if (filters.currentUserId) {
+  if (chatScope !== 'classic' && filters.currentUserId) {
     chatOrFilters.push({
       participants: {
         documentId: filters.currentUserId,

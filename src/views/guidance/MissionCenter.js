@@ -589,17 +589,23 @@ function MissionCenter({ navigation, route }) {
             <View style={[Spaces.gap[12]]}>
               <Button
                 disabled={selectedMission.isLocked}
-                onPress={() => openMission(selectedMission, { tutorialSource: 'mission_center' })}
+                onPress={() => {
+                  openMission(selectedMission, { tutorialSource: 'mission_center' });
+                  closeMissionSheet();
+                }}
                 title="Ouvrir l’écran"
                 variant="Primary"
               />
               {selectedMission.tutorialTargetResolved?.tutorialId ? (
                 <Button
                   disabled={selectedMission.isLocked}
-                  onPress={() => openMission(selectedMission, {
-                    startTutorial: true,
-                    tutorialSource: 'mission_center',
-                  })}
+                  onPress={() => {
+                    openMission(selectedMission, {
+                      startTutorial: true,
+                      tutorialSource: 'mission_center',
+                    });
+                    closeMissionSheet();
+                  }}
                   title="Lancer le guide"
                   variant="Secondary"
                 />
@@ -607,7 +613,10 @@ function MissionCenter({ navigation, route }) {
               {selectedMission.completionMode === 'manual_fallback' && !selectedMission.isCompleted ? (
                 <Button
                   disabled={selectedMission.isLocked}
-                  onPress={() => confirmMissionManually(selectedMission.id)}
+                  onPress={() => {
+                    confirmMissionManually(selectedMission.id);
+                    closeMissionSheet();
+                  }}
                   title="J’ai compris cet outil"
                   variant="SecondaryLight"
                 />

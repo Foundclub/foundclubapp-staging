@@ -1,5 +1,5 @@
 import { joiResolver } from '@hookform/resolvers/joi';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -89,11 +89,16 @@ function ProfileEdit({ navigation, route }) {
     Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: fetchedUserData } = useGetMe();
   const { data: sections } = useGetSections();
   const { data: levels } = useGetLevels();
   const {
-    formatBirthdateToDisplay, formatBirthdateToSend, profileFields, userData: authUserData,
+    formatBirthdateToDisplay,
+    formatBirthdateToSend,
+    profileFields,
+    refetchUserData,
+    userData: authUserData,
   } = useAuth();
   const userData = fetchedUserData || authUserData;
   const { getGeohashForPointAndRadius } = usePlaces();
@@ -118,7 +123,11 @@ function ProfileEdit({ navigation, route }) {
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'get-me',
+      });
+      await refetchUserData?.();
       navigation.goBack();
     },
   });

@@ -28,6 +28,20 @@ export const getUnreadStatus = (
 };
 
 /**
+ * Checks whether a chat belongs to FoundClub League.
+ * @param {Chat | null | undefined | Record<string, any>} chat
+ * @returns {boolean}
+ */
+export const isLeagueChat = (chat) => {
+  if (!chat || typeof chat !== 'object') return false;
+
+  const chatType = String(chat.type || '').trim().toLowerCase();
+  if (chatType === 'league_match' || chatType === 'league') return true;
+
+  return Boolean(chat.league_match);
+};
+
+/**
  * Conversation name generator
  * @param {object} params - Parameters for generating the conversation name
  * @param {Club} [params.chatClub] - The chat club object

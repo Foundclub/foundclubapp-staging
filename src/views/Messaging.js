@@ -15,7 +15,10 @@ import { Swipeable } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
-import { getChatMessagePreview } from '@/domains/messaging/messagingUseCases';
+import {
+  getChatMessagePreview,
+  isLeagueChat,
+} from '@/domains/messaging/messagingUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
@@ -26,6 +29,7 @@ import NotificationBadge from '@/components/molecules/notificationBadge/Notifica
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -37,6 +41,13 @@ import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { markMessagingPerf } from '@/utils/performance/messagingPerformance';
+
+const CHAT_SCOPE_VALUES = new Set(['all', 'classic', 'league']);
+
+const normalizeChatScopeFilter = (value) => {
+  const safeValue = String(value || '').trim().toLowerCase();
+  return CHAT_SCOPE_VALUES.has(safeValue) ? safeValue : 'all';
+};
 
 /**
  * Main messaging screen component
@@ -51,6 +62,10 @@ function Messaging({ navigation, route }) {
   } = useTheme();
   const { allMyTeams, userData } = useAuth();
   const { getClubInitials } = useClub();
+  const routeChatScope = route?.params?.chatScope || route?.params?.initialChatScope;
+  const [chatScopeFilter, setChatScopeFilter] = useState(
+    () => normalizeChatScopeFilter(routeChatScope),
+  );
   const safeTeamIds = useMemo(
     () => (Array.isArray(allMyTeams)
       ? Array.from(new Set(
@@ -71,6 +86,7 @@ function Messaging({ navigation, route }) {
     isLoading,
     refetch,
   } = useGetChats({
+    chatScope: chatScopeFilter,
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
     currentUserTeamIds: safeTeamIds,
@@ -92,6 +108,20 @@ function Messaging({ navigation, route }) {
   const listOpenLoggedRef = useRef(false);
   const listPrimaryLoggedRef = useRef(false);
   const listFirstRenderedLoggedRef = useRef(false);
+  const chatScopeOptions = useMemo(() => [
+    {
+      label: t('messaging.filters.all', 'Toutes'),
+      value: 'all',
+    },
+    {
+      label: t('messaging.filters.classic', 'Classique'),
+      value: 'classic',
+    },
+    {
+      label: t('messaging.filters.league', 'League'),
+      value: 'league',
+    },
+  ], [t]);
   const allChats = useMemo(() => {
     const chats = chatsData?.pages ? chatsData?.pages?.reduce(
       (acc, page) => acc.concat(page.data || []),
@@ -128,6 +158,11 @@ function Messaging({ navigation, route }) {
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });
   }, [chatsData?.pages, userData]);
+
+  useEffect(() => {
+    if (routeChatScope == null) return;
+    setChatScopeFilter(normalizeChatScopeFilter(routeChatScope));
+  }, [routeChatScope]);
 
   useEffect(() => {
     if (listOpenLoggedRef.current) return;
@@ -300,10 +335,16 @@ function Messaging({ navigation, route }) {
   };
 
   const filteredChats = useMemo(() => {
-    if (!searchQuery) return allChats;
+    const scopeFilteredChats = allChats.filter((chat) => {
+      if (chatScopeFilter === 'league') return isLeagueChat(chat);
+      if (chatScopeFilter === 'classic') return !isLeagueChat(chat);
+      return true;
+    });
+
+    if (!searchQuery) return scopeFilteredChats;
     const lowerQuery = searchQuery.toLowerCase();
 
-    return allChats.filter((chat) => {
+    return scopeFilteredChats.filter((chat) => {
       const name = getConversationName({
         chatClub: chat.club,
         chatGroupName: chat.groupName,
@@ -316,7 +357,35 @@ function Messaging({ navigation, route }) {
       });
       return name?.toLowerCase()?.includes(lowerQuery);
     });
-  }, [allChats, searchQuery, getConversationName, userData]);
+  }, [allChats, chatScopeFilter, searchQuery, getConversationName, userData]);
+
+  const getEmptyListMessage = () => {
+    if (searchQuery.trim()) {
+      return t('messaging.noSearchResults', 'Aucune conversation trouvee.');
+    }
+
+    if (chatScopeFilter === 'league') {
+      return t('messaging.noLeagueData', 'Aucune conversation League.');
+    }
+
+    if (chatScopeFilter === 'classic') {
+      return t('messaging.noClassicData', 'Aucune conversation classique.');
+    }
+
+    return t('messaging.noData');
+  };
+
+  const renderChatScopeFilter = () => (
+    <View
+      style={[Alignments.alignCenter, Alignments.fullWidth, Spaces.marginBottom[16]]}
+    >
+      <SegmentedControl
+        onChange={setChatScopeFilter}
+        options={chatScopeOptions}
+        value={chatScopeFilter}
+      />
+    </View>
+  );
 
   const renderSearch = () => (
     <View style={[Spaces.paddingHorizontal[0], Spaces.marginBottom[16]]}>
@@ -540,6 +609,7 @@ function Messaging({ navigation, route }) {
    * @returns {import('react').ReactElement} The rendered chat item
    */
   const renderChat = ({ item: chat }) => {
+    const chatIsLeague = isLeagueChat(chat);
     const lastMessage = chat.messages?.[0];
     const isMyMessage = lastMessage?.sender?.documentId === userData?.documentId;
     const hasUnread = !isMyMessage && (lastMessage && getUnreadStatus(
@@ -551,7 +621,7 @@ function Messaging({ navigation, route }) {
     let chatBackgroundStyle = ApplicationStyle.backgroundColor.transparent;
     if (hasUnread) {
       chatBackgroundStyle = ApplicationStyle.backgroundColor.primary700;
-    } else if (chat.type === 'league_match') {
+    } else if (chatIsLeague) {
       chatBackgroundStyle = { backgroundColor: 'rgba(212, 175, 55, 0.1)' };
     }
 
@@ -568,7 +638,7 @@ function Messaging({ navigation, route }) {
             Spaces.marginBottom[8],
             chatBackgroundStyle,
             isPinned && { borderLeftColor: Colors.primary500, borderLeftWidth: 4 },
-            chat.type === 'league_match' && { borderLeftColor: Colors.gold500, borderLeftWidth: 4 },
+            chatIsLeague && { borderLeftColor: Colors.gold500, borderLeftWidth: 4 },
           ]}
         >
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
@@ -603,9 +673,13 @@ function Messaging({ navigation, route }) {
                     meId: userData?.documentId,
                   })}
                 </Text>
-                {chat.type === 'league_match' && (
+                {chatIsLeague && (
                 <View style={{
-                  backgroundColor: Colors.gold500, borderRadius: 4, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2,
+                  backgroundColor: Colors.gold500,
+                  borderRadius: 4,
+                  marginLeft: 8,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
                 }}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
@@ -660,7 +734,7 @@ function Messaging({ navigation, route }) {
       Spaces.marginVertical[24]]}
     >
       <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
-        {t('messaging.noData')}
+        {getEmptyListMessage()}
       </Text>
     </View>
   );
@@ -719,6 +793,7 @@ function Messaging({ navigation, route }) {
           title="Messagerie"
         >
           <View style={[Alignments.fill]}>
+            {renderChatScopeFilter()}
             {renderSearch()}
             {isLoading && (
               <WithDataWrapper

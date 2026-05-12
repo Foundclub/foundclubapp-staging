@@ -51,9 +51,9 @@ describe('guidanceEngine', () => {
     expect(snapshot.currentMission?.id).toBe('player_profile_basics');
   });
 
-  it('keeps profile basics open until identity and avatar are complete', () => {
+  it('keeps player profile basics open until identity and sport profile fields are complete', () => {
     const state = createEmptyGuidanceState();
-    const withoutAvatarSnapshot = buildGuidanceSnapshot({
+    const incompletePlayerSnapshot = buildGuidanceSnapshot({
       config: undefined,
       context: createPlayerContext({
         firstname: 'Ada',
@@ -61,20 +61,49 @@ describe('guidanceEngine', () => {
       }),
       state,
     });
-    const withAvatarSnapshot = buildGuidanceSnapshot({
+    const completePlayerSnapshot = buildGuidanceSnapshot({
       config: undefined,
       context: createPlayerContext({
-        avatar: { url: 'https://example.com/avatar.png' },
+        category: 'Senior',
         firstname: 'Ada',
         lastname: 'Lovelace',
+        preferredSport: 'football',
+        section: { documentId: 'section-1' },
       }),
       state,
     });
 
-    expect(withoutAvatarSnapshot.currentMission?.id).toBe('player_profile_basics');
-    expect(withoutAvatarSnapshot.preparedState.completedMissionIds).not.toContain('player_profile_basics');
-    expect(withAvatarSnapshot.preparedState.completedMissionIds).toContain('player_profile_basics');
-    expect(withAvatarSnapshot.currentMission?.id).toBe('player_open_planning');
+    expect(incompletePlayerSnapshot.currentMission?.id).toBe('player_profile_basics');
+    expect(incompletePlayerSnapshot.preparedState.completedMissionIds).not.toContain('player_profile_basics');
+    expect(completePlayerSnapshot.preparedState.completedMissionIds).toContain('player_profile_basics');
+    expect(completePlayerSnapshot.currentMission?.id).toBe('player_open_planning');
+  });
+
+  it('marks coach profile basics complete from identity plus sport profile fields', () => {
+    const state = createEmptyGuidanceState();
+    const incompleteCoachSnapshot = buildGuidanceSnapshot({
+      config: undefined,
+      context: createCoachContext({
+        firstname: 'Didier',
+        lastname: 'Coach',
+      }),
+      state,
+    });
+    const completeCoachSnapshot = buildGuidanceSnapshot({
+      config: undefined,
+      context: createCoachContext({
+        category: 'U7',
+        firstname: 'Didier',
+        lastname: 'Coach',
+        preferredSport: 'football',
+      }),
+      state,
+    });
+
+    expect(incompleteCoachSnapshot.currentMission?.id).toBe('coach_profile_basics');
+    expect(incompleteCoachSnapshot.preparedState.completedMissionIds).not.toContain('coach_profile_basics');
+    expect(completeCoachSnapshot.preparedState.completedMissionIds).toContain('coach_profile_basics');
+    expect(completeCoachSnapshot.currentMission?.id).toBe('coach_open_planning');
   });
 
   it('auto-completes route-based missions and advances to the next unlocked mission', () => {
@@ -149,6 +178,32 @@ describe('guidanceEngine', () => {
 
     expect(snapshot.preparedState.completedMissionIds).toContain('coach_search_recruitment');
     expect(snapshot.currentMission?.id).toBe('coach_open_ad_wizard');
+  });
+
+  it('skips coach event creation missions when no training team can create events', () => {
+    const state = {
+      ...createEmptyGuidanceState(),
+      routeVisits: {
+        [RouteNames.Chat]: '2026-05-09T10:10:00.000Z',
+        [RouteNames.MyEventList]: '2026-05-09T10:00:00.000Z',
+        [RouteNames.RequestsHub]: '2026-05-09T10:20:00.000Z',
+      },
+    };
+
+    const snapshot = buildGuidanceSnapshot({
+      config: undefined,
+      context: createCoachContext({
+        category: 'U7',
+        firstname: 'Didier',
+        lastname: 'Coach',
+        preferredSport: 'football',
+      }),
+      state,
+    });
+
+    expect(snapshot.missions.find((mission) => mission.id === 'coach_create_event')).toBeUndefined();
+    expect(snapshot.missions.find((mission) => mission.id === 'coach_edit_event')).toBeUndefined();
+    expect(snapshot.currentMission?.id).toBe('coach_search_events');
   });
 
   it('skips hidden request-filter missions when the current president context cannot expose them', () => {

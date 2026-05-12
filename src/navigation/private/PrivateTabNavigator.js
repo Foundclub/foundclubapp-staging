@@ -176,6 +176,7 @@ function PrivateTabNavigator() {
       ) : null}
       <Tab.Screen
         getComponent={() => require('@/views/Messaging').default}
+        initialParams={{ chatScope: 'classic' }}
         name={RouteNames.Chat}
         options={{
           headerShown: false,

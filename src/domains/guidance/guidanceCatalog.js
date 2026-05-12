@@ -18,7 +18,9 @@ const tutorialTarget = (tutorialId, routeName, params = undefined) => ({
 
 const mission = (definition) => definition;
 
-const planningTarget = tutorialTarget(TutorialIds.PLANNING, RouteNames.MyEventList);
+const planningTarget = tutorialTarget(TutorialIds.PLANNING, RouteNames.HomeTab, {
+  screen: RouteNames.MyEventList,
+});
 const profileTarget = tutorialTarget(TutorialIds.PROFILE_MAIN, RouteNames.ProfileStack, {
   screen: RouteNames.Profile,
 });
@@ -28,6 +30,10 @@ const profileEditTarget = tutorialTarget(TutorialIds.PROFILE_EDIT, RouteNames.Pr
 const messagingTarget = tutorialTarget(TutorialIds.MESSAGING, RouteNames.HomeTab, {
   screen: RouteNames.Chat,
 });
+const teamHubTarget = {
+  params: { screen: RouteNames.MyTeamList },
+  routeName: RouteNames.HomeTab,
+};
 const searchHubTarget = (tutorialId, activeType, params = undefined) => tutorialTarget(
   tutorialId,
   RouteNames.SearchHub,
@@ -216,7 +222,7 @@ export const guidanceCatalog = Object.freeze({
       id: 'player_open_team_space',
       longDescription: 'Votre espace équipe vous montre vos collectifs, leurs détails et les accès rapides liés à votre pratique.',
       module: 'team',
-      navTarget: { routeName: RouteNames.MyTeamList },
+      navTarget: teamHubTarget,
       packId: 'player_foundations',
       prerequisiteMissionIds: ['player_open_planning'],
       priority: 30,
@@ -449,7 +455,7 @@ export const guidanceCatalog = Object.freeze({
       id: 'coach_open_teams',
       longDescription: 'Votre espace équipes concentre les collectifs que vous encadrez et devient une porte d’entrée vers leur gestion.',
       module: 'team',
-      navTarget: { routeName: RouteNames.MyTeamList },
+      navTarget: teamHubTarget,
       packId: 'coach_foundations',
       prerequisiteMissionIds: ['coach_open_planning'],
       priority: 30,
@@ -496,7 +502,7 @@ export const guidanceCatalog = Object.freeze({
     }),
     mission({
       actionsToTry: ['Créer un événement depuis le planning ou le CTA dédié'],
-      audience: { roleKeys: ['coach'] },
+      audience: { requiresTrainingTeam: true, roleKeys: ['coach'] },
       completionMode: 'manual_fallback',
       completionSignal: { key: 'event.created', type: 'action' },
       id: 'coach_create_event',
@@ -513,7 +519,7 @@ export const guidanceCatalog = Object.freeze({
     }),
     mission({
       actionsToTry: ['Ouvrir le planning et repérer où modifier un événement existant'],
-      audience: { roleKeys: ['coach'] },
+      audience: { requiresTrainingTeam: true, roleKeys: ['coach'] },
       completionMode: 'manual_fallback',
       completionSignal: { key: 'event.updated', type: 'action' },
       id: 'coach_edit_event',
@@ -588,7 +594,7 @@ export const guidanceCatalog = Object.freeze({
       actionsToTry: ['Ouvrir l’assistant annonce', 'Repérer les étapes du wizard'],
       audience: { roleKeys: ['coach'] },
       completionMode: 'manual_fallback',
-      completionSignal: { routeName: RouteNames.AdWizardStack, type: 'route' },
+      completionSignal: { routeName: RouteNames.AdWizardAudienceType, type: 'route' },
       id: 'coach_open_ad_wizard',
       longDescription: 'Le wizard de recrutement est l’endroit où vous publiez un besoin structuré. Même une première ouverture suffit pour comprendre le parcours produit.',
       module: 'recruitment',
@@ -831,7 +837,7 @@ export const guidanceCatalog = Object.freeze({
       id: 'president_open_structure',
       longDescription: 'Selon votre contexte, l’onglet équipes ou l’espace club multisport devient un point d’accès crucial pour naviguer dans la structure.',
       module: 'team',
-      navTarget: { routeName: RouteNames.MyTeamList },
+      navTarget: teamHubTarget,
       packId: 'president_operations',
       prerequisiteMissionIds: ['president_edit_event'],
       priority: 80,
@@ -902,7 +908,7 @@ export const guidanceCatalog = Object.freeze({
       actionsToTry: ['Ouvrir l’assistant annonce', 'Observer les étapes disponibles'],
       audience: { roleKeys: ['president'] },
       completionMode: 'manual_fallback',
-      completionSignal: { routeName: RouteNames.AdWizardStack, type: 'route' },
+      completionSignal: { routeName: RouteNames.AdWizardAudienceType, type: 'route' },
       id: 'president_open_ad_wizard',
       longDescription: 'Le wizard de recrutement structure la publication d’un besoin. Cette mission vous amène au bon endroit pour maîtriser ce parcours dirigeant.',
       module: 'recruitment',

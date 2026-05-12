@@ -19,6 +19,7 @@ const CHAT_MESSAGES_STALE_MS = 15 * 1000;
  *   currentUserClubId?: string;
  *   currentUserId?: string;
  *   currentUserTeamIds?: string[];
+ *   chatScope?: 'all' | 'classic' | 'league';
  * }} [params]
  * @param {any} [options]
  * @returns {import('@tanstack/react-query').UseInfiniteQueryResult<{
@@ -42,11 +43,13 @@ export const useGetChats = (params, options = {}) => {
     },
     initialPageParam: 1,
     queryFn: ({ pageParam = 1 }) => getChats(pageParam, params?.pageSize, {
+      chatScope: params?.chatScope,
       currentUserClubId: params?.currentUserClubId,
       currentUserId: params?.currentUserId,
       currentUserTeamIds: params?.currentUserTeamIds,
     }),
     queryKey: buildNormalizedQueryKey('chats', {
+      chatScope: params?.chatScope,
       currentUserClubId: params?.currentUserClubId,
       currentUserId: params?.currentUserId,
       currentUserTeamIds: params?.currentUserTeamIds,

@@ -32,11 +32,13 @@ const useFallbackGetChats = (params, options = {}) => {
     },
     initialPageParam: 1,
     queryFn: ({ pageParam = 1 }) => getChats(pageParam, params?.pageSize, {
+      chatScope: params?.chatScope,
       currentUserClubId: params?.currentUserClubId,
       currentUserId: params?.currentUserId,
       currentUserTeamIds: params?.currentUserTeamIds,
     }),
     queryKey: buildNormalizedQueryKey('chats', {
+      chatScope: params?.chatScope,
       currentUserClubId: params?.currentUserClubId,
       currentUserId: params?.currentUserId,
       currentUserTeamIds: params?.currentUserTeamIds,

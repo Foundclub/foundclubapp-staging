@@ -192,6 +192,7 @@ export default function LeagueTabNavigator() {
       {/* 4. Messaging (Replaces Standings) */}
       <Tab.Screen
         component={Messaging}
+        initialParams={{ chatScope: 'league' }}
         name={RouteNames.Chat}
         options={{
           headerShown: false,

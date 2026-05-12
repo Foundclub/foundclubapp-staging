@@ -54,4 +54,57 @@ describe('guidanceCatalog search hub contract', () => {
       });
     });
   });
+
+  it('keeps team structure missions wired through the HomeTab container', () => {
+    [
+      'player_open_team_space',
+      'coach_open_teams',
+      'president_open_structure',
+    ].forEach((missionId) => {
+      const mission = getMission(missionId);
+
+      expect(mission).toMatchObject({
+        completionSignal: { routeName: RouteNames.MyTeamList, type: 'route' },
+        navTarget: {
+          params: { screen: RouteNames.MyTeamList },
+          routeName: RouteNames.HomeTab,
+        },
+      });
+    });
+  });
+
+  it('keeps planning missions wired through the HomeTab container', () => {
+    [
+      'player_open_planning',
+      'coach_open_planning',
+      'coach_create_event',
+      'coach_edit_event',
+      'president_open_planning',
+      'president_create_event',
+      'president_edit_event',
+    ].forEach((missionId) => {
+      const mission = getMission(missionId);
+
+      expect(mission).toMatchObject({
+        navTarget: {
+          params: { screen: RouteNames.MyEventList },
+          routeName: RouteNames.HomeTab,
+        },
+      });
+    });
+  });
+
+  it('completes ad wizard discovery missions on the first wizard screen', () => {
+    [
+      'coach_open_ad_wizard',
+      'president_open_ad_wizard',
+    ].forEach((missionId) => {
+      const mission = getMission(missionId);
+
+      expect(mission).toMatchObject({
+        completionSignal: { routeName: RouteNames.AdWizardAudienceType, type: 'route' },
+        navTarget: { routeName: RouteNames.AdWizardStack },
+      });
+    });
+  });
 });

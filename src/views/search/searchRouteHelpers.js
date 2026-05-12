@@ -103,7 +103,8 @@ export function consumeSearchHubGuidanceSignal(searchType, exposedTypes) {
 export function hasLegacySearchParams(params) {
   if (!params) return false;
   return Boolean(
-    params.initialSearchType
+    params.activeType
+      || params.initialSearchType
       || params.initialRecruitmentTab
       || params.initialTab
       || params.timestamp,
@@ -118,7 +119,8 @@ export function hasLegacySearchParams(params) {
 export function resolveLegacySearchTarget(params, userOrRole) {
   if (!hasLegacySearchParams(params)) return null;
 
-  const initialSearchType = params?.initialSearchType
+  const initialSearchType = params?.activeType
+    || params?.initialSearchType
     || (params?.initialTab === 'mercato' ? 'recrutement' : params?.initialTab);
 
   const normalizedType = normalizeSearchType(initialSearchType);

@@ -36,8 +36,21 @@ const statePredicates = {
   hasRequestsContext: (context) => Boolean(context?.hasRequestsContext),
   profileBasicsComplete: (context) => {
     const userData = context?.userData || {};
+    const roleKey = context?.roleKey;
     const hasName = Boolean(userData.firstname && userData.lastname);
     const hasAvatar = Boolean(userData.avatar?.url || userData.avatar?.documentId);
+    if (roleKey === 'player') {
+      const hasPlayerSportBasics = Boolean(
+        userData.category
+        && userData.preferredSport
+        && (userData.section?.documentId || userData.section),
+      );
+      return hasName && hasPlayerSportBasics;
+    }
+    if (roleKey === 'coach') {
+      const hasCoachSportBasics = Boolean(userData.category && userData.preferredSport);
+      return hasName && hasCoachSportBasics;
+    }
     return hasName && hasAvatar;
   },
 };

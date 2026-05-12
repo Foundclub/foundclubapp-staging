@@ -1,6 +1,11 @@
 import { storage } from '@/store/appContext';
 
-import { getConversationName, getLastReadMessageKey, getUnreadStatus } from './messagingUseCases';
+import {
+  getConversationName,
+  getLastReadMessageKey,
+  getUnreadStatus,
+  isLeagueChat,
+} from './messagingUseCases';
 
 jest.mock('@/store/appContext', () => ({
   storage: {
@@ -34,6 +39,30 @@ describe('messagingUseCases', () => {
     test('should return false when last message is older than last read', () => {
       storage.getString.mockReturnValue('2023-01-02T00:00:00.000Z');
       expect(getUnreadStatus('test-chat', '2023-01-01T00:00:00.000Z')).toBe(false);
+    });
+  });
+
+  describe('isLeagueChat', () => {
+    test('should return true for league match chat type', () => {
+      expect(isLeagueChat({ type: 'league_match' })).toBe(true);
+    });
+
+    test('should return true when a league match relation is present', () => {
+      expect(isLeagueChat({
+        league_match: { documentId: 'league-match-1' },
+        type: 'group',
+      })).toBe(true);
+    });
+
+    test('should return false for classic chat types', () => {
+      expect(isLeagueChat({ type: 'team' })).toBe(false);
+      expect(isLeagueChat({ type: 'club' })).toBe(false);
+      expect(isLeagueChat({ type: 'whisper' })).toBe(false);
+    });
+
+    test('should handle missing chat gracefully', () => {
+      expect(isLeagueChat(null)).toBe(false);
+      expect(isLeagueChat(undefined)).toBe(false);
     });
   });
 
