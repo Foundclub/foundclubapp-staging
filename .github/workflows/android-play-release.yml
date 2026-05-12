@@ -1,0 +1,222 @@
+name: Android Play Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "Version Android visible dans Google Play"
+        required: true
+      version_code:
+        description: "Version code Android entier, strictement superieur au precedent"
+        required: true
+      track:
+        description: "Track Google Play cible (internal, alpha, beta, production, ou track custom)"
+        required: true
+        default: "internal"
+      release_status:
+        description: "Statut de la release Google Play"
+        required: true
+        type: choice
+        default: "draft"
+        options:
+          - draft
+          - completed
+      release_name:
+        description: "Nom de release Google Play optionnel"
+        required: false
+        default: ""
+
+concurrency:
+  group: android-play-release
+  cancel-in-progress: false
+
+jobs:
+  build-and-upload-play:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      APP_ENV: production
+      ENV: production
+      ANDROID_PACKAGE_NAME: com.foundclub
+      ANDROID_VERSION_NAME: ${{ github.event.inputs.version_name }}
+      ANDROID_VERSION_CODE: ${{ github.event.inputs.version_code }}
+      PLAY_TRACK: ${{ github.event.inputs.track }}
+      PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status }}
+      PLAY_RELEASE_NAME: ${{ github.event.inputs.release_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Validate required runtime, signing, and Play secrets
+        shell: bash
+        run: |
+          test -n "${{ secrets.ANDROID_PRODUCTION_GOOGLE_SERVICES_JSON_BASE64 }}" || (echo "Missing secret: ANDROID_PRODUCTION_GOOGLE_SERVICES_JSON_BASE64" && exit 1)
+          test -n "${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}" || (echo "Missing secret: ANDROID_UPLOAD_KEYSTORE_BASE64" && exit 1)
+          test -n "${{ secrets.ANDROID_RELEASE_STORE_PASSWORD }}" || (echo "Missing secret: ANDROID_RELEASE_STORE_PASSWORD" && exit 1)
+          test -n "${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}" || (echo "Missing secret: ANDROID_RELEASE_KEY_PASSWORD" && exit 1)
+          test -n "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}" || (echo "Missing secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64" && exit 1)
+          test -n "${{ secrets.TOMTOM_API_KEY_PRODUCTION }}" || (echo "Missing secret: TOMTOM_API_KEY_PRODUCTION" && exit 1)
+          test -n "${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION }}" || (echo "Missing secret: GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION" && exit 1)
+          echo "All Android Play release secrets are present."
+
+      - name: Validate release inputs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+
+          version_name = os.environ["ANDROID_VERSION_NAME"].strip()
+          version_code_raw = os.environ["ANDROID_VERSION_CODE"].strip()
+          if not version_name:
+              raise SystemExit("version_name is required.")
+          if not version_code_raw.isdigit():
+              raise SystemExit(f"version_code must be an integer, received: {version_code_raw!r}")
+
+          version_code = int(version_code_raw)
+          if version_code <= 0:
+              raise SystemExit("version_code must be greater than 0.")
+          if version_code > 2_100_000_000:
+              raise SystemExit("version_code exceeds the Google Play maximum of 2100000000.")
+          PY
+
+      - name: Create production env file
+        shell: bash
+        env:
+          TOMTOM_API_KEY_PRODUCTION: ${{ secrets.TOMTOM_API_KEY_PRODUCTION }}
+        run: |
+          cat > .env.production <<EOF
+          APP_ENV=production
+          API_URL=https://api.foundclubpro.com/api
+          SOCKET_URL=https://api.foundclubpro.com
+          SENTRY_DSN=
+          FC_ENABLE_PUSH_NOTIFICATIONS=1
+          FC_ENABLE_SMART_NOTIFICATIONS=1
+          FC_ENABLE_NOTIFICATION_TEST_TRIGGER=0
+          FC_SEARCH_MAP_PROVIDER=tomtom
+          TOMTOM_API_KEY=${TOMTOM_API_KEY_PRODUCTION}
+          DELETE_ACCOUNT_URL=https://api.foundclubpro.com/suppression.html
+          CONTACT_URL=https://foundclubpro.com
+          EOF
+
+      - name: Restore production google-services.json
+        shell: bash
+        run: |
+          mkdir -p android/app/src/production
+          printf '%s' "${{ secrets.ANDROID_PRODUCTION_GOOGLE_SERVICES_JSON_BASE64 }}" | base64 --decode > android/app/src/production/google-services.json
+          test -s android/app/src/production/google-services.json
+
+      - name: Restore Android upload keystore
+        shell: bash
+        run: |
+          printf '%s' "${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore
+          test -s android/app/keystore
+
+      - name: Restore Google Play service account
+        shell: bash
+        run: |
+          mkdir -p ci-play
+          printf '%s' "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}" | base64 --decode > ci-play/google-play-service-account.json
+          test -s ci-play/google-play-service-account.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("ci-play/google-play-service-account.json").read_text(encoding="utf-8"))
+          required_keys = {"client_email", "private_key", "project_id", "type"}
+          missing = sorted(required_keys.difference(data))
+          if missing:
+              raise SystemExit(f"Invalid Google Play service account JSON, missing keys: {', '.join(missing)}")
+          if data.get("type") != "service_account":
+              raise SystemExit("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 must decode to a service account JSON document.")
+          print(f"Validated Google Play service account for project: {data['project_id']}")
+          PY
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Validate runtime env
+        shell: bash
+        run: |
+          set -a
+          . ./.env.production
+          set +a
+          node ./scripts/validate-runtime-env.js
+
+      - name: Print release version metadata
+        shell: bash
+        run: |
+          echo "Using Android package: ${ANDROID_PACKAGE_NAME}"
+          echo "Using Android version name: ${ANDROID_VERSION_NAME}"
+          echo "Using Android version code: ${ANDROID_VERSION_CODE}"
+          echo "Using Google Play track: ${PLAY_TRACK}"
+          echo "Using Google Play release status: ${PLAY_RELEASE_STATUS}"
+
+      - name: Resolve Play release name
+        id: release_name
+        shell: bash
+        run: |
+          if [ -n "${PLAY_RELEASE_NAME}" ]; then
+            VALUE="${PLAY_RELEASE_NAME}"
+          else
+            VALUE="FoundClub Android ${ANDROID_VERSION_NAME} (${ANDROID_VERSION_CODE})"
+          fi
+          echo "value=${VALUE}" >> "$GITHUB_OUTPUT"
+
+      - name: Build production AAB
+        shell: bash
+        env:
+          GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION }}
+        run: |
+          set -a
+          . ./.env.production
+          set +a
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleProductionRelease --no-daemon \
+            "-PRELEASE_STORE_PASSWORD=${{ secrets.ANDROID_RELEASE_STORE_PASSWORD }}" \
+            "-PRELEASE_KEY_PASSWORD=${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}" \
+            "-PversionCode=${ANDROID_VERSION_CODE}" \
+            "-PversionName=${ANDROID_VERSION_NAME}"
+
+      - name: Resolve AAB path
+        id: aab
+        shell: bash
+        run: |
+          AAB_PATH="$(find android/app/build/outputs/bundle/productionRelease -name '*.aab' | head -n 1)"
+          test -n "$AAB_PATH" || (echo "Unable to locate production AAB" && exit 1)
+          echo "path=$AAB_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundclub-android-play-aab
+          path: ${{ steps.aab.outputs.path }}
+          if-no-files-found: error
+
+      - name: Upload AAB to Google Play
+        uses: r0adkll/upload-google-play@v1.1.5
+        with:
+          serviceAccountJson: ${{ github.workspace }}/ci-play/google-play-service-account.json
+          packageName: ${{ env.ANDROID_PACKAGE_NAME }}
+          releaseFiles: ${{ steps.aab.outputs.path }}
+          tracks: ${{ env.PLAY_TRACK }}
+          status: ${{ env.PLAY_RELEASE_STATUS }}
+          releaseName: ${{ steps.release_name.outputs.value }}
