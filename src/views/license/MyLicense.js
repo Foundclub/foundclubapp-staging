@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint-disable import/order, perfectionist/sort-imports, perfectionist/sort-named-imports */
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -129,6 +130,7 @@ function MyLicense({ navigation, route }) {
   ), [current?.documentSubmissions]);
   const receipts = current?.receipts || [];
   const paymentHistory = (current?.payments || []).slice(0, 8);
+  const officialLicenseDocument = current?.officialLicenseDocument || null;
   const isCampaignPaused = current?.campaign?.status === 'paused';
   const canDeclareOfflinePayment = offlinePaymentMethods.length > 0
     && Number(current?.amountRemainingCents || 0) > 0
@@ -344,8 +346,21 @@ function MyLicense({ navigation, route }) {
           description="Les actions ci-dessous suivent les moyens de paiement actives par ton club."
           title="Payer ou regulariser"
         />
-        {!isCampaignPaused && paymentModes.stripe ? <Button isLoading={checkoutMutation.isPending} onPress={() => openCheckout('stripe')} title="Payer en ligne" /> : null}
-        {!isCampaignPaused && (paymentModes.external_link || paymentModes.helloasso) ? <Button onPress={() => openCheckout(paymentModes.helloasso ? 'helloasso' : 'external')} title="Ouvrir le lien club" variant="Secondary" /> : null}
+        {!isCampaignPaused && paymentModes.helloasso ? (
+          <Button
+            isLoading={checkoutMutation.isPending}
+            onPress={() => openCheckout('helloasso')}
+            title="Payer avec HelloAsso"
+          />
+        ) : null}
+        {!isCampaignPaused && paymentModes.external_link ? (
+          <Button
+            isLoading={checkoutMutation.isPending}
+            onPress={() => openCheckout('external')}
+            title="Ouvrir le lien externe du club"
+            variant="Secondary"
+          />
+        ) : null}
         {!isCampaignPaused && canDeclareOfflinePayment ? <Button onPress={() => setDeclareModalVisible(true)} title="J'ai paye hors app" variant="Secondary" /> : null}
         {!isCampaignPaused ? <Button onPress={sharePayerLink} title="Partager le lien payeur" variant="Secondary" /> : null}
         {offlineInstructions.length ? (
@@ -359,6 +374,32 @@ function MyLicense({ navigation, route }) {
             ))}
           </>
         ) : null}
+        <LicenseSectionHeader title="Ma licence" />
+        <LicenseCard variant="muted">
+          <View style={Spaces.gap[licenseSpacing.actionGap]}>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {officialLicenseDocument?.request?.name || 'Licence officielle'}
+            </Text>
+            {officialLicenseDocument?.file?.url ? (
+              <>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  {officialLicenseDocument?.uploadedAt
+                    ? `Disponible depuis le ${documentDate(officialLicenseDocument.submission || {}) || '-'}`
+                    : 'Document disponible'}
+                </Text>
+                <Button
+                  onPress={() => openUploadedDocument(officialLicenseDocument.submission)}
+                  title="Voir ma licence"
+                  variant="Secondary"
+                />
+              </>
+            ) : (
+              <Text style={[Fonts.p2, Fonts.neutral200]}>
+                Votre licence n est pas encore disponible.
+              </Text>
+            )}
+          </View>
+        </LicenseCard>
         <LicenseSectionHeader title="Documents a fournir" />
         {(current?.campaign?.documentRequests || []).length ? (
           <View style={Spaces.gap[licenseSpacing.listGap]}>

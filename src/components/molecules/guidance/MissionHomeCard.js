@@ -102,7 +102,7 @@ function MissionHomeCard() {
                 /
                 {summary.totalCount || 1}
               </Text>
-              <Text style={[Fonts.p4Bold, Fonts.neutral300]}>{isExpanded ? 'REDUIRE' : 'DETAILS'}</Text>
+              <Text style={[Fonts.p4Bold, Fonts.neutral300]}>{isExpanded ? 'REDUIRE' : 'DEPLIER'}</Text>
             </View>
           </View>
 

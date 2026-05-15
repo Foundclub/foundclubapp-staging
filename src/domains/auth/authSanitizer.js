@@ -121,6 +121,9 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
     user?.myTeams?.map((/** @type {any} */ team) => normalizeString(team?.documentId)),
   ),
   parentAccountDocumentId: normalizeString(user?.parentAccount?.documentId),
+  parentalDeclarantUserDocumentId: normalizeString(user?.parentalDeclarantUserDocumentId),
+  parentalDeclarationAccepted: user?.parentalDeclarationAccepted === true,
+  parentalDeclarationAcceptedAt: normalizeString(user?.parentalDeclarationAcceptedAt),
   position: normalizeString(user?.position),
   preferredSport: normalizeString(user?.preferredSport),
   roleId: normalizeString(user?.role?.documentId) || normalizeString(user?.role?.name),
@@ -179,6 +182,9 @@ export const sanitizeUser = (user) => {
     parentAccount: user?.parentAccount
       ? { documentId: normalizeString(user.parentAccount.documentId) }
       : null,
+    parentalDeclarantUserDocumentId: normalizeString(user?.parentalDeclarantUserDocumentId),
+    parentalDeclarationAccepted: user?.parentalDeclarationAccepted === true,
+    parentalDeclarationAcceptedAt: normalizeString(user?.parentalDeclarationAcceptedAt),
     phoneNumber: normalizeString(user?.phoneNumber),
     position: normalizeString(user?.position),
     preferredSport: normalizeString(user?.preferredSport),

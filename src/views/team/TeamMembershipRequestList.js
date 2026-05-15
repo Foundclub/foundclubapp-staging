@@ -43,13 +43,14 @@ const extractApiErrorMessage = (error) => {
  */
 function TeamMembershipRequestList({ navigation, route }) {
   const routeParams = route?.params ?? {};
-  const teamIds = Array.isArray(routeParams.teamIds)
-    ? routeParams.teamIds
-    : routeParams.teamIds
-      ? [routeParams.teamIds]
-      : routeParams.teamId
-        ? [routeParams.teamId]
-        : [];
+  let teamIds = [];
+  if (Array.isArray(routeParams.teamIds)) {
+    teamIds = routeParams.teamIds;
+  } else if (routeParams.teamIds) {
+    teamIds = [routeParams.teamIds];
+  } else if (routeParams.teamId) {
+    teamIds = [routeParams.teamId];
+  }
   const { userData } = useAuth();
 
   // hooks
@@ -166,95 +167,130 @@ function TeamMembershipRequestList({ navigation, route }) {
    * @param {TeamMembershipRequest} param.item
    * @returns {import('react').ReactElement}
    */
-  const renderItem = ({ item }) => (
-    <View
-      style={[
-        Alignments.alignEnd,
-        Alignments.justifySpaceBetween,
-        Spaces.gap[12],
-        Spaces.padding[24],
-        Spaces.marginVertical[12],
-        ApplicationStyle.backgroundColor.primary700,
-        ApplicationStyle.borderRadius24,
-      ]}
-    >
-      <Tag
-        text={item.team?.name}
-      />
+  const renderItem = ({ item }) => {
+    const canManageRequest = item?.permissions?.canManage !== false;
+    let governanceText = t(
+      'teamMembershipRequestList.governance.readOnly',
+      'Vous voyez cette demande, mais seul un entraîneur autorisé ou le dirigeant peut la traiter.',
+    );
+    if (item?.team?.membershipRequestManagementMode === 'CLUB_OWNER_ONLY') {
+      governanceText = t(
+        'teamMembershipRequestList.governance.ownerOnly',
+        'Gestion reservée au dirigeant du club.',
+      );
+    } else if (canManageRequest) {
+      governanceText = t(
+        'teamMembershipRequestList.governance.manageAllowed',
+        'Vous pouvez traiter cette demande pour cette équipe.',
+      );
+    }
+
+    return (
       <View
         style={[
-          Alignments.row,
-          Alignments.fullWidth,
-          Alignments.alignCenter,
-          Spaces.gap[24],
+          Alignments.alignEnd,
+          Alignments.justifySpaceBetween,
+          Spaces.gap[12],
+          Spaces.padding[24],
+          Spaces.marginVertical[12],
+          ApplicationStyle.backgroundColor.primary700,
+          ApplicationStyle.borderRadius24,
         ]}
       >
-        <ProfileAvatar
-          imageStyle={{ borderRadius: 40 }}
-          imageUrl={item?.user?.avatar?.url}
-          size={40}
+        <Tag
+          text={item.team?.name}
+        />
+        <View
           style={[
-            ApplicationStyle.borderWidth1,
-            ApplicationStyle.borderColor.neutral00,
-            { borderRadius: 40 },
+            Alignments.row,
+            Alignments.fullWidth,
+            Alignments.alignCenter,
+            Spaces.gap[24],
           ]}
-        />
-        {item?.user?.firstname && item?.user?.lastname && (
-          <View style={[
-            { maxWidth: '70%' },
-            Alignments.justifyStart,
-            Alignments.alignStart,
-            Spaces.gap[4],
+        >
+          <ProfileAvatar
+            imageStyle={{ borderRadius: 40 }}
+            imageUrl={item?.user?.avatar?.url}
+            size={40}
+            style={[
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.neutral00,
+              { borderRadius: 40 },
+            ]}
+          />
+          {item?.user?.firstname && item?.user?.lastname && (
+            <View style={[
+              { maxWidth: '70%' },
+              Alignments.justifyStart,
+              Alignments.alignStart,
+              Spaces.gap[4],
+            ]}
+            >
+              <Text
+                numberOfLines={2}
+                style={[
+                  Fonts.textCenter,
+                  Fonts.h4Black,
+                  Fonts.neutral00]}
+              >
+                {`${item?.user?.firstname} ${item?.user?.lastname?.toUpperCase()}`}
+              </Text>
+              <Text
+                style={[
+                  Fonts.textLeft,
+                  Fonts.p3,
+                  Fonts.neutral00]}
+              >
+                {t('teamMembershipRequestList.fields.pending', {
+                  firstname: item?.user?.firstname,
+                })}
+                {' '}
+                {item?.team?.name}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View
+          style={[
+            ApplicationStyle.borderRadius16,
+            Spaces.padding[12],
+            {
+              backgroundColor: canManageRequest ? `${Colors.primary500}1A` : 'rgba(255,255,255,0.06)',
+              width: '100%',
+            },
           ]}
+        >
+          <Text style={[Fonts.p3, Fonts.neutral100]}>
+            {governanceText}
+          </Text>
+        </View>
+        {canManageRequest ? (
+          <View style={[Alignments.row,
+            Spaces.gap[12], Spaces.marginTop[12]]}
           >
-            <Text
-              numberOfLines={2}
-              style={[
-                Fonts.textCenter,
-                Fonts.h4Black,
-                Fonts.neutral00]}
-            >
-              {`${item?.user?.firstname} ${item?.user?.lastname?.toUpperCase()}`}
-            </Text>
-            <Text
-              style={[
-                Fonts.textLeft,
-                Fonts.p3,
-                Fonts.neutral00]}
-            >
-              {t('teamMembershipRequestList.fields.pending', {
-                firstname: item?.user?.firstname,
-              })}
-              {' '}
-              {item?.team?.name}
-            </Text>
+            <Button
+              disabled={isMutating}
+              icon="check"
+              isLoading={acceptRequestMutation.isPending}
+              isOption
+              onPress={() => handleAcceptRequest(item.documentId)}
+              title={t('teamMembershipRequestList.actions.accept')}
+              variant="Primary"
+            />
+            <Button
+              disabled={isMutating}
+              icon="close"
+              isLoading={rejectRequestMutation.isPending}
+              isOption
+              onPress={() => handleRejectRequest(item.documentId)}
+              title={t('teamMembershipRequestList.actions.reject')}
+              variant="Secondary"
+            />
           </View>
-        )}
+        ) : null}
       </View>
-      <View style={[Alignments.row,
-        Spaces.gap[12], Spaces.marginTop[12]]}
-      >
-        <Button
-          disabled={isMutating}
-          icon="check"
-          isOption
-          isLoading={acceptRequestMutation.isPending}
-          onPress={() => handleAcceptRequest(item.documentId)}
-          title={t('teamMembershipRequestList.actions.accept')}
-          variant="Primary"
-        />
-        <Button
-          disabled={isMutating}
-          icon="close"
-          isOption
-          isLoading={rejectRequestMutation.isPending}
-          onPress={() => handleRejectRequest(item.documentId)}
-          title={t('teamMembershipRequestList.actions.reject')}
-          variant="Secondary"
-        />
-      </View>
-    </View>
-  );
+    );
+  };
 
   const renderEmptyList = () => (
     <View style={[

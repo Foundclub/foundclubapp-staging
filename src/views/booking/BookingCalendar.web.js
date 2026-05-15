@@ -14,6 +14,7 @@ import {
 } from '@/services/facility/facilityQueries';
 import useTheme from '@/theme/themeContext';
 import { getEntityDocumentId } from '@/utils/entityId';
+import { getShortAddress, normalizeLocationInput } from '@/utils/location';
 
 const normalizeFacilities = (response) => {
   if (Array.isArray(response?.data)) return response.data;
@@ -55,6 +56,14 @@ const getFacilityMeta = (facility) => {
     chunks.push(`${facility.pricePerSlot} EUR / ${facility.slotDuration} min`);
   }
   return chunks.join(' • ');
+};
+
+const getFacilityAddressLabel = (facility) => {
+  const normalized = normalizeLocationInput(facility?.address);
+  return normalized?.label
+    || normalized?.address
+    || getShortAddress(facility?.address)
+    || '';
 };
 
 function BookingCalendar({ navigation, route }) {
@@ -282,9 +291,9 @@ function BookingCalendar({ navigation, route }) {
                       {getFacilityMeta(facility)}
                     </p>
                   ) : null}
-                  {facility?.address ? (
+                  {getFacilityAddressLabel(facility) ? (
                     <p style={{ color: mutedTextColor, margin: 0 }}>
-                      {String(facility.address)}
+                      {getFacilityAddressLabel(facility)}
                     </p>
                   ) : null}
                 </div>

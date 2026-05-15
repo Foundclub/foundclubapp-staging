@@ -18,6 +18,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', routeName: RouteNames.SuperAdminHome },
+  { label: 'Cotisations', routeName: RouteNames.SuperAdminLicenses },
   { label: 'Paramètres', routeName: RouteNames.SuperAdminSettings },
   { label: 'Squads', routeName: RouteNames.SuperAdminLeagueSquads },
   { label: 'Matchs', routeName: RouteNames.SuperAdminLeagueMatches },

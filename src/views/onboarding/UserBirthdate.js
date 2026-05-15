@@ -1,7 +1,7 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation } from '@tanstack/react-query';
-import { Controller, useForm } from 'react-hook-form';
 import { useEffect } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, KeyboardAvoidingView, Platform, Text, View,
@@ -23,6 +23,8 @@ import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
 import { getFieldError } from '@/utils/form/formUtils';
+
+import { isBirthdateUnder13 } from '@/constants/parentalDeclaration';
 
 const defaultValues = {
   day: '',
@@ -96,6 +98,11 @@ function UserBirthdate({ navigation }) {
       Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour votre profil.');
     },
     onSuccess: () => {
+      const submittedBirthdate = `${watch('year')}-${watch('month')}-${watch('day')}`;
+      if (isBirthdateUnder13(submittedBirthdate) && userData?.parentalDeclarationAccepted !== true) {
+        navigation.navigate(RouteNames.UserParentalDeclaration);
+        return;
+      }
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserBirthdate)
         || RouteNames.UserAvatar);
     },
@@ -107,6 +114,7 @@ function UserBirthdate({ navigation }) {
     handleSubmit,
     reset,
     setFocus,
+    watch,
   } = useForm({
     defaultValues,
     mode: 'onBlur',

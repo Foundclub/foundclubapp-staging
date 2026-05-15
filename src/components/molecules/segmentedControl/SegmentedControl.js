@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import {
-  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
@@ -19,6 +19,7 @@ function SegmentedControl({
   centerContent = false, onChange, options, value,
 }) {
   const { Colors, Fonts } = useTheme();
+  const isWeb = Platform.OS === 'web';
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -26,8 +27,9 @@ function SegmentedControl({
       backgroundColor: Colors.transparent,
       flexDirection: 'row',
       gap: horizontalScale(8.58),
-      height: verticalScale(37.52),
+      minHeight: verticalScale(isWeb ? 44 : 37.52),
       minWidth: horizontalScale(327),
+      paddingVertical: verticalScale(isWeb ? 2 : 0),
     },
     containerCentered: {
       flexGrow: 1,
@@ -46,9 +48,9 @@ function SegmentedControl({
       borderWidth: 1,
       flexDirection: 'row',
       justifyContent: 'center',
-      minHeight: verticalScale(32),
+      minHeight: verticalScale(isWeb ? 36 : 32),
       paddingHorizontal: horizontalScale(16),
-      paddingVertical: verticalScale(8),
+      paddingVertical: verticalScale(isWeb ? 9 : 8),
     },
     segmentSelected: {
       backgroundColor: Colors.primary500,
@@ -67,7 +69,8 @@ function SegmentedControl({
       ...Fonts.p3,
       color: Colors.neutral00,
       fontSize: moderateScale(12.87),
-      includeFontPadding: false,
+      includeFontPadding: !isWeb ? false : undefined,
+      lineHeight: moderateScale(isWeb ? 18.5 : 18),
       textAlign: 'center',
       textAlignVertical: 'center',
     },
@@ -75,12 +78,14 @@ function SegmentedControl({
       ...Fonts.p3Bold,
       color: Colors.neutral00,
       fontSize: moderateScale(12.87),
+      includeFontPadding: !isWeb ? false : undefined,
+      lineHeight: moderateScale(isWeb ? 18.5 : 18),
     },
     wrapper: {
-      height: verticalScale(45),
+      minHeight: verticalScale(isWeb ? 52 : 45),
       width: '100%',
     },
-  }), [Colors, Fonts.p3, Fonts.p3Bold]);
+  }), [Colors, Fonts.p3, Fonts.p3Bold, isWeb]);
 
   return (
     <View style={styles.wrapper}>

@@ -48,8 +48,20 @@ import Input from '../input/Input';
  * @property {string} [modalTitle] - Optional modal title override.
  * @property {(string|number)[]} [modalSnapPoints] - Optional modal snap points override.
  * @property {string} [displayValue] - Optional custom display value for the closed state.
+ * @property {React.ReactNode} [closedContent] - Optional custom closed state content.
+ * @property {import('react-native').ViewStyle
+ * | Array<import('react-native').ViewStyle>} [closedPressableStyle]
+ *  - Optional style override for the closed pressable area.
+ * @property {(option: Option, isChecked: boolean) => React.ReactNode} [renderOptionContent]
+ *  - Optional custom option renderer.
+ * @property {import('react-native').TextStyle
+ * | Array<import('react-native').TextStyle>} [displayTextStyle]
+ *  - Optional custom text style for the closed state value.
  * @property {'default' | 'card' | 'compact-card'} [displayVariant] - Optional closed state variant.
  * @property {string} [description] - Optional helper copy displayed under the label.
+ * @property {import('react-native').TextStyle
+ * | Array<import('react-native').TextStyle>} [optionTextStyle]
+ *  - Optional text style applied to option labels.
  */
 
 /**
@@ -384,7 +396,7 @@ const AutocompleteSelect = forwardRef(
               <View style={[Alignments.fill, Spaces.gap[8]]}>
                 <Text
                   numberOfLines={2}
-                  style={valueTextStyle}
+                  style={[valueTextStyle, props.displayTextStyle]}
                 >
                   {hasValue ? displayValue : props.placeholder}
                 </Text>
@@ -422,16 +434,19 @@ const AutocompleteSelect = forwardRef(
                 Spaces.padding[12],
                 hasLabel ? Spaces.paddingTop[40] : Spaces.paddingTop[12],
                 { zIndex: 1 },
+                props.closedPressableStyle,
               ]}
             >
               {props.value && (!Array.isArray(props.value) || props.value.length > 0) ? (
-                <Text
-                  ellipsizeMode="tail"
-                  numberOfLines={1}
-                  style={[Fonts.p1, Fonts.neutral00]}
-                >
-                  {displayValue}
-                </Text>
+                props.closedContent || (
+                  <Text
+                    ellipsizeMode="tail"
+                    numberOfLines={1}
+                    style={[Fonts.p1, Fonts.neutral00, props.displayTextStyle]}
+                  >
+                    {displayValue}
+                  </Text>
+                )
               ) : (
                 <Text style={[Fonts.p1, props.lightMode ? Fonts.neutral200 : Fonts.neutral500]}>
                   {props.placeholder}
@@ -499,20 +514,25 @@ const AutocompleteSelect = forwardRef(
 
             {/* Options - Scrollable area */}
             <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
-              {renderOptions.map(({ key, option }) => (
-                option.isHeader ? (
-                  <Text
-                    key={key}
-                    style={[
-                      Fonts.p3Bold,
-                      Fonts.neutral500,
-                      Spaces.marginTop[16],
-                      Spaces.marginBottom[8],
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                ) : (
+              {renderOptions.map(({ key, option }) => {
+                if (option.isHeader) {
+                  return (
+                    <Text
+                      key={key}
+                      style={[
+                        Fonts.p3Bold,
+                        Fonts.neutral500,
+                        Spaces.marginTop[16],
+                        Spaces.marginBottom[8],
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  );
+                }
+
+                const isChecked = handleIsChecked(option);
+                return (
                   <View
                     key={key}
                     style={[Alignments.row, Spaces.marginTop[8]]}
@@ -521,16 +541,19 @@ const AutocompleteSelect = forwardRef(
                       customFillColor={Colors.neutral00}
                       disableBounceAnimation
                       disabled={false}
-                      isChecked={handleIsChecked(option)}
+                      fontStyle={props.optionTextStyle}
+                      isChecked={isChecked}
                       setIsChecked={
                         () => (handleSelectOption(option))
                       }
                       text={option.label}
                       type={props.isMulti ? 'square' : 'circle'}
-                    />
+                    >
+                      {props.renderOptionContent ? props.renderOptionContent(option, isChecked) : null}
+                    </Checkable>
                   </View>
-                )
-              ))}
+                );
+              })}
               {props.options.length === 0 && (props.searchValue?.length || 0) > 0
                 ? (
                   <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>

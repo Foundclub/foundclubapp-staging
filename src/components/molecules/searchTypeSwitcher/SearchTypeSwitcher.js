@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -14,6 +15,7 @@ import useTheme from '@/theme/themeContext';
  */
 
 /**
+ * Horizontal switcher for search domains.
  * @param {{
  *  activeType: SearchType;
  *  onTypeChange: (type: SearchType) => void;
@@ -21,6 +23,7 @@ import useTheme from '@/theme/themeContext';
  * @returns {import('react').ReactElement}
  */
 function SearchTypeSwitcher({ activeType, onTypeChange }) {
+  const isWeb = Platform.OS === 'web';
   const {
     Alignments,
     Colors,
@@ -79,9 +82,9 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
                 borderRadius: 999,
                 borderWidth: 1,
                 justifyContent: 'center',
-                minHeight: 40,
+                minHeight: isWeb ? 44 : 40,
                 paddingHorizontal: 14,
-                paddingVertical: 8,
+                paddingVertical: isWeb ? 10 : 8,
               }}
             >
               <Text
@@ -90,8 +93,8 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
                   Fonts.p4Bold,
                   isActive ? Fonts.neutral900 : Fonts.neutral100,
                   {
-                    includeFontPadding: false,
-                    lineHeight: 16,
+                    includeFontPadding: !isWeb ? false : undefined,
+                    lineHeight: isWeb ? 17 : 16,
                     textAlign: 'center',
                     textAlignVertical: 'center',
                   },

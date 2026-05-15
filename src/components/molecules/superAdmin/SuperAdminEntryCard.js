@@ -6,10 +6,9 @@ import {
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+import rightIcon from '@/assets/icons/arrowRight.png';
 
 import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
-
-const rightIcon = require('@/assets/icons/arrowRight.png');
 
 const getBadgeColors = (tone, colors) => {
   if (tone === 'success') {

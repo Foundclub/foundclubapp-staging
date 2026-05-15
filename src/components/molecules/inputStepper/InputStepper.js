@@ -1,5 +1,3 @@
-import PropTypes from 'prop-types';
-import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -60,14 +58,5 @@ function InputStepper({
     </View>
   );
 }
-
-InputStepper.propTypes = {
-  label: PropTypes.string,
-  max: PropTypes.number,
-  min: PropTypes.number,
-  onDecrement: PropTypes.func.isRequired,
-  onIncrement: PropTypes.func.isRequired,
-  value: PropTypes.number.isRequired,
-};
 
 export default InputStepper;

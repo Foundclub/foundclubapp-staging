@@ -4,10 +4,9 @@ import {
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
-
-const calendarIcon = require('@/assets/icons/calendar-days.png');
-const filterIcon = require('@/assets/icons/filter.png');
-const searchIcon = require('@/assets/icons/search.png');
+import calendarIcon from '@/assets/icons/calendar-days.png';
+import filterIcon from '@/assets/icons/filter.png';
+import searchIcon from '@/assets/icons/search.png';
 
 /**
  * SearchBar component - themed version.

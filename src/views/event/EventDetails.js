@@ -77,6 +77,8 @@ import EventDetectionSlots from './components/EventDetectionSlots';
 import EventHeader from './components/EventHeader';
 import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
+import EventTasksSection from './components/EventTasksSection';
+import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { useEventMutations } from './hooks/useEventMutations';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
@@ -4015,6 +4017,22 @@ function EventDetails({ navigation, route }) {
                 onApply={handleApplyToDetectionSlot}
                 onOpenSlot={handleOpenDetectionSlot}
                 slots={detectionSlots}
+              />
+            ) : null}
+
+            {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
+              <EventTasksSection
+                canManageEvent={canEdit}
+                event={event}
+                userData={userData}
+              />
+            ) : null}
+
+            {Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0 ? (
+              <EventTeamAudiencesSection
+                canManageEvent={canEdit}
+                event={event}
+                userData={userData}
               />
             ) : null}
 

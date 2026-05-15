@@ -51,6 +51,9 @@ const userSchema = Joi.object({
   id: Joi.number().required(),
   isLookingForClub: Joi.boolean().allow(null).optional(),
   lastname: Joi.string().allow(null, '').optional(),
+  parentalDeclarationAccepted: Joi.boolean().allow(null).optional(),
+  parentalDeclarationAcceptedAt: Joi.string().isoDate().allow(null).optional(),
+  parentalDeclarantUserDocumentId: Joi.string().allow(null, '').optional(),
   phoneNumber: Joi.string().required(),
   position: Joi.string().allow(null, '').optional(),
   preferredSport: Joi.string().allow(null, '').optional(),
@@ -310,6 +313,8 @@ export const updateMe = async (userData) => {
     const userDataCopy = {
       ...userData,
       birthdate: normalizeBirthdateToIso(userData.birthdate),
+      legalAcceptance: userData.legalAcceptance,
+      parentalDeclarationAccepted: userData.parentalDeclarationAccepted,
       role: userData.role?.documentId || userData?.role,
       section: userData.section?.documentId || userData?.section,
     };

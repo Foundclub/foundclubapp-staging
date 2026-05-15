@@ -3,7 +3,14 @@ import Joi from 'joi';
 import client from '../client';
 
 const teamMembershipRequestSchema = Joi.object({
+  decisionSource: Joi.string().allow('', null).optional(),
   documentId: Joi.string().required(),
+  permissions: Joi.object({
+    canManage: Joi.boolean().optional(),
+    canView: Joi.boolean().optional(),
+  }).optional(),
+  processedAt: Joi.string().allow('', null).optional(),
+  processedBy: Joi.object().allow(null).optional(),
   state: Joi.string().valid('processed', 'refused', 'pending').required(),
   team: Joi.object().required(),
   user: Joi.object().required(),
@@ -26,6 +33,7 @@ export const createTeamMembershipRequest = async (teamMembershipRequestData) => 
  * @param {string|string[]} teamIds - Single teamId or array of teamIds
  * @param {{
  *   clubId?: string;
+ *   includeHistory?: boolean;
  *   page?: number;
  *   pageSize?: number;
  * }} [params]
@@ -35,6 +43,7 @@ export const createTeamMembershipRequest = async (teamMembershipRequestData) => 
 export const getTeamMembershipRequests = async (teamIds, params = {}) => {
   const {
     clubId,
+    includeHistory,
     page,
     pageSize,
   } = params;
@@ -68,6 +77,7 @@ export const getTeamMembershipRequests = async (teamIds, params = {}) => {
       pageSize: pageSize || 10,
     },
     populate: ['user', 'user.avatar', 'team'],
+    ...(includeHistory ? { includeHistory: true } : {}),
   };
 
   const response = await client.get('/team-membership-requests', { params: filters });

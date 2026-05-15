@@ -18,6 +18,7 @@ import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import ParentalDeclarationCard from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -30,6 +31,10 @@ import { useGetSections } from '@/services/section/sectionQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+import {
+  buildMinorParentalDeclarationPayload,
+  isBirthdateUnder13,
+} from '@/constants/parentalDeclaration';
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
 const defaultValues = {
@@ -108,6 +113,7 @@ function ProfileEdit({ navigation, route }) {
     /** @type {Avatar | undefined} */
     (undefined),
   );
+  const [parentalDeclarationChecked, setParentalDeclarationChecked] = useState(false);
   const hydratedUserKeyRef = useRef(null);
   const hydratedSignatureRef = useRef('');
 
@@ -166,11 +172,18 @@ function ProfileEdit({ navigation, route }) {
 
     reset(nextValues);
     setAvatar(userData?.avatar?.url ? { url: userData.avatar.url } : undefined);
+    setParentalDeclarationChecked(false);
     hydratedUserKeyRef.current = nextUserKey;
     hydratedSignatureRef.current = nextSignature;
   }, [formatBirthdateToDisplay, isDirty, reset, userData]);
 
   const preferredSport = watch('preferredSport');
+  const watchedBirthdate = watch('birthdate');
+  const requiresParentalDeclaration = Boolean(
+    watchedBirthdate
+    && isBirthdateUnder13(formatBirthdateToSend(watchedBirthdate || ''))
+    && userData?.parentalDeclarationAccepted !== true,
+  );
 
   useEffect(() => {
     const focusField = route?.params?.focusField;
@@ -217,6 +230,17 @@ function ProfileEdit({ navigation, route }) {
         height: data.height,
         isLookingForClub: data.isLookingForClub,
         lastname: data.lastname,
+        ...(requiresParentalDeclaration ? {
+          legalAcceptance: buildMinorParentalDeclarationPayload({
+            metadata: {
+              birthdate: formatBirthdateToSend(data.birthdate || ''),
+              childUserDocumentId: userData?.documentId || null,
+            },
+            sourceScreen: 'profile_edit_parental_declaration',
+            targetDocumentId: userData?.documentId || null,
+          }),
+          parentalDeclarationAccepted: true,
+        } : {}),
         position: data.position,
         preferredSport: data.preferredSport,
         section: data.section,
@@ -647,6 +671,14 @@ function ProfileEdit({ navigation, route }) {
                     </View>
                   )}
                 />
+
+                {requiresParentalDeclaration ? (
+                  <ParentalDeclarationCard
+                    checked={parentalDeclarationChecked}
+                    helperText={!parentalDeclarationChecked ? 'Cette confirmation est obligatoire pour enregistrer un profil de moins de 13 ans.' : ''}
+                    onChange={setParentalDeclarationChecked}
+                  />
+                ) : null}
               </View>
             </OnboardingWrapper>
           </ScrollView>
@@ -661,6 +693,7 @@ function ProfileEdit({ navigation, route }) {
             title="Enregistrer"
           >
             <Button
+              disabled={requiresParentalDeclaration && !parentalDeclarationChecked}
               isLoading={updateUserMutation.isPending}
               onPress={handleSubmit(handleFormSubmit)}
               title={t('profile.actions.save')}

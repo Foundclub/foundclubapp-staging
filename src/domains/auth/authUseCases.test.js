@@ -153,6 +153,31 @@ describe('authUseCases', () => {
       ]);
     });
 
+    it('inserts parental declaration step when a saved birthdate is under 13', () => {
+      const result = getOnboardingViews({
+        birthdate: '2018-05-14',
+        role: { name: USER_ROLES.player },
+      });
+
+      expect(result.views.map((view) => view.route)).toContain(RouteNames.UserParentalDeclaration);
+      const parentalStep = result.views.find((view) => view.route === RouteNames.UserParentalDeclaration);
+      expect(parentalStep).toEqual({
+        canShow: true,
+        index: 4,
+        route: RouteNames.UserParentalDeclaration,
+      });
+    });
+
+    it('hides parental declaration step when it was already accepted', () => {
+      const result = getOnboardingViews({
+        birthdate: '2018-05-14',
+        parentalDeclarationAccepted: true,
+        role: { name: USER_ROLES.player },
+      });
+
+      expect(result.views.map((view) => view.route)).not.toContain(RouteNames.UserParentalDeclaration);
+    });
+
     it('returns player flow with optional football profile steps', () => {
       const result = getOnboardingViews({
         role: { name: USER_ROLES.player },

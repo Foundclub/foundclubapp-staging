@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -17,9 +18,10 @@ import useTheme from '@/theme/themeContext';
 
 import { useGuidance } from '@/context/GuidanceContext';
 
-const SUCCESS_PHASE_MS = 2600;
-const NEXT_PHASE_MS = 2200;
+const SUCCESS_PHASE_MS = Platform.OS === 'web' ? 3600 : 2600;
+const NEXT_PHASE_MS = Platform.OS === 'web' ? 2600 : 2200;
 const EXIT_DURATION_MS = 220;
+const IS_WEB = Platform.OS === 'web';
 
 function MissionCelebrationHost() {
   const { Colors, Fonts } = useTheme();
@@ -32,6 +34,7 @@ function MissionCelebrationHost() {
     snapshot,
   } = useGuidance();
   const [phase, setPhase] = useState('success');
+  const [webProgressRatio, setWebProgressRatio] = useState(1);
 
   const opacity = useSharedValue(0);
   const progress = useSharedValue(1);
@@ -50,6 +53,69 @@ function MissionCelebrationHost() {
     }
 
     setPhase('success');
+
+    if (IS_WEB) {
+      setWebProgressRatio(1);
+
+      let frameId = null;
+      const getNow = () => (
+        typeof window !== 'undefined' && typeof window.performance?.now === 'function'
+          ? window.performance.now()
+          : Date.now()
+      );
+      const requestFrame = typeof window !== 'undefined'
+        ? window.requestAnimationFrame.bind(window)
+        : (callback) => setTimeout(callback, 16);
+      const cancelFrame = typeof window !== 'undefined'
+        ? window.cancelAnimationFrame.bind(window)
+        : clearTimeout;
+      const startProgress = (durationMs) => {
+        const startAt = getNow();
+
+        const step = () => {
+          const elapsed = getNow() - startAt;
+          const nextRatio = Math.max(0, 1 - (elapsed / durationMs));
+          setWebProgressRatio(nextRatio);
+
+          if (nextRatio > 0) {
+            frameId = requestFrame(step);
+          }
+        };
+
+        frameId = requestFrame(step);
+      };
+
+      startProgress(SUCCESS_PHASE_MS);
+
+      const phaseTimer = setTimeout(() => {
+        if (frameId !== null) {
+          cancelFrame(frameId);
+          frameId = null;
+        }
+
+        setPhase('next');
+        setWebProgressRatio(1);
+        startProgress(NEXT_PHASE_MS);
+      }, SUCCESS_PHASE_MS);
+
+      const dismissTimer = setTimeout(() => {
+        if (frameId !== null) {
+          cancelFrame(frameId);
+          frameId = null;
+        }
+
+        dismissCelebration();
+      }, SUCCESS_PHASE_MS + NEXT_PHASE_MS);
+
+      return () => {
+        clearTimeout(phaseTimer);
+        clearTimeout(dismissTimer);
+        if (frameId !== null) {
+          cancelFrame(frameId);
+        }
+      };
+    }
+
     opacity.value = 0;
     progress.value = 1;
     translateY.value = -24;
@@ -98,6 +164,9 @@ function MissionCelebrationHost() {
     return null;
   }
 
+  const ContainerComponent = IS_WEB ? View : Animated.View;
+  const ProgressFillComponent = IS_WEB ? View : Animated.View;
+
   const isSuccessPhase = phase === 'success';
   const eyebrow = isSuccessPhase ? 'MISSION REUSSIE' : 'MISSION SUIVANTE';
   const title = isSuccessPhase
@@ -119,13 +188,14 @@ function MissionCelebrationHost() {
   };
 
   return (
-    <Animated.View
+    <ContainerComponent
       pointerEvents="box-none"
       style={[
         styles.wrapper,
-        containerStyle,
+        !IS_WEB && containerStyle,
         {
           left: 16,
+          position: IS_WEB ? 'fixed' : 'absolute',
           right: 16,
           top: insets.top + 8,
         },
@@ -154,16 +224,18 @@ function MissionCelebrationHost() {
         </View>
 
         <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.10)' }]}>
-          <Animated.View
+          <ProgressFillComponent
             style={[
               styles.progressFill,
-              progressStyle,
+              IS_WEB
+                ? { width: `${Math.max(0, Math.min(1, webProgressRatio)) * 100}%` }
+                : progressStyle,
               { backgroundColor: Colors.primary500 },
             ]}
           />
         </View>
       </Pressable>
-    </Animated.View>
+    </ContainerComponent>
   );
 }
 
@@ -190,7 +262,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   wrapper: {
-    position: 'absolute',
     zIndex: 1195,
   },
 });

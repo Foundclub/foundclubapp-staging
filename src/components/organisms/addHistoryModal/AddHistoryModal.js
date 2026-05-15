@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
+import searchIcon from '@/assets/icons/search.png';
 
 import Button from '@/components/atoms/button/Button';
 
@@ -21,8 +22,6 @@ import { useGetCategories } from '@/services/category/categoryQueries';
 import { useSearchClubs } from '@/services/club/clubQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useCreateHistory, useDeleteHistory, useUpdateHistory } from '@/services/userHistory/userHistoryQueries';
-
-const searchIcon = require('@/assets/icons/search.png');
 
 /**
  * @typedef {{

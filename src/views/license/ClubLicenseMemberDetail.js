@@ -20,12 +20,14 @@ import {
   reviewLicenseDocument,
   sendLicenseReminder,
   updateLicenseAssignmentAmount,
+  uploadOfficialLicenseDocument,
   useLicenseAssignment,
   useLicenseDashboard,
   useLicenseMutation,
   waiveLicenseAssignment,
 } from '@/services/license/licenseQueries';
 import LinksPlatform from '@/platform/links';
+import MediaPlatform from '@/platform/media';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 import {
@@ -62,6 +64,9 @@ const resolveCanManageLicenses = (scope, routeCanManageLicenses) => {
   if (typeof routeCanManageLicenses === 'boolean') return routeCanManageLicenses;
   return Boolean(scope && scope !== 'coach');
 };
+const isPickerCancelError = (error) => String(error?.code || error?.message || '')
+  .toLowerCase()
+  .includes('cancel');
 
 /**
  *
@@ -202,6 +207,7 @@ function ClubLicenseMemberDetail({ route }) {
   const receiptMutation = useLicenseMutation((paymentId) => generateLicenseReceipt(paymentId), campaignId);
   const refundMutation = useLicenseMutation(({ paymentId, ...payload }) => refundLicensePayment(paymentId, payload), campaignId);
   const reviewDocumentMutation = useLicenseMutation(({ submissionId, ...payload }) => reviewLicenseDocument(submissionId, payload), campaignId);
+  const officialLicenseMutation = useLicenseMutation((payload) => uploadOfficialLicenseDocument(assignmentId, payload), campaignId);
   const amountMutation = useLicenseMutation((payload) => updateLicenseAssignmentAmount(assignmentId, payload), campaignId);
   const waiveMutation = useLicenseMutation((payload) => waiveLicenseAssignment(assignmentId, payload), campaignId);
   const reminderMutation = useLicenseMutation((payload) => sendLicenseReminder(assignmentId, payload), campaignId);
@@ -220,6 +226,7 @@ function ClubLicenseMemberDetail({ route }) {
   const paymentHistory = (assignment?.payments || []).slice(0, 6);
   const receipts = assignment?.receipts || [];
   const documentRequests = assignment?.campaign?.documentRequests || [];
+  const officialLicenseDocument = assignment?.officialLicenseDocument || null;
   const currency = assignment?.currency || assignment?.campaign?.currency || 'EUR';
   const documentSubmissionByRequestId = useMemo(() => new Map(
     (assignment?.documentSubmissions || [])
@@ -309,6 +316,65 @@ function ClubLicenseMemberDetail({ route }) {
     }
     await LinksPlatform.openUrl(url);
   }, []);
+
+  const submitOfficialLicenseFile = useCallback(async (picked) => {
+    if (!canUseSensitiveActions || !assignmentId) return;
+    const file = Array.isArray(picked) ? picked[0] : picked;
+    if (!file) return;
+    officialLicenseMutation.mutate({ file }, {
+      onSuccess: () => {
+        query.refetch();
+        Alert.alert('Licence ajoutee', 'La licence officielle est maintenant disponible pour les personnes autorisees.');
+      },
+    });
+  }, [assignmentId, canUseSensitiveActions, officialLicenseMutation, query]);
+
+  const uploadOfficialLicense = useCallback(() => {
+    if (!canUseSensitiveActions) return;
+    Alert.alert(
+      'Ajouter la licence',
+      'Choisis une source pour importer la licence officielle.',
+      [
+        {
+          onPress: async () => {
+            try {
+              await submitOfficialLicenseFile(await MediaPlatform.capturePhoto({}));
+            } catch (error) {
+              if (!isPickerCancelError(error)) {
+                Alert.alert('Upload impossible', error?.message || 'La photo n a pas pu etre prise.');
+              }
+            }
+          },
+          text: 'Prendre une photo',
+        },
+        {
+          onPress: async () => {
+            try {
+              await submitOfficialLicenseFile(await MediaPlatform.pickImage({}));
+            } catch (error) {
+              if (!isPickerCancelError(error)) {
+                Alert.alert('Upload impossible', error?.message || 'La photo n a pas pu etre choisie.');
+              }
+            }
+          },
+          text: 'Choisir une image',
+        },
+        {
+          onPress: async () => {
+            try {
+              await submitOfficialLicenseFile(await MediaPlatform.pickDocument({ accept: '*/*', mode: 'open', type: ['*/*'] }));
+            } catch (error) {
+              if (!isPickerCancelError(error)) {
+                Alert.alert('Upload impossible', error?.message || 'Le fichier n a pas pu etre choisi.');
+              }
+            }
+          },
+          text: 'Importer un fichier',
+        },
+        { style: 'cancel', text: 'Annuler' },
+      ],
+    );
+  }, [canUseSensitiveActions, submitOfficialLicenseFile]);
 
   const retryData = useCallback(() => {
     query.refetch();
@@ -406,6 +472,37 @@ function ClubLicenseMemberDetail({ route }) {
         ) : null}
         <LicenseSectionHeader title="Echeancier" />
         <LicenseInstallmentList currency={currency} installments={assignment?.installments || []} />
+        <LicenseSectionHeader
+          description={canUseSensitiveActions
+            ? 'Ajoute ou remplace la licence officielle de cet adherent.'
+            : 'Consulte la licence officielle de cet adherent si elle est disponible.'}
+          title="Licence officielle"
+        />
+        <LicenseCard variant="muted">
+          <View style={Spaces.gap[licenseSpacing.actionGap]}>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {officialLicenseDocument?.request?.name || 'Licence officielle'}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {officialLicenseDocument?.uploadedAt
+                ? `Derniere mise a jour ${documentDate(officialLicenseDocument.submission || {}) || '-'}`
+                : 'Aucune licence officielle n est encore disponible.'}
+            </Text>
+            {officialLicenseDocument?.submission?.status ? (
+              <LicenseStatusChip status={officialLicenseDocument.submission.status} />
+            ) : null}
+            {officialLicenseDocument?.file?.url ? (
+              <Button onPress={() => openUploadedDocument(officialLicenseDocument.submission)} title="Voir la licence" variant="Secondary" />
+            ) : null}
+            {canUseSensitiveActions ? (
+              <Button
+                isLoading={officialLicenseMutation.isPending}
+                onPress={uploadOfficialLicense}
+                title={officialLicenseDocument?.file?.url ? 'Remplacer la licence' : 'Ajouter la licence'}
+              />
+            ) : null}
+          </View>
+        </LicenseCard>
         <LicenseSectionHeader
           description={canUseSensitiveActions
             ? 'Valide ou redemande les pieces fournies par le membre.'

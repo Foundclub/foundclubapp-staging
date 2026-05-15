@@ -22,6 +22,7 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
  * @param {boolean} [props.disabled]
  * @param {boolean} [props.isLoading]
  * @param {boolean} [props.isSelected]
+ * @param {string | null} [props.selectionSummary]
  * @param {boolean} [props.showSelectionIndicator]
  * @returns {import('react').ReactElement}
  */
@@ -30,6 +31,7 @@ function EventWizardTeamCard({
   isLoading = false,
   isSelected = false,
   onPress,
+  selectionSummary = null,
   showSelectionIndicator = false,
   team,
 }) {
@@ -263,6 +265,27 @@ function EventWizardTeamCard({
               {team?.club?.name || '-'}
             </Text>
           )}
+          {selectionSummary ? (
+            <View style={[Spaces.marginTop[12]]}>
+              <View
+                style={[
+                  Alignments.selfStart,
+                  Spaces.paddingHorizontal[12],
+                  Spaces.paddingVertical[8],
+                  {
+                    backgroundColor: isSelected ? `${Colors.primary500}16` : 'rgba(255,255,255,0.05)',
+                    borderColor: isSelected ? `${Colors.primary500}66` : 'rgba(255,255,255,0.10)',
+                    borderRadius: 999,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, isSelected ? Fonts.primary100 : Fonts.neutral200]}>
+                  {selectionSummary}
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </View>
       </TouchableOpacity>
     </View>

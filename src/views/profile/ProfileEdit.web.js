@@ -1,5 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
@@ -19,6 +21,7 @@ import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import ParentalDeclarationCard from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -29,6 +32,10 @@ import { updateMe } from '@/services/auth/authService';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 
+import {
+  buildMinorParentalDeclarationPayload,
+  isBirthdateUnder13,
+} from '@/constants/parentalDeclaration';
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
 const defaultValues = {
@@ -139,6 +146,7 @@ function ProfileEditWeb({ navigation, route }) {
   );
   const [formValues, setFormValues] = useState(defaultValues);
   const [formErrors, setFormErrors] = useState(/** @type {Record<string, string>} */ ({}));
+  const [parentalDeclarationChecked, setParentalDeclarationChecked] = useState(false);
   const [submitErrorMessage, setSubmitErrorMessage] = useState('');
   const hydratedUserKeyRef = useRef(null);
   const hydratedSignatureRef = useRef('');
@@ -182,6 +190,7 @@ function ProfileEditWeb({ navigation, route }) {
 
     setFormValues(nextValues);
     setFormErrors({});
+    setParentalDeclarationChecked(false);
     setSubmitErrorMessage('');
     setAvatar(userData?.avatar?.url ? { url: userData.avatar.url } : undefined);
     hydratedUserKeyRef.current = nextUserKey;
@@ -202,7 +211,7 @@ function ProfileEditWeb({ navigation, route }) {
     return () => clearTimeout(timeoutId);
   }, [navigation, route?.params?.focusField]);
 
-  const preferredSport = formValues.preferredSport;
+  const { preferredSport } = formValues;
 
   const setFieldValue = (fieldName, value) => {
     setFormValues((currentValues) => ({
@@ -250,6 +259,11 @@ function ProfileEditWeb({ navigation, route }) {
     );
     return sportKey ? SPORTS_POSITIONS[sportKey] : [];
   }, [preferredSport]);
+  const requiresParentalDeclaration = Boolean(
+    formValues.birthdate
+    && isBirthdateUnder13(formatBirthdateToSend(formValues.birthdate || ''))
+    && userData?.parentalDeclarationAccepted !== true,
+  );
 
   const handleFormSubmit = () => {
     const nextErrors = validateValues(formValues);
@@ -282,6 +296,17 @@ function ProfileEditWeb({ navigation, route }) {
       height: formValues.height,
       isLookingForClub: formValues.isLookingForClub,
       lastname: formValues.lastname,
+      ...(requiresParentalDeclaration ? {
+        legalAcceptance: buildMinorParentalDeclarationPayload({
+          metadata: {
+            birthdate: formatBirthdateToSend(formValues.birthdate || ''),
+            childUserDocumentId: userData?.documentId || null,
+          },
+          sourceScreen: 'profile_edit_web_parental_declaration',
+          targetDocumentId: userData?.documentId || null,
+        }),
+        parentalDeclarationAccepted: true,
+      } : {}),
       position: formValues.position,
       preferredSport: formValues.preferredSport,
       section: formValues.section,
@@ -470,17 +495,21 @@ function ProfileEditWeb({ navigation, route }) {
                   value={formValues.preferredSport}
                 />
 
-                {profileFields?.includes('position') ? (
-                  sportPositions.length > 0 ? (
-                    <AutocompleteSelect
-                      error={formErrors.position}
-                      label={t('profile.fields.position.label')}
-                      options={sportPositions.map((position) => ({ label: position, value: position }))}
-                      placeholder={t('profile.fields.position.placeholder')}
-                      setValue={(option) => setFieldValue('position', option?.value || '')}
-                      value={formValues.position}
-                    />
-                  ) : (
+                {profileFields?.includes('position') ? (() => {
+                  if (sportPositions.length > 0) {
+                    return (
+                      <AutocompleteSelect
+                        error={formErrors.position}
+                        label={t('profile.fields.position.label')}
+                        options={sportPositions.map((position) => ({ label: position, value: position }))}
+                        placeholder={t('profile.fields.position.placeholder')}
+                        setValue={(option) => setFieldValue('position', option?.value || '')}
+                        value={formValues.position}
+                      />
+                    );
+                  }
+
+                  return (
                     <Input
                       enterKeyHint="done"
                       error={formErrors.position}
@@ -490,8 +519,8 @@ function ProfileEditWeb({ navigation, route }) {
                       ref={setInputRef('position')}
                       value={formValues.position}
                     />
-                  )
-                ) : null}
+                  );
+                })() : null}
 
                 <AutocompleteAddressInput
                   address={formValues.address}
@@ -512,6 +541,14 @@ function ProfileEditWeb({ navigation, route }) {
                   />
                 </View>
 
+                {requiresParentalDeclaration ? (
+                  <ParentalDeclarationCard
+                    checked={parentalDeclarationChecked}
+                    helperText={!parentalDeclarationChecked ? 'Cette confirmation est obligatoire pour enregistrer un profil de moins de 13 ans.' : ''}
+                    onChange={setParentalDeclarationChecked}
+                  />
+                ) : null}
+
                 {submitErrorMessage ? (
                   <Text style={[Fonts.p2, Fonts.error700]}>
                     {submitErrorMessage}
@@ -531,6 +568,7 @@ function ProfileEditWeb({ navigation, route }) {
             title="Enregistrer"
           >
             <Button
+              disabled={requiresParentalDeclaration && !parentalDeclarationChecked}
               isLoading={updateUserMutation.isPending}
               onPress={handleFormSubmit}
               title={t('profile.actions.save')}

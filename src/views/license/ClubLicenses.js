@@ -87,6 +87,16 @@ const campaignStatusLabel = {
   paused: 'En pause',
   scheduled: 'Programme',
 };
+const providerReadinessLabel = {
+  checkout_failed: 'Test checkout en erreur',
+  credentials_missing: 'Configuration incomplete',
+  disabled: 'Desactive',
+  oauth_failed: 'OAuth en erreur',
+  pending: 'A verifier',
+  ready: 'Pret',
+  webhook_pending: 'Webhook a confirmer',
+  webhook_stale: 'Webhook a verifier',
+};
 const paymentOwnerLabel = {
   club: 'Club',
   platform: 'Plateforme',
@@ -447,6 +457,7 @@ function CampaignCard({
   } = useTheme();
   const totals = item?.totals || {};
   const lifecycle = lifecycleForCampaign(item);
+  const helloAssoReadiness = item?.paymentProviderSnapshot?.helloasso?.readiness;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}>
       <View style={[ApplicationStyle.card, Spaces.gap[8], {
@@ -487,6 +498,13 @@ function CampaignCard({
           {(item?.documentRequests || []).length}
           {' document(s) demande(s)'}
         </Text>
+        {item?.paymentModes?.helloasso ? (
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            HelloAsso:
+            {' '}
+            {providerReadinessLabel[helloAssoReadiness] || helloAssoReadiness || 'A configurer'}
+          </Text>
+        ) : null}
         <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
           <Button onPress={onDuplicate} style={{ flex: 1 }} title="Dupliquer" variant="Secondary" />
           {lifecycle ? <Button onPress={onLifecycle} style={{ flex: 1 }} title={lifecycle.label} variant="Secondary" /> : null}
@@ -528,7 +546,7 @@ function LicenseSetupIntro() {
           title="Definir la campagne"
         />
         <SetupStep
-          description="Active les paiements acceptes: espece, cheque, virement, HelloAsso ou lien externe."
+          description="Active les paiements acceptes: espece, cheque, virement, HelloAsso integre ou lien externe."
           index="2"
           title="Configurer les moyens de paiement"
         />
@@ -766,7 +784,7 @@ function ClubLicenses({ navigation, route }) {
     return sourceDate ? formatDateLabel(sourceDate) : 'Non disponible';
   }, [campaign?.createdAt, campaign?.launchedAt, campaign?.updatedAt]);
   const enabledPaymentModes = useMemo(() => Object.entries(campaign?.paymentModes || {})
-    .filter(([, enabled]) => Boolean(enabled))
+    .filter(([mode, enabled]) => Boolean(enabled) && mode !== 'stripe')
     .map(([mode]) => paymentModeLabels[mode] || mode), [campaign?.paymentModes]);
   const documentRequestSummaries = useMemo(() => (campaign?.documentRequests || []).map((item) => summarizeDocumentRequest(item)), [campaign?.documentRequests]);
   const pricingRuleSummaries = useMemo(() => (campaign?.pricingRules || []).map((item) => summarizePricingRule(item, campaign?.currency || 'EUR')), [campaign?.currency, campaign?.pricingRules]);
@@ -1453,6 +1471,11 @@ function ClubLicenses({ navigation, route }) {
                   {(enabledPaymentModes.length ? enabledPaymentModes : ['Aucun moyen active']).map((item) => (
                     <DetailPill key={item} label={item} />
                   ))}
+                  {campaign?.paymentModes?.helloasso ? (
+                    <DetailPill
+                      label={`HelloAsso ${providerReadinessLabel[campaign?.paymentProviderSnapshot?.helloasso?.readiness] || campaign?.paymentProviderSnapshot?.helloasso?.readiness || 'A configurer'}`}
+                    />
+                  ) : null}
                 </View>
               </CampaignDetailSection>
             </>

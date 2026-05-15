@@ -28,6 +28,7 @@ import {
   getLicensePaymentStatus,
   getMyLicenseAssignment,
   getMyLicenses,
+  getUserCurrentLicense,
   refundLicensePayment,
   rejectExternalLicensePayment,
   reviewLicenseDocument,
@@ -37,6 +38,7 @@ import {
   transitionLicenseCampaign,
   updateLicenseAssignmentAmount,
   updateLicenseCampaign,
+  uploadOfficialLicenseDocument,
   upsertLicenseDocumentRequest,
   upsertLicensePricingRule,
   waiveLicenseAssignment,
@@ -58,6 +60,7 @@ export const licenseKeys = {
   mineAssignment: (/** @type {any} */ assignmentId) => ['licenses', 'mine', assignmentId],
   paymentReviews: (/** @type {any} */ campaignId, /** @type {any} */ params) => ['licenses', 'campaign', campaignId, 'payment-reviews', params],
   paymentStatus: (/** @type {any} */ paymentId) => ['licenses', 'payment', paymentId, 'status'],
+  userCurrent: (/** @type {any} */ userId) => ['licenses', 'user', userId, 'current'],
 };
 
 export const useCurrentLicenseCampaign = (params = {}, options = {}) => useQuery({
@@ -170,6 +173,14 @@ export const useMyLicenseAssignment = (/** @type {any} */ assignmentId, /** @typ
   ...options,
 });
 
+export const useUserCurrentLicense = (/** @type {any} */ userId, /** @type {any} */ options = {}) => useQuery({
+  enabled: Boolean(userId) && (options.enabled ?? true),
+  queryFn: () => getUserCurrentLicense(userId),
+  queryKey: licenseKeys.userCurrent(userId),
+  staleTime: 20_000,
+  ...options,
+});
+
 const invalidateCampaign = (/** @type {any} */ queryClient, /** @type {any} */ campaignId) => {
   queryClient.invalidateQueries({ queryKey: ['licenses'] });
   if (campaignId) {
@@ -211,6 +222,7 @@ export {
   transitionLicenseCampaign,
   updateLicenseAssignmentAmount,
   updateLicenseCampaign,
+  uploadOfficialLicenseDocument,
   upsertLicenseDocumentRequest,
   upsertLicensePricingRule,
   waiveLicenseAssignment,

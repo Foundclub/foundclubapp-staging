@@ -25,7 +25,7 @@ import { formatDateWithDayPrefix } from '@/utils/date';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
 
-const CARD_BACKGROUND = require('@/assets/background-card-event/card-autre.png');
+import CARD_BACKGROUND from '@/assets/background-card-event/card-autre.png';
 
 const normalizeTypeLabel = (value = '') => String(value || '')
   .toLowerCase()

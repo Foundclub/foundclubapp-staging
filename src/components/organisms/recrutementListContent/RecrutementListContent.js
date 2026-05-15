@@ -4,7 +4,7 @@ import React, {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator, Alert, FlatList, Text, TouchableOpacity, View,
+  ActivityIndicator, Alert, FlatList, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -261,6 +261,7 @@ function RecrutementListContent({
   screenActive = true,
   timestamp,
 }) {
+  const isWeb = Platform.OS === 'web';
   useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -670,9 +671,9 @@ function RecrutementListContent({
             borderRadius: 12,
             borderWidth: 1,
             flex: 1,
-            minHeight: 42,
+            minHeight: isWeb ? 46 : 42,
             paddingHorizontal: 12,
-            paddingVertical: 8,
+            paddingVertical: isWeb ? 10 : 8,
           },
         ]}
       >
@@ -684,6 +685,7 @@ function RecrutementListContent({
             Fonts.p3Bold,
             {
               color: isActive ? Colors.neutral100 : Colors.neutral500,
+              lineHeight: isWeb ? 19 : Fonts.p3Bold.lineHeight,
               textAlign: 'center',
             },
           ]}
@@ -715,13 +717,16 @@ function RecrutementListContent({
                 borderRadius: 999,
                 borderWidth: 1,
                 paddingHorizontal: 14,
-                paddingVertical: 8,
+                paddingVertical: isWeb ? 10 : 8,
               }}
             >
               <Text
                 style={[
                   Fonts.p4Bold,
-                  { color: isActive ? Colors.primary500 : Colors.neutral200 },
+                  {
+                    color: isActive ? Colors.primary500 : Colors.neutral200,
+                    lineHeight: isWeb ? 17 : Fonts.p4Bold.lineHeight,
+                  },
                 ]}
               >
                 {option.label}
@@ -745,7 +750,7 @@ function RecrutementListContent({
         borderRadius: 16,
         borderWidth: 1,
         marginBottom: 32,
-        padding: 5,
+        padding: isWeb ? 6 : 5,
       },
     ]}
     >

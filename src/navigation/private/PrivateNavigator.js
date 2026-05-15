@@ -20,6 +20,7 @@ import UserCategory from '@/views/onboarding/UserCategory';
 import UserClubSearch from '@/views/onboarding/UserClubSearch';
 import UserLevel from '@/views/onboarding/UserLevel';
 import UserName from '@/views/onboarding/UserName';
+import UserParentalDeclaration from '@/views/onboarding/UserParentalDeclaration';
 import UserPhysique from '@/views/onboarding/UserPhysique';
 import UserPosition from '@/views/onboarding/UserPosition';
 import UserType from '@/views/onboarding/UserRole';
@@ -642,6 +643,18 @@ function PrivateNavigator() {
             }}
           />
         ) : null}
+
+        <Stack.Screen
+          component={UserParentalDeclaration}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserParentalDeclaration}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.UserParentalDeclaration),
+            headerTitle: () => renderStepper(RouteNames.UserParentalDeclaration),
+            headerTitleAlign: 'left',
+          }}
+        />
 
         {canShowView(RouteNames.UserAddress) ? (
           <Stack.Screen

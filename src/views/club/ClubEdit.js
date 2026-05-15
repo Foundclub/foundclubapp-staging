@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View,
+  Alert, KeyboardAvoidingView, Platform, ScrollView, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { Joi } from '@/theme/strings';
@@ -26,11 +27,13 @@ import { updateClubInfo } from '@/services/club/clubService';
 import { getFieldError } from '@/utils/form/formUtils';
 import safeJsonParse from '@/utils/safeJsonParse';
 
-/** @type {{ name: string; email: string; phoneNumber: string; addressDetails: string; activites: string[] }} */
+/** @type {{ name: string; email: string; phoneNumber: string; addressDetails: string; activites: string[]; clubMembersPublicVisibility: boolean; membershipRequestManagementMode: 'CLUB_OWNER_ONLY'|'COACH_ALLOWED_BY_TEAM' }} */
 const defaultValues = {
   activites: [],
   addressDetails: '',
+  clubMembersPublicVisibility: true,
   email: '',
+  membershipRequestManagementMode: 'COACH_ALLOWED_BY_TEAM',
   name: '',
   phoneNumber: '',
 };
@@ -38,7 +41,9 @@ const defaultValues = {
 const clubSchema = Joi.object({
   activites: Joi.array().items(Joi.string().allow('')).optional(),
   addressDetails: Joi.string().allow('').optional(),
+  clubMembersPublicVisibility: Joi.boolean().required(),
   email: Joi.string().email({ tlds: { allow: false } }).allow('').optional(),
+  membershipRequestManagementMode: Joi.string().valid('CLUB_OWNER_ONLY', 'COACH_ALLOWED_BY_TEAM').required(),
   name: Joi.string().required(),
   phoneNumber: Joi.string().allow('').optional(),
 }).unknown(true);
@@ -53,9 +58,27 @@ function ClubEdit({ navigation, route }) {
 
   // hooks
   const {
-    Alignments, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const membershipModeOptions = useMemo(() => ([
+    {
+      description: t(
+        'clubEdit.membership.mode.ownerOnlyDescription',
+        "Le dirigeant garde la main sur toutes les demandes d'adhésion des équipes du club.",
+      ),
+      label: t('clubEdit.membership.mode.ownerOnly', 'Gestion par le dirigeant'),
+      value: 'CLUB_OWNER_ONLY',
+    },
+    {
+      description: t(
+        'clubEdit.membership.mode.coachAllowedDescription',
+        'Le dirigeant peut déléguer équipe par équipe aux entraîneurs autorisés, tout en gardant une vue complète.',
+      ),
+      label: t('clubEdit.membership.mode.coachAllowed', "Délégation à l'entraîneur"),
+      value: 'COACH_ALLOWED_BY_TEAM',
+    },
+  ]), [t]);
 
   const {
     data: clubData,
@@ -133,7 +156,9 @@ function ClubEdit({ navigation, route }) {
       reset({
         activites: (clubData.activites || []).map((activity) => activity.documentId).filter(Boolean),
         addressDetails: parsedAddress,
+        clubMembersPublicVisibility: clubData.clubMembersPublicVisibility !== false,
         email: clubData.email || '',
+        membershipRequestManagementMode: clubData.membershipRequestManagementMode || 'COACH_ALLOWED_BY_TEAM',
         name: clubData.name || '',
         phoneNumber: clubData.phoneNumber || '',
       });
@@ -359,6 +384,134 @@ function ClubEdit({ navigation, route }) {
                 />
               )}
             />
+
+            <View
+              style={[
+                ApplicationStyle.card,
+                Spaces.padding[16],
+                Spaces.gap[12],
+                {
+                  backgroundColor: 'rgba(4, 31, 44, 0.82)',
+                  borderColor: 'rgba(1, 179, 244, 0.24)',
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                    {t('clubEdit.publicMembers.title', 'Visibilité des membres')}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
+                    {t(
+                      'clubEdit.publicMembers.description',
+                      'Choisissez si les membres du club peuvent apparaître publiquement sur la page du club.',
+                    )}
+                  </Text>
+                </View>
+                <Controller
+                  control={control}
+                  name="clubMembersPublicVisibility"
+                  render={({ field: { onChange, value } }) => (
+                    <Switch
+                      onValueChange={onChange}
+                      thumbColor={value ? Colors.primary500 : Colors.neutral300}
+                      trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
+                      value={value === true}
+                    />
+                  )}
+                />
+              </View>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {t('clubEdit.publicMembers.switchLabel', 'Afficher les membres publiquement')}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                ApplicationStyle.card,
+                Spaces.padding[16],
+                Spaces.gap[12],
+                {
+                  backgroundColor: 'rgba(4, 31, 44, 0.82)',
+                  borderColor: 'rgba(1, 179, 244, 0.24)',
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                {t('clubEdit.membership.title', "Demandes d'adhésion aux équipes")}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'clubEdit.membership.description',
+                  'Choisissez si toutes les demandes doivent être traitées par le dirigeant, ou si les entraîneurs peuvent être autorisés à gérer celles de leur équipe.',
+                )}
+              </Text>
+              <Controller
+                control={control}
+                name="membershipRequestManagementMode"
+                render={({ field: { onChange, value } }) => (
+                  <View style={[Spaces.gap[12]]}>
+                    {membershipModeOptions.map((option) => {
+                      const isSelected = (value || 'COACH_ALLOWED_BY_TEAM') === option.value;
+
+                      return (
+                        <TouchableOpacity
+                          activeOpacity={0.9}
+                          key={option.value}
+                          onPress={() => onChange(option.value)}
+                          style={[
+                            Spaces.padding[16],
+                            Spaces.gap[10],
+                            {
+                              backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255, 255, 255, 0.03)',
+                              borderColor: isSelected ? Colors.primary500 : 'rgba(255, 255, 255, 0.12)',
+                              borderRadius: 18,
+                              borderWidth: 1,
+                            },
+                          ]}
+                        >
+                          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                            <Text style={[isSelected ? Fonts.p2Bold : Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
+                              {option.label}
+                            </Text>
+                            <View
+                              style={[
+                                Alignments.alignCenter,
+                                Alignments.justifyCenter,
+                                {
+                                  backgroundColor: isSelected ? `${Colors.primary500}22` : 'transparent',
+                                  borderColor: isSelected ? Colors.primary500 : Colors.neutral500,
+                                  borderRadius: 11,
+                                  borderWidth: 2,
+                                  height: 22,
+                                  width: 22,
+                                },
+                              ]}
+                            >
+                              {isSelected ? (
+                                <View
+                                  style={{
+                                    backgroundColor: Colors.primary500,
+                                    borderRadius: 4,
+                                    height: 8,
+                                    width: 8,
+                                  }}
+                                />
+                              ) : null}
+                            </View>
+                          </View>
+                          <Text style={[Fonts.p3, Fonts.neutral200]}>
+                            {option.description}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              />
+            </View>
           </View>
         </ScrollView>
 

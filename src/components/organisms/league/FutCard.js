@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import {
   Image, StyleSheet, Text, View,
 } from 'react-native';
@@ -74,23 +73,6 @@ function FutCard({ team, variant = 'classic' }) {
     </View>
   );
 }
-
-FutCard.propTypes = {
-  team: PropTypes.shape({
-    crest: PropTypes.string,
-    division: PropTypes.number,
-    elo: PropTypes.number,
-    home_base: PropTypes.shape({
-      address: PropTypes.string,
-    }),
-    name: PropTypes.string,
-  }).isRequired,
-  variant: PropTypes.oneOf(['classic', 'gold']),
-};
-
-FutCard.defaultProps = {
-  variant: 'classic',
-};
 
 const styles = StyleSheet.create({
   bottomRow: {

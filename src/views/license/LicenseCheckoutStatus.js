@@ -56,6 +56,11 @@ function LicenseCheckoutStatus({ navigation, route }) {
     if (payment?.status === 'manual_review') {
       return 'Le paiement est en attente de verification par le club.';
     }
+    if (payment?.status === 'pending') {
+      return provider === 'helloasso'
+        ? 'HelloAsso a bien ete ouvert. Nous attendons maintenant la confirmation du paiement.'
+        : `Le paiement ${provider} est encore en cours de verification.`;
+    }
     if (payment?.status === 'rejected' || payment?.status === 'failed') {
       return 'Le paiement n a pas abouti. Tu peux revenir a ta cotisation pour relancer un reglement.';
     }

@@ -25,6 +25,7 @@ import {
   rollbackEventsByCancel,
 } from '@/services/event/eventService';
 
+import EventTasksEditor from '../components/EventTasksEditor';
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardRecapStepIndex,
@@ -68,6 +69,10 @@ const getErrorMessage = (error, fallback) => (
   || fallback
 );
 
+const getAudienceRecapKey = (audience) => (
+  `${String(audience?.audienceKind || 'audience')}:${String(audience?.team?.documentId || audience?.team?.id || 'team')}`
+);
+
 const buildWizardFormData = (wizardState) => {
   const isTournament = isTournamentEventType(wizardState?.type?.name);
   const tournamentScopeMode = wizardState.tournamentScopeMode === 'autonomous' ? 'autonomous' : 'team';
@@ -82,11 +87,13 @@ const buildWizardFormData = (wizardState) => {
     description: wizardState.description || '',
     detectionSlots: Array.isArray(wizardState.detectionSlots) ? wizardState.detectionSlots : [],
     endTime: format(end, 'HH:mm'),
+    eventTasks: Array.isArray(wizardState.eventTasks) ? wizardState.eventTasks : [],
     facility: wizardState.facility,
     invitedTeams: Array.isArray(wizardState.invitedTeams) ? wizardState.invitedTeams : [],
     isMultiDayTournament: wizardState.isMultiDayTournament === true,
     isRecurrent: Boolean(wizardState.isRecurrent),
     location: wizardState.location,
+    participantIdentityVisibility: wizardState.participantIdentityVisibility || 'VISIBLE',
     pricePerPerson: wizardState.pricePerPerson ?? null,
     recurrenceDays: Array.isArray(wizardState.recurrenceDays) ? wizardState.recurrenceDays : [],
     recurrenceEndDate: wizardState.recurrenceEndDate
@@ -123,6 +130,7 @@ const buildWizardFormData = (wizardState) => {
       : '',
     startTime: format(start, 'HH:mm'),
     team: isTournament && tournamentScopeMode === 'autonomous' ? undefined : wizardState.team?.documentId,
+    teamAudiences: Array.isArray(wizardState.teamAudiences) ? wizardState.teamAudiences : [],
     totalPlayers: wizardState.totalPlayers ?? null,
     tournamentActivity: isTournament && tournamentScopeMode === 'autonomous'
       ? wizardState.tournamentActivity?.documentId
@@ -257,9 +265,14 @@ function EventWizardRecap({ navigation }) {
   const dateValue = getFormattedDate();
   const timeValue = getFormattedTime();
   const locationValue = getLocationDisplayText();
+  const eventTasks = Array.isArray(state.eventTasks) ? state.eventTasks : [];
+  const teamAudiences = Array.isArray(state.teamAudiences) ? state.teamAudiences : [];
   const visibilityValue = state.sessionStatus === 'closed'
     ? t('eventWizard.steps.visibility.team')
     : t('eventWizard.steps.visibility.public');
+  const participantPrivacyValue = state.participantIdentityVisibility === 'ANONYMIZED'
+    ? t('eventWizard.steps.visibility.participantPrivacyAnonymized', 'Participants anonymises')
+    : t('eventWizard.steps.visibility.participantPrivacyVisible', 'Identites visibles');
   const effectiveValidationMode = isTournament
     ? (state.tournamentRegistrationMode || 'manual')
     : (state.validationMode || 'auto');
@@ -580,6 +593,42 @@ function EventWizardRecap({ navigation }) {
         title={t('eventWizard.steps.recap.title')}
       >
         <View style={[Spaces.gap[16]]}>
+          <EventTasksEditor
+            editable
+            onChange={(nextTasks) => dispatch({ payload: { eventTasks: nextTasks }, type: 'SET_META' })}
+            value={eventTasks}
+          />
+
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Invitations avancees</Text>
+            {teamAudiences.length ? (
+              <View style={Spaces.gap[8]}>
+                {teamAudiences.map((audience) => (
+                  <View
+                    key={getAudienceRecapKey(audience)}
+                    style={[ApplicationStyle.card, Spaces.padding[12], {
+                      backgroundColor: 'rgba(1, 179, 244, 0.10)',
+                      borderColor: 'rgba(1, 179, 244, 0.25)',
+                    }]}
+                  >
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{audience?.team?.name || 'Equipe'}</Text>
+                    <Text style={[Fonts.p3, Fonts.neutral200]}>
+                      {(audience?.audienceKind === 'external_invited' ? 'Externe' : 'Interne')}
+                      {' '}
+                      -
+                      {' '}
+                      {audience?.selectionMode === 'SELECTED_MEMBERS'
+                        ? `${Array.isArray(audience?.selectedMembers) ? audience.selectedMembers.length : 0} membre(s)`
+                        : 'Tous les membres'}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>Aucune invitation avancée pour le moment.</Text>
+            )}
+          </View>
+
           <View
             style={[
               ApplicationStyle.card,
@@ -928,6 +977,12 @@ function EventWizardRecap({ navigation }) {
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.visibility')}</Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>{visibilityValue}</Text>
+              </View>
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t('eventWizard.recap.sections.participantPrivacy', 'Confidentialite participants')}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>{participantPrivacyValue}</Text>
               </View>
             </View>
           </View>

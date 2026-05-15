@@ -28,6 +28,7 @@ import SuperAdminLeagueDivisions from '@/views/admin/SuperAdminLeagueDivisions';
 import SuperAdminLeagueMatches from '@/views/admin/SuperAdminLeagueMatches';
 import SuperAdminLeagueSettings from '@/views/admin/SuperAdminLeagueSettings';
 import SuperAdminLeagueSquads from '@/views/admin/SuperAdminLeagueSquads';
+import SuperAdminLicensesDashboard from '@/views/admin/SuperAdminLicensesDashboard';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -55,6 +56,14 @@ function AdminStack() {
       <Stack.Screen
         component={SuperAdminLeagueDashboard}
         name={RouteNames.SuperAdminDashboard}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminLicensesDashboard}
+        name={RouteNames.SuperAdminLicenses}
         options={{
           ...commonOptions,
           headerShown: false,

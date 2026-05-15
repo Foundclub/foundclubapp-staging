@@ -25,21 +25,27 @@ export const licenseRadius = {
 export const licenseStatusLabels = {
   active: 'Active',
   cancelled: 'Annulee',
+  checkout_failed: 'Test checkout en erreur',
   closed: 'Cloturee',
   confirmed: 'Valide',
+  credentials_missing: 'Configuration incomplete',
+  disabled: 'Desactive',
   disputed: 'Litige',
   draft: 'Brouillon',
   failed: 'Echoue',
   issued: 'Emis',
+  link_missing: 'Lien manquant',
   manual_review: 'A valider',
   missing: 'Manquant',
   not_configured: 'A configurer',
   not_due: 'Non due',
+  oauth_failed: 'OAuth en erreur',
   overdue: 'En retard',
   paid: 'Payee',
   partial: 'Partiel',
   partially_refunded: 'Remboursement partiel',
   pending: 'En attente',
+  ready: 'Pret',
   refunded: 'Remboursee',
   refused: 'Refuse',
   rejected: 'Rejete',
@@ -48,6 +54,8 @@ export const licenseStatusLabels = {
   to_replace: 'A remplacer',
   validated: 'Valide',
   waived: 'Exemptee',
+  webhook_pending: 'Webhook a confirmer',
+  webhook_stale: 'Webhook a verifier',
 };
 
 export const paymentModeLabels = {
@@ -56,8 +64,8 @@ export const paymentModeLabels = {
   cash: 'Especes',
   check: 'Cheque',
   custom: 'Autre moyen',
-  external_link: 'Lien club',
-  helloasso: 'HelloAsso',
+  external_link: 'Lien externe club',
+  helloasso: 'HelloAsso integre',
   stripe: 'Carte en ligne',
 };
 
@@ -87,7 +95,7 @@ export const normalizePaymentModes = (raw = {}) => {
     custom: Boolean(modes.custom),
     external_link: Boolean(modes.external_link),
     helloasso: Boolean(modes.helloasso),
-    stripe: Boolean(modes.stripe),
+    stripe: false,
   };
 };
 
@@ -100,25 +108,33 @@ export const getEnabledManualPaymentMethods = (raw = {}) => {
 
 export const getLicenseStatusTone = (Colors, status) => ({
   active: Colors.success500,
+  checkout_failed: Colors.error500,
   closed: Colors.neutral200,
   confirmed: Colors.success500,
+  credentials_missing: Colors.warning500,
+  disabled: Colors.neutral300,
   draft: Colors.primary200,
   failed: Colors.error500,
   issued: Colors.primary200,
+  link_missing: Colors.warning500,
   manual_review: Colors.warning500,
   missing: Colors.error500,
   not_configured: Colors.neutral300,
+  oauth_failed: Colors.error500,
   overdue: Colors.error500,
   paid: Colors.success500,
   partial: Colors.primary200,
   partially_refunded: Colors.warning500,
   pending: Colors.primary500,
+  ready: Colors.success500,
   refused: Colors.error500,
   rejected: Colors.error500,
   submitted: Colors.primary500,
   to_replace: Colors.warning500,
   validated: Colors.success500,
   waived: Colors.neutral200,
+  webhook_pending: Colors.warning500,
+  webhook_stale: Colors.warning500,
 }[status] || Colors.primary500);
 
 /**

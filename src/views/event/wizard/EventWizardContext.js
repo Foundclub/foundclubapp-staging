@@ -40,7 +40,14 @@ const createInitialState = () => {
     tournamentSection: null,
 
     // Step 3: Invites
+    externalClubFilters: {
+      activity: '',
+      city: { label: '', value: '' },
+      geohash: [],
+      radius: 20,
+    },
     invitedTeams: [],
+    teamAudiences: [],
 
     // Step 4: Logistics
     date: new Date(),
@@ -69,6 +76,8 @@ const createInitialState = () => {
 
     // Step 7+: Meta
     description: '',
+    eventTasks: [],
+    participantIdentityVisibility: 'VISIBLE',
     sessionStatus: 'open',
     tournamentAllowCrossClubPlayers: false,
     tournamentAllowCustomTeams: true,
@@ -165,6 +174,8 @@ function eventWizardReducer(state, action) {
         invitedTeams: [],
         team: action.payload,
       };
+    case 'SET_TEAM_AUDIENCES':
+      return { ...state, teamAudiences: action.payload };
     case 'SET_TOURNAMENT_CONTEXT':
       return {
         ...state,

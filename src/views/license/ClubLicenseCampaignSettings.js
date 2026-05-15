@@ -33,11 +33,13 @@ import {
   useLicenseCampaign,
   useLicenseMutation,
 } from '@/services/license/licenseQueries';
-import { connectLicenseHelloAsso, connectLicenseStripe, saveLicenseExternalLink } from '@/services/license/licenseService';
+import { connectLicenseHelloAsso } from '@/services/license/licenseService';
 import { useGetSections } from '@/services/section/sectionQueries';
 
 import {
+  LicenseCard,
   LicenseEmptyState,
+  LicenseStatusChip,
   licenseRadius,
   licenseSpacing,
   normalizePaymentModes,
@@ -160,7 +162,7 @@ const licenseCampaignWizardStepCatalog = {
   },
   paymentOnline: {
     key: 'paymentOnline',
-    subtitle: 'Configure le lien externe et les connexions Stripe ou HelloAsso.',
+    subtitle: 'Configure le lien externe du club ou la connexion HelloAsso.',
     title: 'Paiement en ligne',
   },
   paymentOwner: {
@@ -272,6 +274,49 @@ const defaultPaymentModes = {
   external_link: false,
   helloasso: false,
   stripe: false,
+};
+const helloAssoReadyStates = new Set(['ready', 'webhook_pending', 'webhook_stale']);
+const getHelloAssoSnapshot = (campaign) => campaign?.paymentProviderSnapshot?.helloasso || null;
+const createHelloAssoDraft = (campaign) => {
+  const snapshot = getHelloAssoSnapshot(campaign);
+  return {
+    clientId: '',
+    clientSecret: '',
+    environment: snapshot?.environment || 'production',
+    organizationSlug: snapshot?.organizationSlug || '',
+  };
+};
+const isHelloAssoReadyForCampaign = (snapshot) => helloAssoReadyStates.has(String(snapshot?.readiness || '').trim());
+const describeHelloAssoReadiness = (snapshot) => {
+  const readiness = String(snapshot?.readiness || '').trim();
+  if (!readiness) {
+    return 'La connexion HelloAsso n est pas encore configuree pour cette campagne.';
+  }
+  if (readiness === 'ready') {
+    return 'Connexion HelloAsso validee. La campagne peut utiliser le paiement in-app.';
+  }
+  if (readiness === 'webhook_pending') {
+    return 'Connexion validee. Le premier paiement doit encore confirmer le webhook.';
+  }
+  if (readiness === 'webhook_stale') {
+    return 'Connexion validee, mais aucun webhook recent n a ete vu. Un test de paiement est recommande.';
+  }
+  if (readiness === 'oauth_failed') {
+    return 'OAuth HelloAsso en erreur. Verifie le client id et le client secret.';
+  }
+  if (readiness === 'checkout_failed') {
+    return 'Le test de checkout HelloAsso a echoue. Verifie le slug organisation et les droits API.';
+  }
+  if (readiness === 'credentials_missing') {
+    return 'Renseigne le slug, le client id et le client secret avant publication.';
+  }
+  if (readiness === 'disabled') {
+    return 'HelloAsso est desactive pour ce scope.';
+  }
+  if (readiness === 'pending') {
+    return 'La configuration HelloAsso existe, mais elle n a pas encore ete verifiee.';
+  }
+  return 'La configuration HelloAsso demande une verification supplementaire.';
 };
 const createDocumentRequestDraft = (documentRequest = {}) => ({
   acceptedMimeTypesText: Array.isArray(documentRequest.acceptedMimeTypes)
@@ -1195,6 +1240,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const [externalUrl, setExternalUrl] = useState(campaign?.externalPaymentUrl || '');
   const [paymentModes, setPaymentModes] = useState({ ...defaultPaymentModes, ...normalizePaymentModes(campaign?.paymentModes) });
   const [paymentOwner, setPaymentOwner] = useState(campaign?.paymentOwner || 'section');
+  const [helloAssoConfig, setHelloAssoConfig] = useState(() => createHelloAssoDraft(campaign));
+  const [helloAssoSnapshot, setHelloAssoSnapshot] = useState(() => getHelloAssoSnapshot(campaign));
   const [bankTransferInstructions, setBankTransferInstructions] = useState(campaign?.bankTransferInstructions || '');
   const [cashInstructions, setCashInstructions] = useState(campaign?.cashInstructions || '');
   const [checkInstructions, setCheckInstructions] = useState(campaign?.checkInstructions || '');
@@ -1245,6 +1292,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     setExternalUrl(campaign.externalPaymentUrl || '');
     setPaymentModes({ ...defaultPaymentModes, ...normalizePaymentModes(campaign.paymentModes) });
     setPaymentOwner(campaign.paymentOwner || 'section');
+    setHelloAssoConfig(createHelloAssoDraft(campaign));
+    setHelloAssoSnapshot(getHelloAssoSnapshot(campaign));
     setBankTransferInstructions(campaign.bankTransferInstructions || '');
     setCashInstructions(campaign.cashInstructions || '');
     setCheckInstructions(campaign.checkInstructions || '');
@@ -1418,8 +1467,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   );
   const hasOnlinePaymentStep = Boolean(
     paymentModes.external_link
-    || paymentModes.helloasso
-    || paymentModes.stripe,
+    || paymentModes.helloasso,
   );
   const licenseCampaignWizardSteps = useMemo(() => {
     const steps = [
@@ -1450,8 +1498,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
     if (hasOnlinePaymentStep) {
       steps.push(
-        licenseCampaignWizardStepCatalog.paymentOnline,
         licenseCampaignWizardStepCatalog.paymentOwner,
+        licenseCampaignWizardStepCatalog.paymentOnline,
       );
     }
 
@@ -1492,6 +1540,16 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     if (wizardStepIndex < wizardStepCount - 1) return 'Suivant';
     return canPublishFromWizard ? 'Enregistrer le brouillon' : 'Enregistrer';
   }, [canPublishFromWizard, wizardStepCount, wizardStepIndex]);
+  const effectiveHelloAssoSnapshot = helloAssoSnapshot || getHelloAssoSnapshot(campaign);
+  const helloAssoScopePayload = useMemo(() => {
+    if (paymentOwner === 'multisport') {
+      const multisportClubId = club?.parentMultisport?.documentId || club?.parentMultisport?.id || null;
+      return multisportClubId ? { multisportClubId } : null;
+    }
+    return clubId ? { clubId } : null;
+  }, [club?.parentMultisport?.documentId, club?.parentMultisport?.id, clubId, paymentOwner]);
+  const helloAssoIsPublishReady = isHelloAssoReadyForCampaign(effectiveHelloAssoSnapshot);
+  const helloAssoStatusMessage = describeHelloAssoReadiness(effectiveHelloAssoSnapshot);
 
   useEffect(() => {
     setWizardStepIndex((currentIndex) => Math.min(currentIndex, Math.max(licenseCampaignWizardSteps.length - 1, 0)));
@@ -1552,8 +1610,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       onlinePaymentRequired,
       paymentModes: {
         ...paymentModes,
-        external_link: paymentModes.external_link || Boolean(externalUrl),
-        helloasso: paymentModes.helloasso && Boolean(externalUrl),
+        external_link: paymentModes.external_link && Boolean(externalUrl),
+        helloasso: paymentModes.helloasso,
       },
       paymentOwner,
       reminderAutomation: {
@@ -1587,9 +1645,53 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   }, []);
 
   const providerMutation = useLicenseMutation(async () => {
-    if (externalUrl) await saveLicenseExternalLink({ clubId, externalPaymentUrl: externalUrl, status: 'active' });
     return true;
   }, campaignId);
+  const helloAssoMutation = useLicenseMutation(async () => {
+    if (!helloAssoScopePayload) {
+      throw new Error('Le scope HelloAsso est incomplet. Verifie le club ou le multisport choisi.');
+    }
+    return connectLicenseHelloAsso({
+      ...helloAssoScopePayload,
+      clientId: helloAssoConfig.clientId,
+      clientSecret: helloAssoConfig.clientSecret,
+      environment: helloAssoConfig.environment,
+      organizationSlug: helloAssoConfig.organizationSlug,
+    });
+  }, campaignId);
+  const handleHelloAssoFieldChange = useCallback((key, value) => {
+    setHelloAssoConfig((currentConfig) => ({
+      ...currentConfig,
+      [key]: value,
+    }));
+  }, []);
+  const verifyHelloAssoConnection = useCallback(() => {
+    if (paymentOwner === 'multisport' && !club?.parentMultisport) {
+      Alert.alert('Multisport requis', 'Ce club n est rattache a aucun multisport. Garde un encaissement section ou configure le multisport d abord.');
+      return;
+    }
+    helloAssoMutation.mutate(undefined, {
+      onError: (error) => {
+        Alert.alert('Verification HelloAsso impossible', error?.message || 'La verification HelloAsso a echoue.');
+      },
+      onSuccess: (result) => {
+        setHelloAssoSnapshot(result?.snapshot || null);
+        setHelloAssoConfig((currentConfig) => ({
+          ...currentConfig,
+          clientId: '',
+          clientSecret: '',
+          environment: result?.snapshot?.environment || currentConfig.environment,
+          organizationSlug: result?.snapshot?.organizationSlug || currentConfig.organizationSlug,
+        }));
+        Alert.alert(
+          result?.readiness === 'ready' || result?.readiness === 'webhook_pending' || result?.readiness === 'webhook_stale'
+            ? 'HelloAsso pret'
+            : 'HelloAsso a verifier',
+          describeHelloAssoReadiness(result?.snapshot),
+        );
+      },
+    });
+  }, [club?.parentMultisport, helloAssoMutation, paymentOwner]);
   const syncSavedCampaignParams = useCallback((savedCampaignId) => {
     if (!savedCampaignId) return;
     navigation.setParams({
@@ -1608,6 +1710,14 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
   const persistCampaign = useCallback((options = {}) => {
     const requestedStatus = options.status || campaign?.status || 'draft';
+    if (requestedStatus !== 'draft' && paymentModes.external_link && !String(externalUrl || '').trim()) {
+      Alert.alert('Lien manquant', 'Ajoute le lien externe du club avant publication.');
+      return;
+    }
+    if (requestedStatus !== 'draft' && paymentModes.helloasso && !helloAssoIsPublishReady) {
+      Alert.alert('HelloAsso non pret', helloAssoStatusMessage);
+      return;
+    }
     const persistedDocumentWithEmptyName = documentRequests.find((item) => item.documentId && !item.name.trim());
     if (persistedDocumentWithEmptyName) {
       Alert.alert('Document incomplet', 'Renseigne le nom des documents existants avant d enregistrer.');
@@ -1703,7 +1813,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         }
       },
     });
-  }, [campaign?.status, campaignId, documentRequests, goToCampaignOperations, pricingRules, providerMutation, removedDocumentRequestIds, removedPricingRuleIds, saveMutation, syncSavedCampaignParams]);
+  }, [campaign?.status, campaignId, documentRequests, externalUrl, goToCampaignOperations, helloAssoIsPublishReady, helloAssoStatusMessage, paymentModes.external_link, paymentModes.helloasso, pricingRules, providerMutation, removedDocumentRequestIds, removedPricingRuleIds, saveMutation, syncSavedCampaignParams]);
 
   const save = useCallback(() => {
     persistCampaign({ status: canPublishFromWizard ? 'draft' : (campaign?.status || 'draft') });
@@ -1868,10 +1978,17 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       };
     }
 
-    if ((stepKey === 'paymentOnline' || stepKey === 'review') && (paymentModes.external_link || paymentModes.helloasso) && !String(externalUrl || '').trim()) {
+    if ((stepKey === 'paymentOnline' || stepKey === 'review') && paymentModes.external_link && !String(externalUrl || '').trim()) {
       return {
-        message: 'Ajoute un lien de paiement avant de continuer avec HelloAsso ou le lien externe.',
+        message: 'Ajoute le lien externe du club avant de continuer.',
         title: 'Lien manquant',
+      };
+    }
+
+    if ((stepKey === 'paymentOnline' || stepKey === 'review') && paymentModes.helloasso && !helloAssoIsPublishReady) {
+      return {
+        message: helloAssoStatusMessage,
+        title: 'HelloAsso non pret',
       };
     }
 
@@ -1884,6 +2001,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     enabledPaymentModeLabels.length,
     endDate,
     externalUrl,
+    helloAssoIsPublishReady,
+    helloAssoStatusMessage,
     installmentCount,
     name,
     paymentModes.external_link,
@@ -2433,6 +2552,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             value={paymentOwner === 'multisport'}
           />
         </View>
+        {paymentOwner === 'multisport' && !club?.parentMultisport ? (
+          <Text style={[Fonts.p3, { color: Colors.warning500 }]}>
+            Aucun multisport parent n est rattache a ce club. Le paiement central ne pourra pas etre valide.
+          </Text>
+        ) : null}
       </View>
     );
   } else if (activeWizardStep.key === 'paymentMethods') {
@@ -2442,7 +2566,6 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         <PaymentModeToggle enabled={paymentModes.cash} label={paymentModeLabels.cash} onChange={() => togglePaymentMode('cash')} />
         <PaymentModeToggle enabled={paymentModes.check} label={paymentModeLabels.check} onChange={() => togglePaymentMode('check')} />
         <PaymentModeToggle enabled={paymentModes.card_physical} label={paymentModeLabels.card_physical} onChange={() => togglePaymentMode('card_physical')} />
-        <PaymentModeToggle enabled={paymentModes.stripe} label={paymentModeLabels.stripe} onChange={() => togglePaymentMode('stripe')} />
         <PaymentModeToggle enabled={paymentModes.external_link} label={paymentModeLabels.external_link} onChange={() => togglePaymentMode('external_link')} />
         <PaymentModeToggle enabled={paymentModes.helloasso} label={paymentModeLabels.helloasso} onChange={() => togglePaymentMode('helloasso')} />
       </View>
@@ -2459,27 +2582,70 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   } else if (activeWizardStep.key === 'paymentOnline') {
     stepContent = (
       <View style={Spaces.gap[licenseSpacing.sectionGap]}>
-        {(paymentModes.external_link || paymentModes.helloasso) ? (
+        {paymentModes.external_link ? (
           <View style={primaryStepCardStyle}>
-            <Field label="Lien externe / HelloAsso" onChangeText={setExternalUrl} placeholder="https://..." value={externalUrl} />
+            <Field label="Lien externe du club" onChangeText={setExternalUrl} placeholder="https://..." value={externalUrl} />
           </View>
         ) : null}
-        <View style={Spaces.gap[12]}>
-          {paymentModes.helloasso ? (
-            <Button
-              onPress={() => connectLicenseHelloAsso({ clubId, externalPaymentUrl: externalUrl, status: externalUrl ? 'active' : 'pending' })}
-              title="Connecter HelloAsso"
-              variant="Secondary"
-            />
-          ) : null}
-          {paymentModes.stripe ? (
-            <Button
-              onPress={() => connectLicenseStripe({ clubId, status: 'pending' })}
-              title="Preparer Stripe Connect"
-              variant="Secondary"
-            />
-          ) : null}
-        </View>
+        {paymentModes.helloasso ? (
+          <LicenseCard>
+            <View style={Spaces.gap[12]}>
+              <View style={Spaces.gap[4]}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>HelloAsso integre</Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  Le club configure directement son organisation HelloAsso. Aucun lien manuel n est demande pour ce mode.
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  Checklist: choisis le scope, renseigne le slug organisation, ajoute le client id et le client secret, verifie la connexion, puis fais un paiement test avant publication.
+                </Text>
+              </View>
+              <LicenseStatusChip status={effectiveHelloAssoSnapshot?.readiness || 'not_configured'} />
+              <Text style={[Fonts.p3, Fonts.neutral200]}>{helloAssoStatusMessage}</Text>
+              <Field
+                label="Slug organisation"
+                onChangeText={(value) => handleHelloAssoFieldChange('organizationSlug', value)}
+                placeholder="mon-club"
+                value={helloAssoConfig.organizationSlug}
+              />
+              <Field
+                label="Environnement"
+                onChangeText={(value) => handleHelloAssoFieldChange('environment', value)}
+                placeholder="production ou sandbox"
+                value={helloAssoConfig.environment}
+              />
+              <Field
+                label="Client id"
+                onChangeText={(value) => handleHelloAssoFieldChange('clientId', value)}
+                placeholder={effectiveHelloAssoSnapshot?.clientIdConfigured ? 'Laisser vide pour conserver l identifiant actuel' : 'Renseigne le client id'}
+                value={helloAssoConfig.clientId}
+              />
+              <Field
+                label="Client secret"
+                onChangeText={(value) => handleHelloAssoFieldChange('clientSecret', value)}
+                placeholder={effectiveHelloAssoSnapshot?.clientSecretConfigured ? 'Laisser vide pour conserver le secret actuel' : 'Renseigne le client secret'}
+                value={helloAssoConfig.clientSecret}
+              />
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                Scope actif:
+                {' '}
+                {paymentOwner === 'multisport' ? 'multisport' : 'section'}
+              </Text>
+              {effectiveHelloAssoSnapshot?.validation?.checkoutValidatedAt ? (
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  Derniere verification:
+                  {' '}
+                  {effectiveHelloAssoSnapshot.validation.checkoutValidatedAt.slice(0, 19).replace('T', ' ')}
+                </Text>
+              ) : null}
+              <Button
+                isLoading={helloAssoMutation.isPending}
+                onPress={verifyHelloAssoConnection}
+                title="Verifier la connexion"
+                variant="Secondary"
+              />
+            </View>
+          </LicenseCard>
+        ) : null}
       </View>
     );
   } else if (activeWizardStep.key === 'review') {
@@ -2497,6 +2663,13 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
               ? `Paiements actives: ${enabledPaymentModeLabels.join(', ')}.`
               : 'Aucun moyen de paiement active.'}
           </Text>
+          {paymentModes.helloasso ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              HelloAsso:
+              {' '}
+              {helloAssoStatusMessage}
+            </Text>
+          ) : null}
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {allowInstallments
               ? `${normalizedInstallmentSchedule.length} echeance(s) configuree(s) en mode ${installmentFrequency}.`

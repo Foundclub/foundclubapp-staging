@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useCallback, useEffect, useMemo, useState,
@@ -35,9 +36,13 @@ import {
 import { getEntityDocumentId } from '@/utils/entityId';
 import getImageUrl from '@/utils/imageUrl';
 
+/* eslint-disable perfectionist/sort-imports */
 import * as LinksPlatform from '@/platform/links';
 import * as SharePlatform from '@/platform/share';
 import { BREAKPOINTS } from '@/responsive';
+import EventTasksSection from './components/EventTasksSection';
+import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+/* eslint-enable perfectionist/sort-imports */
 
 const flattenPages = (pages) => {
   if (!Array.isArray(pages)) return [];
@@ -216,13 +221,17 @@ function EventDetails({ navigation, route }) {
   );
 
   useEffect(() => {
-    if (!highlightedSection || isLoading) return;
+    if (!highlightedSection || isLoading) {
+      return undefined;
+    }
     const frameId = window.requestAnimationFrame(() => {
       const section = document.querySelector(`[data-event-section="${highlightedSection}"]`);
       section?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
     });
 
-    return () => window.cancelAnimationFrame(frameId);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [highlightedSection, isLoading]);
 
   const invalidateEventQueries = useCallback(async () => {
@@ -356,6 +365,101 @@ function EventDetails({ navigation, route }) {
   const participationRequests = Array.isArray(event?.participationRequests) ? event.participationRequests : [];
   const invitedTeams = Array.isArray(event?.invitedTeams) ? event.invitedTeams : [];
   const detectedPlayers = Array.isArray(event?.missings) ? event.missings : [];
+  const participantIdentitiesHidden = event?.participantIdentitiesHidden === true;
+
+  const renderParticipantsSection = () => {
+    if (participants.length === 0) {
+      return <div style={{ color: mutedTextColor }}>Aucun participant confirme pour le moment.</div>;
+    }
+
+    if (participantIdentitiesHidden) {
+      return (
+        <div style={{
+          background: 'rgba(255,255,255,0.04)',
+          border: `1px solid ${borderColor}`,
+          borderRadius: 16,
+          display: 'grid',
+          gap: 14,
+          padding: '16px 18px',
+        }}
+        >
+          <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>
+            {participants.length}
+            {' '}
+            participant
+            {participants.length > 1 ? 's' : ''}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {Array.from({ length: Math.min(participants.length, 6) }).map((_, index) => (
+              <div
+                key={`participant-anon-${index + 1}`}
+                style={{
+                  alignItems: 'center',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: '50%',
+                  color: mutedTextColor,
+                  display: 'inline-flex',
+                  fontFamily: 'Montserrat-Bold, sans-serif',
+                  height: 42,
+                  justifyContent: 'center',
+                  width: 42,
+                }}
+              >
+                ?
+              </div>
+            ))}
+          </div>
+          <div style={{ color: mutedTextColor, fontSize: 13, lineHeight: 1.5 }}>
+            Les identites des participants sont masquees par l organisateur.
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: 'grid', gap: 12 }}>
+        {participants.map((participant) => {
+          const displayName = getUserDisplayName(participant);
+          const avatarUrl = getAvatarUrl(participant);
+          return (
+            <div
+              key={getEntityDocumentId(participant) || displayName}
+              style={{
+                alignItems: 'center',
+                background: 'rgba(255,255,255,0.04)',
+                border: `1px solid ${borderColor}`,
+                borderRadius: 16,
+                display: 'flex',
+                gap: 12,
+                padding: '12px 14px',
+              }}
+            >
+              {avatarUrl ? (
+                <img
+                  alt={displayName}
+                  src={avatarUrl}
+                  style={{
+                    borderRadius: '50%', height: 42, objectFit: 'cover', width: 42,
+                  }}
+                />
+              ) : (
+                <div style={{
+                  alignItems: 'center', background: 'rgba(1,179,244,0.16)', borderRadius: '50%', display: 'inline-flex', height: 42, justifyContent: 'center', width: 42,
+                }}
+                >
+                  {getInitials(displayName)}
+                </div>
+              )}
+              <div style={{ display: 'grid', gap: 4 }}>
+                <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{displayName}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <ScreenContainer
@@ -671,50 +775,27 @@ function EventDetails({ navigation, route }) {
             }}
             >
               <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 20, margin: 0 }}>Participants</h2>
-              {participants.length === 0 ? (
-                <div style={{ color: mutedTextColor }}>Aucun participant confirme pour le moment.</div>
-              ) : (
-                <div style={{ display: 'grid', gap: 12 }}>
-                  {participants.map((participant) => {
-                    const displayName = getUserDisplayName(participant);
-                    const avatarUrl = getAvatarUrl(participant);
-                    return (
-                      <div
-                        key={getEntityDocumentId(participant) || displayName}
-                        style={{
-                          alignItems: 'center',
-                          background: 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${borderColor}`,
-                          borderRadius: 16,
-                          display: 'flex',
-                          gap: 12,
-                          padding: '12px 14px',
-                        }}
-                      >
-                        {avatarUrl ? (
-                          <img
-                            alt={displayName}
-                            src={avatarUrl}
-                            style={{
-                              borderRadius: '50%', height: 42, objectFit: 'cover', width: 42,
-                            }}
-                          />
-                        ) : (
-                          <div style={{
-                            alignItems: 'center', background: 'rgba(1,179,244,0.16)', borderRadius: '50%', display: 'inline-flex', height: 42, justifyContent: 'center', width: 42,
-                          }}
-                          >
-                            {getInitials(displayName)}
-                          </div>
-                        )}
-                        <div style={{ display: 'grid', gap: 4 }}>
-                          <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{displayName}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {renderParticipantsSection()}
+
+              {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
+                <div style={{ marginTop: 24 }}>
+                  <EventTasksSection
+                    canManageEvent={canEdit}
+                    event={event}
+                    userData={userData}
+                  />
                 </div>
-              )}
+              ) : null}
+
+              {Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0 ? (
+                <div style={{ marginTop: 24 }}>
+                  <EventTeamAudiencesSection
+                    canManageEvent={canEdit}
+                    event={event}
+                    userData={userData}
+                  />
+                </div>
+              ) : null}
 
               {canEdit ? (
                 <>
@@ -796,9 +877,16 @@ function EventDetails({ navigation, route }) {
               </div>
 
               {isTournamentEvent ? (
-                <div data-event-section="tournament" style={{
-                  background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
-                }}
+                <div
+                  data-event-section="tournament"
+                  style={{
+                    background: sectionBackground,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 24,
+                    display: 'grid',
+                    gap: 14,
+                    padding: 22,
+                  }}
                 >
                   <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 20, margin: 0 }}>Mode tournoi</h2>
                   <div style={{

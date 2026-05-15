@@ -8,12 +8,11 @@ import {
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+import closeIcon from '@/assets/icons/close.png';
+import searchIcon from '@/assets/icons/search.png';
 
 import Button from '@/components/atoms/button/Button';
 import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
-
-const closeIcon = require('@/assets/icons/close.png');
-const searchIcon = require('@/assets/icons/search.png');
 
 /**
  * @typedef {{

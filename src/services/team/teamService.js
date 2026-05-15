@@ -2,8 +2,33 @@ import Joi from 'joi';
 
 import client from '../client';
 
+const normalizeTeamGovernanceSettings = (team) => {
+  if (!team || typeof team !== 'object') {
+    return team;
+  }
+
+  let teamMembershipApprovalEnabledForCoaches = true;
+  if (typeof team.teamMembershipApprovalEnabledForCoaches === 'boolean') {
+    teamMembershipApprovalEnabledForCoaches = team.teamMembershipApprovalEnabledForCoaches;
+  } else if (typeof team.teamMembershipApprovalEnabledForCoaches === 'string') {
+    const normalized = team.teamMembershipApprovalEnabledForCoaches.trim().toLowerCase();
+    if (normalized === 'false') {
+      teamMembershipApprovalEnabledForCoaches = false;
+    }
+  }
+
+  return {
+    ...team,
+    authorizedMembershipManagers: Array.isArray(team.authorizedMembershipManagers)
+      ? team.authorizedMembershipManagers
+      : [],
+    teamMembershipApprovalEnabledForCoaches,
+  };
+};
+
 const teamSchema = Joi.object({
   activities: Joi.any().allow(null).optional(), // Relaxed validation for Strapi v5 connect syntax
+  authorizedMembershipManagers: Joi.any().allow(null).optional(),
   category: Joi.any().allow(null).optional(),
   club: Joi.any().allow(null).optional(),
   description: Joi.string().allow('', null).optional(),
@@ -17,6 +42,7 @@ const teamSchema = Joi.object({
   name: Joi.string().required(),
   players: Joi.any().allow(null).optional(),
   section: Joi.any().allow(null).optional(),
+  teamMembershipApprovalEnabledForCoaches: Joi.boolean().optional(),
   trainers: Joi.any().allow(null).optional(),
 }).required();
 
@@ -104,6 +130,9 @@ export const getTeams = async (params = {}) => {
 
   const response = await client.get('/teams', { params: filters });
   try {
+    const normalizedData = Array.isArray(response.data?.data)
+      ? response.data.data.map(normalizeTeamGovernanceSettings)
+      : response.data?.data;
     const schema = Joi.object({
       data: Joi.array().items(teamSchema).empty(Joi.array().length(0)),
       meta: Joi.object({
@@ -116,7 +145,10 @@ export const getTeams = async (params = {}) => {
       }).required(),
     }).required();
 
-    const validationResult = await schema.validateAsync(response.data, {
+    const validationResult = await schema.validateAsync({
+      ...response.data,
+      data: normalizedData,
+    }, {
       allowUnknown: true,
     });
     return validationResult;
@@ -136,6 +168,9 @@ export const getTeamById = async (teamId) => {
     params: {
       populate: {
         activities: {
+          populate: '*',
+        },
+        authorizedMembershipManagers: {
           populate: '*',
         },
         category: {
@@ -173,11 +208,15 @@ export const getTeamById = async (teamId) => {
     },
   });
   try {
+    const normalizedData = normalizeTeamGovernanceSettings(response.data?.data);
     const schema = Joi.object({
       data: teamSchema.required(),
     }).required();
 
-    const validationResult = await schema.validateAsync(response.data, {
+    const validationResult = await schema.validateAsync({
+      ...response.data,
+      data: normalizedData,
+    }, {
       allowUnknown: true,
     });
 

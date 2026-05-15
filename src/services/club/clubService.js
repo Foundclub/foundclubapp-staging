@@ -35,14 +35,50 @@ const sponsorSchema = Joi.object({
   title: Joi.string().required(),
 });
 
+const normalizeClubGovernanceSettings = (club) => {
+  if (!club || typeof club !== 'object') {
+    return club;
+  }
+
+  let clubMembersPublicVisibility = true;
+  if (typeof club.clubMembersPublicVisibility === 'boolean') {
+    clubMembersPublicVisibility = club.clubMembersPublicVisibility;
+  } else if (typeof club.clubMembersPublicVisibility === 'string') {
+    const normalized = club.clubMembersPublicVisibility.trim().toLowerCase();
+    if (normalized === 'false') {
+      clubMembersPublicVisibility = false;
+    } else {
+      clubMembersPublicVisibility = true;
+    }
+  }
+
+  const membershipRequestManagementMode = [
+    'CLUB_OWNER_ONLY',
+    'COACH_ALLOWED_BY_TEAM',
+  ].includes(club.membershipRequestManagementMode)
+    ? club.membershipRequestManagementMode
+    : 'COACH_ALLOWED_BY_TEAM';
+
+  return {
+    ...club,
+    clubMembersPublicVisibility,
+    membershipRequestManagementMode,
+  };
+};
+
 const clubSchema = Joi.object({
   activites: Joi.array().items(activitySchema).optional(),
   address: Joi.object().required(),
+  clubMembersPublicVisibility: Joi.boolean().optional(),
   email: Joi.string().allow('', null).optional(),
   geohash: Joi.string().allow('', null).optional(),
   id: Joi.number().required(),
   isCustomer: Joi.boolean().required().default(false),
   maxTeamNumber: Joi.number().required().default(0),
+  members: Joi.array().items(Joi.object().unknown(true)).optional(),
+  membersAreHidden: Joi.boolean().optional(),
+  membersCount: Joi.number().optional(),
+  membershipRequestManagementMode: Joi.string().valid('CLUB_OWNER_ONLY', 'COACH_ALLOWED_BY_TEAM').optional(),
   name: Joi.string().required(),
   phoneNumber: Joi.string().allow('', null).optional(),
   sponsor: Joi.array().items(sponsorSchema).optional(),
@@ -325,11 +361,15 @@ export const getClubById = async (id) => {
     },
   });
   try {
+    const normalizedData = normalizeClubGovernanceSettings(response.data?.data);
     const schema = Joi.object({
       data: clubSchema.required(),
     }).required();
 
-    const validationResult = await schema.validateAsync(response.data, {
+    const validationResult = await schema.validateAsync({
+      ...response.data,
+      data: normalizedData,
+    }, {
       allowUnknown: true,
     });
 

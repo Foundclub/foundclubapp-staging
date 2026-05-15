@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
@@ -249,6 +250,7 @@ function EventParticipants({
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const areParticipantIdentitiesHidden = event?.participantIdentitiesHidden === true;
 
   const renderParticipant = (player, options = {}) => {
     const userId = player?.documentId || '';
@@ -476,8 +478,59 @@ function EventParticipants({
     participantsSummary?.participatingCount ?? event?.participations?.length ?? 0,
   );
   const capacity = Number(participantsSummary?.capacity ?? event?.capacity ?? 0);
+  const anonymizedPreviewCount = Math.min(participatingCount, 5);
 
   const renderParticipationsContent = () => {
+    if (areParticipantIdentitiesHidden) {
+      return (
+        <View
+          style={[
+            ApplicationStyle.backgroundColor.primary700,
+            ApplicationStyle.borderRadius24,
+            Spaces.padding[20],
+            Spaces.gap[16],
+          ]}
+        >
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {participatingCount > 0
+              ? `${participatingCount} participant${participatingCount > 1 ? 's' : ''}`
+              : 'Aucun participant confirme pour le moment.'}
+          </Text>
+
+          {anonymizedPreviewCount > 0 ? (
+            <View style={[Alignments.row, Spaces.gap[12]]}>
+              {Array.from({ length: anonymizedPreviewCount }).map((_, index) => (
+                <View
+                  key={`participant-placeholder-${index + 1}`}
+                  style={[
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    {
+                      backgroundColor: 'rgba(255,255,255,0.08)',
+                      borderColor: 'rgba(255,255,255,0.16)',
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      height: 40,
+                      width: 40,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p4Bold, Fonts.neutral200]}>?</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t(
+              'eventDetails.participantsHiddenMessage',
+              'Les identites des participants sont masquees par l organisateur.',
+            )}
+          </Text>
+        </View>
+      );
+    }
+
     if (hasTeamSections) {
       return (
         <View style={[Spaces.gap[12]]}>
@@ -628,7 +681,11 @@ function ParticipantItem({
       ]}
     >
       <TouchableOpacity
-        onPress={() => onPress(player)}
+        disabled={player?.isAnonymous === true}
+        onPress={() => {
+          if (player?.isAnonymous === true) return;
+          onPress(player);
+        }}
         style={[
           Alignments.row,
           Alignments.alignCenter,

@@ -18,6 +18,9 @@ import {
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+import closeIcon from '@/assets/icons/close.png';
+import rightIcon from '@/assets/icons/arrowRight.png';
+import searchIcon from '@/assets/icons/search.png';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -41,10 +44,6 @@ import {
 } from '@/services/admin/adminClubContentQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
-
-const rightIcon = require('@/assets/icons/arrowRight.png');
-const closeIcon = require('@/assets/icons/close.png');
-const searchIcon = require('@/assets/icons/search.png');
 
 const SORT_OPTIONS = [
   { key: 'updated', label: 'MAJ' },

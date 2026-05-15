@@ -50,6 +50,8 @@ export const eventSchema = Joi.object({
     lng: Joi.number().allow(null).optional(),
   }).allow(null).optional(),
   parentEvent: Joi.object().allow(null).optional(),
+  participantIdentitiesHidden: Joi.boolean().allow(null).optional(),
+  participantIdentityVisibility: Joi.string().valid('VISIBLE', 'ANONYMIZED').allow('', null).optional(),
   pendingReason: Joi.string().allow('', null).optional(),
   recurrenceGroupId: Joi.string().allow(null).optional(),
   sessionStatus: Joi.string().valid('open', 'closed').allow(null).optional(),
@@ -303,6 +305,21 @@ export const getEventById = async (documentId) => {
         'tournamentTeams.members',
         'tournamentTeams.members.user',
         'tournamentTeams.members.user.avatar',
+        'eventTasks',
+        'eventTasks.assignments',
+        'eventTasks.assignments.user',
+        'eventTasks.assignments.user.avatar',
+        'eventTasks.assignments.validatedBy',
+        'teamAudiences',
+        'teamAudiences.team',
+        'teamAudiences.team.club',
+        'teamAudiences.team.players',
+        'teamAudiences.team.players.avatar',
+        'teamAudiences.team.trainers',
+        'teamAudiences.team.trainers.avatar',
+        'teamAudiences.selectedMembers',
+        'teamAudiences.selectedMembers.avatar',
+        'teamAudiences.respondedBy',
         'team.club.sponsor',
         'team.club.sponsor.logo'],
     },
@@ -320,6 +337,86 @@ export const getEventById = async (documentId) => {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch event: ${errorToDisplay}`);
   }
+};
+
+/**
+ * Get the team audiences attached to an event.
+ * @param {string} eventId
+ * @returns {Promise<any>}
+ */
+export const getEventTeamAudiences = async (eventId) => {
+  const response = await client.get(`/events/${eventId}/team-audiences`);
+  return response.data;
+};
+
+/**
+ * Invite a team to an event.
+ * @param {string} eventId
+ * @param {{ teamId: string, audienceKind?: 'organizer' | 'internal_invited' | 'external_invited', selectionMode?: 'ALL_MEMBERS' | 'SELECTED_MEMBERS', selectedMembers?: string[] }} payload
+ * @returns {Promise<any>}
+ */
+export const inviteEventTeamAudience = async (eventId, payload) => {
+  const response = await client.post(`/events/${eventId}/team-audiences`, {
+    data: payload,
+  });
+  return response.data;
+};
+
+/**
+ * Update a team audience invitation response.
+ * @param {string} audienceId
+ * @param {'accept' | 'refuse' | 'cancel'} action
+ * @returns {Promise<any>}
+ */
+export const respondEventTeamAudience = async (audienceId, action) => {
+  const response = await client.post(`/event-team-audiences/${audienceId}/${action}`);
+  return response.data;
+};
+
+/**
+ * Self-assign to an event task.
+ * @param {string} taskId
+ * @param {{ userId?: string }} payload
+ * @returns {Promise<any>}
+ */
+export const assignEventTask = async (taskId, payload = {}) => {
+  const response = await client.post(`/event-tasks/${taskId}/assign`, {
+    data: payload,
+  });
+  return response.data;
+};
+
+/**
+ * Approve an event task assignment.
+ * @param {string} assignmentId
+ * @returns {Promise<any>}
+ */
+export const approveEventTaskAssignment = async (assignmentId) => {
+  const response = await client.post(`/event-task-assignments/${assignmentId}/approve`);
+  return response.data;
+};
+
+/**
+ * Reject an event task assignment.
+ * @param {string} assignmentId
+ * @param {{ reason?: string }} payload
+ * @returns {Promise<any>}
+ */
+export const rejectEventTaskAssignment = async (assignmentId, payload = {}) => {
+  const response = await client.post(`/event-task-assignments/${assignmentId}/reject`, {
+    data: payload,
+  });
+  return response.data;
+};
+
+/**
+ * Cancel an event task assignment.
+ * @param {string} assignmentId
+ * @returns {Promise<any>}
+ */
+export const cancelEventTaskAssignment = async (assignmentId) => {
+  const response = await client.post(`/event-task-assignments/${assignmentId}/cancel`);
+  return response.data;
 };
 
 /**

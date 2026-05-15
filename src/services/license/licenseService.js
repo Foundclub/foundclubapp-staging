@@ -103,8 +103,36 @@ export const submitLicenseDocument = async (/** @type {any} */ assignmentId, /**
 
   return unwrapFetchJson(response);
 };
+export const uploadOfficialLicenseDocument = async (/** @type {any} */ assignmentId, /** @type {any} */ payload = {}) => {
+  const apiBaseUrl = getApiBaseUrl();
+  if (!apiBaseUrl) throw new Error('API FoundClub indisponible pour envoyer la licence officielle.');
+
+  const file = normalizePickedFile(payload.file || payload.document || payload.proof);
+  const formData = new FormData();
+  appendUploadField(formData, 'comment', payload.comment || payload.memberComment);
+  if (file) {
+    if (typeof File !== 'undefined' && file instanceof File) {
+      formData.append('file', file, file.name || `licence-officielle-${Date.now()}`);
+    } else {
+      formData.append('file', /** @type {any} */ ({
+        name: file.name,
+        type: file.type,
+        uri: file.uri,
+      }));
+    }
+  }
+
+  const token = getAuthTokens()?.token;
+  const response = await fetch(`${apiBaseUrl}/licenses/assignments/${assignmentId}/official-license`, {
+    body: formData,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    method: 'POST',
+  });
+
+  return unwrapFetchJson(response);
+};
 export const reviewLicenseDocument = async (/** @type {any} */ submissionId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/documents/${submissionId}/review`, payload));
-export const getLicensePaymentStatus = async (/** @type {any} */ paymentId) => unwrap(await client.get(`/licenses/payments/${paymentId}/status`));
+export const getLicensePaymentStatus = async (/** @type {any} */ paymentId, params = {}) => unwrap(await client.get(`/licenses/payments/${paymentId}/status`, { params }));
 export const generateLicenseReceipt = async (/** @type {any} */ paymentId) => unwrap(await client.post(`/licenses/payments/${paymentId}/receipt`));
 export const refundLicensePayment = async (/** @type {any} */ paymentId, payload = {}) => unwrap(await client.post(`/licenses/payments/${paymentId}/refunds`, payload));
 export const approveExternalLicensePayment = async (/** @type {any} */ paymentId, payload = {}) => unwrap(await client.post(`/licenses/payments/${paymentId}/approve`, payload));
@@ -113,6 +141,7 @@ export const sendLicenseReminder = async (/** @type {any} */ assignmentId, paylo
 export const sendBulkLicenseReminder = async (/** @type {any} */ campaignId, payload = {}) => unwrap(await client.post(`/licenses/campaigns/${campaignId}/reminders/bulk`, payload));
 export const getMyLicenses = async () => unwrap(await client.get('/licenses/me'));
 export const getMyLicenseAssignment = async (/** @type {any} */ assignmentId) => unwrap(await client.get(`/licenses/me/${assignmentId}`));
+export const getUserCurrentLicense = async (/** @type {any} */ userId) => unwrap(await client.get(`/licenses/users/${userId}/current`));
 export const createLicenseCheckout = async (/** @type {any} */ assignmentId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/me/${assignmentId}/checkout`, payload));
 export const declareExternalLicensePayment = async (/** @type {any} */ assignmentId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/me/${assignmentId}/external-payment-declared`, payload));
 export const getPublicLicensePayment = async (/** @type {any} */ token) => unwrap(await client.get(`/licenses/pay/${token}`));

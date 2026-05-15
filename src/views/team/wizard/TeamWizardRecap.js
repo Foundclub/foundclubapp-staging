@@ -155,12 +155,14 @@ function TeamWizardRecap({ navigation }) {
 
     createTeamMutation.mutate(/** @type {any} */ ({
       activities: selectedOverview.activity ? [selectedOverview.activity] : [],
+      authorizedMembershipManagers: [],
       category: selectedOverview.category || undefined,
       club: selectedOverview.clubId,
       description: selectedOverview.description,
       level: selectedOverview.level || undefined,
       name: selectedOverview.name,
       section: selectedOverview.section || undefined,
+      teamMembershipApprovalEnabledForCoaches: clubData?.membershipRequestManagementMode !== 'CLUB_OWNER_ONLY',
       trainers: selectedOverview.trainers,
     }));
   };
@@ -184,6 +186,9 @@ function TeamWizardRecap({ navigation }) {
   const categoryLabel = getLabelFromCollection(categories, selectedOverview.category);
   const levelLabel = getLabelFromCollection(levels, selectedOverview.level);
   const clubLabel = clubData?.name || t('eventWizard.recap.notSet', 'Non renseigné');
+  const teamMembershipModeLabel = clubData?.membershipRequestManagementMode === 'CLUB_OWNER_ONLY'
+    ? t('teamWizard.recap.membership.ownerOnly', 'Demandes traitées par le dirigeant')
+    : t('teamWizard.recap.membership.coachAllowed', 'Demandes délégables aux entraîneurs');
 
   return (
     <WizardStepLayout
@@ -205,7 +210,7 @@ function TeamWizardRecap({ navigation }) {
             <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
               <ActivityIndicator size="small" />
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                Chargement du recapitulatif de l'equipe...
+                Chargement du recapitulatif de cette equipe...
               </Text>
             </View>
           </View>
@@ -217,16 +222,16 @@ function TeamWizardRecap({ navigation }) {
               Impossible de charger toutes les informations du recapitulatif.
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Reessaye avant de creer l'equipe pour verifier le club, les referentiels et les entraineurs.
+              Reessaye avant de creer cette equipe pour verifier le club, les referentiels et les entraineurs.
             </Text>
             <Button
               onPress={() => {
-                void activitiesQuery.refetch();
-                void categoriesQuery.refetch();
-                void levelsQuery.refetch();
-                void sectionsQuery.refetch();
+                activitiesQuery.refetch();
+                categoriesQuery.refetch();
+                levelsQuery.refetch();
+                sectionsQuery.refetch();
                 if (state.clubId) {
-                  void clubQuery.refetch();
+                  clubQuery.refetch();
                 }
               }}
               title="Réessayer"
@@ -339,6 +344,9 @@ function TeamWizardRecap({ navigation }) {
               count: selectedOverview.trainers.length,
               defaultValue: `${selectedOverview.trainers.length} entraîneur(s)`,
             })}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {teamMembershipModeLabel}
           </Text>
         </View>
       </View>

@@ -4,6 +4,7 @@ import { getAuthRuntimeSnapshot } from '@/store/authRuntime';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { isBirthdateUnder13 } from '@/constants/parentalDeclaration';
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
 const SPORTS_WITH_POSITIONS = Object.keys(SPORTS_POSITIONS).map((s) => s.toLowerCase());
@@ -74,7 +75,7 @@ export const getAuthTokens = () => {
  */
 export const getOnboardingViews = ({
   address, avatar, bestLevel, birthdate, category, club, documentId,
-  firstname, height, lastname, myTeams, position, preferredSport, role,
+  firstname, height, lastname, myTeams, parentalDeclarationAccepted, position, preferredSport, role,
   section, sportsHistory, trainedTeams, weight,
 }) => {
   // Check if user has already completed onboarding once
@@ -109,6 +110,11 @@ export const getOnboardingViews = ({
     }
     return false;
   })();
+  const needsParentalDeclaration = Boolean(
+    birthdate
+    && isBirthdateUnder13(birthdate)
+    && parentalDeclarationAccepted !== true,
+  );
 
   const baseViews = (() => {
     switch (roleKey) {
@@ -116,32 +122,42 @@ export const getOnboardingViews = ({
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
           { canShow: true, index: 2, route: RouteNames.UserBirthdate },
-          { canShow: true, index: 3, route: RouteNames.UserAddress },
-          { canShow: true, index: 4, route: RouteNames.UserAvatar },
-          { canShow: shouldShowAffiliationGuide, index: 5, route: RouteNames.UserAffiliationGuide },
-          { canShow: true, index: 6, route: RouteNames.Welcome },
+          ...(needsParentalDeclaration
+            ? [{ canShow: true, index: 3, route: RouteNames.UserParentalDeclaration }]
+            : []),
+          { canShow: true, index: needsParentalDeclaration ? 4 : 3, route: RouteNames.UserAddress },
+          { canShow: true, index: needsParentalDeclaration ? 5 : 4, route: RouteNames.UserAvatar },
+          {
+            canShow: shouldShowAffiliationGuide,
+            index: needsParentalDeclaration ? 6 : 5,
+            route: RouteNames.UserAffiliationGuide,
+          },
+          { canShow: true, index: needsParentalDeclaration ? 7 : 6, route: RouteNames.Welcome },
         ];
       case 'player':
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
           { canShow: true, index: 2, route: RouteNames.UserSection },
           { canShow: true, index: 3, route: RouteNames.UserBirthdate },
-          { canShow: true, index: 4, route: RouteNames.UserAddress },
-          { canShow: true, index: 5, route: RouteNames.UserAvatar },
+          ...(needsParentalDeclaration
+            ? [{ canShow: true, index: 4, route: RouteNames.UserParentalDeclaration }]
+            : []),
+          { canShow: true, index: needsParentalDeclaration ? 5 : 4, route: RouteNames.UserAddress },
+          { canShow: true, index: needsParentalDeclaration ? 6 : 5, route: RouteNames.UserAvatar },
           // Optional steps for players
-          { canShow: true, index: 6, route: RouteNames.UserSport },
-          { canShow: true, index: 7, route: RouteNames.UserPosition },
-          { canShow: true, index: 8, route: RouteNames.UserPhysique },
-          { canShow: true, index: 9, route: RouteNames.UserLevel },
-          { canShow: true, index: 10, route: RouteNames.UserCategory },
-          { canShow: true, index: 11, route: RouteNames.UserSportHistory },
-          { canShow: true, index: 12, route: RouteNames.UserClubSearch },
+          { canShow: true, index: needsParentalDeclaration ? 7 : 6, route: RouteNames.UserSport },
+          { canShow: true, index: needsParentalDeclaration ? 8 : 7, route: RouteNames.UserPosition },
+          { canShow: true, index: needsParentalDeclaration ? 9 : 8, route: RouteNames.UserPhysique },
+          { canShow: true, index: needsParentalDeclaration ? 10 : 9, route: RouteNames.UserLevel },
+          { canShow: true, index: needsParentalDeclaration ? 11 : 10, route: RouteNames.UserCategory },
+          { canShow: true, index: needsParentalDeclaration ? 12 : 11, route: RouteNames.UserSportHistory },
+          { canShow: true, index: needsParentalDeclaration ? 13 : 12, route: RouteNames.UserClubSearch },
           {
             canShow: shouldShowAffiliationGuide,
-            index: 13,
+            index: needsParentalDeclaration ? 14 : 13,
             route: RouteNames.UserAffiliationGuide,
           },
-          { canShow: true, index: 14, route: RouteNames.Welcome },
+          { canShow: true, index: needsParentalDeclaration ? 15 : 14, route: RouteNames.Welcome },
         ];
       case 'president':
         return [
@@ -162,17 +178,20 @@ export const getOnboardingViews = ({
           { canShow: true, index: 2, route: RouteNames.UserName },
           { canShow: true, index: 3, route: RouteNames.UserSection },
           { canShow: true, index: 4, route: RouteNames.UserBirthdate },
-          { canShow: true, index: 5, route: RouteNames.UserAddress },
-          { canShow: true, index: 6, route: RouteNames.UserAvatar },
+          ...(needsParentalDeclaration
+            ? [{ canShow: true, index: 5, route: RouteNames.UserParentalDeclaration }]
+            : []),
+          { canShow: true, index: needsParentalDeclaration ? 6 : 5, route: RouteNames.UserAddress },
+          { canShow: true, index: needsParentalDeclaration ? 7 : 6, route: RouteNames.UserAvatar },
           // Optional steps (will apply if user selects player role)
-          { canShow: true, index: 7, route: RouteNames.UserSport },
-          { canShow: true, index: 8, route: RouteNames.UserPosition },
-          { canShow: true, index: 9, route: RouteNames.UserPhysique },
-          { canShow: true, index: 10, route: RouteNames.UserLevel },
-          { canShow: true, index: 11, route: RouteNames.UserCategory },
-          { canShow: true, index: 12, route: RouteNames.UserSportHistory },
-          { canShow: true, index: 13, route: RouteNames.UserClubSearch },
-          { canShow: true, index: 14, route: RouteNames.Welcome },
+          { canShow: true, index: needsParentalDeclaration ? 8 : 7, route: RouteNames.UserSport },
+          { canShow: true, index: needsParentalDeclaration ? 9 : 8, route: RouteNames.UserPosition },
+          { canShow: true, index: needsParentalDeclaration ? 10 : 9, route: RouteNames.UserPhysique },
+          { canShow: true, index: needsParentalDeclaration ? 11 : 10, route: RouteNames.UserLevel },
+          { canShow: true, index: needsParentalDeclaration ? 12 : 11, route: RouteNames.UserCategory },
+          { canShow: true, index: needsParentalDeclaration ? 13 : 12, route: RouteNames.UserSportHistory },
+          { canShow: true, index: needsParentalDeclaration ? 14 : 13, route: RouteNames.UserClubSearch },
+          { canShow: true, index: needsParentalDeclaration ? 15 : 14, route: RouteNames.Welcome },
         ];
     }
   })();
@@ -185,6 +204,9 @@ export const getOnboardingViews = ({
       return Object.assign(view, { canShow: false });
     }
     if (view.route === RouteNames.UserBirthdate && birthdate) {
+      return Object.assign(view, { canShow: false });
+    }
+    if (view.route === RouteNames.UserParentalDeclaration && !needsParentalDeclaration) {
       return Object.assign(view, { canShow: false });
     }
     if (view.route === RouteNames.UserAddress && address) {

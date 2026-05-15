@@ -52,7 +52,6 @@ const defaultPaymentModes = {
   check: true,
   external_link: false,
   helloasso: false,
-  stripe: false,
 };
 
 const firstReviewPayment = (assignment) => (
@@ -118,6 +117,13 @@ function SectionLicenseCard({
               {campaign?.seasonLabel || 'Aucune campagne'}
               {campaign?.paymentOwner === 'multisport' ? ' - encaissement central' : ''}
             </Text>
+            {campaign?.paymentModes?.helloasso ? (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                HelloAsso:
+                {' '}
+                {campaign?.paymentProviderSnapshot?.helloasso?.readiness || 'a verifier'}
+              </Text>
+            ) : null}
           </View>
           <LicenseStatusChip status={campaign?.status || 'not_configured'} tone={tone} />
         </View>

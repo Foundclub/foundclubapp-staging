@@ -3,12 +3,13 @@ import { useMutation } from '@tanstack/react-query';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -45,6 +46,7 @@ import safeJsonParse from '@/utils/safeJsonParse';
 const defaultValues = {
   activities: '',
   address: null,
+  authorizedMembershipManagers: /** @type {string[]} */ ([]),
   category: '',
   city: '',
   description: '',
@@ -52,12 +54,14 @@ const defaultValues = {
   level: '',
   name: '',
   section: '',
+  teamMembershipApprovalEnabledForCoaches: true,
   trainers: /** @type {string[]} */ ([]),
 };
 
 const teamSchema = Joi.object({
   activities: Joi.string().allow('', null).optional(),
   address: Joi.object().allow(null).optional(),
+  authorizedMembershipManagers: Joi.array().items(Joi.string()).optional(),
   category: Joi.string().required(),
   city: Joi.string().allow('', null).optional(),
   description: Joi.string().allow('', null).optional(),
@@ -65,8 +69,44 @@ const teamSchema = Joi.object({
   level: Joi.string().required(),
   name: Joi.string().required(),
   section: Joi.string().required(),
+  teamMembershipApprovalEnabledForCoaches: Joi.boolean().required(),
   trainers: Joi.array().items(Joi.string()).optional(),
 }).unknown(true);
+
+const formatAddress = (addr) => {
+  if (!addr) return null;
+  if (addr.label && !addr.properties) return addr;
+  if (addr.properties?.label) {
+    return {
+      label: addr.properties.label,
+      value: addr.geometry?.coordinates ? addr.geometry.coordinates.join('|') : '',
+      ...addr,
+    };
+  }
+  return null;
+};
+
+const getClubAddress = (club) => {
+  if (!club) return null;
+  const formatted = formatAddress(club.address);
+  if (formatted) return formatted;
+  if (club.addressDetails) {
+    const details = safeJsonParse(club.addressDetails, null);
+
+    if (details?.address) {
+      return {
+        city: details.city,
+        label: details.address,
+        postcode: details.postcode,
+        value: club.address?.lat && club.address?.lng
+          ? `${club.address.lng}|${club.address.lat}`
+          : '',
+        ...club.address,
+      };
+    }
+  }
+  return null;
+};
 
 /**
  * Team edit screen component. Allows users to create or edit a team.
@@ -116,7 +156,7 @@ function TeamEdit({ navigation, route }) {
   const { data: sections } = sectionsQuery;
 
   const {
-    Alignments, Colors, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const { userData } = useAuth();
@@ -155,42 +195,6 @@ function TeamEdit({ navigation, route }) {
     shouldFocusError: false,
   });
 
-  // Helper to normalize address structure (GeoJSON vs Flat)
-  const formatAddress = (addr) => {
-    if (!addr) return null;
-    if (addr.label && !addr.properties) return addr;
-    if (addr.properties?.label) {
-      return {
-        label: addr.properties.label,
-        value: addr.geometry?.coordinates ? addr.geometry.coordinates.join('|') : '',
-        ...addr,
-      };
-    }
-    return null;
-  };
-
-  const getClubAddress = (club) => {
-    if (!club) return null;
-    const formatted = formatAddress(club.address);
-    if (formatted) return formatted;
-    if (club.addressDetails) {
-      const details = safeJsonParse(club.addressDetails, null);
-
-      if (details?.address) {
-        return {
-          city: details.city,
-          label: details.address,
-          postcode: details.postcode,
-          value: club.address?.lat && club.address?.lng
-            ? `${club.address.lng}|${club.address.lat}`
-            : '',
-          ...club.address,
-        };
-      }
-    }
-    return null;
-  };
-
   // Populate form with team data when editing OR pre-fill when creating
   useEffect(() => {
     if (teamId && teamData) {
@@ -201,6 +205,7 @@ function TeamEdit({ navigation, route }) {
       reset({
         activities: teamData.activities?.[0]?.documentId || '',
         address: teamAddress || null,
+        authorizedMembershipManagers: teamData.authorizedMembershipManagers?.map((manager) => manager.documentId) || [],
         category: teamData.category?.documentId || '',
         city: teamData.city || teamData.club?.city || clubData?.city || '',
         description: teamData.description || '',
@@ -208,6 +213,7 @@ function TeamEdit({ navigation, route }) {
         level: teamData.level?.documentId || '',
         name: teamData.name || '',
         section: teamData.section?.documentId || '',
+        teamMembershipApprovalEnabledForCoaches: teamData.teamMembershipApprovalEnabledForCoaches !== false,
         trainers: teamData.trainers?.map((trainer) => trainer.documentId) || [],
       });
       isInitialized.current = true;
@@ -291,6 +297,35 @@ function TeamEdit({ navigation, route }) {
     return members;
   }, [clubData?.members, userData]);
 
+  const watchedTrainerIds = useWatch({
+    control,
+    defaultValue: [],
+    name: 'trainers',
+  });
+  const coachApprovalEnabled = useWatch({
+    control,
+    defaultValue: true,
+    name: 'teamMembershipApprovalEnabledForCoaches',
+  });
+  const watchedAuthorizedMembershipManagers = useWatch({
+    control,
+    defaultValue: [],
+    name: 'authorizedMembershipManagers',
+  });
+  const selectedTrainerIds = useMemo(
+    () => (Array.isArray(watchedTrainerIds) ? watchedTrainerIds : []),
+    [watchedTrainerIds],
+  );
+  const authorizedMembershipManagers = useMemo(
+    () => (Array.isArray(watchedAuthorizedMembershipManagers) ? watchedAuthorizedMembershipManagers : []),
+    [watchedAuthorizedMembershipManagers],
+  );
+  const selectedTrainerOptions = useMemo(
+    () => trainerOptions.filter((option) => selectedTrainerIds.includes(option.value)),
+    [selectedTrainerIds, trainerOptions],
+  );
+  const clubUsesOwnerOnlyMembershipApproval = clubData?.membershipRequestManagementMode === 'CLUB_OWNER_ONLY';
+
   useEffect(() => {
     if (teamId || !preselectedTrainerId || preselectionAppliedRef.current) return;
     const trainerExists = trainerOptions.some((option) => option.value === preselectedTrainerId);
@@ -305,6 +340,34 @@ function TeamEdit({ navigation, route }) {
     }
     preselectionAppliedRef.current = true;
   }, [getValues, preselectedTrainerId, setValue, teamId, trainerOptions]);
+
+  useEffect(() => {
+    const currentManagers = getValues('authorizedMembershipManagers') || [];
+    const nextManagers = currentManagers.filter((managerId) => selectedTrainerIds.includes(managerId));
+    if (nextManagers.length !== currentManagers.length) {
+      setValue('authorizedMembershipManagers', nextManagers, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [getValues, selectedTrainerIds, setValue]);
+
+  useEffect(() => {
+    if (!clubUsesOwnerOnlyMembershipApproval) return;
+    if (coachApprovalEnabled) {
+      setValue('teamMembershipApprovalEnabledForCoaches', false, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    const currentManagers = getValues('authorizedMembershipManagers') || [];
+    if (currentManagers.length > 0) {
+      setValue('authorizedMembershipManagers', [], {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [clubUsesOwnerOnlyMembershipApproval, coachApprovalEnabled, getValues, setValue]);
 
   const handleTrainerCreated = useCallback((createdTrainer) => {
     if (!createdTrainer?.documentId) return;
@@ -334,11 +397,15 @@ function TeamEdit({ navigation, route }) {
     const finalData = {
       ...data,
       activities: formattedActivities,
+      authorizedMembershipManagers: Array.isArray(data.authorizedMembershipManagers)
+        ? data.authorizedMembershipManagers.filter(Boolean)
+        : [],
       category: data.category || undefined,
       city: data.address?.city || data.city,
       geohash: data.address?.geohash || data.geohash,
       level: data.level || undefined,
       section: data.section || undefined,
+      teamMembershipApprovalEnabledForCoaches: data.teamMembershipApprovalEnabledForCoaches === true,
       trainers: formattedTrainers,
     };
 
@@ -416,15 +483,15 @@ function TeamEdit({ navigation, route }) {
 
   const handleRetryBootstrap = () => {
     if (teamId) {
-      void refetchTeam();
+      refetchTeam();
     }
     if (effectiveClubId) {
-      void refetchClubData();
+      refetchClubData();
     }
-    void activitiesQuery.refetch();
-    void categoriesQuery.refetch();
-    void levelsQuery.refetch();
-    void sectionsQuery.refetch();
+    activitiesQuery.refetch();
+    categoriesQuery.refetch();
+    levelsQuery.refetch();
+    sectionsQuery.refetch();
   };
 
   if (isFormBlocked) {
@@ -437,13 +504,13 @@ function TeamEdit({ navigation, route }) {
           {isBootstrapLoading ? (
             <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
               <Loader color={Colors.primary500} size="large" />
-              <Text>Chargement de l'equipe et des referentiels...</Text>
+              <Text>Chargement des informations de cette equipe...</Text>
             </View>
           ) : null}
 
           {isMissingTeamId ? (
             <View style={Spaces.gap[12]}>
-              <Text>Identifiant d'equipe manquant. Ouvre l'edition depuis la fiche equipe pour continuer.</Text>
+              <Text>Identifiant d equipe manquant. Ouvre la fiche equipe pour continuer.</Text>
               <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux equipes" variant="Secondary" />
             </View>
           ) : null}
@@ -674,6 +741,107 @@ function TeamEdit({ navigation, route }) {
                 />
               )}
             />
+
+            <View
+              style={[
+                ApplicationStyle.card,
+                Spaces.padding[16],
+                Spaces.gap[12],
+                {
+                  backgroundColor: 'rgba(4, 31, 44, 0.82)',
+                  borderColor: 'rgba(1, 179, 244, 0.24)',
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                {t('teamEdit.membershipRequests.title', "Demandes d'adhésion")}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {clubUsesOwnerOnlyMembershipApproval
+                  ? t(
+                    'teamEdit.membershipRequests.ownerOnlyDescription',
+                    'Le club est configuré pour que le dirigeant traite toutes les demandes. Les entraîneurs de cette équipe ne pourront pas accepter ou refuser directement.',
+                  )
+                  : t(
+                    'teamEdit.membershipRequests.description',
+                    'Choisissez si les entraîneurs de cette équipe peuvent gérer les demandes, ou si le dirigeant garde la main.',
+                  )}
+              </Text>
+
+              {!clubUsesOwnerOnlyMembershipApproval ? (
+                <>
+                  <Controller
+                    control={control}
+                    name="teamMembershipApprovalEnabledForCoaches"
+                    render={({ field: { onChange, value } }) => (
+                      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                            {t('teamEdit.membershipRequests.allowCoachToggle', "Autoriser l'entraîneur à traiter les demandes")}
+                          </Text>
+                          <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
+                            {t(
+                              'teamEdit.membershipRequests.allowCoachHint',
+                              'Si ce réglage est désactivé, seul le dirigeant pourra accepter ou refuser les demandes pour cette équipe.',
+                            )}
+                          </Text>
+                        </View>
+                        <Switch
+                          onValueChange={onChange}
+                          thumbColor={value ? Colors.primary500 : Colors.neutral300}
+                          trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
+                          value={value === true}
+                        />
+                      </View>
+                    )}
+                  />
+
+                  {coachApprovalEnabled ? (
+                    <Controller
+                      control={control}
+                      name="authorizedMembershipManagers"
+                      render={({
+                        field: {
+                          name, onBlur, onChange, ref, value,
+                        },
+                      }) => (
+                        <AutocompleteSelect
+                          error={getFieldError({ errors: formErrors, fieldName: name })}
+                          isMulti
+                          label={t('teamEdit.membershipRequests.authorizedManagers', 'Entraîneurs autorisés')}
+                          onBlur={onBlur}
+                          options={selectedTrainerOptions}
+                          placeholder={t('teamEdit.membershipRequests.authorizedManagersPlaceholder', 'Tous les entraîneurs sélectionnés')}
+                          ref={ref}
+                          setValue={(/** @type {Option[] | null} */ options) => onChange(
+                            options?.map((opt) => opt.value) || [],
+                          )}
+                          value={(Array.isArray(value) ? value : [])
+                            .map((managerId) => selectedTrainerOptions.find((option) => option.value === managerId)?.label)
+                            .filter(Boolean)
+                            .join(', ')}
+                        />
+                      )}
+                    />
+                  ) : null}
+
+                  {coachApprovalEnabled ? (
+                    <Text style={[Fonts.p3, Fonts.neutral200]}>
+                      {authorizedMembershipManagers.length > 0
+                        ? t(
+                          'teamEdit.membershipRequests.authorizedManagersHint',
+                          'Seuls les entraîneurs sélectionnés pourront gérer les demandes. Le dirigeant gardera toujours une vue complète.',
+                        )
+                        : t(
+                          'teamEdit.membershipRequests.allSelectedHint',
+                          "Aucun filtre précis n'est appliqué: tous les entraîneurs de l'équipe pourront traiter les demandes.",
+                        )}
+                    </Text>
+                  ) : null}
+                </>
+              ) : null}
+            </View>
           </View>
         </ScrollView>
 

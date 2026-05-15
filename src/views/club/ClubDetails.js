@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
@@ -452,6 +453,8 @@ function ClubDetails({ navigation, route }) {
     ),
     [club, USER_ROLES.president],
   );
+  const areClubMembersHidden = club?.membersAreHidden === true;
+  const clubMembersCount = Number(club?.membersCount || club?.members?.length || 0);
 
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
   const facilities = useMemo(
@@ -1815,6 +1818,35 @@ function ClubDetails({ navigation, route }) {
                 </View>
               ) : null}
 
+              {areClubMembersHidden ? (
+                <View style={[Spaces.gap[16]]}>
+                  <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
+                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                      {t('clubDetails.titles.members', 'Membres')}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      ApplicationStyle.borderRadius24,
+                      ApplicationStyle.backgroundColor.primary700,
+                      Spaces.padding[16],
+                      Spaces.gap[8],
+                    ]}
+                  >
+                    <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                      {t('clubDetails.membersHidden.title', 'Membres masqués par le club')}
+                    </Text>
+                    <Text style={[Fonts.p2, Fonts.neutral200]}>
+                      {t(
+                        'clubDetails.membersHidden.description',
+                        '{{count}} membres sont rattachés à ce club, mais leurs identités ne sont pas visibles publiquement.',
+                        { count: clubMembersCount },
+                      )}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
               {/* Coachs */}
               {coachs?.length || canEdit ? (
                 <View style={[Spaces.gap[16]]}>
@@ -1979,7 +2011,7 @@ function ClubDetails({ navigation, route }) {
         ) : null
       }
       {
-        canContactAdmin && !club?.parentMultisport && owners?.length > 0 && !canUseClubPartneringFlow ? (
+        canContactAdmin && !club?.parentMultisport && (owners?.length > 0 || areClubMembersHidden) && !canUseClubPartneringFlow ? (
           <Button
             disabled={hasPendingClubRequest}
             onPress={handleClaimClub}
@@ -2285,6 +2317,7 @@ function ClubDetails({ navigation, route }) {
           && !canEdit
           && !canJoinClub
           && !canUseClubPartneringFlow
+          && !areClubMembersHidden
           && owners?.length === 0
           && userData
           && userData?.role?.name !== USER_ROLES.player

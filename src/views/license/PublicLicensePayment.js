@@ -256,8 +256,21 @@ function PublicLicensePayment({ route }) {
           description="Choisissez le moyen propose par le club."
           title="Regler"
         />
-        {!isCampaignPaused && paymentModes.stripe ? <Button isLoading={checkoutMutation.isPending} onPress={() => openCheckout('stripe')} title="Payer en ligne" /> : null}
-        {!isCampaignPaused && (paymentModes.helloasso || paymentModes.external_link) ? <Button isLoading={checkoutMutation.isPending} onPress={() => openCheckout(paymentModes.helloasso ? 'helloasso' : 'external')} title="Ouvrir le lien club" variant="Secondary" /> : null}
+        {!isCampaignPaused && paymentModes.helloasso ? (
+          <Button
+            isLoading={checkoutMutation.isPending}
+            onPress={() => openCheckout('helloasso')}
+            title="Payer avec HelloAsso"
+          />
+        ) : null}
+        {!isCampaignPaused && paymentModes.external_link ? (
+          <Button
+            isLoading={checkoutMutation.isPending}
+            onPress={() => openCheckout('external')}
+            title="Ouvrir le lien externe du club"
+            variant="Secondary"
+          />
+        ) : null}
         {!isCampaignPaused && canDeclareOfflinePayment ? (
           <Button
             onPress={() => setDeclareModalVisible(true)}

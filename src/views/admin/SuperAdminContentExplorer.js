@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+import closeIcon from '@/assets/icons/close.png';
+import searchIcon from '@/assets/icons/search.png';
 
 import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
 import SuperAdminEmptyState from '@/components/molecules/superAdmin/SuperAdminEmptyState';
@@ -23,9 +25,6 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetSuperadminContentTypes } from '@/services/admin/superadminQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
-
-const closeIcon = require('@/assets/icons/close.png');
-const searchIcon = require('@/assets/icons/search.png');
 
 const sortByDisplayName = (a, b) => String(a?.displayName || '').localeCompare(String(b?.displayName || ''), 'fr');
 
