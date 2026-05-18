@@ -236,6 +236,73 @@ function BootErrorAlertHost() {
   );
 }
 
+// eslint-disable-next-line perfectionist/sort-modules
+function AppShell() {
+  const {
+    markInteractionsSettled,
+    markNavigationReady,
+    notifyRouteChanged,
+    phase,
+  } = useStartupPhase();
+  const isDeferredStartupReady = phase !== STARTUP_PHASES.BOOT_CORE
+    && phase !== STARTUP_PHASES.NAV_READY
+    && phase !== STARTUP_PHASES.ROUTE_STABLE;
+
+  useEffect(() => {
+    markBootStep('app_component_mounted');
+  }, []);
+
+  useEffect(() => {
+    if (phase !== STARTUP_PHASES.ROUTE_STABLE) {
+      return undefined;
+    }
+
+    markBootStep('navigation_ready');
+    const task = InteractionManager.runAfterInteractions(() => {
+      markBootStep('deferred_startup_tasks_ready');
+      markInteractionsSettled();
+    });
+
+    return () => {
+      task?.cancel?.();
+    };
+  }, [markInteractionsSettled, phase]);
+
+  return (
+    <AppErrorBoundary
+      fallback={<ErrorScreen />}
+      onError={(error) => {
+        if (isSentryEnabled) {
+          Sentry.captureException(error);
+        }
+      }}
+    >
+      <StartupPromptBoundary>
+        <BootGate>
+          <BootErrorAlertHost />
+          <SessionManager />
+          <MissionCelebrationHost />
+          <AppBannerHost />
+          <LeaguePlatformGate>
+            <AppNavigator
+              navigationIntegration={navigationIntegration}
+              onReady={() => {
+                const routeName = navigationRef.getCurrentRoute()?.name || null;
+                markNavigationReady(routeName);
+              }}
+              onStateChange={(routeName) => {
+                notifyRouteChanged(routeName);
+                emitGuidanceRouteVisit(routeName);
+              }}
+            />
+            {isDeferredStartupReady ? <DeferredStartupHosts /> : null}
+          </LeaguePlatformGate>
+        </BootGate>
+      </StartupPromptBoundary>
+    </AppErrorBoundary>
+  );
+}
+
 function DeferredStartupHosts() {
   const { appBootstrapData, isBootstrapResolved } = useAuth();
   const [allowBootstrapFallbackFetches, setAllowBootstrapFallbackFetches] = useState(false);
@@ -275,71 +342,9 @@ function DeferredStartupHosts() {
  * @returns {import('react').ReactElement} App root component.
  */
 function App() {
-  const {
-    markInteractionsSettled,
-    markNavigationReady,
-    notifyRouteChanged,
-    phase,
-  } = useStartupPhase();
-  const isDeferredStartupReady = phase !== STARTUP_PHASES.BOOT_CORE
-    && phase !== STARTUP_PHASES.NAV_READY
-    && phase !== STARTUP_PHASES.ROUTE_STABLE;
-
-  useEffect(() => {
-    markBootStep('app_component_mounted');
-  }, []);
-
-  useEffect(() => {
-    if (phase !== STARTUP_PHASES.ROUTE_STABLE) {
-      return undefined;
-    }
-
-    markBootStep('navigation_ready');
-    const task = InteractionManager.runAfterInteractions(() => {
-      markBootStep('deferred_startup_tasks_ready');
-      markInteractionsSettled();
-    });
-
-    return () => {
-      task?.cancel?.();
-    };
-  }, [markInteractionsSettled, phase]);
-
   return (
     <AppProvidersNative queryClient={queryClient}>
-      <AppErrorBoundary
-        fallback={<ErrorScreen />}
-        onError={(error) => {
-          if (isSentryEnabled) {
-            Sentry.captureException(error);
-          }
-        }}
-      >
-        <StartupPromptBoundary>
-          <BootGate>
-            <BootErrorAlertHost />
-            <SessionManager />
-            <MissionCelebrationHost />
-            <AppBannerHost />
-            <LeaguePlatformGate>
-              <AppNavigator
-                navigationIntegration={navigationIntegration}
-                onReady={() => {
-                  const routeName = navigationRef.getCurrentRoute()?.name || null;
-                  markNavigationReady(routeName);
-                  notifyRouteChanged(routeName);
-                  emitGuidanceRouteVisit(routeName);
-                }}
-                onStateChange={(routeName) => {
-                  notifyRouteChanged(routeName);
-                  emitGuidanceRouteVisit(routeName);
-                }}
-              />
-              {isDeferredStartupReady ? <DeferredStartupHosts /> : null}
-            </LeaguePlatformGate>
-          </BootGate>
-        </StartupPromptBoundary>
-      </AppErrorBoundary>
+      <AppShell />
     </AppProvidersNative>
   );
 }
