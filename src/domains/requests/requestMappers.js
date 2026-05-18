@@ -10,7 +10,7 @@
  * @property {string | null} createdAt
  * @property {string} title
  * @property {string} subtitle
- * @property {{ primary: RequestHubAction; secondary?: RequestHubAction }} actions
+ * @property {{ primary?: RequestHubAction; secondary?: RequestHubAction }} actions
  * @property {Record<string, any>} meta
  */
 
@@ -127,13 +127,33 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
   const requester = request?.user || {};
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
+  const canManage = request?.permissions?.canManage !== false;
+  const isOwnerOnly = request?.team?.membershipRequestManagementMode === 'CLUB_OWNER_ONLY';
+  const isReadOnly = !canManage;
+  let readOnlyReason = '';
+  if (isReadOnly) {
+    readOnlyReason = isOwnerOnly ? 'club_owner_only' : 'manager_required';
+  }
+  const readOnlySubtitle = isOwnerOnly
+    ? [
+      `${requesterName} a demande a rejoindre ${teamName}.`,
+      'Votre equipe doit attendre la validation par votre/vos dirigeant(s).',
+    ].join(' ')
+    : [
+      `${requesterName} a demande a rejoindre ${teamName}.`,
+      'Un responsable autorise doit traiter cette demande.',
+    ].join(' ');
 
   return {
-    actions: { primary: 'accept', secondary: 'reject' },
+    actions: isReadOnly ? {} : { primary: 'accept', secondary: 'reject' },
     createdAt: toIsoString(request?.createdAt),
     id: `team:${requestId}`,
     meta: {
+      canManage,
+      governanceMode: normalizeString(request?.team?.membershipRequestManagementMode),
+      infoOnly: isReadOnly,
       raw: request,
+      readOnlyReason,
       requesterAvatarUrl,
       requesterId: normalizeString(request?.user?.documentId),
       requesterName,
@@ -142,8 +162,8 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
       teamName,
     },
     status: 'pending',
-    subtitle: `${requesterName} souhaite rejoindre ${teamName}.`,
-    title: 'Demande adhesion equipe',
+    subtitle: isReadOnly ? readOnlySubtitle : `${requesterName} souhaite rejoindre ${teamName}.`,
+    title: isReadOnly ? 'Demande equipe en validation' : 'Demande adhesion equipe',
     type: 'team',
   };
 };

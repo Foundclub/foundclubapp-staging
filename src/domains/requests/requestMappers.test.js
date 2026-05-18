@@ -1,6 +1,7 @@
 import {
   getAvailableRequestHubFilters,
   mapEventParticipationRequestToHubItem,
+  mapTeamMembershipRequestToHubItem,
 } from '@/domains/requests/requestMappers';
 
 describe('requestMappers', () => {
@@ -61,6 +62,46 @@ describe('requestMappers', () => {
     );
 
     expect(item.meta.requesterName).toBe('+33600000000');
+  });
+
+  test('maps owner-only team requests as informational for coaches', () => {
+    const item = mapTeamMembershipRequestToHubItem({
+      createdAt: '2026-05-18T10:00:00.000Z',
+      documentId: 'request-1',
+      permissions: {
+        canManage: false,
+        canView: true,
+      },
+      team: {
+        documentId: 'team-1',
+        membershipRequestManagementMode: 'CLUB_OWNER_ONLY',
+        name: 'U18',
+      },
+      user: {
+        avatar: { url: '/uploads/leo.jpg' },
+        documentId: 'user-1',
+        firstname: 'Leo',
+        lastname: 'Martin',
+      },
+    });
+
+    expect(item).toEqual(expect.objectContaining({
+      actions: {},
+      id: 'team:request-1',
+      status: 'pending',
+      subtitle: 'Leo Martin a demande a rejoindre U18. Votre equipe doit attendre la validation par votre/vos dirigeant(s).',
+      title: 'Demande equipe en validation',
+      type: 'team',
+    }));
+    expect(item.meta).toEqual(expect.objectContaining({
+      canManage: false,
+      governanceMode: 'CLUB_OWNER_ONLY',
+      infoOnly: true,
+      readOnlyReason: 'club_owner_only',
+      requesterAvatarUrl: '/uploads/leo.jpg',
+      requesterId: 'user-1',
+      teamId: 'team-1',
+    }));
   });
 
   test('returns the team filter for training-team contexts', () => {

@@ -109,6 +109,42 @@ describe('requestsHubService', () => {
     });
   });
 
+  test('keeps owner-only team requests visible without action buttons', async () => {
+    getTeamMembershipRequests.mockResolvedValue({
+      data: [
+        {
+          documentId: 'team-request-1',
+          permissions: {
+            canManage: false,
+            canView: true,
+          },
+          state: 'pending',
+          team: {
+            documentId: 'team-1',
+            membershipRequestManagementMode: 'CLUB_OWNER_ONLY',
+            name: 'U18',
+          },
+          user: {
+            documentId: 'user-1',
+            firstname: 'Leo',
+            lastname: 'Martin',
+          },
+        },
+      ],
+      meta: emptyPaginatedResponse.meta,
+    });
+
+    const result = await getRequestsHubData({ teamIds: ['team-1'] });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toEqual(expect.objectContaining({
+      actions: {},
+      id: 'team:team-request-1',
+      subtitle: 'Leo Martin a demande a rejoindre U18. Votre equipe doit attendre la validation par votre/vos dirigeant(s).',
+      type: 'team',
+    }));
+  });
+
   test('does not fetch installation requests when the user cannot manage them', async () => {
     await getRequestsHubData({
       canManageInstallationRequests: false,

@@ -180,6 +180,7 @@ function UserRole({ navigation }) {
         disabled={!role}
         isLoading={updateUserMutation.isPending}
         onPress={handleNext}
+        style={[Spaces.marginTop[24]]}
         title={t('profile.actions.save')}
         variant="Primary"
       />

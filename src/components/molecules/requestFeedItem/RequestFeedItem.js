@@ -105,6 +105,9 @@ function RequestFeedItem({
     && Boolean(requesterId || requesterName || requesterAvatarUrl);
   const canOpenEvent = Boolean(item?.meta?.eventId && onEventPress);
   const canOpenRequesterProfile = Boolean(requesterId && onRequesterPress);
+  const hasPrimaryAction = Boolean(item?.actions?.primary);
+  const hasSecondaryAction = Boolean(item?.actions?.secondary);
+  const hasActions = hasPrimaryAction || hasSecondaryAction;
   const installationWindowLabel = formatWindowLabel(
     item?.meta?.windowStart,
     item?.meta?.windowEnd,
@@ -349,30 +352,34 @@ function RequestFeedItem({
         </View>
       ) : null}
 
-      <View style={[Alignments.row, Spaces.gap[12]]}>
-        {item?.actions?.secondary ? (
-          <View style={{ flex: 1 }}>
-            <Button
-              disabled={isBusy}
-              icon="close"
-              isOption
-              onPress={() => onSecondaryPress && onSecondaryPress(item)}
-              title={getActionLabel(item?.actions?.secondary, item, t)}
-              variant="Secondary"
-            />
-          </View>
-        ) : null}
-        <View style={{ flex: 1 }}>
-          <Button
-            disabled={isBusy}
-            icon={item?.actions?.primary === 'validate' ? 'check' : 'check'}
-            isOption
-            onPress={() => onPrimaryPress && onPrimaryPress(item)}
-            title={getActionLabel(item?.actions?.primary, item, t)}
-            variant="Primary"
-          />
+      {hasActions ? (
+        <View style={[Alignments.row, Spaces.gap[12]]}>
+          {hasSecondaryAction ? (
+            <View style={{ flex: 1 }}>
+              <Button
+                disabled={isBusy}
+                icon="close"
+                isOption
+                onPress={() => onSecondaryPress && onSecondaryPress(item)}
+                title={getActionLabel(item?.actions?.secondary, item, t)}
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
+          {hasPrimaryAction ? (
+            <View style={{ flex: 1 }}>
+              <Button
+                disabled={isBusy}
+                icon={item?.actions?.primary === 'validate' ? 'check' : 'check'}
+                isOption
+                onPress={() => onPrimaryPress && onPrimaryPress(item)}
+                title={getActionLabel(item?.actions?.primary, item, t)}
+                variant="Primary"
+              />
+            </View>
+          ) : null}
         </View>
-      </View>
+      ) : null}
     </View>
   );
 }

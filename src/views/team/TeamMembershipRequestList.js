@@ -174,10 +174,15 @@ function TeamMembershipRequestList({ navigation, route }) {
       'Vous voyez cette demande, mais seul un entraîneur autorisé ou le dirigeant peut la traiter.',
     );
     if (item?.team?.membershipRequestManagementMode === 'CLUB_OWNER_ONLY') {
+      const requesterName = [item?.user?.firstname, item?.user?.lastname].filter(Boolean).join(' ')
+        || t('common.user', 'Utilisateur');
+      const teamName = item?.team?.name || t('requestsHub.types.team', 'equipe');
       governanceText = t(
         'teamMembershipRequestList.governance.ownerOnly',
-        'Gestion reservée au dirigeant du club.',
-      );
+        '{{name}} a demande a rejoindre {{team}}. Votre equipe doit attendre la validation par votre/vos dirigeant(s).',
+      )
+        .replace('{{name}}', requesterName)
+        .replace('{{team}}', teamName);
     } else if (canManageRequest) {
       governanceText = t(
         'teamMembershipRequestList.governance.manageAllowed',

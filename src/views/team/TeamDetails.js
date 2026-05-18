@@ -515,6 +515,8 @@ function TeamDetails({ navigation, route }) {
     });
   }, [team?.isLeague, team?.players, team?.trainers]);
 
+  const areTeamMembersHidden = team?.membersAreHidden === true;
+
   const isMyClub = useMemo(
     () => team?.club?.documentId === currentUser?.club?.documentId,
     [team?.club?.documentId, currentUser?.club?.documentId],
@@ -858,8 +860,52 @@ function TeamDetails({ navigation, route }) {
     }
   };
 
-  const trainersCount = useMemo(() => team?.trainers?.length || 0, [team?.trainers]);
-  const playersCount = useMemo(() => filteredPlayers.length || 0, [filteredPlayers]);
+  const trainersCount = useMemo(() => {
+    const explicitCount = Number(team?.trainersCount);
+    if (areTeamMembersHidden && Number.isFinite(explicitCount) && explicitCount >= 0) {
+      return explicitCount;
+    }
+    return team?.trainers?.length || 0;
+  }, [areTeamMembersHidden, team?.trainers, team?.trainersCount]);
+  const playersCount = useMemo(() => {
+    const explicitCount = Number(team?.playersCount);
+    if (areTeamMembersHidden && Number.isFinite(explicitCount) && explicitCount >= 0) {
+      return explicitCount;
+    }
+    return filteredPlayers.length || 0;
+  }, [areTeamMembersHidden, filteredPlayers, team?.playersCount]);
+  const renderMembersHiddenCard = useCallback((message) => (
+    <View
+      style={[
+        ApplicationStyle.borderRadius24,
+        ApplicationStyle.backgroundColor.primary700,
+        Spaces.padding[16],
+        Spaces.gap[8],
+        {
+          borderColor: `${Colors.primary500}55`,
+          borderWidth: 1,
+        },
+      ]}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {t('teamDetails.sections.membersHiddenTitle', 'Membres masqués')}
+      </Text>
+      <Text style={[Fonts.p2, Fonts.primary100]}>
+        {message}
+      </Text>
+    </View>
+  ), [
+    ApplicationStyle.backgroundColor.primary700,
+    ApplicationStyle.borderRadius24,
+    Colors.primary500,
+    Fonts.neutral00,
+    Fonts.p2,
+    Fonts.p2Bold,
+    Fonts.primary100,
+    Spaces.gap,
+    Spaces.padding,
+    t,
+  ]);
   const hasStandingData = useMemo(
     () => Array.isArray(team?.externalStandingData) && team.externalStandingData.length > 0,
     [team?.externalStandingData],
@@ -2564,8 +2610,14 @@ function TeamDetails({ navigation, route }) {
                       />
                     ) : null}
                   </View>
-                  {
-                  team?.trainers?.map((/** @type {User} */ trainer) => (
+                  {areTeamMembersHidden ? renderMembersHiddenCard(
+                    t(
+                      'teamDetails.sections.trainersHidden',
+                      "Le club masque les entraîneurs de cette équipe pour les visiteurs externes.",
+                    ),
+                  ) : (
+                    <>
+                      {team?.trainers?.map((/** @type {User} */ trainer) => (
                     <TouchableOpacity
                       key={trainer.documentId}
                       onPress={() => handleUserPress(trainer)}
@@ -2609,9 +2661,8 @@ function TeamDetails({ navigation, route }) {
                           </View>
                         ) : null}
                     </TouchableOpacity>
-                  ))
-                }
-                  {!trainersCount ? (
+                  ))}
+                      {!trainersCount ? (
                     <View
                       style={[
                         ApplicationStyle.borderRadius24,
@@ -2623,7 +2674,9 @@ function TeamDetails({ navigation, route }) {
                         {t('teamDetails.sections.noTrainer', 'Aucun entraîneur pour le moment')}
                       </Text>
                     </View>
-                  ) : null}
+                      ) : null}
+                    </>
+                  )}
                 </View>
               ) : null}
               {playersCount || canManageTeam ? (
@@ -2647,8 +2700,14 @@ function TeamDetails({ navigation, route }) {
                     />
                     )}
                   </View>
-                  {
-                  filteredPlayers.map((/** @type {User} */ player) => (
+                  {areTeamMembersHidden ? renderMembersHiddenCard(
+                    t(
+                      'teamDetails.sections.playersHidden',
+                      "Le club masque les joueurs de cette équipe pour les visiteurs externes.",
+                    ),
+                  ) : (
+                    <>
+                      {filteredPlayers.map((/** @type {User} */ player) => (
                     <View
                       key={player.documentId}
                       style={[
@@ -2692,8 +2751,9 @@ function TeamDetails({ navigation, route }) {
                         </View>
                       )}
                     </View>
-                  ))
-                }
+                  ))}
+                    </>
+                  )}
                 </View>
               ) : null}
               <View style={[Spaces.gap[16]]}>

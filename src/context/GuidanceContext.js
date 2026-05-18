@@ -68,6 +68,17 @@ const GuidanceContext = createContext({
 });
 
 const serializeState = (state, programVersion) => serializeGuidanceState(state, programVersion);
+const serializeConfig = (config) => JSON.stringify(normalizeGuidanceConfig(config || DEFAULT_GUIDANCE_CONFIG));
+const GUIDANCE_SIGNAL_DEDUPE_MS = {
+  action: 3000,
+  interaction: 10000,
+  route: 30000,
+};
+const GUIDANCE_SYNC_DELAYS_MS = {
+  action: 2500,
+  interaction: 8000,
+  route: 15000,
+};
 
 /**
  *
@@ -89,7 +100,10 @@ export function GuidanceProvider({ children }) {
   const [activeCelebration, setActiveCelebration] = useState(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [needsSync, setNeedsSync] = useState(false);
+  const [syncDelayMs, setSyncDelayMs] = useState(GUIDANCE_SYNC_DELAYS_MS.action);
 
+  const guidanceConfigRef = useRef(DEFAULT_GUIDANCE_CONFIG);
+  const guidanceConfigSignatureRef = useRef(serializeConfig(DEFAULT_GUIDANCE_CONFIG));
   const lastSyncedSignatureRef = useRef('');
   const missionStateRef = useRef(missionState);
   const previousCompletedMissionIdsRef = useRef(null);
@@ -121,9 +135,23 @@ export function GuidanceProvider({ children }) {
     persistGuidanceState(currentUserIdRef.current, nextState);
   }, []);
 
+  const updateGuidanceConfig = useCallback((nextConfig) => {
+    const normalizedConfig = normalizeGuidanceConfig(nextConfig || DEFAULT_GUIDANCE_CONFIG);
+    const nextSignature = serializeConfig(normalizedConfig);
+    guidanceConfigRef.current = normalizedConfig;
+    if (guidanceConfigSignatureRef.current === nextSignature) {
+      return normalizedConfig;
+    }
+
+    guidanceConfigSignatureRef.current = nextSignature;
+    setGuidanceConfig(normalizedConfig);
+    return normalizedConfig;
+  }, []);
+
   const applyPreparedState = useCallback((candidateState, options = {}) => {
     const {
       markDirty = true,
+      syncDelayMs: nextSyncDelayMs = GUIDANCE_SYNC_DELAYS_MS.action,
       syncedSignature = null,
     } = options;
     /** @type {any} */
@@ -164,6 +192,7 @@ export function GuidanceProvider({ children }) {
     }
 
     if (shouldSync) {
+      setSyncDelayMs((previousDelayMs) => Math.min(previousDelayMs || nextSyncDelayMs, nextSyncDelayMs));
       setNeedsSync(true);
     }
 
@@ -171,9 +200,8 @@ export function GuidanceProvider({ children }) {
   }, [audienceContext, guidanceConfig, persistPreparedState]);
 
   useEffect(() => {
-    const normalizedConfig = normalizeGuidanceConfig(appBootstrapData?.guidanceConfig || DEFAULT_GUIDANCE_CONFIG);
-    setGuidanceConfig(normalizedConfig);
-  }, [appBootstrapData?.guidanceConfig]);
+    updateGuidanceConfig(appBootstrapData?.guidanceConfig || DEFAULT_GUIDANCE_CONFIG);
+  }, [appBootstrapData?.guidanceConfig, updateGuidanceConfig]);
 
   useEffect(() => {
     if (!currentUserId) {
@@ -181,6 +209,7 @@ export function GuidanceProvider({ children }) {
       setActiveCelebration(null);
       setIsHydrated(false);
       setNeedsSync(false);
+      setSyncDelayMs(GUIDANCE_SYNC_DELAYS_MS.action);
       lastSyncedSignatureRef.current = '';
       previousCompletedMissionIdsRef.current = null;
       remoteSyncDisabledRef.current = false;
@@ -215,6 +244,7 @@ export function GuidanceProvider({ children }) {
     remoteSyncDisabledRef.current = false;
     syncWarningKeyRef.current = '';
     setNeedsSync(nextSignature !== remoteSignature);
+    setSyncDelayMs(GUIDANCE_SYNC_DELAYS_MS.action);
     setIsHydrated(true);
     previousCompletedMissionIdsRef.current = nextState.completedMissionIds;
   }, [
@@ -232,13 +262,38 @@ export function GuidanceProvider({ children }) {
         return;
       }
 
+      const nextState = normalizeGuidanceState(
+        missionStateRef.current,
+        guidanceConfigRef.current.programVersion,
+      );
+      let existingTimestamp = nextState.actionSignals?.[signal.key];
+      if (signal.kind === 'route') {
+        existingTimestamp = nextState.routeVisits?.[signal.key];
+      } else if (signal.kind === 'interaction') {
+        existingTimestamp = nextState.interactionSignals?.[signal.key];
+      }
+      const dedupeWindowMs = GUIDANCE_SIGNAL_DEDUPE_MS[signal.kind] || 0;
+      if (existingTimestamp && dedupeWindowMs > 0) {
+        const elapsedMs = Math.abs(
+          new Date(signal.occurredAt).getTime() - new Date(existingTimestamp).getTime(),
+        );
+        if (Number.isFinite(elapsedMs) && elapsedMs < dedupeWindowMs) {
+          return;
+        }
+      }
+
+      const nextSyncDelayMs = GUIDANCE_SYNC_DELAYS_MS[signal.kind] || GUIDANCE_SYNC_DELAYS_MS.action;
+
       applyPreparedState((previousState) => {
-        const nextState = normalizeGuidanceState(previousState, guidanceConfig.programVersion);
+        const normalizedState = normalizeGuidanceState(
+          previousState,
+          guidanceConfigRef.current.programVersion,
+        );
         if (signal.kind === 'route') {
           return {
-            ...nextState,
+            ...normalizedState,
             routeVisits: {
-              ...nextState.routeVisits,
+              ...normalizedState.routeVisits,
               [signal.key]: signal.occurredAt,
             },
             updatedAt: signal.occurredAt,
@@ -247,9 +302,9 @@ export function GuidanceProvider({ children }) {
 
         if (signal.kind === 'interaction') {
           return {
-            ...nextState,
+            ...normalizedState,
             interactionSignals: {
-              ...nextState.interactionSignals,
+              ...normalizedState.interactionSignals,
               [signal.key]: signal.occurredAt,
             },
             updatedAt: signal.occurredAt,
@@ -257,18 +312,18 @@ export function GuidanceProvider({ children }) {
         }
 
         return {
-          ...nextState,
+          ...normalizedState,
           actionSignals: {
-            ...nextState.actionSignals,
+            ...normalizedState.actionSignals,
             [signal.key]: signal.occurredAt,
           },
           updatedAt: signal.occurredAt,
         };
-      });
+      }, { syncDelayMs: nextSyncDelayMs });
     });
 
     return unsubscribe;
-  }, [applyPreparedState, guidanceConfig.programVersion, isHydrated]);
+  }, [applyPreparedState, isHydrated]);
 
   useEffect(() => {
     if (
@@ -287,13 +342,20 @@ export function GuidanceProvider({ children }) {
       try {
         const replace = nextSyncModeRef.current === 'replace';
         const stateToSync = missionStateRef.current;
+        const currentSignature = serializeState(
+          stateToSync,
+          guidanceConfigRef.current.programVersion,
+        );
+        if (!replace && currentSignature === lastSyncedSignatureRef.current) {
+          setNeedsSync(false);
+          return;
+        }
         const response = await patchGuidanceState(stateToSync, { replace });
         if (currentUserIdRef.current !== currentUserId) {
           return;
         }
 
-        const responseConfig = normalizeGuidanceConfig(response?.guidanceConfig || guidanceConfig);
-        setGuidanceConfig(responseConfig);
+        const responseConfig = updateGuidanceConfig(response?.guidanceConfig || guidanceConfigRef.current);
         const remoteState = normalizeGuidanceState(
           response?.guidanceState,
           responseConfig.programVersion,
@@ -345,7 +407,7 @@ export function GuidanceProvider({ children }) {
       } finally {
         syncInFlightRef.current = false;
       }
-    }, 800);
+    }, Math.max(800, syncDelayMs));
 
     return () => clearTimeout(timeoutId);
   }, [
@@ -356,6 +418,8 @@ export function GuidanceProvider({ children }) {
     isHydrated,
     missionState,
     needsSync,
+    syncDelayMs,
+    updateGuidanceConfig,
   ]);
 
   useEffect(() => {

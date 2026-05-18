@@ -140,14 +140,14 @@ export const POPUP_REGISTRY = {
     surfacePolicy: POPUP_SURFACE_POLICIES.STANDARD,
   },
   [POPUP_IDS.PUSH_PERMISSION_PREPROMPT]: {
-    allowedStartupPhases: ['startup_prompt_window'],
+    allowedStartupPhases: ['startup_prompt_window', 'screen_local_prompts', 'steady_state'],
     blocking: true,
     dismissScope: POPUP_DISMISS_SCOPES.DAY,
     id: POPUP_IDS.PUSH_PERMISSION_PREPROMPT,
     kind: POPUP_KINDS.STARTUP_BLOCKING,
     priority: 90,
     surface: POPUP_SURFACES.MODAL,
-    surfacePolicy: POPUP_SURFACE_POLICIES.MODAL_ONLY_DURING_STARTUP,
+    surfacePolicy: POPUP_SURFACE_POLICIES.STANDARD,
   },
   [POPUP_IDS.SMART_LINEUP_REMINDER]: {
     allowedStartupPhases: ['startup_prompt_window', 'screen_local_prompts', 'steady_state'],
