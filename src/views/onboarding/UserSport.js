@@ -14,6 +14,7 @@ import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
+import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -264,7 +265,9 @@ function UserSport({ navigation }) {
               filteredActivities.map((activity) => (
                 <TouchableOpacity
                   key={activity.documentId || activity.id}
-                  onPress={() => setSelectedSport(activity.name)}
+                  onPress={() => setSelectedSport((currentSport) => (
+                    currentSport === activity.name ? null : activity.name
+                  ))}
                   style={[
                     Spaces.padding[16],
                     {
@@ -285,7 +288,7 @@ function UserSport({ navigation }) {
         )}
       </View>
 
-      <View style={[Spaces.gap[16], { paddingTop: 16 }]}>
+      <OnboardingStickyFooter contentWidth="readable">
         <OnboardingOptionalHint />
         <Button
           disabled={!selectedSport}
@@ -300,7 +303,7 @@ function UserSport({ navigation }) {
           title={t('common.actions.continueLater', 'Continuer plus tard')}
           variant="Secondary"
         />
-      </View>
+      </OnboardingStickyFooter>
     </FormScreenContainer>
   );
 }

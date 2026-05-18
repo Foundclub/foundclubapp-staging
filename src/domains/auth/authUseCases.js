@@ -40,6 +40,28 @@ export const getUserRoleKey = (roleName) => {
   return 'new';
 };
 
+export const getManagedMultisportSectionIds = (/** @type {any} */ userData) => new Set(
+  (Array.isArray(userData?.multisportClubs) ? userData.multisportClubs : [])
+    .flatMap((multisportClub) => (
+      Array.isArray(multisportClub?.sections) ? multisportClub.sections : []
+    ))
+    .map((section) => String(section?.documentId || '').trim())
+    .filter(Boolean),
+);
+
+export const canUserEditClub = (/** @type {any} */ userData, /** @type {string} */ clubId) => {
+  const normalizedClubId = String(clubId || '').trim();
+  if (!normalizedClubId || getUserRoleKey(userData?.role?.name) !== 'president') {
+    return false;
+  }
+
+  if (String(userData?.club?.documentId || '').trim() === normalizedClubId) {
+    return true;
+  }
+
+  return getManagedMultisportSectionIds(userData).has(normalizedClubId);
+};
+
 export const findRoleByKey = (roles, roleNameOrKey) => {
   const expectedRoleKey = getUserRoleKey(roleNameOrKey);
   return roles?.find((role) => getUserRoleKey(role?.type || role?.name) === expectedRoleKey);

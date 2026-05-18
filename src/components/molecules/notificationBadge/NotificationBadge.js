@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Image, InteractionManager, StyleSheet, Text, TouchableOpacity, Vibration,
+  Animated, Image, InteractionManager, Platform, StyleSheet, Text, TouchableOpacity, Vibration,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -35,11 +35,25 @@ function NotificationBadge({
   const shouldLoadNotifications = !onPress && isPopupVisible;
 
   useEffect(() => {
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timeoutId;
     const task = InteractionManager.runAfterInteractions(() => {
+      if (Platform.OS === 'web') {
+        timeoutId = setTimeout(() => {
+          setIsUnreadCountReady(true);
+        }, 1200);
+        return;
+      }
+
       setIsUnreadCountReady(true);
     });
 
-    return () => task?.cancel?.();
+    return () => {
+      task?.cancel?.();
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, []);
 
   useEffect(() => {

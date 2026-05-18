@@ -97,8 +97,10 @@ function ScreenContainer({
   let centeredMinHeight;
   if (typeof desktopMinHeight === 'number') {
     centeredMinHeight = desktopMinHeight;
-  } else if (desktopMinHeight !== false && shouldCenterContent && useSurface) {
-    centeredMinHeight = Math.max(520, Math.min(height - 96, 700));
+  } else if (desktopMinHeight !== false && shouldCenterContent) {
+    centeredMinHeight = useSurface
+      ? Math.max(520, Math.min(height - 96, 700))
+      : Math.max(560, Math.min(height - Math.max(insets.top, 20) - 72, 760));
   }
   const backgroundColor = gradient?.[0] || Colors.primary700;
   const backgroundImageSource = Images?.[bgImage];
@@ -148,7 +150,7 @@ function ScreenContainer({
         padding: contentFramePadding,
       }
       : null,
-    shouldCenterContent
+    centeredMinHeight
       ? {
         minHeight: centeredMinHeight,
       }

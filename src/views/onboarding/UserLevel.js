@@ -13,6 +13,7 @@ import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
+import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -167,7 +168,7 @@ function UserLevel({ navigation }) {
         </ScrollView>
       </View>
 
-      <View style={[Spaces.gap[16]]}>
+      <OnboardingStickyFooter>
         <OnboardingOptionalHint />
         <Button
           disabled={!selectedLevel}
@@ -182,7 +183,7 @@ function UserLevel({ navigation }) {
           title={t('common.actions.continueLater', 'Continuer plus tard')}
           variant="Secondary"
         />
-      </View>
+      </OnboardingStickyFooter>
     </FormScreenContainer>
   );
 }

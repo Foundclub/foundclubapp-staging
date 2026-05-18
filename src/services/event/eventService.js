@@ -546,7 +546,33 @@ const COMPACT_EVENT_CARD_FIELDS = [
   'totalPlayers',
 ];
 
-const COMPACT_EVENT_CARD_POPULATE = {
+const REQUEST_HUB_EVENT_FIELDS = [
+  'createdAt',
+  'date',
+  'documentId',
+  'name',
+  'validationMode',
+];
+
+const PARTICIPATION_REQUEST_STATUSES = ['accepted', 'missing', 'pending'];
+const REQUEST_HUB_PARTICIPATION_REQUEST_STATUSES = ['pending'];
+
+const buildViewerScopedUserRelation = (viewerDocumentId) => {
+  if (!viewerDocumentId) {
+    return {
+      fields: ['documentId'],
+    };
+  }
+
+  return {
+    fields: ['documentId'],
+    filters: {
+      documentId: viewerDocumentId,
+    },
+  };
+};
+
+const buildCompactEventCardPopulate = (viewerDocumentId) => ({
   club: {
     fields: ['documentId', 'name', 'addressDetails'],
     populate: {
@@ -572,23 +598,34 @@ const COMPACT_EVENT_CARD_POPULATE = {
   league_match: {
     fields: ['documentId'],
   },
-  missings: {
-    fields: ['documentId'],
-  },
+  missings: buildViewerScopedUserRelation(viewerDocumentId),
   parentEvent: {
     fields: ['documentId'],
   },
   participationRequests: {
     fields: ['createdAt', 'documentId', 'isActive', 'participationStatus', 'updatedAt'],
+    filters: {
+      isActive: {
+        $ne: false,
+      },
+      participationStatus: {
+        $in: PARTICIPATION_REQUEST_STATUSES,
+      },
+      ...(viewerDocumentId
+        ? {
+          user: {
+            documentId: viewerDocumentId,
+          },
+        }
+        : {}),
+    },
     populate: {
       user: {
         fields: ['documentId'],
       },
     },
   },
-  participations: {
-    fields: ['documentId'],
-  },
+  participations: buildViewerScopedUserRelation(viewerDocumentId),
   team: {
     fields: ['documentId', 'name'],
     populate: {
@@ -634,7 +671,28 @@ const COMPACT_EVENT_CARD_POPULATE = {
   type: {
     fields: ['documentId', 'name'],
   },
-};
+});
+
+const buildRequestHubEventPopulate = () => ({
+  participationRequests: {
+    fields: ['createdAt', 'documentId', 'isActive', 'participationStatus', 'updatedAt'],
+    filters: {
+      isActive: {
+        $ne: false,
+      },
+      participationStatus: {
+        $in: REQUEST_HUB_PARTICIPATION_REQUEST_STATUSES,
+      },
+    },
+    populate: ['sourceTeam', 'user', 'user.avatar'],
+  },
+  team: {
+    fields: ['documentId', 'name'],
+  },
+  type: {
+    fields: ['documentId', 'name'],
+  },
+});
 
 /**
  * Get events
@@ -668,6 +726,8 @@ const COMPACT_EVENT_CARD_POPULATE = {
  *   facility?: {documentId?: string, name?: string};
  *   myTeams?: string[];
  *   compact?: boolean;
+ *   requestHub?: boolean;
+ *   viewerDocumentId?: string;
  *  }} params - The parameters for filtering events
  * @param {{ signal?: AbortSignal }} [options]
  * @returns {Promise<{data: FCEvent[], meta: {
@@ -700,7 +760,10 @@ export const getEvents = async (params = {}, options = {}) => {
     teamIds,
     trainerEventsFilter = false,
     type,
+    viewerDocumentId,
   } = params;
+  const isRequestHubMode = params.requestHub === true;
+  const normalizedSearchQuery = typeof q === 'string' ? q.trim() : q;
 
   /** @type {Record<string, any>} */
   const filtersObj = {
@@ -967,16 +1030,20 @@ export const getEvents = async (params = {}, options = {}) => {
     ];
   }
 
-  const filters = {
-    _q: q,
-    filters: filtersObj,
-    ...(compact ? { fields: COMPACT_EVENT_CARD_FIELDS } : {}),
-    myTeams: params.myTeams, // Pass myTeams filter to backend
-    pagination: {
-      page: page || 1,
-      pageSize: pageSize || 10,
-    },
-    populate: compact ? COMPACT_EVENT_CARD_POPULATE : [
+  let fields;
+  if (isRequestHubMode) {
+    fields = REQUEST_HUB_EVENT_FIELDS;
+  } else if (compact) {
+    fields = COMPACT_EVENT_CARD_FIELDS;
+  }
+
+  let populate;
+  if (isRequestHubMode) {
+    populate = buildRequestHubEventPopulate();
+  } else if (compact) {
+    populate = buildCompactEventCardPopulate(viewerDocumentId);
+  } else {
+    populate = [
       'club',
       'club.sponsor',
       'club.sponsor.logo',
@@ -1007,7 +1074,19 @@ export const getEvents = async (params = {}, options = {}) => {
       'participationRequests.user.avatar',
       'participationRequests.sourceTeam',
       'league_match',
-    ],
+    ];
+  }
+
+  const filters = {
+    filters: filtersObj,
+    ...(normalizedSearchQuery ? { _q: normalizedSearchQuery } : {}),
+    ...(fields ? { fields } : {}),
+    myTeams: params.myTeams, // Pass myTeams filter to backend
+    pagination: {
+      page: page || 1,
+      pageSize: pageSize || 10,
+    },
+    populate,
     sort: params.sort ? [params.sort] : ['date:asc'], // Sort by date ascending
     // Location-based filtering (Haversine)
     ...(lat && lon && radius && { lat, lon, radius }),

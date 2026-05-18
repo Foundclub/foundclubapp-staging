@@ -18,7 +18,7 @@ function FormScreenContainer({
   contentContainerStyle = [],
   contentWidth = 'form',
   desktopAlignment = 'center',
-  desktopMinHeight = false,
+  desktopMinHeight = 640,
   gradient = null,
   responsiveHorizontalPadding = true,
   responsivePadding = true,

@@ -13,6 +13,7 @@ import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
+import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -194,7 +195,7 @@ function UserPosition({ navigation, route }) {
         </ScrollView>
       </View>
 
-      <View style={[Spaces.gap[16], { paddingTop: 16 }]}>
+      <OnboardingStickyFooter>
         <OnboardingOptionalHint />
         <Button
           disabled={selectedPositions.length === 0}
@@ -211,7 +212,7 @@ function UserPosition({ navigation, route }) {
           title={t('common.actions.continueLater', 'Continuer plus tard')}
           variant="Secondary"
         />
-      </View>
+      </OnboardingStickyFooter>
     </FormScreenContainer>
   );
 }

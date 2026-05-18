@@ -430,6 +430,9 @@ function RequestsHub({ navigation, route }) {
 
   const sourceErrors = requestsQuery?.data?.errors || [];
   const canGoBack = typeof navigation?.canGoBack === 'function' && navigation.canGoBack();
+  const isInitialRequestsLoad = requestsQuery.isLoading
+    && filteredItems.length === 0
+    && sourceErrors.length === 0;
 
   const handleBackPress = useCallback(() => {
     if (canGoBack) {
@@ -630,7 +633,9 @@ function RequestsHub({ navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
-                {t('requestsHub.empty', 'Aucune demande en attente')}
+                {isInitialRequestsLoad
+                  ? t('requestsHub.loading', 'Chargement des demandes...')
+                  : t('requestsHub.empty', 'Aucune demande en attente')}
               </Text>
             </View>
           )}

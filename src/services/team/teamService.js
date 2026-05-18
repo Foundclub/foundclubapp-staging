@@ -107,6 +107,7 @@ const teamSchema = Joi.object({
  *   section?: string;
  *   category?: string[];
  *   activities?: string;
+ *   summary?: boolean;
  * }} [params]
  * @returns {Promise<{data: Team[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
@@ -123,9 +124,64 @@ export const getTeams = async (params = {}) => {
     pageSize,
     parentMultisportId,
     section,
+    summary = false,
   } = params;
 
   try {
+    const populate = summary ? {
+      activities: {
+        fields: ['documentId', 'name'],
+      },
+      category: {
+        fields: ['documentId', 'name'],
+      },
+      club: {
+        fields: ['documentId', 'name'],
+        populate: {
+          logo: {
+            fields: ['url'],
+          },
+          sponsor: {
+            fields: ['link', 'title'],
+            populate: {
+              logo: {
+                fields: ['url'],
+              },
+            },
+          },
+        },
+      },
+      level: {
+        fields: ['documentId', 'name'],
+      },
+      players: {
+        fields: ['documentId'],
+      },
+      section: {
+        fields: ['documentId', 'name'],
+      },
+      trainers: {
+        fields: ['documentId'],
+      },
+    } : {
+      activities: true,
+      category: true,
+      club: {
+        populate: {
+          logo: true,
+          sponsor: {
+            populate: {
+              logo: true,
+            },
+          },
+        },
+      },
+      level: true,
+      players: true,
+      section: true,
+      trainers: true,
+    };
+
     const buildRequestParams = (useLegacyClubId = false) => ({
       filters: {
         activities: activities ? {
@@ -163,24 +219,7 @@ export const getTeams = async (params = {}) => {
         page: page || 1,
         pageSize: pageSize || 10,
       },
-      populate: {
-        activities: true,
-        category: true,
-        club: {
-          populate: {
-            logo: true,
-            sponsor: {
-              populate: {
-                logo: true,
-              },
-            },
-          },
-        },
-        level: true,
-        players: true,
-        section: true,
-        trainers: true,
-      },
+      populate,
     });
 
     const validateResponse = async (response) => {

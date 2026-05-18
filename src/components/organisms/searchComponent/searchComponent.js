@@ -6,6 +6,11 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 
+const normalizeSearchValue = (value) => {
+  const normalized = String(value || '');
+  return normalized.length > 0 && normalized.length < 2 ? '' : normalized;
+};
+
 /**
  * Search component for clubs.
  * @param {object} props - The props
@@ -29,23 +34,41 @@ function SearchComponent({
 }) {
   const [search, setSearch] = useState(searchDefaultValue);
   const searchHandlerRef = useRef(handleSearchField);
+  const isSyncingDefaultValueRef = useRef(false);
+  const lastEmittedValueRef = useRef(normalizeSearchValue(searchDefaultValue));
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
 
   useEffect(() => {
-    setSearch(searchDefaultValue);
-  }, [searchDefaultValue]);
+    const nextDefaultValue = String(searchDefaultValue || '');
+    lastEmittedValueRef.current = normalizeSearchValue(nextDefaultValue);
+
+    if (search === nextDefaultValue) {
+      return;
+    }
+
+    isSyncingDefaultValueRef.current = true;
+    setSearch(nextDefaultValue);
+  }, [search, searchDefaultValue]);
 
   useEffect(() => {
     searchHandlerRef.current = handleSearchField;
   }, [handleSearchField]);
 
   useEffect(() => {
-    const value = search || '';
-    const normalizedValue = value.length > 0 && value.length < 2 ? '' : value;
+    if (isSyncingDefaultValueRef.current) {
+      isSyncingDefaultValueRef.current = false;
+      return undefined;
+    }
+
+    const normalizedValue = normalizeSearchValue(search);
+    if (normalizedValue === lastEmittedValueRef.current) {
+      return undefined;
+    }
 
     const timeout = setTimeout(() => {
+      lastEmittedValueRef.current = normalizedValue;
       searchHandlerRef.current?.(normalizedValue);
     }, 300);
 
@@ -61,7 +84,8 @@ function SearchComponent({
   };
 
   const handleSubmit = () => {
-    const normalizedValue = search.length > 0 && search.length < 2 ? '' : search;
+    const normalizedValue = normalizeSearchValue(search);
+    lastEmittedValueRef.current = normalizedValue;
     searchHandlerRef.current?.(normalizedValue);
   };
 

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import {
+  EMPTY_REQUESTS_HUB_DATA,
   getRequestsHubData,
   hasAnyRequestsContext,
   normalizeRequestsHubContext,
@@ -28,6 +29,7 @@ export const useRequestsHubData = (rawContext = {}, options = {}) => {
   return useQuery({
     ...options,
     enabled,
+    placeholderData: (previousData) => previousData || EMPTY_REQUESTS_HUB_DATA,
     queryFn: () => getRequestsHubData(context),
     queryKey: getRequestsHubQueryKey(context),
     staleTime: 30_000,

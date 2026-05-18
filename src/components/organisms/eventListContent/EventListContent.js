@@ -1,7 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { addDays, isBefore, startOfDay } from 'date-fns';
+import {
+  addDays,
+  isBefore,
+  startOfDay,
+  startOfMinute,
+} from 'date-fns';
 import {
   useCallback,
   useEffect,
@@ -196,6 +201,7 @@ function EventListContent({
   const userDocumentId = userData?.documentId;
   const viewportSession = searchMapSessions?.events || {};
   const { sceneBottomInset } = useBottomDockLayout();
+  const defaultFutureCutoffRef = useRef(startOfMinute(new Date()).toISOString());
 
   const emitTutorialLayout = useCallback((key, ref) => {
     if (!onTutorialLayout || !ref?.current) return;
@@ -212,12 +218,21 @@ function EventListContent({
     });
   }, [onTutorialLayout]);
 
-  const eventsConfig = useMemo(() => ({
-    ...(showFilters ? eventFilters : {}),
-    ...additionalFilters,
-    compact: true,
-    pageSize: 15,
-  }), [showFilters, eventFilters, additionalFilters]);
+  const eventsConfig = useMemo(() => {
+    const config = {
+      ...(showFilters ? eventFilters : {}),
+      ...additionalFilters,
+      compact: true,
+      pageSize: 15,
+      ...(userDocumentId ? { viewerDocumentId: userDocumentId } : {}),
+    };
+
+    if (!config.startDateAfter && !config.startDateBefore) {
+      config.startDateAfter = defaultFutureCutoffRef.current;
+    }
+
+    return config;
+  }, [showFilters, eventFilters, additionalFilters, userDocumentId]);
   const viewportExecutedQuery = viewportSession?.executedQuery || null;
   const viewportRegion = viewportSession?.searchedViewport
     || viewportSession?.executedViewport
@@ -233,6 +248,47 @@ function EventListContent({
     [eventsConfig?.q],
   );
   const isSmartSearchEnabled = !isViewportListMode && activeSearchText.length >= 2;
+  const hasExplicitListFilters = useMemo(() => Boolean(
+    activeSearchText
+    || eventsConfig?.club?.value
+    || (typeof eventsConfig?.club === 'string' ? eventsConfig.club : null)
+    || eventsConfig?.category
+    || eventsConfig?.level
+    || eventsConfig?.activity
+    || eventsConfig?.type
+    || eventsConfig?.excludeType
+    || eventsConfig?.facility
+    || eventsConfig?.lat
+    || eventsConfig?.lon
+    || eventsConfig?.radius
+    || eventsConfig?.participantId
+    || eventsConfig?.sessionStatus
+    || eventsConfig?.startDateBefore
+    || eventsConfig?.validationMode
+    || (Array.isArray(eventsConfig?.teamIds) && eventsConfig.teamIds.length > 0),
+  ), [
+    activeSearchText,
+    eventsConfig?.activity,
+    eventsConfig?.category,
+    eventsConfig?.club,
+    eventsConfig?.excludeType,
+    eventsConfig?.facility,
+    eventsConfig?.lat,
+    eventsConfig?.level,
+    eventsConfig?.lon,
+    eventsConfig?.participantId,
+    eventsConfig?.radius,
+    eventsConfig?.sessionStatus,
+    eventsConfig?.startDateBefore,
+    eventsConfig?.teamIds,
+    eventsConfig?.type,
+    eventsConfig?.validationMode,
+  ]);
+  const shouldPrefetchAdjacentDates = screenActive
+    && !showFilters
+    && !propEvents
+    && !isViewportListMode
+    && !isSmartSearchEnabled;
 
   // Get user's club and multisport club IDs for membership filtering
   const userClubId = userData?.club?.documentId;
@@ -250,7 +306,12 @@ function EventListContent({
       isFeatured: true,
       pageSize: 5,
       sessionStatus: 'open',
+      ...(userDocumentId ? { viewerDocumentId: userDocumentId } : {}),
     });
+
+    if (!config.startDateAfter && !config.startDateBefore) {
+      config.startDateAfter = defaultFutureCutoffRef.current;
+    }
 
     if (isPlanning) {
       // SECTION/CM featured events - filter by user's membership
@@ -265,7 +326,13 @@ function EventListContent({
     }
 
     return config;
-  }, [showFilters, eventFilters, additionalFilters, isPlanning, userClubId, allCmIds]);
+  }, [showFilters, eventFilters, additionalFilters, isPlanning, userClubId, allCmIds, userDocumentId]);
+  const shouldLoadFeaturedEvents = areFeaturedEventsEnabled
+    && !showFilters
+    && !isPlanning
+    && !isViewportListMode
+    && !isSmartSearchEnabled
+    && !hasExplicitListFilters;
 
   // Only fetch if no external events are provided
   const {
@@ -331,7 +398,7 @@ function EventListContent({
     data: featuredPages,
     refetch: refetchFeatured,
   } = useGetEvents(featuredEventsConfig, {
-    enabled: screenActive && !propEvents && areFeaturedEventsEnabled,
+    enabled: screenActive && !propEvents && shouldLoadFeaturedEvents,
   });
 
   const selectedParticipationFlow = useMemo(
@@ -592,7 +659,7 @@ function EventListContent({
   }, [activeMode, events.length, isListFetchingNext, isLoading, screenActive]);
 
   useEffect(() => {
-    if (!screenActive || !areFeaturedEventsEnabled || propEvents) return;
+    if (!screenActive || !shouldLoadFeaturedEvents || propEvents) return;
 
     const signature = `${activeMode}:${featuredEvents.length}`;
     if (secondaryQuerySignatureRef.current === signature) return;
@@ -610,7 +677,7 @@ function EventListContent({
       resultCount: featuredEvents.length,
       type: 'events',
     });
-  }, [activeMode, areFeaturedEventsEnabled, featuredEvents.length, propEvents, screenActive]);
+  }, [activeMode, featuredEvents.length, propEvents, screenActive, shouldLoadFeaturedEvents]);
 
   const filterCount = useMemo(() => {
     if (!eventFilters) return 0;
@@ -740,11 +807,27 @@ function EventListContent({
   };
 
   const handleSearchField = useCallback((/** @type {string} */ q) => {
+    const normalizedNextQ = typeof q === 'string' ? q.trim() : '';
+    const currentNormalizedQ = typeof eventFilters?.q === 'string'
+      ? eventFilters.q.trim()
+      : '';
+
+    if (normalizedNextQ === currentNormalizedQ) {
+      return;
+    }
+
+    const nextFilters = {
+      ...(eventFilters || {}),
+    };
+
+    if (normalizedNextQ) {
+      nextFilters.q = normalizedNextQ;
+    } else {
+      delete nextFilters.q;
+    }
+
     appDispatch({
-      payload: {
-        ...(eventFilters || {}),
-        q,
-      },
+      payload: nextFilters,
       type: 'SET_EVENT_FILTERS',
     });
   }, [appDispatch, eventFilters]);
@@ -892,7 +975,7 @@ function EventListContent({
   ]);
 
   const prefetchDateEvents = useCallback((/** @type {Date} */ date) => {
-    if (propEvents || isViewportListMode || isSmartSearchEnabled) {
+    if (!shouldPrefetchAdjacentDates) {
       return Promise.resolve();
     }
 
@@ -921,10 +1004,8 @@ function EventListContent({
     });
   }, [
     eventsConfig,
-    isSmartSearchEnabled,
-    isViewportListMode,
-    propEvents,
     queryClient,
+    shouldPrefetchAdjacentDates,
   ]);
 
   // Date Picker Handlers
@@ -1020,7 +1101,7 @@ function EventListContent({
   }, []);
 
   useEffect(() => {
-    if (!screenActive || propEvents || isViewportListMode || isSmartSearchEnabled) {
+    if (!shouldPrefetchAdjacentDates) {
       return;
     }
 
@@ -1035,12 +1116,9 @@ function EventListContent({
   }, [
     hasResolvedActiveQuery,
     isActiveQueryBusy,
-    isSmartSearchEnabled,
-    isViewportListMode,
     prefetchDateEvents,
-    propEvents,
-    screenActive,
     selectedDate,
+    shouldPrefetchAdjacentDates,
   ]);
 
   useEffect(() => {
@@ -1057,11 +1135,10 @@ function EventListContent({
     }
 
     refetch();
-    if (areFeaturedEventsEnabled) {
+    if (shouldLoadFeaturedEvents) {
       refetchFeatured();
     }
   }, [
-    areFeaturedEventsEnabled,
     isSmartSearchEnabled,
     isViewportListMode,
     propEvents,
@@ -1071,6 +1148,7 @@ function EventListContent({
     refetchSearch,
     refetchViewport,
     screenActive,
+    shouldLoadFeaturedEvents,
   ]);
 
   // renderers
@@ -1170,7 +1248,7 @@ function EventListContent({
   );
   const listHeader = (
     <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
-      {!propEvents && featuredEvents.length > 0 ? (
+      {!propEvents && !showFilters && featuredEvents.length > 0 ? (
         <FeaturedEvents events={featuredEvents} />
       ) : null}
 

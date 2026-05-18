@@ -12,6 +12,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
+import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -197,13 +198,15 @@ function UserSection({ navigation }) {
           })}
         </ScrollView>
       </View>
-      <Button
-        disabled={!section}
-        isLoading={updateUserMutation.isPending}
-        onPress={handleNext}
-        title={t('profile.actions.save')}
-        variant="Primary"
-      />
+      <OnboardingStickyFooter>
+        <Button
+          disabled={!section}
+          isLoading={updateUserMutation.isPending}
+          onPress={handleNext}
+          title={t('profile.actions.save')}
+          variant="Primary"
+        />
+      </OnboardingStickyFooter>
     </FormScreenContainer>
   );
 }

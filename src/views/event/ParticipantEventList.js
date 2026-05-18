@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { isAfter, isSameDay } from 'date-fns';
+import { isAfter, isSameDay, startOfDay } from 'date-fns';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
-  Alert, FlatList, Image, InteractionManager, Text, TouchableOpacity, View,
+  Alert, FlatList, Image, InteractionManager, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -81,7 +81,10 @@ function ParticipantEventList({ navigation }) {
   const [joinModalError, setJoinModalError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(undefined);
   const [shouldLoadEventFeed, setShouldLoadEventFeed] = useState(false);
+  const [shouldLoadFeaturedFeed, setShouldLoadFeaturedFeed] = useState(Platform.OS !== 'web');
+  const [isPlanningContentReady, setIsPlanningContentReady] = useState(Platform.OS !== 'web');
   const flatListRef = useRef(null);
+  const listStartDateAfter = useMemo(() => startOfDay(listStartDate).toISOString(), [listStartDate]);
 
   // Hooks
 
@@ -90,7 +93,8 @@ function ParticipantEventList({ navigation }) {
     // @ts-ignore
     myTeams: true,
     sort: 'date:asc',
-  }), []);
+    startDateAfter: listStartDateAfter,
+  }), [listStartDateAfter]);
 
   // @ts-ignore
   const {
@@ -133,13 +137,14 @@ function ParticipantEventList({ navigation }) {
     membershipClubIds: allClubIds.length ? allClubIds : undefined,
     pageSize: 5,
     sessionStatus: 'open',
-  }), [allClubIds]);
+    startDateAfter: listStartDateAfter,
+  }), [allClubIds, listStartDateAfter]);
 
   const {
     data: featuredData,
     isLoading: isFeaturedLoading,
   } = useGetEvents(featuredEventsQueryConfig, {
-    enabled: allClubIds.length > 0 && shouldLoadEventFeed,
+    enabled: allClubIds.length > 0 && shouldLoadEventFeed && shouldLoadFeaturedFeed,
   });
 
   const featuredEvents = useMemo(
@@ -153,13 +158,42 @@ function ParticipantEventList({ navigation }) {
 
   useEffect(() => {
     const interactions = InteractionManager.runAfterInteractions(() => {
-      setShouldLoadEventFeed(true);
+      if (Platform.OS !== 'web') {
+        setShouldLoadEventFeed(true);
+      }
     });
 
     return () => {
       interactions.cancel?.();
     };
   }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || shouldLoadEventFeed || !isPlanningContentReady) {
+      return undefined;
+    }
+
+    setShouldLoadEventFeed(true);
+    return undefined;
+  }, [isPlanningContentReady, shouldLoadEventFeed]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      setShouldLoadFeaturedFeed(true);
+      return undefined;
+    }
+
+    if (!shouldLoadEventFeed) {
+      setShouldLoadFeaturedFeed(false);
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setShouldLoadFeaturedFeed(true);
+    }, 1500);
+
+    return () => clearTimeout(timeoutId);
+  }, [shouldLoadEventFeed]);
 
   // Filter events for the list (starting from listStartDate)
   const listEvents = useMemo(() => (
@@ -432,7 +466,10 @@ function ParticipantEventList({ navigation }) {
             }}
             title="Mon planning"
           >
-            <PersonalPlanningContainer onSummaryPress={handleSummaryPress} />
+            <PersonalPlanningContainer
+              onDataResolved={() => setIsPlanningContentReady(true)}
+              onSummaryPress={handleSummaryPress}
+            />
           </OnboardingWrapper>
         </View>
 
@@ -455,7 +492,7 @@ function ParticipantEventList({ navigation }) {
             onDateSelected={handleDateConfirm}
             selectedDate={listStartDate}
           />
-          {(!shouldLoadEventFeed || isEventsLoading || isFeaturedLoading) && (
+          {(!shouldLoadEventFeed || isEventsLoading || (shouldLoadFeaturedFeed && isFeaturedLoading)) && (
             <Text style={[Fonts.body4, Fonts.neutral300, Spaces.marginTop[8]]}>
               Mise a jour des evenements...
             </Text>

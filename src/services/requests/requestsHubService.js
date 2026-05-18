@@ -130,6 +130,7 @@ const fetchEventValidationRequests = async (clubId) => {
     club: { value: clubId },
     page,
     pageSize: 50,
+    requestHub: true,
     sessionStatus: 'open',
     startDateAfter: new Date(),
     validationMode: 'manual',
@@ -156,17 +157,19 @@ const getPendingParticipationRequests = (event) => (
     : []
 );
 
+export const EMPTY_REQUESTS_HUB_DATA = {
+  counts: buildRequestHubCounts([]),
+  errors: [],
+  items: [],
+};
+
 /**
  * @param {Partial<RequestsHubContext>} rawContext
  */
 export const getRequestsHubData = async (rawContext = {}) => {
   const context = normalizeRequestsHubContext(rawContext);
   if (!hasAnyRequestsContext(context)) {
-    return {
-      counts: buildRequestHubCounts([]),
-      errors: [],
-      items: [],
-    };
+    return EMPTY_REQUESTS_HUB_DATA;
   }
 
   const sources = [

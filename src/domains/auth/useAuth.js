@@ -34,6 +34,7 @@ import {
   sanitizeUser,
 } from '@/domains/auth/authSanitizer';
 import {
+  canUserEditClub,
   formatBirthdateToDisplay,
   formatBirthdateToSend,
   getAuthTokens, getOnboardingViews, profileFieldToDisplay, USER_ROLES,
@@ -74,6 +75,12 @@ const getBootstrapSessionKey = (/** @type {any} */ auth) => String(
   || auth?.user?.id
   || auth?.token
   || 'no-session',
+);
+
+const shouldDisableAppBootstrapForWeb = () => Boolean(
+  Platform.OS === 'web'
+  && typeof window !== 'undefined'
+  && window?.foundClubWebRuntime?.disableAppBootstrap === true,
 );
 
 /**
@@ -151,6 +158,7 @@ const useAuth = () => {
   });
 
   const { auth, authSessions, isAddingAccount } = /** @type {any} */ (useAppContext()[0]);
+  const disableAppBootstrap = shouldDisableAppBootstrapForWeb();
 
   const switchAccount = useCallback(async (/** @type {any} */ session) => {
     authLogger.debug('Switching account', { userDocumentId: session?.user?.documentId || session?.user?.id });
@@ -191,7 +199,7 @@ const useAuth = () => {
     error: bootstrapError,
     isLoading: isBootstrapLoading,
   } = useQuery({
-    enabled: Boolean(auth?.token) && !isAddingAccount,
+    enabled: Boolean(auth?.token) && !isAddingAccount && !disableAppBootstrap,
     placeholderData: auth?.user ? { userSummary: auth.user } : undefined,
     queryFn: getAppBootstrap,
     queryKey: ['app-bootstrap', auth?.token || 'no-token'],
@@ -201,6 +209,10 @@ const useAuth = () => {
   });
 
   useEffect(() => {
+    if (disableAppBootstrap) {
+      return;
+    }
+
     if (auth?.token && !isAddingAccount) {
       const requestLogKey = getBootstrapSessionKey(auth);
       if (lastBootstrapRequestLogKey === requestLogKey) {
@@ -209,7 +221,7 @@ const useAuth = () => {
       lastBootstrapRequestLogKey = requestLogKey;
       markBootStep('bootstrap_requested');
     }
-  }, [auth, auth?.token, isAddingAccount]);
+  }, [auth, auth?.token, disableAppBootstrap, isAddingAccount]);
 
   useEffect(() => {
     if (!bootstrapError) {
@@ -263,7 +275,12 @@ const useAuth = () => {
   const shouldEnableFullUserFetch = Boolean(auth?.token)
     && !isAddingAccount
     && isFullUserFetchReady
-    && (Boolean(bootstrapData?.serverTime) || Boolean(bootstrapError) || !auth?.user);
+    && (
+      disableAppBootstrap
+      || Boolean(bootstrapData?.serverTime)
+      || Boolean(bootstrapError)
+      || !auth?.user
+    );
 
   const {
     data: fullUserData,
@@ -482,8 +499,10 @@ const useAuth = () => {
   const allMyTeams = useMemo(() => (userData?.myTeams || [])
     ?.concat(userData?.trainedTeams || []), [userData]);
 
-  const canEditClub = useCallback((/** @type {string} */clubId) => userData?.role.name
-    === USER_ROLES.president && userData?.club?.documentId === clubId, [userData]);
+  const canEditClub = useCallback(
+    (/** @type {string} */clubId) => canUserEditClub(userData, clubId),
+    [userData],
+  );
 
   const canEditEvent = useCallback(
     (/** @type {string} */teamId) => (userData?.role.name
@@ -509,14 +528,8 @@ const useAuth = () => {
       return true;
     }
 
-    const userClubId = String(userData?.club?.documentId || '').trim();
     const organizerClubId = String(event?.team?.club?.documentId || event?.club?.documentId || '').trim();
-    if (
-      roleName === USER_ROLES.president
-      && userClubId
-      && organizerClubId
-      && organizerClubId === userClubId
-    ) {
+    if (canUserEditClub(userData, organizerClubId)) {
       return true;
     }
 
@@ -613,7 +626,10 @@ const useAuth = () => {
     inviteTeamPlayers,
     inviteTrainer,
     isAddingAccount,
-    isBootstrapResolved: !auth?.token || isAddingAccount || Boolean(bootstrapData?.serverTime || bootstrapError),
+    isBootstrapResolved: disableAppBootstrap
+      || !auth?.token
+      || isAddingAccount
+      || Boolean(bootstrapData?.serverTime || bootstrapError),
     isLoading: otpMutation.isPending || loginMutation.isPending,
     loginMutation,
     logoutMutation,

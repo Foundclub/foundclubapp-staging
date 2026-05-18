@@ -1,5 +1,7 @@
 import {
+  canUserEditClub,
   getAuthTokens,
+  getManagedMultisportSectionIds,
   getOnboardingViews,
   getRoleDocumentIdByKey,
   getUserRoleKey,
@@ -25,6 +27,43 @@ describe('authUseCases', () => {
     jest.clearAllMocks();
     resetAuthRuntimeForTests();
     storage.getBoolean.mockReturnValue(false);
+  });
+
+  describe('club management scope', () => {
+    it('lets a multisport dirigeant edit child section clubs', () => {
+      const user = {
+        club: null,
+        multisportClubs: [
+          {
+            documentId: 'cm-1',
+            sections: [
+              { documentId: 'section-club-1', name: 'Basket' },
+              { documentId: 'section-club-2', name: 'Football' },
+            ],
+          },
+        ],
+        role: { name: USER_ROLES.president },
+      };
+
+      expect(Array.from(getManagedMultisportSectionIds(user))).toEqual([
+        'section-club-1',
+        'section-club-2',
+      ]);
+      expect(canUserEditClub(user, 'section-club-1')).toBe(true);
+    });
+
+    it('does not let non-dirigeants edit multisport child sections', () => {
+      const user = {
+        multisportClubs: [
+          {
+            sections: [{ documentId: 'section-club-1' }],
+          },
+        ],
+        role: { name: USER_ROLES.coach },
+      };
+
+      expect(canUserEditClub(user, 'section-club-1')).toBe(false);
+    });
   });
 
   describe('getAuthTokens', () => {

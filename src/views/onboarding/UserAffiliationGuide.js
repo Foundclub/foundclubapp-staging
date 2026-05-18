@@ -7,8 +7,10 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,8 +35,10 @@ import OnboardingWrapper from '@/components/molecules/onboardingWrapper/Onboardi
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
+import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
 
 import { RouteNames } from '@/navigation/routeNames';
+import { BREAKPOINTS } from '@/responsive';
 
 import { useGetClubs } from '@/services/club/clubQueries';
 import { createClubRequest } from '@/services/clubRequest/clubRequestService';
@@ -107,6 +111,7 @@ function UserAffiliationGuideContent({ navigation }) {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const {
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
@@ -139,6 +144,7 @@ function UserAffiliationGuideContent({ navigation }) {
   const [requestedName, setRequestedName] = useState('');
   const [comment, setComment] = useState('');
   const [footerHeight, setFooterHeight] = useState(0);
+  const isDesktopWeb = Platform.OS === 'web' && width >= BREAKPOINTS.desktop;
 
   if (userDataLoading) {
     return (
@@ -161,7 +167,7 @@ function UserAffiliationGuideContent({ navigation }) {
     );
   }
 
-  const stickyFooterInset = (footerHeight || 156) + 12;
+  const stickyFooterInset = isDesktopWeb ? 0 : (footerHeight || 156) + 12;
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchValue.trim()), DEBOUNCE_MS);
@@ -352,6 +358,65 @@ function UserAffiliationGuideContent({ navigation }) {
     const nextHeight = Math.ceil(event?.nativeEvent?.layout?.height || 0);
     setFooterHeight((prevHeight) => (prevHeight === nextHeight ? prevHeight : nextHeight));
   }, []);
+
+  const footerActions = (
+    <>
+      <AffiliationTutorialStep
+        description={isClubFlow
+          ? t(
+            'onboardingAffiliation.tutorial.stepNotFoundDescriptionClub',
+            'Si tu ne trouves pas ton club, envoie une demande guidÃ©e aux superadmins.',
+          )
+          : t(
+            'onboardingAffiliation.tutorial.stepNotFoundDescriptionTeam',
+            'Si tu ne trouves pas ton Ã©quipe, envoie une demande guidÃ©e aux superadmins.',
+          )}
+        id="affiliation-not-found-action"
+        order={3}
+        spotlight={{
+          borderRadius: 28,
+          overlayOpacity: 0.4,
+          paddingX: 2,
+          paddingY: 3,
+        }}
+        title={isClubFlow
+          ? t('onboardingAffiliation.tutorial.stepNotFoundTitleClub', 'Je ne trouve pas mon club')
+          : t('onboardingAffiliation.tutorial.stepNotFoundTitleTeam', 'Je ne trouve pas mon Ã©quipe')}
+      >
+        <Button
+          accessibilityHint={isClubFlow
+            ? t(
+              'onboardingAffiliation.a11y.notFoundHintClub',
+              'Envoie une demande d\'aide si ton club est introuvable.',
+            )
+            : t(
+              'onboardingAffiliation.a11y.notFoundHintTeam',
+              'Envoie une demande d\'aide si ton Ã©quipe est introuvable.',
+            )}
+          accessibilityLabel={isClubFlow
+            ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
+            : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon Ã©quipe')}
+          onPress={handleOpenNotFoundModal}
+          title={isClubFlow
+            ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
+            : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon Ã©quipe')}
+          variant="Secondary"
+        />
+      </AffiliationTutorialStep>
+
+      <OnboardingOptionalHint />
+      <Button
+        accessibilityHint={t(
+          'onboardingAffiliation.a11y.continueLaterHint',
+          'Passe cette Ã©tape et continue l\'onboarding.',
+        )}
+        accessibilityLabel={t('common.actions.continueLater', 'Continuer plus tard')}
+        onPress={handleContinueLater}
+        title={t('common.actions.continueLater', 'Continuer plus tard')}
+        variant="Secondary"
+      />
+    </>
+  );
 
   const modalFooter = (
     <View style={[Alignments.row, Spaces.gap[12]]}>
@@ -859,7 +924,12 @@ function UserAffiliationGuideContent({ navigation }) {
           </View>
         </View>
 
-        <View
+        {isDesktopWeb ? (
+          <OnboardingStickyFooter contentWidth="wide">
+            {footerActions}
+          </OnboardingStickyFooter>
+        ) : (
+          <View
           onLayout={handleFooterLayout}
           style={[
             Spaces.paddingTop[8],
@@ -932,7 +1002,8 @@ function UserAffiliationGuideContent({ navigation }) {
             title={t('common.actions.continueLater', 'Continuer plus tard')}
             variant="Secondary"
           />
-        </View>
+          </View>
+        )}
       </View>
 
       <BottomModal

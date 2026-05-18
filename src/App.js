@@ -1,7 +1,7 @@
 /* eslint-disable perfectionist/sort-imports */
 import * as Sentry from '@sentry/react-native';
 import { useEffect, useState } from 'react';
-import { InteractionManager } from 'react-native';
+import { InteractionManager, Platform } from 'react-native';
 
 import SessionManager from '@/components/atoms/sessionManager/SessionManager';
 import MissionCelebrationHost from '@/components/organisms/guidance/MissionCelebrationHost';
@@ -306,6 +306,7 @@ function AppShell() {
 function DeferredStartupHosts() {
   const { appBootstrapData, isBootstrapResolved } = useAuth();
   const [allowBootstrapFallbackFetches, setAllowBootstrapFallbackFetches] = useState(false);
+  const shouldDeferHostFetchesOnWeb = Platform.OS === 'web';
 
   useEffect(() => {
     if (isBootstrapResolved) {
@@ -320,7 +321,9 @@ function DeferredStartupHosts() {
     return () => clearTimeout(timeoutId);
   }, [isBootstrapResolved]);
 
-  const shouldSkipBootstrapBackedInitialFetch = !isBootstrapResolved && !allowBootstrapFallbackFetches;
+  const shouldSkipBootstrapBackedInitialFetch = shouldDeferHostFetchesOnWeb
+    ? !allowBootstrapFallbackFetches
+    : !isBootstrapResolved && !allowBootstrapFallbackFetches;
 
   return (
     <>

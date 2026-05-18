@@ -13,6 +13,7 @@ import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
+import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -181,7 +182,7 @@ function UserCategory({ navigation }) {
         </ScrollView>
       </View>
 
-      <View style={[Spaces.gap[16], { paddingTop: 16 }]}>
+      <OnboardingStickyFooter>
         <OnboardingOptionalHint />
         <Button
           disabled={selectedCategories.length === 0}
@@ -196,7 +197,7 @@ function UserCategory({ navigation }) {
           title={t('common.actions.continueLater', 'Continuer plus tard')}
           variant="Secondary"
         />
-      </View>
+      </OnboardingStickyFooter>
     </FormScreenContainer>
   );
 }

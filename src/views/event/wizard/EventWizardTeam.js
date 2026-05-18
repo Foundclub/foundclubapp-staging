@@ -134,6 +134,7 @@ function EventWizardTeam({ navigation }) {
       clubIds: managedSectionClubIds.length > 0 ? managedSectionClubIds : undefined,
       pageSize: 100,
       parentMultisportId: !resolvedClubId && managedSectionClubIds.length === 0 ? managedMultisportClubId : undefined,
+      summary: true,
     },
     {
       enabled: Boolean(

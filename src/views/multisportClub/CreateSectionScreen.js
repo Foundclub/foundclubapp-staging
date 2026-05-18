@@ -1,5 +1,10 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -139,7 +144,11 @@ function CreateSectionScreen({ navigation, route }) {
         typeof message === 'string' ? message : fallbackMessage,
       );
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
+      await Promise.allSettled([
+        refetchCm(),
+        refetchUserData(),
+      ]);
       Alert.alert(
         t('multisport.sectionCreatedTitle', 'Section creee'),
         t(
@@ -195,7 +204,7 @@ function CreateSectionScreen({ navigation, route }) {
     return (
       <MultisportStateView
         actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.createSection.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
+        description={t('multisport.createSection.userError', 'Impossible de retrouver votre structure multisport pour le moment.')}
         onAction={() => refetchUserData()}
         title={t('multisport.createSection.userErrorTitle', 'Creation indisponible')}
       />
@@ -225,7 +234,7 @@ function CreateSectionScreen({ navigation, route }) {
     return (
       <MultisportStateView
         actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.createSection.error', "Impossible de charger cette structure multisport pour le moment.")}
+        description={t('multisport.createSection.error', 'Impossible de charger cette structure multisport pour le moment.')}
         onAction={() => refetchCm()}
         title={t('multisport.createSection.errorTitle', 'Creation indisponible')}
       />
@@ -285,7 +294,7 @@ function CreateSectionScreen({ navigation, route }) {
                 {t('multisport.createSection.activitiesErrorTitle', 'Le referentiel des sports est indisponible')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                {t('multisport.createSection.activitiesErrorDescription', "Impossible de charger la liste des sports pour le moment.")}
+                {t('multisport.createSection.activitiesErrorDescription', 'Impossible de charger la liste des sports pour le moment.')}
               </Text>
               <Button
                 onPress={() => refetchActivities()}

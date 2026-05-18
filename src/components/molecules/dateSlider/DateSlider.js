@@ -6,13 +6,18 @@ import React, {
   useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
-  FlatList, Image, StyleSheet, Text, TouchableOpacity, View,
+  FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+
+const WEB_DATE_SLIDER_PAST_DAYS = 7;
+const WEB_DATE_SLIDER_TOTAL_DAYS = 45;
+const NATIVE_DATE_SLIDER_PAST_DAYS = 15;
+const NATIVE_DATE_SLIDER_TOTAL_DAYS = 120;
 
 /**
  * DateSlider component
@@ -39,15 +44,19 @@ function DateSlider({
   const [isMonthPickerVisible, setIsMonthPickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState(new Date()); // Date used inside the picker
 
-  // Generate dates: Start from baseDate - 15 days, go +120 days
+  const pastDays = Platform.OS === 'web' ? WEB_DATE_SLIDER_PAST_DAYS : NATIVE_DATE_SLIDER_PAST_DAYS;
+  const totalDays = Platform.OS === 'web' ? WEB_DATE_SLIDER_TOTAL_DAYS : NATIVE_DATE_SLIDER_TOTAL_DAYS;
+
+  // Generate a shorter strip on web to keep the first render lighter.
+  // The month picker still gives fast jumps for distant dates.
   const dates = useMemo(() => {
-    const start = addDays(baseDate, -15);
+    const start = addDays(baseDate, -pastDays);
     const days = [];
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < totalDays; i++) {
       days.push(addDays(start, i));
     }
     return days;
-  }, [baseDate]);
+  }, [baseDate, pastDays, totalDays]);
 
   // Find initial index to scroll to
   const initialScrollIndex = useMemo(() => {

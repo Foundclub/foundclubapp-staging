@@ -2,10 +2,11 @@ import { useNavigation } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, addMonths, addWeeks } from 'date-fns';
 import {
-  useEffect, useMemo, useState,
+  useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Platform,
   Text,
   View,
 } from 'react-native';
@@ -30,6 +31,7 @@ import {
 } from '@/utils/planning/planningSlots';
 
 const PERSONAL_PLANNING_STALE_MS = 60 * 1000;
+const SHOULD_PREFETCH_ADJACENT_PLANNING_RANGES = Platform.OS !== 'web';
 
 const shiftPlanningAnchorDate = (currentDate, viewMode, direction) => {
   if (viewMode === 'month') {
@@ -45,10 +47,10 @@ const shiftPlanningAnchorDate = (currentDate, viewMode, direction) => {
 
 /**
  * Personal planning content.
- * @param {{ onSummaryPress?: () => void }} props
+ * @param {{ onDataResolved?: () => void, onSummaryPress?: () => void }} props
  * @returns {import('react').ReactElement}
  */
-function PersonalPlanningContainer({ onSummaryPress }) {
+function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -60,6 +62,7 @@ function PersonalPlanningContainer({ onSummaryPress }) {
   } = useTheme();
   const [currentDate, setCurrentDate] = useState(getPlanningDefaultDate());
   const [viewMode, setViewMode] = useState('3days');
+  const hasEmittedReadyRef = useRef(false);
 
   const planningRange = useMemo(
     () => getPlanningRange(currentDate, viewMode),
@@ -73,6 +76,19 @@ function PersonalPlanningContainer({ onSummaryPress }) {
   });
 
   useEffect(() => {
+    if (!eventsData || hasEmittedReadyRef.current) {
+      return;
+    }
+
+    hasEmittedReadyRef.current = true;
+    onDataResolved?.();
+  }, [eventsData, onDataResolved, hasEmittedReadyRef]);
+
+  useEffect(() => {
+    if (!SHOULD_PREFETCH_ADJACENT_PLANNING_RANGES) {
+      return undefined;
+    }
+
     [-1, 1].forEach((direction) => {
       const nextAnchorDate = shiftPlanningAnchorDate(currentDate, viewMode, direction);
       const nextRange = getPlanningRange(nextAnchorDate, viewMode);
@@ -82,6 +98,7 @@ function PersonalPlanningContainer({ onSummaryPress }) {
         staleTime: PERSONAL_PLANNING_STALE_MS,
       });
     });
+    return undefined;
   }, [currentDate, queryClient, viewMode]);
 
   const viewOptions = useMemo(() => ([
