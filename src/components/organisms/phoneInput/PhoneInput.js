@@ -1,6 +1,6 @@
 import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
 import {
-  forwardRef, useMemo, useRef, useState,
+  forwardRef, useCallback, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -268,19 +268,61 @@ const PhoneInput = forwardRef(
       }
     }, [value]);
 
+    const defaultCountryCode = useMemo(() => {
+      const countryCode = getDialOptionCountryCode(dialCode);
+      return countryCode ? countryCode.toUpperCase() : 'FR';
+    }, [dialCode]);
+
     /**
-     * Handle the change of the dial code
-     * @param {string} val
-     * @returns {string | undefined}
+     * Normalize a native or typed phone input into E.164 for the form state.
+     * This also covers Android autofill, which can update the native field
+     * without always emitting the usual character-by-character change events.
+     * @param {string} rawValue
+     * @returns {string}
      */
-    const getInternationalValue = (val) => {
-      try {
-        const phoneNumber = parsePhoneNumberFromString(val || '');
-        return phoneNumber?.number;
-      } catch (e) {
-        return value;
+    const getInternationalValue = useCallback((rawValue) => {
+      const normalizedRawValue = String(rawValue || '').trim();
+      if (!normalizedRawValue) {
+        return '';
       }
-    };
+
+      const compactDigits = normalizedRawValue.replace(/[^\d+]/g, '');
+      const nationalDigits = compactDigits.replace(/[^\d]/g, '');
+      const localDigits = nationalDigits.startsWith('0') ? nationalDigits.slice(1) : nationalDigits;
+      const prefixedDialCodeValue = dialCode?.value
+        ? `${dialCode.value}${localDigits}`
+        : normalizedRawValue;
+
+      const parseCandidates = [
+        normalizedRawValue,
+        compactDigits,
+        prefixedDialCodeValue,
+      ].filter(Boolean);
+
+      const parsedPhoneNumber = parseCandidates.reduce((resolvedValue, candidate) => {
+        if (resolvedValue) {
+          return resolvedValue;
+        }
+
+        try {
+          const nextPhoneNumber = parsePhoneNumberFromString(candidate, defaultCountryCode);
+          return nextPhoneNumber?.number || '';
+        } catch (parseError) {
+          // Ignore parse errors and continue through normalization fallbacks.
+          return '';
+        }
+      }, '');
+
+      if (parsedPhoneNumber) {
+        return parsedPhoneNumber;
+      }
+
+      if (compactDigits.startsWith('+')) {
+        return compactDigits;
+      }
+
+      return value || '';
+    }, [defaultCountryCode, dialCode?.value, value]);
 
     return (
       <View style={[Alignments.row, Alignments.fullWidth, Alignments.alignEnd]}>
@@ -306,6 +348,7 @@ const PhoneInput = forwardRef(
         />
         <View style={[Alignments.fill]}>
           <Input
+            autoComplete="tel"
             enterKeyHint="done"
             error={error}
             inputMode="tel"
@@ -315,7 +358,8 @@ const PhoneInput = forwardRef(
               left: -DIALCODE_WIDTH,
             }}
             onBlur={onBlur}
-            onChangeText={(val) => onChange(getInternationalValue(`${dialCode?.value}${val}`))}
+            onChangeText={(val) => onChange(getInternationalValue(val))}
+            onEndEditing={(event) => onChange(getInternationalValue(event?.nativeEvent?.text))}
             placeholder={t('login.fields.phoneNumber.placeholder')}
             ref={ref}
             value={formattedValue}

@@ -1,5 +1,6 @@
 import { RouteNames } from '@/navigation/routeNames';
 
+import { isFootballElevenSport } from '@/utils/leagueSportConfig';
 import {
   normalizeNotificationType,
   NOTIFICATION_TYPES,
@@ -64,6 +65,14 @@ const parseMaybeJson = (value) => {
   }
   return value;
 };
+
+/**
+ * @param {NotificationPayload} payload
+ * @returns {'presence' | 'venueBooking'}
+ */
+const getLeagueMatchFocusSection = (payload) => (
+  isFootballElevenSport(payload?.matchSport) ? 'presence' : 'venueBooking'
+);
 
 /**
  * @param {unknown} value
@@ -594,7 +603,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       return payload.matchId
         ? {
           params: {
-            focusSection: 'venueBooking',
+            focusSection: getLeagueMatchFocusSection(payload),
             matchId: String(payload.matchId),
           },
           route: RouteNames.LeagueMatchDetails,
@@ -667,7 +676,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       return payload.matchId
         ? {
           params: {
-            focusSection: 'venueBooking',
+            focusSection: getLeagueMatchFocusSection(payload),
             matchId: String(payload.matchId),
           },
           route: RouteNames.LeagueMatchDetails,

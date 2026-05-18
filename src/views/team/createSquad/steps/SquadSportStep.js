@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 
 import { getActivities } from '@/services/activity/activityService';
+import { SPORT_KEYS } from '@/utils/leagueSportConfig';
 
 /**
  *
@@ -17,7 +19,7 @@ import { getActivities } from '@/services/activity/activityService';
  * @param root0.updateData
  */
 function SquadSportStep({
-  data, onNext, onPrev, updateData,
+  data, onNext, onPrev, updateData, user,
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
 
@@ -36,11 +38,19 @@ function SquadSportStep({
           },
         },
       });
-      const options = activities.map((a) => ({
+      let options = activities.map((a) => ({
         label: a.name,
         value: a.documentId,
       }));
-      setSports(options);
+      if (getUserRoleKey(user?.role?.name || user?.role?.type) === 'coach') {
+        options = [
+          ...options,
+          { label: 'Football a 11', value: SPORT_KEYS.football11 },
+        ];
+      }
+      setSports(options.filter((option, index, array) => (
+        array.findIndex((candidate) => String(candidate.label).trim().toLowerCase() === String(option.label).trim().toLowerCase()) === index
+      )));
     } catch (error) {
       console.error('Error fetching sports:', error);
       setLoadError("Impossible de charger les sports League pour le moment.");
@@ -48,7 +58,7 @@ function SquadSportStep({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.role?.name, user?.role?.type]);
 
   React.useEffect(() => {
     fetchSports();

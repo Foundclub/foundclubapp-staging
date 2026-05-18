@@ -19,21 +19,16 @@ import {
 function useBottomDockLayout() {
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom || 0;
-
-  if (Platform.OS === 'web') {
-    return {
-      bottomInset,
-      dockClearance: 0,
-      floatingActionBottomOffset: Math.max(bottomInset + 24, 24),
-      sceneBottomInset: 0,
-    };
-  }
+  const sceneBottomInset = getFloatingTabBarScenePaddingBottom(bottomInset);
+  const floatingActionBottomOffset = getFloatingActionBottomOffset(bottomInset, 14);
 
   return {
     bottomInset,
-    dockClearance: getFloatingTabBarMetrics(bottomInset).clearance,
-    floatingActionBottomOffset: getFloatingActionBottomOffset(bottomInset, 14),
-    sceneBottomInset: getFloatingTabBarScenePaddingBottom(bottomInset),
+    dockClearance: Platform.OS === 'web'
+      ? Math.max(sceneBottomInset - 12, 0)
+      : getFloatingTabBarMetrics(bottomInset).clearance,
+    floatingActionBottomOffset,
+    sceneBottomInset,
   };
 }
 

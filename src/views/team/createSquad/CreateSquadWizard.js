@@ -13,6 +13,7 @@ import SquadLevelStep from '@/views/team/createSquad/steps/SquadLevelStep';
 import SquadLocationStep from '@/views/team/createSquad/steps/SquadLocationStep';
 import SquadNameStep from '@/views/team/createSquad/steps/SquadNameStep';
 import SquadSectionStep from '@/views/team/createSquad/steps/SquadSectionStep';
+import SquadSourceTeamStep from '@/views/team/createSquad/steps/SquadSourceTeamStep';
 import SquadSportStep from '@/views/team/createSquad/steps/SquadSportStep';
 import SquadSummaryStep from '@/views/team/createSquad/steps/SquadSummaryStep';
 
@@ -21,6 +22,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { createLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
 import { createTeamSlot } from '@/services/teamSlot/teamSlotService';
 
+import { isFootballElevenSport } from '@/utils/leagueSportConfig';
 import { buildHomeBasePayload, normalizeLocationInput } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
 
@@ -71,6 +73,8 @@ const canUseWizardStorage = () => (
  * @property {SelectOption|null} section
  * @property {any} [logo]
  * @property {any} [cover]
+ * @property {SelectOption|null} [sourceTeam]
+ * @property {any} [sourceTeamDetails]
  */
 
 /**
@@ -88,6 +92,8 @@ const createInitialSquadData = () => /** @type {SquadData} */ ({
   radius: 50,
   section: null,
   slots: [],
+  sourceTeam: null,
+  sourceTeamDetails: null,
   sport: null,
 });
 
@@ -146,6 +152,11 @@ function CreateSquadWizard({ navigation }) {
   const [submitError, setSubmitError] = useState('');
   /** @type {[SquadData, React.Dispatch<React.SetStateAction<SquadData>>]} */
   const [squadData, setSquadData] = useState(persistedState.squadData);
+  const isFootball11 = isFootballElevenSport(squadData?.sport);
+  const stepKeys = isFootball11
+    ? ['sport', 'sourceTeam', 'name', 'level', 'category', 'section', 'location', 'image', 'availabilities', 'summary']
+    : ['sport', 'name', 'level', 'category', 'section', 'location', 'image', 'availabilities', 'summary'];
+  const maxStep = stepKeys.length;
 
   useEffect(() => {
     if (!canUseWizardStorage()) return;
@@ -163,7 +174,13 @@ function CreateSquadWizard({ navigation }) {
     }
   }, [squadData, step]);
 
-  const nextStep = () => setStep((prev) => prev + 1);
+  useEffect(() => {
+    if (step > maxStep) {
+      setStep(maxStep);
+    }
+  }, [maxStep, step]);
+
+  const nextStep = () => setStep((prev) => Math.min(prev + 1, maxStep));
   const prevStep = () => {
     if (step > 1) {
       setStep((prev) => prev - 1);
@@ -177,7 +194,28 @@ function CreateSquadWizard({ navigation }) {
    * @param {any} value
    */
   const updateSquadData = (key, value) => {
-    setSquadData((prev) => ({ ...prev, [key]: value }));
+    setSquadData((prev) => {
+      if (key === 'sport') {
+        const nextIsFootball11 = isFootballElevenSport(value);
+        return {
+          ...prev,
+          [key]: value,
+          ...(nextIsFootball11
+            ? {}
+            : {
+              slots: Array.isArray(prev?.slots)
+                ? prev.slots.map((slot) => {
+                  const { locationMode, ...rest } = slot;
+                  return rest;
+                })
+                : [],
+              sourceTeam: null,
+              sourceTeamDetails: null,
+            }),
+        };
+      }
+      return { ...prev, [key]: value };
+    });
   };
 
   const handleSubmit = async () => {
@@ -206,6 +244,11 @@ function CreateSquadWizard({ navigation }) {
         male: 'Male',
         mixed: 'Mixed',
       };
+      const selectedSourceTeamId = squadData?.sourceTeam?.value || null;
+
+      if (isFootball11 && !selectedSourceTeamId) {
+        throw new Error("Selectionnez l'equipe source pour creer une squad Football a 11.");
+      }
 
       // Level to ELO/Division Mapping
       const levelValue = squadData.level?.value || 'beginner';
@@ -221,7 +264,7 @@ function CreateSquadWizard({ navigation }) {
       }
 
       const homeBasePayload = buildHomeBasePayload(squadData.address, squadData.radius);
-      if (!homeBasePayload) {
+      if (!homeBasePayload && !isFootball11) {
         throw new Error('Adresse invalide: sélectionnez une adresse avec des coordonnées.');
       }
 
@@ -238,11 +281,22 @@ function CreateSquadWizard({ navigation }) {
         cover: squadData.cover,
         division,
         elo,
-        home_base: {
-          ...homeBasePayload,
-          city: homeBasePayload.city || normalizedAddress?.city || '',
-        },
         logo: squadData.logo,
+        ...(homeBasePayload
+          ? {
+            home_base: {
+              ...homeBasePayload,
+              city: homeBasePayload.city || normalizedAddress?.city || '',
+            },
+          }
+          : {}),
+        ...(isFootball11 && selectedSourceTeamId
+          ? {
+            source_team: {
+              connect: [{ documentId: String(selectedSourceTeamId) }],
+            },
+          }
+          : {}),
       };
 
       console.log('DEBUG: League Team Payload:', JSON.stringify(leagueTeamPayload, null, 2));
@@ -293,6 +347,7 @@ function CreateSquadWizard({ navigation }) {
           return createTeamSlot({
             end_hour: formatForStrapiTime(slot.endTime),
             league_team: { connect: [{ documentId: teamId }] }, // Link to LeagueTeam
+            ...(slot?.locationMode ? { location_mode: slot.locationMode } : {}),
             recurrence_day: slot.day,
             start_hour: formatForStrapiTime(slot.startTime),
             status: 'open',
@@ -338,91 +393,122 @@ function CreateSquadWizard({ navigation }) {
   }
 
   const renderStep = () => {
-    switch (step) {
-      case 1:
-        return (
-          <SquadNameStep
-            data={squadData}
-            onNext={nextStep}
-            updateData={updateSquadData}
-          />
-        );
-      case 2:
-        return (
-          <SquadSportStep
-            data={squadData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            updateData={updateSquadData}
-          />
-        );
-      case 3:
-        return (
-          <SquadLevelStep
-            data={squadData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            updateData={updateSquadData}
-          />
-        );
-      case 4:
-        return (
-          <SquadCategoryStep
-            data={squadData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            updateData={updateSquadData}
-          />
-        );
-      case 5:
-        return (
-          <SquadSectionStep
-            data={squadData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            updateData={updateSquadData}
-          />
-        );
-      case 6:
-        return (
-          <SquadLocationStep
-            data={squadData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            updateData={updateSquadData}
-          />
-        );
-      case 7:
-        return (
-          <SquadImageStep
-            data={squadData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            updateData={updateSquadData}
-          />
-        );
-      case 8:
-        return (
-          <SquadAvailabilitiesStep
-            data={squadData}
-            onNext={nextStep}
-            onPrev={prevStep}
-            updateData={updateSquadData}
-          />
-        );
-      case 9:
-        return (
-          <SquadSummaryStep
-            data={squadData}
-            isLoading={isLoading}
-            onPrev={prevStep}
-            onSubmit={handleSubmit}
-            submitError={submitError}
-          />
-        );
-      default:
-        return null;
+    const currentStepKey = stepKeys[step - 1];
+
+    if (currentStepKey === 'sport') {
+      return (
+        <SquadSportStep
+          data={squadData}
+          onNext={nextStep}
+          onPrev={prevStep}
+          updateData={updateSquadData}
+          user={user}
+        />
+      );
     }
+
+    if (currentStepKey === 'sourceTeam') {
+      return (
+        <SquadSourceTeamStep
+          data={squadData}
+          onNext={nextStep}
+          onPrev={prevStep}
+          updateData={updateSquadData}
+          user={user}
+        />
+      );
+    }
+
+    if (currentStepKey === 'name') {
+      return (
+        <SquadNameStep
+          data={squadData}
+          onNext={nextStep}
+          onPrev={prevStep}
+          updateData={updateSquadData}
+        />
+      );
+    }
+
+    if (currentStepKey === 'level') {
+      return (
+        <SquadLevelStep
+          data={squadData}
+          onNext={nextStep}
+          onPrev={prevStep}
+          updateData={updateSquadData}
+        />
+      );
+    }
+
+    if (currentStepKey === 'category') {
+      return (
+        <SquadCategoryStep
+          data={squadData}
+          onNext={nextStep}
+          onPrev={prevStep}
+          updateData={updateSquadData}
+        />
+      );
+    }
+
+    if (currentStepKey === 'section') {
+      return (
+        <SquadSectionStep
+          data={squadData}
+          onNext={nextStep}
+          onPrev={prevStep}
+          updateData={updateSquadData}
+        />
+      );
+    }
+
+    if (currentStepKey === 'location') {
+      return (
+        <SquadLocationStep
+          data={squadData}
+          onNext={nextStep}
+          onPrev={prevStep}
+          updateData={updateSquadData}
+        />
+      );
+    }
+
+    if (currentStepKey === 'image') {
+      return (
+        <SquadImageStep
+          data={squadData}
+          onNext={nextStep}
+          onPrev={prevStep}
+          updateData={updateSquadData}
+        />
+      );
+    }
+
+    if (currentStepKey === 'availabilities') {
+      return (
+        <SquadAvailabilitiesStep
+          data={squadData}
+          onNext={nextStep}
+          onPrev={prevStep}
+          updateData={updateSquadData}
+        />
+      );
+    }
+
+    if (currentStepKey === 'summary') {
+      return (
+        <SquadSummaryStep
+          data={squadData}
+          isLoading={isLoading}
+          onPrev={prevStep}
+          onSubmit={handleSubmit}
+          submitError={submitError}
+        />
+      );
+    }
+
+    return null;
   };
 
   return (

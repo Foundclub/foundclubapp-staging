@@ -2,6 +2,53 @@ import Joi from 'joi';
 
 import client from '../client';
 
+const buildClubFilter = (clubId, useLegacyId = false) => {
+  if (!clubId) return undefined;
+
+  if (!useLegacyId) {
+    return {
+      documentId: clubId,
+    };
+  }
+
+  const numericClubId = Number(clubId);
+  return {
+    id: Number.isFinite(numericClubId) ? numericClubId : clubId,
+  };
+};
+
+const buildClubFilters = ({
+  clubId,
+  clubIds,
+  parentMultisportId,
+  useLegacyClubId = false,
+}) => {
+  const normalizedClubIds = Array.isArray(clubIds)
+    ? clubIds.map((value) => String(value || '').trim()).filter(Boolean)
+    : [];
+
+  if (normalizedClubIds.length > 0) {
+    return {
+      documentId: {
+        $in: normalizedClubIds,
+      },
+    };
+  }
+
+  const normalizedParentMultisportId = String(parentMultisportId || '').trim();
+  if (normalizedParentMultisportId) {
+    return {
+      parentMultisport: {
+        documentId: {
+          $eq: normalizedParentMultisportId,
+        },
+      },
+    };
+  }
+
+  return buildClubFilter(clubId, useLegacyClubId);
+};
+
 const normalizeTeamGovernanceSettings = (team) => {
   if (!team || typeof team !== 'object') {
     return team;
@@ -52,6 +99,8 @@ const teamSchema = Joi.object({
  *   page?: number;
  *   pageSize?: number;
  *   clubId?: string;
+ *   clubIds?: string[];
+ *   parentMultisportId?: string;
  *   playerId?: string;
  *   name?: string;
  *   level?: string[];
@@ -67,90 +116,109 @@ export const getTeams = async (params = {}) => {
     activities,
     category,
     clubId,
+    clubIds,
     level,
     name,
     page,
     pageSize,
+    parentMultisportId,
     section,
   } = params;
 
-  const filters = {
-    filters: {
-      activities: activities ? {
-        documentId: activities,
-      } : undefined,
-      category: category?.length ? {
-        documentId: {
-          $in: category,
-        },
-      } : undefined,
-      club: clubId ? {
-        documentId: clubId,
-      } : undefined,
-      level: level?.length ? {
-        documentId: {
-          $in: level,
-        },
-      } : undefined,
-      name: name ? {
-        $containsi: name,
-      } : undefined,
-      players: params.playerId ? {
-        documentId: {
-          $eq: params.playerId,
-        },
-      } : undefined,
-      section: section ? {
-        documentId: section,
-      } : undefined,
-    },
-    pagination: {
-      page: page || 1,
-      pageSize: pageSize || 10,
-    },
-    populate: {
-      activities: true,
-      category: true,
-      club: {
-        populate: {
-          logo: true,
-          sponsor: {
-            populate: {
-              logo: true,
+  try {
+    const buildRequestParams = (useLegacyClubId = false) => ({
+      filters: {
+        activities: activities ? {
+          documentId: activities,
+        } : undefined,
+        category: category?.length ? {
+          documentId: {
+            $in: category,
+          },
+        } : undefined,
+        club: buildClubFilters({
+          clubId,
+          clubIds,
+          parentMultisportId,
+          useLegacyClubId,
+        }),
+        level: level?.length ? {
+          documentId: {
+            $in: level,
+          },
+        } : undefined,
+        name: name ? {
+          $containsi: name,
+        } : undefined,
+        players: params.playerId ? {
+          documentId: {
+            $eq: params.playerId,
+          },
+        } : undefined,
+        section: section ? {
+          documentId: section,
+        } : undefined,
+      },
+      pagination: {
+        page: page || 1,
+        pageSize: pageSize || 10,
+      },
+      populate: {
+        activities: true,
+        category: true,
+        club: {
+          populate: {
+            logo: true,
+            sponsor: {
+              populate: {
+                logo: true,
+              },
             },
           },
         },
+        level: true,
+        players: true,
+        section: true,
+        trainers: true,
       },
-      level: true,
-      players: true,
-      section: true,
-      trainers: true,
-    },
-  };
-
-  const response = await client.get('/teams', { params: filters });
-  try {
-    const normalizedData = Array.isArray(response.data?.data)
-      ? response.data.data.map(normalizeTeamGovernanceSettings)
-      : response.data?.data;
-    const schema = Joi.object({
-      data: Joi.array().items(teamSchema).empty(Joi.array().length(0)),
-      meta: Joi.object({
-        pagination: Joi.object({
-          page: Joi.number().required(),
-          pageCount: Joi.number().required(),
-          pageSize: Joi.number().required(),
-          total: Joi.number().required(),
-        }).required(),
-      }).required(),
-    }).required();
-
-    const validationResult = await schema.validateAsync({
-      ...response.data,
-      data: normalizedData,
-    }, {
-      allowUnknown: true,
     });
+
+    const validateResponse = async (response) => {
+      const normalizedData = Array.isArray(response.data?.data)
+        ? response.data.data.map(normalizeTeamGovernanceSettings)
+        : response.data?.data;
+      const schema = Joi.object({
+        data: Joi.array().items(teamSchema).empty(Joi.array().length(0)),
+        meta: Joi.object({
+          pagination: Joi.object({
+            page: Joi.number().required(),
+            pageCount: Joi.number().required(),
+            pageSize: Joi.number().required(),
+            total: Joi.number().required(),
+          }).required(),
+        }).required(),
+      }).required();
+
+      return schema.validateAsync({
+        ...response.data,
+        data: normalizedData,
+      }, {
+        allowUnknown: true,
+      });
+    };
+
+    const primaryResponse = await client.get('/teams', { params: buildRequestParams(false) });
+    let validationResult = await validateResponse(primaryResponse);
+
+    if (
+      clubId
+      && Array.isArray(validationResult?.data)
+      && validationResult.data.length === 0
+    ) {
+      const legacyResponse = await client.get('/teams', { params: buildRequestParams(true) });
+      validationResult = await validateResponse(legacyResponse);
+    }
+
     return validationResult;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;

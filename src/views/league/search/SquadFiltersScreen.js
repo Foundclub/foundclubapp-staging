@@ -21,14 +21,12 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { getFieldError } from '@/utils/form/formUtils';
+import { LEAGUE_SPORT_OPTIONS } from '@/utils/leagueSportConfig';
 
 const DEFAULT_RADIUS_KM = 20;
 const DIVISION_OPTIONS = [1, 2, 3, 4, 5];
 
-const SPORT_OPTIONS = [
-  { label: 'Football a 5', value: 'football5' },
-  { label: 'Padel', value: 'padel' },
-];
+const SPORT_OPTIONS = LEAGUE_SPORT_OPTIONS;
 
 const SECTION_OPTIONS = [
   { label: 'Masculin', value: 'Male' },

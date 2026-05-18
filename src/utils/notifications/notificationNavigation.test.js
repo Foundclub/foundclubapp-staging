@@ -36,6 +36,22 @@ describe('notificationNavigation', () => {
     });
   });
 
+  test('routes football11 accepted proposals to presence instead of venue booking', () => {
+    const destination = resolveNotificationDestination({
+      matchId: 'match-11',
+      matchSport: 'Football a 11',
+      type: NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED,
+    });
+
+    expect(destination).toEqual({
+      params: {
+        focusSection: 'presence',
+        matchId: 'match-11',
+      },
+      route: RouteNames.LeagueMatchDetails,
+    });
+  });
+
   test('normalizes notification payload ids and keeps a deterministic open key', () => {
     const normalized = normalizeNotificationPayload({
       data: JSON.stringify({

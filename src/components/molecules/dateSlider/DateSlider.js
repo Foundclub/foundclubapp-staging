@@ -11,6 +11,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
 /**
@@ -18,12 +19,19 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * Custom implementation using FlatList to ensure day names slide with dates
  * and to provide a dynamic month header with picker.
  * @param {object} props
+ * @param {boolean} [props.isRefreshing]
+ * @param {string} [props.refreshLabel]
  * @param {Date} props.selectedDate - The currently selected date
  * @param {Function} props.onDateSelected - Callback when a date is selected
  */
-function DateSlider({ onDateSelected, selectedDate }) {
+function DateSlider({
+  isRefreshing = false,
+  onDateSelected,
+  refreshLabel = '',
+  selectedDate,
+}) {
   const {
-    Colors, Fonts, Images, Spaces,
+    Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const flatListRef = useRef(null);
   const [currentMonth, setCurrentMonth] = useState(selectedDate || new Date());
@@ -158,8 +166,24 @@ function DateSlider({ onDateSelected, selectedDate }) {
         >
           {format(currentMonth, 'MMMM yyyy', { locale: fr })}
         </Text>
-        <Text style={{ color: Colors.primary500, fontSize: 12 }}>▼</Text>
+        <Text style={{ color: Colors.primary500, fontSize: 12 }}>{'\u25BE'}</Text>
       </TouchableOpacity>
+
+      {isRefreshing && refreshLabel ? (
+        <View
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.gap[8],
+            { marginBottom: 12 },
+          ]}
+        >
+          <Loader color={Colors.primary500} size="small" />
+          <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
+            {refreshLabel}
+          </Text>
+        </View>
+      ) : null}
 
       {/* Date Strip */}
       <FlatList

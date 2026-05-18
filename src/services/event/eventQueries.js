@@ -15,6 +15,7 @@ import {
 
 const EVENT_DETAIL_STALE_MS = 30_000;
 const EVENT_ATTENDANCE_STALE_MS = 15_000;
+const EVENT_LIST_STALE_MS = 60_000;
 
 /**
  * @param {Record<string, any> | undefined} params
@@ -118,9 +119,12 @@ export const useGetEvents = (params, options) => useInfiniteQuery({
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },
   placeholderData: getPlaceholderDataOption(options),
-  queryFn: ({ pageParam = 1 }) => getEvents(/** @type {any} */ ({ ...params, page: pageParam })),
+  queryFn: ({ pageParam = 1, signal }) => getEvents(
+    /** @type {any} */ ({ ...params, page: pageParam }),
+    { signal },
+  ),
   queryKey: getEventsQueryKey(params),
   refetchOnMount: options?.refetchOnMount ?? false,
-  staleTime: 30 * 1000,
+  staleTime: EVENT_LIST_STALE_MS,
   ...options,
 });

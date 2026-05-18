@@ -30,7 +30,7 @@ import UserSportHistory from '@/views/onboarding/UserSportHistory';
 import Welcome from '@/views/onboarding/Welcome';
 
 import { commonOptions } from '@/navigation/commonOptions';
-import { navigate as navigateRoot } from '@/navigation/navigationService';
+import { navigate as navigateRoot, navigationRef } from '@/navigation/navigationService';
 import { readPendingSquadInviteLink } from '@/navigation/pendingSquadInviteLink';
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -51,12 +51,13 @@ function PrivateNavigator() {
   const { isGold } = useAppMode();
   const { t } = useTranslation();
   const isSuperAdmin = getUserRoleKey(userData?.role?.type || userData?.role?.name) === 'superAdmin';
-  const pendingSquadInviteNavigationKeyRef = useRef(null);
+  const pendingSquadInviteNavigationKeyRef = useRef(/** @type {string | null} */(null));
+  const onboardingRedirectAttemptRef = useRef(/** @type {string | null} */(null));
 
-  const getStepNumber = (routeName) => onboardingViews?.views?.find((view) => view.route === routeName)?.index || 0;
+  const getStepNumber = (/** @type {string} */ routeName) => onboardingViews?.views?.find((view) => view.route === routeName)?.index || 0;
   const getTotalSteps = () => onboardingViews?.totalViews || 0;
-  const renderStepper = (routeName) => <Stepper currentStep={getStepNumber(routeName)} steps={getTotalSteps()} />;
-  const renderStepperIndicator = (routeName) => (
+  const renderStepper = (/** @type {string} */ routeName) => <Stepper currentStep={getStepNumber(routeName)} steps={getTotalSteps()} />;
+  const renderStepperIndicator = (/** @type {string} */ routeName) => (
     <View style={[Spaces.marginHorizontal[12]]}>
       <Text style={[Fonts.p2, Fonts.neutral300]}>
         {getStepNumber(routeName)}
@@ -77,6 +78,18 @@ function PrivateNavigator() {
     return RouteNames.HomeTab;
   }, [onboardingViews, isGold]);
 
+  const firstPendingOnboardingRoute = useMemo(() => {
+    if (
+      !initialRouteName
+      || initialRouteName === RouteNames.HomeTab
+      || initialRouteName === RouteNames.LeagueHomeTab
+    ) {
+      return null;
+    }
+
+    return initialRouteName;
+  }, [initialRouteName]);
+
   useEffect(() => {
     if (!userData?.documentId || userDataLoading || userDataError) return undefined;
 
@@ -88,6 +101,7 @@ function PrivateNavigator() {
     pendingSquadInviteNavigationKeyRef.current = navigationKey;
 
     let attemptCount = 0;
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
     let retryTimeout;
     const openPendingInvite = () => {
       attemptCount += 1;
@@ -108,7 +122,54 @@ function PrivateNavigator() {
     };
   }, [userData?.documentId, userDataError, userDataLoading]);
 
-  const canShowView = useCallback((routeName) => {
+  useEffect(() => {
+    if (!userData?.documentId || userDataLoading || userDataError || !firstPendingOnboardingRoute) {
+      onboardingRedirectAttemptRef.current = null;
+      return undefined;
+    }
+
+    const currentRouteName = navigationRef.getCurrentRoute()?.name || null;
+    const shouldRedirectFromHome = (
+      !currentRouteName
+      || currentRouteName === RouteNames.HomeTab
+      || currentRouteName === RouteNames.LeagueHomeTab
+    );
+
+    if (!shouldRedirectFromHome) {
+      onboardingRedirectAttemptRef.current = null;
+      return undefined;
+    }
+
+    const redirectKey = `${userData.documentId}:${firstPendingOnboardingRoute}:${currentRouteName || 'none'}`;
+    if (onboardingRedirectAttemptRef.current === redirectKey) {
+      return undefined;
+    }
+    onboardingRedirectAttemptRef.current = redirectKey;
+
+    let attemptCount = 0;
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let retryTimeout;
+    const openPendingOnboarding = () => {
+      attemptCount += 1;
+      const didNavigate = navigateRoot(firstPendingOnboardingRoute);
+
+      if (!didNavigate && attemptCount < 6) {
+        retryTimeout = setTimeout(openPendingOnboarding, 250);
+      }
+    };
+
+    retryTimeout = setTimeout(openPendingOnboarding, 50);
+    return () => {
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
+  }, [
+    firstPendingOnboardingRoute,
+    userData?.documentId,
+    userDataError,
+    userDataLoading,
+  ]);
+
+  const canShowView = useCallback((/** @type {string} */ routeName) => {
     const view = onboardingViews?.views?.find((item) => item.route === routeName);
     return !!view?.canShow;
   }, [onboardingViews]);

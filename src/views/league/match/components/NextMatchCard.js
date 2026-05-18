@@ -36,6 +36,11 @@ import {
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { getImageUrl } from '@/utils/imageUrl';
 import { isLeagueCaptain } from '@/utils/league/captains';
+import {
+  doesMatchRequireVenue,
+  getMatchDurationMinutes,
+  getRequiredPlayersForSport,
+} from '@/utils/leagueSportConfig';
 
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
@@ -63,16 +68,6 @@ const normalizeComparableLabel = (value) => String(value || '')
   .toLowerCase()
   .replace(/\s+/g, ' ')
   .trim();
-
-/**
- * @param {unknown} sportValue
- * @returns {number}
- */
-const getRequiredPlayersForSport = (sportValue) => {
-  const normalized = String(sportValue || '').trim().toLowerCase();
-  if (normalized.includes('padel')) return 2;
-  return 5;
-};
 
 /**
  * @param {{
@@ -113,10 +108,11 @@ function NextMatchCard({
   const matchLegalLabel = `${myTeam?.name || 'Votre squad'} VS ${isAnonymous ? 'Adversaire' : opponent?.name || 'Adversaire'}`;
   const isTerminalStatus = ['cancelled', 'forfeit', 'no_show', 'valid'].includes(normalizedStatus);
   const isVenueBooked = event?.venueBooked === true || match?.venueBooked === true || match?.venue_booked === true;
+  const venueRequired = doesMatchRequireVenue(match);
   const hasMatchEnded = isMatchPastEnd(match, event, now);
   const canSubmitScoreByPhase = ['disputed', 'pending_validation', 'waiting_score'].includes(derivedPhase);
   const isScoreLockedByTime = normalizedStatus === 'scheduled' && isVenueBooked && !canSubmitScoreByPhase;
-  const canManageVenue = Boolean(myTeam) && derivedPhase === 'waiting_venue' && !isTerminalStatus;
+  const canManageVenue = Boolean(myTeam) && venueRequired && derivedPhase === 'waiting_venue' && !isTerminalStatus;
   const workflowViewModel = useMemo(
     () => buildLeagueWorkflowViewModel(match, null, { event, isCaptain }),
     [event, isCaptain, match],
@@ -166,9 +162,10 @@ function NextMatchCard({
       return String(match.recurring_end_hour).slice(0, 5);
     }
 
-    const plusOneHour = new Date(matchDate.getTime() + (60 * 60 * 1000));
-    return format(plusOneHour, 'HH:mm', { locale: fr });
-  }, [event?.endDate, match?.location?.proposed_end_time, match?.recurring_end_hour, matchDate]);
+    const durationMinutes = getMatchDurationMinutes(myTeam?.sport || match?.team_a?.sport || match?.team_b?.sport);
+    const endDate = new Date(matchDate.getTime() + (durationMinutes * 60 * 1000));
+    return format(endDate, 'HH:mm', { locale: fr });
+  }, [event?.endDate, match?.location?.proposed_end_time, match?.recurring_end_hour, match?.team_a?.sport, match?.team_b?.sport, matchDate, myTeam?.sport]);
 
   // ELO Prediction: Calculate expected win/loss points
   const eloPrediction = useMemo(() => {
@@ -200,11 +197,11 @@ function NextMatchCard({
 
     return [
       { done: true, key: 'found', label: 'Trouvé' },
-      { done: isVenueBooked || matchPlayed || resultSubmitted, key: 'booked', label: 'Terrain réservé' },
+      { done: venueRequired ? (isVenueBooked || matchPlayed || resultSubmitted) : true, key: 'booked', label: venueRequired ? 'Terrain réservé' : 'Confirmé' },
       { done: matchPlayed || resultSubmitted, key: 'played', label: 'Match joué' },
       { done: resultSubmitted, key: 'result', label: 'Résultat' },
     ];
-  }, [derivedPhase, hasMatchEnded, isVenueBooked, normalizedStatus]);
+  }, [derivedPhase, hasMatchEnded, isVenueBooked, normalizedStatus, venueRequired]);
 
   const handlePrimaryWorkflowAction = () => {
     if (['disputed', 'pending_validation', 'waiting_score'].includes(workflowViewModel.phase)) {

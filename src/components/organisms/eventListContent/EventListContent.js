@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { isBefore, startOfDay } from 'date-fns';
+import { addDays, isBefore, startOfDay } from 'date-fns';
 import {
   useCallback,
   useEffect,
@@ -29,8 +29,10 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
+import Loader from '@/components/atoms/loader/Loader';
 import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
+import SearchResultsLoadingState from '@/components/molecules/searchResultsLoadingState/SearchResultsLoadingState';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
@@ -40,9 +42,10 @@ import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
-import { useGetEvents } from '@/services/event/eventQueries';
-import { missingEvent, respondToEventRsvp } from '@/services/event/eventService';
+import { getEventsQueryKey, useGetEvents } from '@/services/event/eventQueries';
+import { getEvents, missingEvent, respondToEventRsvp } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+import { keepPreviousPageData } from '@/services/queryOptions';
 import { joinReservation } from '@/services/reservation/reservationService';
 import { useSearchEvents, useSearchEventsMap } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
@@ -54,6 +57,12 @@ import JoinEventModal from '../joinEventModal/JoinEventModal';
 
 const eventListLogger = createLogger('event-list');
 const FEATURED_CLUB_SCOPES = ['SECTION', 'CM'];
+const DATE_PREFETCH_OFFSETS = [-2, -1, 1, 2, 3, 4, 5, 6, 7];
+const EVENT_LIST_STALE_MS = 60 * 1000;
+const normalizeTypeName = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase();
 
 const isApprovedFeaturedEvent = (event, scopes = []) => {
   if (!event?.isFeatured || event?.featuredRequestStatus !== 'approved') {
@@ -154,11 +163,18 @@ function EventListContent({
   const [joinModalError, setJoinModalError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
   const [areFeaturedEventsEnabled, setAreFeaturedEventsEnabled] = useState(false);
+  const [isDateRefreshPending, setIsDateRefreshPending] = useState(false);
+  const [hasDateRefreshStarted, setHasDateRefreshStarted] = useState(false);
+  const [hasDateRefreshMinimumElapsed, setHasDateRefreshMinimumElapsed] = useState(false);
+  const [hasDateRefreshFallbackElapsed, setHasDateRefreshFallbackElapsed] = useState(false);
   const filtersTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
   const firstCardTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
   const primaryQuerySignatureRef = useRef('');
   const firstResultsSignatureRef = useRef('');
   const secondaryQuerySignatureRef = useRef('');
+  const pendingDateAfterRef = useRef('');
+  const dateRefreshTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
+  const dateRefreshFallbackTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
 
   // Date Picker State
   // Date Picker State
@@ -257,18 +273,22 @@ function EventListContent({
     error,
     fetchNextPage,
     hasNextPage,
+    isFetched: isInternalFetched,
+    isFetching: isInternalFetching,
     isFetchingNextPage,
     isLoading: isInternalLoading,
     refetch,
   } = useGetEvents(eventsConfig, {
     enabled: screenActive && !propEvents && !isViewportListMode && !isSmartSearchEnabled,
-    placeholderData: undefined,
+    placeholderData: keepPreviousPageData,
   });
   const {
     data: searchPages,
     error: searchError,
     fetchNextPage: fetchSearchNextPage,
     hasNextPage: hasSearchNextPage,
+    isFetched: isSearchFetched,
+    isFetching: isSearchFetching,
     isFetchingNextPage: isFetchingSearchNextPage,
     isLoading: isSearchLoading,
     refetch: refetchSearch,
@@ -290,19 +310,21 @@ function EventListContent({
     type: eventsConfig?.type,
   }, {
     enabled: screenActive && !propEvents && !isViewportListMode && isSmartSearchEnabled,
-    placeholderData: undefined,
+    placeholderData: keepPreviousPageData,
   });
   const {
     data: viewportPages,
     error: viewportError,
     fetchNextPage: fetchViewportNextPage,
     hasNextPage: hasViewportNextPage,
+    isFetched: isViewportFetched,
+    isFetching: isViewportFetching,
     isFetchingNextPage: isFetchingViewportNextPage,
     isLoading: isViewportLoading,
     refetch: refetchViewport,
   } = useSearchEventsMap(viewportListParams || {}, {
     enabled: screenActive && !propEvents && isViewportListMode && Boolean(viewportListParams),
-    placeholderData: undefined,
+    placeholderData: keepPreviousPageData,
   });
 
   const {
@@ -437,28 +459,88 @@ function EventListContent({
   }
 
   let activeError = error;
+  let activeHasFetched = isInternalFetched;
   if (isViewportListMode) {
     activeError = viewportError;
+    activeHasFetched = isViewportFetched;
   } else if (isSmartSearchEnabled) {
     activeError = searchError;
+    activeHasFetched = isSearchFetched;
   }
 
   let isLoading = propIsLoading !== undefined ? propIsLoading : isInternalLoading;
+  let isFetching = propIsLoading !== undefined ? Boolean(propIsLoading) : isInternalFetching;
   if (propIsLoading === undefined) {
     if (isViewportListMode) {
       isLoading = isViewportLoading;
+      isFetching = isViewportFetching;
     } else if (isSmartSearchEnabled) {
       isLoading = isSearchLoading;
+      isFetching = isSearchFetching;
     }
   }
-  const shouldShowMapToggle = enableMapMode && events.length > 0;
-  const listBottomPadding = sceneBottomInset;
   let isListFetchingNext = isFetchingNextPage;
   if (isViewportListMode) {
     isListFetchingNext = isFetchingViewportNextPage;
   } else if (isSmartSearchEnabled) {
     isListFetchingNext = isFetchingSearchNextPage;
   }
+  const lastStableDefaultEventsRef = useRef(/** @type {FCEvent[]} */ ([]));
+  const canReusePreviousDefaultEvents = !propEvents && !isViewportListMode && !isSmartSearchEnabled;
+  const hasResolvedActiveQuery = Boolean(propEvents) || activeHasFetched || Boolean(activeError);
+  const isActiveQueryBusy = Boolean(isLoading || isFetching);
+
+  useEffect(() => {
+    if (!canReusePreviousDefaultEvents || isActiveQueryBusy || events.length === 0) {
+      return;
+    }
+
+    lastStableDefaultEventsRef.current = events;
+  }, [canReusePreviousDefaultEvents, events, isActiveQueryBusy]);
+
+  const fallbackEvents = canReusePreviousDefaultEvents ? lastStableDefaultEventsRef.current : [];
+  const displayEvents = canReusePreviousDefaultEvents
+    && isActiveQueryBusy
+    && events.length === 0
+    && fallbackEvents.length > 0
+    ? fallbackEvents
+    : events;
+  const visibleEvents = useMemo(() => {
+    if (
+      !canReusePreviousDefaultEvents
+      || !isDateRefreshPending
+      || displayEvents.length === 0
+      || !pendingDateAfterRef.current
+    ) {
+      return displayEvents;
+    }
+
+    const pendingTimestamp = Date.parse(pendingDateAfterRef.current);
+    if (Number.isNaN(pendingTimestamp)) {
+      return displayEvents;
+    }
+
+    const filteredEvents = displayEvents.filter((event) => {
+      const rawDate = event?.stageStartDate || event?.date;
+      const eventTimestamp = Date.parse(String(rawDate || ''));
+      return !Number.isNaN(eventTimestamp) && eventTimestamp >= pendingTimestamp;
+    });
+
+    return filteredEvents.length > 0 ? filteredEvents : displayEvents;
+  }, [
+    canReusePreviousDefaultEvents,
+    displayEvents,
+    isDateRefreshPending,
+  ]);
+  const shouldShowMapToggle = enableMapMode && visibleEvents.length > 0;
+  const listBottomPadding = sceneBottomInset;
+  const showLoadingPlaceholder = !hasResolvedActiveQuery
+    || (isActiveQueryBusy && visibleEvents.length === 0);
+  const showInlineLoadingHint = hasResolvedActiveQuery
+    && (isActiveQueryBusy || isDateRefreshPending)
+    && visibleEvents.length > 0
+    && !isListFetchingNext;
+  const showDateRefreshBanner = isDateRefreshPending;
   let activeMode = 'default-list';
   if (isViewportListMode) {
     activeMode = 'viewport-list';
@@ -809,10 +891,69 @@ function EventListContent({
     userDocumentId,
   ]);
 
+  const prefetchDateEvents = useCallback((/** @type {Date} */ date) => {
+    if (propEvents || isViewportListMode || isSmartSearchEnabled) {
+      return Promise.resolve();
+    }
+
+    const start = startOfDay(date).toISOString();
+    const nextParams = {
+      ...eventsConfig,
+      startDateAfter: start,
+    };
+
+    return queryClient.prefetchInfiniteQuery({
+      getNextPageParam: (lastPage) => {
+        if (!lastPage) return undefined;
+        const { meta: { pagination } = {} } = lastPage;
+        if (!pagination) return undefined;
+        return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
+      },
+      initialPageParam: 1,
+      queryFn: ({ pageParam = 1, signal }) => getEvents(
+        { ...nextParams, page: pageParam },
+        { signal },
+      ),
+      queryKey: getEventsQueryKey(nextParams),
+      staleTime: EVENT_LIST_STALE_MS,
+    }).catch(() => {
+      // Let the main query own the error UX. Prefetch is best-effort only.
+    });
+  }, [
+    eventsConfig,
+    isSmartSearchEnabled,
+    isViewportListMode,
+    propEvents,
+    queryClient,
+  ]);
+
   // Date Picker Handlers
   const handleDateSelected = useCallback((/** @type {Date} */ date) => {
     setSelectedDate(date);
     const start = startOfDay(date).toISOString();
+    pendingDateAfterRef.current = start;
+    setIsDateRefreshPending(true);
+    setHasDateRefreshStarted(false);
+    setHasDateRefreshMinimumElapsed(false);
+    setHasDateRefreshFallbackElapsed(false);
+
+    if (dateRefreshTimerRef.current) {
+      clearTimeout(dateRefreshTimerRef.current);
+    }
+    if (dateRefreshFallbackTimerRef.current) {
+      clearTimeout(dateRefreshFallbackTimerRef.current);
+    }
+
+    dateRefreshTimerRef.current = setTimeout(() => {
+      setHasDateRefreshMinimumElapsed(true);
+    }, 900);
+    dateRefreshFallbackTimerRef.current = setTimeout(() => {
+      setHasDateRefreshFallbackElapsed(true);
+    }, 2200);
+
+    queryClient.cancelQueries({ queryKey: ['events'] }).catch(() => {});
+    queryClient.cancelQueries({ queryKey: ['search', 'events'] }).catch(() => {});
+    prefetchDateEvents(date);
 
     appDispatch({
       payload: {
@@ -821,7 +962,86 @@ function EventListContent({
       },
       type: 'SET_EVENT_FILTERS',
     });
-  }, [appDispatch, eventFilters]);
+  }, [
+    appDispatch,
+    eventFilters,
+    queryClient,
+    prefetchDateEvents,
+  ]);
+
+  useEffect(() => {
+    if (!isDateRefreshPending) {
+      return;
+    }
+
+    const pendingDateAfter = pendingDateAfterRef.current;
+    const activeStartDateAfter = eventFilters?.startDateAfter;
+    const hasPendingDateApplied = pendingDateAfter && activeStartDateAfter === pendingDateAfter;
+
+    if (hasPendingDateApplied && isActiveQueryBusy && !hasDateRefreshStarted) {
+      setHasDateRefreshStarted(true);
+      return;
+    }
+
+    if (!hasPendingDateApplied || !hasDateRefreshMinimumElapsed || !hasResolvedActiveQuery) {
+      return;
+    }
+
+    if (hasDateRefreshStarted && isActiveQueryBusy) {
+      return;
+    }
+
+    if (!hasDateRefreshStarted && !hasDateRefreshFallbackElapsed) {
+      return;
+    }
+
+    setIsDateRefreshPending(false);
+    setHasDateRefreshStarted(false);
+    setHasDateRefreshMinimumElapsed(false);
+    setHasDateRefreshFallbackElapsed(false);
+    pendingDateAfterRef.current = '';
+  }, [
+    eventFilters?.startDateAfter,
+    hasDateRefreshFallbackElapsed,
+    hasDateRefreshMinimumElapsed,
+    hasDateRefreshStarted,
+    hasResolvedActiveQuery,
+    isActiveQueryBusy,
+    isDateRefreshPending,
+  ]);
+
+  useEffect(() => () => {
+    if (dateRefreshTimerRef.current) {
+      clearTimeout(dateRefreshTimerRef.current);
+    }
+    if (dateRefreshFallbackTimerRef.current) {
+      clearTimeout(dateRefreshFallbackTimerRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!screenActive || propEvents || isViewportListMode || isSmartSearchEnabled) {
+      return;
+    }
+
+    if (isActiveQueryBusy || !hasResolvedActiveQuery) {
+      return;
+    }
+
+    const selectedDay = startOfDay(selectedDate);
+    DATE_PREFETCH_OFFSETS.map((offset) => addDays(selectedDay, offset)).forEach((candidateDate) => {
+      prefetchDateEvents(candidateDate);
+    });
+  }, [
+    hasResolvedActiveQuery,
+    isActiveQueryBusy,
+    isSmartSearchEnabled,
+    isViewportListMode,
+    prefetchDateEvents,
+    propEvents,
+    screenActive,
+    selectedDate,
+  ]);
 
   useEffect(() => {
     if (!screenActive || !refreshSignal || propEvents) return;
@@ -862,7 +1082,7 @@ function EventListContent({
    * @returns {import('react').ReactElement} The rendered event item
    */
   const renderItem = ({ index, item }) => {
-    const isReservation = item?.type?.name === 'Réservation';
+    const isReservation = normalizeTypeName(item?.type?.name).includes('reservation');
     const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
     const showAbout = isPlanning || isManager;
     const card = isReservation ? (
@@ -910,13 +1130,43 @@ function EventListContent({
   };
 
   const emptyListContent = (
-    <EmptyState
-      actionLabel={!showFilters ? t('eventList.actions.findEvent') : undefined}
-      description={!showFilters ? t('eventList.emptyDesc', 'Essayez de modifier vos filtres ou lancez une nouvelle recherche.') : undefined}
-      icon={Images.search}
-      onAction={!showFilters ? handleFindEvent : undefined}
-      title={t('eventList.noData')}
-    />
+    showLoadingPlaceholder ? (
+      <SearchResultsLoadingState
+        description={t('eventList.loadingDesc', 'Nous chargeons les \u00E9v\u00E9nements correspondant \u00E0 votre recherche.')}
+        title={t('eventList.loadingTitle', 'Chargement des \u00E9v\u00E9nements')}
+      />
+    ) : (
+      <EmptyState
+        actionLabel={!showFilters ? t('eventList.actions.findEvent') : undefined}
+        description={!showFilters ? t('eventList.emptyDesc', 'Essayez de modifier vos filtres ou lancez une nouvelle recherche.') : undefined}
+        icon={Images.search}
+        onAction={!showFilters ? handleFindEvent : undefined}
+        title={t('eventList.noData')}
+      />
+    )
+  );
+  const renderLoadingHint = (label, fullWidth = false) => (
+    <View
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        ApplicationStyle.borderRadius1,
+        Spaces.gap[8],
+        Spaces.paddingHorizontal[12],
+        Spaces.paddingVertical[8],
+        {
+          alignSelf: fullWidth ? 'stretch' : 'flex-start',
+          backgroundColor: Colors.primary900,
+          borderColor: Colors.primary500,
+          borderWidth: 1,
+        },
+      ]}
+    >
+      <Loader color={Colors.primary500} size="small" />
+      <Text style={[Fonts.p4, Fonts.neutral200, fullWidth ? { flex: 1 } : null]}>
+        {label}
+      </Text>
+    </View>
   );
   const listHeader = (
     <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
@@ -970,9 +1220,15 @@ function EventListContent({
         </View>
 
         <DateSlider
+          isRefreshing={Boolean(isDateRefreshPending || (isFetching && displayEvents.length > 0))}
           onDateSelected={handleDateSelected}
+          refreshLabel={t('eventList.loadingUpdating', 'Actualisation des \u00E9v\u00E9nements...')}
           selectedDate={selectedDate}
         />
+        {showDateRefreshBanner ? renderLoadingHint(
+          t('eventList.loadingUpdating', 'Actualisation des \u00E9v\u00E9nements...'),
+          true,
+        ) : null}
       </View>
 
       {showFilters ? (
@@ -998,7 +1254,7 @@ function EventListContent({
           </Text>
           {isViewportTruncated ? (
             <Text style={[Fonts.p4, Fonts.neutral200]}>
-              Zoomez sur la carte pour afficher tous les événements de cette zone.
+              {'Zoomez sur la carte pour afficher tous les \u00E9v\u00E9nements de cette zone.'}
             </Text>
           ) : null}
         </View>
@@ -1008,6 +1264,10 @@ function EventListContent({
           Trie par pertinence
         </Text>
       ) : null}
+      {showInlineLoadingHint ? renderLoadingHint(
+        t('eventList.loadingUpdating', 'Actualisation des \u00E9v\u00E9nements...'),
+        false,
+      ) : null}
     </View>
   );
 
@@ -1015,13 +1275,13 @@ function EventListContent({
     <View style={[Spaces.gap[24], Alignments.fill]}>
       <WithDataWrapper
         error={activeError?.message}
-        isLoading={isLoading && !isListFetchingNext}
+        isLoading={false}
         wrapperStyle={[Alignments.fill]}
       >
         <View style={[Alignments.fill, ApplicationStyle.borderRadius2]}>
           <FlashList
             contentContainerStyle={{ paddingBottom: listBottomPadding }}
-            data={/** @type {FCEvent[]} */ (events)}
+            data={/** @type {FCEvent[]} */ (visibleEvents)}
             estimatedItemSize={200}
             ItemSeparatorComponent={EventListSeparator}
             keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
@@ -1041,7 +1301,7 @@ function EventListContent({
                 refetchFeatured();
               }
             }}
-            refreshing={isLoading && !isListFetchingNext}
+            refreshing={isActiveQueryBusy && !isListFetchingNext}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
           />

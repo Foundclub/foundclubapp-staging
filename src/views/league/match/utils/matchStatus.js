@@ -1,3 +1,9 @@
+import {
+  doesMatchRequireVenue,
+  getMatchDurationMinutes,
+  isFootballElevenSport,
+} from '@/utils/leagueSportConfig';
+
 const FALLBACK_COLORS = {
   error: '#EF4444',
   gold: '#D4AF37',
@@ -138,7 +144,10 @@ export const getMatchEndDate = (match, event = null) => {
     return end;
   }
 
-  return new Date(startDate.getTime() + (60 * 60 * 1000));
+  return new Date(
+    startDate.getTime()
+      + (getMatchDurationMinutes(match?.team_a?.sport || match?.team_b?.sport || match?.sport) * 60 * 1000),
+  );
 };
 
 /**
@@ -165,6 +174,7 @@ export const getMatchDerivedPhase = (match, event = null, now = new Date()) => {
   const backendPhase = normalizePhase(match.phase);
   const status = normalizeMatchStatus(match.status);
   const venueBooked = isVenueBookedForMatch(match, event);
+  const venueRequired = doesMatchRequireVenue(match);
 
   if (backendPhase) {
     // Backend is the single source of truth for time-based phase transitions.
@@ -175,6 +185,7 @@ export const getMatchDerivedPhase = (match, event = null, now = new Date()) => {
   const postSlotResolution = String(match?.automation_meta?.post_slot_resolution?.resolution || '').trim().toLowerCase();
   if (
     status === 'scheduled'
+    && venueRequired
     && !venueBooked
     && isScoreWindowOpen(match, event, now)
     && !['auto_cancelled', 'cancelled', 'disputed', 'rescheduled', 'score_flow'].includes(postSlotResolution)
@@ -183,8 +194,9 @@ export const getMatchDerivedPhase = (match, event = null, now = new Date()) => {
   }
   // Never unlock score from device time fallback.
   // If backend phase is missing, keep scheduled matches in pre-score phases only.
-  if (status === 'scheduled' && !venueBooked) return 'waiting_venue';
+  if (status === 'scheduled' && venueRequired && !venueBooked) return 'waiting_venue';
   if (status === 'scheduled' && venueBooked) return 'confirmed_upcoming';
+  if (status === 'scheduled' && !venueRequired) return 'confirmed_upcoming';
   if (status === 'pending_validation') return 'pending_validation';
   if (status === 'disputed') return 'disputed';
   if (status === 'valid') return 'valid';
@@ -201,6 +213,9 @@ export const getMatchDerivedPhase = (match, event = null, now = new Date()) => {
  * @returns {boolean}
  */
 export const shouldMaskOpponentIdentity = (match, event = null) => {
+  if (isFootballElevenSport(match?.team_a?.sport || match?.team_b?.sport || match?.sport)) {
+    return false;
+  }
   const phase = getMatchDerivedPhase(match, event);
   // Keep anonymity during all pre-result phases to reduce targeted cancellations.
   return !['cancelled', 'forfeit', 'no_show', 'valid'].includes(phase);

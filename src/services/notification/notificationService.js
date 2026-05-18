@@ -30,6 +30,25 @@ export const getNotifications = async (params = {}) => {
 };
 
 /**
+ * Get one notification owned by the current user.
+ * Uses the list endpoint so backend ownership filtering stays centralized.
+ * @param {string | number} notificationId - Notification document id
+ * @returns {Promise<any | null>}
+ */
+export const getNotificationById = async (notificationId) => {
+  const safeNotificationId = String(notificationId || '').trim();
+  if (!safeNotificationId) return null;
+
+  const response = await getNotifications({
+    'filters[documentId][$eq]': safeNotificationId,
+    page: 1,
+    pageSize: 1,
+  });
+
+  return Array.isArray(response?.data) ? response.data[0] || null : null;
+};
+
+/**
  * Get unread notifications count
  * @returns {Promise<{count: number}>}
  */

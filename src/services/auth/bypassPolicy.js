@@ -1,4 +1,35 @@
-export const isFirebaseBypassEnabled = (env = process.env) => (
-  String(env.APP_ENV || '').trim().toLowerCase() === 'local'
-  && env.BYPASS_FIREBASE_AUTH === 'true'
-);
+const normalizeFlag = (value) => String(value || '').trim().toLowerCase();
+
+export const isFirebaseBypassEnabled = (env = process.env) => {
+  if (normalizeFlag(env.APP_ENV) !== 'local') {
+    return false;
+  }
+
+  const bypassFlag = normalizeFlag(env.BYPASS_FIREBASE_AUTH);
+  if (!bypassFlag) {
+    return true;
+  }
+
+  return bypassFlag === 'true';
+};
+
+const normalizePhoneNumberForBypass = (value) => String(value || '')
+  .replace(/\s+/g, '')
+  .trim();
+
+const parseCsvPhones = (rawValue) => String(rawValue || '')
+  .split(',')
+  .map((value) => normalizePhoneNumberForBypass(value))
+  .filter(Boolean);
+
+export const isWebQaPhoneBypassEnabled = (phoneNumber, env = process.env) => {
+  const isEnabled = String(env.WEB_ENABLE_QA_LOGIN_BYPASS || '').trim().toLowerCase() === 'true';
+  if (!isEnabled) return false;
+
+  const normalizedPhoneNumber = normalizePhoneNumberForBypass(phoneNumber);
+  if (!normalizedPhoneNumber) return false;
+
+  return parseCsvPhones(env.WEB_QA_BYPASS_PHONES).includes(normalizedPhoneNumber);
+};
+
+export const normalizePhoneNumberForBypassMatch = normalizePhoneNumberForBypass;

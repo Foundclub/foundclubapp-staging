@@ -20,9 +20,11 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
+import Loader from '@/components/atoms/loader/Loader';
 import SearchMapFab from '@/components/atoms/searchMapFab/SearchMapFab';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import ClubSearchResultCard from '@/components/molecules/clubSearchResultCard/ClubSearchResultCard';
+import SearchResultsLoadingState from '@/components/molecules/searchResultsLoadingState/SearchResultsLoadingState';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
@@ -30,6 +32,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetClubs, useGetMultisportClubs } from '@/services/club/clubQueries';
+import { keepPreviousPageData } from '@/services/queryOptions';
 import { useSearchClubs, useSearchClubsMap } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
@@ -138,6 +141,8 @@ function ClubListContent({
     error,
     fetchNextPage,
     hasNextPage,
+    isFetched,
+    isFetching,
     isFetchingNextPage,
     isLoading,
     refetch,
@@ -147,7 +152,7 @@ function ClubListContent({
     pageSize: 30,
   }, {
     enabled: screenActive && !isViewportListMode && !isSmartSearchEnabled,
-    placeholderData: undefined,
+    placeholderData: keepPreviousPageData,
   });
 
   const {
@@ -170,6 +175,8 @@ function ClubListContent({
     error: smartError,
     fetchNextPage: fetchSmartNextPage,
     hasNextPage: hasSmartNextPage,
+    isFetched: isSmartFetched,
+    isFetching: isSmartFetching,
     isFetchingNextPage: isFetchingSmartNextPage,
     isLoading: isSmartLoading,
     refetch: refetchSmart,
@@ -182,7 +189,7 @@ function ClubListContent({
     radius: clubFilters?.radius,
   }, {
     enabled: screenActive && !isViewportListMode && isSmartSearchEnabled,
-    placeholderData: undefined,
+    placeholderData: keepPreviousPageData,
   });
 
   const {
@@ -190,12 +197,14 @@ function ClubListContent({
     error: viewportError,
     fetchNextPage: fetchViewportNextPage,
     hasNextPage: hasViewportNextPage,
+    isFetched: isViewportFetched,
+    isFetching: isViewportFetching,
     isFetchingNextPage: isFetchingViewportNextPage,
     isLoading: isViewportLoading,
     refetch: refetchViewport,
   } = useSearchClubsMap(viewportListParams || {}, {
     enabled: screenActive && isViewportListMode && Boolean(viewportListParams),
-    placeholderData: undefined,
+    placeholderData: keepPreviousPageData,
   });
 
   const clubs = useMemo(() => clubPages?.pages
@@ -236,17 +245,23 @@ function ClubListContent({
   }
 
   let activeError = error;
+  let activeHasFetched = isFetched;
   if (isViewportListMode) {
     activeError = viewportError;
+    activeHasFetched = isViewportFetched;
   } else if (isSmartSearchEnabled) {
     activeError = smartError;
+    activeHasFetched = isSmartFetched;
   }
 
   let activeIsLoading = isLoading;
+  let activeIsFetching = isFetching;
   if (isViewportListMode) {
     activeIsLoading = isViewportLoading;
+    activeIsFetching = isViewportFetching;
   } else if (isSmartSearchEnabled) {
     activeIsLoading = isSmartLoading;
+    activeIsFetching = isSmartFetching;
   }
 
   let activeIsFetchingNext = isFetchingNextPage;
@@ -255,6 +270,14 @@ function ClubListContent({
   } else if (isSmartSearchEnabled) {
     activeIsFetchingNext = isFetchingSmartNextPage;
   }
+  const hasResolvedActiveQuery = activeHasFetched || Boolean(activeError);
+  const isActiveQueryBusy = Boolean(activeIsLoading || activeIsFetching);
+  const showLoadingPlaceholder = !hasResolvedActiveQuery
+    || (isActiveQueryBusy && displayedClubs.length === 0);
+  const showInlineLoadingHint = hasResolvedActiveQuery
+    && isActiveQueryBusy
+    && displayedClubs.length > 0
+    && !activeIsFetchingNext;
 
   const shouldShowMapToggle = enableMapMode && (displayedClubs.length > 0 || isViewportListMode);
   const listBottomPadding = shouldShowMapToggle
@@ -543,6 +566,15 @@ function ClubListContent({
   }, [Alignments.row, Fonts.neutral00, Fonts.p4Bold, Spaces.gap, Spaces.marginTop, handleClubSelection, handleMultisportSelection]);
 
   const renderEmptyList = useCallback(() => {
+    if (showLoadingPlaceholder) {
+      return (
+        <SearchResultsLoadingState
+          description="Nous chargeons les clubs correspondant à votre recherche."
+          title="Chargement des clubs"
+        />
+      );
+    }
+
     if (requiresViewportZoom) {
       return (
         <EmptyState
@@ -559,7 +591,7 @@ function ClubListContent({
         title={t('clubList.noData')}
       />
     );
-  }, [handleCreateClub, requiresViewportZoom, t]);
+  }, [handleCreateClub, requiresViewportZoom, showLoadingPlaceholder, t]);
 
   return (
     <View style={[Alignments.fill, Spaces.gap[16]]}>
@@ -576,6 +608,14 @@ function ClubListContent({
           />
         </View>
       </View>
+      {showInlineLoadingHint ? (
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+          <Loader color={Colors.primary500} size="small" />
+          <Text style={[Fonts.p4, Fonts.neutral200]}>
+            Actualisation des clubs...
+          </Text>
+        </View>
+      ) : null}
 
       {isViewportListMode ? (
         <View
@@ -626,7 +666,7 @@ function ClubListContent({
 
       <WithDataWrapper
         error={activeError?.message}
-        isLoading={activeIsLoading && !activeIsFetchingNext}
+        isLoading={false}
         wrapperStyle={[Alignments.fill]}
       >
         <FlashList
@@ -647,7 +687,7 @@ function ClubListContent({
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
           onRefresh={refreshHandler}
-          refreshing={activeIsLoading && !activeIsFetchingNext}
+          refreshing={isActiveQueryBusy && !activeIsFetchingNext}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
         />

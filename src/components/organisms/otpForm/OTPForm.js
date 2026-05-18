@@ -1,5 +1,7 @@
 import { joiResolver } from '@hookform/resolvers/joi';
-import { useState } from 'react';
+import {
+  useCallback, useEffect, useRef, useState,
+} from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -18,6 +20,9 @@ const otpLogger = createLogger('otp-form');
 const defaultValues = {
   code: '',
 };
+
+const WEB_QA_BYPASS_FLAG = '__webQaBypass';
+const LOCAL_FIREBASE_FALLBACK_FLAG = '__localFirebaseFallbackBypass';
 
 const otpSchema = Joi.object({
   code: Joi.string().length(6).required(),
@@ -39,23 +44,44 @@ function OTPForm({
   const { Alignments, Spaces } = useTheme();
   const { t } = useTranslation();
   const [isLocalSubmitting, setIsLocalSubmitting] = useState(false);
+  const hasAutoSubmittedRef = useRef(false);
+  const bypassConfirmation = /** @type {any} */ (confirm);
+  const bypassPrefilledCode = (
+    bypassConfirmation?.[WEB_QA_BYPASS_FLAG] === true
+    || bypassConfirmation?.[LOCAL_FIREBASE_FALLBACK_FLAG] === true
+  )
+    ? '123456'
+    : '';
 
   const {
     control,
     formState: { errors: formErrors },
     handleSubmit,
+    setValue,
   } = useForm({
-    defaultValues,
+    defaultValues: {
+      ...defaultValues,
+      code: bypassPrefilledCode,
+    },
     mode: 'onBlur',
     resolver: joiResolver(otpSchema),
     shouldFocusError: false,
   });
 
+  useEffect(() => {
+    if (!bypassPrefilledCode) return;
+    setValue('code', bypassPrefilledCode, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  }, [bypassPrefilledCode, setValue]);
+
   /**
    * Handle form submit
    * @param {typeof defaultValues} data
    */
-  const handleFormSubmit = async (data) => {
+  const handleFormSubmit = useCallback(async (data) => {
     if (isLocalSubmitting) return;
 
     if (confirm && phoneNumber) {
@@ -64,11 +90,21 @@ function OTPForm({
         await loginMutation.mutateAsync({ code: data.code, confirm });
       } catch (error) {
         otpLogger.error('Login failed', error);
+        hasAutoSubmittedRef.current = false;
         // Reset local state on error so user can try again
         setIsLocalSubmitting(false);
       }
     }
-  };
+  }, [confirm, isLocalSubmitting, loginMutation, phoneNumber]);
+
+  useEffect(() => {
+    if (!bypassPrefilledCode || hasAutoSubmittedRef.current || isLocalSubmitting) {
+      return;
+    }
+
+    hasAutoSubmittedRef.current = true;
+    handleSubmit(handleFormSubmit)();
+  }, [bypassPrefilledCode, handleFormSubmit, handleSubmit, isLocalSubmitting]);
 
   return (
     <View style={[Spaces.gap[24], Alignments.fullWidth]}>

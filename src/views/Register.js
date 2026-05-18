@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, ScrollView, Text, View,
+  Image, KeyboardAvoidingView, Platform, ScrollView, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,13 +22,32 @@ function Register() {
   const [phone, setPhone] = useState('');
   // hooks
   const {
-    Alignments, Fonts, Spaces,
+    Alignments, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
     canShowCodeButton, confirm, isLoading, loginMutation, otpMutation,
   } = useAuth();
+  const renderBrandLogo = () => {
+    if (Platform.OS === 'web') {
+      return (
+        <img
+          alt="FoundClub"
+          src="/foundclub-logo.png"
+          style={{ height: 24, objectFit: 'contain', width: 220 }}
+        />
+      );
+    }
+
+    return (
+      <Image
+        resizeMode="contain"
+        source={Images.logo}
+        style={{ height: 24, width: 220 }}
+      />
+    );
+  };
 
   /**
    * Handle form submit
@@ -44,9 +63,10 @@ function Register() {
     <FormScreenContainer
       bgImage="bg2"
       contentContainerStyle={[
-        Spaces.paddingTop[32],
+        Platform.OS === 'web' ? Spaces.paddingTop[80] : Spaces.paddingTop[32],
         Spaces.paddingBottom[24],
       ]}
+      desktopAlignment={Platform.OS === 'web' ? 'top' : 'center'}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -64,9 +84,14 @@ function Register() {
           showsVerticalScrollIndicator={false}
         >
           <View style={[Spaces.gap[32], Alignments.fill]}>
-            <View style={[Spaces.gap[16]]}>
-              <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('register.title')}</Text>
-              <Text style={[Fonts.p1, Fonts.neutral00]}>{t('register.subtitle')}</Text>
+            <View style={Spaces.gap[24]}>
+              <View style={Alignments.alignCenter}>
+                {renderBrandLogo()}
+              </View>
+              <View style={[Spaces.gap[16], Alignments.fullWidth]}>
+                <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('register.title')}</Text>
+                <Text style={[Fonts.p1, Fonts.neutral00]}>{t('register.subtitle')}</Text>
+              </View>
             </View>
             {canShowCodeButton
               ? (

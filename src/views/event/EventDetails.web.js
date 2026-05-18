@@ -127,7 +127,10 @@ function EventDetails({ navigation, route }) {
     error,
     isLoading,
     refetch,
-  } = useGetEvent(eventId || '');
+  } = useGetEvent(eventId || '', {
+    refetchOnMount: fromEventCreation ? 'always' : false,
+    staleTime: fromEventCreation ? 0 : undefined,
+  });
   const {
     data: myParticipationPages,
   } = useGetEventParticipations(eventId || '', userData?.documentId, {
@@ -138,6 +141,16 @@ function EventDetails({ navigation, route }) {
   });
   const [isSharing, setIsSharing] = useState(false);
   const [actionError, setActionError] = useState('');
+
+  useEffect(() => {
+    if (!fromEventCreation || !eventId) return undefined;
+
+    const refreshTimeout = setTimeout(() => {
+      refetch();
+    }, 450);
+
+    return () => clearTimeout(refreshTimeout);
+  }, [eventId, fromEventCreation, refetch]);
 
   const myParticipations = useMemo(
     () => flattenPages(myParticipationPages?.pages),
@@ -774,11 +787,8 @@ function EventDetails({ navigation, route }) {
               background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
             }}
             >
-              <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 20, margin: 0 }}>Participants</h2>
-              {renderParticipantsSection()}
-
               {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
-                <div style={{ marginTop: 24 }}>
+                <div>
                   <EventTasksSection
                     canManageEvent={canEdit}
                     event={event}
@@ -786,6 +796,9 @@ function EventDetails({ navigation, route }) {
                   />
                 </div>
               ) : null}
+
+              <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 20, margin: 0 }}>Participants</h2>
+              {renderParticipantsSection()}
 
               {Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0 ? (
                 <div style={{ marginTop: 24 }}>

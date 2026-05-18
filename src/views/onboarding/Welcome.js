@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import {
-  Image, ScrollView, Text, View,
+  Image, Platform, ScrollView, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -61,16 +61,29 @@ function Welcome({ navigation }) {
       // Mark onboarding as fully completed so it won't show again
       markOnboardingComplete(auth.user.documentId);
     }
+    const targetRoute = getPostOnboardingHomeRoute();
+
+    if (Platform.OS === 'web') {
+      if (typeof navigation?.replace === 'function') {
+        navigation.replace(targetRoute);
+        return;
+      }
+
+      if (typeof navigation?.navigate === 'function') {
+        navigation.navigate(targetRoute);
+        return;
+      }
+    }
+
     navigation.reset({
       index: 0,
-      routes: [{ name: getPostOnboardingHomeRoute() }],
+      routes: [{ name: targetRoute }],
     });
   };
 
   return (
     <FormScreenContainer
       bgImage="bg2"
-      contentWidth="readable"
       contentContainerStyle={[
         Spaces.padding[24],
         Alignments.justifySpaceBetween,
@@ -78,6 +91,7 @@ function Welcome({ navigation }) {
         Alignments.fill,
         { marginBottom: insets.bottom },
       ]}
+      contentWidth="readable"
     >
       <ScrollView
         contentContainerStyle={[Spaces.gap[40]]}

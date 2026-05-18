@@ -40,6 +40,7 @@ import {
 } from '@/services/notificationActions/rsvpActions';
 
 import { persistDiagnosticError } from '@/utils/bootDiagnostics';
+import { getMatchDurationMinutes } from '@/utils/leagueSportConfig';
 import { createLogger } from '@/utils/logger/logger';
 import { isDuplicateNotificationKey } from '@/utils/notifications/notificationDedupe';
 import {
@@ -452,7 +453,8 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   const openCalendarFromNotification = useCallback(async (notificationData) => {
     const startIso = notificationData?.matchDate || notificationData?.date;
     const startDate = startIso ? new Date(startIso) : new Date();
-    const endDate = new Date(startDate.getTime() + (60 * 60 * 1000));
+    const durationMinutes = getMatchDurationMinutes(notificationData?.matchSport);
+    const endDate = new Date(startDate.getTime() + (durationMinutes * 60 * 1000));
     const startParam = formatDateForGoogleCalendar(startDate);
     const endParam = formatDateForGoogleCalendar(endDate);
     if (!startParam || !endParam) return;

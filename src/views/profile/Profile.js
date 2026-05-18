@@ -201,8 +201,8 @@ function Profile({ navigation, route }) {
   };
 
   const handleAddAccount = () => {
-    // Limit to 5 accounts maximum
-    const MAX_ACCOUNTS = 5;
+    // Keep a little room for multi-role QA and real multi-account users.
+    const MAX_ACCOUNTS = 7;
     if (safeAuthSessions.length >= MAX_ACCOUNTS) {
       Alert.alert(
         t('profile.alerts.maxAccounts.title', 'Limite atteinte'),

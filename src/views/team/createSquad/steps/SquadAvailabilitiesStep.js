@@ -7,6 +7,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import TeamSlotCreationForm from '@/components/organisms/teamSlotCreationForm/TeamSlotCreationForm';
+import { getLocationModeLabel, isFootballElevenSport } from '@/utils/leagueSportConfig';
 
 if (Platform.OS === 'android') {
   if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -25,7 +26,7 @@ const DAYS = [
 ];
 
 /**
- * @typedef {{ day: string, startTime: string, endTime: string }} TeamSlotDraft
+ * @typedef {{ day: string, startTime: string, endTime: string, locationMode?: string | null }} TeamSlotDraft
  */
 
 /**
@@ -40,6 +41,7 @@ function SquadAvailabilitiesStep({
 }) {
   const { Colors, Fonts } = useTheme();
   const [isAddingSlot, setIsAddingSlot] = useState(false);
+  const requireLocationMode = isFootballElevenSport(data?.sport);
 
   const toggleAddSlot = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -143,6 +145,11 @@ function SquadAvailabilitiesStep({
                   -
                   {slot.endTime}
                 </Text>
+                {requireLocationMode && slot?.locationMode ? (
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary500, marginTop: 4 }]}>
+                    {getLocationModeLabel(slot.locationMode)}
+                  </Text>
+                ) : null}
               </View>
 
               <TouchableOpacity onPress={() => removeSlot(slot.id)}>
@@ -170,6 +177,7 @@ function SquadAvailabilitiesStep({
         ) : (
           <View style={{ marginTop: 10 }}>
             <TeamSlotCreationForm
+              requireLocationMode={requireLocationMode}
               onAdd={handleAddSlot}
               onCancel={toggleAddSlot}
             />

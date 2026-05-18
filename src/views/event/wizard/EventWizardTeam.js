@@ -51,6 +51,13 @@ const toReferenceOptions = (items = [], searchValue = '') => {
     ));
 };
 
+const getRelationDocumentId = (value) => String(value?.documentId || value?.id || '').trim();
+const dedupeIds = (values = []) => Array.from(new Set(
+  values
+    .map((value) => String(value || '').trim())
+    .filter(Boolean),
+));
+
 /**
  *
  * @param root0
@@ -77,6 +84,38 @@ function EventWizardTeam({ navigation }) {
   const [activitySearchValue, setActivitySearchValue] = useState('');
   const [sectionSearchValue, setSectionSearchValue] = useState('');
   const [categorySearchValue, setCategorySearchValue] = useState('');
+  const managedSectionClubIds = useMemo(
+    () => dedupeIds(
+      (userData?.multisportClubs || [])
+        .flatMap((multisportClub) => multisportClub?.sections || [])
+        .map((sectionClub) => getRelationDocumentId(sectionClub)),
+    ),
+    [userData?.multisportClubs],
+  );
+  const managedMultisportClubId = useMemo(
+    () => getRelationDocumentId((userData?.multisportClubs || [])[0]),
+    [userData?.multisportClubs],
+  );
+  const resolvedClubId = useMemo(
+    () => (
+      getRelationDocumentId(userData?.club)
+      || getRelationDocumentId((userData?.myTeams || []).find((team) => team?.club)?.club)
+      || getRelationDocumentId((userData?.trainedTeams || []).find((team) => team?.club)?.club)
+    ),
+    [userData?.club, userData?.myTeams, userData?.trainedTeams],
+  );
+  const fallbackTeams = useMemo(
+    () => sortTeamsForDisplay(
+      dedupeIds([
+        ...(Array.isArray(userData?.myTeams) ? userData.myTeams.map((team) => team?.documentId) : []),
+        ...(Array.isArray(userData?.trainedTeams) ? userData.trainedTeams.map((team) => team?.documentId) : []),
+      ]).map((documentId) => (
+        (userData?.myTeams || []).find((team) => team?.documentId === documentId)
+        || (userData?.trainedTeams || []).find((team) => team?.documentId === documentId)
+      )).filter(Boolean),
+    ),
+    [userData?.myTeams, userData?.trainedTeams],
+  );
 
   const trainedTeamIds = useMemo(() => new Set(
     (userData?.trainedTeams || [])
@@ -91,11 +130,16 @@ function EventWizardTeam({ navigation }) {
     refetch,
   } = useGetTeams(
     {
-      clubId: userData?.club?.documentId,
+      clubId: resolvedClubId,
+      clubIds: managedSectionClubIds.length > 0 ? managedSectionClubIds : undefined,
       pageSize: 100,
+      parentMultisportId: !resolvedClubId && managedSectionClubIds.length === 0 ? managedMultisportClubId : undefined,
     },
     {
-      enabled: Boolean(userData?.club?.documentId && (isClubManager || trainedTeamIds.size > 0)),
+      enabled: Boolean(
+        (resolvedClubId || managedSectionClubIds.length > 0 || managedMultisportClubId)
+        && (isClubManager || trainedTeamIds.size > 0 || fallbackTeams.length > 0),
+      ),
     },
   );
   const activitiesQuery = useGetActivities({ enabled: isTournament });
@@ -105,10 +149,6 @@ function EventWizardTeam({ navigation }) {
   const fetchedTeams = useMemo(
     () => teamsData?.pages?.flatMap((page) => page?.data || [])?.filter(Boolean) || [],
     [teamsData],
-  );
-  const fallbackTeams = useMemo(
-    () => (Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : []),
-    [userData?.trainedTeams],
   );
   const availableTeams = useMemo(() => {
     if (fetchedTeams.length > 0) {

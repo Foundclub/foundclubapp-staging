@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Platform, Text, UIManager, View,
+  Platform, Text, TouchableOpacity, UIManager, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -25,20 +25,27 @@ const DAYS = [
   { label: 'Dimanche', value: 'sunday' },
 ];
 
+const LOCATION_MODES = [
+  { label: 'Recoit', value: 'host' },
+  { label: 'Se deplace', value: 'travel' },
+  { label: 'Les deux', value: 'both' },
+];
+
 /**
- * @typedef {{ day: string, startTime: string, endTime: string }} TeamSlotDraft
+ * @typedef {{ day: string, startTime: string, endTime: string, locationMode?: string | null }} TeamSlotDraft
  */
 
 /**
  * @param {object} props
  * @param {(slotOrSlots: TeamSlotDraft | TeamSlotDraft[]) => void} props.onAdd
  * @param {() => void} props.onCancel
- * @param {{ day?: string, startTime?: string, endTime?: string } | null} [props.initialValues]
+ * @param {{ day?: string, startTime?: string, endTime?: string, locationMode?: string | null } | null} [props.initialValues]
  * @param {() => void} [props.onDelete]
  * @param {(draft: { isValid: boolean, slot: TeamSlotDraft | null, slots: TeamSlotDraft[] }) => void} [props.onDraftChange]
+ * @param {boolean} [props.requireLocationMode]
  */
 function TeamSlotCreationForm({
-  initialValues, onAdd, onCancel, onDelete, onDraftChange,
+  initialValues, onAdd, onCancel, onDelete, onDraftChange, requireLocationMode = false,
 }) {
   const { Colors, Fonts } = useTheme();
   const isEditMode = Boolean(initialValues);
@@ -53,6 +60,10 @@ function TeamSlotCreationForm({
   const [selectedDays, setSelectedDays] = useState(
     /** @type {{ label: string, value: string }[]} */ ([]),
   );
+  const [locationMode, setLocationMode] = useState(() => {
+    if (!requireLocationMode) return 'both';
+    return initialValues?.locationMode || 'both';
+  });
 
   const [startTimeDate, setStartTimeDate] = useState(() => {
     const d = new Date();
@@ -135,13 +146,14 @@ function TeamSlotCreationForm({
     return selectedDayValues.map((dayValue) => ({
       day: dayValue,
       endTime,
+      locationMode: requireLocationMode ? locationMode : null,
       startTime,
     }));
-  }, [hasValidTimeRange, selectedDayValues, startTimeDate, endTimeDate]);
+  }, [endTimeDate, hasValidTimeRange, locationMode, requireLocationMode, selectedDayValues, startTimeDate]);
 
   const isFormValid = useMemo(
-    () => hasValidTimeRange && slotsDraft.length > 0,
-    [hasValidTimeRange, slotsDraft],
+    () => hasValidTimeRange && slotsDraft.length > 0 && (!requireLocationMode || Boolean(locationMode)),
+    [hasValidTimeRange, locationMode, requireLocationMode, slotsDraft],
   );
 
   useEffect(() => {
@@ -262,6 +274,37 @@ function TeamSlotCreationForm({
           </View>
         </View>
       </View>
+
+      {requireLocationMode ? (
+        <View style={{ marginBottom: 12 }}>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 10 }]}>
+            Sur ce creneau
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {LOCATION_MODES.map((option) => {
+              const isActive = locationMode === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => setLocationMode(option.value)}
+                  style={{
+                    backgroundColor: isActive ? `${Colors.primary500}20` : Colors.neutral900,
+                    borderColor: isActive ? Colors.primary500 : Colors.neutral700,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                  }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: isActive ? Colors.primary500 : Colors.neutral200 }]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
 
       <View style={{ gap: 12, marginTop: 24 }}>
         <View style={{ flexDirection: 'row', gap: 12 }}>

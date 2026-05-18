@@ -64,10 +64,22 @@ const Input = forwardRef(
       }
     };
 
-    const handleBlur = () => {
+    const handleBlur = (
+      /** @type {import('react-native').NativeSyntheticEvent<any> | undefined} */ event,
+    ) => {
       setMainColor('neutral00');
       if (props?.onBlur) {
-        props?.onBlur();
+        props?.onBlur(event);
+      }
+    };
+
+    /**
+     * @param {import('react-native').NativeSyntheticEvent<import('react-native').TextInputEndEditingEventData>} event
+     */
+    const handleEndEditing = (event) => {
+      handleBlur(event);
+      if (props?.onEndEditing) {
+        props.onEndEditing(event);
       }
     };
 
@@ -132,7 +144,7 @@ const Input = forwardRef(
                 numberOfLines={props.numberOfLines}
                 onBlur={handleBlur}
                 onChangeText={props.onChangeText}
-                onEndEditing={handleBlur}
+                onEndEditing={handleEndEditing}
                 onFocus={handleFocus}
                 onPressIn={props.onPressIn}
                 onSubmitEditing={props.onSubmitEditing}

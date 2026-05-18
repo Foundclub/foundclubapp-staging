@@ -837,16 +837,17 @@ export default {
   },
   eventList: {
     actions: {
-      about: 'À propos',
-      absent: 'Absent·e',
-      add: 'Ajouter un évènement',
-      findEvent: 'Trouver un événement',
+      about: '\u00C0 propos',
+      absent: 'Absent\u00B7e',
+      add: 'Ajouter un \u00E9v\u00E9nement',
+      findEvent: 'Trouver un \u00E9v\u00E9nement',
       join: 'Participer',
-      present: 'Présent·e',
+      present: 'Pr\u00E9sent\u00B7e',
     },
+    featured: '\u00C0 la une :',
     info: {
       alreadyJoined: 'Je participe !',
-      alreadyMissing: 'Je serai absent·e',
+      alreadyMissing: 'Je serai absent\u00B7e',
       pendingRequest: 'Demande en attente',
     },
     joinModal: {
@@ -855,29 +856,32 @@ export default {
         confirm: 'Confirmer ma participation',
       },
       checkboxes: {
-        conditions: "J'accepte les conditions pour participer à l'évènement",
-        responsibility: 'Je déclare avoir pris connaissance de la "Déclaration de responsabilité et acceptation des risques"',
+        conditions: "J'accepte les conditions pour participer \u00E0 l'\u00E9v\u00E9nement",
+        responsibility: 'Je d\u00E9clare avoir pris connaissance de la "D\u00E9claration de responsabilit\u00E9 et acceptation des risques"',
       },
-      description: 'Je soussigné(e), participant majeur ou, le cas échéant, représentant légal du participant mineur, reconnais et accepte ce qui suit :'
-        + '\n\nRôle de Found Club : '
-        + '\n    - Found Club est une plateforme de mise en relation et n\'organise pas l\'événement. Found Club ne fournit aucune assurance liée à la participation.'
+      description: 'Je soussign\u00E9(e), participant majeur ou, le cas \u00E9ch\u00E9ant, repr\u00E9sentant l\u00E9gal du participant mineur, reconnais et accepte ce qui suit :'
+        + '\n\nR\u00F4le de Found Club : '
+        + '\n    - Found Club est une plateforme de mise en relation et n\'organise pas l\'\u00E9v\u00E9nement. Found Club ne fournit aucune assurance li\u00E9e \u00E0 la participation.'
         + '\n\nTrajets aller/retour :'
-        + '\n    - Sauf transport expressément organisé par l\'organisateur, le trajet vers et depuis l\'événement est sous ma responsabilité (ou celle du représentant légal pour un mineur), y compris assurance et choix du mode de transport.'
+        + '\n    - Sauf transport express\u00E9ment organis\u00E9 par l\'organisateur, le trajet vers et depuis l\'\u00E9v\u00E9nement est sous ma responsabilit\u00E9 (ou celle du repr\u00E9sentant l\u00E9gal pour un mineur), y compris assurance et choix du mode de transport.'
         + '\n\nAssurance :'
-        + '\n    - J\'atteste disposer (ou, pour un mineur, que l\'enfant dispose) d\'une couverture d\'assurance appropriée (ex. licence fédérale en cours et/ou responsabilité civile). J\'ai compris que Found Club n\'assure ni les dommages corporels ni matériels.'
-        + '\n\nAptitude médicale :'
-        + '\nJ\'atteste être apte à la pratique au jour de l\'événement (ou que l\'enfant est apte, conformément aux exigences fédérales : certificat/questionnaire le cas échéant) et je m\'engage à ne pas participer / ne pas autoriser la participation en cas de doute sur l\'état de santé.'
-        + '\n\nLimites de responsabilité (droit FR) :'
-        + '\nDans la mesure permise par la loi, je m\'engage à ne pas rechercher la responsabilité de Found Club du fait de la participation ; cette clause ne s\'applique pas en cas de faute lourde ou intentionnelle ou de manquement grave aux obligations de sécurité imputable à Found Club ou à l\'organisateur.'
-        + '\n\nRèglement & sécurité :'
-        + '\nJe m\'engage (ou j\'engage le mineur) à respecter le règlement, les consignes de sécurité et les instructions des encadrants ; l\'organisateur peut refuser ou interrompre la participation en cas de non-respect.'
-        + '\n\nUrgence médicale :'
-        + '\nJ\'autorise l\'organisateur à prévenir les secours en cas d\'urgence ; pour un mineur, j\'autorise l\'organisateur à accompagner l\'enfant si nécessaire et je m\'engage à rester joignable.',
-      title: 'DÉCLARATION DE RESPONSABILITÉ ET ACCEPTATION DES RISQUES',
-      validation: 'En cochant les cases et en validant mon inscription, je confirmé avoir lu, compris et accepté la présente déclaration et j\'accepte de participer à l\'événement dans ces conditions.',
+        + '\n    - J\'atteste disposer (ou, pour un mineur, que l\'enfant dispose) d\'une couverture d\'assurance appropri\u00E9e (ex. licence f\u00E9d\u00E9rale en cours et/ou responsabilit\u00E9 civile). J\'ai compris que Found Club n\'assure ni les dommages corporels ni mat\u00E9riels.'
+        + '\n\nAptitude m\u00E9dicale :'
+        + '\nJ\'atteste \u00EAtre apte \u00E0 la pratique au jour de l\'\u00E9v\u00E9nement (ou que l\'enfant est apte, conform\u00E9ment aux exigences f\u00E9d\u00E9rales : certificat/questionnaire le cas \u00E9ch\u00E9ant) et je m\'engage \u00E0 ne pas participer / ne pas autoriser la participation en cas de doute sur l\'\u00E9tat de sant\u00E9.'
+        + '\n\nLimites de responsabilit\u00E9 (droit FR) :'
+        + '\nDans la mesure permise par la loi, je m\'engage \u00E0 ne pas rechercher la responsabilit\u00E9 de Found Club du fait de la participation ; cette clause ne s\'applique pas en cas de faute lourde ou intentionnelle ou de manquement grave aux obligations de s\u00E9curit\u00E9 imputable \u00E0 Found Club ou \u00E0 l\'organisateur.'
+        + '\n\nR\u00E8glement & s\u00E9curit\u00E9 :'
+        + '\nJe m\'engage (ou j\'engage le mineur) \u00E0 respecter le r\u00E8glement, les consignes de s\u00E9curit\u00E9 et les instructions des encadrants ; l\'organisateur peut refuser ou interrompre la participation en cas de non-respect.'
+        + '\n\nUrgence m\u00E9dicale :'
+        + '\nJ\'autorise l\'organisateur \u00E0 pr\u00E9venir les secours en cas d\'urgence ; pour un mineur, j\'autorise l\'organisateur \u00E0 accompagner l\'enfant si n\u00E9cessaire et je m\'engage \u00E0 rester joignable.',
+      title: 'D\u00C9CLARATION DE RESPONSABILIT\u00C9 ET ACCEPTATION DES RISQUES',
+      validation: 'En cochant les cases et en validant mon inscription, je confirme avoir lu, compris et accept\u00E9 la pr\u00E9sente d\u00E9claration et j\'accepte de participer \u00E0 l\'\u00E9v\u00E9nement dans ces conditions.',
     },
-    noData: 'Aucun évènement trouvé.',
-    title: 'Mes évènements',
+    loadingDesc: 'Nous chargeons les \u00E9v\u00E9nements correspondant \u00E0 votre recherche.',
+    loadingTitle: 'Chargement des \u00E9v\u00E9nements',
+    loadingUpdating: 'Actualisation des \u00E9v\u00E9nements...',
+    noData: 'Aucun \u00E9v\u00E9nement trouv\u00E9.',
+    title: 'Mes \u00E9v\u00E9nements',
   },
   eventWizard: {
     common: {

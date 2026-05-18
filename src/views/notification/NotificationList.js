@@ -136,14 +136,18 @@ function NotificationList() {
     return result;
   }, [getStableItemKey, groupedNotifications]);
 
-  const showActionError = (/** @type {string} */ fallbackMessage, /** @type {any} */ error) => {
-    const message = error?.response?.data?.error?.message || fallbackMessage;
+  const showActionMessage = useCallback((/** @type {string} */ message) => {
     if (Platform.OS === 'android' && ToastAndroid?.show) {
       ToastAndroid.show(message, ToastAndroid.SHORT);
       return;
     }
-    console.warn(`[NotificationList] ${message}`);
-  };
+    Alert.alert('Notifications', message);
+  }, []);
+
+  const showActionError = useCallback((/** @type {string} */ fallbackMessage, /** @type {any} */ error) => {
+    const message = error?.response?.data?.error?.message || fallbackMessage;
+    showActionMessage(message);
+  }, [showActionMessage]);
 
   const isDeclinedParticipationNotification = useCallback((/** @type {NotificationItem} */ notification) => {
     const normalizedType = normalizeNotificationType(
@@ -184,13 +188,11 @@ function NotificationList() {
         ? 'Presence enregistree.'
         : 'Absence enregistree.';
 
-      if (Platform.OS === 'android' && ToastAndroid?.show) {
-        ToastAndroid.show(successMessage, ToastAndroid.SHORT);
-      }
+      showActionMessage(successMessage);
     } catch (error) {
       showActionError("Impossible d'enregistrer votre reponse.", error);
     }
-  }, [markAsRead, refreshNotifications]);
+  }, [markAsRead, refreshNotifications, showActionError, showActionMessage]);
 
   const handlePressNotification = useCallback(async (/** @type {NotificationItem} */ notification) => {
     try {
@@ -210,7 +212,7 @@ function NotificationList() {
 
     console.log(`[NOTIF_OPENED] type=${notification.type || payload.type || 'unknown'} route=${RouteNames.NotificationList} source=in_app_history_fallback`);
     nav.navigate(RouteNames.NotificationList);
-  }, [markAsRead, nav]);
+  }, [markAsRead, nav, showActionError]);
 
   const handleDelete = useCallback((/** @type {NotificationItem} */ notification) => {
     Alert.alert(
@@ -231,7 +233,7 @@ function NotificationList() {
         },
       ],
     );
-  }, [deleteNotification]);
+  }, [deleteNotification, showActionError]);
 
   const renderRightActions = useCallback((/** @type {NotificationItem} */ notification) => (
     <TouchableOpacity
@@ -273,7 +275,7 @@ function NotificationList() {
         Lu
       </Text>
     </TouchableOpacity>
-  ), [Colors, markAsRead]);
+  ), [Colors, markAsRead, showActionError]);
 
   const renderItem = useCallback((/** @type {{ item: NotificationSectionItem; index: number }} */ { index, item }) => {
     if (item.type === 'header') {

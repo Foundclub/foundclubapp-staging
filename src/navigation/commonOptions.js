@@ -77,6 +77,7 @@ const MOBILE_FLOATING_TAB_BAR_BOTTOM_GAP = 6;
 const MOBILE_FLOATING_TAB_BAR_HORIZONTAL_INSET = 16;
 const MOBILE_FLOATING_TAB_BAR_VERTICAL_PADDING = 10;
 const MOBILE_FLOATING_TAB_BAR_HEIGHT = 82;
+const WEB_FLOATING_DOCK_CLEARANCE = 112;
 
 /**
  * Resolve floating tab bar layout metrics.
@@ -114,7 +115,7 @@ export const getFloatingTabBarMetrics = (bottomInset = 0) => {
  */
 export const getFloatingTabBarScenePaddingBottom = (bottomInset = 0, extra = 12) => (
   Platform.OS === 'web'
-    ? 0
+    ? WEB_FLOATING_DOCK_CLEARANCE + Math.max(bottomInset, 0) + extra
     : getFloatingTabBarMetrics(bottomInset).clearance + extra
 );
 
@@ -126,7 +127,7 @@ export const getFloatingTabBarScenePaddingBottom = (bottomInset = 0, extra = 12)
  */
 export const getFloatingActionBottomOffset = (bottomInset = 0, extra = 14) => (
   Platform.OS === 'web'
-    ? Math.max(bottomInset + extra, 20)
+    ? WEB_FLOATING_DOCK_CLEARANCE + Math.max(bottomInset, 0) + extra
     : getFloatingTabBarMetrics(bottomInset).clearance + extra
 );
 

@@ -6,6 +6,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import { getLocationModeLabel } from '@/utils/leagueSportConfig';
+
 const REQUIRED_PLAYERS = 5;
 
 const dayMap = {
@@ -48,6 +50,27 @@ const getStatus = (count, t) => {
   };
 };
 
+const getStatusForRequiredPlayers = (count, requiredPlayers, t) => {
+  if (count >= requiredPlayers) {
+    return { label: t('teamSlotList.status.complete', 'Complet'), tone: 'ready' };
+  }
+  if (count >= requiredPlayers - 2) {
+    return {
+      label: t('teamSlotList.status.remaining', `Encore ${requiredPlayers - count}`, {
+        count: requiredPlayers - count,
+      }),
+      tone: 'warning',
+    };
+  }
+  return {
+    label: t('teamSlotList.status.confirmed', `${count}/${requiredPlayers} confirmes`, {
+      count,
+      required: requiredPlayers,
+    }),
+    tone: 'default',
+  };
+};
+
 /**
  * Component to display and manage Team Slots (Availability)
  * @param {object} props
@@ -63,6 +86,8 @@ const getStatus = (count, t) => {
  * @param {'responsive' | 'fixed'} [props.cardWidthMode]
  * @param {'default' | 'league'} [props.surfaceTone]
  * @param {boolean} [props.showMemberHelperText]
+ * @param {number} [props.requiredPlayers]
+ * @param {boolean} [props.showLocationMode]
  * @returns {import('react').ReactElement}
  */
 export default function TeamSlotList({
@@ -76,6 +101,8 @@ export default function TeamSlotList({
   onCheckIn,
   onSlotPress,
   preferListOnCompact = false,
+  requiredPlayers = 5,
+  showLocationMode = false,
   showMemberHelperText = true,
   slots = [],
   surfaceTone = 'default',
@@ -206,9 +233,12 @@ export default function TeamSlotList({
           {slots.map((slot, index) => {
             const participantsCount = slot?.participants?.length || 0;
             const checkedIn = slot?.participants?.some((p) => p?.documentId === currentUserId);
-            const status = getStatus(participantsCount, t);
-            const progressRatio = Math.min(1, participantsCount / REQUIRED_PLAYERS);
+            const status = requiredPlayers === 5
+              ? getStatus(participantsCount, t)
+              : getStatusForRequiredPlayers(participantsCount, requiredPlayers, t);
+            const progressRatio = Math.min(1, participantsCount / requiredPlayers);
             const slotKey = slot?.documentId || `${slot?.recurrence_day || 'slot'}-${index}`;
+            const locationModeLabel = showLocationMode ? getLocationModeLabel(slot?.location_mode || slot?.locationMode) : '';
 
             let statusColor = Colors.neutral300;
             if (status.tone === 'ready') {
@@ -269,6 +299,22 @@ export default function TeamSlotList({
                   {formatHour(slot?.end_hour)}
                 </Text>
 
+                {locationModeLabel ? (
+                  <View style={{
+                    alignSelf: 'flex-start',
+                    backgroundColor: `${Colors.primary500}12`,
+                    borderColor: `${Colors.primary500}24`,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    marginBottom: 12,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                  }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{locationModeLabel}</Text>
+                  </View>
+                ) : null}
+
                 <View style={{ marginBottom: 12 }}>
                   <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 6 }]}>
                     {t('teamSlotList.confirmedPlayers', 'Joueurs confirmés')}
@@ -276,7 +322,7 @@ export default function TeamSlotList({
                     {' '}
                     {participantsCount}
                     /
-                    {REQUIRED_PLAYERS}
+                    {requiredPlayers}
                   </Text>
                   <View style={{
                     backgroundColor: cardTone.trackBg,

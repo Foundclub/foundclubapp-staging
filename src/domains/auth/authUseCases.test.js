@@ -178,6 +178,32 @@ describe('authUseCases', () => {
       expect(result.views.map((view) => view.route)).not.toContain(RouteNames.UserParentalDeclaration);
     });
 
+    it('keeps parental declaration visible for a partially completed minor player profile loaded from persisted auth', () => {
+      const result = getOnboardingViews({
+        birthdate: '2016-05-16T00:00:00.000Z',
+        documentId: 'minor-player-doc',
+        firstname: 'Test',
+        lastname: 'Mineur',
+        parentalDeclarationAccepted: false,
+        role: { name: 'Joueur', type: 'joueur' },
+        section: { documentId: 'section-doc', id: 2, name: 'Masculine' },
+      });
+
+      expect(result.views.filter((view) => view.canShow).map((view) => view.route)).toEqual([
+        RouteNames.UserParentalDeclaration,
+        RouteNames.UserAddress,
+        RouteNames.UserAvatar,
+        RouteNames.UserSport,
+        RouteNames.UserPhysique,
+        RouteNames.UserLevel,
+        RouteNames.UserCategory,
+        RouteNames.UserSportHistory,
+        RouteNames.UserClubSearch,
+        RouteNames.UserAffiliationGuide,
+        RouteNames.Welcome,
+      ]);
+    });
+
     it('returns player flow with optional football profile steps', () => {
       const result = getOnboardingViews({
         role: { name: USER_ROLES.player },

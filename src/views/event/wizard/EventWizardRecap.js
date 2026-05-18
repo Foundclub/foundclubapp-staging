@@ -21,6 +21,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   createEventsWithConcurrency,
+  getEventById,
   requestFeatured,
   rollbackEventsByCancel,
 } from '@/services/event/eventService';
@@ -60,6 +61,84 @@ const getErrorCode = (error) => (
   || error?.response?.data?.code
   || null
 );
+
+const delay = (durationMs) => new Promise((resolve) => {
+  setTimeout(resolve, durationMs);
+});
+
+const getCreatedEventSnapshot = (createdItem) => {
+  if (createdItem?.response?.data?.documentId) {
+    return createdItem.response.data;
+  }
+  if (createdItem?.response?.documentId) {
+    return createdItem.response;
+  }
+  return null;
+};
+
+const hasExpectedEventHydration = (eventSnapshot, expectedTaskCount, expectedAudienceCount) => {
+  if (!eventSnapshot?.documentId) return false;
+  const actualTaskCount = Array.isArray(eventSnapshot?.eventTasks) ? eventSnapshot.eventTasks.length : 0;
+  const actualAudienceCount = Array.isArray(eventSnapshot?.teamAudiences) ? eventSnapshot.teamAudiences.length : 0;
+  return actualTaskCount >= expectedTaskCount && actualAudienceCount >= expectedAudienceCount;
+};
+
+const preloadCreatedEventDetail = async ({
+  createdItem,
+  eventId,
+  queryClient,
+}) => {
+  if (!eventId || !createdItem) return;
+
+  const expectedTaskCount = Array.isArray(createdItem?.payload?.eventTasks)
+    ? createdItem.payload.eventTasks.length
+    : 0;
+  const expectedAudienceCount = Array.isArray(createdItem?.payload?.teamAudiences)
+    ? createdItem.payload.teamAudiences.length
+    : 0;
+  const createdSnapshot = getCreatedEventSnapshot(createdItem);
+  const shouldRetryHydration = expectedTaskCount > 0 || expectedAudienceCount > 0;
+  const maxAttempts = shouldRetryHydration ? 3 : 1;
+
+  if (createdSnapshot?.documentId) {
+    queryClient.setQueryData(['event', eventId], createdSnapshot);
+  }
+
+  if (
+    createdSnapshot
+    && !shouldRetryHydration
+    && hasExpectedEventHydration(createdSnapshot, expectedTaskCount, expectedAudienceCount)
+  ) {
+    return;
+  }
+
+  const fetchAttempt = async (attemptIndex) => {
+    try {
+      const hydratedEvent = await queryClient.fetchQuery({
+        queryFn: () => getEventById(eventId),
+        queryKey: ['event', eventId],
+        staleTime: 0,
+      });
+
+      if (
+        !shouldRetryHydration
+        || hasExpectedEventHydration(hydratedEvent, expectedTaskCount, expectedAudienceCount)
+        || attemptIndex >= maxAttempts - 1
+      ) {
+        return;
+      }
+    } catch (prefetchError) {
+      if (attemptIndex >= maxAttempts - 1) {
+        return;
+      }
+    }
+
+    await delay(350 * (attemptIndex + 1));
+    await fetchAttempt(attemptIndex + 1);
+  };
+
+  await fetchAttempt(0);
+};
 
 const getErrorMessage = (error, fallback) => (
   error?.response?.data?.error?.message
@@ -420,6 +499,16 @@ function EventWizardRecap({ navigation }) {
     await queryClient.invalidateQueries({ queryKey: ['events'] });
     await queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
     await queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
+
+    const firstCreatedItem = created.find((item) => item.documentId === firstCreatedId) || null;
+    if (firstCreatedId && firstCreatedItem) {
+      await preloadCreatedEventDetail({
+        createdItem: firstCreatedItem,
+        eventId: firstCreatedId,
+        queryClient,
+      });
+    }
+
     dispatch({ type: 'RESET' });
 
     if (featuredFailures.length > 0) {

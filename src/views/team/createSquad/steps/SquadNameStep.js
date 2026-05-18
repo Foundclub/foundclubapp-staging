@@ -34,9 +34,12 @@ const buildSuggestionCandidates = (baseName) => {
  * @param root0
  * @param root0.data
  * @param root0.onNext
+ * @param root0.onPrev
  * @param root0.updateData
  */
-function SquadNameStep({ data, onNext, updateData }) {
+function SquadNameStep({
+  data, onNext, onPrev, updateData,
+}) {
   const { Colors, Fonts } = useTheme();
   const [nameCheckState, setNameCheckState] = useState('idle'); // idle | checking | available | taken | error
   const [nameMessage, setNameMessage] = useState('');
@@ -174,16 +177,24 @@ function SquadNameStep({ data, onNext, updateData }) {
         ) : null}
       </View>
 
-      <Button
-        disabled={!canContinue}
-        onPress={() => {
-          updateData('name', normalizedName);
-          onNext();
-        }}
-        style={{ marginBottom: 20 }}
-        title="Continuer"
-        variant="Primary"
-      />
+      <View style={{ gap: 10, marginBottom: 20 }}>
+        <Button
+          disabled={!canContinue}
+          onPress={() => {
+            updateData('name', normalizedName);
+            onNext();
+          }}
+          title="Continuer"
+          variant="Primary"
+        />
+        {typeof onPrev === 'function' ? (
+          <Button
+            onPress={onPrev}
+            title="Retour"
+            variant="Secondary"
+          />
+        ) : null}
+      </View>
     </View>
   );
 }

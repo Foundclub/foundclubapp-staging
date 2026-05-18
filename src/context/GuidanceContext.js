@@ -91,11 +91,13 @@ export function GuidanceProvider({ children }) {
   const [needsSync, setNeedsSync] = useState(false);
 
   const lastSyncedSignatureRef = useRef('');
+  const missionStateRef = useRef(missionState);
   const previousCompletedMissionIdsRef = useRef(null);
   const remoteSyncDisabledRef = useRef(false);
   const syncInFlightRef = useRef(false);
   const syncWarningKeyRef = useRef('');
   const currentUserIdRef = useRef(currentUserId);
+  const nextSyncModeRef = useRef('merge');
 
   const audienceContext = useMemo(() => buildGuidanceAudienceContext({
     canEditClub,
@@ -145,10 +147,12 @@ export function GuidanceProvider({ children }) {
           lastSyncedSignatureRef.current = syncedSignature;
           setNeedsSync(false);
         }
+        missionStateRef.current = previousState;
         return previousState;
       }
 
       persistPreparedState(preparedState);
+      missionStateRef.current = preparedState;
       shouldSync = markDirty;
       return preparedState;
     });
@@ -206,6 +210,7 @@ export function GuidanceProvider({ children }) {
     setMissionState(nextState);
     setActiveCelebration(null);
     persistGuidanceState(currentUserId, nextState);
+    missionStateRef.current = nextState;
     lastSyncedSignatureRef.current = remoteSignature;
     remoteSyncDisabledRef.current = false;
     syncWarningKeyRef.current = '';
@@ -280,7 +285,9 @@ export function GuidanceProvider({ children }) {
       if (syncInFlightRef.current) return;
       syncInFlightRef.current = true;
       try {
-        const response = await patchGuidanceState(missionState);
+        const replace = nextSyncModeRef.current === 'replace';
+        const stateToSync = missionStateRef.current;
+        const response = await patchGuidanceState(stateToSync, { replace });
         if (currentUserIdRef.current !== currentUserId) {
           return;
         }
@@ -291,16 +298,24 @@ export function GuidanceProvider({ children }) {
           response?.guidanceState,
           responseConfig.programVersion,
         );
-        const mergedState = hydrateGuidanceState({
-          config: responseConfig,
-          context: audienceContext,
-          localState: missionState,
-          remoteState,
-        });
-        const syncedSignature = serializeState(mergedState, responseConfig.programVersion);
+        const nextState = replace
+          ? prepareGuidanceState({
+            config: responseConfig,
+            context: audienceContext,
+            state: remoteState,
+          })
+          : hydrateGuidanceState({
+            config: responseConfig,
+            context: audienceContext,
+            localState: stateToSync,
+            remoteState,
+          });
+        const syncedSignature = serializeState(nextState, responseConfig.programVersion);
         remoteSyncDisabledRef.current = false;
         syncWarningKeyRef.current = '';
-        applyPreparedState(mergedState, {
+        nextSyncModeRef.current = 'merge';
+        missionStateRef.current = nextState;
+        applyPreparedState(nextState, {
           markDirty: false,
           syncedSignature,
         });
@@ -495,6 +510,9 @@ export function GuidanceProvider({ children }) {
       updatedAt: now,
     };
 
+    nextSyncModeRef.current = 'replace';
+    previousCompletedMissionIdsRef.current = [];
+    setActiveCelebration(null);
     applyPreparedState(resetState);
   }, [applyPreparedState, currentUserId, guidanceConfig.programVersion]);
 

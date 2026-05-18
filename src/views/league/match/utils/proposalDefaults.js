@@ -1,3 +1,5 @@
+import { getMatchDurationMinutes } from '@/utils/leagueSportConfig';
+
 /**
  * @param {unknown} value
  * @returns {Date | null}
@@ -86,11 +88,12 @@ const findSelectedCommonSlot = (match) => {
  * @returns {{ date: Date, start: Date, end: Date }}
  */
 export const buildProposalDefaultsFromMatch = (match) => {
+  const durationMinutes = getMatchDurationMinutes(match?.team_a?.sport || match?.team_b?.sport || match?.sport);
   if (!match) {
     const fallbackStart = buildDateWithHour(new Date(), '20:00');
     return {
       date: fallbackStart,
-      end: new Date(fallbackStart.getTime() + (60 * 60 * 1000)),
+      end: new Date(fallbackStart.getTime() + (durationMinutes * 60 * 1000)),
       start: fallbackStart,
     };
   }
@@ -116,7 +119,7 @@ export const buildProposalDefaultsFromMatch = (match) => {
     end = buildDateWithHour(start, slotEnd);
   }
   if (!end || end <= start) {
-    end = new Date(start.getTime() + (60 * 60 * 1000));
+    end = new Date(start.getTime() + (durationMinutes * 60 * 1000));
   }
 
   return {

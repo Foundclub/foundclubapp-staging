@@ -47,6 +47,7 @@ import {
   removeSquadMember,
   requestToJoinSquad,
   respondToSquadInvite,
+  resyncLeagueSourceTeam,
   updateLeagueTeam,
 } from '@/services/leagueTeam/leagueTeamService';
 import { useGetLeagueTeamPerformanceStats } from '@/services/matchStats/matchStatsQueries';
@@ -59,6 +60,10 @@ import {
   isLeagueCaptain,
   isLeagueMember,
 } from '@/utils/league/captains';
+import {
+  getRequiredPlayersForSport,
+  isFootballElevenSport,
+} from '@/utils/leagueSportConfig';
 import { normalizeLocationInput } from '@/utils/location';
 import {
   buildInstallLandingUrl,
@@ -254,7 +259,7 @@ function SquadDetailsScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useContext(BottomTabBarHeightContext);
   const { floatingActionBottomOffset, sceneBottomInset: dockSceneBottomInset } = useBottomDockLayout();
-  
+
   const bottomInset = insets.bottom || 0;
   const hasTabBar = (tabBarHeight || 0) > 0;
   const fixedButtonBottomOffset = hasTabBar ? floatingActionBottomOffset : Math.max(bottomInset + 16, 24);
@@ -342,6 +347,8 @@ function SquadDetailsScreen({ navigation, route }) {
 
   const isMember = useMemo(() => isLeagueMember(team, currentUserId), [currentUserId, team]);
   const canViewStatistics = Boolean(isMember);
+  const isFootball11 = useMemo(() => isFootballElevenSport(team?.sport), [team?.sport]);
+  const requiredPlayers = useMemo(() => getRequiredPlayersForSport(team?.sport), [team?.sport]);
 
   const hasPendingRequest = useMemo(() => team?.join_requests?.some((/** @type {User} */ u) => u.documentId === currentUser?.documentId), [team, currentUser]);
   const hasInvitation = useMemo(() => team?.invitations?.some((/** @type {User} */ u) => u.documentId === currentUser?.documentId), [team, currentUser]);
@@ -421,7 +428,7 @@ function SquadDetailsScreen({ navigation, route }) {
     return { label: 'Squad ouverte', tone: 'blue' };
   }, [hasInvitation, hasPendingRequest, isCaptain, isMember]);
   const nextSlotParticipantsCount = Number(nextSlot?.participants?.length || 0);
-  const nextSlotRemainingCount = Math.max(0, 5 - nextSlotParticipantsCount);
+  const nextSlotRemainingCount = Math.max(0, requiredPlayers - nextSlotParticipantsCount);
   const nextSlotStatus = useMemo(() => {
     if (!nextSlot) {
       return {
@@ -429,13 +436,13 @@ function SquadDetailsScreen({ navigation, route }) {
         helper: 'Ajoutez un cr\u00E9neau pour donner un premier point de rendez-vous \u00E0 la squad.',
       };
     }
-    if (nextSlotParticipantsCount >= 5) {
+    if (nextSlotParticipantsCount >= requiredPlayers) {
       return {
         badge: 'Pret a jouer',
         helper: 'Le prochain cr\u00E9neau est complet. La squad a d\u00E9j\u00E0 assez de monde pour se lancer.',
       };
     }
-    if (nextSlotParticipantsCount >= 3) {
+    if (nextSlotParticipantsCount >= Math.max(requiredPlayers - 2, 1)) {
       return {
         badge: 'Presque pret',
         helper: `Encore ${nextSlotRemainingCount} pr\u00E9sence${nextSlotRemainingCount > 1 ? 's' : ''} pour atteindre le format ideal.`,
@@ -445,7 +452,7 @@ function SquadDetailsScreen({ navigation, route }) {
       badge: 'A renforcer',
       helper: `Seulement ${nextSlotParticipantsCount} pr\u00E9sence${nextSlotParticipantsCount > 1 ? 's' : ''} pour le moment. Il faut encore mobiliser la squad.`,
     };
-  }, [nextSlot, nextSlotParticipantsCount, nextSlotRemainingCount]);
+  }, [nextSlot, nextSlotParticipantsCount, nextSlotRemainingCount, requiredPlayers]);
   const rosterSignals = useMemo(() => {
     const signals = [
       {
@@ -1037,6 +1044,7 @@ function SquadDetailsScreen({ navigation, route }) {
         const payload = {
           end_hour: `${slotData.endTime}:00`,
           league_team: safeTeamId,
+          ...(slotData?.locationMode ? { location_mode: slotData.locationMode } : {}),
           recurrence_day: slotData.day,
           start_hour: `${slotData.startTime}:00`,
           status: 'open',
@@ -1053,6 +1061,7 @@ function SquadDetailsScreen({ navigation, route }) {
             const payload = {
               end_hour: `${slotData.endTime}:00`,
               league_team: safeTeamId,
+              ...(slotData?.locationMode ? { location_mode: slotData.locationMode } : {}),
               recurrence_day: slotData.day,
               start_hour: `${slotData.startTime}:00`,
               status: 'open',
@@ -1421,6 +1430,23 @@ function SquadDetailsScreen({ navigation, route }) {
     navigation.navigate(RouteNames.SquadRequests, { teamId: safeTeamId });
   }, [navigation, safeTeamId]);
 
+  const handleResyncSourceTeam = useCallback(async () => {
+    if (!safeTeamId || !isFootball11) return;
+
+    try {
+      setIsUpdating(true);
+      await resyncLeagueSourceTeam(safeTeamId);
+      await refetch();
+      queryClient.invalidateQueries({ queryKey: ['leagueTeam', safeTeamId] });
+      Alert.alert('Synchronisation terminee', "L'equipe source a ete resynchronisee dans League.");
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Erreur', "Impossible de resynchroniser l'equipe source pour le moment.");
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [isFootball11, queryClient, refetch, safeTeamId]);
+
   const openCaptainActionsMenu = useCallback(() => {
     Alert.alert(
       t('squadDetails.actions.menuTitle', 'Actions équipe'),
@@ -1435,6 +1461,12 @@ function SquadDetailsScreen({ navigation, route }) {
           onPress: () => navigation.navigate(RouteNames.SquadEdit, { teamId: safeTeamId }),
           text: t('squadDetails.actions.editTeam', 'Modifier l\'équipe'),
         },
+        ...(isFootball11
+          ? [{
+            onPress: handleResyncSourceTeam,
+            text: 'Resynchroniser l equipe source',
+          }]
+          : []),
         {
           onPress: openRequests,
           text: t('squadDetails.actions.openRequests', 'Voir les demandes'),
@@ -1451,7 +1483,7 @@ function SquadDetailsScreen({ navigation, route }) {
         },
       ],
     );
-  }, [handleDeleteTeam, handleLeaveSquad, handleShare, navigation, openRequests, safeTeamId, t]);
+  }, [handleDeleteTeam, handleLeaveSquad, handleResyncSourceTeam, handleShare, isFootball11, navigation, openRequests, safeTeamId, t]);
 
   const dynamicSummaryLabel = useMemo(() => {
     if (isCaptain) return 'Demandes';
@@ -2649,7 +2681,8 @@ function SquadDetailsScreen({ navigation, route }) {
                   <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Confirmes</Text>
                   <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>
                     {nextSlotParticipantsCount}
-                    /5
+                    /
+                    {requiredPlayers}
                   </Text>
                 </View>
                 <View style={{
@@ -2686,6 +2719,8 @@ function SquadDetailsScreen({ navigation, route }) {
               onAddSlot={() => setIsSlotModalVisible(true)}
               onCheckIn={handleCheckIn}
               onSlotPress={handleSlotPress}
+              requiredPlayers={requiredPlayers}
+              showLocationMode={isFootball11}
               showMemberHelperText
               slots={team?.slots || []}
               surfaceTone="league"
@@ -2953,6 +2988,7 @@ function SquadDetailsScreen({ navigation, route }) {
           initialValues={editingSlot ? {
             day: /** @type {any} */ (editingSlot)?.recurrence_day,
             endTime: /** @type {any} */ (editingSlot)?.end_hour?.substring(0, 5),
+            locationMode: /** @type {any} */ (editingSlot)?.location_mode || /** @type {any} */ (editingSlot)?.locationMode || 'both',
             startTime: /** @type {any} */ (editingSlot)?.start_hour?.substring(0, 5),
           } : null}
           onAdd={handleSaveSlot}
@@ -2974,6 +3010,7 @@ function SquadDetailsScreen({ navigation, route }) {
               );
             }, 500);
           }}
+          requireLocationMode={isFootball11}
         />
       </BottomModal>
 

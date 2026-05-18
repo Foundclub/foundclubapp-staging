@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,7 +34,6 @@ import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeam
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
-import { getClubs } from '@/services/club/clubService';
 import { getTeams } from '@/services/team/teamService';
 
 import { useEventWizard } from './EventWizardContext';
@@ -46,6 +46,36 @@ const getUserDisplayName = (user) => (
   || String(user?.username || '').trim()
   || 'Membre'
 );
+
+const normalizeSearchText = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .toLowerCase();
+
+const buildExternalClubSearchHaystack = (club) => [
+  club?.name,
+  club?.address,
+  club?.city,
+  club?.postalCode,
+  club?.section?.name,
+  ...(Array.isArray(club?.activities) ? club.activities.map((activity) => activity?.name) : []),
+  ...(Array.isArray(club?.activites) ? club.activites.map((activity) => activity?.name) : []),
+]
+  .map((value) => normalizeSearchText(value))
+  .filter(Boolean)
+  .join(' ');
+
+const buildExternalTeamSearchHaystack = (team) => [
+  team?.name,
+  team?.category?.name,
+  team?.level?.name,
+  team?.section?.name,
+  ...(Array.isArray(team?.activities) ? team.activities.map((activity) => activity?.name) : []),
+]
+  .map((value) => normalizeSearchText(value))
+  .filter(Boolean)
+  .join(' ');
 
 const uniqueUsers = (users = []) => {
   const map = new Map();
@@ -89,13 +119,25 @@ const buildInviteModeCountLabel = (count, singular, plural) => {
   return `${count} ${plural}`;
 };
 
+const normalizeExternalClubGeohash = (value) => {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return String(value[0] || '');
+  }
+
+  return '';
+};
+
 const createDefaultExternalClubFilters = (filters = {}) => ({
   activity: typeof filters?.activity === 'string' ? filters.activity : '',
   city: {
     label: String(filters?.city?.label || ''),
     value: String(filters?.city?.value || ''),
   },
-  geohash: Array.isArray(filters?.geohash) ? filters.geohash.filter(Boolean) : [],
+  geohash: normalizeExternalClubGeohash(filters?.geohash),
   radius: Number.isFinite(Number(filters?.radius)) ? Number(filters.radius) : 20,
 });
 
@@ -110,6 +152,69 @@ const formatExternalClubLocationLabel = (filters = {}) => {
   if (!filters?.city?.label) return '';
   const radius = Number.isFinite(Number(filters?.radius)) ? Number(filters.radius) : 20;
   return `${filters.city.label} - ${radius} km`;
+};
+
+const mergeClubActivities = (club = {}, team = {}) => {
+  let existingActivities = [];
+  if (Array.isArray(club?.activities)) {
+    existingActivities = club.activities;
+  } else if (Array.isArray(club?.activites)) {
+    existingActivities = club.activites;
+  }
+  const teamActivities = Array.isArray(team?.activities) ? team.activities : [];
+  const byId = new Map();
+
+  [...existingActivities, ...teamActivities].forEach((activity) => {
+    const activityId = getDocumentId(activity);
+    if (!activityId || byId.has(activityId)) return;
+    byId.set(activityId, activity);
+  });
+
+  return Array.from(byId.values());
+};
+
+const buildInviteableClubFromTeam = (team) => {
+  const club = team?.club;
+  const clubId = getDocumentId(club);
+  if (!clubId) return null;
+
+  const mergedActivities = mergeClubActivities(club, team);
+
+  return {
+    ...club,
+    activites: mergedActivities,
+    activities: mergedActivities,
+    documentId: clubId,
+  };
+};
+
+const clubMatchesExternalFilters = (club, filters = {}) => {
+  if (!club) return false;
+
+  if (filters?.activity) {
+    const clubActivityIds = [
+      ...(Array.isArray(club?.activities) ? club.activities : []),
+      ...(Array.isArray(club?.activites) ? club.activites : []),
+    ]
+      .map((activity) => getDocumentId(activity))
+      .filter(Boolean);
+
+    if (!clubActivityIds.includes(filters.activity)) {
+      return false;
+    }
+  }
+
+  const searchGeohash = String(filters?.geohash || '').trim();
+  if (searchGeohash) {
+    const clubGeohash = String(club?.geohash || '').trim();
+    const geohashMatches = clubGeohash
+      && (clubGeohash.startsWith(searchGeohash) || searchGeohash.startsWith(clubGeohash));
+    if (!geohashMatches) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 const MODE_CARD_CONTENT = {
@@ -170,15 +275,18 @@ function EventWizardInvites({ navigation }) {
   const [hasExternalClubSearchError, setHasExternalClubSearchError] = useState(false);
   const [selectedExternalClub, setSelectedExternalClub] = useState(null);
   const [externalClubTeams, setExternalClubTeams] = useState([]);
+  const [inviteableExternalClubsPool, setInviteableExternalClubsPool] = useState([]);
+  const [externalTeamSearch, setExternalTeamSearch] = useState('');
   const [isLoadingExternalTeams, setIsLoadingExternalTeams] = useState(false);
   const [hasExternalTeamsError, setHasExternalTeamsError] = useState(false);
   const [isExternalFiltersModalOpen, setIsExternalFiltersModalOpen] = useState(false);
   const [externalClubFiltersDraft, setExternalClubFiltersDraft] = useState(
     createDefaultExternalClubFilters(state.externalClubFilters),
   );
+  const inviteableExternalClubsLoadedRef = useRef(false);
 
-  const selectedOrganizerTeamId = state.team?.documentId;
-  const clubId = state.team?.club?.documentId || userData?.club?.documentId;
+  const selectedOrganizerTeamId = getDocumentId(state.team);
+  const clubId = getDocumentId(state.team?.club) || getDocumentId(userData?.club);
   const externalClubFilters = useMemo(
     () => createDefaultExternalClubFilters(state.externalClubFilters),
     [state.externalClubFilters],
@@ -268,6 +376,57 @@ function EventWizardInvites({ navigation }) {
     }
   }, []);
 
+  const loadInviteableExternalClubs = useCallback(async () => {
+    if (inviteableExternalClubsLoadedRef.current) {
+      return inviteableExternalClubsPool;
+    }
+
+    const uniqueClubs = new Map();
+    const ingestTeams = (teams = []) => {
+      teams.forEach((team) => {
+        const inviteableClub = buildInviteableClubFromTeam(team);
+        const externalClubId = getDocumentId(inviteableClub);
+        if (!inviteableClub || !externalClubId || externalClubId === getDocumentId(clubId)) {
+          return;
+        }
+
+        const existingClub = uniqueClubs.get(externalClubId);
+        if (!existingClub) {
+          uniqueClubs.set(externalClubId, inviteableClub);
+          return;
+        }
+
+        const mergedActivities = mergeClubActivities(existingClub, team);
+        uniqueClubs.set(externalClubId, {
+          ...existingClub,
+          activites: mergedActivities,
+          activities: mergedActivities,
+        });
+      });
+    };
+
+    const firstPageResponse = await getTeams({ page: 1, pageSize: 100 });
+    ingestTeams(Array.isArray(firstPageResponse?.data) ? firstPageResponse.data : []);
+
+    const pageCount = Number(firstPageResponse?.meta?.pagination?.pageCount) || 1;
+    if (pageCount > 1) {
+      const remainingResponses = await Promise.all(
+        Array.from({ length: pageCount - 1 }, (_, index) => getTeams({ page: index + 2, pageSize: 100 })),
+      );
+      remainingResponses.forEach((response) => {
+        ingestTeams(Array.isArray(response?.data) ? response.data : []);
+      });
+    }
+
+    const clubs = Array.from(uniqueClubs.values()).sort((left, right) => (
+      String(left?.name || '').localeCompare(String(right?.name || ''), 'fr', { sensitivity: 'base' })
+    ));
+
+    inviteableExternalClubsLoadedRef.current = true;
+    setInviteableExternalClubsPool(clubs);
+    return clubs;
+  }, [clubId, inviteableExternalClubsPool]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -281,19 +440,17 @@ function EventWizardInvites({ navigation }) {
       setIsLoadingExternalClubs(true);
       setHasExternalClubSearchError(false);
       try {
-        const response = await getClubs({
-          activity: externalClubFilters.activity || undefined,
-          geohash: externalClubFilters.geohash?.length ? externalClubFilters.geohash : undefined,
-          includeMultisport: false,
-          name: hasExternalClubSearchQuery ? externalClubSearchQuery : undefined,
-          pageSize: 12,
-        });
+        const clubs = await loadInviteableExternalClubs();
         if (cancelled) return;
 
-        const clubs = Array.isArray(response?.data) ? response.data : [];
-        setExternalClubResults(
-          clubs.filter((club) => getDocumentId(club) !== getDocumentId(clubId)),
-        );
+        const normalizedQuery = normalizeSearchText(externalClubSearchQuery);
+        const filteredClubs = clubs
+          .filter((club) => clubMatchesExternalFilters(club, externalClubFilters))
+          .filter((club) => {
+            if (!normalizedQuery) return true;
+            return buildExternalClubSearchHaystack(club).includes(normalizedQuery);
+          });
+        setExternalClubResults(filteredClubs);
       } catch (_error) {
         if (cancelled) return;
         setExternalClubResults([]);
@@ -311,12 +468,12 @@ function EventWizardInvites({ navigation }) {
     };
   }, [
     clubId,
-    externalClubFilters.activity,
-    externalClubFilters.geohash,
+    externalClubFilters,
     externalClubSearchQuery,
     externalClubSearchNonce,
     hasExternalClubSearchQuery,
     isExternalSectionOpen,
+    loadInviteableExternalClubs,
     selectedExternalClub,
   ]);
 
@@ -350,6 +507,11 @@ function EventWizardInvites({ navigation }) {
       return rightSelected - leftSelected;
     })
   ), [externalAudienceMap, externalClubTeams]);
+  const filteredExternalTeamsForSelectedClub = useMemo(() => {
+    const query = normalizeSearchText(externalTeamSearch);
+    if (!query) return externalTeamsForSelectedClub;
+    return externalTeamsForSelectedClub.filter((team) => buildExternalTeamSearchHaystack(team).includes(query));
+  }, [externalTeamSearch, externalTeamsForSelectedClub]);
   const selectedExternalAudiences = useMemo(
     () => externalAudiences.filter((audience) => {
       if (!selectedExternalClubId) return true;
@@ -399,6 +561,9 @@ function EventWizardInvites({ navigation }) {
     externalClubEmptyMessage = 'Aucun club externe trouve pour cette recherche.';
   } else if (hasActiveExternalClubFilters) {
     externalClubEmptyMessage = 'Aucun club externe ne correspond a ces filtres pour le moment.';
+  }
+  if (!hasExternalClubSearchQuery && !hasActiveExternalClubFilters) {
+    externalClubEmptyMessage = 'Aucun club externe avec equipe disponible pour le moment.';
   }
 
   const syncAudiences = useCallback((nextInternalAudiences, nextExternalAudiences) => {
@@ -484,11 +649,13 @@ function EventWizardInvites({ navigation }) {
 
   const handleSelectExternalClub = async (club) => {
     setSelectedExternalClub(club);
+    setExternalTeamSearch('');
     await loadExternalClubTeams(club);
   };
 
   const handleResetExternalClub = () => {
     setSelectedExternalClub(null);
+    setExternalTeamSearch('');
     setExternalClubTeams([]);
     setHasExternalTeamsError(false);
   };
@@ -522,11 +689,11 @@ function EventWizardInvites({ navigation }) {
       && Number.isFinite(lon);
     const geohash = hasCoordinates
       ? getGeohashForPointAndRadius(lat, lon, nextFilters.radius)
-      : [];
+      : '';
 
     persistExternalClubFilters({
       ...nextFilters,
-      geohash: Array.isArray(geohash) ? geohash : [],
+      geohash: typeof geohash === 'string' ? geohash : '',
     });
     closeExternalFiltersModal();
   };
@@ -1006,6 +1173,13 @@ function EventWizardInvites({ navigation }) {
                     </Text>
                   </View>
 
+                  <SearchBar
+                    onChangeText={setExternalTeamSearch}
+                    placeholder="Rechercher une equipe"
+                    value={externalTeamSearch}
+                    withCalendar={false}
+                  />
+
                   {isLoadingExternalTeams ? (
                     <ActivityIndicator color={Colors.primary500} size="large" />
                   ) : null}
@@ -1031,9 +1205,20 @@ function EventWizardInvites({ navigation }) {
                     </View>
                   ) : null}
 
-                  {!isLoadingExternalTeams && !hasExternalTeamsError && externalTeamsForSelectedClub.length > 0 ? (
+                  {!isLoadingExternalTeams
+                    && !hasExternalTeamsError
+                    && externalTeamsForSelectedClub.length > 0
+                    && filteredExternalTeamsForSelectedClub.length === 0 ? (
+                      <View style={[ApplicationStyle.card, Spaces.padding[24], cardSurfaceStyle]}>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>
+                          Aucune equipe ne correspond a cette recherche.
+                        </Text>
+                      </View>
+                    ) : null}
+
+                  {!isLoadingExternalTeams && !hasExternalTeamsError && filteredExternalTeamsForSelectedClub.length > 0 ? (
                     <View style={Spaces.gap[12]}>
-                      {externalTeamsForSelectedClub.map(renderExternalTeamCard)}
+                      {filteredExternalTeamsForSelectedClub.map(renderExternalTeamCard)}
                     </View>
                   ) : null}
 

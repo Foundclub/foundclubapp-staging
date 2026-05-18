@@ -33,10 +33,11 @@ const buildDefaultStartTime = (sourceDate = getParisNowAsDeviceDate()) => {
 
 /**
  * @param {Date} [sourceDate]
+ * @param {number} [durationMinutes]
  */
-const buildDefaultEndTime = (sourceDate = getParisNowAsDeviceDate()) => {
-  const date = new Date(sourceDate);
-  date.setHours(21, 0, 0, 0);
+const buildDefaultEndTime = (sourceDate = getParisNowAsDeviceDate(), durationMinutes = 60) => {
+  const date = buildDefaultStartTime(sourceDate);
+  date.setMinutes(date.getMinutes() + durationMinutes);
   return date;
 };
 
@@ -86,6 +87,8 @@ const isSameCalendarDay = (left, right) => (
  * @property {() => void} onClose
  * @property {(payload: VenueProposalPayload) => void} onSend
  * @property {(() => void) | undefined} [onSkip]
+ * @property {number} [durationMinutes]
+ * @property {boolean} [venueRequired]
  */
 
 /**
@@ -94,6 +97,7 @@ const isSameCalendarDay = (left, right) => (
  * @param {VenueProposalModalProps} props
  */
 function VenueProposalModal({
+  durationMinutes = 60,
   initialDate,
   initialEndTime,
   initialStartTime,
@@ -101,6 +105,7 @@ function VenueProposalModal({
   onClose,
   onSend,
   onSkip,
+  venueRequired = true,
 }) {
   const { Colors, Fonts } = useTheme();
   const { showBanner } = useAppFeedback();
@@ -108,7 +113,7 @@ function VenueProposalModal({
   const [venueInput, setVenueInput] = useState('');
   const [date, setDate] = useState(getParisNowAsDeviceDate());
   const [startTime, setStartTime] = useState(() => buildDefaultStartTime());
-  const [endTime, setEndTime] = useState(() => buildDefaultEndTime());
+  const [endTime, setEndTime] = useState(() => buildDefaultEndTime(undefined, durationMinutes));
   const modalScrollRef = useRef(
     /** @type {{ scrollTo?: (options: { y: number; animated?: boolean }) => void; scrollToOffset?: (options: { offset: number; animated?: boolean }) => void } | null} */ (null),
   );
@@ -146,22 +151,25 @@ function VenueProposalModal({
       : buildDefaultStartTime(baseDate);
     const nextEnd = initialParisEnd
       ? safeDate(initialParisEnd, nextStart)
-      : new Date(nextStart.getTime() + (60 * 60 * 1000));
+      : new Date(nextStart.getTime() + (durationMinutes * 60 * 1000));
 
     setVenueInput('');
     setDate(baseDate);
     setStartTime(nextStart);
-    setEndTime(nextEnd > nextStart ? nextEnd : new Date(nextStart.getTime() + (60 * 60 * 1000)));
+    setEndTime(nextEnd > nextStart ? nextEnd : new Date(nextStart.getTime() + (durationMinutes * 60 * 1000)));
     hasHydratedInitialValuesRef.current = true;
-  }, [isVisible, initialDate, initialStartTime, initialEndTime]);
+  }, [durationMinutes, isVisible, initialDate, initialStartTime, initialEndTime]);
 
   useEffect(() => {
     const nextEnd = new Date(startTime);
-    nextEnd.setMinutes(nextEnd.getMinutes() + 60);
+    nextEnd.setMinutes(nextEnd.getMinutes() + durationMinutes);
     setEndTime(nextEnd);
-  }, [startTime]);
+  }, [durationMinutes, startTime]);
 
-  const isSendDisabled = useMemo(() => !venueInput?.trim(), [venueInput]);
+  const isSendDisabled = useMemo(
+    () => (venueRequired ? !venueInput?.trim() : false),
+    [venueInput, venueRequired],
+  );
   const venueSummary = useMemo(() => venueInput?.trim() || 'A definir', [venueInput]);
   const dateSummary = useMemo(
     () => date.toLocaleDateString('fr-FR', {
@@ -190,7 +198,7 @@ function VenueProposalModal({
 
   const handleSend = () => {
     const venue = venueInput?.trim();
-    if (!venue) return;
+    if (venueRequired && !venue) return;
 
     const finalStartDate = new Date(date);
     finalStartDate.setHours(startTime.getHours());
@@ -217,7 +225,7 @@ function VenueProposalModal({
       return;
     }
 
-    const finalEndDate = new Date(startUtcDate.getTime() + (60 * 60 * 1000));
+    const finalEndDate = new Date(startUtcDate.getTime() + (durationMinutes * 60 * 1000));
 
     onSend({
       address: venue,
@@ -268,14 +276,23 @@ function VenueProposalModal({
     }, 220);
   }, [dateSelectorY, timeSelectorY, scrollModalTo]);
 
+  const venueFieldLabel = venueRequired ? 'Lieu' : 'Lieu (optionnel)';
+  const venueFieldHint = venueRequired
+    ? 'Renseigne le nom du lieu ou son adresse en un seul champ.'
+    : 'Tu peux deja proposer un lieu, mais ce n est pas obligatoire pour ce format.';
+  const modalDescription = venueRequired
+    ? 'Propose un terrain et un creneau a ton adversaire.'
+    : 'Propose un creneau a ton adversaire et ajoute un lieu si besoin.';
+  const modalTitle = venueRequired ? 'Ou jouer ?' : 'Quand jouer ?';
+
   return (
     <BottomModal
       close={onClose}
       contentContainerStyle={{ gap: 20, paddingBottom: 32 }}
       headerComponent={(
         <LeagueModalHeader
-          description="Propose un terrain et un créneau à ton adversaire."
-          title="Où jouer ?"
+          description={modalDescription}
+          title={modalTitle}
         />
       )}
       isVisible={isVisible}
@@ -283,9 +300,9 @@ function VenueProposalModal({
       snapPoints={['85%']}
     >
       <View>
-        <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 10 }]}>Lieu</Text>
+        <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 10 }]}>{venueFieldLabel}</Text>
         <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
-          Renseigne le nom du lieu ou son adresse en un seul champ.
+          {venueFieldHint}
         </Text>
 
         <Input
@@ -396,7 +413,7 @@ function VenueProposalModal({
               </Text>
             </View>
             <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
-              Durée fixe : 60 min
+              {`Duree fixe : ${durationMinutes} min`}
             </Text>
           </View>
         </View>

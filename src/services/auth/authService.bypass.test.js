@@ -26,4 +26,10 @@ describe('authService bypass gating', () => {
     process.env.BYPASS_FIREBASE_AUTH = 'false';
     expect(isFirebaseBypassEnabled()).toBe(false);
   });
+
+  test('defaults to bypass enabled in local when the flag is missing', () => {
+    process.env.APP_ENV = 'local';
+    delete process.env.BYPASS_FIREBASE_AUTH;
+    expect(isFirebaseBypassEnabled()).toBe(true);
+  });
 });

@@ -5,6 +5,7 @@ import { getAuthTokens } from '@/domains/auth/authUseCases';
 import client from '@/services/client';
 
 import { clampLeagueDivision } from '@/utils/league/division';
+import { normalizeLeagueSportKey, SPORT_KEYS } from '@/utils/leagueSportConfig';
 
 import { getUploadEndpoint } from '@/config/runtimeUrls';
 
@@ -339,6 +340,9 @@ export const getLeagueTeamById = async (id) => {
           invitations: { populate: ['avatar'] },
           join_requests: { populate: ['avatar'] },
           roster: { populate: ['avatar'] },
+          source_team: {
+            populate: ['activities', 'category', 'cover', 'logo', 'players', 'section', 'trainers'],
+          },
           slots: { populate: ['participants'] },
         },
       },
@@ -423,6 +427,11 @@ export const removeSquadMember = async (teamId, userId) => {
   }
 };
 
+export const resyncLeagueSourceTeam = async (teamId) => {
+  const response = await client.post(`/league-teams/${teamId}/resync-source-team`);
+  return response.data?.data || response.data;
+};
+
 /**
  * Search squads with filters
  * @param {SquadSearchFilters} filters
@@ -459,27 +468,7 @@ export const searchSquads = async (filters) => {
      * @param {unknown} value
      * @returns {string | null}
      */
-    const resolveSportToken = (value) => {
-      const normalized = normalizeText(value);
-      if (!normalized) return null;
-
-      if (
-        normalized === 'football'
-                || normalized === 'foot'
-                || normalized === 'football a 5'
-                || normalized === 'futsal'
-                || normalized === 'five'
-                || normalized === 'urban soccer'
-      ) {
-        return 'football5';
-      }
-
-      if (normalized === 'padel') {
-        return 'padel';
-      }
-
-      return normalized;
-    };
+    const resolveSportToken = (value) => normalizeLeagueSportKey(normalizeFilterValue(value));
 
     /**
      * @param {unknown} value
@@ -759,11 +748,15 @@ export const searchSquads = async (filters) => {
         const teamSport = normalizeText(team?.sport);
         if (!teamSport) return false;
 
-        if (requestedSportToken === 'football5') {
+        if (requestedSportToken === SPORT_KEYS.football5) {
           return teamSport.includes('football') || teamSport.includes('futsal');
         }
 
-        if (requestedSportToken === 'padel') {
+        if (requestedSportToken === SPORT_KEYS.football11) {
+          return teamSport.includes('11');
+        }
+
+        if (requestedSportToken === SPORT_KEYS.padel) {
           return teamSport.includes('padel');
         }
 

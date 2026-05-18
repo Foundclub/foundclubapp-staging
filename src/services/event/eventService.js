@@ -524,7 +524,6 @@ const COMPACT_EVENT_CARD_FIELDS = [
   'capacity',
   'currentPlayers',
   'date',
-  'description',
   'documentId',
   'endTime',
   'eventFormat',
@@ -582,9 +581,6 @@ const COMPACT_EVENT_CARD_POPULATE = {
   participationRequests: {
     fields: ['createdAt', 'documentId', 'isActive', 'participationStatus', 'updatedAt'],
     populate: {
-      sourceTeam: {
-        fields: ['documentId', 'name'],
-      },
       user: {
         fields: ['documentId'],
       },
@@ -673,10 +669,11 @@ const COMPACT_EVENT_CARD_POPULATE = {
  *   myTeams?: string[];
  *   compact?: boolean;
  *  }} params - The parameters for filtering events
+ * @param {{ signal?: AbortSignal }} [options]
  * @returns {Promise<{data: FCEvent[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
  */
-export const getEvents = async (params = {}) => {
+export const getEvents = async (params = {}, options = {}) => {
   const {
     activity,
     category,
@@ -1016,7 +1013,10 @@ export const getEvents = async (params = {}) => {
     ...(lat && lon && radius && { lat, lon, radius }),
   };
 
-  const response = await client.get('/events', { params: filters });
+  const response = await client.get('/events', {
+    params: filters,
+    signal: options?.signal,
+  });
   const pagination = response?.data?.meta?.pagination || {};
   const queryHash = getEventQueryHash({
     featuredRequestStatus,

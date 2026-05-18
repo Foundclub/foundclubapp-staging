@@ -292,10 +292,20 @@ function EventDetails({ navigation, route }) {
     isLoading,
     refetch,
   } = useGetEvent(eventId || '', {
-    refetchOnMount: false,
-    staleTime: EVENT_DETAILS_STALE_MS,
+    refetchOnMount: fromEventCreation ? 'always' : false,
+    staleTime: fromEventCreation ? 0 : EVENT_DETAILS_STALE_MS,
   });
   const hasLoadedEvent = Boolean(event);
+
+  useEffect(() => {
+    if (!fromEventCreation || !eventId) return undefined;
+
+    const refreshTimeout = setTimeout(() => {
+      refetch();
+    }, 450);
+
+    return () => clearTimeout(refreshTimeout);
+  }, [eventId, fromEventCreation, refetch]);
 
   useEffect(() => {
     const safeEventId = String(eventId || '');
@@ -3929,6 +3939,14 @@ function EventDetails({ navigation, route }) {
               </TouchableOpacity>
             ) : null}
 
+            {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
+              <EventTasksSection
+                canManageEvent={canEdit}
+                event={event}
+                userData={userData}
+              />
+            ) : null}
+
             {renderTournamentSection()}
 
             {eventDescriptionText ? (
@@ -4017,14 +4035,6 @@ function EventDetails({ navigation, route }) {
                 onApply={handleApplyToDetectionSlot}
                 onOpenSlot={handleOpenDetectionSlot}
                 slots={detectionSlots}
-              />
-            ) : null}
-
-            {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
-              <EventTasksSection
-                canManageEvent={canEdit}
-                event={event}
-                userData={userData}
               />
             ) : null}
 

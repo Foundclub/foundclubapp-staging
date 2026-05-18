@@ -52,6 +52,12 @@ import {
   normalizeLocationInput,
   normalizeRadius,
 } from '@/utils/location';
+import {
+  doesMatchRequireVenue,
+  getLocationModeLabel,
+  getMatchDurationMinutes,
+  getRequiredPlayersForSport,
+} from '@/utils/leagueSportConfig';
 import safeJsonParse from '@/utils/safeJsonParse';
 
 import ClockIcon from '../../../assets/icons/clock.png';
@@ -78,7 +84,7 @@ import NextMatchCard from './components/NextMatchCard';
  */
 
 /**
- * @typedef {{day: string, startTime: string, endTime: string}} AddSearchSlotPayload
+ * @typedef {{day: string, startTime: string, endTime: string, locationMode?: string | null}} AddSearchSlotPayload
  */
 
 /**
@@ -322,6 +328,11 @@ function MatchCenterScreen() {
     const right = currentMatch?.team_b?.name || opponentDetails?.name || 'Adversaire';
     return `${left} VS ${right}`;
   }, [currentMatch?.team_a?.name, currentMatch?.team_b?.name, mySquad?.name, opponentDetails?.name]);
+  const venueRequired = React.useMemo(() => doesMatchRequireVenue(currentMatch), [currentMatch]);
+  const proposalDurationMinutes = React.useMemo(
+    () => getMatchDurationMinutes(currentMatch?.team_a?.sport || currentMatch?.team_b?.sport || mySquad?.sport),
+    [currentMatch?.team_a?.sport, currentMatch?.team_b?.sport, mySquad?.sport],
+  );
 
   // Search Config State
   const [searchRadius, setSearchRadius] = useState(20);
@@ -334,6 +345,7 @@ function MatchCenterScreen() {
   const mySquadLogoUri = React.useMemo(() => getSquadLogoUri(mySquad), [getSquadLogoUri, mySquad]);
   const userId = React.useMemo(() => getEntityDocumentId(userData), [userData]);
   const mySquadId = React.useMemo(() => getEntityDocumentId(mySquad), [mySquad]);
+  const squadRequiredPlayers = React.useMemo(() => getRequiredPlayersForSport(mySquad?.sport), [mySquad?.sport]);
   const isOpponentAnonymous = React.useMemo(() => shouldMaskOpponentIdentity(currentMatch), [currentMatch]);
   const opponentChatTitle = isOpponentAnonymous ? 'Vs Adversaire' : `Vs ${opponentDetails?.name || 'Adversaire'}`;
   const routeOpenProposalRequested = Boolean(route?.params?.openLeagueProposal || route?.params?.forceLeagueActionPrompt);
@@ -387,7 +399,9 @@ function MatchCenterScreen() {
 
     if (!currentMatch || !matchHasPendingProposal) {
       return {
-        helper: 'Le match correspond \u00E0 vos crit\u00E8res. Envoyez une proposition de terrain et d\u2019horaire pour lancer la n\u00E9gociation.',
+        helper: venueRequired
+          ? 'Le match correspond \u00E0 vos crit\u00E8res. Envoyez une proposition de terrain et d\u2019horaire pour lancer la n\u00E9gociation.'
+          : 'Le match correspond \u00E0 vos crit\u00E8res. Envoyez une proposition d horaire, avec un lieu si vous voulez le fixer tout de suite.',
         kind: 'create',
         title: 'ENVOYER UNE PROPOSITION',
       };
@@ -414,7 +428,7 @@ function MatchCenterScreen() {
       kind: 'open',
       title: 'OUVRIR LA N\u00C9GOCIATION',
     };
-  }, [currentMatch, matchHasPendingProposal, matchLastProposalSide, matchTeamSide]);
+  }, [currentMatch, matchHasPendingProposal, matchLastProposalSide, matchTeamSide, venueRequired]);
 
   // DAY_MAP for display
   /** @type {Record<string, string>} */
@@ -970,6 +984,7 @@ function MatchCenterScreen() {
           const payload = {
             end_hour: `${slotData.endTime}:00`,
             league_team: teamId,
+            ...(slotData?.locationMode ? { location_mode: slotData.locationMode } : {}),
             recurrence_day: slotData.day,
             start_hour: `${slotData.startTime}:00`,
             status: 'open',
@@ -1029,7 +1044,7 @@ function MatchCenterScreen() {
         throw new Error('Missing proposal date');
       }
       const proposalPayload = buildCanonicalLeagueProposalPayload(proposalData);
-      if (!proposalPayload.venueLabel) {
+      if (venueRequired && !proposalPayload.venueLabel) {
         throw new Error('Missing proposal venue');
       }
 
@@ -1037,7 +1052,7 @@ function MatchCenterScreen() {
         metadata: {
           matchLabel: currentMatchLegalLabel,
           teamName: mySquad?.name || null,
-          venueLabel: proposalPayload.venueLabel,
+          ...(proposalPayload.venueLabel ? { venueLabel: proposalPayload.venueLabel } : {}),
         },
         scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
         sourceScreen: 'match_center_proposal',
@@ -1053,7 +1068,7 @@ function MatchCenterScreen() {
       const rawUpdatedMatch = result?.match || {
         ...currentMatch,
         proposed_time: proposalPayload.startAt,
-        proposed_venue: proposalPayload.venueLabel,
+        proposed_venue: proposalPayload.venueLabel || null,
         ...(proposalPayload.addressObject
           ? { location: { ...(currentMatch?.location || {}), ...proposalPayload.addressObject } }
           : {}),
@@ -1577,7 +1592,16 @@ function MatchCenterScreen() {
           const dayLabel = anonymousDayMap[String(slot?.day || '').toLowerCase()] || slot?.day || '';
           const startLabel = toHourMinute(slot?.startHour || slot?.start_hour) || '?';
           const endLabel = toHourMinute(slot?.endHour || slot?.end_hour) || '?';
-          return dayLabel ? `${dayLabel} ${startLabel}-${endLabel}` : null;
+          const myLocationModeLabel = getLocationModeLabel(
+            matchTeamSide === 'a' ? slot?.teamALocationMode : slot?.teamBLocationMode,
+          );
+          const opponentLocationModeLabel = getLocationModeLabel(
+            matchTeamSide === 'a' ? slot?.teamBLocationMode : slot?.teamALocationMode,
+          );
+          const locationModeSummary = !isOpponentAnonymous && (myLocationModeLabel || opponentLocationModeLabel)
+            ? ` • Nous: ${myLocationModeLabel || '-'} / Eux: ${opponentLocationModeLabel || '-'}`
+            : '';
+          return dayLabel ? `${dayLabel} ${startLabel}-${endLabel}${locationModeSummary}` : null;
         })
         .filter(Boolean);
 
@@ -1641,15 +1665,23 @@ function MatchCenterScreen() {
                 width: 88,
               }}
               >
-                <Text style={{
-                  color: Colors.neutral00,
-                  fontSize: 36,
-                  fontWeight: '700',
-                  lineHeight: 40,
-                }}
-                >
-                  ?
-                </Text>
+                {isOpponentAnonymous ? (
+                  <Text style={{
+                    color: Colors.neutral00,
+                    fontSize: 36,
+                    fontWeight: '700',
+                    lineHeight: 40,
+                  }}
+                  >
+                    ?
+                  </Text>
+                ) : (
+                  <TeamShield
+                    initials={getSquadShieldInitials(opponentDetails?.name || currentMatch?.team_b?.name)}
+                    isGold
+                    size={56}
+                  />
+                )}
               </View>
 
               <View style={{ flex: 1 }}>
@@ -1670,7 +1702,7 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  Équipe adverse
+                  {isOpponentAnonymous ? 'Equipe adverse' : (opponentDetails?.name || currentMatch?.team_b?.name || 'Equipe adverse')}
                 </Text>
                 <Text style={[Fonts.p2, { color: Colors.primary500, marginBottom: 8 }]}>
                   {sportLabel}
@@ -1678,7 +1710,9 @@ function MatchCenterScreen() {
                   {categoryLabel}
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20 }]}>
-                  Le profil reste masque tant que le premier contact n&apos;est pas engage dans le chat.
+                  {isOpponentAnonymous
+                    ? 'Le profil reste masque tant que le premier contact n est pas engage dans le chat.'
+                    : 'Pour le Football a 11, l identite adverse et les creneaux communs sont visibles des le match trouve.'}
                 </Text>
               </View>
             </View>
@@ -2015,7 +2049,16 @@ function MatchCenterScreen() {
         const startLabel = toHourMinute(slot?.startHour || slot?.start_hour) || '?';
         const endLabel = toHourMinute(slot?.endHour || slot?.end_hour) || '?';
         if (!dayLabel) return;
-        commonSlotsSummary.push(`${dayLabel} ${startLabel}-${endLabel}`);
+        const myLocationModeLabel = getLocationModeLabel(
+          matchTeamSide === 'a' ? slot?.teamALocationMode : slot?.teamBLocationMode,
+        );
+        const opponentLocationModeLabel = getLocationModeLabel(
+          matchTeamSide === 'a' ? slot?.teamBLocationMode : slot?.teamALocationMode,
+        );
+        const locationModeSummary = !isOpponentAnonymous && (myLocationModeLabel || opponentLocationModeLabel)
+          ? ` • Nous: ${myLocationModeLabel || '-'} / Eux: ${opponentLocationModeLabel || '-'}`
+          : '';
+        commonSlotsSummary.push(`${dayLabel} ${startLabel}-${endLabel}${locationModeSummary}`);
       });
 
       console.log('[DEBUG] MatchCenter Opponent Détails:', JSON.stringify(opponentDetails, null, 2));
@@ -2027,7 +2070,7 @@ function MatchCenterScreen() {
             color: Colors.neutral200, letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase',
           }]}
           >
-            ADVERSAIRE MYSTERE
+            {isOpponentAnonymous ? 'ADVERSAIRE MYSTERE' : (opponentDetails?.name || 'ADVERSAIRE')}
           </Text>
 
           {/* MAIN CARD */}
@@ -2064,12 +2107,20 @@ function MatchCenterScreen() {
                 width: 80,
               }}
               >
-                <Text style={{
-                  color: Colors.neutral00, fontSize: 36, fontWeight: '700', lineHeight: 42,
-                }}
-                >
-                  ?
-                </Text>
+                {isOpponentAnonymous ? (
+                  <Text style={{
+                    color: Colors.neutral00, fontSize: 36, fontWeight: '700', lineHeight: 42,
+                  }}
+                  >
+                    ?
+                  </Text>
+                ) : (
+                  <TeamShield
+                    initials={getSquadShieldInitials(opponentDetails?.name || currentMatch?.team_b?.name)}
+                    isGold
+                    size={52}
+                  />
+                )}
               </View>
               <View style={{
                 backgroundColor: 'rgba(255, 209, 0, 0.10)',
@@ -2095,7 +2146,9 @@ function MatchCenterScreen() {
               <Text style={{ color: Colors.gold500, fontSize: 18, marginBottom: 2 }}>
                 {swordsIcon}
               </Text>
-              <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>Équipe ADVERSE</Text>
+              <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>
+                {isOpponentAnonymous ? 'Equipe adverse' : (opponentDetails?.name || currentMatch?.team_b?.name || 'Equipe adverse')}
+              </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 16 }]}>
                 {sportLabel}
                 {' '}
@@ -2405,7 +2458,7 @@ function MatchCenterScreen() {
                   </View>
                   {/* Status Chip */}
                   {(() => {
-                    const isSlotFull = (item.rsvp_count || 0) >= 5;
+                    const isSlotFull = (item.rsvp_count || 0) >= squadRequiredPlayers;
                     return (
                       <View style={{
                         backgroundColor: isSlotFull ? 'rgba(76, 175, 80, 0.15)' : 'rgba(1, 179, 244, 0.1)',
@@ -2429,16 +2482,18 @@ function MatchCenterScreen() {
                     <Text style={[Fonts.p3, { color: Colors.neutral300, textTransform: 'uppercase' }]}>
                       EFFECTIF
                       {' '}
-                      <Text style={{ color: Colors.gold500 }}>
-                        {item.rsvp_count || 0}
-                        /5
+                        <Text style={{ color: Colors.gold500 }}>
+                          {item.rsvp_count || 0}
+                        /
+                        {squadRequiredPlayers}
+                        </Text>
                       </Text>
-                    </Text>
-                    <VisualRoster
-                      Colors={Colors}
-                      Images={Images}
-                      rsvpCount={item.rsvp_count || 0}
-                    />
+                      <VisualRoster
+                        Colors={Colors}
+                        Images={Images}
+                        rsvpCount={item.rsvp_count || 0}
+                        total={squadRequiredPlayers}
+                      />
                   </View>
 
                   {/* Navigation Indicators (Dots) */}
@@ -2479,7 +2534,7 @@ function MatchCenterScreen() {
         {/* Actions */}
         {activeSlot ? (
           <View>
-            {(activeSlot.rsvp_count || 0) >= 5 ? (
+            {(activeSlot.rsvp_count || 0) >= squadRequiredPlayers ? (
               <View>
                 <Text style={[Fonts.p2, { color: Colors.success500 || '#27d6a3', marginBottom: 12, textAlign: 'center' }]}>
                   Équipe complete
@@ -3022,6 +3077,7 @@ function MatchCenterScreen() {
             <TeamSlotCreationForm
               onAdd={handleAddSearchSlot}
               onCancel={() => setIsAddingSearchSlot(false)}
+              requireLocationMode={mySquad?.sport && getRequiredPlayersForSport(mySquad.sport) === 11}
             />
           </View>
           )}
@@ -3148,7 +3204,7 @@ function MatchCenterScreen() {
             backgroundColor: Colors.neutral800, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4,
           }}
           >
-            <Text style={[Fonts.p1Bold, { color: Colors.gold500 }]}>60 min</Text>
+            <Text style={[Fonts.p1Bold, { color: Colors.gold500 }]}>{`${getMatchDurationMinutes(mySquad?.sport)} min`}</Text>
           </View>
         </View>
 
@@ -3360,6 +3416,7 @@ function MatchCenterScreen() {
       {renderSquadSelectorModal()}
 
       <VenueProposalModal
+        durationMinutes={proposalDurationMinutes}
         initialDate={proposalDefaults.date}
         initialEndTime={proposalDefaults.end}
         initialStartTime={proposalDefaults.start}
@@ -3377,6 +3434,7 @@ function MatchCenterScreen() {
             });
           }
         }}
+        venueRequired={venueRequired}
       />
       {leagueLegalAcceptanceModal}
     </ScreenContainer>

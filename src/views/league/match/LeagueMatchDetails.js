@@ -71,6 +71,11 @@ import {
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { isLeagueCaptain, isLeagueMember } from '@/utils/league/captains';
+import {
+  doesMatchRequireVenue,
+  getMatchDurationMinutes,
+  getRequiredPlayersForSport,
+} from '@/utils/leagueSportConfig';
 
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -111,16 +116,6 @@ const isAlreadyResolvedError = (error) => {
   const status = Number(error?.response?.status || error?.status || 0);
   const code = String(error?.response?.data?.error?.code || error?.code || '');
   return status === 409 || code === 'ALREADY_RESOLVED';
-};
-
-/**
- * @param {unknown} sportValue
- * @returns {number}
- */
-const getRequiredPlayersForSport = (sportValue) => {
-  const normalized = String(sportValue || '').trim().toLowerCase();
-  if (normalized.includes('padel')) return 2;
-  return 5;
 };
 
 /**
@@ -252,6 +247,8 @@ function LeagueMatchDetails({ navigation, route }) {
   const hasConfirm\u00E9d = participations.some((/** @type {User} */ p) => areSameEntityId(getEntityDocumentId(p), userId));
   const participationCount = participations.length;
   const requiredPlayers = useMemo(() => getRequiredPlayersForSport(myTeam?.sport), [myTeam?.sport]);
+  const venueRequired = useMemo(() => doesMatchRequireVenue(match), [match]);
+  const primaryFocusSection = venueRequired ? 'venueBooking' : 'presence';
 
   const normalizedStatus = useMemo(() => normalizeMatchStatus(match?.status), [match?.status]);
   const isVenueBooked = useMemo(() => isVenueBookedForMatch(match), [match]);
@@ -276,7 +273,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const leagueMyCoachReview = leagueMatchStatsPayload?.myCoachReview || null;
   const leagueMyMatchResponse = leagueMyMatchResponsePayload?.response || null;
   const isCoachFeedbackHighlighted = highlightedSection === 'coachFeedback';
-  const isVenueBookingHighlighted = highlightedSection === 'venueBooking';
+  const isVenueBookingHighlighted = venueRequired && highlightedSection === 'venueBooking';
   const hasLeagueCoachReview = leagueMyCoachReview?.rating != null || Boolean(leagueMyCoachReview?.comment);
   const isLeagueStatsFinal = leagueStatsReport?.status === 'final';
   const isLeagueStatsReviewRequired = Boolean(leagueStatsReport?.needsReview);
@@ -360,7 +357,9 @@ function LeagueMatchDetails({ navigation, route }) {
       origin = 'Envoy\u00E9e par votre squad';
     } else if (negotiationState === 'opponent_found') {
       title = 'Adversaire trouve';
-      helper = 'Le match est cree. Envoyez une proposition de date et de terrain pour lancer la negociation.';
+      helper = venueRequired
+        ? 'Le match est cree. Envoyez une proposition de date et de terrain pour lancer la negociation.'
+        : 'Le match est cree. Envoyez une proposition de date, avec un lieu si vous voulez le fixer tout de suite.';
       origin = 'Aucune proposition d\u00E9finitive pour le moment';
     }
 
@@ -379,7 +378,7 @@ function LeagueMatchDetails({ navigation, route }) {
       origin,
       title,
     };
-  }, [negotiationProposalDate, negotiationState]);
+  }, [negotiationProposalDate, negotiationState, venueRequired]);
   const renderNegotiationActions = useCallback(() => {
     if (canCreateFirstProposalFromNegotiationCard && !hasNegotiationConversation) {
       return (
@@ -610,7 +609,7 @@ function LeagueMatchDetails({ navigation, route }) {
     };
   }, [match]);
 
-  const canManageVenue = Boolean(teamSide && matchPhase === 'waiting_venue');
+  const canManageVenue = Boolean(venueRequired && teamSide && matchPhase === 'waiting_venue');
   const hasCaptainQuickActions = Boolean(
     canManageVenue
       || canSubmitScore
@@ -694,7 +693,7 @@ function LeagueMatchDetails({ navigation, route }) {
       };
     }
 
-    if (normalizedStatus === 'scheduled' && !isVenueBooked) {
+    if (normalizedStatus === 'scheduled' && venueRequired && !isVenueBooked) {
       return {
         accentColor: Colors.warning500,
         icon: Images.stadium,
@@ -743,6 +742,7 @@ function LeagueMatchDetails({ navigation, route }) {
     normalizedStatus,
     isCaptain,
     scoreQuickActionMeta.helper,
+    venueRequired,
   ]);
   const heroSupportText = useMemo(() => {
     if (hasOfficialScore && normalizedStatus === 'valid') {
@@ -751,7 +751,7 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isScoreActionPhase || isScoreToSubmitBadge) {
       return scoreQuickActionMeta.helper;
     }
-    if (normalizedStatus === 'scheduled' && !isVenueBooked) {
+    if (normalizedStatus === 'scheduled' && venueRequired && !isVenueBooked) {
       return "Le terrain doit encore être confirmé avant le coup d'envoi.";
     }
     if (normalizedStatus === 'scheduled') {
@@ -766,12 +766,15 @@ function LeagueMatchDetails({ navigation, route }) {
     isVenueBooked,
     normalizedStatus,
     scoreQuickActionMeta.helper,
+    venueRequired,
   ]);
   const captainQuickActionMeta = useMemo(() => {
     if (isPostSlotResolutionCurrentMatch) {
       return {
         accentColor: Colors.warning500,
-        helper: 'Le creneau est depasse sans terrain confirme. Le capitaine doit maintenant dire si le match a eu lieu.',
+        helper: venueRequired
+          ? 'Le creneau est depasse sans terrain confirme. Le capitaine doit maintenant dire si le match a eu lieu.'
+          : 'Le creneau est depasse. Le capitaine doit maintenant confirmer si le match a eu lieu.',
         label: 'Resolution a faire',
         title: 'Confirmation du match',
       };
@@ -797,8 +800,10 @@ function LeagueMatchDetails({ navigation, route }) {
 
     return {
       accentColor: Colors.primary500,
-      helper: "Le terrain doit être confirmé avant le coup d'envoi pour garder le workflow League propre.",
-      label: 'Terrain à confirmer',
+      helper: venueRequired
+        ? "Le terrain doit etre confirme avant le coup d'envoi pour garder le workflow League propre."
+        : "Le match reste a confirmer par les equipes avant le coup d'envoi.",
+      label: venueRequired ? 'Terrain a confirmer' : 'Match a confirmer',
       title: 'Organisation du match',
     };
   }, [
@@ -809,6 +814,7 @@ function LeagueMatchDetails({ navigation, route }) {
     isScoreLockedByTime,
     scoreQuickActionMeta.helper,
     scoreQuickActionMeta.label,
+    venueRequired,
   ]);
   const actionDockMeta = useMemo(() => {
     if (hasBottomPresenceBar) {
@@ -872,14 +878,16 @@ function LeagueMatchDetails({ navigation, route }) {
     }
 
     return {
-      helper: 'Le creneau est depasse sans terrain confirme. Les capitaines doivent confirmer si le match a eu lieu.',
+      helper: venueRequired
+        ? 'Le creneau est depasse sans terrain confirme. Les capitaines doivent confirmer si le match a eu lieu.'
+        : 'Le creneau est depasse. Les capitaines doivent confirmer si le match a eu lieu.',
       title: 'Le match a-t-il eu lieu ?',
     };
-  }, [effectivePostSlotResolutionStep]);
+  }, [effectivePostSlotResolutionStep, venueRequired]);
   const leagueWorkflowSteps = useMemo(() => {
     const hasProposal = Boolean(negotiationState) || normalizedStatus === 'scheduled' || normalizedStatus === 'valid';
     const hasEnoughPlayers = participationCount >= requiredPlayers || normalizedStatus !== 'scheduled';
-    const venueResolved = isVenueBooked || normalizedStatus !== 'scheduled';
+    const venueResolved = !venueRequired || isVenueBooked || normalizedStatus !== 'scheduled';
     const matchHasStarted = normalizedStatus !== 'scheduled' || hasOfficialScore || canSubmitScore;
     const scoreDone = hasOfficialScore && normalizedStatus === 'valid';
     let scoreState = 'todo';
@@ -897,7 +905,7 @@ function LeagueMatchDetails({ navigation, route }) {
       },
       {
         key: 'venue',
-        label: 'Terrain',
+        label: venueRequired ? 'Terrain' : 'Confirme',
         state: venueResolved ? 'done' : 'active',
       },
       {
@@ -924,6 +932,7 @@ function LeagueMatchDetails({ navigation, route }) {
     normalizedStatus,
     participationCount,
     requiredPlayers,
+    venueRequired,
   ]);
   const leagueStatsAction = useMemo(() => {
     if (normalizedStatus !== 'valid') {
@@ -1366,7 +1375,7 @@ function LeagueMatchDetails({ navigation, route }) {
       await refetchPendingLeagueAction();
       await loadMatch();
       navigation.navigate(RouteNames.LeagueMatchDetails, {
-        focusSection: 'venueBooking',
+        focusSection: primaryFocusSection,
         matchId,
       });
     } catch (error) {
@@ -1389,6 +1398,7 @@ function LeagueMatchDetails({ navigation, route }) {
     myTeam?.name,
     navigation,
     negotiationProposalMessageId,
+    primaryFocusSection,
     refetchPendingLeagueAction,
     requestLeagueLegalAcceptance,
   ]);
@@ -1432,14 +1442,14 @@ function LeagueMatchDetails({ navigation, route }) {
 
     try {
       const proposalPayload = buildCanonicalLeagueProposalPayload(proposalData);
-      if (!proposalPayload.venueLabel) {
+      if (venueRequired && !proposalPayload.venueLabel) {
         throw new Error('Missing proposal venue');
       }
       const legalAcceptance = await requestLeagueLegalAcceptance({
         metadata: {
           matchLabel: matchLegalLabel,
           teamName: myTeam?.name || null,
-          venueLabel: proposalPayload.venueLabel,
+          ...(proposalPayload.venueLabel ? { venueLabel: proposalPayload.venueLabel } : {}),
         },
         scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
         sourceScreen: 'league_match_details_counter_proposal',
@@ -1493,6 +1503,7 @@ function LeagueMatchDetails({ navigation, route }) {
     navigation,
     refetchPendingLeagueAction,
     requestLeagueLegalAcceptance,
+    venueRequired,
   ]);
 
   const handleOpenMatchStats = useCallback(() => {
@@ -2552,7 +2563,9 @@ function LeagueMatchDetails({ navigation, route }) {
                 </View>
                 {canShowCaptainPrimary ? (
                   <Text style={[Fonts.p3, { color: leagueCardTextColor, marginBottom: canShowCaptainCancel ? 12 : 0 }]}>
-                    Les actions rapides terrain, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.
+                    {venueRequired
+                      ? 'Les actions rapides terrain, score et resolution restent visibles dans la barre du bas pour agir sans quitter la fiche.'
+                      : 'Les actions rapides presence, score et resolution restent visibles dans la barre du bas pour agir sans quitter la fiche.'}
                   </Text>
                 ) : null}
                 {canShowCaptainCancel ? (
@@ -2893,6 +2906,7 @@ function LeagueMatchDetails({ navigation, route }) {
           </View>
         </BottomModal>
         <VenueProposalModal
+          durationMinutes={getMatchDurationMinutes(myTeam?.sport || match?.team_a?.sport || match?.team_b?.sport)}
           initialDate={proposalDefaults.date}
           initialEndTime={proposalDefaults.end}
           initialStartTime={proposalDefaults.start}
@@ -2900,6 +2914,7 @@ function LeagueMatchDetails({ navigation, route }) {
           onClose={() => setIsNegotiationModalVisible(false)}
           onSend={handleSendCounterProposal}
           onSkip={() => setIsNegotiationModalVisible(false)}
+          venueRequired={venueRequired}
         />
         {leagueLegalAcceptanceModal}
       </SafeAreaView>

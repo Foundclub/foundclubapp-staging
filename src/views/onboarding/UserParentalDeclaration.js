@@ -1,9 +1,10 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -30,6 +31,8 @@ function UserParentalDeclaration({ navigation }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [accepted, setAccepted] = useState(false);
+  const queryClient = useQueryClient();
+  const [, appDispatch] = useAppContext();
   const {
     data: userData,
     error: userDataError,
@@ -42,7 +45,15 @@ function UserParentalDeclaration({ navigation }) {
     onError: (error) => {
       Alert.alert('Erreur', error?.message || 'Impossible d enregistrer la declaration parentale.');
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
+      queryClient.setQueriesData({ queryKey: ['get-me'] }, updatedUser);
+      queryClient.invalidateQueries({ queryKey: ['get-me'] });
+      if (updatedUser?.documentId) {
+        appDispatch({
+          payload: updatedUser,
+          type: 'UPDATE_USER_DATA',
+        });
+      }
       navigation.navigate(RouteNames.UserAddress);
     },
   });

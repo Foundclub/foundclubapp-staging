@@ -34,6 +34,11 @@ import {
   submitPostSlotResponse,
 } from '@/services/league/leagueMatchService';
 
+import {
+  doesMatchRequireVenue,
+  getMatchDurationMinutes,
+} from '@/utils/leagueSportConfig';
+
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import {
   POPUP_DISMISS_SCOPES,
@@ -135,6 +140,11 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   });
 
   const nextAction = pendingActionPayload?.nextAction || null;
+  const promptVenueRequired = doesMatchRequireVenue(nextAction?.match);
+  const promptDurationMinutes = getMatchDurationMinutes(
+    nextAction?.match?.team_a?.sport || nextAction?.match?.team_b?.sport || nextAction?.match?.sport,
+  );
+  const promptMatchFocusSection = promptVenueRequired ? 'venueBooking' : 'presence';
   const isBlockedRoute = currentRouteName ? BLOCKED_ROUTES.has(currentRouteName) : false;
   const isCompactMobile = width < 390 || height < 760;
   const modalSnapPoint = isCompactMobile ? '90%' : '84%';
@@ -269,7 +279,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
 
     if (nextAction?.state === 'waiting_venue' || nextAction?.matchId) {
       navigate(RouteNames.LeagueMatchDetails, {
-        focusSection: 'venueBooking',
+        focusSection: promptMatchFocusSection,
         matchId: nextAction?.matchId,
       });
       return;
@@ -278,7 +288,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     if (nextAction?.chatId) {
       navigate(RouteNames.Conversation, { chatId: nextAction.chatId });
     }
-  }, [dismissForSession, invalidateLeagueQueries, nextAction?.chatId, nextAction?.matchId, nextAction?.state, refetch]);
+  }, [dismissForSession, invalidateLeagueQueries, nextAction?.chatId, nextAction?.matchId, nextAction?.state, promptMatchFocusSection, refetch]);
 
   const handleAcceptProposal = useCallback(async () => {
     if (!nextAction?.matchId || !nextAction?.proposalMessageId || isSubmitting) return;
@@ -300,7 +310,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       await invalidateLeagueQueries();
       dismissForSession();
       navigate(RouteNames.LeagueMatchDetails, {
-        focusSection: 'venueBooking',
+        focusSection: promptMatchFocusSection,
         matchId: nextAction.matchId,
       });
     } catch (error) {
@@ -323,6 +333,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     isSubmitting,
     nextAction?.matchId,
     nextAction?.proposalMessageId,
+    promptMatchFocusSection,
     promptMatchLabel,
     requestLeagueLegalAcceptance,
     showBanner,
@@ -365,13 +376,13 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
 
     try {
       const proposalPayload = buildCanonicalLeagueProposalPayload(proposalData);
-      if (!proposalPayload.venueLabel) {
+      if (promptVenueRequired && !proposalPayload.venueLabel) {
         throw new Error('Missing proposal venue');
       }
       const legalAcceptance = await requestLeagueLegalAcceptance({
         metadata: {
           matchLabel: promptMatchLabel,
-          venueLabel: proposalPayload.venueLabel,
+          ...(proposalPayload.venueLabel ? { venueLabel: proposalPayload.venueLabel } : {}),
         },
         scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
         sourceScreen: 'league_action_prompt_counter_proposal',
@@ -422,6 +433,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     nextAction?.matchId,
     nextAction?.state,
     promptMatchLabel,
+    promptVenueRequired,
     requestLeagueLegalAcceptance,
     showBanner,
   ]);
@@ -430,10 +442,10 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     if (!nextAction?.matchId) return;
     dismissForSession();
     navigate(RouteNames.LeagueMatchDetails, {
-      focusSection: 'venueBooking',
+      focusSection: promptMatchFocusSection,
       matchId: nextAction.matchId,
     });
-  }, [dismissForSession, nextAction?.matchId]);
+  }, [dismissForSession, nextAction?.matchId, promptMatchFocusSection]);
 
   const openLeagueScoreFlow = useCallback((matchId) => {
     if (!matchId) return;
@@ -587,7 +599,9 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     promptBody = "Le match est confirm\u00E9, mais le terrain n'est pas encore r\u00E9serv\u00E9. Pensez \u00E0 finaliser l'organisation.";
   } else if (isOpponentFound) {
     promptTitle = 'Adversaire trouv\u00E9';
-    promptBody = 'Un match compatible est cr\u00E9\u00E9. Envoyez la premi\u00E8re proposition de terrain et de cr\u00E9neau pour lancer la n\u00E9gociation.';
+    promptBody = promptVenueRequired
+      ? 'Un match compatible est cree. Envoyez la premiere proposition de terrain et de creneau pour lancer la negociation.'
+      : 'Un match compatible est cree. Envoyez la premiere proposition de creneau, avec un lieu si vous voulez le fixer tout de suite.';
   }
   if (isPostSlotResolution) {
     if (effectivePostSlotStep === 'confirm_reschedule') {
@@ -987,6 +1001,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       </BottomModal>
 
       <VenueProposalModal
+        durationMinutes={promptDurationMinutes}
         initialDate={proposalDefaults.date}
         initialEndTime={proposalDefaults.end}
         initialStartTime={proposalDefaults.start}
@@ -1006,6 +1021,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
             navigate(RouteNames.Conversation, { chatId: nextAction.chatId });
           }
         }}
+        venueRequired={promptVenueRequired}
       />
       {leagueLegalAcceptanceModal}
     </>
