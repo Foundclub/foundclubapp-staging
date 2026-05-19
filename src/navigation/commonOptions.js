@@ -77,8 +77,8 @@ const MOBILE_FLOATING_TAB_BAR_BOTTOM_GAP = 6;
 const MOBILE_FLOATING_TAB_BAR_HORIZONTAL_INSET = 16;
 const MOBILE_FLOATING_TAB_BAR_VERTICAL_PADDING = 10;
 const MOBILE_FLOATING_TAB_BAR_HEIGHT = 82;
-const WEB_FLOATING_DOCK_CLEARANCE = 112;
-const WEB_FLOATING_ACTION_SIDE_OFFSET = 32;
+const WEB_FLOATING_DOCK_CLEARANCE = 132;
+const WEB_FLOATING_ACTION_SIDE_OFFSET = 36;
 
 /**
  * Resolve floating tab bar layout metrics.
@@ -150,7 +150,7 @@ export const getFloatingActionContainerStyle = (
   Platform.OS === 'web'
     ? {
       bottom: bottomOffset,
-      position: 'fixed',
+      position: 'absolute',
       right: webRight,
       zIndex,
     }

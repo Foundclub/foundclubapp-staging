@@ -1,6 +1,7 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
 
 import { buildWebPath } from '@/navigation/webRoutes';
+
 import {
   normalizeNotificationPayload,
   resolveNotificationDestination,
@@ -26,7 +27,18 @@ const parseBooleanFlag = (rawValue) => {
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 };
 
-const pushNotificationsEnabled = parseBooleanFlag(process.env.FC_ENABLE_PUSH_NOTIFICATIONS || '');
+const hasExplicitFlagValue = (rawValue) => (
+  typeof rawValue === 'string' && rawValue.trim().length > 0
+);
+
+const appRuntimeEnv = String(
+  process.env.APP_ENV
+  || process.env.ENV
+  || process.env.WEB_RUNTIME_ENV
+  || '',
+).trim().toLowerCase();
+const notificationsDefaultEnabledForEnv = appRuntimeEnv === 'staging' || appRuntimeEnv === 'production';
+const hasExplicitPushFlag = hasExplicitFlagValue(process.env.FC_ENABLE_PUSH_NOTIFICATIONS);
 const notificationsBootstrapDisabled = parseBooleanFlag(process.env.FC_DISABLE_NOTIFICATIONS_BOOTSTRAP || '');
 
 const getFirebaseConfig = () => ({
@@ -50,6 +62,16 @@ const isFirebaseConfigured = () => {
     && config.messagingSenderId,
   );
 };
+
+const isFirebaseMessagingConfigured = () => (
+  isFirebaseConfigured() && Boolean(getWebVapidKey())
+);
+
+const pushNotificationsEnabled = (
+  hasExplicitPushFlag
+    ? parseBooleanFlag(process.env.FC_ENABLE_PUSH_NOTIFICATIONS || '')
+    : notificationsDefaultEnabledForEnv && isFirebaseMessagingConfigured()
+);
 
 const logInfo = (message, meta = undefined) => {
   if (typeof console !== 'undefined' && typeof console.info === 'function') {
@@ -133,7 +155,7 @@ const navigateToPath = (path) => {
     window.history.pushState({}, '', path);
   }
 
-  window.dispatchEvent(new PopStateEvent('popstate'));
+  window.dispatchEvent(new window.PopStateEvent('popstate'));
 };
 
 const hasUnresolvedRouteParams = (path) => /(^|\/):[A-Za-z0-9_]+/.test(String(path || ''));
@@ -174,7 +196,9 @@ const attachServiceWorkerBridge = () => {
 
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event?.data?.type !== SERVICE_WORKER_CLICK_EVENT) return;
-    void openFromPayload(event.data.payload);
+    openFromPayload(event.data.payload).catch((error) => {
+      logWarn('Erreur lors de l ouverture depuis le service worker.', error?.message || error);
+    });
   });
 
   hasAttachedServiceWorkerBridge = true;
@@ -205,9 +229,15 @@ const ensureMessagingRuntime = async () => {
       return null;
     }
 
-    const messaging = messagingModule.getMessaging(getFirebaseApp());
+    let messaging = null;
+    try {
+      messaging = messagingModule.getMessaging(getFirebaseApp());
+    } catch (error) {
+      logWarn('Firebase Messaging n est pas disponible dans ce navigateur.', error?.message || error);
+      return null;
+    }
 
-    if (!hasAttachedForegroundSubscription) {
+    if (!hasAttachedForegroundSubscription && messaging) {
       messagingModule.onMessage(messaging, (payload) => {
         emitForegroundPayload(payload);
       });
@@ -313,9 +343,9 @@ export const openFromPayload = async (payload) => {
 };
 
 export const requestPermission = async () => {
-  if (typeof Notification === 'undefined') return false;
-  if (Notification.permission === 'granted') return true;
-  const permission = await Notification.requestPermission();
+  if (typeof window === 'undefined' || typeof window.Notification === 'undefined') return false;
+  if (window.Notification.permission === 'granted') return true;
+  const permission = await window.Notification.requestPermission();
   return permission === 'granted';
 };
 
@@ -325,7 +355,9 @@ export const subscribeForeground = (handler) => {
   }
 
   foregroundSubscribers.add(handler);
-  void bootstrap();
+  bootstrap().catch((error) => {
+    logWarn('Bootstrap notifications web indisponible.', error?.message || error);
+  });
 
   return () => {
     foregroundSubscribers.delete(handler);

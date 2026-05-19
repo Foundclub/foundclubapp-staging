@@ -676,16 +676,17 @@ export const getUserById = async (id) => {
  */
 export const addDeviceToken = async (token) => {
   try {
+    const normalizedPlatform = Platform.OS === 'web' ? 'web' : Platform.OS;
     logAuthDebug(`[FCM] Registering device token ${formatBootMeta({
       device: getDeviceId(),
-      platform: Platform.OS,
+      platform: normalizedPlatform,
       tokenPrefix: token ? `${token.slice(0, 12)}...` : 'none',
     })}`);
     const result = await client.post('/user-fcm-token/me/device', {
       data: {
         appVersion: getAppVersion(),
         device: getDeviceId(),
-        platform: Platform.OS,
+        platform: normalizedPlatform,
         supportsPushActions: true,
         token,
       },

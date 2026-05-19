@@ -251,7 +251,7 @@ function EventDetails({ navigation, route }) {
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
   const [stageDetailsTab, setStageDetailsTab] = useState('overview');
-  const [isMatchActionsOpen, setIsMatchActionsOpen] = useState(true);
+  const [isEventActionsOpen, setIsEventActionsOpen] = useState(true);
   const [isTournamentActionsOpen, setIsTournamentActionsOpen] = useState(true);
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
   const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
@@ -2191,6 +2191,9 @@ function EventDetails({ navigation, route }) {
     const typeName = String(event?.type?.name || '').trim().toLowerCase();
     return typeName.includes('match');
   }, [event?.type?.name]);
+  const eventActionsToggleLabel = isEventActionsOpen
+    ? 'Fermer les actions evenement'
+    : 'Ouvrir les actions evenement';
 
   // @ts-ignore: FIXME: Baseline TS regression
   const getCompositionSourceLabel = useCallback((source) => {
@@ -3587,9 +3590,7 @@ function EventDetails({ navigation, route }) {
               Spaces.gap[12],
             ]}
           >
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => setIsMatchActionsOpen((prev) => !prev)}
+            <View
               style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}
             >
               <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
@@ -3598,7 +3599,17 @@ function EventDetails({ navigation, route }) {
                   Modifie cet événement, gère son annulation ou ouvre la composition d&apos;équipe.
                 </Text>
               </View>
-              <View
+              <TouchableOpacity
+                accessibilityLabel={eventActionsToggleLabel}
+                accessibilityRole="button"
+                activeOpacity={0.82}
+                hitSlop={{
+                  bottom: 8,
+                  left: 8,
+                  right: 8,
+                  top: 8,
+                }}
+                onPress={() => setIsEventActionsOpen((prev) => !prev)}
                 style={[
                   ApplicationStyle.backgroundColor.primary700,
                   ApplicationStyle.borderColor.primary500,
@@ -3609,12 +3620,70 @@ function EventDetails({ navigation, route }) {
                 ]}
               >
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                  {isMatchActionsOpen ? 'Fermer' : 'Ouvrir'}
+                  {isEventActionsOpen ? 'Fermer' : 'Ouvrir'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {isEventActionsOpen ? actionButtonsNode : null}
+          </View>
+
+          {featuredActionNode}
+          {pendingFeaturedActionNode}
+        </View>
+      );
+    }
+
+    if (canEdit) {
+      return (
+        <View>
+          <View
+            style={[
+              ApplicationStyle.card,
+              ApplicationStyle.backgroundColor.primary900,
+              ApplicationStyle.borderColor.primary500,
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              Spaces.gap[12],
+            ]}
+          >
+            <View
+              style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}
+            >
+              <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions Ã©vÃ©nement</Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  Modifie cet Ã©vÃ©nement ou gÃ¨re son annulation.
                 </Text>
               </View>
-            </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityLabel={eventActionsToggleLabel}
+                accessibilityRole="button"
+                activeOpacity={0.82}
+                hitSlop={{
+                  bottom: 8,
+                  left: 8,
+                  right: 8,
+                  top: 8,
+                }}
+                onPress={() => setIsEventActionsOpen((prev) => !prev)}
+                style={[
+                  ApplicationStyle.backgroundColor.primary700,
+                  ApplicationStyle.borderColor.primary500,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.paddingHorizontal[12],
+                  Spaces.paddingVertical[8],
+                  { borderRadius: 20 },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {isEventActionsOpen ? 'Fermer' : 'Ouvrir'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-            {isMatchActionsOpen ? actionButtonsNode : null}
+            {isEventActionsOpen ? actionButtonsNode : null}
           </View>
 
           {featuredActionNode}

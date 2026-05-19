@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 import { isFootballElevenSport } from '@/utils/leagueSportConfig';
@@ -380,6 +382,47 @@ const profileDestination = (userId) => {
 };
 
 /**
+ * @param {NotificationPayload} payload
+ * @param {{ route?: string, params?: Record<string, unknown> } | null} destination
+ */
+const adaptDestinationForCurrentPlatform = (payload, destination) => {
+  if (!destination || Platform.OS !== 'web') {
+    return destination;
+  }
+
+  const routeName = String(destination.route || '').trim();
+  const safeMatchId = normalizeEntityId(payload?.matchId);
+  const isLeagueMatchCenterDestination = routeName === RouteNames.LeagueMatchTab
+    || routeName === RouteNames.LeagueHomeTab;
+
+  if (!isLeagueMatchCenterDestination) {
+    return destination;
+  }
+
+  if (safeMatchId) {
+    const nextFocusSection = payload?.scoreFlowState
+      ? undefined
+      : (
+        payload?.focusSection
+        || getLeagueMatchFocusSection(payload)
+      );
+
+    return {
+      params: {
+        ...(nextFocusSection ? { focusSection: nextFocusSection } : {}),
+        matchId: safeMatchId,
+      },
+      route: RouteNames.LeagueMatchDetails,
+    };
+  }
+
+  return {
+    params: {},
+    route: RouteNames.LeagueDashboard,
+  };
+};
+
+/**
  * @param {unknown} rawPayload
  */
 export const resolveNotificationDestination = (rawPayload = {}) => {
@@ -387,17 +430,17 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
   const { type } = payload;
 
   if (payload.ctaRoute) {
-    return {
+    return adaptDestinationForCurrentPlatform(payload, {
       params: toParamsObject(payload.ctaParams),
       route: String(payload.ctaRoute),
-    };
+    });
   }
 
   if (payload.route) {
-    return {
+    return adaptDestinationForCurrentPlatform(payload, {
       params: toParamsObject(payload.params),
       route: String(payload.route),
-    };
+    });
   }
 
   const leagueScoreActionTypes = new Set([
@@ -414,13 +457,13 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
   ]);
 
   if (leagueScoreActionTypes.has(type) && payload.matchId) {
-    return {
+    return adaptDestinationForCurrentPlatform(payload, {
       params: {
         matchId: String(payload.matchId),
         scoreFlowState: payload.scoreFlowState || payload.phase || undefined,
       },
       route: RouteNames.EndMatchScreen,
-    };
+    });
   }
 
   const leagueTabTypes = new Set([
@@ -447,7 +490,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
   ]);
 
   if (leagueTabTypes.has(type)) {
-    return { params: {}, route: RouteNames.LeagueMatchTab };
+    return adaptDestinationForCurrentPlatform(payload, { params: {}, route: RouteNames.LeagueMatchTab });
   }
 
   const recruitmentTypes = new Set([
@@ -457,12 +500,12 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
   ]);
 
   if (recruitmentTypes.has(type)) {
-    return payload.adId
-      ? {
-        params: { adId: String(payload.adId) },
-        route: RouteNames.RecruitmentAdDetails,
-      }
-      : null;
+      return adaptDestinationForCurrentPlatform(payload, payload.adId
+        ? {
+          params: { adId: String(payload.adId) },
+          route: RouteNames.RecruitmentAdDetails,
+        }
+        : null);
   }
 
   switch (type) {
@@ -470,22 +513,22 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.NEW_TEAM:
     case NOTIFICATION_TYPES.TEAM_EXTERNAL_SOURCE_UPDATED:
     case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST:
-      return teamDetailsDestination(payload.teamId);
+      return adaptDestinationForCurrentPlatform(payload, teamDetailsDestination(payload.teamId));
 
     case NOTIFICATION_TYPES.AFFILIATION_HELP_REQUEST:
-      return {
+      return adaptDestinationForCurrentPlatform(payload, {
         params: {
           params: { filter: 'pending' },
           screen: RouteNames.AdminClaimList,
         },
         route: RouteNames.AdminStack,
-      };
+      });
 
     case NOTIFICATION_TYPES.AFFILIATION_HELP_STATUS:
-      return {
+      return adaptDestinationForCurrentPlatform(payload, {
         params: {},
         route: RouteNames.NotificationList,
-      };
+      });
 
     case NOTIFICATION_TYPES.CLUB_MEMBERSHIP_REQUEST:
       if (payload.requestType === 'claim') {
@@ -497,16 +540,16 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           route: RouteNames.ClubStack,
         };
       }
-      return {
+      return adaptDestinationForCurrentPlatform(payload, {
         params: {
           initialFilter: 'club',
           source: 'notification',
         },
         route: RouteNames.RequestsHub,
-      };
+      });
 
     case NOTIFICATION_TYPES.CLUB_REQUEST:
-      return payload.clubId
+      return adaptDestinationForCurrentPlatform(payload, payload.clubId
         ? {
           params: {
             params: { clubId: String(payload.clubId) },
@@ -514,7 +557,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           },
           route: RouteNames.ClubStack,
         }
-        : null;
+        : null);
 
     case NOTIFICATION_TYPES.COACH_REPORT_PUBLISHED:
     case NOTIFICATION_TYPES.EVENT_ABSENCE_FINAL:
@@ -538,18 +581,21 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.RESERVATION_PLAYER_JOINED:
     case NOTIFICATION_TYPES.RESERVATION_SOS_ALERT:
       if (type === NOTIFICATION_TYPES.COACH_REPORT_PUBLISHED) {
-        return coachReportPublishedDestination(payload);
+        return adaptDestinationForCurrentPlatform(payload, coachReportPublishedDestination(payload));
       }
       if (type === NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER) {
-        return eventLineupDestination(payload.eventId)
-          || eventDetailsDestination(payload.eventId);
+        return adaptDestinationForCurrentPlatform(
+          payload,
+          eventLineupDestination(payload.eventId)
+            || eventDetailsDestination(payload.eventId),
+        );
       }
       if (type === NOTIFICATION_TYPES.PARTICIPATION_REQUEST && String(payload.status || '').toLowerCase() === 'declined') {
-        return notificationDetailsDestination(payload);
+        return adaptDestinationForCurrentPlatform(payload, notificationDetailsDestination(payload));
       }
-      return eventDetailsDestination(payload.eventId);
+      return adaptDestinationForCurrentPlatform(payload, eventDetailsDestination(payload.eventId));
     case NOTIFICATION_TYPES.LEAGUE_COUNTER_PROPOSAL_RECEIVED:
-      return {
+      return adaptDestinationForCurrentPlatform(payload, {
         params: {
           params: {
             matchId: payload.matchId ? String(payload.matchId) : undefined,
@@ -559,29 +605,32 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           screen: RouteNames.LeagueMatchTab,
         },
         route: RouteNames.LeagueHomeTab,
-      };
+      });
     case NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED:
-      return chatDestination(payload.chatId || payload.conversationId)
-        || { params: {}, route: RouteNames.LeagueMatchTab };
+      return adaptDestinationForCurrentPlatform(
+        payload,
+        chatDestination(payload.chatId || payload.conversationId)
+          || { params: {}, route: RouteNames.LeagueMatchTab },
+      );
     case NOTIFICATION_TYPES.LEAGUE_MATCH_FINALIZED: {
       const finalStatus = String(payload.finalStatus || '').toLowerCase();
       if (finalStatus === 'valid' && payload.matchId) {
-        return {
+        return adaptDestinationForCurrentPlatform(payload, {
           params: { matchId: String(payload.matchId) },
           route: RouteNames.PastMatchDetails,
-        };
+        });
       }
       if (payload.matchId) {
-        return {
+        return adaptDestinationForCurrentPlatform(payload, {
           params: { matchId: String(payload.matchId) },
           route: RouteNames.LeagueMatchDetails,
-        };
+        });
       }
-      return { params: {}, route: RouteNames.LeagueMatchTab };
+      return adaptDestinationForCurrentPlatform(payload, { params: {}, route: RouteNames.LeagueMatchTab });
     }
     case NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND:
     case NOTIFICATION_TYPES.MATCH_FOUND:
-      return {
+      return adaptDestinationForCurrentPlatform(payload, {
         params: {
           params: {
             matchId: payload.matchId ? String(payload.matchId) : undefined,
@@ -591,16 +640,16 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           screen: RouteNames.LeagueMatchTab,
         },
         route: RouteNames.LeagueHomeTab,
-      };
+      });
     case NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED:
-      return payload.matchId
+      return adaptDestinationForCurrentPlatform(payload, payload.matchId
         ? {
           params: { matchId: String(payload.matchId) },
           route: RouteNames.PastMatchDetails,
         }
-        : { params: {}, route: RouteNames.LeagueMatchTab };
+        : { params: {}, route: RouteNames.LeagueMatchTab });
     case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED:
-      return payload.matchId
+      return adaptDestinationForCurrentPlatform(payload, payload.matchId
         ? {
           params: {
             focusSection: getLeagueMatchFocusSection(payload),
@@ -608,9 +657,9 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           },
           route: RouteNames.LeagueMatchDetails,
         }
-        : { params: {}, route: RouteNames.LeagueMatchTab };
+        : { params: {}, route: RouteNames.LeagueMatchTab });
     case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_DECLINED:
-      return payload.matchId
+      return adaptDestinationForCurrentPlatform(payload, payload.matchId
         ? {
           params: {
             focusSection: 'negotiation',
@@ -618,9 +667,9 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           },
           route: RouteNames.LeagueMatchDetails,
         }
-        : { params: {}, route: RouteNames.LeagueMatchTab };
+        : { params: {}, route: RouteNames.LeagueMatchTab });
     case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED:
-      return {
+      return adaptDestinationForCurrentPlatform(payload, {
         params: {
           params: {
             matchId: payload.matchId ? String(payload.matchId) : undefined,
@@ -630,10 +679,10 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           screen: RouteNames.LeagueMatchTab,
         },
         route: RouteNames.LeagueHomeTab,
-      };
+      });
     case NOTIFICATION_TYPES.LEAGUE_QUORUM_REACHED:
     case NOTIFICATION_TYPES.LEAGUE_QUORUM_REMINDER:
-      return payload.matchId
+      return adaptDestinationForCurrentPlatform(payload, payload.matchId
         ? {
           params: {
             focusSection: 'presence',
@@ -641,39 +690,39 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           },
           route: RouteNames.LeagueMatchDetails,
         }
-        : { params: {}, route: RouteNames.LeagueMatchTab };
+        : { params: {}, route: RouteNames.LeagueMatchTab });
     case NOTIFICATION_TYPES.LEAGUE_SCORE_DISPUTED_BY_OPPONENT:
     case NOTIFICATION_TYPES.LEAGUE_SCORE_SUBMITTED_BY_OPPONENT:
     case NOTIFICATION_TYPES.LEAGUE_SCORE_VALIDATION_REQUIRED:
-      return payload.matchId
+      return adaptDestinationForCurrentPlatform(payload, payload.matchId
         ? {
           params: { matchId: String(payload.matchId) },
           route: RouteNames.LeagueMatchDetails,
         }
-        : { params: {}, route: RouteNames.LeagueMatchTab };
+        : { params: {}, route: RouteNames.LeagueMatchTab });
     case NOTIFICATION_TYPES.LEAGUE_SQUAD_INVITATION:
-      return payload.teamId
+      return adaptDestinationForCurrentPlatform(payload, payload.teamId
         ? {
           params: { teamId: String(payload.teamId) },
           route: RouteNames.SquadDetails,
         }
-        : { params: {}, route: RouteNames.SquadSearch };
+        : { params: {}, route: RouteNames.SquadSearch });
     case NOTIFICATION_TYPES.LEAGUE_SQUAD_JOIN_REQUEST:
-      return payload.teamId
+      return adaptDestinationForCurrentPlatform(payload, payload.teamId
         ? {
           params: { teamId: String(payload.teamId) },
           route: RouteNames.SquadRequests,
         }
-        : { params: {}, route: RouteNames.SquadSearch };
+        : { params: {}, route: RouteNames.SquadSearch });
     case NOTIFICATION_TYPES.LEAGUE_SQUAD_JOIN_REQUEST_STATUS:
-      return payload.teamId
+      return adaptDestinationForCurrentPlatform(payload, payload.teamId
         ? {
           params: { teamId: String(payload.teamId) },
           route: RouteNames.SquadDetails,
         }
-        : { params: {}, route: RouteNames.SquadSearch };
+        : { params: {}, route: RouteNames.SquadSearch });
     case NOTIFICATION_TYPES.LEAGUE_VENUE_BOOKED:
-      return payload.matchId
+      return adaptDestinationForCurrentPlatform(payload, payload.matchId
         ? {
           params: {
             focusSection: getLeagueMatchFocusSection(payload),
@@ -681,42 +730,42 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           },
           route: RouteNames.LeagueMatchDetails,
         }
-        : { params: {}, route: RouteNames.LeagueMatchTab };
+        : { params: {}, route: RouteNames.LeagueMatchTab });
     case NOTIFICATION_TYPES.LICENSE_INSTALLMENT_OVERDUE:
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_CONFIRMED:
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_DUE:
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_REJECTED:
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_REMINDER:
-      return {
+      return adaptDestinationForCurrentPlatform(payload, {
         params: payload.assignmentId ? { assignmentId: String(payload.assignmentId) } : {},
         route: RouteNames.MyLicense,
-      };
+      });
     case NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE:
     case NOTIFICATION_TYPES.NEW_WHISPER:
-      return chatDestination(payload.chatId || payload.conversationId);
+      return adaptDestinationForCurrentPlatform(payload, chatDestination(payload.chatId || payload.conversationId));
 
     case NOTIFICATION_TYPES.SEARCH_ALERT_MATCH: {
       const alertType = payload.alertType || payload.matchType || payload.dataType || payload.kind || payload.notificationKind || payload.type;
       if (alertType === 'event') {
-        return eventDetailsDestination(payload.eventId);
+        return adaptDestinationForCurrentPlatform(payload, eventDetailsDestination(payload.eventId));
       }
       if (alertType === 'mercato') {
-        return profileDestination(payload.profileId);
+        return adaptDestinationForCurrentPlatform(payload, profileDestination(payload.profileId));
       }
-      if (payload.eventId) return eventDetailsDestination(payload.eventId);
-      if (payload.profileId) return profileDestination(payload.profileId);
-      return { params: {}, route: RouteNames.SearchAlerts };
+      if (payload.eventId) return adaptDestinationForCurrentPlatform(payload, eventDetailsDestination(payload.eventId));
+      if (payload.profileId) return adaptDestinationForCurrentPlatform(payload, profileDestination(payload.profileId));
+      return adaptDestinationForCurrentPlatform(payload, { params: {}, route: RouteNames.SearchAlerts });
     }
     case NOTIFICATION_TYPES.TEAM_REQUEST:
-      return {
+      return adaptDestinationForCurrentPlatform(payload, {
         params: {
           initialFilter: 'team',
           source: 'notification',
         },
         route: RouteNames.RequestsHub,
-      };
+      });
     case NOTIFICATION_TYPES.TOURNAMENT_CAPTAIN_TRANSFER:
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_INVITATION:
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_INVITATION_STATUS:

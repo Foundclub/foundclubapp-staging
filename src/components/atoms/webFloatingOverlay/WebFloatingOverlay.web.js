@@ -15,6 +15,7 @@ function WebFloatingOverlay({
   children,
   style,
 }) {
+  const overlayZIndex = typeof style?.zIndex === 'number' ? style.zIndex : 1100;
   const overlay = (
     <View
       pointerEvents="box-none"
@@ -25,10 +26,16 @@ function WebFloatingOverlay({
         position: 'fixed',
         right: 0,
         top: 0,
-        zIndex: style?.zIndex ?? 1100,
+        zIndex: overlayZIndex,
       }}
     >
-      <View pointerEvents="box-none" style={style}>
+      <View
+        pointerEvents="box-none"
+        style={{
+          ...style,
+          position: 'absolute',
+        }}
+      >
         {children}
       </View>
     </View>
