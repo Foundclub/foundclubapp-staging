@@ -1,9 +1,9 @@
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
-import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import CMPlanningContent from '@/components/organisms/planning/CMPlanningContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import MyEventListTutorialBoundary from '@/views/event/MyEventListTutorialBoundary';
 import ParticipantEventList from '@/views/event/ParticipantEventList';
 
 /**
@@ -20,7 +20,7 @@ function MyEventList({ navigation, route }) {
   const multisportClub = userData?.multisportClubs?.[0];
 
   return (
-    <TutorialFlowBoundary
+    <MyEventListTutorialBoundary
       onForceStartHandled={() => {
         navigation.setParams({
           startTutorial: undefined,
@@ -45,7 +45,7 @@ function MyEventList({ navigation, route }) {
       ) : (
         <ParticipantEventList navigation={navigation} />
       )}
-    </TutorialFlowBoundary>
+    </MyEventListTutorialBoundary>
   );
 }
 

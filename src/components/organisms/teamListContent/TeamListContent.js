@@ -23,10 +23,12 @@ import Button from '@/components/atoms/button/Button';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
+import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
@@ -845,14 +847,8 @@ function TeamListContent({
         </View>
 
         {isLeagueMode ? (
-          <View
-            pointerEvents="box-none"
-            style={{
-              bottom: floatingActionBottom,
-              position: 'absolute',
-              right: 20,
-              zIndex: 100,
-            }}
+          <WebFloatingOverlay
+            style={getFloatingActionContainerStyle(floatingActionBottom, { zIndex: 1100 })}
           >
             <TouchableOpacity
               accessibilityLabel="Creer une squad"
@@ -918,7 +914,7 @@ function TeamListContent({
                 />
               </View>
             </TouchableOpacity>
-          </View>
+          </WebFloatingOverlay>
         ) : null}
       </WithDataWrapper>
     </View>

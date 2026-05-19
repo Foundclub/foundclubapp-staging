@@ -1,5 +1,7 @@
 import Joi from 'joi';
 
+import { celebrate } from '@/services/celebrations/celebrationRuntime';
+
 import client from '../client';
 
 const clubMembershipRequestSchema = Joi.object({
@@ -51,6 +53,9 @@ const toFlatUser = (user) => {
 export const createClubMembershipRequest = async (clubMembershipRequestData) => {
   const response = await client.post('/club-membership-requests', {
     data: clubMembershipRequestData,
+  });
+  celebrate('club_membership_request_sent', {
+    clubId: clubMembershipRequestData?.club,
   });
   return response.data;
 };

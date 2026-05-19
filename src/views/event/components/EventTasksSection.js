@@ -16,6 +16,7 @@ import Checkbox from '@/components/atoms/checkbox/Checkbox';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
+import { celebrate } from '@/services/celebrations/celebrationRuntime';
 import {
   approveEventTaskAssignment,
   assignEventTask,
@@ -94,6 +95,13 @@ const isTrainerForUser = (team, user) => {
   return Array.isArray(team?.trainers) && team.trainers.some((trainer) => getUserKey(trainer) === userKey);
 };
 
+/**
+ *
+ * @param root0
+ * @param root0.canManageEvent
+ * @param root0.event
+ * @param root0.userData
+ */
 function EventTasksSection({ canManageEvent = false, event, userData }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -130,7 +138,17 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
   const assignMutation = useMutation({
     mutationFn: ({ taskId }) => assignEventTask(taskId, { userId: userData?.documentId }),
     onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible de rejoindre cette tache.'),
-    onSuccess: refreshEvent,
+    onSuccess: (result, variables) => {
+      const task = tasks.find((item) => String(item?.documentId || item?.id || '') === String(variables?.taskId || ''));
+      const status = String(result?.data?.status || result?.status || '').toUpperCase();
+      celebrate(status === 'APPROVED' ? 'event_task_assignment_validated' : 'event_task_volunteer_sent', {
+        assignmentId: result?.data?.documentId || result?.documentId || null,
+        eventId: event?.documentId,
+        taskId: variables?.taskId,
+        taskTitle: task?.title || 'cette tache',
+      });
+      refreshEvent();
+    },
   });
   const managerAssignMutation = useMutation({
     mutationFn: ({ taskId, userIds }) => Promise.all(
@@ -138,6 +156,12 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
     ),
     onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible d assigner ces membres a la tache.'),
     onSuccess: () => {
+      celebrate('event_task_members_assigned', {
+        count: selectedManagerMemberIds.length,
+        eventId: event?.documentId,
+        taskId: activeManagerTask?.documentId || activeManagerTask?.id || null,
+        taskTitle: activeManagerTask?.title || 'cette tache',
+      });
       setIsAssignMembersModalOpen(false);
       setActiveManagerTaskId('');
       setSelectedManagerMemberIds([]);
@@ -147,7 +171,15 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
   const approveMutation = useMutation({
     mutationFn: ({ assignmentId }) => approveEventTaskAssignment(assignmentId),
     onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible de valider cette assignation.'),
-    onSuccess: refreshEvent,
+    onSuccess: (result) => {
+      celebrate('event_task_assignment_validated', {
+        assignmentId: result?.data?.documentId || result?.documentId || null,
+        eventId: event?.documentId,
+        taskId: result?.data?.task?.documentId || result?.task?.documentId || null,
+        taskTitle: result?.data?.task?.title || result?.task?.title || 'cette tache',
+      });
+      refreshEvent();
+    },
   });
   const rejectMutation = useMutation({
     mutationFn: ({ assignmentId }) => rejectEventTaskAssignment(assignmentId, {}),

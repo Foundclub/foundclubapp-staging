@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAfter, isSameDay, startOfDay } from 'date-fns';
 import {
+  Suspense,
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
@@ -14,18 +15,22 @@ import {
 } from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
 
-import DateSlider from '@/components/molecules/dateSlider/DateSlider';
-import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
-import MissionDock from '@/components/molecules/guidance/MissionDock';
-import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
-import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
-import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
-import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
-import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
-import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import PersonalPlanningContainer from '@/components/organisms/planning/PersonalPlanningContainer';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import {
+  DateSlider,
+  EventCardNew,
+  FeaturedEvents,
+  JoinEventModal,
+  LeagueHeaderSwitch,
+  MissionDock,
+  NotificationBadge,
+  ProfileButton,
+} from '@/views/event/ParticipantEventListDeferred';
+import PlanningOnboardingWrapper from '@/views/event/PlanningOnboardingWrapper';
 
+import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
@@ -58,6 +63,17 @@ const mergeUniqueEvents = (...collections) => {
 };
 
 /**
+ * @param {{ height?: number, width?: import('react-native').ViewStyle['width'] }} props
+ * @returns {import('react').ReactElement}
+ */
+function DeferredFallback({
+  height = 0,
+  width = '100%',
+}) {
+  return <View style={{ height, width }} />;
+}
+
+/**
  * Standard event list screen component for participants
  * @param {object} props
  * @param {object} props.navigation - Navigation object
@@ -83,6 +99,12 @@ function ParticipantEventList({ navigation }) {
   const [shouldLoadEventFeed, setShouldLoadEventFeed] = useState(false);
   const [shouldLoadFeaturedFeed, setShouldLoadFeaturedFeed] = useState(Platform.OS !== 'web');
   const [isPlanningContentReady, setIsPlanningContentReady] = useState(Platform.OS !== 'web');
+  const [shouldRenderSecondaryPlanningContent, setShouldRenderSecondaryPlanningContent] = useState(
+    Platform.OS !== 'web',
+  );
+  const [shouldLoadSecondaryPlanningData, setShouldLoadSecondaryPlanningData] = useState(
+    Platform.OS !== 'web',
+  );
   const flatListRef = useRef(null);
   const listStartDateAfter = useMemo(() => startOfDay(listStartDate).toISOString(), [listStartDate]);
 
@@ -169,13 +191,48 @@ function ParticipantEventList({ navigation }) {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || shouldLoadEventFeed || !isPlanningContentReady) {
+    if (Platform.OS !== 'web') {
+      setShouldRenderSecondaryPlanningContent(true);
+      setShouldLoadSecondaryPlanningData(true);
+      return undefined;
+    }
+
+    if (!isPlanningContentReady) {
+      setShouldRenderSecondaryPlanningContent(false);
+      setShouldLoadSecondaryPlanningData(false);
+      return undefined;
+    }
+
+    let isCancelled = false;
+    setShouldRenderSecondaryPlanningContent(true);
+
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timeoutId;
+    const interactions = InteractionManager.runAfterInteractions(() => {
+      timeoutId = setTimeout(() => {
+        if (!isCancelled) {
+          setShouldLoadSecondaryPlanningData(true);
+        }
+      }, 180);
+    });
+
+    return () => {
+      isCancelled = true;
+      interactions.cancel?.();
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isPlanningContentReady]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || shouldLoadEventFeed || !shouldLoadSecondaryPlanningData) {
       return undefined;
     }
 
     setShouldLoadEventFeed(true);
     return undefined;
-  }, [isPlanningContentReady, shouldLoadEventFeed]);
+  }, [shouldLoadEventFeed, shouldLoadSecondaryPlanningData]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -371,31 +428,35 @@ function ParticipantEventList({ navigation }) {
     if (item.reservation) {
       return (
         <View style={[Spaces.marginBottom[16]]}>
-          <EventCardNew
-            item={item.reservation}
-            // @ts-ignore
-            onDecline={() => {}}
-            onJoin={() => handleJoinEvent(item.reservation)}
-            onLogin={() => {}}
-            onParticipate={() => handleParticipateToEvent(item.reservation)}
-            onPress={() => navigation.navigate(RouteNames.ReservationDetails, { reservationId: item.reservation.documentId })}
-            useFacilityAccentColor
-          />
+          <Suspense fallback={<DeferredFallback height={184} />}>
+            <EventCardNew
+              item={item.reservation}
+              // @ts-ignore
+              onDecline={() => {}}
+              onJoin={() => handleJoinEvent(item.reservation)}
+              onLogin={() => {}}
+              onParticipate={() => handleParticipateToEvent(item.reservation)}
+              onPress={() => navigation.navigate(RouteNames.ReservationDetails, { reservationId: item.reservation.documentId })}
+              useFacilityAccentColor
+            />
+          </Suspense>
         </View>
       );
     }
     return (
       <View style={[Spaces.marginBottom[16]]}>
-        <EventCardNew
-          displayProfile="teamFocused"
-          item={item}
-          onDecline={() => {}}
-          onJoin={() => handleJoinEvent(item)}
-          onLogin={() => {}}
-          onParticipate={() => handleParticipateToEvent(item)}
-          onPress={() => handleEventPress(item)}
-          useFacilityAccentColor
-        />
+        <Suspense fallback={<DeferredFallback height={184} />}>
+          <EventCardNew
+            displayProfile="teamFocused"
+            item={item}
+            onDecline={() => {}}
+            onJoin={() => handleJoinEvent(item)}
+            onLogin={() => {}}
+            onParticipate={() => handleParticipateToEvent(item)}
+            onPress={() => handleEventPress(item)}
+            useFacilityAccentColor
+          />
+        </Suspense>
       </View>
     );
   };
@@ -439,65 +500,87 @@ function ParticipantEventList({ navigation }) {
    */
   // eslint-disable-next-line react/no-unstable-nested-components
   function ListHeader() {
+    const planningContent = (
+      <PersonalPlanningContainer
+        onDataResolved={() => setIsPlanningContentReady(true)}
+        onSummaryPress={handleSummaryPress}
+      />
+    );
+
     return (
       <View style={[Spaces.gap[24], Spaces.marginBottom[16]]}>
         {/* Top Header */}
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-          <LeagueHeaderSwitch />
+          <Suspense fallback={<DeferredFallback height={28} width={180} />}>
+            <LeagueHeaderSwitch />
+          </Suspense>
           <View style={{ alignItems: 'center', flexDirection: 'row' }}>
-            <NotificationBadge />
-            <ProfileButton />
+            <Suspense fallback={<DeferredFallback height={40} width={88} />}>
+              <NotificationBadge />
+              <ProfileButton />
+            </Suspense>
           </View>
         </View>
 
-        <MissionDock />
+        {shouldRenderSecondaryPlanningContent ? (
+          <Suspense fallback={null}>
+            <MissionDock />
+          </Suspense>
+        ) : null}
 
         {/* Calendar Section */}
         <View>
-          <OnboardingWrapper
-            description="Retrouvez vos événements, votre calendrier et les actions de planning."
-            id="planning-main-content"
-            order={1}
-            spotlight={{
-              borderRadius: 16,
-              overlayOpacity: 0.4,
-              paddingX: 2,
-              paddingY: 2,
-            }}
-            title="Mon planning"
-          >
-            <PersonalPlanningContainer
-              onDataResolved={() => setIsPlanningContentReady(true)}
-              onSummaryPress={handleSummaryPress}
-            />
-          </OnboardingWrapper>
+          {Platform.OS === 'web' ? (
+            planningContent
+          ) : (
+            <PlanningOnboardingWrapper
+              description="Retrouvez vos événements, votre calendrier et les actions de planning."
+              id="planning-main-content"
+              order={1}
+              spotlight={{
+                borderRadius: 16,
+                overlayOpacity: 0.4,
+                paddingX: 2,
+                paddingY: 2,
+              }}
+              title="Mon planning"
+            >
+              {planningContent}
+            </PlanningOnboardingWrapper>
+          )}
         </View>
 
         {/* Featured Events Carousel */}
-        {featuredEvents.length > 0 && (
+        {shouldRenderSecondaryPlanningContent && featuredEvents.length > 0 && (
           <View style={[Spaces.marginTop[16]]}>
             <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
               ⭐ À la une dans mon club
             </Text>
-            <FeaturedEvents events={featuredEvents} useFacilityAccentColorForPublic />
+            <Suspense fallback={<DeferredFallback height={180} />}>
+              <FeaturedEvents events={featuredEvents} useFacilityAccentColorForPublic />
+            </Suspense>
           </View>
         )}
 
         {/* List Header Section */}
-        <View style={[Spaces.marginTop[16]]}>
-          <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
-            Évènements à partir de
-          </Text>
-          <DateSlider
-            onDateSelected={handleDateConfirm}
-            selectedDate={listStartDate}
-          />
-          {(!shouldLoadEventFeed || isEventsLoading || (shouldLoadFeaturedFeed && isFeaturedLoading)) && (
-            <Text style={[Fonts.body4, Fonts.neutral300, Spaces.marginTop[8]]}>
-              Mise a jour des evenements...
+        {shouldRenderSecondaryPlanningContent ? (
+          <View style={[Spaces.marginTop[16]]}>
+            <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
+              Évènements à partir de
             </Text>
-          )}
-        </View>
+            <Suspense fallback={<DeferredFallback height={76} />}>
+              <DateSlider
+                onDateSelected={handleDateConfirm}
+                selectedDate={listStartDate}
+              />
+            </Suspense>
+            {(!shouldLoadEventFeed || isEventsLoading || (shouldLoadFeaturedFeed && isFeaturedLoading)) && (
+              <Text style={[Fonts.body4, Fonts.neutral300, Spaces.marginTop[8]]}>
+                Mise a jour des evenements...
+              </Text>
+            )}
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -522,12 +605,7 @@ function ParticipantEventList({ navigation }) {
         windowSize={7}
       />
       {canManageEvents && (
-        <View style={{
-          bottom: floatingCtaBottom,
-          position: 'absolute',
-          right: 20,
-        }}
-        >
+        <WebFloatingOverlay style={getFloatingActionContainerStyle(floatingCtaBottom, { zIndex: 1100 })}>
           <TouchableOpacity
             accessibilityLabel="Ajouter un evenement"
             activeOpacity={0.85}
@@ -589,20 +667,22 @@ function ParticipantEventList({ navigation }) {
               />
             </View>
           </TouchableOpacity>
-        </View>
+        </WebFloatingOverlay>
       )}
-      <JoinEventModal
-        clubName={selectedEvent?.team?.club?.name || ''}
-        confirmLabel={selectedParticipationFlow?.confirmLabel}
-        errorMessage={joinModalError || null}
-        isSubmitting={
-          joinReservationMutation.isPending
-          || createEventParticipationMutation.isPending
-        }
-        isVisible={isJoinModalVisible}
-        onClose={handleCloseJoinModal}
-        onConfirm={handleConfirmJoinEvent}
-      />
+      <Suspense fallback={null}>
+        <JoinEventModal
+          clubName={selectedEvent?.team?.club?.name || ''}
+          confirmLabel={selectedParticipationFlow?.confirmLabel}
+          errorMessage={joinModalError || null}
+          isSubmitting={
+            joinReservationMutation.isPending
+            || createEventParticipationMutation.isPending
+          }
+          isVisible={isJoinModalVisible}
+          onClose={handleCloseJoinModal}
+          onConfirm={handleConfirmJoinEvent}
+        />
+      </Suspense>
     </ScreenContainer>
   );
 }

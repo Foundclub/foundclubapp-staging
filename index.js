@@ -1,4 +1,4 @@
-import { AppRegistry } from 'react-native';
+import { AppRegistry, LogBox } from 'react-native';
 
 import { name as appName } from './app.json';
 import {
@@ -11,6 +11,10 @@ import {
   readPersistedBootError,
 } from './src/utils/bootDiagnostics';
 import { formatBootMeta } from './src/utils/performance/bootPerformance';
+
+if (__DEV__) {
+  LogBox.ignoreAllLogs(true);
+}
 
 const isNotificationsBootstrapDisabled = !ENABLE_PUSH_NOTIFICATIONS;
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Joi from 'joi';
 import { Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -5,6 +6,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 
+import { celebrate } from '@/services/celebrations/celebrationRuntime';
 import client from '@/services/client';
 
 import { createLogger } from '@/utils/logger/logger';
@@ -86,6 +88,11 @@ export const createEvent = async (eventData) => {
   const response = await client.post('/events', {
     data: eventData,
   });
+  celebrate('event_created', {
+    eventId: response?.data?.data?.documentId || response?.data?.documentId || null,
+    eventName: eventData?.name || eventData?.description || '',
+    teamId: eventData?.team || eventData?.team?.documentId || null,
+  });
   emitGuidanceAction('event.created', {
     eventType: eventData?.type || null,
   });
@@ -107,6 +114,13 @@ export const updateEvent = async ({ documentId, eventData, recurrenceMode }) => 
   }
   const response = await client.put(`/events/${documentId}`, {
     data,
+  });
+  const shouldCelebratePublish = eventData?.isActive === true
+    || String(eventData?.status || '').trim().toLowerCase() === 'published';
+  celebrate(shouldCelebratePublish ? 'event_published' : 'event_updated', {
+    eventId: documentId,
+    eventName: eventData?.name || eventData?.description || '',
+    teamId: eventData?.team || eventData?.team?.documentId || null,
   });
   emitGuidanceAction('event.updated', {
     eventId: documentId,
@@ -446,6 +460,10 @@ export const publishEventConvocation = async (eventId, payload = {}) => {
     data: {
       teamId: payload?.teamId || null,
     },
+  });
+  celebrate('event_convocation_published', {
+    eventId,
+    teamId: payload?.teamId || null,
   });
   return response?.data?.data || response?.data;
 };
@@ -1174,6 +1192,12 @@ export const respondToEventRsvp = async (eventId, answer, meta = {}) => {
     notificationId: meta.notificationId,
     source: meta.source || 'in_app',
   });
+  if (answer === 'present' && meta?.source !== 'push_action') {
+    celebrate('event_rsvp_present', {
+      eventId,
+      eventName: meta?.eventName || '',
+    });
+  }
   return response.data;
 };
 

@@ -4,6 +4,7 @@ import {
 } from 'react';
 import {
   AppState,
+  Platform,
   Text,
   useWindowDimensions,
   View,
@@ -23,6 +24,8 @@ import {
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetPendingMatchStatsPrompts } from '@/services/matchStats/matchStatsQueries';
+
+import { getWebBackgroundPollMs } from '@/utils/webRuntime';
 
 import {
   POPUP_DISMISS_SCOPES,
@@ -170,13 +173,17 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  let matchStatsPollInterval = false;
+  if (auth?.token) {
+    matchStatsPollInterval = Platform.OS === 'web' ? getWebBackgroundPollMs() : 60000;
+  }
 
   const {
     data: pendingPromptsPayload,
     refetch,
   } = useGetPendingMatchStatsPrompts({
     enabled: ENABLE_MATCH_STATS_PROMPTS && Boolean(auth?.token) && !skipInitialFetch,
-    refetchInterval: auth?.token ? 60000 : false,
+    refetchInterval: matchStatsPollInterval,
     refetchIntervalInBackground: false,
   });
 

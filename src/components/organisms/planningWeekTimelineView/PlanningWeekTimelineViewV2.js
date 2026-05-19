@@ -15,6 +15,7 @@ import {
 } from 'react';
 import {
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -718,219 +719,147 @@ function PlanningWeekTimelineView({
     </View>
   ) : null;
 
-  return (
-    <GestureDetector gesture={Gesture.Simultaneous(flingLeft, flingRight)}>
-      <View style={styles.container}>
-        {showHeader ? (
-          <View style={[styles.headerSpacing, compactFullscreen ? styles.compactHeaderSpacing : null]}>
-            <View
-              style={[
-                styles.headerCard,
-                compactFullscreen ? styles.compactHeaderCard : null,
-                { backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}33` },
-              ]}
-            >
-              <TouchableOpacity hitSlop={styles.hitSlop} onPress={handlePrevPage}>
-                <Image
-                  resizeMode="contain"
-                  source={Images.arrowLeft}
-                  style={[
-                    styles.headerArrow,
-                    compactFullscreen ? styles.compactHeaderArrow : null,
-                    { tintColor: Colors.primary500 },
-                  ]}
-                />
-              </TouchableOpacity>
+  const timelineBody = (
+    <View style={styles.container}>
+      {showHeader ? (
+        <View style={[styles.headerSpacing, compactFullscreen ? styles.compactHeaderSpacing : null]}>
+          <View
+            style={[
+              styles.headerCard,
+              compactFullscreen ? styles.compactHeaderCard : null,
+              { backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}33` },
+            ]}
+          >
+            <TouchableOpacity hitSlop={styles.hitSlop} onPress={handlePrevPage}>
+              <Image
+                resizeMode="contain"
+                source={Images.arrowLeft}
+                style={[
+                  styles.headerArrow,
+                  compactFullscreen ? styles.compactHeaderArrow : null,
+                  { tintColor: Colors.primary500 },
+                ]}
+              />
+            </TouchableOpacity>
 
-              <View style={styles.headerCenter}>
-                {!compactFullscreen ? (
-                  <Text style={[styles.headerTitle, { color: Colors.primary200 }]}>
-                    Planning
-                  </Text>
-                ) : null}
-                <Text style={[Fonts.p1Bold, compactFullscreen ? styles.compactHeaderDate : null, { color: Colors.neutral00 }]}>
-                  {dateRangeText}
+            <View style={styles.headerCenter}>
+              {!compactFullscreen ? (
+                <Text style={[styles.headerTitle, { color: Colors.primary200 }]}>
+                  Planning
                 </Text>
-              </View>
-
-              <TouchableOpacity hitSlop={styles.hitSlop} onPress={handleNextPage}>
-                <Image
-                  resizeMode="contain"
-                  source={Images.arrowRight}
-                  style={[
-                    styles.headerArrow,
-                    compactFullscreen ? styles.compactHeaderArrow : null,
-                    { tintColor: Colors.primary500 },
-                  ]}
-                />
-              </TouchableOpacity>
+              ) : null}
+              <Text style={[Fonts.p1Bold, compactFullscreen ? styles.compactHeaderDate : null, { color: Colors.neutral00 }]}>
+                {dateRangeText}
+              </Text>
             </View>
+
+            <TouchableOpacity hitSlop={styles.hitSlop} onPress={handleNextPage}>
+              <Image
+                resizeMode="contain"
+                source={Images.arrowRight}
+                style={[
+                  styles.headerArrow,
+                  compactFullscreen ? styles.compactHeaderArrow : null,
+                  { tintColor: Colors.primary500 },
+                ]}
+              />
+            </TouchableOpacity>
           </View>
-        ) : null}
+        </View>
+      ) : null}
 
-        <View
-          style={[
-            styles.panel,
-            compactFullscreen ? styles.compactPanel : null,
-            { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.10)' },
-          ]}
-        >
-          {summarySection}
+      <View
+        style={[
+          styles.panel,
+          compactFullscreen ? styles.compactPanel : null,
+          { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.10)' },
+        ]}
+      >
+        {summarySection}
 
-          <View style={[styles.daysRow, compactFullscreen ? styles.compactDaysRow : null, { borderBottomColor: 'rgba(255,255,255,0.12)' }]}>
-            <View style={{ width: timeColumnWidth }} />
-            {weekDays.map((day) => {
-              const dayKey = getDayKey(day);
-              const isTodayColumn = isSameDay(day, nowReference);
-              const eventCount = dayEventCounts.get(dayKey) || 0;
-              const hasPendingEvent = pendingEventDayKeys.has(dayKey);
-              let badgeBackground = 'transparent';
+        <View style={[styles.daysRow, compactFullscreen ? styles.compactDaysRow : null, { borderBottomColor: 'rgba(255,255,255,0.12)' }]}>
+          <View style={{ width: timeColumnWidth }} />
+          {weekDays.map((day) => {
+            const dayKey = getDayKey(day);
+            const isTodayColumn = isSameDay(day, nowReference);
+            const eventCount = dayEventCounts.get(dayKey) || 0;
+            const hasPendingEvent = pendingEventDayKeys.has(dayKey);
+            let badgeBackground = 'transparent';
 
-              if (isTodayColumn) {
-                badgeBackground = Colors.primary500;
-              } else if (eventCount > 0) {
-                badgeBackground = Colors.neutral800;
-              }
-
-              return (
-                <View key={dayKey} style={styles.dayColumnHeader}>
-                  <Text
-                    style={[
-                      Fonts.p3,
-                      styles.dayLabel,
-                      compactFullscreen ? styles.compactDayLabel : null,
-                      { color: isTodayColumn ? Colors.primary500 : Colors.neutral300, fontWeight: isTodayColumn ? '700' : '400' },
-                    ]}
-                  >
-                    {format(day, 'EEE', { locale: fr }).replace('.', '')}
-                  </Text>
-                  <View style={styles.dayBadgeWrapper}>
-                    <View
-                      style={[
-                        styles.dayBadge,
-                        compactFullscreen ? styles.compactDayBadge : null,
-                        { backgroundColor: badgeBackground },
-                      ]}
-                    >
-                      <Text style={[Fonts.h3, styles.dayBadgeText, { color: Colors.neutral00 }]}>
-                        {format(day, 'd')}
-                      </Text>
-                      {eventCount > 0 && !isTodayColumn ? (
-                        <View
-                          style={[
-                            styles.dayCountBadge,
-                            {
-                              backgroundColor: Colors.primary500,
-                              borderColor: Colors.neutral700,
-                            },
-                          ]}
-                        >
-                          <Text style={styles.dayCountText}>{eventCount}</Text>
-                        </View>
-                      ) : null}
-                      {hasPendingEvent ? (
-                        <View
-                          style={[
-                            styles.pendingDayBadge,
-                            { backgroundColor: pendingAccentColor },
-                          ]}
-                        >
-                          <Text style={styles.pendingDayBadgeText}>!</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-
-          {!compactFullscreen ? untimedSection : null}
-
-          {(() => {
-            if (timedEvents.length === 0) {
-              return (
-                <View style={styles.emptyState}>
-                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 6 }]}>{emptyTitle}</Text>
-                  <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>{emptyDescription}</Text>
-                </View>
-              );
-            }
-
-            if (expandToContent) {
-              return (
-                <View style={[styles.scrollContent, compactFullscreen ? styles.compactScrollContent : null]}>
-                  <View style={styles.timelineRow}>
-                    <View style={{ width: timeColumnWidth }}>
-                      {timelineBlocks.map((block) => (
-                        <View key={block.type === 'hour' ? `hour-${block.value}` : block.id} style={[styles.timeCell, { height: block.type === 'hour' ? hourHeight : collapsedHeight }]}>
-                          {block.type === 'hour' ? (
-                            <Text style={[Fonts.p3, styles.hourText, { color: Colors.neutral300 }]}>{`${block.value}:00`}</Text>
-                          ) : (
-                            <Text style={styles.collapsedText}>…</Text>
-                          )}
-                        </View>
-                      ))}
-                    </View>
-
-                    <View style={[styles.gridContainer, { borderRightColor: 'rgba(255,255,255,0.10)', borderTopColor: 'rgba(255,255,255,0.10)' }]}>
-                      <View style={[StyleSheet.absoluteFillObject, styles.dayBackgroundRow]}>
-                        {weekDays.map((day) => (
-                          <View
-                            key={`bg-${getDayKey(day)}`}
-                            style={[styles.dayBackgroundColumn, {
-                              backgroundColor: isSameDay(day, nowReference) ? hexToRgba(Colors.primary500, 0.05) : 'transparent',
-                              borderLeftColor: 'rgba(255,255,255,0.10)',
-                            }]}
-                          />
-                        ))}
-                      </View>
-
-                      {timelineBlocks.map((block) => (
-                        <View
-                          key={`grid-${block.type === 'hour' ? block.value : block.id}`}
-                          style={[styles.gridLine, {
-                            backgroundColor: block.type === 'collapsed' ? 'rgba(255,255,255,0.05)' : 'transparent',
-                            borderBottomColor: 'rgba(255,255,255,0.10)',
-                            height: block.type === 'hour' ? hourHeight : collapsedHeight,
-                          }]}
-                        />
-                      ))}
-
-                      {nowLine ? (
-                        <View style={[styles.nowLineContainer, { left: `${(nowLine.dayIndex * 100) / weekDays.length}%`, top: nowLine.top, width: `${100 / weekDays.length}%` }]}>
-                          <View style={styles.nowLineTrack}>
-                            <View style={[styles.nowDot, { backgroundColor: Colors.primary500 }]} />
-                            <View style={[styles.nowLine, { backgroundColor: Colors.primary500 }]} />
-                          </View>
-                        </View>
-                      ) : null}
-
-                      {layoutEvents.map((event) => {
-                        const dayWidth = 100 / weekDays.length;
-                        const left = (event.dayIndex * dayWidth) + ((event.leftPercent || 0) * (dayWidth / 100));
-                        const width = (event.widthPercent || 100) * (dayWidth / 100);
-
-                        if (event.displayType === 'overflow') {
-                          return renderOverflowCard(event, left, width);
-                        }
-
-                        return renderTimedEventCard(event, left, width);
-                      })}
-                    </View>
-                  </View>
-                </View>
-              );
+            if (isTodayColumn) {
+              badgeBackground = Colors.primary500;
+            } else if (eventCount > 0) {
+              badgeBackground = Colors.neutral800;
             }
 
             return (
-              <ScrollView
-                contentContainerStyle={[styles.scrollContent, compactFullscreen ? styles.compactScrollContent : null]}
-                nestedScrollEnabled={scrollEnabled}
-                ref={scrollViewRef}
-                scrollEnabled={scrollEnabled}
-                showsVerticalScrollIndicator={false}
-              >
+              <View key={dayKey} style={styles.dayColumnHeader}>
+                <Text
+                  style={[
+                    Fonts.p3,
+                    styles.dayLabel,
+                    compactFullscreen ? styles.compactDayLabel : null,
+                    { color: isTodayColumn ? Colors.primary500 : Colors.neutral300, fontWeight: isTodayColumn ? '700' : '400' },
+                  ]}
+                >
+                  {format(day, 'EEE', { locale: fr }).replace('.', '')}
+                </Text>
+                <View style={styles.dayBadgeWrapper}>
+                  <View
+                    style={[
+                      styles.dayBadge,
+                      compactFullscreen ? styles.compactDayBadge : null,
+                      { backgroundColor: badgeBackground },
+                    ]}
+                  >
+                    <Text style={[Fonts.h3, styles.dayBadgeText, { color: Colors.neutral00 }]}>
+                      {format(day, 'd')}
+                    </Text>
+                    {eventCount > 0 && !isTodayColumn ? (
+                      <View
+                        style={[
+                          styles.dayCountBadge,
+                          {
+                            backgroundColor: Colors.primary500,
+                            borderColor: Colors.neutral700,
+                          },
+                        ]}
+                      >
+                        <Text style={styles.dayCountText}>{eventCount}</Text>
+                      </View>
+                    ) : null}
+                    {hasPendingEvent ? (
+                      <View
+                        style={[
+                          styles.pendingDayBadge,
+                          { backgroundColor: pendingAccentColor },
+                        ]}
+                      >
+                        <Text style={styles.pendingDayBadgeText}>!</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {!compactFullscreen ? untimedSection : null}
+
+        {(() => {
+          if (timedEvents.length === 0) {
+            return (
+              <View style={styles.emptyState}>
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 6 }]}>{emptyTitle}</Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>{emptyDescription}</Text>
+              </View>
+            );
+          }
+
+          if (expandToContent) {
+            return (
+              <View style={[styles.scrollContent, compactFullscreen ? styles.compactScrollContent : null]}>
                 <View style={styles.timelineRow}>
                   <View style={{ width: timeColumnWidth }}>
                     {timelineBlocks.map((block) => (
@@ -990,12 +919,92 @@ function PlanningWeekTimelineView({
                     })}
                   </View>
                 </View>
-              </ScrollView>
+              </View>
             );
-          })()}
-          {compactFullscreen ? untimedSection : null}
-        </View>
+          }
+
+          return (
+            <ScrollView
+              contentContainerStyle={[styles.scrollContent, compactFullscreen ? styles.compactScrollContent : null]}
+              nestedScrollEnabled={scrollEnabled}
+              ref={scrollViewRef}
+              scrollEnabled={scrollEnabled}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.timelineRow}>
+                <View style={{ width: timeColumnWidth }}>
+                  {timelineBlocks.map((block) => (
+                    <View key={block.type === 'hour' ? `hour-${block.value}` : block.id} style={[styles.timeCell, { height: block.type === 'hour' ? hourHeight : collapsedHeight }]}>
+                      {block.type === 'hour' ? (
+                        <Text style={[Fonts.p3, styles.hourText, { color: Colors.neutral300 }]}>{`${block.value}:00`}</Text>
+                      ) : (
+                        <Text style={styles.collapsedText}>…</Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
+
+                <View style={[styles.gridContainer, { borderRightColor: 'rgba(255,255,255,0.10)', borderTopColor: 'rgba(255,255,255,0.10)' }]}>
+                  <View style={[StyleSheet.absoluteFillObject, styles.dayBackgroundRow]}>
+                    {weekDays.map((day) => (
+                      <View
+                        key={`bg-${getDayKey(day)}`}
+                        style={[styles.dayBackgroundColumn, {
+                          backgroundColor: isSameDay(day, nowReference) ? hexToRgba(Colors.primary500, 0.05) : 'transparent',
+                          borderLeftColor: 'rgba(255,255,255,0.10)',
+                        }]}
+                      />
+                    ))}
+                  </View>
+
+                  {timelineBlocks.map((block) => (
+                    <View
+                      key={`grid-${block.type === 'hour' ? block.value : block.id}`}
+                      style={[styles.gridLine, {
+                        backgroundColor: block.type === 'collapsed' ? 'rgba(255,255,255,0.05)' : 'transparent',
+                        borderBottomColor: 'rgba(255,255,255,0.10)',
+                        height: block.type === 'hour' ? hourHeight : collapsedHeight,
+                      }]}
+                    />
+                  ))}
+
+                  {nowLine ? (
+                    <View style={[styles.nowLineContainer, { left: `${(nowLine.dayIndex * 100) / weekDays.length}%`, top: nowLine.top, width: `${100 / weekDays.length}%` }]}>
+                      <View style={styles.nowLineTrack}>
+                        <View style={[styles.nowDot, { backgroundColor: Colors.primary500 }]} />
+                        <View style={[styles.nowLine, { backgroundColor: Colors.primary500 }]} />
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {layoutEvents.map((event) => {
+                    const dayWidth = 100 / weekDays.length;
+                    const left = (event.dayIndex * dayWidth) + ((event.leftPercent || 0) * (dayWidth / 100));
+                    const width = (event.widthPercent || 100) * (dayWidth / 100);
+
+                    if (event.displayType === 'overflow') {
+                      return renderOverflowCard(event, left, width);
+                    }
+
+                    return renderTimedEventCard(event, left, width);
+                  })}
+                </View>
+              </View>
+            </ScrollView>
+          );
+        })()}
+        {compactFullscreen ? untimedSection : null}
       </View>
+    </View>
+  );
+
+  if (Platform.OS === 'web') {
+    return timelineBody;
+  }
+
+  return (
+    <GestureDetector gesture={Gesture.Simultaneous(flingLeft, flingRight)}>
+      {timelineBody}
     </GestureDetector>
   );
 }

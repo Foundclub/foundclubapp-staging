@@ -11,6 +11,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -20,6 +21,7 @@ import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
@@ -160,14 +162,8 @@ function TeamList({ navigation, route }) {
         </OnboardingWrapper>
 
         {canManageTeam ? (
-          <View
-            pointerEvents="box-none"
-            style={{
-              bottom: floatingButtonBottom,
-              position: 'absolute',
-              right: 20,
-              zIndex: 100,
-            }}
+          <WebFloatingOverlay
+            style={getFloatingActionContainerStyle(floatingButtonBottom, { zIndex: 1100 })}
           >
             <TouchableOpacity
               accessibilityLabel={t('teamList.actions.add', 'Ajouter une equipe')}
@@ -230,7 +226,7 @@ function TeamList({ navigation, route }) {
                 />
               </View>
             </TouchableOpacity>
-          </View>
+          </WebFloatingOverlay>
         ) : null}
 
         <GlobalPromptModal

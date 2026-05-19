@@ -1,58 +1,54 @@
-import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import GlobalBanner from '@/components/organisms/popup/GlobalBanner';
+import AppCelebrationBanner from '@/components/organisms/popup/AppCelebrationBanner';
 
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 
-const DEFAULT_BANNER_DURATION_MS = 3200;
-
+/**
+ *
+ */
 function AppBannerHost() {
   const { activeBanner, dismissBanner } = useAppFeedback();
-
-  useEffect(() => {
-    if (!activeBanner) return undefined;
-    const timeoutMs = Number(activeBanner?.durationMs) > 0
-      ? Number(activeBanner.durationMs)
-      : DEFAULT_BANNER_DURATION_MS;
-    const timer = setTimeout(() => dismissBanner(), timeoutMs);
-    return () => clearTimeout(timer);
-  }, [activeBanner, dismissBanner]);
 
   if (!activeBanner) return null;
 
   return (
     <View style={[styles.wrap, styles.pointerBoxNone]}>
-      <GlobalBanner
+      <AppCelebrationBanner
         actionLabel={activeBanner.actionLabel}
         body={activeBanner.body}
+        durationMs={activeBanner.durationMs}
+        eyebrow={activeBanner.eyebrow}
         onAction={() => {
           activeBanner.onAction?.();
           dismissBanner();
         }}
+        onExited={dismissBanner}
         onPress={() => {
           if (typeof activeBanner.onAction === 'function') {
             activeBanner.onAction();
           }
           dismissBanner();
         }}
+        progressBar={activeBanner.progressBar !== false}
         title={activeBanner.title}
         tone={activeBanner.tone}
+        variant={activeBanner.variant}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  pointerBoxNone: {
+    pointerEvents: 'box-none',
+  },
   wrap: {
     left: 16,
     position: 'absolute',
     right: 16,
     top: 64,
     zIndex: 1180,
-  },
-  pointerBoxNone: {
-    pointerEvents: 'box-none',
   },
 });
 

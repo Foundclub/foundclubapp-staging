@@ -78,6 +78,7 @@ const MOBILE_FLOATING_TAB_BAR_HORIZONTAL_INSET = 16;
 const MOBILE_FLOATING_TAB_BAR_VERTICAL_PADDING = 10;
 const MOBILE_FLOATING_TAB_BAR_HEIGHT = 82;
 const WEB_FLOATING_DOCK_CLEARANCE = 112;
+const WEB_FLOATING_ACTION_SIDE_OFFSET = 32;
 
 /**
  * Resolve floating tab bar layout metrics.
@@ -129,6 +130,36 @@ export const getFloatingActionBottomOffset = (bottomInset = 0, extra = 14) => (
   Platform.OS === 'web'
     ? WEB_FLOATING_DOCK_CLEARANCE + Math.max(bottomInset, 0) + extra
     : getFloatingTabBarMetrics(bottomInset).clearance + extra
+);
+
+/**
+ * Resolve a stable floating action container position across platforms.
+ * On web, the CTA is fixed to the viewport so it keeps the same placement while scrolling.
+ * @param {number} bottomOffset
+ * @param {{ right?: number, webRight?: number, zIndex?: number }} [options]
+ * @returns {import('react-native').ViewStyle}
+ */
+export const getFloatingActionContainerStyle = (
+  bottomOffset,
+  {
+    right = 20,
+    webRight = WEB_FLOATING_ACTION_SIDE_OFFSET,
+    zIndex = 1000,
+  } = {},
+) => (
+  Platform.OS === 'web'
+    ? {
+      bottom: bottomOffset,
+      position: 'fixed',
+      right: webRight,
+      zIndex,
+    }
+    : {
+      bottom: bottomOffset,
+      position: 'absolute',
+      right,
+      zIndex,
+    }
 );
 
 /**

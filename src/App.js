@@ -42,6 +42,7 @@ import {
 } from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
+import { getWebBackgroundHostsDelayMs } from '@/utils/webRuntime';
 
 import { formatBootMeta, markBootStep } from '@/utils/performance/bootPerformance';
 
@@ -307,6 +308,9 @@ function DeferredStartupHosts() {
   const { appBootstrapData, isBootstrapResolved } = useAuth();
   const [allowBootstrapFallbackFetches, setAllowBootstrapFallbackFetches] = useState(false);
   const shouldDeferHostFetchesOnWeb = Platform.OS === 'web';
+  const bootstrapFallbackDelayMs = shouldDeferHostFetchesOnWeb
+    ? getWebBackgroundHostsDelayMs()
+    : 2500;
 
   useEffect(() => {
     if (isBootstrapResolved) {
@@ -316,10 +320,10 @@ function DeferredStartupHosts() {
 
     const timeoutId = setTimeout(() => {
       setAllowBootstrapFallbackFetches(true);
-    }, 2500);
+    }, bootstrapFallbackDelayMs);
 
     return () => clearTimeout(timeoutId);
-  }, [isBootstrapResolved]);
+  }, [bootstrapFallbackDelayMs, isBootstrapResolved]);
 
   const shouldSkipBootstrapBackedInitialFetch = shouldDeferHostFetchesOnWeb
     ? !allowBootstrapFallbackFetches

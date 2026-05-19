@@ -64,6 +64,12 @@ export const createWebNavigationAdapter = ({
       }
       push(buildWebPath(routeName, nextParams));
     },
+    push: (routeName, nextParams = {}) => {
+      if (typeof push !== 'function') {
+        return;
+      }
+      push(buildWebPath(routeName, nextParams));
+    },
     replace: (routeName, nextParams = {}) => {
       if (typeof replace !== 'function') {
         return;

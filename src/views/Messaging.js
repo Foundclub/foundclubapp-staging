@@ -24,6 +24,7 @@ import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -34,6 +35,7 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
@@ -101,7 +103,7 @@ function Messaging({ navigation, route }) {
   const canCreateConversation = userData?.role?.name === 'Entraîneur'
     || userData?.role?.name === 'Dirigeant'
     || userData?.role?.name === 'SuperAdmin';
-  const floatingButtonBottom = isWeb ? 24 : floatingActionBottomOffset;
+  const floatingButtonBottom = floatingActionBottomOffset;
   const chatListBottomInset = canCreateConversation
     ? Math.max(sceneBottomInset, floatingButtonBottom + 84)
     : sceneBottomInset;
@@ -845,13 +847,8 @@ function Messaging({ navigation, route }) {
         </OnboardingWrapper>
 
         {canCreateConversation ? (
-          <View
-            pointerEvents="box-none"
-            style={{
-              bottom: floatingButtonBottom,
-              position: 'absolute',
-              right: 20,
-            }}
+          <WebFloatingOverlay
+            style={getFloatingActionContainerStyle(floatingButtonBottom, { zIndex: 1100 })}
           >
             <TouchableOpacity
               accessibilityLabel={t('messaging.newConversation', 'Nouvelle conversation')}
@@ -914,7 +911,7 @@ function Messaging({ navigation, route }) {
                 />
               </View>
             </TouchableOpacity>
-          </View>
+          </WebFloatingOverlay>
         ) : null}
       </ScreenContainer>
     </TutorialFlowBoundary>

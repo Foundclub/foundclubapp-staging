@@ -416,6 +416,7 @@ export const NOTIFICATION_TYPES = {
   TOURNAMENT_TEAM_STATUS: 'tournamentTeamStatus',
 
   // Events
+  CELEBRATION: 'celebration',
   COACH_REPORT_PUBLISHED: 'coachReportPublished',
   EVENT_ABSENCE_FINAL: 'eventAbsenceFinal',
   EVENT_CANCELLATION: 'eventCancellation',

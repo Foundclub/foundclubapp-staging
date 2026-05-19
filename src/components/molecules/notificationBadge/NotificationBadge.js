@@ -8,6 +8,11 @@ import useTheme from '@/theme/themeContext';
 
 import NotificationPopup from '@/components/organisms/notificationPopup/NotificationPopup';
 
+import {
+  getWebUnreadBadgeDelayMs,
+  getWebUnreadPollMs,
+} from '@/utils/webRuntime';
+
 import { useNotificationController } from '@/hooks/useNotificationController';
 
 /**
@@ -33,6 +38,8 @@ function NotificationBadge({
   const [allowUnreadFallbackFetch, setAllowUnreadFallbackFetch] = useState(false);
   const [prevUnreadCount, setPrevUnreadCount] = useState(0);
   const shouldLoadNotifications = !onPress && isPopupVisible;
+  const unreadBadgeDelayMs = Platform.OS === 'web' ? getWebUnreadBadgeDelayMs() : 0;
+  const unreadPollMs = Platform.OS === 'web' ? getWebUnreadPollMs() : undefined;
 
   useEffect(() => {
     /** @type {ReturnType<typeof setTimeout> | undefined} */
@@ -41,7 +48,7 @@ function NotificationBadge({
       if (Platform.OS === 'web') {
         timeoutId = setTimeout(() => {
           setIsUnreadCountReady(true);
-        }, 1200);
+        }, unreadBadgeDelayMs);
         return;
       }
 
@@ -54,7 +61,7 @@ function NotificationBadge({
         clearTimeout(timeoutId);
       }
     };
-  }, []);
+  }, [unreadBadgeDelayMs]);
 
   useEffect(() => {
     if (isBootstrapResolved) {
@@ -82,6 +89,7 @@ function NotificationBadge({
     notificationsEnabled: shouldLoadNotifications,
     skipInitialFocusRefresh: true,
     unreadCountEnabled: shouldEnableUnreadCount,
+    unreadPollMs,
   });
 
   // Animation values

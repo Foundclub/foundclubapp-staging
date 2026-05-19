@@ -1,5 +1,7 @@
 import Joi from 'joi';
 
+import { celebrate } from '@/services/celebrations/celebrationRuntime';
+
 import client from '../client';
 
 const buildClubFilter = (clubId, useLegacyId = false) => {
@@ -457,6 +459,10 @@ export const createTeam = async (teamData) => {
       allowUnknown: true,
     });
 
+    celebrate('team_created', {
+      teamId: validationResult?.data?.documentId,
+      teamName: validationResult?.data?.name || teamData?.name,
+    });
     return validationResult.data;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;

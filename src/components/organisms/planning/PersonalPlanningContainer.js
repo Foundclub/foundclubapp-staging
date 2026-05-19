@@ -63,6 +63,7 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
   const [currentDate, setCurrentDate] = useState(getPlanningDefaultDate());
   const [viewMode, setViewMode] = useState('3days');
   const hasEmittedReadyRef = useRef(false);
+  const isWebPlanning = Platform.OS === 'web';
 
   const planningRange = useMemo(
     () => getPlanningRange(currentDate, viewMode),
@@ -153,10 +154,12 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
     <PlanningWeekTimelineView
       currentDate={currentDate}
       events={events}
+      expandToContent={isWebPlanning}
       mode={viewMode}
       onDateChange={setCurrentDate}
       onEventPress={handleEventPress}
       onSummaryPress={onSummaryPress}
+      scrollEnabled={!isWebPlanning}
     />
   );
 

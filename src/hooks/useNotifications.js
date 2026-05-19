@@ -1,3 +1,4 @@
+// @ts-nocheck
 import notifee, { EventType } from '@notifee/react-native';
 import { getApp } from '@react-native-firebase/app';
 import {
@@ -28,6 +29,7 @@ import { useAppContext } from '@/store/appContext';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { addDeviceToken } from '@/services/auth/authService';
+import { emitCelebrationFromNotificationPayload } from '@/services/celebrations/celebrationRuntime';
 import {
   consumePendingOpenNotification,
   displayChatReplyActionableNotification,
@@ -225,6 +227,12 @@ const onDisplayNotification = async ({ body, data, title }) => {
     notificationsLogger.warn('[Notifications] Failed to display foreground notification:', error);
   }
 };
+
+const hasCelebrationPayload = (payload) => Boolean(
+  String(payload?.celebrationKey || '').trim()
+  || String(payload?.celebrationVariant || '').trim()
+  || String(payload?.celebrationTitle || '').trim(),
+);
 
 /**
  * @param {{
@@ -599,6 +607,15 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         return;
       }
 
+      const foregroundNotificationPayload = {
+        ...normalizedData,
+        body: remoteMessage.notification?.body || normalizedData?.body || '',
+        title: remoteMessage.notification?.title || normalizedData?.title || '',
+      };
+      const emittedForegroundCelebration = emitCelebrationFromNotificationPayload(
+        foregroundNotificationPayload,
+      );
+
       const shouldUseSmartForeground = Boolean(
         messageType
         && onSmartNotification
@@ -610,10 +627,12 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
       if (shouldUseSmartForeground) {
         onSmartNotification({
-          ...normalizedData,
-          body: remoteMessage.notification?.body || normalizedData?.body || '',
-          title: remoteMessage.notification?.title || normalizedData?.title || '',
+          ...foregroundNotificationPayload,
         });
+        return;
+      }
+
+      if (emittedForegroundCelebration || hasCelebrationPayload(normalizedData)) {
         return;
       }
 

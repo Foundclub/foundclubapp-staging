@@ -1,5 +1,6 @@
 /* eslint-disable perfectionist/sort-imports */
 import { getAuthTokens } from '@/domains/auth/authUseCases';
+import { celebrate } from '@/services/celebrations/celebrationRuntime';
 import { getApiBaseUrl } from '@/config/runtimeUrls';
 
 import client from '../client';
@@ -129,7 +130,11 @@ export const uploadOfficialLicenseDocument = async (/** @type {any} */ assignmen
     method: 'POST',
   });
 
-  return unwrapFetchJson(response);
+  const result = await unwrapFetchJson(response);
+  celebrate('official_license_uploaded', {
+    assignmentId,
+  });
+  return result;
 };
 export const reviewLicenseDocument = async (/** @type {any} */ submissionId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/documents/${submissionId}/review`, payload));
 export const getLicensePaymentStatus = async (/** @type {any} */ paymentId, params = {}) => unwrap(await client.get(`/licenses/payments/${paymentId}/status`, { params }));

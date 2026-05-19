@@ -1,5 +1,7 @@
 import Joi from 'joi';
 
+import { celebrate } from '@/services/celebrations/celebrationRuntime';
+
 import client from '../client';
 
 const teamMembershipRequestSchema = Joi.object({
@@ -24,6 +26,9 @@ const teamMembershipRequestSchema = Joi.object({
 export const createTeamMembershipRequest = async (teamMembershipRequestData) => {
   const response = await client.post('/team-membership-requests', {
     data: teamMembershipRequestData,
+  });
+  celebrate('team_membership_request_sent', {
+    teamId: teamMembershipRequestData?.team,
   });
   return response.data;
 };

@@ -29,6 +29,10 @@ import {
   buildShareMessageWithUrl,
 } from '@/utils/shareLinks';
 import {
+  getWebFullUserFetchDelayMs,
+  isAppBootstrapDisabledOnWeb,
+} from '@/utils/webRuntime';
+import {
   getSanitizedUserSignature,
   haveSameSanitizedUser,
   sanitizeUser,
@@ -75,12 +79,6 @@ const getBootstrapSessionKey = (/** @type {any} */ auth) => String(
   || auth?.user?.id
   || auth?.token
   || 'no-session',
-);
-
-const shouldDisableAppBootstrapForWeb = () => Boolean(
-  Platform.OS === 'web'
-  && typeof window !== 'undefined'
-  && window?.foundClubWebRuntime?.disableAppBootstrap === true,
 );
 
 /**
@@ -158,7 +156,7 @@ const useAuth = () => {
   });
 
   const { auth, authSessions, isAddingAccount } = /** @type {any} */ (useAppContext()[0]);
-  const disableAppBootstrap = shouldDisableAppBootstrapForWeb();
+  const disableAppBootstrap = Platform.OS === 'web' && isAppBootstrapDisabledOnWeb();
 
   const switchAccount = useCallback(async (/** @type {any} */ session) => {
     authLogger.debug('Switching account', { userDocumentId: session?.user?.documentId || session?.user?.id });
@@ -255,12 +253,15 @@ const useAuth = () => {
     let isCancelled = false;
     /** @type {ReturnType<typeof setTimeout> | undefined} */
     let timeoutId;
+    const fullUserFetchDelayMs = Platform.OS === 'web'
+      ? getWebFullUserFetchDelayMs()
+      : 350;
     const task = InteractionManager.runAfterInteractions(() => {
       timeoutId = setTimeout(() => {
         if (!isCancelled) {
           setIsFullUserFetchReady(true);
         }
-      }, 350);
+      }, fullUserFetchDelayMs);
     });
 
     return () => {

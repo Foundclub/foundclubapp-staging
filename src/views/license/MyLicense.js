@@ -213,7 +213,7 @@ function MyLicense({ navigation, route }) {
       const file = Array.isArray(picked) ? picked[0] : picked;
       if (!file) return;
       documentMutation.mutate({
-        documentRequestId: request?.documentId || request?.id,
+        documentRequestId: request?.id || request?.documentId,
         file,
       }, {
         onSuccess: () => {

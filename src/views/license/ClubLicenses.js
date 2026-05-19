@@ -2,7 +2,7 @@ import {
   useCallback, useEffect, useLayoutEffect, useMemo, useState,
 } from 'react';
 import {
-  Alert, FlatList, Pressable, ScrollView, Text, TextInput, View,
+  Alert, FlatList, Platform, Pressable, ScrollView, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -459,7 +459,14 @@ function CampaignCard({
   const lifecycle = lifecycleForCampaign(item);
   const helloAssoReadiness = item?.paymentProviderSnapshot?.helloasso?.readiness;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        { opacity: pressed ? 0.9 : 1 },
+        Platform.OS === 'web' ? { cursor: 'pointer' } : null,
+      ]}
+    >
       <View style={[ApplicationStyle.card, Spaces.gap[8], {
         backgroundColor: isSelected ? Colors.primary700 : Colors.primary800,
         borderColor: isSelected ? Colors.primary500 : `${Colors.primary500}55`,
@@ -505,6 +512,19 @@ function CampaignCard({
             {providerReadinessLabel[helloAssoReadiness] || helloAssoReadiness || 'A configurer'}
           </Text>
         ) : null}
+        <Pressable
+          accessibilityRole="button"
+          onPress={onPress}
+          style={({ pressed }) => [{
+            alignSelf: 'flex-start',
+            opacity: pressed ? 0.8 : 1,
+            paddingVertical: 4,
+          }, Platform.OS === 'web' ? { cursor: 'pointer' } : null]}
+        >
+          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+            {isSelected ? 'Campagne ouverte' : 'Voir le detail de la campagne'}
+          </Text>
+        </Pressable>
         <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
           <Button onPress={onDuplicate} style={{ flex: 1 }} title="Dupliquer" variant="Secondary" />
           {lifecycle ? <Button onPress={onLifecycle} style={{ flex: 1 }} title={lifecycle.label} variant="Secondary" /> : null}

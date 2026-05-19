@@ -4,6 +4,7 @@ import {
 } from 'react';
 import {
   AppState,
+  Platform,
   Text,
   useWindowDimensions,
   View,
@@ -38,6 +39,7 @@ import {
   doesMatchRequireVenue,
   getMatchDurationMinutes,
 } from '@/utils/leagueSportConfig';
+import { getWebBackgroundPollMs } from '@/utils/webRuntime';
 
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import {
@@ -135,7 +137,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     refetch,
   } = usePendingLeagueAction(undefined, {
     enabled: ENABLE_LEAGUE_ACTION_PROMPTS && Boolean(auth?.token) && !skipInitialFetch,
-    refetchInterval: 60000,
+    refetchInterval: Platform.OS === 'web' ? getWebBackgroundPollMs() : 60000,
     refetchIntervalInBackground: false,
   });
 
