@@ -56,7 +56,11 @@ import {
   POPUP_DISMISS_SCOPES,
   POPUP_IDS,
 } from '@/constants/popupRegistry';
-import { ENABLE_PUSH_NOTIFICATIONS, ENABLE_SMART_NOTIFICATIONS } from '@/constants/runtimeFlags';
+import {
+  APP_RUNTIME_ENV,
+  ENABLE_PUSH_NOTIFICATIONS,
+  ENABLE_SMART_NOTIFICATIONS,
+} from '@/constants/runtimeFlags';
 import {
   usePopupEligibility,
   usePopupManager,
@@ -353,6 +357,9 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
 
     const bypassPreprompt = Boolean(options?.bypassPreprompt);
+    // In local development we allow the native OS prompt immediately so emulator
+    // push validation is not blocked behind the in-app pre-prompt flow.
+    const bypassPrepromptForLocal = APP_RUNTIME_ENV === 'local';
     const force = Boolean(options?.force);
 
     const now = Date.now();
@@ -375,7 +382,12 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
       const permissionGranted = await getPushPermissionGranted();
 
-      if (!permissionGranted && !bypassPreprompt && requestPushPermissionPrePrompt(reason)) {
+      if (
+        !permissionGranted
+        && !bypassPreprompt
+        && !bypassPrepromptForLocal
+        && requestPushPermissionPrePrompt(reason)
+      ) {
         notificationsLogger.info('[FCM] Deferring token sync until push pre-prompt is answered.', { reason });
         return;
       }

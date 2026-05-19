@@ -80,6 +80,12 @@ export function AppFeedbackProvider({ children }) {
     if (dedupeKey) {
       const previousAt = recentBannerMapRef.current.get(dedupeKey);
       if (previousAt && now - previousAt < dedupeWindowMs) {
+        if (__DEV__) {
+          console.info('[celebrations] deduped', {
+            dedupeKey,
+            title: payload?.title,
+          });
+        }
         return dedupeKey;
       }
       recentBannerMapRef.current.set(dedupeKey, now);
@@ -118,6 +124,13 @@ export function AppFeedbackProvider({ children }) {
         if (priorityDiff !== 0) return priorityDiff;
         return String(left?.id || '').localeCompare(String(right?.id || ''));
       });
+      if (__DEV__) {
+        console.info('[celebrations] queued', {
+          queueLength: nextQueue.length,
+          title: nextBanner.title,
+          variant: nextBanner.variant,
+        });
+      }
       return nextQueue;
     });
     return bannerId;

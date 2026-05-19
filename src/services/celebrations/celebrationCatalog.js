@@ -108,6 +108,20 @@ export const celebrationCatalog = {
     tone: 'success',
     variant: 'banner',
   },
+  event_batch_created: {
+    buildCopy: (context) => ({
+      body: `${Number(context?.eventCount || 0) || 1} evenements sont maintenant enregistres.`,
+      eyebrow: 'EVENEMENTS',
+      title: 'Evenements crees',
+    }),
+    category: 'event',
+    channels: 'local_banner',
+    cooldownMs: 6000,
+    durationMs: DEFAULT_DURATION_MS,
+    priority: 3,
+    tone: 'success',
+    variant: 'banner',
+  },
   event_convocation_published: {
     buildCopy: (context) => ({
       body: `La convocation pour ${toLabel(context?.teamName, 'ton equipe')} est prete.`,

@@ -82,17 +82,20 @@ export const eventSchema = Joi.object({
 /**
  * Create a new event
  * @param {FCEventForm} eventData
+ * @param {{ suppressCelebration?: boolean }} [options]
  * @returns {Promise<any>} 201
  */
-export const createEvent = async (eventData) => {
+export const createEvent = async (eventData, options = {}) => {
   const response = await client.post('/events', {
     data: eventData,
   });
-  celebrate('event_created', {
-    eventId: response?.data?.data?.documentId || response?.data?.documentId || null,
-    eventName: eventData?.name || eventData?.description || '',
-    teamId: eventData?.team || eventData?.team?.documentId || null,
-  });
+  if (options?.suppressCelebration !== true) {
+    celebrate('event_created', {
+      eventId: response?.data?.data?.documentId || response?.data?.documentId || null,
+      eventName: eventData?.name || eventData?.description || '',
+      teamId: eventData?.team || eventData?.team?.documentId || null,
+    });
+  }
   emitGuidanceAction('event.created', {
     eventType: eventData?.type || null,
   });
@@ -146,13 +149,16 @@ export const cancelEvent = async ({ documentId, recurrenceMode }) => {
  * Create multiple events sequentially.
  * Useful for récurrent creation to collect partial failures.
  * @param {FCEventForm[]} payloads
+ * @param {{ suppressCelebration?: boolean }} [options]
  * @returns {Promise<{created: Array<{payload: FCEventForm, response: any, documentId: string | null}>, failed: Array<{payload: FCEventForm, error: any}>}>}
  */
-export const createEventsSequentially = async (payloads = []) => (
+export const createEventsSequentially = async (payloads = [], options = {}) => (
   payloads.reduce(async (accPromise, payload) => {
     const acc = await accPromise;
     try {
-      const response = await createEvent(payload);
+      const response = await createEvent(payload, {
+        suppressCelebration: options?.suppressCelebration === true,
+      });
       const documentId = response?.data?.documentId || response?.documentId || null;
       acc.created.push({ documentId, payload, response });
     } catch (error) {
@@ -201,7 +207,9 @@ export const createEventsWithConcurrency = async (payloads = [], options = {}) =
       try {
         // Each worker intentionally processes its own queue sequentially to cap network concurrency.
         // eslint-disable-next-line no-await-in-loop
-        const response = await createEvent(payload);
+        const response = await createEvent(payload, {
+          suppressCelebration: options?.suppressCelebration === true,
+        });
         const documentId = response?.data?.documentId || response?.documentId || null;
         created.push({
           documentId,

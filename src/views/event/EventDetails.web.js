@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useWindowDimensions } from 'react-native';
 
@@ -21,6 +21,7 @@ import {
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { celebrate } from '@/services/celebrations/celebrationRuntime';
 import { useGetEvent } from '@/services/event/eventQueries';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import {
@@ -111,6 +112,7 @@ function EventDetails({ navigation, route }) {
   const { eventId } = route?.params || {};
   const highlightedSection = route?.params?.focusSection || null;
   const fromEventCreation = Boolean(route?.params?.fromEventCreation);
+  const creationCelebration = route?.params?.creationCelebration || null;
   const { width } = useWindowDimensions();
   const isDesktop = width >= BREAKPOINTS.desktop;
   const isTablet = width >= BREAKPOINTS.tablet;
@@ -141,6 +143,7 @@ function EventDetails({ navigation, route }) {
   });
   const [isSharing, setIsSharing] = useState(false);
   const [actionError, setActionError] = useState('');
+  const creationCelebrationShownRef = useRef(false);
 
   useEffect(() => {
     if (!fromEventCreation || !eventId) return undefined;
@@ -151,6 +154,43 @@ function EventDetails({ navigation, route }) {
 
     return () => clearTimeout(refreshTimeout);
   }, [eventId, fromEventCreation, refetch]);
+
+  useEffect(() => {
+    const resolvedCreationCelebration = creationCelebration || (
+      event
+        ? {
+          actionKey: 'event_created',
+          payload: {
+            eventId,
+            eventName: event?.name || event?.description || '',
+            teamId: event?.team?.documentId || null,
+          },
+        }
+        : null
+    );
+
+    if (!fromEventCreation || !resolvedCreationCelebration || creationCelebrationShownRef.current) {
+      return undefined;
+    }
+
+    let celebrationDelay = null;
+    const task = setTimeout(() => {
+      celebrationDelay = setTimeout(() => {
+        celebrate(
+          resolvedCreationCelebration?.actionKey || 'event_created',
+          resolvedCreationCelebration?.payload || {},
+        );
+        creationCelebrationShownRef.current = true;
+      }, 220);
+    }, 0);
+
+    return () => {
+      clearTimeout(task);
+      if (celebrationDelay) {
+        clearTimeout(celebrationDelay);
+      }
+    };
+  }, [creationCelebration, event, eventId, fromEventCreation]);
 
   const myParticipations = useMemo(
     () => flattenPages(myParticipationPages?.pages),

@@ -19,6 +19,13 @@ export const subscribeToCelebrations = (listener) => {
 
 export const emitCelebrationBanner = (payload) => {
   if (!payload) return null;
+  if (__DEV__) {
+    console.info('[celebrations] emit', {
+      actionKey: payload?.actionKey,
+      title: payload?.title,
+      variant: payload?.variant,
+    });
+  }
   celebrationListeners.forEach((listener) => {
     try {
       listener(payload);

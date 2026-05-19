@@ -45,6 +45,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
+import { celebrate } from '@/services/celebrations/celebrationRuntime';
 import {
   useGetEvent,
   useGetEventAttendance,
@@ -220,11 +221,12 @@ const resolveEventStartAt = (event) => {
 };
 
 /**
- * @param {{ navigation: import('@react-navigation/native').NavigationProp<any>; route: { params?: { eventId?: string, fromEventCreation?: boolean } } }} props
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any>; route: { params?: { eventId?: string, fromEventCreation?: boolean, creationCelebration?: { actionKey?: string, payload?: Record<string, any> } } } }} props
  */
 function EventDetails({ navigation, route }) {
   const { eventId } = route?.params ?? {};
   const fromEventCreation = Boolean(route?.params?.fromEventCreation);
+  const creationCelebration = route?.params?.creationCelebration || null;
   // @ts-ignore: FIXME: Baseline TS regression
   const highlightedSection = route?.params?.focusSection || null;
 
@@ -260,6 +262,7 @@ function EventDetails({ navigation, route }) {
   const primaryCompletedEventIdRef = useRef('');
   const firstRenderedEventIdRef = useRef('');
   const secondaryCompletedEventIdRef = useRef('');
+  const creationCelebrationShownRef = useRef(false);
 
   const [isLateModalVisible, setIsLateModalVisible] = useState(false);
   const [lateModalMode, setLateModalMode] = useState(/** @type {'coach_mark' | 'coach_edit' | 'player_declare' | 'player_update'} */ ('coach_mark'));
@@ -306,6 +309,43 @@ function EventDetails({ navigation, route }) {
 
     return () => clearTimeout(refreshTimeout);
   }, [eventId, fromEventCreation, refetch]);
+
+  useEffect(() => {
+    const resolvedCreationCelebration = creationCelebration || (
+      event
+        ? {
+          actionKey: 'event_created',
+          payload: {
+            eventId,
+            eventName: event?.name || event?.description || '',
+            teamId: event?.team?.documentId || null,
+          },
+        }
+        : null
+    );
+
+    if (!fromEventCreation || !resolvedCreationCelebration || creationCelebrationShownRef.current) {
+      return undefined;
+    }
+
+    let celebrationDelay = null;
+    const task = InteractionManager.runAfterInteractions(() => {
+      celebrationDelay = setTimeout(() => {
+        celebrate(
+          resolvedCreationCelebration?.actionKey || 'event_created',
+          resolvedCreationCelebration?.payload || {},
+        );
+        creationCelebrationShownRef.current = true;
+      }, 220);
+    });
+
+    return () => {
+      task?.cancel?.();
+      if (celebrationDelay) {
+        clearTimeout(celebrationDelay);
+      }
+    };
+  }, [creationCelebration, event, eventId, fromEventCreation]);
 
   useEffect(() => {
     const safeEventId = String(eventId || '');

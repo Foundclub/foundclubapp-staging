@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  InteractionManager,
   Text,
   TouchableOpacity,
   View,
@@ -19,6 +20,9 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import {
+  celebrate,
+} from '@/services/celebrations/celebrationRuntime';
 import {
   createEventsWithConcurrency,
   getEventById,
@@ -456,6 +460,7 @@ function EventWizardRecap({ navigation }) {
     const result = await createEventsWithConcurrency(payloads, {
       concurrency: CREATE_EVENT_BATCH_CONCURRENCY,
       onProgress: setSubmitProgress,
+      suppressCelebration: true,
     });
     return {
       created: result.created,
@@ -501,6 +506,16 @@ function EventWizardRecap({ navigation }) {
     await queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
 
     const firstCreatedItem = created.find((item) => item.documentId === firstCreatedId) || null;
+    const celebrationPayload = {
+      eventCount: created.length,
+      eventId: firstCreatedId,
+      eventName: firstCreatedItem?.payload?.name || firstCreatedItem?.payload?.description || '',
+      teamId: firstCreatedItem?.payload?.team || firstCreatedItem?.payload?.team?.documentId || null,
+    };
+    const creationCelebration = {
+      actionKey: created.length > 1 ? 'event_batch_created' : 'event_created',
+      payload: celebrationPayload,
+    };
     if (firstCreatedId && firstCreatedItem) {
       await preloadCreatedEventDetail({
         createdItem: firstCreatedItem,
@@ -527,6 +542,7 @@ function EventWizardRecap({ navigation }) {
         routes: [{
           name: RouteNames.EventDetails,
           params: {
+            creationCelebration,
             eventId: firstCreatedId,
             fromEventCreation: true,
           },
@@ -536,6 +552,11 @@ function EventWizardRecap({ navigation }) {
     }
 
     navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.MyEventList });
+    InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => {
+        celebrate(creationCelebration.actionKey, creationCelebration.payload);
+      }, 180);
+    });
   };
 
   const getFailureSummary = (failedItems) => {
