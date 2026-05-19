@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, addMonths, addWeeks } from 'date-fns';
 import {
-  useEffect, useMemo, useRef, useState,
+  memo, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -192,4 +192,4 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
   );
 }
 
-export default PersonalPlanningContainer;
+export default memo(PersonalPlanningContainer);

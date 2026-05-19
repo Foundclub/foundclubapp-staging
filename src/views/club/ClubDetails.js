@@ -219,11 +219,20 @@ function ClubDetails({ navigation, route }) {
     isLoading,
     refetch,
   } = useGetClub(clubId ?? '');
+  const clubParentMultisportId = club?.parentMultisport?.documentId || null;
+  const canLoadFacilityContext = Boolean(clubId) && !isLoading && !error;
   const {
     data: facilityContext,
-    isLoading: facilitiesLoading,
+    isLoading: isLoadingFacilities,
     refetch: refetchFacilities,
-  } = useClubFacilityContext({ clubId: clubId ?? '', cmId: club?.parentMultisport?.documentId || null });
+  } = useClubFacilityContext(
+    { clubId: clubId ?? '', cmId: clubParentMultisportId },
+    {
+      enabled: canLoadFacilityContext,
+      resolveCmId: false,
+      retry: 0,
+    },
+  );
   const {
     data: allActivities,
     isLoading: activitiesLoading,
@@ -457,6 +466,7 @@ function ClubDetails({ navigation, route }) {
   const clubMembersCount = Number(club?.membersCount || club?.members?.length || 0);
 
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
+  const facilitiesLoading = canLoadFacilityContext && isLoadingFacilities;
   const facilities = useMemo(
     () => (Array.isArray(facilityContext?.allFacilities) ? facilityContext.allFacilities : []),
     [facilityContext?.allFacilities],
@@ -465,7 +475,7 @@ function ClubDetails({ navigation, route }) {
     clubTitle: t('facilityList.sections.club', 'Installations du club'),
     sharedTitle: t('facilityList.sections.shared', 'Installations partagées'),
   }), [facilities, t]);
-  const resolvedFacilityCmId = facilityContext?.cmId || club?.parentMultisport?.documentId || null;
+  const resolvedFacilityCmId = facilityContext?.cmId || clubParentMultisportId || null;
 
   // handlers
   const handleStartChat = async () => {
@@ -779,11 +789,19 @@ function ClubDetails({ navigation, route }) {
       setClubPartnerRequestPending(false);
       setJoinRequestPending(false);
       refetch();
-      refetchFacilities();
+      if (canLoadFacilityContext) {
+        refetchFacilities();
+      }
       if (canUseClubPartneringFlow) {
         refetchPendingClubCreationRequests();
       }
-    }, [canUseClubPartneringFlow, refetch, refetchFacilities, refetchPendingClubCreationRequests]),
+    }, [
+      canLoadFacilityContext,
+      canUseClubPartneringFlow,
+      refetch,
+      refetchFacilities,
+      refetchPendingClubCreationRequests,
+    ]),
   );
 
   const clubTeamIds = useMemo(

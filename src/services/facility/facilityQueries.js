@@ -72,12 +72,13 @@ export const useGetFacilities = (clubId, options = {}) => useQuery({
  */
 export const useClubFacilityContext = (context = {}, options = {}) => {
   const { clubId = null, cmId = null } = context;
+  const { resolveCmId = true, ...queryOptions } = options;
   return useQuery({
     enabled: Boolean(clubId || cmId),
-    queryFn: () => getClubFacilityContext(clubId, cmId),
+    queryFn: () => getClubFacilityContext(clubId, cmId, { resolveCmId }),
     queryKey: ['club-facility-context', clubId || 'none', cmId || 'auto'],
     staleTime: 1000 * 60 * 5,
-    ...options,
+    ...queryOptions,
   });
 };
 

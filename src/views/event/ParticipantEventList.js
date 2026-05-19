@@ -99,9 +99,6 @@ function ParticipantEventList({ navigation }) {
   const [shouldLoadEventFeed, setShouldLoadEventFeed] = useState(false);
   const [shouldLoadFeaturedFeed, setShouldLoadFeaturedFeed] = useState(Platform.OS !== 'web');
   const [isPlanningContentReady, setIsPlanningContentReady] = useState(Platform.OS !== 'web');
-  const [shouldRenderSecondaryPlanningContent, setShouldRenderSecondaryPlanningContent] = useState(
-    Platform.OS !== 'web',
-  );
   const [shouldLoadSecondaryPlanningData, setShouldLoadSecondaryPlanningData] = useState(
     Platform.OS !== 'web',
   );
@@ -192,19 +189,16 @@ function ParticipantEventList({ navigation }) {
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
-      setShouldRenderSecondaryPlanningContent(true);
       setShouldLoadSecondaryPlanningData(true);
       return undefined;
     }
 
     if (!isPlanningContentReady) {
-      setShouldRenderSecondaryPlanningContent(false);
       setShouldLoadSecondaryPlanningData(false);
       return undefined;
     }
 
     let isCancelled = false;
-    setShouldRenderSecondaryPlanningContent(true);
 
     /** @type {ReturnType<typeof setTimeout> | undefined} */
     let timeoutId;
@@ -464,14 +458,18 @@ function ParticipantEventList({ navigation }) {
   /**
    * @param {Date} date
    */
-  const handleDateConfirm = (date) => {
+  const handleDateConfirm = useCallback((date) => {
     setListStartDate(date);
-  };
+  }, []);
 
-  const handleSummaryPress = () => {
+  const handleSummaryPress = useCallback(() => {
     // @ts-ignore
     flatListRef.current?.scrollToOffset({ animated: true, offset: 500 });
-  };
+  }, []);
+
+  const handlePlanningDataResolved = useCallback(() => {
+    setIsPlanningContentReady(true);
+  }, []);
 
   const handleCreateEventPress = useCallback(() => {
     // @ts-ignore
@@ -495,14 +493,10 @@ function ParticipantEventList({ navigation }) {
     ? Math.max(sceneBottomInset, floatingCtaBottom + 84)
     : sceneBottomInset;
 
-  /**
-   *
-   */
-  // eslint-disable-next-line react/no-unstable-nested-components
-  function ListHeader() {
+  const listHeaderComponent = useMemo(() => {
     const planningContent = (
       <PersonalPlanningContainer
-        onDataResolved={() => setIsPlanningContentReady(true)}
+        onDataResolved={handlePlanningDataResolved}
         onSummaryPress={handleSummaryPress}
       />
     );
@@ -522,7 +516,7 @@ function ParticipantEventList({ navigation }) {
           </View>
         </View>
 
-        {shouldRenderSecondaryPlanningContent ? (
+        {shouldLoadSecondaryPlanningData ? (
           <Suspense fallback={null}>
             <MissionDock />
           </Suspense>
@@ -551,7 +545,7 @@ function ParticipantEventList({ navigation }) {
         </View>
 
         {/* Featured Events Carousel */}
-        {shouldRenderSecondaryPlanningContent && featuredEvents.length > 0 && (
+        {shouldLoadSecondaryPlanningData && featuredEvents.length > 0 && (
           <View style={[Spaces.marginTop[16]]}>
             <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
               ⭐ À la une dans mon club
@@ -563,7 +557,7 @@ function ParticipantEventList({ navigation }) {
         )}
 
         {/* List Header Section */}
-        {shouldRenderSecondaryPlanningContent ? (
+        {shouldLoadSecondaryPlanningData ? (
           <View style={[Spaces.marginTop[16]]}>
             <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
               Évènements à partir de
@@ -583,7 +577,28 @@ function ParticipantEventList({ navigation }) {
         ) : null}
       </View>
     );
-  }
+  }, [
+    Alignments.alignCenter,
+    Alignments.justifySpaceBetween,
+    Alignments.row,
+    Fonts.body4,
+    Fonts.h3,
+    Fonts.neutral00,
+    Fonts.neutral300,
+    Spaces.gap,
+    Spaces.marginBottom,
+    Spaces.marginTop,
+    featuredEvents,
+    handleDateConfirm,
+    handlePlanningDataResolved,
+    handleSummaryPress,
+    isEventsLoading,
+    isFeaturedLoading,
+    listStartDate,
+    shouldLoadEventFeed,
+    shouldLoadFeaturedFeed,
+    shouldLoadSecondaryPlanningData,
+  ]);
 
   return (
     <ScreenContainer bgImage="bg2">
@@ -596,7 +611,7 @@ function ParticipantEventList({ navigation }) {
         extraData={userData}
         initialNumToRender={6}
         keyExtractor={keyExtractor}
-        ListHeaderComponent={<ListHeader />}
+        ListHeaderComponent={listHeaderComponent}
         maxToRenderPerBatch={8}
         onEndReached={handleListEndReached}
         onEndReachedThreshold={0.5}

@@ -11,7 +11,7 @@ import {
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
-  useEffect, useMemo, useRef, useState,
+  memo, useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
   Image,
@@ -1154,4 +1154,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PlanningWeekTimelineView;
+export default memo(PlanningWeekTimelineView);

@@ -90,8 +90,9 @@ const resolveParentMultisportId = async (clubId) => {
   }
 };
 
-const getClubFacilityContext = async (clubId, cmId) => {
-  const resolvedCmId = cmId || await resolveParentMultisportId(clubId);
+const getClubFacilityContext = async (clubId, cmId, options = {}) => {
+  const { resolveCmId = true } = options;
+  const resolvedCmId = cmId || (resolveCmId ? await resolveParentMultisportId(clubId) : null);
   const [clubResponse, cmResponse] = await Promise.all([
     clubId ? getFacilities(clubId) : Promise.resolve(null),
     resolvedCmId ? getCMFacilities(resolvedCmId) : Promise.resolve(null),

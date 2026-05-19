@@ -500,12 +500,12 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
   ]);
 
   if (recruitmentTypes.has(type)) {
-      return adaptDestinationForCurrentPlatform(payload, payload.adId
-        ? {
-          params: { adId: String(payload.adId) },
-          route: RouteNames.RecruitmentAdDetails,
-        }
-        : null);
+    return adaptDestinationForCurrentPlatform(payload, payload.adId
+      ? {
+        params: { adId: String(payload.adId) },
+        route: RouteNames.RecruitmentAdDetails,
+      }
+      : null);
   }
 
   switch (type) {
@@ -740,6 +740,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         params: payload.assignmentId ? { assignmentId: String(payload.assignmentId) } : {},
         route: RouteNames.MyLicense,
       });
+    case NOTIFICATION_TYPES.NEW_GROUP_MESSAGE:
     case NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE:

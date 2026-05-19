@@ -448,6 +448,7 @@ export const NOTIFICATION_TYPES = {
   LICENSE_PAYMENT_REMINDER: 'licensePaymentReminder',
 
   // Messages
+  NEW_GROUP_MESSAGE: 'newGroupMessage',
   NEW_LEAGUE_MATCH_MESSAGE: 'newLeagueMatchMessage',
   NEW_TEAM_MESSAGE: 'newTeamMessage',
   NEW_TEAM_PLAYER_MESSAGE: 'newTeamPlayerMessage',

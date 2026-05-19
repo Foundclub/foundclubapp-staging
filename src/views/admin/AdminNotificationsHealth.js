@@ -261,6 +261,7 @@ function AdminNotificationsHealth() {
               {renderAction('Test standard', () => runAction('Test standard', () => testMutation.mutateAsync({ kind: 'standard' })), testMutation.isPending)}
               {renderAction('Test RSVP', () => runAction('Test RSVP', () => testMutation.mutateAsync({ kind: 'event-rsvp' })), testMutation.isPending)}
               {renderAction('Test chat', () => runAction('Test chat', () => testMutation.mutateAsync({ kind: 'chat-reply' })), testMutation.isPending)}
+              {renderAction('Test groupe', () => runAction('Test groupe', () => testMutation.mutateAsync({ kind: 'chat-group' })), testMutation.isPending)}
               {renderAction(
                 'Relancer dernier échec',
                 () => runAction('Relance delivery', () => retryMutation.mutateAsync(firstFailureDocumentId)),
