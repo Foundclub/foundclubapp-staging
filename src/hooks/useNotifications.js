@@ -382,12 +382,17 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
       const permissionGranted = await getPushPermissionGranted();
 
-      if (
-        !permissionGranted
+      // iOS must reach the native permission prompt at least once, otherwise the app
+      // never appears in Settings > Notifications and no FCM token can be issued.
+      const shouldDeferBehindInAppPreprompt = (
+        Platform.OS !== 'ios'
+        && !permissionGranted
         && !bypassPreprompt
         && !bypassPrepromptForLocal
         && requestPushPermissionPrePrompt(reason)
-      ) {
+      );
+
+      if (shouldDeferBehindInAppPreprompt) {
         notificationsLogger.info('[FCM] Deferring token sync until push pre-prompt is answered.', { reason });
         return;
       }

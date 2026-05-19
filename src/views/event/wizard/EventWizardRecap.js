@@ -87,8 +87,24 @@ const hasExpectedEventHydration = (eventSnapshot, expectedTaskCount, expectedAud
   return actualTaskCount >= expectedTaskCount && actualAudienceCount >= expectedAudienceCount;
 };
 
+const seedCreatedEventDetailCache = ({
+  createdItem,
+  eventId,
+  queryClient,
+}) => {
+  if (!eventId || !createdItem) return null;
+
+  const createdSnapshot = getCreatedEventSnapshot(createdItem);
+  if (createdSnapshot?.documentId) {
+    queryClient.setQueryData(['event', eventId], createdSnapshot);
+  }
+
+  return createdSnapshot;
+};
+
 const preloadCreatedEventDetail = async ({
   createdItem,
+  createdSnapshot: seededSnapshot,
   eventId,
   queryClient,
 }) => {
@@ -100,13 +116,9 @@ const preloadCreatedEventDetail = async ({
   const expectedAudienceCount = Array.isArray(createdItem?.payload?.teamAudiences)
     ? createdItem.payload.teamAudiences.length
     : 0;
-  const createdSnapshot = getCreatedEventSnapshot(createdItem);
+  const createdSnapshot = seededSnapshot || getCreatedEventSnapshot(createdItem);
   const shouldRetryHydration = expectedTaskCount > 0 || expectedAudienceCount > 0;
   const maxAttempts = shouldRetryHydration ? 3 : 1;
-
-  if (createdSnapshot?.documentId) {
-    queryClient.setQueryData(['event', eventId], createdSnapshot);
-  }
 
   if (
     createdSnapshot
@@ -516,13 +528,13 @@ function EventWizardRecap({ navigation }) {
       actionKey: created.length > 1 ? 'event_batch_created' : 'event_created',
       payload: celebrationPayload,
     };
-    if (firstCreatedId && firstCreatedItem) {
-      await preloadCreatedEventDetail({
+    const seededCreatedEvent = firstCreatedId && firstCreatedItem
+      ? seedCreatedEventDetailCache({
         createdItem: firstCreatedItem,
         eventId: firstCreatedId,
         queryClient,
-      });
-    }
+      })
+      : null;
 
     dispatch({ type: 'RESET' });
 
@@ -548,6 +560,16 @@ function EventWizardRecap({ navigation }) {
           },
         }],
       });
+      if (firstCreatedItem) {
+        InteractionManager.runAfterInteractions(() => {
+          preloadCreatedEventDetail({
+            createdItem: firstCreatedItem,
+            createdSnapshot: seededCreatedEvent,
+            eventId: firstCreatedId,
+            queryClient,
+          }).catch(() => {});
+        });
+      }
       return;
     }
 

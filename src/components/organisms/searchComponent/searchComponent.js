@@ -36,12 +36,18 @@ function SearchComponent({
   const searchHandlerRef = useRef(handleSearchField);
   const isSyncingDefaultValueRef = useRef(false);
   const lastEmittedValueRef = useRef(normalizeSearchValue(searchDefaultValue));
+  const previousDefaultValueRef = useRef(String(searchDefaultValue || ''));
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
 
   useEffect(() => {
     const nextDefaultValue = String(searchDefaultValue || '');
+    if (previousDefaultValueRef.current === nextDefaultValue) {
+      return;
+    }
+
+    previousDefaultValueRef.current = nextDefaultValue;
     lastEmittedValueRef.current = normalizeSearchValue(nextDefaultValue);
 
     if (search === nextDefaultValue) {

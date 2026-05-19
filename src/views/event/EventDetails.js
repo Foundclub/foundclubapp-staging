@@ -710,10 +710,7 @@ function EventDetails({ navigation, route }) {
 
   const {
     data: eventParticipations,
-    fetchNextPage: fetchNextParticipationsPage,
-    hasNextPage: hasNextParticipationsPage,
     isFetching: isParticipationsFetching,
-    isFetchingNextPage: isFetchingNextParticipationsPage,
     refetch: refetchParticipations,
   } = useGetEventParticipations(eventId || '', undefined, {
     includeInactive: true,
@@ -721,16 +718,6 @@ function EventDetails({ navigation, route }) {
   }, {
     enabled: Boolean(eventId && areDeferredQueriesEnabled),
   });
-
-  useEffect(() => {
-    if (!areDeferredQueriesEnabled || !hasNextParticipationsPage || isFetchingNextParticipationsPage) return;
-    fetchNextParticipationsPage();
-  }, [
-    areDeferredQueriesEnabled,
-    fetchNextParticipationsPage,
-    hasNextParticipationsPage,
-    isFetchingNextParticipationsPage,
-  ]);
 
   const mutations = useEventMutations(eventId, refetch, refetchParticipations);
   const approveFeaturedRequestMutation = useMutation({
