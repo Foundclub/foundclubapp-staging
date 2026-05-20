@@ -231,6 +231,7 @@ function TeamList({ navigation, route }) {
 
         <GlobalPromptModal
           body={`${assignmentTrainerName || 'Cet entraîneur'} est maintenant dans votre club.\n\n1. Ouvrez une équipe.\n2. Appuyez sur "Modifier".\n3. Dans la section "Entraîneurs", ajoutez-le puis validez.`}
+          inlineOnAndroid
           onRequestClose={dismissTrainerGuide}
           primaryAction={{
             label: t('common.actions.ok', 'OK'),

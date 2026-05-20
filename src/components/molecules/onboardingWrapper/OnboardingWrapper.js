@@ -9,6 +9,7 @@ import { Platform, View } from 'react-native';
 import { measureTutorialTargetOnWeb } from '@/domains/tutorial/tutorialWebRuntime';
 
 import { tutorialDebugLog } from '@/utils/logger/tutorialDebug';
+
 import { useOnboarding } from '@/context/OnboardingContext';
 
 /**
@@ -46,18 +47,22 @@ function OnboardingWrapper({
   nextAction,
   nextLabel,
   nextTargetStepId,
-  targetNodeResolver,
   onNext,
   order,
   spotlight,
   style,
+  targetNodeResolver,
   title,
 }) {
   const onboardingContext = useOnboarding() || {};
-  const { currentStep } = onboardingContext;
-  const { isActive } = onboardingContext;
-  const registerStep = onboardingContext.registerStep || (() => {});
-  const unregisterStep = onboardingContext.unregisterStep || (() => {});
+  const {
+    currentStep,
+    isActive = false,
+    registerStep: registerStepFromContext,
+    unregisterStep: unregisterStepFromContext,
+  } = onboardingContext;
+  const registerStep = registerStepFromContext;
+  const unregisterStep = unregisterStepFromContext;
   const viewRef = useRef(/** @type {import('react-native').View | null} */ (null));
   const hasInitialRegistrationRef = useRef(false);
   const lastRegistrationKeyRef = useRef('');
@@ -67,7 +72,7 @@ function OnboardingWrapper({
   const lastDebugLogAtRef = useRef(0);
   const wasCurrentStepRef = useRef(false);
   const remeasureTimersRef = useRef(/** @type {ReturnType<typeof setTimeout>[]} */ ([]));
-  const resizeObserverRef = useRef(/** @type {ResizeObserver | null} */ (null));
+  const resizeObserverRef = useRef(/** @type {{ disconnect: () => void; observe: (node: any) => void } | null} */ (null));
 
   const getTargetNode = useCallback(() => (
     (typeof targetNodeResolver === 'function' && targetNodeResolver()) || viewRef.current
@@ -129,17 +134,59 @@ function OnboardingWrapper({
     spotlight?.paddingY,
   ]);
 
+  const registerStepOptions = useMemo(() => ({
+    nextAction,
+    nextLabel,
+    nextTargetStepId,
+  }), [nextAction, nextLabel, nextTargetStepId]);
+
+  const commitStepRegistration = useCallback((layout) => {
+    if (typeof registerStep !== 'function') return;
+
+    registerStep(
+      id,
+      layout,
+      order,
+      title,
+      description,
+      normalizedSpotlight,
+      onNext,
+      measureTarget,
+      getTargetNode,
+      registerStepOptions,
+    );
+  }, [
+    description,
+    getTargetNode,
+    id,
+    measureTarget,
+    normalizedSpotlight,
+    onNext,
+    order,
+    registerStep,
+    registerStepOptions,
+    title,
+  ]);
+
+  const registerPlaceholderStep = useCallback(() => {
+    commitStepRegistration(null);
+  }, [
+    commitStepRegistration,
+  ]);
+
   const measureAndRegister = useCallback(() => {
     if (!viewRef.current) return;
 
     const targetNode = getTargetNode();
-    const measurableNode = Platform.OS === 'web'
-      ? (
-        typeof targetNode?.getBoundingClientRect === 'function'
-          ? targetNode
-          : (typeof viewRef.current?.getBoundingClientRect === 'function' ? viewRef.current : null)
-      )
-      : viewRef.current;
+    let measurableNode = viewRef.current;
+
+    if (Platform.OS === 'web') {
+      if (typeof targetNode?.getBoundingClientRect === 'function') {
+        measurableNode = targetNode;
+      } else if (typeof viewRef.current?.getBoundingClientRect !== 'function') {
+        measurableNode = null;
+      }
+    }
 
     if (Platform.OS === 'web' && measurableNode) {
       const rect = measurableNode.getBoundingClientRect();
@@ -180,24 +227,11 @@ function OnboardingWrapper({
       lastRegistrationKeyRef.current = registrationKey;
       tutorialDebugLog('wrapper.register', { id, layout, order });
 
-      registerStep(
-        id,
-        layout,
-        order,
-        title,
-        description,
-        normalizedSpotlight,
-        onNext,
-        measureTarget,
-        getTargetNode,
-        {
-          nextAction,
-          nextLabel,
-          nextTargetStepId,
-        },
-      );
+      commitStepRegistration(layout);
       return;
     }
+
+    if (!measurableNode) return;
 
     measurableNode.measureInWindow((
       /** @type {number} */ measuredX,
@@ -242,35 +276,18 @@ function OnboardingWrapper({
       lastRegistrationKeyRef.current = registrationKey;
       tutorialDebugLog('wrapper.register', { id, layout, order });
 
-      registerStep(
-        id,
-        layout,
-        order,
-        title,
-        description,
-        normalizedSpotlight,
-        onNext,
-        measureTarget,
-        getTargetNode,
-        {
-          nextAction,
-          nextLabel,
-          nextTargetStepId,
-        },
-      );
+      commitStepRegistration(layout);
     });
   }, [
+    commitStepRegistration,
     description,
     getTargetNode,
     id,
-    measureTarget,
     normalizedSpotlight,
     nextAction,
     nextLabel,
     nextTargetStepId,
-    onNext,
     order,
-    registerStep,
     title,
   ]);
 
@@ -319,11 +336,13 @@ function OnboardingWrapper({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return undefined;
+    if (!isActive || currentStep?.id !== id) return undefined;
     const node = viewRef.current;
     if (!node) return undefined;
 
-    if (typeof ResizeObserver !== 'undefined' && typeof node?.getBoundingClientRect === 'function') {
-      resizeObserverRef.current = new ResizeObserver(() => {
+    const WebResizeObserver = window.ResizeObserver;
+    if (typeof WebResizeObserver === 'function' && typeof node?.getBoundingClientRect === 'function') {
+      resizeObserverRef.current = new WebResizeObserver(() => {
         scheduleMeasure();
       });
       resizeObserverRef.current.observe(node);
@@ -361,7 +380,9 @@ function OnboardingWrapper({
     remeasureTimersRef.current = [];
     isMeasureScheduledRef.current = false;
     lastRegistrationKeyRef.current = '';
-    unregisterStep(id);
+    if (typeof unregisterStep === 'function') {
+      unregisterStep(id);
+    }
   }, [id, unregisterStep]);
 
   return (
@@ -370,6 +391,10 @@ function OnboardingWrapper({
       onLayout={() => {
         if (!hasInitialRegistrationRef.current) {
           hasInitialRegistrationRef.current = true;
+          registerPlaceholderStep();
+        }
+
+        if (isActive && currentStep?.id === id) {
           scheduleMeasure();
         }
       }}

@@ -314,6 +314,7 @@ function RemotePopupCampaignHost({
       body={activeCampaign?.body || ''}
       eyebrow={activeCampaign?.eyebrow || undefined}
       headerContent={headerContent}
+      inlineOnAndroid
       onRequestClose={handleDismiss}
       primaryAction={primaryAction ? {
         label: primaryAction.label,

@@ -377,7 +377,7 @@ function HomeHubContent({ auth, navigation, route }) {
   useBlockingOverlayLifecycle(homeHubEntryPopup.descriptor.id, isHomeHubEntryGateVisible, {
     releaseDelayMs: 320,
   });
-  const shouldRenderLegacyEntryGate = false;
+  const shouldRenderLegacyEntryGate = Platform.OS !== 'web' && isHomeHubEntryGateVisible;
   const isExternalCompetitionPromptEnabled = isFocused
     && isStartupStable
     && canShowLocalScreenPrompt
@@ -1866,7 +1866,9 @@ function HomeHubContent({ auth, navigation, route }) {
       </View>
 
       <ScrollView
+        bounces={false}
         contentContainerStyle={[Spaces.gap[24], { paddingBottom: scrollBottomPadding }]}
+        overScrollMode="never"
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
@@ -2066,10 +2068,11 @@ function HomeHubContent({ auth, navigation, route }) {
           "Vous pouvez lancer le tutoriel complet pour tout comprendre, ou explorer l'application par vous-même.",
         )}
         title={t('homeHubTutorial.entry.title', 'Bienvenue sur FoundClub')}
-        visible={isHomeHubEntryGateVisible}
+        visible={Platform.OS === 'web' && isHomeHubEntryGateVisible}
       />
       <GlobalPromptModal
         body={contextualPrompt?.body}
+        inlineOnAndroid
         onRequestClose={closeContextualPrompt}
         primaryAction={contextualPrompt?.primaryAction}
         secondaryAction={contextualPrompt?.secondaryAction}

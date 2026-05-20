@@ -84,9 +84,9 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
       theme={navigationTheme}
     >
       <StatusBar
-        backgroundColor={Colors.transparent}
+        backgroundColor={scheme === 'dark' ? (Colors.primary900 || Colors.neutral900) : Colors.neutral00}
         barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
-        translucent
+        translucent={false}
       />
       {auth?.token && !isAddingAccount ? <PrivateNavigator /> : <PublicNavigator />}
     </NavigationContainer>

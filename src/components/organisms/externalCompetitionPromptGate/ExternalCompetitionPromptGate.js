@@ -396,11 +396,11 @@ function ExternalCompetitionPromptGate({
     </View>
   );
 
-  if (Platform.OS === 'web') {
-    if (!visible) {
-      return null;
-    }
+  if (!visible) {
+    return null;
+  }
 
+  if (Platform.OS === 'web') {
     return (
       <View
         style={{

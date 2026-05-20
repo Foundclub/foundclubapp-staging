@@ -79,6 +79,7 @@ function BottomModal({
   const sheetStateRef = useRef('hidden');
   const presentRecoveryTimerRef = useRef(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [shouldRender, setShouldRender] = useState(Boolean(isVisible));
   const insets = useSafeAreaInsets();
   const { phase: startupPhase } = useStartupPhase();
   const {
@@ -89,6 +90,13 @@ function BottomModal({
     || startupPhase === STARTUP_PHASES.STEADY_STATE;
 
   useEffect(() => {
+    if (isVisible) {
+      setShouldRender(true);
+    }
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (!shouldRender) return;
     if (!modalRef.current) return;
     if (isVisible && !canPresentDuringStartup) return;
 
@@ -122,7 +130,7 @@ function BottomModal({
       // This allows handleDismiss to trigger callbacks such as onDismissed.
       modalRef.current.dismiss();
     }
-  }, [canPresentDuringStartup, isVisible]);
+  }, [canPresentDuringStartup, isVisible, shouldRender]);
 
   useEffect(() => () => {
     visibilityRef.current = false;
@@ -169,6 +177,7 @@ function BottomModal({
     if (!visibilityRef.current) return;
     visibilityRef.current = false;
     sheetStateRef.current = 'hidden';
+    setShouldRender(false);
     if (presentRecoveryTimerRef.current) {
       clearTimeout(presentRecoveryTimerRef.current);
       presentRecoveryTimerRef.current = 0;
@@ -235,6 +244,10 @@ function BottomModal({
       useSafeAreaBottomInset,
     ],
   );
+
+  if (!shouldRender) {
+    return null;
+  }
 
   return (
     <BottomSheetModal

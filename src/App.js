@@ -225,6 +225,7 @@ function BootErrorAlertHost() {
     <GlobalPromptModal
       body={summary.slice(0, 500)}
       eyebrow="Crash précédent"
+      inlineOnAndroid
       onRequestClose={finalize}
       primaryAction={{
         label: 'OK',

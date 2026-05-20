@@ -6023,6 +6023,7 @@ function Conversation({ navigation, route }) {
 
         <GlobalPromptModal
           body={conversationPrompt?.body}
+          inlineOnAndroid
           onRequestClose={closeConversationPrompt}
           primaryAction={conversationPrompt?.primaryAction}
           secondaryAction={conversationPrompt?.secondaryAction}

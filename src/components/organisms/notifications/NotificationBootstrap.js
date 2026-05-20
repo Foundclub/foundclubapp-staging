@@ -95,6 +95,7 @@ function NotificationBootstrapEnabled() {
     <>
       <GlobalPromptModal
         body={pushPermissionPrompt.body}
+        inlineOnAndroid
         onRequestClose={pushPermissionPrompt.onDismiss}
         primaryAction={{
           label: 'Activer',
@@ -111,6 +112,7 @@ function NotificationBootstrapEnabled() {
 
       <GlobalPromptModal
         body={calendarPrompt.body}
+        inlineOnAndroid
         onRequestClose={calendarPrompt.onDismiss}
         primaryAction={{
           label: 'Ajouter au calendrier',
