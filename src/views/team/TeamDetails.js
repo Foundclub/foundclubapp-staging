@@ -3983,6 +3983,7 @@ function TeamDetails({ navigation, route }) {
       </Modal>
 
       <CreateTrainerModal
+        clubId={team?.club?.documentId}
         isVisible={isCreateTrainerModalVisible}
         onClose={() => setIsCreateTrainerModalVisible(false)}
         onTrainerCreated={handleTrainerCreated}

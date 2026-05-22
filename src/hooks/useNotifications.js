@@ -23,12 +23,18 @@ import {
   Platform,
 } from 'react-native';
 
+import {
+  activateSessionByDocumentId,
+} from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { addDeviceToken } from '@/services/auth/authService';
+import {
+  addDeviceToken,
+  addDeviceTokenForSession,
+} from '@/services/auth/authService';
 import { emitCelebrationFromNotificationPayload } from '@/services/celebrations/celebrationRuntime';
 import {
   consumePendingOpenNotification,
@@ -245,13 +251,17 @@ const hasCelebrationPayload = (payload) => Boolean(
  * }} props
  */
 const useNotifications = ({ navigate, onSmartNotification }) => {
-  const [{ pendingNotification }, dispatch] = useAppContext();
+  const [{ activeSessionDocumentId, authSessions, pendingNotification }, dispatch] = useAppContext();
   const { userData } = useAuth();
   const queryClient = useQueryClient();
-  const { clearSafeTimer, setSafeInterval } = useSafeTimers();
+  const {
+    clearSafeTimer,
+    setSafeInterval,
+    setSafeTimeout,
+  } = useSafeTimers();
   const { isStartupWindowActive } = usePopupManager();
 
-  const { mutate: saveTokenMutation } = useMutation({
+  const { mutateAsync: saveTokenMutationAsync } = useMutation({
     meta: { preventToastError: true },
     mutationFn: addDeviceToken,
     onError: (error) => {
@@ -272,11 +282,17 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     },
   });
 
-  const saveToken = useCallback((token) => {
-    if (!token) return;
+  const saveToken = useCallback(async (token) => {
+    if (!token) return false;
     notificationsLogger.debug('[FCM] Calling saveTokenMutation with token:', `${token.substring(0, 20)}...`);
-    saveTokenMutation(token);
-  }, [saveTokenMutation]);
+    try {
+      await saveTokenMutationAsync(token);
+      await syncLinkedSessionsWithToken(token);
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }, [saveTokenMutationAsync, syncLinkedSessionsWithToken]);
 
   const smartNotifEnabled = useRef(ENABLE_SMART_NOTIFICATIONS);
   const [pendingCalendarPrompts, setPendingCalendarPrompts] = useState([]);
@@ -286,7 +302,9 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   const shownCalendarPromptKeyRef = useRef('');
   const queuedNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
   const handledNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
+  const linkedSessionSyncKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
   const tokenSyncInFlightRef = useRef(false);
+  const tokenSyncRetryTimerRef = useRef(null);
   const lastTokenSyncAtRef = useRef(0);
   const lastSyncedUserIdRef = useRef('');
   const currentUserNotificationIdentity = getUserNotificationIdentity(userData);
@@ -328,8 +346,67 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     if (!userData) {
       setPendingPushPermissionReason('');
       lastSyncedUserIdRef.current = '';
+      linkedSessionSyncKeysRef.current.clear();
+      if (tokenSyncRetryTimerRef.current) {
+        clearSafeTimer(tokenSyncRetryTimerRef.current);
+        tokenSyncRetryTimerRef.current = null;
+      }
     }
-  }, [userData]);
+  }, [clearSafeTimer, userData]);
+
+  const syncLinkedSessionsWithToken = useCallback(async (token) => {
+    const normalizedToken = typeof token === 'string' ? token.trim() : '';
+    if (!normalizedToken) {
+      return;
+    }
+
+    const sessions = Array.isArray(authSessions) ? authSessions : [];
+    if (sessions.length <= 1) {
+      return;
+    }
+
+    const pendingSessionSyncs = sessions
+      .map((session) => {
+        const sessionDocumentId = String(session?.user?.documentId || '').trim();
+        const sessionToken = String(session?.token || '').trim();
+        const syncKey = `${normalizedToken}:${sessionDocumentId}`;
+
+        if (!sessionDocumentId || !sessionToken || linkedSessionSyncKeysRef.current.has(syncKey)) {
+          return null;
+        }
+
+        return {
+          sessionDocumentId,
+          sessionToken,
+          syncKey,
+        };
+      })
+      .filter(Boolean);
+
+    await Promise.all(pendingSessionSyncs.map(async (sessionSync) => {
+      try {
+        await addDeviceTokenForSession(sessionSync.sessionToken, normalizedToken);
+        rememberRuntimeKey(linkedSessionSyncKeysRef, sessionSync.syncKey);
+      } catch (error) {
+        const typedError = /** @type {any} */ (error);
+        const statusCode = typedError?.status || typedError?.response?.status;
+        if (statusCode === 401 || statusCode === 403) {
+          notificationsLogger.warn('[FCM] Linked session token sync skipped: session authorization rejected.', {
+            sessionDocumentId: sessionSync.sessionDocumentId,
+          });
+        } else if (isNetworkError(typedError)) {
+          notificationsLogger.warn('[FCM] Linked session token sync postponed: network unavailable.', {
+            sessionDocumentId: sessionSync.sessionDocumentId,
+          });
+        } else {
+          notificationsLogger.warn('[FCM] Linked session token sync failed.', {
+            error: typedError?.message || 'unknown',
+            sessionDocumentId: sessionSync.sessionDocumentId,
+          });
+        }
+      }
+    }));
+  }, [authSessions]);
 
   const finalizeCalendarPrompt = useCallback(() => {
     if (!pendingCalendarPromptKey) return;
@@ -353,7 +430,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
   const syncTokenIfNeeded = useCallback(async (reason = 'manual', options = {}) => {
     if (!ENABLE_PUSH_NOTIFICATIONS || !userData) {
-      return;
+      return 'skipped';
     }
 
     const bypassPreprompt = Boolean(options?.bypassPreprompt);
@@ -367,7 +444,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       tokenSyncInFlightRef.current
       || (!force && now - lastTokenSyncAtRef.current < 30000 && reason !== 'token_refresh')
     ) {
-      return;
+      return 'throttled';
     }
 
     tokenSyncInFlightRef.current = true;
@@ -378,7 +455,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       const messagingInstance = getMessagingInstanceSafe();
       if (!messagingInstance) {
         notificationsLogger.warn('[FCM] Token retrieval skipped: messaging unavailable.');
-        return;
+        return 'skipped';
       }
       const permissionGranted = await getPushPermissionGranted();
 
@@ -394,7 +471,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
       if (shouldDeferBehindInAppPreprompt) {
         notificationsLogger.info('[FCM] Deferring token sync until push pre-prompt is answered.', { reason });
-        return;
+        return 'deferred';
       }
 
       if (Platform.OS === 'ios') {
@@ -405,7 +482,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         const didGrantPermission = await getPushPermissionGranted();
         if (!didGrantPermission) {
           notificationsLogger.info('[FCM] Permission denied after iOS prompt. Token sync aborted.', { reason });
-          return;
+          return 'denied';
         }
         const registered = await messagingInstance.isDeviceRegisteredForRemoteMessages;
         notificationsLogger.debug('[FCM] Device registered for remote messages:', registered);
@@ -426,7 +503,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         );
         if (!didGrantPermission) {
           notificationsLogger.info('[FCM] Permission denied after Android prompt. Token sync aborted.', { reason });
-          return;
+          return 'denied';
         }
       }
 
@@ -439,9 +516,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           isFatal: false,
         });
         notificationsLogger.warn('[FCM] Empty token returned. Token sync skipped.', { reason });
-        return;
+        return 'failed';
       }
-      saveToken(token);
+      const didSaveToken = await saveToken(token);
+      return didSaveToken ? 'success' : 'failed';
     } catch (err) {
       const typedError = /** @type {any} */ (err);
       const errorMessage = typeof typedError === 'string'
@@ -455,10 +533,35 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       } else {
         notificationsLogger.error('[FCM] Error retrieving token:', typedError);
       }
+      return 'failed';
     } finally {
       tokenSyncInFlightRef.current = false;
     }
   }, [requestPushPermissionPrePrompt, saveToken, userData]);
+
+  const scheduleTokenSyncRetry = useCallback((userIdentity, reason = 'retry') => {
+    if (!userIdentity || tokenSyncRetryTimerRef.current) {
+      return;
+    }
+
+    tokenSyncRetryTimerRef.current = setSafeTimeout(async () => {
+      tokenSyncRetryTimerRef.current = null;
+
+      if (getUserNotificationIdentity(userData) !== userIdentity) {
+        return;
+      }
+
+      notificationsLogger.info('[FCM] Retrying token sync after earlier failure.', {
+        reason,
+        userIdentity,
+      });
+
+      const retryStatus = await syncTokenIfNeeded(`retry_${reason}`, { force: true });
+      if (retryStatus === 'success') {
+        lastSyncedUserIdRef.current = userIdentity;
+      }
+    }, 15000);
+  }, [setSafeTimeout, syncTokenIfNeeded, userData]);
 
   /**
    * @typedef {{
@@ -533,6 +636,29 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       return fallback !== false;
     }
 
+    const targetSessionDocumentId = String(notificationData?.targetUserDocumentId || '').trim();
+    if (targetSessionDocumentId) {
+      const activationResult = activateSessionByDocumentId(targetSessionDocumentId);
+      if (!activationResult?.activated && activationResult?.reason === 'session_not_found') {
+        notificationsLogger.warn('[NOTIF_OPENED] target session missing locally, opening current account notification center instead.', {
+          targetSessionDocumentId,
+          type: notificationData.type,
+        });
+        const fallback = navigate(RouteNames.NotificationList);
+        if (fallback !== false) {
+          markHandled();
+        }
+        return fallback !== false;
+      }
+
+      if (String(activeSessionDocumentId || '').trim() !== targetSessionDocumentId) {
+        notificationsLogger.debug(
+          `[NOTIF_OPENED] waiting_for_account_switch target=${targetSessionDocumentId} current=${String(activeSessionDocumentId || '').trim() || 'none'} type=${notificationData.type}`,
+        );
+        return false;
+      }
+    }
+
     if (notificationData.type === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) {
       maybePromptAddToCalendar(notificationData);
     }
@@ -564,7 +690,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
     notificationsLogger.debug(`[NOTIF_OPENED] type=${notificationData.type} route=${destination.route} handled=${Boolean(handled)}`);
     return handled;
-  }, [invalidateNotificationQueries, maybePromptAddToCalendar, navigate]);
+  }, [activeSessionDocumentId, invalidateNotificationQueries, maybePromptAddToCalendar, navigate]);
 
   const smartForegroundTypes = useRef(new Set([
     NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER,
@@ -697,10 +823,17 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
       if (type === EventType.PRESS && detail.notification?.data?.type) {
         invalidateNotificationQueries();
-        handleNavigateOnOpen(normalizeNotificationPayload(detail.notification.data));
+        const normalizedData = normalizeNotificationPayload(detail.notification.data);
+        const handled = handleNavigateOnOpen(normalizedData);
+        if (!handled) {
+          dispatch({
+            payload: normalizedData,
+            type: 'SET_PENDING_NOTIFICATION',
+          });
+        }
       }
     });
-  }, [handleNavigateOnOpen, invalidateNotificationQueries]);
+  }, [dispatch, handleNavigateOnOpen, invalidateNotificationQueries]);
 
   useEffect(() => {
     notificationsLogger.debug('[FCM] useEffect triggered - userData:', !!userData, 'userIdentity:', currentUserNotificationIdentity);
@@ -709,8 +842,22 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       && currentUserNotificationIdentity
       && lastSyncedUserIdRef.current !== currentUserNotificationIdentity
     ) {
-      lastSyncedUserIdRef.current = currentUserNotificationIdentity;
-      syncTokenIfNeeded('login', { force: true });
+      if (tokenSyncRetryTimerRef.current) {
+        clearSafeTimer(tokenSyncRetryTimerRef.current);
+        tokenSyncRetryTimerRef.current = null;
+      }
+
+      (async () => {
+        const syncStatus = await syncTokenIfNeeded('login', { force: true });
+        if (syncStatus === 'success') {
+          lastSyncedUserIdRef.current = currentUserNotificationIdentity;
+          return;
+        }
+
+        if (syncStatus === 'failed') {
+          scheduleTokenSyncRetry(currentUserNotificationIdentity, 'login');
+        }
+      })();
     }
 
     const queuePendingNotification = (payload, source) => {
@@ -798,10 +945,12 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       appStateSubscription?.remove?.();
     };
   }, [
+    clearSafeTimer,
     currentUserNotificationIdentity,
     dispatch,
     invalidateNotificationQueries,
     saveToken,
+    scheduleTokenSyncRetry,
     syncTokenIfNeeded,
     userData,
   ]);

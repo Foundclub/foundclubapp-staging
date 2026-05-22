@@ -26,7 +26,7 @@ const onRequest = (axiosConfig) => {
   const token = getAuthTokens()?.token;
   const newConfig = { ...axiosConfig };
 
-  if (token) {
+  if (token && !newConfig.headers?.Authorization) {
     newConfig.headers.Authorization = `Bearer ${token}`;
   }
 

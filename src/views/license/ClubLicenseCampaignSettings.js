@@ -1,4 +1,5 @@
 /* eslint-disable perfectionist/sort-objects */
+import { useQueryClient } from '@tanstack/react-query';
 import { format, isValid, parse } from 'date-fns';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
@@ -37,11 +38,15 @@ import { connectLicenseHelloAsso } from '@/services/license/licenseService';
 import { useGetSections } from '@/services/section/sectionQueries';
 
 import {
+  buildEventCampaignDefaults,
+  buildEventTargetConfig,
+} from './eventCampaignDefaults';
+import {
   LicenseCard,
   LicenseEmptyState,
-  LicenseStatusChip,
   licenseRadius,
   licenseSpacing,
+  LicenseStatusChip,
   normalizePaymentModes,
   paymentModeLabels,
 } from './licenseDesignSystem';
@@ -369,6 +374,9 @@ const normalizePricingRules = (campaign) => {
 };
 const createTargetConfigDraft = (campaign) => {
   const config = campaign?.targetConfig || {};
+  if (String(config.source || '').toLowerCase() === 'event_participants') {
+    return buildEventTargetConfig(String(config.eventId || '').trim());
+  }
   const categoryIds = Array.isArray(config.categoryIds || config.categories)
     ? (config.categoryIds || config.categories).map(referenceKey).filter(Boolean)
     : [];
@@ -616,29 +624,39 @@ const toggleRole = (items, value) => {
     ? items.filter((item) => item !== key)
     : [...items, key];
 };
-const buildTargetSummaryPayload = (targetConfig) => ({
-  categoryCount: targetConfig.categoryIds.length,
-  hasScopedFilters: Boolean(
+const buildTargetSummaryPayload = (targetConfig) => {
+  const config = /** @type {any} */ (targetConfig);
+  const isEventTarget = config.source === 'event_participants';
+  const hasScopedFilters = Boolean(
     targetConfig.roles.length
     || targetConfig.teamIds.length
     || targetConfig.categoryIds.length
     || targetConfig.sectionIds.length
     || targetConfig.levelIds.length,
-  ),
-  includeAllMembers: !(
-    targetConfig.roles.length
-    || targetConfig.teamIds.length
-    || targetConfig.categoryIds.length
-    || targetConfig.sectionIds.length
-    || targetConfig.levelIds.length
-  ),
-  levelCount: targetConfig.levelIds.length,
-  roleCount: targetConfig.roles.length,
-  roles: targetConfig.roles,
-  sectionCount: targetConfig.sectionIds.length,
-  teamCount: targetConfig.teamIds.length,
-});
+  );
+  return {
+    categoryCount: isEventTarget ? 0 : targetConfig.categoryIds.length,
+    eventId: isEventTarget ? config.eventId : undefined,
+    hasScopedFilters: isEventTarget ? true : hasScopedFilters,
+    includeAllMembers: isEventTarget ? false : !hasScopedFilters,
+    includeExternalParticipants: isEventTarget ? true : undefined,
+    levelCount: targetConfig.levelIds.length,
+    participantStatuses: isEventTarget ? ['accepted'] : undefined,
+    roleCount: targetConfig.roles.length,
+    roles: targetConfig.roles,
+    sectionCount: targetConfig.sectionIds.length,
+    source: config.source,
+    teamCount: targetConfig.teamIds.length,
+  };
+};
 const normalizeTargetConfigPayload = (targetConfig) => {
+  const config = /** @type {any} */ (targetConfig);
+  if (config.source === 'event_participants') {
+    return {
+      ...buildEventTargetConfig(config.eventId),
+      eventId: config.eventId,
+    };
+  }
   const roles = targetConfig.roles.filter(Boolean);
   const teamIds = targetConfig.teamIds.filter(Boolean);
   const categoryIds = targetConfig.categoryIds.filter(Boolean);
@@ -1145,18 +1163,29 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const clubId = route?.params?.clubId;
   const routeCampaignId = route?.params?.campaignId;
   const routeCampaign = route?.params?.campaign;
-  const campaignQuery = useCurrentLicenseCampaign(useMemo(() => ({ clubId, includeDraft: true }), [clubId]), { enabled: Boolean(clubId && !routeCampaignId) });
+  const routeEventId = String(route?.params?.eventId || '').trim();
+  const routeEvent = route?.params?.event || null;
+  const createNewCampaign = Boolean(route?.params?.createNew || (routeEventId && !routeCampaignId));
+  const todayIsoDateValue = useMemo(() => getTodayIsoDateValue(), []);
+  const eventCampaignDefaults = useMemo(() => buildEventCampaignDefaults({
+    event: routeEvent,
+    eventId: routeEventId,
+    todayIsoDateValue,
+  }), [routeEvent, routeEventId, todayIsoDateValue]);
+  const campaignQuery = useCurrentLicenseCampaign(useMemo(() => ({ clubId, includeDraft: true }), [clubId]), { enabled: Boolean(clubId && !routeCampaignId && !createNewCampaign) });
   const campaignByIdQuery = useLicenseCampaign(routeCampaignId, { enabled: Boolean(routeCampaignId) });
-  const campaign = routeCampaignId ? (campaignByIdQuery.data || routeCampaign) : campaignQuery.data;
+  const currentCampaign = createNewCampaign ? routeCampaign : campaignQuery.data;
+  const campaign = routeCampaignId ? (campaignByIdQuery.data || routeCampaign) : currentCampaign;
   const clubQuery = useGetClub(clubId, { enabled: Boolean(clubId) });
   const sectionsQuery = useGetSections();
   const categoriesQuery = useGetCategories();
   const levelsQuery = useGetLevels();
-  const campaignIsLoading = routeCampaignId ? !campaign && campaignByIdQuery.isLoading : campaignQuery.isLoading;
-  const campaignHasError = routeCampaignId ? !campaign && campaignByIdQuery.isError : campaignQuery.isError;
+  const campaignIsLoading = routeCampaignId ? !campaign && campaignByIdQuery.isLoading : (!createNewCampaign && campaignQuery.isLoading);
+  const campaignHasError = routeCampaignId ? !campaign && campaignByIdQuery.isError : (!createNewCampaign && campaignQuery.isError);
   const campaignId = routeCampaignId || campaign?.documentId || campaign?.id;
   const club = clubQuery.data;
   const clubMembers = useMemo(() => [...(club?.members || [])].sort((left, right) => (
@@ -1213,22 +1242,21 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     .filter((level) => referenceKey(level))
     .sort((left, right) => String(left?.name || '').localeCompare(String(right?.name || ''), 'fr', { sensitivity: 'base' }))
     .map((level) => ({ key: referenceKey(level), label: level?.name || 'Niveau' })), [levelsQuery.data]);
-  const initialCampaignName = String(campaign?.name || '').trim();
-  const todayIsoDateValue = useMemo(() => getTodayIsoDateValue(), []);
+  const initialCampaignName = String(campaign?.name || eventCampaignDefaults?.name || '').trim();
   const [seasonLabel, setSeasonLabel] = useState(campaign?.seasonLabel || detectSeasonLabelFromDates({
-    endDate: campaign?.endDate,
-    startDate: campaign?.startDate,
+    endDate: campaign?.endDate || eventCampaignDefaults?.endDate,
+    startDate: campaign?.startDate || eventCampaignDefaults?.startDate,
   }));
   const [seasonLabelManuallyEdited, setSeasonLabelManuallyEdited] = useState(Boolean(campaign?.seasonLabel));
   const [name, setName] = useState(initialCampaignName);
   const [nameAutoManaged, setNameAutoManaged] = useState(!initialCampaignName);
-  const [type, setType] = useState(campaign?.type || 'license');
-  const [description, setDescription] = useState(campaign?.description || '');
-  const [startDate, setStartDate] = useState(campaign?.startDate || todayIsoDateValue);
-  const [endDate, setEndDate] = useState(campaign?.endDate || todayIsoDateValue);
+  const [type, setType] = useState(campaign?.type || eventCampaignDefaults?.type || 'license');
+  const [description, setDescription] = useState(campaign?.description || eventCampaignDefaults?.description || '');
+  const [startDate, setStartDate] = useState(campaign?.startDate || eventCampaignDefaults?.startDate || todayIsoDateValue);
+  const [endDate, setEndDate] = useState(campaign?.endDate || eventCampaignDefaults?.endDate || todayIsoDateValue);
   const [internalNote, setInternalNote] = useState(campaign?.internalNote || '');
   const [currency, setCurrency] = useState(String(campaign?.currency || 'EUR').toUpperCase());
-  const [amount, setAmount] = useState(centsToEuro(campaign?.defaultAmountCents || 0));
+  const [amount, setAmount] = useState(campaign?.defaultAmountCents ? centsToEuro(campaign.defaultAmountCents) : (eventCampaignDefaults?.amount || centsToEuro(0)));
   const [overdueAfterDate, setOverdueAfterDate] = useState(campaign?.dueDate || '');
   const [allowInstallments, setAllowInstallments] = useState(Boolean(campaign?.allowInstallments));
   const [installmentCount, setInstallmentCount] = useState(String(campaign?.installmentCount || 3));
@@ -1251,7 +1279,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const [removedDocumentRequestIds, setRemovedDocumentRequestIds] = useState([]);
   const [pricingRules, setPricingRules] = useState(() => normalizePricingRules(campaign));
   const [removedPricingRuleIds, setRemovedPricingRuleIds] = useState([]);
-  const [targetConfig, setTargetConfig] = useState(() => createTargetConfigDraft(campaign));
+  const [targetConfig, setTargetConfig] = useState(() => (
+    /** @type {any} */ (eventCampaignDefaults?.targetConfig || createTargetConfigDraft(campaign))
+  ));
   const initialAutomation = normalizeReminderAutomation(campaign);
   const [autoReminderEnabled, setAutoReminderEnabled] = useState(initialAutomation.enabled);
   const [reminderBeforeDueDays, setReminderBeforeDueDays] = useState(initialAutomation.beforeDueDays);
@@ -1263,9 +1293,26 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const [reminderTargetStatuses, setReminderTargetStatuses] = useState(initialAutomation.targetStatuses);
   const [wizardStepIndex, setWizardStepIndex] = useState(0);
   const allowScreenExitRef = useRef(false);
+  const isEventParticipantTarget = /** @type {any} */ (targetConfig).source === 'event_participants';
 
   useEffect(() => {
-    if (!campaign) return;
+    if (!campaign) {
+      if (!eventCampaignDefaults) return;
+      setName(eventCampaignDefaults.name || '');
+      setNameAutoManaged(!String(eventCampaignDefaults.name || '').trim());
+      setType(eventCampaignDefaults.type || 'other');
+      setDescription(eventCampaignDefaults.description || '');
+      setSeasonLabel(detectSeasonLabelFromDates({
+        endDate: eventCampaignDefaults.endDate,
+        startDate: eventCampaignDefaults.startDate,
+      }));
+      setSeasonLabelManuallyEdited(false);
+      setStartDate(eventCampaignDefaults.startDate || todayIsoDateValue);
+      setEndDate(eventCampaignDefaults.endDate || todayIsoDateValue);
+      setAmount(eventCampaignDefaults.amount || centsToEuro(0));
+      setTargetConfig(eventCampaignDefaults.targetConfig);
+      return;
+    }
     const automation = normalizeReminderAutomation(campaign);
     setName(campaign.name || '');
     setNameAutoManaged(!String(campaign.name || '').trim());
@@ -1312,7 +1359,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     setReminderOnDueDate(automation.onDueDate);
     setReminderStartDate(automation.startDate);
     setReminderTargetStatuses(automation.targetStatuses);
-  }, [campaign, todayIsoDateValue]);
+  }, [campaign, eventCampaignDefaults, todayIsoDateValue]);
 
   const updateDocumentRequest = useCallback((localId, patch) => {
     setDocumentRequests((currentItems) => currentItems.map((item) => (
@@ -1599,6 +1646,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         : null,
       endDate: endDate.trim() || null,
       dueDate: overdueAfterDate.trim() || null,
+      eventId: isEventParticipantTarget
+        ? (/** @type {any} */ (targetConfig).eventId || routeEventId)
+        : undefined,
       externalPaymentUrl: externalUrl,
       internalNote,
       installmentCount: Number(installmentCount) || 1,
@@ -1644,9 +1694,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     }));
   }, []);
 
-  const providerMutation = useLicenseMutation(async () => {
-    return true;
-  }, campaignId);
+  const providerMutation = useLicenseMutation(async () => true, campaignId);
   const helloAssoMutation = useLicenseMutation(async () => {
     if (!helloAssoScopePayload) {
       throw new Error('Le scope HelloAsso est incomplet. Verifie le club ou le multisport choisi.');
@@ -1793,6 +1841,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           return;
         }
         syncSavedCampaignParams(savedCampaignId);
+        if (routeEventId) {
+          queryClient.invalidateQueries({ queryKey: ['event', routeEventId] });
+          queryClient.invalidateQueries({ queryKey: ['licenses', 'campaigns'] });
+        }
         const isDraftSave = requestedStatus === 'draft';
         const isScheduledSave = requestedStatus === 'scheduled';
         let successTitle = 'Campagne ouverte';
@@ -1813,7 +1865,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         }
       },
     });
-  }, [campaign?.status, campaignId, documentRequests, externalUrl, goToCampaignOperations, helloAssoIsPublishReady, helloAssoStatusMessage, paymentModes.external_link, paymentModes.helloasso, pricingRules, providerMutation, removedDocumentRequestIds, removedPricingRuleIds, saveMutation, syncSavedCampaignParams]);
+  }, [campaign?.status, campaignId, documentRequests, externalUrl, goToCampaignOperations, helloAssoIsPublishReady, helloAssoStatusMessage, paymentModes.external_link, paymentModes.helloasso, pricingRules, providerMutation, queryClient, removedDocumentRequestIds, removedPricingRuleIds, routeEventId, saveMutation, syncSavedCampaignParams]);
 
   const save = useCallback(() => {
     persistCampaign({ status: canPublishFromWizard ? 'draft' : (campaign?.status || 'draft') });
@@ -1896,7 +1948,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       return { message: 'Le prix par defaut doit etre superieur a 0 EUR.', title: 'Montant invalide' };
     }
 
-    if (stepKey === 'targetMode' && !targetConfig.includeAllMembers) {
+    if (stepKey === 'targetMode' && !targetConfig.includeAllMembers && !isEventParticipantTarget) {
       const hasAtLeastOneFilter = Boolean(
         targetConfig.roles.length
         || targetConfig.teamIds.length
@@ -2004,6 +2056,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     helloAssoIsPublishReady,
     helloAssoStatusMessage,
     installmentCount,
+    isEventParticipantTarget,
     name,
     paymentModes.external_link,
     paymentModes.helloasso,
@@ -2097,6 +2150,33 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     paddingHorizontal: licenseSpacing.cardPadding,
     paddingVertical: licenseSpacing.cardPadding,
   }];
+  const targetFilterParts = [
+    `${targetConfig.roles.length} role(s)`,
+    `${targetConfig.teamIds.length} equipe(s)`,
+    `${targetConfig.categoryIds.length} categorie(s)`,
+    `${targetConfig.sectionIds.length} section(s)`,
+    `${targetConfig.levelIds.length} niveau(x)`,
+  ];
+  const filteredTargetSummary = `${targetFilterParts.join(', ')} filtres.`;
+  const reviewFilteredTargetSummary = `${targetFilterParts.join(', ')}.`;
+  let targetModeSummaryText = filteredTargetSummary;
+  if (isEventParticipantTarget) {
+    targetModeSummaryText = [
+      'Cible verrouillee sur les participants acceptes',
+      'de l evenement.',
+    ].join(' ');
+  } else if (targetConfig.includeAllMembers) {
+    targetModeSummaryText = 'La campagne concernera tout le club.';
+  }
+  let reviewTargetSummaryText = reviewFilteredTargetSummary;
+  if (isEventParticipantTarget) {
+    reviewTargetSummaryText = [
+      'Les participants acceptes de l evenement recevront',
+      'cette cotisation.',
+    ].join(' ');
+  } else if (targetConfig.includeAllMembers) {
+    reviewTargetSummaryText = 'Tous les membres du club seront pris en compte.';
+  }
 
   let stepContent = null;
 
@@ -2262,27 +2342,36 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   } else if (activeWizardStep.key === 'targetMode') {
     stepContent = (
       <View style={primaryStepCardStyle}>
-        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-          <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Tous les membres du club</Text>
+        {isEventParticipantTarget ? (
+          <View style={[Spaces.gap[8]]}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Participants acceptes de l evenement</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Active ce choix si la campagne concerne tout le club. Sinon, selectionne directement les profils vises.
+              Cette campagne est rattachee a un evenement. Les affectations seront generees pour les participants acceptes, y compris les participants externes.
             </Text>
           </View>
-          <Switch
-            onValueChange={(enabled) => setTargetConfig((current) => ({
-              ...current,
-              categoryIds: enabled ? [] : current.categoryIds,
-              includeAllMembers: enabled,
-              levelIds: enabled ? [] : current.levelIds,
-              roles: enabled ? [] : current.roles,
-              sectionIds: enabled ? [] : current.sectionIds,
-              teamIds: enabled ? [] : current.teamIds,
-            }))}
-            value={targetConfig.includeAllMembers}
-          />
-        </View>
-        {!targetConfig.includeAllMembers ? (
+        ) : (
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+            <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Tous les membres du club</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                Active ce choix si la campagne concerne tout le club. Sinon, selectionne directement les profils vises.
+              </Text>
+            </View>
+            <Switch
+              onValueChange={(enabled) => setTargetConfig((current) => ({
+                ...current,
+                categoryIds: enabled ? [] : current.categoryIds,
+                includeAllMembers: enabled,
+                levelIds: enabled ? [] : current.levelIds,
+                roles: enabled ? [] : current.roles,
+                sectionIds: enabled ? [] : current.sectionIds,
+                teamIds: enabled ? [] : current.teamIds,
+              }))}
+              value={targetConfig.includeAllMembers}
+            />
+          </View>
+        )}
+        {!targetConfig.includeAllMembers && !isEventParticipantTarget ? (
           <>
             <SelectionGroup
               description="Laisse vide si tu ne veux pas filtrer par role."
@@ -2318,9 +2407,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           </>
         ) : null}
         <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {targetConfig.includeAllMembers
-            ? 'La campagne concernera tout le club.'
-            : `${targetConfig.roles.length} role(s), ${targetConfig.teamIds.length} equipe(s), ${targetConfig.categoryIds.length} categorie(s), ${targetConfig.sectionIds.length} section(s), ${targetConfig.levelIds.length} niveau(x) filtres.`}
+          {targetModeSummaryText}
         </Text>
       </View>
     );
@@ -2654,9 +2741,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         <View style={primaryStepCardStyle}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Verification avant lancement</Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {targetConfig.includeAllMembers
-              ? 'Tous les membres du club seront pris en compte.'
-              : `${targetConfig.roles.length} role(s), ${targetConfig.teamIds.length} equipe(s), ${targetConfig.categoryIds.length} categorie(s), ${targetConfig.sectionIds.length} section(s), ${targetConfig.levelIds.length} niveau(x).`}
+            {reviewTargetSummaryText}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {enabledPaymentModeLabels.length

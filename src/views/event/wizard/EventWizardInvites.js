@@ -323,6 +323,16 @@ function EventWizardInvites({ navigation }) {
     });
     return map;
   }, [externalAudiences]);
+  const externalClubFilterCount = useMemo(
+    () => getExternalClubFilterCount(externalClubFilters),
+    [externalClubFilters],
+  );
+  const externalClubSearchQuery = useMemo(
+    () => String(externalClubSearch || '').trim(),
+    [externalClubSearch],
+  );
+  const hasExternalClubSearchQuery = externalClubSearchQuery.length >= 2;
+  const hasActiveExternalClubFilters = externalClubFilterCount > 0;
 
   const loadClubTeams = useCallback(async () => {
     if (!clubId) {
@@ -519,16 +529,6 @@ function EventWizardInvites({ navigation }) {
     }),
     [externalAudiences, selectedExternalClubId],
   );
-  const externalClubFilterCount = useMemo(
-    () => getExternalClubFilterCount(externalClubFilters),
-    [externalClubFilters],
-  );
-  const externalClubSearchQuery = useMemo(
-    () => String(externalClubSearch || '').trim(),
-    [externalClubSearch],
-  );
-  const hasExternalClubSearchQuery = externalClubSearchQuery.length >= 2;
-  const hasActiveExternalClubFilters = externalClubFilterCount > 0;
   const activityOptions = useMemo(
     () => (allActivities || []).map(({ documentId, name }) => ({
       label: name,

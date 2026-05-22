@@ -20,22 +20,35 @@ function SegmentedControl({
 }) {
   const { Colors, Fonts } = useTheme();
   const isWeb = Platform.OS === 'web';
+  const useEqualWidthLayout = centerContent;
+  const horizontalGap = isWeb ? 8 : horizontalScale(8.58);
+  const containerMinHeight = isWeb ? 44 : verticalScale(37.52);
+  const segmentMinHeight = isWeb ? 36 : verticalScale(32);
+  const segmentHorizontalPadding = isWeb ? 16 : horizontalScale(16);
+  const segmentVerticalPadding = isWeb ? 9 : verticalScale(8);
+  const segmentTextSize = isWeb ? 13 : moderateScale(12.87);
+  const segmentTextLineHeight = isWeb ? 18 : moderateScale(18);
+  const wrapperMinHeight = isWeb ? 52 : verticalScale(45);
+  const segmentRadius = moderateScale(33.24);
+  const selectedRadius = moderateScale(34.31);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
       alignItems: 'center',
       backgroundColor: Colors.transparent,
       flexDirection: 'row',
-      gap: horizontalScale(8.58),
-      minHeight: verticalScale(isWeb ? 44 : 37.52),
-      minWidth: horizontalScale(327),
-      paddingVertical: verticalScale(isWeb ? 2 : 0),
+      gap: horizontalGap,
+      minHeight: containerMinHeight,
+      paddingVertical: isWeb ? 2 : 0,
+      width: '100%',
     },
     containerCentered: {
-      flexGrow: 1,
       justifyContent: 'center',
-      paddingHorizontal: horizontalScale(4),
+      paddingHorizontal: isWeb ? 4 : horizontalScale(4),
       width: '100%',
+    },
+    containerEqualWidth: {
+      alignItems: 'stretch',
     },
     scroll: {
       width: '100%',
@@ -44,18 +57,22 @@ function SegmentedControl({
       alignItems: 'center',
       backgroundColor: Colors.transparent,
       borderColor: Colors.neutral500,
-      borderRadius: moderateScale(33.24),
+      borderRadius: segmentRadius,
       borderWidth: 1,
       flexDirection: 'row',
       justifyContent: 'center',
-      minHeight: verticalScale(isWeb ? 36 : 32),
-      paddingHorizontal: horizontalScale(16),
-      paddingVertical: verticalScale(isWeb ? 9 : 8),
+      minHeight: segmentMinHeight,
+      paddingHorizontal: segmentHorizontalPadding,
+      paddingVertical: segmentVerticalPadding,
+    },
+    segmentEqualWidth: {
+      flex: 1,
+      minWidth: 0,
     },
     segmentSelected: {
       backgroundColor: Colors.primary500,
       borderColor: Colors.primary500,
-      borderRadius: moderateScale(34.31),
+      borderRadius: selectedRadius,
       elevation: 4,
       shadowColor: Colors.neutral900,
       shadowOffset: {
@@ -68,58 +85,84 @@ function SegmentedControl({
     segmentText: {
       ...Fonts.p3,
       color: Colors.neutral00,
-      fontSize: moderateScale(12.87),
+      flexShrink: 1,
+      fontSize: segmentTextSize,
       includeFontPadding: !isWeb ? false : undefined,
-      lineHeight: moderateScale(isWeb ? 18.5 : 18),
+      lineHeight: segmentTextLineHeight,
       textAlign: 'center',
       textAlignVertical: 'center',
     },
     segmentTextSelected: {
       ...Fonts.p3Bold,
       color: Colors.neutral00,
-      fontSize: moderateScale(12.87),
+      fontSize: segmentTextSize,
       includeFontPadding: !isWeb ? false : undefined,
-      lineHeight: moderateScale(isWeb ? 18.5 : 18),
+      lineHeight: segmentTextLineHeight,
     },
     wrapper: {
-      minHeight: verticalScale(isWeb ? 52 : 45),
+      minHeight: wrapperMinHeight,
       width: '100%',
     },
-  }), [Colors, Fonts.p3, Fonts.p3Bold, isWeb]);
+  }), [
+    Colors,
+    Fonts.p3,
+    Fonts.p3Bold,
+    containerMinHeight,
+    horizontalGap,
+    isWeb,
+    segmentHorizontalPadding,
+    segmentMinHeight,
+    segmentRadius,
+    segmentTextLineHeight,
+    segmentTextSize,
+    segmentVerticalPadding,
+    selectedRadius,
+    wrapperMinHeight,
+  ]);
+
+  const segmentButtons = options.map((option) => {
+    const isSelected = option.value === value;
+    return (
+      <TouchableOpacity
+        activeOpacity={0.8}
+        key={option.value}
+        onPress={() => onChange(option.value)}
+        style={[
+          styles.segment,
+          useEqualWidthLayout && styles.segmentEqualWidth,
+          isSelected && styles.segmentSelected,
+        ]}
+      >
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.segmentText,
+            isSelected && styles.segmentTextSelected,
+          ]}
+        >
+          {option.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  });
 
   return (
     <View style={styles.wrapper}>
-      <ScrollView
-        bounces={!centerContent}
-        contentContainerStyle={[styles.container, centerContent && styles.containerCentered]}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.scroll}
-      >
-        {options.map((option) => {
-          const isSelected = option.value === value;
-          return (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              key={option.value}
-              onPress={() => onChange(option.value)}
-              style={[
-                styles.segment,
-                isSelected && styles.segmentSelected,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  isSelected && styles.segmentTextSelected,
-                ]}
-              >
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      {useEqualWidthLayout ? (
+        <View style={[styles.container, styles.containerCentered, styles.containerEqualWidth]}>
+          {segmentButtons}
+        </View>
+      ) : (
+        <ScrollView
+          bounces={!centerContent}
+          contentContainerStyle={[styles.container, centerContent && styles.containerCentered]}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.scroll}
+        >
+          {segmentButtons}
+        </ScrollView>
+      )}
     </View>
   );
 }

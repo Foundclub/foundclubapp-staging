@@ -867,6 +867,7 @@ function TeamEdit({ navigation, route }) {
         </View>
       </KeyboardAvoidingView>
       <CreateTrainerModal
+        clubId={effectiveClubId}
         isVisible={isCreateTrainerModalVisible}
         onClose={() => setIsCreateTrainerModalVisible(false)}
         onTrainerCreated={handleTrainerCreated}

@@ -65,4 +65,30 @@ describe('notificationNavigation', () => {
     expect(normalized.matchId).toBe('77');
     expect(getNotificationOpenKey(normalized)).toContain(NOTIFICATION_TYPES.LEAGUE_SCORE_REMINDER_2H);
   });
+
+  test('keeps target account context and differentiates open keys across local accounts', () => {
+    const firstPayload = normalizeNotificationPayload({
+      data: JSON.stringify({
+        eventId: 55,
+        targetUserDocumentId: ' user-a ',
+        targetUserId: 10,
+      }),
+      notificationId: 'notif-1',
+      type: NOTIFICATION_TYPES.EVENT_REMINDER,
+    });
+
+    const secondPayload = normalizeNotificationPayload({
+      data: JSON.stringify({
+        eventId: 55,
+        targetUserDocumentId: 'user-b',
+        targetUserId: 11,
+      }),
+      notificationId: 'notif-1',
+      type: NOTIFICATION_TYPES.EVENT_REMINDER,
+    });
+
+    expect(firstPayload.targetUserDocumentId).toBe('user-a');
+    expect(firstPayload.targetUserId).toBe('10');
+    expect(getNotificationOpenKey(firstPayload)).not.toBe(getNotificationOpenKey(secondPayload));
+  });
 });

@@ -1,6 +1,9 @@
 import { sanitizeUser } from '@/domains/auth/authSanitizer';
 import { storage } from '@/store/appContext';
-import { getAuthRuntimeSnapshot } from '@/store/authRuntime';
+import {
+  dispatchAuthRuntimeAction,
+  getAuthRuntimeSnapshot,
+} from '@/store/authRuntime';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -90,6 +93,136 @@ export const getAuthTokens = () => {
   return auth;
 };
 
+const normalizeDocumentId = (value) => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const getSessionDocumentId = (session) => normalizeDocumentId(session?.user?.documentId);
+
+const orderSessionsByActive = (sessions, activeSessionDocumentId) => {
+  const safeSessions = Array.isArray(sessions) ? sessions : [];
+  const normalizedActiveDocumentId = normalizeDocumentId(activeSessionDocumentId);
+  if (!normalizedActiveDocumentId) {
+    return [...safeSessions];
+  }
+
+  const matchingSession = safeSessions.find(
+    (session) => getSessionDocumentId(session) === normalizedActiveDocumentId,
+  );
+
+  if (!matchingSession) {
+    return [...safeSessions];
+  }
+
+  return [
+    matchingSession,
+    ...safeSessions.filter((session) => getSessionDocumentId(session) !== normalizedActiveDocumentId),
+  ];
+};
+
+const safeJsonParse = (rawValue, fallbackValue) => {
+  if (typeof rawValue !== 'string' || rawValue.trim().length === 0) {
+    return fallbackValue;
+  }
+
+  try {
+    return JSON.parse(rawValue);
+  } catch (_error) {
+    return fallbackValue;
+  }
+};
+
+export const getStoredAuthSessions = () => {
+  const runtimeSnapshot = getAuthRuntimeSnapshot();
+  if (runtimeSnapshot.ready) {
+    return Array.isArray(runtimeSnapshot.authSessions) ? runtimeSnapshot.authSessions : [];
+  }
+
+  const storedAuth = safeJsonParse(storage.getString('auth'), null);
+  const storedSessions = safeJsonParse(storage.getString('authSessions'), []);
+  const orderedSessions = Array.isArray(storedSessions) ? [...storedSessions] : [];
+  const storedAuthDocumentId = getSessionDocumentId(storedAuth);
+
+  if (
+    storedAuthDocumentId
+    && !orderedSessions.some((session) => getSessionDocumentId(session) === storedAuthDocumentId)
+  ) {
+    orderedSessions.push(storedAuth);
+  }
+
+  return orderedSessions.filter(Boolean);
+};
+
+export const findAuthSessionByDocumentId = (documentId) => {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!normalizedDocumentId) return null;
+
+  return getStoredAuthSessions().find(
+    (session) => getSessionDocumentId(session) === normalizedDocumentId,
+  ) || null;
+};
+
+export const getActiveSessionDocumentId = () => {
+  const runtimeSnapshot = getAuthRuntimeSnapshot();
+  if (runtimeSnapshot.ready) {
+    return normalizeDocumentId(runtimeSnapshot.activeSessionDocumentId)
+      || getSessionDocumentId(runtimeSnapshot.auth);
+  }
+
+  return normalizeDocumentId(storage.getString('activeSessionDocumentId'))
+    || getSessionDocumentId(safeJsonParse(storage.getString('auth'), null));
+};
+
+export const activateSessionByDocumentId = (documentId) => {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!normalizedDocumentId) {
+    return { activated: false, reason: 'missing_document_id' };
+  }
+
+  const session = findAuthSessionByDocumentId(normalizedDocumentId);
+  if (!session?.token) {
+    return { activated: false, reason: 'session_not_found' };
+  }
+
+  const currentDocumentId = getActiveSessionDocumentId();
+  if (currentDocumentId === normalizedDocumentId) {
+    return {
+      activated: true,
+      session,
+      switched: false,
+    };
+  }
+
+  const didDispatch = dispatchAuthRuntimeAction({
+    payload: normalizedDocumentId,
+    type: 'SET_ACTIVE_SESSION',
+  });
+
+  if (!didDispatch) {
+    const orderedSessions = orderSessionsByActive(getStoredAuthSessions(), normalizedDocumentId);
+    storage.set('activeSessionDocumentId', normalizedDocumentId);
+    storage.set('auth', JSON.stringify(session));
+    storage.set('authSessions', JSON.stringify(orderedSessions));
+  }
+
+  return {
+    activated: true,
+    session,
+    switched: true,
+  };
+};
+
+export const activateSessionForNotificationPayload = (payload) => {
+  const normalizedDocumentId = normalizeDocumentId(payload?.targetUserDocumentId);
+  if (!normalizedDocumentId) {
+    return { activated: false, reason: 'no_target_user' };
+  }
+
+  return activateSessionByDocumentId(normalizedDocumentId);
+};
+
 /**
  * Get the onboarding view to show based on user type and existing user data
  * @param {User} params - The user data parameters
@@ -97,7 +230,7 @@ export const getAuthTokens = () => {
  */
 export const getOnboardingViews = ({
   address, avatar, bestLevel, birthdate, category, club, documentId,
-  firstname, height, lastname, myTeams, parentalDeclarationAccepted, position, preferredSport, role,
+  firstname, height, lastname, multisportClubs, myTeams, parentalDeclarationAccepted, position, preferredSport, role,
   section, sportsHistory, trainedTeams, weight,
 }) => {
   // Check if user has already completed onboarding once
@@ -120,7 +253,8 @@ export const getOnboardingViews = ({
 
   const roleName = role?.name || USER_ROLES.new;
   const roleKey = getUserRoleKey(roleName);
-  const hasClubAffiliation = !!(club?.documentId || club?.id);
+  const hasClubAffiliation = !!(club?.documentId || club?.id)
+    || ((Array.isArray(multisportClubs) ? multisportClubs.length : 0) > 0);
   const hasTeamAffiliation = (Array.isArray(myTeams) ? myTeams.length : 0)
     + (Array.isArray(trainedTeams) ? trainedTeams.length : 0) > 0;
   const shouldShowAffiliationGuide = (() => {

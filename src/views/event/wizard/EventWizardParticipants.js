@@ -99,6 +99,11 @@ function EventWizardParticipants({ navigation }) {
     borderColor: 'rgba(1, 179, 244, 0.24)',
     borderWidth: 1,
   };
+  const capacityModeControlWrapperStyle = {
+    alignSelf: 'center',
+    maxWidth: 540,
+    width: '100%',
+  };
 
   const counterButtonStyle = (isEnabled) => ([
     ApplicationStyle.card,
@@ -167,21 +172,23 @@ function EventWizardParticipants({ navigation }) {
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
             {t('eventWizard.steps.participants.modeLabel', 'Mode de capacite')}
           </Text>
-          <SegmentedControl
-            centerContent
-            onChange={setCapacityMode}
-            options={[
-              {
-                label: t('eventWizard.steps.participants.unlimited', 'Illimite'),
-                value: 'unlimited',
-              },
-              {
-                label: t('eventWizard.steps.participants.fixed', 'Capacite fixe'),
-                value: 'fixed',
-              },
-            ]}
-            value={capacityMode}
-          />
+          <View style={capacityModeControlWrapperStyle}>
+            <SegmentedControl
+              centerContent
+              onChange={setCapacityMode}
+              options={[
+                {
+                  label: t('eventWizard.steps.participants.unlimited', 'Illimite'),
+                  value: 'unlimited',
+                },
+                {
+                  label: t('eventWizard.steps.participants.fixed', 'Capacite fixe'),
+                  value: 'fixed',
+                },
+              ]}
+              value={capacityMode}
+            />
+          </View>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {capacityMode === 'unlimited'
               ? t(

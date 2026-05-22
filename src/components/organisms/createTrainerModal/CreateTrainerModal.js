@@ -36,12 +36,18 @@ const schema = Joi.object({
 
 /**
  * @param {{
+ *  clubId?: string | null;
  *  isVisible: boolean;
  *  onClose: () => void;
  *  onTrainerCreated?: (trainer: User) => void;
  * }} props
  */
-function CreateTrainerModal({ isVisible, onClose, onTrainerCreated }) {
+function CreateTrainerModal({
+  clubId,
+  isVisible,
+  onClose,
+  onTrainerCreated,
+}) {
   const { t } = useTranslation();
   const {
     Alignments,
@@ -69,7 +75,7 @@ function CreateTrainerModal({ isVisible, onClose, onTrainerCreated }) {
         : t('APIerrors.unknown');
       Alert.alert(t('common.error', 'Erreur'), message);
     },
-    onSuccess: (createdTrainer) => {
+    onSuccess: (/** @type {any} */ createdTrainer) => {
       if (onTrainerCreated && createdTrainer?.documentId) {
         onTrainerCreated(createdTrainer);
       }
@@ -83,10 +89,13 @@ function CreateTrainerModal({ isVisible, onClose, onTrainerCreated }) {
   });
 
   const handleFormSubmit = useCallback(
-    (data) => {
-      createTrainerMutation.mutate(data);
+    (/** @type {typeof defaultValues & { clubId?: string }} */ data) => {
+      createTrainerMutation.mutate({
+        ...data,
+        ...(clubId ? { clubId } : {}),
+      });
     },
-    [createTrainerMutation],
+    [clubId, createTrainerMutation],
   );
 
   const handleClose = useCallback(() => {

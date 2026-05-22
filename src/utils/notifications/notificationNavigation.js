@@ -33,6 +33,9 @@ import {
  *  notificationTitle?: string,
  *  notificationBody?: string,
  *  notificationId?: string | number,
+ *  targetUserDocumentId?: string | number,
+ *  targetUserId?: string | number,
+ *  targetUserLabel?: string,
  *  dedupeKey?: string,
  *  matchId?: string | number,
  *  sourceDocumentId?: string | number,
@@ -87,7 +90,7 @@ const toParamsObject = (value) => (isPlainObject(value) ? value : {});
  * @returns {string | null}
  */
 const normalizeEntityId = (value) => {
-  if (typeof value === 'string' && value.trim().length > 0) return value;
+  if (typeof value === 'string' && value.trim().length > 0) return value.trim();
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return null;
 };
@@ -112,6 +115,7 @@ const buildNotificationFallbackKey = (payload) => {
   const identifiers = [
     payload.type,
     normalizeEntityId(payload.notificationId),
+    normalizeEntityId(payload.targetUserDocumentId || payload.targetUserId),
     normalizeEntityId(payload.matchId),
     normalizeEntityId(payload.eventId),
     normalizeEntityId(payload.chatId || payload.conversationId),
@@ -177,6 +181,12 @@ export const normalizeNotificationPayload = (payload) => {
 
   const profileId = normalizeEntityId(merged.profileId);
   if (profileId) merged.profileId = profileId;
+
+  const targetUserDocumentId = normalizeEntityId(merged.targetUserDocumentId);
+  if (targetUserDocumentId) merged.targetUserDocumentId = targetUserDocumentId;
+
+  const targetUserId = normalizeEntityId(merged.targetUserId);
+  if (targetUserId) merged.targetUserId = targetUserId;
 
   const matchId = normalizeEntityId(merged.matchId);
   if (matchId) merged.matchId = matchId;

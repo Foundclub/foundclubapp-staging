@@ -58,6 +58,7 @@ import {
   rejectFeatured,
 } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
+import { useLicenseCampaigns } from '@/services/license/licenseQueries';
 import {
   useGetEventMatchStats,
   useGetEventMyMatchResponse,
@@ -95,6 +96,18 @@ import {
 const SharePlatform = require('@/platform/share').default;
 
 const EVENT_DETAILS_STALE_MS = 30_000;
+/**
+ * @param {number | string | null | undefined} amountCents
+ * @param {string} currency
+ * @returns {string}
+ */
+const formatCampaignAmount = (amountCents, currency = 'EUR') => {
+  try {
+    return new Intl.NumberFormat('fr-FR', { currency, style: 'currency' }).format((Number(amountCents) || 0) / 100);
+  } catch (_) {
+    return `${((Number(amountCents) || 0) / 100).toFixed(2)} ${currency}`;
+  }
+};
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 /**
@@ -221,11 +234,12 @@ const resolveEventStartAt = (event) => {
 };
 
 /**
- * @param {{ navigation: import('@react-navigation/native').NavigationProp<any>; route: { params?: { eventId?: string, fromEventCreation?: boolean, creationCelebration?: { actionKey?: string, payload?: Record<string, any> } } } }} props
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any>; route: { params?: { eventId?: string, fromEventCreation?: boolean, eventCampaignCreationSuggested?: boolean, creationCelebration?: { actionKey?: string, payload?: Record<string, any> } } } }} props
  */
 function EventDetails({ navigation, route }) {
   const { eventId } = route?.params ?? {};
   const fromEventCreation = Boolean(route?.params?.fromEventCreation);
+  const eventCampaignCreationSuggested = Boolean(route?.params?.eventCampaignCreationSuggested);
   const creationCelebration = route?.params?.creationCelebration || null;
   // @ts-ignore: FIXME: Baseline TS regression
   const highlightedSection = route?.params?.focusSection || null;
@@ -284,7 +298,9 @@ function EventDetails({ navigation, route }) {
   });
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { canEditEvent, canManageEvent, userData } = useAuth();
+  const {
+    canEditClub, canEditEvent, canManageEvent, userData,
+  } = useAuth();
   const { sendMessage } = useMessaging();
 
   const {
@@ -591,6 +607,46 @@ function EventDetails({ navigation, route }) {
     || isMultisportAdminForEvent
     || userData?.role?.name === USER_ROLES.superAdmin,
   );
+  const licenseCampaignEventId = isStageDayEvent && event?.parentEvent?.documentId
+    ? event.parentEvent.documentId
+    : (event?.documentId || eventId || '');
+  const licenseCampaignEvent = useMemo(() => (
+    isStageDayEvent && event?.parentEvent?.documentId
+      ? {
+        ...event.parentEvent,
+        club: event?.club,
+        date: event?.parentEvent?.date || event?.date,
+        eventFormat: 'stage_parent',
+        name: event?.parentEvent?.name || event?.name,
+        stageEndDate: event?.parentEvent?.stageEndDate || event?.stageEndDate,
+        stageStartDate: event?.parentEvent?.stageStartDate || event?.stageStartDate,
+        team: event?.parentEvent?.team || event?.team,
+        type: event?.parentEvent?.type || event?.type,
+      }
+      : event
+  ), [
+    event,
+    isStageDayEvent,
+  ]);
+  const canManageEventLicenseCampaigns = Boolean(
+    eventClubId
+    && (
+      canEditClub(eventClubId)
+      || userData?.role?.name === USER_ROLES.superAdmin
+    ),
+  );
+  const eventLicenseCampaignsQueryParams = useMemo(() => ({
+    clubId: eventClubId,
+    eventId: licenseCampaignEventId,
+  }), [eventClubId, licenseCampaignEventId]);
+  const eventLicenseCampaignsQuery = useLicenseCampaigns(eventLicenseCampaignsQueryParams, {
+    enabled: Boolean(canManageEventLicenseCampaigns && eventClubId && licenseCampaignEventId),
+  });
+  const eventLicenseCampaigns = useMemo(() => {
+    const queriedCampaigns = eventLicenseCampaignsQuery.data?.data;
+    if (Array.isArray(queriedCampaigns)) return queriedCampaigns;
+    return Array.isArray(event?.licenseCampaigns) ? event.licenseCampaigns : [];
+  }, [event?.licenseCampaigns, eventLicenseCampaignsQuery.data]);
   const featuredRequestsSummary = useMemo(() => ({
     CM: {
       requestId: null,
@@ -2174,6 +2230,45 @@ function EventDetails({ navigation, route }) {
     t,
   ]);
 
+  const openEventLicenseCampaignSettings = useCallback(() => {
+    if (!eventClubId || !licenseCampaignEventId) return;
+    navigation.navigate(RouteNames.ClubStack, {
+      params: {
+        clubId: eventClubId,
+        createNew: true,
+        event: licenseCampaignEvent,
+        eventId: licenseCampaignEventId,
+      },
+      screen: RouteNames.ClubLicenseCampaignSettings,
+    });
+  }, [eventClubId, licenseCampaignEvent, licenseCampaignEventId, navigation]);
+
+  const openEventLicenseCampaign = useCallback((/** @type {any} */ campaign) => {
+    const campaignId = campaign?.documentId || campaign?.id;
+    if (!eventClubId || !campaignId) return;
+    navigation.navigate(RouteNames.ClubStack, {
+      params: {
+        campaignId,
+        clubId: eventClubId,
+      },
+      screen: RouteNames.ClubLicenseCampaignDetail,
+    });
+  }, [eventClubId, navigation]);
+
+  const editEventLicenseCampaign = useCallback((/** @type {any} */ campaign) => {
+    const campaignId = campaign?.documentId || campaign?.id;
+    if (!eventClubId || !campaignId) return;
+    navigation.navigate(RouteNames.ClubStack, {
+      params: {
+        campaignId,
+        clubId: eventClubId,
+        event: licenseCampaignEvent,
+        eventId: licenseCampaignEventId,
+      },
+      screen: RouteNames.ClubLicenseCampaignSettings,
+    });
+  }, [eventClubId, licenseCampaignEvent, licenseCampaignEventId, navigation]);
+
   const isMatchEvent = useMemo(() => {
     const typeName = String(event?.type?.name || '').trim().toLowerCase();
     return typeName.includes('match');
@@ -3188,6 +3283,132 @@ function EventDetails({ navigation, route }) {
     );
   };
 
+  const renderLicenseCampaignsSection = () => {
+    if (!canManageEventLicenseCampaigns) return null;
+
+    const subtitle = eventCampaignCreationSuggested
+      ? 'Evenement cree. Tu peux maintenant preparer une campagne de paiement rattachee.'
+      : 'Cree ou ouvre les campagnes de paiement rattachees a cet evenement.';
+
+    return (
+      <View style={[Spaces.gap[12]]}>
+        <View
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Alignments.justifySpaceBetween,
+            Spaces.gap[12],
+          ]}
+        >
+          <View style={[Spaces.gap[4], { flex: 1 }]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Cotisations liees</Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {subtitle}
+            </Text>
+          </View>
+          <Button
+            onPress={openEventLicenseCampaignSettings}
+            title="Creer"
+            variant="Secondary"
+          />
+        </View>
+
+        {eventLicenseCampaignsQuery.isLoading ? (
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary900,
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              {
+                borderColor: `${Colors.primary500}40`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des campagnes...</Text>
+          </View>
+        ) : null}
+
+        {!eventLicenseCampaignsQuery.isLoading && eventLicenseCampaigns.length === 0 ? (
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary900,
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              Spaces.gap[12],
+              {
+                borderColor: `${Colors.primary500}40`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aucune campagne liee</Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              La prochaine campagne ciblera les participants acceptes de l evenement.
+            </Text>
+            <Button
+              onPress={openEventLicenseCampaignSettings}
+              title="Creer une campagne"
+              variant="Primary"
+            />
+          </View>
+        ) : null}
+
+        {eventLicenseCampaigns.map((/** @type {any} */ campaign) => {
+          const campaignId = campaign?.documentId || campaign?.id;
+          const assignmentTotal = Number(campaign?.totals?.total || 0);
+          return (
+            <View
+              key={campaignId}
+              style={[
+                ApplicationStyle.backgroundColor.primary900,
+                ApplicationStyle.borderRadius24,
+                ApplicationStyle.borderWidth1,
+                Spaces.padding[16],
+                Spaces.gap[12],
+                {
+                  borderColor: `${Colors.primary500}55`,
+                },
+              ]}
+            >
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                <View style={[Spaces.gap[4], { flex: 1 }]}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{campaign?.name || 'Campagne evenement'}</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {formatCampaignAmount(campaign?.defaultAmountCents, campaign?.currency || 'EUR')}
+                    {' '}
+                    par participant
+                    {' - '}
+                    {assignmentTotal}
+                    {' '}
+                    affectation(s)
+                  </Text>
+                </View>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {String(campaign?.status || 'draft').toUpperCase()}
+                </Text>
+              </View>
+              <View style={[Alignments.row, Spaces.gap[12]]}>
+                <Button
+                  onPress={() => openEventLicenseCampaign(campaign)}
+                  style={{ flex: 1 }}
+                  title="Ouvrir"
+                  variant="Secondary"
+                />
+                <Button
+                  onPress={() => editEventLicenseCampaign(campaign)}
+                  style={{ flex: 1 }}
+                  title="Modifier"
+                  variant="Secondary"
+                />
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
   const renderTournamentSection = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
     let tournamentFormatLabel = 'Poules uniquement';
@@ -4034,6 +4255,8 @@ function EventDetails({ navigation, route }) {
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>Voir le stage</Text>
               </TouchableOpacity>
             ) : null}
+
+            {renderLicenseCampaignsSection()}
 
             {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
               <EventTasksSection

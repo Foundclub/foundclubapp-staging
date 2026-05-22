@@ -39,6 +39,10 @@ const addCoachSchema = Joi.object({
   phoneNumber: Joi.string().required(),
 }).unknown(true);
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const sanitizeRouteParam = (value) => {
   const normalizedValue = String(value || '').trim();
   if (!normalizedValue || normalizedValue.startsWith(':')) {
@@ -60,7 +64,10 @@ function AddCoach({ navigation, route }) {
     (undefined),
   );
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
-  const [createdTrainer, setCreatedTrainer] = useState(null);
+  const [createdTrainer, setCreatedTrainer] = useState(
+    /** @type {{ firstname?: string, phoneNumber?: string } | null} */
+    (null),
+  );
 
   const { t } = useTranslation();
   const { Alignments, Spaces } = useTheme();
@@ -136,7 +143,10 @@ function AddCoach({ navigation, route }) {
               },
               {
                 onPress: () => {
-                  linkTrainerToClubMutation.mutate(user.documentId);
+                  linkTrainerToClubMutation.mutate({
+                    clubId: routeClubId || clubData?.documentId,
+                    trainerId: user.documentId,
+                  });
                 },
                 text: t('addCoach.alerts.alreadyExist.actions.addToClub'),
               },
@@ -152,7 +162,7 @@ function AddCoach({ navigation, route }) {
       }
     },
     onSuccess: (data, variables) => {
-      setCreatedTrainer({ ...(data?.data || {}), ...variables });
+      setCreatedTrainer({ ...(data || {}), ...variables });
       setIsSuccessModalVisible(true);
     },
   });
@@ -165,6 +175,7 @@ function AddCoach({ navigation, route }) {
     createTrainerMutation.mutate({
       ...data,
       avatar,
+      clubId: routeClubId || clubData?.documentId,
     });
   };
 

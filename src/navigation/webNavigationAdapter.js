@@ -9,23 +9,30 @@ const buildRouteState = (routeName, params = {}) => ({
 export const createWebNavigationAdapter = ({
   currentPath = '/',
   currentRouteName,
+  goBack,
   params = {},
   parentNavigation,
   push,
   replace,
   setSearchParams,
-  goBack,
 }) => {
+  const resolveResetTarget = (resetState = {}) => {
+    const nextRoute = resetState?.routes?.[resetState?.index ?? 0];
+    if (!nextRoute?.name) return null;
+    return {
+      params: nextRoute.params || {},
+      routeName: nextRoute.name,
+    };
+  };
+
   const adapter = {
-    currentPath,
-    currentRouteName,
-    addListener: (_eventName, _listener) => {
-      return () => {};
-    },
+    addListener: () => () => {},
     canGoBack: () => {
       if (typeof window === 'undefined') return false;
       return window.history.length > 1;
     },
+    currentPath,
+    currentRouteName,
     dispatch: (action) => {
       const type = action?.type;
       const payload = action?.payload || {};
@@ -46,9 +53,9 @@ export const createWebNavigationAdapter = ({
       }
 
       if (type === 'RESET') {
-        const nextRoute = payload?.routes?.[payload?.index ?? 0];
-        if (!nextRoute?.name) return;
-        adapter.replace(nextRoute.name, nextRoute.params || {});
+        const resetTarget = resolveResetTarget(payload);
+        if (!resetTarget) return;
+        adapter.replace(resetTarget.routeName, resetTarget.params);
       }
     },
     getParent: () => parentNavigation || adapter,
@@ -76,7 +83,15 @@ export const createWebNavigationAdapter = ({
       }
       replace(buildWebPath(routeName, nextParams));
     },
+    reset: (resetState = {}) => {
+      const resetTarget = resolveResetTarget(resetState);
+      if (!resetTarget) {
+        return;
+      }
+      adapter.replace(resetTarget.routeName, resetTarget.params);
+    },
     route: buildRouteState(currentRouteName, params),
+    setOptions: () => {},
     setParams: (nextParams = {}) => {
       if (typeof setSearchParams !== 'function') {
         return;
@@ -87,7 +102,6 @@ export const createWebNavigationAdapter = ({
       };
       setSearchParams(mergedParams);
     },
-    setOptions: () => {},
   };
 
   return adapter;

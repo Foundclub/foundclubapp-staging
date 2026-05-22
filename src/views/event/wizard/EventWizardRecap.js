@@ -555,6 +555,7 @@ function EventWizardRecap({ navigation }) {
           name: RouteNames.EventDetails,
           params: {
             creationCelebration,
+            eventCampaignCreationSuggested: true,
             eventId: firstCreatedId,
             fromEventCreation: true,
           },

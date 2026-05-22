@@ -97,7 +97,14 @@ function TeamWizardTrainers({ navigation }) {
       >
         <View>
           {isLoading ? (
-            <View style={{ alignItems: 'center', flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <View
+              style={{
+                alignItems: 'center',
+                flexDirection: 'row',
+                gap: 12,
+                marginBottom: 16,
+              }}
+            >
               <ActivityIndicator size="small" />
               <Text>Chargement des entraineurs du club...</Text>
             </View>
@@ -105,7 +112,10 @@ function TeamWizardTrainers({ navigation }) {
 
           {isClubMissing ? (
             <View style={{ marginBottom: 16 }}>
-              <Text>Club introuvable pour initialiser la creation de l'equipe. Reviens a la liste des equipes puis relance le wizard.</Text>
+              <Text>
+                Club introuvable pour initialiser la creation de l&apos;equipe. Reviens a la liste
+                des equipes puis relance le wizard.
+              </Text>
             </View>
           ) : null}
 
@@ -136,13 +146,14 @@ function TeamWizardTrainers({ navigation }) {
 
           {!isLoading && !hasError && !isClubMissing && trainerOptions.length === 0 ? (
             <View style={{ marginTop: 12 }}>
-              <Text>Aucun entraineur n'est encore disponible pour ce club. Ajoute-en un pour continuer.</Text>
+              <Text>Aucun entraineur n&apos;est encore disponible pour ce club. Ajoute-en un pour continuer.</Text>
             </View>
           ) : null}
         </View>
       </WizardStepLayout>
 
       <CreateTrainerModal
+        clubId={state.clubId}
         isVisible={isCreateTrainerModalVisible}
         onClose={() => setIsCreateTrainerModalVisible(false)}
         onTrainerCreated={handleTrainerCreated}

@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -39,15 +40,13 @@ const formatDate = (value) => {
   });
 };
 
-/**
- *
- */
 function AdminNotificationsHealth() {
   const {
     Colors,
     Fonts,
     Spaces,
   } = useTheme();
+  const [{ authSessions }] = useAppContext();
   const [feedback, setFeedback] = useState('');
   const {
     data,
@@ -78,6 +77,24 @@ function AdminNotificationsHealth() {
 
   const queueCounts = data?.queueCounts || {};
   const tokenCounts = data?.tokenCounts || {};
+  const localSessions = Array.isArray(authSessions) ? authSessions : [];
+  const currentDeviceLinkedUsers = (data?.currentDeviceInstallations || [])
+    .flatMap((installation) => installation?.linkedUsers || [])
+    .filter(Boolean);
+  const currentDeviceLinkedUserDocumentIds = new Set(
+    currentDeviceLinkedUsers
+      .map((linkedUser) => String(linkedUser?.documentId || '').trim())
+      .filter(Boolean),
+  );
+  const localSessionDocumentIds = localSessions
+    .map((session) => String(session?.user?.documentId || '').trim())
+    .filter(Boolean);
+  const unsubscribedLocalAccounts = localSessionDocumentIds.filter(
+    (documentId) => !currentDeviceLinkedUserDocumentIds.has(documentId),
+  );
+  const subscribedLocalAccountsCount = localSessionDocumentIds.filter(
+    (documentId) => currentDeviceLinkedUserDocumentIds.has(documentId),
+  ).length;
 
   const runAction = async (label, action) => {
     setFeedback('');
@@ -86,14 +103,14 @@ function AdminNotificationsHealth() {
       setFeedback(`${label} : OK${result?.ok === false ? ' avec avertissement' : ''}`);
       refetch();
     } catch (actionError) {
-      setFeedback(`${label} : ${actionError?.message || 'échec'}`);
+      setFeedback(`${label} : ${actionError?.message || 'echec'}`);
     }
   };
 
   if (isLoading) {
     return (
       <AdminStateView
-        description="Nous lisons l'état runtime push, la queue et les tokens."
+        description="Nous lisons l'etat runtime push, la queue et les installations."
         isLoading
         title="Diagnostic notifications"
       />
@@ -103,7 +120,7 @@ function AdminNotificationsHealth() {
   if (error) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
+        actionLabel="Reessayer"
         description={error?.message || 'Impossible de charger le diagnostic notifications.'}
         onAction={refetch}
         title="Diagnostic indisponible"
@@ -182,7 +199,7 @@ function AdminNotificationsHealth() {
           </Text>
           <Text style={[Fonts.h1, Fonts.neutral00]}>Notifications Health</Text>
           <Text style={[Fonts.p2, Fonts.neutral300, styles.headerDescription]}>
-            Vérifie la configuration push, la queue d’envoi et les tokens sans exposer les secrets.
+            Verifie la configuration push, la queue d&apos;envoi et les abonnements multi-comptes sans exposer les secrets.
           </Text>
         </View>
 
@@ -212,8 +229,8 @@ function AdminNotificationsHealth() {
             <View style={styles.metricsGrid}>
               {renderMetric('En attente', queueCounts.pending)}
               {renderMetric('Envoi', queueCounts.sending)}
-              {renderMetric('Envoyées', queueCounts.sent, Colors.success500)}
-              {renderMetric('Échouées', queueCounts.failed, Colors.warning500)}
+              {renderMetric('Envoyees', queueCounts.sent, Colors.success500)}
+              {renderMetric('Echouees', queueCounts.failed, Colors.warning500)}
               {renderMetric('Dead', queueCounts.dead, Colors.error500)}
             </View>
           ),
@@ -226,31 +243,94 @@ function AdminNotificationsHealth() {
                 {renderMetric('Total', tokenCounts.total)}
                 {renderMetric('iOS', tokenCounts.ios)}
                 {renderMetric('Android', tokenCounts.android)}
+                {renderMetric('Abonnements', tokenCounts.subscriptions, Colors.primary200)}
+                {renderMetric('Multi-comptes', tokenCounts.multiAccountInstallations, Colors.success500)}
                 {renderMetric('Orphelins', tokenCounts.orphaned, Colors.warning500)}
               </View>
+
+              <View style={styles.tokenSummary}>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {subscribedLocalAccountsCount}
+                  {' '}
+                  compte(s) local(aux) abonnes sur cet appareil.
+                </Text>
+                {unsubscribedLocalAccounts.length > 0 ? (
+                  <Text style={[Fonts.p3, { color: Colors.warning500 }]}>
+                    {unsubscribedLocalAccounts.length}
+                    {' '}
+                    compte(s) local(aux) connecte(s) ne sont pas encore abonnes sur cet appareil.
+                  </Text>
+                ) : (
+                  <Text style={[Fonts.p3, { color: Colors.success500 }]}>
+                    Tous les comptes locaux detectes sur cet appareil sont abonnes.
+                  </Text>
+                )}
+              </View>
+
               <View style={styles.tokenList}>
                 {(data?.currentUserTokens || []).map((token) => (
                   <View key={token.documentId || token.tokenPrefix} style={styles.tokenRow}>
                     <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                       {token.platform}
-                      {' '}
-                      ·
-                      {token.tokenPrefix || 'token masqué'}
+                      {' - '}
+                      {token.tokenPrefix || 'token masque'}
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {token.supportsPushActions ? 'Actions rapides' : 'Standard'}
-                      {' '}
-                      ·
+                      {' - '}
                       {formatDate(token.updatedAt)}
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                      {token.subscriptionCount || 0}
+                      {' '}
+                      abonnement(s)
+                      {Array.isArray(token.linkedUsers) && token.linkedUsers.length > 0
+                        ? ` - ${token.linkedUsers.map((linkedUser) => linkedUser.label || linkedUser.documentId || linkedUser.id).filter(Boolean).join(', ')}`
+                        : ''}
                     </Text>
                   </View>
                 ))}
                 {!data?.currentUserTokens?.length ? (
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    Aucun token enregistré pour ton compte courant.
+                    Aucune installation push n&apos;est encore abonnee pour ton compte courant.
                   </Text>
                 ) : null}
               </View>
+
+              {data?.currentDeviceInstallations?.length ? (
+                <View style={styles.currentDeviceSection}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    Installations detectees pour cet appareil
+                  </Text>
+                  <View style={styles.tokenList}>
+                    {data.currentDeviceInstallations.map((installation) => (
+                      <View
+                        key={`device-${installation.documentId || installation.tokenPrefix}`}
+                        style={styles.tokenRow}
+                      >
+                        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                          {installation.platform || 'other'}
+                          {' - '}
+                          {installation.tokenPrefix || 'token masque'}
+                        </Text>
+                        <Text style={[Fonts.p3, Fonts.neutral300]}>
+                          {installation.subscriptionCount || 0}
+                          {' '}
+                          compte(s) lie(s)
+                        </Text>
+                        {Array.isArray(installation.linkedUsers) && installation.linkedUsers.length > 0 ? (
+                          <Text style={[Fonts.p3, Fonts.neutral300]}>
+                            {installation.linkedUsers
+                              .map((linkedUser) => linkedUser.label || linkedUser.documentId || linkedUser.id)
+                              .filter(Boolean)
+                              .join(', ')}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
             </>
           ),
         )}
@@ -266,7 +346,7 @@ function AdminNotificationsHealth() {
               {renderAction('Test chat', () => runAction('Test chat', () => testMutation.mutateAsync({ kind: 'chat-reply' })), testMutation.isPending)}
               {renderAction('Test groupe', () => runAction('Test groupe', () => testMutation.mutateAsync({ kind: 'chat-group' })), testMutation.isPending)}
               {renderAction(
-                'Relancer dernier échec',
+                'Relancer dernier echec',
                 () => runAction('Relance delivery', () => retryMutation.mutateAsync(firstFailureDocumentId)),
                 !firstFailureDocumentId || retryMutation.isPending,
               )}
@@ -280,7 +360,7 @@ function AdminNotificationsHealth() {
         )}
 
         {renderCard(
-          'Derniers échecs', (
+          'Derniers echecs', (
             <View style={styles.failures}>
               {(data?.recentFailures || []).map((failure) => (
                 <View key={failure.documentId} style={styles.failureRow}>
@@ -290,19 +370,18 @@ function AdminNotificationsHealth() {
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {failure.status}
-                      {' '}
-                      ·
+                      {' - '}
                       {formatDate(failure.updatedAt || failure.lastAttemptAt)}
                     </Text>
                   </View>
                   <Text numberOfLines={3} style={[Fonts.p3, Fonts.neutral300, styles.failureError]}>
-                    {failure.lastError || 'Sans erreur détaillée'}
+                    {failure.lastError || 'Sans erreur detaillee'}
                   </Text>
                 </View>
               ))}
               {!data?.recentFailures?.length ? (
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  Aucun échec récent.
+                  Aucun echec recent.
                 </Text>
               ) : null}
             </View>
@@ -340,6 +419,10 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingTop: 18,
+  },
+  currentDeviceSection: {
+    gap: 10,
+    marginTop: 18,
   },
   failureError: {
     flex: 1,
@@ -402,6 +485,10 @@ const styles = StyleSheet.create({
   },
   tokenRow: {
     gap: 4,
+  },
+  tokenSummary: {
+    gap: 4,
+    marginTop: 14,
   },
 });
 

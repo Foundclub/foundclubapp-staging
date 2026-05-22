@@ -6,6 +6,8 @@ import {
   refuseClubRequest as refuseAffiliationClubRequest,
 } from '@/services/clubRequest/clubRequestService';
 
+import deviceRuntime from '@/platform/device';
+
 /**
  * @typedef {{ q?: string; role?: string; page?: number; pageSize?: number }} AdminUsersParams
  * @typedef {{ q?: string; page?: number; pageSize?: number }} AdminClubsParams
@@ -21,7 +23,11 @@ export const getAdminStats = async () => {
 };
 
 export const getNotificationsHealth = async () => {
-  const result = await client.get('/notifications/health');
+  const result = await client.get('/notifications/health', {
+    params: {
+      device: deviceRuntime.getDeviceId(),
+    },
+  });
   return result.data;
 };
 

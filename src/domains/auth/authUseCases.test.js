@@ -1,9 +1,13 @@
 import {
+  activateSessionByDocumentId,
+  activateSessionForNotificationPayload,
   canUserEditClub,
+  findAuthSessionByDocumentId,
   getAuthTokens,
   getManagedMultisportSectionIds,
   getOnboardingViews,
   getRoleDocumentIdByKey,
+  getStoredAuthSessions,
   getUserRoleKey,
   USER_ROLES,
 } from '@/domains/auth/authUseCases';
@@ -19,6 +23,7 @@ jest.mock('../../store/appContext', () => ({
   storage: {
     getBoolean: jest.fn(),
     getString: jest.fn(),
+    set: jest.fn(),
   },
 }));
 
@@ -27,6 +32,7 @@ describe('authUseCases', () => {
     jest.clearAllMocks();
     resetAuthRuntimeForTests();
     storage.getBoolean.mockReturnValue(false);
+    storage.getString.mockReturnValue(null);
   });
 
   describe('club management scope', () => {
@@ -68,7 +74,6 @@ describe('authUseCases', () => {
 
   describe('getAuthTokens', () => {
     it('returns null when no auth data exists', () => {
-      storage.getString.mockReturnValue(null);
       expect(getAuthTokens()).toBeNull();
     });
 
@@ -107,6 +112,107 @@ describe('authUseCases', () => {
     it('returns null when auth data is invalid JSON', () => {
       storage.getString.mockReturnValue('invalid-json');
       expect(getAuthTokens()).toBeNull();
+    });
+  });
+
+  describe('multi-account notification helpers', () => {
+    it('reads stored auth sessions and appends persisted auth when missing from authSessions', () => {
+      storage.getString.mockImplementation((key) => {
+        if (key === 'auth') {
+          return JSON.stringify({
+            token: 'token-a',
+            user: { documentId: 'user-a' },
+          });
+        }
+        if (key === 'authSessions') {
+          return JSON.stringify([
+            {
+              token: 'token-b',
+              user: { documentId: 'user-b' },
+            },
+          ]);
+        }
+        return null;
+      });
+
+      expect(getStoredAuthSessions().map((session) => session.user.documentId)).toEqual([
+        'user-b',
+        'user-a',
+      ]);
+      expect(findAuthSessionByDocumentId('user-a')?.token).toBe('token-a');
+    });
+
+    it('activates a stored session through persisted storage when runtime dispatch is unavailable', () => {
+      storage.getString.mockImplementation((key) => {
+        if (key === 'activeSessionDocumentId') return 'user-a';
+        if (key === 'auth') {
+          return JSON.stringify({
+            token: 'token-a',
+            user: { documentId: 'user-a' },
+          });
+        }
+        if (key === 'authSessions') {
+          return JSON.stringify([
+            {
+              token: 'token-a',
+              user: { documentId: 'user-a' },
+            },
+            {
+              token: 'token-b',
+              user: { documentId: 'user-b' },
+            },
+          ]);
+        }
+        return null;
+      });
+
+      const result = activateSessionByDocumentId('user-b');
+
+      expect(result).toMatchObject({
+        activated: true,
+        switched: true,
+      });
+      expect(result.session?.token).toBe('token-b');
+      expect(storage.set).toHaveBeenCalledWith('activeSessionDocumentId', 'user-b');
+      expect(storage.set).toHaveBeenCalledWith('auth', JSON.stringify({
+        token: 'token-b',
+        user: { documentId: 'user-b' },
+      }));
+    });
+
+    it('activates the targeted session from a notification payload', () => {
+      storage.getString.mockImplementation((key) => {
+        if (key === 'activeSessionDocumentId') return 'user-a';
+        if (key === 'authSessions') {
+          return JSON.stringify([
+            {
+              token: 'token-a',
+              user: { documentId: 'user-a' },
+            },
+            {
+              token: 'token-b',
+              user: { documentId: 'user-b' },
+            },
+          ]);
+        }
+        if (key === 'auth') {
+          return JSON.stringify({
+            token: 'token-a',
+            user: { documentId: 'user-a' },
+          });
+        }
+        return null;
+      });
+
+      const result = activateSessionForNotificationPayload({
+        targetUserDocumentId: 'user-b',
+      });
+
+      expect(result).toMatchObject({
+        activated: true,
+        switched: true,
+      });
+      expect(result.session?.user?.documentId).toBe('user-b');
     });
   });
 
@@ -352,6 +458,20 @@ describe('authUseCases', () => {
       expect(affiliationStep).toEqual({
         canShow: false,
         index: 5,
+        route: RouteNames.UserAffiliationGuide,
+      });
+    });
+
+    it('hides affiliation guide for president when already affiliated through a multisport club', () => {
+      const result = getOnboardingViews({
+        multisportClubs: [{ documentId: 'cm-1', name: 'FoundClub Multisport' }],
+        role: { name: USER_ROLES.president },
+      });
+
+      const affiliationStep = result.views.find((v) => v.route === RouteNames.UserAffiliationGuide);
+      expect(affiliationStep).toEqual({
+        canShow: false,
+        index: 3,
         route: RouteNames.UserAffiliationGuide,
       });
     });

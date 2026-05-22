@@ -1,6 +1,8 @@
 import notifee from '@notifee/react-native';
 import { MMKV } from 'react-native-mmkv';
 
+import { activateSessionForNotificationPayload } from '@/domains/auth/authUseCases';
+
 import client from '@/services/client';
 
 import {
@@ -137,29 +139,45 @@ const getChatReplyAndroidActions = () => ([
  * @param {string | number} eventId
  * @param {'present' | 'absent'} answer
  * @param {string | number | undefined} notificationId
+ * @param {string | undefined} sessionToken
  * @returns {Promise<any>}
  */
-const sendRsvpAnswer = async (eventId, answer, notificationId) => {
+const sendRsvpAnswer = async (eventId, answer, notificationId, sessionToken) => {
+  const config = sessionToken
+    ? {
+      headers: {
+        Authorization: `Bearer ${sessionToken}`,
+      },
+    }
+    : undefined;
   const response = await client.post(`/events/${eventId}/rsvp`, {
     answer,
     notificationId,
     source: 'push_action',
-  });
+  }, config);
   return response.data;
 };
 
 /**
  * @param {string | number} chatId
  * @param {string} message
+ * @param {string | undefined} sessionToken
  * @returns {Promise<any>}
  */
-const sendChatReplyMessage = async (chatId, message) => {
+const sendChatReplyMessage = async (chatId, message, sessionToken) => {
+  const config = sessionToken
+    ? {
+      headers: {
+        Authorization: `Bearer ${sessionToken}`,
+      },
+    }
+    : undefined;
   const response = await client.post('/chat-messages', {
     data: {
       chat: chatId,
       message,
     },
-  });
+  }, config);
   return response.data;
 };
 
@@ -350,7 +368,8 @@ export const handleEventRsvpActionPress = async ({
     : undefined;
 
   try {
-    await sendRsvpAnswer(eventId, answer, notificationId);
+    const activationResult = await activateSessionForNotificationPayload(normalizedData);
+    await sendRsvpAnswer(eventId, answer, notificationId, activationResult?.session?.token);
 
     const feedback = getRsvpFeedbackCopy(answer);
     await displayLocalNotification({
@@ -403,7 +422,8 @@ export const handleChatReplyActionPress = async ({
   }
 
   try {
-    await sendChatReplyMessage(chatId, replyText);
+    const activationResult = await activateSessionForNotificationPayload(normalizedData);
+    await sendChatReplyMessage(chatId, replyText, activationResult?.session?.token);
 
     const feedback = getChatReplyFeedbackCopy();
     await displayLocalNotification({

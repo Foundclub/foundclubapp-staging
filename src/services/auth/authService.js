@@ -507,7 +507,7 @@ export const updateMe = async (userData) => {
 
 /**
  * Create a trainer
- * @param {Partial<User>} userData
+ * @param {Partial<User> & { clubId?: string }} userData
  * @returns {Promise<object>} The created trainer data
  */
 export const createTrainer = async (userData) => {
@@ -614,11 +614,16 @@ export const leaveClub = async () => {
 
 /**
  * Link a trainer to my club
- * @param {string} id
+ * @param {string | { trainerId: string, clubId?: string }} id
  * @returns {Promise<object>} The linked trainer data
  */
 export const linkTrainerToClub = async (id) => {
-  const result = await client.put(`/firebase-auth/add-trainer-to-club/${id}`);
+  const trainerId = typeof id === 'string' ? id : id?.trainerId;
+  const clubId = typeof id === 'object' && id !== null ? id.clubId : undefined;
+  const result = await client.put(
+    `/firebase-auth/add-trainer-to-club/${trainerId}`,
+    clubId ? { clubId } : undefined,
+  );
   try {
     const validationResult = await userSchema.validateAsync(result.data.data, {
       allowUnknown: true,
@@ -703,6 +708,36 @@ export const addDeviceToken = async (token) => {
     }
     throw error;
   }
+};
+
+/**
+ * Add the current installation token for a specific stored session.
+ * Used to keep multiple locally connected accounts subscribed on the same device.
+ * @param {string} sessionToken
+ * @param {string} token
+ * @returns {Promise<object>}
+ */
+export const addDeviceTokenForSession = async (sessionToken, token) => {
+  if (!sessionToken || !token) {
+    throw new Error('Missing session token or device token');
+  }
+
+  const normalizedPlatform = Platform.OS === 'web' ? 'web' : Platform.OS;
+  const result = await client.post('/user-fcm-token/me/device', {
+    data: {
+      appVersion: getAppVersion(),
+      device: getDeviceId(),
+      platform: normalizedPlatform,
+      supportsPushActions: true,
+      token,
+    },
+  }, {
+    headers: {
+      Authorization: `Bearer ${sessionToken}`,
+    },
+  });
+
+  return result.data;
 };
 
 /**
