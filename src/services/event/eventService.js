@@ -290,7 +290,6 @@ export const getEventById = async (documentId) => {
         'participationRequests.user',
         'participationRequests.user.avatar',
         'participationRequests.sourceTeam',
-        'licenseCampaigns',
         'recruitmentAds',
         'recruitmentAds.candidates',
         'recruitmentAds.candidates.avatar',

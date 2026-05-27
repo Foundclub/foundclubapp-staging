@@ -19,6 +19,7 @@ import useTheme from '@/theme/themeContext';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { navigate as navigateFromRoot } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
 import client from '@/services/client';
@@ -168,7 +169,7 @@ function NotificationList() {
     /** @type {NotificationItem} */ notification,
     /** @type {'present' | 'absent'} */ answer,
   ) => {
-    const payload = getNotificationPayload(notification);
+    const payload = /** @type {any} */ (getNotificationPayload(notification));
     const eventId = String(payload?.eventId || '').trim();
     if (!eventId) {
       showActionError("Impossible de retrouver l'evenement associe a cette notification.");
@@ -206,12 +207,18 @@ function NotificationList() {
 
     if (destination?.route) {
       console.log(`[NOTIF_OPENED] type=${notification.type || payload.type || 'unknown'} route=${destination.route} source=in_app_history`);
-      nav.navigate(destination.route, destination.params || {});
+      const didNavigate = navigateFromRoot(destination.route, destination.params || {});
+      if (!didNavigate) {
+        nav.navigate(destination.route, destination.params || {});
+      }
       return;
     }
 
     console.log(`[NOTIF_OPENED] type=${notification.type || payload.type || 'unknown'} route=${RouteNames.NotificationList} source=in_app_history_fallback`);
-    nav.navigate(RouteNames.NotificationList);
+    const didNavigate = navigateFromRoot(RouteNames.NotificationList);
+    if (!didNavigate) {
+      nav.navigate(RouteNames.NotificationList);
+    }
   }, [markAsRead, nav, showActionError]);
 
   const handleDelete = useCallback((/** @type {NotificationItem} */ notification) => {

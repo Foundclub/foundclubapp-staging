@@ -26,6 +26,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
@@ -143,10 +144,12 @@ function LeagueMatchDetails({ navigation, route }) {
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
   const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
   const [isNegotiationModalVisible, setIsNegotiationModalVisible] = useState(false);
+  const [isNegotiationResponseSheetVisible, setIsNegotiationResponseSheetVisible] = useState(false);
   const [isPostSlotResolutionVisible, setIsPostSlotResolutionVisible] = useState(false);
   const [postSlotResolutionStep, setPostSlotResolutionStep] = useState(/** @type {string | null} */ (null));
   const [isActionDockExpanded, setIsActionDockExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedContentTab, setSelectedContentTab] = useState('match');
 
   const userId = getEntityDocumentId(userData);
 
@@ -181,6 +184,8 @@ function LeagueMatchDetails({ navigation, route }) {
 
   useEffect(() => {
     setIsActionDockExpanded(false);
+    setSelectedContentTab('match');
+    setIsNegotiationResponseSheetVisible(false);
   }, [matchId]);
 
   useEffect(() => {
@@ -386,8 +391,6 @@ function LeagueMatchDetails({ navigation, route }) {
           <Button
             disabled={actionLoading}
             onPress={handleOpenCounterProposal}
-            style={{ backgroundColor: Colors.gold500 }}
-            textStyle={{ color: Colors.primary900 }}
             title="Envoyer une proposition"
             variant="Primary"
           />
@@ -400,22 +403,26 @@ function LeagueMatchDetails({ navigation, route }) {
         <View style={{ gap: 10, marginTop: 16 }}>
           <Button
             disabled={actionLoading}
-            onPress={handleAcceptNegotiationProposal}
-            title="Accepter"
+            onPress={handleOpenNegotiationResponseSheet}
+            style={{
+              backgroundColor: Colors.gold500,
+              borderColor: Colors.gold500,
+            }}
+            textStyle={{ color: Colors.primary900 }}
+            title="Repondre"
             variant="Primary"
           />
-          <Button
-            disabled={actionLoading}
-            onPress={handleDeclineNegotiationProposal}
-            title="Refuser"
-            variant="Secondary"
-          />
-          <Button
-            disabled={actionLoading}
-            onPress={handleOpenCounterProposal}
-            title="Contre-proposer"
-            variant="SecondaryLight"
-          />
+          {hasNegotiationConversation ? (
+            <TouchableOpacity
+              disabled={actionLoading}
+              onPress={handleOpenChat}
+              style={{ alignSelf: 'flex-start', paddingVertical: 2 }}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                Ouvrir dans le chat &gt;
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       );
     }
@@ -425,10 +432,19 @@ function LeagueMatchDetails({ navigation, route }) {
         <View style={{ gap: 10, marginTop: 16 }}>
           <Button
             disabled={actionLoading}
-            onPress={handleOpenCounterProposal}
-            title="Contre-proposer"
-            variant="Secondary"
+            onPress={handleOpenChat}
+            title="Ouvrir le chat"
+            variant="SecondaryLight"
           />
+          <TouchableOpacity
+            disabled={actionLoading}
+            onPress={handleOpenCounterProposal}
+            style={{ alignItems: 'center', paddingVertical: 4 }}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+              Envoyer une nouvelle proposition
+            </Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -440,11 +456,14 @@ function LeagueMatchDetails({ navigation, route }) {
     canCounterProposeFromNegotiationCard,
     canReplyFromNegotiationCard,
     Colors.gold500,
+    Colors.primary500,
     Colors.primary900,
+    Fonts.p4Bold,
+    Fonts.p3Bold,
+    handleOpenChat,
     handleOpenCounterProposal,
+    handleOpenNegotiationResponseSheet,
     hasNegotiationConversation,
-    handleAcceptNegotiationProposal,
-    handleDeclineNegotiationProposal,
   ]);
   const renderPostSlotResolutionActions = useCallback(() => {
     if (effectivePostSlotResolutionStep === 'choose_not_played_action') {
@@ -552,16 +571,16 @@ function LeagueMatchDetails({ navigation, route }) {
 
     if (teamSide === 'b') {
       return {
-        backgroundColor: 'rgba(255, 215, 0, 0.12)',
-        borderColor: 'rgba(255, 215, 0, 0.28)',
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        borderColor: 'rgba(255, 255, 255, 0.18)',
         label: 'EXTERIEUR',
         subtitle: 'Deplacement League',
-        textColor: Colors.gold500,
+        textColor: Colors.neutral200,
       };
     }
 
     return null;
-  }, [Colors.gold500, Colors.primary500, teamSide]);
+  }, [Colors.neutral200, Colors.primary500, teamSide]);
   const remainingPlayers = useMemo(
     () => Math.max(requiredPlayers - participationCount, 0),
     [participationCount, requiredPlayers],
@@ -621,7 +640,8 @@ function LeagueMatchDetails({ navigation, route }) {
   const hasBottomPresenceBar = Boolean(
     teamSide && ['confirmed_upcoming', 'waiting_venue'].includes(String(matchPhase || '').trim()),
   );
-  const hasBottomActionBar = Boolean(teamSide && (hasBottomPresenceBar || hasCaptainQuickActions));
+  const shouldShowInlineCaptainActions = Boolean(teamSide && hasCaptainQuickActions && !hasBottomPresenceBar);
+  const hasBottomActionBar = Boolean(teamSide && hasBottomPresenceBar);
   const bottomBarFloatingStyle = useMemo(() => ({
     bottom: floatingActionBottomOffset,
   }), [floatingActionBottomOffset]);
@@ -642,6 +662,78 @@ function LeagueMatchDetails({ navigation, route }) {
     isActionDockExpanded,
     sceneBottomInset,
   ]);
+  const renderCaptainQuickActionButtons = () => (
+    <View pointerEvents="box-none" style={styles.bottomCaptainButtonsStack}>
+      {isPostSlotResolutionCurrentMatch ? (
+        <Button
+          disabled={actionLoading}
+          icon="flag"
+          iconColor={Colors.primary900}
+          iconPosition="before"
+          onPress={handleOpenPostSlotResolution}
+          size="small"
+          style={{
+            backgroundColor: Colors.gold500,
+            borderColor: Colors.gold500,
+          }}
+          textStyle={{ color: Colors.primary900 }}
+          title="Confirmer le match"
+          variant="Primary"
+        />
+      ) : null}
+      {canManageVenue ? (
+        <Button
+          disabled={actionLoading}
+          icon="stadium"
+          iconColor={Colors.neutral00}
+          iconPosition="before"
+          onPress={handleMarkVenueBooked}
+          size="small"
+          style={{
+            backgroundColor: Colors.primary500,
+            borderColor: Colors.primary500,
+          }}
+          textStyle={{ color: Colors.neutral00 }}
+          title="Marquer terrain reserve"
+          variant="Primary"
+        />
+      ) : null}
+      {isScoreLockedByTime && !canSubmitScore ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.bottomLockedInfo,
+            {
+              backgroundColor: 'rgba(1, 179, 244, 0.08)',
+              borderColor: 'rgba(1, 179, 244, 0.24)',
+            },
+          ]}
+        >
+          <Image source={Images.clock} style={{ height: 16, tintColor: Colors.primary500, width: 16 }} />
+          <Text style={[Fonts.p4Bold, { color: Colors.neutral200, flex: 1 }]}>
+            Score disponible au debut du match + 1 min.
+          </Text>
+        </View>
+      ) : null}
+      {canSubmitScore ? (
+        <Button
+          disabled={actionLoading}
+          icon="edit"
+          iconColor={Colors.neutral00}
+          iconPosition="before"
+          onPress={handleGoToScoreEntry}
+          size="small"
+          style={{
+            backgroundColor: Colors.primary500,
+            borderColor: Colors.primary500,
+          }}
+          textStyle={{ color: Colors.neutral00 }}
+          title={scoreQuickActionMeta.title}
+          variant="Primary"
+        />
+      ) : null}
+    </View>
+  );
   const isScoreToSubmitBadge = String(statusConfig.label || '').toLowerCase().includes('saisir');
   const scoreQuickActionMeta = useMemo(() => {
     const countdown = formatScoreFlowCountdown(scoreFlow.remainingSeconds);
@@ -695,7 +787,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
     if (normalizedStatus === 'scheduled' && venueRequired && !isVenueBooked) {
       return {
-        accentColor: Colors.warning500,
+        accentColor: Colors.gold500,
         icon: Images.stadium,
         label: 'Organisation \u00E9quipe',
         text: "Le terrain doit encore être confirmé avant le coup d'envoi.",
@@ -730,7 +822,6 @@ function LeagueMatchDetails({ navigation, route }) {
     Colors.gold500,
     Colors.primary500,
     Colors.success500,
-    Colors.warning500,
     Images.check,
     Images.clock,
     Images.edit,
@@ -771,10 +862,8 @@ function LeagueMatchDetails({ navigation, route }) {
   const captainQuickActionMeta = useMemo(() => {
     if (isPostSlotResolutionCurrentMatch) {
       return {
-        accentColor: Colors.warning500,
-        helper: venueRequired
-          ? 'Le creneau est depasse sans terrain confirme. Le capitaine doit maintenant dire si le match a eu lieu.'
-          : 'Le creneau est depasse. Le capitaine doit maintenant confirmer si le match a eu lieu.',
+        accentColor: Colors.gold500,
+        helper: 'Le creneau est depasse. Confirmez si le match a eu lieu.',
         label: 'Resolution a faire',
         title: 'Confirmation du match',
       };
@@ -807,14 +896,35 @@ function LeagueMatchDetails({ navigation, route }) {
       title: 'Organisation du match',
     };
   }, [
+    Colors.gold500,
     Colors.primary500,
-    Colors.warning500,
     canSubmitScore,
     isPostSlotResolutionCurrentMatch,
     isScoreLockedByTime,
     scoreQuickActionMeta.helper,
     scoreQuickActionMeta.label,
     venueRequired,
+  ]);
+  const captainPrimarySummaryText = useMemo(() => {
+    if (isPostSlotResolutionCurrentMatch) {
+      return 'Confirmez si le match a eu lieu.';
+    }
+    if (canManageVenue) {
+      return 'Confirmez le terrain du match.';
+    }
+    if (canSubmitScore) {
+      return 'Saisissez le score officiel.';
+    }
+    if (isScoreLockedByTime) {
+      return 'Le score sera disponible au coup d envoi.';
+    }
+    return captainQuickActionMeta.helper;
+  }, [
+    canManageVenue,
+    canSubmitScore,
+    captainQuickActionMeta.helper,
+    isPostSlotResolutionCurrentMatch,
+    isScoreLockedByTime,
   ]);
   const actionDockMeta = useMemo(() => {
     if (hasBottomPresenceBar) {
@@ -855,6 +965,25 @@ function LeagueMatchDetails({ navigation, route }) {
     pr\u00E9senceCompactHelperText,
     requiredPlayers,
   ]);
+  const captainSectionHelperText = useMemo(() => {
+    if (shouldShowInlineCaptainActions) {
+      return null;
+    }
+    if (venueRequired) {
+      return 'Les actions rapides terrain, score et resolution restent visibles dans la barre du bas pour agir sans quitter la fiche.';
+    }
+    return 'Les actions rapides presence, score et resolution restent visibles dans la barre du bas pour agir sans quitter la fiche.';
+  }, [shouldShowInlineCaptainActions, venueRequired]);
+  const captainSectionTitle = useMemo(() => {
+    if (canShowCaptainPrimary) return 'Action prioritaire';
+    return isCaptain ? 'Zone Capitaine' : 'Organisation du match';
+  }, [canShowCaptainPrimary, isCaptain]);
+  const captainSectionLabel = useMemo(() => {
+    if (canShowCaptainPrimary) return 'ACTION PRIORITAIRE';
+    return isCaptain ? 'PRIORITE MATCH' : 'ACTION EQUIPE';
+  }, [canShowCaptainPrimary, isCaptain]);
+  const shouldRenderCaptainSectionHelper = Boolean(canShowCaptainPrimary && captainSectionHelperText);
+  const shouldRenderInlineCaptainActions = Boolean(canShowCaptainPrimary && shouldShowInlineCaptainActions);
   const postSlotResolutionModalMeta = useMemo(() => {
     if (effectivePostSlotResolutionStep === 'confirm_reschedule') {
       return {
@@ -934,6 +1063,44 @@ function LeagueMatchDetails({ navigation, route }) {
     requiredPlayers,
     venueRequired,
   ]);
+  const detailTabOptions = useMemo(() => ([
+    { label: 'Match', value: 'match' },
+    { label: 'Equipe', value: 'team' },
+    { label: 'Historique', value: 'history' },
+  ]), []);
+  const activeWorkflowStepLabel = useMemo(() => {
+    const activeStep = leagueWorkflowSteps.find((step) => step.state === 'active');
+    if (activeStep?.label) return activeStep.label;
+
+    const nextStep = leagueWorkflowSteps.find((step) => step.state !== 'done');
+    if (nextStep?.label) return nextStep.label;
+
+    return 'Termine';
+  }, [leagueWorkflowSteps]);
+  const heroSummaryChips = useMemo(() => {
+    const chips = [
+      {
+        key: 'players',
+        tone: 'primary',
+        value: `${participationCount}/${requiredPlayers} joueurs`,
+      },
+      {
+        key: 'workflow',
+        tone: activeWorkflowStepLabel === 'Termine' ? 'success' : 'neutral',
+        value: activeWorkflowStepLabel,
+      },
+    ];
+
+    if (hasNegotiationConversation) {
+      chips.push({
+        key: 'chat',
+        tone: 'neutral',
+        value: 'Chat actif',
+      });
+    }
+
+    return chips;
+  }, [activeWorkflowStepLabel, hasNegotiationConversation, participationCount, requiredPlayers]);
   const leagueStatsAction = useMemo(() => {
     if (normalizedStatus !== 'valid') {
       return {
@@ -1435,8 +1602,27 @@ function LeagueMatchDetails({ navigation, route }) {
   const handleOpenCounterProposal = useCallback(() => {
     setIsNegotiationModalVisible(true);
   }, []);
+  const handleOpenNegotiationResponseSheet = useCallback(() => {
+    if (!canReplyFromNegotiationCard) return;
+    setIsNegotiationResponseSheetVisible(true);
+  }, [canReplyFromNegotiationCard]);
+  const handleAcceptNegotiationProposalFromSheet = useCallback(() => {
+    setIsNegotiationResponseSheetVisible(false);
+    handleAcceptNegotiationProposal();
+  }, [handleAcceptNegotiationProposal]);
+  const handleDeclineNegotiationProposalFromSheet = useCallback(() => {
+    setIsNegotiationResponseSheetVisible(false);
+    handleDeclineNegotiationProposal();
+  }, [handleDeclineNegotiationProposal]);
+  const handleCounterProposalFromSheet = useCallback(() => {
+    setIsNegotiationResponseSheetVisible(false);
+    handleOpenCounterProposal();
+  }, [handleOpenCounterProposal]);
 
-  const handleSendCounterProposal = useCallback(async (proposalData) => {
+  const handleSendCounterProposal = useCallback(async (
+    proposalData,
+    /** @type {{ legalAcceptance?: Record<string, unknown> } | undefined} */ options = undefined,
+  ) => {
     const chatId = getEntityDocumentId(match?.chat);
     if (!matchId || actionLoading) return;
 
@@ -1445,7 +1631,7 @@ function LeagueMatchDetails({ navigation, route }) {
       if (venueRequired && !proposalPayload.venueLabel) {
         throw new Error('Missing proposal venue');
       }
-      const legalAcceptance = await requestLeagueLegalAcceptance({
+      const legalAcceptance = options?.legalAcceptance || await requestLeagueLegalAcceptance({
         metadata: {
           matchLabel: matchLegalLabel,
           teamName: myTeam?.name || null,
@@ -1641,7 +1827,7 @@ function LeagueMatchDetails({ navigation, route }) {
           <View style={[styles.headerSide, styles.headerSideRight]}>
             {match.chat ? (
               <TouchableOpacity onPress={handleOpenChat} style={styles.chatButton}>
-                <Image source={Images.envelope} style={{ height: 18, tintColor: Colors.gold500, width: 18 }} />
+                <Image source={Images.envelope} style={{ height: 18, tintColor: Colors.primary500, width: 18 }} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -1712,7 +1898,7 @@ function LeagueMatchDetails({ navigation, route }) {
                     {match.score_b}
                   </Text>
                 ) : (
-                  <Text style={[Fonts.h1, styles.heroVsValue, { color: Colors.gold500 }]}>VS</Text>
+                  <Text style={[Fonts.h1, styles.heroVsValue, { color: Colors.primary500 }]}>VS</Text>
                 )}
               </View>
 
@@ -1720,11 +1906,11 @@ function LeagueMatchDetails({ navigation, route }) {
                 {isAnonymous ? (
                   <>
                     <View style={styles.heroGhostShield}>
-                      <Text style={[Fonts.h2, { color: Colors.gold500 }]}>?</Text>
+                      <Text style={[Fonts.h2, { color: Colors.primary500 }]}>?</Text>
                     </View>
                     <Text
                       numberOfLines={2}
-                      style={[Fonts.h4, styles.heroTeamName, { color: leagueCardTextColor, fontStyle: 'italic' }]}
+                      style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral200, fontStyle: 'italic' }]}
                     >
                       Adversaire mystere
                     </Text>
@@ -1768,149 +1954,113 @@ function LeagueMatchDetails({ navigation, route }) {
               </View>
             </View>
 
-            <Text style={[Fonts.p3, styles.heroSummaryText, { color: leagueCardTextColor }]}>
+            <Text style={[Fonts.p3, styles.heroSummaryText, { color: Colors.neutral200 }]}>
               {heroSupportText}
             </Text>
-            {hasCaptainQuickActions && !hasBottomActionBar ? (
-              <View style={styles.heroQuickActionArea}>
-                {isPostSlotResolutionCurrentMatch ? (
-                  <Button
-                    disabled={actionLoading}
-                    icon="flag"
-                    iconColor={Colors.primary900}
-                    iconPosition="before"
-                    onPress={handleOpenPostSlotResolution}
-                    size="small"
-                    style={{
-                      backgroundColor: Colors.warning500,
-                      borderColor: Colors.warning500,
-                    }}
-                    textStyle={{ color: Colors.primary900 }}
-                    title="Le match a-t-il eu lieu ?"
-                    variant="Primary"
-                  />
-                ) : null}
-                {canManageVenue ? (
-                  <Button
-                    disabled={actionLoading}
-                    icon="stadium"
-                    iconColor={Colors.neutral00}
-                    iconPosition="before"
-                    onPress={handleMarkVenueBooked}
-                    size="small"
-                    style={{
-                      backgroundColor: Colors.primary500,
-                      borderColor: Colors.primary500,
-                    }}
-                    textStyle={{ color: Colors.neutral00 }}
-                    title="Marquer terrain reserve"
-                    variant="Primary"
-                  />
-                ) : null}
-                {isScoreLockedByTime && !canSubmitScore ? (
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.bottomLockedInfo,
-                      {
-                        backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                        borderColor: 'rgba(1, 179, 244, 0.24)',
-                        marginTop: 10,
-                      },
-                    ]}
-                  >
-                    <Image source={Images.clock} style={{ height: 16, tintColor: Colors.primary500, width: 16 }} />
-                    <Text style={[Fonts.p4Bold, { color: Colors.neutral200, flex: 1 }]}>
-                      Score disponible au debut du match + 1 min.
-                    </Text>
-                  </View>
-                ) : null}
-                {canSubmitScore ? (
-                  <Button
-                    disabled={actionLoading}
-                    icon="edit"
-                    iconColor={Colors.neutral00}
-                    iconPosition="before"
-                    onPress={handleGoToScoreEntry}
-                    size="small"
-                    style={{
-                      backgroundColor: Colors.primary500,
-                      borderColor: Colors.primary500,
-                    }}
-                    textStyle={{ color: Colors.neutral00 }}
-                    title={scoreQuickActionMeta.title}
-                    variant="Primary"
-                  />
-                ) : null}
-              </View>
-            ) : null}
-          </LeagueCard>
+            <View style={styles.progressChipsRow}>
+              {heroSummaryChips.map((chip) => {
+                let chipTone = Colors.primary500;
+                let chipBackgroundColor = 'rgba(1, 179, 244, 0.08)';
+                let chipBorderColor = 'rgba(1, 179, 244, 0.24)';
 
-          <LeagueCard style={styles.workflowCard}>
-            <View style={styles.workflowHeaderRow}>
-              <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>Suivi League</Text>
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                {participationCount}
-                /
-                {requiredPlayers}
-                {' '}
-                joueurs
-              </Text>
-            </View>
-            <View style={styles.workflowStepsRow}>
-              {leagueWorkflowSteps.map((step) => {
-                const isDone = step.state === 'done';
-                const isActive = step.state === 'active';
-                let tone = Colors.primary500;
-                let stepBackgroundColor = 'rgba(1, 179, 244, 0.08)';
-                let stepBorderColor = 'rgba(1, 179, 244, 0.24)';
-                if (isDone) {
-                  tone = Colors.success500;
-                  stepBackgroundColor = 'rgba(34, 197, 94, 0.12)';
-                  stepBorderColor = 'rgba(34, 197, 94, 0.30)';
-                } else if (isActive) {
-                  tone = Colors.primary500;
-                  stepBackgroundColor = 'rgba(1, 179, 244, 0.12)';
-                  stepBorderColor = 'rgba(1, 179, 244, 0.36)';
+                if (chip.tone === 'success') {
+                  chipTone = Colors.success500;
+                  chipBackgroundColor = 'rgba(34, 197, 94, 0.10)';
+                  chipBorderColor = 'rgba(34, 197, 94, 0.28)';
+                } else if (chip.tone === 'neutral') {
+                  chipTone = Colors.neutral200;
+                  chipBackgroundColor = 'rgba(255, 255, 255, 0.05)';
+                  chipBorderColor = 'rgba(255, 255, 255, 0.12)';
                 }
+
                 return (
                   <View
-                    key={step.key}
+                    key={chip.key}
                     style={[
                       styles.workflowStep,
                       {
-                        backgroundColor: stepBackgroundColor,
-                        borderColor: stepBorderColor,
+                        backgroundColor: chipBackgroundColor,
+                        borderColor: chipBorderColor,
                       },
                     ]}
                   >
-                    <View style={[styles.workflowDot, { backgroundColor: tone }]} />
-                    <Text style={[Fonts.p4Bold, { color: tone }]}>{step.label}</Text>
+                    <View style={[styles.workflowDot, { backgroundColor: chipTone }]} />
+                    <Text style={[Fonts.p4Bold, { color: chipTone }]}>{chip.value}</Text>
                   </View>
                 );
               })}
             </View>
           </LeagueCard>
 
-          {negotiationState ? (
+          <View style={styles.detailsTabsWrap}>
+            <SegmentedControl
+              centerContent
+              onChange={setSelectedContentTab}
+              options={detailTabOptions}
+              value={selectedContentTab}
+            />
+          </View>
+
+          {selectedContentTab === 'match' && (canShowCaptainPrimary || canShowCaptainCancel) ? (
+            <>
+              {renderSectionHeader(captainSectionTitle, Colors.gold500)}
+              <LeagueCard style={[styles.leagueCardSurface, isVenueBookingHighlighted ? { borderColor: Colors.gold500, borderWidth: 2 } : null]}>
+                <View
+                  style={[
+                    styles.captainHeroCard,
+                    {
+                      backgroundColor: isVenueBookingHighlighted ? 'rgba(255, 215, 0, 0.10)' : leagueAccentSurface,
+                      borderColor: isVenueBookingHighlighted ? 'rgba(255, 215, 0, 0.28)' : 'rgba(1, 179, 244, 0.22)',
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>
+                    {captainSectionLabel}
+                  </Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                    {canShowCaptainPrimary ? captainPrimarySummaryText : captainQuickActionMeta.helper}
+                  </Text>
+                </View>
+                {shouldRenderCaptainSectionHelper ? (
+                  <Text style={[Fonts.p3, { color: leagueCardTextColor, marginBottom: 14 }]}>
+                    {captainSectionHelperText}
+                  </Text>
+                ) : null}
+                {shouldRenderInlineCaptainActions ? renderCaptainQuickActionButtons() : null}
+                {canShowCaptainCancel ? (
+                  <TouchableOpacity
+                    disabled={actionLoading}
+                    onPress={handleCancelMatch}
+                    style={{ alignItems: 'center', paddingBottom: 6, paddingTop: canShowCaptainPrimary ? 12 : 6 }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.error500, textDecorationLine: 'underline' }]}>
+                      Annuler le match
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </LeagueCard>
+            </>
+          ) : null}
+
+          {selectedContentTab === 'match' && negotiationState ? (
             <>
               {renderSectionHeader('Negociation')}
               <LeagueCard
-                style={[styles.leagueCardSurface, isNegotiationHighlighted ? { borderColor: Colors.warning500, borderWidth: 2 } : null]}
+                style={[styles.leagueCardSurface, isNegotiationHighlighted ? { borderColor: Colors.primary500, borderWidth: 2 } : null]}
               >
                 <View
                   style={[
                     styles.captainHeroCard,
                     {
-                      backgroundColor: isNegotiationHighlighted ? 'rgba(245, 158, 11, 0.14)' : leagueAccentSurface,
-                      borderColor: isNegotiationHighlighted ? 'rgba(245, 158, 11, 0.34)' : 'rgba(1, 179, 244, 0.22)',
+                      backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                      borderColor: isNegotiationHighlighted ? 'rgba(1, 179, 244, 0.40)' : 'rgba(1, 179, 244, 0.22)',
                     },
                   ]}
                 >
-                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginBottom: 4 }]}>
                     {negotiationMeta.title}
                   </Text>
-                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00, lineHeight: 24 }]}>
                     {negotiationMeta.helper}
                   </Text>
                 </View>
@@ -1920,60 +2070,30 @@ function LeagueMatchDetails({ navigation, route }) {
                     style={[
                       styles.infoPill,
                       {
-                        backgroundColor: leagueGoldSurface,
-                        borderColor: 'rgba(255, 215, 0, 0.18)',
-                      },
-                    ]}
-                  >
-                    <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(255, 215, 0, 0.14)' }]}>
-                      <Image source={Images.calendar} style={{ height: 18, tintColor: Colors.gold500, width: 18 }} />
-                    </View>
-                    <View style={styles.infoTextWrap}>
-                      <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Derniere proposition</Text>
-                      <Text style={[Fonts.p1, { color: Colors.gold500 }]}>{negotiationMeta.formattedDate}</Text>
-                    </View>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.infoPill,
-                      {
-                        backgroundColor: leagueAccentSurface,
-                        borderColor: 'rgba(1, 179, 244, 0.18)',
+                        backgroundColor: 'rgba(1, 179, 244, 0.05)',
+                        borderColor: 'rgba(1, 179, 244, 0.16)',
                       },
                     ]}
                   >
                     <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(1, 179, 244, 0.14)' }]}>
-                      <Image source={Images.pin} style={{ height: 18, tintColor: Colors.gold500, width: 18 }} />
+                      <Image source={Images.calendar} style={{ height: 18, tintColor: Colors.primary500, width: 18 }} />
                     </View>
                     <View style={styles.infoTextWrap}>
-                      <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Origine et lieu</Text>
-                      <Text style={[Fonts.p1, { color: Colors.gold500 }]}>{negotiationProposalVenue}</Text>
-                      <Text style={[Fonts.p2, { color: leagueCardTextColor, marginTop: 4 }]}>
+                      <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginBottom: 4 }]}>
+                        Proposition recue
+                      </Text>
+                      <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>{negotiationMeta.formattedDate}</Text>
+                      <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 8 }]}>
+                        {negotiationProposalVenue}
+                      </Text>
+                      <Text style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}>
                         {negotiationMeta.origin}
                       </Text>
                     </View>
                   </View>
                 </View>
 
-                {hasNegotiationConversation ? (
-                  <View style={{ gap: 10, marginTop: 16 }}>
-                    <Button
-                      disabled={actionLoading}
-                      onPress={canCreateFirstProposalFromNegotiationCard ? handleOpenCounterProposal : handleOpenChat}
-                      style={{ backgroundColor: Colors.gold500 }}
-                      textStyle={{ color: Colors.primary900 }}
-                      title={canCreateFirstProposalFromNegotiationCard ? 'Envoyer une proposition' : 'Repondre'}
-                      variant="Primary"
-                    />
-                    <Button
-                      disabled={actionLoading}
-                      onPress={handleOpenChat}
-                      title={negotiationProposalMessageId ? 'Voir la proposition dans le chat' : 'Voir le fil de negociation'}
-                      variant="Secondary"
-                    />
-                  </View>
-                ) : (
+                {!hasNegotiationConversation ? (
                   <View
                     style={[
                       styles.heroStatusSupportCard,
@@ -2002,117 +2122,118 @@ function LeagueMatchDetails({ navigation, route }) {
                       />
                     </View>
                   </View>
-                )}
+                ) : null}
 
                 {renderNegotiationActions()}
               </LeagueCard>
             </>
           ) : null}
 
-          {renderSectionHeader('Organisation')}
-          <LeagueCard
-            isGold
-            style={[styles.leagueCardGoldSurface, {
-              backgroundColor: leagueAccentSurfaceSoft,
-              borderColor: 'rgba(255, 215, 0, 0.42)',
-            }]}
-          >
-            <View style={styles.infoStack}>
-              <View
-                style={[
-                  styles.infoPill,
-                  {
-                    backgroundColor: leagueGoldSurface,
-                    borderColor: 'rgba(255, 215, 0, 0.18)',
-                  },
-                ]}
-              >
-                <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(255, 215, 0, 0.14)' }]}>
-                  <Image source={Images.calendar} style={{ height: 18, tintColor: Colors.gold500, width: 18 }} />
-                </View>
-                <View style={styles.infoTextWrap}>
-                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Date et heure</Text>
-                  <Text style={[Fonts.p1, { color: Colors.gold500 }]}>
-                    {formattedDate}
-                  </Text>
-                </View>
-              </View>
-
-              <View
-                style={[
-                  styles.infoPill,
-                  {
-                    backgroundColor: leagueAccentSurface,
-                    borderColor: isVenueBookingHighlighted ? Colors.warning500 : 'rgba(1, 179, 244, 0.18)',
-                    borderWidth: isVenueBookingHighlighted ? 2 : 1,
-                  },
-                ]}
-              >
-                <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(1, 179, 244, 0.14)' }]}>
-                  <Image source={Images.pin} style={{ height: 18, tintColor: Colors.gold500, width: 18 }} />
-                </View>
-                <View style={styles.infoTextWrap}>
-                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Lieu</Text>
-                  <Text style={[Fonts.p1, { color: Colors.gold500 }]}>{venueLabel}</Text>
-                  {showAddressLine ? (
-                    <Text style={[Fonts.p2, { color: Colors.gold500, marginTop: 4 }]}>
-                      {addressLabel}
+          {selectedContentTab === 'match' ? renderSectionHeader('Organisation') : null}
+          {selectedContentTab === 'match' ? (
+            <LeagueCard
+              style={[styles.leagueCardSurface, {
+                backgroundColor: leagueAccentSurfaceSoft,
+                borderColor: 'rgba(1, 179, 244, 0.28)',
+              }]}
+            >
+              <View style={styles.infoStack}>
+                <View
+                  style={[
+                    styles.infoPill,
+                    {
+                      backgroundColor: 'rgba(255,255,255,0.04)',
+                      borderColor: 'rgba(255,255,255,0.10)',
+                    },
+                  ]}
+                >
+                  <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(1, 179, 244, 0.14)' }]}>
+                    <Image source={Images.calendar} style={{ height: 18, tintColor: Colors.primary500, width: 18 }} />
+                  </View>
+                  <View style={styles.infoTextWrap}>
+                    <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginBottom: 4 }]}>Date et heure</Text>
+                    <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
+                      {formattedDate}
                     </Text>
-                  ) : null}
-                </View>
-              </View>
-            </View>
-
-            {eloPrediction ? (
-              <>
-                <View style={[styles.separator, { backgroundColor: 'rgba(1, 179, 244, 0.16)' }]} />
-                <View style={styles.eloContainer}>
-                  <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 8, textAlign: 'center' }]}>
-                    ENJEUX DU MATCH (ELO matchmaking)
-                  </Text>
-                  <View style={styles.eloRow}>
-                    <View
-                      style={[
-                        styles.eloTeam,
-                        {
-                          backgroundColor: leagueGoldSurface,
-                          borderColor: 'rgba(255, 215, 0, 0.16)',
-                        },
-                      ]}
-                    >
-                      <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{match.team_a?.name}</Text>
-                      <Text style={[Fonts.p1, { color: Colors.gold500 }]}>
-                        +
-                        {eloPrediction.winA}
-                        {' / '}
-                        <Text style={{ color: Colors.gold500 }}>{eloPrediction.lossA}</Text>
-                      </Text>
-                    </View>
-                    <View style={[styles.verticalSep, { backgroundColor: 'rgba(1, 179, 244, 0.28)' }]} />
-                    <View
-                      style={[
-                        styles.eloTeam,
-                        {
-                          backgroundColor: leagueAccentSurface,
-                          borderColor: 'rgba(1, 179, 244, 0.16)',
-                        },
-                      ]}
-                    >
-                      <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{isAnonymous ? '???' : match.team_b?.name}</Text>
-                      <Text style={[Fonts.p1, { color: Colors.gold500 }]}>
-                        +
-                        {eloPrediction.winB}
-                        {' / '}
-                        <Text style={{ color: Colors.gold500 }}>{eloPrediction.lossB}</Text>
-                      </Text>
-                    </View>
                   </View>
                 </View>
-              </>
-            ) : null}
-          </LeagueCard>
 
-          {teamSide && normalizedStatus === 'valid' && canRespondMyLeagueStats ? (
+                <View
+                  style={[
+                    styles.infoPill,
+                    {
+                      backgroundColor: leagueAccentSurface,
+                      borderColor: isVenueBookingHighlighted ? Colors.warning500 : 'rgba(1, 179, 244, 0.18)',
+                      borderWidth: isVenueBookingHighlighted ? 2 : 1,
+                    },
+                  ]}
+                >
+                  <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(1, 179, 244, 0.14)' }]}>
+                    <Image source={Images.pin} style={{ height: 18, tintColor: Colors.primary500, width: 18 }} />
+                  </View>
+                  <View style={styles.infoTextWrap}>
+                    <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginBottom: 4 }]}>Lieu</Text>
+                    <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>{venueLabel}</Text>
+                    {showAddressLine ? (
+                      <Text style={[Fonts.p2, { color: Colors.neutral200, marginTop: 4 }]}>
+                        {addressLabel}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+
+              {eloPrediction ? (
+                <>
+                  <View style={[styles.separator, { backgroundColor: 'rgba(1, 179, 244, 0.16)' }]} />
+                  <View style={styles.eloContainer}>
+                    <Text style={[Fonts.label, { color: Colors.primary500, marginBottom: 8, textAlign: 'center' }]}>
+                      ENJEUX DU MATCH (ELO matchmaking)
+                    </Text>
+                    <View style={styles.eloRow}>
+                      <View
+                        style={[
+                          styles.eloTeam,
+                          {
+                            backgroundColor: 'rgba(255,255,255,0.04)',
+                            borderColor: 'rgba(255,255,255,0.10)',
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{match.team_a?.name}</Text>
+                        <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
+                          +
+                          {eloPrediction.winA}
+                          {' / '}
+                          <Text style={{ color: Colors.neutral00 }}>{eloPrediction.lossA}</Text>
+                        </Text>
+                      </View>
+                      <View style={[styles.verticalSep, { backgroundColor: 'rgba(1, 179, 244, 0.28)' }]} />
+                      <View
+                        style={[
+                          styles.eloTeam,
+                          {
+                            backgroundColor: leagueAccentSurface,
+                            borderColor: 'rgba(1, 179, 244, 0.16)',
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{isAnonymous ? '???' : match.team_b?.name}</Text>
+                        <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
+                          +
+                          {eloPrediction.winB}
+                          {' / '}
+                          <Text style={{ color: Colors.neutral00 }}>{eloPrediction.lossB}</Text>
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </>
+              ) : null}
+            </LeagueCard>
+          ) : null}
+
+          {selectedContentTab === 'team' && teamSide && normalizedStatus === 'valid' && canRespondMyLeagueStats ? (
             <>
               {renderSectionHeader('Mes stats')}
               <LeagueCard style={styles.leagueCardSurface}>
@@ -2164,7 +2285,7 @@ function LeagueMatchDetails({ navigation, route }) {
                         padding: 16,
                       }}
                     >
-                      <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
+                      <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
                         {`Le match de l \u00E9quipe : ${leagueMyMatchResponse.teamRating}/10`}
                       </Text>
                     </View>
@@ -2196,7 +2317,7 @@ function LeagueMatchDetails({ navigation, route }) {
             </>
           ) : null}
 
-          {teamSide && normalizedStatus === 'valid' && canRespondMyLeagueStats ? (
+          {selectedContentTab === 'team' && teamSide && normalizedStatus === 'valid' && canRespondMyLeagueStats ? (
             <>
               {renderSectionHeader('Mon retour capitaine', Colors.gold500)}
               <LeagueCard style={[styles.leagueCardSurface, isCoachFeedbackHighlighted ? { borderColor: Colors.gold500, borderWidth: 2 } : null]}>
@@ -2265,15 +2386,15 @@ function LeagueMatchDetails({ navigation, route }) {
             </>
           ) : null}
 
-          {canViewLeagueStats ? (
+          {selectedContentTab === 'match' && canViewLeagueStats ? (
             <>
               {renderSectionHeader('Stats du match')}
               <LeagueCard style={styles.leagueCardSurface}>
                 <View style={{ gap: 12 }}>
                   <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 6 }]}>SUIVI POST-MATCH</Text>
-                      <Text style={[Fonts.p1, { color: Colors.gold500 }]}>
+                      <Text style={[Fonts.label, { color: Colors.primary500, marginBottom: 6 }]}>SUIVI POST-MATCH</Text>
+                      <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
                         {leagueMatchStatsPayload?.score?.available
                           ? `${leagueMatchStatsPayload?.score?.scoreFor ?? '-'} - ${leagueMatchStatsPayload?.score?.scoreAgainst ?? '-'}`
                           : 'Score en attente'}
@@ -2312,8 +2433,8 @@ function LeagueMatchDetails({ navigation, route }) {
                             padding: 12,
                           }}
                         >
-                          <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Note capitaine</Text>
-                          <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+                          <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Note capitaine</Text>
+                          <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
                             {`${leagueStatsReport.collectiveRating}/10`}
                           </Text>
                         </View>
@@ -2328,8 +2449,8 @@ function LeagueMatchDetails({ navigation, route }) {
                             padding: 12,
                           }}
                         >
-                          <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Ressenti joueurs</Text>
-                          <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+                          <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Ressenti joueurs</Text>
+                          <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
                             {`${leaguePlayerCollectiveRating.average}/10`}
                           </Text>
                         </View>
@@ -2364,7 +2485,7 @@ function LeagueMatchDetails({ navigation, route }) {
                         {`${leagueStatsReport?.responseCompletionCount ?? leaguePlayerCollectiveRating?.count ?? 0}/${leagueStatsReport?.responseEligibleCount ?? leaguePlayerCollectiveRating?.eligibleCount ?? 0} joueurs ont répondu`}
                       </Text>
                       {leaguePlayerCollectiveRating?.count ? (
-                        <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
+                        <Text style={[Fonts.p4, { color: leagueCardTextColor }]}>
                           {`${leaguePlayerCollectiveRating.count} note${leaguePlayerCollectiveRating.count > 1 ? 's' : ''} collective${leaguePlayerCollectiveRating.count > 1 ? 's' : ''} prise${leaguePlayerCollectiveRating.count > 1 ? 's' : ''} en compte`}
                         </Text>
                       ) : null}
@@ -2382,7 +2503,7 @@ function LeagueMatchDetails({ navigation, route }) {
                         }}
                       >
                         <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>Version</Text>
-                        <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+                        <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
                           {`v${Number(leagueStatsReport?.version || 1)}`}
                         </Text>
                       </View>
@@ -2395,7 +2516,7 @@ function LeagueMatchDetails({ navigation, route }) {
                         }}
                       >
                         <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>Publication</Text>
-                        <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+                        <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
                           {leagueStatsReport?.finalizedAt
                             ? new Date(leagueStatsReport.finalizedAt).toLocaleString('fr-FR')
                             : '-'}
@@ -2440,66 +2561,68 @@ function LeagueMatchDetails({ navigation, route }) {
             </>
           ) : null}
 
-          {renderSectionHeader(
+          {selectedContentTab === 'team' ? renderSectionHeader(
             `Compositions (${match.participations_a?.length || 0} vs ${match.participations_b?.length || 0})`,
-          )}
+          ) : null}
 
-          <LeagueCard style={styles.leagueCardSurface}>
-            <View style={[styles.compoRow, { gap: 12 }]}>
-              <View
-                style={[
-                  styles.compoColumn,
-                  {
-                    backgroundColor: leagueGoldSurface,
-                    borderColor: 'rgba(255, 215, 0, 0.18)',
-                  },
-                ]}
-              >
-                <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 12 }]}>{match.team_a?.name}</Text>
-                {(match.participations_a || []).map((/** @type {User} */ p, /** @type {number} */ i) => (
-                  <View key={`${getEntityDocumentId(p) || i}-a`} style={styles.playerRow}>
-                    <View style={[styles.dot, { backgroundColor: Colors.gold500 }]} />
-                    <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{getParticipantDisplayName(p)}</Text>
-                    {p.isCaptain ? <Text style={{ color: Colors.gold500, fontSize: 10, marginLeft: 4 }}>C</Text> : null}
-                  </View>
-                ))}
-                {(!match.participations_a || match.participations_a.length === 0) ? (
-                  <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>Aucun joueur</Text>
-                ) : null}
+          {selectedContentTab === 'team' ? (
+            <LeagueCard style={styles.leagueCardSurface}>
+              <View style={[styles.compoRow, { gap: 12 }]}>
+                <View
+                  style={[
+                    styles.compoColumn,
+                    {
+                      backgroundColor: leagueGoldSurface,
+                      borderColor: 'rgba(255, 215, 0, 0.18)',
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 12 }]}>{match.team_a?.name}</Text>
+                  {(match.participations_a || []).map((/** @type {User} */ p, /** @type {number} */ i) => (
+                    <View key={`${getEntityDocumentId(p) || i}-a`} style={styles.playerRow}>
+                      <View style={[styles.dot, { backgroundColor: Colors.gold500 }]} />
+                      <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{getParticipantDisplayName(p)}</Text>
+                      {p.isCaptain ? <Text style={{ color: Colors.gold500, fontSize: 10, marginLeft: 4 }}>C</Text> : null}
+                    </View>
+                  ))}
+                  {(!match.participations_a || match.participations_a.length === 0) ? (
+                    <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>Aucun joueur</Text>
+                  ) : null}
+                </View>
+
+                <View
+                  style={[
+                    styles.compoColumn,
+                    {
+                      backgroundColor: leagueAccentSurface,
+                      borderColor: 'rgba(1, 179, 244, 0.18)',
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.label, { color: leagueCardTextColor, marginBottom: 12 }]}>
+                    {isAnonymous ? 'Adversaire' : match.team_b?.name}
+                  </Text>
+                  {isAnonymous ? (
+                    <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>Masque</Text>
+                  ) : (
+                    <>
+                      {(match.participations_b || []).map((/** @type {User} */ p, /** @type {number} */ i) => (
+                        <View key={`${getEntityDocumentId(p) || i}-b`} style={styles.playerRow}>
+                          <View style={[styles.dot, { backgroundColor: leagueCardTextColor }]} />
+                          <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{getParticipantDisplayName(p)}</Text>
+                        </View>
+                      ))}
+                      {(!match.participations_b || match.participations_b.length === 0) ? (
+                        <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>Aucun joueur</Text>
+                      ) : null}
+                    </>
+                  )}
+                </View>
               </View>
+            </LeagueCard>
+          ) : null}
 
-              <View
-                style={[
-                  styles.compoColumn,
-                  {
-                    backgroundColor: leagueAccentSurface,
-                    borderColor: 'rgba(1, 179, 244, 0.18)',
-                  },
-                ]}
-              >
-                <Text style={[Fonts.label, { color: leagueCardTextColor, marginBottom: 12 }]}>
-                  {isAnonymous ? 'Adversaire' : match.team_b?.name}
-                </Text>
-                {isAnonymous ? (
-                  <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>Masque</Text>
-                ) : (
-                  <>
-                    {(match.participations_b || []).map((/** @type {User} */ p, /** @type {number} */ i) => (
-                      <View key={`${getEntityDocumentId(p) || i}-b`} style={styles.playerRow}>
-                        <View style={[styles.dot, { backgroundColor: leagueCardTextColor }]} />
-                        <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{getParticipantDisplayName(p)}</Text>
-                      </View>
-                    ))}
-                    {(!match.participations_b || match.participations_b.length === 0) ? (
-                      <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>Aucun joueur</Text>
-                    ) : null}
-                  </>
-                )}
-              </View>
-            </View>
-          </LeagueCard>
-
-          {leagueTimeline.length ? (
+          {selectedContentTab === 'history' && leagueTimeline.length ? (
             <>
               {renderSectionHeader('Historique League')}
               <LeagueCard style={[styles.leagueCardSurface, isTimelineHighlighted ? { borderColor: Colors.warning500, borderWidth: 2 } : null]}>
@@ -2540,48 +2663,18 @@ function LeagueMatchDetails({ navigation, route }) {
               </LeagueCard>
             </>
           ) : null}
-
-          {(canShowCaptainPrimary || canShowCaptainCancel) ? (
+          {selectedContentTab === 'history' && !leagueTimeline.length ? (
             <>
-              {renderSectionHeader(isCaptain ? 'Zone Capitaine' : 'Organisation du match')}
-              <LeagueCard style={[styles.leagueCardSurface, isVenueBookingHighlighted ? { borderColor: Colors.warning500, borderWidth: 2 } : null]}>
-                <View
-                  style={[
-                    styles.captainHeroCard,
-                    {
-                      backgroundColor: isVenueBookingHighlighted ? 'rgba(245, 158, 11, 0.14)' : leagueAccentSurface,
-                      borderColor: isVenueBookingHighlighted ? 'rgba(245, 158, 11, 0.34)' : 'rgba(1, 179, 244, 0.22)',
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>
-                    {isCaptain ? 'PRIORITE MATCH' : 'ACTION EQUIPE'}
-                  </Text>
-                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-                    {captainQuickActionMeta.helper}
-                  </Text>
-                </View>
-                {canShowCaptainPrimary ? (
-                  <Text style={[Fonts.p3, { color: leagueCardTextColor, marginBottom: canShowCaptainCancel ? 12 : 0 }]}>
-                    {venueRequired
-                      ? 'Les actions rapides terrain, score et resolution restent visibles dans la barre du bas pour agir sans quitter la fiche.'
-                      : 'Les actions rapides presence, score et resolution restent visibles dans la barre du bas pour agir sans quitter la fiche.'}
-                  </Text>
-                ) : null}
-                {canShowCaptainCancel ? (
-                  <TouchableOpacity
-                    disabled={actionLoading}
-                    onPress={handleCancelMatch}
-                    style={{ alignItems: 'center', paddingVertical: 6 }}
-                  >
-                    <Text style={[Fonts.p3Bold, { color: Colors.error500, textDecorationLine: 'underline' }]}>
-                      Annuler le match
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
+              {renderSectionHeader('Historique League')}
+              <LeagueCard style={styles.leagueCardSurface}>
+                <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
+                  Les prochaines mises a jour League apparaitront ici des qu une action
+                  sera enregistree sur ce match.
+                </Text>
               </LeagueCard>
             </>
           ) : null}
+
         </ScrollView>
 
         {hasBottomActionBar && !isPostSlotResolutionVisible ? (
@@ -2758,76 +2851,7 @@ function LeagueMatchDetails({ navigation, route }) {
                   </View>
                   <Text pointerEvents="none" style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{captainQuickActionMeta.title}</Text>
                   <Text pointerEvents="none" style={[Fonts.p4, { color: leagueCardTextColor }]}>{captainQuickActionMeta.helper}</Text>
-                  <View pointerEvents="box-none" style={styles.bottomCaptainButtonsStack}>
-                    {isPostSlotResolutionCurrentMatch ? (
-                      <Button
-                        disabled={actionLoading}
-                        icon="flag"
-                        iconColor={Colors.primary900}
-                        iconPosition="before"
-                        onPress={handleOpenPostSlotResolution}
-                        size="small"
-                        style={{
-                          backgroundColor: Colors.warning500,
-                          borderColor: Colors.warning500,
-                        }}
-                        textStyle={{ color: Colors.primary900 }}
-                        title="Le match a-t-il eu lieu ?"
-                        variant="Primary"
-                      />
-                    ) : null}
-                    {canManageVenue ? (
-                      <Button
-                        disabled={actionLoading}
-                        icon="stadium"
-                        iconColor={Colors.neutral00}
-                        iconPosition="before"
-                        onPress={handleMarkVenueBooked}
-                        size="small"
-                        style={{
-                          backgroundColor: Colors.primary500,
-                          borderColor: Colors.primary500,
-                        }}
-                        textStyle={{ color: Colors.neutral00 }}
-                        title="Marquer terrain reserve"
-                        variant="Primary"
-                      />
-                    ) : null}
-                    {isScoreLockedByTime && !canSubmitScore ? (
-                      <View
-                        pointerEvents="none"
-                        style={[
-                          styles.bottomLockedInfo,
-                          {
-                            backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                            borderColor: 'rgba(1, 179, 244, 0.24)',
-                          },
-                        ]}
-                      >
-                        <Image source={Images.clock} style={{ height: 16, tintColor: Colors.primary500, width: 16 }} />
-                        <Text style={[Fonts.p4Bold, { color: Colors.neutral200, flex: 1 }]}>
-                          Score disponible au debut du match + 1 min.
-                        </Text>
-                      </View>
-                    ) : null}
-                    {canSubmitScore ? (
-                      <Button
-                        disabled={actionLoading}
-                        icon="edit"
-                        iconColor={Colors.neutral00}
-                        iconPosition="before"
-                        onPress={handleGoToScoreEntry}
-                        size="small"
-                        style={{
-                          backgroundColor: Colors.primary500,
-                          borderColor: Colors.primary500,
-                        }}
-                        textStyle={{ color: Colors.neutral00 }}
-                        title={scoreQuickActionMeta.title}
-                        variant="Primary"
-                      />
-                    ) : null}
-                  </View>
+                  {renderCaptainQuickActionButtons()}
                 </View>
               ) : null}
             </View>
@@ -2881,6 +2905,74 @@ function LeagueMatchDetails({ navigation, route }) {
           </View>
         </BottomModal>
         <BottomModal
+          close={() => setIsNegotiationResponseSheetVisible(false)}
+          isVisible={isNegotiationResponseSheetVisible}
+          snapPoints={['56%']}
+        >
+          <View style={{ gap: 16, paddingBottom: 12 }}>
+            <View style={{ gap: 4 }}>
+              <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Repondre a la proposition</Text>
+              <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
+                Choisissez une seule action pour repondre a cette proposition de match.
+              </Text>
+            </View>
+
+            <LeagueCard style={styles.leagueCardSurface}>
+              <View style={{ gap: 12 }}>
+                <View style={styles.infoRow}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary500, minWidth: 72 }]}>Date</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1 }]}>
+                    {negotiationMeta.formattedDate}
+                  </Text>
+                </View>
+                <View style={[styles.separator, { backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 0 }]} />
+                <View style={styles.infoRow}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary500, minWidth: 72 }]}>Lieu</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1 }]}>
+                    {negotiationProposalVenue}
+                  </Text>
+                </View>
+              </View>
+            </LeagueCard>
+
+            <View style={styles.bottomCaptainButtonsStack}>
+              <Button
+                disabled={actionLoading}
+                isLoading={actionLoading}
+                onPress={handleAcceptNegotiationProposalFromSheet}
+                title="Accepter"
+                variant="Primary"
+              />
+              <Button
+                disabled={actionLoading}
+                onPress={handleDeclineNegotiationProposalFromSheet}
+                title="Refuser"
+                variant="Secondary"
+              />
+              <Button
+                disabled={actionLoading}
+                onPress={handleCounterProposalFromSheet}
+                title="Contre-proposer"
+                variant="SecondaryLight"
+              />
+              {hasNegotiationConversation ? (
+                <TouchableOpacity
+                  disabled={actionLoading}
+                  onPress={() => {
+                    setIsNegotiationResponseSheetVisible(false);
+                    handleOpenChat();
+                  }}
+                  style={{ alignItems: 'center', paddingVertical: 4 }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                    Voir la proposition dans le chat
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+        </BottomModal>
+        <BottomModal
           close={handleClosePostSlotResolution}
           isVisible={isPostSlotResolutionVisible}
           snapPoints={['64%']}
@@ -2910,7 +3002,19 @@ function LeagueMatchDetails({ navigation, route }) {
           initialDate={proposalDefaults.date}
           initialEndTime={proposalDefaults.end}
           initialStartTime={proposalDefaults.start}
+          isSubmitting={actionLoading}
           isVisible={isNegotiationModalVisible}
+          legalAcceptanceConfig={{
+            metadata: {
+              matchLabel: matchLegalLabel,
+              teamName: myTeam?.name || null,
+            },
+            scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
+            sourceScreen: 'league_match_details_counter_proposal',
+            targetDocumentId: matchId,
+            targetLabel: matchLegalLabel,
+            targetType: 'league_match',
+          }}
           onClose={() => setIsNegotiationModalVisible(false)}
           onSend={handleSendCounterProposal}
           onSkip={() => setIsNegotiationModalVisible(false)}
@@ -3024,8 +3128,8 @@ const styles = StyleSheet.create({
   },
   chatButton: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.08)',
-    borderColor: 'rgba(255, 215, 0, 0.42)',
+    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+    borderColor: 'rgba(1, 179, 244, 0.32)',
     borderRadius: 999,
     borderWidth: 1,
     height: 36,
@@ -3033,8 +3137,8 @@ const styles = StyleSheet.create({
     width: 36,
   },
   coachTag: {
-    backgroundColor: 'rgba(255, 215, 0, 0.08)',
-    borderColor: 'rgba(255, 215, 0, 0.25)',
+    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+    borderColor: 'rgba(1, 179, 244, 0.25)',
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 8,
@@ -3053,6 +3157,9 @@ const styles = StyleSheet.create({
   confirmedActionsRow: {
     alignItems: 'stretch',
     width: '100%',
+  },
+  detailsTabsWrap: {
+    marginBottom: 10,
   },
   dot: {
     borderRadius: 3,
@@ -3121,8 +3228,8 @@ const styles = StyleSheet.create({
   },
   heroGhostShield: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.08)',
-    borderColor: 'rgba(255, 215, 0, 0.28)',
+    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+    borderColor: 'rgba(1, 179, 244, 0.22)',
     borderRadius: 22,
     borderWidth: 1,
     height: 68,
@@ -3253,7 +3360,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 18,
+    marginTop: 14,
   },
   progressChipText: {
     fontFamily: 'Montserrat-SemiBold',

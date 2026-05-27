@@ -10,7 +10,6 @@ import {
 import {
   Alert,
   Dimensions,
-  Image,
   ImageBackground,
   StyleSheet,
   Text,
@@ -35,6 +34,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -49,7 +49,6 @@ import {
 
 import {
   getTacticalFieldAspectRatio,
-  getTacticalFieldImage,
 } from '@/utils/tacticalField';
 
 import DraggableToken from './DraggableToken';
@@ -264,7 +263,6 @@ function TacticalBoard() {
 
   // Sport specific
   const aspectRatio = getTacticalFieldAspectRatio(sport);
-  const fieldImage = getTacticalFieldImage(sport);
 
   // Calculate field dimensions - maximize space
   const fieldWidth = SCREEN_WIDTH - 28;
@@ -1117,8 +1115,7 @@ function TacticalBoard() {
               },
             ]}
           >
-            <Image resizeMode="cover" source={fieldImage} style={styles.fieldImage} />
-            <View style={[styles.fieldTint, { backgroundColor: `${Colors.primary500}10` }]} />
+            <RenderedTacticalField sport={sport} style={StyleSheet.absoluteFillObject} />
 
             {/* Drop zone indicator */}
             <Animated.View style={[styles.dropZoneIndicator, { borderColor: Colors.primary500 }, dropZoneStyle]} />
@@ -1464,15 +1461,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '78%',
   },
-  fieldImage: {
-    height: '100%',
-    width: '100%',
-  },
   fieldPlayerWrapper: {
     position: 'absolute',
-  },
-  fieldTint: {
-    ...StyleSheet.absoluteFillObject,
   },
   footer: {
     borderRadius: 24,

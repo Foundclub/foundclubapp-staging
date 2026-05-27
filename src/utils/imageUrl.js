@@ -8,18 +8,33 @@ import { getPublicApiOrigin } from '@/config/runtimeUrls';
 export const getImageUrl = (url) => {
   if (!url) return undefined;
 
-  // If it's already a full URL with http/https, transform localhost to 10.0.2.2
+  const publicOrigin = getPublicApiOrigin();
+  const preferredLoopbackHost = (() => {
+    try {
+      return new URL(publicOrigin).hostname;
+    } catch (_error) {
+      return '';
+    }
+  })();
+
+  // If it's already a full URL with http/https, align localhost with the current runtime host.
   if (url.startsWith('http://localhost')) {
-    return url.replace('http://localhost', 'http://10.0.2.2');
+    if (preferredLoopbackHost && preferredLoopbackHost !== 'localhost') {
+      return url.replace('http://localhost', `http://${preferredLoopbackHost}`);
+    }
+    return url;
   }
 
   if (url.startsWith('https://localhost')) {
-    return url.replace('https://localhost', 'http://10.0.2.2');
+    if (preferredLoopbackHost) {
+      return url.replace('https://localhost', `http://${preferredLoopbackHost}`);
+    }
+    return url.replace('https://localhost', 'http://localhost');
   }
 
   // If it's a relative URL, prepend the API base URL
   if (url.startsWith('/')) {
-    return `${getPublicApiOrigin()}${url}`;
+    return `${publicOrigin}${url}`;
   }
 
   // Otherwise return as is

@@ -331,6 +331,33 @@ function EventDetails({ navigation, route }) {
   const textColor = Colors?.neutral00 || '#ffffff';
   const mutedTextColor = Colors?.neutral300 || '#adb1b2';
   const accentColor = Colors?.primary500 || '#01b3f4';
+  const softTextColor = Colors?.neutral100 || '#e6eef2';
+  const softSurfaceColor = 'rgba(255,255,255,0.04)';
+  const pillSurfaceColor = 'rgba(255,255,255,0.06)';
+  const sectionTitleStyle = {
+    color: textColor,
+    fontFamily: 'Montserrat-Bold, sans-serif',
+    fontSize: 20,
+    margin: 0,
+  };
+  const outlineButtonStyle = {
+    background: 'transparent',
+    border: `1px solid ${borderColor}`,
+    borderRadius: 999,
+    color: textColor,
+    cursor: 'pointer',
+    fontFamily: 'Montserrat-SemiBold, Montserrat-Bold, sans-serif',
+    padding: '10px 16px',
+  };
+  const primaryButtonStyle = {
+    background: accentColor,
+    border: 0,
+    borderRadius: 999,
+    color: textColor,
+    cursor: 'pointer',
+    fontFamily: 'Montserrat-Bold, sans-serif',
+    padding: '10px 16px',
+  };
 
   const handleJoin = useCallback(async () => {
     setActionError('');
@@ -428,7 +455,7 @@ function EventDetails({ navigation, route }) {
     if (participantIdentitiesHidden) {
       return (
         <div style={{
-          background: 'rgba(255,255,255,0.04)',
+          background: softSurfaceColor,
           border: `1px solid ${borderColor}`,
           borderRadius: 16,
           display: 'grid',
@@ -480,7 +507,7 @@ function EventDetails({ navigation, route }) {
               key={getEntityDocumentId(participant) || displayName}
               style={{
                 alignItems: 'center',
-                background: 'rgba(255,255,255,0.04)',
+                background: softSurfaceColor,
                 border: `1px solid ${borderColor}`,
                 borderRadius: 16,
                 display: 'flex',
@@ -505,7 +532,7 @@ function EventDetails({ navigation, route }) {
                 </div>
               )}
               <div style={{ display: 'grid', gap: 4 }}>
-                <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{displayName}</span>
+                <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{displayName}</span>
               </div>
             </div>
           );
@@ -539,14 +566,7 @@ function EventDetails({ navigation, route }) {
             <span>Evenement cree. Verifie les derniers details avant de le partager.</span>
             <button
               onClick={() => navigation.navigate(RouteNames.MyEventList)}
-              style={{
-                background: 'transparent',
-                border: `1px solid ${borderColor}`,
-                borderRadius: 999,
-                color: textColor,
-                cursor: 'pointer',
-                padding: '8px 14px',
-              }}
+              style={{ ...outlineButtonStyle, padding: '8px 14px' }}
               type="button"
             >
               Voir mon planning
@@ -577,14 +597,7 @@ function EventDetails({ navigation, route }) {
               >
                 <button
                   onClick={() => navigation.goBack()}
-                  style={{
-                    background: 'transparent',
-                    border: `1px solid ${borderColor}`,
-                    borderRadius: 999,
-                    color: textColor,
-                    cursor: 'pointer',
-                    padding: '10px 14px',
-                  }}
+                  style={{ ...outlineButtonStyle, padding: '10px 14px' }}
                   type="button"
                 >
                   Retour
@@ -593,14 +606,7 @@ function EventDetails({ navigation, route }) {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     <button
                       onClick={handleShare}
-                      style={{
-                        background: 'transparent',
-                        border: `1px solid ${borderColor}`,
-                        borderRadius: 999,
-                        color: textColor,
-                        cursor: 'pointer',
-                        padding: '10px 14px',
-                      }}
+                      style={{ ...outlineButtonStyle, padding: '10px 14px' }}
                       type="button"
                     >
                       {isSharing ? 'Partage...' : 'Partager'}
@@ -608,15 +614,7 @@ function EventDetails({ navigation, route }) {
                     {canEdit ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.EventEdit, { eventId })}
-                        style={{
-                          background: accentColor,
-                          border: 0,
-                          borderRadius: 999,
-                          color: '#001218',
-                          cursor: 'pointer',
-                          fontFamily: 'Montserrat-Bold, sans-serif',
-                          padding: '10px 16px',
-                        }}
+                        style={primaryButtonStyle}
                         type="button"
                       >
                         Modifier
@@ -636,13 +634,17 @@ function EventDetails({ navigation, route }) {
                       {event?.type?.name || 'Evenement'}
                     </span>
                     <h1 style={{
-                      fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 38 : 30, lineHeight: 1.1, margin: 0,
+                      color: textColor,
+                      fontFamily: 'Montserrat-Black, sans-serif',
+                      fontSize: isTablet ? 38 : 30,
+                      lineHeight: 1.1,
+                      margin: 0,
                     }}
                     >
                       {event?.name || event?.type?.name || 'Evenement'}
                     </h1>
                     <div style={{
-                      color: mutedTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
+                      color: softTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
                     }}
                     >
                       <span>{formatDateTimeLabel(event?.date)}</span>
@@ -661,19 +663,28 @@ function EventDetails({ navigation, route }) {
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                     {event?.facility?.name ? (
-                      <span style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, padding: '9px 14px' }}>
+                      <span style={{
+                        background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
+                      }}
+                      >
                         {event.facility.name}
                       </span>
                     ) : null}
                     {event?.validationMode ? (
-                      <span style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, padding: '9px 14px' }}>
+                      <span style={{
+                        background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
+                      }}
+                      >
                         Validation
                         {' '}
                         {event.validationMode === 'manual' ? 'manuelle' : 'auto'}
                       </span>
                     ) : null}
                     {event?.sessionStatus ? (
-                      <span style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, padding: '9px 14px' }}>
+                      <span style={{
+                        background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
+                      }}
+                      >
                         Session
                         {' '}
                         {event.sessionStatus === 'closed' ? 'fermee' : 'ouverte'}
@@ -683,7 +694,7 @@ function EventDetails({ navigation, route }) {
 
                   {String(event?.description || '').trim() ? (
                     <p style={{
-                      color: textColor, fontSize: 15, lineHeight: 1.65, margin: 0, maxWidth: 840,
+                      color: softTextColor, fontSize: 15, lineHeight: 1.65, margin: 0, maxWidth: 840,
                     }}
                     >
                       {String(event?.description || '').trim()}
@@ -703,7 +714,7 @@ function EventDetails({ navigation, route }) {
                   padding: isTablet ? 32 : 22,
                 }}
               >
-                <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>Mon statut</div>
+                <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>Mon statut</div>
                 <div style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.5 }}>
                   {participationLabel}
                 </div>
@@ -713,12 +724,8 @@ function EventDetails({ navigation, route }) {
                       disabled={createParticipationMutation.isPending}
                       onClick={handleJoin}
                       style={{
-                        background: accentColor,
-                        border: 0,
-                        borderRadius: 999,
-                        color: '#001218',
+                        ...primaryButtonStyle,
                         cursor: createParticipationMutation.isPending ? 'not-allowed' : 'pointer',
-                        fontFamily: 'Montserrat-Bold, sans-serif',
                         opacity: createParticipationMutation.isPending ? 0.7 : 1,
                         padding: '12px 16px',
                       }}
@@ -732,10 +739,7 @@ function EventDetails({ navigation, route }) {
                       disabled={cancelParticipationMutation.isPending}
                       onClick={handleCancelParticipation}
                       style={{
-                        background: 'transparent',
-                        border: `1px solid ${borderColor}`,
-                        borderRadius: 999,
-                        color: textColor,
+                        ...outlineButtonStyle,
                         cursor: cancelParticipationMutation.isPending ? 'not-allowed' : 'pointer',
                         opacity: cancelParticipationMutation.isPending ? 0.7 : 1,
                         padding: '12px 16px',
@@ -748,14 +752,7 @@ function EventDetails({ navigation, route }) {
                   {isReservation && facilityId ? (
                     <button
                       onClick={() => navigation.navigate(RouteNames.BookingCalendar, { facilityId })}
-                      style={{
-                        background: 'transparent',
-                        border: `1px solid ${borderColor}`,
-                        borderRadius: 999,
-                        color: textColor,
-                        cursor: 'pointer',
-                        padding: '12px 16px',
-                      }}
+                      style={{ ...outlineButtonStyle, padding: '12px 16px' }}
                       type="button"
                     >
                       Ouvrir le calendrier
@@ -788,9 +785,7 @@ function EventDetails({ navigation, route }) {
             <div style={{ color: mutedTextColor, marginBottom: 14 }}>{error?.message || 'Une erreur est survenue.'}</div>
             <button
               onClick={() => refetch()}
-              style={{
-                background: accentColor, border: 0, borderRadius: 999, color: '#001218', cursor: 'pointer', padding: '10px 16px',
-              }}
+              style={{ ...primaryButtonStyle, padding: '10px 16px' }}
               type="button"
             >
               Recharger
@@ -837,7 +832,7 @@ function EventDetails({ navigation, route }) {
                 </div>
               ) : null}
 
-              <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 20, margin: 0 }}>Participants</h2>
+              <h2 style={sectionTitleStyle}>Participants</h2>
               {renderParticipantsSection()}
 
               {Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0 ? (
@@ -852,7 +847,7 @@ function EventDetails({ navigation, route }) {
 
               {canEdit ? (
                 <>
-                  <h3 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Demandes en attente</h3>
+                  <h3 style={{ ...sectionTitleStyle, fontSize: 18 }}>Demandes en attente</h3>
                   {participationRequests.length === 0 ? (
                     <div style={{ color: mutedTextColor }}>Aucune demande en attente.</div>
                   ) : (
@@ -861,7 +856,7 @@ function EventDetails({ navigation, route }) {
                         <div
                           key={getEntityDocumentId(request) || getEntityDocumentId(request?.user)}
                           style={{
-                            background: 'rgba(255,255,255,0.04)',
+                            background: softSurfaceColor,
                             border: `1px solid ${borderColor}`,
                             borderRadius: 16,
                             display: 'grid',
@@ -869,7 +864,7 @@ function EventDetails({ navigation, route }) {
                             padding: '12px 14px',
                           }}
                         >
-                          <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
+                          <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
                             {getUserDisplayName(request?.user)}
                           </span>
                           <span style={{ color: mutedTextColor, fontSize: 13 }}>
@@ -897,35 +892,36 @@ function EventDetails({ navigation, route }) {
                 background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
               }}
               >
-                <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 20, margin: 0 }}>Infos rapides</h2>
-                <div style={{
-                  color: mutedTextColor, display: 'grid', fontSize: 14, gap: 10,
-                }}
-                >
-                  <span>
-                    Type:
-                    {event?.type?.name || 'Non defini'}
-                  </span>
-                  <span>
-                    Equipe:
-                    {event?.team?.name || 'Non definie'}
-                  </span>
-                  <span>
-                    Section:
-                    {event?.team?.section?.name || 'Non definie'}
-                  </span>
-                  <span>
-                    Capacite:
-                    {event?.capacity ?? 'Libre'}
-                  </span>
-                  <span>
-                    Joueurs attendus:
-                    {event?.totalPlayers ?? 'Non defini'}
-                  </span>
-                  <span>
-                    Prix / personne:
-                    {event?.pricePerPerson != null ? `${event.pricePerPerson} EUR` : 'Gratuit ou non defini'}
-                  </span>
+                <h2 style={sectionTitleStyle}>Infos rapides</h2>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {[
+                    { label: 'Type', value: event?.type?.name || 'Non defini' },
+                    { label: 'Equipe', value: event?.team?.name || 'Non definie' },
+                    { label: 'Section', value: event?.team?.section?.name || 'Non definie' },
+                    { label: 'Capacite', value: event?.capacity ?? 'Libre' },
+                    { label: 'Joueurs attendus', value: event?.totalPlayers ?? 'Non defini' },
+                    { label: 'Prix / personne', value: event?.pricePerPerson != null ? `${event.pricePerPerson} EUR` : 'Gratuit ou non defini' },
+                  ].map((item, index, rows) => (
+                    <div
+                      key={item.label}
+                      style={{
+                        borderBottom: index < rows.length - 1 ? `1px solid ${borderColor}` : 'none',
+                        display: 'grid',
+                        gap: 4,
+                        paddingBottom: index < rows.length - 1 ? 12 : 0,
+                      }}
+                    >
+                      <span style={{
+                        color: mutedTextColor, fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase',
+                      }}
+                      >
+                        {item.label}
+                      </span>
+                      <span style={{ color: textColor, fontFamily: 'Montserrat-SemiBold, Montserrat-Bold, sans-serif', fontSize: 15 }}>
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -941,7 +937,7 @@ function EventDetails({ navigation, route }) {
                     padding: 22,
                   }}
                 >
-                  <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 20, margin: 0 }}>Mode tournoi</h2>
+                  <h2 style={sectionTitleStyle}>Mode tournoi</h2>
                   <div style={{
                     color: mutedTextColor, display: 'grid', fontSize: 14, gap: 10,
                   }}
@@ -1007,7 +1003,7 @@ function EventDetails({ navigation, route }) {
                         background: canEdit ? accentColor : 'transparent',
                         border: canEdit ? 0 : `1px solid ${borderColor}`,
                         borderRadius: 999,
-                        color: canEdit ? '#001218' : textColor,
+                        color: textColor,
                         cursor: 'pointer',
                         fontFamily: canEdit ? 'Montserrat-Bold, sans-serif' : 'Montserrat-Regular, sans-serif',
                         padding: '10px 16px',
@@ -1019,15 +1015,7 @@ function EventDetails({ navigation, route }) {
                     {canEdit ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId })}
-                        style={{
-                          background: accentColor,
-                          border: 0,
-                          borderRadius: 999,
-                          color: '#001218',
-                          cursor: 'pointer',
-                          fontFamily: 'Montserrat-Bold, sans-serif',
-                          padding: '10px 16px',
-                        }}
+                        style={primaryButtonStyle}
                         type="button"
                       >
                         Modifier les parametres
@@ -1138,7 +1126,7 @@ function EventDetails({ navigation, route }) {
                           <div
                             key={getEntityDocumentId(team) || team?.name}
                             style={{
-                              background: 'rgba(255,255,255,0.04)',
+                              background: softSurfaceColor,
                               border: `1px solid ${borderColor}`,
                               borderRadius: 16,
                               display: 'grid',
@@ -1151,7 +1139,7 @@ function EventDetails({ navigation, route }) {
                             }}
                             >
                               <div style={{ display: 'grid', gap: 4 }}>
-                                <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
+                                <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
                                   {team?.name || 'Equipe tournoi'}
                                 </span>
                                 <span style={{ color: mutedTextColor, fontSize: 13 }}>
@@ -1219,11 +1207,7 @@ function EventDetails({ navigation, route }) {
                                   <button
                                     onClick={() => handleReviewTournamentTeam(team?.documentId, 'accepted')}
                                     style={{
-                                      background: accentColor,
-                                      border: 0,
-                                      borderRadius: 999,
-                                      color: '#001218',
-                                      cursor: 'pointer',
+                                      ...primaryButtonStyle,
                                       padding: '9px 14px',
                                     }}
                                     type="button"
@@ -1259,7 +1243,7 @@ function EventDetails({ navigation, route }) {
                 background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
               }}
               >
-                <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 20, margin: 0 }}>Equipes invitees</h2>
+                <h2 style={sectionTitleStyle}>Equipes invitees</h2>
                 {invitedTeams.length === 0 ? (
                   <div style={{ color: mutedTextColor }}>Aucune equipe invitee.</div>
                 ) : (
@@ -1268,10 +1252,10 @@ function EventDetails({ navigation, route }) {
                       <div
                         key={getEntityDocumentId(team) || team?.name}
                         style={{
-                          background: 'rgba(255,255,255,0.04)', border: `1px solid ${borderColor}`, borderRadius: 16, padding: '12px 14px',
+                          background: softSurfaceColor, border: `1px solid ${borderColor}`, borderRadius: 16, padding: '12px 14px',
                         }}
                       >
-                        <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{team?.name || 'Equipe'}</div>
+                        <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{team?.name || 'Equipe'}</div>
                         <div style={{ color: mutedTextColor, fontSize: 13 }}>{team?.club?.name || team?.section?.name || ''}</div>
                       </div>
                     ))}
@@ -1284,7 +1268,7 @@ function EventDetails({ navigation, route }) {
                   background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
                 }}
                 >
-                  <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 20, margin: 0 }}>Absences / manques</h2>
+                  <h2 style={sectionTitleStyle}>Absences / manques</h2>
                   <div style={{ display: 'grid', gap: 10 }}>
                     {detectedPlayers.map((player) => (
                       <div key={getEntityDocumentId(player) || getUserDisplayName(player)} style={{ color: mutedTextColor, fontSize: 14 }}>

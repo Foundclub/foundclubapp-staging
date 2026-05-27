@@ -3860,9 +3860,9 @@ function EventDetails({ navigation, route }) {
               style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}
             >
               <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions Ã©vÃ©nement</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions événement</Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  Modifie cet Ã©vÃ©nement ou gÃ¨re son annulation.
+                  Modifie cet événement ou gère son annulation.
                 </Text>
               </View>
               <TouchableOpacity

@@ -27,10 +27,10 @@ import Animated, {
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 
 import {
   getTacticalFieldAspectRatio,
-  getTacticalFieldImage,
 } from '@/utils/tacticalField';
 
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -304,7 +304,6 @@ function TacticalBoard({
 
   // Calculate field dimensions with fixed aspect ratio
   const aspectRatio = getTacticalFieldAspectRatio(sport);
-  const fieldImage = getTacticalFieldImage(sport);
 
   // All players
   const allPlayers = useMemo(() => [...players, ...manualPlayers], [players, manualPlayers]);
@@ -478,7 +477,7 @@ function TacticalBoard({
             },
           ]}
         >
-          <Image resizeMode="cover" source={fieldImage} style={styles.fieldImage} />
+          <RenderedTacticalField sport={sport} style={StyleSheet.absoluteFillObject} />
 
           {/* Drop zone indicator */}
           <DropZoneIndicator isOverField={isOverField} visible={dropZoneVisible} />
@@ -657,10 +656,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     overflow: 'hidden',
     position: 'relative',
-  },
-  fieldImage: {
-    height: '100%',
-    width: '100%',
   },
   fieldTokenWrapper: {
     position: 'absolute',

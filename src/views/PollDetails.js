@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   ImageBackground,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -125,6 +126,9 @@ function PollDetails({ navigation, route }) {
     Images,
     Spaces,
   } = useTheme();
+  const shouldAvoidDeprecatedSystemBarColors = Platform.OS === 'android'
+    && typeof Platform.Version === 'number'
+    && Platform.Version >= 35;
 
   const { data: chatData } = useGetChatById(chatId);
   const {
@@ -317,7 +321,11 @@ function PollDetails({ navigation, route }) {
       source={Images.bg2}
       style={[Alignments.fill]}
     >
-      <StatusBar backgroundColor="transparent" barStyle="light-content" translucent />
+      {shouldAvoidDeprecatedSystemBarColors ? (
+        <StatusBar barStyle="light-content" translucent />
+      ) : (
+        <StatusBar backgroundColor="transparent" barStyle="light-content" translucent />
+      )}
 
       <View style={[styles.header, { paddingTop: top + 10 }]}>
         <HeaderBackButton

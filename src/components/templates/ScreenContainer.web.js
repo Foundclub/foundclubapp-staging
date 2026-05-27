@@ -71,6 +71,10 @@ function ScreenContainer({
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
   const isResponsivePaddingEnabled = responsivePadding ?? responsiveHorizontalPadding;
+  const safeStyle = Array.isArray(style) ? style : [style];
+  const safeContentContainerStyle = Array.isArray(contentContainerStyle)
+    ? contentContainerStyle
+    : [contentContainerStyle];
   const isTabletOrDesktop = width >= BREAKPOINTS.tablet;
   const isDesktop = width >= BREAKPOINTS.desktop;
   let horizontalPadding = 24;
@@ -131,7 +135,7 @@ function ScreenContainer({
       paddingHorizontal: horizontalPadding,
       paddingTop: withHeaderPadding ? Math.max(insets.top, 20) : 0,
     },
-    style,
+    ...safeStyle,
   ];
   const contentFrameStyle = [
     {
@@ -167,7 +171,7 @@ function ScreenContainer({
     <View style={containerStyle}>
       <View style={overlayStyle}>
         <View style={contentFrameStyle}>
-          <View style={[Alignments.grow1, contentContainerStyle]}>
+          <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
             {children}
           </View>
         </View>

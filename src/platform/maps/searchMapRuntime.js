@@ -167,9 +167,19 @@ export const buildSearchMapRuntimeHtml = ({
       .leaflet-container {
         background: transparent;
         color: #f3f8ff;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: "FoundClubMontserrat", "Montserrat-Regular", "Segoe UI", sans-serif;
         height: 100%;
         width: 100%;
+      }
+
+      .leaflet-container,
+      .leaflet-container *,
+      .leaflet-control,
+      .leaflet-popup-content,
+      .leaflet-tooltip,
+      .leaflet-control-attribution,
+      .leaflet-control-scale-line {
+        font-family: "FoundClubMontserrat", "Montserrat-Regular", "Segoe UI", sans-serif;
       }
 
       .leaflet-control-zoom {
@@ -212,7 +222,10 @@ export const buildSearchMapRuntimeHtml = ({
         border-radius: 999px;
         bottom: 12px;
         color: rgba(255,255,255,0.72);
-        font: 600 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: "FoundClubMontserrat", "Montserrat-Regular", "Segoe UI", sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1;
         left: 12px;
         padding: 7px 10px;
         position: absolute;
@@ -400,7 +413,10 @@ export const buildSearchMapRuntimeHtml = ({
           var contentHtml = markerLabel
             ? '<span style="' +
                 'color:' + (isSelected ? '#061822' : (isEventMarker ? '#ffffff' : '#061822')) + ';' +
-                'font:700 13px/1 -apple-system, BlinkMacSystemFont, \\"Segoe UI\\", sans-serif;' +
+                'font-family:FoundClubMontserrat, Montserrat-Bold, \\"Segoe UI\\", sans-serif;' +
+                'font-size:13px;' +
+                'font-weight:700;' +
+                'line-height:1;' +
               '">' + markerLabel + '</span>'
             : '<span style="' +
                 'background:' + (isSelected ? MARKER_COLOR : '#ffffff') + ';' +
@@ -461,7 +477,10 @@ export const buildSearchMapRuntimeHtml = ({
               'border:3px solid rgba(255,255,255,0.84);' +
               'box-shadow:0 0 0 7px rgba(255,255,255,0.16), 0 16px 28px rgba(0,0,0,0.32);' +
               'color:#061822;' +
-              'font:700 ' + (count >= 100 ? '13px' : '12px') + '/1 -apple-system, BlinkMacSystemFont, \\"Segoe UI\\", sans-serif;' +
+              'font-family:FoundClubMontserrat, Montserrat-Bold, \\"Segoe UI\\", sans-serif;' +
+              'font-size:' + (count >= 100 ? '13px' : '12px') + ';' +
+              'font-weight:700;' +
+              'line-height:1;' +
               'height:' + clusterSize + 'px;' +
               'width:' + clusterSize + 'px;' +
             '">' +

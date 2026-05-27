@@ -12,18 +12,21 @@ jest.mock('react-native', () => ({
 describe('mediaUrl utils', () => {
   const originalApiUrl = process.env.API_URL;
   const originalPublicUrl = process.env.API_PUBLIC_URL;
+  const originalAdbReverse = process.env.LOCAL_ANDROID_USE_ADB_REVERSE;
   const originalDev = global.__DEV__;
 
   beforeEach(() => {
     jest.clearAllMocks();
     delete process.env.API_URL;
     delete process.env.API_PUBLIC_URL;
+    delete process.env.LOCAL_ANDROID_USE_ADB_REVERSE;
     global.__DEV__ = true;
   });
 
   afterAll(() => {
     process.env.API_URL = originalApiUrl;
     process.env.API_PUBLIC_URL = originalPublicUrl;
+    process.env.LOCAL_ANDROID_USE_ADB_REVERSE = originalAdbReverse;
     global.__DEV__ = originalDev;
   });
 
@@ -41,6 +44,17 @@ describe('mediaUrl utils', () => {
 
     expect(resolveMediaUrl('/uploads/test.m4a'))
       .toBe('http://10.0.2.2:1337/uploads/test.m4a');
+  });
+
+  it('keeps localhost media URLs when adb reverse override is enabled on Android', () => {
+    Platform.OS = 'android';
+    process.env.API_URL = 'http://localhost:1337/api';
+    process.env.LOCAL_ANDROID_USE_ADB_REVERSE = 'true';
+
+    expect(resolveMediaUrl('http://localhost:1337/uploads/test.m4a'))
+      .toBe('http://localhost:1337/uploads/test.m4a');
+    expect(resolveMediaUrl('/uploads/test.m4a'))
+      .toBe('http://localhost:1337/uploads/test.m4a');
   });
 
   it('keeps already public media URLs unchanged', () => {

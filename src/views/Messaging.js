@@ -202,7 +202,10 @@ function Messaging({ navigation, route }) {
    */
   const handleChatPress = (chatId) => {
     joinChat(chatId);
-    navigation.navigate(RouteNames.Conversation, { chatId });
+    navigation.navigate(RouteNames.Conversation, {
+      chatId,
+      chatScope: chatScopeFilter,
+    });
   };
 
   /**
@@ -853,7 +856,9 @@ function Messaging({ navigation, route }) {
             <TouchableOpacity
               accessibilityLabel={t('messaging.newConversation', 'Nouvelle conversation')}
               activeOpacity={0.85}
-              onPress={() => navigation.navigate(RouteNames.NewConversation)}
+              onPress={() => navigation.navigate(RouteNames.NewConversation, {
+                chatScope: chatScopeFilter,
+              })}
               style={[
                 ApplicationStyle.shadow200,
                 {

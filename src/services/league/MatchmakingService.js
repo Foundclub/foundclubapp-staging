@@ -2,6 +2,36 @@ import { requireDocumentId } from '@/utils/entityId';
 
 import axiosInstance from '../client';
 
+/**
+ * @typedef {Error & {
+ *  code?: string | null;
+ *  details?: Record<string, any> | null;
+ *  status?: number | null;
+ * }} MatchmakingServiceError
+ */
+
+/**
+ * Normalize an API error into a reusable Error instance for the UI layer.
+ * @param {unknown} error
+ * @param {string} fallbackMessage
+ * @returns {MatchmakingServiceError}
+ */
+const buildApiError = (error, fallbackMessage) => {
+  const apiError = /** @type {any} */ (error);
+  const message = apiError?.response?.data?.message
+    || apiError?.response?.data?.error
+    || apiError?.message
+    || fallbackMessage;
+  const nextError = /** @type {MatchmakingServiceError} */ (new Error(message));
+  nextError.code = apiError?.response?.data?.code
+    || apiError?.response?.data?.details?.code
+    || apiError?.code
+    || null;
+  nextError.status = apiError?.response?.status || apiError?.status || null;
+  nextError.details = apiError?.response?.data?.details || null;
+  return nextError;
+};
+
 const MatchmakingService = {
   /**
    * Get active request and status for the team
@@ -17,8 +47,7 @@ const MatchmakingService = {
       return response.data; // Expected: { state, request, match? }
     } catch (error) {
       console.error('Error fetching matchmaking status:', error);
-      const apiMessage = error?.response?.data?.message || error?.message || 'Unable to fetch matchmaking status';
-      throw new Error(apiMessage);
+      throw buildApiError(error, 'Unable to fetch matchmaking status');
     }
   },
 
@@ -50,6 +79,7 @@ const MatchmakingService = {
   /**
    * Cancel an active request
    * @param {string} requestId
+   * @returns {Promise<boolean>}
    */
   cancelRequest: async (requestId) => {
     try {
@@ -57,7 +87,7 @@ const MatchmakingService = {
       return true;
     } catch (error) {
       console.error('Error canceling request:', error);
-      return false;
+      throw buildApiError(error, 'Unable to cancel matchmaking request');
     }
   },
 
@@ -65,6 +95,7 @@ const MatchmakingService = {
    * Answer an optional widened matchmaking suggestion.
    * @param {string} suggestionId
    * @param {'accept' | 'decline'} decision
+   * @returns {Promise<any>}
    */
   respondSuggestion: async (suggestionId, decision) => {
     const normalizedSuggestionId = requireDocumentId(suggestionId, 'matchmakingSuggestion');

@@ -23,6 +23,7 @@ export const resolveRuntimeEndpoints = () => buildRuntimeEndpoints({
   isDev: __DEV__,
   isEmulator: readIsEmulator(),
   platformOs: Platform.OS,
+  preferAndroidAdbReverse: process.env.LOCAL_ANDROID_USE_ADB_REVERSE,
   socketUrlEnv: process.env.SOCKET_URL,
 });
 
@@ -32,7 +33,9 @@ export const getApiBaseUrl = () => resolveRuntimeEndpoints().apiUrl || '';
 export const getSocketBaseUrl = () => resolveRuntimeEndpoints().socketUrl || '';
 export const getPublicApiOrigin = () => resolveRuntimeEndpoints().publicOrigin || '';
 export const getUploadEndpoint = () => resolveRuntimeEndpoints().uploadUrl || '';
-export const getRuntimeEndpointsLog = () => describeRuntimeEndpointsForLog(resolveRuntimeEndpoints());
+export const getRuntimeEndpointsLog = () => describeRuntimeEndpointsForLog(
+  resolveRuntimeEndpoints(),
+);
 
 export const assertRuntimeEndpointsReady = () => {
   const runtimeEndpoints = resolveRuntimeEndpoints();

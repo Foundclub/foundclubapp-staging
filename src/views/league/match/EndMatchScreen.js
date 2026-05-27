@@ -30,6 +30,7 @@ import {
   formatScoreFlowCountdown,
 } from '@/views/league/match/utils/scoreFlow';
 
+import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
 import {
   fetchMatch,
   submitMatchScore,
@@ -50,6 +51,12 @@ import { isLeagueCaptain, isLeagueMember } from '@/utils/league/captains';
 import { buildPadelScorePayload, getSubmissionScoreLabel } from '@/utils/leagueScoreDetails';
 import { getMatchLeagueSportConfig, LEAGUE_SPORT_KEYS } from '@/utils/leagueSportConfig';
 import { getLocationCoordinates, normalizeRadius } from '@/utils/location';
+
+import {
+  POPUP_DISMISS_SCOPES,
+  POPUP_IDS,
+} from '@/constants/popupRegistry';
+import { usePopupManager } from '@/context/PopupManagerContext';
 
 /**
  * @typedef {{ uri: string, name: string, type: string, source: 'gallery' | 'camera' }} ProofPayload
@@ -192,10 +199,15 @@ function EndMatchScreen() {
   const navigation = /** @type {any} */ (useNavigation());
   const route = /** @type {any} */ (useRoute());
   const queryClient = useQueryClient();
+  const { dismissPopup } = usePopupManager();
   const { userData } = /** @type {{userData: User | null}} */ (useAuth());
   const leaguePlatformRuntimeQuery = useLeaguePlatformRuntime();
   const leaguePlatformRuntime = leaguePlatformRuntimeQuery.data || null;
   const matchId = route.params?.matchId ? String(route.params.matchId) : '';
+  const { data: pendingLeagueActionPayload } = usePendingLeagueAction(undefined, {
+    enabled: Boolean(matchId),
+  });
+  const pendingLeagueAction = pendingLeagueActionPayload?.nextAction || null;
 
   const [scoreA, setScoreA] = useState('0');
   const [scoreB, setScoreB] = useState('0');
@@ -242,6 +254,39 @@ function EndMatchScreen() {
     () => buildLocalScoreFlow(match, { isCaptainA, isCaptainB, teamSide: scoreTeamSide }),
     [isCaptainA, isCaptainB, match, scoreTeamSide],
   );
+  useEffect(() => {
+    const pendingActionMatchId = String(
+      pendingLeagueAction?.matchId
+      || pendingLeagueAction?.match?.documentId
+      || pendingLeagueAction?.match?.id
+      || '',
+    ).trim();
+    const pendingActionState = String(
+      pendingLeagueAction?.state
+      || pendingLeagueAction?.match?.phase
+      || '',
+    ).trim().toLowerCase();
+    const isScoreAction = ['disputed', 'pending_validation', 'waiting_score'].includes(
+      pendingActionState,
+    );
+
+    if (!matchId || !pendingLeagueAction?.key || !isScoreAction) return;
+    if (pendingActionMatchId !== matchId) return;
+
+    /** @type {any} */ (dismissPopup)(POPUP_IDS.LEAGUE_ACTION_PROMPT, {
+      cooldownKey: pendingLeagueAction.key,
+      dismissScope: POPUP_DISMISS_SCOPES.SESSION,
+    });
+  }, [
+    dismissPopup,
+    matchId,
+    pendingLeagueAction?.key,
+    pendingLeagueAction?.match?.documentId,
+    pendingLeagueAction?.match?.id,
+    pendingLeagueAction?.match?.phase,
+    pendingLeagueAction?.matchId,
+    pendingLeagueAction?.state,
+  ]);
   const showLeagueRestrictionAlert = (errorLike = null) => {
     const restrictionCode = getLeaguePlatformRestrictionCode(errorLike);
     const runtime = getLeagueRuntimeFromError(errorLike) || leaguePlatformRuntime;
@@ -1218,6 +1263,7 @@ function EndMatchScreen() {
                       onChangeText={handleScoreChange(setScoreA)}
                       placeholder="0"
                       placeholderTextColor={Colors.neutral500}
+                      selectTextOnFocus
                       style={[
                         styles.scoreInput,
                         {
@@ -1289,6 +1335,7 @@ function EndMatchScreen() {
                       onChangeText={handleScoreChange(setScoreB)}
                       placeholder="0"
                       placeholderTextColor={Colors.neutral500}
+                      selectTextOnFocus
                       style={[
                         styles.scoreInput,
                         {

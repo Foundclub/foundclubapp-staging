@@ -333,7 +333,7 @@ const MAX_ATTACHMENT_BYTES = {
  */
 const toPublicApiOrigin = (rawApiUrl) => {
   const raw = String(rawApiUrl || '').trim();
-  if (!raw) return 'http://10.0.2.2:1337';
+  if (!raw) return getPublicApiOrigin() || 'http://10.0.2.2:1337';
   return raw.replace(/\/api\/?$/i, '');
 };
 
@@ -343,7 +343,7 @@ const toPublicApiOrigin = (rawApiUrl) => {
  */
 const toApiBaseUrl = (rawApiUrl) => {
   const raw = String(rawApiUrl || '').trim();
-  if (!raw) return 'http://10.0.2.2:1337/api';
+  if (!raw) return getApiBaseUrl() || 'http://10.0.2.2:1337/api';
   const withoutTrailingSlash = raw.replace(/\/+$/g, '');
   if (/\/api$/i.test(withoutTrailingSlash)) return withoutTrailingSlash;
   return `${withoutTrailingSlash}/api`;
@@ -420,6 +420,9 @@ function Conversation({ navigation, route }) {
   const { showBanner } = useAppFeedback();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const { clearSafeTimer, setSafeTimeout } = useSafeTimers();
+  const shouldAvoidDeprecatedSystemBarColors = Platform.OS === 'android'
+    && typeof Platform.Version === 'number'
+    && Platform.Version >= 35;
 
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [conversationPrompt, setConversationPrompt] = useState(/** @type {any | null} */ (null));
@@ -983,8 +986,8 @@ function Conversation({ navigation, route }) {
   const [isAttachmentMenuVisible, setIsAttachmentMenuVisible] = useState(false);
   const [isPollModalVisible, setIsPollModalVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
+  const [isProposalSubmitting, setIsProposalSubmitting] = useState(false);
   const [isProposalResponseSubmitting, setIsProposalResponseSubmitting] = useState(false);
-  const [isLeagueNegotiationBannerCollapsed, setIsLeagueNegotiationBannerCollapsed] = useState(false);
   const [, setCounterProposalContext] = useState(
     /** @type {{ messageId: string; shouldDecline: boolean } | null} */ (null),
   );
@@ -2988,7 +2991,10 @@ function Conversation({ navigation, route }) {
   };
 
   /* Proposal Logic */
-  const handleSendProposal = async (/** @type {any} */ proposalData) => {
+  const handleSendProposal = async (
+    /** @type {any} */ proposalData,
+    /** @type {{ legalAcceptance?: Record<string, unknown> } | undefined} */ options = undefined,
+  ) => {
     try {
       const matchId = getEntityDocumentId(chatData?.league_match);
       if (!matchId) {
@@ -2998,7 +3004,7 @@ function Conversation({ navigation, route }) {
       if (!proposalPayload.venueLabel) {
         throw new Error('Missing proposal venue');
       }
-      const legalAcceptance = await requestLeagueLegalAcceptance({
+      const legalAcceptance = options?.legalAcceptance || await requestLeagueLegalAcceptance({
         metadata: {
           chatId,
           matchLabel: leagueLegalMatchLabel,
@@ -3012,6 +3018,7 @@ function Conversation({ navigation, route }) {
       });
       if (!legalAcceptance) return;
 
+      setIsProposalSubmitting(true);
       await createLeagueProposal(matchId, /** @type {any} */ (proposalPayload), { legalAcceptance });
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
@@ -3023,6 +3030,8 @@ function Conversation({ navigation, route }) {
     } catch (error) {
       conversationLogger.error('Send proposal failed', error);
       showErrorBanner("Impossible d'envoyer la proposition.");
+    } finally {
+      setIsProposalSubmitting(false);
     }
   };
 
@@ -3578,7 +3587,19 @@ function Conversation({ navigation, route }) {
       }
     }
 
+    let compactHelper = 'La discussion dans le chat reste l espace principal pour organiser ce match.';
+    if (proposalStatus === 'pending') {
+      compactHelper = isLatestProposalFromMySquad
+        ? 'Suivez la reponse adverse directement dans le fil.'
+        : 'Repondez directement depuis la proposition dans le fil.';
+    } else if (proposalStatus === 'accepted') {
+      compactHelper = 'Retrouvez les details confirms dans la fiche match.';
+    } else if (proposalStatus === 'declined') {
+      compactHelper = 'La negociation continue dans le fil de discussion.';
+    }
+
     return {
+      compactHelper,
       formattedDate,
       helper,
       proposalStatus,
@@ -4308,10 +4329,6 @@ function Conversation({ navigation, route }) {
       matchId: leagueConversationMatchId,
     });
   }, [leagueConversationMatchId, navigation]);
-
-  useEffect(() => {
-    setIsLeagueNegotiationBannerCollapsed(false);
-  }, [chatId, latestProposalMessageId, leagueConversationMatchId]);
 
   useEffect(() => {
     const focusToken = String(route?.params?.leagueNegotiationFocusToken || '').trim();
@@ -5615,62 +5632,14 @@ function Conversation({ navigation, route }) {
 
   const renderLeagueNegotiationBanner = () => {
     if (!isLeagueConversation || !leagueConversationMatch) return null;
-    const canRespondToLatestProposal = Boolean(
-      leagueNegotiationSummary.proposalStatus === 'pending'
-      && latestProposalMessage
-      && !isLatestProposalFromMySquad,
-    );
-
-    if (isLeagueNegotiationBannerCollapsed) {
-      return (
-        <View
-          style={[
-            ApplicationStyle.borderRadius24,
-            Spaces.marginHorizontal[16],
-            Spaces.marginBottom[12],
-            Spaces.padding[16],
-            {
-              backgroundColor: 'rgba(10, 28, 43, 0.92)',
-              borderColor: 'rgba(1,179,244,0.28)',
-              borderWidth: 1,
-            },
-          ]}
-        >
-          <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, { columnGap: 12 }]}>
-            <View style={{ flex: 1 }}>
-              <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                {leagueNegotiationSummary.statusLabel}
-              </Text>
-              <Text numberOfLines={1} style={[Fonts.p3Bold, { color: Colors.neutral00, marginTop: 2 }]}>
-                {leagueNegotiationSummary.title}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => setIsLeagueNegotiationBannerCollapsed(false)}
-              style={{
-                backgroundColor: 'rgba(1,179,244,0.14)',
-                borderColor: 'rgba(1,179,244,0.36)',
-                borderRadius: 999,
-                borderWidth: 1,
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-              }}
-            >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Ouvrir</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      );
-    }
-
     return (
       <View
         style={[
           ApplicationStyle.borderRadius24,
           Spaces.marginHorizontal[16],
           Spaces.marginBottom[12],
-          Spaces.padding[24],
-          Spaces.gap[16],
+          Spaces.padding[16],
+          Spaces.gap[12],
           {
             backgroundColor: 'rgba(10, 28, 43, 0.92)',
             borderColor: 'rgba(1,179,244,0.28)',
@@ -5678,7 +5647,7 @@ function Conversation({ navigation, route }) {
           },
         ]}
       >
-        <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, { columnGap: 12, flexWrap: 'wrap', rowGap: 10 }]}>
+        <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, { columnGap: 12 }]}>
           <View
             style={{
               backgroundColor: 'rgba(1,179,244,0.14)',
@@ -5693,106 +5662,41 @@ function Conversation({ navigation, route }) {
               {leagueNegotiationSummary.statusLabel}
             </Text>
           </View>
-          <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 12, flexWrap: 'wrap', rowGap: 8 }]}>
-            {latestProposalMessageId ? (
-              <TouchableOpacity
-                onPress={() => scrollToMessageByDocumentId(latestProposalMessageId)}
-                style={{ paddingHorizontal: 4, paddingVertical: 6 }}
-              >
-                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Voir la proposition</Text>
-              </TouchableOpacity>
-            ) : null}
-            <TouchableOpacity
-              onPress={() => setIsLeagueNegotiationBannerCollapsed(true)}
-              style={{ paddingHorizontal: 4, paddingVertical: 6 }}
-            >
-              <Text style={[Fonts.p4Bold, { color: Colors.neutral200 }]}>Fermer</Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
-        <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, lineHeight: 22 }]}>
+        <View style={Spaces.gap[6]}>
+          <Text style={[Fonts.p3Bold, { color: Colors.neutral00, lineHeight: 20 }]}>
             {leagueNegotiationSummary.title}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20 }]}>
-            {leagueNegotiationSummary.helper}
+            {leagueNegotiationSummary.compactHelper}
           </Text>
         </View>
 
-        <View style={[Alignments.row, { flexWrap: 'wrap', gap: 10 }]}>
-          <View
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              borderColor: 'rgba(255,255,255,0.08)',
-              borderRadius: 999,
-              borderWidth: 1,
-              paddingHorizontal: 14,
-              paddingVertical: 9,
-            }}
+        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifyBetween, { columnGap: 12 }]}>
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p4, { color: Colors.neutral300, flex: 1 }]}
           >
-            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-              {leagueNegotiationSummary.scheduleLabel}
-            </Text>
-          </View>
-          <View
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              borderColor: 'rgba(255,255,255,0.08)',
-              borderRadius: 999,
-              borderWidth: 1,
-              paddingHorizontal: 14,
-              paddingVertical: 9,
-            }}
-          >
-            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-              {leagueNegotiationSummary.venue}
-            </Text>
-          </View>
-        </View>
-
-        {canRespondToLatestProposal ? (
-          <View style={Spaces.gap[12]}>
-            <View style={[Alignments.row, Spaces.gap[12]]}>
-              <Button
-                disabled={isProposalResponseSubmitting}
-                isLoading={isProposalResponseSubmitting}
-                onPress={() => handleRespondProposal(latestProposalMessage, 'accepted')}
-                size="sm"
-                style={{ flex: 1 }}
-                title="Accepter"
-                variant="Primary"
-              />
-              <Button
-                disabled={isProposalResponseSubmitting}
-                onPress={() => handleOpenCounterProposal(latestProposalMessage, {
-                  isMine: false,
-                  shouldDecline: true,
-                })}
-                size="sm"
-                style={{ flex: 1 }}
-                title="Contre-proposer"
-                variant="Secondary"
-              />
-            </View>
-            <Button
-              disabled={isProposalResponseSubmitting}
-              onPress={() => handleRespondProposal(latestProposalMessage, 'declined')}
-              size="sm"
-              style={{ borderColor: `${Colors.error500}66` }}
-              textStyle={{ color: Colors.error500 }}
-              title="Refuser"
-              variant="SecondaryLight"
-            />
-          </View>
-        ) : null}
-
-        <View>
-          <Button
+            {latestProposalMessageId
+              ? 'La proposition detaillee reste visible dans le fil ci-dessous.'
+              : 'Retrouvez l historique de l organisation dans le fil ci-dessous.'}
+          </Text>
+          <TouchableOpacity
             onPress={handleOpenLeagueMatchDetails}
-            title="Voir la fiche match"
-            variant="SecondaryLight"
-          />
+            style={{
+              backgroundColor: 'rgba(1,179,244,0.12)',
+              borderColor: 'rgba(1,179,244,0.32)',
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+            }}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+              Voir la fiche match
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -5804,7 +5708,11 @@ function Conversation({ navigation, route }) {
       source={Images.bg2}
       style={[Alignments.fill]}
     >
-      <StatusBar backgroundColor="transparent" barStyle="light-content" translucent />
+      {shouldAvoidDeprecatedSystemBarColors ? (
+        <StatusBar barStyle="light-content" translucent />
+      ) : (
+        <StatusBar backgroundColor="transparent" barStyle="light-content" translucent />
+      )}
 
       {/* Custom Header */}
       <View style={{
@@ -6590,7 +6498,19 @@ function Conversation({ navigation, route }) {
           initialDate={proposalDefaults.date}
           initialEndTime={proposalDefaults.end}
           initialStartTime={proposalDefaults.start}
+          isSubmitting={isProposalSubmitting}
           isVisible={isProposalModalVisible}
+          legalAcceptanceConfig={{
+            metadata: {
+              chatId,
+              matchLabel: leagueLegalMatchLabel,
+            },
+            scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
+            sourceScreen: 'conversation_league_proposal',
+            targetDocumentId: getEntityDocumentId(chatData?.league_match),
+            targetLabel: leagueLegalMatchLabel,
+            targetType: 'league_match',
+          }}
           onClose={() => {
             setCounterProposalContext(null);
             setIsProposalModalVisible(false);

@@ -4,6 +4,8 @@ const PRIVATE_IPV4_HOST_PATTERN = /^(10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}
 
 const normalizeText = (value) => String(value || '').trim();
 const isPrivateIpv4Host = (value) => PRIVATE_IPV4_HOST_PATTERN.test(normalizeText(value));
+const isTruthyFlag = (value) => ['1', 'on', 'true', 'yes']
+  .includes(normalizeText(value).toLowerCase());
 
 export const normalizeAppEnv = (value) => {
   const normalized = normalizeText(value).toLowerCase();
@@ -68,6 +70,7 @@ const rewriteLoopbackForRuntime = ({
   isDev,
   isEmulator,
   platformOs,
+  preferAndroidAdbReverse,
   value,
 }) => {
   const normalized = normalizeText(value);
@@ -79,6 +82,10 @@ const rewriteLoopbackForRuntime = ({
     if (!LOOPBACK_HOSTS.has(host)) return normalized;
 
     if (platformOs === 'android') {
+      if (preferAndroidAdbReverse) {
+        url.hostname = 'localhost';
+        return url.toString();
+      }
       url.hostname = '10.0.2.2';
       return url.toString();
     }
@@ -94,8 +101,17 @@ const rewriteLoopbackForRuntime = ({
   return normalized;
 };
 
-const buildDevFallback = ({ isEmulator, platformOs }) => {
+const buildDevFallback = ({ isEmulator, platformOs, preferAndroidAdbReverse }) => {
   if (platformOs === 'android') {
+    if (preferAndroidAdbReverse) {
+      return {
+        apiUrl: 'http://localhost:1337/api',
+        publicOrigin: 'http://localhost:1337',
+        socketUrl: 'http://localhost:1337',
+        source: 'android-emulator-adb-reverse-fallback',
+      };
+    }
+
     return {
       apiUrl: 'http://10.0.2.2:1337/api',
       publicOrigin: 'http://10.0.2.2:1337',
@@ -134,25 +150,31 @@ export const buildRuntimeEndpoints = ({
   isDev,
   isEmulator,
   platformOs,
+  preferAndroidAdbReverse,
   socketUrlEnv,
 }) => {
   const normalizedEnv = normalizeAppEnv(appEnv);
+  const shouldPreferAndroidAdbReverse = platformOs === 'android'
+    && isTruthyFlag(preferAndroidAdbReverse);
   const rewrittenApiValue = rewriteLoopbackForRuntime({
     isDev,
     isEmulator,
     platformOs,
+    preferAndroidAdbReverse: shouldPreferAndroidAdbReverse,
     value: apiUrlEnv,
   });
   const rewrittenSocketValue = rewriteLoopbackForRuntime({
     isDev,
     isEmulator,
     platformOs,
+    preferAndroidAdbReverse: shouldPreferAndroidAdbReverse,
     value: socketUrlEnv,
   });
   const rewrittenPublicOriginValue = rewriteLoopbackForRuntime({
     isDev,
     isEmulator,
     platformOs,
+    preferAndroidAdbReverse: shouldPreferAndroidAdbReverse,
     value: apiPublicUrlEnv,
   });
   const explicitApiUrl = normalizeApiUrl(
@@ -173,7 +195,11 @@ export const buildRuntimeEndpoints = ({
   let publicOrigin = explicitPublicOrigin;
 
   if (!apiUrl && isDev) {
-    const devFallback = buildDevFallback({ isEmulator, platformOs });
+    const devFallback = buildDevFallback({
+      isEmulator,
+      platformOs,
+      preferAndroidAdbReverse: shouldPreferAndroidAdbReverse,
+    });
     if (devFallback) {
       apiUrl = devFallback.apiUrl;
       socketUrl = socketUrl || devFallback.socketUrl;
@@ -218,15 +244,21 @@ export const buildRuntimeEndpoints = ({
 
   const resolvedApiHost = getHostname(apiUrl);
   if (isNativeReleaseBuild && normalizedEnv === 'local') {
-    errors.push('Release builds cannot use APP_ENV=local. Build this app with staging or production runtime configuration.');
+    errors.push(
+      'Release builds cannot use APP_ENV=local. Build this app with staging or production runtime configuration.',
+    );
   }
 
   if (isNativeReleaseBuild && resolvedApiHost && LOOPBACK_HOSTS.has(resolvedApiHost)) {
-    errors.push('Release builds cannot point API_URL to a loopback host such as localhost or 10.0.2.2.');
+    errors.push(
+      'Release builds cannot point API_URL to a loopback host such as localhost or 10.0.2.2.',
+    );
   }
 
   if (resolvedApiHost && LOOPBACK_HOSTS.has(resolvedApiHost) && isDev && !isEmulator) {
-    errors.push('API_URL points to a loopback host on a physical device. Use a LAN or remote backend URL.');
+    errors.push(
+      'API_URL points to a loopback host on a physical device. Use a LAN or remote backend URL.',
+    );
   }
 
   let uploadUrl = '';

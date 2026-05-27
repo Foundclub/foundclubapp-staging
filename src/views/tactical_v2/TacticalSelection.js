@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
 
@@ -53,6 +54,7 @@ function TacticalSelection() {
   const {
     Colors, Fonts, Spaces,
   } = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const route = useRoute();
 
@@ -562,6 +564,9 @@ function TacticalSelection() {
     );
   }, [selectedIds, Colors, Fonts, toggleSelection, handleEditPlayer, numberOverrides]);
 
+  const footerBottomInset = Math.max(insets.bottom, 12);
+  const stickyFooterHeight = 84 + footerBottomInset;
+
   return (
     <ScreenContainer bgImage="bg2" style={[{ paddingHorizontal: 0 }]}>
       {/* Header */}
@@ -659,23 +664,39 @@ function TacticalSelection() {
       </View>
 
       {/* Player List */}
-      <FlatList
-        contentContainerStyle={[Spaces.paddingHorizontal[24], styles.listContent]}
-        data={filteredPlayers}
-        keyExtractor={(item, index) => String(item.id || item.documentId || `player_${index}`)}
-        ListEmptyComponent={(
-          <View style={styles.emptyState}>
-            <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+      <View style={styles.listSection}>
+        <FlatList
+          contentContainerStyle={[
+            Spaces.paddingHorizontal[24],
+            styles.listContent,
+            { paddingBottom: stickyFooterHeight + 16 },
+          ]}
+          data={filteredPlayers}
+          keyExtractor={(item, index) => String(item.id || item.documentId || `player_${index}`)}
+          ListEmptyComponent={(
+            <View style={styles.emptyState}>
+              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
               {searchQuery ? 'Aucun résultat' : "Aucun joueur dans l'équipe"}
-            </Text>
-          </View>
-        )}
-        renderItem={renderPlayer}
-        showsVerticalScrollIndicator={false}
-      />
+              </Text>
+            </View>
+          )}
+          renderItem={renderPlayer}
+          showsVerticalScrollIndicator={false}
+          style={styles.list}
+        />
+      </View>
 
       {/* Footer */}
-      <View style={[styles.footer, { backgroundColor: Colors.neutral900, borderTopColor: Colors.neutral700 }]}>
+      <View
+        style={[
+          styles.footer,
+          {
+            backgroundColor: Colors.neutral900,
+            borderColor: Colors.neutral700,
+            bottom: footerBottomInset,
+          },
+        ]}
+      >
         <Button
           disabled={selectedIds.size === 0 || isResolvingTeam || isTeamResolutionBlocked}
           onPress={handleValidate}
@@ -849,8 +870,17 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   footer: {
-    borderTopWidth: 1,
-    padding: 16,
+    borderRadius: 22,
+    borderWidth: 1,
+    elevation: 10,
+    left: 24,
+    padding: 14,
+    position: 'absolute',
+    right: 24,
+    shadowColor: '#000',
+    shadowOffset: { height: 10, width: 0 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
   },
   header: {
     alignItems: 'center',
@@ -862,8 +892,14 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 44,
   },
+  list: {
+    flex: 1,
+  },
   listContent: {
     paddingBottom: 20,
+  },
+  listSection: {
+    flex: 1,
   },
   playerInfo: {
     flex: 1,

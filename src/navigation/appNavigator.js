@@ -1,5 +1,5 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { StatusBar } from 'react-native';
+import { Platform, StatusBar } from 'react-native';
 
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
@@ -32,6 +32,9 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
   const navigationTheme = scheme === 'dark'
     ? ApplicationStyle.darkNavigationTheme
     : ApplicationStyle.lightNavigationTheme;
+  const shouldAvoidDeprecatedSystemBarColors = Platform.OS === 'android'
+    && typeof Platform.Version === 'number'
+    && Platform.Version >= 35;
 
   const linking = {
     config: {
@@ -83,11 +86,18 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
       ref={navigationRef}
       theme={navigationTheme}
     >
-      <StatusBar
-        backgroundColor={scheme === 'dark' ? (Colors.primary900 || Colors.neutral900) : Colors.neutral00}
-        barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
-        translucent={false}
-      />
+      {shouldAvoidDeprecatedSystemBarColors ? (
+        <StatusBar
+          barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
+          translucent={false}
+        />
+      ) : (
+        <StatusBar
+          backgroundColor={scheme === 'dark' ? (Colors.primary900 || Colors.neutral900) : Colors.neutral00}
+          barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
+          translucent={false}
+        />
+      )}
       {auth?.token && !isAddingAccount ? <PrivateNavigator /> : <PublicNavigator />}
     </NavigationContainer>
   );

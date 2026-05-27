@@ -38,6 +38,15 @@ export const pickPreferredMediaOrigin = (origins) => {
   if (candidates.length === 0) return '';
 
   if (Platform.OS === 'android' && __DEV__) {
+    const runtimeOrigin = normalizeOrigin(getPublicApiOrigin()) || normalizeOrigin(getApiBaseUrl());
+    const runtimeLoopbackHost = getOriginHost(runtimeOrigin);
+    if (runtimeLoopbackHost) {
+      const matchingRuntimeOrigin = candidates.find(
+        (origin) => getOriginHost(origin) === runtimeLoopbackHost,
+      );
+      if (matchingRuntimeOrigin) return matchingRuntimeOrigin;
+    }
+
     const emulatorOrigin = candidates.find((origin) => getOriginHost(origin) === '10.0.2.2');
     if (emulatorOrigin) return emulatorOrigin;
   }

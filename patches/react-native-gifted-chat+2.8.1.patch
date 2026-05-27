@@ -1,0 +1,84 @@
+diff --git a/node_modules/react-native-gifted-chat/lib/GiftedChat/index.js b/node_modules/react-native-gifted-chat/lib/GiftedChat/index.js
+index 4fc42d2..adcafb6 100644
+--- a/node_modules/react-native-gifted-chat/lib/GiftedChat/index.js
++++ b/node_modules/react-native-gifted-chat/lib/GiftedChat/index.js
+@@ -22,10 +22,23 @@ import { SystemMessage } from '../SystemMessage';
+ import { Time } from '../Time';
+ import * as utils from '../utils';
+ import Animated, { useAnimatedStyle, useAnimatedReaction, useSharedValue, withTiming, runOnJS, } from 'react-native-reanimated';
+-import { KeyboardProvider, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+ import stylesCommon from '../styles';
+ import styles from './styles';
+ dayjs.extend(localizedFormat);
++let keyboardControllerModule = null;
++try {
++    keyboardControllerModule = require('react-native-keyboard-controller');
++}
++catch (_error) {
++    keyboardControllerModule = null;
++}
++const KeyboardProvider = keyboardControllerModule?.KeyboardProvider || (({ children }) => <>{children}</>);
++const useKeyboardAnimationFallback = () => {
++    const progress = useSharedValue(0);
++    const height = useSharedValue(0);
++    return { progress, height };
++};
++const useKeyboardAnimation = keyboardControllerModule?.useReanimatedKeyboardAnimation || useKeyboardAnimationFallback;
+ function GiftedChat(props) {
+     const { messages = [], initialText = '', isTyping, 
+     // "random" function from here: https://stackoverflow.com/a/8084248/3452513
+@@ -44,7 +57,7 @@ function GiftedChat(props) {
+     const [composerHeight, setComposerHeight] = useState(minComposerHeight);
+     const [text, setText] = useState(() => props.text || '');
+     const [isTypingDisabled, setIsTypingDisabled] = useState(false);
+-    const keyboard = useReanimatedKeyboardAnimation();
++    const keyboard = useKeyboardAnimation();
+     const trackingKeyboardMovement = useSharedValue(false);
+     const debounceEnableTypingTimeoutId = useRef(undefined);
+     const keyboardOffsetBottom = useSharedValue(0);
+diff --git a/node_modules/react-native-gifted-chat/src/GiftedChat/index.tsx b/node_modules/react-native-gifted-chat/src/GiftedChat/index.tsx
+index 3e0bcd0..f4e32e6 100644
+--- a/node_modules/react-native-gifted-chat/src/GiftedChat/index.tsx
++++ b/node_modules/react-native-gifted-chat/src/GiftedChat/index.tsx
+@@ -47,7 +47,6 @@ import Animated, {
+   withTiming,
+   runOnJS,
+ } from 'react-native-reanimated'
+-import { KeyboardProvider, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller'
+ import { GiftedChatProps } from './types'
+ 
+ import stylesCommon from '../styles'
+@@ -55,6 +54,24 @@ import styles from './styles'
+ 
+ dayjs.extend(localizedFormat)
+ 
++let keyboardControllerModule: any = null
++
++try {
++  // Lazy resolution so chat can still render on stale native builds.
++  // eslint-disable-next-line global-require, import/no-extraneous-dependencies
++  keyboardControllerModule = require('react-native-keyboard-controller')
++} catch (_error) {
++  keyboardControllerModule = null
++}
++
++const KeyboardProvider = keyboardControllerModule?.KeyboardProvider || (({ children }: { children?: React.ReactNode }) => <>{children}</>)
++const useKeyboardAnimationFallback = () => {
++  const progress = useSharedValue(0)
++  const height = useSharedValue(0)
++  return { progress, height }
++}
++const useKeyboardAnimation = keyboardControllerModule?.useReanimatedKeyboardAnimation || useKeyboardAnimationFallback
++
+ function GiftedChat<TMessage extends IMessage = IMessage> (
+   props: GiftedChatProps<TMessage>
+ ) {
+@@ -112,7 +129,7 @@ function GiftedChat<TMessage extends IMessage = IMessage> (
+   const [text, setText] = useState<string | undefined>(() => props.text || '')
+   const [isTypingDisabled, setIsTypingDisabled] = useState<boolean>(false)
+ 
+-  const keyboard = useReanimatedKeyboardAnimation()
++  const keyboard = useKeyboardAnimation()
+   const trackingKeyboardMovement = useSharedValue(false)
+   const debounceEnableTypingTimeoutId = useRef<ReturnType<typeof setTimeout>>(undefined)
+   const keyboardOffsetBottom = useSharedValue(0)

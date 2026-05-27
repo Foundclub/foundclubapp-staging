@@ -18,6 +18,24 @@ describe('runtimeUrls.shared', () => {
     expect(runtime.errors).toEqual([]);
   });
 
+  it('keeps localhost on the Android emulator when adb reverse override is enabled', () => {
+    const runtime = buildRuntimeEndpoints({
+      apiPublicUrlEnv: '',
+      apiUrlEnv: 'http://localhost:1337/api',
+      appEnv: 'local',
+      isDev: true,
+      isEmulator: true,
+      platformOs: 'android',
+      preferAndroidAdbReverse: 'true',
+      socketUrlEnv: 'http://localhost:1337',
+    });
+
+    expect(runtime.apiUrl).toBe('http://localhost:1337/api');
+    expect(runtime.socketUrl).toBe('http://localhost:1337');
+    expect(runtime.uploadUrl).toBe('http://localhost:1337/api/upload');
+    expect(runtime.errors).toEqual([]);
+  });
+
   it('falls back to localhost on the iOS simulator when no API URL is provided', () => {
     const runtime = buildRuntimeEndpoints({
       apiPublicUrlEnv: '',
@@ -33,6 +51,25 @@ describe('runtimeUrls.shared', () => {
     expect(runtime.socketUrl).toBe('http://localhost:1337');
     expect(runtime.uploadUrl).toBe('http://localhost:1337/api/upload');
     expect(runtime.source).toBe('ios-simulator-fallback');
+    expect(runtime.errors).toEqual([]);
+  });
+
+  it('falls back to localhost on the Android emulator when adb reverse override is enabled', () => {
+    const runtime = buildRuntimeEndpoints({
+      apiPublicUrlEnv: '',
+      apiUrlEnv: '',
+      appEnv: 'local',
+      isDev: true,
+      isEmulator: true,
+      platformOs: 'android',
+      preferAndroidAdbReverse: 'true',
+      socketUrlEnv: '',
+    });
+
+    expect(runtime.apiUrl).toBe('http://localhost:1337/api');
+    expect(runtime.socketUrl).toBe('http://localhost:1337');
+    expect(runtime.uploadUrl).toBe('http://localhost:1337/api/upload');
+    expect(runtime.source).toBe('android-emulator-adb-reverse-fallback');
     expect(runtime.errors).toEqual([]);
   });
 

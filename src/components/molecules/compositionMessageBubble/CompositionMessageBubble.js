@@ -1,15 +1,15 @@
 import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import {
-  ImageBackground, StyleSheet, Text, TouchableOpacity, View,
+  StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import 'dayjs/locale/fr';
 
 import useTheme from '@/theme/themeContext';
 
-import { RouteNames } from '@/navigation/routeNames';
+import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 
-import { getTacticalFieldImage } from '@/utils/tacticalField';
+import { RouteNames } from '@/navigation/routeNames';
 
 // Mini field dimensions
 const MINI_FIELD_WIDTH = 220;
@@ -61,7 +61,6 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   // Combine all players for lookup
   const allPlayers = [...teamPlayers, ...manualPlayers];
 
-  const fieldImage = getTacticalFieldImage(sport);
   const formattedDate = eventDate ? dayjs(eventDate).locale('fr').format('DD/MM/YYYY') : '';
 
   // Navigate to TacticalBoard in readonly mode
@@ -149,12 +148,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       </View>
 
       {/* Mini Field */}
-      <ImageBackground
-        imageStyle={styles.fieldImage}
-        resizeMode="cover"
-        source={fieldImage}
-        style={styles.miniField}
-      >
+      <RenderedTacticalField sport={sport} style={styles.miniField}>
         {renderMiniTokens()}
 
         {/* Player count badge */}
@@ -166,7 +160,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
             {placements.length > 1 ? 's' : ''}
           </Text>
         </View>
-      </ImageBackground>
+      </RenderedTacticalField>
 
       {/* Footer hint */}
       <View style={[styles.footer, { backgroundColor: Colors.neutral900 }]}>
@@ -195,9 +189,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 6,
     top: 6,
-  },
-  fieldImage: {
-    borderRadius: 8,
   },
   footer: {
     alignItems: 'center',

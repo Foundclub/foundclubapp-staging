@@ -1,5 +1,3 @@
-/* eslint-disable global-require */
-
 const FIELD_ASPECT_RATIOS = {
   basketball: 1.7,
   football: 1.5,
@@ -7,15 +5,6 @@ const FIELD_ASPECT_RATIOS = {
   handball: 1.5,
   rugby: 1.4,
   volleyball: 1.8,
-};
-
-const FIELD_IMAGES = {
-  basketball: require('@/assets/fields/field_basket.jpg'),
-  football: require('@/assets/fields/field_football.jpg'),
-  generic: require('@/assets/fields/field_generic.jpg'),
-  handball: require('@/assets/fields/field_handball.jpg'),
-  rugby: require('@/assets/fields/field_rugby.jpg'),
-  volleyball: require('@/assets/fields/field_volley.jpg'),
 };
 
 const normalizeSportInput = (value) => String(value || '')
@@ -48,15 +37,6 @@ export const getTacticalSportKey = (sport) => {
 
   return 'generic';
 };
-
-/**
- * Returns the tactical field image for a sport.
- * @param {string | null | undefined} sport
- * @returns {any}
- */
-export const getTacticalFieldImage = (sport) => (
-  FIELD_IMAGES[getTacticalSportKey(sport)] || FIELD_IMAGES.generic
-);
 
 /**
  * Returns the tactical field aspect ratio for a sport.

@@ -787,10 +787,9 @@ function EventListContent({
       return;
     }
     eventListLogger.debug('Navigating to event details', { eventDocumentId: event.documentId });
-    navigateToStackScreenOrScreen(/** @type {any} */ (navigation), {
+    navigation.navigate(RouteNames.EventStack, {
       params: { eventId: event.documentId },
       screen: RouteNames.EventDetails,
-      stack: RouteNames.EventStack,
     });
   }, [navigation]);
 

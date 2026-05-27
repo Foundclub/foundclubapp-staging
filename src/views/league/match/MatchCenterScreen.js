@@ -24,7 +24,11 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
 import { useMatchmakingStateMachine } from '@/views/league/match/hooks/useMatchmakingStateMachine';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
-import { shouldMaskOpponentIdentity, shouldShowNextMatchCard } from '@/views/league/match/utils/matchStatus';
+import { canOpenProposalRouteForMatch } from '@/views/league/match/utils/proposalRouteIntent';
+import {
+  shouldMaskOpponentIdentity,
+  shouldShowNextMatchCard,
+} from '@/views/league/match/utils/matchStatus';
 import { buildProposalDefaultsFromMatch, toHourMinute } from '@/views/league/match/utils/proposalDefaults';
 import { buildCanonicalLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
 
@@ -348,7 +352,7 @@ function MatchCenterScreen() {
   const squadRequiredPlayers = React.useMemo(() => getRequiredPlayersForSport(mySquad?.sport), [mySquad?.sport]);
   const isOpponentAnonymous = React.useMemo(() => shouldMaskOpponentIdentity(currentMatch), [currentMatch]);
   const opponentChatTitle = isOpponentAnonymous ? 'Vs Adversaire' : `Vs ${opponentDetails?.name || 'Adversaire'}`;
-  const routeOpenProposalRequested = Boolean(route?.params?.openLeagueProposal || route?.params?.forceLeagueActionPrompt);
+  const routeOpenProposalRequested = Boolean(route?.params?.openLeagueProposal);
   const routeOpenProposalToken = String(
     route?.params?.openLeagueProposalToken
       || route?.params?.forceLeagueActionPromptToken
@@ -1019,24 +1023,46 @@ function MatchCenterScreen() {
 
   const handleCancelSearch = async () => {
     if (!matchRequest) return;
+    if (!isCurrentUserCaptain) {
+      Alert.alert(
+        'Action reservee',
+        'Seul un capitaine ou co-capitaine peut arreter la recherche League.',
+      );
+      return;
+    }
     setLoading(true);
     try {
       const reqId = getEntityDocumentId(matchRequest);
+      if (!reqId) {
+        throw new Error('Missing matchmaking request id');
+      }
       await MatchmakingService.cancelRequest(reqId);
       setMatchRequest(null);
       setSoftSuggestion(null);
+      setMatchmakingServerNow(null);
       // Refresh data to ensure consistent state
       await loadMatchCenter();
       setViewState('locker_room');
     } catch (error) {
       console.error('Cancel Error:', error);
-      Alert.alert('Erreur', "Impossible d'annuler");
+      const cancelError = /** @type {any} */ (error);
+      const isUnauthorized = cancelError?.code === 'UNAUTHORIZED_TEAM_ACTION'
+        || cancelError?.status === 403;
+      Alert.alert(
+        isUnauthorized ? 'Action reservee' : 'Erreur',
+        isUnauthorized
+          ? 'Seul un capitaine ou co-capitaine peut arreter la recherche League.'
+          : "Impossible d'annuler la recherche pour le moment.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSendProposal = async (/** @type {VenueProposalPayload} */ proposalData) => {
+  const handleSendProposal = async (
+    /** @type {VenueProposalPayload} */ proposalData,
+    /** @type {{ legalAcceptance?: Record<string, unknown> } | undefined} */ options = undefined,
+  ) => {
     if (!currentMatch) return;
     try {
       const matchId = getEntityDocumentId(currentMatch);
@@ -1048,7 +1074,7 @@ function MatchCenterScreen() {
         throw new Error('Missing proposal venue');
       }
 
-      const legalAcceptance = await requestLeagueLegalAcceptance({
+      const legalAcceptance = options?.legalAcceptance || await requestLeagueLegalAcceptance({
         metadata: {
           matchLabel: currentMatchLegalLabel,
           teamName: mySquad?.name || null,
@@ -1078,16 +1104,22 @@ function MatchCenterScreen() {
         proposalMessageId: result?.proposalMessageId,
       });
       setCurrentMatch(updatedMatch);
+      setIsProposalModalVisible(false);
 
       const chatId = getEntityDocumentId(updatedMatch?.chat || currentMatch.chat);
       if (chatId) {
-        setIsProposalModalVisible(false);
         navigation.navigate(RouteNames.Conversation, {
           chatId,
           subTitle: 'Match de Ligue',
           title: opponentChatTitle,
         });
+        return;
       }
+
+      navigation.navigate(RouteNames.LeagueMatchDetails, {
+        focusSection: 'negotiation',
+        matchId,
+      });
     } catch (error) {
       const apiMessage = error?.response?.data?.error?.message
         || error?.response?.data?.message
@@ -1166,11 +1198,20 @@ function MatchCenterScreen() {
       return;
     }
 
+    if (!canOpenProposalRouteForMatch(currentMatch)) {
+      return;
+    }
+
     consumedRouteOpenProposalTokenRef.current = requestKey;
+    navigation.setParams?.({
+      openLeagueProposal: undefined,
+      openLeagueProposalToken: undefined,
+    });
     handleMatchFoundPrimaryAction(currentMatch);
   }, [
     currentMatch,
     handleMatchFoundPrimaryAction,
+    navigation,
     routeOpenProposalMatchId,
     routeOpenProposalRequested,
     routeOpenProposalToken,
@@ -1445,14 +1486,14 @@ function MatchCenterScreen() {
     if (viewState === 'radar') {
       return renderMissionState({
         accentColor: leagueGold,
-        actions: (
+        actions: isCurrentUserCaptain ? (
           <Button
             disabled={loading}
             onPress={handleCancelSearch}
             title="ANNULER"
             variant="Secondary"
           />
-        ),
+        ) : null,
         children: (
           <>
             <Text style={[Fonts.p3Bold, {
@@ -1464,6 +1505,18 @@ function MatchCenterScreen() {
             >
               {searchStatus}
             </Text>
+            {!isCurrentUserCaptain ? (
+              <Text style={[Fonts.p3, {
+                color: Colors.neutral300,
+                lineHeight: 20,
+                marginBottom: 12,
+                textAlign: 'center',
+              }]}
+              >
+                La recherche est geree par le capitaine de votre squad. Seul lui
+                ou un co-capitaine peut l annuler.
+              </Text>
+            ) : null}
             <SearchCountdown
               createdAt={matchRequest?.createdAt}
               onExpired={handleCancelSearch}
@@ -3420,7 +3473,19 @@ function MatchCenterScreen() {
         initialDate={proposalDefaults.date}
         initialEndTime={proposalDefaults.end}
         initialStartTime={proposalDefaults.start}
+        isSubmitting={loading}
         isVisible={isProposalModalVisible}
+        legalAcceptanceConfig={{
+          metadata: {
+            matchLabel: currentMatchLegalLabel,
+            teamName: mySquad?.name || null,
+          },
+          scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
+          sourceScreen: 'match_center_proposal',
+          targetDocumentId: getEntityDocumentId(currentMatch),
+          targetLabel: currentMatchLegalLabel,
+          targetType: 'league_match',
+        }}
         onClose={() => setIsProposalModalVisible(false)}
         onSend={handleSendProposal}
         onSkip={() => {

@@ -1,5 +1,10 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
   Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -28,7 +33,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { getMatch, getMatchHistory } from '@/services/league/leagueMatchService';
-import MatchmakingService from '@/services/league/MatchmakingService';
+import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
 import {
   getInvitedLeagueTeams,
   getMyLeagueTeam,
@@ -294,6 +299,14 @@ function LeagueDashboard() {
   const [isSquadSelectorVisible, setIsSquadSelectorVisible] = useState(false);
   const [leagueActionState, setLeagueActionState] = useState(/** @type {any | null} */ (null));
   const [conversationFallbackState, setConversationFallbackState] = useState(/** @type {any | null} */ (null));
+  const pendingLeagueActionTeamId = activeSquadId || getEntityDocumentId(userTeam) || undefined;
+  const {
+    data: pendingLeagueActionPayload,
+    refetch: refetchPendingLeagueAction,
+  } = usePendingLeagueAction(pendingLeagueActionTeamId, {
+    enabled: Boolean(pendingLeagueActionTeamId),
+    refetchOnMount: true,
+  });
   const leagueSurface = {
     backgroundColor: 'rgba(10, 28, 43, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.22)',
@@ -309,11 +322,6 @@ function LeagueDashboard() {
 
     const teamId = getEntityDocumentId(team);
     try {
-      if (teamId) {
-        const searchState = await MatchmakingService.getActiveRequest(teamId);
-        setLeagueActionState(searchState || null);
-      }
-
       const [history, rankings] = await Promise.all([
         teamId ? getMatchHistory(teamId, 5) : Promise.resolve([]),
         getRanking(clampLeagueDivision(team?.division)),
@@ -327,6 +335,15 @@ function LeagueDashboard() {
       setLeagueActionState(null);
     }
   }, []);
+
+  useEffect(() => {
+    if (!pendingLeagueActionTeamId) {
+      setLeagueActionState(null);
+      return;
+    }
+
+    setLeagueActionState(pendingLeagueActionPayload?.nextAction || null);
+  }, [pendingLeagueActionPayload?.nextAction, pendingLeagueActionTeamId]);
 
   const loadDashboard = useCallback(async () => {
     if (!userData) return;
@@ -373,7 +390,10 @@ function LeagueDashboard() {
   useFocusEffect(
     useCallback(() => {
       loadDashboard();
-    }, [loadDashboard]),
+      if (pendingLeagueActionTeamId) {
+        refetchPendingLeagueAction();
+      }
+    }, [loadDashboard, pendingLeagueActionTeamId, refetchPendingLeagueAction]),
   );
 
   const handleSquadSwitch = useCallback(async (/** @type {Team} */ squad) => {
@@ -509,24 +529,17 @@ function LeagueDashboard() {
     }
 
     if (state === 'proposal_received') {
-      openLeagueConversation({
-        chatId: leagueActionState?.chatId,
-        matchId,
-        proposalMessageId: leagueActionState?.proposalMessageId,
-      });
+      openLeagueMatchDetails(matchId, 'negotiation');
       return;
     }
 
-    if (['confirmed_upcoming', 'confirm\u00E9d_upcoming', 'proposal_sent_waiting'].includes(state)) {
-      if (state === 'proposal_sent_waiting') {
-        openLeagueConversation({
-          chatId: leagueActionState?.chatId,
-          matchId,
-          proposalMessageId: leagueActionState?.proposalMessageId,
-        });
-      } else {
-        openLeagueMatchDetails(matchId);
-      }
+    if (state === 'proposal_sent_waiting') {
+      openLeagueMatchDetails(matchId, 'negotiation');
+      return;
+    }
+
+    if (['confirmed_upcoming', 'confirm\u00E9d_upcoming'].includes(state)) {
+      openLeagueMatchDetails(matchId);
       return;
     }
 
@@ -546,7 +559,16 @@ function LeagueDashboard() {
       return;
     }
 
-    if (state === 'opponent_found' || state === 'proposal_sent_waiting') {
+    if (state === 'proposal_sent_waiting') {
+      openLeagueConversation({
+        chatId: leagueActionState?.chatId,
+        matchId,
+        proposalMessageId: leagueActionState?.proposalMessageId,
+      });
+      return;
+    }
+
+    if (state === 'opponent_found') {
       openLeagueMatchDetails(matchId);
       return;
     }

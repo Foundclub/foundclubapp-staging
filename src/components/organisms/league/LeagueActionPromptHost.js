@@ -23,6 +23,7 @@ import { buildCanonicalLeagueProposalPayload } from '@/views/league/match/utils/
 
 import {
   getCurrentRouteName,
+  getCurrentRouteTrail,
   navigate,
   navigationRef,
 } from '@/navigation/navigationService';
@@ -56,7 +57,7 @@ import { usePopupEligibility } from '@/context/PopupManagerContext';
 import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 
 const END_MATCH_ROUTE = RouteNames.EndMatchScreen;
-const LEAGUE_ACTION_PROMPT_STATES = new Set([
+const LEAGUE_ACTION_PROMPT_STATES = /** @type {Set<string>} */ (new Set([
   'disputed',
   'opponent_found',
   'pending_validation',
@@ -64,17 +65,21 @@ const LEAGUE_ACTION_PROMPT_STATES = new Set([
   'proposal_received',
   'waiting_score',
   'waiting_venue',
-]);
+]));
 
-const BLOCKED_ROUTES = new Set([
+const BLOCKED_ROUTES = /** @type {Set<string>} */ (new Set([
   END_MATCH_ROUTE,
   RouteNames.Conversation,
   RouteNames.LeagueMatchDetails,
   RouteNames.MatchStatsEditor,
   RouteNames.PendingMatchStats,
   RouteNames.PlayerMatchResponse,
-]);
+]));
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const formatActionDate = (value) => {
   if (!value) return 'Date \u00E0 d\u00E9finir';
   try {
@@ -89,12 +94,21 @@ const formatActionDate = (value) => {
   }
 };
 
+/**
+ * @param {any} error
+ * @returns {boolean}
+ */
 const isAlreadyResolvedError = (error) => {
   const status = Number(error?.response?.status || error?.status || 0);
   const code = String(error?.response?.data?.error?.code || error?.code || '');
   return status === 409 || code === 'ALREADY_RESOLVED';
 };
 
+/**
+ * @param {string | undefined | null} opponentResponse
+ * @param {string | undefined | null} opponentNextAction
+ * @returns {string}
+ */
 const getOpponentResponseLabel = (opponentResponse, opponentNextAction) => {
   if (opponentResponse === 'played') {
     return 'Match jou\u00E9';
@@ -117,11 +131,13 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const [consumedForcedPromptKey, setConsumedForcedPromptKey] = useState(/** @type {string | null} */ (null));
   const [dismissedActionKey, setDismissedActionKey] = useState(/** @type {string | null} */ (null));
   const [currentRouteName, setCurrentRouteName] = useState(/** @type {string | null} */ (null));
+  const [currentRouteTrail, setCurrentRouteTrail] = useState(/** @type {string[]} */ ([]));
   const [forcePromptToken, setForcePromptToken] = useState(/** @type {string | null} */ (null));
   const [isNavigationReady, setIsNavigationReady] = useState(navigationRef.isReady());
   const [isCounterProposalVisible, setIsCounterProposalVisible] = useState(false);
   const [postSlotLocalStep, setPostSlotLocalStep] = useState(/** @type {string | null} */ (null));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [suppressedScoreMatchId, setSuppressedScoreMatchId] = useState(/** @type {string | null} */ (null));
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const appStateRef = useRef(AppState.currentState);
   const shownActionPromptKeyRef = useRef(/** @type {string | null} */ (null));
@@ -142,18 +158,41 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   });
 
   const nextAction = pendingActionPayload?.nextAction || null;
+  const nextActionMatchId = String(
+    nextAction?.matchId
+    || nextAction?.match?.documentId
+    || nextAction?.match?.id
+    || '',
+  ).trim();
   const promptVenueRequired = doesMatchRequireVenue(nextAction?.match);
   const promptDurationMinutes = getMatchDurationMinutes(
     nextAction?.match?.team_a?.sport || nextAction?.match?.team_b?.sport || nextAction?.match?.sport,
   );
   const promptMatchFocusSection = promptVenueRequired ? 'venueBooking' : 'presence';
-  const isBlockedRoute = currentRouteName ? BLOCKED_ROUTES.has(currentRouteName) : false;
+  const isBlockedRoute = Boolean(
+    (currentRouteName && BLOCKED_ROUTES.has(currentRouteName))
+    || currentRouteTrail.some((routeName) => BLOCKED_ROUTES.has(routeName)),
+  );
   const isCompactMobile = width < 390 || height < 760;
   const modalSnapPoint = isCompactMobile ? '90%' : '84%';
   const sectionGap = isCompactMobile ? 12 : 16;
   const currentForcedPromptKey = nextAction?.key && forcePromptToken
     ? `${nextAction.key}:${forcePromptToken}`
     : null;
+  const scoreActionState = String(nextAction?.state || '').trim().toLowerCase();
+  const scoreActionPhase = String(nextAction?.match?.phase || '').trim().toLowerCase();
+  const effectiveScoreAction = ['disputed', 'pending_validation', 'waiting_score'].includes(scoreActionState)
+    ? scoreActionState
+    : scoreActionPhase;
+  const isScoreActionPrompt = ['disputed', 'pending_validation', 'waiting_score'].includes(
+    effectiveScoreAction,
+  );
+  const isSuppressedScorePrompt = Boolean(
+    suppressedScoreMatchId
+    && nextActionMatchId
+    && String(suppressedScoreMatchId) === nextActionMatchId
+    && isScoreActionPrompt,
+  );
   const isForcedForCurrentAction = Boolean(
     currentForcedPromptKey && consumedForcedPromptKey !== currentForcedPromptKey,
   );
@@ -163,6 +202,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     && nextAction
     && isNavigationReady
     && !isBlockedRoute
+    && !isSuppressedScorePrompt
     && LEAGUE_ACTION_PROMPT_STATES.has(String(nextAction?.state || ''))
     && (dismissedActionKey !== (nextAction?.key || null) || isForcedForCurrentAction),
   );
@@ -230,7 +270,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     }
     if (shownActionPromptKeyRef.current === nextAction.key) return;
     shownActionPromptKeyRef.current = nextAction.key;
-    leagueActionPopup.markShown({ actionKey: nextAction.key });
+    /** @type {any} */ (leagueActionPopup).markShown({ actionKey: nextAction.key });
   }, [isVisible, leagueActionPopup, nextAction?.key]);
 
   useEffect(() => {
@@ -241,7 +281,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     }
     if (shownCounterProposalKeyRef.current === counterProposalKey) return;
     shownCounterProposalKeyRef.current = counterProposalKey;
-    counterProposalPopup.markShown({ actionKey: nextAction?.key || 'default' });
+    /** @type {any} */ (counterProposalPopup).markShown({ actionKey: nextAction?.key || 'default' });
   }, [canShowCounterProposalModal, counterProposalPopup, isCounterProposalVisible, nextAction?.key]);
 
   const invalidateLeagueQueries = useCallback(() => {
@@ -253,14 +293,20 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
   }, [queryClient]);
 
-  const openMatchDetails = useCallback((focusSection = undefined) => {
-    if (!nextAction?.matchId) return;
-    dismissForSession();
-    navigate(RouteNames.LeagueMatchDetails, {
-      ...(focusSection ? { focusSection } : {}),
-      matchId: nextAction.matchId,
-    });
-  }, [dismissForSession, nextAction?.matchId]);
+  const openMatchDetails = useCallback(
+    /**
+     * @param {string | undefined} focusSection
+     */
+    (focusSection = undefined) => {
+      if (!nextActionMatchId) return;
+      dismissForSession();
+      navigate(RouteNames.LeagueMatchDetails, {
+        ...(focusSection ? { focusSection } : {}),
+        matchId: nextActionMatchId,
+      });
+    },
+    [dismissForSession, nextActionMatchId],
+  );
 
   const openChat = useCallback(() => {
     if (!nextAction?.chatId) return;
@@ -373,7 +419,10 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     setIsCounterProposalVisible(true);
   }, [dismissForSession]);
 
-  const handleCounterProposalSend = useCallback(async (proposalData) => {
+  const handleCounterProposalSend = useCallback(async (
+    /** @type {any} */ proposalData,
+    /** @type {{ legalAcceptance?: Record<string, unknown> } | undefined} */ options = undefined,
+  ) => {
     if (!nextAction?.matchId || isSubmitting) return;
 
     try {
@@ -381,7 +430,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       if (promptVenueRequired && !proposalPayload.venueLabel) {
         throw new Error('Missing proposal venue');
       }
-      const legalAcceptance = await requestLeagueLegalAcceptance({
+      const legalAcceptance = options?.legalAcceptance || await requestLeagueLegalAcceptance({
         metadata: {
           matchLabel: promptMatchLabel,
           ...(proposalPayload.venueLabel ? { venueLabel: proposalPayload.venueLabel } : {}),
@@ -395,7 +444,11 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       if (!legalAcceptance) return;
 
       setIsSubmitting(true);
-      const result = await createLeagueProposal(nextAction.matchId, proposalPayload, { legalAcceptance });
+      const result = await createLeagueProposal(
+        nextAction.matchId,
+        /** @type {any} */ (proposalPayload),
+        { legalAcceptance },
+      );
       await invalidateLeagueQueries();
       setIsCounterProposalVisible(false);
       dismissForSession();
@@ -441,70 +494,122 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   ]);
 
   const handleVenueReminder = useCallback(() => {
-    if (!nextAction?.matchId) return;
+    if (!nextActionMatchId) return;
     dismissForSession();
     navigate(RouteNames.LeagueMatchDetails, {
       focusSection: promptMatchFocusSection,
-      matchId: nextAction.matchId,
+      matchId: nextActionMatchId,
     });
-  }, [dismissForSession, nextAction?.matchId, promptMatchFocusSection]);
+  }, [dismissForSession, nextActionMatchId, promptMatchFocusSection]);
 
-  const openLeagueScoreFlow = useCallback((matchId) => {
-    if (!matchId) return;
-    navigate(RouteNames.LeagueHomeTab, {
-      params: {
-        params: { matchId },
-        screen: END_MATCH_ROUTE,
-      },
-      screen: RouteNames.LeagueDashboard,
-    });
-  }, []);
-
-  const handlePostSlotResponse = useCallback(async (payload) => {
-    if (!nextAction?.matchId || isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      const response = await submitPostSlotResponse(nextAction.matchId, payload);
-      await invalidateLeagueQueries();
-      setPostSlotLocalStep(null);
-      dismissForSession();
-
-      const resolution = String(response?.resolution || '').trim().toLowerCase();
-      if (resolution === 'score_flow') {
-        openLeagueScoreFlow(nextAction.matchId);
+  const openLeagueScoreFlow = useCallback(
+    /**
+     * @param {string} matchId
+     */
+    (matchId) => {
+      if (!matchId) return;
+      if (navigate(END_MATCH_ROUTE, { matchId })) {
         return;
       }
-      if (resolution === 'rescheduled') {
-        if (nextAction?.chatId) {
-          navigate(RouteNames.Conversation, { chatId: nextAction.chatId });
+
+      navigate(RouteNames.LeagueHomeTab, {
+        params: {
+          params: { matchId },
+          screen: END_MATCH_ROUTE,
+        },
+        screen: RouteNames.LeagueDashboard,
+      });
+    },
+    [],
+  );
+
+  const dismissThenOpenLeagueScoreFlow = useCallback(
+    /**
+     * @param {string} matchId
+     */
+    (matchId) => {
+      if (!matchId) return;
+      setSuppressedScoreMatchId(String(matchId));
+      dismissForSession();
+      setTimeout(() => {
+        openLeagueScoreFlow(matchId);
+      }, 0);
+    },
+    [dismissForSession, openLeagueScoreFlow],
+  );
+
+  useEffect(() => {
+    if (!suppressedScoreMatchId) return;
+    if (!nextActionMatchId || nextActionMatchId !== String(suppressedScoreMatchId)) {
+      setSuppressedScoreMatchId(null);
+      return;
+    }
+    if (!isScoreActionPrompt) {
+      setSuppressedScoreMatchId(null);
+    }
+  }, [isScoreActionPrompt, nextActionMatchId, suppressedScoreMatchId]);
+
+  const handlePostSlotResponse = useCallback(
+    /**
+     * @param {Record<string, unknown>} payload
+     */
+    async (payload) => {
+      if (!nextActionMatchId || isSubmitting) return;
+      setIsSubmitting(true);
+      try {
+        const response = await submitPostSlotResponse(nextActionMatchId, payload);
+        await invalidateLeagueQueries();
+        setPostSlotLocalStep(null);
+        dismissForSession();
+
+        const resolution = String(response?.resolution || '').trim().toLowerCase();
+        if (resolution === 'score_flow') {
+          dismissThenOpenLeagueScoreFlow(nextActionMatchId);
           return;
         }
-        navigate(RouteNames.LeagueMatchDetails, { matchId: nextAction.matchId });
-        return;
+        if (resolution === 'rescheduled') {
+          if (nextAction?.chatId) {
+            navigate(RouteNames.Conversation, { chatId: nextAction.chatId });
+            return;
+          }
+          navigate(RouteNames.LeagueMatchDetails, { matchId: nextActionMatchId });
+          return;
+        }
+        if (['auto_cancelled', 'cancelled', 'disputed'].includes(resolution)) {
+          navigate(RouteNames.LeagueMatchDetails, { matchId: nextActionMatchId });
+        }
+      } catch (error) {
+        if (isAlreadyResolvedError(error)) {
+          await handleResolvedElsewhere();
+          return;
+        }
+        const apiError = /** @type {any} */ (error);
+        const serverMessage = String(
+          apiError?.response?.data?.error?.message
+          || apiError?.response?.data?.message
+          || apiError?.message
+          || '',
+        ).trim();
+        showBanner({
+          body: serverMessage || "Impossible d'enregistrer cette r\u00E9ponse.",
+          title: 'Erreur',
+          tone: 'error',
+        });
+      } finally {
+        setIsSubmitting(false);
       }
-      if (['auto_cancelled', 'cancelled', 'disputed'].includes(resolution)) {
-        navigate(RouteNames.LeagueMatchDetails, { matchId: nextAction.matchId });
-      }
-    } catch (error) {
-      if (isAlreadyResolvedError(error)) {
-        await handleResolvedElsewhere();
-        return;
-      }
-      const serverMessage = String(
-        error?.response?.data?.error?.message
-        || error?.response?.data?.message
-        || error?.message
-        || '',
-      ).trim();
-      showBanner({
-        body: serverMessage || "Impossible d'enregistrer cette r\u00E9ponse.",
-        title: 'Erreur',
-        tone: 'error',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.chatId, nextAction?.matchId, openLeagueScoreFlow, showBanner]);
+    },
+    [
+      dismissThenOpenLeagueScoreFlow,
+      dismissForSession,
+      handleResolvedElsewhere,
+      invalidateLeagueQueries,
+      isSubmitting,
+      nextAction?.chatId,
+      nextActionMatchId,
+      showBanner,
+    ],
+  );
 
   const openPostSlotNoMatchChoices = useCallback(() => {
     setPostSlotLocalStep('choose_not_played_action');
@@ -524,11 +629,13 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
 
       if (!ready) {
         setCurrentRouteName(null);
+        setCurrentRouteTrail([]);
         setForcePromptToken(null);
         return;
       }
 
-      const currentRoute = navigationRef.getCurrentRoute?.();
+      const currentRoute = /** @type {any} */ (navigationRef).getCurrentRoute?.();
+      setCurrentRouteTrail(getCurrentRouteTrail());
       setCurrentRouteName(currentRoute?.name || getCurrentRouteName());
       const explicitForcePromptToken = currentRoute?.params?.forceLeagueActionPromptToken;
       const shouldForcePrompt = Boolean(currentRoute?.params?.forceLeagueActionPrompt);
@@ -568,6 +675,11 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
 
     return () => subscription.remove();
   }, [auth?.token, refetch]);
+
+  useEffect(() => {
+    if (!isBlockedRoute || !isScoreActionPrompt || !nextAction?.key) return;
+    leagueActionPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+  }, [isBlockedRoute, isScoreActionPrompt, leagueActionPopup, nextAction?.key]);
 
   useEffect(() => {
     setPostSlotLocalStep(null);
@@ -749,10 +861,9 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     const isScoreAction = ['disputed', 'pending_validation', 'waiting_score'].includes(scoreActionKey);
 
     const goToCanonicalScreen = () => {
-      if (!nextAction?.matchId) return;
+      if (!nextActionMatchId) return;
       if (isScoreAction) {
-        dismissForSession();
-        openLeagueScoreFlow(nextAction.matchId);
+        dismissThenOpenLeagueScoreFlow(nextActionMatchId);
         return;
       }
 
@@ -866,17 +977,16 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     );
   }, [
     ApplicationStyle.borderRadius24,
-    dismissForSession,
     handleAcceptProposal,
     handleDeclineProposal,
     handleOpenProposalComposer,
     handleVenueReminder,
     isSubmitting,
     nextAction?.match?.phase,
-    nextAction?.matchId,
     nextAction?.state,
+    nextActionMatchId,
     openChat,
-    openLeagueScoreFlow,
+    dismissThenOpenLeagueScoreFlow,
     openMatchDetails,
     renderPostSlotActions,
   ]);
@@ -885,129 +995,142 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
 
   return (
     <>
-      <BottomModal
-        contentBottomPaddingOverride={6}
-        isVisible={isVisible}
-        onClose={dismissForSession}
-        preventStartupPresentation
-        snapPoint={modalSnapPoint}
-      >
-        <View style={{ gap: sectionGap, paddingBottom: isCompactMobile ? 4 : 8 }}>
-          <LeagueModalHeader
-            align="left"
-            description={promptBody}
-            title={promptTitle}
-          />
+      {shouldShowPrompt ? (
+        <BottomModal
+          close={dismissForSession}
+          contentBottomPaddingOverride={6}
+          isVisible={isVisible}
+          preventStartupPresentation
+          snapPoints={[modalSnapPoint]}
+        >
+          <View style={{ gap: sectionGap, paddingBottom: isCompactMobile ? 4 : 8 }}>
+            <LeagueModalHeader
+              align="left"
+              description={promptBody}
+              title={promptTitle}
+            />
 
-          <View
-            style={[
-              ApplicationStyle.borderRadius24,
-              {
-                backgroundColor: 'rgba(10, 28, 43, 0.90)',
-                borderColor: 'rgba(1, 179, 244, 0.24)',
-                borderWidth: 1,
-                gap: 14,
-                padding: isCompactMobile ? 16 : 20,
-              },
-            ]}
-          >
-            <View style={{ gap: 6 }}>
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Adversaire</Text>
-              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                {shouldHideOpponentName ? 'Adversaire' : nextAction?.opponent?.name || 'Adversaire'}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <View style={{
-                backgroundColor: `${Colors.primary500}18`,
-                borderColor: `${Colors.primary500}45`,
-                borderRadius: 999,
-                borderWidth: 1,
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-              }}
-              >
-                <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{homeAwayLabel}</Text>
+            <View
+              style={[
+                ApplicationStyle.borderRadius24,
+                {
+                  backgroundColor: 'rgba(10, 28, 43, 0.90)',
+                  borderColor: 'rgba(1, 179, 244, 0.24)',
+                  borderWidth: 1,
+                  gap: 14,
+                  padding: isCompactMobile ? 16 : 20,
+                },
+              ]}
+            >
+              <View style={{ gap: 6 }}>
+                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Adversaire</Text>
+                <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                  {shouldHideOpponentName ? 'Adversaire' : nextAction?.opponent?.name || 'Adversaire'}
+                </Text>
               </View>
-              {nextAction?.division != null ? (
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 <View style={{
-                  backgroundColor: `${Colors.gold500}16`,
-                  borderColor: `${Colors.gold500}40`,
+                  backgroundColor: `${Colors.primary500}18`,
+                  borderColor: `${Colors.primary500}45`,
                   borderRadius: 999,
                   borderWidth: 1,
                   paddingHorizontal: 12,
                   paddingVertical: 8,
                 }}
                 >
-                  <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
-                    Division
-                    {' '}
-                    {nextAction.division}
-                  </Text>
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{homeAwayLabel}</Text>
                 </View>
-              ) : null}
+                {nextAction?.division != null ? (
+                  <View style={{
+                    backgroundColor: `${Colors.gold500}16`,
+                    borderColor: `${Colors.gold500}40`,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                  }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+                      Division
+                      {' '}
+                      {nextAction.division}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={{ gap: 10 }}>
+                <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+                  Date
+                  {' : '}
+                  <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{formatActionDate(nextAction?.date)}</Text>
+                </Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+                  Terrain
+                  {' : '}
+                  <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{nextAction?.venue || '\u00C0 d\u00E9finir'}</Text>
+                </Text>
+                {nextAction?.currentProposal?.status ? (
+                  <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+                    Statut
+                    {' : '}
+                    <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                      {nextAction.currentProposal.status === 'pending'
+                        ? 'En attente'
+                        : nextAction.currentProposal.status}
+                    </Text>
+                  </Text>
+                ) : null}
+                {isPostSlotResolution && nextAction?.opponentResponse ? (
+                  <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+                    Reponse adverse
+                    {' : '}
+                    <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                      {opponentResponseLabel}
+                    </Text>
+                  </Text>
+                ) : null}
+              </View>
             </View>
 
-            <View style={{ gap: 10 }}>
-              <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-                Date
-                {' : '}
-                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{formatActionDate(nextAction?.date)}</Text>
+            {renderPromptActions()}
+
+            <View
+              style={{
+                backgroundColor: `${Colors.neutral00}10`,
+                borderColor: `${Colors.primary500}28`,
+                borderRadius: 18,
+                borderWidth: 1,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+              }}
+            >
+              <Text style={[Fonts.p4, { color: Colors.neutral200, textAlign: 'center' }]}>
+                Si vous fermez ce rappel sans agir, il reviendra a la prochaine ouverture de l&apos;app tant que cet etat reste actif.
               </Text>
-              <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-                Terrain
-                {' : '}
-                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{nextAction?.venue || '\u00C0 d\u00E9finir'}</Text>
-              </Text>
-              {nextAction?.currentProposal?.status ? (
-                <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-                  Statut
-                  {' : '}
-                  <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                    {nextAction.currentProposal.status === 'pending'
-                      ? 'En attente'
-                      : nextAction.currentProposal.status}
-                  </Text>
-                </Text>
-              ) : null}
-              {isPostSlotResolution && nextAction?.opponentResponse ? (
-                <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-                  Reponse adverse
-                  {' : '}
-                  <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                    {opponentResponseLabel}
-                  </Text>
-                </Text>
-              ) : null}
             </View>
           </View>
-
-          {renderPromptActions()}
-
-          <View
-            style={{
-              backgroundColor: `${Colors.neutral00}10`,
-              borderColor: `${Colors.primary500}28`,
-              borderRadius: 18,
-              borderWidth: 1,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-            }}
-          >
-            <Text style={[Fonts.p4, { color: Colors.neutral200, textAlign: 'center' }]}>
-              Si vous fermez ce rappel sans agir, il reviendra a la prochaine ouverture de l&apos;app tant que cet etat reste actif.
-            </Text>
-          </View>
-        </View>
-      </BottomModal>
+        </BottomModal>
+      ) : null}
 
       <VenueProposalModal
         durationMinutes={promptDurationMinutes}
         initialDate={proposalDefaults.date}
         initialEndTime={proposalDefaults.end}
         initialStartTime={proposalDefaults.start}
+        isSubmitting={isSubmitting}
         isVisible={Boolean(isCounterProposalVisible && counterProposalPopup.canShow && canShowCounterProposalModal)}
+        legalAcceptanceConfig={{
+          metadata: {
+            matchLabel: promptMatchLabel,
+          },
+          scope: LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
+          sourceScreen: 'league_action_prompt_counter_proposal',
+          targetDocumentId: nextAction?.matchId || undefined,
+          targetLabel: promptMatchLabel,
+          targetType: 'league_match',
+        }}
         onClose={() => {
           counterProposalPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
           setIsCounterProposalVisible(false);

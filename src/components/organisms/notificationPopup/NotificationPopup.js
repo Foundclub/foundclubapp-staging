@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
 
+import { navigate as navigateFromRoot } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
@@ -97,42 +98,57 @@ function NotificationPopup({
 
   if (!isVisible) return null;
 
-  const handlePressNotification = async (/** @type {NotificationPopupItem} */ notification) => {
+  const handlePressNotification = (/** @type {NotificationPopupItem} */ notification) => {
     const notificationId = String(notification.documentId || notification.id || '');
-    if (onMarkAsRead && notificationId) {
-      try {
-        await onMarkAsRead(notificationId);
-      } catch (error) {
-        showFeedback(getErrorMessage(error, 'generic') || 'Impossible de marquer comme lu.');
-      }
-    }
-
-    onClose();
-
     const payload = {
       ...(notification.data || {}),
       notificationKind: notification?.data?.type,
       type: notification.type,
     };
 
+    /** @type {any} */
+    let destination = null;
     try {
-      const destination = resolveNotificationDestination(payload);
+      destination = resolveNotificationDestination(payload);
+    } catch (_error) {
+      destination = null;
+    }
+
+    if (onMarkAsRead && notificationId) {
+      Promise.resolve(onMarkAsRead(notificationId)).catch((error) => {
+        const typedError = /** @type {any} */ (error);
+        showFeedback(getErrorMessage(typedError, 'generic') || 'Impossible de marquer comme lu.');
+      });
+    }
+
+    onClose();
+
+    setTimeout(() => {
       if (destination?.route) {
         console.log(`[NOTIF_OPENED] type=${notification.type || payload.type || 'unknown'} route=${destination.route} source=in_app_popup`);
-        navigation.navigate(destination.route, destination.params || {});
-      } else {
-        console.log(`[NOTIF_OPENED] type=${notification.type || payload.type || 'unknown'} route=${RouteNames.NotificationList} source=in_app_popup_fallback`);
+        const didNavigate = navigateFromRoot(destination.route, destination.params || {});
+        if (!didNavigate) {
+          navigation.navigate(destination.route, destination.params || {});
+        }
+        return;
+      }
+
+      console.log(`[NOTIF_OPENED] type=${notification.type || payload.type || 'unknown'} route=${RouteNames.NotificationList} source=in_app_popup_fallback`);
+      const didNavigate = navigateFromRoot(RouteNames.NotificationList);
+      if (!didNavigate) {
         navigation.navigate(RouteNames.NotificationList);
       }
-    } catch (_error) {
-      console.log(`[NOTIF_OPENED] type=${notification.type || payload.type || 'unknown'} route=${RouteNames.NotificationList} source=in_app_popup_error_fallback`);
-      navigation.navigate(RouteNames.NotificationList);
-    }
+    }, 0);
   };
 
   const handleViewAll = () => {
     onClose();
-    navigation.navigate(RouteNames.NotificationList);
+    setTimeout(() => {
+      const didNavigate = navigateFromRoot(RouteNames.NotificationList);
+      if (!didNavigate) {
+        navigation.navigate(RouteNames.NotificationList);
+      }
+    }, 0);
   };
 
   const handleMarkAllAsRead = async () => {
