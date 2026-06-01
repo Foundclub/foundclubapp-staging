@@ -561,6 +561,7 @@ export const NOTIFICATION_TYPES = {
   EVENT_PUBLISHED: 'eventPublished',
   EVENT_REMINDER: 'eventReminder',
   EVENT_RSVP_STATUS_CHANGED: 'eventRsvpStatusChanged',
+  TEAM_FIRST_EVENT_CREATED: 'teamFirstEventCreated',
   EVENT_TEAM_INVITED: 'eventTeamInvited',
   EVENT_UPDATED: 'eventUpdated',
   FEATURED_APPROVED: 'featuredApproved',

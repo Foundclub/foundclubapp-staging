@@ -1,8 +1,18 @@
+// @ts-nocheck
+/* eslint-disable max-len, no-nested-ternary, react/function-component-definition, react/jsx-one-expression-per-line, perfectionist/sort-jsx-props */
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Alert,
+  Linking,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -15,17 +25,43 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   useGenerateTestTournament,
   useGetAdminStats,
+  useGetDetectionVerificationQueue,
   useGetLeagueDisputes,
+  useGetNonPartnerCoachAffiliations,
   useGetPendingClubClaims,
   useGetPendingClubOnboardingRequests,
+  useUpdateDetectionVerification,
+  useUpdateNonPartnerCoachAffiliation,
+  useUpdateNonPartnerCoachGovernance,
 } from '@/services/admin/adminQueries';
 import { getPendingFeaturedRequests } from '@/services/event/eventService';
 import { useGetInAppPopupCampaigns } from '@/services/inAppPopupCampaign/inAppPopupCampaignQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
-// We might need a useGetClubs hook. I'll assume it exists or I can use a generic fetch.
-// Checking imports in other files... useClub hook exists but it's for the user's club.
-// I'll check if there is a query for all clubs.
+
+const formatDateTime = (value) => {
+  if (!value) return 'Date inconnue';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Date inconnue';
+  return date.toLocaleString('fr-FR');
+};
+
+const formatPersonName = (person) => {
+  const firstname = String(person?.firstname || '').trim();
+  const lastname = String(person?.lastname || '').trim();
+  const fullname = `${firstname} ${lastname}`.trim();
+  return fullname || 'Utilisateur inconnu';
+};
+
+const sanitizePhoneNumber = (value) => String(value || '')
+  .replace(/[^\d+]/g, '')
+  .trim();
+
+const REVIEWABLE_STATUSES = [
+  { key: 'pending', label: 'En attente' },
+  { key: 'verified', label: 'Verifiee' },
+  { key: 'rejected', label: 'Rejetee' },
+];
 
 /**
  * Admin Dashboard screen component
@@ -40,8 +76,14 @@ function AdminDashboard() {
   } = useTheme();
   const navigation = useNavigation();
   const generateTestTournamentMutation = useGenerateTestTournament();
+  const updateDetectionVerificationMutation = useUpdateDetectionVerification();
+  const updateNonPartnerCoachGovernanceMutation = useUpdateNonPartnerCoachGovernance();
+  const updateNonPartnerCoachAffiliationMutation = useUpdateNonPartnerCoachAffiliation();
 
-  // 1. Featured Requests Count
+  const [reviewItem, setReviewItem] = useState(null);
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [reviewStatus, setReviewStatus] = useState('pending');
+
   const {
     data: featuredRequestsData,
     error: featuredRequestsError,
@@ -59,12 +101,30 @@ function AdminDashboard() {
     refetch: refetchStats,
   } = useGetAdminStats();
 
-  const featuredCount = Array.isArray(featuredRequestsData?.data)
-    ? featuredRequestsData.data.length
-    : 0;
-  const eventsTodayCount = stats?.eventsToday || 0;
-  const caGenerated = stats?.revenue || 0;
-  const reportsCount = stats?.reportsCount || 0;
+  const detectionQueueParams = useMemo(() => ({
+    page: 1,
+    pageSize: 12,
+    status: 'pending',
+  }), []);
+
+  const {
+    data: detectionQueueData,
+    error: detectionQueueError,
+    isLoading: isDetectionQueueLoading,
+    refetch: refetchDetectionQueue,
+  } = useGetDetectionVerificationQueue(detectionQueueParams);
+
+  const governanceAffiliationParams = useMemo(() => ({
+    page: 1,
+    pageSize: 12,
+  }), []);
+
+  const {
+    data: governanceAffiliationsData,
+    error: governanceAffiliationsError,
+    isLoading: isGovernanceAffiliationsLoading,
+    refetch: refetchGovernanceAffiliations,
+  } = useGetNonPartnerCoachAffiliations(governanceAffiliationParams);
 
   const {
     data: claimsData,
@@ -73,7 +133,6 @@ function AdminDashboard() {
     refetch: refetchClaims,
   } = useGetPendingClubClaims();
 
-  const claimsCount = claimsData?.meta?.pagination?.total || 0;
   const {
     data: clubOnboardingData,
     error: clubOnboardingError,
@@ -85,7 +144,7 @@ function AdminDashboard() {
       pageSize: 1,
     },
   });
-  const clubOnboardingCount = clubOnboardingData?.meta?.pagination?.total || 0;
+
   const disputeCountParams = useMemo(() => ({
     pagination: { page: 1, pageSize: 1 },
   }), []);
@@ -97,7 +156,6 @@ function AdminDashboard() {
     refetch: refetchLeagueDisputes,
   } = useGetLeagueDisputes(disputeCountParams);
 
-  const leagueDisputesCount = leagueDisputesData?.meta?.pagination?.total || 0;
   const {
     data: popupCampaignsData,
     error: popupCampaignsError,
@@ -107,14 +165,17 @@ function AdminDashboard() {
     page: 1,
     pageSize: 1,
   });
-  const popupCampaignCount = popupCampaignsData?.meta?.total || 0;
+
   const secondaryDashboardErrors = [
     featuredRequestsError,
     claimsError,
     clubOnboardingError,
+    detectionQueueError,
+    governanceAffiliationsError,
     leagueDisputesError,
     popupCampaignsError,
   ].filter(Boolean);
+
   const partialDashboardDescription = secondaryDashboardErrors.length > 0
     ? 'Certaines tuiles admin sont temporairement indisponibles.'
     : '';
@@ -123,6 +184,8 @@ function AdminDashboard() {
     useCallback(() => {
       refetchFeatured();
       refetchStats();
+      refetchDetectionQueue();
+      refetchGovernanceAffiliations();
       refetchClaims();
       refetchClubOnboarding();
       refetchLeagueDisputes();
@@ -130,24 +193,60 @@ function AdminDashboard() {
     }, [
       refetchClaims,
       refetchClubOnboarding,
+      refetchDetectionQueue,
       refetchFeatured,
+      refetchGovernanceAffiliations,
       refetchLeagueDisputes,
       refetchPopupCampaigns,
       refetchStats,
     ]),
   );
 
+  const featuredCount = Array.isArray(featuredRequestsData?.data)
+    ? featuredRequestsData.data.length
+    : 0;
+
+  const business = stats?.business || {};
+  const ops = stats?.ops || {};
+  const publishingGovernance = stats?.publishingGovernance || {};
+  const recentFirstTeamEvents = Array.isArray(stats?.recentFirstTeamEvents)
+    ? stats.recentFirstTeamEvents
+    : [];
+  const governanceAffiliations = Array.isArray(governanceAffiliationsData?.data)
+    ? governanceAffiliationsData.data
+    : [];
+  const detectionVerificationQueue = Array.isArray(detectionQueueData?.data)
+    ? detectionQueueData.data
+    : (Array.isArray(stats?.detectionVerificationQueuePreview?.data)
+      ? stats.detectionVerificationQueuePreview.data
+      : []);
+
+  const detectionQueueTotal = detectionQueueData?.meta?.pagination?.total
+    || ops?.detectionsPendingVerification
+    || detectionVerificationQueue.length
+    || 0;
+
+  const eventsTodayCount = stats?.eventsToday || 0;
+  const generatedRevenue = stats?.revenue || 0;
+  const reportsCount = stats?.reportsCount || 0;
+  const claimsCount = claimsData?.meta?.pagination?.total || 0;
+  const clubOnboardingCount = clubOnboardingData?.meta?.pagination?.total || 0;
+  const leagueDisputesCount = leagueDisputesData?.meta?.pagination?.total || 0;
+  const popupCampaignCount = popupCampaignsData?.meta?.total || 0;
+
   const dashboardError = statsError;
   const isBootstrapping = (
     isFeaturedRequestsLoading
     || isStatsLoading
+    || isDetectionQueueLoading
+    || isGovernanceAffiliationsLoading
     || isClaimsLoading
     || isClubOnboardingLoading
     || isLeagueDisputesLoading
     || isPopupCampaignsLoading
   );
 
-  const openGeneratedTournament = useCallback((eventDocumentId) => {
+  const openEventDetails = useCallback((eventDocumentId) => {
     if (!eventDocumentId) return;
     navigation.navigate(RouteNames.EventStack, {
       params: {
@@ -156,6 +255,8 @@ function AdminDashboard() {
       screen: RouteNames.EventDetails,
     });
   }, [navigation]);
+
+  const openGeneratedTournament = openEventDetails;
 
   const handleGenerateTestTournament = useCallback(() => {
     if (generateTestTournamentMutation.isPending) return;
@@ -208,6 +309,125 @@ function AdminDashboard() {
     );
   }, [generateTestTournamentMutation, openGeneratedTournament]);
 
+  const openReviewModal = useCallback((item, forcedStatus = null) => {
+    const nextStatus = forcedStatus || item?.verification?.status || 'pending';
+    setReviewItem(item);
+    setReviewStatus(nextStatus);
+    setReviewNotes(String(item?.verification?.notes || ''));
+  }, []);
+
+  const closeReviewModal = useCallback(() => {
+    setReviewItem(null);
+    setReviewNotes('');
+    setReviewStatus('pending');
+  }, []);
+
+  const handleCallOrganizer = useCallback(async (phoneNumber) => {
+    const sanitizedPhone = sanitizePhoneNumber(phoneNumber);
+    if (!sanitizedPhone) {
+      Alert.alert('Numero manquant', 'Aucun numero de telephone exploitable sur cette detection.');
+      return;
+    }
+
+    const targetUrl = `tel:${sanitizedPhone}`;
+    try {
+      const supported = await Linking.canOpenURL(targetUrl);
+      if (!supported) {
+        Alert.alert('Appel indisponible', sanitizedPhone);
+        return;
+      }
+      await Linking.openURL(targetUrl);
+    } catch (_error) {
+      Alert.alert('Appel indisponible', sanitizedPhone);
+    }
+  }, []);
+
+  const handleSubmitReview = useCallback(() => {
+    if (!reviewItem?.documentId || updateDetectionVerificationMutation.isPending) return;
+
+    updateDetectionVerificationMutation.mutate(
+      {
+        documentId: reviewItem.documentId,
+        notes: reviewNotes,
+        status: reviewStatus,
+      },
+      {
+        onError: (error) => {
+          Alert.alert(
+            'Verification impossible',
+            getErrorMessage(error, 'generic') || 'Impossible de mettre a jour cette verification.',
+          );
+        },
+        onSuccess: () => {
+          closeReviewModal();
+        },
+      },
+    );
+  }, [
+    closeReviewModal,
+    reviewItem?.documentId,
+    reviewNotes,
+    reviewStatus,
+    updateDetectionVerificationMutation,
+  ]);
+
+  const handleToggleGlobalGovernance = useCallback(() => {
+    if (updateNonPartnerCoachGovernanceMutation.isPending) return;
+
+    updateNonPartnerCoachGovernanceMutation.mutate(
+      {
+        globalEnabled: publishingGovernance?.globalEnabled !== true,
+      },
+      {
+        onError: (error) => {
+          Alert.alert(
+            'Mise a jour impossible',
+            getErrorMessage(error, 'generic') || 'Impossible de mettre a jour la publication des coachs non certifies.',
+          );
+        },
+      },
+    );
+  }, [publishingGovernance?.globalEnabled, updateNonPartnerCoachGovernanceMutation]);
+
+  const handleToggleCoachOverride = useCallback((item) => {
+    if (!item?.user?.documentId || !item?.club?.documentId || updateNonPartnerCoachAffiliationMutation.isPending) {
+      return;
+    }
+
+    updateNonPartnerCoachAffiliationMutation.mutate(
+      {
+        allowed: item?.override?.publicationOverride !== 'allowed',
+        clubDocumentId: item.club.documentId,
+        notes: item?.override?.internalReviewNotes || '',
+        userDocumentId: item.user.documentId,
+      },
+      {
+        onError: (error) => {
+          Alert.alert(
+            'Autorisation impossible',
+            getErrorMessage(error, 'generic') || 'Impossible de mettre a jour cette autorisation coach.',
+          );
+        },
+      },
+    );
+  }, [updateNonPartnerCoachAffiliationMutation]);
+
+  const getPartnerStatusMeta = useCallback((isCustomer) => (
+    isCustomer === true
+      ? {
+        backgroundColor: `${Colors.success500}18`,
+        borderColor: `${Colors.success500}44`,
+        label: 'Verifie',
+        textColor: Colors.success500,
+      }
+      : {
+        backgroundColor: `${Colors.neutral300}18`,
+        borderColor: `${Colors.neutral300}44`,
+        label: 'Non certifiee',
+        textColor: Colors.neutral100,
+      }
+  ), [Colors.neutral100, Colors.neutral300, Colors.success500]);
+
   if (isBootstrapping) {
     return (
       <AdminStateView
@@ -221,11 +441,13 @@ function AdminDashboard() {
   if (dashboardError) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
+        actionLabel="Reessayer"
         description={dashboardError?.message || 'Impossible de charger les indicateurs admin.'}
         onAction={() => {
           refetchFeatured();
           refetchStats();
+          refetchDetectionQueue();
+          refetchGovernanceAffiliations();
           refetchClaims();
           refetchClubOnboarding();
           refetchLeagueDisputes();
@@ -236,60 +458,364 @@ function AdminDashboard() {
     );
   }
 
-  /**
-   * Render an admin dashboard shortcut card.
-   * @param {object} root0 - Dashboard card props.
-   * @param {string} [root0.color] - Accent color.
-   * @param {string} [root0.meta] - Small contextual chip.
-   * @param {() => void} [root0.onPress] - Navigation action.
-   * @param {string} root0.title - Card title.
-   * @param {string | number} root0.value - Main metric value.
-   * @returns {import('react').ReactElement} Dashboard card.
-   */
   // eslint-disable-next-line react/no-unstable-nested-components
-  function DashboardCard({
-    color = Colors.primary500, meta, onPress, title, value,
-  }) {
+  const DashboardCard = ({
+    color = Colors.primary500,
+    meta,
+    onPress,
+    title,
+    value,
+  }) => (
+    <TouchableOpacity
+      accessibilityHint={onPress ? `Ouvrir ${title}` : undefined}
+      accessibilityLabel={`${title}: ${value}`}
+      accessibilityRole={onPress ? 'button' : 'summary'}
+      activeOpacity={0.82}
+      disabled={!onPress}
+      onPress={onPress}
+      style={[
+        styles.dashboardCard,
+        {
+          backgroundColor: Colors.primary700,
+          borderColor: `${color}55`,
+          shadowColor: color,
+        },
+      ]}
+    >
+      <View style={[styles.cardHalo, { backgroundColor: `${color}18` }]} />
+      <View style={[styles.cardAccent, { backgroundColor: color }]} />
+      <View style={styles.cardHeader}>
+        <View
+          style={[
+            styles.cardChip,
+            { backgroundColor: `${color}16`, borderColor: `${color}88` },
+          ]}
+        >
+          <Text style={[Fonts.label, styles.cardChipText, { color }]}>{meta || 'Admin'}</Text>
+        </View>
+      </View>
+      <View>
+        <Text numberOfLines={1} style={[Fonts.h2Bold, styles.cardValue, { color }]}>
+          {value}
+        </Text>
+        <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral00, styles.cardTitle]}>
+          {title}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderDetectionQueueItem = (item) => {
+    const verificationStatus = String(item?.verification?.status || 'pending');
+    const organizerName = formatPersonName(item?.organizer);
+    const phoneNumber = item?.organizer?.phoneNumber || '';
+    const phoneLabel = sanitizePhoneNumber(phoneNumber);
+    const partnerStatusMeta = getPartnerStatusMeta(item?.club?.isCustomer === true);
+
     return (
-      <TouchableOpacity
-        accessibilityHint={onPress ? `Ouvrir ${title}` : undefined}
-        accessibilityLabel={`${title}: ${value}`}
-        accessibilityRole={onPress ? 'button' : 'summary'}
-        activeOpacity={0.82}
-        disabled={!onPress}
-        onPress={onPress}
+      <View
+        key={`detection-${item?.documentId || item?.name || item?.createdAt || 'row'}`}
         style={[
-          styles.dashboardCard,
+          styles.detailCard,
           {
             backgroundColor: Colors.primary700,
-            borderColor: `${color}55`,
-            shadowColor: color,
+            borderColor: `${Colors.primary500}33`,
           },
         ]}
       >
-        <View style={[styles.cardHalo, { backgroundColor: `${color}18` }]} />
-        <View style={[styles.cardAccent, { backgroundColor: color }]} />
-        <View style={styles.cardHeader}>
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {item?.name || 'Detection'}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item?.team?.name || 'Equipe inconnue'}
+              {item?.club?.name ? ` - ${item.club.name}` : ''}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {formatDateTime(item?.date || item?.createdAt)}
+            </Text>
+            <View
+              style={[
+                styles.statusPill,
+                Spaces.marginTop[8],
+                {
+                  alignSelf: 'flex-start',
+                  backgroundColor: partnerStatusMeta.backgroundColor,
+                  borderColor: partnerStatusMeta.borderColor,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p4Bold, { color: partnerStatusMeta.textColor }]}>
+                {partnerStatusMeta.label}
+              </Text>
+            </View>
+          </View>
           <View
             style={[
-              styles.cardChip,
-              { backgroundColor: `${color}16`, borderColor: `${color}88` },
+              styles.statusPill,
+              {
+                backgroundColor: verificationStatus === 'verified'
+                  ? `${Colors.success500}18`
+                  : verificationStatus === 'rejected'
+                    ? `${Colors.error500}18`
+                    : `${Colors.warning500}18`,
+                borderColor: verificationStatus === 'verified'
+                  ? `${Colors.success500}55`
+                  : verificationStatus === 'rejected'
+                    ? `${Colors.error500}55`
+                    : `${Colors.warning500}55`,
+              },
             ]}
           >
-            <Text style={[Fonts.label, styles.cardChipText, { color }]}>{meta || 'Admin'}</Text>
+            <Text
+              style={[
+                Fonts.p4Bold,
+                {
+                  color: verificationStatus === 'verified'
+                    ? Colors.success500
+                    : verificationStatus === 'rejected'
+                      ? Colors.error500
+                      : Colors.warning500,
+                },
+              ]}
+            >
+              {verificationStatus === 'verified'
+                ? 'Verifiee'
+                : verificationStatus === 'rejected'
+                  ? 'Rejetee'
+                  : 'En attente'}
+            </Text>
           </View>
         </View>
-        <View>
-          <Text numberOfLines={1} style={[Fonts.h2Bold, styles.cardValue, { color }]}>
-            {value}
+
+        <View style={Spaces.marginTop[12]}>
+          <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>
+            Coach
           </Text>
-          <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral00, styles.cardTitle]}>
-            {title}
+          <Text style={[Fonts.p4, Fonts.neutral00, Spaces.marginTop[4]]}>
+            {organizerName}
+          </Text>
+          <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+            {phoneLabel || 'Telephone non renseigne'}
           </Text>
         </View>
+
+        {item?.verification?.notes ? (
+          <View style={[styles.notesBlock, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}10` }]}>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>Notes</Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item.verification.notes}
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={styles.inlineActionsRow}>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={() => openEventDetails(item?.documentId)}
+            style={[styles.inlineActionButton, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}44` }]}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Ouvrir</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={() => handleCallOrganizer(phoneNumber)}
+            style={[styles.inlineActionButton, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}18` }]}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Appeler</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={() => openReviewModal(item)}
+            style={[styles.inlineActionButton, { backgroundColor: `${Colors.success500}14`, borderColor: `${Colors.success500}33` }]}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>Traiter</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderFirstTeamEventItem = (item) => {
+    const partnerStatusMeta = getPartnerStatusMeta(item?.club?.isCustomer === true);
+
+    return (
+      <TouchableOpacity
+        key={`first-team-event-${item?.documentId || item?.name || item?.createdAt || 'row'}`}
+        activeOpacity={0.86}
+        onPress={() => openEventDetails(item?.documentId)}
+        style={[
+          styles.detailCard,
+          {
+            backgroundColor: Colors.primary700,
+            borderColor: `${Colors.primary200}33`,
+          },
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {item?.name || 'Evenement'}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item?.team?.name || 'Equipe inconnue'}
+              {item?.club?.name ? ` - ${item.club.name}` : ''}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              Cree le {formatDateTime(item?.createdAt)}
+            </Text>
+            <View
+              style={[
+                styles.statusPill,
+                Spaces.marginTop[8],
+                {
+                  alignSelf: 'flex-start',
+                  backgroundColor: partnerStatusMeta.backgroundColor,
+                  borderColor: partnerStatusMeta.borderColor,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p4Bold, { color: partnerStatusMeta.textColor }]}>
+                {partnerStatusMeta.label}
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.statusPill, { backgroundColor: `${Colors.primary200}18`, borderColor: `${Colors.primary200}44` }]}>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>1er event</Text>
+          </View>
+        </View>
+        <Text style={[Fonts.p4, Fonts.primary100, Spaces.marginTop[12]]}>
+          Organisateur: {formatPersonName(item?.organizer)}
+        </Text>
       </TouchableOpacity>
     );
-  }
+  };
+
+  const renderGovernanceAffiliationItem = (item) => {
+    const phoneLabel = sanitizePhoneNumber(item?.user?.phoneNumber);
+    const coachName = formatPersonName(item?.user);
+    const canPublish = item?.access?.canPublish === true;
+    const hasIndividualOverride = item?.override?.publicationOverride === 'allowed';
+    const eventsCreatedCount = Number(item?.metrics?.eventsCreatedCount || 0);
+    const recruitmentAdsCreatedCount = Number(item?.metrics?.recruitmentAdsCreatedCount || 0);
+    const statusMeta = canPublish
+      ? {
+        backgroundColor: `${Colors.success500}18`,
+        borderColor: `${Colors.success500}44`,
+        label: item?.access?.reason === 'global_enabled'
+          ? 'Publication ouverte (global)'
+          : 'Publication autorisee',
+        textColor: Colors.success500,
+      }
+      : {
+        backgroundColor: `${Colors.warning500}18`,
+        borderColor: `${Colors.warning500}44`,
+        label: 'Publication bloquee',
+        textColor: Colors.warning500,
+      };
+
+    return (
+      <View
+        key={`governed-coach-${item?.user?.documentId || 'user'}-${item?.club?.documentId || 'club'}`}
+        style={[
+          styles.detailCard,
+          {
+            backgroundColor: Colors.primary700,
+            borderColor: `${Colors.neutral00}14`,
+          },
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {coachName}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item?.club?.name || 'Club non renseigne'}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {phoneLabel || 'Telephone non renseigne'}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.statusPill,
+              {
+                backgroundColor: statusMeta.backgroundColor,
+                borderColor: statusMeta.borderColor,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, { color: statusMeta.textColor }]}>
+              {statusMeta.label}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginTop[12]]}>
+          <View style={[styles.statusPill, { backgroundColor: `${Colors.primary500}14`, borderColor: `${Colors.primary500}33` }]}>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+              {eventsCreatedCount}
+              {' '}
+              event
+              {eventsCreatedCount > 1 ? 's' : ''}
+            </Text>
+          </View>
+          <View style={[styles.statusPill, { backgroundColor: `${Colors.primary200}14`, borderColor: `${Colors.primary200}33` }]}>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>
+              {recruitmentAdsCreatedCount}
+              {' '}
+              annonce
+              {recruitmentAdsCreatedCount > 1 ? 's' : ''}
+            </Text>
+          </View>
+          {item?.affiliation?.autoAffiliated ? (
+            <View style={[styles.statusPill, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}16` }]}>
+              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Auto-affilie</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {item?.override?.internalReviewNotes ? (
+          <View style={[styles.notesBlock, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}10` }]}>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>Note interne</Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item.override.internalReviewNotes}
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={styles.inlineActionsRow}>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={() => handleCallOrganizer(item?.user?.phoneNumber)}
+            style={[styles.inlineActionButton, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}18` }]}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Appeler</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            disabled={updateNonPartnerCoachAffiliationMutation.isPending}
+            onPress={() => handleToggleCoachOverride(item)}
+            style={[
+              styles.inlineActionButton,
+              {
+                backgroundColor: canPublish ? `${Colors.warning500}16` : `${Colors.success500}16`,
+                borderColor: canPublish ? `${Colors.warning500}33` : `${Colors.success500}33`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, { color: hasIndividualOverride ? Colors.warning500 : Colors.success500 }]}>
+              {hasIndividualOverride ? 'Retirer l exception' : 'Autoriser'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <ScreenContainer
@@ -305,7 +831,7 @@ function AdminDashboard() {
         </Text>
         <Text style={[Fonts.h1, Fonts.neutral00]}>Dashboard Admin</Text>
         <Text style={[Fonts.p2, Fonts.neutral300, styles.headerDescription]}>
-          Pilote les demandes, les alertes et les contenus sensibles depuis un seul espace.
+          Pilote les demandes, les alertes, les detections et les evenements sensibles depuis un seul espace.
         </Text>
         {partialDashboardDescription ? (
           <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[8]]}>
@@ -315,6 +841,52 @@ function AdminDashboard() {
       </View>
 
       <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[32]]}>
+        <View
+          style={[
+            styles.flagBanner,
+            {
+              backgroundColor: publishingGovernance.globalEnabled
+                ? `${Colors.success500}18`
+                : `${Colors.warning500}18`,
+              borderColor: publishingGovernance.globalEnabled
+                ? `${Colors.success500}44`
+                : `${Colors.warning500}44`,
+            },
+          ]}
+        >
+          <View style={styles.flagBannerContent}>
+            <Text style={[Fonts.label, styles.cardChipText, { color: publishingGovernance.globalEnabled ? Colors.success500 : Colors.warning500 }]}>
+              Gouvernance
+            </Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginTop[6]]}>
+              Publication coachs non certifies
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
+              {publishingGovernance.globalEnabled
+                ? 'Les coachs rattaches a un club non certifie peuvent publier leurs evenements et annonces.'
+                : 'Les coachs de clubs non certifies restent bloques tant qu aucune exception superadmin n est accordee.'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            disabled={updateNonPartnerCoachGovernanceMutation.isPending}
+            onPress={handleToggleGlobalGovernance}
+            style={[
+              styles.flagStatePill,
+              {
+                backgroundColor: publishingGovernance.globalEnabled ? Colors.success500 : Colors.warning500,
+                opacity: updateNonPartnerCoachGovernanceMutation.isPending ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
+              {updateNonPartnerCoachGovernanceMutation.isPending
+                ? '...'
+                : (publishingGovernance.globalEnabled ? 'ON' : 'OFF')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View
           style={[
             styles.testToolsCard,
@@ -355,27 +927,24 @@ function AdminDashboard() {
           </TouchableOpacity>
         </View>
 
+        <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginBottom[12]]}>
+          Pilotage general
+        </Text>
         <View style={styles.dashboardGrid}>
-
-          {/* CA Généré */}
           <DashboardCard
             color={Colors.success500}
             meta="Finance"
             onPress={() => navigation.navigate(RouteNames.AdminRevenue)}
-            title="CA généré"
-            value={`${caGenerated} €`}
+            title="CA genere"
+            value={`${generatedRevenue} EUR`}
           />
-
-          {/* Événements du jour */}
           <DashboardCard
             color={Colors.primary500}
             meta="Live"
             onPress={() => navigation.navigate(RouteNames.AdminEvents)}
-            title="Événements du jour"
+            title="Evenements du jour"
             value={eventsTodayCount}
           />
-
-          {/* Signalements */}
           <DashboardCard
             color={Colors.error500}
             meta="Alerte"
@@ -383,17 +952,13 @@ function AdminDashboard() {
             title="Signalements"
             value={reportsCount}
           />
-
-          {/* Demandes à la une */}
           <DashboardCard
             color={Colors.primary200}
-            meta="À traiter"
+            meta="A traiter"
             onPress={() => navigation.navigate(RouteNames.FeaturedRequestsList)}
-            title="Demandes à la une"
+            title="Demandes a la une"
             value={featuredCount}
           />
-
-          {/* Revendications Cards */}
           <DashboardCard
             color={Colors.warning500}
             meta="Clubs"
@@ -401,15 +966,13 @@ function AdminDashboard() {
             title="Revendications"
             value={claimsCount}
           />
-
           <DashboardCard
             color={Colors.primary500}
             meta="Onboarding"
             onPress={() => navigation.navigate(RouteNames.AdminClubOnboardingList)}
-            title="Clubs à onboarder"
+            title="Clubs a onboarder"
             value={clubOnboardingCount}
           />
-
           <DashboardCard
             color={Colors.primary200}
             meta="Pop-up"
@@ -417,7 +980,6 @@ function AdminDashboard() {
             title="Campagnes pop-up"
             value={popupCampaignCount}
           />
-
           <DashboardCard
             color={Colors.error500}
             meta="League"
@@ -425,7 +987,6 @@ function AdminDashboard() {
             title="Litiges League"
             value={leagueDisputesCount}
           />
-
           <DashboardCard
             color={Colors.primary500}
             meta="Push"
@@ -433,25 +994,20 @@ function AdminDashboard() {
             title="Notifications"
             value="Push"
           />
-
-          {/* Gestion Utilisateurs */}
           <DashboardCard
             color={Colors.primary200}
             meta="Gestion"
             onPress={() => navigation.navigate(RouteNames.AdminUserList)}
             title="Utilisateurs"
-            value="👤"
+            value="Users"
           />
-
-          {/* Gestion Clubs */}
           <DashboardCard
             color={Colors.primary500}
             meta="Gestion"
             onPress={() => navigation.navigate(RouteNames.AdminClubList)}
             title="Clubs"
-            value="🏟️"
+            value="Clubs"
           />
-
           <DashboardCard
             color={Colors.primary500}
             meta="Contenus"
@@ -459,9 +1015,296 @@ function AdminDashboard() {
             title="Explorer CM"
             value="CM"
           />
+        </View>
 
+        <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginBottom[12], Spaces.marginTop[8]]}>
+          KPIs detection et acquisition
+        </Text>
+        <View style={styles.dashboardGrid}>
+          <DashboardCard
+            color={Colors.primary500}
+            meta="Business"
+            title="Utilisateurs avec club"
+            value={business?.usersWithClub || 0}
+          />
+          <DashboardCard
+            color={Colors.warning500}
+            meta="Business"
+            title="Utilisateurs sans club"
+            value={business?.usersWithoutClub || 0}
+          />
+          <DashboardCard
+            color={Colors.primary200}
+            meta="Business"
+            title="Equipes creees"
+            value={business?.teamsCreated || 0}
+          />
+          <DashboardCard
+            color={Colors.success500}
+            meta="Business"
+            title="Clubs partenaires"
+            value={business?.partnerClubs || 0}
+          />
+          <DashboardCard
+            color={Colors.primary500}
+            meta="Detections"
+            title="Publiees sur 30 jours"
+            value={ops?.detectionsPublishedLast30Days || 0}
+          />
+          <DashboardCard
+            color={Colors.warning500}
+            meta="Detections"
+            title="A verifier"
+            value={ops?.detectionsPendingVerification || 0}
+          />
+          <DashboardCard
+            color={Colors.primary200}
+            meta="Signals"
+            title="Equipes avec 1er event"
+            value={ops?.teamsWithFirstEventCount || 0}
+          />
+          <DashboardCard
+            color={Colors.neutral100}
+            meta="Gouvernance"
+            title="Coachs non certifies"
+            value={publishingGovernance?.nonPartnerCoaches || 0}
+          />
+          <DashboardCard
+            color={Colors.neutral100}
+            meta="Gouvernance"
+            title="Clubs non certifies actifs"
+            value={publishingGovernance?.nonPartnerClubsWithAffiliatedCoaches || 0}
+          />
+          <DashboardCard
+            color={Colors.success500}
+            meta="Gouvernance"
+            title="Exceptions individuelles"
+            value={publishingGovernance?.individuallyAllowedCoaches || 0}
+          />
+          <DashboardCard
+            color={Colors.primary200}
+            meta="Gouvernance"
+            title="Coachs auto-affilies"
+            value={publishingGovernance?.autoAffiliatedCoaches || 0}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: Colors.primary700,
+              borderColor: `${Colors.neutral00}18`,
+            },
+          ]}
+        >
+          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Coachs non certifies</Text>
+              <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
+                {publishingGovernance?.nonPartnerCoaches || 0}
+                {' '}
+                coach
+                {(publishingGovernance?.nonPartnerCoaches || 0) > 1 ? 's' : ''}
+                {' '}
+                rattaches a un club non partenaire. Autorise individuellement ceux qui peuvent publier.
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={refetchGovernanceAffiliations}
+              style={[styles.refreshButton, { borderColor: `${Colors.neutral00}18` }]}
+            >
+              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Rafraichir</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={Spaces.marginTop[16]}>
+            {governanceAffiliations.length > 0 ? (
+              governanceAffiliations.map(renderGovernanceAffiliationItem)
+            ) : (
+              <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun coach non certifie</Text>
+                <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[6]]}>
+                  Les nouvelles affiliations auto-assignees apparaitront ici.
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: Colors.primary700,
+              borderColor: `${Colors.primary500}44`,
+            },
+          ]}
+        >
+          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>File de verification detection</Text>
+              <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
+                {detectionQueueTotal}
+                {' '}
+                detection
+                {detectionQueueTotal > 1 ? 's' : ''}
+                {' '}
+                dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la verification.
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={refetchDetectionQueue}
+              style={[styles.refreshButton, { borderColor: `${Colors.primary500}44` }]}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Rafraichir</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={Spaces.marginTop[16]}>
+            {detectionVerificationQueue.length > 0 ? (
+              detectionVerificationQueue.map(renderDetectionQueueItem)
+            ) : (
+              <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucune detection en attente</Text>
+                <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[6]]}>
+                  La file est vide pour le moment.
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: Colors.primary700,
+              borderColor: `${Colors.primary200}44`,
+            },
+          ]}
+        >
+          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Premiers evenements d equipe</Text>
+              <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
+                Surveille les equipes qui viennent de creer leur premier evenement pour detecter les structures a relancer.
+              </Text>
+            </View>
+            <View style={[styles.statusPill, { backgroundColor: `${Colors.primary200}18`, borderColor: `${Colors.primary200}44` }]}>
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>
+                {ops?.teamsWithFirstEventCount || 0}
+              </Text>
+            </View>
+          </View>
+
+          <View style={Spaces.marginTop[16]}>
+            {recentFirstTeamEvents.length > 0 ? (
+              recentFirstTeamEvents.map(renderFirstTeamEventItem)
+            ) : (
+              <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun premier evenement recent</Text>
+                <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[6]]}>
+                  Les nouveaux signaux d activation d equipe apparaitront ici.
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={closeReviewModal}
+        transparent
+        visible={Boolean(reviewItem)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary500}44` }]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Traiter la verification</Text>
+            <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
+              {reviewItem?.name || 'Detection'}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.primary100, Spaces.marginTop[4]]}>
+              {reviewItem?.team?.name || 'Equipe inconnue'}
+              {reviewItem?.club?.name ? ` - ${reviewItem.club.name}` : ''}
+            </Text>
+
+            <View style={[styles.statusSelectorRow, Spaces.marginTop[16]]}>
+              {REVIEWABLE_STATUSES.map((statusOption) => {
+                const isActive = reviewStatus === statusOption.key;
+                return (
+                  <TouchableOpacity
+                    key={statusOption.key}
+                    activeOpacity={0.86}
+                    onPress={() => setReviewStatus(statusOption.key)}
+                    style={[
+                      styles.statusOptionButton,
+                      {
+                        backgroundColor: isActive ? `${Colors.primary500}20` : `${Colors.neutral00}06`,
+                        borderColor: isActive ? `${Colors.primary500}66` : `${Colors.neutral00}16`,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, { color: isActive ? Colors.primary500 : Colors.neutral00 }]}>
+                      {statusOption.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+              Notes internes
+            </Text>
+            <TextInput
+              multiline
+              onChangeText={setReviewNotes}
+              placeholder="Appel effectue, identite verifiee, contact club, etc."
+              placeholderTextColor={Colors.neutral400}
+              style={[
+                styles.notesInput,
+                {
+                  borderColor: `${Colors.neutral00}18`,
+                  color: Colors.neutral00,
+                },
+              ]}
+              textAlignVertical="top"
+              value={reviewNotes}
+            />
+
+            <View style={styles.modalActionsRow}>
+              <TouchableOpacity
+                activeOpacity={0.86}
+                onPress={closeReviewModal}
+                style={[styles.modalActionButton, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}16` }]}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.86}
+                disabled={updateDetectionVerificationMutation.isPending}
+                onPress={handleSubmitReview}
+                style={[
+                  styles.modalActionButton,
+                  {
+                    backgroundColor: updateDetectionVerificationMutation.isPending
+                      ? `${Colors.primary500}66`
+                      : Colors.primary500,
+                    borderColor: Colors.primary500,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
+                  {updateDetectionVerificationMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -524,14 +1367,135 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+  detailCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 16,
+  },
+  emptySectionState: {
+    alignItems: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 24,
+  },
+  flagBanner: {
+    borderRadius: 24,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
+    padding: 18,
+  },
+  flagBannerContent: {
+    flex: 1,
+  },
+  flagStatePill: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    justifyContent: 'center',
+    minWidth: 52,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
   headerDescription: {
     marginTop: 8,
-    maxWidth: 330,
+    maxWidth: 460,
   },
   headerEyebrow: {
     letterSpacing: 1.5,
     marginBottom: 4,
     textTransform: 'uppercase',
+  },
+  inlineActionButton: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    minWidth: 88,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  inlineActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 16,
+  },
+  modalActionButton: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 46,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 18,
+  },
+  modalCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+    width: '100%',
+  },
+  modalOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(7, 11, 16, 0.82)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  notesBlock: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  notesInput: {
+    borderRadius: 16,
+    borderWidth: 1,
+    minHeight: 124,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  refreshButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  sectionCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    marginTop: 20,
+    padding: 18,
+  },
+  statusOptionButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  statusPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  statusSelectorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   testToolsButton: {
     alignItems: 'center',

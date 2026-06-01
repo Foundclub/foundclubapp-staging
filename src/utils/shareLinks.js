@@ -1,6 +1,8 @@
-import { getApiBaseUrl } from '@/config/runtimeUrls';
+// @ts-nocheck
+import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
 
 const DEFAULT_PUBLIC_ORIGIN = 'https://foundclub.com';
+const DEFAULT_WEB_APP_ORIGIN = 'https://foundclub.app';
 
 const buildQueryString = (params) => Object.entries(params)
   .filter(([, value]) => value !== undefined && value !== null && value !== '')
@@ -16,6 +18,25 @@ export const toPublicOrigin = (apiUrl = getApiBaseUrl()) => {
 export const resolveShareEnvironment = (appEnv = process.env.APP_ENV || process.env.ENV) => {
   const normalizedEnv = String(appEnv || '').trim().toLowerCase();
   return normalizedEnv === 'production' ? 'production' : 'staging';
+};
+
+export const resolveWebAppOrigin = ({
+  apiUrl = getApiBaseUrl(),
+  publicOrigin = getPublicApiOrigin(),
+  webUrl = process.env.WEB_APP_URL || process.env.FRONTEND_URL,
+} = {}) => {
+  const configuredWebUrl = String(webUrl || '').trim().replace(/\/+$/g, '');
+  if (configuredWebUrl) return configuredWebUrl;
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return String(window.location.origin).trim().replace(/\/+$/g, '');
+  }
+
+  const runtimePublicOrigin = String(publicOrigin || '').trim().replace(/\/+$/g, '');
+  if (runtimePublicOrigin) return runtimePublicOrigin;
+
+  const derivedOrigin = toPublicOrigin(apiUrl);
+  return derivedOrigin || DEFAULT_WEB_APP_ORIGIN;
 };
 
 export const buildFoundClubDeepLink = ({ id, invite = false, type }) => {
@@ -55,6 +76,24 @@ export const buildInstallLandingUrl = ({
   });
 
   return `${baseUrl}/install.html${query ? `?${query}` : ''}`;
+};
+
+export const buildPublicEventUrl = ({
+  apiUrl,
+  eventId,
+  publicOrigin,
+  webUrl,
+}) => {
+  const normalizedEventId = String(eventId || '').trim();
+  if (!normalizedEventId) return null;
+
+  const baseUrl = resolveWebAppOrigin({
+    apiUrl,
+    publicOrigin,
+    webUrl,
+  });
+
+  return `${baseUrl}/events/${encodeURIComponent(normalizedEventId)}`;
 };
 
 export const buildShareMessageWithUrl = ({ intro, linkLabel, url }) => {

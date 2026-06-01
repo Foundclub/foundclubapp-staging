@@ -203,6 +203,40 @@ const getEligibleTeamPlayers = (team) => {
   );
 };
 
+const getDetectionCandidatePlayers = (event, team) => {
+  const excludedKeys = new Set([
+    ...getEligibleTeamPlayers(team).map((player) => getUserKey(player)).filter(Boolean),
+    ...Array.from(getTrainerKeySet(team)),
+  ]);
+
+  const adCandidates = Array.isArray(event?.recruitmentAds)
+    ? event.recruitmentAds.flatMap((recruitmentAd) => recruitmentAd?.candidates || [])
+    : [];
+  const acceptedOrPendingRequests = getActiveParticipationRequests(event)
+    .filter((participation) => ['accepted', 'pending'].includes(String(participation?.participationStatus || '').toLowerCase()))
+    .map((participation) => participation?.user)
+    .filter(Boolean);
+  const acceptedParticipations = Array.isArray(event?.participations) ? event.participations : [];
+
+  return filterUsersByExcludedKeys(
+    [
+      ...adCandidates,
+      ...acceptedParticipations,
+      ...acceptedOrPendingRequests,
+    ],
+    excludedKeys,
+  );
+};
+
+const getCompositionPlayersForEvent = (event, team, detectionEnabled) => {
+  const teamPlayers = getEligibleTeamPlayers(team);
+  if (!detectionEnabled) return teamPlayers;
+  return uniqueUsers([
+    ...teamPlayers,
+    ...getDetectionCandidatePlayers(event, team),
+  ]);
+};
+
 // @ts-ignore: FIXME: Baseline TS regression
 const filterUsersByExcludedKeys = (users = [], excludedKeys = new Set()) => uniqueUsers(
   users.filter((user) => {
@@ -2273,6 +2307,7 @@ function EventDetails({ navigation, route }) {
     const typeName = String(event?.type?.name || '').trim().toLowerCase();
     return typeName.includes('match');
   }, [event?.type?.name]);
+  const supportsEventComposition = isMatchEvent || isDetectionEvent;
   const eventActionsToggleLabel = isEventActionsOpen
     ? 'Fermer les actions evenement'
     : 'Ouvrir les actions evenement';
@@ -2325,8 +2360,8 @@ function EventDetails({ navigation, route }) {
   }, [compositionTeamId, event?.invitedTeams, event?.team]);
 
   const compositionEditorPlayers = useMemo(
-    () => getEligibleTeamPlayers(compositionEditorTeam),
-    [compositionEditorTeam],
+    () => getCompositionPlayersForEvent(event, compositionEditorTeam, isDetectionEvent),
+    [compositionEditorTeam, event, isDetectionEvent],
   );
 
   const compositionSport = useMemo(
@@ -2346,8 +2381,8 @@ function EventDetails({ navigation, route }) {
       return preferredLabel.trim();
     }
 
-    return 'Match';
-  }, [event?.description, event?.name, eventDescriptionText, externalMatchDisplay?.title]);
+    return isDetectionEvent ? 'Detection' : 'Match';
+  }, [event?.description, event?.name, eventDescriptionText, externalMatchDisplay?.title, isDetectionEvent]);
 
   const {
     data: staffCompositionPayload,
@@ -2357,7 +2392,7 @@ function EventDetails({ navigation, route }) {
     eventId || '',
     compositionTeamId || undefined,
     {
-      enabled: Boolean(areDeferredQueriesEnabled && eventId && isMatchEvent && compositionTeamId && canEdit),
+      enabled: Boolean(areDeferredQueriesEnabled && eventId && supportsEventComposition && compositionTeamId && canEdit),
     },
   );
 
@@ -2406,7 +2441,7 @@ function EventDetails({ navigation, route }) {
     eventId || '',
     compositionTeamId || undefined,
     {
-      enabled: Boolean(areDeferredQueriesEnabled && eventId && isMatchEvent && compositionTeamId && isTeamMember),
+      enabled: Boolean(areDeferredQueriesEnabled && eventId && supportsEventComposition && compositionTeamId && isTeamMember),
     },
   );
 
@@ -2624,6 +2659,9 @@ function EventDetails({ navigation, route }) {
       ...player,
       convoked: Boolean(player?.isConvoked),
       label: `${String(player?.firstname || '').trim()} ${String(player?.lastname || '').trim()}`.trim() || 'Joueur',
+      sourceLabel: player?.participantSource === 'detection_candidate'
+        ? 'Candidat detection'
+        : (player?.participantSource === 'team_player' ? 'Joueur equipe' : ''),
       rowKey: String(player?.documentId || player?.id || ''),
     }))
     // @ts-ignore: FIXME: Baseline TS regression
@@ -2635,12 +2673,14 @@ function EventDetails({ navigation, route }) {
     }), [convocationSnapshotPlayers]);
 
   const compositionPrimaryAction = useMemo(() => {
+    const compositionTitle = isDetectionEvent ? 'Convocation detection' : "Composition d'equipe";
+
     if (staffCompositionPayload?.draft) {
       return {
         subtitle: staffCompositionPayload?.draft?.updatedAt
           ? `Brouillon enregistre le ${new Date(staffCompositionPayload.draft.updatedAt).toLocaleString('fr-FR')}`
           : 'Brouillon enregistre',
-        title: "Composition d'equipe",
+        title: compositionTitle,
       };
     }
 
@@ -2650,7 +2690,7 @@ function EventDetails({ navigation, route }) {
         subtitle: staffCompositionPayload?.published?.publishedAt
           ? `Composition publiee v${publishedVersion} le ${new Date(staffCompositionPayload.published.publishedAt).toLocaleString('fr-FR')}`
           : `Composition publiee v${publishedVersion}`,
-        title: "Composition d'equipe",
+        title: compositionTitle,
       };
     }
 
@@ -2658,15 +2698,17 @@ function EventDetails({ navigation, route }) {
     if (bootstrapSource && bootstrapSource !== 'empty') {
       return {
         subtitle: `Preremplissage disponible : ${getCompositionSourceLabel(bootstrapSource)}`,
-        title: "Composition d'equipe",
+        title: compositionTitle,
       };
     }
 
     return {
-      subtitle: 'Selectionne les joueurs puis organise ta composition.',
-      title: "Composition d'equipe",
+      subtitle: isDetectionEvent
+        ? 'Selectionne les candidats et les joueurs, puis organise ta seance.'
+        : 'Selectionne les joueurs puis organise ta composition.',
+      title: compositionTitle,
     };
-  }, [getCompositionSourceLabel, staffCompositionPayload]);
+  }, [getCompositionSourceLabel, isDetectionEvent, staffCompositionPayload]);
 
   const matchStatsPrimaryAction = useMemo(() => {
     if (!isMatchFinished) {
@@ -2827,7 +2869,9 @@ function EventDetails({ navigation, route }) {
       // @ts-ignore: FIXME: Baseline TS regression
       editorSourceLabel: options.editorSourceLabel || null,
       eventId,
+      eventKind: isDetectionEvent ? 'detection' : 'match',
       eventName: compositionEventLabel,
+      eventTypeLabel: event?.type?.name || null,
       existingComposition: composition,
       players: playersForBoard,
       // @ts-ignore: FIXME: Baseline TS regression
@@ -2844,7 +2888,9 @@ function EventDetails({ navigation, route }) {
     compositionSport,
     compositionTeamId,
     compositionEventLabel,
+    event?.type?.name,
     eventId,
+    isDetectionEvent,
     navigation,
     staffCompositionPayload,
   ]);
@@ -2886,7 +2932,9 @@ function EventDetails({ navigation, route }) {
       editorSource: staffCompositionPayload?.bootstrap?.source || 'empty',
       editorSourceLabel: getCompositionSourceLabel(staffCompositionPayload?.bootstrap?.source || 'empty'),
       eventId,
+      eventKind: isDetectionEvent ? 'detection' : 'match',
       eventName: compositionEventLabel,
+      eventTypeLabel: event?.type?.name || null,
       existingComposition: null,
       players: compositionEditorPlayers,
       sport: compositionSport,
@@ -2899,9 +2947,11 @@ function EventDetails({ navigation, route }) {
     compositionSport,
     compositionTeamId,
     compositionEventLabel,
+    event?.type?.name,
     eventId,
     getCompositionSourceLabel,
     isStaffCompositionFetching,
+    isDetectionEvent,
     navigation,
     openCompositionBoard,
     staffCompositionPayload,
@@ -3748,12 +3798,12 @@ function EventDetails({ navigation, route }) {
             participationFlow={tournamentAwareParticipationFlow}
           />
         )}
-        {canEdit && isMatchEvent && (
+        {canEdit && supportsEventComposition && (
           <View style={{ marginTop: 12 }}>
             <Button
               disabled={isStaffCompositionFetching}
               onPress={handleManageComposition}
-              title={isStaffCompositionFetching ? 'Chargement...' : "Composition d'equipe"}
+              title={isStaffCompositionFetching ? 'Chargement...' : compositionPrimaryAction.title}
               variant="Secondary"
             />
             {compositionPrimaryAction.subtitle ? (
@@ -3762,19 +3812,21 @@ function EventDetails({ navigation, route }) {
               </Text>
             ) : null}
 
-            <View style={{ marginTop: 12 }}>
-              <Button
-                disabled={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
-                onPress={openMatchStatsEditor}
-                title={isMatchStatsFetching ? 'Chargement...' : matchStatsPrimaryAction.title}
-                variant="Secondary"
-              />
-              {matchStatsPrimaryAction.subtitle ? (
-                <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 8, textAlign: 'center' }]}>
-                  {matchStatsPrimaryAction.subtitle}
-                </Text>
-              ) : null}
-            </View>
+            {isMatchEvent ? (
+              <View style={{ marginTop: 12 }}>
+                <Button
+                  disabled={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
+                  onPress={openMatchStatsEditor}
+                  title={isMatchStatsFetching ? 'Chargement...' : matchStatsPrimaryAction.title}
+                  variant="Secondary"
+                />
+                {matchStatsPrimaryAction.subtitle ? (
+                  <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 8, textAlign: 'center' }]}>
+                    {matchStatsPrimaryAction.subtitle}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         )}
       </View>
@@ -3784,7 +3836,7 @@ function EventDetails({ navigation, route }) {
       return null;
     }
 
-    if (canEdit && isMatchEvent) {
+    if (canEdit && supportsEventComposition) {
       return (
         <View>
           <View
@@ -3920,15 +3972,17 @@ function EventDetails({ navigation, route }) {
     if (canAccessAttendance) {
       refetchAttendance();
     }
-    if (isMatchEvent && canEdit && compositionTeamId) {
+    if (supportsEventComposition && canEdit && compositionTeamId) {
       refetchTeamComposition();
     }
     if (isMatchEvent && compositionTeamId && (canManageMatchStats || isTeamMember)) {
       refetchMatchStats();
     }
+    if (supportsEventComposition && isTeamMember && compositionTeamId) {
+      refetchConvocation();
+    }
     if (isMatchEvent && isTeamMember && compositionTeamId) {
       refetchMyMatchResponse();
-      refetchConvocation();
     }
   }, [
     areDeferredQueriesEnabled,
@@ -3945,6 +3999,7 @@ function EventDetails({ navigation, route }) {
     refetchMyMatchResponse,
     refetchParticipations,
     refetchTeamComposition,
+    supportsEventComposition,
   ]);
 
   useFocusEffect(
@@ -4735,9 +4790,11 @@ function EventDetails({ navigation, route }) {
               </View>
             ) : null}
 
-            {isMatchEvent && isTeamMember ? (
+            {supportsEventComposition && (isTeamMember || canEdit) ? (
               <View style={[Spaces.gap[12]]}>
-                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Convocation</Text>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                  {isDetectionEvent ? 'Convocation detection' : 'Convocation'}
+                </Text>
                 {convocationPublished ? (
                   <View style={[Spaces.gap[8]]}>
                     <Text style={[Fonts.p2, Fonts.neutral300]}>
@@ -4767,6 +4824,11 @@ function EventDetails({ navigation, route }) {
                         <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
                           {player.label}
                         </Text>
+                        {player.sourceLabel ? (
+                          <Text style={[Fonts.p4, Fonts.neutral300, { marginRight: 10 }]}>
+                            {player.sourceLabel}
+                          </Text>
+                        ) : null}
                         <Text
                           style={[
                             Fonts.p3,
@@ -5045,7 +5107,10 @@ function EventDetails({ navigation, route }) {
         onSubmit={(reason) => mutations.reportEventMutation.mutate({ event: eventId || '', reason })}
       />
       <ShareEventModal
-        event={event}
+        event={event ? {
+          ...event,
+          title: event?.title || event?.name || event?.type?.name || 'Evenement FoundClub',
+        } : null}
         isVisible={isShareModalVisible}
         onClose={() => setIsShareModalVisible(false)}
         onSelectChat={handleShareEventInChat}

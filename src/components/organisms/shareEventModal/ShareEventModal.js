@@ -19,7 +19,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
 import {
-  buildInstallLandingUrl,
+  buildPublicEventUrl,
   buildShareMessageWithUrl,
 } from '@/utils/shareLinks';
 
@@ -152,17 +152,15 @@ function ShareEventModal({
   const handleNativeShare = async () => {
     if (!event) return;
     try {
-      const shareUrl = buildInstallLandingUrl({
-        id: event?.documentId,
-        source: 'share',
-        type: 'event',
+      const shareUrl = buildPublicEventUrl({
+        eventId: event?.documentId,
       });
       const message = buildShareMessageWithUrl({
         intro: [
           `${t('event.shareMessage', 'Découvrez cet événement :')} ${event.title}`,
           event.description || '',
         ].filter(Boolean).join('\n'),
-        linkLabel: t('event.shareLinkLabel', 'Ouvrir dans FoundClub'),
+        linkLabel: t('event.shareLinkLabel', 'Voir la fiche FoundClub'),
         url: shareUrl,
       });
       await SharePlatform.share({

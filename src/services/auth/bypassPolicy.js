@@ -1,7 +1,13 @@
+import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
+
 const normalizeFlag = (value) => String(value || '').trim().toLowerCase();
 
+export const getResolvedAuthAppEnv = (env = process.env) => normalizeFlag(
+  env.APP_ENV || env.ENV || APP_RUNTIME_ENV,
+);
+
 export const isFirebaseBypassEnabled = (env = process.env) => {
-  if (normalizeFlag(env.APP_ENV) !== 'local') {
+  if (getResolvedAuthAppEnv(env) !== 'local') {
     return false;
   }
 

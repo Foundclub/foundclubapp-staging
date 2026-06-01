@@ -34,11 +34,15 @@ import {
   reviewTournamentTeamRegistration,
 } from '@/services/tournamentTeam/tournamentTeamService';
 
+import {
+  getClubCertificationLabel,
+  getClubCertificationPalette,
+} from '@/utils/clubCertification';
 import { getEntityDocumentId } from '@/utils/entityId';
 import getImageUrl from '@/utils/imageUrl';
+import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
 
 /* eslint-disable perfectionist/sort-imports */
-import * as LinksPlatform from '@/platform/links';
 import * as SharePlatform from '@/platform/share';
 import { BREAKPOINTS } from '@/responsive';
 import EventTasksSection from './components/EventTasksSection';
@@ -268,7 +272,7 @@ function EventDetails({ navigation, route }) {
     [tournamentConfig, tournamentTeams],
   );
   const facilityId = getEntityDocumentId(event?.facility);
-  const eventLink = LinksPlatform.buildDeepLink(RouteNames.EventDetails, { eventId });
+  const eventLink = buildPublicEventUrl({ eventId });
   const participationLabel = getParticipationLabel(
     participationState?.effectiveStatus,
   );
@@ -334,6 +338,8 @@ function EventDetails({ navigation, route }) {
   const softTextColor = Colors?.neutral100 || '#e6eef2';
   const softSurfaceColor = 'rgba(255,255,255,0.04)';
   const pillSurfaceColor = 'rgba(255,255,255,0.06)';
+  const clubCertificationPalette = getClubCertificationPalette(event?.team?.club, Colors);
+  const clubCertificationLabel = getClubCertificationLabel(event?.team?.club);
   const sectionTitleStyle = {
     color: textColor,
     fontFamily: 'Montserrat-Bold, sans-serif',
@@ -381,8 +387,13 @@ function EventDetails({ navigation, route }) {
   const handleShare = useCallback(async () => {
     setIsSharing(true);
     try {
+      const shareMessage = buildShareMessageWithUrl({
+        intro: event?.name || event?.type?.name || 'Evenement',
+        linkLabel: 'Voir la fiche FoundClub',
+        url: eventLink,
+      });
       await SharePlatform.share({
-        message: `${event?.name || event?.type?.name || 'Evenement'}\n${eventLink}`,
+        message: shareMessage,
         title: event?.name || 'Evenement FoundClub',
         url: eventLink,
       });
@@ -765,10 +776,26 @@ function EventDetails({ navigation, route }) {
                   </div>
                 ) : null}
                 {event?.team?.club?.name ? (
-                  <div style={{ color: mutedTextColor, fontSize: 13 }}>
-                    Club organisateur:
-                    {' '}
-                    {event.team.club.name}
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <div style={{ color: mutedTextColor, fontSize: 13 }}>
+                      Club organisateur:
+                      {' '}
+                      {event.team.club.name}
+                    </div>
+                    <div
+                      style={{
+                        alignSelf: 'flex-start',
+                        background: clubCertificationPalette.backgroundColor,
+                        border: `1px solid ${clubCertificationPalette.borderColor}`,
+                        borderRadius: 999,
+                        color: clubCertificationPalette.textColor,
+                        fontFamily: 'Montserrat-Bold, sans-serif',
+                        fontSize: 12,
+                        padding: '6px 10px',
+                      }}
+                    >
+                      {clubCertificationLabel}
+                    </div>
                   </div>
                 ) : null}
               </div>

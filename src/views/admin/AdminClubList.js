@@ -18,9 +18,6 @@ import {
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
-import closeIcon from '@/assets/icons/close.png';
-import rightIcon from '@/assets/icons/arrowRight.png';
-import searchIcon from '@/assets/icons/search.png';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -44,6 +41,10 @@ import {
 } from '@/services/admin/adminClubContentQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+
+import rightIcon from '@/assets/icons/arrowRight.png';
+import closeIcon from '@/assets/icons/close.png';
+import searchIcon from '@/assets/icons/search.png';
 
 const SORT_OPTIONS = [
   { key: 'updated', label: 'MAJ' },
@@ -87,6 +88,9 @@ const getBadgePresentation = (tone, colors) => {
   };
 };
 
+/**
+ *
+ */
 function AdminClubList() {
   const {
     Alignments,
@@ -422,7 +426,7 @@ function AdminClubList() {
           <Button
             icon="plus"
             iconPosition="after"
-            onPress={() => navigation.navigate(RouteNames.AdminClubForm)}
+            onPress={() => navigation.navigate(RouteNames.AdminClubWizardIdentity)}
             size="sm"
             title="Créer"
           />

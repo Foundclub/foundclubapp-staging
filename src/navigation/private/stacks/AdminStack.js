@@ -17,6 +17,17 @@ import AdminReports from '@/views/admin/AdminReports';
 import AdminRevenue from '@/views/admin/AdminRevenue';
 import AdminUserDetail from '@/views/admin/AdminUserDetail';
 import AdminUserList from '@/views/admin/AdminUserList';
+import AdminClubWizardActivities from '@/views/admin/clubWizard/AdminClubWizardActivities';
+import AdminClubWizardAddress from '@/views/admin/clubWizard/AdminClubWizardAddress';
+import AdminClubWizardBusiness from '@/views/admin/clubWizard/AdminClubWizardBusiness';
+import AdminClubWizardContact from '@/views/admin/clubWizard/AdminClubWizardContact';
+import {
+  AdminClubWizardProvider,
+} from '@/views/admin/clubWizard/AdminClubWizardContext';
+import AdminClubWizardIdentity from '@/views/admin/clubWizard/AdminClubWizardIdentity';
+import AdminClubWizardMultisport from '@/views/admin/clubWizard/AdminClubWizardMultisport';
+import AdminClubWizardRecap from '@/views/admin/clubWizard/AdminClubWizardRecap';
+import AdminClubWizardSponsors from '@/views/admin/clubWizard/AdminClubWizardSponsors';
 import FeaturedRequestsList from '@/views/admin/FeaturedRequestsList';
 import SuperAdminContentExplorer from '@/views/admin/SuperAdminContentExplorer';
 import SuperAdminEntryDetail from '@/views/admin/SuperAdminEntryDetail';
@@ -40,253 +51,295 @@ const Stack = createStackNavigator();
  */
 function AdminStack() {
   return (
-    <Stack.Navigator
-      id={undefined}
-      initialRouteName={RouteNames.SuperAdminHome}
-      screenOptions={commonOptions}
-    >
-      <Stack.Screen
-        component={SuperAdminLeagueDashboard}
-        name={RouteNames.SuperAdminHome}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminLeagueDashboard}
-        name={RouteNames.SuperAdminDashboard}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminLicensesDashboard}
-        name={RouteNames.SuperAdminLicenses}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminLeagueSettings}
-        name={RouteNames.SuperAdminSettings}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminLeagueSquads}
-        name={RouteNames.SuperAdminLeagueSquads}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminLeagueMatches}
-        name={RouteNames.SuperAdminLeagueMatches}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminLeagueDisputes}
-        name={RouteNames.SuperAdminLeagueDisputes}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminLeagueDivisions}
-        name={RouteNames.SuperAdminLeagueDivisions}
-        options={{
-          ...commonOptions,
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        component={AdminDashboard}
-        name={RouteNames.AdminDashboard}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={AdminRevenue}
-        name={RouteNames.AdminRevenue}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Revenus',
-        }}
-      />
-      <Stack.Screen
-        component={AdminEvents}
-        name={RouteNames.AdminEvents}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Événements',
-        }}
-      />
-      <Stack.Screen
-        component={AdminReports}
-        name={RouteNames.AdminReports}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Signalements',
-        }}
-      />
+    <AdminClubWizardProvider>
+      <Stack.Navigator
+        id={undefined}
+        initialRouteName={RouteNames.SuperAdminHome}
+        screenOptions={commonOptions}
+      >
+        <Stack.Screen
+          component={SuperAdminLeagueDashboard}
+          name={RouteNames.SuperAdminHome}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminLeagueDashboard}
+          name={RouteNames.SuperAdminDashboard}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminLicensesDashboard}
+          name={RouteNames.SuperAdminLicenses}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminLeagueSettings}
+          name={RouteNames.SuperAdminSettings}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminLeagueSquads}
+          name={RouteNames.SuperAdminLeagueSquads}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminLeagueMatches}
+          name={RouteNames.SuperAdminLeagueMatches}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminLeagueDisputes}
+          name={RouteNames.SuperAdminLeagueDisputes}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminLeagueDivisions}
+          name={RouteNames.SuperAdminLeagueDivisions}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          component={AdminDashboard}
+          name={RouteNames.AdminDashboard}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          component={AdminRevenue}
+          name={RouteNames.AdminRevenue}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Revenus',
+          }}
+        />
+        <Stack.Screen
+          component={AdminEvents}
+          name={RouteNames.AdminEvents}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Événements',
+          }}
+        />
+        <Stack.Screen
+          component={AdminReports}
+          name={RouteNames.AdminReports}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Signalements',
+          }}
+        />
 
-      <Stack.Screen
-        component={FeaturedRequestsList}
-        name={RouteNames.FeaturedRequestsList}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Demandes à la une',
-        }}
-      />
-      <Stack.Screen
-        component={AdminClaimList}
-        name={RouteNames.AdminClaimList}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Revendications',
-        }}
-      />
-      <Stack.Screen
-        component={AdminClaimDetail}
-        name={RouteNames.AdminClaimDetail}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Détail Demande',
-        }}
-      />
-      <Stack.Screen
-        component={AdminClubOnboardingList}
-        name={RouteNames.AdminClubOnboardingList}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Clubs a onboarder',
-        }}
-      />
-      <Stack.Screen
-        component={AdminUserList}
-        name={RouteNames.AdminUserList}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Utilisateurs',
-        }}
-      />
-      <Stack.Screen
-        component={AdminUserDetail}
-        name={RouteNames.AdminUserDetail}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Détail Utilisateur',
-        }}
-      />
-      <Stack.Screen
-        component={AdminClubList}
-        name={RouteNames.AdminClubList}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Clubs',
-        }}
-      />
-      <Stack.Screen
-        component={AdminClubDetail}
-        name={RouteNames.AdminClubDetail}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Détail Club',
-        }}
-      />
-      <Stack.Screen
-        component={AdminClubForm}
-        name={RouteNames.AdminClubForm}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Edition Club',
-        }}
-      />
-      <Stack.Screen
-        component={AdminLeagueDisputes}
-        name={RouteNames.AdminLeagueDisputes}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Litiges League',
-        }}
-      />
-      <Stack.Screen
-        component={AdminNotificationsHealth}
-        name={RouteNames.AdminNotificationsHealth}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Notifications',
-        }}
-      />
-      <Stack.Screen
-        component={AdminPopupCampaignList}
-        name={RouteNames.AdminPopupCampaignList}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Campagnes pop-up',
-        }}
-      />
-      <Stack.Screen
-        component={AdminPopupCampaignDetail}
-        name={RouteNames.AdminPopupCampaignDetail}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Détail campagne',
-        }}
-      />
-      <Stack.Screen
-        component={AdminPopupCampaignForm}
-        name={RouteNames.AdminPopupCampaignForm}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Éditer campagne',
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminContentExplorer}
-        name={RouteNames.SuperAdminContentExplorer}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Explorer CM',
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminEntryList}
-        name={RouteNames.SuperAdminEntryList}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Entrées',
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminEntryDetail}
-        name={RouteNames.SuperAdminEntryDetail}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Détail',
-        }}
-      />
-      <Stack.Screen
-        component={SuperAdminEntryForm}
-        name={RouteNames.SuperAdminEntryForm}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Edition',
-        }}
-      />
-    </Stack.Navigator>
+        <Stack.Screen
+          component={FeaturedRequestsList}
+          name={RouteNames.FeaturedRequestsList}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Demandes à la une',
+          }}
+        />
+        <Stack.Screen
+          component={AdminClaimList}
+          name={RouteNames.AdminClaimList}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Revendications',
+          }}
+        />
+        <Stack.Screen
+          component={AdminClaimDetail}
+          name={RouteNames.AdminClaimDetail}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Détail Demande',
+          }}
+        />
+        <Stack.Screen
+          component={AdminClubOnboardingList}
+          name={RouteNames.AdminClubOnboardingList}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Clubs a onboarder',
+          }}
+        />
+        <Stack.Screen
+          component={AdminUserList}
+          name={RouteNames.AdminUserList}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Utilisateurs',
+          }}
+        />
+        <Stack.Screen
+          component={AdminUserDetail}
+          name={RouteNames.AdminUserDetail}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Détail Utilisateur',
+          }}
+        />
+        <Stack.Screen
+          component={AdminClubList}
+          name={RouteNames.AdminClubList}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Clubs',
+          }}
+        />
+        <Stack.Screen
+          component={AdminClubDetail}
+          name={RouteNames.AdminClubDetail}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Détail Club',
+          }}
+        />
+        <Stack.Screen
+          component={AdminClubForm}
+          name={RouteNames.AdminClubForm}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Edition Club',
+          }}
+        />
+        <Stack.Screen
+          component={AdminClubWizardIdentity}
+          name={RouteNames.AdminClubWizardIdentity}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdminClubWizardContact}
+          name={RouteNames.AdminClubWizardContact}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdminClubWizardAddress}
+          name={RouteNames.AdminClubWizardAddress}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdminClubWizardActivities}
+          name={RouteNames.AdminClubWizardActivities}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdminClubWizardBusiness}
+          name={RouteNames.AdminClubWizardBusiness}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdminClubWizardMultisport}
+          name={RouteNames.AdminClubWizardMultisport}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdminClubWizardSponsors}
+          name={RouteNames.AdminClubWizardSponsors}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdminClubWizardRecap}
+          name={RouteNames.AdminClubWizardRecap}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdminLeagueDisputes}
+          name={RouteNames.AdminLeagueDisputes}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Litiges League',
+          }}
+        />
+        <Stack.Screen
+          component={AdminNotificationsHealth}
+          name={RouteNames.AdminNotificationsHealth}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Notifications',
+          }}
+        />
+        <Stack.Screen
+          component={AdminPopupCampaignList}
+          name={RouteNames.AdminPopupCampaignList}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Campagnes pop-up',
+          }}
+        />
+        <Stack.Screen
+          component={AdminPopupCampaignDetail}
+          name={RouteNames.AdminPopupCampaignDetail}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Détail campagne',
+          }}
+        />
+        <Stack.Screen
+          component={AdminPopupCampaignForm}
+          name={RouteNames.AdminPopupCampaignForm}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Éditer campagne',
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminContentExplorer}
+          name={RouteNames.SuperAdminContentExplorer}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Explorer CM',
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminEntryList}
+          name={RouteNames.SuperAdminEntryList}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Entrées',
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminEntryDetail}
+          name={RouteNames.SuperAdminEntryDetail}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Détail',
+          }}
+        />
+        <Stack.Screen
+          component={SuperAdminEntryForm}
+          name={RouteNames.SuperAdminEntryForm}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Edition',
+          }}
+        />
+      </Stack.Navigator>
+    </AdminClubWizardProvider>
   );
 }
 

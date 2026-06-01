@@ -41,6 +41,10 @@ import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { getFacilitySections } from '@/services/facility/facilityService';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
+import {
+  getClubCertificationLabel,
+  getClubCertificationPalette,
+} from '@/utils/clubCertification';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getImageUrl } from '@/utils/imageUrl';
 import safeJsonParse from '@/utils/safeJsonParse';
@@ -243,6 +247,8 @@ function ClubDetails({ navigation, route }) {
     [club?.teams],
   );
   const clubHasNoTeams = sortedClubTeams.length === 0;
+  const clubCertificationPalette = getClubCertificationPalette(club, Colors);
+  const clubCertificationLabel = getClubCertificationLabel(club);
 
   const deleteTrainerMutation = useMutation({
     mutationFn: removeTrainerFromClub,
@@ -284,23 +290,45 @@ function ClubDetails({ navigation, route }) {
     onError: () => {
       setJoinRequestPending(false);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setJoinRequestPending(true);
+      let refreshedUser = userData;
+
+      try {
+        const refreshedUserResult = await refetchUserData();
+        refreshedUser = refreshedUserResult?.data || refreshedUser;
+      } catch {
+        refreshedUser = userData;
+      }
+
+      refetch();
+      const refreshedUserClubId = String(
+        refreshedUser?.club?.documentId || refreshedUser?.club?.id || '',
+      ).trim();
+      const joinedImmediately = Boolean(
+        userData?.role?.name === USER_ROLES.coach
+        && club?.isCustomer !== true
+        && refreshedUserClubId
+        && refreshedUserClubId === String(clubId || '').trim(),
+      );
+
       if (fromOnboardingAffiliation) {
-        refetch();
-        refetchUserData();
         handleGoToNextOnboardingStep();
         return;
       }
 
       Alert.alert(
         t('clubDetails.alerts.joinClub.title'),
-        t('clubDetails.alerts.joinClub.description'),
+        joinedImmediately
+          ? t(
+            'clubDetails.alerts.joinClub.autoAffiliatedDescription',
+            'Vous avez ete ajoute directement a ce club. Vous pouvez maintenant creer des equipes et completer votre organisation.',
+          )
+          : t('clubDetails.alerts.joinClub.description'),
         [
           {
             onPress: () => {
               refetch();
-              refetchUserData();
               handleGoToNextOnboardingStep();
             },
             text: t('clubDetails.alerts.joinClub.actions.ok'),
@@ -758,6 +786,7 @@ function ClubDetails({ navigation, route }) {
     && !isMember
     && clubHasNoTeams
     && (isPlayerRole || isCoachRole)
+    && !(isCoachRole && club?.isCustomer !== true)
   ), [club, clubHasNoTeams, clubId, isCoachRole, isMember, isPlayerRole]);
 
   const {
@@ -1402,6 +1431,22 @@ function ClubDetails({ navigation, route }) {
               <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
                 {club?.name}
               </Text>
+              <View
+                style={[
+                  ApplicationStyle.borderRadius24,
+                  Spaces.paddingVertical[4],
+                  Spaces.paddingHorizontal[12],
+                  {
+                    backgroundColor: clubCertificationPalette.backgroundColor,
+                    borderColor: clubCertificationPalette.borderColor,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, { color: clubCertificationPalette.textColor }]}>
+                  {clubCertificationLabel}
+                </Text>
+              </View>
               <Text style={[Fonts.p2, Fonts.primary100]}>
                 {(() => {
                   const parsedAddress = safeJsonParse(club?.addressDetails, null);
@@ -1826,6 +1871,24 @@ function ClubDetails({ navigation, route }) {
                                   {getTeamMetaSummary(team)}
                                 </Text>
                               ) : null}
+                              <View
+                                style={[
+                                  ApplicationStyle.borderRadius24,
+                                  Spaces.paddingVertical[2],
+                                  Spaces.paddingHorizontal[10],
+                                  Spaces.marginTop[6],
+                                  {
+                                    alignSelf: 'flex-start',
+                                    backgroundColor: getClubCertificationPalette(team?.club || club, Colors).backgroundColor,
+                                    borderColor: getClubCertificationPalette(team?.club || club, Colors).borderColor,
+                                    borderWidth: 1,
+                                  },
+                                ]}
+                              >
+                                <Text style={[Fonts.p4Bold, { color: getClubCertificationPalette(team?.club || club, Colors).textColor }]}>
+                                  {getClubCertificationLabel(team?.club || club)}
+                                </Text>
+                              </View>
                             </View>
                           </View>
 
@@ -2293,6 +2356,24 @@ function ClubDetails({ navigation, route }) {
                       <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
                         {getTeamMetaSummary(teamItem) || teamItem?.club?.name || t('common.messages.noData', 'Aucune donnee disponible')}
                       </Text>
+                      <View
+                        style={[
+                          ApplicationStyle.borderRadius24,
+                          Spaces.paddingVertical[2],
+                          Spaces.paddingHorizontal[10],
+                          Spaces.marginTop[6],
+                          {
+                            alignSelf: 'flex-start',
+                            backgroundColor: getClubCertificationPalette(teamItem?.club || club, Colors).backgroundColor,
+                            borderColor: getClubCertificationPalette(teamItem?.club || club, Colors).borderColor,
+                            borderWidth: 1,
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p4Bold, { color: getClubCertificationPalette(teamItem?.club || club, Colors).textColor }]}>
+                          {getClubCertificationLabel(teamItem?.club || club)}
+                        </Text>
+                      </View>
                     </View>
                   </View>
 

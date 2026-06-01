@@ -16,11 +16,12 @@ import { formatBootMeta } from '@/utils/performance/bootPerformance';
 import { getAppVersion, getDeviceId } from '@/platform/device';
 
 import {
+  getResolvedAuthAppEnv,
   isFirebaseBypassEnabled,
   isWebQaPhoneBypassEnabled,
 } from './bypassPolicy';
 
-const isLocalAppEnvironment = () => String(process.env.APP_ENV || '').trim().toLowerCase() === 'local';
+const isLocalAppEnvironment = () => getResolvedAuthAppEnv() === 'local';
 const isNetworkError = (error) => {
   const statusCode = error?.status || error?.response?.status;
   const message = String(error?.message || error || '').toLowerCase();
@@ -97,9 +98,16 @@ const userSchema = Joi.object({
   id: Joi.number().required(),
   isLookingForClub: Joi.boolean().allow(null).optional(),
   lastname: Joi.string().allow(null, '').optional(),
+  nonPartnerCoachPublishingAccess: Joi.object({
+    canPublish: Joi.boolean().allow(null).optional(),
+    clubDocumentId: Joi.string().allow(null, '').optional(),
+    isNonPartnerCoach: Joi.boolean().allow(null).optional(),
+    overrideAllowed: Joi.boolean().allow(null).optional(),
+    reason: Joi.string().allow(null, '').optional(),
+  }).allow(null).optional(),
+  parentalDeclarantUserDocumentId: Joi.string().allow(null, '').optional(),
   parentalDeclarationAccepted: Joi.boolean().allow(null).optional(),
   parentalDeclarationAcceptedAt: Joi.string().isoDate().allow(null).optional(),
-  parentalDeclarantUserDocumentId: Joi.string().allow(null, '').optional(),
   phoneNumber: Joi.string().required(),
   position: Joi.string().allow(null, '').optional(),
   preferredSport: Joi.string().allow(null, '').optional(),
@@ -125,11 +133,13 @@ const appEntitySummarySchema = Joi.object({
 const appClubSummarySchema = Joi.object({
   documentId: Joi.string().allow(null, '').optional(),
   id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+  isCustomer: Joi.boolean().allow(null).optional(),
   logo: appImageSummarySchema.optional(),
   name: Joi.string().allow(null, '').optional(),
   parentMultisport: Joi.object({
     documentId: Joi.string().allow(null, '').optional(),
     id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+    isCustomer: Joi.boolean().allow(null).optional(),
     logo: appImageSummarySchema.optional(),
     name: Joi.string().allow(null, '').optional(),
   }).allow(null).optional(),

@@ -7,6 +7,11 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+
+import {
+  getClubCertificationLabel,
+  getClubCertificationPalette,
+} from '@/utils/clubCertification';
 import { getShortAddress } from '@/utils/location';
 
 const getSectionLabel = (count) => {
@@ -38,6 +43,8 @@ function ClubSearchResultCard({
     ? isMultisportProp
     : Reflect.get(item || {}, '_type') === 'multisport';
   const shortAddress = getShortAddress(item?.addressDetails || item?.address);
+  const certificationPalette = getClubCertificationPalette(item, Colors);
+  const certificationLabel = getClubCertificationLabel(item);
 
   return (
     <TouchableOpacity
@@ -116,7 +123,22 @@ function ClubSearchResultCard({
             >
               <Text style={[Fonts.p3, { color: '#FFFFFF' }]}>OMNISPORT</Text>
             </View>
-          ) : null}
+          ) : (
+            <View
+              style={{
+                backgroundColor: certificationPalette.backgroundColor,
+                borderColor: certificationPalette.borderColor,
+                borderRadius: 999,
+                borderWidth: 1,
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+              }}
+            >
+              <Text style={[Fonts.p4Bold, { color: certificationPalette.textColor }]}>
+                {certificationLabel}
+              </Text>
+            </View>
+          )}
         </View>
 
         {shortAddress ? (

@@ -569,6 +569,11 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         }
         : null);
 
+    case NOTIFICATION_TYPES.TEAM_FIRST_EVENT_CREATED:
+      return adaptDestinationForCurrentPlatform(payload, {
+        route: RouteNames.AdminDashboard,
+      });
+
     case NOTIFICATION_TYPES.COACH_REPORT_PUBLISHED:
     case NOTIFICATION_TYPES.EVENT_ABSENCE_FINAL:
     case NOTIFICATION_TYPES.EVENT_CANCELLATION:

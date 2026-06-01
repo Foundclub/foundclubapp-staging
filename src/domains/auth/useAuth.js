@@ -575,6 +575,31 @@ const useAuth = () => {
     [userData],
   );
 
+  const nonPartnerCoachPublishingAccess = useMemo(
+    () => userData?.nonPartnerCoachPublishingAccess || null,
+    [userData?.nonPartnerCoachPublishingAccess],
+  );
+
+  const isCurrentClubPartner = userData?.club?.isCustomer === true;
+
+  const isNonPartnerCoach = nonPartnerCoachPublishingAccess?.isNonPartnerCoach === true;
+
+  const canPublishGovernedClubContent = useMemo(() => {
+    if (!isNonPartnerCoach) {
+      return true;
+    }
+
+    return nonPartnerCoachPublishingAccess?.canPublish === true;
+  }, [isNonPartnerCoach, nonPartnerCoachPublishingAccess?.canPublish]);
+
+  const governedPublishingBlockReason = useMemo(() => {
+    if (canPublishGovernedClubContent) {
+      return null;
+    }
+
+    return nonPartnerCoachPublishingAccess?.reason || 'requires_superadmin_authorization';
+  }, [canPublishGovernedClubContent, nonPartnerCoachPublishingAccess?.reason]);
+
   const canSendMessageToUser = useCallback((/** @type {User} */userToContact) => {
     if (userToContact?.documentId === userData?.documentId) {
       return false;
@@ -616,6 +641,7 @@ const useAuth = () => {
     canManageEvent,
     canManageEvents,
     canManageTeam,
+    canPublishGovernedClubContent,
     canSendMessageToUser,
     canShowCodeButton: !!confirm,
     confirm,
@@ -624,6 +650,7 @@ const useAuth = () => {
     getAuthTokens,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
+    governedPublishingBlockReason,
     inviteTeamPlayers,
     inviteTrainer,
     isAddingAccount,
@@ -631,9 +658,12 @@ const useAuth = () => {
       || !auth?.token
       || isAddingAccount
       || Boolean(bootstrapData?.serverTime || bootstrapError),
+    isCurrentClubPartner,
     isLoading: otpMutation.isPending || loginMutation.isPending,
+    isNonPartnerCoach,
     loginMutation,
     logoutMutation,
+    nonPartnerCoachPublishingAccess,
     onboardingViews,
     otpMutation,
     profileFields,

@@ -1,3 +1,4 @@
+/* eslint-disable jsdoc/require-returns, max-len, no-nested-ternary, perfectionist/sort-imports, perfectionist/sort-objects, react/jsx-indent, react/jsx-one-expression-per-line, react/no-unescaped-entities */
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   useCallback,
@@ -59,11 +60,13 @@ function TacticalSelection() {
   const route = useRoute();
 
   // Get players from navigation params
-  /** @type {{players?: TacticalPlayer[], eventId?: string, sport?: string, existingComposition?: any, teamId?: string, editorMode?: 'event' | 'team-default', bootstrapComposition?: any, editorSource?: string, editorSourceLabel?: string, teamName?: string, eventName?: string}} */
+  /** @type {{players?: TacticalPlayer[], eventId?: string, sport?: string, existingComposition?: any, teamId?: string, editorMode?: 'event' | 'team-default', bootstrapComposition?: any, editorSource?: string, editorSourceLabel?: string, teamName?: string, eventName?: string, eventKind?: 'match' | 'detection', eventTypeLabel?: string | null}} */
   const params = route.params || {};
   const {
     bootstrapComposition: bootstrapCompositionParam = null,
     editorMode = 'event',
+    eventKind = 'match',
+    eventTypeLabel = null,
     editorSource = null,
     editorSourceLabel = null,
     eventName = '',
@@ -444,6 +447,8 @@ function TacticalSelection() {
     // @ts-ignore
     navigation.navigate(RouteNames.TacticalBoardV2, {
       editorMode,
+      eventKind,
+      eventTypeLabel,
       editorSource,
       editorSourceLabel: sourceLabel,
       eventId,
@@ -458,6 +463,8 @@ function TacticalSelection() {
     });
   }, [
     editorMode,
+    eventKind,
+    eventTypeLabel,
     editorSource,
     selectedIds,
     allPlayers,

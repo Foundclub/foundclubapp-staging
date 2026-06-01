@@ -22,6 +22,42 @@ export const getAdminStats = async () => {
   return result.data;
 };
 
+export const getDetectionVerificationQueue = async (params = {}) => {
+  const result = await client.get('/admin-dashboard/detection-verification', {
+    params,
+  });
+  return result.data;
+};
+
+export const updateDetectionVerification = async (documentId, payload = {}) => {
+  const result = await client.put(`/admin-dashboard/detection-verification/${encodeURIComponent(String(documentId || '').trim())}`, payload);
+  return result.data;
+};
+
+export const getNonPartnerCoachGovernance = async () => {
+  const result = await client.get('/admin-dashboard/non-partner-coach-governance');
+  return result.data;
+};
+
+export const updateNonPartnerCoachGovernance = async (payload = {}) => {
+  const result = await client.put('/admin-dashboard/non-partner-coach-governance', payload);
+  return result.data;
+};
+
+export const getNonPartnerCoachAffiliations = async (params = {}) => {
+  const result = await client.get('/admin-dashboard/non-partner-coach-affiliations', {
+    params,
+  });
+  return result.data;
+};
+
+export const updateNonPartnerCoachAffiliation = async (userDocumentId, clubDocumentId, payload = {}) => {
+  const safeUserDocumentId = encodeURIComponent(String(userDocumentId || '').trim());
+  const safeClubDocumentId = encodeURIComponent(String(clubDocumentId || '').trim());
+  const result = await client.put(`/admin-dashboard/non-partner-coach-affiliations/${safeUserDocumentId}/${safeClubDocumentId}`, payload);
+  return result.data;
+};
+
 export const getNotificationsHealth = async () => {
   const result = await client.get('/notifications/health', {
     params: {

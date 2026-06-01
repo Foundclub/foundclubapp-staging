@@ -290,7 +290,13 @@ function HomeHubContent({ auth, navigation, route }) {
     hasRecentStartupPrompt,
     isStartupStable,
   } = useStartupPhase();
-  const { logoutMutation, userData } = auth;
+  const {
+    canPublishGovernedClubContent,
+    governedPublishingBlockReason,
+    logoutMutation,
+    nonPartnerCoachPublishingAccess,
+    userData,
+  } = auth;
   const { showBanner } = useAppFeedback();
 
   const homeHubTutorial = useFeatureTutorial({
@@ -333,6 +339,9 @@ function HomeHubContent({ auth, navigation, route }) {
   const isCoach = roleKey === 'coach';
   const isPresident = roleKey === 'president';
   const hasManageSection = isCoach || isPresident;
+  const isGovernedNonPartnerCoach = nonPartnerCoachPublishingAccess?.isNonPartnerCoach === true;
+  const isPublishingGovernedBlocked = isGovernedNonPartnerCoach
+    && canPublishGovernedClubContent !== true;
   const routeParams = route?.params;
   const scrollBottomPadding = tabBarHeight + insets.bottom + 16;
   const entryGateTopInset = Math.max(insets.top, 20) + 16;
@@ -1154,12 +1163,42 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [isGold, navigation, toggleMode]);
 
   const handleAddEvent = useCallback(() => {
+    if (isPublishingGovernedBlocked) {
+      showBanner({
+        body: t(
+          'homeHub.alerts.nonPartnerCoachPublishingBlocked.description',
+          'Votre club n est pas encore certifie sur FoundClub. Un superadmin doit autoriser la publication avant de creer un evenement.',
+        ),
+        title: t(
+          'homeHub.alerts.nonPartnerCoachPublishingBlocked.title',
+          'Publication en attente d autorisation',
+        ),
+        tone: 'warning',
+      });
+      return;
+    }
+
     navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType });
-  }, [navigation]);
+  }, [isPublishingGovernedBlocked, navigation, showBanner, t]);
 
   const handleAddRecruitmentAd = useCallback(() => {
+    if (isPublishingGovernedBlocked) {
+      showBanner({
+        body: t(
+          'homeHub.alerts.nonPartnerCoachPublishingBlocked.adDescription',
+          'Votre club n est pas encore certifie sur FoundClub. Un superadmin doit autoriser la publication avant de creer une annonce.',
+        ),
+        title: t(
+          'homeHub.alerts.nonPartnerCoachPublishingBlocked.title',
+          'Publication en attente d autorisation',
+        ),
+        tone: 'warning',
+      });
+      return;
+    }
+
     navigation.navigate(RouteNames.AdWizardStack);
-  }, [navigation]);
+  }, [isPublishingGovernedBlocked, navigation, showBanner, t]);
 
   const handleOpenMyRecruitmentAds = useCallback(() => {
     navigation.navigate(RouteNames.SearchRecruitment, {
@@ -1375,6 +1414,7 @@ function HomeHubContent({ auth, navigation, route }) {
         },
         {
           accentColor: Colors.primary500,
+          disabled: isPublishingGovernedBlocked,
           icon: 'calendar',
           key: 'manage-add-event',
           onPress: handleAddEvent,
@@ -1390,6 +1430,7 @@ function HomeHubContent({ auth, navigation, route }) {
         },
         {
           accentColor: Colors.primary500,
+          disabled: isPublishingGovernedBlocked,
           icon: 'running',
           key: 'manage-add-ad',
           onPress: handleAddRecruitmentAd,
@@ -1483,6 +1524,7 @@ function HomeHubContent({ auth, navigation, route }) {
         },
         {
           accentColor: Colors.primary500,
+          disabled: isPublishingGovernedBlocked,
           icon: 'calendar',
           key: 'manage-add-event',
           onPress: handleAddEvent,
@@ -1493,6 +1535,7 @@ function HomeHubContent({ auth, navigation, route }) {
         },
         {
           accentColor: Colors.primary500,
+          disabled: isPublishingGovernedBlocked,
           icon: 'running',
           key: 'manage-add-ad',
           onPress: handleAddRecruitmentAd,
@@ -1566,6 +1609,7 @@ function HomeHubContent({ auth, navigation, route }) {
     handleOpenMyRecruitmentAds,
     handleOpenManageClub,
     handleOpenRequestsHub,
+    isPublishingGovernedBlocked,
     isCoach,
     isPresident,
     makeTutorial,
@@ -1896,6 +1940,30 @@ function HomeHubContent({ auth, navigation, route }) {
         <MissionHomeCard />
 
         <View onLayout={(event) => registerSectionAnchor('manage', event)} ref={(node) => registerSectionViewRef('manage', node)}>
+          {isPublishingGovernedBlocked ? (
+            <View
+              style={[
+                ApplicationStyle.borderRadius24,
+                Spaces.padding[16],
+                Spaces.marginBottom[16],
+                Spaces.gap[8],
+                {
+                  backgroundColor: 'rgba(163, 163, 163, 0.10)',
+                  borderColor: 'rgba(163, 163, 163, 0.26)',
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                Publication reservee aux clubs certifies
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {governedPublishingBlockReason === 'requires_superadmin_authorization'
+                  ? 'Votre club n est pas encore certifie. Vous pouvez gerer votre organisation, mais un superadmin doit encore autoriser la publication des evenements et des annonces.'
+                  : 'La publication est temporairement bloqueee pour ce club non certifie.'}
+              </Text>
+            </View>
+          ) : null}
           <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.manageClub')} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('search', event)} ref={(node) => registerSectionViewRef('search', node)}>

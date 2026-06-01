@@ -52,6 +52,10 @@ import {
   withdrawRecruitmentApplication,
 } from '@/services/recruitment/recruitmentService';
 
+import {
+  getClubCertificationLabel,
+  getClubCertificationPalette,
+} from '@/utils/clubCertification';
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
@@ -427,6 +431,8 @@ function RecruitmentAdDetails() {
   const club = team?.club;
   const clubName = club?.name || team?.name || 'Club inconnu';
   const clubLogo = getImageUrl(club?.logo?.url);
+  const clubCertificationPalette = getClubCertificationPalette(club, Colors);
+  const clubCertificationLabel = getClubCertificationLabel(club);
   const positionLabel = isCoachAd
     ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, 'Role entraineur')
     : (ad?.position || 'Poste non specifie');
@@ -1216,6 +1222,16 @@ function RecruitmentAdDetails() {
             <Text style={[Fonts.h3, styles.clubTitle, { color: Colors.primary500 }]}>
               {clubName}
             </Text>
+            <TagView
+              style={{
+                backgroundColor: clubCertificationPalette.backgroundColor,
+                borderColor: clubCertificationPalette.borderColor,
+                marginTop: 8,
+              }}
+              text={clubCertificationLabel}
+              textColor={club?.isCustomer === true ? 'success500' : 'neutral100'}
+              textStyle={{ fontWeight: '700' }}
+            />
             {team?.name && (
               <Text style={[Fonts.p1, { color: Colors.neutral300, marginTop: 2, textAlign: 'center' }]}>
                 {team.name}

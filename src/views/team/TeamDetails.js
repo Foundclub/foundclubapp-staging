@@ -45,6 +45,10 @@ import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueN
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
+import {
+  getClubCertificationLabel,
+  getClubCertificationPalette,
+} from '@/utils/clubCertification';
 
 import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
@@ -2460,6 +2464,22 @@ function TeamDetails({ navigation, route }) {
                 <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
                   {team?.name}
                 </Text>
+                <View
+                  style={[
+                    ApplicationStyle.borderRadius24,
+                    Spaces.paddingVertical[4],
+                    Spaces.paddingHorizontal[12],
+                    {
+                      backgroundColor: getClubCertificationPalette(team?.club, Colors).backgroundColor,
+                      borderColor: getClubCertificationPalette(team?.club, Colors).borderColor,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: getClubCertificationPalette(team?.club, Colors).textColor }]}>
+                    {getClubCertificationLabel(team?.club)}
+                  </Text>
+                </View>
                 {primaryActivityLabel ? (
                   <View
                     style={[

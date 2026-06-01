@@ -13,7 +13,10 @@ import {
   getAdminUsers,
   getClubClaimRequest,
   getClubClaimsRequestList,
+  getDetectionVerificationQueue,
   getLeagueDisputes,
+  getNonPartnerCoachAffiliations,
+  getNonPartnerCoachGovernance,
   getNotificationsHealth,
   getPendingClubClaims,
   getPendingClubOnboardingRequests,
@@ -26,6 +29,9 @@ import {
   sendNotificationsHealthTest,
   updateAdminClub,
   updateAdminUser,
+  updateDetectionVerification,
+  updateNonPartnerCoachAffiliation,
+  updateNonPartnerCoachGovernance,
 } from './adminService';
 
 /**
@@ -114,6 +120,64 @@ export const useGetAdminStats = () => useQuery({
   queryFn: getAdminStats,
   queryKey: ['adminStats'],
 });
+
+export const useGetDetectionVerificationQueue = (params) => useQuery({
+  queryFn: () => getDetectionVerificationQueue(params),
+  queryKey: buildNormalizedQueryKey(['admin', 'detectionVerification'], params),
+});
+
+export const useUpdateDetectionVerification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (/** @type {{ documentId: string; notes?: string; status: 'pending' | 'rejected' | 'verified' }} */ payload) => updateDetectionVerification(payload.documentId, {
+      notes: payload.notes,
+      status: payload.status,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'detectionVerification'] });
+    },
+  });
+};
+
+export const useGetNonPartnerCoachGovernance = () => useQuery({
+  queryFn: getNonPartnerCoachGovernance,
+  queryKey: ['admin', 'non-partner-coach-governance'],
+});
+
+export const useUpdateNonPartnerCoachGovernance = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (/** @type {{ globalEnabled: boolean }} */ payload) => updateNonPartnerCoachGovernance(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'non-partner-coach-governance'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'non-partner-coach-affiliations'] });
+    },
+  });
+};
+
+export const useGetNonPartnerCoachAffiliations = (params) => useQuery({
+  queryFn: () => getNonPartnerCoachAffiliations(params),
+  queryKey: buildNormalizedQueryKey(['admin', 'non-partner-coach-affiliations'], params),
+});
+
+export const useUpdateNonPartnerCoachAffiliation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      /** @type {{ userDocumentId: string; clubDocumentId: string; allowed: boolean; notes?: string }} */ payload,
+    ) => updateNonPartnerCoachAffiliation(payload.userDocumentId, payload.clubDocumentId, {
+      allowed: payload.allowed,
+      notes: payload.notes,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'non-partner-coach-governance'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'non-partner-coach-affiliations'] });
+    },
+  });
+};
 
 export const useGetNotificationsHealth = () => useQuery({
   queryFn: getNotificationsHealth,

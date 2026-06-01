@@ -447,12 +447,35 @@ jobs:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
         run: |
+          set -euo pipefail
           IPA_PATH="$(find ios/build/export -name '*.ipa' | head -n 1)"
           test -n "$IPA_PATH" || (echo "Unable to locate exported IPA" && exit 1)
+          LOG_PATH="ios/build/altool-upload.log"
 
+          set +e
           xcrun altool \
             --upload-app \
             --type ios \
             --file "$IPA_PATH" \
             --apiKey "$APPSTORE_KEY_ID" \
-            --apiIssuer "$APPSTORE_ISSUER_ID"
+            --apiIssuer "$APPSTORE_ISSUER_ID" 2>&1 | tee "$LOG_PATH"
+          ALTOOL_EXIT_CODE=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$ALTOOL_EXIT_CODE" -ne 0 ]; then
+            echo "::error::App Store upload command failed with exit code $ALTOOL_EXIT_CODE."
+            exit "$ALTOOL_EXIT_CODE"
+          fi
+
+          if grep -Eqi "UPLOAD FAILED|Validation failed|Failed to upload package|STATE_ERROR" "$LOG_PATH"; then
+            echo "::error::App Store upload was rejected during validation. See altool-upload.log for details."
+            exit 1
+          fi
+
+      - name: Upload App Store upload log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: altool-upload-log
+          path: ios/build/altool-upload.log
+          if-no-files-found: ignore

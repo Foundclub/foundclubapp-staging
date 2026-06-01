@@ -1,3 +1,4 @@
+/* eslint-disable jsdoc/require-returns, max-len, no-console, no-nested-ternary, perfectionist/sort-objects, react/jsx-one-expression-per-line, react/no-unescaped-entities */
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -146,7 +147,7 @@ function TacticalBoard() {
   const skipUnsavedPromptRef = useRef(false);
 
   // Get params
-  /** @type {{selectedPlayers?: TacticalPlayer[], players?: any[], eventId?: string, eventName?: string, sport?: string, existingComposition?: any, teamId?: string, teamName?: string, readOnly?: boolean, canEdit?: boolean, manualPlayers?: any[], selectedPlayerIds?: string[], teamComposition?: any, teamDefaultComposition?: any, editorMode?: 'event' | 'team-default', editorSource?: string, editorSourceLabel?: string}} */
+  /** @type {{selectedPlayers?: TacticalPlayer[], players?: any[], eventId?: string, eventName?: string, sport?: string, existingComposition?: any, teamId?: string, teamName?: string, readOnly?: boolean, canEdit?: boolean, manualPlayers?: any[], selectedPlayerIds?: string[], teamComposition?: any, teamDefaultComposition?: any, editorMode?: 'event' | 'team-default', editorSource?: string, editorSourceLabel?: string, eventKind?: 'match' | 'detection', eventTypeLabel?: string | null}} */
   const params = route.params || {};
   const {
     canEdit = false,
@@ -154,7 +155,9 @@ function TacticalBoard() {
     editorSource = null,
     editorSourceLabel = null,
     eventId,
+    eventKind = 'match',
     eventName = '',
+    eventTypeLabel = null,
     existingComposition,
     manualPlayers = [],
     players = [],
@@ -168,6 +171,7 @@ function TacticalBoard() {
     teamName = '',
   } = params;
   const isTeamDefaultMode = editorMode === 'team-default';
+  const isDetectionEvent = eventKind === 'detection';
 
   // Use poolPlayers for reconstruction (selectedPlayers from editor, players from viewer)
   const poolPlayers = useMemo(() => {
@@ -310,6 +314,37 @@ function TacticalBoard() {
   } else if (isPublishing) {
     primaryActionTitle = 'Publication...';
   }
+
+  const resolvedHeaderTitle = (() => {
+    if (isTeamDefaultMode) return headerTitle;
+    if (readOnly) {
+      return isDetectionEvent ? 'Convocation detection publiee' : headerTitle;
+    }
+    return isDetectionEvent ? 'Convocation detection' : headerTitle;
+  })();
+
+  const resolvedHeaderModeLabel = isTeamDefaultMode
+    ? headerModeLabel
+    : readOnly
+      ? headerModeLabel
+      : 'Edition';
+
+  const resolvedContextTitle = (() => {
+    const explicitTypeLabel = String(eventTypeLabel || '').trim();
+    if (teamName || readableEventName) {
+      return contextTitle;
+    }
+    if (isDetectionEvent) {
+      return explicitTypeLabel || 'Detection';
+    }
+    return contextTitle;
+  })();
+
+  const resolvedPrimaryActionTitle = (
+    !isTeamDefaultMode && !isPublishing && isDetectionEvent
+      ? 'Publier la convocation detection'
+      : primaryActionTitle
+  );
 
   let actionsPanelHeight = 452;
   if (readOnly) {
@@ -725,7 +760,9 @@ function TacticalBoard() {
       editorSource: source || null,
       editorSourceLabel: sourceLabel || null,
       eventId,
+      eventKind,
       eventName,
+      eventTypeLabel,
       existingComposition: buildDraftPayload(),
       players: poolPlayers,
       sport,
@@ -735,10 +772,12 @@ function TacticalBoard() {
   }, [
     buildDraftPayload,
     editorMode,
+    eventKind,
     editorSource,
     editorSourceLabel,
     eventId,
     eventName,
+    eventTypeLabel,
     navigation,
     poolPlayers,
     sport,
@@ -754,7 +793,9 @@ function TacticalBoard() {
       editorSource: source,
       editorSourceLabel: sourceLabel,
       eventId,
+      eventKind,
       eventName,
+      eventTypeLabel,
       existingComposition: buildDraftPayload(),
       players: poolPlayers,
       readOnly: false,
@@ -767,8 +808,10 @@ function TacticalBoard() {
     buildDraftPayload,
     compositionMeta,
     editorMode,
+    eventKind,
     eventId,
     eventName,
+    eventTypeLabel,
     navigation,
     poolPlayers,
     sport,
@@ -1065,10 +1108,10 @@ function TacticalBoard() {
           </View>
           <View style={styles.headerCenter}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00, styles.headerTitle]}>
-              {headerTitle}
+              {resolvedHeaderTitle}
             </Text>
             <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, styles.headerSubtitle]}>
-              {contextTitle}
+              {resolvedContextTitle}
             </Text>
             {contextSubtitle ? (
               <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }, styles.headerCaption]}>
@@ -1078,7 +1121,7 @@ function TacticalBoard() {
             <View style={styles.headerMetaRow}>
               <View style={[styles.headerPill, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}55` }]}>
                 <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                  {headerModeLabel}
+                  {resolvedHeaderModeLabel}
                 </Text>
               </View>
               <View style={[styles.headerPill, { backgroundColor: `${Colors.primary300}16`, borderColor: `${Colors.primary300}40` }]}>
@@ -1146,7 +1189,9 @@ function TacticalBoard() {
 
             {fieldPlayers.length === 0 ? (
               <View style={[styles.fieldEmptyState, { backgroundColor: `${Colors.primary900}88`, borderColor: `${Colors.primary500}44` }]}>
-                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>Place tes titulaires sur le terrain</Text>
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+                  {isDetectionEvent ? 'Place les joueurs convoques sur le terrain' : 'Place tes titulaires sur le terrain'}
+                </Text>
                 <Text style={[Fonts.p4, { color: Colors.primary100, textAlign: 'center' }]}>
                   Maintiens un joueur du banc puis glisse-le vers sa position.
                 </Text>
@@ -1306,7 +1351,7 @@ function TacticalBoard() {
                     <Button
                       disabled={isSaving || isPublishing}
                       onPress={isTeamDefaultMode ? handleSave : handlePublish}
-                      title={primaryActionTitle}
+                      title={resolvedPrimaryActionTitle}
                       variant="Primary"
                     />
                   </View>
@@ -1355,12 +1400,12 @@ function TacticalBoard() {
 
                   {!isTeamDefaultMode ? (
                     <View style={[styles.actionsHintCard, { backgroundColor: `${Colors.primary700}30`, borderColor: `${Colors.primary500}22` }]}>
-                      <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>À quoi servent ces deux sauvegardes ?</Text>
+                      <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>A quoi servent ces deux sauvegardes ?</Text>
                       <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
-                        Brouillon : garde tes changements privés pour ce match, sans les publier.
+                        Brouillon : garde tes changements prives pour {isDetectionEvent ? 'cette detection' : 'ce match'}, sans les publier.
                       </Text>
                       <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
-                        Favori d'équipe : réutilise cette composition comme base de départ sur les prochains matchs.
+                        Favori d'equipe : reutilise cette composition comme base de depart sur les prochains evenements.
                       </Text>
                     </View>
                   ) : null}

@@ -65,6 +65,9 @@ const cloneWithoutSystemFields = (club = {}) => ({
   updatedAt: undefined,
 });
 
+/**
+ *
+ */
 function AdminClubForm() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -101,6 +104,12 @@ function AdminClubForm() {
     if (duplicateFrom) return 'Dupliquer le club';
     return 'Créer un club';
   })();
+
+  useEffect(() => {
+    if (!clubId && !duplicateFrom) {
+      navigation.replace(RouteNames.AdminClubWizardIdentity);
+    }
+  }, [clubId, duplicateFrom, navigation]);
 
   useEffect(() => {
     if (!sourceDocumentId && !isEditing) {
@@ -341,6 +350,16 @@ function AdminClubForm() {
       </View>
     </TouchableOpacity>
   ), [Alignments, ApplicationStyle, Colors, Fonts, Spaces, formValues, setField]);
+
+  if (!clubId && !duplicateFrom) {
+    return (
+      <AdminStateView
+        description="Nous ouvrons le tunnel de creation du club."
+        isLoading
+        title="Ouverture du tunnel"
+      />
+    );
+  }
 
   if (sourceDocumentId && isLoading && !sourceClub) {
     return (

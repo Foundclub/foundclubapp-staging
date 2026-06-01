@@ -34,6 +34,7 @@ const sanitizeMultisportClubSummary = (/** @type {any} */ club) => {
   return {
     documentId: normalizeString(club?.documentId),
     id: club?.id ?? null,
+    isCustomer: typeof club?.isCustomer === 'boolean' ? club.isCustomer : null,
     logo: sanitizeImageSummary(club?.logo),
     name: normalizeString(club?.name),
     sections: Array.isArray(club?.sections)
@@ -47,9 +48,21 @@ const sanitizeClubSummary = (/** @type {any} */ club) => {
   return {
     documentId: normalizeString(club?.documentId),
     id: club?.id ?? null,
+    isCustomer: typeof club?.isCustomer === 'boolean' ? club.isCustomer : null,
     logo: sanitizeImageSummary(club?.logo),
     name: normalizeString(club?.name),
     parentMultisport: sanitizeMultisportClubSummary(club?.parentMultisport),
+  };
+};
+
+const sanitizeNonPartnerCoachPublishingAccess = (/** @type {any} */ access) => {
+  if (!access || typeof access !== 'object') return null;
+  return {
+    canPublish: access?.canPublish === true,
+    clubDocumentId: normalizeString(access?.clubDocumentId),
+    isNonPartnerCoach: access?.isNonPartnerCoach === true,
+    overrideAllowed: access?.overrideAllowed === true,
+    reason: normalizeString(access?.reason),
   };
 };
 
@@ -102,6 +115,7 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
   birthdate: normalizeString(user?.birthdate),
   category: normalizeString(user?.category),
   clubId: normalizeString(user?.club?.documentId),
+  clubIsCustomer: typeof user?.club?.isCustomer === 'boolean' ? user.club.isCustomer : null,
   clubMembershipRequestIds: normalizeIdList(
     user?.clubMembershipRequests?.map((/** @type {any} */ request) => normalizeString(request?.documentId)),
   ),
@@ -119,6 +133,9 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
   ),
   myTeamIds: normalizeIdList(
     user?.myTeams?.map((/** @type {any} */ team) => normalizeString(team?.documentId)),
+  ),
+  nonPartnerCoachPublishingAccess: sanitizeNonPartnerCoachPublishingAccess(
+    user?.nonPartnerCoachPublishingAccess,
   ),
   parentAccountDocumentId: normalizeString(user?.parentAccount?.documentId),
   parentalDeclarantUserDocumentId: normalizeString(user?.parentalDeclarantUserDocumentId),
@@ -179,6 +196,9 @@ export const sanitizeUser = (user) => {
     myTeams: Array.isArray(user?.myTeams)
       ? user.myTeams.map(sanitizeTeamSummary).filter(Boolean)
       : [],
+    nonPartnerCoachPublishingAccess: sanitizeNonPartnerCoachPublishingAccess(
+      user?.nonPartnerCoachPublishingAccess,
+    ),
     parentAccount: user?.parentAccount
       ? { documentId: normalizeString(user.parentAccount.documentId) }
       : null,

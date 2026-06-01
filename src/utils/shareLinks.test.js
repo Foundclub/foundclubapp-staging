@@ -1,7 +1,9 @@
 import {
   buildFoundClubDeepLink,
+  buildPublicEventUrl,
   buildInstallLandingUrl,
   buildShareMessageWithUrl,
+  resolveWebAppOrigin,
   resolveShareEnvironment,
   toPublicOrigin,
 } from './shareLinks';
@@ -27,6 +29,22 @@ describe('shareLinks utils', () => {
       source: 'sms',
       type: 'team',
     })).toBe('https://impressive-bat-b03c2eeb7d.strapiapp.com/install.html?env=staging&id=team-doc-123&invite=true&source=sms&type=team');
+  });
+
+  test('resolveWebAppOrigin prefers configured web URL and trims trailing slashes', () => {
+    expect(resolveWebAppOrigin({
+      apiUrl: 'https://api.example.com/api',
+      publicOrigin: 'https://public.example.com',
+      webUrl: 'https://foundclub.app/',
+    })).toBe('https://foundclub.app');
+  });
+
+  test('buildPublicEventUrl targets the public event page', () => {
+    expect(buildPublicEventUrl({
+      apiUrl: 'https://api.example.com/api',
+      eventId: 'event-doc-55',
+      webUrl: 'https://foundclub.app',
+    })).toBe('https://foundclub.app/events/event-doc-55');
   });
 
   test('buildFoundClubDeepLink appends invite query only for invite flows', () => {
