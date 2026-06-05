@@ -73,6 +73,10 @@ import {
 } from '@/services/tournamentTeam/tournamentTeamService';
 
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
+import {
+  dismissMatchStatsPromptForSession,
+  isMatchStatsPromptDismissedForSession,
+} from '@/utils/matchStatsPromptSession';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
 
 import EventDetectionSlots from './components/EventDetectionSlots';
@@ -205,8 +209,8 @@ const getEligibleTeamPlayers = (team) => {
 
 const getDetectionCandidatePlayers = (event, team) => {
   const excludedKeys = new Set([
-    ...getEligibleTeamPlayers(team).map((player) => getUserKey(player)).filter(Boolean),
     ...Array.from(getTrainerKeySet(team)),
+    ...getEligibleTeamPlayers(team).map((player) => getUserKey(player)).filter(Boolean),
   ]);
 
   const adCandidates = Array.isArray(event?.recruitmentAds)
@@ -235,6 +239,12 @@ const getCompositionPlayersForEvent = (event, team, detectionEnabled) => {
     ...teamPlayers,
     ...getDetectionCandidatePlayers(event, team),
   ]);
+};
+
+const getConvocationSourceLabel = (participantSource) => {
+  if (participantSource === 'detection_candidate') return 'Candidat detection';
+  if (participantSource === 'team_player') return 'Joueur equipe';
+  return '';
 };
 
 // @ts-ignore: FIXME: Baseline TS regression
@@ -302,7 +312,7 @@ function EventDetails({ navigation, route }) {
   const [isEventActionsOpen, setIsEventActionsOpen] = useState(true);
   const [isTournamentActionsOpen, setIsTournamentActionsOpen] = useState(true);
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
-  const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
+  const [dismissedMatchStatsPromptKey, setDismissedMatchStatsPromptKey] = useState(null);
   const [areDeferredQueriesEnabled, setAreDeferredQueriesEnabled] = useState(false);
   const firstFocusRefreshRef = useRef(true);
   const lastFocusRefreshAtRef = useRef(0);
@@ -2659,10 +2669,8 @@ function EventDetails({ navigation, route }) {
       ...player,
       convoked: Boolean(player?.isConvoked),
       label: `${String(player?.firstname || '').trim()} ${String(player?.lastname || '').trim()}`.trim() || 'Joueur',
-      sourceLabel: player?.participantSource === 'detection_candidate'
-        ? 'Candidat detection'
-        : (player?.participantSource === 'team_player' ? 'Joueur equipe' : ''),
       rowKey: String(player?.documentId || player?.id || ''),
+      sourceLabel: getConvocationSourceLabel(player?.participantSource),
     }))
     // @ts-ignore: FIXME: Baseline TS regression
     .filter((player) => Boolean(player.rowKey))
@@ -2848,6 +2856,34 @@ function EventDetails({ navigation, route }) {
 
     return 'Le match est termine. Enregistre d abord le score puis complete les statistiques de ton equipe.';
   }, [isMatchStatsReviewRequired, matchStatsPayload?.score?.available]);
+  const matchStatsPromptSessionKey = useMemo(() => {
+    if (!eventId || !compositionTeamId) return '';
+
+    return [
+      'event',
+      eventId,
+      compositionTeamId,
+      String(matchStatsReport?.documentId || matchStatsReport?.id || 'report'),
+      `version:${Number(matchStatsReport?.version || 0)}`,
+      `review:${isMatchStatsReviewRequired ? 'yes' : 'no'}`,
+      `score:${matchStatsPayload?.score?.available ? 'ready' : 'pending'}`,
+    ].join(':');
+  }, [
+    compositionTeamId,
+    eventId,
+    isMatchStatsReviewRequired,
+    matchStatsPayload?.score?.available,
+    matchStatsReport?.documentId,
+    matchStatsReport?.id,
+    matchStatsReport?.version,
+  ]);
+  const dismissMatchStatsPrompt = useCallback(() => {
+    if (matchStatsPromptSessionKey) {
+      dismissMatchStatsPromptForSession(matchStatsPromptSessionKey);
+      setDismissedMatchStatsPromptKey(matchStatsPromptSessionKey);
+    }
+    setIsMatchStatsPromptVisible(false);
+  }, [matchStatsPromptSessionKey]);
 
   // @ts-ignore: FIXME: Baseline TS regression
   const openCompositionBoard = useCallback((composition, options = {}) => {
@@ -3003,14 +3039,9 @@ function EventDetails({ navigation, route }) {
     navigation,
   ]);
 
-  useFocusEffect(
-    useCallback(() => {
-      setHasDismissedMatchStatsPrompt(false);
-      return () => {
-        setIsMatchStatsPromptVisible(false);
-      };
-    }, []),
-  );
+  useFocusEffect(useCallback(() => () => {
+    setIsMatchStatsPromptVisible(false);
+  }, []));
 
   useEffect(() => {
     if (!canManageMatchStats || !isMatchEvent || !compositionTeamId || !isMatchFinished) {
@@ -3028,17 +3059,23 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
-    if (matchStatsPayload && !isMatchStatsFetching && !hasDismissedMatchStatsPrompt) {
+    if (
+      matchStatsPayload
+      && !isMatchStatsFetching
+      && dismissedMatchStatsPromptKey !== matchStatsPromptSessionKey
+      && !isMatchStatsPromptDismissedForSession(matchStatsPromptSessionKey)
+    ) {
       setIsMatchStatsPromptVisible(true);
     }
   }, [canManageMatchStats, compositionTeamId,
-    hasDismissedMatchStatsPrompt,
+    dismissedMatchStatsPromptKey,
     isMatchEvent,
     isMatchFinished,
     isMatchStatsFetching,
     isMatchStatsCompleted,
     matchStatsPayload,
     matchStatsPayload?.score?.waitingOfficial,
+    matchStatsPromptSessionKey,
   ]);
 
   const openCoachLateModal = useCallback((/** @type {User | null | undefined} */ targetUser, /** @type {'coach_mark' | 'coach_edit'} */ mode) => {
@@ -5293,10 +5330,7 @@ function EventDetails({ navigation, route }) {
       </BottomModal>
 
       <BottomModal
-        close={() => {
-          setHasDismissedMatchStatsPrompt(true);
-          setIsMatchStatsPromptVisible(false);
-        }}
+        close={dismissMatchStatsPrompt}
         isVisible={isMatchStatsPromptVisible}
         snapPoints={['42%']}
       >
@@ -5325,18 +5359,14 @@ function EventDetails({ navigation, route }) {
 
           <Button
             onPress={() => {
-              setHasDismissedMatchStatsPrompt(true);
-              setIsMatchStatsPromptVisible(false);
+              dismissMatchStatsPrompt();
               openMatchStatsEditor();
             }}
             title={matchStatsPrimaryAction.title}
             variant="Primary"
           />
           <Button
-            onPress={() => {
-              setHasDismissedMatchStatsPrompt(true);
-              setIsMatchStatsPromptVisible(false);
-            }}
+            onPress={dismissMatchStatsPrompt}
             title="Plus tard"
             variant="Secondary"
           />

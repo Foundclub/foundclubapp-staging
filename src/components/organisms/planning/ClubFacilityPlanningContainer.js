@@ -18,6 +18,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { getClubPlanning } from '@/services/event/eventService';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { getClubSharedPlanning } from '@/services/multisportClub/multisportClubService';
+import { keepPreviousPageData } from '@/services/queryOptions';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
@@ -99,16 +100,19 @@ function ClubFacilityPlanningContainer({
 
   const { data: eventsData, isLoading: isLoadingEvents } = useQuery({
     enabled: !!clubId,
+    placeholderData: keepPreviousPageData,
     queryFn: () => getClubPlanning(clubId, {
       facilityId: selectedFacilityId || undefined,
       from: planningRange.from,
       to: planningRange.to,
     }),
     queryKey: ['club-planning', clubId, planningRange.from, planningRange.to, selectedFacilityId],
+    staleTime: 30_000,
   });
 
   const { data: sharedPlanningData, isLoading: isLoadingSharedPlanning } = useQuery({
     enabled: Boolean(clubId && resolvedCmId && canAccessSharedPlanning && planningScope === 'shared'),
+    placeholderData: keepPreviousPageData,
     queryFn: () => getClubSharedPlanning(resolvedCmId, clubId, {
       from: planningRange.from,
       installationId: selectedFacilityId || undefined,
@@ -123,6 +127,7 @@ function ClubFacilityPlanningContainer({
       selectedFacilityId,
       planningScope,
     ],
+    staleTime: 30_000,
   });
   const sharedEvents = useMemo(
     () => normalizePlanningItems(sharedPlanningData?.data || []),

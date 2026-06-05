@@ -1833,7 +1833,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           }
           await providerMutation.mutateAsync();
         } catch (error) {
-          syncSavedCampaignParams(savedCampaignId);
+          goToCampaignOperations(savedCampaignId);
           Alert.alert(
             'Campagne enregistree partiellement',
             error?.message || 'La campagne est sauvee, mais certains documents ou providers demandent une verification.',
@@ -1856,13 +1856,12 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           successTitle = 'Campagne programmee';
           successMessage = 'La campagne est publiee et s ouvrira automatiquement a sa date de debut.';
         }
-        Alert.alert(
-          successTitle,
-          successMessage,
-        );
-        if (!isDraftSave) {
-          goToCampaignOperations(savedCampaignId);
-        }
+        Alert.alert(successTitle, successMessage, [
+          {
+            onPress: () => goToCampaignOperations(savedCampaignId),
+            text: 'OK',
+          },
+        ]);
       },
     });
   }, [campaign?.status, campaignId, documentRequests, externalUrl, goToCampaignOperations, helloAssoIsPublishReady, helloAssoStatusMessage, paymentModes.external_link, paymentModes.helloasso, pricingRules, providerMutation, queryClient, removedDocumentRequestIds, removedPricingRuleIds, routeEventId, saveMutation, syncSavedCampaignParams]);
@@ -2798,6 +2797,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
   return (
     <WizardStepLayout
+      collapsibleHeader
       isNextDisabled={isWizardNextDisabled}
       isNextLoading={saveMutation.isPending}
       nextLabel={finalSaveLabel}

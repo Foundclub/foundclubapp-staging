@@ -561,7 +561,6 @@ export const NOTIFICATION_TYPES = {
   EVENT_PUBLISHED: 'eventPublished',
   EVENT_REMINDER: 'eventReminder',
   EVENT_RSVP_STATUS_CHANGED: 'eventRsvpStatusChanged',
-  TEAM_FIRST_EVENT_CREATED: 'teamFirstEventCreated',
   EVENT_TEAM_INVITED: 'eventTeamInvited',
   EVENT_UPDATED: 'eventUpdated',
   FEATURED_APPROVED: 'featuredApproved',
@@ -574,13 +573,20 @@ export const NOTIFICATION_TYPES = {
   RESERVATION_PLAYER_JOINED: 'reservationPlayerJoined',
   RESERVATION_SOS_ALERT: 'reservationSosAlert',
   SEARCH_ALERT_MATCH: 'searchAlertMatch',
+  TEAM_FIRST_EVENT_CREATED: 'teamFirstEventCreated',
 
   // Licences
+  LICENSE_CAMPAIGN_CLOSED: 'licenseCampaignClosed',
+  LICENSE_CAMPAIGN_PAUSED: 'licenseCampaignPaused',
+  LICENSE_CAMPAIGN_PUBLISHED: 'licenseCampaignPublished',
+  LICENSE_DOCUMENT_REPLACEMENT_REQUIRED: 'licenseDocumentReplacementRequired',
+  LICENSE_DOCUMENT_SUBMITTED: 'licenseDocumentSubmitted',
   LICENSE_INSTALLMENT_OVERDUE: 'licenseInstallmentOverdue',
   LICENSE_PAYMENT_CONFIRMED: 'licensePaymentConfirmed',
   LICENSE_PAYMENT_DUE: 'licensePaymentDue',
   LICENSE_PAYMENT_REJECTED: 'licensePaymentRejected',
   LICENSE_PAYMENT_REMINDER: 'licensePaymentReminder',
+  LICENSE_PAYMENT_SUBMITTED: 'licensePaymentSubmitted',
 
   // Messages
   NEW_GROUP_MESSAGE: 'newGroupMessage',

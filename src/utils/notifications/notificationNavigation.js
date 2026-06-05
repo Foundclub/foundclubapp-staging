@@ -569,11 +569,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         }
         : null);
 
-    case NOTIFICATION_TYPES.TEAM_FIRST_EVENT_CREATED:
-      return adaptDestinationForCurrentPlatform(payload, {
-        route: RouteNames.AdminDashboard,
-      });
-
     case NOTIFICATION_TYPES.COACH_REPORT_PUBLISHED:
     case NOTIFICATION_TYPES.EVENT_ABSENCE_FINAL:
     case NOTIFICATION_TYPES.EVENT_CANCELLATION:
@@ -746,11 +741,17 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           route: RouteNames.LeagueMatchDetails,
         }
         : { params: {}, route: RouteNames.LeagueMatchTab });
+    case NOTIFICATION_TYPES.LICENSE_CAMPAIGN_CLOSED:
+    case NOTIFICATION_TYPES.LICENSE_CAMPAIGN_PAUSED:
+    case NOTIFICATION_TYPES.LICENSE_CAMPAIGN_PUBLISHED:
+    case NOTIFICATION_TYPES.LICENSE_DOCUMENT_REPLACEMENT_REQUIRED:
+    case NOTIFICATION_TYPES.LICENSE_DOCUMENT_SUBMITTED:
     case NOTIFICATION_TYPES.LICENSE_INSTALLMENT_OVERDUE:
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_CONFIRMED:
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_DUE:
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_REJECTED:
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_REMINDER:
+    case NOTIFICATION_TYPES.LICENSE_PAYMENT_SUBMITTED:
       return adaptDestinationForCurrentPlatform(payload, {
         params: payload.assignmentId ? { assignmentId: String(payload.assignmentId) } : {},
         route: RouteNames.MyLicense,
@@ -774,6 +775,10 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       if (payload.profileId) return adaptDestinationForCurrentPlatform(payload, profileDestination(payload.profileId));
       return adaptDestinationForCurrentPlatform(payload, { params: {}, route: RouteNames.SearchAlerts });
     }
+    case NOTIFICATION_TYPES.TEAM_FIRST_EVENT_CREATED:
+      return adaptDestinationForCurrentPlatform(payload, {
+        route: RouteNames.AdminDashboard,
+      });
     case NOTIFICATION_TYPES.TEAM_REQUEST:
       return adaptDestinationForCurrentPlatform(payload, {
         params: {

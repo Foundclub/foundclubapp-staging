@@ -1,6 +1,6 @@
-import parsePhoneNumberFromString, { getCountryCallingCode } from 'libphonenumber-js';
+import parsePhoneNumberFromString, { AsYouType, getCountryCallingCode } from 'libphonenumber-js';
 import {
-  forwardRef, useCallback, useMemo, useRef, useState,
+  forwardRef, useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -137,6 +137,44 @@ const renderDialOptionNode = (option, Alignments) => {
 const WEB_EMOJI_FONT_STACK_REGULAR = 'Montserrat-Regular, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 const WEB_EMOJI_FONT_STACK_BOLD = 'Montserrat-Bold, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 
+const formatPhoneDisplayValue = (rawValue, syncDialCode) => {
+  try {
+    const phoneNumber = parsePhoneNumberFromString(rawValue || '');
+    if (phoneNumber?.country) {
+      const newDialCode = `+${getCountryCallingCode(phoneNumber.country)}`;
+      const foundDialCode = DIAL_CODES.find(({ value: code }) => code === newDialCode);
+      if (foundDialCode) syncDialCode(foundDialCode);
+      return phoneNumber.formatNational();
+    }
+    return phoneNumber?.formatNational() || '';
+  } catch (_error) {
+    return rawValue || '';
+  }
+};
+
+const formatPhoneDraftValue = (rawValue, defaultCountryCode, syncDialCode) => {
+  const normalizedRawValue = String(rawValue || '');
+  if (!normalizedRawValue.trim()) {
+    return '';
+  }
+
+  try {
+    const formatter = new AsYouType(defaultCountryCode);
+    const formattedValue = formatter.input(normalizedRawValue);
+    const detectedCountryCode = String(formatter.getCountry() || '').trim();
+
+    if (detectedCountryCode) {
+      const detectedDialCode = `+${getCountryCallingCode(detectedCountryCode)}`;
+      const foundDialCode = DIAL_CODES.find(({ value: code }) => code === detectedDialCode);
+      if (foundDialCode) syncDialCode(foundDialCode);
+    }
+
+    return formattedValue || normalizedRawValue;
+  } catch (_error) {
+    return normalizedRawValue;
+  }
+};
+
 /**
  *
  * @param props
@@ -161,9 +199,11 @@ const PhoneInput = forwardRef(
     } = useTheme();
     const { t } = useTranslation();
     const searchInput = useRef(null);
+    const isEditingRef = useRef(false);
 
     const [dialCode, setDialCode] = useState(getDeviceDialCode());
     const [searchDialCode, setSearchDialCode] = useState('');
+    const [draftValue, setDraftValue] = useState('');
     const dialDisplayTextStyle = useMemo(
       () => (Platform.OS === 'web'
         ? {
@@ -253,20 +293,15 @@ const PhoneInput = forwardRef(
       }));
     }, [searchDialCode]);
 
-    const formattedValue = useMemo(() => {
-      try {
-        const phoneNumber = parsePhoneNumberFromString(value || '');
-        if (phoneNumber?.country) {
-          const newDialCode = `+${getCountryCallingCode(phoneNumber.country)}`;
-          const foundDialCode = DIAL_CODES.find(({ value: code }) => code === newDialCode);
-          if (foundDialCode) setDialCode(foundDialCode);
-          return phoneNumber.formatNational();
-        }
-        return phoneNumber?.formatNational();
-      } catch (e) {
-        return value;
-      }
-    }, [value]);
+    const formattedValue = useMemo(
+      () => formatPhoneDisplayValue(value, setDialCode),
+      [value],
+    );
+
+    useEffect(() => {
+      if (isEditingRef.current) return;
+      setDraftValue(formattedValue || '');
+    }, [formattedValue]);
 
     const defaultCountryCode = useMemo(() => {
       const countryCode = getDialOptionCountryCode(dialCode);
@@ -321,8 +356,26 @@ const PhoneInput = forwardRef(
         return compactDigits;
       }
 
-      return value || '';
-    }, [defaultCountryCode, dialCode?.value, value]);
+      if (dialCode?.value && localDigits) {
+        return `${dialCode.value}${localDigits}`;
+      }
+
+      return '';
+    }, [defaultCountryCode, dialCode?.value]);
+
+    const handleChangeText = useCallback((nextValue) => {
+      isEditingRef.current = true;
+      setDraftValue(formatPhoneDraftValue(nextValue, defaultCountryCode, setDialCode));
+      onChange(getInternationalValue(nextValue));
+    }, [defaultCountryCode, getInternationalValue, onChange]);
+
+    const handleEndEditing = useCallback((event) => {
+      const nextValue = String(event?.nativeEvent?.text || '');
+      const nextCanonicalValue = getInternationalValue(nextValue);
+      isEditingRef.current = false;
+      onChange(nextCanonicalValue);
+      setDraftValue(formatPhoneDisplayValue(nextCanonicalValue, setDialCode));
+    }, [getInternationalValue, onChange]);
 
     return (
       <View style={[Alignments.row, Alignments.fullWidth, Alignments.alignEnd]}>
@@ -358,11 +411,11 @@ const PhoneInput = forwardRef(
               left: -DIALCODE_WIDTH,
             }}
             onBlur={onBlur}
-            onChangeText={(val) => onChange(getInternationalValue(val))}
-            onEndEditing={(event) => onChange(getInternationalValue(event?.nativeEvent?.text))}
+            onChangeText={handleChangeText}
+            onEndEditing={handleEndEditing}
             placeholder={t('login.fields.phoneNumber.placeholder')}
             ref={ref}
-            value={formattedValue}
+            value={draftValue}
           />
         </View>
         <View style={[

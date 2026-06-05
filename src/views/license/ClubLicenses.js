@@ -1,8 +1,8 @@
 import {
-  useCallback, useEffect, useLayoutEffect, useMemo, useState,
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import {
-  Alert, FlatList, Platform, Pressable, ScrollView, Text, TextInput, View,
+  Alert, FlatList, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -36,7 +36,6 @@ import {
 import {
   LicenseEmptyState,
   licenseRadius,
-  LicenseSectionHeader,
   licenseSpacing,
   paymentModeLabels,
 } from './licenseDesignSystem';
@@ -123,6 +122,32 @@ const detailTabOptions = [
   { label: 'Documents', value: 'documents' },
   { label: 'Relances', value: 'reminders' },
 ];
+const emptyMemberFilters = {
+  category: '',
+  documentStatus: '',
+  level: '',
+  role: '',
+  section: '',
+  teamId: '',
+};
+const memberQuickFilterLabels = {
+  expected: 'Attendu',
+  overdue: 'Retards',
+  paid: 'Encaisse',
+  remaining: 'Reste',
+};
+const normalizeMemberQuickFilter = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(memberQuickFilterLabels, normalized) ? normalized : '';
+};
+const matchesMemberQuickFilter = (item, quickFilter) => {
+  const normalizedFilter = normalizeMemberQuickFilter(quickFilter);
+  if (!normalizedFilter || normalizedFilter === 'expected') return true;
+  if (normalizedFilter === 'paid') return String(item?.status || '') === 'paid';
+  if (normalizedFilter === 'remaining') return Number(item?.amountRemainingCents || 0) > 0;
+  if (normalizedFilter === 'overdue') return String(item?.status || '') === 'overdue';
+  return true;
+};
 const reminderEligibleStatuses = ['manual_review', 'overdue', 'partial', 'pending'];
 const lifecycleForCampaign = (campaign) => {
   const status = campaign?.status;
@@ -305,18 +330,54 @@ function FilterTrigger({
  * @param root0.tone
  * @param root0.value
  */
-function StatCard({ label, tone, value }) {
+function StatCard({
+  active = false,
+  label,
+  onPress,
+  tone,
+  value,
+}) {
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
-  return (
+  const renderCard = ({ isActive = false }) => (
     <View style={[ApplicationStyle.card, {
-      backgroundColor: Colors.primary700, borderColor: `${tone || Colors.primary500}88`, borderRadius: licenseRadius.card, flex: 1, minHeight: 88, paddingHorizontal: licenseSpacing.cardPadding, paddingVertical: licenseSpacing.cardPadding,
+      backgroundColor: Colors.primary700,
+      borderColor: isActive ? (tone || Colors.primary500) : `${tone || Colors.primary500}88`,
+      borderRadius: licenseRadius.card,
+      borderWidth: isActive ? 2 : 1,
+      flex: 1,
+      minHeight: 88,
+      paddingHorizontal: licenseSpacing.cardPadding,
+      paddingVertical: licenseSpacing.cardPadding,
     }]}
     >
       <Text style={[Fonts.p3, Fonts.neutral200]}>{label}</Text>
       <Text numberOfLines={1} style={[Fonts.h3, Spaces.marginTop[8], { color: tone || Colors.primary500 }]}>{value}</Text>
     </View>
+  );
+
+  if (!onPress) {
+    return renderCard({ isActive: active });
+  }
+
+  return (
+    <TouchableOpacity
+      accessibilityHint={`Ouvre les membres pour le bloc ${label.toLowerCase()}.`}
+      accessibilityRole="button"
+      accessible
+      activeOpacity={0.92}
+      hitSlop={{
+        bottom: 6,
+        left: 6,
+        right: 6,
+        top: 6,
+      }}
+      onPress={onPress}
+      style={{ flex: 1 }}
+    >
+      {renderCard({ isActive: active })}
+    </TouchableOpacity>
   );
 }
 
@@ -458,6 +519,17 @@ function CampaignCard({
   const totals = item?.totals || {};
   const lifecycle = lifecycleForCampaign(item);
   const helloAssoReadiness = item?.paymentProviderSnapshot?.helloasso?.readiness;
+  const normalizedStatus = String(item?.status || '').toLowerCase();
+  const isInactiveCampaign = ['archived', 'closed', 'paused'].includes(normalizedStatus);
+  const statusColor = isInactiveCampaign ? Colors.neutral300 : Colors.primary500;
+  const secondaryTextColor = isInactiveCampaign ? Colors.neutral300 : Colors.neutral200;
+  let backgroundColor = Colors.primary800;
+  if (isInactiveCampaign) backgroundColor = Colors.primary900;
+  else if (isSelected) backgroundColor = Colors.primary700;
+
+  let borderColor = `${Colors.primary500}55`;
+  if (isSelected) borderColor = isInactiveCampaign ? `${Colors.neutral300}99` : Colors.primary500;
+  else if (isInactiveCampaign) borderColor = `${Colors.neutral400}55`;
   return (
     <Pressable
       accessibilityRole="button"
@@ -468,8 +540,8 @@ function CampaignCard({
       ]}
     >
       <View style={[ApplicationStyle.card, Spaces.gap[8], {
-        backgroundColor: isSelected ? Colors.primary700 : Colors.primary800,
-        borderColor: isSelected ? Colors.primary500 : `${Colors.primary500}55`,
+        backgroundColor,
+        borderColor,
         borderRadius: licenseRadius.card,
         borderWidth: isSelected ? 1.5 : 1,
         paddingHorizontal: licenseSpacing.cardPadding,
@@ -482,31 +554,38 @@ function CampaignCard({
         >
           <View style={{ flex: 1 }}>
             <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{item?.name || 'Campagne'}</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {item?.seasonLabel || '-'}
-              {' '}
-              -
-              {' '}
-              {campaignStatusLabel[item?.status] || item?.status}
-            </Text>
+            <Text style={[Fonts.p3, { color: secondaryTextColor }]}>{item?.seasonLabel || '-'}</Text>
           </View>
           <View style={{ alignItems: 'flex-end', gap: 4 }}>
             {isSelected ? <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Suivi actuel</Text> : null}
+            <View style={{
+              backgroundColor: isInactiveCampaign ? 'rgba(255,255,255,0.08)' : 'rgba(1,179,244,0.14)',
+              borderColor: isInactiveCampaign ? 'rgba(255,255,255,0.12)' : 'rgba(1,179,244,0.4)',
+              borderRadius: licenseRadius.pill,
+              borderWidth: 1,
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+            }}
+            >
+              <Text style={[Fonts.p4Bold, { color: statusColor }]}>
+                {campaignStatusLabel[item?.status] || item?.status}
+              </Text>
+            </View>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{money(totals.remainingCents || 0, item?.currency || 'EUR')}</Text>
           </View>
         </View>
-        <Text style={[Fonts.p3, Fonts.neutral200]}>
+        <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
           {totals.total || 0}
           {' membres - '}
           {money(totals.expectedCents || 0, item?.currency || 'EUR')}
           {' attendus'}
         </Text>
-        <Text style={[Fonts.p3, Fonts.neutral200]}>
+        <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
           {(item?.documentRequests || []).length}
           {' document(s) demande(s)'}
         </Text>
         {item?.paymentModes?.helloasso ? (
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
+          <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
             HelloAsso:
             {' '}
             {providerReadinessLabel[helloAssoReadiness] || helloAssoReadiness || 'A configurer'}
@@ -521,7 +600,7 @@ function CampaignCard({
             paddingVertical: 4,
           }, Platform.OS === 'web' ? { cursor: 'pointer' } : null]}
         >
-          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+          <Text style={[Fonts.p3Bold, { color: statusColor }]}>
             {isSelected ? 'Campagne ouverte' : 'Voir le detail de la campagne'}
           </Text>
         </Pressable>
@@ -637,23 +716,24 @@ function ClubLicenses({ navigation, route }) {
   const clubId = route?.params?.clubId;
   const routeCampaign = route?.params?.campaign;
   const routeCampaignId = route?.params?.campaignId;
+  const routeInitialDetailTab = route?.params?.initialDetailTab;
+  const routeInitialMemberQuickFilter = normalizeMemberQuickFilter(route?.params?.initialMemberQuickFilter);
+  const routeInitialStatusFilter = normalizeFilterValue(route?.params?.initialStatusFilter);
+  const routeAutoScrollToMembers = Boolean(route?.params?.autoScrollToMembers);
   const roleKey = getUserRoleKey(auth?.user?.role?.type || auth?.user?.role?.name);
   const showMemberLicense = !['coach', 'president', 'superAdmin'].includes(roleKey);
   const managerViewEnabled = Boolean(clubId) && !showMemberLicense;
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [detailTab, setDetailTab] = useState('overview');
+  const [statusFilter, setStatusFilter] = useState(routeCampaignId ? routeInitialStatusFilter : '');
+  const [memberQuickFilter, setMemberQuickFilter] = useState(routeCampaignId ? routeInitialMemberQuickFilter : '');
+  const [detailTab, setDetailTab] = useState(routeCampaignId ? (routeInitialDetailTab || 'members') : 'overview');
   const [setupFooterHeight, setSetupFooterHeight] = useState(0);
   const [pendingReminderAssignmentId, setPendingReminderAssignmentId] = useState(null);
   const [memberFilterMenuKey, setMemberFilterMenuKey] = useState(null);
-  const [memberFilters, setMemberFilters] = useState({
-    category: '',
-    documentStatus: '',
-    level: '',
-    role: '',
-    section: '',
-    teamId: '',
-  });
+  const [memberFilters, setMemberFilters] = useState({ ...emptyMemberFilters });
+  const [membersSectionOffset, setMembersSectionOffset] = useState(null);
+  const [shouldAutoScrollMembers, setShouldAutoScrollMembers] = useState(routeAutoScrollToMembers);
+  const dashboardListRef = useRef(null);
   const campaignQueryParams = useMemo(() => ({ clubId }), [clubId]);
   const campaignsQueryParams = useMemo(() => ({ clubId }), [clubId]);
   const campaignQuery = useCurrentLicenseCampaign(campaignQueryParams, { enabled: managerViewEnabled });
@@ -751,6 +831,7 @@ function ClubLicenses({ navigation, route }) {
   }), [assignments]);
   const assignmentsTotalCount = assignmentsQuery.data?.meta?.pagination?.total || assignments.length;
   const visibleAssignments = useMemo(() => assignments.filter((item) => {
+    if (!matchesMemberQuickFilter(item, memberQuickFilter)) return false;
     if (statusFilter && String(item?.status || '') !== statusFilter) return false;
     if (memberFilters.teamId && getAssignmentTeamId(item) !== memberFilters.teamId) return false;
     if (memberFilters.role && getAssignmentRoleKey(item) !== memberFilters.role) return false;
@@ -759,7 +840,7 @@ function ClubLicenses({ navigation, route }) {
     if (memberFilters.level && getAssignmentLevelValue(item) !== memberFilters.level) return false;
     if (memberFilters.documentStatus && normalizeFilterValue(item?.documentStatus || 'none') !== memberFilters.documentStatus) return false;
     return true;
-  }), [assignments, memberFilters, statusFilter]);
+  }), [assignments, memberFilters, memberQuickFilter, statusFilter]);
   const paymentReviewAssignments = useMemo(
     () => paymentReviewsQuery.data?.data || [],
     [paymentReviewsQuery.data?.data],
@@ -793,16 +874,6 @@ function ClubLicenses({ navigation, route }) {
     [assignments],
   );
   const targetSummary = useMemo(() => buildTargetSummary(campaign), [campaign]);
-  const syncScopeLabel = useMemo(() => {
-    if (campaign?.targetConfig?.includeAllMembers) return 'Tout le club';
-    if (!targetSummary.length) return 'Ciblage personnalise';
-    if (targetSummary.length === 1) return targetSummary[0];
-    return `${targetSummary[0]} +${targetSummary.length - 1}`;
-  }, [campaign?.targetConfig?.includeAllMembers, targetSummary]);
-  const lastSyncLabel = useMemo(() => {
-    const sourceDate = campaign?.updatedAt || campaign?.launchedAt || campaign?.createdAt;
-    return sourceDate ? formatDateLabel(sourceDate) : 'Non disponible';
-  }, [campaign?.createdAt, campaign?.launchedAt, campaign?.updatedAt]);
   const enabledPaymentModes = useMemo(() => Object.entries(campaign?.paymentModes || {})
     .filter(([mode, enabled]) => Boolean(enabled) && mode !== 'stripe')
     .map(([mode]) => paymentModeLabels[mode] || mode), [campaign?.paymentModes]);
@@ -832,6 +903,7 @@ function ClubLicenses({ navigation, route }) {
   }, [campaign?.allowInstallments, campaign?.installmentCount, campaign?.installmentFrequency, campaign?.installmentSchedule]);
   const campaignDescription = nonEmptyText(campaign?.description);
   const campaignInternalNote = nonEmptyText(campaign?.internalNote);
+  const isFocusedMembersView = isFocusedCampaignView && detailTab === 'members';
   const shouldShowCampaignSwitcher = !isFocusedCampaignView || detailTab === 'overview';
   const shouldShowCampaignManagementActions = !isFocusedCampaignView || detailTab === 'overview';
   const documentStatusSummary = useMemo(() => assignments.reduce((accumulator, item) => {
@@ -885,19 +957,21 @@ function ClubLicenses({ navigation, route }) {
     [memberFilters],
   );
   const activeMemberFilterPills = useMemo(
-    () => memberFilterDefinitions
-      .map((definition) => {
+    () => [
+      memberQuickFilter ? `Vue rapide: ${memberQuickFilterLabels[memberQuickFilter] || memberQuickFilter}` : null,
+      statusFilter ? `Statut: ${statusFilters.find((filter) => filter.value === statusFilter)?.label || statusFilter}` : null,
+      ...memberFilterDefinitions.map((definition) => {
         const selectedValue = memberFilters[definition.key];
         if (!selectedValue) return null;
         const selectedOption = definition.options.find((option) => option.value === selectedValue);
         return selectedOption ? `${definition.label}: ${selectedOption.label}` : null;
-      })
-      .filter(Boolean),
-    [memberFilterDefinitions, memberFilters],
+      }),
+    ].filter(Boolean),
+    [memberFilterDefinitions, memberFilters, memberQuickFilter, statusFilter],
   );
   const memberListSummary = useMemo(() => {
     if (assignmentsQuery.isLoading) return '';
-    if (activeMemberFilterCount || statusFilter) {
+    if (activeMemberFilterCount || statusFilter || memberQuickFilter) {
       return `${visibleAssignments.length} membre(s) affiche(s)${assignmentsTotalCount > assignments.length ? ` - apercu sur ${assignments.length}/${assignmentsTotalCount}` : ''}.`;
     }
     if (assignmentsTotalCount > assignments.length) {
@@ -909,24 +983,100 @@ function ClubLicenses({ navigation, route }) {
     assignments.length,
     assignmentsQuery.isLoading,
     assignmentsTotalCount,
+    memberQuickFilter,
     statusFilter,
     visibleAssignments.length,
   ]);
 
-  useEffect(() => {
-    setDetailTab('overview');
+  const resetAdvancedMemberFilters = useCallback(() => {
+    setMemberFilters({ ...emptyMemberFilters });
+  }, []);
+
+  const clearMemberFilters = useCallback(() => {
     setSearch('');
     setStatusFilter('');
+    setMemberQuickFilter('');
+    resetAdvancedMemberFilters();
+  }, [resetAdvancedMemberFilters]);
+
+  const applyMemberQuickFilterView = useCallback((quickFilterKey) => {
+    setDetailTab('members');
+    setSearch('');
+    setStatusFilter('');
+    setMemberQuickFilter(normalizeMemberQuickFilter(quickFilterKey));
     setMemberFilterMenuKey(null);
-    setMemberFilters({
-      category: '',
-      documentStatus: '',
-      level: '',
-      role: '',
-      section: '',
-      teamId: '',
+    setShouldAutoScrollMembers(true);
+    resetAdvancedMemberFilters();
+  }, [resetAdvancedMemberFilters]);
+
+  const handleOpenMemberStatView = useCallback((quickFilterKey) => {
+    if (isFocusedCampaignView) {
+      applyMemberQuickFilterView(quickFilterKey);
+      return;
+    }
+
+    const targetCampaign = defaultCampaign;
+    const targetCampaignId = targetCampaign?.documentId || targetCampaign?.id;
+    if (!targetCampaignId) {
+      Alert.alert('Aucune campagne disponible', 'Cree ou ouvre une campagne pour consulter les membres relies a ces indicateurs.');
+      return;
+    }
+
+    navigation.push(RouteNames.ClubLicenseCampaignDetail, {
+      autoScrollToMembers: true,
+      campaign: targetCampaign,
+      campaignId: targetCampaignId,
+      clubId,
+      initialDetailTab: 'members',
+      initialMemberQuickFilter: normalizeMemberQuickFilter(quickFilterKey),
     });
-  }, [campaignId]);
+  }, [applyMemberQuickFilterView, clubId, defaultCampaign, isFocusedCampaignView, navigation]);
+
+  useEffect(() => {
+    setDetailTab(campaignId ? (routeInitialDetailTab || 'members') : 'overview');
+    setSearch('');
+    setStatusFilter(campaignId ? routeInitialStatusFilter : '');
+    setMemberQuickFilter(campaignId ? routeInitialMemberQuickFilter : '');
+    setMemberFilterMenuKey(null);
+    setMemberFilters({ ...emptyMemberFilters });
+    setShouldAutoScrollMembers(campaignId ? routeAutoScrollToMembers : false);
+  }, [campaignId, routeAutoScrollToMembers, routeInitialDetailTab, routeInitialMemberQuickFilter, routeInitialStatusFilter]);
+
+  useEffect(() => {
+    if (!isFocusedCampaignView || detailTab !== 'members' || !shouldAutoScrollMembers) {
+      return undefined;
+    }
+    if (!dashboardListRef.current) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      if (visibleAssignments.length > 0) {
+        try {
+          dashboardListRef.current?.scrollToIndex?.({
+            animated: true,
+            index: 0,
+            viewOffset: 0,
+            viewPosition: 0,
+          });
+          setShouldAutoScrollMembers(false);
+          return;
+        } catch (_error) {
+          // Fallback below if the list has not measured the first item yet.
+        }
+      }
+
+      if (membersSectionOffset != null) {
+        dashboardListRef.current?.scrollToOffset?.({
+          animated: true,
+          offset: Math.max(membersSectionOffset - 12, 0),
+        });
+      }
+      setShouldAutoScrollMembers(false);
+    }, 80);
+
+    return () => clearTimeout(timeoutId);
+  }, [detailTab, isFocusedCampaignView, membersSectionOffset, shouldAutoScrollMembers, visibleAssignments.length]);
 
   useLayoutEffect(() => {
     if (currentRouteName !== RouteNames.ClubLicenseCampaignDetail) return;
@@ -943,6 +1093,8 @@ function ClubLicenses({ navigation, route }) {
 
     setSearch('');
     setStatusFilter('');
+    setMemberQuickFilter('');
+    resetAdvancedMemberFilters();
     const params = {
       campaign: selectedCampaign,
       campaignId: selectedCampaignId,
@@ -956,17 +1108,19 @@ function ClubLicenses({ navigation, route }) {
     }
 
     navigation.push(RouteNames.ClubLicenseCampaignDetail, params);
-  }, [campaignId, clubId, isFocusedCampaignView, navigation]);
+  }, [campaignId, clubId, isFocusedCampaignView, navigation, resetAdvancedMemberFilters]);
 
   const handleReturnToCampaignOverview = useCallback(() => {
     setSearch('');
     setStatusFilter('');
+    setMemberQuickFilter('');
+    resetAdvancedMemberFilters();
     if (currentRouteName === RouteNames.ClubLicenseCampaignDetail && navigation.canGoBack()) {
       navigation.goBack();
       return;
     }
     navigation.replace(RouteNames.ClubLicenses, { clubId });
-  }, [clubId, currentRouteName, navigation]);
+  }, [clubId, currentRouteName, navigation, resetAdvancedMemberFilters]);
 
   const handleSetupContinue = useCallback(() => {
     navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { clubId });
@@ -991,17 +1145,6 @@ function ClubLicenses({ navigation, route }) {
       ...current,
       [key]: normalizeFilterValue(value),
     }));
-  }, []);
-
-  const clearMemberFilters = useCallback(() => {
-    setMemberFilters({
-      category: '',
-      documentStatus: '',
-      level: '',
-      role: '',
-      section: '',
-      teamId: '',
-    });
   }, []);
 
   const handleSingleReminder = useCallback((item) => {
@@ -1145,52 +1288,86 @@ function ClubLicenses({ navigation, route }) {
   const renderDashboardHeader = () => (
     <View style={Spaces.gap[licenseSpacing.sectionGap]}>
       <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-        <StatCard label="Attendu" tone={Colors.primary500} value={money(totals.expectedCents, campaign?.currency || 'EUR')} />
-        <StatCard label="Encaisse" tone={Colors.success500} value={money(totals.paidCents, campaign?.currency || 'EUR')} />
+        <StatCard
+          active={memberQuickFilter === 'expected'}
+          label="Attendu"
+          onPress={() => handleOpenMemberStatView('expected')}
+          tone={Colors.primary500}
+          value={money(totals.expectedCents, campaign?.currency || 'EUR')}
+        />
+        <StatCard
+          active={memberQuickFilter === 'paid'}
+          label="Encaisse"
+          onPress={() => handleOpenMemberStatView('paid')}
+          tone={Colors.success500}
+          value={money(totals.paidCents, campaign?.currency || 'EUR')}
+        />
       </View>
       <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-        <StatCard label="Reste" tone={Colors.warning500} value={money(totals.remainingCents, campaign?.currency || 'EUR')} />
-        <StatCard label="Retards" tone={Colors.error500} value={String(totals.overdueCount || 0)} />
+        <StatCard
+          active={memberQuickFilter === 'remaining'}
+          label="Reste"
+          onPress={() => handleOpenMemberStatView('remaining')}
+          tone={Colors.warning500}
+          value={money(totals.remainingCents, campaign?.currency || 'EUR')}
+        />
+        <StatCard
+          active={memberQuickFilter === 'overdue'}
+          label="Retards"
+          onPress={() => handleOpenMemberStatView('overdue')}
+          tone={Colors.error500}
+          value={String(totals.overdueCount || 0)}
+        />
       </View>
-      {isFocusedCampaignView ? (
-        <View style={[Spaces.gap[12], {
-          backgroundColor: Colors.primary800,
-          borderColor: `${Colors.primary500}55`,
-          borderRadius: licenseRadius.card,
-          borderWidth: 1,
-          paddingHorizontal: licenseSpacing.cardPadding,
-          paddingVertical: licenseSpacing.cardPadding,
-        }]}
-        >
-          <View style={Spaces.gap[4]}>
-            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Suivi de campagne</Text>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{campaign?.name || 'Campagne'}</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {campaign?.seasonLabel || '-'}
-              {' '}
-              -
-              {' '}
-              {campaignStatusLabel[campaign?.status] || campaign?.status}
-            </Text>
+      {(() => {
+        if (!isFocusedCampaignView) {
+          return (
+            <View style={[Spaces.gap[8], {
+              backgroundColor: Colors.primary800,
+              borderColor: `${Colors.primary500}44`,
+              borderRadius: licenseRadius.card,
+              borderWidth: 1,
+              paddingHorizontal: licenseSpacing.cardPadding,
+              paddingVertical: licenseSpacing.cardPadding,
+            }]}
+            >
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Vue d ensemble des campagnes</Text>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>
+                Ouvre une campagne pour suivre ses membres, ses relances et ses paiements en detail.
+              </Text>
+            </View>
+          );
+        }
+
+        if (isFocusedMembersView) {
+          return null;
+        }
+
+        return (
+          <View style={[Spaces.gap[12], {
+            backgroundColor: Colors.primary800,
+            borderColor: `${Colors.primary500}55`,
+            borderRadius: licenseRadius.card,
+            borderWidth: 1,
+            paddingHorizontal: licenseSpacing.cardPadding,
+            paddingVertical: licenseSpacing.cardPadding,
+          }]}
+          >
+            <View style={Spaces.gap[4]}>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Suivi de campagne</Text>
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{campaign?.name || 'Campagne'}</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {campaign?.seasonLabel || '-'}
+                {' '}
+                -
+                {' '}
+                {campaignStatusLabel[campaign?.status] || campaign?.status}
+              </Text>
+            </View>
+            <Button onPress={handleReturnToCampaignOverview} title="Voir toutes les campagnes" variant="Secondary" />
           </View>
-          <Button onPress={handleReturnToCampaignOverview} title="Voir toutes les campagnes" variant="Secondary" />
-        </View>
-      ) : (
-        <View style={[Spaces.gap[8], {
-          backgroundColor: Colors.primary800,
-          borderColor: `${Colors.primary500}44`,
-          borderRadius: licenseRadius.card,
-          borderWidth: 1,
-          paddingHorizontal: licenseSpacing.cardPadding,
-          paddingVertical: licenseSpacing.cardPadding,
-        }]}
-        >
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Vue d ensemble des campagnes</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Ouvre une campagne pour suivre ses membres, ses relances et ses paiements en detail.
-          </Text>
-        </View>
-      )}
+        );
+      })()}
       {isFocusedCampaignView ? (
         <View style={{ marginTop: -4 }}>
           <SegmentedControl
@@ -1321,36 +1498,39 @@ function ClubLicenses({ navigation, route }) {
           ) : null}
 
           {detailTab === 'members' ? (
-            <View style={Spaces.gap[licenseSpacing.fieldGap]}>
-              <View style={[Spaces.gap[licenseSpacing.actionGap], { flexDirection: 'row' }]}>
-                <Button
-                  onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { campaignId, clubId })}
-                  style={{ flex: 1 }}
-                  textStyle={{ textAlign: 'center' }}
-                  title="Parametres"
-                  variant="Secondary"
-                />
-                {lifecycleForCampaign(campaign) ? (
-                  <Button
-                    onPress={() => handleLifecycleCampaign(campaign)}
-                    style={{ flex: 1 }}
-                    textStyle={{ textAlign: 'center' }}
-                    title={lifecycleForCampaign(campaign)?.label}
-                    variant="Secondary"
-                  />
-                ) : null}
-              </View>
-
-              <LicenseSectionHeader
-                description="Recherche, filtre et pilote directement les cotisations synchronisees avec cette campagne."
-                title="Membres"
-              />
-
+            <View
+              onLayout={(event) => {
+                const nextOffset = Math.round(event?.nativeEvent?.layout?.y || 0);
+                setMembersSectionOffset((currentOffset) => (
+                  currentOffset === nextOffset ? currentOffset : nextOffset
+                ));
+              }}
+              style={Spaces.gap[12]}
+            >
               <View style={Spaces.gap[licenseSpacing.actionGap]}>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  <DetailPill label={`Cible: ${syncScopeLabel}`} />
-                  <DetailPill label={`Cotisations actives: ${assignmentsTotalCount}`} />
-                  <DetailPill label={`Derniere sync: ${lastSyncLabel}`} />
+                <View style={{
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  gap: 12,
+                  justifyContent: 'space-between',
+                }}
+                >
+                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Membres</Text>
+                  {activeMemberFilterPills.length ? (
+                    <Pressable
+                      onPress={clearMemberFilters}
+                      style={{
+                        backgroundColor: Colors.primary800,
+                        borderColor: `${Colors.primary500}44`,
+                        borderRadius: licenseRadius.pill,
+                        borderWidth: 1,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                      }}
+                    >
+                      <Text style={[Fonts.p3Bold, Fonts.primary500]}>Reinitialiser</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
                 <TextInput
                   onChangeText={setSearch}
@@ -1376,7 +1556,10 @@ function ClubLicenses({ navigation, route }) {
                     return (
                       <Pressable
                         key={filter.value || 'all'}
-                        onPress={() => setStatusFilter(filter.value)}
+                        onPress={() => {
+                          setMemberQuickFilter('');
+                          setStatusFilter(filter.value);
+                        }}
                         style={{
                           backgroundColor: selected ? Colors.primary500 : Colors.primary800,
                           borderColor: selected ? Colors.primary500 : `${Colors.primary500}55`,
@@ -1391,30 +1574,19 @@ function ClubLicenses({ navigation, route }) {
                     );
                   })}
                 </ScrollView>
-                {visibleMemberFilterDefinitions.length && activeMemberFilterPills.length ? (
+                {activeMemberFilterPills.length ? (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {activeMemberFilterPills.map((pill) => (
                       <DetailPill key={pill} label={pill} />
                     ))}
-                    <Pressable
-                      onPress={clearMemberFilters}
-                      style={{
-                        backgroundColor: Colors.primary800,
-                        borderColor: `${Colors.primary500}44`,
-                        borderRadius: licenseRadius.pill,
-                        borderWidth: 1,
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                      }}
-                    >
-                      <Text style={[Fonts.p3Bold, Fonts.primary500]}>Reinitialiser</Text>
-                    </Pressable>
                   </View>
                 ) : null}
                 {assignmentsQuery.isLoading ? (
                   <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des membres...</Text>
                 ) : null}
-                {!assignmentsQuery.isLoading && memberListSummary ? <Text style={[Fonts.p3, Fonts.neutral200]}>{memberListSummary}</Text> : null}
+                {!assignmentsQuery.isLoading && memberListSummary && (search.trim() || activeMemberFilterPills.length) ? (
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>{memberListSummary}</Text>
+                ) : null}
               </View>
             </View>
           ) : null}
@@ -1833,6 +2005,7 @@ function ClubLicenses({ navigation, route }) {
               {renderDashboardHeader()}
             </View>
           )}
+          ref={dashboardListRef}
           renderItem={renderAssignmentItem}
           showsVerticalScrollIndicator={false}
         />

@@ -5,6 +5,7 @@ const path = require('node:path');
 const DEFAULT_PACKAGE_NAME = 'com.foundclub.staging';
 const DEFAULT_DEV_HOST = '10.0.2.2:8081';
 const DEFAULT_PORT = '8081';
+const DEFAULT_API_PORT = '1337';
 
 const packageName = process.argv[2] || DEFAULT_PACKAGE_NAME;
 const devHost = process.argv[3] || DEFAULT_DEV_HOST;
@@ -64,11 +65,14 @@ if (emulatorDevices.length === 0) {
 
 const prefsPath = `/data/user/0/${packageName}/shared_prefs/${packageName}_preferences.xml`;
 const reverseArgs = [`tcp:${port}`, `tcp:${port}`];
+const apiReverseArgs = [`tcp:${DEFAULT_API_PORT}`, `tcp:${DEFAULT_API_PORT}`];
 const sedPattern = `s#127.0.0.1:${port}#${devHost}#g`;
 
 emulatorDevices.forEach((deviceId) => {
   console.log(`[metro-repair] ${deviceId}: adb reverse ${reverseArgs.join(' ')}`);
   runAdb(['-s', deviceId, 'reverse', ...reverseArgs], { stdio: 'inherit' });
+  console.log(`[metro-repair] ${deviceId}: adb reverse ${apiReverseArgs.join(' ')}`);
+  runAdb(['-s', deviceId, 'reverse', ...apiReverseArgs], { stdio: 'inherit' });
 
   const currentPrefs = runAdb(
     ['-s', deviceId, 'shell', 'run-as', packageName, 'cat', prefsPath],

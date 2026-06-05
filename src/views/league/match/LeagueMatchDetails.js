@@ -77,6 +77,10 @@ import {
   getMatchDurationMinutes,
   getRequiredPlayersForSport,
 } from '@/utils/leagueSportConfig';
+import {
+  dismissMatchStatsPromptForSession,
+  isMatchStatsPromptDismissedForSession,
+} from '@/utils/matchStatsPromptSession';
 
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -142,7 +146,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const [loadError, setLoadError] = useState('');
   const [match, setMatch] = useState(/** @type {LeagueMatch | null} */ (null));
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
-  const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
+  const [dismissedMatchStatsPromptKey, setDismissedMatchStatsPromptKey] = useState(null);
   const [isNegotiationModalVisible, setIsNegotiationModalVisible] = useState(false);
   const [isNegotiationResponseSheetVisible, setIsNegotiationResponseSheetVisible] = useState(false);
   const [isPostSlotResolutionVisible, setIsPostSlotResolutionVisible] = useState(false);
@@ -285,6 +289,30 @@ function LeagueMatchDetails({ navigation, route }) {
   const isLeagueStatsCompleted = isLeagueStatsFinal && !isLeagueStatsReviewRequired;
   const canViewLeagueStats = Boolean(leagueMatchStatsPayload?.permissions?.canView || teamSide);
   const canManageLeagueStats = Boolean(leagueMatchStatsPayload?.permissions?.canManage);
+  const matchStatsPromptSessionKey = useMemo(() => (
+    [
+      'league',
+      matchId,
+      String(leagueStatsReport?.documentId || leagueStatsReport?.id || 'report'),
+      `version:${Number(leagueStatsReport?.version || 0)}`,
+      `review:${isLeagueStatsReviewRequired ? 'yes' : 'no'}`,
+      `status:${normalizedStatus || 'unknown'}`,
+    ].join(':')
+  ), [
+    isLeagueStatsReviewRequired,
+    leagueStatsReport?.documentId,
+    leagueStatsReport?.id,
+    leagueStatsReport?.version,
+    matchId,
+    normalizedStatus,
+  ]);
+  const dismissMatchStatsPrompt = useCallback(() => {
+    if (matchStatsPromptSessionKey) {
+      dismissMatchStatsPromptForSession(matchStatsPromptSessionKey);
+      setDismissedMatchStatsPromptKey(matchStatsPromptSessionKey);
+    }
+    setIsMatchStatsPromptVisible(false);
+  }, [matchStatsPromptSessionKey]);
   const canRespondMyLeagueStats = Boolean(leagueMyMatchResponsePayload?.permissions?.canRespond || teamSide);
   const canSubmitScore = useMemo(
     () => Boolean(teamSide && scoreFlow.canSubmit),
@@ -1310,10 +1338,6 @@ function LeagueMatchDetails({ navigation, route }) {
 
     navigateToEndMatchScreen(navigation, matchId);
   }, [isScoreLockedByTime, matchId, navigation]);
-  const handleCloseMatchStatsPrompt = useCallback(() => {
-    setHasDismissedMatchStatsPrompt(true);
-    setIsMatchStatsPromptVisible(false);
-  }, []);
 
   const handleConfirmParticipation = async () => {
     if (!teamSide) return;
@@ -1738,14 +1762,9 @@ function LeagueMatchDetails({ navigation, route }) {
     });
   }, [myTeamId, navigation]);
 
-  useFocusEffect(
-    useCallback(() => {
-      setHasDismissedMatchStatsPrompt(false);
-      return () => {
-        setIsMatchStatsPromptVisible(false);
-      };
-    }, []),
-  );
+  useFocusEffect(useCallback(() => () => {
+    setIsMatchStatsPromptVisible(false);
+  }, []));
 
   useEffect(() => {
     if (!canManageLeagueStats || normalizedStatus !== 'valid' || isLeagueStatsCompleted) {
@@ -1753,15 +1772,21 @@ function LeagueMatchDetails({ navigation, route }) {
       return;
     }
 
-    if (leagueMatchStatsPayload && !isLeagueMatchStatsFetching && !hasDismissedMatchStatsPrompt) {
+    if (
+      leagueMatchStatsPayload
+      && !isLeagueMatchStatsFetching
+      && dismissedMatchStatsPromptKey !== matchStatsPromptSessionKey
+      && !isMatchStatsPromptDismissedForSession(matchStatsPromptSessionKey)
+    ) {
       setIsMatchStatsPromptVisible(true);
     }
   }, [
     canManageLeagueStats,
-    hasDismissedMatchStatsPrompt,
+    dismissedMatchStatsPromptKey,
     isLeagueMatchStatsFetching,
     isLeagueStatsCompleted,
     leagueMatchStatsPayload,
+    matchStatsPromptSessionKey,
     normalizedStatus,
   ]);
   useEffect(() => {
@@ -2859,7 +2884,7 @@ function LeagueMatchDetails({ navigation, route }) {
         ) : null}
 
         <BottomModal
-          close={handleCloseMatchStatsPrompt}
+          close={dismissMatchStatsPrompt}
           isVisible={isMatchStatsPromptVisible}
           snapPoints={['40%']}
         >
@@ -2887,18 +2912,14 @@ function LeagueMatchDetails({ navigation, route }) {
 
             <Button
               onPress={() => {
-                setHasDismissedMatchStatsPrompt(true);
-                setIsMatchStatsPromptVisible(false);
+                dismissMatchStatsPrompt();
                 handleOpenMatchStats();
               }}
               title={leagueStatsAction.title}
               variant="Primary"
             />
             <Button
-              onPress={() => {
-                setHasDismissedMatchStatsPrompt(true);
-                setIsMatchStatsPromptVisible(false);
-              }}
+              onPress={dismissMatchStatsPrompt}
               title="Plus tard"
               variant="Secondary"
             />

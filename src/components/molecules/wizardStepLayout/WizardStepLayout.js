@@ -1,4 +1,8 @@
-import { useEffect } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
@@ -16,6 +20,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  *
  * @param root0
  * @param root0.children
+ * @param root0.collapsibleHeader
  * @param root0.isNextDisabled
  * @param root0.isNextLoading
  * @param root0.nextLabel
@@ -31,6 +36,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  */
 function WizardStepLayout({
   children,
+  collapsibleHeader = false,
   isNextDisabled = false,
   isNextLoading = false,
   nextLabel,
@@ -53,9 +59,19 @@ function WizardStepLayout({
   } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   const hasProgress = Number.isFinite(stepIndex) && Number.isFinite(stepCount) && stepCount > 0;
   const normalizedProgress = hasProgress ? Math.max(0, Math.min(1, stepIndex / stepCount)) : 0;
+  const handleScroll = useCallback((event) => {
+    if (!collapsibleHeader) return;
+
+    const offsetY = Number(event?.nativeEvent?.contentOffset?.y || 0);
+    setIsHeaderCollapsed((currentValue) => {
+      const nextValue = offsetY > 24;
+      return currentValue === nextValue ? currentValue : nextValue;
+    });
+  }, [collapsibleHeader]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || !onNext || isNextDisabled || isNextLoading) {
@@ -129,7 +145,7 @@ function WizardStepLayout({
         style={[Alignments.fill]}
       >
         <View style={[Alignments.fill]}>
-          <View style={[Spaces.marginTop[24], Spaces.marginBottom[32], { position: 'relative' }]}>
+          <View style={[Spaces.marginTop[24], isHeaderCollapsed ? Spaces.marginBottom[16] : Spaces.marginBottom[32], { position: 'relative' }]}>
             {onClose ? (
               <TouchableOpacity
                 accessibilityLabel={t('common.close', 'Fermer')}
@@ -155,7 +171,7 @@ function WizardStepLayout({
               </TouchableOpacity>
             ) : null}
             {hasProgress ? (
-              <View style={[Spaces.marginBottom[24], { paddingRight: onClose ? 40 : 0 }]}>
+              <View style={[isHeaderCollapsed ? Spaces.marginBottom[12] : Spaces.marginBottom[24], { paddingRight: onClose ? 40 : 0 }]}>
                 <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginBottom[12]]}>
                   {t('eventWizard.common.stepCounter', {
                     current: stepIndex,
@@ -170,7 +186,7 @@ function WizardStepLayout({
                       backgroundColor: 'rgba(1, 179, 244, 0.08)',
                       borderColor: 'rgba(1, 179, 244, 0.22)',
                       borderRadius: 999,
-                      height: 8,
+                      height: isHeaderCollapsed ? 4 : 8,
                       overflow: 'hidden',
                     },
                   ]}
@@ -187,10 +203,17 @@ function WizardStepLayout({
               </View>
             ) : null}
 
-            <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[20]]}>
+            <Text
+              numberOfLines={isHeaderCollapsed ? 1 : undefined}
+              style={[
+                isHeaderCollapsed ? Fonts.h2 : Fonts.h1,
+                Fonts.neutral00,
+                isHeaderCollapsed ? Spaces.marginBottom[8] : Spaces.marginBottom[20],
+              ]}
+            >
               {title}
             </Text>
-            {subtitle ? (
+            {subtitle && !isHeaderCollapsed ? (
               <Text style={[Fonts.p1, Fonts.neutral100, { lineHeight: 30, maxWidth: 720 }]}>
                 {subtitle}
               </Text>
@@ -202,6 +225,8 @@ function WizardStepLayout({
             contentContainerStyle={[Spaces.paddingBottom[48]]}
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             keyboardShouldPersistTaps="handled"
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
             showsVerticalScrollIndicator={false}
           >
             {children}

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
   useEffect,
@@ -54,6 +54,7 @@ const normalizeSearchText = (value = '') => value
 function CreateSectionScreen({ navigation, route }) {
   const { cmId } = route?.params ?? {};
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const {
     Alignments,
     ApplicationStyle,
@@ -145,6 +146,10 @@ function CreateSectionScreen({ navigation, route }) {
       );
     },
     onSuccess: async (result) => {
+      await Promise.allSettled([
+        queryClient.invalidateQueries({ queryKey: ['multisport-club', resolvedCmId] }),
+        queryClient.invalidateQueries({ queryKey: ['get-me'] }),
+      ]);
       await Promise.allSettled([
         refetchCm(),
         refetchUserData(),
