@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { joiResolver } from '@hookform/resolvers/joi';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import Joi from 'joi';
 import { useEffect, useMemo, useState } from 'react';
@@ -28,12 +28,14 @@ import Input from '@/components/molecules/input/Input';
 import FacilitySelector from '@/components/organisms/facilitySelector/FacilitySelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { useGetMe } from '@/services/auth/authQueries';
 import {
   useGetEvent,
   useGetEventTypes,
 } from '@/services/event/eventQueries';
-import { createEvent, getEvents, updateEvent } from '@/services/event/eventService';
+import { createEvent, updateEvent } from '@/services/event/eventService';
 import { getTeams } from '@/services/team/teamService';
 
 import { getFieldError } from '@/utils/form/formUtils';
@@ -209,10 +211,12 @@ function EventEdit({ navigation, route }) {
   const { data: event } = useGetEvent(eventId);
   const { data: eventTypes } = useGetEventTypes();
   const {
+    createEventUpdatePayload,
     createReccurrentEventPayload,
     formatDateInput,
     formatTimeInput,
     getDateFromDateInput,
+    getEventEditSupport,
     getReccurrenceDayOptions,
     recurrenceFrequencyOptions,
     sessionStatusOptions,
@@ -235,8 +239,7 @@ function EventEdit({ navigation, route }) {
       value: 'ANONYMIZED',
     },
   ];
-
-  const [hasConflict, setHasConflict] = useState(false);
+  const [selectedOccupancy, setSelectedOccupancy] = useState(null);
 
   const createEventMutation = useMutation({
     mutationFn: createEvent,
@@ -316,6 +319,14 @@ function EventEdit({ navigation, route }) {
   const occupancyWindow = useMemo(
     () => buildOccupancyWindow(selectedDate, selectedStartTime, selectedEndTime, getDateFromDateInput),
     [getDateFromDateInput, selectedDate, selectedEndTime, selectedStartTime],
+  );
+  const selectedTypeData = useMemo(
+    () => eventTypes?.find((eventType) => eventType.documentId === selectedType) || event?.type || null,
+    [event?.type, eventTypes, selectedType],
+  );
+  const editSupport = useMemo(
+    () => getEventEditSupport(event, selectedTypeData?.name),
+    [event, getEventEditSupport, selectedTypeData?.name],
   );
 
   useEffect(() => {
@@ -406,84 +417,22 @@ function EventEdit({ navigation, route }) {
     return finalOptions;
   }, [teamOptions, selectedTeamId, clubTeams, trainedTeams, t]);
 
-  // Conflict Detection
-  const { data: facilityEvents } = useQuery({
-    enabled: !!selectedFacilityId && !!selectedDate && selectedDate.length === 10,
-    queryFn: async () => {
-      if (!selectedFacilityId || !selectedDate) return [];
-      const parts = selectedDate.split('/');
-      if (parts.length !== 3) return [];
-      const dateObj = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-
-      const startOfDay = new Date(dateObj);
-      startOfDay.setHours(0, 0, 0, 0);
-
-      const endOfDay = new Date(dateObj);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      const res = await getEvents({
-        facility: selectedFacilityId,
-        startDateAfter: startOfDay,
-        startDateBefore: endOfDay,
-      });
-      return res.data;
-    },
-    queryKey: ['facilityEvents', selectedFacilityId, selectedDate],
-  });
-
-  useEffect(() => {
-    if (facilityEvents && selectedStartTime && selectedEndTime) {
-      const parseTime = (/** @type {string} */ timeValue) => {
-        const [h, m] = timeValue.split(':').map(Number);
-        return h * 60 + m;
-      };
-
-      const start = parseTime(selectedStartTime);
-      const end = parseTime(selectedEndTime);
-
-      // Filter events that overlap
-      const overlappingEvents = facilityEvents.filter((/** @type {import('@/domains/event/types').FCEvent} */ e) => {
-        if (e.documentId === eventId) return false; // Ignore self
-        if (!e.startTime || !e.endTime) return false;
-        const eStart = parseTime(e.startTime.substring(0, 5));
-        const eEnd = parseTime(e.endTime.substring(0, 5));
-        return (start < eEnd && end > eStart);
-      });
-
-      // Check maxSlots
-      // We need to know the maxSlots of the selected facility.
-      // Since we don't have easy access to the facility object here without fetching,
-      // and I don't want to break imports, I will try to find the facility in the overlapping events
-      // or default to 1.
-      // BUT, the user explicitly complained about maxSlots not being respected.
-      // So I MUST get the correct maxSlots.
-
-      // Let's assume for now that if there is ANY overlap, we check if the count >= maxSlots.
-      // But where is maxSlots?
-      // I will assume it's 1 for now to be safe, BUT I will add a TODO to fetch it properly.
-      // Wait, I can see `useGetEvent` fetches the event with facility.
-      // But if we are creating a new event, we selected a facility.
-
-      // Let's try to get maxSlots from the first overlapping event's facility object if available
-      const facilityMaxSlots = overlappingEvents.length > 0 ? (overlappingEvents[0].facility?.maxSlots || 1) : 1;
-
-      // If we have overlaps, we check if we reached the limit
-      const conflict = overlappingEvents.length >= facilityMaxSlots;
-
-      setHasConflict(conflict);
-      if (conflict) {
-        setValue('validationMode', 'manual'); // Force manual validation if conflict
-      }
-    } else {
-      setHasConflict(false);
-    }
-  }, [facilityEvents, selectedStartTime, selectedEndTime, eventId, setValue, watch]);
+  const requiresFacilityApproval = Boolean(
+    selectedFacilityId
+    && selectedOccupancy?.saturated
+    && selectedOccupancy?.requiresApproval,
+  );
+  const allowsImmediateFacilityConflict = Boolean(
+    selectedFacilityId
+    && selectedOccupancy?.saturated
+    && selectedOccupancy?.allowsImmediateConfirmation,
+  );
 
   // Déterminer si le type sélectionné est "Réservation"
-  const isReservationType = useMemo(() => {
-    const selectedTypeData = eventTypes?.find((eventType) => eventType.documentId === selectedType);
-    return selectedTypeData?.name === 'Réservation';
-  }, [selectedType, eventTypes]);
+  const isReservationType = useMemo(
+    () => selectedTypeData?.name === 'Réservation',
+    [selectedTypeData?.name],
+  );
 
   // Reset form when event data is loaded
   useEffect(() => {
@@ -537,14 +486,18 @@ function EventEdit({ navigation, route }) {
    */
   const handleFormSubmit = async (data) => {
     try {
+      if (eventId && !editSupport?.isSupported) {
+        Alert.alert(
+          t('eventEdit.modals.unsupportedEdit.title', 'Modification limitee'),
+          editSupport?.reason || "Cette fiche ne permet pas encore d'editer ce type d'evenement.",
+        );
+        return;
+      }
+
       console.log('Form submitted with data:', data);
-      const formattedEvents = createReccurrentEventPayload(data);
-      const normalizedEvents = hasConflict
-        ? formattedEvents.map((formattedEvent) => ({
-          ...formattedEvent,
-          validationMode: 'manual',
-        }))
-        : formattedEvents;
+      const normalizedEvents = eventId
+        ? [createEventUpdatePayload(data)]
+        : createReccurrentEventPayload(data);
       console.log('Formatted events:', normalizedEvents);
 
       if (eventId) {
@@ -555,15 +508,17 @@ function EventEdit({ navigation, route }) {
             eventData: normalizedEvents[0],
             recurrenceMode,
           });
-          if (navigation.canGoBack()) {
-            navigation.goBack();
-          }
+          navigation.replace(RouteNames.EventDetails, { eventId });
         };
 
         if (event?.recurrenceGroupId) {
+          const originalDate = event?.date ? format(new Date(event.date), 'dd/MM/yyyy') : '';
+          const recurrenceScopeHint = originalDate && data?.date && data.date !== originalDate
+            ? "\n\nSi vous choisissez les futurs ou toute la serie, la nouvelle date reste specifique a cet evenement. Les autres occurrences recuperent surtout les parametres communs comme l'horaire, le lieu et les invitations."
+            : '';
           Alert.alert(
             t('eventEdit.modals.recurrenceUpdate.title', 'Modification récurrente'),
-            t('eventEdit.modals.recurrenceUpdate.description', 'Cet événement fait partie d\'une série. Que voulez-vous modifier ?'),
+            `${t('eventEdit.modals.recurrenceUpdate.description', 'Cet événement fait partie d\'une série. Que voulez-vous modifier ?')}${recurrenceScopeHint}`,
             [
               {
                 style: 'cancel',
@@ -727,12 +682,52 @@ function EventEdit({ navigation, route }) {
                     onChange(newLocation);
                     setValue('facility', newFacilityId || '');
                   }}
+                  onOccupancyResolved={setSelectedOccupancy}
                 />
               )}
             />
 
+            {eventId && !editSupport?.isSupported ? (
+              <View style={[
+                Spaces.padding[16],
+                ApplicationStyle.backgroundColor.warning100,
+                { borderColor: Colors.warning500, borderRadius: 8, borderWidth: 1 },
+              ]}
+              >
+                <Text style={[Fonts.p2, Fonts.warning900]}>
+                  {editSupport?.reason || "Cette fiche ne permet pas encore d'editer ce type d'evenement."}
+                </Text>
+              </View>
+            ) : null}
+
+            {requiresFacilityApproval ? (
+              <View style={[
+                Spaces.padding[16],
+                ApplicationStyle.backgroundColor.warning100,
+                { borderColor: Colors.warning500, borderRadius: 8, borderWidth: 1 },
+              ]}
+              >
+                <Text style={[Fonts.p2, Fonts.warning900]}>
+                  Ce creneau depasse la capacite de l installation. L evenement restera en demande en attente jusqu au traitement d un dirigeant.
+                </Text>
+              </View>
+            ) : null}
+
+            {allowsImmediateFacilityConflict ? (
+              <View style={[
+                Spaces.padding[16],
+                ApplicationStyle.backgroundColor.primary700,
+                { borderColor: Colors.primary500, borderRadius: 8, borderWidth: 1 },
+              ]}
+              >
+                <Text style={[Fonts.p2, Fonts.primary200]}>
+                  Ce creneau depasse la capacite de l installation, mais ce club est configure en Autorise et notifier. L evenement restera confirme et les dirigeants seront prevenus.
+                </Text>
+              </View>
+            ) : null}
+
             {/* Conflict Warning */}
-            {hasConflict && (
+            {false && eventId && !editSupport?.isSupported && (
               <View style={[
                 Spaces.padding[16],
                 ApplicationStyle.backgroundColor.warning100,
@@ -818,7 +813,6 @@ function EventEdit({ navigation, route }) {
                 },
               }) => (
                 <AutocompleteSelect
-                  disabled={hasConflict} // Disable if conflict exists (forced to manual)
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   label={t('eventEdit.fields.validationMode.label')}
                   onBlur={onBlur}
@@ -1245,6 +1239,7 @@ function EventEdit({ navigation, route }) {
         </ScrollView>
         <View style={[Spaces.gap[8]]}>
           <Button
+            disabled={Boolean(eventId && !editSupport?.isSupported)}
             isLoading={
               createEventMutation.isPending
               || updateEventMutation.isPending

@@ -47,15 +47,19 @@ export const normalizeEventTypeLabel = (value = '') => String(value || '')
 
 export const isStageEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('stage');
 export const isTournamentEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('tournoi');
+export const isDetectionEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('detection');
 
 /**
- * Format a date string to send
- * @param {string | undefined} dateString - The date string to format
- * @param {string | undefined} timeString - The time string to format
- * @returns {string | undefined} The formatted date string or null if invalid
+ * @param {number | string} value
+ * @param {number} [size]
+ * @returns {string}
  */
 const padTimePart = (value, size = 2) => String(value).padStart(size, '0');
 
+/**
+ * @param {Date | string | undefined | null} value
+ * @returns {{ hours: number, milliseconds: number, minutes: number, seconds: number } | undefined}
+ */
 const getTimeParts = (value) => {
   if (!value) return undefined;
 
@@ -105,6 +109,12 @@ const getTimeParts = (value) => {
   };
 };
 
+/**
+ * Format a date string to send
+ * @param {string | Date | undefined} dateString - The date string to format
+ * @param {string | Date | undefined} timeString - The time string to format
+ * @returns {string | undefined} The formatted date string or null if invalid
+ */
 export const formatDateTimeToSend = (dateString, timeString) => {
   if (!dateString || !timeString) return undefined;
 
@@ -265,6 +275,10 @@ const formatTimeForStrapi = (timeString) => {
   return `${padTimePart(hours)}:${padTimePart(minutes)}:${padTimePart(seconds)}.${padTimePart(milliseconds, 3)}`;
 };
 
+/**
+ * @param {any} location
+ * @returns {{ location: { lat: number, lng: number } | undefined, locationDetails: string | null }}
+ */
 const buildLocationPayload = (location) => {
   const parsedLat = Number.isFinite(location?.lat)
     ? Number(location.lat)
@@ -285,6 +299,10 @@ const buildLocationPayload = (location) => {
   };
 };
 
+/**
+ * @param {string | Date | undefined | null} value
+ * @returns {string}
+ */
 const formatStageDate = (value) => {
   if (!value) return '';
   return format(new Date(value), 'yyyy-MM-dd');
@@ -302,13 +320,13 @@ const EVENT_FEATURED_MUTATION_FIELDS = [
 
 /**
  * Create the event payload for the API from the event form data
- * @param {FCEventForm} event
- * @returns {FCEventForm}
+ * @param {Record<string, any>} event
+ * @returns {Record<string, any>}
  */
 export const createEventPayload = (event) => {
   const effectiveStartTime = event.startTime || event.time;
   const locationPayload = buildLocationPayload(event.location);
-  const formattedData = {
+  const formattedData = /** @type {Record<string, any>} */ ({
     ...event,
     date: formatDateTimeToSend(event.date, effectiveStartTime),
     location: locationPayload.location,
@@ -316,7 +334,7 @@ export const createEventPayload = (event) => {
     // Format startTime and endTime for Strapi (HH:mm:ss.SSS)
     endTime: formatTimeForStrapi(event.endTime),
     startTime: formatTimeForStrapi(effectiveStartTime),
-  };
+  });
 
   delete formattedData.time;
   delete formattedData.recurrenceDay;
@@ -349,8 +367,85 @@ export const createEventPayload = (event) => {
   return formattedData;
 };
 
+const EVENT_UPDATE_STRIPPED_FIELDS = [
+  'childStageEvents',
+  'detectionSlots',
+  'eventFormat',
+  'facilityOverrideRequest',
+  'parentEvent',
+  'recurrenceGroupId',
+  'status',
+];
+
+/**
+ * @param {Record<string, any>} event
+ * @returns {Record<string, any>}
+ */
+export const createEventUpdatePayload = (event) => {
+  const formattedData = /** @type {Record<string, any>} */ (createEventPayload(event));
+  EVENT_UPDATE_STRIPPED_FIELDS.forEach((field) => {
+    delete formattedData[field];
+  });
+  return formattedData;
+};
+
+/**
+ * @param {string} [value]
+ * @returns {string}
+ */
+const normalizeEventFormat = (value = '') => String(value || '')
+  .trim()
+  .toLowerCase();
+
+/**
+ * @param {Record<string, any> | undefined | null} event
+ * @param {string} [eventTypeName]
+ * @returns {{ isSupported: boolean, reason: string | null, reasonKey: string | null }}
+ */
+export const getEventEditSupport = (event, eventTypeName = '') => {
+  const sourceEvent = event || {};
+  const resolvedTypeName = String(eventTypeName || sourceEvent?.type?.name || sourceEvent?.typeName || '').trim();
+  const eventFormat = normalizeEventFormat(sourceEvent?.eventFormat);
+  const detectionSlots = /** @type {any[]} */ (Array.isArray(sourceEvent?.detectionSlots) ? sourceEvent.detectionSlots : []);
+  const hasDetectionSlots = detectionSlots.length > 0;
+
+  if (eventFormat === 'stage_parent' || eventFormat === 'stage_day' || isStageEventType(resolvedTypeName)) {
+    return {
+      isSupported: false,
+      reason: "La modification complete des stages passe encore par un flow dedie. Cette fiche ne permet pas d'editer ce type d'evenement pour l'instant.",
+      reasonKey: 'stage',
+    };
+  }
+
+  if (isTournamentEventType(resolvedTypeName)) {
+    return {
+      isSupported: false,
+      reason: 'La modification complete des tournois reste limitee a leurs ecrans dedies. Cette fiche ne prend pas encore en charge ce format.',
+      reasonKey: 'tournament',
+    };
+  }
+
+  if (hasDetectionSlots || (isDetectionEventType(resolvedTypeName) && hasDetectionSlots)) {
+    return {
+      isSupported: false,
+      reason: 'Les detections avec postes recherches ne peuvent pas encore etre reeditees depuis cette fiche sans risque de perdre la configuration des postes.',
+      reasonKey: 'detection_slots',
+    };
+  }
+
+  return {
+    isSupported: true,
+    reason: null,
+    reasonKey: null,
+  };
+};
+
+/**
+ * @param {Record<string, any>} event
+ * @returns {Record<string, any>}
+ */
 export const createStageEventPayload = (event) => {
-  const stageSchedule = Array.isArray(event?.stageSchedule) ? event.stageSchedule : [];
+  const stageSchedule = /** @type {any[]} */ (Array.isArray(event?.stageSchedule) ? event.stageSchedule : []);
   const activeDays = stageSchedule.filter((entry) => entry?.isActive !== false);
 
   if (!activeDays.length) {
@@ -397,8 +492,8 @@ export const createStageEventPayload = (event) => {
 
 /**
  * Create the event payload for the API from the event form data for reccurent events
- * @param {FCEventForm} event
- * @returns {FCEventForm[]}
+ * @param {Record<string, any>} event
+ * @returns {Record<string, any>[]}
  */
 export const createReccurrentEventPayload = (event) => {
   const typeName = event?.type?.name || event?.typeName || '';
@@ -434,7 +529,7 @@ export const createReccurrentEventPayload = (event) => {
       // Loop until weekStart exceeds endDate
       while (weekStart <= endDate) {
         // For this week, create events for selected days
-        recurrenceDays.forEach((dayIndex) => {
+        recurrenceDays.forEach(/** @param {number} dayIndex */ (dayIndex) => {
           // Calculate date for this day in the current week
           // Monday is base.
           // dayIndex: 0 (Sun) -> +6 days

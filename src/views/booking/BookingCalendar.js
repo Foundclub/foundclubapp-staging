@@ -65,7 +65,7 @@ function BookingCalendar({ navigation, route }) {
   }, []);
 
   const handleSlotPress = useCallback((slot) => {
-    if (slot.remaining > 0 || slot.canRequestOverflow) {
+    if (slot.remaining > 0 || slot.requiresApproval || slot.allowsImmediateConfirmation) {
       setSelectedSlot(slot);
       setIsModalVisible(true);
     }
@@ -121,17 +121,21 @@ function BookingCalendar({ navigation, route }) {
   // Render time slot chip
   const renderSlotChip = (slot) => {
     const isAvailable = slot.remaining > 0;
-    const canRequestOverflow = Boolean(slot.canRequestOverflow);
-    const canOpenSlot = isAvailable || canRequestOverflow;
+    const requiresApproval = Boolean(slot.requiresApproval);
+    const allowsImmediateConfirmation = Boolean(slot.allowsImmediateConfirmation);
+    const canOpenSlot = isAvailable || requiresApproval || allowsImmediateConfirmation;
     let borderColor = 'rgba(255,255,255,0.1)';
     let availabilityLabel = 'Complet';
 
     if (isAvailable) {
       borderColor = Colors.primary500;
       availabilityLabel = `${slot.remaining} dispo`;
-    } else if (canRequestOverflow) {
+    } else if (requiresApproval) {
       borderColor = Colors.warning500;
-      availabilityLabel = 'Demande possible';
+      availabilityLabel = 'Demande en attente';
+    } else if (allowsImmediateConfirmation) {
+      borderColor = Colors.primary500;
+      availabilityLabel = 'Autorise et notifier';
     }
 
     return (

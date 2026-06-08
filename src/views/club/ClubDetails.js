@@ -7,6 +7,7 @@ import {
   Alert,
   Image, Linking, Platform, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -20,8 +21,8 @@ import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -35,6 +36,8 @@ import { leaveClub, removeTrainerFromClub } from '@/services/auth/authService';
 import { getCategorySortKey } from '@/services/category/categoryService';
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimClub, updateClub } from '@/services/club/clubService';
+import { useGetMyClubInterestRequests } from '@/services/clubInterestRequest/clubInterestRequestQueries';
+import { createClubInterestRequest } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { createClubRequest, getPendingClubCreationRequests } from '@/services/clubRequest/clubRequestService';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
@@ -162,6 +165,7 @@ function ClubDetails({ navigation, route }) {
   } = useAuth();
   const { startClubChat } = useMessaging();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { getClubInitials } = useClub();
   const isAuthenticated = Boolean(userData?.documentId);
   const [selectedTab, setSelectedTab] = useState('infos');
@@ -171,6 +175,7 @@ function ClubDetails({ navigation, route }) {
   const [clubPartnerRequestPending, setClubPartnerRequestPending] = useState(false);
   const [clubPartnerForm, setClubPartnerForm] = useState(() => buildDefaultClubPartnerForm(userData));
   const [isClubPartnerRequestVisible, setIsClubPartnerRequestVisible] = useState(false);
+  const [isClubInterestTeamPickerVisible, setIsClubInterestTeamPickerVisible] = useState(false);
   const [isPlayerTeamPickerVisible, setIsPlayerTeamPickerVisible] = useState(false);
   const [activitySearch, setActivitySearch] = useState('');
   const [activitiesToAdd, setActivitiesToAdd] = useState(
@@ -322,7 +327,7 @@ function ClubDetails({ navigation, route }) {
         joinedImmediately
           ? t(
             'clubDetails.alerts.joinClub.autoAffiliatedDescription',
-            'Vous avez ete ajoute directement a ce club. Vous pouvez maintenant creer des equipes et completer votre organisation.',
+            'Vous avez été ajouté directement à ce club. Vous pouvez maintenant créer des équipes et compléter votre organisation.',
           )
           : t('clubDetails.alerts.joinClub.description'),
         [
@@ -356,17 +361,17 @@ function ClubDetails({ navigation, route }) {
     onSuccess: (_result, variables) => {
       const selectedTeamName = sortedClubTeams
         .find((teamItem) => getTeamIdentity(teamItem) === variables?.teamId)?.name
-        || t('common.team', 'Equipe');
+        || t('common.team', 'Équipe');
 
       refetchUserData();
       refetch();
       setIsPlayerTeamPickerVisible(false);
 
       Alert.alert(
-        t('teamDetails.alerts.joinRequest.title', 'Demande envoyee'),
+        t('teamDetails.alerts.joinRequest.title', 'Demande envoyée'),
         t(
           'clubDetails.alerts.playerTeamJoin.description',
-          'Votre demande pour rejoindre {{teamName}} a ete envoyee.',
+          'Votre demande pour rejoindre {{teamName}} a été envoyée.',
           { teamName: selectedTeamName },
         ),
         [{
@@ -400,7 +405,7 @@ function ClubDetails({ navigation, route }) {
       refetchPendingClubCreationRequests();
 
       Alert.alert(
-        t('clubDetails.alerts.clubPartnerRequest.title', 'Demande envoyee'),
+        t('clubDetails.alerts.clubPartnerRequest.title', 'Demande envoyée'),
         t(
           'clubDetails.alerts.clubPartnerRequest.description',
           "Nous allons contacter le dirigeant de ce club pour l'aider a rejoindre FoundClub.",
@@ -693,7 +698,7 @@ function ClubDetails({ navigation, route }) {
       t('clubDetails.alerts.leave.title', 'Quitter le club ?'),
       t(
         'clubDetails.alerts.leave.description',
-        'Vous ne serez plus lie a ce club ni a ses equipes en tant qu encadrant. Etes-vous sur de vouloir continuer ?',
+        "Vous ne serez plus lié à ce club ni à ses équipes en tant qu'encadrant. Êtes-vous sûr de vouloir continuer ?",
       ),
       [
         {
@@ -892,6 +897,159 @@ function ClubDetails({ navigation, route }) {
     && !isPlayerAlreadyInViewedClub
     && clubTeamIds.length > 0
   ), [USER_ROLES.player, clubTeamIds.length, isMember, isPlayerAlreadyInViewedClub, userData?.role?.name]);
+
+  const isUserAlreadyAttachedToViewedClub = useMemo(() => (
+    isMember
+    || isPlayerAlreadyInViewedClub
+    || (userData?.trainedTeams || []).some((team) => (team?.club?.documentId || team?.club?.id) === clubId)
+  ), [clubId, isMember, isPlayerAlreadyInViewedClub, userData?.trainedTeams]);
+
+  const canSignalClubInterest = useMemo(() => (
+    isAuthenticated
+    && !isUserAlreadyAttachedToViewedClub
+    && clubTeamIds.length > 0
+  ), [clubTeamIds.length, isAuthenticated, isUserAlreadyAttachedToViewedClub]);
+
+  const shouldShowPlayerClubAction = canPlayerSignalClubTeam;
+  const shouldShowEmptyClubClaimAction = (
+    !isMember
+    && !canEdit
+    && !canJoinClub
+    && !canUseClubPartneringFlow
+    && !areClubMembersHidden
+    && owners?.length === 0
+    && userData
+    && userData?.role?.name !== USER_ROLES.player
+  );
+  const shouldShowClubInterestAction = canSignalClubInterest;
+  const floatingClubActionsCount = [
+    shouldShowPlayerClubAction,
+    shouldShowEmptyClubClaimAction,
+    shouldShowClubInterestAction,
+  ].filter(Boolean).length;
+  const hasFloatingClubActions = floatingClubActionsCount > 0;
+  const floatingClubActionsBottomInset = Math.max(insets.bottom, 12);
+  const floatingClubActionsScrollPaddingBottom = hasFloatingClubActions
+    ? floatingClubActionsBottomInset + 128 + ((floatingClubActionsCount - 1) * 72)
+    : 40;
+  const floatingClubActionButtonStyle = {
+    elevation: 18,
+    shadowColor: Colors.neutral900,
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.24,
+    shadowRadius: 16,
+  };
+  const floatingClubInterestButtonStyle = {
+    backgroundColor: Colors.primary900,
+    borderRadius: 20,
+    minHeight: 52,
+    paddingVertical: 14,
+  };
+
+  const myClubInterestRequestsQuery = useGetMyClubInterestRequests(
+    { clubId },
+    {
+      enabled: Boolean(isAuthenticated && clubId && clubTeamIds.length > 0 && !isUserAlreadyAttachedToViewedClub),
+      retry: 0,
+    },
+  );
+
+  const pendingClubInterestTeamIds = useMemo(() => {
+    const pendingIds = new Set();
+
+    (myClubInterestRequestsQuery?.data?.data || []).forEach((request) => {
+      const requestTeamId = getTeamIdentity(request?.team);
+      if (request?.status === 'pending' && requestTeamId && clubTeamIdsSet.has(requestTeamId)) {
+        pendingIds.add(requestTeamId);
+      }
+    });
+
+    return pendingIds;
+  }, [clubTeamIdsSet, myClubInterestRequestsQuery?.data?.data]);
+
+  const hasPendingClubInterestRequest = useCallback((teamDocumentId) => (
+    pendingClubInterestTeamIds.has(String(teamDocumentId || '').trim())
+  ), [pendingClubInterestTeamIds]);
+
+  const hasPendingViewedClubInterestRequest = useMemo(
+    () => clubTeamIds.length > 0 && clubTeamIds.every((teamId) => pendingClubInterestTeamIds.has(teamId)),
+    [clubTeamIds, pendingClubInterestTeamIds],
+  );
+
+  const createClubInterestRequestMutation = useMutation({
+    mutationFn: ({ teamId }) => createClubInterestRequest({ team: teamId }),
+    onError: (mutationError) => {
+      const rawMessage = mutationError?.response?.data?.error?.message
+        || mutationError?.response?.data?.message
+        || mutationError?.error?.message
+        || mutationError?.message
+        || mutationError?.name
+        || '';
+      const normalizedMessage = rawMessage
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+      const statusCode = Number(
+        mutationError?.response?.status
+        || mutationError?.response?.data?.error?.status
+        || mutationError?.status
+        || 0,
+      );
+      const isDuplicate = normalizedMessage.includes('already pending')
+        || normalizedMessage.includes('deja');
+      const isAlreadyMember = normalizedMessage.includes('already belongs');
+      const isForbidden = statusCode === 403 || normalizedMessage.includes('forbidden');
+      const isTeamNotFound = statusCode === 404
+        || normalizedMessage.includes('team not found')
+        || normalizedMessage.includes('requested team not found');
+
+      let alertMessage = t(
+        'clubDetails.clubInterest.error',
+        "Impossible d'envoyer ton intérêt pour le moment.",
+      );
+      if (isDuplicate) {
+        alertMessage = t('clubDetails.clubInterest.alreadySent', 'Intérêt déjà envoyé.');
+      } else if (isAlreadyMember) {
+        alertMessage = t(
+          'clubDetails.clubInterest.alreadyMember',
+          'Tu es déjà rattaché à ce club.',
+        );
+      } else if (isForbidden) {
+        alertMessage = t(
+          'clubDetails.clubInterest.forbidden',
+          "Ton compte n'a pas encore l'autorisation d'envoyer un intérêt. Réessaie dans quelques instants.",
+        );
+      } else if (isTeamNotFound) {
+        alertMessage = t(
+          'clubDetails.clubInterest.teamNotFound',
+          "Cette équipe n'est plus disponible.",
+        );
+      }
+
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        alertMessage,
+      );
+    },
+    onSuccess: (_result, variables) => {
+      const selectedTeamName = sortedClubTeams
+        .find((teamItem) => getTeamIdentity(teamItem) === variables?.teamId)?.name
+        || t('common.team', 'Équipe');
+
+      myClubInterestRequestsQuery.refetch();
+      setIsClubInterestTeamPickerVisible(false);
+
+      Alert.alert(
+        t('clubDetails.clubInterest.sentTitle', 'Intérêt envoyé'),
+        t(
+          'clubDetails.clubInterest.sentDescription',
+          'Le staff de {{teamName}} a reçu ton intérêt et pourra te répondre.',
+          { teamName: selectedTeamName },
+        ),
+        [{ text: t('common.actions.ok', 'OK') }],
+      );
+    },
+  });
 
   const isParentClubAdmin = useMemo(() => {
     // Check if user is admin of the parent multisport club
@@ -1098,11 +1256,11 @@ function ClubDetails({ navigation, route }) {
     if (hasPendingClubTeamRequest(teamDocumentId)) return;
 
     Alert.alert(
-      t('clubDetails.alerts.playerTeamJoin.title', 'Choisir cette equipe ?'),
+      t('clubDetails.alerts.playerTeamJoin.title', 'Choisir cette équipe ?'),
       t(
         'clubDetails.alerts.playerTeamJoin.confirmation',
-        'Une demande sera envoyee pour rejoindre {{teamName}}.',
-        { teamName: teamItem?.name || t('common.team', 'Equipe') },
+        'Une demande sera envoyée pour rejoindre {{teamName}}.',
+        { teamName: teamItem?.name || t('common.team', 'Équipe') },
       ),
       [
         {
@@ -1127,6 +1285,62 @@ function ClubDetails({ navigation, route }) {
     t,
     userData?.documentId,
   ]);
+
+  const handleOpenClubInterestTeamPicker = useCallback(() => {
+    if (!isAuthenticated) {
+      openClubAuthFlow('club-interest-login');
+      return;
+    }
+
+    if (!clubTeamIds.length) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('clubDetails.clubInterest.noTeams', "Aucune équipe n'est disponible dans ce club pour le moment."),
+      );
+      return;
+    }
+
+    setIsClubInterestTeamPickerVisible(true);
+  }, [clubTeamIds.length, isAuthenticated, openClubAuthFlow, t]);
+
+  const handleCloseClubInterestTeamPicker = useCallback(() => {
+    if (createClubInterestRequestMutation.isPending) return;
+    setIsClubInterestTeamPickerVisible(false);
+  }, [createClubInterestRequestMutation.isPending]);
+
+  const handleSelectClubInterestTeam = useCallback((teamItem) => {
+    const teamDocumentId = getTeamIdentity(teamItem);
+    if (!teamDocumentId || createClubInterestRequestMutation.isPending) return;
+
+    if (hasPendingClubInterestRequest(teamDocumentId)) {
+      Alert.alert(
+        t('clubDetails.clubInterest.alreadySentTitle', 'Intérêt déjà envoyé'),
+        t('clubDetails.clubInterest.alreadySentDescription', 'Le staff de cette équipe a déjà reçu ton intérêt.'),
+      );
+      return;
+    }
+
+    Alert.alert(
+      t('clubDetails.clubInterest.confirmTitle', 'Envoyer ton intérêt ?'),
+      t(
+        'clubDetails.clubInterest.confirmDescription',
+        'Le staff de {{teamName}} verra ton profil et pourra te répondre.',
+        { teamName: teamItem?.name || t('common.team', 'Équipe') },
+      ),
+      [
+        {
+          style: 'cancel',
+          text: t('common.actions.cancel', 'Annuler'),
+        },
+        {
+          onPress: () => {
+            createClubInterestRequestMutation.mutate({ teamId: teamDocumentId });
+          },
+          text: t('clubDetails.clubInterest.sendAction', 'Envoyer mon intérêt'),
+        },
+      ],
+    );
+  }, [createClubInterestRequestMutation, hasPendingClubInterestRequest, t]);
 
   const handleToggleActivityToAdd = useCallback((activityId) => {
     const normalizedId = String(activityId || '').trim();
@@ -1352,12 +1566,13 @@ function ClubDetails({ navigation, route }) {
         Spaces.paddingVertical[24],
         Alignments.column,
         Alignments.fill,
+        Alignments.relative,
       ]}
     >
       <ScrollView
         contentContainerStyle={[
           Spaces.gap[32],
-          Spaces.paddingBottom[40],
+          { paddingBottom: floatingClubActionsScrollPaddingBottom },
         ]}
         refreshControl={(
           <RefreshControl
@@ -1405,24 +1620,16 @@ function ClubDetails({ navigation, route }) {
               </TouchableOpacity>
             ) : null}
             <View style={{ marginTop: -24, zIndex: 1 }}>
-              {club?.logo?.url ? (
-                <ProfileAvatar
-                  imageUrl={club.logo.url}
-                  shape="rounded"
-                  size={80}
-                  style={[
-                    ApplicationStyle.borderWidth1,
-                    ApplicationStyle.borderColor.neutral00,
-                    ApplicationStyle.backgroundColor.neutral00,
-                    { borderRadius: 20 },
-                  ]}
-                  variant="logo"
-                />
-              ) : (
-                <TeamShield
-                  initials={club?.name ? getClubInitials(club?.name) : ''}
-                />
-              )}
+              <ClubLogoMark
+                club={club}
+                logoStyle={[
+                  ApplicationStyle.borderWidth1,
+                  ApplicationStyle.borderColor.neutral00,
+                  ApplicationStyle.backgroundColor.neutral00,
+                  { borderRadius: 20 },
+                ]}
+                size={80}
+              />
             </View>
             <View style={[
               Spaces.gap[4],
@@ -2066,7 +2273,7 @@ function ClubDetails({ navigation, route }) {
           <Button
             onPress={() => openClubAuthFlow('club-public-claim-login')}
             style={[Spaces.marginTop[12], Spaces.marginBottom[24]]}
-            title={t('clubDetails.actions.claimClub', "C'est mon club")}
+            title={t('clubDetails.actions.claimClub', 'C’est mon club')}
             variant="Primary"
           />
         ) : null
@@ -2120,7 +2327,7 @@ function ClubDetails({ navigation, route }) {
             ]}
             title={hasPendingClubPartneringRequest
               ? t('clubDetails.actions.requestPending', 'Demande en attente')
-              : t('clubDetails.actions.claimClub', "C'est mon club")}
+              : t('clubDetails.actions.claimClub', 'C’est mon club')}
             variant="Primary"
           />
         ) : null
@@ -2230,7 +2437,7 @@ function ClubDetails({ navigation, route }) {
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t(
               'clubDetails.clubPartnerRequest.description',
-              "Votre club n'est pas encore partenaire FoundClub. Ajoutez les coordonnees du dirigeant pour que nous puissions le contacter et lui donner acces au classement, au calendrier et aux statistiques directement dans l'application.",
+              "Votre club n'est pas encore partenaire FoundClub. Ajoutez les coordonnées du dirigeant pour que nous puissions le contacter et lui donner accès au classement, au calendrier et aux statistiques directement dans l'application.",
             )}
           </Text>
 
@@ -2324,7 +2531,7 @@ function ClubDetails({ navigation, route }) {
                 actionLabel = t('clubDetails.actions.requestPending', 'Demande en attente');
               }
               if (isCurrentTeam) {
-                actionLabel = t('clubDetails.actions.myTeam', 'Mon equipe');
+                actionLabel = t('clubDetails.actions.myTeam', 'Mon équipe');
               }
 
               return (
@@ -2351,10 +2558,10 @@ function ClubDetails({ navigation, route }) {
                     />
                     <View style={{ flex: 1 }}>
                       <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                        {teamItem?.name || t('common.team', 'Equipe')}
+                        {teamItem?.name || t('common.team', 'Équipe')}
                       </Text>
                       <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
-                        {getTeamMetaSummary(teamItem) || teamItem?.club?.name || t('common.messages.noData', 'Aucune donnee disponible')}
+                        {getTeamMetaSummary(teamItem) || teamItem?.club?.name || t('common.messages.noData', 'Aucune donnée disponible')}
                       </Text>
                       <View
                         style={[
@@ -2390,60 +2597,155 @@ function ClubDetails({ navigation, route }) {
           </View>
         </View>
       </BottomModal>
-      {
-        canPlayerSignalClubTeam ? (
-          <Button
-            disabled={hasPendingViewedClubTeamRequest || createTeamMembershipRequestMutation.isPending}
-            onPress={handleOpenPlayerTeamPicker}
-            style={[
-              Spaces.marginTop[12],
-              Spaces.marginBottom[24],
-              (hasPendingViewedClubTeamRequest || createTeamMembershipRequestMutation.isPending)
-                ? { opacity: 0.7 }
-                : null,
-            ]}
-            title={hasPendingViewedClubTeamRequest
-              ? t('clubDetails.actions.requestPending', 'Demande en attente')
-              : t('clubDetails.actions.claimClub', "C'est mon club")}
-            variant="Primary"
-          />
-        ) : null
-      }
-      {
-        /* Claim Club Button - Show if not member, not admin, and club has no owners */
-        (
-          !isMember
-          && !canEdit
-          && !canJoinClub
-          && !canUseClubPartneringFlow
-          && !areClubMembersHidden
-          && owners?.length === 0
-          && userData
-          && userData?.role?.name !== USER_ROLES.player
-        ) ? (
-            (() => {
-              if (hasPendingClubRequest) {
-                return (
-                  <Button
-                    disabled
-                    style={[Spaces.marginTop[12], Spaces.marginBottom[24], { opacity: 0.6 }]}
-                    title={t('clubDetails.actions.requestPending', 'Demande en attente')}
-                    variant="Secondary"
-                  />
-                );
-              }
+      <BottomModal
+        close={handleCloseClubInterestTeamPicker}
+        headerComponent={(
+          <View style={[Alignments.row, Alignments.alignCenter]}>
+            <Text numberOfLines={1} style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginRight[16], { flex: 1 }]}>
+              {t('clubDetails.clubInterest.pickerTitle', "Quelle équipe t'intéresse ?")}
+            </Text>
+          </View>
+        )}
+        hideCloseButton
+        isVisible={isClubInterestTeamPickerVisible}
+        scrollable
+        snapPoints={['82%']}
+      >
+        <View style={[Spaces.gap[16]]}>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t(
+              'clubDetails.clubInterest.pickerDescription',
+              "Sélectionne une équipe pour signaler ton intérêt au staff, sans créer de demande d'adhésion.",
+            )}
+          </Text>
+
+          <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
+            {sortedClubTeams.map((teamItem) => {
+              const teamDocumentId = getTeamIdentity(teamItem);
+              const isPending = hasPendingClubInterestRequest(teamDocumentId);
+              const isDisabled = isPending || createClubInterestRequestMutation.isPending;
+              const actionLabel = isPending
+                ? t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé')
+                : t('clubDetails.clubInterest.sendAction', 'Envoyer mon intérêt');
 
               return (
-                <Button
-                  onPress={handleClaimClub}
-                  style={[Spaces.marginTop[12], Spaces.marginBottom[24]]}
-                  title={t('clubDetails.actions.claimClub', "C'est mon club")}
-                  variant="Secondary"
-                />
+                <TouchableOpacity
+                  disabled={isDisabled}
+                  key={`interest-${teamDocumentId || teamItem?.name}`}
+                  onPress={() => handleSelectClubInterestTeam(teamItem)}
+                  style={[
+                    ApplicationStyle.borderRadius24,
+                    ApplicationStyle.backgroundColor.primary700,
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
+                    Spaces.padding[16],
+                    {
+                      opacity: isDisabled ? 0.65 : 1,
+                    },
+                  ]}
+                >
+                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
+                    <TeamShield
+                      initials={getClubInitials(teamItem?.name || '')}
+                      isSmall
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                        {teamItem?.name || t('common.team', 'Équipe')}
+                      </Text>
+                      <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
+                        {getTeamMetaSummary(teamItem) || teamItem?.club?.name || t('common.messages.noData', 'Aucune donnée disponible')}
+                      </Text>
+                      <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary200, Spaces.marginTop[6]]}>
+                        {t(
+                          'clubDetails.clubInterest.cardHint',
+                          'Le staff pourra répondre avec un message ou ouvrir une conversation.',
+                        )}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Button
+                    disabled={isDisabled}
+                    isLoading={createClubInterestRequestMutation.isPending && !isPending}
+                    onPress={() => handleSelectClubInterestTeam(teamItem)}
+                    size="small"
+                    title={actionLabel}
+                    variant={isPending ? 'Secondary' : 'Primary'}
+                  />
+                </TouchableOpacity>
               );
-            })()
-          ) : null
-      }
+            })}
+          </View>
+        </View>
+      </BottomModal>
+      {hasFloatingClubActions ? (
+        <View
+          pointerEvents="box-none"
+          style={[
+            Alignments.absolute,
+            Spaces.gap[12],
+            {
+              bottom: floatingClubActionsBottomInset,
+              elevation: 24,
+              left: 0,
+              right: 0,
+              zIndex: 24,
+            },
+          ]}
+        >
+          {shouldShowPlayerClubAction ? (
+            <Button
+              disabled={hasPendingViewedClubTeamRequest || createTeamMembershipRequestMutation.isPending}
+              onPress={handleOpenPlayerTeamPicker}
+              style={[
+                floatingClubActionButtonStyle,
+                (hasPendingViewedClubTeamRequest || createTeamMembershipRequestMutation.isPending)
+                  ? { opacity: 0.7 }
+                  : null,
+              ]}
+              title={hasPendingViewedClubTeamRequest
+                ? t('clubDetails.actions.requestPending', 'Demande en attente')
+                : t('clubDetails.actions.claimClub', 'C’est mon club')}
+              variant="Primary"
+            />
+          ) : null}
+
+          {shouldShowEmptyClubClaimAction ? (
+            <Button
+              disabled={hasPendingClubRequest}
+              onPress={handleClaimClub}
+              style={[
+                floatingClubActionButtonStyle,
+                hasPendingClubRequest ? { opacity: 0.6 } : null,
+              ]}
+              title={hasPendingClubRequest
+                ? t('clubDetails.actions.requestPending', 'Demande en attente')
+                : t('clubDetails.actions.claimClub', 'C’est mon club')}
+              variant={hasPendingClubRequest ? 'Secondary' : 'Primary'}
+            />
+          ) : null}
+
+          {shouldShowClubInterestAction ? (
+            <Button
+              disabled={hasPendingViewedClubInterestRequest || createClubInterestRequestMutation.isPending}
+              onPress={handleOpenClubInterestTeamPicker}
+              style={[
+                floatingClubActionButtonStyle,
+                floatingClubInterestButtonStyle,
+                (hasPendingViewedClubInterestRequest || createClubInterestRequestMutation.isPending)
+                  ? { opacity: 0.7 }
+                  : null,
+              ]}
+              title={hasPendingViewedClubInterestRequest
+                ? t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé')
+                : t('clubDetails.clubInterest.button', 'Intéressé par le club')}
+              variant="Secondary"
+            />
+          ) : null}
+        </View>
+      ) : null}
     </ScreenContainer>
   );
 }

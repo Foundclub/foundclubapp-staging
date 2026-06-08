@@ -29,6 +29,28 @@ import MultisportSponsorsSection from './components/MultisportSponsorsSection';
 import MultisportStateView from './components/MultisportStateView';
 import MultisportStatsRow from './components/MultisportStatsRow';
 
+const normalizeErrorMessage = (error) => String(
+  error?.message
+  || error?.error?.message
+  || error?.response?.data?.error?.message
+  || '',
+).trim().toLowerCase();
+
+const getErrorStatus = (error) => Number(
+  error?.status
+  || error?.statusCode
+  || error?.response?.status
+  || error?.response?.data?.status
+  || 0,
+);
+
+const isForbiddenError = (error) => (
+  getErrorStatus(error) === 403
+  || normalizeErrorMessage(error).includes('acces refuse')
+  || normalizeErrorMessage(error).includes('accès refusé')
+  || normalizeErrorMessage(error).includes('forbidden')
+);
+
 /**
  * @typedef {{ url?: string }} ImageAsset
  * @typedef {{ documentId?: string; firstname?: string; lastname?: string; avatar?: ImageAsset }} CMAdmin
@@ -60,6 +82,10 @@ function MultisportClubDetails({ navigation, route }) {
   const { userData } = useAuth();
   const { getClubInitials } = useClub();
   const resolvedCmId = cmId || userData?.multisportClubs?.[0]?.documentId;
+  const managedCmSummary = useMemo(
+    () => (userData?.multisportClubs || []).find((club) => club?.documentId === resolvedCmId) || null,
+    [resolvedCmId, userData?.multisportClubs],
+  );
 
   const {
     data: cmData,
@@ -75,14 +101,20 @@ function MultisportClubDetails({ navigation, route }) {
     queryKey: ['multisport-club', resolvedCmId],
   });
 
-  const cm = /** @type {MultisportClub | null | undefined} */ (cmData);
+  const canFallbackToManagedSummary = Boolean(
+    managedCmSummary?.documentId
+    && managedCmSummary.documentId === resolvedCmId
+    && isForbiddenError(error),
+  );
+  const cm = /** @type {MultisportClub | null | undefined} */ (cmData || managedCmSummary);
   const sponsors = useMemo(() => cm?.sponsor || [], [cm?.sponsor]);
   const sections = useMemo(() => cm?.sections || [], [cm?.sections]);
   const admins = useMemo(() => cm?.admins || [], [cm?.admins]);
   const canEdit = useMemo(
-    () => admins.some((admin) => admin.documentId === userData?.documentId),
-    [admins, userData?.documentId],
+    () => canFallbackToManagedSummary || admins.some((admin) => admin.documentId === userData?.documentId),
+    [admins, canFallbackToManagedSummary, userData?.documentId],
   );
+  const effectiveError = canFallbackToManagedSummary ? null : error;
 
   const handleSectionPress = useCallback((section) => {
     if (!section?.documentId) return;
@@ -208,22 +240,22 @@ function MultisportClubDetails({ navigation, route }) {
     );
   }
 
-  if (error && !cm) {
+  if (effectiveError && !cm) {
     return (
       <MultisportStateView
         actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.details.error', "Impossible de charger cette structure multisport pour le moment.")}
+        description={t('multisport.details.error', 'Impossible de charger cette structure multisport pour le moment.')}
         onAction={() => refetch()}
         title={t('multisport.details.errorTitle', 'Club indisponible')}
       />
     );
   }
 
-  if (!isLoading && !error && !cm) {
+  if (!isLoading && !effectiveError && !cm) {
     return (
       <MultisportStateView
         actionLabel={t('common.retry', 'Actualiser')}
-        description={t('multisport.details.notFound', "Cette structure multisport est introuvable ou n est plus accessible.")}
+        description={t('multisport.details.notFound', 'Cette structure multisport est introuvable ou n est plus accessible.')}
         onAction={() => refetch()}
         title={t('multisport.details.notFoundTitle', 'Club introuvable')}
       />
@@ -245,7 +277,7 @@ function MultisportClubDetails({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <WithDataWrapper
-          error={error?.message}
+          error={effectiveError?.message}
           isLoading={isLoading}
           wrapperStyle={[Spaces.gap[24]]}
         >

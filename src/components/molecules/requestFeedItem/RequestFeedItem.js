@@ -6,6 +6,10 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
+/**
+ * @param {string | number | Date | null | undefined} startValue
+ * @param {string | number | Date | null | undefined} endValue
+ */
 const formatWindowLabel = (startValue, endValue) => {
   const startDate = startValue ? new Date(startValue) : null;
   const endDate = endValue ? new Date(endValue) : null;
@@ -35,6 +39,10 @@ const formatWindowLabel = (startValue, endValue) => {
   return `${dateLabel} - ${startTimeLabel}`;
 };
 
+/**
+ * @param {string | undefined} type
+ * @param {(key: string, fallback?: string) => string} t
+ */
 const getTypeLabel = (type, t) => {
   switch (type) {
     case 'club':
@@ -45,6 +53,8 @@ const getTypeLabel = (type, t) => {
       return t('requestsHub.types.featured', 'À la une');
     case 'installation':
       return t('requestsHub.types.installation', 'Installation');
+    case 'interest':
+      return t('requestsHub.types.interest', 'Interet');
     case 'team':
       return t('requestsHub.types.team', 'Équipe');
     default:
@@ -52,6 +62,11 @@ const getTypeLabel = (type, t) => {
   }
 };
 
+/**
+ * @param {string | undefined} action
+ * @param {Record<string, any>} item
+ * @param {(key: string, fallback?: string) => string} t
+ */
 const getActionLabel = (action, item, t) => {
   switch (action) {
     case 'accept':
@@ -59,8 +74,12 @@ const getActionLabel = (action, item, t) => {
         return t('requestsHub.actions.approveOverflow', 'Autoriser');
       }
       return t('common.accept', 'Accepter');
+    case 'chat':
+      return t('requestsHub.actions.openChat', 'Ouvrir chat');
     case 'reject':
       return t('common.reject', 'Refuser');
+    case 'respond':
+      return t('requestsHub.actions.respond', 'Repondre');
     case 'validate':
       return t('common.validate', 'Valider');
     default:
@@ -98,8 +117,10 @@ function RequestFeedItem({
   const requesterId = item?.meta?.requesterId || '';
   const requesterName = item?.meta?.requesterName || t('common.user', 'Utilisateur');
   const featuredScopeLabel = item?.meta?.scopeLabel || '';
+  const interestTeamName = item?.meta?.teamName || '';
   const sourceTeamName = item?.meta?.sourceTeamName || '';
   const isInstallationRequest = item?.type === 'installation';
+  const isInterestRequest = item?.type === 'interest';
   const isMembershipRequest = item?.type === 'team' || item?.type === 'club';
   const isEventParticipationRequest = item?.type === 'event'
     && Boolean(requesterId || requesterName || requesterAvatarUrl);
@@ -113,6 +134,9 @@ function RequestFeedItem({
     item?.meta?.windowEnd,
   );
   const occupancyRatioLabel = `${Number(item?.meta?.overlapCount || 0)}/${Number(item?.meta?.maxSlots || 1)} slots occupes`;
+  /**
+   * @param {import('react').ReactNode} children
+   */
   const renderRequesterWrapper = (children) => {
     const wrapperStyle = [Alignments.row, Alignments.alignCenter, Spaces.gap[12]];
 
@@ -142,7 +166,7 @@ function RequestFeedItem({
     </Text>
   );
 
-  if (isMembershipRequest) {
+  if (isMembershipRequest || isInterestRequest) {
     bodyContent = renderRequesterWrapper(
       <>
         <ProfileAvatar
@@ -150,14 +174,24 @@ function RequestFeedItem({
           imageUrl={requesterAvatarUrl}
           size={40}
         />
-        <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
-          {item?.subtitle}
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100]}>
+            {item?.subtitle}
+          </Text>
+          {isInterestRequest && interestTeamName ? (
+            <Text numberOfLines={1} style={[Fonts.p3, Fonts.primary200, { marginTop: 4 }]}>
+              {t('requestsHub.interest.targetTeam', 'Equipe visee')}
+              :
+              {' '}
+              {interestTeamName}
+            </Text>
+          ) : null}
+        </View>
       </>,
     );
   } else if (isEventParticipationRequest) {
     bodyContent = (
-      <View style={[Spaces.gap[10]]}>
+      <View style={[{ gap: 10 }]}>
         {renderRequesterWrapper(
           <>
             <ProfileAvatar
@@ -194,8 +228,8 @@ function RequestFeedItem({
                 style={[
                   ApplicationStyle.borderRadius100,
                   ApplicationStyle.borderWidth1,
-                  Spaces.paddingHorizontal[10],
-                  Spaces.paddingVertical[6],
+                  { paddingHorizontal: 10 },
+                  { paddingVertical: 6 },
                   {
                     backgroundColor: 'rgba(1, 179, 244, 0.08)',
                     borderColor: `${Colors.primary500}44`,
@@ -214,7 +248,7 @@ function RequestFeedItem({
             ApplicationStyle.borderRadius16,
             ApplicationStyle.borderWidth1,
             Spaces.padding[12],
-            Spaces.gap[6],
+            { gap: 6 },
             {
               backgroundColor: 'rgba(245, 158, 11, 0.12)',
               borderColor: `${Colors.warning500}66`,
@@ -358,7 +392,7 @@ function RequestFeedItem({
             <View style={{ flex: 1 }}>
               <Button
                 disabled={isBusy}
-                icon="close"
+                icon={item?.actions?.secondary === 'chat' ? undefined : 'close'}
                 isOption
                 onPress={() => onSecondaryPress && onSecondaryPress(item)}
                 title={getActionLabel(item?.actions?.secondary, item, t)}

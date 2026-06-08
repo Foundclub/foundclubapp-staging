@@ -1,5 +1,6 @@
 import {
   buildRequestHubCounts,
+  mapClubInterestRequestToHubItem,
   mapClubMembershipRequestToHubItem,
   mapEventParticipationRequestToHubItem,
   mapFacilityOverrideRequestToHubItem,
@@ -8,6 +9,7 @@ import {
   sortRequestHubItems,
 } from '@/domains/requests/requestMappers';
 
+import { getClubInterestRequests } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';
 import { getPendingFacilityOverrideRequests } from '@/services/facility/facilityService';
@@ -123,6 +125,34 @@ const fetchClubRequests = async (clubId) => {
   }));
 };
 
+/**
+ * @param {{ clubId?: string; teamIds?: string[] }} params
+ */
+const fetchClubInterestRequests = async ({ clubId = '', teamIds = [] }) => {
+  const jobs = [];
+
+  if (teamIds.length) {
+    jobs.push(fetchAllPages((/** @type {number} */ page) => getClubInterestRequests({
+      page,
+      pageSize: 50,
+      teamIds,
+    })));
+  }
+
+  if (clubId) {
+    jobs.push(fetchAllPages((/** @type {number} */ page) => getClubInterestRequests({
+      clubId,
+      page,
+      pageSize: 50,
+    })));
+  }
+
+  if (!jobs.length) return [];
+
+  const settled = await Promise.all(jobs);
+  return mergeRequestsById(settled.flat());
+};
+
 const fetchEventValidationRequests = async (clubId) => {
   if (!clubId) return [];
 
@@ -198,6 +228,11 @@ export const getRequestsHubData = async (rawContext = {}) => {
       fetcher: () => fetchFacilityRequests(context.clubId),
       key: 'installation',
     },
+    {
+      enabled: context.teamIds.length > 0 || Boolean(context.clubId),
+      fetcher: () => fetchClubInterestRequests({ clubId: context.clubId, teamIds: context.teamIds }),
+      key: 'interest',
+    },
   ];
 
   const enabledSources = sources.filter((source) => source.enabled);
@@ -258,6 +293,14 @@ export const getRequestsHubData = async (rawContext = {}) => {
 
     if (source.key === 'installation') {
       items.push(...entries.map(mapFacilityOverrideRequestToHubItem));
+    }
+
+    if (source.key === 'interest') {
+      items.push(
+        ...entries
+          .filter((request) => request?.status === 'pending')
+          .map(mapClubInterestRequestToHubItem),
+      );
     }
   });
 

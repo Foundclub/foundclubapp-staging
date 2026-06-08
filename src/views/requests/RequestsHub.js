@@ -16,6 +16,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
+import useMessaging from '@/domains/messaging/useMessaging';
 import {
   getAvailableRequestHubFilters,
   REQUEST_HUB_FILTERS,
@@ -31,6 +32,10 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import {
+  CLUB_INTEREST_RESPONSE_PRESETS,
+  respondClubInterestRequest,
+} from '@/services/clubInterestRequest/clubInterestRequestService';
 import { acceptClubMembershipRequest, rejectClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import {
   approveFeatured,
@@ -72,6 +77,8 @@ const getSourceErrorLabel = (source, t) => {
       return t('requestsHub.types.featured', 'À la une');
     case 'installation':
       return t('requestsHub.types.installation', 'Installation');
+    case 'interest':
+      return t('requestsHub.types.interest', 'Interet');
     case 'team':
       return t('requestsHub.types.team', 'Équipe');
     default:
@@ -119,8 +126,13 @@ function RequestsHub({ navigation, route }) {
     userData,
   } = useAuth();
   const queryClient = useQueryClient();
+  const { startWhisperChat } = useMessaging();
 
   const [activeFilter, setActiveFilter] = useState(() => normalizeFilter(route?.params?.initialFilter));
+  const [interestResponseItem, setInterestResponseItem] = useState(/** @type {any | null} */ (null));
+  const [interestResponsePresetKey, setInterestResponsePresetKey] = useState(
+    CLUB_INTEREST_RESPONSE_PRESETS[0]?.key || 'thanks',
+  );
   const [installationRefusalItem, setInstallationRefusalItem] = useState(null);
   const [installationRefusalReason, setInstallationRefusalReason] = useState('');
   const [processingItemId, setProcessingItemId] = useState('');
@@ -187,6 +199,7 @@ function RequestsHub({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['pendingEvents'] }),
       queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] }),
       queryClient.invalidateQueries({ queryKey: ['facility-override-requests'] }),
+      queryClient.invalidateQueries({ queryKey: ['clubInterestRequests'] }),
       queryClient.invalidateQueries({ queryKey: ['events'] }),
     ]);
   }, [context, queryClient]);
@@ -195,6 +208,12 @@ function RequestsHub({ navigation, route }) {
     setInstallationRefusalItem(null);
     setInstallationRefusalReason('');
   }, []);
+
+  const closeInterestResponseModal = useCallback(() => {
+    if (processingItemId) return;
+    setInterestResponseItem(null);
+    setInterestResponsePresetKey(CLUB_INTEREST_RESPONSE_PRESETS[0]?.key || 'thanks');
+  }, [processingItemId]);
 
   const handleClubAssignPrompt = useCallback((item) => {
     const trainerName = item?.meta?.requesterName || t('common.user', 'Utilisateur');
@@ -292,8 +311,36 @@ function RequestsHub({ navigation, route }) {
       return;
     }
 
+    if (item?.type === 'interest' && action === 'respond') {
+      setInterestResponseItem(item);
+      setInterestResponsePresetKey(CLUB_INTEREST_RESPONSE_PRESETS[0]?.key || 'thanks');
+      return;
+    }
+
     try {
       setProcessingItemId(itemId);
+
+      if (item?.type === 'interest') {
+        if (!requestId) throw new Error('Missing club interest request identifier');
+        if (action === 'chat') {
+          const requesterId = item?.meta?.requesterId;
+          if (!requesterId) throw new Error('Missing requester identifier');
+          const chat = await startWhisperChat([requesterId]);
+          const chatDocumentId = chat?.documentId || /** @type {any} */ (chat)?.data?.documentId;
+          if (!chatDocumentId) throw new Error('Missing conversation identifier');
+
+          await respondClubInterestRequest(requestId, {
+            chatDocumentId,
+            responseType: 'chat',
+          });
+          await invalidateRequests();
+          emitGuidanceAction('requests.processed', {
+            requestType: item?.type || 'unknown',
+          });
+          navigation.navigate(RouteNames.Conversation, { chatId: chatDocumentId });
+          return;
+        }
+      }
 
       if (item?.type === 'team') {
         if (!requestId) throw new Error('Missing request identifier');
@@ -366,7 +413,7 @@ function RequestsHub({ navigation, route }) {
     } finally {
       setProcessingItemId('');
     }
-  }, [closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequests, t]);
+  }, [closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequests, navigation, startWhisperChat, t]);
 
   const handlePrimaryPress = useCallback((item) => {
     runItemAction(item, 'primary');
@@ -393,6 +440,44 @@ function RequestsHub({ navigation, route }) {
 
     runItemAction(installationRefusalItem, 'secondary-confirmed', trimmedReason);
   }, [installationRefusalItem, installationRefusalReason, runItemAction, t]);
+
+  const handleInterestResponseConfirm = useCallback(async () => {
+    if (!interestResponseItem) return;
+
+    const requestId = interestResponseItem?.meta?.requestId;
+    const selectedPreset = CLUB_INTEREST_RESPONSE_PRESETS.find(
+      (preset) => preset.key === interestResponsePresetKey,
+    );
+
+    if (!requestId || !selectedPreset) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('requestsHub.interest.responseMissing', 'Choisis une reponse pour traiter cet interet.'),
+      );
+      return;
+    }
+
+    try {
+      setProcessingItemId(interestResponseItem.id);
+      await respondClubInterestRequest(requestId, {
+        presetKey: selectedPreset.key,
+        responseType: 'preset',
+      });
+      await invalidateRequests();
+      emitGuidanceAction('requests.processed', {
+        requestType: 'interest',
+      });
+      setInterestResponseItem(null);
+      setInterestResponsePresetKey(CLUB_INTEREST_RESPONSE_PRESETS[0]?.key || 'thanks');
+    } catch (responseError) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        /** @type {any} */ (responseError)?.message || t('requestsHub.actionError', 'Impossible de traiter la demande.'),
+      );
+    } finally {
+      setProcessingItemId('');
+    }
+  }, [interestResponseItem, interestResponsePresetKey, invalidateRequests, t]);
 
   const handleRequesterPress = useCallback((item) => {
     const requesterId = String(item?.meta?.requesterId || '').trim();
@@ -426,13 +511,17 @@ function RequestsHub({ navigation, route }) {
     { key: 'event', label: t('requestsHub.filters.event', 'Événement') },
     { key: 'featured', label: t('requestsHub.filters.featured', 'À la une') },
     { key: 'installation', label: t('requestsHub.filters.installation', 'Installation') },
-  ]).filter((chip) => availableFilters.includes(chip.key)), [availableFilters, t]);
+    { key: 'interest', label: t('requestsHub.filters.interest', 'Interets') },
+  ]).filter((chip) => availableFilters.includes(/** @type {any} */ (chip.key))), [availableFilters, t]);
 
   const sourceErrors = requestsQuery?.data?.errors || [];
   const canGoBack = typeof navigation?.canGoBack === 'function' && navigation.canGoBack();
   const isInitialRequestsLoad = requestsQuery.isLoading
     && filteredItems.length === 0
     && sourceErrors.length === 0;
+  const selectedInterestPreset = CLUB_INTEREST_RESPONSE_PRESETS.find(
+    (preset) => preset.key === interestResponsePresetKey,
+  );
 
   const handleBackPress = useCallback(() => {
     if (canGoBack) {
@@ -479,14 +568,14 @@ function RequestsHub({ navigation, route }) {
               ApplicationStyle.backgroundColor.primary700,
               ApplicationStyle.borderRadius16,
               ApplicationStyle.borderWidth1,
-              Spaces.padding[20],
+              { padding: 20 },
               Spaces.gap[16],
               {
                 borderColor: `${Colors.warning500}66`,
               },
             ]}
           >
-            <View style={[Spaces.gap[6]]}>
+            <View style={[{ gap: 6 }]}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
                 {t('requestsHub.installation.refusalModalTitle', 'Refuser la demande')}
               </Text>
@@ -536,6 +625,107 @@ function RequestsHub({ navigation, route }) {
                   disabled={Boolean(processingItemId)}
                   onPress={handleInstallationRefusalConfirm}
                   title={t('common.reject', 'Refuser')}
+                  variant="Primary"
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={closeInterestResponseModal}
+        transparent
+        visible={Boolean(interestResponseItem)}
+      >
+        <View
+          style={[
+            Alignments.fill,
+            Alignments.justifyCenter,
+            Spaces.padding[24],
+            { backgroundColor: 'rgba(0, 0, 0, 0.55)' },
+          ]}
+        >
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary700,
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              { padding: 20 },
+              Spaces.gap[16],
+              {
+                borderColor: `${Colors.primary500}66`,
+              },
+            ]}
+          >
+            <View style={[{ gap: 6 }]}>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {t('requestsHub.interest.responseTitle', 'Repondre a cet interet')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'requestsHub.interest.responseDescription',
+                  'Choisis une reponse rapide a envoyer au joueur interesse.',
+                )}
+              </Text>
+            </View>
+
+            <View style={[{ gap: 10 }]}>
+              {CLUB_INTEREST_RESPONSE_PRESETS.map((preset) => {
+                const isSelected = preset.key === interestResponsePresetKey;
+                return (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    disabled={Boolean(processingItemId)}
+                    key={preset.key}
+                    onPress={() => setInterestResponsePresetKey(preset.key)}
+                    style={[
+                      ApplicationStyle.borderRadius16,
+                      ApplicationStyle.borderWidth1,
+                      Spaces.padding[12],
+                      Spaces.gap[4],
+                      {
+                        backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255,255,255,0.04)',
+                        borderColor: isSelected ? Colors.primary500 : `${Colors.primary500}33`,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p3Bold, isSelected ? Fonts.primary100 : Fonts.neutral00]}>
+                      {preset.label}
+                    </Text>
+                    <Text style={[Fonts.p4, Fonts.neutral200]}>
+                      {preset.message}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {selectedInterestPreset ? (
+              <Text style={[Fonts.p4, Fonts.neutral300]}>
+                {t('requestsHub.interest.responsePreview', 'Message envoye')}
+                :
+                {' '}
+                {selectedInterestPreset.message}
+              </Text>
+            ) : null}
+
+            <View style={[Alignments.row, Spaces.gap[12]]}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  disabled={Boolean(processingItemId)}
+                  onPress={closeInterestResponseModal}
+                  title={t('common.actions.cancel', 'Annuler')}
+                  variant="Secondary"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button
+                  disabled={Boolean(processingItemId)}
+                  isLoading={processingItemId === interestResponseItem?.id}
+                  onPress={handleInterestResponseConfirm}
+                  title={t('requestsHub.actions.respond', 'Repondre')}
                   variant="Primary"
                 />
               </View>

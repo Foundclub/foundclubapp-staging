@@ -5,15 +5,13 @@ import {
   Image, Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import SvgIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -51,7 +49,6 @@ function EventCard({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { getClubInitials } = useClub();
 
   // Helper to safely access club data
   const club = item?.team?.club || item?.club;
@@ -114,20 +111,12 @@ function EventCard({
           Alignments.alignCenter,
           Spaces.gap[8]]}
         >
-          {clubLogo ? (
-            <ProfileAvatar
-              imageStyle={{ borderRadius: 30 }}
-              imageUrl={clubLogo}
-              size={60}
-              variant="logo"
-              style={{ borderRadius: 30 }}
-            />
-          ) : (
-            <TeamShield
-              initials={clubName ? getClubInitials(clubName) : ''}
-              isSmall
-            />
-          )}
+          <ClubLogoMark
+            logoStyle={{ borderRadius: 30 }}
+            logoUrl={clubLogo}
+            name={clubName}
+            size={60}
+          />
           <View style={[Spaces.gap[4], { maxWidth: '80%' }]}>
             <Text
               ellipsizeMode="tail"

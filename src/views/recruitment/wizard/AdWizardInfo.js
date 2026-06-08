@@ -7,13 +7,11 @@ import {
   View,
 } from 'react-native';
 
-import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import StrapiImage from '@/components/atoms/strapiImage/StrapiImage';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -47,7 +45,6 @@ function AdWizardInfo({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
-  const { getClubInitials } = useClub();
   const { showBanner } = useAppFeedback();
   const { dispatch, state } = useAdWizard();
   const { width } = useWindowDimensions();
@@ -122,30 +119,18 @@ function AdWizardInfo({ navigation }) {
   const shouldUseSingleColumnFields = width <= 430;
   const compactFieldWidth = shouldUseSingleColumnFields ? '100%' : '48%';
 
-  const teamIdentityNode = state.team?.club?.logo?.url ? (
-    <View
-      style={{
-        alignItems: 'center',
+  const teamIdentityNode = (
+    <ClubLogoMark
+      club={state.team?.club}
+      logoStyle={{
         backgroundColor: Colors.neutral00,
         borderColor: Colors.primary500,
         borderRadius: 28,
         borderWidth: 1.5,
-        height: 56,
-        justifyContent: 'center',
-        overflow: 'hidden',
-        width: 56,
       }}
-    >
-      <StrapiImage
-        resizeMode="contain"
-        source={{ uri: state.team.club.logo.url }}
-        style={{ backgroundColor: Colors.neutral00, height: 44, width: 44 }}
-      />
-    </View>
-  ) : (
-    <TeamShield
-      initials={getClubInitials(state.team?.club?.name || state.team?.name || '')}
-      isSmall
+      name={state.team?.club?.name || state.team?.name}
+      safeInsetRatio={0.1}
+      size={56}
     />
   );
 

@@ -1,10 +1,12 @@
 import {
   canEventBeJoined,
   createEventPayload,
+  createEventUpdatePayload,
   createReccurrentEventPayload,
   formatDateInput,
   formatDateTimeToSend,
   formatTimeInput,
+  getEventEditSupport,
   getReccurrenceDayOptions,
   haveIAlreadyJoined,
   isValidDate,
@@ -291,6 +293,71 @@ describe('Event Use Cases', () => {
       expect(result).not.toHaveProperty('featuredScope');
       expect(result).not.toHaveProperty('highlightRequests');
       expect(result).not.toHaveProperty('isFeatured');
+    });
+  });
+
+  describe('createEventUpdatePayload', () => {
+    test('should strip update-only unsupported fields while keeping editable data', () => {
+      const mockEvent = {
+        childStageEvents: [{ documentId: 'child-1' }],
+        date: '15/05/2025',
+        detectionSlots: [{ position: 'GB', quantity: 1 }],
+        eventFormat: 'single',
+        facilityOverrideRequest: { documentId: 'request-1' },
+        location: { label: 'Paris', value: '2.3522|48.8566' },
+        parentEvent: { documentId: 'parent-1' },
+        recurrenceGroupId: 'rec-1',
+        startTime: '14:30',
+        status: 'pending_validation',
+        team: 'team-123',
+        type: 'type-123',
+        validationMode: 'auto',
+      };
+
+      const result = createEventUpdatePayload(mockEvent);
+
+      expect(result.date).toMatch(/^2025-05-15T.*:30:00/);
+      expect(result).not.toHaveProperty('childStageEvents');
+      expect(result).not.toHaveProperty('detectionSlots');
+      expect(result).not.toHaveProperty('eventFormat');
+      expect(result).not.toHaveProperty('facilityOverrideRequest');
+      expect(result).not.toHaveProperty('parentEvent');
+      expect(result).not.toHaveProperty('recurrenceGroupId');
+      expect(result).not.toHaveProperty('status');
+    });
+  });
+
+  describe('getEventEditSupport', () => {
+    test('should flag stage events as unsupported', () => {
+      expect(getEventEditSupport({ eventFormat: 'stage_parent' })).toEqual(expect.objectContaining({
+        isSupported: false,
+        reasonKey: 'stage',
+      }));
+    });
+
+    test('should flag tournament events as unsupported', () => {
+      expect(getEventEditSupport({}, 'Tournoi regional')).toEqual(expect.objectContaining({
+        isSupported: false,
+        reasonKey: 'tournament',
+      }));
+    });
+
+    test('should flag detections with slots as unsupported', () => {
+      expect(getEventEditSupport({
+        detectionSlots: [{ position: 'BU', quantity: 2 }],
+      }, 'Detection')).toEqual(expect.objectContaining({
+        isSupported: false,
+        reasonKey: 'detection_slots',
+      }));
+    });
+
+    test('should keep standard events editable', () => {
+      expect(getEventEditSupport({
+        eventFormat: 'single',
+      }, 'Entrainement')).toEqual(expect.objectContaining({
+        isSupported: true,
+        reasonKey: null,
+      }));
     });
   });
 

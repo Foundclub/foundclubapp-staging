@@ -11,11 +11,9 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -68,7 +66,6 @@ function RecruitmentAdCard({
   const {
     Colors, Fonts, Images,
   } = useTheme();
-  const { getClubInitials } = useClub();
   const { userData } = useAuth();
 
   const scale = useSharedValue(1);
@@ -217,21 +214,12 @@ function RecruitmentAdCard({
 
           <View style={styles.clubInfoContainer}>
             <View style={styles.clubLogoContainer}>
-              {clubLogo ? (
-                <ProfileAvatar
-                  imageStyle={{ borderRadius: 24 }}
-                  imageUrl={clubLogo}
-                  size={48}
-                  style={{ borderColor: Colors.neutral200, borderRadius: 24, borderWidth: 1 }}
-                  variant="logo"
-                />
-              ) : (
-                <TeamShield
-                  initials={clubName ? getClubInitials(clubName) : ''}
-                  isSmall
-                  size={48}
-                />
-              )}
+              <ClubLogoMark
+                logoStyle={{ borderColor: Colors.neutral200, borderRadius: 24, borderWidth: 1 }}
+                logoUrl={clubLogo}
+                name={clubName}
+                size={48}
+              />
             </View>
 
             <View style={styles.clubTextContainer}>

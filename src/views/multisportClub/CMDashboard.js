@@ -39,6 +39,28 @@ import MultisportSectionsList from './components/MultisportSectionsList';
 import MultisportSponsorsSection from './components/MultisportSponsorsSection';
 import MultisportStatsRow from './components/MultisportStatsRow';
 
+const normalizeErrorMessage = (error) => String(
+  error?.message
+  || error?.error?.message
+  || error?.response?.data?.error?.message
+  || '',
+).trim().toLowerCase();
+
+const getErrorStatus = (error) => Number(
+  error?.status
+  || error?.statusCode
+  || error?.response?.status
+  || error?.response?.data?.status
+  || 0,
+);
+
+const isForbiddenError = (error) => (
+  getErrorStatus(error) === 403
+  || normalizeErrorMessage(error).includes('acces refuse')
+  || normalizeErrorMessage(error).includes('accès refusé')
+  || normalizeErrorMessage(error).includes('forbidden')
+);
+
 /**
  * @typedef {{ url?: string }} ImageAsset
  * @typedef {{ documentId?: string; firstname?: string; lastname?: string; avatar?: ImageAsset }} CMAdmin
@@ -70,6 +92,10 @@ function CMDashboard({ navigation, route }) {
   } = useTheme();
   const { userData } = useAuth();
   const { getClubInitials } = useClub();
+  const managedCmSummary = useMemo(
+    () => (userData?.multisportClubs || []).find((club) => club?.documentId === cmId) || null,
+    [cmId, userData?.multisportClubs],
+  );
 
   const {
     data: cmData,
@@ -99,17 +125,22 @@ function CMDashboard({ navigation, route }) {
     queryKey: ['cm-clubs', cmId],
   });
 
-  const cm = /** @type {CMMultisport | null | undefined} */ (cmData);
+  const canFallbackToManagedSummary = Boolean(
+    managedCmSummary?.documentId
+    && managedCmSummary.documentId === cmId
+    && isForbiddenError(cmError),
+  );
+  const cm = /** @type {CMMultisport | null | undefined} */ (cmData || managedCmSummary);
   const sectionsData = /** @type {{ data?: CMSectionRow[] } | undefined} */ (sectionsDataRaw);
   const sections = useMemo(() => sectionsData?.data || [], [sectionsData?.data]);
   const sponsors = useMemo(() => cm?.sponsor || [], [cm?.sponsor]);
   const admins = useMemo(() => cm?.admins || [], [cm?.admins]);
   const isLoading = cmLoading || sectionsLoading;
-  const error = cmError || sectionsError;
+  const error = sectionsError || (canFallbackToManagedSummary ? null : cmError);
 
   const isCmAdmin = useMemo(
-    () => admins.some((admin) => admin.documentId === userData?.documentId),
-    [admins, userData?.documentId],
+    () => canFallbackToManagedSummary || admins.some((admin) => admin.documentId === userData?.documentId),
+    [admins, canFallbackToManagedSummary, userData?.documentId],
   );
 
   const refetch = useCallback(() => {

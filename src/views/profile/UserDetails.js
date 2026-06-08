@@ -27,6 +27,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import TabButton from '@/components/atoms/tabButton/TabButton';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
@@ -745,10 +746,7 @@ function UserDetails({ navigation, route }) {
                     onPress={handleOpenClub}
                     style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
                   >
-                    <TeamShield
-                      initials={getClubInitials(user.club.name)}
-                      isSmall
-                    />
+                    <ClubLogoMark club={user.club} size={60} />
                     <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral200, { flex: 1 }]}>
                       {user.club.name}
                     </Text>

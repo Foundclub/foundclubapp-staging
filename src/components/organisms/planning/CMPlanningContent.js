@@ -37,6 +37,7 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 import { getCMFacilities } from '@/services/facility/facilityService';
 import { getCMClubs, getCMPlanning } from '@/services/multisportClub/multisportClubService';
 
+import { getFacilityConflictMode } from '@/utils/facilityConflictMode';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
   getPlanningDefaultDate,
@@ -195,7 +196,7 @@ function CMPlanningContent({
       facilityId: selectedFacilityId,
       facilityMeta: selectedFacility
         ? {
-          allowOverflowRequests: selectedFacility?.allowOverflowRequests !== false,
+          capacityConflictMode: getFacilityConflictMode(selectedFacility),
           maxSlots: Number(selectedFacility?.maxSlots || 1),
           name: selectedFacility?.name || null,
           planningColor: resolveFacilityPlanningColor(selectedFacility) || Colors.primary500,

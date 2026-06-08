@@ -15,7 +15,6 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useEvent from '@/domains/event/useEvent';
 import { resolveParticipationFlow } from '@/domains/participation/participationFlow';
@@ -23,9 +22,8 @@ import useTheme from '@/theme/themeContext';
 
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Tag from '@/components/atoms/tag/Tag';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import {
   resolveExternalMatchDisplay,
@@ -178,7 +176,6 @@ function EventCardNew({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { getClubInitials } = useClub();
   const { userData } = useAuth();
   const { haveIAlreadyJoined } = useEvent();
 
@@ -492,21 +489,12 @@ function EventCardNew({
           {/* Club / Team Info */}
           <View style={styles.clubInfoContainer}>
             <View style={styles.clubLogoContainer}>
-              {clubLogo ? (
-                <ProfileAvatar
-                  imageStyle={{ borderRadius: 20 }}
-                  imageUrl={clubLogo}
-                  size={40}
-                  style={{ borderRadius: 20 }}
-                  variant="logo"
-                />
-              ) : (
-                <TeamShield
-                  initials={clubName ? getClubInitials(clubName) : ''}
-                  isSmall
-                  size={40}
-                />
-              )}
+              <ClubLogoMark
+                logoStyle={{ borderRadius: 20 }}
+                logoUrl={clubLogo}
+                name={clubName}
+                size={40}
+              />
             </View>
             <View style={styles.clubTextContainer}>
               <Text numberOfLines={2} style={resolvedPrimaryTitleStyle}>{primaryTitle}</Text>

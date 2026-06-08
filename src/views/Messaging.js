@@ -14,7 +14,6 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import {
   getChatMessagePreview,
   isLeagueChat,
@@ -23,8 +22,8 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -63,7 +62,6 @@ function Messaging({ navigation, route }) {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { allMyTeams, userData } = useAuth();
-  const { getClubInitials } = useClub();
   const routeChatScope = route?.params?.chatScope || route?.params?.initialChatScope;
   const [chatScopeFilter, setChatScopeFilter] = useState(
     () => normalizeChatScopeFilter(routeChatScope),
@@ -216,21 +214,11 @@ function Messaging({ navigation, route }) {
   const renderConversationAvatar = (chat) => {
     switch (chat.type) {
       case 'club':
-        if (chat?.club?.logo?.url) {
-          return (
-            <ProfileAvatar
-              enablePreview={false}
-              imageUrl={chat.club.logo.url}
-              size={48}
-              variant="logo"
-            />
-          );
-        }
         return (
-          <TeamShield
-            initials={chat?.club?.name ? getClubInitials(chat?.club?.name) : ''}
+          <ClubLogoMark
+            club={chat?.club}
             isNeutral
-            isSmall
+            size={48}
           />
         );
       case 'group':
@@ -268,38 +256,19 @@ function Messaging({ navigation, route }) {
           </View>
         );
       case 'multisport':
-        if (chat?.multisportClub?.logo?.url) {
-          return (
-            <ProfileAvatar
-              enablePreview={false}
-              imageUrl={chat.multisportClub.logo.url}
-              size={48}
-              variant="logo"
-            />
-          );
-        }
         return (
-          <TeamShield
-            initials={chat?.multisportClub?.name ? getClubInitials(chat?.multisportClub?.name) : ''}
+          <ClubLogoMark
+            club={chat?.multisportClub}
             isNeutral
-            isSmall
+            size={48}
           />
         );
       case 'team':
-        if (chat?.team?.logo?.url) {
-          return (
-            <ProfileAvatar
-              enablePreview={false}
-              imageUrl={chat.team.logo.url}
-              size={48}
-              variant="logo"
-            />
-          );
-        }
         return (
-          <TeamShield
-            initials={chat?.team?.name ? getClubInitials(chat?.team?.name) : ''}
-            isSmall
+          <ClubLogoMark
+            club={chat?.team}
+            name={chat?.team?.club?.name || chat?.team?.name}
+            size={48}
           />
         );
       default:

@@ -1,8 +1,8 @@
 /**
- * @typedef {'all' | 'team' | 'club' | 'event' | 'featured' | 'installation'} RequestHubFilter
- * @typedef {'team' | 'club' | 'event' | 'featured' | 'installation'} RequestHubType
+ * @typedef {'all' | 'team' | 'club' | 'event' | 'featured' | 'installation' | 'interest'} RequestHubFilter
+ * @typedef {'team' | 'club' | 'event' | 'featured' | 'installation' | 'interest'} RequestHubType
  * @typedef {'pending'} RequestHubStatus
- * @typedef {'accept' | 'reject' | 'validate'} RequestHubAction
+ * @typedef {'accept' | 'reject' | 'validate' | 'respond' | 'chat'} RequestHubAction
  * @typedef {object} RequestHubItem
  * @property {string} id
  * @property {RequestHubType} type
@@ -14,7 +14,7 @@
  * @property {Record<string, any>} meta
  */
 
-export const REQUEST_HUB_FILTERS = /** @type {const} */ (['all', 'team', 'club', 'event', 'featured', 'installation']);
+export const REQUEST_HUB_FILTERS = /** @type {const} */ (['all', 'team', 'club', 'event', 'featured', 'installation', 'interest']);
 
 /**
  * @param {{
@@ -37,7 +37,7 @@ export const getAvailableRequestHubFilters = (context = {}) => {
   const filters = ['all'];
 
   if ((Array.isArray(teamIds) && teamIds.length > 0) || clubId) {
-    filters.push('team');
+    filters.push('team', 'interest');
   }
   if (clubId) {
     filters.push('club', 'event');
@@ -205,6 +205,40 @@ export const mapClubMembershipRequestToHubItem = (request = {}) => {
     subtitle,
     title,
     type: 'club',
+  };
+};
+
+/**
+ * @param {Record<string, any>} request
+ * @returns {RequestHubItem}
+ */
+export const mapClubInterestRequestToHubItem = (request = {}) => {
+  const requestId = String(request?.documentId || request?.id || '');
+  const teamName = normalizeString(request?.team?.name) || 'Equipe';
+  const clubName = normalizeString(request?.club?.name || request?.team?.club?.name) || 'Club';
+  const requester = request?.user || {};
+  const requesterName = resolveRequesterName(requester);
+  const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
+
+  return {
+    actions: { primary: 'respond', secondary: 'chat' },
+    createdAt: toIsoString(request?.createdAt),
+    id: `interest:${requestId}`,
+    meta: {
+      clubId: normalizeString(request?.club?.documentId || request?.team?.club?.documentId),
+      clubName,
+      raw: request,
+      requesterAvatarUrl,
+      requesterId: normalizeString(requester?.documentId),
+      requesterName,
+      requestId,
+      teamId: normalizeString(request?.team?.documentId),
+      teamName,
+    },
+    status: 'pending',
+    subtitle: `${requesterName} est interesse par ${teamName}.`,
+    title: 'Interet club',
+    type: 'interest',
   };
 };
 
@@ -381,6 +415,7 @@ export const buildRequestHubCounts = (items = []) => {
     event: 0,
     featured: 0,
     installation: 0,
+    interest: 0,
     team: 0,
     total: 0,
   };

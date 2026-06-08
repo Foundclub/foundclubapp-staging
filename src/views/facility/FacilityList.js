@@ -28,6 +28,7 @@ import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { deleteFacility, getFacilitySections } from '@/services/facility/facilityService';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+import { FACILITY_CONFLICT_MODES, getFacilityConflictMode } from '@/utils/facilityConflictMode';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
 const getAddressLabel = (address, fallback = 'Adresse non renseignee') => {
@@ -258,6 +259,7 @@ function FacilityList() {
     const cardTintColor = `${planningColor}22`;
     const isEditable = !item?.isReadOnly;
     const sharedOwnerLabel = item?.ownerName || t('facilityList.badges.multisport', 'Multisport');
+    const conflictMode = getFacilityConflictMode(item);
     const accessibilityEditLabel = t(
       'facilityList.accessibility.editCard',
       `Modifier l'installation ${item?.name || ''}`.trim(),
@@ -324,10 +326,10 @@ function FacilityList() {
             {renderMetaChip(capacityLabel, 'primary')}
             {renderMetaChip(item?.type || t('facilityList.defaults.unknownType', 'Type inconnu'), 'neutral')}
             {renderMetaChip(
-              item?.allowOverflowRequests !== false
-                ? t('facilityList.badges.overflowAllowed', 'Exceptions autorisees')
-                : t('facilityList.badges.overflowBlocked', 'Capacite stricte'),
-              item?.allowOverflowRequests !== false ? 'warning' : 'neutral',
+              conflictMode === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY
+                ? t('facilityList.badges.overflowAllowed', 'Autorise et notifier')
+                : t('facilityList.badges.overflowBlocked', 'Demande en attente'),
+              conflictMode === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY ? 'primary' : 'warning',
             )}
             {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.shared', 'Partagee'), 'primary') : null}
           </View>

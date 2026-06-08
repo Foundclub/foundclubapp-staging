@@ -20,6 +20,10 @@ import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { getClubSharedPlanning } from '@/services/multisportClub/multisportClubService';
 import { keepPreviousPageData } from '@/services/queryOptions';
 
+import {
+  FACILITY_CONFLICT_MODES,
+  getFacilityConflictMode,
+} from '@/utils/facilityConflictMode';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
   getPlanningDefaultDate,
@@ -156,16 +160,18 @@ function ClubFacilityPlanningContainer({
     const maxSlots = Math.max(1, Number(selectedFacility?.maxSlots || 1));
     const peakConcurrent = occupancy.maxConcurrent;
     const remainingAtPeak = Math.max(0, maxSlots - peakConcurrent);
-    const allowOverflowRequests = selectedFacility?.allowOverflowRequests !== false;
+    const conflictMode = getFacilityConflictMode(selectedFacility);
 
     return {
-      allowOverflowRequests,
+      allowsImmediateConfirmation: conflictMode === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY,
+      conflictMode,
       eventCount: occupancy.itemCount,
       facilityColor: resolveFacilityPlanningColor(selectedFacility) || Colors.primary500,
       maxSlots,
       peakConcurrent,
       reachedCapacity: peakConcurrent >= maxSlots,
       remainingAtPeak,
+      requiresApproval: conflictMode === FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
     };
   }, [Colors.primary500, displayedEvents, selectedFacility, selectedFacilityId]);
 
@@ -229,7 +235,7 @@ function ClubFacilityPlanningContainer({
       facilityId: selectedFacilityId,
       facilityMeta: activeFacility
         ? {
-          allowOverflowRequests: activeFacility?.allowOverflowRequests !== false,
+          capacityConflictMode: getFacilityConflictMode(activeFacility),
           maxSlots: Number(activeFacility?.maxSlots || 1),
           name: activeFacility?.name || null,
           planningColor: resolveFacilityPlanningColor(activeFacility) || Colors.primary500,
@@ -243,16 +249,16 @@ function ClubFacilityPlanningContainer({
     if (!facilityPlanningSummary) return '';
 
     if (facilityPlanningSummary.reachedCapacity) {
-      if (facilityPlanningSummary.allowOverflowRequests) {
+      if (facilityPlanningSummary.allowsImmediateConfirmation) {
         return t(
           'facilityList.planning.capacityReachedOverflow',
-          'La capacite a deja ete atteinte sur cette periode. Les depassements restent possibles via validation dirigeant.',
+          'La capacite a deja ete atteinte sur cette periode. Les nouveaux depassements restent autorises et notifieront les dirigeants.',
         );
       }
 
       return t(
         'facilityList.planning.capacityReachedStrict',
-        'La capacite a deja ete atteinte sur cette periode. Aucun depassement n\'est autorise.',
+        'La capacite a deja ete atteinte sur cette periode. Les nouveaux depassements passeront en demande en attente.',
       );
     }
 
@@ -387,9 +393,9 @@ function ClubFacilityPlanningContainer({
                 `${facilityPlanningSummary.maxSlots} slot${facilityPlanningSummary.maxSlots > 1 ? 's' : ''}`,
                 `Pic ${facilityPlanningSummary.peakConcurrent}/${facilityPlanningSummary.maxSlots}`,
                 `${facilityPlanningSummary.eventCount} evenement${facilityPlanningSummary.eventCount > 1 ? 's' : ''}`,
-                facilityPlanningSummary.allowOverflowRequests
-                  ? t('facilityList.planning.overflowAllowed', 'Exception possible')
-                  : t('facilityList.planning.overflowBlocked', 'Capacite stricte'),
+                facilityPlanningSummary.allowsImmediateConfirmation
+                  ? t('facilityList.planning.overflowAllowed', 'Autorise et notifier')
+                  : t('facilityList.planning.overflowBlocked', 'Demande en attente'),
               ].map((label, index) => (
                 <View
                   key={`${label}-${index + 1}`}

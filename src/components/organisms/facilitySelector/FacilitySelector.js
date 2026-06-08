@@ -195,30 +195,31 @@ function FacilitySelector({
     (facility) => (facility.documentId || facility.id) === facilityId,
   );
   const isSaturated = Boolean(occupancySummary?.saturated);
-  const canRequestOverflow = Boolean(occupancySummary?.canRequestOverflow);
+  const requiresApproval = Boolean(occupancySummary?.requiresApproval);
+  const allowsImmediateConfirmation = Boolean(occupancySummary?.allowsImmediateConfirmation);
   let occupancyCardBackground = cardSurfaceStyle.backgroundColor;
   let occupancyCardBorder = cardSurfaceStyle.borderColor;
   let occupancyTone = Fonts.primary200;
   let occupancyMessage = t(
-    'eventWizard.steps.location.overflowAvailable',
+    'eventWizard.steps.location.capacityAvailable',
     'Cette installation a encore de la capacite pour ce creneau.',
   );
 
-  if (isSaturated && canRequestOverflow) {
+  if (isSaturated && requiresApproval) {
     occupancyCardBackground = 'rgba(245, 158, 11, 0.12)';
     occupancyCardBorder = `${Colors.warning500}88`;
     occupancyTone = Fonts.warning500;
     occupancyMessage = t(
-      'eventWizard.steps.location.overflowPossible',
-      "Ce creneau est complet. La creation enverra une demande d'exception dirigeant.",
+      'eventWizard.steps.location.pendingValidationConflict',
+      "Ce creneau depasse la capacite. La creation passera en demande en attente jusqu'a validation d'un dirigeant.",
     );
-  } else if (isSaturated) {
-    occupancyCardBackground = 'rgba(239, 68, 68, 0.12)';
-    occupancyCardBorder = `${Colors.error500}88`;
-    occupancyTone = Fonts.error500;
+  } else if (isSaturated && allowsImmediateConfirmation) {
+    occupancyCardBackground = 'rgba(1, 179, 244, 0.12)';
+    occupancyCardBorder = `${Colors.primary500}88`;
+    occupancyTone = Fonts.primary500;
     occupancyMessage = t(
-      'eventWizard.steps.location.overflowBlocked',
-      'Ce creneau est complet sur cette installation. Choisissez un autre horaire ou une autre installation.',
+      'eventWizard.steps.location.allowAndNotifyConflict',
+      'Ce creneau depasse la capacite, mais il restera autorise et notifiera les dirigeants.',
     );
   }
 

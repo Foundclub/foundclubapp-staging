@@ -46,6 +46,10 @@ import {
   lockToPortrait,
 } from '@/utils/device/orientation';
 import {
+  FACILITY_CONFLICT_MODES,
+  getFacilityConflictMode,
+} from '@/utils/facilityConflictMode';
+import {
   getPlanningDefaultDate,
   getPlanningPeakOccupancy,
   getPlanningRange,
@@ -196,13 +200,14 @@ function PlanningWeekFullscreen() {
     const remainingAtPeak = Math.max(0, maxSlots - peakConcurrent);
 
     return {
-      allowOverflowRequests: facilityMeta?.allowOverflowRequests !== false,
+      allowsImmediateConfirmation: getFacilityConflictMode(facilityMeta) === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY,
       eventCount: occupancy.itemCount,
       facilityColor: facilityMeta?.planningColor || Colors.primary500,
       maxSlots,
       peakConcurrent,
       reachedCapacity: peakConcurrent >= maxSlots,
       remainingAtPeak,
+      requiresApproval: getFacilityConflictMode(facilityMeta) === FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
     };
   }, [Colors.primary500, events, facilityId, facilityMeta]);
   const weekLabel = useMemo(() => {
@@ -242,16 +247,16 @@ function PlanningWeekFullscreen() {
     if (!facilityPlanningSummary) return '';
 
     if (facilityPlanningSummary.reachedCapacity) {
-      if (facilityPlanningSummary.allowOverflowRequests) {
+      if (facilityPlanningSummary.allowsImmediateConfirmation) {
         return t(
           'facilityList.planning.capacityReachedOverflow',
-          'La capacite a deja ete atteinte sur cette periode. Les depassements restent possibles via validation dirigeant.',
+          'La capacite a deja ete atteinte sur cette periode. Les nouveaux depassements restent autorises et notifieront les dirigeants.',
         );
       }
 
       return t(
         'facilityList.planning.capacityReachedStrict',
-        'La capacite a deja ete atteinte sur cette periode. Aucun depassement n\'est autorise.',
+        'La capacite a deja ete atteinte sur cette periode. Les nouveaux depassements passeront en demande en attente.',
       );
     }
 

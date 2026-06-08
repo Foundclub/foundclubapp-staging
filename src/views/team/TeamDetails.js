@@ -33,6 +33,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamLocationIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import StatRow from '@/components/molecules/statRow/StatRow';
@@ -2421,30 +2422,22 @@ function TeamDetails({ navigation, route }) {
           {activeTab === 'infos' && (
           <View style={[Spaces.marginTop[8]]}>
             <View style={[Alignments.alignCenter, { elevation: 2, marginBottom: -40, zIndex: 2 }]}>
-              {team?.club?.logo?.url ? (
-                <ProfileAvatar
-                  fitMode="contain"
-                  imageStyle={{ backgroundColor: 'transparent' }}
-                  imageUrl={team.club.logo.url}
-                  safeInsetRatio={teamClubLogoFrame.safeInsetRatio}
-                  shape="rounded"
-                  size={90}
-                  style={[
-                    ApplicationStyle.borderWidth1,
-                    ApplicationStyle.borderColor.neutral00,
-                    {
-                      borderRadius: teamClubLogoFrame.borderRadius,
-                      height: teamClubLogoFrame.height,
-                      width: teamClubLogoFrame.width,
-                    },
-                  ]}
-                  variant="logo"
-                />
-              ) : (
-                <TeamShield
-                  initials={team?.club?.name ? getClubInitials(team?.club?.name || '') : ''}
-                />
-              )}
+              <ClubLogoMark
+                club={team?.club}
+                imageStyle={{ backgroundColor: 'transparent' }}
+                logoStyle={[
+                  ApplicationStyle.borderWidth1,
+                  ApplicationStyle.borderColor.neutral00,
+                  {
+                    borderRadius: teamClubLogoFrame.borderRadius,
+                    height: teamClubLogoFrame.height,
+                    width: teamClubLogoFrame.width,
+                  },
+                ]}
+                name={team?.club?.name}
+                safeInsetRatio={teamClubLogoFrame.safeInsetRatio}
+                size={90}
+              />
             </View>
             <View
               key={team?.documentId}

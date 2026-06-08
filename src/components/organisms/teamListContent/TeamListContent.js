@@ -24,6 +24,7 @@ import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile'
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
@@ -379,12 +380,22 @@ function TeamListContent({
       />
     ) : null;
 
-    let identityAvatar = (
+    let identityAvatar = isLeagueCard ? (
       <TeamShield
         initials={getClubInitials(item.name)}
-        isGold={isLeagueCard}
-        isSmall={!isLeagueCard}
-        size={isLeagueCard ? 80 : undefined}
+        isGold
+        size={80}
+      />
+    ) : (
+      <ClubLogoMark
+        club={item?.club}
+        logoStyle={[
+          ApplicationStyle.borderWidth1,
+          ApplicationStyle.borderColor.primary500,
+          { borderRadius: 16 },
+        ]}
+        name={item?.club?.name || item?.name}
+        size={60}
       />
     );
 
@@ -400,23 +411,6 @@ function TeamListContent({
             borderRadius: 20,
             borderWidth: 1,
           }}
-          variant="logo"
-        />
-      );
-    } else if (item?.club?.logo?.url) {
-      identityAvatar = (
-        <ProfileAvatar
-          fitMode="cover"
-          imageStyle={{ backgroundColor: 'transparent' }}
-          imageUrl={item.club.logo.url}
-          safeInsetRatio={0}
-          shape="rounded"
-          size={60}
-          style={[
-            ApplicationStyle.borderWidth1,
-            ApplicationStyle.borderColor.primary500,
-            { borderRadius: 16 },
-          ]}
           variant="logo"
         />
       );

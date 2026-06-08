@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -31,6 +30,10 @@ import { useGetFacility } from '@/services/facility/facilityQueries';
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
 
 import {
+  FACILITY_CONFLICT_MODES,
+  getFacilityConflictMode,
+} from '@/utils/facilityConflictMode';
+import {
   FACILITY_PLANNING_PALETTE,
   isValidFacilityPlanningColor,
   resolveFacilityPlanningColor,
@@ -41,7 +44,10 @@ const schema = Joi.object({
     Joi.string().allow('').optional(),
     Joi.object().optional(),
   ),
-  allowOverflowRequests: Joi.boolean().required(),
+  capacityConflictMode: Joi.string().valid(
+    FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
+    FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY,
+  ).required(),
   maxSlots: Joi.number().min(1).required().messages({
     'any.required': 'La capacité est requise',
     'number.min': 'La capacité doit être d\'au moins 1',
@@ -133,6 +139,29 @@ const sanitizeRouteParam = (value) => {
   return normalizedValue;
 };
 
+const FACILITY_CONFLICT_MODE_OPTIONS = [
+  {
+    description: 'Si le creneau depasse la capacite, l evenement ou la reservation passe en demande en attente jusqu\'a validation d\'un dirigeant.',
+    title: 'Demande en attente',
+    value: FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
+  },
+  {
+    description: 'Si le creneau depasse la capacite, l objet reste confirme tout de suite et les dirigeants sont simplement notifies.',
+    title: 'Autorise et notifier',
+    value: FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY,
+  },
+];
+
+/** @type {{ address: any, capacityConflictMode: string, maxSlots: number, name: string, planningColor: string, type: string }} */
+const DEFAULT_FORM_VALUES = {
+  address: null,
+  capacityConflictMode: FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
+  maxSlots: 1,
+  name: '',
+  planningColor: FACILITY_PLANNING_PALETTE[0],
+  type: 'Terrain',
+};
+
 /**
  * Facility create/update screen.
  * @returns {import('react').ReactElement}
@@ -177,14 +206,7 @@ function FacilityForm() {
     setError,
     watch,
   } = useForm({
-    defaultValues: {
-      address: null,
-      allowOverflowRequests: true,
-      maxSlots: 1,
-      name: '',
-      planningColor: FACILITY_PLANNING_PALETTE[0],
-      type: 'Terrain',
-    },
+    defaultValues: DEFAULT_FORM_VALUES,
     resolver: joiResolver(schema),
   });
 
@@ -195,15 +217,16 @@ function FacilityForm() {
   const watchedAddress = watch('address');
   const watchedMaxSlots = watch('maxSlots');
   const watchedPlanningColor = watch('planningColor');
-  const watchedAllowOverflowRequests = watch('allowOverflowRequests');
+  const watchedCapacityConflictMode = watch('capacityConflictMode');
   const isMissingCreateContext = !isEdit && !contextClubId && !contextCmId;
   const isFacilityNotFound = isEdit && !facilityLoading && !facilityError && !facility;
 
   useEffect(() => {
     if (facility) {
       reset({
+        ...DEFAULT_FORM_VALUES,
         address: facility?.address || null,
-        allowOverflowRequests: facility?.allowOverflowRequests !== false,
+        capacityConflictMode: String(getFacilityConflictMode(facility) || FACILITY_CONFLICT_MODES.PENDING_VALIDATION),
         maxSlots: Number(facility?.maxSlots || 1),
         name: facility?.name || '',
         planningColor: resolveFacilityPlanningColor(facility) || FACILITY_PLANNING_PALETTE[0],
@@ -213,14 +236,7 @@ function FacilityForm() {
     }
 
     if (!isEdit) {
-      reset({
-        address: null,
-        allowOverflowRequests: true,
-        maxSlots: 1,
-        name: '',
-        planningColor: FACILITY_PLANNING_PALETTE[0],
-        type: 'Terrain',
-      });
+      reset(DEFAULT_FORM_VALUES);
     }
   }, [facility, isEdit, reset]);
 
@@ -257,6 +273,8 @@ function FacilityForm() {
     const formattedData = {
       ...data,
       address: normalizedAddress,
+      allowOverflowRequests: true,
+      capacityConflictMode: data.capacityConflictMode || FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
     };
 
     setLoading(true);
@@ -295,6 +313,11 @@ function FacilityForm() {
         backgroundColor: `${Colors.primary500}1F`,
         borderColor: Colors.primary500,
         textColor: Colors.primary500,
+      },
+      warning: {
+        backgroundColor: `${Colors.warning500}1F`,
+        borderColor: Colors.warning500,
+        textColor: Colors.warning500,
       },
     };
     const chipStyle = chipStyleByTone[tone] || chipStyleByTone.primary;
@@ -579,37 +602,63 @@ function FacilityForm() {
 
             <Controller
               control={control}
-              name="allowOverflowRequests"
+              name="capacityConflictMode"
               render={({ field: { onChange, value } }) => (
-                <View
-                  style={[
-                    ApplicationStyle.backgroundColor.primary900,
-                    ApplicationStyle.borderRadius16,
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    Alignments.justifySpaceBetween,
-                    Spaces.padding[12],
-                    Spaces.gap[12],
-                    { borderColor: `${Colors.primary500}55`, borderWidth: 1 },
-                  ]}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                      {t('facilityForm.fields.allowOverflowRequests', 'Autoriser les demandes d\'exception')}
-                    </Text>
-                    <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      {t(
-                        'facilityForm.hints.allowOverflowRequests',
-                        'Quand les slots sont pleins, les equipes pourront envoyer une demande au dirigeant.',
-                      )}
-                    </Text>
-                  </View>
-                  <Switch
-                    onValueChange={onChange}
-                    thumbColor={value ? Colors.primary500 : Colors.neutral200}
-                    trackColor={{ false: `${Colors.neutral500}88`, true: `${Colors.primary500}66` }}
-                    value={Boolean(value)}
-                  />
+                <View style={[Spaces.gap[10]]}>
+                  <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                    {t('facilityForm.fields.capacityConflictMode', 'Comportement en cas de conflit')}
+                  </Text>
+                  {FACILITY_CONFLICT_MODE_OPTIONS.map((option) => {
+                    const isActive = value === option.value;
+                    return (
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        key={option.value}
+                        onPress={() => onChange(option.value)}
+                        style={[
+                          ApplicationStyle.backgroundColor.primary900,
+                          ApplicationStyle.borderRadius16,
+                          Spaces.padding[12],
+                          Spaces.gap[8],
+                          {
+                            borderColor: isActive ? Colors.primary500 : `${Colors.primary500}33`,
+                            borderWidth: 1,
+                          },
+                        ]}
+                      >
+                        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                          <Text style={[Fonts.p3Bold, isActive ? Fonts.primary500 : Fonts.neutral00, { flex: 1 }]}>
+                            {option.title}
+                          </Text>
+                          <View
+                            style={{
+                              alignItems: 'center',
+                              backgroundColor: isActive ? Colors.primary500 : 'transparent',
+                              borderColor: isActive ? Colors.primary500 : Colors.neutral400,
+                              borderRadius: 10,
+                              borderWidth: 1.6,
+                              height: 20,
+                              justifyContent: 'center',
+                              width: 20,
+                            }}
+                          >
+                            {isActive ? (
+                              <View style={{
+                                backgroundColor: Colors.neutral900,
+                                borderRadius: 999,
+                                height: 8,
+                                width: 8,
+                              }}
+                              />
+                            ) : null}
+                          </View>
+                        </View>
+                        <Text style={[Fonts.p3, Fonts.neutral300]}>
+                          {option.description}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               )}
             />
@@ -683,10 +732,10 @@ function FacilityForm() {
               {renderMetaChip(getCapacityLabel(watchedMaxSlots, t), 'primary')}
               {renderMetaChip(watchedType || t('facilityForm.defaults.type', 'Type inconnu'), 'neutral')}
               {renderMetaChip(
-                watchedAllowOverflowRequests
-                  ? t('facilityForm.preview.overflowAllowed', 'Exception possible')
-                  : t('facilityForm.preview.overflowBlocked', 'Capacite stricte'),
-                watchedAllowOverflowRequests ? 'warning' : 'neutral',
+                watchedCapacityConflictMode === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY
+                  ? t('facilityForm.preview.overflowAllowed', 'Autorise et notifier')
+                  : t('facilityForm.preview.overflowBlocked', 'Demande en attente'),
+                watchedCapacityConflictMode === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY ? 'primary' : 'warning',
               )}
             </View>
 

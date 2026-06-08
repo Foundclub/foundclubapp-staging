@@ -7,13 +7,11 @@ import {
   View,
 } from 'react-native';
 
-import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
-import StrapiImage from '@/components/atoms/strapiImage/StrapiImage';
 import Tag from '@/components/atoms/tag/Tag';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 /**
  * @param {object} props
@@ -43,7 +41,6 @@ function EventWizardTeamCard({
     Fonts,
     Spaces,
   } = useTheme();
-  const { getClubInitials } = useClub();
   const { width } = useWindowDimensions();
   const isCompactScreen = width <= 375;
 
@@ -79,7 +76,6 @@ function EventWizardTeamCard({
   const allSponsors = Array.isArray(team?.club?.sponsor) ? team.club.sponsor.filter(Boolean) : [];
   const sponsors = allSponsors.slice(0, 2);
   const logoFrameSize = 60;
-  const logoImageSize = 48;
   let selectionIndicatorNode = null;
   const logoFrameStyle = {
     alignItems: 'center',
@@ -93,22 +89,13 @@ function EventWizardTeamCard({
     width: logoFrameSize,
   };
 
-  const identityAvatar = team?.club?.logo?.url ? (
-    <View style={logoFrameStyle}>
-      <StrapiImage
-        resizeMode="contain"
-        source={{ uri: team.club.logo.url }}
-        style={{
-          backgroundColor: Colors.neutral00,
-          height: logoImageSize,
-          width: logoImageSize,
-        }}
-      />
-    </View>
-  ) : (
-    <TeamShield
-      initials={getClubInitials(team?.club?.name || team?.name || '')}
-      isSmall
+  const identityAvatar = (
+    <ClubLogoMark
+      club={team?.club}
+      logoStyle={logoFrameStyle}
+      name={team?.club?.name || team?.name}
+      safeInsetRatio={0.1}
+      size={logoFrameSize}
     />
   );
 

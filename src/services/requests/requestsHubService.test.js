@@ -1,9 +1,14 @@
+import { getClubInterestRequests } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';
 import { getPendingFacilityOverrideRequests } from '@/services/facility/facilityService';
 import { getTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import { getRequestsHubData } from './requestsHubService';
+
+jest.mock('@/services/clubInterestRequest/clubInterestRequestService', () => ({
+  getClubInterestRequests: jest.fn(),
+}));
 
 jest.mock('@/services/clubMembershipRequest/clubMembershipRequestService', () => ({
   getClubMembershipRequests: jest.fn(),
@@ -36,6 +41,7 @@ const emptyPaginatedResponse = {
 
 describe('requestsHubService', () => {
   beforeEach(() => {
+    getClubInterestRequests.mockResolvedValue(emptyPaginatedResponse);
     getClubMembershipRequests.mockResolvedValue(emptyPaginatedResponse);
     getEvents.mockResolvedValue(emptyPaginatedResponse);
     getPendingFeaturedRequests.mockResolvedValue({ data: [] });
@@ -104,9 +110,44 @@ describe('requestsHubService', () => {
       event: 0,
       featured: 0,
       installation: 0,
+      interest: 0,
       team: 0,
       total: 0,
     });
+  });
+
+  test('maps pending club interest requests into the hub', async () => {
+    getClubInterestRequests.mockResolvedValue({
+      data: [
+        {
+          club: {
+            documentId: 'club-1',
+            name: 'FC Test',
+          },
+          documentId: 'interest-1',
+          status: 'pending',
+          team: {
+            documentId: 'team-1',
+            name: 'U19',
+          },
+          user: {
+            documentId: 'user-1',
+            firstname: 'Mina',
+            lastname: 'Diallo',
+          },
+        },
+      ],
+      meta: emptyPaginatedResponse.meta,
+    });
+
+    const result = await getRequestsHubData({ teamIds: ['team-1'] });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toEqual(expect.objectContaining({
+      actions: { primary: 'respond', secondary: 'chat' },
+      id: 'interest:interest-1',
+      type: 'interest',
+    }));
   });
 
   test('keeps owner-only team requests visible without action buttons', async () => {

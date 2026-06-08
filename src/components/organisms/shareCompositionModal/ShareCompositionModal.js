@@ -6,13 +6,12 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
@@ -48,7 +47,6 @@ function ShareCompositionModal({
   } = useTheme();
   const { t } = useTranslation();
   const { allMyTeams, userData } = useAuth();
-  const { getClubInitials } = useClub();
   const { getConversationName } = useMessaging();
 
   const {
@@ -140,20 +138,17 @@ function ShareCompositionModal({
   const renderAvatar = (chat) => {
     switch (chat.type) {
       case 'club':
-        if (chat?.club?.logo?.url) {
-          return <ProfileAvatar enablePreview={false} imageUrl={chat.club.logo.url} size={40} variant="logo" />;
-        }
-        return <TeamShield initials={getClubInitials(chat?.club?.name || '')} isNeutral isSmall />;
+        return <ClubLogoMark club={chat?.club} isNeutral size={40} />;
       case 'multisport':
-        if (chat?.multisportClub?.logo?.url) {
-          return <ProfileAvatar enablePreview={false} imageUrl={chat.multisportClub.logo.url} size={40} variant="logo" />;
-        }
-        return <TeamShield initials={getClubInitials(chat?.multisportClub?.name || '')} isNeutral isSmall />;
+        return <ClubLogoMark club={chat?.multisportClub} isNeutral size={40} />;
       case 'team':
-        if (chat?.team?.logo?.url) {
-          return <ProfileAvatar enablePreview={false} imageUrl={chat.team.logo.url} size={40} variant="logo" />;
-        }
-        return <TeamShield initials={getClubInitials(chat?.team?.name || '')} isSmall />;
+        return (
+          <ClubLogoMark
+            club={chat?.team}
+            name={chat?.team?.club?.name || chat?.team?.name}
+            size={40}
+          />
+        );
       case 'group':
       case 'whisper':
       default: {

@@ -2276,7 +2276,7 @@ function EventDetails({ navigation, route }) {
 
   const openEventLicenseCampaignSettings = useCallback(() => {
     if (!eventClubId || !licenseCampaignEventId) return;
-    navigation.navigate(RouteNames.ClubStack, {
+    const navigateToCampaignSettings = () => navigation.navigate(RouteNames.ClubStack, {
       params: {
         clubId: eventClubId,
         createNew: true,
@@ -2285,7 +2285,31 @@ function EventDetails({ navigation, route }) {
       },
       screen: RouteNames.ClubLicenseCampaignSettings,
     });
-  }, [eventClubId, licenseCampaignEvent, licenseCampaignEventId, navigation]);
+
+    if (eventLicenseCampaigns.length > 0) {
+      Alert.alert(
+        'Campagne deja liee',
+        'Cet evenement a deja une campagne de cotisation. Creez-en une autre seulement si vous voulez un paiement distinct.',
+        [
+          { style: 'cancel', text: t('common.cancel', 'Annuler') },
+          {
+            onPress: navigateToCampaignSettings,
+            text: 'Creer quand meme',
+          },
+        ],
+      );
+      return;
+    }
+
+    navigateToCampaignSettings();
+  }, [
+    eventClubId,
+    eventLicenseCampaigns.length,
+    licenseCampaignEvent,
+    licenseCampaignEventId,
+    navigation,
+    t,
+  ]);
 
   const openEventLicenseCampaign = useCallback((/** @type {any} */ campaign) => {
     const campaignId = campaign?.documentId || campaign?.id;
@@ -3317,6 +3341,8 @@ function EventDetails({ navigation, route }) {
               variant={canEdit ? 'Primary' : 'Secondary'}
             />
 
+            {renderEventLicenseCampaignActions()}
+
             {managedTournamentTeam?.documentId ? (
               <Button
                 onPress={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
@@ -3370,76 +3396,43 @@ function EventDetails({ navigation, route }) {
     );
   };
 
-  const renderLicenseCampaignsSection = () => {
+  const renderEventLicenseCampaignActions = () => {
     if (!canManageEventLicenseCampaigns) return null;
 
-    const subtitle = eventCampaignCreationSuggested
-      ? 'Evenement cree. Tu peux maintenant preparer une campagne de paiement rattachee.'
-      : 'Cree ou ouvre les campagnes de paiement rattachees a cet evenement.';
+    const hasLinkedCampaigns = eventLicenseCampaigns.length > 0;
+    const createCampaignTitle = eventCampaignCreationSuggested
+      ? 'Preparer la campagne de cotisation'
+      : 'Creer une campagne de cotisation';
+
+    if (eventLicenseCampaignsQuery.isLoading) {
+      return (
+        <View style={[Spaces.gap[8], Spaces.paddingTop[4]]}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Cotisations</Text>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            Chargement des campagnes...
+          </Text>
+        </View>
+      );
+    }
+
+    if (!hasLinkedCampaigns) {
+      return (
+        <Button
+          onPress={openEventLicenseCampaignSettings}
+          title={createCampaignTitle}
+          variant={eventCampaignCreationSuggested ? 'Primary' : 'Secondary'}
+        />
+      );
+    }
 
     return (
-      <View style={[Spaces.gap[12]]}>
-        <View
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            Alignments.justifySpaceBetween,
-            Spaces.gap[12],
-          ]}
-        >
-          <View style={[Spaces.gap[4], { flex: 1 }]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Cotisations liees</Text>
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {subtitle}
-            </Text>
-          </View>
-          <Button
-            onPress={openEventLicenseCampaignSettings}
-            title="Creer"
-            variant="Secondary"
-          />
+      <View style={[Spaces.gap[12], Spaces.paddingTop[4]]}>
+        <View style={[Spaces.gap[4]]}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Cotisations liees</Text>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            Campagnes de paiement rattachees a cet evenement.
+          </Text>
         </View>
-
-        {eventLicenseCampaignsQuery.isLoading ? (
-          <View
-            style={[
-              ApplicationStyle.backgroundColor.primary900,
-              ApplicationStyle.borderRadius24,
-              ApplicationStyle.borderWidth1,
-              Spaces.padding[16],
-              {
-                borderColor: `${Colors.primary500}40`,
-              },
-            ]}
-          >
-            <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des campagnes...</Text>
-          </View>
-        ) : null}
-
-        {!eventLicenseCampaignsQuery.isLoading && eventLicenseCampaigns.length === 0 ? (
-          <View
-            style={[
-              ApplicationStyle.backgroundColor.primary900,
-              ApplicationStyle.borderRadius24,
-              ApplicationStyle.borderWidth1,
-              Spaces.padding[16],
-              Spaces.gap[12],
-              {
-                borderColor: `${Colors.primary500}40`,
-              },
-            ]}
-          >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aucune campagne liee</Text>
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              La prochaine campagne ciblera les participants acceptes de l evenement.
-            </Text>
-            <Button
-              onPress={openEventLicenseCampaignSettings}
-              title="Creer une campagne"
-              variant="Primary"
-            />
-          </View>
-        ) : null}
 
         {eventLicenseCampaigns.map((/** @type {any} */ campaign) => {
           const campaignId = campaign?.documentId || campaign?.id;
@@ -3448,21 +3441,33 @@ function EventDetails({ navigation, route }) {
             <View
               key={campaignId}
               style={[
-                ApplicationStyle.backgroundColor.primary900,
-                ApplicationStyle.borderRadius24,
+                ApplicationStyle.borderRadius16,
                 ApplicationStyle.borderWidth1,
-                Spaces.padding[16],
-                Spaces.gap[12],
+                Spaces.padding[12],
+                Spaces.gap[10],
                 {
+                  backgroundColor: Colors.primary700,
                   borderColor: `${Colors.primary500}55`,
                 },
               ]}
             >
-              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+              <View
+                style={[
+                  Alignments.row,
+                  Alignments.justifySpaceBetween,
+                  Alignments.alignCenter,
+                  Spaces.gap[12],
+                ]}
+              >
                 <View style={[Spaces.gap[4], { flex: 1 }]}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{campaign?.name || 'Campagne evenement'}</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {campaign?.name || 'Campagne evenement'}
+                  </Text>
                   <Text style={[Fonts.p3, Fonts.neutral300]}>
-                    {formatCampaignAmount(campaign?.defaultAmountCents, campaign?.currency || 'EUR')}
+                    {formatCampaignAmount(
+                      campaign?.defaultAmountCents,
+                      campaign?.currency || 'EUR',
+                    )}
                     {' '}
                     par participant
                     {' - '}
@@ -3475,7 +3480,7 @@ function EventDetails({ navigation, route }) {
                   {String(campaign?.status || 'draft').toUpperCase()}
                 </Text>
               </View>
-              <View style={[Alignments.row, Spaces.gap[12]]}>
+              <View style={[Alignments.row, Spaces.gap[8]]}>
                 <Button
                   onPress={() => openEventLicenseCampaign(campaign)}
                   style={{ flex: 1 }}
@@ -3492,6 +3497,11 @@ function EventDetails({ navigation, route }) {
             </View>
           );
         })}
+        <Button
+          onPress={openEventLicenseCampaignSettings}
+          title="Creer une autre campagne"
+          variant="Secondary"
+        />
       </View>
     );
   };
@@ -3815,26 +3825,38 @@ function EventDetails({ navigation, route }) {
 
       return null;
     })();
+    const canShowEventActionsPanel = Boolean(
+      canEdit || canManageEventLicenseCampaigns,
+    );
+    const eventLicenseCampaignActionsNode = canManageEventLicenseCampaigns
+      ? renderEventLicenseCampaignActions()
+      : null;
+    const eventAnswerButtonsNode = (
+      <EventAnswerButtons
+        event={event}
+        hasAcceptedRequest={hasAcceptedRequest}
+        hasPendingRequest={hasPendingRequest}
+        onDecline={() => handleDeclineEvent(event)}
+        onDeleteParticipation={handleDeleteParticipation}
+        onJoin={handleJoinEvent}
+        onLogin={() => openPublicAuthFlow(navigation, {
+          origin: RouteNames.EventDetails,
+          source: 'event-details-login',
+        })}
+        onParticipate={() => handleParticipateToEvent(event)}
+        participationFlow={tournamentAwareParticipationFlow}
+      />
+    );
     const actionButtonsNode = (
-      <View>
+      <View style={[Spaces.gap[12]]}>
         {canEdit ? (
-          <Button onPress={handleOpenEventActionsMenu} title="Actions événement" variant="Secondary" />
-        ) : (
-          <EventAnswerButtons
-            event={event}
-            hasAcceptedRequest={hasAcceptedRequest}
-            hasPendingRequest={hasPendingRequest}
-            onDecline={() => handleDeclineEvent(event)}
-            onDeleteParticipation={handleDeleteParticipation}
-            onJoin={handleJoinEvent}
-            onLogin={() => openPublicAuthFlow(navigation, {
-              origin: RouteNames.EventDetails,
-              source: 'event-details-login',
-            })}
-            onParticipate={() => handleParticipateToEvent(event)}
-            participationFlow={tournamentAwareParticipationFlow}
+          <Button
+            onPress={handleOpenEventActionsMenu}
+            title="Actions événement"
+            variant="Secondary"
           />
-        )}
+        ) : null}
+        {eventLicenseCampaignActionsNode}
         {canEdit && supportsEventComposition && (
           <View style={{ marginTop: 12 }}>
             <Button
@@ -3931,7 +3953,7 @@ function EventDetails({ navigation, route }) {
       );
     }
 
-    if (canEdit) {
+    if (canShowEventActionsPanel) {
       return (
         <View>
           <View
@@ -3951,7 +3973,9 @@ function EventDetails({ navigation, route }) {
               <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions événement</Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  Modifie cet événement ou gère son annulation.
+                  {canEdit
+                    ? 'Modifie cet evenement ou gere son annulation.'
+                    : 'Gere les cotisations rattachees a cet evenement.'}
                 </Text>
               </View>
               <TouchableOpacity
@@ -3983,6 +4007,11 @@ function EventDetails({ navigation, route }) {
             {isEventActionsOpen ? actionButtonsNode : null}
           </View>
 
+          {!canEdit ? (
+            <View style={{ marginTop: 12 }}>
+              {eventAnswerButtonsNode}
+            </View>
+          ) : null}
           {featuredActionNode}
           {pendingFeaturedActionNode}
         </View>
@@ -3991,7 +4020,7 @@ function EventDetails({ navigation, route }) {
 
     return (
       <View>
-        {actionButtonsNode}
+        {eventAnswerButtonsNode}
         {featuredActionNode}
         {pendingFeaturedActionNode}
       </View>
@@ -4347,8 +4376,6 @@ function EventDetails({ navigation, route }) {
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>Voir le stage</Text>
               </TouchableOpacity>
             ) : null}
-
-            {renderLicenseCampaignsSection()}
 
             {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
               <EventTasksSection

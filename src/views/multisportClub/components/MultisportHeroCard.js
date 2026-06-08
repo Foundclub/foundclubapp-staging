@@ -9,8 +9,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 /**
  * @typedef {{ url?: string }} ImageAsset
@@ -30,14 +29,13 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
  * @param {{
  *  cm?: CMMultisport | null;
  *  canEdit?: boolean;
- *  getClubInitials: (name: string) => string;
+ *  getClubInitials?: (name: string) => string;
  *  onEditPress?: () => void;
  * }} props
  */
 function MultisportHeroCard({
   canEdit = false,
   cm,
-  getClubInitials,
   onEditPress,
 }) {
   const {
@@ -95,17 +93,11 @@ function MultisportHeroCard({
       ) : null}
 
       <View style={[Spaces.marginTop[16]]}>
-        {cm?.logo?.url ? (
-          <ProfileAvatar
-            imageUrl={cm.logo.url}
-            shape="rounded"
-            size={80}
-            style={[ApplicationStyle.backgroundColor.neutral00, { borderRadius: 20 }]}
-            variant="logo"
-          />
-        ) : (
-          <TeamShield initials={getClubInitials(cm?.name || '')} />
-        )}
+        <ClubLogoMark
+          club={cm || undefined}
+          logoStyle={[ApplicationStyle.backgroundColor.neutral00, { borderRadius: 20 }]}
+          size={80}
+        />
       </View>
 
       <View style={[Spaces.gap[4], Alignments.alignCenter]}>

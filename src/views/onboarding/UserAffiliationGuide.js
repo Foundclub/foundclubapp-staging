@@ -26,13 +26,12 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import OnboardingOverlay from '@/components/molecules/onboardingOverlay/OnboardingOverlay';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
@@ -452,7 +451,7 @@ function UserAffiliationGuideContent({ navigation }) {
 
   const renderCard = ({ index, item }) => {
     const wrapperId = `${roleTargetLabel}-result-item`;
-    const cardLogoUrl = isClubFlow ? item?.logo?.url : item?.club?.logo?.url;
+    const cardClub = isClubFlow ? item : item?.club;
     const cardName = item?.name || '-';
     const cardMeta = isClubFlow
       ? getClubCardMeta(
@@ -542,15 +541,11 @@ function UserAffiliationGuideContent({ navigation }) {
         ]}
       >
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
-          {cardLogoUrl ? (
-            <ProfileAvatar imageUrl={cardLogoUrl} size={52} variant="logo" />
-          ) : (
-            <TeamShield
-              initials={String(cardName).slice(0, 2).toUpperCase()}
-              isSmall
-              size={52}
-            />
-          )}
+          <ClubLogoMark
+            club={cardClub}
+            name={isClubFlow ? cardName : item?.club?.name || cardName}
+            size={52}
+          />
 
           <View style={{ flex: 1 }}>
             <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>

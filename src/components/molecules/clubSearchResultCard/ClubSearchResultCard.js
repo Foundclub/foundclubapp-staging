@@ -6,7 +6,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import {
   getClubCertificationLabel,
@@ -64,38 +64,15 @@ function ClubSearchResultCard({
         },
       ]}
     >
-      {item?.logo?.url ? (
-        <ProfileAvatar
-          enablePreview={false}
-          imageUrl={item.logo.url}
-          shape="rounded"
-          size={56}
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderColor: isSelected ? Colors.primary500 : Colors.primary200,
-            borderRadius: 14,
-            borderWidth: 1,
-          }}
-          variant="logo"
-        />
-      ) : (
-        <View
-          style={{
-            alignItems: 'center',
-            backgroundColor: '#FFFFFF',
-            borderColor: isSelected ? Colors.primary500 : Colors.primary200,
-            borderRadius: 14,
-            borderWidth: 1,
-            height: 56,
-            justifyContent: 'center',
-            width: 56,
-          }}
-        >
-          <Text style={[Fonts.h3Black, { color: Colors.primary500 }]}>
-            {(item?.name || 'C').trim().charAt(0).toUpperCase() || 'C'}
-          </Text>
-        </View>
-      )}
+      <ClubLogoMark
+        club={item}
+        logoStyle={{
+          borderColor: isSelected ? Colors.primary500 : Colors.primary200,
+          borderRadius: 14,
+          borderWidth: 1,
+        }}
+        size={56}
+      />
 
       <View style={[Spaces.gap[4], { flex: 1 }]}>
         {reasonLabel ? (

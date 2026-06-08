@@ -16,7 +16,6 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
@@ -24,8 +23,8 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import TabButton from '@/components/atoms/tabButton/TabButton';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
@@ -49,7 +48,6 @@ function Profile({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const [{ fcmToken }] = useAppContext();
-  const { getClubInitials } = useClub();
   const {
     addAccount,
     authSessions,
@@ -240,27 +238,15 @@ function Profile({ navigation, route }) {
           onPress={handleOpenClub}
           style={clubRowStyle}
         >
-          {userData?.club?.logo?.url ? (
-            <ProfileAvatar
-              imageStyle={{ borderRadius: clubIdentityRadius }}
-              imageUrl={userData.club.logo.url}
-              size={clubIdentitySize}
-              style={[
-                ApplicationStyle.borderWidth1,
-                ApplicationStyle.borderColor.neutral00,
-                { borderRadius: clubIdentityRadius },
-              ]}
-              variant="logo"
-            />
-          ) : (
-            <TeamShield
-              initials={
-                userData?.club?.name
-                  ? getClubInitials(userData.club?.name) : ''
-              }
-              size={clubIdentitySize}
-            />
-          )}
+          <ClubLogoMark
+            club={userData.club}
+            logoStyle={[
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.neutral00,
+              { borderRadius: clubIdentityRadius },
+            ]}
+            size={clubIdentitySize}
+          />
           <View style={[
             { height: 24, width: 1 },
             ApplicationStyle.backgroundColor.neutral300,
@@ -285,24 +271,16 @@ function Profile({ navigation, route }) {
           onPress={() => handleOpenMultisportClub(cm.documentId)}
           style={clubRowStyle}
         >
-          {cm?.logo?.url ? (
-            <ProfileAvatar
-              imageStyle={{ borderRadius: clubIdentityRadius }}
-              imageUrl={cm.logo.url}
-              size={clubIdentitySize}
-              style={[
-                ApplicationStyle.borderWidth1,
-                ApplicationStyle.borderColor.primary500,
-                { borderRadius: clubIdentityRadius },
-              ]}
-              variant="logo"
-            />
-          ) : (
-            <TeamShield
-              initials={cm?.name ? getClubInitials(cm.name) : 'CM'}
-              size={clubIdentitySize}
-            />
-          )}
+          <ClubLogoMark
+            club={cm}
+            logoStyle={[
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.primary500,
+              { borderRadius: clubIdentityRadius },
+            ]}
+            name={cm?.name || 'CM'}
+            size={clubIdentitySize}
+          />
           <View style={[
             { height: 24, width: 1 },
             ApplicationStyle.backgroundColor.primary500,
@@ -350,27 +328,16 @@ function Profile({ navigation, route }) {
           onPress={() => handleOpenTeam(team.documentId || '')}
           style={clubRowStyle}
         >
-          {team?.club?.logo?.url ? (
-            <ProfileAvatar
-              imageStyle={{ borderRadius: clubIdentityRadius }}
-              imageUrl={team.club.logo.url}
-              size={clubIdentitySize}
-              style={[
-                ApplicationStyle.borderWidth1,
-                ApplicationStyle.borderColor.neutral00,
-                { borderRadius: clubIdentityRadius },
-              ]}
-              variant="logo"
-            />
-          ) : (
-            <TeamShield
-              initials={
-                team?.club?.name
-                  ? getClubInitials(team.club?.name) : ''
-              }
-              size={clubIdentitySize}
-            />
-          )}
+          <ClubLogoMark
+            club={team?.club}
+            logoStyle={[
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.neutral00,
+              { borderRadius: clubIdentityRadius },
+            ]}
+            name={team?.club?.name || team?.name}
+            size={clubIdentitySize}
+          />
           <View style={[
             { height: 24, width: 1 },
             ApplicationStyle.backgroundColor.neutral300,

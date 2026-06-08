@@ -145,6 +145,14 @@ function BookingConfigModal({
             'Le creneau est deja complet. Votre reservation a ete envoyee aux dirigeants pour arbitrage.',
           ),
         );
+      } else if (selectedSlot?.allowsImmediateConfirmation && Number(selectedSlot?.remaining || 0) <= 0) {
+        Alert.alert(
+          t('bookingModal.overflowAutoApprovedTitle', 'Reservation confirmee'),
+          t(
+            'bookingModal.overflowAutoApprovedMessage',
+            'Le creneau depasse la capacite habituelle, mais cette installation est configuree en "Autorise et notifier". Les dirigeants ont ete prevenus.',
+          ),
+        );
       }
 
       handleClose();

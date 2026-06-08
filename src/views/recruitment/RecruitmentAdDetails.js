@@ -21,14 +21,13 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import Tag from '@/components/atoms/tag/Tag';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -157,7 +156,6 @@ function RecruitmentAdDetails() {
   const { t } = useTranslation();
   const { userData } = /** @type {any} */ (useAuth());
   const isAuthenticated = Boolean(userData?.documentId);
-  const { getClubInitials } = useClub();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -1203,17 +1201,13 @@ function RecruitmentAdDetails() {
 
           <View style={styles.headerContent}>
             <View style={[styles.shieldContainer, { shadowColor: Colors.primary500 }]}>
-              {clubLogo ? (
-                <ImageBackground
-                  imageStyle={{ borderRadius: 50 }}
-                  source={{ uri: clubLogo }}
-                  style={styles.clubLogo}
-                />
-              ) : (
-                <View style={{ transform: [{ scale: 1.5 }] }}>
-                  <TeamShield initials={getClubInitials(clubName)} />
-                </View>
-              )}
+              <ClubLogoMark
+                club={club}
+                logoStyle={styles.clubLogo}
+                logoUrl={clubLogo}
+                name={clubName}
+                size={100}
+              />
             </View>
 
             <Text style={[Fonts.h1, styles.title]}>

@@ -1,5 +1,6 @@
 import {
   getAvailableRequestHubFilters,
+  mapClubInterestRequestToHubItem,
   mapEventParticipationRequestToHubItem,
   mapTeamMembershipRequestToHubItem,
 } from '@/domains/requests/requestMappers';
@@ -104,16 +105,56 @@ describe('requestMappers', () => {
     }));
   });
 
+  test('maps club interest requests with requester and target team', () => {
+    const item = mapClubInterestRequestToHubItem({
+      club: {
+        documentId: 'club-1',
+        name: 'FC Test',
+      },
+      createdAt: '2026-06-01T09:00:00.000Z',
+      documentId: 'interest-1',
+      status: 'pending',
+      team: {
+        documentId: 'team-1',
+        name: 'Senior 1',
+      },
+      user: {
+        avatar: { url: '/uploads/player.jpg' },
+        documentId: 'user-1',
+        firstname: 'Mina',
+        lastname: 'Diallo',
+      },
+    });
+
+    expect(item).toEqual(expect.objectContaining({
+      actions: { primary: 'respond', secondary: 'chat' },
+      id: 'interest:interest-1',
+      status: 'pending',
+      subtitle: 'Mina Diallo est interesse par Senior 1.',
+      title: 'Interet club',
+      type: 'interest',
+    }));
+    expect(item.meta).toEqual(expect.objectContaining({
+      clubId: 'club-1',
+      requesterAvatarUrl: '/uploads/player.jpg',
+      requesterId: 'user-1',
+      requesterName: 'Mina Diallo',
+      requestId: 'interest-1',
+      teamId: 'team-1',
+      teamName: 'Senior 1',
+    }));
+  });
+
   test('returns the team filter for training-team contexts', () => {
     expect(getAvailableRequestHubFilters({
       teamIds: ['team-1'],
-    })).toEqual(['all', 'team']);
+    })).toEqual(['all', 'team', 'interest']);
   });
 
   test('returns club and event filters only when a club context exists', () => {
     expect(getAvailableRequestHubFilters({
       clubId: 'club-1',
-    })).toEqual(['all', 'team', 'club', 'event', 'featured']);
+    })).toEqual(['all', 'team', 'interest', 'club', 'event', 'featured']);
     expect(getAvailableRequestHubFilters({
       cmId: 'cm-1',
     })).toEqual(['all', 'featured']);
@@ -124,6 +165,6 @@ describe('requestMappers', () => {
       canManageInstallationRequests: true,
       clubId: 'club-1',
       teamIds: ['team-1'],
-    })).toEqual(['all', 'team', 'club', 'event', 'featured', 'installation']);
+    })).toEqual(['all', 'team', 'interest', 'club', 'event', 'featured', 'installation']);
   });
 });

@@ -10,8 +10,7 @@ import useTheme from '@/theme/themeContext';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import SvgIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getShortAddress } from '@/utils/location';
@@ -66,21 +65,11 @@ function ReservationCard({ item, onParticipate, onPress }) {
         <View style={styles.headerLeft}>
           {/* Logo */}
           <View style={styles.logo}>
-            {item?.team?.club?.logo?.url ? (
-              <ProfileAvatar
-                imageStyle={{ borderRadius: 20 }}
-                imageUrl={item.team.club.logo.url}
-                size={40}
-                variant="logo"
-                style={{ borderRadius: 20 }}
-              />
-            ) : (
-              <TeamShield
-                initials={item?.team?.club?.name ? item.team.club.name.slice(0, 3).toUpperCase() : ''}
-                isSmall
-                size={40}
-              />
-            )}
+            <ClubLogoMark
+              club={item?.team?.club}
+              logoStyle={{ borderRadius: 20 }}
+              size={40}
+            />
           </View>
           {/* Nom + Catégorie */}
           <View style={styles.headerTextContainer}>

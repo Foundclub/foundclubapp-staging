@@ -1,9 +1,14 @@
+/* eslint-disable jsx-a11y/label-has-associated-control */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { createEventPayload } from '@/domains/event/eventUseCases';
+import {
+  createEventPayload,
+  createEventUpdatePayload,
+  getEventEditSupport,
+} from '@/domains/event/eventUseCases';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -105,6 +110,7 @@ function EventEdit({ navigation, route }) {
     type: '',
     validationMode: 'auto',
   });
+  const [recurrenceScope, setRecurrenceScope] = useState('this');
   const [submitError, setSubmitError] = useState('');
   const selectedTeam = useMemo(() => {
     const selectedTeamId = String(formState.team || initialTeamId || '').trim();
@@ -185,11 +191,29 @@ function EventEdit({ navigation, route }) {
     };
   }, [facilityClubId]);
 
-  const typeOptions = Array.isArray(eventTypes)
-    ? eventTypes
-    : Array.isArray(eventTypes?.data)
-      ? eventTypes.data
-      : [];
+  const typeOptions = useMemo(() => {
+    if (Array.isArray(eventTypes)) return eventTypes;
+    if (Array.isArray(eventTypes?.data)) return eventTypes.data;
+    return [];
+  }, [eventTypes]);
+  const selectedTypeData = useMemo(
+    () => typeOptions.find((eventType) => getEntityDocumentId(eventType) === formState.type) || event?.type || null,
+    [event?.type, formState.type, typeOptions],
+  );
+  const editSupport = useMemo(
+    () => getEventEditSupport(event, selectedTypeData?.name),
+    [event, selectedTypeData?.name],
+  );
+  const originalEventDate = useMemo(
+    () => toDateInputValue(event?.date),
+    [event?.date],
+  );
+  const hasRecurringDateShift = Boolean(
+    event?.recurrenceGroupId
+    && originalEventDate
+    && formState.date
+    && formState.date !== originalEventDate,
+  );
   const isBootstrapping = Boolean(eventId) && eventLoading;
   const missingEvent = Boolean(eventId) && !eventLoading && !eventError && !event;
   const setupLoading = Boolean(!isBootstrapping && (eventTypesLoading || (facilityClubId && facilitiesLoading)));
@@ -240,9 +264,11 @@ function EventEdit({ navigation, route }) {
   const mutedTextColor = Colors?.neutral300 || '#adb1b2';
   const accentColor = Colors?.primary500 || '#01b3f4';
   const isSubmitting = createEventMutation.isPending || updateEventMutation.isPending;
+  const isSetupPending = eventTypesLoading || facilitiesLoading;
   const canSubmit = Boolean(
     !isBootstrapping
     && !setupError
+    && !(eventId && !editSupport?.isSupported)
     && hasTypes
     && hasTeams
     && formState.type
@@ -250,6 +276,15 @@ function EventEdit({ navigation, route }) {
     && formState.date
     && formState.startTime,
   );
+  const isSubmitDisabled = !canSubmit || isSubmitting || isSetupPending;
+  let submitButtonLabel = 'Creer';
+  if (isSubmitting) {
+    submitButtonLabel = 'Enregistrement...';
+  } else if (isSetupPending) {
+    submitButtonLabel = 'Preparation...';
+  } else if (eventId) {
+    submitButtonLabel = 'Mettre a jour';
+  }
 
   const updateField = (field, value) => {
     setFormState((current) => ({
@@ -295,7 +330,12 @@ function EventEdit({ navigation, route }) {
       return;
     }
 
-    const payload = createEventPayload({
+    if (eventId && !editSupport?.isSupported) {
+      setSubmitError(editSupport?.reason || "Cette fiche ne permet pas encore d'editer ce type d'evenement.");
+      return;
+    }
+
+    const baseFormPayload = {
       capacity: formState.capacity ? Number(formState.capacity) : null,
       date: toDisplayDateValue(formState.date),
       description: formState.description,
@@ -314,13 +354,19 @@ function EventEdit({ navigation, route }) {
       totalPlayers: formState.totalPlayers ? Number(formState.totalPlayers) : null,
       type: formState.type,
       validationMode: formState.validationMode,
-    });
+    };
+    const payload = eventId
+      ? createEventUpdatePayload(baseFormPayload)
+      : createEventPayload(baseFormPayload);
 
     try {
       if (eventId) {
         await updateEventMutation.mutateAsync({
           documentId: eventId,
           eventData: payload,
+          recurrenceMode: event?.recurrenceGroupId && recurrenceScope !== 'this'
+            ? recurrenceScope
+            : undefined,
         });
       } else {
         await createEventMutation.mutateAsync(payload);
@@ -379,6 +425,53 @@ function EventEdit({ navigation, route }) {
               Retour
             </button>
           </div>
+
+          {eventId && !editSupport?.isSupported ? (
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.12)',
+              border: '1px solid rgba(245, 158, 11, 0.5)',
+              borderRadius: 18,
+              color: textColor,
+              display: 'grid',
+              gap: 8,
+              marginBottom: 18,
+              padding: 16,
+            }}
+            >
+              <strong style={{ color: '#f59e0b', fontFamily: 'Montserrat-Bold, sans-serif' }}>
+                Modification limitee
+              </strong>
+              <span style={{ color: mutedTextColor }}>
+                {editSupport?.reason || "Cette fiche ne permet pas encore d'editer ce type d'evenement."}
+              </span>
+            </div>
+          ) : null}
+
+          {event?.recurrenceGroupId ? (
+            <div style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: `1px solid ${borderColor}`,
+              borderRadius: 18,
+              color: mutedTextColor,
+              display: 'grid',
+              gap: 8,
+              marginBottom: 18,
+              padding: 16,
+            }}
+            >
+              <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
+                Serie recurrente
+              </strong>
+              <span>
+                La portee ci-dessous determine si la mise a jour s applique a cet evenement seulement, aux suivants, ou a toute la serie.
+              </span>
+              {hasRecurringDateShift ? (
+                <span style={{ color: '#f59e0b' }}>
+                  Si tu modifies la date du calendrier, elle reste specifique a cet evenement. Les mises a jour pour les suivants ou toute la serie propagent surtout les parametres communs comme l horaire, le lieu et les invitations.
+                </span>
+              ) : null}
+            </div>
+          ) : null}
 
           {isBootstrapping ? (
             <div style={{ color: mutedTextColor }}>Chargement de l evenement...</div>
@@ -460,6 +553,17 @@ function EventEdit({ navigation, route }) {
                     <input onChange={(eventObject) => updateField('endTime', eventObject.target.value)} style={fieldStyle} type="time" value={formState.endTime} />
                   </label>
                 </div>
+
+                {event?.recurrenceGroupId ? (
+                  <label style={{ display: 'grid', gap: 8 }}>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Portee de la mise a jour</span>
+                    <select onChange={(eventObject) => setRecurrenceScope(eventObject.target.value)} style={fieldStyle} value={recurrenceScope}>
+                      <option value="this">Cet evenement</option>
+                      <option value="future">Cet evenement et les suivants</option>
+                      <option value="all">Toute la serie</option>
+                    </select>
+                  </label>
+                ) : null}
 
                 <label style={{ display: 'grid', gap: 8 }}>
                   <span style={{ color: mutedTextColor, fontSize: 13 }}>Installation</span>
@@ -641,20 +745,20 @@ function EventEdit({ navigation, route }) {
                     Annuler
                   </button>
                   <button
-                    disabled={!canSubmit || isSubmitting || eventTypesLoading || facilitiesLoading}
+                    disabled={isSubmitDisabled}
                     style={{
-                      background: !canSubmit || isSubmitting || eventTypesLoading || facilitiesLoading ? 'rgba(255,255,255,0.14)' : accentColor,
+                      background: isSubmitDisabled ? 'rgba(255,255,255,0.14)' : accentColor,
                       border: 0,
                       borderRadius: 999,
                       color: '#001218',
-                      cursor: !canSubmit || isSubmitting || eventTypesLoading || facilitiesLoading ? 'not-allowed' : 'pointer',
+                      cursor: isSubmitDisabled ? 'not-allowed' : 'pointer',
                       fontFamily: 'Montserrat-Bold, sans-serif',
-                      opacity: !canSubmit || isSubmitting || eventTypesLoading || facilitiesLoading ? 0.7 : 1,
+                      opacity: isSubmitDisabled ? 0.7 : 1,
                       padding: '12px 18px',
                     }}
                     type="submit"
                   >
-                    {isSubmitting ? 'Enregistrement...' : eventTypesLoading || facilitiesLoading ? 'Preparation...' : eventId ? 'Mettre a jour' : 'Creer'}
+                    {submitButtonLabel}
                   </button>
                 </div>
               </div>

@@ -50,13 +50,17 @@ function EventWizardLocation({ navigation }) {
     end: buildDateTimeIso(state.date, state.endTime),
     start: buildDateTimeIso(state.date, state.startTime),
   };
-
-  const isStrictlySaturated = Boolean(
+  const requiresApproval = Boolean(
     facilityId
     && selectedOccupancy?.saturated
-    && selectedOccupancy?.canRequestOverflow === false,
+    && selectedOccupancy?.requiresApproval,
   );
-  const canGoNext = Boolean(location || facilityId) && !isStrictlySaturated;
+  const allowsImmediateConfirmation = Boolean(
+    facilityId
+    && selectedOccupancy?.saturated
+    && selectedOccupancy?.allowsImmediateConfirmation,
+  );
+  const canGoNext = Boolean(location || facilityId);
 
   const handleNext = () => {
     dispatch({
@@ -104,7 +108,7 @@ function EventWizardLocation({ navigation }) {
           }}
           onOccupancyResolved={setSelectedOccupancy}
         />
-        {!canGoNext && !isStrictlySaturated ? (
+        {!canGoNext ? (
           <Text style={[Fonts.p3, Fonts.warning500]}>
             {t(
               'eventWizard.steps.location.disabledNextHint',
@@ -112,11 +116,19 @@ function EventWizardLocation({ navigation }) {
             )}
           </Text>
         ) : null}
-        {isStrictlySaturated ? (
-          <Text style={[Fonts.p3, Fonts.error500]}>
+        {requiresApproval ? (
+          <Text style={[Fonts.p3, Fonts.warning500]}>
             {t(
-              'eventWizard.steps.location.strictCapacityHint',
-              "Cette installation est complete sur ce creneau et n'autorise pas de depassement. Choisissez un autre lieu ou un autre horaire.",
+              'eventWizard.steps.location.pendingValidationHint',
+              "Cette installation depasse sa capacite sur ce creneau. L'evenement sera cree en demande en attente jusqu'a validation d'un dirigeant.",
+            )}
+          </Text>
+        ) : null}
+        {allowsImmediateConfirmation ? (
+          <Text style={[Fonts.p3, Fonts.primary500]}>
+            {t(
+              'eventWizard.steps.location.allowAndNotifyHint',
+              "Cette installation depasse sa capacite sur ce creneau, mais elle est configuree en 'Autorise et notifier'. L'evenement restera confirme.",
             )}
           </Text>
         ) : null}

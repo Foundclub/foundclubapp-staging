@@ -4,11 +4,9 @@ import {
   Image, ImageBackground, Linking, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
 import {
@@ -96,7 +94,6 @@ function EventHeader({ event, matchScoreSummary = null }) {
   } = useTheme();
   const SpacesAny = /** @type {any} */ (Spaces);
   const { t } = useTranslation();
-  const { getClubInitials } = useClub();
 
   const backgroundImage = getBackgroundImage(event?.type?.name);
   const normalizedTypeName = String(event?.type?.name || '')
@@ -112,7 +109,8 @@ function EventHeader({ event, matchScoreSummary = null }) {
   const categoryName = toDisplayText(event?.team?.category?.name || event?.tournamentCategory?.name);
   const levelName = toDisplayText(event?.team?.level?.name);
   const activityName = toDisplayText(event?.team?.activities?.[0]?.name || event?.tournamentActivity?.name);
-  const logoUrl = event?.team?.club?.logo?.url || event?.club?.logo?.url;
+  const eventClub = event?.team?.club || event?.club;
+  const logoUrl = eventClub?.logo?.url;
   const locationDetails = event?.locationDetails;
   const isImportedExternalMatch = (
     event?.externalAutoSource === 'external_competition'
@@ -225,24 +223,17 @@ function EventHeader({ event, matchScoreSummary = null }) {
           Alignments.row,
         ]}
       >
-        {logoUrl ? (
-          <ProfileAvatar
-            imageStyle={{ borderRadius: 60 }}
-            imageUrl={logoUrl}
-            size={60}
-            style={[
-              ApplicationStyle.borderWidth1,
-              ApplicationStyle.borderColor.neutral00,
-              { borderRadius: 60 },
-            ]}
-            variant="logo"
-          />
-        ) : (
-          <TeamShield
-            initials={clubName ? getClubInitials(clubName) : ''}
-            isSmall
-          />
-        )}
+        <ClubLogoMark
+          club={eventClub}
+          logoStyle={[
+            ApplicationStyle.borderWidth1,
+            ApplicationStyle.borderColor.neutral00,
+            { borderRadius: 60 },
+          ]}
+          logoUrl={logoUrl}
+          name={clubName}
+          size={60}
+        />
         <View style={[Spaces.gap[4], { maxWidth: '75%' }]}>
           <Text style={[showMatchTitle ? Fonts.h3Black : Fonts.p1Bold, Fonts.neutral00]}>
             {headerPrimaryTitle}

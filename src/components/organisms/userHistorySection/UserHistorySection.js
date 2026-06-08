@@ -9,18 +9,15 @@ import {
   View,
 } from 'react-native';
 
-import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import {
   useDeleteHistory,
   useGetMyHistories,
   useGetUserHistories,
 } from '@/services/userHistory/userHistoryQueries';
-
-import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * @typedef {{
@@ -64,7 +61,6 @@ function UserHistorySection({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { getClubInitials } = useClub();
   const shouldUseUserHistory = Boolean(userId);
 
   const { data: myHistoriesData, isLoading: isLoadingMyHistories } = useGetMyHistories({
@@ -140,37 +136,21 @@ function UserHistorySection({
   };
 
   const renderClubLogo = (/** @type {UserHistoryItem} */ item) => {
-    const logoUrl = item?.club?.logo?.url || item?.multisport_club?.logo?.url;
-
-    if (logoUrl) {
-      return (
-        <View
-          style={{
-            alignItems: 'center',
-            backgroundColor: `${Colors.primary700}A6`,
-            borderColor: `${Colors.primary500}66`,
-            borderRadius: 12,
-            borderWidth: 1,
-            height: 44,
-            justifyContent: 'center',
-            overflow: 'hidden',
-            width: 44,
-          }}
-        >
-          <Image
-            resizeMode="cover"
-            source={{ uri: getImageUrl(logoUrl) }}
-            style={{
-              height: '100%',
-              width: '100%',
-            }}
-          />
-        </View>
-      );
-    }
-
     const clubName = item?.club?.name || item?.multisport_club?.name || item?.customClubName || '';
-    return <TeamShield initials={getClubInitials(clubName)} isSmall size={44} />;
+
+    return (
+      <ClubLogoMark
+        club={item?.club || item?.multisport_club}
+        logoStyle={{
+          backgroundColor: `${Colors.primary700}A6`,
+          borderColor: `${Colors.primary500}66`,
+          borderRadius: 12,
+          borderWidth: 1,
+        }}
+        name={clubName}
+        size={44}
+      />
+    );
   };
 
   const infoPills = [

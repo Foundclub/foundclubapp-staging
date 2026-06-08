@@ -6,15 +6,13 @@ import {
   View,
 } from 'react-native';
 
-import useClub from '@/domains/club/useClub';
 import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Tag from '@/components/atoms/tag/Tag';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
 
@@ -60,7 +58,6 @@ function FeaturedReservationCard({
   const {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
-  const { getClubInitials } = useClub();
 
   // Get sponsors from team's club
   const sponsors = item?.team?.club?.sponsor || item?.club?.sponsor || [];
@@ -120,21 +117,11 @@ function FeaturedReservationCard({
             { gap: horizontalScale(8) },
           ]}
           >
-            {(item?.team?.club?.logo?.url || item?.club?.logo?.url) ? (
-              <ProfileAvatar
-                imageStyle={{ borderRadius: moderateScale(20) }}
-                imageUrl={item?.team?.club?.logo?.url || item?.club?.logo?.url}
-                size={moderateScale(40)}
-                variant="logo"
-                style={{ borderRadius: moderateScale(20) }}
-              />
-            ) : (
-              <TeamShield
-                initials={item?.team?.club?.name ? getClubInitials(item?.team?.club?.name) : ''}
-                isSmall
-                size={moderateScale(40)}
-              />
-            )}
+            <ClubLogoMark
+              club={item?.team?.club || item?.club}
+              logoStyle={{ borderRadius: moderateScale(20) }}
+              size={moderateScale(40)}
+            />
             <View style={[{ gap: verticalScale(4) }, { maxWidth: '80%' }]}>
               <Text
                 ellipsizeMode="tail"
