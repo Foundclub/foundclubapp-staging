@@ -8,6 +8,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
@@ -32,12 +33,16 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
  *  sections: MultisportSection[];
  *  title: string;
  *  getClubInitials: (name: string) => string;
+ *  canEdit?: boolean;
+ *  onAddSection?: () => void;
  *  onDeleteSection?: (section: MultisportSection) => void;
  *  onSectionPress?: (section: MultisportSection) => void;
  * }} props
  */
 function MultisportSectionsList({
+  canEdit = false,
   getClubInitials,
+  onAddSection,
   onDeleteSection,
   onSectionPress,
   sections,
@@ -48,17 +53,32 @@ function MultisportSectionsList({
   } = useTheme();
   const { t } = useTranslation();
 
+  /** @param {MultisportSection} section */
   const getSectionSport = (section) => section?.sport || section?.activites?.[0]?.name || '';
+  /** @param {MultisportSection} section */
   const getTeamsCount = (section) => section?.stats?.teams || section?.teams?.length || 0;
+  /** @param {MultisportSection} section */
   const getMembersCount = (section) => section?.stats?.members;
+  /** @param {MultisportSection} section */
   const resolveLogoUrl = (section) => section?.logoUrl || section?.logo?.url;
 
   return (
     <View style={[Spaces.gap[12]]}>
-      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-        {title}
-        {` (${sections.length})`}
-      </Text>
+      <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Alignments.fill, Spaces.gap[16]]}>
+        <Text style={[Fonts.h4Bold, Fonts.neutral00, { flex: 1, flexShrink: 1 }]}>
+          {title}
+          {` (${sections.length})`}
+        </Text>
+        {canEdit ? (
+          <Button
+            accessibilityLabel={t('multisport.accessibility.addSection', 'Ajouter une section')}
+            icon="plus"
+            isOption
+            onPress={onAddSection}
+            variant="Primary"
+          />
+        ) : null}
+      </View>
 
       {sections.length === 0 ? (
         <View
@@ -104,8 +124,8 @@ function MultisportSectionsList({
                 imageUrl={logoUrl}
                 shape="rounded"
                 size={50}
-                variant="logo"
                 style={[ApplicationStyle.backgroundColor.neutral00, { borderRadius: 14 }]}
+                variant="logo"
               />
             ) : (
               <TeamShield initials={getClubInitials(section?.name || '')} isSmall />

@@ -39,6 +39,7 @@
 - pret :
   - `API_URL=https://api.foundclubpro.com/api`
   - `SOCKET_URL=https://api.foundclubpro.com`
+  - `WEB_APP_URL=https://foundclub.app`
   - `DELETE_ACCOUNT_URL=https://api.foundclubpro.com/suppression.html`
   - `CONTACT_URL=https://foundclubpro.com`
 - reste a fournir :

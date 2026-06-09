@@ -93,6 +93,14 @@ function ClubStack() {
         }}
       />
       <Stack.Screen
+        component={AddCoach}
+        name={RouteNames.AddClubManager}
+        options={{
+          ...commonOptions,
+          headerTitle: t('addClubManager.titles.main', 'Ajouter un dirigeant'),
+        }}
+      />
+      <Stack.Screen
         component={AddSponsor}
         name={RouteNames.AddSponsor}
         options={{

@@ -32,7 +32,7 @@ import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
-import { leaveClub, removeTrainerFromClub } from '@/services/auth/authService';
+import { leaveClub, removeManagerFromClub, removeTrainerFromClub } from '@/services/auth/authService';
 import { getCategorySortKey } from '@/services/category/categoryService';
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimClub, updateClub } from '@/services/club/clubService';
@@ -257,6 +257,13 @@ function ClubDetails({ navigation, route }) {
 
   const deleteTrainerMutation = useMutation({
     mutationFn: removeTrainerFromClub,
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  const deleteManagerMutation = useMutation({
+    mutationFn: removeManagerFromClub,
     onSuccess: () => {
       refetch();
     },
@@ -531,6 +538,12 @@ function ClubDetails({ navigation, route }) {
     }
   };
 
+  const handleCreateManager = () => {
+    if (userData) {
+      navigation.navigate(RouteNames.AddClubManager, { clubId, clubName: club?.name, staffType: 'manager' });
+    }
+  };
+
   const handleCreateSponsor = () => {
     if (userData) {
       navigation.navigate(RouteNames.AddSponsor, { clubId });
@@ -683,6 +696,30 @@ function ClubDetails({ navigation, route }) {
               deleteTrainerMutation.mutate(trainerId);
             },
             text: t('clubDetails.alerts.deleteTrainer.actions.confirm'),
+          },
+        ],
+      );
+    }
+  };
+
+  const handleDeleteManager = (managerId) => {
+    if (managerId) {
+      Alert.alert(
+        t('clubDetails.alerts.deleteManager.title', 'Retirer ce dirigeant ?'),
+        t(
+          'clubDetails.alerts.deleteManager.description',
+          'Ce dirigeant ne sera plus rattaché à cette section. Vous pourrez le réajouter plus tard si besoin.',
+        ),
+        [
+          {
+            style: 'cancel',
+            text: t('clubDetails.alerts.deleteManager.actions.cancel', 'Annuler'),
+          },
+          {
+            onPress: () => {
+              deleteManagerMutation.mutate(managerId);
+            },
+            text: t('clubDetails.alerts.deleteManager.actions.confirm', 'Retirer'),
           },
         ],
       );
@@ -900,9 +937,10 @@ function ClubDetails({ navigation, route }) {
 
   const isUserAlreadyAttachedToViewedClub = useMemo(() => (
     isMember
+    || canEdit
     || isPlayerAlreadyInViewedClub
     || (userData?.trainedTeams || []).some((team) => (team?.club?.documentId || team?.club?.id) === clubId)
-  ), [clubId, isMember, isPlayerAlreadyInViewedClub, userData?.trainedTeams]);
+  ), [canEdit, clubId, isMember, isPlayerAlreadyInViewedClub, userData?.trainedTeams]);
 
   const canSignalClubInterest = useMemo(() => (
     isAuthenticated
@@ -2217,12 +2255,20 @@ function ClubDetails({ navigation, route }) {
                 </View>
               ) : null}
               {/* president */}
-              {owners?.length ? (
+              {owners?.length || canEdit ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
                     <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.owners')}</Text>
+                    {canEdit ? (
+                      <Button
+                        icon="plus"
+                        isOption
+                        onPress={handleCreateManager}
+                        variant="Primary"
+                      />
+                    ) : null}
                   </View>
                   <View
                     style={[Spaces.gap[16]]}
@@ -2258,6 +2304,16 @@ function ClubDetails({ navigation, route }) {
                               {`${user.firstname} ${user.lastname}`}
                             </Text>
                           </View>
+                          {canEdit ? (
+                            <View style={[Alignments.row, Spaces.gap[8]]}>
+                              <Button
+                                icon="trash"
+                                isOption
+                                onPress={() => handleDeleteManager(user.documentId)}
+                                variant="SecondaryLight"
+                              />
+                            </View>
+                          ) : null}
                         </TouchableOpacity>
                       ))
                     }

@@ -34,6 +34,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.ClubMembershipRequests]: '/clubs/:clubId/requests',
   [RouteNames.RequestsDashboard]: '/clubs/:clubId/requests-dashboard',
   [RouteNames.AddCoach]: '/clubs/:clubId/coaches/add',
+  [RouteNames.AddClubManager]: '/clubs/:clubId/managers/add',
   [RouteNames.AddSponsor]: '/clubs/:clubId?/sponsors/add',
   [RouteNames.AssignCoachTeams]: '/clubs/:clubId/coaches/:trainerId/assign',
   [RouteNames.ClubLicenses]: '/licenses/clubs/:clubId',

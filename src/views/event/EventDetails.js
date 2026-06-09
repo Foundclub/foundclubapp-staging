@@ -3341,8 +3341,6 @@ function EventDetails({ navigation, route }) {
               variant={canEdit ? 'Primary' : 'Secondary'}
             />
 
-            {renderEventLicenseCampaignActions()}
-
             {managedTournamentTeam?.documentId ? (
               <Button
                 onPress={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
@@ -3398,6 +3396,7 @@ function EventDetails({ navigation, route }) {
 
   const renderEventLicenseCampaignActions = () => {
     if (!canManageEventLicenseCampaigns) return null;
+    if (!eventCampaignCreationSuggested && eventLicenseCampaigns.length === 0) return null;
 
     const hasLinkedCampaigns = eventLicenseCampaigns.length > 0;
     const createCampaignTitle = eventCampaignCreationSuggested

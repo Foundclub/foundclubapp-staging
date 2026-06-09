@@ -32,7 +32,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import {
-  useGetEvent,
+  useGetEventForEdit,
   useGetEventTypes,
 } from '@/services/event/eventQueries';
 import { createEvent, updateEvent } from '@/services/event/eventService';
@@ -208,7 +208,7 @@ function EventEdit({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
-  const { data: event } = useGetEvent(eventId);
+  const { data: event } = useGetEventForEdit(eventId);
   const { data: eventTypes } = useGetEventTypes();
   const {
     createEventUpdatePayload,
@@ -447,6 +447,9 @@ function EventEdit({ navigation, route }) {
         endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
         eventTasks: Array.isArray(event?.eventTasks) ? event.eventTasks : [],
         facility: event?.facility?.documentId || null,
+        invitedTeams: event?.invitedTeams?.map(
+          (/** @type {Team} */ invitedTeam) => invitedTeam.documentId || '',
+        ) || [],
         location: {
           label: getEventLocationLabel(event?.locationDetails),
           value: `${event?.location?.lat}|${event?.location?.lng}`,
@@ -580,7 +583,8 @@ function EventEdit({ navigation, route }) {
             Spaces.gap[24],
             Spaces.paddingBottom[40],
           ]}
-          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="always"
           style={[Alignments.fill]}
         >
           <View style={[Alignments.fill, Spaces.gap[24]]}>

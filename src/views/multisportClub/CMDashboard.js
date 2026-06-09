@@ -39,6 +39,7 @@ import MultisportSectionsList from './components/MultisportSectionsList';
 import MultisportSponsorsSection from './components/MultisportSponsorsSection';
 import MultisportStatsRow from './components/MultisportStatsRow';
 
+/** @param {any} error */
 const normalizeErrorMessage = (error) => String(
   error?.message
   || error?.error?.message
@@ -46,6 +47,7 @@ const normalizeErrorMessage = (error) => String(
   || '',
 ).trim().toLowerCase();
 
+/** @param {any} error */
 const getErrorStatus = (error) => Number(
   error?.status
   || error?.statusCode
@@ -54,6 +56,7 @@ const getErrorStatus = (error) => Number(
   || 0,
 );
 
+/** @param {any} error */
 const isForbiddenError = (error) => (
   getErrorStatus(error) === 403
   || normalizeErrorMessage(error).includes('acces refuse')
@@ -67,6 +70,7 @@ const isForbiddenError = (error) => (
  * @typedef {{ title?: string; link?: string; logo?: ImageAsset }} CMSponsor
  * @typedef {{ teams?: number; members?: number }} CMSectionStats
  * @typedef {{ documentId?: string; name?: string; sport?: string; logoUrl?: string; stats?: CMSectionStats }} CMSectionRow
+ * @typedef {{ documentId?: string; name?: string; admins?: CMAdmin[]; sections?: Array<{ documentId?: string; name?: string }> }} CMMultisportSummary
  * @typedef {{
  *  documentId?: string;
  *  name?: string;
@@ -92,9 +96,34 @@ function CMDashboard({ navigation, route }) {
   } = useTheme();
   const { userData } = useAuth();
   const { getClubInitials } = useClub();
+  const parentMultisportSummary = /** @type {CMMultisportSummary | null} */ (
+    userData?.club?.parentMultisport || null
+  );
+  const relatedCmSummaries = useMemo(() => {
+    /** @type {Map<string, CMMultisportSummary>} */
+    const map = new Map();
+    const candidates = [
+      ...(Array.isArray(userData?.multisportClubs) ? userData.multisportClubs : []),
+      parentMultisportSummary,
+    ];
+
+    candidates.forEach((candidate) => {
+      const documentId = String(candidate?.documentId || '').trim();
+      if (!documentId || map.has(documentId)) return;
+      map.set(documentId, candidate);
+    });
+
+    return Array.from(map.values());
+  }, [parentMultisportSummary, userData?.multisportClubs]);
+  const resolvedCmId = cmId || relatedCmSummaries[0]?.documentId || '';
   const managedCmSummary = useMemo(
-    () => (userData?.multisportClubs || []).find((club) => club?.documentId === cmId) || null,
-    [cmId, userData?.multisportClubs],
+    () => relatedCmSummaries.find((/** @type {CMMultisportSummary} */ club) => club?.documentId === resolvedCmId) || null,
+    [relatedCmSummaries, resolvedCmId],
+  );
+  const isManagedCmByAuth = Boolean(
+    resolvedCmId
+    && managedCmSummary?.documentId
+    && managedCmSummary.documentId === resolvedCmId,
   );
 
   const {
@@ -103,12 +132,12 @@ function CMDashboard({ navigation, route }) {
     isLoading: cmLoading,
     refetch: refetchCM,
   } = useQuery({
-    enabled: !!cmId,
+    enabled: !!resolvedCmId,
     queryFn: () => {
-      if (!cmId) return Promise.resolve(null);
-      return getMultisportClubById(cmId);
+      if (!resolvedCmId) return Promise.resolve(null);
+      return getMultisportClubById(resolvedCmId);
     },
-    queryKey: ['multisport-club', cmId],
+    queryKey: ['multisport-club', resolvedCmId],
   });
 
   const {
@@ -117,30 +146,60 @@ function CMDashboard({ navigation, route }) {
     isLoading: sectionsLoading,
     refetch: refetchSections,
   } = useQuery({
-    enabled: !!cmId,
+    enabled: !!resolvedCmId,
     queryFn: () => {
-      if (!cmId) return Promise.resolve({ data: [] });
-      return getCMClubs(cmId);
+      if (!resolvedCmId) return Promise.resolve({ data: [] });
+      return getCMClubs(resolvedCmId);
     },
-    queryKey: ['cm-clubs', cmId],
+    queryKey: ['cm-clubs', resolvedCmId],
   });
 
   const canFallbackToManagedSummary = Boolean(
     managedCmSummary?.documentId
-    && managedCmSummary.documentId === cmId
+    && managedCmSummary.documentId === resolvedCmId
     && isForbiddenError(cmError),
   );
   const cm = /** @type {CMMultisport | null | undefined} */ (cmData || managedCmSummary);
   const sectionsData = /** @type {{ data?: CMSectionRow[] } | undefined} */ (sectionsDataRaw);
   const sections = useMemo(() => sectionsData?.data || [], [sectionsData?.data]);
   const sponsors = useMemo(() => cm?.sponsor || [], [cm?.sponsor]);
-  const admins = useMemo(() => cm?.admins || [], [cm?.admins]);
+  const admins = useMemo(() => {
+    const cmAdmins = Array.isArray(cm?.admins) ? cm.admins : [];
+    const baseAdmins = /** @type {CMAdmin[]} */ (
+      cmAdmins
+    ).filter(Boolean);
+    const connectedAdmin = isManagedCmByAuth && userData?.documentId
+      ? {
+        avatar: userData?.avatar,
+        documentId: userData.documentId,
+        firstname: userData?.firstname,
+        lastname: userData?.lastname,
+      }
+      : null;
+
+    if (!connectedAdmin) {
+      return baseAdmins;
+    }
+
+    if (baseAdmins.some((admin) => admin?.documentId === connectedAdmin.documentId)) {
+      return baseAdmins;
+    }
+
+    return [...baseAdmins, connectedAdmin];
+  }, [
+    cm?.admins,
+    isManagedCmByAuth,
+    userData?.avatar,
+    userData?.documentId,
+    userData?.firstname,
+    userData?.lastname,
+  ]);
   const isLoading = cmLoading || sectionsLoading;
   const error = sectionsError || (canFallbackToManagedSummary ? null : cmError);
 
   const isCmAdmin = useMemo(
-    () => canFallbackToManagedSummary || admins.some((admin) => admin.documentId === userData?.documentId),
-    [admins, canFallbackToManagedSummary, userData?.documentId],
+    () => isManagedCmByAuth || canFallbackToManagedSummary || admins.some((admin) => admin.documentId === userData?.documentId),
+    [admins, canFallbackToManagedSummary, isManagedCmByAuth, userData?.documentId],
   );
 
   const refetch = useCallback(() => {
@@ -162,10 +221,10 @@ function CMDashboard({ navigation, route }) {
     };
   }, [sections]);
 
-  const deleteMutation = useMutation({
-    mutationFn: (sectionId) => {
-      if (!cmId) throw new Error('Missing cmId');
-      return deleteCMSection(cmId, sectionId);
+  const deleteMutation = /** @type {import('@tanstack/react-query').UseMutationResult<any, any, string, unknown>} */ (useMutation({
+    mutationFn: (/** @type {string} */ sectionId) => {
+      if (!resolvedCmId) throw new Error('Missing cmId');
+      return deleteCMSection(resolvedCmId, sectionId);
     },
     onError: (err) => {
       displayErrorAlert(err);
@@ -174,12 +233,12 @@ function CMDashboard({ navigation, route }) {
       refetchSections();
       Alert.alert(t('common.actions.delete'), t('multisport.sectionDeleted'));
     },
-  });
+  }));
 
   const handleOpenManageClub = useCallback(() => {
-    if (!cmId) return;
-    navigation.navigate(RouteNames.MultisportClubEdit, { cmId });
-  }, [cmId, navigation]);
+    if (!resolvedCmId) return;
+    navigation.navigate(RouteNames.MultisportClubEdit, { cmId: resolvedCmId });
+  }, [navigation, resolvedCmId]);
 
   const handleOpenRequestsHub = useCallback(() => {
     navigateToRequestsHub(navigation, {
@@ -199,18 +258,21 @@ function CMDashboard({ navigation, route }) {
   }, [navigation]);
 
   const handleOpenLicenses = useCallback(() => {
-    navigation.navigate(RouteNames.CMLicensesDashboard, { cmId });
-  }, [cmId, navigation]);
+    if (!resolvedCmId) return;
+    navigation.navigate(RouteNames.CMLicensesDashboard, { cmId: resolvedCmId });
+  }, [navigation, resolvedCmId]);
 
   const handleCreateSection = useCallback(() => {
-    navigation.navigate(RouteNames.CreateSection, { cmId });
-  }, [cmId, navigation]);
+    if (!resolvedCmId) return;
+    navigation.navigate(RouteNames.CreateSection, { cmId: resolvedCmId });
+  }, [navigation, resolvedCmId]);
 
   const handleCreateSponsor = useCallback(() => {
-    navigation.navigate(RouteNames.AddSponsor, { cmId });
-  }, [cmId, navigation]);
+    if (!resolvedCmId) return;
+    navigation.navigate(RouteNames.AddSponsor, { cmId: resolvedCmId });
+  }, [navigation, resolvedCmId]);
 
-  const handleSectionPress = useCallback((section) => {
+  const handleSectionPress = useCallback((/** @type {CMSectionRow} */ section) => {
     if (!section?.documentId) return;
     navigation.navigate(RouteNames.ClubStack, {
       params: { clubId: section.documentId },
@@ -218,7 +280,7 @@ function CMDashboard({ navigation, route }) {
     });
   }, [navigation]);
 
-  const handleDeleteSection = useCallback((section) => {
+  const handleDeleteSection = useCallback((/** @type {CMSectionRow} */ section) => {
     Alert.alert(
       t('multisport.deleteSectionTitle'),
       t('multisport.deleteSectionConfirm', { name: section.name }),
@@ -237,7 +299,7 @@ function CMDashboard({ navigation, route }) {
     );
   }, [deleteMutation, t]);
 
-  const handleAdminPress = useCallback((admin) => {
+  const handleAdminPress = useCallback((/** @type {CMAdmin} */ admin) => {
     if (!admin?.documentId) return;
     navigation.navigate(RouteNames.ProfileStack, {
       params: { userId: admin.documentId },
@@ -303,19 +365,19 @@ function CMDashboard({ navigation, route }) {
     {
       key: 'teams',
       label: t('multisport.stats.teams', 'Équipes'),
-      onPress: () => navigation.navigate(RouteNames.CMTeams, { cmId }),
+      onPress: () => navigation.navigate(RouteNames.CMTeams, { cmId: resolvedCmId }),
       value: globalStats.teams,
     },
     {
       key: 'members',
       label: t('multisport.stats.members', 'Membres'),
-      onPress: () => navigation.navigate(RouteNames.CMMembers, { cmId }),
+      onPress: () => navigation.navigate(RouteNames.CMMembers, { cmId: resolvedCmId }),
       value: globalStats.members,
     },
-  ]), [cmId, globalStats.members, globalStats.sections, globalStats.teams, navigation, t]);
+  ]), [globalStats.members, globalStats.sections, globalStats.teams, navigation, resolvedCmId, t]);
 
-  const isMissingCmId = !cmId;
-  const isCmNotFound = Boolean(cmId) && !isLoading && !error && !cm;
+  const isMissingCmId = !resolvedCmId;
+  const isCmNotFound = Boolean(resolvedCmId) && !isLoading && !error && !cm;
 
   if (isMissingCmId || isCmNotFound) {
     return (
@@ -401,13 +463,6 @@ function CMDashboard({ navigation, route }) {
 
               <MultisportStatsRow items={statsItems} />
 
-              <View style={[Spaces.gap[12]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                  {t('multisport.titles.quickActions', 'Actions rapides')}
-                </Text>
-                <MultisportActionGrid items={actionItems} />
-              </View>
-
               <MultisportSponsorsSection
                 canEdit={isCmAdmin}
                 onAddSponsor={handleCreateSponsor}
@@ -415,7 +470,9 @@ function CMDashboard({ navigation, route }) {
               />
 
               <MultisportSectionsList
+                canEdit={isCmAdmin}
                 getClubInitials={getClubInitials}
+                onAddSection={isCmAdmin ? handleCreateSection : undefined}
                 onDeleteSection={isCmAdmin ? handleDeleteSection : undefined}
                 onSectionPress={handleSectionPress}
                 sections={sections}
@@ -424,16 +481,12 @@ function CMDashboard({ navigation, route }) {
 
               <MultisportAdminsSection admins={admins} onAdminPress={handleAdminPress} />
 
-              {isCmAdmin ? (
-                <View style={[Spaces.marginTop[4]]}>
-                  <Button
-                    icon="plus"
-                    onPress={handleCreateSection}
-                    title={t('multisport.actions.createSection.title', 'Créer une section')}
-                    variant="Secondary"
-                  />
-                </View>
-              ) : null}
+              <View style={[Spaces.gap[12]]}>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('multisport.titles.quickActions', 'Actions rapides')}
+                </Text>
+                <MultisportActionGrid items={actionItems} />
+              </View>
             </WithDataWrapper>
           </ScrollView>
         </OnboardingWrapper>

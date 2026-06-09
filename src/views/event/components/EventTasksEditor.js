@@ -187,7 +187,15 @@ function EventTasksEditor({
       )}
 
       {isOpen ? (
-        <BottomModal close={closeModal} isVisible snapPoints={['78%']} webPresentation="dialog">
+        <BottomModal
+          close={closeModal}
+          enableContentPanningGesture={false}
+          enablePanDownToClose={false}
+          isVisible
+          scrollable={false}
+          snapPoints={['78%']}
+          webPresentation="dialog"
+        >
           <View style={[Spaces.gap[16], Spaces.paddingBottom[24]]}>
             <Text style={[Fonts.h3, Fonts.neutral00]}>Nouvelle tache</Text>
 

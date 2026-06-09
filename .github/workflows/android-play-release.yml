@@ -99,6 +99,7 @@ jobs:
           APP_ENV=production
           API_URL=https://api.foundclubpro.com/api
           SOCKET_URL=https://api.foundclubpro.com
+          WEB_APP_URL=https://foundclub.app
           SENTRY_DSN=
           FC_ENABLE_PUSH_NOTIFICATIONS=1
           FC_ENABLE_SMART_NOTIFICATIONS=1

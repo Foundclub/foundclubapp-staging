@@ -24,10 +24,30 @@ const normalizeText = (value) => String(value || '')
   .toLowerCase();
 
 const formatClock = (value) => String(value || '').split(':').slice(0, 2).join(':');
+const formatDateClock = (value) => {
+  if (!value) return '';
+
+  const resolvedDate = toDeviceDateFromParisInstant(value);
+  if (!resolvedDate || Number.isNaN(resolvedDate.getTime())) {
+    return '';
+  }
+
+  const hours = String(resolvedDate.getHours()).padStart(2, '0');
+  const minutes = String(resolvedDate.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+const resolvePlanningStartTime = (item) => (
+  formatClock(item?.startTime) || formatDateClock(item?.startAt || item?.date)
+);
+
+const resolvePlanningEndTime = (item) => (
+  formatClock(item?.endTime) || formatDateClock(item?.endAt || item?.endDate)
+);
 
 const buildTimeLabel = (item) => {
-  const start = formatClock(item?.startTime);
-  const end = formatClock(item?.endTime);
+  const start = resolvePlanningStartTime(item);
+  const end = resolvePlanningEndTime(item);
 
   if (start && end && start !== end) {
     return `${start} - ${end}`;
@@ -35,6 +55,8 @@ const buildTimeLabel = (item) => {
 
   return start || end || '';
 };
+
+export const getPlanningTimeLabel = (item) => buildTimeLabel(item);
 
 const buildWindowFromTimes = (startAt, endTime) => {
   if (!startAt || !endTime) return null;
@@ -160,6 +182,8 @@ export const normalizePlanningItem = (item) => {
   const team = normalizeTeam(item.team);
   const facility = normalizeFacility(item.facility || item.installation);
   const matchContext = normalizeMatchContext(item.matchContext);
+  const startTime = resolvePlanningStartTime(item) || null;
+  const endTime = resolvePlanningEndTime(item) || null;
 
   return {
     club: item.club
@@ -170,10 +194,10 @@ export const normalizePlanningItem = (item) => {
       : null,
     date: item.startAt || item.date || null,
     documentId: item.documentId || item.eventId || item.id || null,
-    endAt: item.endAt || item.endDate || item.startAt || item.date || null,
-    endTime: item.endTime || null,
+    endAt: item.endAt || item.endDate || null,
+    endTime,
     facility,
-    hasExplicitTime: item.hasExplicitTime ?? Boolean(item.startTime && item.endTime),
+    hasExplicitTime: Boolean(item.hasExplicitTime || startTime),
     id: item.documentId || item.eventId || item.id || null,
     isSharedFacility: Boolean(item.isSharedFacility),
     kind: inferPlanningKind(item, typeLabel),
@@ -188,7 +212,7 @@ export const normalizePlanningItem = (item) => {
       : null,
     raw: item,
     startAt: item.startAt || item.date || null,
-    startTime: item.startTime || null,
+    startTime,
     team,
     title,
     type: typeLabel ? { name: typeLabel } : null,
@@ -232,7 +256,7 @@ export const getPlanningItemWindow = (item) => {
   if (!startAt) return null;
 
   let endAt = item?.endAt ? toDeviceDateFromParisInstant(item.endAt) : null;
-  if (!endAt || Number.isNaN(endAt.getTime())) {
+  if (!endAt || Number.isNaN(endAt.getTime()) || endAt.getTime() <= startAt.getTime()) {
     endAt = buildWindowFromTimes(startAt, item?.endTime);
   }
 

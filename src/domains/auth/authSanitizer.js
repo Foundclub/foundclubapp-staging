@@ -29,9 +29,23 @@ const sanitizeEntitySummary = (/** @type {any} */ entity) => {
   };
 };
 
+const sanitizeUserLiteSummary = (/** @type {any} */ user) => {
+  if (!user) return null;
+  return {
+    avatar: sanitizeImageSummary(user?.avatar),
+    documentId: normalizeString(user?.documentId),
+    firstname: normalizeString(user?.firstname),
+    id: user?.id ?? null,
+    lastname: normalizeString(user?.lastname),
+  };
+};
+
 const sanitizeMultisportClubSummary = (/** @type {any} */ club) => {
   if (!club) return null;
   return {
+    admins: Array.isArray(club?.admins)
+      ? club.admins.map(sanitizeUserLiteSummary).filter(Boolean)
+      : [],
     documentId: normalizeString(club?.documentId),
     id: club?.id ?? null,
     isCustomer: typeof club?.isCustomer === 'boolean' ? club.isCustomer : null,
@@ -130,6 +144,11 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
   lastname: normalizeString(user?.lastname),
   multisportIds: normalizeIdList(
     user?.multisportClubs?.map((/** @type {any} */ club) => normalizeString(club?.documentId)),
+  ),
+  multisportAdminIds: normalizeIdList(
+    user?.multisportClubs?.flatMap(
+      (/** @type {any} */ club) => (club?.admins || []).map((/** @type {any} */ admin) => normalizeString(admin?.documentId)),
+    ),
   ),
   myTeamIds: normalizeIdList(
     user?.myTeams?.map((/** @type {any} */ team) => normalizeString(team?.documentId)),

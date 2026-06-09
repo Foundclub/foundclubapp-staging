@@ -20,7 +20,14 @@ import TrainerInvitedModal from '@/components/organisms/trainerInvitedModal/Trai
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ClubStateView from '@/views/club/components/ClubStateView';
 
-import { createTrainer, linkTrainerToClub } from '@/services/auth/authService';
+import { RouteNames } from '@/navigation/routeNames';
+
+import {
+  createManager,
+  createTrainer,
+  linkManagerToClub,
+  linkTrainerToClub,
+} from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
@@ -72,6 +79,7 @@ function AddCoach({ navigation, route }) {
   const { t } = useTranslation();
   const { Alignments, Spaces } = useTheme();
   const { formatBirthdateToDisplay, userData } = useAuth();
+  const isManagerMode = route?.name === RouteNames.AddClubManager || route?.params?.staffType === 'manager';
   const routeClubId = sanitizeRouteParam(route?.params?.clubId);
   const routeClubName = String(route?.params?.clubName || '').trim();
   const {
@@ -83,6 +91,15 @@ function AddCoach({ navigation, route }) {
     enabled: !!routeClubId,
   });
   const resolvedClubName = routeClubName || clubData?.name || userData?.club?.name || 'Club';
+  /**
+   * @param {string | undefined} firstname
+   * @param {string | undefined} lastname
+   * @param {string | undefined} fallbackPhone
+   * @returns {string}
+   */
+  const successEntityName = (firstname, lastname, fallbackPhone) => (
+    [firstname, lastname].filter(Boolean).join(' ').trim() || fallbackPhone || (isManagerMode ? 'dirigeant' : 'coach')
+  );
 
   const {
     control,
@@ -97,11 +114,13 @@ function AddCoach({ navigation, route }) {
   });
 
   const linkTrainerToClubMutation = useMutation({
-    mutationFn: linkTrainerToClub,
+    mutationFn: /** @type {any} */ (isManagerMode ? linkManagerToClub : linkTrainerToClub),
     onError: () => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        "Impossible d'ajouter cet entraineur au club pour le moment.",
+        isManagerMode
+          ? "Impossible d'ajouter ce dirigeant à la section pour le moment."
+          : "Impossible d'ajouter cet entraineur au club pour le moment.",
       );
     },
     onSuccess: () => {
@@ -112,43 +131,69 @@ function AddCoach({ navigation, route }) {
   const { inviteTrainer } = useAuth();
 
   const createTrainerMutation = useMutation({
-    mutationFn: createTrainer,
+    mutationFn: isManagerMode ? createManager : createTrainer,
     onError: (/** @type {import('axios').AxiosError} */error) => {
       const errorResponse = error?.response?.data?.error;
       if (errorResponse?.message === 'Uniqueness check failed' && errorResponse?.details?.user) {
         const { user } = errorResponse.details;
         if (user?.club) {
           Alert.alert(
-            t('addCoach.alerts.alreadyInClub.title'),
-            t(
-              'addCoach.alerts.alreadyInClub.description',
-              {
-                firstname: user.firstname,
-                lastname: user.lastname,
-              },
-            ),
+            isManagerMode
+              ? t('addClubManager.alerts.alreadyInClub.title', "Impossible d'ajouter ce dirigeant à la section")
+              : t('addCoach.alerts.alreadyInClub.title'),
+            isManagerMode
+              ? t(
+                'addClubManager.alerts.alreadyInClub.description',
+                "Un utilisateur du nom de {{firstname}} {{lastname}} est déjà membre d'un autre club.",
+                {
+                  firstname: user.firstname,
+                  lastname: user.lastname,
+                },
+              )
+              : t(
+                'addCoach.alerts.alreadyInClub.description',
+                {
+                  firstname: user.firstname,
+                  lastname: user.lastname,
+                },
+              ),
 
           );
         } else if (user) {
           Alert.alert(
-            t('addCoach.alerts.alreadyExist.title'),
-            t('addCoach.alerts.alreadyExist.description', {
-              firstname: user.firstname,
-              lastname: user.lastname,
-            }),
+            isManagerMode
+              ? t('addClubManager.alerts.alreadyExist.title', 'Un utilisateur existe déjà avec ce numéro de téléphone.')
+              : t('addCoach.alerts.alreadyExist.title'),
+            isManagerMode
+              ? t(
+                'addClubManager.alerts.alreadyExist.description',
+                "Le détenteur de ce numéro de téléphone utilise déjà l'application sous le nom de {{firstname}} {{lastname}}. Voulez-vous l'ajouter comme dirigeant à cette section ?",
+                {
+                  firstname: user.firstname,
+                  lastname: user.lastname,
+                },
+              )
+              : t('addCoach.alerts.alreadyExist.description', {
+                firstname: user.firstname,
+                lastname: user.lastname,
+              }),
             [
               {
                 style: 'cancel',
-                text: t('addCoach.alerts.alreadyExist.actions.cancel'),
+                text: isManagerMode
+                  ? t('addClubManager.alerts.alreadyExist.actions.cancel', 'Annuler')
+                  : t('addCoach.alerts.alreadyExist.actions.cancel'),
               },
               {
                 onPress: () => {
-                  linkTrainerToClubMutation.mutate({
+                  linkTrainerToClubMutation.mutate(/** @type {any} */ ({
                     clubId: routeClubId || clubData?.documentId,
-                    trainerId: user.documentId,
-                  });
+                    ...(isManagerMode ? { managerId: user.documentId } : { trainerId: user.documentId }),
+                  }));
                 },
-                text: t('addCoach.alerts.alreadyExist.actions.addToClub'),
+                text: isManagerMode
+                  ? t('addClubManager.alerts.alreadyExist.actions.addToClub', 'Ajouter à la section')
+                  : t('addCoach.alerts.alreadyExist.actions.addToClub'),
               },
             ],
           );
@@ -163,6 +208,20 @@ function AddCoach({ navigation, route }) {
     },
     onSuccess: (data, variables) => {
       setCreatedTrainer({ ...(data || {}), ...variables });
+      if (isManagerMode) {
+        Alert.alert(
+          t('addClubManager.alerts.success.title', 'Ajout réussi !'),
+          t(
+            'addClubManager.alerts.success.description',
+            'Le dirigeant {{managerName}} a bien été ajouté à cette section.',
+            {
+              managerName: successEntityName(variables?.firstname, variables?.lastname, variables?.phoneNumber),
+            },
+          ),
+          [{ onPress: () => navigation.goBack(), text: t('common.actions.ok', 'OK') }],
+        );
+        return;
+      }
       setIsSuccessModalVisible(true);
     },
   });
@@ -191,9 +250,11 @@ function AddCoach({ navigation, route }) {
   if (isLoadingClub && !clubData) {
     return (
       <ClubStateView
-        description="Nous récupérons les informations du club pour preparer l'ajout du coach."
+        description={isManagerMode
+          ? "Nous récupérons les informations de la section pour préparer l'ajout du dirigeant."
+          : "Nous récupérons les informations du club pour preparer l'ajout du coach."}
         isLoading
-        title="Chargement du club"
+        title={isManagerMode ? 'Chargement de la section' : 'Chargement du club'}
       />
     );
   }
@@ -341,30 +402,32 @@ function AddCoach({ navigation, route }) {
           disabled={!!Object.keys(formErrors).length}
           isLoading={createTrainerMutation.isPending}
           onPress={handleSubmit(handleFormSubmit)}
-          title={t('addCoach.actions.save')}
+          title={isManagerMode ? t('addClubManager.actions.save', 'Ajouter') : t('addCoach.actions.save')}
           variant="Primary"
         />
       </KeyboardAvoidingView>
-      <TrainerInvitedModal
-        isVisible={isSuccessModalVisible}
-        onClose={() => {
-          setIsSuccessModalVisible(false);
-          navigation.goBack();
-        }}
-        onInvite={() => {
-          if (createdTrainer) {
-            inviteTrainer({
-              clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
-              clubName: resolvedClubName,
-              firstname: createdTrainer.firstname || 'Coach',
-              phoneNumber: createdTrainer.phoneNumber,
-            });
-          }
-          setIsSuccessModalVisible(false);
-          navigation.goBack();
-        }}
-        trainerName={createdTrainer?.firstname || ''}
-      />
+      {!isManagerMode ? (
+        <TrainerInvitedModal
+          isVisible={isSuccessModalVisible}
+          onClose={() => {
+            setIsSuccessModalVisible(false);
+            navigation.goBack();
+          }}
+          onInvite={() => {
+            if (createdTrainer) {
+              inviteTrainer({
+                clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
+                clubName: resolvedClubName,
+                firstname: createdTrainer.firstname || 'Coach',
+                phoneNumber: createdTrainer.phoneNumber,
+              });
+            }
+            setIsSuccessModalVisible(false);
+            navigation.goBack();
+          }}
+          trainerName={createdTrainer?.firstname || ''}
+        />
+      ) : null}
     </ScreenContainer>
   );
 }

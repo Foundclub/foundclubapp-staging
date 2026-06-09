@@ -1,7 +1,22 @@
-import { useMemo } from 'react';
 import {
-  Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {
+  Platform,
+  ScrollView as RNScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import {
+  Gesture,
+  GestureDetector,
+  ScrollView as GestureScrollView,
+} from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
 import useTheme from '@/theme/themeContext';
@@ -20,7 +35,12 @@ function SegmentedControl({
 }) {
   const { Colors, Fonts } = useTheme();
   const isWeb = Platform.OS === 'web';
+  const ScrollViewComponent = isWeb ? RNScrollView : GestureScrollView;
   const useEqualWidthLayout = centerContent;
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+  const scrollOffset = useSharedValue(0);
+  const dragStartOffset = useSharedValue(0);
   const horizontalGap = isWeb ? 8 : horizontalScale(8.58);
   const containerMinHeight = isWeb ? 44 : verticalScale(37.52);
   const segmentMinHeight = isWeb ? 36 : verticalScale(32);
@@ -31,6 +51,49 @@ function SegmentedControl({
   const wrapperMinHeight = isWeb ? 52 : verticalScale(45);
   const segmentRadius = moderateScale(33.24);
   const selectedRadius = moderateScale(34.31);
+  const maxScrollOffset = Math.max(0, contentWidth - containerWidth);
+  const shouldUseManualHorizontalPan = !isWeb && !useEqualWidthLayout;
+
+  useEffect(() => {
+    scrollOffset.value = Math.min(scrollOffset.value, maxScrollOffset);
+  }, [maxScrollOffset, scrollOffset]);
+
+  const panGesture = useMemo(() => Gesture.Pan()
+    .activeOffsetX([-8, 8])
+    .failOffsetY([-8, 8])
+    .onStart(() => {
+      'worklet';
+
+      dragStartOffset.value = scrollOffset.value;
+    })
+    .onUpdate((gestureEvent) => {
+      'worklet';
+
+      const nextOffset = Math.max(
+        0,
+        Math.min(
+          maxScrollOffset,
+          dragStartOffset.value - gestureEvent.translationX,
+        ),
+      );
+      scrollOffset.value = nextOffset;
+    })
+    .onEnd((gestureEvent) => {
+      'worklet';
+
+      const nextOffset = Math.max(
+        0,
+        Math.min(
+          maxScrollOffset,
+          dragStartOffset.value - gestureEvent.translationX,
+        ),
+      );
+      scrollOffset.value = nextOffset;
+    }), [maxScrollOffset, dragStartOffset, scrollOffset]);
+
+  const animatedContentStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -scrollOffset.value }],
+  }));
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -51,6 +114,19 @@ function SegmentedControl({
       alignItems: 'stretch',
     },
     scroll: {
+      width: '100%',
+    },
+    scrollContent: {
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      backgroundColor: Colors.transparent,
+      flexDirection: 'row',
+      gap: horizontalGap,
+      minHeight: containerMinHeight,
+      paddingVertical: isWeb ? 2 : 0,
+    },
+    scrollViewport: {
+      overflow: 'hidden',
       width: '100%',
     },
     segment: {
@@ -146,23 +222,60 @@ function SegmentedControl({
     );
   });
 
+  let content;
+
+  if (useEqualWidthLayout) {
+    content = (
+      <View style={[styles.container, styles.containerCentered, styles.containerEqualWidth]}>
+        {segmentButtons}
+      </View>
+    );
+  } else if (shouldUseManualHorizontalPan) {
+    content = (
+      <GestureDetector gesture={panGesture}>
+        <View
+          onLayout={(event) => {
+            setContainerWidth(event.nativeEvent.layout.width);
+          }}
+          style={[styles.scrollViewport, styles.scroll]}
+        >
+          <Animated.View
+            onLayout={(event) => {
+              setContentWidth(event.nativeEvent.layout.width);
+            }}
+            style={[
+              styles.scrollContent,
+              animatedContentStyle,
+            ]}
+          >
+            {segmentButtons}
+          </Animated.View>
+        </View>
+      </GestureDetector>
+    );
+  } else {
+    content = (
+      <ScrollViewComponent
+        bounces={!centerContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          centerContent && styles.containerCentered,
+        ]}
+        directionalLockEnabled
+        horizontal
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={!isWeb}
+        showsHorizontalScrollIndicator={false}
+        style={styles.scroll}
+      >
+        {segmentButtons}
+      </ScrollViewComponent>
+    );
+  }
+
   return (
     <View style={styles.wrapper}>
-      {useEqualWidthLayout ? (
-        <View style={[styles.container, styles.containerCentered, styles.containerEqualWidth]}>
-          {segmentButtons}
-        </View>
-      ) : (
-        <ScrollView
-          bounces={!centerContent}
-          contentContainerStyle={[styles.container, centerContent && styles.containerCentered]}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.scroll}
-        >
-          {segmentButtons}
-        </ScrollView>
-      )}
+      {content}
     </View>
   );
 }

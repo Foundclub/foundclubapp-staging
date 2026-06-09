@@ -4,7 +4,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Image,
+  InteractionManager,
   Keyboard,
+  Platform,
   Text,
   TouchableOpacity,
   View,
@@ -105,12 +107,18 @@ const AutocompleteSelect = forwardRef(
 
     // refs
     const searchInputRef = useRef(null);
+    const openModalTaskRef = useRef(/** @type {{ cancel?: () => void } | null} */ (null));
     const openModalTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
     const wasValuesVisibleRef = useRef(false);
 
     useEffect(() => () => {
+      if (openModalTaskRef.current?.cancel) {
+        openModalTaskRef.current.cancel();
+      }
+      openModalTaskRef.current = null;
       if (openModalTimeoutRef.current) {
         clearTimeout(openModalTimeoutRef.current);
+        openModalTimeoutRef.current = null;
       }
     }, []);
 
@@ -178,17 +186,47 @@ const AutocompleteSelect = forwardRef(
     }, [areValuesVisible, hydrateSelectedOptionsFromProps]);
 
     // methods
+    const clearPendingOpen = useCallback(() => {
+      if (openModalTaskRef.current?.cancel) {
+        openModalTaskRef.current.cancel();
+      }
+      openModalTaskRef.current = null;
+      if (openModalTimeoutRef.current) {
+        clearTimeout(openModalTimeoutRef.current);
+        openModalTimeoutRef.current = null;
+      }
+    }, []);
+
+    const scheduleOpen = useCallback(() => {
+      clearPendingOpen();
+
+      const openModal = () => {
+        if (props.isSearchable) {
+          openModalTimeoutRef.current = setTimeout(() => {
+            setAreValuesVisible(true);
+            openModalTimeoutRef.current = null;
+          }, 80);
+          return;
+        }
+
+        setAreValuesVisible(true);
+      };
+
+      if (Platform.OS === 'web') {
+        openModal();
+        return;
+      }
+
+      openModalTaskRef.current = InteractionManager.runAfterInteractions(() => {
+        openModalTaskRef.current = null;
+        openModal();
+      });
+    }, [clearPendingOpen, props.isSearchable]);
+
     const handleFocus = () => {
       if (!props.disabled) {
         Keyboard.dismiss();
-        if (openModalTimeoutRef.current) {
-          clearTimeout(openModalTimeoutRef.current);
-        }
-        const openDelay = props.isSearchable ? 80 : 0;
-        openModalTimeoutRef.current = setTimeout(() => {
-          setAreValuesVisible(true);
-          openModalTimeoutRef.current = null;
-        }, openDelay);
+        scheduleOpen();
         if (props?.onFocus) {
           props?.onFocus();
         }
@@ -215,10 +253,7 @@ const AutocompleteSelect = forwardRef(
     };
 
     const handleCloseModal = (persistSelection = true) => {
-      if (openModalTimeoutRef.current) {
-        clearTimeout(openModalTimeoutRef.current);
-        openModalTimeoutRef.current = null;
-      }
+      clearPendingOpen();
 
       if (persistSelection) {
         props.setValue(selectedOptions);
@@ -426,6 +461,8 @@ const AutocompleteSelect = forwardRef(
         ) : (
           <View style={[Alignments.relative, { opacity: props.disabled ? 0.5 : 1 }]}>
             <TouchableOpacity
+              accessibilityRole="button"
+              activeOpacity={0.82}
               disabled={props.disabled}
               onPress={handleFocus}
               style={[
@@ -433,7 +470,7 @@ const AutocompleteSelect = forwardRef(
                 Alignments.fullSize,
                 Spaces.padding[12],
                 hasLabel ? Spaces.paddingTop[40] : Spaces.paddingTop[12],
-                { zIndex: 1 },
+                { elevation: 2, zIndex: 2 },
                 props.closedPressableStyle,
               ]}
             >
@@ -453,15 +490,17 @@ const AutocompleteSelect = forwardRef(
                 </Text>
               )}
             </TouchableOpacity>
-            <Input
-              editable={false}
-              error={props.error}
-              label={props.label}
-              lightMode={props.lightMode}
-              readOnly
-              ref={ref}
-              wrapperStyle={props.wrapperStyle}
-            />
+            <View pointerEvents="none">
+              <Input
+                editable={false}
+                error={props.error}
+                label={props.label}
+                lightMode={props.lightMode}
+                readOnly
+                ref={ref}
+                wrapperStyle={props.wrapperStyle}
+              />
+            </View>
           </View>
         )}
         {isCardVariant && props.error && props.error !== ' ' ? (

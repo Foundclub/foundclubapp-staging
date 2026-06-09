@@ -91,7 +91,14 @@ function MissionDock({ style }) {
     setIsExpanded(false);
   }, [currentMission?.id]);
 
-  if (!guidanceConfig.enabled || !isHydrated || !currentMission) {
+  const {
+    completedCount: programCompletedCountFromSummary = 0,
+    totalCount: programTotalCountFromSummary = 0,
+  } = snapshot.programSummary;
+  const isProgramCompleted = programTotalCountFromSummary > 0
+    && programCompletedCountFromSummary >= programTotalCountFromSummary;
+
+  if (!guidanceConfig.enabled || !isHydrated || !currentMission || isProgramCompleted) {
     return null;
   }
 

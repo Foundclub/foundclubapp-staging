@@ -56,7 +56,6 @@ import { useAppFeedback } from '@/context/AppFeedbackContext';
 import { useAppMode } from '@/context/AppModeContext';
 import {
   useBlockingOverlayLifecycle,
-  useBlockingOverlayPrompt,
 } from '@/context/BlockingOverlayContext';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
@@ -358,8 +357,8 @@ function HomeHubContent({ auth, navigation, route }) {
   );
   const clubId = userData?.club?.documentId;
   const cmId = userData?.multisportClubs?.[0]?.documentId;
-  const isTutorialCenterVisible = activeTutorialModal === 'center';
-  const isFeatureTutorialPickerVisible = activeTutorialModal === 'feature';
+  const isTutorialCenterVisible = false;
+  const isFeatureTutorialPickerVisible = false;
   const closeContextualPrompt = useCallback(() => {
     setContextualPrompt(null);
   }, []);
@@ -373,16 +372,7 @@ function HomeHubContent({ auth, navigation, route }) {
       cooldownKey: userData?.documentId || 'anonymous',
     },
   );
-  const canShowEntryGatePrompt = useBlockingOverlayPrompt(
-    homeHubEntryPopup.descriptor.id,
-    homeHubEntryPopup.canShow,
-    homeHubEntryPopup.descriptor.priority,
-  );
-  const isHomeHubEntryGateVisible = Boolean(
-    isEntryGateVisible
-    && homeHubEntryPopup.canShow
-    && canShowEntryGatePrompt,
-  );
+  const isHomeHubEntryGateVisible = false;
   useBlockingOverlayLifecycle(homeHubEntryPopup.descriptor.id, isHomeHubEntryGateVisible, {
     releaseDelayMs: 320,
   });
@@ -844,9 +834,11 @@ function HomeHubContent({ auth, navigation, route }) {
     scrollToTop,
   ]);
 
-  const openTutorialCenterModal = useCallback(() => {
-    setActiveTutorialModal('center');
-  }, []);
+  const handleOpenMissionCenter = useCallback(() => {
+    navigation.navigate(RouteNames.MissionCenter, {
+      initialTab: 'next',
+    });
+  }, [navigation]);
 
   const openFeatureTutorialPicker = useCallback(() => {
     setActiveTutorialModal('feature');
@@ -1876,19 +1868,18 @@ function HomeHubContent({ auth, navigation, route }) {
     },
     {
       accentColor: Colors.primary500,
-      icon: 'search',
-      key: 'account-tutorial-center',
-      onPress: openTutorialCenterModal,
-      subtitle: t('homeHub.cards.account.tutorial.subtitle', 'Relancer un tutoriel ou réinitialiser les guides.'),
-      title: t('homeHub.cards.account.tutorial.title', 'Tutoriels et aide'),
-      tutorial: makeTutorial('tutorialCenter', 52, 'Tutoriels et aide', 'Relancez un tutoriel quand vous voulez, ou remettez tout a zero.'),
+      icon: 'trophy',
+      key: 'account-missions-center',
+      onPress: handleOpenMissionCenter,
+      subtitle: t('homeHub.cards.account.missions.subtitle', 'Consultez votre progression et ouvrez le centre des missions.'),
+      title: t('homeHub.cards.account.missions.title', 'Missions'),
     },
   ]), [
     Colors.error500,
     Colors.primary500,
     handleLogout,
-    openTutorialCenterModal,
     handleOpenAccountSwitcher,
+    handleOpenMissionCenter,
     logoutMutation.isPending,
     makeTutorial,
     t,

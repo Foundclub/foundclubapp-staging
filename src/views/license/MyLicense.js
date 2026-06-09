@@ -23,7 +23,9 @@ import {
   useMyLicenses,
 } from '@/services/license/licenseQueries';
 
-import { getPublicApiOrigin } from '@/config/runtimeUrls';
+import {
+  buildPublicWebUrl,
+} from '@/utils/shareLinks';
 import {
   formatLicenseMoney,
   getEnabledManualPaymentMethods,
@@ -138,15 +140,9 @@ function MyLicense({ navigation, route }) {
     && !['cancelled', 'paid', 'waived'].includes(current?.status);
   const payerLink = useMemo(() => {
     if (!current?.securePaymentToken) return null;
-    const configuredWebUrl = String(process.env.WEB_APP_URL || process.env.FRONTEND_URL || '').trim().replace(/\/+$/g, '');
-    if (configuredWebUrl) {
-      return `${configuredWebUrl}/licenses/pay/${current.securePaymentToken}`;
-    }
-    if (typeof window !== 'undefined' && window.location?.origin) {
-      return `${window.location.origin}/licenses/pay/${current.securePaymentToken}`;
-    }
-    const publicOrigin = getPublicApiOrigin();
-    return publicOrigin ? `${publicOrigin}/licenses/pay/${current.securePaymentToken}` : null;
+    return buildPublicWebUrl({
+      path: `/licenses/pay/${current.securePaymentToken}`,
+    });
   }, [current?.securePaymentToken]);
   const offlineInstructions = Object.entries(paymentInstructionFields)
     .map(([mode, field]) => ({

@@ -33,6 +33,8 @@ import {
   getPlanningDefaultDate,
   getPlanningDisplayTitle,
   getPlanningItemDate,
+  getPlanningItemWindow,
+  getPlanningTimeLabel,
   getPlanningTypeLabel,
   isPlanningPendingParticipation,
   resolvePlanningCardContent,
@@ -56,16 +58,21 @@ const hexToRgba = (hex, alpha) => {
 };
 
 const getDayKey = (day) => format(day, 'yyyy-MM-dd');
-const formatClock = (value) => String(value || '').split(':').slice(0, 2).join(':');
 
 const extractTime = (event) => {
-  const startParts = String(event?.startTime || '').split(':');
-  const endParts = String(event?.endTime || '').split(':');
+  const planningWindow = getPlanningItemWindow(event);
+  const startAt = planningWindow?.startAt;
+  const endAt = planningWindow?.endAt;
+
+  if (!startAt || !endAt) {
+    return null;
+  }
+
   return {
-    endHour: Number.parseInt(endParts[0] || '0', 10) || 0,
-    endMinute: Number.parseInt(endParts[1] || '0', 10) || 0,
-    startHour: Number.parseInt(startParts[0] || '0', 10) || 0,
-    startMinute: Number.parseInt(startParts[1] || '0', 10) || 0,
+    endHour: endAt.getHours(),
+    endMinute: endAt.getMinutes(),
+    startHour: startAt.getHours(),
+    startMinute: startAt.getMinutes(),
   };
 };
 
@@ -163,14 +170,20 @@ function PlanningWeekTimelineView({
 
   const displayStartHour = useMemo(() => {
     if (!timedEvents.length) return 8;
-    return timedEvents.reduce((hour, event) => Math.min(hour, extractTime(event).startHour), 23);
+    return timedEvents.reduce((hour, event) => {
+      const eventTime = extractTime(event);
+      if (!eventTime) return hour;
+      return Math.min(hour, eventTime.startHour);
+    }, 23);
   }, [timedEvents]);
 
   const activeHours = useMemo(() => {
     const values = new Set();
 
     timedEvents.forEach((event) => {
-      const { endHour, endMinute, startHour } = extractTime(event);
+      const eventTime = extractTime(event);
+      if (!eventTime) return;
+      const { endHour, endMinute, startHour } = eventTime;
       if (endHour < startHour) {
         for (let hour = startHour; hour <= 23; hour += 1) values.add(hour);
         const inclusiveEnd = endMinute > 0 ? endHour : endHour - 1;
@@ -258,7 +271,16 @@ function PlanningWeekTimelineView({
         endMinute,
         startHour,
         startMinute,
-      } = extractTime(event);
+      } = extractTime(event) || {};
+
+      if (
+        typeof startHour !== 'number'
+        || typeof startMinute !== 'number'
+        || typeof endHour !== 'number'
+        || typeof endMinute !== 'number'
+      ) {
+        return;
+      }
 
       const startBase = hourPositions[startHour] ?? 0;
       const endBase = hourPositions[endHour] ?? totalHeight;
@@ -586,9 +608,9 @@ function PlanningWeekTimelineView({
             {tertiaryLabel}
           </Text>
         ) : null}
-        {!isTiny && !isTeamFocusedCard ? (
+        {!isTiny && !isTeamFocusedCard && getPlanningTimeLabel(event) ? (
           <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, marginTop: 2 }]}>
-            {`${formatClock(event.startTime)} - ${formatClock(event.endTime)}`}
+            {getPlanningTimeLabel(event)}
           </Text>
         ) : null}
         {canShowMeta ? (

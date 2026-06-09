@@ -7,6 +7,7 @@ import { buildNormalizedQueryKey } from '@/utils/queryKey';
 import {
   getEventAttendance,
   getEventById,
+  getEventByIdForEdit,
   getEventConvocation,
   getEvents,
   getEventTeamComposition,
@@ -44,6 +45,21 @@ export const useGetEvent = (documentId, options = {}) => useQuery({
   enabled: !!documentId,
   queryFn: () => getEventById(documentId),
   queryKey: ['event', documentId],
+  refetchOnMount: options?.refetchOnMount ?? false,
+  staleTime: options?.staleTime ?? EVENT_DETAIL_STALE_MS,
+  ...options,
+});
+
+/**
+ * React Query hook to fetch the lightweight event payload used by the edit screen
+ * @param {string} documentId - The event ID
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>}
+ */
+export const useGetEventForEdit = (documentId, options = {}) => useQuery({
+  enabled: !!documentId,
+  queryFn: () => getEventByIdForEdit(documentId),
+  queryKey: ['event', documentId, 'edit'],
   refetchOnMount: options?.refetchOnMount ?? false,
   staleTime: options?.staleTime ?? EVENT_DETAIL_STALE_MS,
   ...options,

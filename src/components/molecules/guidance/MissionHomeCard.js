@@ -68,7 +68,11 @@ function MissionHomeCard() {
     return null;
   }
 
-  const isCompleted = !currentMission && summary.totalCount > 0 && summary.completedCount >= summary.totalCount;
+  const isCompleted = summary.totalCount > 0 && summary.completedCount >= summary.totalCount;
+  if (isCompleted) {
+    return null;
+  }
+
   const expandedDescription = isCompleted
     ? 'Votre progression principale est a jour. Vous pouvez revoir toutes les missions, revisiter les etapes terminees et relancer un guide si besoin.'
     : currentMission?.rewardText || currentMission?.longDescription || 'Reprenez la mission en cours pour avancer vers les outils suivants.';

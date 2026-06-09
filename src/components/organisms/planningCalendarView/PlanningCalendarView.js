@@ -21,6 +21,7 @@ import {
   getPlanningDefaultDate,
   getPlanningDisplayTitle,
   getPlanningItemDate,
+  getPlanningTimeLabel,
   getPlanningTypeLabel,
   isPlanningPendingParticipation,
 } from '@/utils/planning/planningSlots';
@@ -238,9 +239,7 @@ function PlanningCalendarView({
     const facilityName = item?.facility?.name || null;
     const isPendingParticipation = isPlanningPendingParticipation(item);
     const pendingAccentColor = Colors.warning500 || Colors.gold500 || '#F5A623';
-    const timeLabel = item?.startTime && item?.endTime
-      ? `${String(item.startTime).slice(0, 5)} - ${String(item.endTime).slice(0, 5)}`
-      : t('planning.labels.noTime', 'Sans horaire');
+    const timeLabel = getPlanningTimeLabel(item) || t('planning.labels.noTime', 'Sans horaire');
 
     return (
       <TouchableOpacity

@@ -84,6 +84,7 @@ Note importante :
 - `APP_ENV=production`
 - `API_URL=https://api.foundclubpro.com/api`
 - `SOCKET_URL=https://api.foundclubpro.com`
+- `WEB_APP_URL=https://foundclub.app`
 - auth Firebase OK
 - chat/socket OK
 - upload media OK

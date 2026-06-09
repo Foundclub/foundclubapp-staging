@@ -17,7 +17,7 @@ import EventTeamAudiencesEditor from '@/views/event/components/EventTeamAudience
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetEvent, useGetEventTypes } from '@/services/event/eventQueries';
+import { useGetEventForEdit, useGetEventTypes } from '@/services/event/eventQueries';
 import { createEvent, updateEvent } from '@/services/event/eventService';
 import { useGetFacilities } from '@/services/facility/facilityQueries';
 import { getTeams } from '@/services/team/teamService';
@@ -78,7 +78,7 @@ function EventEdit({ navigation, route }) {
     data: event,
     error: eventError,
     isLoading: eventLoading,
-  } = useGetEvent(eventId || '', { enabled: Boolean(eventId) });
+  } = useGetEventForEdit(eventId || '', { enabled: Boolean(eventId) });
   const {
     data: eventTypes,
     error: eventTypesError,
@@ -251,6 +251,7 @@ function EventEdit({ navigation, route }) {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
+        queryClient.invalidateQueries({ queryKey: ['event', eventId, 'edit'] }),
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] }),
       ]);

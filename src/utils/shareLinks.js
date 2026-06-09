@@ -4,6 +4,33 @@ import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
 const DEFAULT_PUBLIC_ORIGIN = 'https://foundclub.com';
 const DEFAULT_WEB_APP_ORIGIN = 'https://foundclub.app';
 
+const normalizeOrigin = (value) => String(value || '').trim().replace(/\/+$/g, '');
+
+const isLikelyApiOrigin = (value) => {
+  const normalized = normalizeOrigin(value);
+  if (!normalized) return false;
+
+  try {
+    const parsed = new URL(normalized);
+    const host = String(parsed.hostname || '').trim().toLowerCase();
+    const pathname = String(parsed.pathname || '').trim().toLowerCase();
+    return host === 'api'
+      || host.startsWith('api.')
+      || host.startsWith('api-')
+      || host.includes('.api.')
+      || pathname === '/api'
+      || pathname.startsWith('/api/');
+  } catch (_error) {
+    return /(^|\/\/)api[.-]/i.test(normalized) || /\/api(?:\/|$)/i.test(normalized);
+  }
+};
+
+const isWebAppCandidateOrigin = (value) => {
+  const normalized = normalizeOrigin(value);
+  if (!normalized) return false;
+  return normalized !== DEFAULT_PUBLIC_ORIGIN && !isLikelyApiOrigin(normalized);
+};
+
 const buildQueryString = (params) => Object.entries(params)
   .filter(([, value]) => value !== undefined && value !== null && value !== '')
   .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
@@ -25,18 +52,39 @@ export const resolveWebAppOrigin = ({
   publicOrigin = getPublicApiOrigin(),
   webUrl = process.env.WEB_APP_URL || process.env.FRONTEND_URL,
 } = {}) => {
-  const configuredWebUrl = String(webUrl || '').trim().replace(/\/+$/g, '');
+  const configuredWebUrl = normalizeOrigin(webUrl);
   if (configuredWebUrl) return configuredWebUrl;
 
   if (typeof window !== 'undefined' && window.location?.origin) {
-    return String(window.location.origin).trim().replace(/\/+$/g, '');
+    return normalizeOrigin(window.location.origin);
   }
 
-  const runtimePublicOrigin = String(publicOrigin || '').trim().replace(/\/+$/g, '');
-  if (runtimePublicOrigin) return runtimePublicOrigin;
+  const runtimePublicOrigin = normalizeOrigin(publicOrigin);
+  if (isWebAppCandidateOrigin(runtimePublicOrigin)) return runtimePublicOrigin;
 
-  const derivedOrigin = toPublicOrigin(apiUrl);
-  return derivedOrigin || DEFAULT_WEB_APP_ORIGIN;
+  const derivedOrigin = normalizeOrigin(toPublicOrigin(apiUrl));
+  if (isWebAppCandidateOrigin(derivedOrigin)) return derivedOrigin;
+
+  return DEFAULT_WEB_APP_ORIGIN;
+};
+
+export const buildPublicWebUrl = ({
+  apiUrl,
+  path,
+  publicOrigin,
+  webUrl,
+}) => {
+  const normalizedPath = String(path || '').trim();
+  if (!normalizedPath) return null;
+
+  const baseUrl = resolveWebAppOrigin({
+    apiUrl,
+    publicOrigin,
+    webUrl,
+  });
+  const pathname = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+
+  return `${baseUrl}${pathname}`;
 };
 
 export const buildFoundClubDeepLink = ({ id, invite = false, type }) => {
@@ -87,13 +135,12 @@ export const buildPublicEventUrl = ({
   const normalizedEventId = String(eventId || '').trim();
   if (!normalizedEventId) return null;
 
-  const baseUrl = resolveWebAppOrigin({
+  return buildPublicWebUrl({
     apiUrl,
+    path: `/events/${encodeURIComponent(normalizedEventId)}`,
     publicOrigin,
     webUrl,
   });
-
-  return `${baseUrl}/events/${encodeURIComponent(normalizedEventId)}`;
 };
 
 export const buildShareMessageWithUrl = ({ intro, linkLabel, url }) => {

@@ -1,10 +1,11 @@
 import {
   buildFoundClubDeepLink,
-  buildPublicEventUrl,
   buildInstallLandingUrl,
+  buildPublicEventUrl,
+  buildPublicWebUrl,
   buildShareMessageWithUrl,
-  resolveWebAppOrigin,
   resolveShareEnvironment,
+  resolveWebAppOrigin,
   toPublicOrigin,
 } from './shareLinks';
 
@@ -39,12 +40,26 @@ describe('shareLinks utils', () => {
     })).toBe('https://foundclub.app');
   });
 
+  test('resolveWebAppOrigin avoids falling back to the API host for public web links', () => {
+    expect(resolveWebAppOrigin({
+      apiUrl: 'https://api.foundclubpro.com/api',
+      publicOrigin: 'https://api.foundclubpro.com',
+    })).toBe('https://foundclub.app');
+  });
+
   test('buildPublicEventUrl targets the public event page', () => {
     expect(buildPublicEventUrl({
       apiUrl: 'https://api.example.com/api',
       eventId: 'event-doc-55',
       webUrl: 'https://foundclub.app',
     })).toBe('https://foundclub.app/events/event-doc-55');
+  });
+
+  test('buildPublicWebUrl builds shared public routes from the configured web origin', () => {
+    expect(buildPublicWebUrl({
+      path: '/licenses/pay/demo-token',
+      webUrl: 'https://foundclub.app/',
+    })).toBe('https://foundclub.app/licenses/pay/demo-token');
   });
 
   test('buildFoundClubDeepLink appends invite query only for invite flows', () => {

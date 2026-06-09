@@ -516,11 +516,12 @@ export const updateMe = async (userData) => {
 };
 
 /**
- * Create a trainer
+ * Create a club staff member.
  * @param {Partial<User> & { clubId?: string }} userData
- * @returns {Promise<object>} The created trainer data
+ * @param {'trainer' | 'manager'} kind
+ * @returns {Promise<object>}
  */
-export const createTrainer = async (userData) => {
+const createClubStaff = async (userData, kind) => {
   const formData = new FormData();
 
   const userDataCopy = {
@@ -580,11 +581,15 @@ export const createTrainer = async (userData) => {
     }
   });
 
-  logAuthDebug('[createTrainer] Sending formData:', JSON.stringify(userDataCopy));
+  const endpoint = kind === 'manager'
+    ? '/firebase-auth/create-manager'
+    : '/firebase-auth/create-trainer';
+
+  logAuthDebug(`[createClubStaff:${kind}] Sending formData:`, JSON.stringify(userDataCopy));
 
   try {
     const result = await client.post(
-      '/firebase-auth/create-trainer',
+      endpoint,
       formData,
       {
         headers: {
@@ -599,9 +604,23 @@ export const createTrainer = async (userData) => {
     return validationResult;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to create trainer: ${errorToDisplay}`);
+    throw new Error(`Failed to create ${kind}: ${errorToDisplay}`);
   }
 };
+
+/**
+ * Create a trainer
+ * @param {Partial<User> & { clubId?: string }} userData
+ * @returns {Promise<object>} The created trainer data
+ */
+export const createTrainer = async (userData) => createClubStaff(userData, 'trainer');
+
+/**
+ * Create a manager
+ * @param {Partial<User> & { clubId?: string }} userData
+ * @returns {Promise<object>} The created manager data
+ */
+export const createManager = async (userData) => createClubStaff(userData, 'manager');
 
 /**
  * Remove a trainer from my team
@@ -610,6 +629,16 @@ export const createTrainer = async (userData) => {
  */
 export const removeTrainerFromClub = async (id) => {
   const result = await client.put(`/firebase-auth/remove-trainer-from-club/${id}`);
+  return result.data;
+};
+
+/**
+ * Remove a manager from a club
+ * @param {string} id
+ * @returns {Promise<object>}
+ */
+export const removeManagerFromClub = async (id) => {
+  const result = await client.put(`/firebase-auth/remove-manager-from-club/${id}`);
   return result.data;
 };
 
@@ -642,6 +671,29 @@ export const linkTrainerToClub = async (id) => {
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to add trainer to my club: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Link a manager to my club
+ * @param {string | { managerId: string, clubId?: string }} id
+ * @returns {Promise<object>}
+ */
+export const linkManagerToClub = async (id) => {
+  const managerId = typeof id === 'string' ? id : id?.managerId;
+  const clubId = typeof id === 'object' && id !== null ? id.clubId : undefined;
+  const result = await client.put(
+    `/firebase-auth/add-manager-to-club/${managerId}`,
+    clubId ? { clubId } : undefined,
+  );
+  try {
+    const validationResult = await userSchema.validateAsync(result.data.data, {
+      allowUnknown: true,
+    });
+    return validationResult;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to add manager to my club: ${errorToDisplay}`);
   }
 };
 
