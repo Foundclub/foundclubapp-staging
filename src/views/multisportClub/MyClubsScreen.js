@@ -1,9 +1,11 @@
+/* eslint-disable import/order */
 import { useTranslation } from 'react-i18next';
 
 import { useGetMe } from '@/services/auth/authQueries';
 
 import CMDashboard from './CMDashboard';
 import MultisportStateView from './components/MultisportStateView';
+import { useClubScope } from '@/context/ClubScopeContext';
 
 /**
  * Deprecated fallback screen.
@@ -18,8 +20,11 @@ function MyClubsScreen({ navigation, route }) {
     isLoading: isLoadingUserData,
     refetch: refetchUserData,
   } = useGetMe();
+  const clubScope = useClubScope() || {};
 
-  const fallbackCmId = route?.params?.cmId || userData?.multisportClubs?.[0]?.documentId;
+  const fallbackCmId = route?.params?.cmId
+    || clubScope.activeMultisportClubId
+    || userData?.multisportClubs?.[0]?.documentId;
 
   if (isLoadingUserData && !fallbackCmId) {
     return (
@@ -35,7 +40,7 @@ function MyClubsScreen({ navigation, route }) {
     return (
       <MultisportStateView
         actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.fallback.error', "Impossible de charger vos informations multisport pour le moment.")}
+        description={t('multisport.fallback.error', 'Impossible de charger vos informations multisport pour le moment.')}
         onAction={() => refetchUserData()}
         title={t('multisport.fallback.errorTitle', 'Club indisponible')}
       />

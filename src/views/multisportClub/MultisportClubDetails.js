@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { useClubScope } from '@/context/ClubScopeContext';
 import useClub from '@/domains/club/useClub';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import useTheme from '@/theme/themeContext';
@@ -83,8 +84,11 @@ function MultisportClubDetails({ navigation, route }) {
     Alignments, Fonts, Spaces,
   } = useTheme();
   const { userData } = useAuth();
+  const clubScope = useClubScope() || {};
   const { getClubInitials } = useClub();
-  const resolvedCmId = cmId || userData?.multisportClubs?.[0]?.documentId;
+  const resolvedCmId = cmId
+    || clubScope.activeMultisportClubId
+    || userData?.multisportClubs?.[0]?.documentId;
   const managedCmSummary = useMemo(
     () => (userData?.multisportClubs || []).find((/** @type {any} */ club) => club?.documentId === resolvedCmId) || null,
     [resolvedCmId, userData?.multisportClubs],

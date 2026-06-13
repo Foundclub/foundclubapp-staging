@@ -60,6 +60,8 @@ import {
   rejectTeamMembershipRequest,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
+import { useClubScope } from '@/context/ClubScopeContext';
+
 const isValidFilter = (value) => REQUEST_HUB_FILTERS.includes(value);
 
 const normalizeFilter = (value) => {
@@ -125,6 +127,7 @@ function RequestsHub({ navigation, route }) {
     canManageTeam,
     userData,
   } = useAuth();
+  const clubScope = useClubScope() || {};
   const queryClient = useQueryClient();
   const { startWhisperChat } = useMessaging();
 
@@ -147,7 +150,7 @@ function RequestsHub({ navigation, route }) {
     [userData?.trainedTeams],
   );
   const clubId = userData?.club?.documentId || userData?.trainedTeams?.[0]?.club?.documentId || '';
-  const cmId = userData?.multisportClubs?.[0]?.documentId || '';
+  const cmId = clubScope.activeMultisportClubId || userData?.multisportClubs?.[0]?.documentId || '';
   const canManageInstallationRequests = useMemo(
     () => Boolean(clubId && canEditClub(clubId)),
     [canEditClub, clubId],

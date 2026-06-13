@@ -40,9 +40,12 @@ import {
   useBlockingOverlayLifecycle,
   useBlockingOverlayPrompt,
 } from '@/context/BlockingOverlayContext';
+import ClubScopeToggle from '@/components/molecules/header/ClubScopeToggle';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import { getWebBackgroundHostsDelayMs } from '@/utils/webRuntime';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatBootMeta, markBootStep } from '@/utils/performance/bootPerformance';
 
@@ -297,11 +300,30 @@ function AppShell() {
                 emitGuidanceRouteVisit(routeName);
               }}
             />
+            <ClubScopeSwitchHost />
             {isDeferredStartupReady ? <DeferredStartupHosts /> : null}
           </LeaguePlatformGate>
         </BootGate>
       </StartupPromptBoundary>
     </AppErrorBoundary>
+  );
+}
+
+function ClubScopeSwitchHost() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <WebFloatingOverlay
+      style={{
+        alignItems: 'center',
+        left: 0,
+        right: 0,
+        top: insets.top + 52,
+        zIndex: 1300,
+      }}
+    >
+      <ClubScopeToggle />
+    </WebFloatingOverlay>
   );
 }
 

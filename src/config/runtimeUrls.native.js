@@ -23,7 +23,11 @@ export const resolveRuntimeEndpoints = () => buildRuntimeEndpoints({
   isDev: __DEV__,
   isEmulator: readIsEmulator(),
   platformOs: Platform.OS,
-  preferAndroidAdbReverse: process.env.LOCAL_ANDROID_USE_ADB_REVERSE,
+  preferAndroidAdbReverse: (
+    String(process.env.APP_ENV || process.env.ENV || '').trim().toLowerCase() === 'local'
+      ? (process.env.LOCAL_ANDROID_USE_ADB_REVERSE || 'true')
+      : process.env.LOCAL_ANDROID_USE_ADB_REVERSE
+  ),
   socketUrlEnv: process.env.SOCKET_URL,
 });
 

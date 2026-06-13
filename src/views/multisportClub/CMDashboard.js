@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { useClubScope } from '@/context/ClubScopeContext';
 import useClub from '@/domains/club/useClub';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
@@ -95,6 +96,7 @@ function CMDashboard({ navigation, route }) {
     Spaces,
   } = useTheme();
   const { userData } = useAuth();
+  const clubScope = useClubScope() || {};
   const { getClubInitials } = useClub();
   const parentMultisportSummary = /** @type {CMMultisportSummary | null} */ (
     userData?.club?.parentMultisport || null
@@ -115,7 +117,10 @@ function CMDashboard({ navigation, route }) {
 
     return Array.from(map.values());
   }, [parentMultisportSummary, userData?.multisportClubs]);
-  const resolvedCmId = cmId || relatedCmSummaries[0]?.documentId || '';
+  const resolvedCmId = cmId
+    || clubScope.activeMultisportClubId
+    || relatedCmSummaries[0]?.documentId
+    || '';
   const managedCmSummary = useMemo(
     () => relatedCmSummaries.find((/** @type {CMMultisportSummary} */ club) => club?.documentId === resolvedCmId) || null,
     [relatedCmSummaries, resolvedCmId],

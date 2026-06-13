@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint-disable global-require */
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
@@ -8,9 +9,11 @@ import {
   View,
 } from 'react-native';
 
-// hooks
 import useAuth from '@/domains/auth/useAuth';
+// hooks
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
+
+import { useClubScope } from '@/context/ClubScopeContext';
 // utils and misc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,10 +38,18 @@ function PrivateTabNavigator() {
   const { Colors, Images } = useTheme();
   const { unreadCount } = useUnreadMessages();
   const { canManageTeam, userData } = useAuth();
+  const clubScope = useClubScope() || {};
   const insets = useSafeAreaInsets();
   const floatingScenePaddingBottom = getFloatingTabBarScenePaddingBottom(insets.bottom);
+  const hasMultisportAccess = Boolean(userData?.multisportClubs?.length > 0);
+  const isSectionScope = clubScope.activeMode === 'section';
+  const activeSectionClubId = clubScope.activeSectionClubId || userData?.club?.documentId || '';
+  const activeMultisportClubId = clubScope.activeMultisportClubId
+    || userData?.club?.parentMultisport?.documentId
+    || userData?.multisportClubs?.[0]?.documentId
+    || '';
   const getTeamTabComponent = () => {
-    if (canManageTeam && userData?.multisportClubs?.length > 0) {
+    if (canManageTeam && hasMultisportAccess && !isSectionScope) {
       return require('@/views/multisportClub/CMDashboard').default;
     }
 
@@ -48,7 +59,7 @@ function PrivateTabNavigator() {
 
     return require('@/views/team/MyTeamList').default;
   };
-  const teamTabLabel = canManageTeam && userData?.multisportClubs?.length > 0
+  const teamTabLabel = canManageTeam && hasMultisportAccess && !isSectionScope
     ? t('menu.myClub')
     : t('menu.myTeams');
 
@@ -153,8 +164,8 @@ function PrivateTabNavigator() {
         <Tab.Screen
           getComponent={getTeamTabComponent}
           initialParams={{
-            clubId: userData?.club?.documentId,
-            cmId: userData?.multisportClubs?.[0]?.documentId,
+            clubId: activeSectionClubId,
+            cmId: activeMultisportClubId,
             playerId: userData?.documentId,
           }}
           name={RouteNames.MyTeamList}
@@ -167,7 +178,7 @@ function PrivateTabNavigator() {
               icon: Images.strokeShield,
               label: teamTabLabel,
               renderTabBarIcon,
-              visualLabel: canManageTeam && userData?.multisportClubs?.length > 0
+              visualLabel: canManageTeam && hasMultisportAccess && !isSectionScope
                 ? t('menuDock.myClub', 'Club')
                 : t('menuDock.myTeams', 'Équipes'),
             }),

@@ -47,7 +47,8 @@ export const pickPreferredMediaOrigin = (origins) => {
       if (matchingRuntimeOrigin) return matchingRuntimeOrigin;
     }
 
-    const emulatorOrigin = candidates.find((origin) => getOriginHost(origin) === '10.0.2.2');
+    const emulatorOrigin = candidates.find((origin) => getOriginHost(origin) === 'localhost')
+      || candidates.find((origin) => getOriginHost(origin) === '10.0.2.2');
     if (emulatorOrigin) return emulatorOrigin;
   }
 

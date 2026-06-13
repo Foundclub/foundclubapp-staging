@@ -57,11 +57,11 @@ import { useAppMode } from '@/context/AppModeContext';
 import {
   useBlockingOverlayLifecycle,
 } from '@/context/BlockingOverlayContext';
+import { useClubScope } from '@/context/ClubScopeContext';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 import { useStartupPhase } from '@/context/StartupPhaseContext';
 
-/* eslint-disable perfectionist/sort-modules */
 const ScreenContainerView = /** @type {any} */ (ScreenContainer);
 
 /**
@@ -103,7 +103,17 @@ const ScreenContainerView = /** @type {any} */ (ScreenContainer);
  *  registerTutorialTargetNode?: (stepId: string, node: any) => void;
  * }} props
  */
-// eslint-disable-next-line perfectionist/sort-modules
+
+/**
+ *
+ * @param root0
+ * @param root0.Alignments
+ * @param root0.cards
+ * @param root0.Fonts
+ * @param root0.registerTutorialTargetNode
+ * @param root0.Spaces
+ * @param root0.title
+ */
 function HomeSection({
   Alignments,
   cards,
@@ -296,6 +306,7 @@ function HomeHubContent({ auth, navigation, route }) {
     nonPartnerCoachPublishingAccess,
     userData,
   } = auth;
+  const clubScope = useClubScope() || {};
   const { showBanner } = useAppFeedback();
 
   const homeHubTutorial = useFeatureTutorial({
@@ -356,7 +367,7 @@ function HomeHubContent({ auth, navigation, route }) {
     [userData?.trainedTeams],
   );
   const clubId = userData?.club?.documentId;
-  const cmId = userData?.multisportClubs?.[0]?.documentId;
+  const cmId = clubScope.activeMultisportClubId || userData?.multisportClubs?.[0]?.documentId;
   const isTutorialCenterVisible = false;
   const isFeatureTutorialPickerVisible = false;
   const closeContextualPrompt = useCallback(() => {

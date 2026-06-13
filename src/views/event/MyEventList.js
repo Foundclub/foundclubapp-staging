@@ -6,6 +6,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import MyEventListTutorialBoundary from '@/views/event/MyEventListTutorialBoundary';
 import ParticipantEventList from '@/views/event/ParticipantEventList';
 
+import { useClubScope } from '@/context/ClubScopeContext';
+
 /**
  * My events list screen component that shows events or CM planning based on role
  * @param {object} props
@@ -15,9 +17,12 @@ import ParticipantEventList from '@/views/event/ParticipantEventList';
  */
 function MyEventList({ navigation, route }) {
   const { userData } = useAuth();
+  const clubScope = useClubScope() || {};
 
   // Check if user is a multisport manager
-  const multisportClub = userData?.multisportClubs?.[0];
+  const multisportClub = clubScope.activeMultisportClubId
+    ? { documentId: clubScope.activeMultisportClubId }
+    : userData?.multisportClubs?.[0];
 
   return (
     <MyEventListTutorialBoundary

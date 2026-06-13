@@ -234,6 +234,7 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     shownStartupBlockingPopupId,
   } = usePopupManager();
   const {
+    activeStartupPromptId,
     canShowGlobalStartupPrompt,
     canShowLocalScreenPrompt,
     phase: startupPhase,
@@ -274,11 +275,17 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
       || descriptor.allowedStartupPhases?.includes('steady_state')
     ),
   );
+  const isCurrentStartupPromptActive = Boolean(
+    descriptor.kind === 'startup_blocking'
+    && activeStartupPromptId
+    && activeStartupPromptId === descriptor.id,
+  );
   const isBlockedByStartupPhase = Array.isArray(descriptor.allowedStartupPhases)
     && descriptor.allowedStartupPhases.length > 0
     && !descriptor.allowedStartupPhases.includes(startupPhase);
   const isBlockedByStartupGate = Boolean(
     descriptor.kind === 'startup_blocking'
+    && !isCurrentStartupPromptActive
     && (
       (isGlobalPhaseEligible && !canShowGlobalStartupPrompt)
       || (isLocalPhaseEligible && !canShowLocalScreenPrompt)

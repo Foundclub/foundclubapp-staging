@@ -103,7 +103,6 @@ const teamSchema = Joi.object({
  *   clubId?: string;
  *   clubIds?: string[];
  *   parentMultisportId?: string;
- *   playerId?: string;
  *   name?: string;
  *   level?: string[];
  *   section?: string;
@@ -128,6 +127,9 @@ export const getTeams = async (params = {}) => {
     section,
     summary = false,
   } = params;
+
+  // Strapi rejects relation filters on `players` / `trainers` here.
+  // We keep "Mes équipes" filtering client-side from the populated team payload.
 
   try {
     const populate = summary ? {
@@ -207,11 +209,6 @@ export const getTeams = async (params = {}) => {
         } : undefined,
         name: name ? {
           $containsi: name,
-        } : undefined,
-        players: params.playerId ? {
-          documentId: {
-            $eq: params.playerId,
-          },
         } : undefined,
         section: section ? {
           documentId: section,

@@ -37,6 +37,8 @@
  * @property {Team} [team]
  * @property {Team[]} [myTeams]
  * @property {Team[]} [trainedTeams]
+ * @property {Club[]} [clubs]
+ * @property {{ club?: Club }[]} [clubAffiliations]
  * @property {TeamMembershipRequest[]} [teamMembershipRequests]
  * @property {ClubMembershipRequest[]} [clubMembershipRequests]
  * @property {boolean} [isLookingForClub]
@@ -47,6 +49,9 @@
  * @property {string | object} [address]
  * @property {{lat?: number, lng?: number, label?: string, city?: string, radius?: number, address?: string, value?: string}} [location]
  * @property {{ documentId?: string; name?: string; logo?: Avatar }[]} [multisportClubs]
+ * @property {boolean} [parentalDeclarationAccepted]
+ * @property {string} [parentalDeclarationAcceptedAt]
+ * @property {string} [parentalDeclarantUserDocumentId]
  * @property {string} [geohash]
  * @property {boolean} [isCaptain]
  */

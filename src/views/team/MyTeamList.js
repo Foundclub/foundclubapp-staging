@@ -19,7 +19,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  * @returns {import('react').ReactElement} Team list screen component
  */
 function MyTeamList({ navigation, route }) {
-  const { isLeagueMode, playerId } = route?.params ?? {};
+  const { isLeagueMode } = route?.params ?? {};
   const { refetchUserData, userData } = useAuth();
   // Effects
   useFocusEffect(() => {
@@ -83,9 +83,8 @@ function MyTeamList({ navigation, route }) {
           title="Mes équipes"
         >
           <TeamListContent
-            clubId={userData?.club?.documentId}
             isLeagueMode={isLeagueMode}
-            playerId={playerId}
+            showOnlyMyTeams={!isLeagueMode}
           />
         </OnboardingWrapper>
       </ScreenContainer>

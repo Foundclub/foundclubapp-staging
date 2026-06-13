@@ -50,8 +50,8 @@ import { sortTeamsForDisplay } from '@/utils/teamSort';
  * Team list content to be used in home page or dedicated team list screen
  * @param {object} props
  * @param {string} [props.clubId] - The ID of the club to fetch teams for
- * @param {string} [props.playerId] - The ID of the player to fetch teams for
  * @param {boolean} [props.isLeagueMode] - League mode renders squads instead of classic teams.
+ * @param {boolean} [props.showOnlyMyTeams] - Hide non-affiliated teams and keep only the user's teams.
  * @param {string} [props.assignmentTrainerId] - Optional trainer to preselect on TeamDetails trainer picker.
  * @param {string} [props.assignmentTrainerName] - Optional trainer display name for assignment flow.
  * @returns {import('react').ReactElement} Team list content component
@@ -61,7 +61,7 @@ function TeamListContent({
   assignmentTrainerName = undefined,
   clubId = undefined,
   isLeagueMode = false,
-  playerId = undefined,
+  showOnlyMyTeams = false,
 }) {
   const { t } = useTranslation();
   const [searchValue, setSearchValue] = useState('');
@@ -101,12 +101,10 @@ function TeamListContent({
       ? teamFilters?.level
       : undefined,
     name: debouncedSearch || teamFilters?.name?.trim() || undefined,
-    playerId,
     section: teamFilters?.section || undefined,
   }), [
     clubId,
     debouncedSearch,
-    playerId,
     teamFilters?.activities,
     teamFilters?.category,
     teamFilters?.level,
@@ -171,6 +169,23 @@ function TeamListContent({
     if (isLeagueMode) return (leagueData || []).filter(Boolean);
     return classicData?.pages?.flatMap((page) => page?.data || [])?.filter(Boolean) || [];
   }, [classicData, leagueData, isLeagueMode]);
+
+  const myTeamIds = useMemo(() => new Set(
+    [
+      ...(Array.isArray(userData?.myTeams) ? userData.myTeams : []),
+      ...(Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : []),
+    ]
+      .map((team) => String(team?.documentId || '').trim())
+      .filter(Boolean),
+  ), [userData?.myTeams, userData?.trainedTeams]);
+
+  const scopedClassicTeams = useMemo(() => {
+    if (isLeagueMode || !showOnlyMyTeams) {
+      return teams;
+    }
+
+    return teams.filter((team) => myTeamIds.has(String(team?.documentId || '').trim()));
+  }, [isLeagueMode, myTeamIds, showOnlyMyTeams, teams]);
 
   const isLoadingTeams = isLeagueMode
     ? (isLoadingLeague || isLoadingInvitedLeague || isLoadingPendingLeague)
@@ -250,14 +265,14 @@ function TeamListContent({
         type: 'club',
       }));
 
-    teams.forEach((/** @type {Team} */ team) => {
-      const isTrainer = team.trainers?.some((/** @type {User} */ trainer) => trainer.documentId === userData.documentId);
-      const isPlayer = team.players?.some((/** @type {User} */ player) => player.documentId === userData.documentId);
+    scopedClassicTeams.forEach((/** @type {Team} */ team) => {
+      const teamDocumentId = String(team?.documentId || '').trim();
+      const isMyTeam = teamDocumentId && myTeamIds.has(teamDocumentId);
       const isPending = pending.some((/** @type {PendingTeam} */ p) => p.documentId === team.documentId);
 
-      if (isTrainer || isPlayer) {
+      if (isMyTeam) {
         my.push(team);
-      } else if (!isPending) {
+      } else if (!showOnlyMyTeams && !isPending) {
         other.push(team);
       }
     });
@@ -268,7 +283,7 @@ function TeamListContent({
       otherTeams: sortTeamsForDisplay(other),
       pendingTeams: sortTeamsForDisplay([...pending, ...pendingClubs]),
     };
-  }, [invitedLeagueData, isLeagueMode, pendingLeagueData, teams, userData]);
+  }, [invitedLeagueData, isLeagueMode, myTeamIds, pendingLeagueData, scopedClassicTeams, showOnlyMyTeams, teams, userData]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -750,7 +765,7 @@ function TeamListContent({
 
       {otherTeams.length > 0 ? (
         <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], (myTeams.length > 0 || pendingTeams.length > 0 || invitedTeams.length > 0) && Spaces.marginTop[24]]}>
-          Autres équipes du club
+          {clubId ? 'Autres équipes du club' : 'Autres équipes'}
         </Text>
       ) : null}
     </View>
@@ -759,6 +774,7 @@ function TeamListContent({
     Fonts,
     Spaces,
     handleOpenFilters,
+    clubId,
     invitedTeams,
     isLeagueMode,
     myTeams,

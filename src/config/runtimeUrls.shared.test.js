@@ -1,33 +1,33 @@
 import { buildRuntimeEndpoints } from './runtimeUrls.shared';
 
 describe('runtimeUrls.shared', () => {
-  it('rewrites localhost to the Android emulator host in local dev', () => {
+  it('uses localhost on the Android emulator in local dev', () => {
     const runtime = buildRuntimeEndpoints({
       apiPublicUrlEnv: '',
-      apiUrlEnv: 'http://localhost:1337/api',
+      apiUrlEnv: 'http://10.0.2.2:1337/api',
       appEnv: 'local',
       isDev: true,
       isEmulator: true,
       platformOs: 'android',
-      socketUrlEnv: 'http://localhost:1337',
+      socketUrlEnv: 'http://10.0.2.2:1337',
     });
 
-    expect(runtime.apiUrl).toBe('http://10.0.2.2:1337/api');
-    expect(runtime.socketUrl).toBe('http://10.0.2.2:1337');
-    expect(runtime.uploadUrl).toBe('http://10.0.2.2:1337/api/upload');
+    expect(runtime.apiUrl).toBe('http://localhost:1337/api');
+    expect(runtime.socketUrl).toBe('http://localhost:1337');
+    expect(runtime.uploadUrl).toBe('http://localhost:1337/api/upload');
     expect(runtime.errors).toEqual([]);
   });
 
   it('keeps localhost on the Android emulator when adb reverse override is enabled', () => {
     const runtime = buildRuntimeEndpoints({
       apiPublicUrlEnv: '',
-      apiUrlEnv: 'http://localhost:1337/api',
+      apiUrlEnv: 'http://10.0.2.2:1337/api',
       appEnv: 'local',
       isDev: true,
       isEmulator: true,
       platformOs: 'android',
       preferAndroidAdbReverse: 'true',
-      socketUrlEnv: 'http://localhost:1337',
+      socketUrlEnv: 'http://10.0.2.2:1337',
     });
 
     expect(runtime.apiUrl).toBe('http://localhost:1337/api');
@@ -69,7 +69,7 @@ describe('runtimeUrls.shared', () => {
     expect(runtime.apiUrl).toBe('http://localhost:1337/api');
     expect(runtime.socketUrl).toBe('http://localhost:1337');
     expect(runtime.uploadUrl).toBe('http://localhost:1337/api/upload');
-    expect(runtime.source).toBe('android-emulator-adb-reverse-fallback');
+    expect(runtime.source).toBe('android-emulator-localhost-fallback');
     expect(runtime.errors).toEqual([]);
   });
 

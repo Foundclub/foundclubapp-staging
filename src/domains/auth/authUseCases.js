@@ -52,17 +52,56 @@ export const getManagedMultisportSectionIds = (/** @type {any} */ userData) => n
     .filter(Boolean),
 );
 
+export const getActiveClubId = (/** @type {any} */ userData) => (
+  String(
+    userData?.club?.documentId
+    || userData?.club?.id
+    || userData?.clubs?.[0]?.documentId
+    || userData?.clubs?.[0]?.id
+    || userData?.clubAffiliations?.[0]?.club?.documentId
+    || userData?.clubAffiliations?.[0]?.club?.id
+    || '',
+  ).trim() || null
+);
+
+export const getClubIds = (/** @type {any} */ userData) => {
+  const clubIds = new Set();
+  const addId = (value) => {
+    const normalizedValue = String(value || '').trim();
+    if (normalizedValue) {
+      clubIds.add(normalizedValue);
+    }
+  };
+
+  addId(userData?.club?.documentId || userData?.club?.id);
+  (Array.isArray(userData?.clubs) ? userData.clubs : []).forEach((club) => {
+    addId(club?.documentId || club?.id);
+  });
+  (Array.isArray(userData?.clubAffiliations) ? userData.clubAffiliations : []).forEach((affiliation) => {
+    addId(affiliation?.club?.documentId || affiliation?.club?.id);
+  });
+
+  return [...clubIds];
+};
+
+export const hasClubAccess = (/** @type {any} */ userData, /** @type {string} */ clubId) => {
+  const normalizedClubId = String(clubId || '').trim();
+  if (!normalizedClubId) return false;
+
+  if (getClubIds(userData).includes(normalizedClubId)) {
+    return true;
+  }
+
+  return getManagedMultisportSectionIds(userData).has(normalizedClubId);
+};
+
 export const canUserEditClub = (/** @type {any} */ userData, /** @type {string} */ clubId) => {
   const normalizedClubId = String(clubId || '').trim();
   if (!normalizedClubId || getUserRoleKey(userData?.role?.name) !== 'president') {
     return false;
   }
 
-  if (String(userData?.club?.documentId || '').trim() === normalizedClubId) {
-    return true;
-  }
-
-  return getManagedMultisportSectionIds(userData).has(normalizedClubId);
+  return hasClubAccess(userData, normalizedClubId);
 };
 
 export const findRoleByKey = (roles, roleNameOrKey) => {
@@ -229,8 +268,8 @@ export const activateSessionForNotificationPayload = (payload) => {
  * @returns {{totalViews: number, views: {index: number, route: string, canShow: boolean}[]}}
  */
 export const getOnboardingViews = ({
-  address, avatar, bestLevel, birthdate, category, club, documentId,
-  firstname, height, lastname, multisportClubs, myTeams, parentalDeclarationAccepted, position, preferredSport, role,
+  address, avatar, bestLevel, birthdate, category, club, clubAffiliations,
+  clubs, documentId, firstname, height, lastname, multisportClubs, myTeams, parentalDeclarationAccepted, position, preferredSport, role,
   section, sportsHistory, trainedTeams, weight,
 }) => {
   // Check if user has already completed onboarding once
@@ -254,6 +293,8 @@ export const getOnboardingViews = ({
   const roleName = role?.name || USER_ROLES.new;
   const roleKey = getUserRoleKey(roleName);
   const hasClubAffiliation = !!(club?.documentId || club?.id)
+    || ((Array.isArray(clubs) ? clubs.length : 0) > 0)
+    || ((Array.isArray(clubAffiliations) ? clubAffiliations.length : 0) > 0)
     || ((Array.isArray(multisportClubs) ? multisportClubs.length : 0) > 0);
   const hasTeamAffiliation = (Array.isArray(myTeams) ? myTeams.length : 0)
     + (Array.isArray(trainedTeams) ? trainedTeams.length : 0) > 0;

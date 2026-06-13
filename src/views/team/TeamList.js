@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { useClubScope } from '@/context/ClubScopeContext';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
@@ -40,7 +41,10 @@ import { usePopupEligibility } from '@/context/PopupManagerContext';
 function TeamList({ navigation, route }) {
   const { t } = useTranslation();
   const { canManageTeam, refetchUserData, userData } = useAuth();
-  const clubId = route?.params?.clubId ? route?.params.clubId : userData?.club?.documentId;
+  const clubScope = useClubScope() || {};
+  const clubId = clubScope.activeMode === 'section'
+    ? (clubScope.activeSectionClubId || route?.params?.clubId || userData?.club?.documentId)
+    : (route?.params?.clubId || userData?.club?.documentId);
   const assignmentTrainerName = route?.params?.assignmentTrainerName;
   const assignmentTrainerId = route?.params?.assignmentTrainerId;
   const openAssignTrainerGuide = route?.params?.openAssignTrainerGuide;

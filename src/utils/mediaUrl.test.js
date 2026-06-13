@@ -30,20 +30,20 @@ describe('mediaUrl utils', () => {
     global.__DEV__ = originalDev;
   });
 
-  it('rewrites localhost media URLs to the Android emulator host', () => {
+  it('keeps localhost media URLs on the Android emulator', () => {
     Platform.OS = 'android';
     process.env.API_URL = 'http://localhost:1337/api';
 
     expect(resolveMediaUrl('http://localhost:1337/uploads/test.m4a'))
-      .toBe('http://10.0.2.2:1337/uploads/test.m4a');
+      .toBe('http://localhost:1337/uploads/test.m4a');
   });
 
-  it('resolves relative media paths against the emulator-safe origin', () => {
+  it('resolves relative media paths against the localhost emulator origin', () => {
     Platform.OS = 'android';
     process.env.API_URL = 'http://localhost:1337/api';
 
     expect(resolveMediaUrl('/uploads/test.m4a'))
-      .toBe('http://10.0.2.2:1337/uploads/test.m4a');
+      .toBe('http://localhost:1337/uploads/test.m4a');
   });
 
   it('keeps localhost media URLs when adb reverse override is enabled on Android', () => {

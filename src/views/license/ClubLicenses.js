@@ -1,3 +1,4 @@
+import { useMutation } from '@tanstack/react-query';
 import {
   useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
@@ -7,17 +8,20 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { switchManagedClub } from '@/services/auth/authService';
 import {
   deleteDraftLicenseCampaign,
   duplicateLicenseCampaign,
@@ -239,6 +243,13 @@ const collectFilterOptions = (items, mapItem) => {
   return [...seen.values()].sort((left, right) => left.label.localeCompare(right.label, 'fr', { sensitivity: 'base' }));
 };
 
+/**
+ *
+ * @param root0
+ * @param root0.children
+ * @param root0.description
+ * @param root0.title
+ */
 function CampaignDetailSection({
   children,
   description,
@@ -266,6 +277,11 @@ function CampaignDetailSection({
   );
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.label
+ */
 function DetailPill({ label }) {
   const { Colors, Fonts } = useTheme();
   return (
@@ -283,6 +299,14 @@ function DetailPill({ label }) {
   );
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.active
+ * @param root0.label
+ * @param root0.onPress
+ * @param root0.valueLabel
+ */
 function FilterTrigger({
   active,
   label,
@@ -329,6 +353,8 @@ function FilterTrigger({
  * @param root0.label
  * @param root0.tone
  * @param root0.value
+ * @param root0.active
+ * @param root0.onPress
  */
 function StatCard({
   active = false,
@@ -452,6 +478,14 @@ function AssignmentCard({
   );
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.helper
+ * @param root0.item
+ * @param root0.label
+ * @param root0.onPress
+ */
 function AssignmentSignalCard({
   helper,
   item,
@@ -505,6 +539,7 @@ function AssignmentSignalCard({
  * @param root0.onDuplicate
  * @param root0.onLifecycle
  * @param root0.onPress
+ * @param root0.isSelected
  */
 function CampaignCard({
   isSelected = false,
@@ -713,7 +748,13 @@ function ClubLicenses({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const currentRouteName = route?.name;
   const [{ auth }] = useAppContext();
-  const clubId = route?.params?.clubId;
+  const {
+    activeClubId,
+    clubs,
+    refetchUserData,
+  } = useAuth();
+  const routeClubId = route?.params?.clubId;
+  const clubId = routeClubId || activeClubId || clubs?.[0]?.documentId || clubs?.[0]?.id || null;
   const routeCampaign = route?.params?.campaign;
   const routeCampaignId = route?.params?.campaignId;
   const routeInitialDetailTab = route?.params?.initialDetailTab;
@@ -723,6 +764,17 @@ function ClubLicenses({ navigation, route }) {
   const roleKey = getUserRoleKey(auth?.user?.role?.type || auth?.user?.role?.name);
   const showMemberLicense = !['coach', 'president', 'superAdmin'].includes(roleKey);
   const managerViewEnabled = Boolean(clubId) && !showMemberLicense;
+  const switchClubMutation = useMutation({
+    mutationFn: switchManagedClub,
+    onError: (mutationError) => {
+      const errorMessage = mutationError?.response?.data?.error?.message
+        || mutationError?.response?.data?.error
+        || mutationError?.message
+        || 'Impossible de changer de club pour le moment.';
+
+      Alert.alert('Erreur', errorMessage);
+    },
+  });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(routeCampaignId ? routeInitialStatusFilter : '');
   const [memberQuickFilter, setMemberQuickFilter] = useState(routeCampaignId ? routeInitialMemberQuickFilter : '');
@@ -1270,12 +1322,37 @@ function ClubLicenses({ navigation, route }) {
     });
   }, [campaignId, canManageLicenses, navigation, scope]);
 
+  const handleSelectClub = useCallback(async (club) => {
+    const selectedClubId = String(club?.documentId || club?.id || '').trim();
+    const currentClubId = String(clubId || '').trim();
+    if (!selectedClubId || selectedClubId === currentClubId) {
+      return;
+    }
+
+    try {
+      await switchClubMutation.mutateAsync({ clubId: selectedClubId });
+      await refetchUserData?.();
+      navigation.replace(RouteNames.ClubLicenses, { clubId: selectedClubId });
+    } catch (_error) {
+      // Handled by the mutation onError alert.
+    }
+  }, [clubId, navigation, refetchUserData, switchClubMutation]);
+
   if (showMemberLicense) {
     return <MyLicense navigation={navigation} route={route} />;
   }
 
   const renderTopHeader = () => (
     <View>
+      {managerViewEnabled && clubs?.length > 1 ? (
+        <ClubSelector
+          activeClubId={clubId}
+          clubs={clubs}
+          isLoading={switchClubMutation.isPending}
+          onSelectClub={handleSelectClub}
+          title="Choisir un club"
+        />
+      ) : null}
       <Text style={[Fonts.h2, Fonts.neutral00]}>Cotisations</Text>
       <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
         {isFocusedCampaignView

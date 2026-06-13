@@ -69,12 +69,13 @@ const rewriteLoopbackToCurrentWebHost = (value) => {
 const rewriteLoopbackForRuntime = ({
   isDev,
   isEmulator,
+  normalizedEnv,
   platformOs,
   preferAndroidAdbReverse,
   value,
 }) => {
   const normalized = normalizeText(value);
-  if (!normalized || !isDev) return normalized;
+  if (!normalized || (!isDev && normalizedEnv !== 'local')) return normalized;
 
   try {
     const url = new URL(normalized);
@@ -82,7 +83,7 @@ const rewriteLoopbackForRuntime = ({
     if (!LOOPBACK_HOSTS.has(host)) return normalized;
 
     if (platformOs === 'android') {
-      if (preferAndroidAdbReverse) {
+      if (normalizedEnv === 'local' || isEmulator || preferAndroidAdbReverse) {
         url.hostname = 'localhost';
         return url.toString();
       }
@@ -101,14 +102,19 @@ const rewriteLoopbackForRuntime = ({
   return normalized;
 };
 
-const buildDevFallback = ({ isEmulator, platformOs, preferAndroidAdbReverse }) => {
+const buildDevFallback = ({
+  isEmulator,
+  normalizedEnv,
+  platformOs,
+  preferAndroidAdbReverse,
+}) => {
   if (platformOs === 'android') {
-    if (preferAndroidAdbReverse) {
+    if (normalizedEnv === 'local' || isEmulator || preferAndroidAdbReverse) {
       return {
         apiUrl: 'http://localhost:1337/api',
         publicOrigin: 'http://localhost:1337',
         socketUrl: 'http://localhost:1337',
-        source: 'android-emulator-adb-reverse-fallback',
+        source: 'android-emulator-localhost-fallback',
       };
     }
 
@@ -159,6 +165,7 @@ export const buildRuntimeEndpoints = ({
   const rewrittenApiValue = rewriteLoopbackForRuntime({
     isDev,
     isEmulator,
+    normalizedEnv,
     platformOs,
     preferAndroidAdbReverse: shouldPreferAndroidAdbReverse,
     value: apiUrlEnv,
@@ -166,6 +173,7 @@ export const buildRuntimeEndpoints = ({
   const rewrittenSocketValue = rewriteLoopbackForRuntime({
     isDev,
     isEmulator,
+    normalizedEnv,
     platformOs,
     preferAndroidAdbReverse: shouldPreferAndroidAdbReverse,
     value: socketUrlEnv,
@@ -173,6 +181,7 @@ export const buildRuntimeEndpoints = ({
   const rewrittenPublicOriginValue = rewriteLoopbackForRuntime({
     isDev,
     isEmulator,
+    normalizedEnv,
     platformOs,
     preferAndroidAdbReverse: shouldPreferAndroidAdbReverse,
     value: apiPublicUrlEnv,
@@ -194,9 +203,10 @@ export const buildRuntimeEndpoints = ({
   let socketUrl = explicitSocketUrl;
   let publicOrigin = explicitPublicOrigin;
 
-  if (!apiUrl && isDev) {
+  if (!apiUrl && (isDev || normalizedEnv === 'local')) {
     const devFallback = buildDevFallback({
       isEmulator,
+      normalizedEnv,
       platformOs,
       preferAndroidAdbReverse: shouldPreferAndroidAdbReverse,
     });

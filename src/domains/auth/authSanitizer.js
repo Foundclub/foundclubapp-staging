@@ -69,6 +69,36 @@ const sanitizeClubSummary = (/** @type {any} */ club) => {
   };
 };
 
+const sanitizeClubSummaries = (/** @type {any} */ clubs, fallbackClub = null) => {
+  /** @type {any[]} */
+  const summaries = [];
+  const seen = new Set();
+
+  const pushClub = (/** @type {any} */ clubLike) => {
+    const summary = sanitizeClubSummary(clubLike);
+    const documentId = normalizeString(summary?.documentId);
+    if (!summary || !documentId || seen.has(documentId)) return;
+
+    seen.add(documentId);
+    summaries.push(summary);
+  };
+
+  pushClub(fallbackClub);
+
+  if (Array.isArray(clubs)) {
+    clubs.forEach((clubLike) => {
+      if (clubLike?.club) {
+        pushClub(clubLike.club);
+        return;
+      }
+
+      pushClub(clubLike);
+    });
+  }
+
+  return summaries;
+};
+
 const sanitizeNonPartnerCoachPublishingAccess = (/** @type {any} */ access) => {
   if (!access || typeof access !== 'object') return null;
   return {
@@ -129,6 +159,15 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
   birthdate: normalizeString(user?.birthdate),
   category: normalizeString(user?.category),
   clubId: normalizeString(user?.club?.documentId),
+  clubIds: normalizeIdList([
+    normalizeString(user?.club?.documentId),
+    ...(Array.isArray(user?.clubs)
+      ? user.clubs.map((/** @type {any} */ club) => normalizeString(club?.documentId))
+      : []),
+    ...(Array.isArray(user?.clubAffiliations)
+      ? user.clubAffiliations.map((/** @type {any} */ affiliation) => normalizeString(affiliation?.club?.documentId))
+      : []),
+  ]),
   clubIsCustomer: typeof user?.club?.isCustomer === 'boolean' ? user.club.isCustomer : null,
   clubMembershipRequestIds: normalizeIdList(
     user?.clubMembershipRequests?.map((/** @type {any} */ request) => normalizeString(request?.documentId)),
@@ -142,13 +181,13 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
     ? user.isLookingForClub
     : null,
   lastname: normalizeString(user?.lastname),
-  multisportIds: normalizeIdList(
-    user?.multisportClubs?.map((/** @type {any} */ club) => normalizeString(club?.documentId)),
-  ),
   multisportAdminIds: normalizeIdList(
     user?.multisportClubs?.flatMap(
       (/** @type {any} */ club) => (club?.admins || []).map((/** @type {any} */ admin) => normalizeString(admin?.documentId)),
     ),
+  ),
+  multisportIds: normalizeIdList(
+    user?.multisportClubs?.map((/** @type {any} */ club) => normalizeString(club?.documentId)),
   ),
   myTeamIds: normalizeIdList(
     user?.myTeams?.map((/** @type {any} */ team) => normalizeString(team?.documentId)),
@@ -189,6 +228,11 @@ export const sanitizeUser = (user) => {
     type: normalizeString(user.role.type),
   } : null;
 
+  const clubSummarySource = [
+    ...(Array.isArray(user?.clubs) ? user.clubs : []),
+    ...(Array.isArray(user?.clubAffiliations) ? user.clubAffiliations : []),
+  ];
+
   return {
     address: normalizeString(user?.address),
     avatar: sanitizeImageSummary(user?.avatar),
@@ -199,6 +243,7 @@ export const sanitizeUser = (user) => {
     clubMembershipRequests: Array.isArray(user?.clubMembershipRequests)
       ? user.clubMembershipRequests.map(sanitizeClubMembershipRequest).filter(Boolean)
       : [],
+    clubs: sanitizeClubSummaries(clubSummarySource, user?.club),
     documentId: normalizeString(user?.documentId),
     email: normalizeString(user?.email),
     firstname: normalizeString(user?.firstname),

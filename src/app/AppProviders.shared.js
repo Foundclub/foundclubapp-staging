@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/theme/themeContext';
 import { AppFeedbackProvider } from '@/context/AppFeedbackContext';
 import { AppModeProvider } from '@/context/AppModeContext';
 import { BlockingOverlayProvider } from '@/context/BlockingOverlayContext';
+import { ClubScopeProvider } from '@/context/ClubScopeContext';
 import { GuidanceProvider } from '@/context/GuidanceContext';
 import { PopupManagerProvider } from '@/context/PopupManagerContext';
 import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
@@ -21,33 +22,37 @@ import { StartupPhaseProvider } from '@/context/StartupPhaseContext';
  */
 function SharedAppProviders({ children, queryClient }) {
   return React.createElement(
-    AppProvider,
-    null,
+    QueryClientProvider,
+    { client: queryClient },
     React.createElement(
-      ThemeProvider,
+      AppProvider,
       null,
       React.createElement(
-        AppModeProvider,
+        ThemeProvider,
         null,
         React.createElement(
-          AppFeedbackProvider,
+          AppModeProvider,
           null,
           React.createElement(
-            StartupPhaseProvider,
+            ClubScopeProvider,
             null,
             React.createElement(
-              PopupManagerProvider,
+              AppFeedbackProvider,
               null,
               React.createElement(
-                SmartNotificationProvider,
+                StartupPhaseProvider,
                 null,
                 React.createElement(
-                  BlockingOverlayProvider,
+                  PopupManagerProvider,
                   null,
                   React.createElement(
-                    QueryClientProvider,
-                    { client: queryClient },
-                    React.createElement(GuidanceProvider, null, children),
+                    SmartNotificationProvider,
+                    null,
+                    React.createElement(
+                      BlockingOverlayProvider,
+                      null,
+                      React.createElement(GuidanceProvider, null, children),
+                    ),
                   ),
                 ),
               ),

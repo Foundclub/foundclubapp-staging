@@ -22,6 +22,8 @@ import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile'
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
+import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
+import ClubScopeToggle from '@/components/molecules/header/ClubScopeToggle';
 import Input from '@/components/molecules/input/Input';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -32,7 +34,12 @@ import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
-import { leaveClub, removeManagerFromClub, removeTrainerFromClub } from '@/services/auth/authService';
+import {
+  leaveClub,
+  removeManagerFromClub,
+  removeTrainerFromClub,
+  switchManagedClub,
+} from '@/services/auth/authService';
 import { getCategorySortKey } from '@/services/category/categoryService';
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimClub, updateClub } from '@/services/club/clubService';
@@ -146,23 +153,28 @@ const compareTeamsByAgeCategoryDesc = (teamA, teamB) => {
  * @returns {import('react').ReactElement} Club details screen component
  */
 function ClubDetails({ navigation, route }) {
-  const { clubId, fromOnboardingAffiliation = false } = route?.params ?? {};
+  const { fromOnboardingAffiliation = false } = route?.params ?? {};
 
   // hooks
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const {
+    activeClubId,
     canContactAdmin,
     canEditClub,
     canJoinClub,
+    clubs,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
+    hasClubAccess,
     inviteTrainer,
     refetchUserData,
     USER_ROLES,
     userData,
   } = useAuth();
+  const routeClubId = route?.params?.clubId;
+  const clubId = routeClubId || activeClubId || clubs?.[0]?.documentId || clubs?.[0]?.id || null;
   const { startClubChat } = useMessaging();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -289,6 +301,18 @@ function ClubDetails({ navigation, route }) {
     mutationFn: updateClub,
     onSuccess: () => {
       refetch();
+    },
+  });
+
+  const switchClubMutation = useMutation({
+    mutationFn: switchManagedClub,
+    onError: (mutationError) => {
+      const errorMessage = mutationError?.response?.data?.error?.message
+        || mutationError?.response?.data?.error
+        || mutationError?.message
+        || 'Impossible de changer de club pour le moment.';
+
+      Alert.alert('Erreur', errorMessage);
     },
   });
 
@@ -558,6 +582,25 @@ function ClubDetails({ navigation, route }) {
     }
   }, [clubId, navigation]);
 
+  const handleSelectManagedClub = useCallback(async (selectedClub) => {
+    const selectedClubId = String(selectedClub?.documentId || selectedClub?.id || '').trim();
+    const currentClubId = String(clubId || '').trim();
+    if (!selectedClubId || selectedClubId === currentClubId) {
+      return;
+    }
+
+    try {
+      await switchClubMutation.mutateAsync({ clubId: selectedClubId });
+      await refetchUserData?.();
+      navigation.replace(RouteNames.Club, {
+        clubId: selectedClubId,
+        ...(fromOnboardingAffiliation ? { fromOnboardingAffiliation } : {}),
+      });
+    } catch (_error) {
+      // Handled by the mutation onError alert.
+    }
+  }, [clubId, fromOnboardingAffiliation, navigation, refetchUserData, switchClubMutation]);
+
   const handleOpenFacilityMap = useCallback((facility) => {
     const addressLabel = getFacilityAddressLabel(facility?.address) || facility?.name || '';
     if (!addressLabel) return;
@@ -809,16 +852,14 @@ function ClubDetails({ navigation, route }) {
     const roleType = String(userData.role?.type || '').toLowerCase();
     if (roleName === 'superadmin' || roleType === 'superadmin' || roleType === 'admin') return true;
 
-    // Check direct club membership
-    const userClubId = userData.club?.documentId || userData.club?.id;
-    if (userClubId === clubId) return true;
+    if (clubId && hasClubAccess(clubId)) return true;
 
     // Check team membership
-    return userData.teams?.some((team) => {
+    return (userData?.myTeams || userData?.trainedTeams || userData?.teams || [])?.some((team) => {
       const teamClubId = team.club?.documentId || team.club?.id;
       return teamClubId === clubId;
     });
-  }, [userData, clubId]);
+  }, [clubId, hasClubAccess, userData]);
 
   const isPlayerRole = userData?.role?.name === USER_ROLES.player;
   const isCoachRole = userData?.role?.name === USER_ROLES.coach;
@@ -946,7 +987,8 @@ function ClubDetails({ navigation, route }) {
     isAuthenticated
     && !isUserAlreadyAttachedToViewedClub
     && clubTeamIds.length > 0
-  ), [clubTeamIds.length, isAuthenticated, isUserAlreadyAttachedToViewedClub]);
+    && !(Boolean(club?.parentMultisport?.documentId) && isMultisportAdmin)
+  ), [club?.parentMultisport?.documentId, clubTeamIds.length, isAuthenticated, isMultisportAdmin, isUserAlreadyAttachedToViewedClub]);
 
   const shouldShowPlayerClubAction = canPlayerSignalClubTeam;
   const shouldShowEmptyClubClaimAction = (
@@ -960,6 +1002,8 @@ function ClubDetails({ navigation, route }) {
     && userData?.role?.name !== USER_ROLES.player
   );
   const shouldShowClubInterestAction = canSignalClubInterest;
+  const shouldShowSectionScopeToggle = Boolean(club?.parentMultisport?.documentId) && isMultisportAdmin;
+
   const floatingClubActionsCount = [
     shouldShowPlayerClubAction,
     shouldShowEmptyClubClaimAction,
@@ -1091,32 +1135,40 @@ function ClubDetails({ navigation, route }) {
 
   const isParentClubAdmin = useMemo(() => {
     // Check if user is admin of the parent multisport club
-    if (!userData?.club || !club?.parentMultisport) return false;
+    if (!club?.parentMultisport) return false;
 
-    // Normalize IDs (support objects and IDs)
-    const userClubId = userData.club.documentId || userData.club.id;
-    const parentId = club.parentMultisport.documentId || club.parentMultisport.id;
+    const parentId = String(
+      club.parentMultisport.documentId || club.parentMultisport.id || '',
+    ).trim();
+    if (!parentId) return false;
 
-    // Check if IDs match
-    return userClubId === parentId;
-  }, [userData, club]);
+    const userManagedParentIds = new Set(
+      (userData?.multisportClubs || [])
+        .map((multisportClub) => String(multisportClub?.documentId || multisportClub?.id || '').trim())
+        .filter(Boolean),
+    );
+
+    return userManagedParentIds.has(parentId) || hasClubAccess(parentId);
+  }, [club, hasClubAccess, userData?.multisportClubs]);
 
   const isPresidentOfViewedClub = useMemo(() => (
     userData?.role?.name === USER_ROLES.president
-    && (userData?.club?.documentId || userData?.club?.id) === clubId
-  ), [USER_ROLES.president, clubId, userData]);
+    && hasClubAccess(clubId)
+  ), [USER_ROLES.president, clubId, hasClubAccess, userData?.role?.name]);
 
   const isCoachOfViewedClub = useMemo(() => (
-    (userData?.trainedTeams || []).some((team) => (team?.club?.documentId || team?.club?.id) === clubId)
-  ), [clubId, userData?.trainedTeams]);
+    userData?.role?.name === USER_ROLES.coach
+    && (
+      hasClubAccess(clubId)
+      || (userData?.trainedTeams || []).some((team) => (team?.club?.documentId || team?.club?.id) === clubId)
+    )
+  ), [USER_ROLES.coach, clubId, hasClubAccess, userData?.role?.name, userData?.trainedTeams]);
 
   const canLeaveClub = useMemo(() => {
-    const currentClubId = userData?.club?.documentId || userData?.club?.id;
     const currentRole = userData?.role?.name;
-
-    return Boolean(currentClubId && clubId && currentClubId === clubId)
+    return Boolean(clubId && hasClubAccess(clubId))
       && (currentRole === USER_ROLES.coach || currentRole === USER_ROLES.president);
-  }, [USER_ROLES.coach, USER_ROLES.president, clubId, userData?.club, userData?.role?.name]);
+  }, [USER_ROLES.coach, USER_ROLES.president, clubId, hasClubAccess, userData?.role?.name]);
 
   const isMultisportAdmin = useMemo(() => (
     (userData?.multisportClubs || []).some((multisportClub) => multisportClub?.documentId === resolvedFacilityCmId)
@@ -1620,6 +1672,15 @@ function ClubDetails({ navigation, route }) {
         )}
         showsVerticalScrollIndicator={false}
       >
+        {clubs?.length > 1 ? (
+          <ClubSelector
+            activeClubId={clubId}
+            clubs={clubs}
+            isLoading={switchClubMutation.isPending}
+            onSelectClub={handleSelectManagedClub}
+            title="Choisir un club"
+          />
+        ) : null}
         <WithDataWrapper
           wrapperStyle={[Spaces.gap[32]]}
         >
@@ -1731,6 +1792,15 @@ function ClubDetails({ navigation, route }) {
               ) : null}
             </View>
           </View>
+
+          {shouldShowSectionScopeToggle ? (
+            <View style={[Alignments.alignCenter, Spaces.marginTop[12]]}>
+              <ClubScopeToggle
+                clubId={club?.documentId}
+                parentMultisportId={club?.parentMultisport?.documentId || club?.parentMultisport?.id}
+              />
+            </View>
+          ) : null}
 
           {/* Tabs */}
           <View style={[Alignments.alignCenter]}>

@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
@@ -169,6 +170,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   const appStateRef = useRef(AppState.currentState);
   const shownPromptKeyRef = useRef(/** @type {string | null} */ (null));
   const { height, width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -228,6 +230,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   const sectionOffset = isCompactMobile ? 8 : 12;
   const summaryBannerPaddingHorizontal = isCompactMobile ? 16 : 24;
   const summaryBannerPaddingVertical = isCompactMobile ? 12 : 16;
+  const modalBottomSpacer = (isCompactMobile ? 28 : 36) + insets.bottom;
   const modalButtonStyle = useMemo(
     () => [
       ApplicationStyle.borderRadius24,
@@ -237,16 +240,6 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     ],
     [ApplicationStyle.borderRadius24, isCompactMobile],
   );
-  const footerButtonStyle = useMemo(
-    () => [
-      ...modalButtonStyle,
-      {
-        marginBottom: isCompactMobile ? 4 : 0,
-      },
-    ],
-    [isCompactMobile, modalButtonStyle],
-  );
-
   const primaryActionTitle = useMemo(() => {
     if (!nextPrompt) return 'Ouvrir';
     if (nextPrompt?.actionType === 'player_self_report') {
@@ -360,30 +353,23 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     return () => subscription.remove();
   }, [auth?.token, queryClient, refetch]);
 
-  if (!ENABLE_MATCH_STATS_PROMPTS || !auth?.token || !nextPrompt) {
+  if (!ENABLE_MATCH_STATS_PROMPTS || !auth?.token || !nextPrompt || !isVisible) {
     return null;
   }
 
   return (
     <BottomModal
       close={dismissPromptForSession}
+      contentBottomPaddingOverride={modalBottomSpacer}
       contentContainerStyle={{
-        paddingBottom: isCompactMobile ? 20 : 24,
+        paddingBottom: modalBottomSpacer,
         paddingTop: isCompactMobile ? 10 : 14,
       }}
-      footerComponent={(
-        <Button
-          onPress={dismissPromptForSession}
-          style={footerButtonStyle}
-          title="Plus tard"
-          variant="Secondary"
-        />
-      )}
       isVisible={isVisible}
       preventStartupPresentation
       snapPoints={[modalSnapPoint]}
     >
-      <View style={[Spaces.gap[sectionGap], Spaces.paddingBottom[isCompactMobile ? 20 : 24]]}>
+      <View style={[Spaces.gap[sectionGap], { paddingBottom: modalBottomSpacer }]}>
         <View style={[Spaces.gap[titleGap]]}>
           <Text style={[Fonts.p4Bold, Fonts.primary500]}>Rappel post-match</Text>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
@@ -509,6 +495,13 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
               variant="Secondary"
             />
           ) : null}
+          <Button
+            onPress={dismissPromptForSession}
+            style={modalButtonStyle}
+            title="Plus tard"
+            variant="Secondary"
+          />
+          <View pointerEvents="none" style={{ height: modalBottomSpacer }} />
         </View>
       </View>
     </BottomModal>

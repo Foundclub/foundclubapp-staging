@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { useClubScope } from '@/context/ClubScopeContext';
 import { useGetMe } from '@/services/auth/authQueries';
 import { getMultisportClubById } from '@/services/multisportClub/multisportClubService';
 
@@ -8,6 +9,7 @@ import { getMultisportClubById } from '@/services/multisportClub/multisportClubS
  * @param {string | undefined} routeCmId
  */
 function useResolvedMultisportClub(routeCmId) {
+  const clubScope = useClubScope() || {};
   const {
     data: userData,
     error: userDataError,
@@ -15,7 +17,10 @@ function useResolvedMultisportClub(routeCmId) {
     refetch: refetchUserData,
   } = useGetMe();
 
-  const resolvedCmId = routeCmId || userData?.multisportClubs?.[0]?.documentId || '';
+  const resolvedCmId = routeCmId
+    || clubScope.activeMultisportClubId
+    || userData?.multisportClubs?.[0]?.documentId
+    || '';
 
   const {
     data: cmData,

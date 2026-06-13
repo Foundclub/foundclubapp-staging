@@ -41,7 +41,13 @@ import {
   canUserEditClub,
   formatBirthdateToDisplay,
   formatBirthdateToSend,
-  getAuthTokens, getOnboardingViews, profileFieldToDisplay, USER_ROLES,
+  getActiveClubId,
+  getAuthTokens,
+  getClubIds,
+  getOnboardingViews,
+  hasClubAccess as hasClubAccessForUser,
+  profileFieldToDisplay,
+  USER_ROLES,
 } from './authUseCases';
 
 import { useAppMode } from '@/context/AppModeContext';
@@ -500,6 +506,14 @@ const useAuth = () => {
   const allMyTeams = useMemo(() => (userData?.myTeams || [])
     ?.concat(userData?.trainedTeams || []), [userData]);
 
+  const clubs = useMemo(() => (Array.isArray(userData?.clubs) ? userData.clubs : []), [userData?.clubs]);
+  const activeClubId = useMemo(() => getActiveClubId(userData), [userData]);
+  const clubIds = useMemo(() => getClubIds(userData), [userData]);
+  const hasClubAccess = useCallback(
+    (/** @type {string} */ clubId) => hasClubAccessForUser(userData, clubId),
+    [userData],
+  );
+
   const canEditClub = useCallback(
     (/** @type {string} */clubId) => canUserEditClub(userData, clubId),
     [userData],
@@ -543,17 +557,13 @@ const useAuth = () => {
   }, [userData]);
 
   const canJoinClub = useMemo(() => {
-    if (userData?.role.name === USER_ROLES.coach) {
-      return !userData?.club;
-    }
-    return false;
+    const roleName = userData?.role?.name;
+    return roleName === USER_ROLES.coach;
   }, [userData]);
 
   const canContactAdmin = useMemo(() => {
-    if (userData?.role.name === USER_ROLES.president) {
-      return !userData?.club;
-    }
-    return false;
+    const roleName = userData?.role?.name;
+    return roleName === USER_ROLES.president;
   }, [userData]);
 
   const canJoinTeam = useCallback((/** @type {string} */teamId) => {
@@ -605,8 +615,11 @@ const useAuth = () => {
       return false;
     }
 
-    if (userData?.club?.documentId === userToContact?.club?.documentId) {
-      return userData?.role.name === USER_ROLES.president;
+    const userClubIds = new Set(clubIds);
+    const contactClubIds = new Set(getClubIds(userToContact));
+    const sharesClub = [...contactClubIds].some((clubId) => userClubIds.has(clubId));
+    if (sharesClub) {
+      return userData?.role?.name === USER_ROLES.president;
     }
 
     const myTeams = (userData?.myTeams || [])
@@ -618,7 +631,7 @@ const useAuth = () => {
       ?.map((/** @type {any} */ { documentId }) => documentId);
 
     return myTeams?.some((/** @type {any} */ teamId) => userToContactTeams?.includes(teamId));
-  }, [userData]);
+  }, [clubIds, userData]);
 
   const cancelAddAccount = useCallback(() => {
     authLogger.debug('Cancel add-account flow');
@@ -632,6 +645,7 @@ const useAuth = () => {
     allMyTeams,
     appBootstrapData: bootstrapData || null,
     authSessions,
+    activeClubId,
     cancelAddAccount,
     canContactAdmin,
     canEditClub,
@@ -645,6 +659,7 @@ const useAuth = () => {
     canSendMessageToUser,
     canShowCodeButton: !!confirm,
     confirm,
+    clubs,
     formatBirthdateToDisplay,
     formatBirthdateToSend,
     getAuthTokens,
@@ -663,11 +678,13 @@ const useAuth = () => {
     isNonPartnerCoach,
     loginMutation,
     logoutMutation,
+    clubIds,
     nonPartnerCoachPublishingAccess,
     onboardingViews,
     otpMutation,
     profileFields,
     refetchUserData,
+    hasClubAccess,
     setConfirm,
     switchAccount,
     USER_ROLES,

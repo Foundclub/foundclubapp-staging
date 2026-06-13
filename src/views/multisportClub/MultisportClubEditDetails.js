@@ -17,6 +17,7 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetMe } from '@/services/auth/authQueries';
+import { useClubScope } from '@/context/ClubScopeContext';
 import { getMultisportClubById, updateMultisportClub } from '@/services/multisportClub/multisportClubService';
 
 import { getFieldError } from '@/utils/form/formUtils';
@@ -60,7 +61,10 @@ function MultisportClubEditDetails({ navigation, route }) {
     isLoading: isLoadingUserData,
     refetch: refetchUserData,
   } = useGetMe();
-  const resolvedCmId = cmId || userData?.multisportClubs?.[0]?.documentId;
+  const clubScope = useClubScope() || {};
+  const resolvedCmId = cmId
+    || clubScope.activeMultisportClubId
+    || userData?.multisportClubs?.[0]?.documentId;
 
   // hooks
   const {

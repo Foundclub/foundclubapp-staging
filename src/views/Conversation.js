@@ -333,7 +333,7 @@ const MAX_ATTACHMENT_BYTES = {
  */
 const toPublicApiOrigin = (rawApiUrl) => {
   const raw = String(rawApiUrl || '').trim();
-  if (!raw) return getPublicApiOrigin() || 'http://10.0.2.2:1337';
+  if (!raw) return getPublicApiOrigin() || 'http://localhost:1337';
   return raw.replace(/\/api\/?$/i, '');
 };
 
@@ -343,7 +343,7 @@ const toPublicApiOrigin = (rawApiUrl) => {
  */
 const toApiBaseUrl = (rawApiUrl) => {
   const raw = String(rawApiUrl || '').trim();
-  if (!raw) return getApiBaseUrl() || 'http://10.0.2.2:1337/api';
+  if (!raw) return getApiBaseUrl() || 'http://localhost:1337/api';
   const withoutTrailingSlash = raw.replace(/\/+$/g, '');
   if (/\/api$/i.test(withoutTrailingSlash)) return withoutTrailingSlash;
   return `${withoutTrailingSlash}/api`;

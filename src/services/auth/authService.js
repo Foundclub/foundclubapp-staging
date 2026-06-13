@@ -77,6 +77,58 @@ const logAuthDebug = (...args) => {
   }
 };
 
+const appImageSummarySchema = Joi.object({
+  url: Joi.string().allow(null, '').optional(),
+}).allow(null).unknown(true);
+
+const appEntitySummarySchema = Joi.object({
+  documentId: Joi.string().allow(null, '').optional(),
+  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+  name: Joi.string().allow(null, '').optional(),
+}).allow(null).unknown(true);
+
+const appUserLiteSummarySchema = Joi.object({
+  avatar: appImageSummarySchema.optional(),
+  documentId: Joi.string().allow(null, '').optional(),
+  firstname: Joi.string().allow(null, '').optional(),
+  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+  lastname: Joi.string().allow(null, '').optional(),
+}).allow(null).unknown(true);
+
+const appMultisportClubSummarySchema = Joi.object({
+  admins: Joi.array().items(appUserLiteSummarySchema).optional(),
+  documentId: Joi.string().allow(null, '').optional(),
+  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+  isCustomer: Joi.boolean().allow(null).optional(),
+  logo: appImageSummarySchema.optional(),
+  name: Joi.string().allow(null, '').optional(),
+  sections: Joi.array().items(appEntitySummarySchema).optional(),
+}).allow(null).unknown(true);
+
+const appClubSummarySchema = Joi.object({
+  documentId: Joi.string().allow(null, '').optional(),
+  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+  isCustomer: Joi.boolean().allow(null).optional(),
+  logo: appImageSummarySchema.optional(),
+  name: Joi.string().allow(null, '').optional(),
+  parentMultisport: appMultisportClubSummarySchema.optional(),
+}).allow(null).unknown(true);
+
+const appTeamSummarySchema = Joi.object({
+  activities: Joi.array().items(appEntitySummarySchema).optional(),
+  category: appEntitySummarySchema.optional(),
+  club: appClubSummarySchema.optional(),
+  documentId: Joi.string().allow(null, '').optional(),
+  externalCompetitionEligible: Joi.boolean().allow(null).optional(),
+  externalProvider: Joi.string().valid('fff', 'ffbb').allow(null, '').optional(),
+  externalStandingUrl: Joi.string().allow(null, '').optional(),
+  externalSyncStatus: Joi.string().allow(null, '').optional(),
+  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+  level: appEntitySummarySchema.optional(),
+  name: Joi.string().allow(null, '').optional(),
+  section: appEntitySummarySchema.optional(),
+}).allow(null).unknown(true);
+
 /**
  * User validation schema
  */
@@ -90,6 +142,7 @@ const userSchema = Joi.object({
     documentId: Joi.string().required(),
     state: Joi.string().required(),
   })).optional(),
+  clubs: Joi.array().items(appClubSummarySchema).optional(),
   documentId: Joi.string().allow(null, '').optional(),
   email: Joi.string().allow(null, '').optional(),
   firstname: Joi.string().allow(null, '').optional(),
@@ -120,45 +173,6 @@ const userSchema = Joi.object({
  * Keep this schema independent from "me" to allow strict field minimization
  * on backend without breaking profile views.
  */
-const appImageSummarySchema = Joi.object({
-  url: Joi.string().allow(null, '').optional(),
-}).allow(null);
-
-const appEntitySummarySchema = Joi.object({
-  documentId: Joi.string().allow(null, '').optional(),
-  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
-  name: Joi.string().allow(null, '').optional(),
-}).allow(null);
-
-const appClubSummarySchema = Joi.object({
-  documentId: Joi.string().allow(null, '').optional(),
-  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
-  isCustomer: Joi.boolean().allow(null).optional(),
-  logo: appImageSummarySchema.optional(),
-  name: Joi.string().allow(null, '').optional(),
-  parentMultisport: Joi.object({
-    documentId: Joi.string().allow(null, '').optional(),
-    id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
-    isCustomer: Joi.boolean().allow(null).optional(),
-    logo: appImageSummarySchema.optional(),
-    name: Joi.string().allow(null, '').optional(),
-  }).allow(null).optional(),
-}).allow(null);
-
-const appTeamSummarySchema = Joi.object({
-  activities: Joi.array().items(appEntitySummarySchema).optional(),
-  category: appEntitySummarySchema.optional(),
-  club: appClubSummarySchema.optional(),
-  documentId: Joi.string().allow(null, '').optional(),
-  externalCompetitionEligible: Joi.boolean().allow(null).optional(),
-  externalProvider: Joi.string().valid('fff', 'ffbb').allow(null, '').optional(),
-  externalStandingUrl: Joi.string().allow(null, '').optional(),
-  externalSyncStatus: Joi.string().allow(null, '').optional(),
-  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
-  level: appEntitySummarySchema.optional(),
-  name: Joi.string().allow(null, '').optional(),
-  section: appEntitySummarySchema.optional(),
-}).allow(null);
 
 const publicUserSchema = Joi.object({
   avatar: appImageSummarySchema.optional(),
@@ -649,6 +663,29 @@ export const removeManagerFromClub = async (id) => {
 export const leaveClub = async () => {
   const result = await client.post('/firebase-auth/me/leave-club');
   return result.data;
+};
+
+/**
+ * Switch the active managed club for the current user.
+ * @param {string | { clubId?: string }} id
+ * @returns {Promise<object>}
+ */
+export const switchManagedClub = async (id) => {
+  const clubId = typeof id === 'string' ? id : id?.clubId;
+  const normalizedClubId = String(clubId || '').trim();
+  const result = await client.put(
+    '/firebase-auth/me/managed-club',
+    normalizedClubId ? { clubId: normalizedClubId } : undefined,
+  );
+  try {
+    const validationResult = await userSchema.validateAsync(result.data.data, {
+      allowUnknown: true,
+    });
+    return validationResult;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to switch managed club: ${errorToDisplay}`);
+  }
 };
 
 /**
