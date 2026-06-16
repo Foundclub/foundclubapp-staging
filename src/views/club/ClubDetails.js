@@ -59,6 +59,7 @@ import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getImageUrl } from '@/utils/imageUrl';
 import safeJsonParse from '@/utils/safeJsonParse';
 
+import { resolveClubDetailsActionMatrix } from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
 
 const getFacilityAddressLabel = (address) => {
@@ -240,7 +241,8 @@ function ClubDetails({ navigation, route }) {
     isLoading,
     refetch,
   } = useGetClub(clubId ?? '');
-  const clubParentMultisportId = club?.parentMultisport?.documentId || null;
+  const clubParentMultisportId = club?.parentMultisport?.documentId || club?.parentMultisport?.id || null;
+  const hasParentMultisportClub = Boolean(clubParentMultisportId);
   const canLoadFacilityContext = Boolean(clubId) && !isLoading && !error;
   const {
     data: facilityContext,
@@ -540,6 +542,9 @@ function ClubDetails({ navigation, route }) {
     sharedTitle: t('facilityList.sections.shared', 'Installations partagées'),
   }), [facilities, t]);
   const resolvedFacilityCmId = facilityContext?.cmId || clubParentMultisportId || null;
+  const isMultisportAdmin = useMemo(() => (
+    (userData?.multisportClubs || []).some((multisportClub) => multisportClub?.documentId === resolvedFacilityCmId)
+  ), [resolvedFacilityCmId, userData?.multisportClubs]);
 
   // handlers
   const handleStartChat = async () => {
@@ -993,51 +998,6 @@ function ClubDetails({ navigation, route }) {
     || (userData?.trainedTeams || []).some((team) => (team?.club?.documentId || team?.club?.id) === clubId)
   ), [canEdit, clubId, isMember, isPlayerAlreadyInViewedClub, userData?.trainedTeams]);
 
-  const canSignalClubInterest = useMemo(() => (
-    isAuthenticated
-    && !isUserAlreadyAttachedToViewedClub
-    && clubTeamIds.length > 0
-    && !(Boolean(club?.parentMultisport?.documentId) && isMultisportAdmin)
-  ), [club?.parentMultisport?.documentId, clubTeamIds.length, isAuthenticated, isMultisportAdmin, isUserAlreadyAttachedToViewedClub]);
-
-  const shouldShowPlayerClubAction = canPlayerSignalClubTeam;
-  const shouldShowEmptyClubClaimAction = (
-    !isMember
-    && !canEdit
-    && !canJoinClub
-    && !canUseClubPartneringFlow
-    && !areClubMembersHidden
-    && owners?.length === 0
-    && userData
-    && userData?.role?.name !== USER_ROLES.player
-  );
-  const shouldShowClubInterestAction = canSignalClubInterest;
-  const shouldShowSectionScopeToggle = Boolean(club?.parentMultisport?.documentId) && isMultisportAdmin;
-
-  const floatingClubActionsCount = [
-    shouldShowPlayerClubAction,
-    shouldShowEmptyClubClaimAction,
-    shouldShowClubInterestAction,
-  ].filter(Boolean).length;
-  const hasFloatingClubActions = floatingClubActionsCount > 0;
-  const floatingClubActionsBottomInset = Math.max(insets.bottom, 12);
-  const floatingClubActionsScrollPaddingBottom = hasFloatingClubActions
-    ? floatingClubActionsBottomInset + 128 + ((floatingClubActionsCount - 1) * 72)
-    : 40;
-  const floatingClubActionButtonStyle = {
-    elevation: 18,
-    shadowColor: Colors.neutral900,
-    shadowOffset: { height: 8, width: 0 },
-    shadowOpacity: 0.24,
-    shadowRadius: 16,
-  };
-  const floatingClubInterestButtonStyle = {
-    backgroundColor: Colors.primary900,
-    borderRadius: 20,
-    minHeight: 52,
-    paddingVertical: 14,
-  };
-
   const myClubInterestRequestsQuery = useGetMyClubInterestRequests(
     { clubId },
     {
@@ -1179,15 +1139,75 @@ function ClubDetails({ navigation, route }) {
     return Boolean(clubId && hasClubAccess(clubId))
       && (currentRole === USER_ROLES.coach || currentRole === USER_ROLES.president);
   }, [USER_ROLES.coach, USER_ROLES.president, clubId, hasClubAccess, userData?.role?.name]);
+  const {
+    showClubInterestAction,
+    showClubPartneringAction,
+    showContactAdminClaimAction,
+    showEmptyClubClaimAction,
+    showJoinClubAction,
+    showLeaveClubAction,
+    showPlayerClubAction,
+    showPublicClaimLogin,
+  } = useMemo(() => resolveClubDetailsActionMatrix({
+    areClubMembersHidden,
+    canContactAdmin,
+    canEdit,
+    canJoinClub,
+    canLeaveClub,
+    canPlayerSignalClubTeam,
+    canUseClubPartneringFlow,
+    clubHasTeams: clubTeamIds.length > 0,
+    hasParentMultisportClub,
+    isAuthenticated,
+    isMultisportAdmin,
+    isParentClubAdmin,
+    isPlayerRole,
+    isUserAlreadyAttachedToViewedClub,
+    ownerCount: owners.length,
+  }), [
+    areClubMembersHidden,
+    canContactAdmin,
+    canEdit,
+    canJoinClub,
+    canLeaveClub,
+    canPlayerSignalClubTeam,
+    canUseClubPartneringFlow,
+    clubTeamIds.length,
+    hasParentMultisportClub,
+    isAuthenticated,
+    isMultisportAdmin,
+    isParentClubAdmin,
+    isPlayerRole,
+    isUserAlreadyAttachedToViewedClub,
+    owners.length,
+  ]);
+  const shouldShowSectionScopeToggle = hasParentMultisportClub && isMultisportAdmin;
 
-  const shouldShowJoinClubAction = canJoinClub
-    && !isUserAlreadyAttachedToViewedClub
-    && !isParentClubAdmin
-    && !canUseClubPartneringFlow;
-
-  const isMultisportAdmin = useMemo(() => (
-    (userData?.multisportClubs || []).some((multisportClub) => multisportClub?.documentId === resolvedFacilityCmId)
-  ), [resolvedFacilityCmId, userData?.multisportClubs]);
+  const floatingClubActionsCount = [
+    showPublicClaimLogin,
+    showPlayerClubAction,
+    showClubPartneringAction,
+    showEmptyClubClaimAction,
+    showClubInterestAction,
+  ].filter(Boolean).length;
+  const hasFloatingClubActions = floatingClubActionsCount > 0;
+  const floatingClubActionsBottomInset = Math.max(insets.bottom, 12);
+  const floatingClubActionsScrollPaddingBottom = hasFloatingClubActions
+    ? floatingClubActionsBottomInset + 128 + ((floatingClubActionsCount - 1) * 72)
+    : 40;
+  const floatingClubActionButtonStyle = {
+    elevation: 18,
+    shadowColor: Colors.neutral900,
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.24,
+    shadowRadius: 16,
+  };
+  const floatingClubInterestButtonStyle = {
+    backgroundColor: Colors.primary900,
+    borderRadius: 20,
+    minHeight: 52,
+    paddingVertical: 14,
+  };
 
   const canAccessSharedPlanning = useMemo(() => (
     Boolean(resolvedFacilityCmId)
@@ -2410,17 +2430,7 @@ function ClubDetails({ navigation, route }) {
         </WithDataWrapper>
       </ScrollView>
       {
-        !isAuthenticated ? (
-          <Button
-            onPress={() => openClubAuthFlow('club-public-claim-login')}
-            style={[Spaces.marginTop[12], Spaces.marginBottom[24]]}
-            title={t('clubDetails.actions.claimClub', 'C’est mon club')}
-            variant="Primary"
-          />
-        ) : null
-      }
-      {
-        shouldShowJoinClubAction ? (
+        showJoinClubAction ? (
           <Button
             disabled={hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
             onPress={handleAskToJoinClub}
@@ -2440,7 +2450,7 @@ function ClubDetails({ navigation, route }) {
         ) : null
       }
       {
-        canContactAdmin && !club?.parentMultisport && (owners?.length > 0 || areClubMembersHidden) && !canUseClubPartneringFlow ? (
+        showContactAdminClaimAction ? (
           <Button
             disabled={hasPendingClubRequest}
             onPress={handleClaimClub}
@@ -2450,25 +2460,6 @@ function ClubDetails({ navigation, route }) {
                 ? t('clubDetails.actions.requestPending', 'Demande en attente')
                 : t('clubDetails.actions.join')
             }
-            variant="Primary"
-          />
-        ) : null
-      }
-      {
-        canUseClubPartneringFlow ? (
-          <Button
-            disabled={hasPendingClubPartneringRequest || createClubRequestMutation.isPending}
-            onPress={handleOpenClubPartnerRequest}
-            style={[
-              Spaces.marginTop[12],
-              Spaces.marginBottom[24],
-              (hasPendingClubPartneringRequest || createClubRequestMutation.isPending)
-                ? { opacity: 0.7 }
-                : null,
-            ]}
-            title={hasPendingClubPartneringRequest
-              ? t('clubDetails.actions.requestPending', 'Demande en attente')
-              : t('clubDetails.actions.claimClub', 'C’est mon club')}
             variant="Primary"
           />
         ) : null
@@ -2484,7 +2475,7 @@ function ClubDetails({ navigation, route }) {
         ) : null
       }
       {
-        canLeaveClub ? (
+        showLeaveClubAction ? (
           <Button
             disabled={leaveClubMutation.isPending}
             onPress={handleAskToLeaveClub}
@@ -2836,7 +2827,16 @@ function ClubDetails({ navigation, route }) {
             },
           ]}
         >
-          {shouldShowPlayerClubAction ? (
+          {showPublicClaimLogin ? (
+            <Button
+              onPress={() => openClubAuthFlow('club-public-claim-login')}
+              style={floatingClubActionButtonStyle}
+              title={t('clubDetails.actions.claimClub', 'C’est mon club')}
+              variant="Primary"
+            />
+          ) : null}
+
+          {showPlayerClubAction ? (
             <Button
               disabled={hasPendingViewedClubTeamRequest || createTeamMembershipRequestMutation.isPending}
               onPress={handleOpenPlayerTeamPicker}
@@ -2853,7 +2853,24 @@ function ClubDetails({ navigation, route }) {
             />
           ) : null}
 
-          {shouldShowEmptyClubClaimAction ? (
+          {showClubPartneringAction ? (
+            <Button
+              disabled={hasPendingClubPartneringRequest || createClubRequestMutation.isPending}
+              onPress={handleOpenClubPartnerRequest}
+              style={[
+                floatingClubActionButtonStyle,
+                (hasPendingClubPartneringRequest || createClubRequestMutation.isPending)
+                  ? { opacity: 0.7 }
+                  : null,
+              ]}
+              title={hasPendingClubPartneringRequest
+                ? t('clubDetails.actions.requestPending', 'Demande en attente')
+                : t('clubDetails.actions.claimClub', 'C’est mon club')}
+              variant="Primary"
+            />
+          ) : null}
+
+          {showEmptyClubClaimAction ? (
             <Button
               disabled={hasPendingClubRequest}
               onPress={handleClaimClub}
@@ -2868,7 +2885,7 @@ function ClubDetails({ navigation, route }) {
             />
           ) : null}
 
-          {shouldShowClubInterestAction ? (
+          {showClubInterestAction ? (
             <Button
               disabled={hasPendingViewedClubInterestRequest || createClubInterestRequestMutation.isPending}
               onPress={handleOpenClubInterestTeamPicker}
