@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
@@ -18,11 +20,35 @@ import { useClubScope } from '@/context/ClubScopeContext';
 function MyEventList({ navigation, route }) {
   const { userData } = useAuth();
   const clubScope = useClubScope() || {};
+  const managedMultisportClubIds = useMemo(() => (
+    new Set(
+      (Array.isArray(userData?.multisportClubs) ? userData.multisportClubs : [])
+        .map((multisportClub) => String(multisportClub?.documentId || multisportClub?.id || '').trim())
+        .filter(Boolean),
+    )
+  ), [userData?.multisportClubs]);
 
-  // Check if user is a multisport manager
-  const multisportClub = clubScope.activeMultisportClubId
-    ? { documentId: clubScope.activeMultisportClubId }
-    : userData?.multisportClubs?.[0];
+  const multisportClub = useMemo(() => {
+    if (clubScope.activeMode !== 'multisport' || managedMultisportClubIds.size === 0) {
+      return null;
+    }
+
+    const preferredIds = [
+      clubScope.activeMultisportClubId,
+      userData?.multisportClubs?.[0]?.documentId,
+      userData?.multisportClubs?.[0]?.id,
+    ]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean);
+
+    const resolvedMultisportClubId = preferredIds.find((candidate) => managedMultisportClubIds.has(candidate));
+    return resolvedMultisportClubId ? { documentId: resolvedMultisportClubId } : null;
+  }, [
+    clubScope.activeMode,
+    clubScope.activeMultisportClubId,
+    managedMultisportClubIds,
+    userData?.multisportClubs,
+  ]);
 
   return (
     <MyEventListTutorialBoundary

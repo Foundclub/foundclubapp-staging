@@ -7,7 +7,7 @@ jest.mock('@/services/client', () => ({
   },
 }));
 
-const { getClubFacilityContext } = require('./facilityService');
+const { getClubFacilityContext, getCMFacilities } = require('./facilityService');
 
 describe('facilityService', () => {
   beforeEach(() => {
@@ -32,10 +32,37 @@ describe('facilityService', () => {
     });
 
     expect(mockGet).toHaveBeenCalledTimes(1);
-    expect(mockGet).toHaveBeenCalledWith('/facilities?filters[club][documentId][$eq]=club-doc-1&populate=*');
+    expect(mockGet).toHaveBeenCalledWith(
+      '/facilities?filters[club][documentId][$eq]=club-doc-1&populate=*',
+    );
   });
 
-  test('getClubFacilityContext loads shared facilities when a multisport id is already known', async () => {
+  test('getCMFacilities uses the dedicated multisport route', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: {
+        data: [
+          {
+            documentId: 'facility-shared-1',
+            name: 'Gymnase central',
+          },
+        ],
+      },
+    });
+
+    await expect(getCMFacilities('cm-doc-1')).resolves.toEqual({
+      data: [
+        {
+          documentId: 'facility-shared-1',
+          name: 'Gymnase central',
+        },
+      ],
+    });
+
+    expect(mockGet).toHaveBeenCalledTimes(1);
+    expect(mockGet).toHaveBeenCalledWith('/cm/cm-doc-1/facilities');
+  });
+
+  test('getClubFacilityContext loads shared multisport facilities', async () => {
     mockGet
       .mockResolvedValueOnce({
         data: {
@@ -73,7 +100,7 @@ describe('facilityService', () => {
     );
     expect(mockGet).toHaveBeenNthCalledWith(
       2,
-      '/facilities?filters[multisportClub][documentId][$eq]=cm-doc-1&populate=*',
+      '/cm/cm-doc-1/facilities',
     );
     expect(mockGet).not.toHaveBeenCalledWith(
       '/clubs/club-doc-1',

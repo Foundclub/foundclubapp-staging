@@ -4,6 +4,7 @@ import {
   canUserEditClub,
   findAuthSessionByDocumentId,
   getAuthTokens,
+  getManagedMultisportIds,
   getManagedMultisportSectionIds,
   getOnboardingViews,
   getRoleDocumentIdByKey,
@@ -51,6 +52,7 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.president },
       };
 
+      expect(Array.from(getManagedMultisportIds(user))).toEqual(['cm-1']);
       expect(Array.from(getManagedMultisportSectionIds(user))).toEqual([
         'section-club-1',
         'section-club-2',

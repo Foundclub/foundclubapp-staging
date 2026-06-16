@@ -17,7 +17,7 @@ const getFacilities = async (clubId) => {
  */
 const getCMFacilities = async (cmId) => {
   try {
-    const response = await client.get(`/facilities?filters[multisportClub][documentId][$eq]=${cmId}&populate=*`);
+    const response = await client.get(`/cm/${cmId}/facilities`);
     return response.data;
   } catch (error) {
     console.error('Error fetching CM facilities:', error);

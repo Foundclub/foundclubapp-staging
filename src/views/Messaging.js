@@ -196,13 +196,28 @@ function Messaging({ navigation, route }) {
 
   /**
    * Handle chat press event
-   * @param {string} chatId
+   * @param {Chat} chat
    */
-  const handleChatPress = (chatId) => {
+  const handleChatPress = (chat) => {
+    const chatId = chat?.documentId;
+    if (!chatId) return;
+
+    const title = getConversationName({
+      chatClub: chat?.club,
+      chatGroupName: chat?.groupName,
+      chatLeagueMatch: chat?.league_match,
+      chatMultisportClub: chat?.multisportClub,
+      chatParticipants: chat?.participants,
+      chatTeam: chat?.team,
+      chatType: chat?.type,
+      meId: userData?.documentId,
+    }) || t('common.chat', 'Conversation');
+
     joinChat(chatId);
     navigation.navigate(RouteNames.Conversation, {
       chatId,
       chatScope: chatScopeFilter,
+      title,
     });
   };
 
@@ -605,7 +620,7 @@ function Messaging({ navigation, route }) {
         renderRightActions={(p, d) => renderRightActions(p, d, chat)}
       >
         <TouchableOpacity
-          onPress={() => handleChatPress(chat.documentId)}
+          onPress={() => handleChatPress(chat)}
           style={[
             ApplicationStyle.borderRadius2,
             Spaces.padding[16],
@@ -617,7 +632,7 @@ function Messaging({ navigation, route }) {
         >
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
             <TouchableOpacity
-              onPress={() => handleChatPress(chat.documentId)}
+              onPress={() => handleChatPress(chat)}
               style={[
                 ApplicationStyle.borderRadius24,
                 { height: 48, width: 48 },

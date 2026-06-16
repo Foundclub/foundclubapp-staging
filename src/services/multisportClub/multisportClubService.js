@@ -190,20 +190,14 @@ export const deleteCMSection = async (cmId, sectionId) => {
 };
 
 /**
- * Get highlight requests for a multisport club (pending)
+ * Get pending featured requests for a multisport club.
  * @param {string} cmId - MultisportClub documentId
  * @returns {Promise<object>} List of pending requests
  */
 export const getCMHighlightRequests = async (cmId) => {
-  const result = await client.get('/event-highlight-requests', {
-    params: {
-      filters: {
-        multisportClub: { documentId: cmId },
-        status: 'PENDING',
-      },
-      populate: ['event', 'requester'],
-    },
-  });
+  const result = await client.get(
+    `/multisport-clubs/${cmId}/pending-featured-requests`,
+  );
   return result.data;
 };
 

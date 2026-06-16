@@ -25,6 +25,23 @@ const normalizeId = (value) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+const getManagedMultisportClubIds = (userData) => new Set(
+  (Array.isArray(userData?.multisportClubs) ? userData.multisportClubs : [])
+    .map((multisportClub) => normalizeId(multisportClub?.documentId || multisportClub?.id))
+    .filter(Boolean),
+);
+
+const resolvePreferredMultisportClubId = (userData, preferredId) => {
+  const managedIds = getManagedMultisportClubIds(userData);
+  const normalizedPreferredId = normalizeId(preferredId);
+
+  if (normalizedPreferredId && managedIds.has(normalizedPreferredId)) {
+    return normalizedPreferredId;
+  }
+
+  return managedIds.values().next().value || null;
+};
+
 const readStoredScopes = () => {
   try {
     const rawValue = storage.getString(CLUB_SCOPE_STORAGE_KEY);
@@ -64,7 +81,8 @@ const getDefaultScopeForUser = (userData) => {
   const firstManagedSectionId = parentMultisportId
     ? currentClubId
     : getFirstManagedSectionId(userData) || null;
-  const hasMultisportAccess = Array.isArray(userData?.multisportClubs) && userData.multisportClubs.length > 0;
+  const managedMultisportClubIds = getManagedMultisportClubIds(userData);
+  const hasMultisportAccess = managedMultisportClubIds.size > 0;
 
   let activeMode = 'multisport';
   if (!hasMultisportAccess && currentClubId) {
@@ -73,7 +91,10 @@ const getDefaultScopeForUser = (userData) => {
 
   return {
     activeMode,
-    activeMultisportClubId: parentMultisportId || firstMultisportClubId || null,
+    activeMultisportClubId: resolvePreferredMultisportClubId(
+      userData,
+      parentMultisportId || firstMultisportClubId || null,
+    ),
     activeSectionClubId: firstManagedSectionId,
     updatedAt: null,
   };
@@ -82,8 +103,10 @@ const getDefaultScopeForUser = (userData) => {
 const normalizeScopeRecord = (scopeRecord, userData) => {
   const fallback = getDefaultScopeForUser(userData);
   const activeMode = scopeRecord?.activeMode === 'section' ? 'section' : 'multisport';
-  const activeMultisportClubId = normalizeId(scopeRecord?.activeMultisportClubId)
-    || fallback.activeMultisportClubId;
+  const activeMultisportClubId = resolvePreferredMultisportClubId(
+    userData,
+    scopeRecord?.activeMultisportClubId || fallback.activeMultisportClubId,
+  );
   const activeSectionClubId = normalizeId(scopeRecord?.activeSectionClubId)
     || fallback.activeSectionClubId;
 
@@ -115,9 +138,8 @@ export function ClubScopeProvider({ children }) {
 
   const hasMultisportAccess = useMemo(() => (
     Boolean(userData?.documentId)
-    && Array.isArray(userData?.multisportClubs)
-    && userData.multisportClubs.length > 0
-  ), [userData?.documentId, userData?.multisportClubs]);
+    && getManagedMultisportClubIds(userData).size > 0
+  ), [userData]);
 
   const updateCurrentUserScope = useCallback((scopeRecord) => {
     if (!userDocumentId) return;
@@ -137,9 +159,18 @@ export function ClubScopeProvider({ children }) {
       return { ok: false, reason: 'no_multisport_access' };
     }
 
+    const nextActiveMultisportClubId = resolvePreferredMultisportClubId(
+      userData,
+      currentScope.activeMultisportClubId,
+    );
+
+    if (!nextActiveMultisportClubId) {
+      return { ok: false, reason: 'no_multisport_access' };
+    }
+
     const nextScope = normalizeScopeRecord({
       activeMode: 'multisport',
-      activeMultisportClubId: currentScope.activeMultisportClubId,
+      activeMultisportClubId: nextActiveMultisportClubId,
       activeSectionClubId: currentScope.activeSectionClubId,
       updatedAt: new Date().toISOString(),
     }, userData);
@@ -167,7 +198,7 @@ export function ClubScopeProvider({ children }) {
     const normalizedParentMultisportId = normalizeId(parentMultisportClubId)
       || normalizeId(userData?.club?.parentMultisport?.documentId || userData?.club?.parentMultisport?.id)
       || currentScope.activeMultisportClubId
-      || normalizeId(userData?.multisportClubs?.[0]?.documentId || userData?.multisportClubs?.[0]?.id)
+      || resolvePreferredMultisportClubId(userData, userData?.multisportClubs?.[0]?.documentId || userData?.multisportClubs?.[0]?.id)
       || null;
     const currentClubId = normalizeId(userData?.club?.documentId || userData?.club?.id);
 

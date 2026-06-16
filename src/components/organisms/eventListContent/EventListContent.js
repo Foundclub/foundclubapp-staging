@@ -202,6 +202,17 @@ function EventListContent({
   const viewportSession = searchMapSessions?.events || {};
   const { sceneBottomInset } = useBottomDockLayout();
   const defaultFutureCutoffRef = useRef(startOfMinute(new Date()).toISOString());
+  const explicitSearchText = useMemo(() => {
+    let rawQuery = '';
+
+    if (typeof additionalFilters?.q === 'string') {
+      rawQuery = additionalFilters.q;
+    } else if (showFilters && typeof eventFilters?.q === 'string') {
+      rawQuery = eventFilters.q;
+    }
+
+    return typeof rawQuery === 'string' ? rawQuery.trim() : '';
+  }, [additionalFilters?.q, eventFilters?.q, showFilters]);
 
   const emitTutorialLayout = useCallback((key, ref) => {
     if (!onTutorialLayout || !ref?.current) return;
@@ -227,12 +238,22 @@ function EventListContent({
       ...(userDocumentId ? { viewerDocumentId: userDocumentId } : {}),
     };
 
-    if (!config.startDateAfter && !config.startDateBefore) {
+    if (explicitSearchText && !additionalFilters?.startDateAfter) {
+      delete config.startDateAfter;
+    }
+
+    if (!config.startDateAfter && !config.startDateBefore && !explicitSearchText) {
       config.startDateAfter = defaultFutureCutoffRef.current;
     }
 
     return config;
-  }, [showFilters, eventFilters, additionalFilters, userDocumentId]);
+  }, [
+    showFilters,
+    eventFilters,
+    additionalFilters,
+    explicitSearchText,
+    userDocumentId,
+  ]);
   const viewportExecutedQuery = viewportSession?.executedQuery || null;
   const viewportRegion = viewportSession?.searchedViewport
     || viewportSession?.executedViewport
@@ -243,10 +264,7 @@ function EventListContent({
     () => (isViewportListMode ? buildViewportListQuery(viewportRegion, eventsConfig) : null),
     [eventsConfig, isViewportListMode, viewportRegion],
   );
-  const activeSearchText = useMemo(
-    () => (typeof eventsConfig?.q === 'string' ? eventsConfig.q.trim() : ''),
-    [eventsConfig?.q],
-  );
+  const activeSearchText = explicitSearchText;
   const isSmartSearchEnabled = !isViewportListMode && activeSearchText.length >= 2;
   const hasExplicitListFilters = useMemo(() => Boolean(
     activeSearchText

@@ -9,6 +9,7 @@ import {
   createEventUpdatePayload,
   getEventEditSupport,
 } from '@/domains/event/eventUseCases';
+import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -607,10 +608,22 @@ function EventEdit({ navigation, route }) {
                 </label>
 
                 <label style={{ display: 'grid', gap: 8 }}>
-                  <span style={{ color: mutedTextColor, fontSize: 13 }}>Etat de session</span>
-                  <select onChange={(eventObject) => updateField('sessionStatus', eventObject.target.value)} style={fieldStyle} value={formState.sessionStatus}>
-                    <option value="open">Ouverte</option>
-                    <option value="closed">Fermee</option>
+                  <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                    {i18n.t('eventEdit.fields.sessionStatus.label')}
+                  </span>
+                  <select
+                    onChange={(eventObject) => (
+                      updateField('sessionStatus', eventObject.target.value)
+                    )}
+                    style={fieldStyle}
+                    value={formState.sessionStatus}
+                  >
+                    <option value="open">
+                      {i18n.t('eventEdit.fields.sessionStatus.options.open')}
+                    </option>
+                    <option value="closed">
+                      {i18n.t('eventEdit.fields.sessionStatus.options.closed')}
+                    </option>
                   </select>
                 </label>
 

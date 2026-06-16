@@ -1,8 +1,14 @@
 // @ts-nocheck
-import { useEffect, useMemo, useRef } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import {
   Animated,
   Easing,
+  PanResponder,
   Platform,
   Pressable,
   StyleSheet,
@@ -13,6 +19,9 @@ import {
 import useTheme from '@/theme/themeContext';
 
 const DEFAULT_DURATION_MS = 3200;
+const SWIPE_DISMISS_DISTANCE = 72;
+const SWIPE_DISMISS_VELOCITY = 0.35;
+const SWIPE_EXIT_OFFSET = 420;
 
 const resolveBannerPalette = (tone, variant, Colors) => {
   if (variant === 'celebration' && tone === 'success') {
@@ -93,11 +102,55 @@ function AppCelebrationBanner({
     [Colors, tone, variant],
   );
   const opacity = useRef(new Animated.Value(0)).current;
+  const dragX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-18)).current;
   const progress = useRef(new Animated.Value(1)).current;
+  const dismissTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
+  const hasExitStartedRef = useRef(false);
+
+  const clearDismissTimer = useCallback(() => {
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+  }, []);
+
+  const runExitAnimation = useCallback((direction = 0) => {
+    if (hasExitStartedRef.current) return;
+    hasExitStartedRef.current = true;
+    clearDismissTimer();
+
+    const targetX = direction === 0 ? 0 : Math.sign(direction) * SWIPE_EXIT_OFFSET;
+    Animated.parallel([
+      Animated.timing(opacity, {
+        duration: 180,
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        duration: 180,
+        easing: Easing.in(Easing.cubic),
+        toValue: -12,
+        useNativeDriver: true,
+      }),
+      Animated.timing(dragX, {
+        duration: 180,
+        easing: Easing.in(Easing.cubic),
+        toValue: targetX,
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) {
+        onExited?.();
+      }
+    });
+  }, [clearDismissTimer, dragX, onExited, opacity, translateY]);
 
   useEffect(() => {
+    hasExitStartedRef.current = false;
+    clearDismissTimer();
     opacity.setValue(0);
+    dragX.setValue(0);
     translateY.setValue(-18);
     progress.setValue(1);
 
@@ -114,6 +167,12 @@ function AppCelebrationBanner({
         toValue: 0,
         useNativeDriver: true,
       }),
+      Animated.timing(dragX, {
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        toValue: 0,
+        useNativeDriver: true,
+      }),
       Animated.timing(progress, {
         duration: Number(durationMs) > 0 ? Number(durationMs) : DEFAULT_DURATION_MS,
         easing: Easing.linear,
@@ -123,28 +182,46 @@ function AppCelebrationBanner({
     ]).start();
 
     const timeoutMs = Number(durationMs) > 0 ? Number(durationMs) : DEFAULT_DURATION_MS;
-    const timer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          duration: 180,
-          toValue: 0,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          duration: 180,
-          easing: Easing.in(Easing.cubic),
-          toValue: -12,
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
-        if (finished) {
-          onExited?.();
-        }
-      });
+    dismissTimerRef.current = setTimeout(() => {
+      runExitAnimation(0);
     }, timeoutMs);
 
-    return () => clearTimeout(timer);
-  }, [durationMs, onExited, opacity, progress, translateY]);
+    return clearDismissTimer;
+  }, [clearDismissTimer, dragX, durationMs, opacity, progress, runExitAnimation, translateY]);
+
+  const panResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_event, gestureState) => (
+      Math.abs(gestureState.dx) > 10
+      && Math.abs(gestureState.dx) > Math.abs(gestureState.dy)
+    ),
+    onPanResponderMove: (_event, gestureState) => {
+      dragX.setValue(gestureState.dx);
+    },
+    onPanResponderRelease: (_event, gestureState) => {
+      const shouldDismiss = Math.abs(gestureState.dx) >= SWIPE_DISMISS_DISTANCE
+        || Math.abs(gestureState.vx) >= SWIPE_DISMISS_VELOCITY;
+
+      if (shouldDismiss) {
+        runExitAnimation(gestureState.dx || gestureState.vx || 1);
+        return;
+      }
+
+      Animated.spring(dragX, {
+        bounciness: 6,
+        speed: 18,
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    },
+    onPanResponderTerminate: () => {
+      Animated.spring(dragX, {
+        bounciness: 6,
+        speed: 18,
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    },
+  }), [dragX, runExitAnimation]);
 
   const progressWidth = progress.interpolate({
     inputRange: [0, 1],
@@ -153,12 +230,15 @@ function AppCelebrationBanner({
 
   return (
     <Animated.View
-      pointerEvents="box-none"
+      onMoveShouldSetResponder={panResponder.panHandlers.onMoveShouldSetResponder}
+      onResponderMove={panResponder.panHandlers.onResponderMove}
+      onResponderRelease={panResponder.panHandlers.onResponderRelease}
+      onResponderTerminate={panResponder.panHandlers.onResponderTerminate}
       style={[
         styles.wrapper,
         {
           opacity,
-          transform: [{ translateY }],
+          transform: [{ translateX: dragX }, { translateY }],
         },
       ]}
     >
@@ -181,7 +261,10 @@ function AppCelebrationBanner({
           ) : null}
           <Text
             numberOfLines={1}
-            style={[variant === 'celebration' ? Fonts.p2Bold : Fonts.p3Bold, { color: Colors.neutral00 }]}
+            style={[
+              variant === 'celebration' ? Fonts.p2Bold : Fonts.p3Bold,
+              { color: Colors.neutral00 },
+            ]}
           >
             {title}
           </Text>

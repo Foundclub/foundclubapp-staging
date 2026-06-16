@@ -150,7 +150,9 @@ function RequestsHub({ navigation, route }) {
     [userData?.trainedTeams],
   );
   const clubId = userData?.club?.documentId || userData?.trainedTeams?.[0]?.club?.documentId || '';
-  const cmId = clubScope.activeMultisportClubId || userData?.multisportClubs?.[0]?.documentId || '';
+  const cmId = clubScope.activeMode === 'multisport'
+    ? (clubScope.activeMultisportClubId || userData?.multisportClubs?.[0]?.documentId || '')
+    : '';
   const canManageInstallationRequests = useMemo(
     () => Boolean(clubId && canEditClub(clubId)),
     [canEditClub, clubId],

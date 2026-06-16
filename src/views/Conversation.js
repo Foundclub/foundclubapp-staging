@@ -39,7 +39,11 @@ import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
-import { getAuthTokens } from '@/domains/auth/authUseCases';
+import {
+  getAuthTokens,
+  getManagedMultisportIds,
+  getUserRoleKey,
+} from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
   applyOptimisticPollVote,
@@ -416,7 +420,7 @@ function Conversation({ navigation, route }) {
     || '',
   ).trim();
   const { t } = /** @type {{ t: (key: string, options?: any) => string }} */ (useTranslationCompat());
-  const { userData } = useAuth();
+  const { hasClubAccess, userData } = useAuth();
   const { showBanner } = useAppFeedback();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const { clearSafeTimer, setSafeTimeout } = useSafeTimers();
@@ -3184,25 +3188,29 @@ function Conversation({ navigation, route }) {
   // Calculate title for Custom Header
   // Calculate title for Custom Header
   const title = useMemo(() => {
-    let displayTitle = route.params?.title;
-    if (!displayTitle && chatData?.type === 'league_match') {
+    const routeTitle = String(route?.params?.title || '').trim();
+    const safeRouteTitle = routeTitle === 'common.chat' ? '' : routeTitle;
+    let displayTitle = '';
+
+    if (chatData?.type === 'league_match') {
       const matchDate = chatData?.league_match?.date;
       const dateDisplay = matchDate
         ? new Date(matchDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
         : '?';
       displayTitle = `Match ${dateDisplay}`;
-    } else if (!displayTitle) {
+    } else {
       displayTitle = getConversationName({
         chatClub: chatData?.club,
         chatGroupName: chatData?.groupName,
+        chatLeagueMatch: chatData?.league_match,
         chatMultisportClub: chatData?.multisportClub,
         chatParticipants: chatData?.participants,
         chatTeam: chatData?.team,
         chatType: chatData?.type || '',
         meId: userData?.documentId,
-      }) || t('common.chat');
+      });
     }
-    return displayTitle;
+    return displayTitle || safeRouteTitle || t('common.chat', 'Conversation');
   }, [chatData, route.params, getConversationName, userData, t]);
 
   const subtitle = route.params?.subTitle || '';
@@ -5030,25 +5038,34 @@ function Conversation({ navigation, route }) {
   /* Permission Check */
   const canWrite = useMemo(() => {
     if (!chatData || !userData) return false;
+    const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+    const isManagerRole = roleKey === 'president';
 
     // Whisper, Team, and League Match chats: All participants can write
     if (chatData.type === 'whisper' || chatData.type === 'team' || isLeagueConversation) return true;
 
-    // Club Chat: Only Club Admins can write
+    // Club Chat: Only section managers and parent multisport managers can write
     if (chatData.type === 'club') {
-      const userIsAdmin = userData.role?.type === 'dirigeant' && userData.club?.documentId === chatData.club?.documentId;
-      return userIsAdmin;
+      const chatClubId = String(chatData?.club?.documentId || chatData?.club?.id || '').trim();
+      return Boolean(chatClubId) && isManagerRole && hasClubAccess(chatClubId);
     }
 
     // Multisport Chat: Only Multisport Admins can write
     if (chatData.type === 'multisport') {
+      const chatMultisportId = String(
+        chatData?.multisportClub?.documentId || chatData?.multisportClub?.id || '',
+      ).trim();
+      const managedMultisportIds = getManagedMultisportIds(userData);
       const admins = chatData.multisportClub?.admins || [];
-      const isMultisportAdmin = admins.some((admin) => admin.documentId === userData.documentId);
-      return isMultisportAdmin;
+      const isChatDeclaredAdmin = admins.some((admin) => admin.documentId === userData.documentId);
+      const isManagedMultisportChat = Boolean(
+        chatMultisportId && managedMultisportIds.has(chatMultisportId),
+      );
+      return isManagerRole && (isChatDeclaredAdmin || isManagedMultisportChat);
     }
 
     return false;
-  }, [chatData, isLeagueConversation, userData]);
+  }, [chatData, hasClubAccess, isLeagueConversation, userData]);
 
   /**
    * Render custom actions (attachment buttons)

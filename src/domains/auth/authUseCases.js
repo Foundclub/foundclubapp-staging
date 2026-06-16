@@ -52,6 +52,12 @@ export const getManagedMultisportSectionIds = (/** @type {any} */ userData) => n
     .filter(Boolean),
 );
 
+export const getManagedMultisportIds = (/** @type {any} */ userData) => new Set(
+  (Array.isArray(userData?.multisportClubs) ? userData.multisportClubs : [])
+    .map((multisportClub) => String(multisportClub?.documentId || multisportClub?.id || '').trim())
+    .filter(Boolean),
+);
+
 export const getActiveClubId = (/** @type {any} */ userData) => (
   String(
     userData?.club?.documentId

@@ -363,6 +363,7 @@ export default {
       save: 'Enregistrer',
     },
     back: 'Retour',
+    chat: 'Conversation',
     close: 'Fermer',
     error: 'Erreur',
     finish: 'Terminer',
@@ -746,10 +747,10 @@ export default {
         placeholder: 'JJ/MM/AAAA',
       },
       sessionStatus: {
-        label: 'Statut de la session',
+        label: "Visibilité de l'événement",
         options: {
-          closed: 'Fermé',
-          open: 'Ouvert',
+          closed: 'Privé',
+          open: 'Public',
         },
       },
       startTime: {

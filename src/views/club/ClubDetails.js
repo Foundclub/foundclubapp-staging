@@ -800,6 +800,10 @@ function ClubDetails({ navigation, route }) {
       return;
     }
 
+    if (isUserAlreadyAttachedToViewedClub) {
+      return;
+    }
+
     if (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending) {
       return;
     }
@@ -846,6 +850,12 @@ function ClubDetails({ navigation, route }) {
     }
   };
 
+  const relatedTeams = useMemo(() => ([
+    ...(Array.isArray(userData?.myTeams) ? userData.myTeams : []),
+    ...(Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : []),
+    ...(Array.isArray(userData?.teams) ? userData.teams : []),
+  ]), [userData?.myTeams, userData?.teams, userData?.trainedTeams]);
+
   const isMember = useMemo(() => {
     if (!userData) return false;
     const roleName = String(userData.role?.name || '').toLowerCase();
@@ -855,11 +865,11 @@ function ClubDetails({ navigation, route }) {
     if (clubId && hasClubAccess(clubId)) return true;
 
     // Check team membership
-    return (userData?.myTeams || userData?.trainedTeams || userData?.teams || [])?.some((team) => {
+    return relatedTeams.some((team) => {
       const teamClubId = team.club?.documentId || team.club?.id;
       return teamClubId === clubId;
     });
-  }, [clubId, hasClubAccess, userData]);
+  }, [clubId, hasClubAccess, relatedTeams, userData]);
 
   const isPlayerRole = userData?.role?.name === USER_ROLES.player;
   const isCoachRole = userData?.role?.name === USER_ROLES.coach;
@@ -1169,6 +1179,11 @@ function ClubDetails({ navigation, route }) {
     return Boolean(clubId && hasClubAccess(clubId))
       && (currentRole === USER_ROLES.coach || currentRole === USER_ROLES.president);
   }, [USER_ROLES.coach, USER_ROLES.president, clubId, hasClubAccess, userData?.role?.name]);
+
+  const shouldShowJoinClubAction = canJoinClub
+    && !isUserAlreadyAttachedToViewedClub
+    && !isParentClubAdmin
+    && !canUseClubPartneringFlow;
 
   const isMultisportAdmin = useMemo(() => (
     (userData?.multisportClubs || []).some((multisportClub) => multisportClub?.documentId === resolvedFacilityCmId)
@@ -2405,7 +2420,7 @@ function ClubDetails({ navigation, route }) {
         ) : null
       }
       {
-        canJoinClub && !isParentClubAdmin && !canUseClubPartneringFlow ? (
+        shouldShowJoinClubAction ? (
           <Button
             disabled={hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
             onPress={handleAskToJoinClub}

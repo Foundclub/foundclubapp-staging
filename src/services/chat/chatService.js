@@ -30,7 +30,7 @@ const chatSchema = Joi.object({
     Joi.array().items(Joi.object().unknown(true)),
     Joi.array().length(0),
   ).optional(),
-  participants: Joi.array().items(Joi.object()).required(),
+  participants: Joi.array().items(Joi.object()).optional(),
   pinnedBy: Joi.array().items(Joi.object()).optional(),
   type: Joi.string().valid('whisper', 'club', 'team', 'multisport', 'league_match', 'group').required(),
   updatedAt: Joi.date().required(),
@@ -151,78 +151,12 @@ const buildChatDetailPopulate = ({ includeMessages = false } = {}) => {
  * Get all chats for the current user
  * @param {number} [page] - The page number
  * @param {number} [pageSize] - The page size
- * @param {{
- *   currentUserId?: string;
- *   currentUserClubId?: string;
- *   currentUserTeamIds?: string[];
- *   chatScope?: 'all' | 'classic' | 'league';
- * }} [filters] - Optional filters for the chats
  * @returns {Promise<{data: Chat[],
  * meta: { pagination: { page: number, pageCount: number, total: number }}}>}
  */
-export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
-  const chatScope = ['classic', 'league'].includes(filters.chatScope)
-    ? filters.chatScope
-    : 'all';
-  const safeTeamIds = Array.isArray(filters.currentUserTeamIds)
-    ? Array.from(
-      new Set(
-        filters.currentUserTeamIds
-          .map((teamId) => String(teamId || '').trim())
-          .filter(Boolean),
-      ),
-    )
-    : [];
-
-  /** @type {Array<Record<string, any>>} */
-  const chatOrFilters = [];
-
-  if (chatScope !== 'league' && filters.currentUserId) {
-    chatOrFilters.push({
-      participants: {
-        documentId: filters.currentUserId,
-      },
-      type: 'whisper',
-    });
-  }
-
-  if (chatScope !== 'league' && filters.currentUserClubId) {
-    chatOrFilters.push({
-      club: {
-        documentId: filters.currentUserClubId,
-      },
-      type: 'whisper',
-    });
-  }
-
-  if (chatScope !== 'league' && safeTeamIds.length > 0) {
-    // Compact form: one filter for both whisper and team chats tied to any of my teams.
-    chatOrFilters.push({
-      team: {
-        documentId: {
-          $in: safeTeamIds,
-        },
-      },
-      type: {
-        $in: ['whisper', 'team'],
-      },
-    });
-  }
-
-  if (chatScope !== 'classic' && filters.currentUserId) {
-    chatOrFilters.push({
-      participants: {
-        documentId: filters.currentUserId,
-      },
-      type: 'league_match',
-    });
-  }
-
+export const getChats = async (page = 1, pageSize = 20) => {
   const response = await client.get('/chats', {
     params: {
-      filters: {
-        $or: chatOrFilters,
-      },
       latestMessageOnly: true,
       pagination: {
         page,
