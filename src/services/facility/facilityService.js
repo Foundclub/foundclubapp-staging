@@ -10,6 +10,41 @@ const getFacilities = async (clubId) => {
   }
 };
 
+const PLANNING_FACILITY_FIELDS_QUERY = [
+  'fields[0]=documentId',
+  'fields[1]=id',
+  'fields[2]=name',
+  'fields[3]=planningColor',
+  'fields[4]=capacityConflictMode',
+  'fields[5]=maxSlots',
+].join('&');
+
+const PLANNING_FACILITY_POPULATE_QUERY = [
+  'populate[club][fields][0]=documentId',
+  'populate[club][fields][1]=id',
+  'populate[club][fields][2]=name',
+  'populate[multisportClub][fields][0]=documentId',
+  'populate[multisportClub][fields][1]=id',
+  'populate[multisportClub][fields][2]=name',
+].join('&');
+
+const getPlanningFacilities = async (clubId) => {
+  try {
+    const planningFacilitiesUrl = [
+      `/facilities?filters[club][documentId][$eq]=${clubId}`,
+      PLANNING_FACILITY_FIELDS_QUERY,
+      PLANNING_FACILITY_POPULATE_QUERY,
+    ].join('&');
+    const response = await client.get(
+      planningFacilitiesUrl,
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching planning facilities:', error);
+    throw error;
+  }
+};
+
 /**
  * Get facilities for a multisport club
  * @param {string} cmId - MultisportClub documentId
@@ -94,7 +129,7 @@ const getClubFacilityContext = async (clubId, cmId, options = {}) => {
   const { resolveCmId = true } = options;
   const resolvedCmId = cmId || (resolveCmId ? await resolveParentMultisportId(clubId) : null);
   const [clubResponse, cmResponse] = await Promise.all([
-    clubId ? getFacilities(clubId) : Promise.resolve(null),
+    clubId ? getPlanningFacilities(clubId) : Promise.resolve(null),
     resolvedCmId ? getCMFacilities(resolvedCmId) : Promise.resolve(null),
   ]);
   const clubFacilities = Array.isArray(clubResponse?.data)

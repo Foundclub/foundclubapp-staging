@@ -9,6 +9,20 @@ jest.mock('@/services/client', () => ({
 
 const { getClubFacilityContext, getCMFacilities } = require('./facilityService');
 
+const expectedPlanningFacilitiesUrl = '/facilities?filters[club][documentId][$eq]=club-doc-1'
+  + '&fields[0]=documentId'
+  + '&fields[1]=id'
+  + '&fields[2]=name'
+  + '&fields[3]=planningColor'
+  + '&fields[4]=capacityConflictMode'
+  + '&fields[5]=maxSlots'
+  + '&populate[club][fields][0]=documentId'
+  + '&populate[club][fields][1]=id'
+  + '&populate[club][fields][2]=name'
+  + '&populate[multisportClub][fields][0]=documentId'
+  + '&populate[multisportClub][fields][1]=id'
+  + '&populate[multisportClub][fields][2]=name';
+
 describe('facilityService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,7 +47,7 @@ describe('facilityService', () => {
 
     expect(mockGet).toHaveBeenCalledTimes(1);
     expect(mockGet).toHaveBeenCalledWith(
-      '/facilities?filters[club][documentId][$eq]=club-doc-1&populate=*',
+      expectedPlanningFacilitiesUrl,
     );
   });
 
@@ -96,7 +110,7 @@ describe('facilityService', () => {
 
     expect(mockGet).toHaveBeenNthCalledWith(
       1,
-      '/facilities?filters[club][documentId][$eq]=club-doc-1&populate=*',
+      expectedPlanningFacilitiesUrl,
     );
     expect(mockGet).toHaveBeenNthCalledWith(
       2,

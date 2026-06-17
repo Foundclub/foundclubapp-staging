@@ -189,14 +189,18 @@ function ClubFacilityPlanningContainer({
   }, [hasSharedScope, initialFacilityId, initialScope, initialSelectionKey]);
 
   useEffect(() => {
-    if (!selectedFacilityId) return;
-    const facilityExists = displayedFacilities.some((facility) => getFacilityId(facility) === selectedFacilityId);
+    if (isLoadingFacilities || !selectedFacilityId) return;
+    const facilityExists = displayedFacilities.some(
+      (facility) => getFacilityId(facility) === selectedFacilityId,
+    );
     if (!facilityExists) {
       setSelectedFacilityId(null);
     }
-  }, [displayedFacilities, selectedFacilityId]);
+  }, [displayedFacilities, isLoadingFacilities, selectedFacilityId]);
 
-  const isLoadingPlanning = isLoadingFacilities || (planningScope === 'shared' ? isLoadingSharedPlanning : isLoadingEvents);
+  const isLoadingPlanning = planningScope === 'shared'
+    ? (isLoadingFacilities || isLoadingSharedPlanning)
+    : isLoadingEvents;
   const viewOptions = useMemo(() => ([
     { label: t('planning.mode.weekShort', 'Semaine'), value: 'week' },
     { label: t('planning.mode.threeDaysShort', '3 jours'), value: '3days' },
