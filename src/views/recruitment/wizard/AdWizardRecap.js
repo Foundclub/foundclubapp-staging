@@ -7,8 +7,10 @@ import {
   View,
 } from 'react-native';
 
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeamCard';
 
@@ -20,7 +22,7 @@ import { getShortAddress } from '@/utils/location';
 
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 
-/* eslint-disable import/order, perfectionist/sort-imports */
+/* eslint-disable perfectionist/sort-imports */
 import { useAdWizard } from './AdWizardContext';
 import {
   getAdWizardRecapStepIndex,
@@ -28,7 +30,7 @@ import {
   isAdWizardCoachProfileComplete,
   isAdWizardSportProfileComplete,
 } from './adWizardStepUtils';
-/* eslint-enable import/order, perfectionist/sort-imports */
+/* eslint-enable perfectionist/sort-imports */
 
 /**
  * Compact recap metric card.
@@ -156,6 +158,7 @@ function AdWizardRecap({ navigation }) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitErrorMessage, setSubmitErrorMessage] = useState('');
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   const createAdMutation = useMutation({
     mutationFn: createRecruitmentAd,
@@ -390,6 +393,11 @@ function AdWizardRecap({ navigation }) {
       dispatch({ type: 'RESET' });
       resetToHome();
     } catch (error) {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
       const nextMessage = error?.message || "Impossible de cr\u00E9er l'annonce. V\u00E9rifiez les informations puis r\u00E9essayez.";
       setSubmitErrorMessage(nextMessage);
       showBanner({
@@ -403,265 +411,275 @@ function AdWizardRecap({ navigation }) {
   };
 
   return (
-    <WizardStepLayout
-      isNextDisabled={!isReadyToSubmit || isSubmitting}
-      isNextLoading={isSubmitting}
-      nextLabel="Publier l'annonce"
-      onBack={() => navigation.goBack()}
-      onNext={handleSubmit}
-      stepCount={getAdWizardStepCount(state)}
-      stepIndex={getAdWizardRecapStepIndex(state)}
-      subtitle={"V\u00E9rifiez l'ensemble du brief avant de publier votre annonce."}
-      title={'R\u00E9capitulatif'}
-    >
-      <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
-        {!isReadyToSubmit ? (
-          <View
-            style={[
-              ApplicationStyle.card,
-              Spaces.padding[24],
-              Spaces.gap[16],
-              {
-                backgroundColor: 'rgba(53, 19, 24, 0.88)',
-                borderColor: 'rgba(239, 68, 68, 0.45)',
-              },
-            ]}
-          >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{'R\u00E9capitulatif incomplet'}</Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Il manque encore
-              {' '}
-              {missingRequiredItems.join(', ')}
-              {' '}
-              avant de publier cette annonce.
-            </Text>
-          </View>
-        ) : null}
-
-        {submitErrorMessage ? (
-          <View
-            style={[
-              ApplicationStyle.card,
-              Spaces.padding[24],
-              Spaces.gap[16],
-              {
-                backgroundColor: 'rgba(53, 19, 24, 0.88)',
-                borderColor: 'rgba(239, 68, 68, 0.45)',
-              },
-            ]}
-          >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {'La publication n\'a pas abouti'}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>{submitErrorMessage}</Text>
-          </View>
-        ) : null}
-
-        <View
-          style={[
-            ApplicationStyle.card,
-            Spaces.padding[24],
-            Spaces.gap[16],
-            {
-              backgroundColor: 'rgba(4, 31, 44, 0.82)',
-              borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.30)' : 'rgba(1, 179, 244, 0.18)',
-            },
-          ]}
-        >
-          <View
-            style={[
-              Alignments.row,
-              Alignments.alignCenter,
-              Alignments.justifySpaceBetween,
-              Spaces.gap[16],
-              { flexWrap: 'wrap' },
-            ]}
-          >
-            <View style={[Spaces.gap[12], { flex: 1 }]}>
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                {'Vue d\'ensemble'}
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {completedQuickOverviewCount}
-                {' '}
-                / 4 informations clés prêtes à publier
-              </Text>
-            </View>
+    <>
+      <WizardStepLayout
+        isNextDisabled={!isReadyToSubmit || isSubmitting}
+        isNextLoading={isSubmitting}
+        nextLabel="Publier l'annonce"
+        onBack={() => navigation.goBack()}
+        onNext={handleSubmit}
+        stepCount={getAdWizardStepCount(state)}
+        stepIndex={getAdWizardRecapStepIndex(state)}
+        subtitle={"V\u00E9rifiez l'ensemble du brief avant de publier votre annonce."}
+        title={'R\u00E9capitulatif'}
+      >
+        <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
+          {!isReadyToSubmit ? (
             <View
               style={[
-                Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[8],
+                ApplicationStyle.card,
+                Spaces.padding[24],
+                Spaces.gap[16],
                 {
-                  backgroundColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.14)' : 'rgba(1, 179, 244, 0.10)',
-                  borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.28)' : 'rgba(1, 179, 244, 0.18)',
-                  borderRadius: 999,
-                  borderWidth: 1,
+                  backgroundColor: 'rgba(53, 19, 24, 0.88)',
+                  borderColor: 'rgba(239, 68, 68, 0.45)',
                 },
               ]}
             >
-              <Text style={[Fonts.p4Bold, isReadyToSubmit ? Fonts.primary500 : Fonts.primary100]}>
-                {isReadyToSubmit ? 'Pr\u00EAt \u00E0 publier' : '\u00C0 compl\u00E9ter'}
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{'R\u00E9capitulatif incomplet'}</Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                Il manque encore
+                {' '}
+                {missingRequiredItems.join(', ')}
+                {' '}
+                avant de publier cette annonce.
               </Text>
             </View>
-          </View>
+          ) : null}
 
-          <View style={[Spaces.gap[12]]}>
-            {quickOverviewItems.map((item) => (
-              <OverviewMetric
-                ApplicationStyle={ApplicationStyle}
-                complete={item.complete}
-                Fonts={Fonts}
-                key={item.label}
-                label={item.label}
-                Spaces={Spaces}
-                value={item.value}
-              />
-            ))}
-          </View>
-        </View>
-
-        <RecapSection
-          eyebrow={'\u00C9quipe qui recrute'}
-          onEdit={() => navigation.navigate(RouteNames.AdWizardTeam)}
-          title="Structure"
-        >
-          {state.team ? (
-            <EventWizardTeamCard
-              onPress={() => navigation.navigate(RouteNames.AdWizardTeam)}
-              team={state.team}
-            />
-          ) : (
-            <Text style={[Fonts.p2, Fonts.primary100]}>{'Aucune \u00E9quipe s\u00E9lectionn\u00E9e'}</Text>
-          )}
-
-          <View style={[Spaces.gap[12]]}>
-            <OverviewMetric
-              ApplicationStyle={ApplicationStyle}
-              complete={Boolean(sportName && sportName !== 'Non d\u00E9fini')}
-              Fonts={Fonts}
-              label="Sport"
-              Spaces={Spaces}
-              value={sportName}
-            />
-            <OverviewMetric
-              ApplicationStyle={ApplicationStyle}
-              complete={Boolean(profileLabel)}
-              Fonts={Fonts}
-              label="Profil"
-              Spaces={Spaces}
-              value={profileLabel || '\u00C0 pr\u00E9ciser'}
-            />
-          </View>
-        </RecapSection>
-
-        <RecapSection
-          eyebrow="Besoins"
-          onEdit={() => navigation.navigate(needsEditRoute)}
-          title={needsSectionTitle}
-        >
-          <Text style={[Fonts.p2, Fonts.neutral100]}>{needsSummary}</Text>
-
-          <View style={[Spaces.gap[12]]}>
-            {isCoachAd ? needsCardsContent : playerNeedsCardsContent}
-          </View>
-        </RecapSection>
-
-        <RecapSection
-          eyebrow="Publication"
-          onEdit={() => navigation.navigate(RouteNames.AdWizardInfo)}
-          title="Ciblage sportif"
-        >
-          <View style={[Spaces.gap[16]]}>
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>Sport</Text>
-              <Text style={[Fonts.p2, Fonts.neutral00]}>{sportName}</Text>
-            </View>
-
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>Profil</Text>
-              <Text style={[Fonts.p2, profileLabel ? Fonts.neutral00 : Fonts.primary100]}>
-                {profileLabel || '\u00C0 pr\u00E9ciser'}
+          {submitErrorMessage ? (
+            <View
+              style={[
+                ApplicationStyle.card,
+                Spaces.padding[24],
+                Spaces.gap[16],
+                {
+                  backgroundColor: 'rgba(53, 19, 24, 0.88)',
+                  borderColor: 'rgba(239, 68, 68, 0.45)',
+                },
+              ]}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {'La publication n\'a pas abouti'}
               </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>{submitErrorMessage}</Text>
             </View>
+          ) : null}
 
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>
-                {'Type d\'annonce'}
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral00]}>{resolvedAdTypeLabel}</Text>
-            </View>
-
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>Validation</Text>
-              <Text style={[Fonts.p2, Fonts.neutral00]}>{validationLabel}</Text>
-            </View>
-
-            {state.event ? (
-              <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral300]}>{'D\u00E9tection li\u00E9e'}</Text>
-                <Text style={[Fonts.p2, Fonts.neutral00]}>
-                  {state.event.name || state.event.type?.name || '\u00C9v\u00E9nement'}
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[24],
+              Spaces.gap[16],
+              {
+                backgroundColor: 'rgba(4, 31, 44, 0.82)',
+                borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.30)' : 'rgba(1, 179, 244, 0.18)',
+              },
+            ]}
+          >
+            <View
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Alignments.justifySpaceBetween,
+                Spaces.gap[16],
+                { flexWrap: 'wrap' },
+              ]}
+            >
+              <View style={[Spaces.gap[12], { flex: 1 }]}>
+                <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                  {'Vue d\'ensemble'}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {completedQuickOverviewCount}
+                  {' '}
+                  / 4 informations clés prêtes à publier
                 </Text>
               </View>
-            ) : null}
-          </View>
-        </RecapSection>
-
-        <RecapSection
-          eyebrow="Lieu"
-          onEdit={() => navigation.navigate(RouteNames.AdWizardLocation)}
-          title="Lieu de publication"
-        >
-          {selectedFacilityName ? (
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>Installation selectionnee</Text>
-              <Text style={[Fonts.p2, Fonts.neutral00]}>{selectedFacilityName}</Text>
+              <View
+                style={[
+                  Spaces.paddingHorizontal[12],
+                  Spaces.paddingVertical[8],
+                  {
+                    backgroundColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.14)' : 'rgba(1, 179, 244, 0.10)',
+                    borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.28)' : 'rgba(1, 179, 244, 0.18)',
+                    borderRadius: 999,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, isReadyToSubmit ? Fonts.primary500 : Fonts.primary100]}>
+                  {isReadyToSubmit ? 'Pr\u00EAt \u00E0 publier' : '\u00C0 compl\u00E9ter'}
+                </Text>
+              </View>
             </View>
-          ) : null}
 
-          <View style={[Spaces.gap[8]]}>
-            <Text style={[Fonts.p3, Fonts.neutral300]}>{selectedFacilityName ? 'Adresse' : 'Lieu'}</Text>
-            <Text style={[Fonts.p2, displayAddress ? Fonts.neutral00 : Fonts.primary100]}>
-              {displayAddress || '\u00C0 compl\u00E9ter'}
+            <View style={[Spaces.gap[12]]}>
+              {quickOverviewItems.map((item) => (
+                <OverviewMetric
+                  ApplicationStyle={ApplicationStyle}
+                  complete={item.complete}
+                  Fonts={Fonts}
+                  key={item.label}
+                  label={item.label}
+                  Spaces={Spaces}
+                  value={item.value}
+                />
+              ))}
+            </View>
+          </View>
+
+          <RecapSection
+            eyebrow={'\u00C9quipe qui recrute'}
+            onEdit={() => navigation.navigate(RouteNames.AdWizardTeam)}
+            title="Structure"
+          >
+            {state.team ? (
+              <EventWizardTeamCard
+                onPress={() => navigation.navigate(RouteNames.AdWizardTeam)}
+                team={state.team}
+              />
+            ) : (
+              <Text style={[Fonts.p2, Fonts.primary100]}>{'Aucune \u00E9quipe s\u00E9lectionn\u00E9e'}</Text>
+            )}
+
+            <View style={[Spaces.gap[12]]}>
+              <OverviewMetric
+                ApplicationStyle={ApplicationStyle}
+                complete={Boolean(sportName && sportName !== 'Non d\u00E9fini')}
+                Fonts={Fonts}
+                label="Sport"
+                Spaces={Spaces}
+                value={sportName}
+              />
+              <OverviewMetric
+                ApplicationStyle={ApplicationStyle}
+                complete={Boolean(profileLabel)}
+                Fonts={Fonts}
+                label="Profil"
+                Spaces={Spaces}
+                value={profileLabel || '\u00C0 pr\u00E9ciser'}
+              />
+            </View>
+          </RecapSection>
+
+          <RecapSection
+            eyebrow="Besoins"
+            onEdit={() => navigation.navigate(needsEditRoute)}
+            title={needsSectionTitle}
+          >
+            <Text style={[Fonts.p2, Fonts.neutral100]}>{needsSummary}</Text>
+
+            <View style={[Spaces.gap[12]]}>
+              {isCoachAd ? needsCardsContent : playerNeedsCardsContent}
+            </View>
+          </RecapSection>
+
+          <RecapSection
+            eyebrow="Publication"
+            onEdit={() => navigation.navigate(RouteNames.AdWizardInfo)}
+            title="Ciblage sportif"
+          >
+            <View style={[Spaces.gap[16]]}>
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>Sport</Text>
+                <Text style={[Fonts.p2, Fonts.neutral00]}>{sportName}</Text>
+              </View>
+
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>Profil</Text>
+                <Text style={[Fonts.p2, profileLabel ? Fonts.neutral00 : Fonts.primary100]}>
+                  {profileLabel || '\u00C0 pr\u00E9ciser'}
+                </Text>
+              </View>
+
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {'Type d\'annonce'}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral00]}>{resolvedAdTypeLabel}</Text>
+              </View>
+
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>Validation</Text>
+                <Text style={[Fonts.p2, Fonts.neutral00]}>{validationLabel}</Text>
+              </View>
+
+              {state.event ? (
+                <View style={[Spaces.gap[8]]}>
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>{'D\u00E9tection li\u00E9e'}</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral00]}>
+                    {state.event.name || state.event.type?.name || '\u00C9v\u00E9nement'}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </RecapSection>
+
+          <RecapSection
+            eyebrow="Lieu"
+            onEdit={() => navigation.navigate(RouteNames.AdWizardLocation)}
+            title="Lieu de publication"
+          >
+            {selectedFacilityName ? (
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>Installation selectionnee</Text>
+                <Text style={[Fonts.p2, Fonts.neutral00]}>{selectedFacilityName}</Text>
+              </View>
+            ) : null}
+
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>{selectedFacilityName ? 'Adresse' : 'Lieu'}</Text>
+              <Text style={[Fonts.p2, displayAddress ? Fonts.neutral00 : Fonts.primary100]}>
+                {displayAddress || '\u00C0 compl\u00E9ter'}
+              </Text>
+            </View>
+          </RecapSection>
+
+          <RecapSection
+            eyebrow="Texte de l'annonce"
+            onEdit={() => navigation.navigate(RouteNames.AdWizardDescription)}
+            title={isCoachAd ? 'Description et missions' : 'Description'}
+          >
+            <Text style={[Fonts.p2, state.description ? Fonts.neutral100 : Fonts.neutral300]}>
+              {state.description || "Aucune description personnalis\u00E9e n'a \u00E9t\u00E9 ajout\u00E9e."}
+            </Text>
+            {isCoachAd ? (
+              <Text style={[Fonts.p2, state.missions ? Fonts.neutral100 : Fonts.neutral300]}>
+                {state.missions || 'Aucune mission detaillee n a encore ete ajoutee.'}
+              </Text>
+            ) : null}
+          </RecapSection>
+
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[24],
+              Spaces.gap[16],
+              {
+                backgroundColor: 'rgba(1, 179, 244, 0.10)',
+                borderColor: 'rgba(1, 179, 244, 0.24)',
+              },
+            ]}
+          >
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>Avant publication</Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {isCoachAd
+                ? "L'annonce sera visible dans le flux recrutement avec un badge entraineur. Plus le role, les missions et le cadre sont precis, plus les candidatures seront pertinentes."
+                : "L'annonce sera visible par les joueurs correspondant au profil recherche. Plus vos informations sont precises, plus la mise en relation sera pertinente."}
             </Text>
           </View>
-        </RecapSection>
-
-        <RecapSection
-          eyebrow="Texte de l'annonce"
-          onEdit={() => navigation.navigate(RouteNames.AdWizardDescription)}
-          title={isCoachAd ? 'Description et missions' : 'Description'}
-        >
-          <Text style={[Fonts.p2, state.description ? Fonts.neutral100 : Fonts.neutral300]}>
-            {state.description || "Aucune description personnalis\u00E9e n'a \u00E9t\u00E9 ajout\u00E9e."}
-          </Text>
-          {isCoachAd ? (
-            <Text style={[Fonts.p2, state.missions ? Fonts.neutral100 : Fonts.neutral300]}>
-              {state.missions || 'Aucune mission detaillee n a encore ete ajoutee.'}
-            </Text>
-          ) : null}
-        </RecapSection>
-
-        <View
-          style={[
-            ApplicationStyle.card,
-            Spaces.padding[24],
-            Spaces.gap[16],
-            {
-              backgroundColor: 'rgba(1, 179, 244, 0.10)',
-              borderColor: 'rgba(1, 179, 244, 0.24)',
-            },
-          ]}
-        >
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>Avant publication</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {isCoachAd
-              ? "L'annonce sera visible dans le flux recrutement avec un badge entraineur. Plus le role, les missions et le cadre sont precis, plus les candidatures seront pertinentes."
-              : "L'annonce sera visible par les joueurs correspondant au profil recherche. Plus vos informations sont precises, plus la mise en relation sera pertinente."}
-          </Text>
         </View>
-      </View>
-    </WizardStepLayout>
+      </WizardStepLayout>
+
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={state.team?.club?.documentId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
+    </>
   );
 }
 

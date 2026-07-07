@@ -97,6 +97,8 @@ const appUserLiteSummarySchema = Joi.object({
 
 const appMultisportClubSummarySchema = Joi.object({
   admins: Joi.array().items(appUserLiteSummarySchema).optional(),
+  clubPartner: Joi.boolean().allow(null).optional(),
+  clubVerified: Joi.boolean().allow(null).optional(),
   documentId: Joi.string().allow(null, '').optional(),
   id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
   isCustomer: Joi.boolean().allow(null).optional(),
@@ -106,6 +108,8 @@ const appMultisportClubSummarySchema = Joi.object({
 }).allow(null).unknown(true);
 
 const appClubSummarySchema = Joi.object({
+  clubPartner: Joi.boolean().allow(null).optional(),
+  clubVerified: Joi.boolean().allow(null).optional(),
   documentId: Joi.string().allow(null, '').optional(),
   id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
   isCustomer: Joi.boolean().allow(null).optional(),

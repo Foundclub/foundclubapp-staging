@@ -12,7 +12,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 
-import { useGetMyLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
+import { useGetLeagueTeamContext } from '@/services/leagueTeam/leagueTeamQueries';
 
 import { isLeagueCaptain } from '@/utils/league/captains';
 // screens
@@ -47,17 +47,16 @@ export default function LeagueTabNavigator() {
   const { unreadCount } = useUnreadMessages();
   const insets = useSafeAreaInsets();
   const floatingScenePaddingBottom = getFloatingTabBarScenePaddingBottom(insets.bottom);
-  const { data: myLeagueTeams } = useGetMyLeagueTeam(userData?.documentId || '', {
+  const { data: leagueTeamContext } = useGetLeagueTeamContext(userData?.documentId || '', {
     enabled: Boolean(userData?.documentId),
     staleTime: 30_000,
   });
+  const myLeagueTeams = Array.isArray(leagueTeamContext?.squads) ? leagueTeamContext.squads : [];
 
-  const squadRequestsBadge = Array.isArray(myLeagueTeams)
-    ? myLeagueTeams.reduce((total, squad) => {
-      if (!isLeagueCaptain(squad, userData)) return total;
-      return total + Number(squad?.join_requests?.length || 0);
-    }, 0)
-    : 0;
+  const squadRequestsBadge = myLeagueTeams.reduce((total, squad) => {
+    if (!isLeagueCaptain(squad, userData)) return total;
+    return total + Number(squad?.join_requests?.length || 0);
+  }, 0);
 
   /**
    * Gold badge renderer (reused logic, updated style).

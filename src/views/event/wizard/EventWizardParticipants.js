@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -21,6 +21,7 @@ import {
   isTournamentEventType,
   shouldExplainDetectionSlotsDisabled,
   shouldShowDetectionSlotsStep,
+  shouldSkipEventWizardParticipantsStep,
 } from './eventWizardDetectionUtils';
 
 const MIN_PARTICIPANTS = 1;
@@ -37,6 +38,14 @@ const isReservationTypeName = (typeName = '') => {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
   return normalized.includes('reservation');
+};
+
+const isTrainingTypeName = (typeName = '') => {
+  const normalized = String(typeName || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return normalized.includes('entrainement');
 };
 
 /**
@@ -57,20 +66,44 @@ function EventWizardParticipants({ navigation }) {
 
   const [capacityMode, setCapacityMode] = useState(state.capacity === null ? 'unlimited' : 'fixed');
   const [capacityValue, setCapacityValue] = useState(state.capacity || 12);
+  const [externalParticipantLimitValue, setExternalParticipantLimitValue] = useState(
+    state.externalParticipantLimit || 3,
+  );
   const [totalPlayersValue, setTotalPlayersValue] = useState(state.totalPlayers || 5);
 
   const isReservation = useMemo(
     () => isReservationTypeName(state.type?.name),
     [state.type?.name],
   );
+  const isTraining = useMemo(
+    () => isTrainingTypeName(state.type?.name),
+    [state.type?.name],
+  );
+  const isOpenTraining = isTraining && state.sessionStatus !== 'closed';
+  const shouldSkipParticipantsStep = useMemo(
+    () => shouldSkipEventWizardParticipantsStep(state),
+    [state],
+  );
 
   const clampedCapacity = clampParticipants(capacityValue);
+  const clampedExternalParticipantLimit = clampParticipants(externalParticipantLimitValue);
   const clampedTotalPlayers = clampParticipants(totalPlayersValue);
-  const normalizedCapacity = capacityMode === 'unlimited' ? null : clampedCapacity;
-  const normalizedTotalPlayers = isReservation ? clampedTotalPlayers : null;
+  let normalizedCapacity = null;
+  if (!isTraining && capacityMode !== 'unlimited') {
+    normalizedCapacity = clampedCapacity;
+  }
+  const shouldCollectInternalPlayers = isReservation || (isTraining && !isOpenTraining);
+  const normalizedTotalPlayers = shouldCollectInternalPlayers ? clampedTotalPlayers : null;
+  let normalizedExternalParticipantLimit = null;
+  if (isTraining) {
+    normalizedExternalParticipantLimit = isOpenTraining
+      ? clampedExternalParticipantLimit
+      : (state.externalParticipantLimit ?? null);
+  }
   const projectedState = {
     ...state,
     capacity: normalizedCapacity,
+    externalParticipantLimit: normalizedExternalParticipantLimit,
     totalPlayers: normalizedTotalPlayers,
   };
   const shouldShowDetectionStep = shouldShowDetectionSlotsStep(projectedState);
@@ -84,15 +117,47 @@ function EventWizardParticipants({ navigation }) {
 
   const canDecreaseCapacity = capacityMode === 'fixed' && clampedCapacity > MIN_PARTICIPANTS;
   const canIncreaseCapacity = capacityMode === 'fixed' && clampedCapacity < MAX_PARTICIPANTS;
+  const canDecreaseExternalLimit = clampedExternalParticipantLimit > MIN_PARTICIPANTS;
+  const canIncreaseExternalLimit = clampedExternalParticipantLimit < MAX_PARTICIPANTS;
   const canDecreaseTotal = clampedTotalPlayers > MIN_PARTICIPANTS;
   const canIncreaseTotal = (
     clampedTotalPlayers < MAX_PARTICIPANTS
-    && (capacityMode === 'unlimited' || clampedTotalPlayers < clampedCapacity)
+    && (isTraining || capacityMode === 'unlimited' || clampedTotalPlayers < clampedCapacity)
   );
 
-  const capacityLabel = capacityMode === 'unlimited'
-    ? t('eventWizard.steps.participants.unlimitedLabel', 'Illimite')
-    : `${clampedCapacity} ${t('eventWizard.steps.participants.playersUnit', 'joueurs max')}`;
+  let capacityLabel = `${clampedCapacity} ${t('eventWizard.steps.participants.playersUnit', 'joueurs max')}`;
+  if (capacityMode === 'unlimited') {
+    capacityLabel = t('eventWizard.steps.participants.unlimitedLabel', 'Illimite');
+  }
+  if (isTraining) {
+    capacityLabel = isOpenTraining
+      ? t(
+        'eventWizard.steps.participants.trainingOpenCapacity',
+        'Illimite en interne + quota externe',
+      )
+      : t(
+        'eventWizard.steps.participants.trainingPrivateCapacity',
+        'Illimite (entrainement prive)',
+      );
+  }
+
+  let previewModeLabel = capacityMode === 'fixed'
+    ? t('eventWizard.steps.participants.fixed', 'Capacite fixe')
+    : t('eventWizard.steps.participants.unlimited', 'Illimite');
+  if (isTraining) {
+    previewModeLabel = isOpenTraining
+      ? t('eventWizard.steps.participants.trainingModeOpen', 'Entrainement ouvert')
+      : t('eventWizard.steps.participants.trainingModePrivate', 'Entrainement prive');
+  }
+  let participantsSubtitleKey = 'eventWizard.steps.participants.subtitle';
+  let participantsSubtitleFallback = 'Choisis une capacite max, ou laisse l evenement en acces illimite.';
+  if (isTraining && isOpenTraining) {
+    participantsSubtitleKey = 'eventWizard.steps.participants.trainingOpenSubtitle';
+    participantsSubtitleFallback = 'Definis uniquement combien de joueurs externes a l equipe tu veux accepter.';
+  } else if (isTraining) {
+    participantsSubtitleKey = 'eventWizard.steps.participants.trainingSubtitle';
+    participantsSubtitleFallback = 'Definis tes joueurs attendus pour cet entrainement.';
+  }
 
   const surfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
@@ -139,6 +204,7 @@ function EventWizardParticipants({ navigation }) {
     dispatch({
       payload: {
         capacity: normalizedCapacity,
+        externalParticipantLimit: normalizedExternalParticipantLimit,
         totalPlayers: normalizedTotalPlayers,
       },
       type: 'SET_PARTICIPANTS',
@@ -154,6 +220,21 @@ function EventWizardParticipants({ navigation }) {
     navigation.navigate(nextRoute);
   };
 
+  useEffect(() => {
+    if (!shouldSkipParticipantsStep) return;
+
+    if (typeof navigation.replace === 'function') {
+      navigation.replace(RouteNames.EventWizardValidationMode);
+      return;
+    }
+
+    navigation.navigate(RouteNames.EventWizardValidationMode);
+  }, [navigation, shouldSkipParticipantsStep]);
+
+  if (shouldSkipParticipantsStep) {
+    return null;
+  }
+
   return (
     <WizardStepLayout
       isNextDisabled={hasInvalidPlayersConfig}
@@ -161,124 +242,127 @@ function EventWizardParticipants({ navigation }) {
       onNext={handleNext}
       stepCount={getEventWizardStepCount(projectedState)}
       stepIndex={getEventWizardParticipantsStepIndex(projectedState)}
-      subtitle={t(
-        'eventWizard.steps.participants.subtitle',
-        'Choisis une capacite max, ou laisse l evenement en acces illimite.',
-      )}
+      subtitle={t(participantsSubtitleKey, participantsSubtitleFallback)}
       title={t('eventWizard.steps.participants.title', 'Participants')}
     >
       <View style={[Spaces.gap[16]]}>
-        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {t('eventWizard.steps.participants.modeLabel', 'Mode de capacite')}
-          </Text>
-          <View style={capacityModeControlWrapperStyle}>
-            <SegmentedControl
-              centerContent
-              onChange={setCapacityMode}
-              options={[
-                {
-                  label: t('eventWizard.steps.participants.unlimited', 'Illimite'),
-                  value: 'unlimited',
-                },
-                {
-                  label: t('eventWizard.steps.participants.fixed', 'Capacite fixe'),
-                  value: 'fixed',
-                },
-              ]}
-              value={capacityMode}
-            />
-          </View>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {capacityMode === 'unlimited'
-              ? t(
-                'eventWizard.steps.participants.modeHintUnlimited',
-                'Mode illimite: aucun plafond de participants.',
-              )
-              : t(
-                'eventWizard.steps.participants.modeHintFixed',
-                'Mode capacite fixe: nombre de places limite.',
-              )}
-          </Text>
-        </View>
-
-        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], surfaceStyle]}>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('eventEdit.fields.capacity.label')}
-          </Text>
-          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-            <TouchableOpacity
-              disabled={!canDecreaseCapacity}
-              onPress={() => setCapacityValue((value) => clampParticipants(value - 1))}
-              style={counterButtonStyle(canDecreaseCapacity)}
-            >
-              <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
-            </TouchableOpacity>
-
-            <View style={[Spaces.paddingHorizontal[12]]}>
-              <Text style={[Fonts.h1, Fonts.neutral00, { textAlign: 'center' }]}>
-                {capacityMode === 'unlimited'
-                  ? t('eventWizard.steps.participants.unlimited', 'Illimite')
-                  : clampedCapacity}
+        {!isTraining ? (
+          <>
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('eventWizard.steps.participants.modeLabel', 'Mode de capacite')}
               </Text>
-              <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
-                {capacityMode === 'unlimited'
-                  ? t('eventWizard.steps.participants.unlimitedHint', 'Aucune limite de places')
-                  : t('eventWizard.steps.participants.playersUnit', 'joueurs max')}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              disabled={!canIncreaseCapacity}
-              onPress={() => setCapacityValue((value) => clampParticipants(value + 1))}
-              style={counterButtonStyle(canIncreaseCapacity)}
-            >
-              <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
-            </TouchableOpacity>
-          </View>
-
-          {capacityMode === 'fixed' ? (
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-                {t('eventWizard.steps.participants.quickPresets', 'Valeurs rapides')}
-              </Text>
-              <View style={[Alignments.row, Spaces.marginTop[4], { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
-                {CAPACITY_PRESETS.map((preset) => {
-                  const selected = clampedCapacity === preset;
-                  return (
-                    <TouchableOpacity
-                      key={`capacity-preset-${preset}`}
-                      onPress={() => setCapacityValue(preset)}
-                      style={[
-                        ApplicationStyle.card,
-                        Alignments.alignCenter,
-                        Alignments.justifyCenter,
-                        Spaces.paddingVertical[12],
-                        Spaces.paddingHorizontal[16],
-                        {
-                          backgroundColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.08)',
-                          borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.26)',
-                          borderRadius: 14,
-                          minHeight: 40,
-                          minWidth: 46,
-                        },
-                      ]}
-                    >
-                      <Text style={[Fonts.p1Bold, selected ? Fonts.neutral900 : Fonts.neutral100]}>
-                        {preset}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+              <View style={capacityModeControlWrapperStyle}>
+                <SegmentedControl
+                  centerContent
+                  onChange={setCapacityMode}
+                  options={[
+                    {
+                      label: t('eventWizard.steps.participants.unlimited', 'Illimite'),
+                      value: 'unlimited',
+                    },
+                    {
+                      label: t('eventWizard.steps.participants.fixed', 'Capacite fixe'),
+                      value: 'fixed',
+                    },
+                  ]}
+                  value={capacityMode}
+                />
               </View>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {capacityMode === 'unlimited'
+                  ? t(
+                    'eventWizard.steps.participants.modeHintUnlimited',
+                    'Mode illimite: aucun plafond de participants.',
+                  )
+                  : t(
+                    'eventWizard.steps.participants.modeHintFixed',
+                    'Mode capacite fixe: nombre de places limite.',
+                  )}
+              </Text>
             </View>
-          ) : null}
-        </View>
 
-        {isReservation ? (
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], surfaceStyle]}>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>
+                {t('eventEdit.fields.capacity.label')}
+              </Text>
+              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+                <TouchableOpacity
+                  disabled={!canDecreaseCapacity}
+                  onPress={() => setCapacityValue((value) => clampParticipants(value - 1))}
+                  style={counterButtonStyle(canDecreaseCapacity)}
+                >
+                  <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
+                </TouchableOpacity>
+
+                <View style={[Spaces.paddingHorizontal[12]]}>
+                  <Text style={[Fonts.h1, Fonts.neutral00, { textAlign: 'center' }]}>
+                    {capacityMode === 'unlimited'
+                      ? t('eventWizard.steps.participants.unlimited', 'Illimite')
+                      : clampedCapacity}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
+                    {capacityMode === 'unlimited'
+                      ? t('eventWizard.steps.participants.unlimitedHint', 'Aucune limite de places')
+                      : t('eventWizard.steps.participants.playersUnit', 'joueurs max')}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  disabled={!canIncreaseCapacity}
+                  onPress={() => setCapacityValue((value) => clampParticipants(value + 1))}
+                  style={counterButtonStyle(canIncreaseCapacity)}
+                >
+                  <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
+                </TouchableOpacity>
+              </View>
+
+              {capacityMode === 'fixed' ? (
+                <View style={[Spaces.gap[8]]}>
+                  <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+                    {t('eventWizard.steps.participants.quickPresets', 'Valeurs rapides')}
+                  </Text>
+                  <View style={[Alignments.row, Spaces.marginTop[4], { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
+                    {CAPACITY_PRESETS.map((preset) => {
+                      const selected = clampedCapacity === preset;
+                      return (
+                        <TouchableOpacity
+                          key={`capacity-preset-${preset}`}
+                          onPress={() => setCapacityValue(preset)}
+                          style={[
+                            ApplicationStyle.card,
+                            Alignments.alignCenter,
+                            Alignments.justifyCenter,
+                            Spaces.paddingVertical[12],
+                            Spaces.paddingHorizontal[16],
+                            {
+                              backgroundColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.08)',
+                              borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.26)',
+                              borderRadius: 14,
+                              minHeight: 40,
+                              minWidth: 46,
+                            },
+                          ]}
+                        >
+                          <Text style={[Fonts.p1Bold, selected ? Fonts.neutral900 : Fonts.neutral100]}>
+                            {preset}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          </>
+        ) : null}
+
+        {shouldCollectInternalPlayers ? (
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {t('eventEdit.fields.totalPlayers.label')}
+              {isTraining
+                ? t('eventWizard.steps.participants.trainingTotalPlayers', 'Joueurs attendus (interne)')
+                : t('eventEdit.fields.totalPlayers.label')}
             </Text>
             <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
               <TouchableOpacity
@@ -295,6 +379,33 @@ function EventWizardParticipants({ navigation }) {
                 disabled={!canIncreaseTotal}
                 onPress={() => setTotalPlayersValue((value) => clampParticipants(value + 1))}
                 style={counterButtonStyle(canIncreaseTotal)}
+              >
+                <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
+
+        {isOpenTraining ? (
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {t('eventWizard.steps.participants.externalQuotaLabel', 'Places externes')}
+            </Text>
+            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+              <TouchableOpacity
+                disabled={!canDecreaseExternalLimit}
+                onPress={() => setExternalParticipantLimitValue((value) => clampParticipants(value - 1))}
+                style={counterButtonStyle(canDecreaseExternalLimit)}
+              >
+                <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
+              </TouchableOpacity>
+              <Text style={[Fonts.h1, Fonts.neutral00]}>
+                {clampedExternalParticipantLimit}
+              </Text>
+              <TouchableOpacity
+                disabled={!canIncreaseExternalLimit}
+                onPress={() => setExternalParticipantLimitValue((value) => clampParticipants(value + 1))}
+                style={counterButtonStyle(canIncreaseExternalLimit)}
               >
                 <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
               </TouchableOpacity>
@@ -323,15 +434,24 @@ function EventWizardParticipants({ navigation }) {
               'eventWizard.steps.participants.previewMode',
               'Mode: {{value}}',
               {
-                value: capacityMode === 'fixed'
-                  ? t('eventWizard.steps.participants.fixed', 'Capacite fixe')
-                  : t('eventWizard.steps.participants.unlimited', 'Illimite'),
+                value: previewModeLabel,
               },
             )}
           </Text>
-          {isReservation ? (
+          {shouldCollectInternalPlayers ? (
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('eventWizard.steps.participants.previewTotalPlayers', 'Joueurs attendus: {{value}}', { value: clampedTotalPlayers })}
+              {t(
+                isTraining
+                  ? 'eventWizard.steps.participants.previewTrainingTotalPlayers'
+                  : 'eventWizard.steps.participants.previewTotalPlayers',
+                'Joueurs attendus: {{value}}',
+                { value: clampedTotalPlayers },
+              )}
+            </Text>
+          ) : null}
+          {isOpenTraining ? (
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t('eventWizard.steps.participants.previewExternalQuota', 'Places externes: {{value}}', { value: clampedExternalParticipantLimit })}
             </Text>
           ) : null}
           {hasInvalidPlayersConfig ? (

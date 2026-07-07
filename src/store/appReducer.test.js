@@ -91,4 +91,23 @@ describe('appReducer auth session flow', () => {
     expect(nextState.auth).toEqual(sessionB);
     expect(nextState.authSessions).toEqual([sessionB]);
   });
+
+  it('fully clears authentication when logging out the last remaining session', () => {
+    const sessionA = buildSession('session-a');
+    const state = {
+      activeSessionDocumentId: 'session-a',
+      auth: sessionA,
+      authSessions: [sessionA],
+      isAddingAccount: false,
+      returnSessionDocumentId: undefined,
+    };
+
+    const nextState = appReducer(state, { type: 'LOGOUT_CURRENT_SESSION' });
+
+    expect(nextState.activeSessionDocumentId).toBeUndefined();
+    expect(nextState.auth).toBeUndefined();
+    expect(nextState.authSessions).toEqual([]);
+    expect(nextState.isAddingAccount).toBe(false);
+    expect(nextState.returnSessionDocumentId).toBeUndefined();
+  });
 });

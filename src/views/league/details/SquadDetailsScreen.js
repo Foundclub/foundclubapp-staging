@@ -35,6 +35,7 @@ import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
+import { getPendingLeagueActionQueryKey } from '@/services/league/leagueActionQueries';
 import MatchmakingService from '@/services/league/MatchmakingService';
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import {
@@ -267,6 +268,12 @@ function SquadDetailsScreen({ navigation, route }) {
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const currentUserId = getEntityDocumentId(currentUser);
   const { getClubInitials } = useClub();
+  const invalidatePendingLeagueActionQueries = useCallback(() => Promise.allSettled([
+    queryClient.invalidateQueries({ queryKey: getPendingLeagueActionQueryKey(undefined) }),
+    safeTeamId
+      ? queryClient.invalidateQueries({ queryKey: getPendingLeagueActionQueryKey(safeTeamId) })
+      : Promise.resolve(),
+  ]), [queryClient, safeTeamId]);
 
   // Use League Team Hook
   const {
@@ -736,6 +743,7 @@ function SquadDetailsScreen({ navigation, route }) {
       await joinSquadViaInviteLink(safeTeamId, currentUserId || '', { legalAcceptance });
       await Promise.all([
         refetch(),
+        queryClient.invalidateQueries({ queryKey: ['leagueTeamContext'] }),
         queryClient.invalidateQueries({ queryKey: ['myLeagueTeam', currentUserId] }),
         queryClient.invalidateQueries({ queryKey: ['pendingLeagueTeams', currentUserId] }),
         queryClient.invalidateQueries({ queryKey: ['invitedLeagueTeams', currentUserId] }),
@@ -918,9 +926,10 @@ function SquadDetailsScreen({ navigation, route }) {
       await Promise.allSettled([
         refetch(),
         queryClient.invalidateQueries({ queryKey: ['leagueTeam', safeTeamId] }),
+        queryClient.invalidateQueries({ queryKey: ['leagueTeamContext'] }),
         queryClient.invalidateQueries({ queryKey: ['myLeagueTeam'] }),
         queryClient.invalidateQueries({ queryKey: ['league-matches'] }),
-        queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] }),
+        invalidatePendingLeagueActionQueries(),
         currentUserId
           ? queryClient.invalidateQueries({ queryKey: ['myLeagueTeam', currentUserId] })
           : Promise.resolve(),
@@ -942,6 +951,7 @@ function SquadDetailsScreen({ navigation, route }) {
     captainAssignmentTarget,
     captainAssignmentTargetName,
     currentUserId,
+    invalidatePendingLeagueActionQueries,
     queryClient,
     refetch,
     safeTeamId,
@@ -1278,16 +1288,17 @@ function SquadDetailsScreen({ navigation, route }) {
 
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['leagueTeam'] }),
+      queryClient.invalidateQueries({ queryKey: ['leagueTeamContext'] }),
       queryClient.invalidateQueries({ queryKey: ['myLeagueTeam'] }),
       queryClient.invalidateQueries({ queryKey: ['pendingLeagueTeams'] }),
       queryClient.invalidateQueries({ queryKey: ['invitedLeagueTeams'] }),
       queryClient.invalidateQueries({ queryKey: ['league-matches'] }),
-      queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] }),
+      invalidatePendingLeagueActionQueries(),
       currentUserId
         ? queryClient.invalidateQueries({ queryKey: ['myLeagueTeam', currentUserId] })
         : Promise.resolve(),
     ]);
-  }, [currentUserId, queryClient, safeTeamId]);
+  }, [currentUserId, invalidatePendingLeagueActionQueries, queryClient, safeTeamId]);
 
   const resetToLeagueHome = useCallback(() => {
     let rootNavigation = navigation;
@@ -1395,9 +1406,10 @@ function SquadDetailsScreen({ navigation, route }) {
               await Promise.allSettled([
                 refetch(),
                 queryClient.invalidateQueries({ queryKey: ['leagueTeam', safeTeamId] }),
+                queryClient.invalidateQueries({ queryKey: ['leagueTeamContext'] }),
                 queryClient.invalidateQueries({ queryKey: ['myLeagueTeam'] }),
                 queryClient.invalidateQueries({ queryKey: ['league-matches'] }),
-                queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] }),
+                invalidatePendingLeagueActionQueries(),
                 currentUserId
                   ? queryClient.invalidateQueries({ queryKey: ['myLeagueTeam', currentUserId] })
                   : Promise.resolve(),
@@ -1420,6 +1432,7 @@ function SquadDetailsScreen({ navigation, route }) {
   }, [
     currentUserId,
     getPlayerDisplayName,
+    invalidatePendingLeagueActionQueries,
     queryClient,
     refetch,
     safeTeamId,

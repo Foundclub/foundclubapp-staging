@@ -1,4 +1,5 @@
 // @ts-nocheck
+/* eslint-disable no-alert, no-nested-ternary, jsx-a11y/label-has-associated-control, object-curly-newline */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
@@ -6,6 +7,7 @@ import {
 import { useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useTheme from '@/theme/themeContext';
 
@@ -22,7 +24,12 @@ import {
 import { RouteNames } from '@/navigation/routeNames';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
-import { useGetEvent } from '@/services/event/eventQueries';
+import {
+  useGetEvent,
+  useGetEventConvocation,
+  useGetEventTeamComposition,
+} from '@/services/event/eventQueries';
+import { updateEvent } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import {
   createEventParticipation,
@@ -147,6 +154,9 @@ function EventDetails({ navigation, route }) {
   });
   const [isSharing, setIsSharing] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [isTrainingSettingsVisible, setIsTrainingSettingsVisible] = useState(false);
+  const [trainingOpenLimitDraft, setTrainingOpenLimitDraft] = useState('');
+  const [trainingOpenValidationDraft, setTrainingOpenValidationDraft] = useState('manual');
   const creationCelebrationShownRef = useRef(false);
 
   useEffect(() => {
@@ -210,6 +220,42 @@ function EventDetails({ navigation, route }) {
 
   const canEdit = Boolean(canManageEvent(event));
   const hasEvent = Boolean(event);
+  const trainingOpenConfig = useMemo(() => resolveTrainingOpenConfig(event || {}), [event]);
+  const canManageTrainingVisibility = Boolean(canEdit && trainingOpenConfig.isTraining);
+  const supportsEventComposition = Boolean(event?.team?.documentId || (event?.invitedTeams || []).length > 0);
+  const isTeamMember = useMemo(() => {
+    const userDocumentId = userData?.documentId;
+    if (!userDocumentId) return false;
+    const teams = [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])].filter(Boolean);
+    return teams.some((team) => (
+      Array.isArray(team?.players) && team.players.some((player) => player?.documentId === userDocumentId)
+    ) || (
+      Array.isArray(team?.trainers) && team.trainers.some((trainer) => trainer?.documentId === userDocumentId)
+    ));
+  }, [event?.invitedTeams, event?.team, userData?.documentId]);
+  const canViewPublishedComposition = useMemo(() => {
+    const effectiveStatus = String(participationState?.effectiveStatus || '').trim().toLowerCase();
+    return canEdit || isTeamMember || effectiveStatus === 'accepted' || effectiveStatus === 'missing';
+  }, [canEdit, isTeamMember, participationState?.effectiveStatus]);
+  const compositionTeamId = useMemo(() => {
+    const teams = [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])].filter(Boolean);
+    if (!teams.length) return null;
+
+    const userDocumentId = userData?.documentId;
+    const trainedTeamIds = new Set((userData?.trainedTeams || []).map((team) => team?.documentId).filter(Boolean));
+    const managedTeam = teams.find((team) => trainedTeamIds.has(team?.documentId))
+      || teams.find((team) => Array.isArray(team?.trainers) && team.trainers.some((trainer) => trainer?.documentId === userDocumentId));
+    if (managedTeam?.documentId) return managedTeam.documentId;
+
+    const playerTeam = teams.find((team) => Array.isArray(team?.players) && team.players.some((player) => player?.documentId === userDocumentId));
+    if (playerTeam?.documentId) return playerTeam.documentId;
+
+    return teams[0]?.documentId || null;
+  }, [event?.invitedTeams, event?.team, userData?.documentId, userData?.trainedTeams]);
+  const compositionEditorTeam = useMemo(() => {
+    const teams = [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])].filter(Boolean);
+    return teams.find((team) => team?.documentId === compositionTeamId) || event?.team || null;
+  }, [compositionTeamId, event?.invitedTeams, event?.team]);
   const isReservation = normalizeTypeName(event?.type?.name).includes('reservation');
   const isTournamentEvent = normalizeTypeName(event?.type?.name).includes('tournoi');
   const tournamentConfig = useMemo(
@@ -276,6 +322,153 @@ function EventDetails({ navigation, route }) {
   const participationLabel = getParticipationLabel(
     participationState?.effectiveStatus,
   );
+  const compositionSport = useMemo(
+    () => compositionEditorTeam?.activities?.[0]?.name || event?.team?.activities?.[0]?.name || 'football',
+    [compositionEditorTeam?.activities, event?.team?.activities],
+  );
+  const compositionEventLabel = useMemo(
+    () => String(event?.name || event?.description || event?.type?.name || 'Evenement').trim() || 'Evenement',
+    [event?.description, event?.name, event?.type?.name],
+  );
+  const {
+    data: staffCompositionPayload,
+    isFetching: isStaffCompositionFetching,
+  } = useGetEventTeamComposition(
+    eventId || '',
+    compositionTeamId || undefined,
+    {
+      enabled: Boolean(eventId && compositionTeamId && supportsEventComposition && canEdit),
+    },
+  );
+  const {
+    data: convocationPayload,
+  } = useGetEventConvocation(
+    eventId || '',
+    compositionTeamId || undefined,
+    {
+      enabled: Boolean(eventId && compositionTeamId && supportsEventComposition && canViewPublishedComposition),
+    },
+  );
+  const convocationBranches = useMemo(() => {
+    if (Array.isArray(convocationPayload?.branches)) return convocationPayload.branches;
+    if (convocationPayload?.published) {
+      return [{
+        published: convocationPayload.published,
+        team: convocationPayload?.team || { documentId: compositionTeamId, name: compositionEditorTeam?.name || null },
+        viewer: { inReserve: false, teamEntryIds: [] },
+      }];
+    }
+    return [];
+  }, [compositionEditorTeam?.name, compositionTeamId, convocationPayload?.branches, convocationPayload?.published, convocationPayload?.team]);
+  const publishedCompositionTeamCount = useMemo(
+    () => convocationBranches.reduce((total, branch) => total + (Array.isArray(branch?.published?.teams) ? branch.published.teams.length : 0), 0),
+    [convocationBranches],
+  );
+  const publishedCompositionReserveCount = useMemo(
+    () => convocationBranches.reduce((total, branch) => total + (Array.isArray(branch?.published?.reservePlayerIds) ? branch.published.reservePlayerIds.length : 0), 0),
+    [convocationBranches],
+  );
+  const compositionEligiblePlayerCount = Array.isArray(staffCompositionPayload?.eligiblePlayers)
+    ? staffCompositionPayload.eligiblePlayers.length
+    : 0;
+  const handleManageComposition = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+
+    if (isStaffCompositionFetching) {
+      window.alert('La composition d\'equipes est encore en cours de chargement.');
+      return;
+    }
+
+    const openBoard = (composition, options = {}) => {
+      navigation.navigate(RouteNames.TacticalBoardV2, {
+        aggregateBranches: Array.isArray(options.aggregateBranches) ? options.aggregateBranches : undefined,
+        canEdit: Boolean(options.canEdit),
+        compositionIntent: options.compositionIntent || null,
+        editorMode: 'event',
+        editorSource: options.editorSource || null,
+        editorSourceLabel: options.editorSourceLabel || null,
+        eventId,
+        eventName: compositionEventLabel,
+        existingComposition: composition,
+        multiTeamComposition: true,
+        players: Array.isArray(options.players) ? options.players : (Array.isArray(staffCompositionPayload?.eligiblePlayers) ? staffCompositionPayload.eligiblePlayers : []),
+        readOnly: Boolean(options.readOnly),
+        sport: composition?.sportContext || compositionSport,
+        teamComposition: options.teamComposition || staffCompositionPayload || null,
+        teamId: compositionTeamId,
+        teamName: compositionEditorTeam?.name || staffCompositionPayload?.team?.name || null,
+      });
+    };
+
+    if (staffCompositionPayload?.draft) {
+      openBoard(staffCompositionPayload.draft, {
+        canEdit: true,
+        compositionIntent: staffCompositionPayload?.draft?.mode || 'manual',
+        editorSource: 'draft',
+        editorSourceLabel: 'Brouillon',
+        readOnly: false,
+      });
+      return;
+    }
+
+    if (staffCompositionPayload?.published) {
+      openBoard(staffCompositionPayload.published, {
+        canEdit: true,
+        compositionIntent: staffCompositionPayload?.published?.mode || 'manual',
+        editorSource: 'published',
+        editorSourceLabel: "Composition d'equipes publiee",
+        players: Array.isArray(staffCompositionPayload?.published?.snapshotPlayers) ? staffCompositionPayload.published.snapshotPlayers : [],
+        readOnly: false,
+      });
+      return;
+    }
+
+    const hasAutoPresets = Array.isArray(staffCompositionPayload?.availablePresets) && staffCompositionPayload.availablePresets.length > 0;
+    if (!hasAutoPresets) {
+      openBoard(staffCompositionPayload?.bootstrap?.composition || null, {
+        canEdit: true,
+        compositionIntent: 'manual',
+        editorSource: staffCompositionPayload?.bootstrap?.source || 'empty',
+        editorSourceLabel: 'Nouvelle composition',
+        readOnly: false,
+      });
+      return;
+    }
+
+    const wantsAuto = window.confirm('OK pour creer les equipes automatiquement ? Clique sur Annuler pour passer en mode manuel.');
+    openBoard(staffCompositionPayload?.bootstrap?.composition || null, {
+      canEdit: true,
+      compositionIntent: wantsAuto ? 'auto' : 'manual',
+      editorSource: staffCompositionPayload?.bootstrap?.source || 'empty',
+      editorSourceLabel: 'Nouvelle composition',
+      readOnly: false,
+    });
+  }, [
+    compositionEditorTeam?.name,
+    compositionEventLabel,
+    compositionSport,
+    compositionTeamId,
+    eventId,
+    isStaffCompositionFetching,
+    navigation,
+    staffCompositionPayload,
+  ]);
+
+  useEffect(() => {
+    if (!trainingOpenConfig.isTraining) return;
+    setTrainingOpenLimitDraft(
+      trainingOpenConfig.externalParticipantLimit != null
+        ? String(trainingOpenConfig.externalParticipantLimit)
+        : '',
+    );
+    setTrainingOpenValidationDraft(
+      trainingOpenConfig.externalParticipantValidationMode || 'manual',
+    );
+  }, [
+    trainingOpenConfig.externalParticipantLimit,
+    trainingOpenConfig.externalParticipantValidationMode,
+    trainingOpenConfig.isTraining,
+  ]);
 
   useEffect(() => {
     if (!highlightedSection || isLoading) {
@@ -314,6 +507,14 @@ function EventDetails({ navigation, route }) {
   const cancelParticipationMutation = useMutation({
     mutationFn: (requestId) => deleteEventParticipation(requestId),
     onSuccess: invalidateEventQueries,
+  });
+  const updateTrainingMutation = useMutation({
+    mutationFn: (eventData) => updateEvent({ documentId: eventId, eventData }),
+    onSuccess: async () => {
+      setActionError('');
+      setIsTrainingSettingsVisible(false);
+      await invalidateEventQueries();
+    },
   });
   const registerTournamentTeamMutation = useMutation({
     mutationFn: (sourceTeamId) => registerClubTeamToTournament(eventId, sourceTeamId),
@@ -383,6 +584,43 @@ function EventDetails({ navigation, route }) {
       setActionError(cancelError?.message || 'Impossible d annuler cette participation.');
     }
   }, [activeParticipationRequestId, cancelParticipationMutation]);
+
+  const handleSubmitTrainingOpenConfig = useCallback(async () => {
+    if (!eventId) return;
+
+    const externalParticipantLimit = Number.parseInt(String(trainingOpenLimitDraft || '').trim(), 10);
+    if (!Number.isFinite(externalParticipantLimit) || externalParticipantLimit < 1) {
+      setActionError('Indique combien de places externes tu veux ouvrir pour cet entrainement.');
+      return;
+    }
+
+    try {
+      await updateTrainingMutation.mutateAsync({
+        externalParticipantLimit,
+        externalParticipantValidationMode: trainingOpenValidationDraft === 'auto' ? 'auto' : 'manual',
+        sessionStatus: 'open',
+      });
+    } catch (mutationError) {
+      setActionError(mutationError?.message || 'Impossible d\'ouvrir cet entrainement.');
+    }
+  }, [
+    eventId,
+    trainingOpenLimitDraft,
+    trainingOpenValidationDraft,
+    updateTrainingMutation,
+  ]);
+
+  const handleCloseTraining = useCallback(async () => {
+    if (!eventId) return;
+
+    try {
+      await updateTrainingMutation.mutateAsync({
+        sessionStatus: 'closed',
+      });
+    } catch (mutationError) {
+      setActionError(mutationError?.message || 'Impossible de fermer cet entrainement.');
+    }
+  }, [eventId, updateTrainingMutation]);
 
   const handleShare = useCallback(async () => {
     setIsSharing(true);
@@ -859,6 +1097,204 @@ function EventDetails({ navigation, route }) {
                 </div>
               ) : null}
 
+              {canManageTrainingVisibility ? (
+                <div
+                  style={{
+                    background: softSurfaceColor,
+                    border: `1px solid ${accentColor}44`,
+                    borderRadius: 18,
+                    display: 'grid',
+                    gap: 12,
+                    padding: '16px 18px',
+                  }}
+                >
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
+                      {trainingOpenConfig.isOpenTraining ? 'Entrainement ouvert' : 'Entrainement prive'}
+                    </strong>
+                    <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
+                      {trainingOpenConfig.isOpenTraining
+                        ? 'Les joueurs externes peuvent rejoindre selon le quota et le mode de validation choisis.'
+                        : 'Ouvre l entrainement pour accueillir des joueurs externes sans compter les membres de tes equipes.'}
+                    </span>
+                  </div>
+
+                  {trainingOpenConfig.externalParticipantLimit !== null ? (
+                    <span style={{ color: softTextColor, fontSize: 14 }}>
+                      {trainingOpenConfig.isOpenTraining
+                        ? `${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`
+                        : `Dernier reglage memorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`}
+                    </span>
+                  ) : null}
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    <button
+                      disabled={updateTrainingMutation.isPending}
+                      onClick={trainingOpenConfig.isOpenTraining
+                        ? handleCloseTraining
+                        : () => setIsTrainingSettingsVisible((current) => !current)}
+                      style={trainingOpenConfig.isOpenTraining ? outlineButtonStyle : primaryButtonStyle}
+                      type="button"
+                    >
+                      {updateTrainingMutation.isPending
+                        ? 'Enregistrement...'
+                        : (trainingOpenConfig.isOpenTraining ? 'Fermer l entrainement' : 'Ouvrir l entrainement')}
+                    </button>
+                  </div>
+
+                  {!trainingOpenConfig.isOpenTraining && isTrainingSettingsVisible ? (
+                    <div style={{ display: 'grid', gap: 14 }}>
+                      <label style={{ display: 'grid', gap: 8 }}>
+                        <span style={{ color: mutedTextColor, fontSize: 13 }}>Places externes</span>
+                        <input
+                          min="1"
+                          onChange={(eventObject) => setTrainingOpenLimitDraft(eventObject.target.value)}
+                          style={{
+                            background: 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${borderColor}`,
+                            borderRadius: 14,
+                            color: textColor,
+                            fontFamily: 'Montserrat-Regular, sans-serif',
+                            fontSize: 14,
+                            outline: 'none',
+                            padding: '12px 14px',
+                          }}
+                          type="number"
+                          value={trainingOpenLimitDraft}
+                        />
+                      </label>
+
+                      <label style={{ display: 'grid', gap: 8 }}>
+                        <span style={{ color: mutedTextColor, fontSize: 13 }}>Validation des joueurs externes</span>
+                        <select
+                          onChange={(eventObject) => setTrainingOpenValidationDraft(eventObject.target.value)}
+                          style={{
+                            background: 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${borderColor}`,
+                            borderRadius: 14,
+                            color: textColor,
+                            fontFamily: 'Montserrat-Regular, sans-serif',
+                            fontSize: 14,
+                            outline: 'none',
+                            padding: '12px 14px',
+                          }}
+                          value={trainingOpenValidationDraft}
+                        >
+                          <option value="auto">Automatique</option>
+                          <option value="manual">Manuelle</option>
+                        </select>
+                      </label>
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                        <button
+                          disabled={updateTrainingMutation.isPending}
+                          onClick={handleSubmitTrainingOpenConfig}
+                          style={primaryButtonStyle}
+                          type="button"
+                        >
+                          Confirmer l ouverture
+                        </button>
+                        <button
+                          disabled={updateTrainingMutation.isPending}
+                          onClick={() => setIsTrainingSettingsVisible(false)}
+                          style={outlineButtonStyle}
+                          type="button"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {supportsEventComposition && (canEdit || canViewPublishedComposition) ? (
+                <div
+                  style={{
+                    background: softSurfaceColor,
+                    border: `1px solid ${accentColor}33`,
+                    borderRadius: 18,
+                    display: 'grid',
+                    gap: 12,
+                    padding: '16px 18px',
+                  }}
+                >
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
+                      Composition d&apos;equipes
+                    </strong>
+                    <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
+                      {staffCompositionPayload?.draft
+                        ? 'Un brouillon existe deja. Reprends-le, ajuste les equipes puis publie la version finale.'
+                        : compositionEligiblePlayerCount === 0
+                          ? 'Tu peux deja creer les equipes meme sans participant: les postes resteront libres et se completeront ensuite.'
+                          : 'Cree plusieurs equipes a la main ou genere-les automatiquement, puis publie la version finale.'}
+                    </span>
+                  </div>
+
+                  {convocationBranches.length > 0 ? (
+                    <div style={{ color: softTextColor, display: 'grid', fontSize: 14, gap: 6 }}>
+                      <span>
+                        {publishedCompositionTeamCount}
+                        {' '}
+                        equipe(s) publiee(s)
+                      </span>
+                      <span>
+                        {convocationBranches.length}
+                        {' '}
+                        branche(s) visible(s)
+                        {publishedCompositionReserveCount > 0 ? ` · ${publishedCompositionReserveCount} remplacant(s)` : ''}
+                      </span>
+                      {convocationBranches[0]?.published?.publishedAt ? (
+                        <span>
+                          Publie le
+                          {' '}
+                          {new Date(convocationBranches[0].published.publishedAt).toLocaleString('fr-FR')}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {canEdit ? (
+                      <button
+                        disabled={isStaffCompositionFetching}
+                        onClick={handleManageComposition}
+                        style={primaryButtonStyle}
+                        type="button"
+                      >
+                        {isStaffCompositionFetching ? 'Chargement...' : "Gerer la composition d'equipes"}
+                      </button>
+                    ) : null}
+
+                    {convocationBranches.length > 0 ? (
+                      <button
+                        onClick={() => navigation.navigate(RouteNames.TacticalBoardV2, {
+                          aggregateBranches: convocationBranches,
+                          canEdit: false,
+                          compositionIntent: null,
+                          editorMode: 'event',
+                          editorSource: 'published',
+                          editorSourceLabel: "Composition d'equipes publiee",
+                          eventId,
+                          eventName: compositionEventLabel,
+                          existingComposition: convocationBranches[0]?.published || null,
+                          multiTeamComposition: true,
+                          readOnly: true,
+                          sport: compositionSport,
+                          teamId: compositionTeamId,
+                          teamName: compositionEditorTeam?.name || null,
+                        })}
+                        style={outlineButtonStyle}
+                        type="button"
+                      >
+                        Voir la composition publiee
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
               <h2 style={sectionTitleStyle}>Participants</h2>
               {renderParticipantsSection()}
 
@@ -926,7 +1362,9 @@ function EventDetails({ navigation, route }) {
                     { label: 'Equipe', value: event?.team?.name || 'Non definie' },
                     { label: 'Section', value: event?.team?.section?.name || 'Non definie' },
                     { label: 'Capacite', value: event?.capacity ?? 'Libre' },
-                    { label: 'Joueurs attendus', value: event?.totalPlayers ?? 'Non defini' },
+                    ...(!trainingOpenConfig.isOpenTraining
+                      ? [{ label: 'Joueurs attendus', value: event?.totalPlayers ?? 'Non defini' }]
+                      : []),
                     { label: 'Prix / personne', value: event?.pricePerPerson != null ? `${event.pricePerPerson} EUR` : 'Gratuit ou non defini' },
                   ].map((item, index, rows) => (
                     <div

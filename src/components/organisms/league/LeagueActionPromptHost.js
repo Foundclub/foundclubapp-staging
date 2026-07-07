@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -29,7 +30,10 @@ import {
 } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
-import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
+import {
+  getPendingLeagueActionQueryKey,
+  usePendingLeagueAction,
+} from '@/services/league/leagueActionQueries';
 import {
   createLeagueProposal,
   respondToLeagueProposal,
@@ -83,7 +87,10 @@ const BLOCKED_ROUTES = /** @type {Set<string>} */ (new Set([
 const formatActionDate = (value) => {
   if (!value) return 'Date \u00E0 d\u00E9finir';
   try {
-    return new Date(value).toLocaleString('fr-FR', {
+    const dateValue = value instanceof Date
+      ? value
+      : new Date(/** @type {string | number} */ (value));
+    return dateValue.toLocaleString('fr-FR', {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
@@ -128,6 +135,7 @@ const getOpponentResponseLabel = (opponentResponse, opponentNextAction) => {
 function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const queryClient = useQueryClient();
   const [{ auth }] = useAppContext();
+  const { isBootstrapResolved } = useAuth();
   const [consumedForcedPromptKey, setConsumedForcedPromptKey] = useState(/** @type {string | null} */ (null));
   const [dismissedActionKey, setDismissedActionKey] = useState(/** @type {string | null} */ (null));
   const [currentRouteName, setCurrentRouteName] = useState(/** @type {string | null} */ (null));
@@ -138,6 +146,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const [postSlotLocalStep, setPostSlotLocalStep] = useState(/** @type {string | null} */ (null));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [suppressedScoreMatchId, setSuppressedScoreMatchId] = useState(/** @type {string | null} */ (null));
+  const [allowPromptFallbackFetch, setAllowPromptFallbackFetch] = useState(false);
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const appStateRef = useRef(AppState.currentState);
   const shownActionPromptKeyRef = useRef(/** @type {string | null} */ (null));
@@ -147,17 +156,24 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     ApplicationStyle, Colors, Fonts,
   } = useTheme();
   const { showBanner } = useAppFeedback();
+  let pendingActionPollInterval = false;
+  if (auth?.token && (isBootstrapResolved || allowPromptFallbackFetch) && Platform.OS === 'web') {
+    pendingActionPollInterval = getWebBackgroundPollMs();
+  }
 
   const {
     data: pendingActionPayload,
     refetch,
   } = usePendingLeagueAction(undefined, {
-    enabled: ENABLE_LEAGUE_ACTION_PROMPTS && Boolean(auth?.token) && !skipInitialFetch,
-    refetchInterval: Platform.OS === 'web' ? getWebBackgroundPollMs() : 60000,
+    enabled: ENABLE_LEAGUE_ACTION_PROMPTS
+      && Boolean(auth?.token)
+      && !skipInitialFetch
+      && (isBootstrapResolved || allowPromptFallbackFetch),
+    refetchInterval: pendingActionPollInterval,
     refetchIntervalInBackground: false,
   });
 
-  const nextAction = pendingActionPayload?.nextAction || null;
+  const nextAction = /** @type {any} */ (pendingActionPayload)?.nextAction || null;
   const nextActionMatchId = String(
     nextAction?.matchId
     || nextAction?.match?.documentId
@@ -252,6 +268,19 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     return `Votre squad VS ${opponent}`;
   }, [nextAction?.opponent?.name, shouldHideOpponentName]);
 
+  useEffect(() => {
+    if (isBootstrapResolved) {
+      setAllowPromptFallbackFetch(false);
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setAllowPromptFallbackFetch(true);
+    }, 2500);
+
+    return () => clearTimeout(timeoutId);
+  }, [isBootstrapResolved]);
+
   const dismissForSession = useCallback(() => {
     if (currentForcedPromptKey) {
       setConsumedForcedPromptKey(currentForcedPromptKey);
@@ -284,14 +313,29 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     /** @type {any} */ (counterProposalPopup).markShown({ actionKey: nextAction?.key || 'default' });
   }, [canShowCounterProposalModal, counterProposalPopup, isCounterProposalVisible, nextAction?.key]);
 
-  const invalidateLeagueQueries = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] });
-    queryClient.invalidateQueries({ queryKey: ['leagueMatchStats'] });
-    queryClient.invalidateQueries({ queryKey: ['leagueMyMatchResponse'] });
-    queryClient.invalidateQueries({ queryKey: ['leagueTeamPerformanceStats'] });
-    queryClient.invalidateQueries({ queryKey: ['chats'] });
-    queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
-  }, [queryClient]);
+  const invalidateLeagueQueries = useCallback(() => Promise.allSettled([
+    queryClient.invalidateQueries({ queryKey: getPendingLeagueActionQueryKey(undefined) }),
+    nextAction?.teamId
+      ? queryClient.invalidateQueries({
+        queryKey: getPendingLeagueActionQueryKey(String(nextAction.teamId)),
+      })
+      : Promise.resolve(),
+    nextActionMatchId
+      ? queryClient.invalidateQueries({ queryKey: ['leagueMatchStats', nextActionMatchId] })
+      : Promise.resolve(),
+    nextActionMatchId
+      ? queryClient.invalidateQueries({ queryKey: ['leagueMyMatchResponse', nextActionMatchId] })
+      : Promise.resolve(),
+    nextAction?.teamId
+      ? queryClient.invalidateQueries({
+        queryKey: ['leagueTeamPerformanceStats', String(nextAction.teamId)],
+      })
+      : Promise.resolve(),
+    queryClient.invalidateQueries({ queryKey: ['chats'] }),
+    nextAction?.chatId
+      ? queryClient.invalidateQueries({ queryKey: ['chat-messages', String(nextAction.chatId)] })
+      : Promise.resolve(),
+  ]), [nextAction?.chatId, nextAction?.teamId, nextActionMatchId, queryClient]);
 
   const openMatchDetails = useCallback(
     /**
@@ -551,7 +595,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
 
   const handlePostSlotResponse = useCallback(
     /**
-     * @param {Record<string, unknown>} payload
+     * @param {{outcome: 'played' | 'not_played', nextAction?: 'reschedule' | 'cancel'}} payload
      */
     async (payload) => {
       if (!nextActionMatchId || isSubmitting) return;
@@ -667,14 +711,14 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       const wasBackground = /inactive|background/.test(appStateRef.current);
       appStateRef.current = nextState;
 
-      if (wasBackground && nextState === 'active') {
+      if (wasBackground && nextState === 'active' && (isBootstrapResolved || allowPromptFallbackFetch)) {
         setDismissedActionKey(null);
         refetch();
       }
     });
 
     return () => subscription.remove();
-  }, [auth?.token, refetch]);
+  }, [allowPromptFallbackFetch, auth?.token, isBootstrapResolved, refetch]);
 
   useEffect(() => {
     if (!isBlockedRoute || !isScoreActionPrompt || !nextAction?.key) return;

@@ -1,3 +1,5 @@
+// @ts-nocheck
+/* eslint-disable no-nested-ternary */
 import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import {
@@ -23,13 +25,24 @@ const MINI_TOKEN_SIZE = 24;
  *   eventId?: string;
  *   eventDate?: string;
  *   eventName?: string;
+ *   manualPlayers?: CompositionPlayer[];
+ *   placements?: CompositionPlacement[];
+ *   publishedVersion?: number;
+ *   reservePlayers?: CompositionPlayer[];
+ *   schemaVersion?: number;
+ *   snapshotPlayers?: CompositionPlayer[];
  *   sport?: string;
  *   sportContext?: string;
- *   placements?: CompositionPlacement[];
- *   manualPlayers?: CompositionPlayer[];
+ *   teamName?: string;
  *   teamPlayers?: CompositionPlayer[];
+ *   teams?: Array<{ id?: string; name?: string; placements?: CompositionPlacement[] }>;
+ *   type?: string;
  * }} CompositionPayload
  */
+
+const getPlayerId = (player) => String(player?.documentId || player?.id || '').trim();
+
+const getPlayerInitials = (player) => `${player?.firstname?.charAt(0) || ''}${player?.lastname?.charAt(0) || ''}`.toUpperCase() || '?';
 
 /**
  * Mini composition preview for chat messages
@@ -51,55 +64,63 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     manualPlayers = [],
     placements = [],
     publishedVersion,
+    reservePlayers = [],
+    schemaVersion = 2,
+    snapshotPlayers = [],
     sport = 'football',
     sportContext,
     teamName,
-    teamPlayers = [], // Team players for reconstruction
+    teamPlayers = [],
+    teams = [],
     type,
   } = composition;
+  const isMultiTeamComposition = Number(schemaVersion) === 3 || Array.isArray(teams);
+  const previewPlacements = isMultiTeamComposition
+    ? (Array.isArray(teams?.[0]?.placements) ? teams[0].placements : [])
+    : placements;
 
-  // Combine all players for lookup
-  const allPlayers = [...teamPlayers, ...manualPlayers];
+  const allPlayers = [...teamPlayers, ...manualPlayers, ...reservePlayers, ...snapshotPlayers];
 
   const formattedDate = eventDate ? dayjs(eventDate).locale('fr').format('DD/MM/YYYY') : '';
 
-  // Navigate to TacticalBoard in readonly mode
   const handlePress = () => {
-    // @ts-ignore - navigation types
     navigation.navigate(RouteNames.EventStack, {
       params: {
         canEdit: false,
         editorMode: 'event',
         editorSource: type === 'lineup_share' ? 'published' : null,
-        editorSourceLabel: type === 'lineup_share' ? 'Composition publiée' : null,
+        editorSourceLabel: type === 'lineup_share' ? "Composition d'equipes publiee" : null,
         eventId,
         eventName,
-        existingComposition: {
-          manualPlayers,
-          placements,
-          sportContext,
-        },
+        existingComposition: isMultiTeamComposition
+          ? {
+            manualPlayers,
+            reservePlayerIds: reservePlayers.map((player) => getPlayerId(player)).filter(Boolean),
+            reserveSnapshotPlayers: reservePlayers,
+            schemaVersion: 3,
+            snapshotPlayers,
+            sportContext,
+            teams,
+          }
+          : {
+            manualPlayers,
+            placements,
+            sportContext,
+          },
+        multiTeamComposition: isMultiTeamComposition,
+        players: allPlayers,
         readOnly: true,
         sport,
         teamName,
-        // Pass ALL players (team + manual) for lookup
-        players: allPlayers,
       },
       screen: RouteNames.TacticalBoardV2,
     });
   };
 
-  // Render mini tokens on the field
-  const renderMiniTokens = () => placements.map((/** @type {CompositionPlacement} */ placement) => {
+  const renderMiniTokens = () => previewPlacements.map((placement) => {
     const { playerId, positionX, positionY } = placement;
-
-    // Find player data from all players (team + manual)
-    const player = allPlayers.find((/** @type {CompositionPlayer} */ p) => p.id === playerId || p.documentId === playerId);
-    const initials = player
-      ? `${player.firstname?.charAt(0) || ''}${player.lastname?.charAt(0) || ''}`.toUpperCase()
-      : '?';
-
-    // Convert percentage to actual position
+    const player = allPlayers.find((entry) => getPlayerId(entry) === String(playerId || '').trim());
+    const initials = player ? getPlayerInitials(player) : '?';
     const left = ((positionX || 0) / 100) * MINI_FIELD_WIDTH - MINI_TOKEN_SIZE / 2;
     const top = ((positionY || 0) / 100) * MINI_FIELD_HEIGHT - MINI_TOKEN_SIZE / 2;
 
@@ -135,38 +156,32 @@ function CompositionMessageBubble({ composition, isMe = false }) {
         },
       ]}
     >
-      {/* Header */}
       <View style={[styles.header, { borderBottomColor: Colors.neutral700 }]}>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-          {type === 'lineup_share' ? 'Convocation publiée' : 'Composition du match'}
+          {type === 'lineup_share' ? "Composition d'equipes publiee" : 'Composition du match'}
         </Text>
-        {formattedDate && (
+        {formattedDate ? (
           <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>
             {formattedDate}
           </Text>
-        )}
+        ) : null}
       </View>
 
-      {/* Mini Field */}
       <RenderedTacticalField sport={sport} style={styles.miniField}>
         {renderMiniTokens()}
-
-        {/* Player count badge */}
         <View style={[styles.countBadge, { backgroundColor: Colors.primary500 }]}>
           <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-            {placements.length}
+            {isMultiTeamComposition ? teams.length : previewPlacements.length}
             {' '}
-            joueur
-            {placements.length > 1 ? 's' : ''}
+            {isMultiTeamComposition ? 'equipe(s)' : `joueur${previewPlacements.length > 1 ? 's' : ''}`}
           </Text>
         </View>
       </RenderedTacticalField>
 
-      {/* Footer hint */}
       <View style={[styles.footer, { backgroundColor: Colors.neutral900 }]}>
         <Text style={[Fonts.p4, { color: Colors.primary500 }]}>
           {type === 'lineup_share'
-            ? `${teamName || 'Équipe'}${publishedVersion ? ` · v${publishedVersion}` : ''}`
+            ? `${teamName || 'Equipe'}${publishedVersion ? ` · v${publishedVersion}` : ''}`
             : 'Appuyer pour voir la composition'}
         </Text>
       </View>

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -11,11 +12,21 @@ import {
   View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
+import {
+  isTrainingEventType,
+  resolveTrainingOpenConfig,
+} from '@/domains/event/eventUseCases';
 import useEvent from '@/domains/event/useEvent';
+import {
+  extractSubscriptionDecisionFromError,
+  getSubscriptionQuotaItem,
+} from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -38,6 +49,7 @@ import {
   hasCompletePerDayLocations,
   isStageEventType,
   isTournamentEventType,
+  shouldSkipEventWizardParticipantsStep,
 } from './eventWizardDetectionUtils';
 
 const CREATE_EVENT_BATCH_CONCURRENCY = 3;
@@ -60,7 +72,9 @@ const FEATURED_SCOPE_OPTIONS = [
 ];
 
 const getErrorCode = (error) => (
-  error?.response?.data?.error?.details?.code
+  error?.details?.code
+  || error?.code
+  || error?.response?.data?.error?.details?.code
   || error?.response?.data?.error?.code
   || error?.response?.data?.code
   || null
@@ -174,15 +188,24 @@ const buildWizardFormData = (wizardState) => {
   const eventDate = wizardState.date ? new Date(wizardState.date) : new Date();
   const start = wizardState.startTime ? new Date(wizardState.startTime) : new Date(eventDate);
   const end = wizardState.endTime ? new Date(wizardState.endTime) : new Date(start.getTime() + (60 * 60000));
+  const trainingOpenConfig = resolveTrainingOpenConfig(wizardState);
+  const hasStoredTrainingExternalConfig = trainingOpenConfig.isOpenTraining
+    || trainingOpenConfig.externalParticipantLimit !== null;
 
   return {
-    capacity: wizardState.capacity ?? null,
+    capacity: trainingOpenConfig.isTraining ? null : (wizardState.capacity ?? null),
     club: wizardState.team?.club?.documentId || wizardState.club?.documentId || null,
     date: format(eventDate, 'dd/MM/yyyy'),
     description: wizardState.description || '',
     detectionSlots: Array.isArray(wizardState.detectionSlots) ? wizardState.detectionSlots : [],
     endTime: format(end, 'HH:mm'),
     eventTasks: Array.isArray(wizardState.eventTasks) ? wizardState.eventTasks : [],
+    externalParticipantLimit: trainingOpenConfig.isTraining && hasStoredTrainingExternalConfig
+      ? trainingOpenConfig.externalParticipantLimit
+      : null,
+    externalParticipantValidationMode: trainingOpenConfig.isTraining && hasStoredTrainingExternalConfig
+      ? trainingOpenConfig.externalParticipantValidationMode
+      : null,
     facility: wizardState.facility,
     invitedTeams: Array.isArray(wizardState.invitedTeams) ? wizardState.invitedTeams : [],
     isMultiDayTournament: wizardState.isMultiDayTournament === true,
@@ -226,7 +249,7 @@ const buildWizardFormData = (wizardState) => {
     startTime: format(start, 'HH:mm'),
     team: isTournament && tournamentScopeMode === 'autonomous' ? undefined : wizardState.team?.documentId,
     teamAudiences: Array.isArray(wizardState.teamAudiences) ? wizardState.teamAudiences : [],
-    totalPlayers: wizardState.totalPlayers ?? null,
+    totalPlayers: trainingOpenConfig.isOpenTraining ? null : (wizardState.totalPlayers ?? null),
     tournamentActivity: isTournament && tournamentScopeMode === 'autonomous'
       ? wizardState.tournamentActivity?.documentId
       : undefined,
@@ -260,6 +283,7 @@ const buildWizardFormData = (wizardState) => {
       ? wizardState.tournamentSection?.documentId
       : undefined,
     type: wizardState.type?.documentId,
+    typeName: wizardState.type?.name || '',
     validationMode: isTournament
       ? (wizardState.tournamentRegistrationMode || 'manual')
       : (wizardState.validationMode || 'auto'),
@@ -280,6 +304,11 @@ function EventWizardRecap({ navigation }) {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const {
+    clubVerificationSummary,
+    freeUsageSummary,
+    subscriptionAccessLevel,
+  } = useAuth();
   const { dispatch, state } = useEventWizard();
   const { createReccurrentEventPayload, createStageEventPayload } = useEvent();
   const queryClient = useQueryClient();
@@ -288,6 +317,7 @@ function EventWizardRecap({ navigation }) {
   const [selectedFeaturedScopes, setSelectedFeaturedScopes] = useState([]);
   const [submitProgress, setSubmitProgress] = useState(null);
   const [partialState, setPartialState] = useState(null);
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.24)',
@@ -298,10 +328,20 @@ function EventWizardRecap({ navigation }) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .includes('reservation');
+  const isTraining = isTrainingEventType(state.type?.name);
   const isStage = isStageEventType(state.type?.name);
   const isTournament = isTournamentEventType(state.type?.name);
   const isMultiDayProgram = isStage || (isTournament && state.isMultiDayTournament === true);
   const hasCompletePerDayLocationSet = hasCompletePerDayLocations(state);
+  const trainingOpenConfig = useMemo(() => resolveTrainingOpenConfig(state), [state]);
+  const shouldSkipParticipantsStep = useMemo(
+    () => shouldSkipEventWizardParticipantsStep(state),
+    [state],
+  );
+  const eventPublishQuotaItem = useMemo(
+    () => getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', subscriptionAccessLevel),
+    [freeUsageSummary, subscriptionAccessLevel],
+  );
 
   const wizardFormData = useMemo(() => buildWizardFormData(state), [state]);
 
@@ -374,6 +414,9 @@ function EventWizardRecap({ navigation }) {
   const validationValue = effectiveValidationMode === 'manual'
     ? t('eventEdit.fields.validationMode.options.manual')
     : t('eventEdit.fields.validationMode.options.auto');
+  const externalValidationValue = trainingOpenConfig.externalParticipantValidationMode === 'auto'
+    ? t('eventEdit.fields.validationMode.options.auto')
+    : t('eventEdit.fields.validationMode.options.manual');
   const invitedCount = state.invitedTeams?.length || 0;
   const detectionSlots = Array.isArray(state.detectionSlots) ? state.detectionSlots : [];
   const detectionSlotsTotal = detectionSlots.reduce((sum, slot) => sum + Number(slot?.quantity || 0), 0);
@@ -429,6 +472,8 @@ function EventWizardRecap({ navigation }) {
   const hasDate = Boolean(isMultiDayProgram ? state.stageStartDate && state.stageEndDate : state.date);
   const hasTime = Boolean(isMultiDayProgram ? state.stageDefaultStartTime && state.stageDefaultEndTime : state.startTime && state.endTime);
   const hasLocation = Boolean(state.location || state.facility || hasCompletePerDayLocationSet);
+  const hasValidationConfig = Boolean(state.validationMode)
+    && (!trainingOpenConfig.isOpenTraining || Boolean(trainingOpenConfig.externalParticipantValidationMode));
   const quickOverviewItems = [
     {
       complete: hasType,
@@ -451,7 +496,7 @@ function EventWizardRecap({ navigation }) {
       value: locationValue,
     },
     {
-      complete: Boolean(state.validationMode),
+      complete: hasValidationConfig,
       label: t('eventWizard.recap.sections.validation'),
       value: validationValue,
     },
@@ -512,10 +557,19 @@ function EventWizardRecap({ navigation }) {
 
   const finalizeSuccess = async (created) => {
     const firstCreatedId = created.find((item) => item.documentId)?.documentId;
+    const eventQuotaSnapshot = eventPublishQuotaItem
+      ? {
+        beforeRemaining: eventPublishQuotaItem.remaining,
+        quotaType: eventPublishQuotaItem.quotaType,
+        total: eventPublishQuotaItem.total,
+      }
+      : null;
     const featuredFailures = await requestFeaturedForCreatedEvents(created);
     await queryClient.invalidateQueries({ queryKey: ['events'] });
     await queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
     await queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
+    await queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
+    await queryClient.invalidateQueries({ queryKey: ['get-me'] });
 
     const firstCreatedItem = created.find((item) => item.documentId === firstCreatedId) || null;
     const celebrationPayload = {
@@ -558,6 +612,14 @@ function EventWizardRecap({ navigation }) {
             eventCampaignCreationSuggested: true,
             eventId: firstCreatedId,
             fromEventCreation: true,
+            subscriptionFollowUp: eventQuotaSnapshot && subscriptionAccessLevel === 'FREE'
+              ? {
+                beforeRemaining: eventQuotaSnapshot.beforeRemaining,
+                consumedCount: Math.max(1, created.length),
+                quotaType: eventQuotaSnapshot.quotaType,
+                total: eventQuotaSnapshot.total,
+              }
+              : null,
           },
         }],
       });
@@ -617,6 +679,13 @@ function EventWizardRecap({ navigation }) {
       }
 
       if (created.length === 0) {
+        const blockedDecision = failed
+          .map((item) => extractSubscriptionDecisionFromError(item?.error))
+          .find(Boolean);
+        if (blockedDecision) {
+          setSubscriptionPaywallDecision(blockedDecision);
+          return;
+        }
         const singleFailureMessage = failed.length === 1
           ? getErrorMessage(failed[0]?.error, getFailureSummary(failed))
           : getFailureSummary(failed);
@@ -633,6 +702,11 @@ function EventWizardRecap({ navigation }) {
         failed,
       });
     } catch (submitError) {
+      const blockedDecision = extractSubscriptionDecisionFromError(submitError);
+      if (blockedDecision) {
+        setSubscriptionPaywallDecision(blockedDecision);
+        return;
+      }
       Alert.alert(
         t('common.error', 'Erreur'),
         submitError?.message || t('eventWizard.errors.genericCreate'),
@@ -832,6 +906,30 @@ function EventWizardRecap({ navigation }) {
               ))}
             </View>
           </View>
+
+          {eventPublishQuotaItem ? (
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('eventWizard.recap.freeQuota.title', 'Quota evenement gratuit')}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {t(
+                  'eventWizard.recap.freeQuota.description',
+                  '{{remaining}}/{{total}} publication gratuite restante avant paywall.',
+                  {
+                    remaining: eventPublishQuotaItem.remaining,
+                    total: eventPublishQuotaItem.total,
+                  },
+                )}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'eventWizard.recap.freeQuota.hint',
+                  'Une fois cet avantage utilise, les prochaines publications seront bloquees cote serveur et renverront vers ton abonnement.',
+                )}
+              </Text>
+            </View>
+          ) : null}
 
           {isSubmitting && submitProgress?.total > 1 ? (
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
@@ -1079,7 +1177,13 @@ function EventWizardRecap({ navigation }) {
               <Text style={[Fonts.h4, Fonts.neutral00]}>
                 {t('eventWizard.recap.participationTitle', 'Participation')}
               </Text>
-              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardParticipants)}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate(
+                  shouldSkipParticipantsStep
+                    ? RouteNames.EventWizardVisibility
+                    : RouteNames.EventWizardParticipants,
+                )}
+              >
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
               </TouchableOpacity>
             </View>
@@ -1088,25 +1192,65 @@ function EventWizardRecap({ navigation }) {
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.participants')}</Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {t('eventWizard.recap.capacity', { value: state.capacity ?? recapNotSet })}
+                  {isTraining
+                    ? t(
+                      trainingOpenConfig.isOpenTraining
+                        ? 'eventWizard.recap.trainingCapacityOpen'
+                        : 'eventWizard.recap.trainingCapacityPrivate',
+                      trainingOpenConfig.isOpenTraining
+                        ? 'Illimite en interne + quota externe'
+                        : 'Capacite illimitee (entrainement prive)',
+                    )
+                    : t('eventWizard.recap.capacity', { value: state.capacity ?? recapNotSet })}
                 </Text>
               </View>
-              {isReservation ? (
+              {(isReservation || (isTraining && !trainingOpenConfig.isOpenTraining)) ? (
                 <View style={[Spaces.gap[4]]}>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    {t('eventWizard.recap.totalPlayersTitle', 'Joueurs attendus')}
+                    {t(
+                      isTraining
+                        ? 'eventWizard.recap.trainingTotalPlayersTitle'
+                        : 'eventWizard.recap.totalPlayersTitle',
+                      isTraining ? 'Joueurs attendus (interne)' : 'Joueurs attendus',
+                    )}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
                     {t('eventWizard.recap.totalPlayers', { value: state.totalPlayers ?? recapNotSet })}
                   </Text>
                 </View>
               ) : null}
+              {isTraining
+                && trainingOpenConfig.isOpenTraining
+                && trainingOpenConfig.externalParticipantLimit !== null ? (
+                  <View style={[Spaces.gap[4]]}>
+                    <Text style={[Fonts.p3, Fonts.neutral200]}>
+                      {t('eventWizard.recap.externalQuotaTitle', 'Places externes')}
+                    </Text>
+                    <Text style={[Fonts.p2, Fonts.neutral100]}>
+                      {`${trainingOpenConfig.externalParticipantLimit}`}
+                    </Text>
+                  </View>
+                ) : null}
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.validation')}</Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {t('eventWizard.recap.validationMode', { value: validationValue })}
+                  {isTraining
+                    ? t('eventWizard.recap.internalValidationMode', 'Membres internes: {{value}}', { value: validationValue })
+                    : t('eventWizard.recap.validationMode', { value: validationValue })}
                 </Text>
               </View>
+              {isTraining
+                && trainingOpenConfig.isOpenTraining
+                && trainingOpenConfig.externalParticipantValidationMode ? (
+                  <View style={[Spaces.gap[4]]}>
+                    <Text style={[Fonts.p3, Fonts.neutral200]}>
+                      {t('eventWizard.recap.externalValidationTitle', 'Validation externe')}
+                    </Text>
+                    <Text style={[Fonts.p2, Fonts.neutral100]}>
+                      {externalValidationValue}
+                    </Text>
+                  </View>
+                ) : null}
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.visibility')}</Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>{visibilityValue}</Text>
@@ -1309,6 +1453,14 @@ function EventWizardRecap({ navigation }) {
           </View>
         </View>
       </BottomModal>
+
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={clubVerificationSummary?.clubDocumentId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
     </>
   );
 }

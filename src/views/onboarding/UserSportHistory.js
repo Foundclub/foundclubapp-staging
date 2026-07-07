@@ -14,24 +14,23 @@ import OnboardingStateView from '@/views/onboarding/components/OnboardingStateVi
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe } from '@/services/auth/authQueries';
-
 /**
  * User sports history input screen
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  */
 function UserSportHistory({ navigation }) {
-  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
+  const {
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
   const {
     Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
-    refetch: refetchUserData,
-  } = useGetMe();
   const insets = useSafeAreaInsets();
 
   if (userDataLoading) {

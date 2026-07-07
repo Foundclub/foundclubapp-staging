@@ -21,12 +21,14 @@ import {
   getAvailableRequestHubFilters,
   REQUEST_HUB_FILTERS,
 } from '@/domains/requests/requestMappers';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import MissionDock from '@/components/molecules/guidance/MissionDock';
 import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedItem';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -125,6 +127,7 @@ function RequestsHub({ navigation, route }) {
   const {
     canEditClub,
     canManageTeam,
+    clubVerificationSummary,
     userData,
   } = useAuth();
   const clubScope = useClubScope() || {};
@@ -139,6 +142,8 @@ function RequestsHub({ navigation, route }) {
   const [installationRefusalItem, setInstallationRefusalItem] = useState(null);
   const [installationRefusalReason, setInstallationRefusalReason] = useState('');
   const [processingItemId, setProcessingItemId] = useState('');
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+  const [subscriptionPaywallClubId, setSubscriptionPaywallClubId] = useState('');
 
   useEffect(() => {
     const nextFilter = normalizeFilter(route?.params?.initialFilter);
@@ -150,6 +155,12 @@ function RequestsHub({ navigation, route }) {
     [userData?.trainedTeams],
   );
   const clubId = userData?.club?.documentId || userData?.trainedTeams?.[0]?.club?.documentId || '';
+  const defaultClubDocumentId = String(
+    clubVerificationSummary?.clubDocumentId
+    || clubId
+    || clubScope?.clubId
+    || '',
+  ).trim();
   const cmId = clubScope.activeMode === 'multisport'
     ? (clubScope.activeMultisportClubId || userData?.multisportClubs?.[0]?.documentId || '')
     : '';
@@ -219,6 +230,16 @@ function RequestsHub({ navigation, route }) {
     setInterestResponseItem(null);
     setInterestResponsePresetKey(CLUB_INTEREST_RESPONSE_PRESETS[0]?.key || 'thanks');
   }, [processingItemId]);
+
+  const closeSubscriptionPaywall = useCallback(() => {
+    setSubscriptionPaywallDecision(null);
+    setSubscriptionPaywallClubId('');
+  }, []);
+
+  const openSubscriptionPaywall = useCallback((decision, clubDocumentId = '') => {
+    setSubscriptionPaywallDecision(decision);
+    setSubscriptionPaywallClubId(String(clubDocumentId || defaultClubDocumentId || '').trim());
+  }, [defaultClubDocumentId]);
 
   const handleClubAssignPrompt = useCallback((item) => {
     const trainerName = item?.meta?.requesterName || t('common.user', 'Utilisateur');
@@ -411,6 +432,11 @@ function RequestsHub({ navigation, route }) {
         closeInstallationRefusalModal();
       }
     } catch (actionError) {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(actionError);
+      if (subscriptionDecision) {
+        openSubscriptionPaywall(subscriptionDecision, item?.meta?.clubId);
+        return;
+      }
       Alert.alert(
         t('common.error', 'Erreur'),
         actionError?.message || t('requestsHub.actionError', 'Impossible de traiter la demande.'),
@@ -418,7 +444,7 @@ function RequestsHub({ navigation, route }) {
     } finally {
       setProcessingItemId('');
     }
-  }, [closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequests, navigation, startWhisperChat, t]);
+  }, [closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequests, navigation, openSubscriptionPaywall, startWhisperChat, t]);
 
   const handlePrimaryPress = useCallback((item) => {
     runItemAction(item, 'primary');
@@ -475,6 +501,11 @@ function RequestsHub({ navigation, route }) {
       setInterestResponseItem(null);
       setInterestResponsePresetKey(CLUB_INTEREST_RESPONSE_PRESETS[0]?.key || 'thanks');
     } catch (responseError) {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(responseError);
+      if (subscriptionDecision) {
+        openSubscriptionPaywall(subscriptionDecision, interestResponseItem?.meta?.clubId);
+        return;
+      }
       Alert.alert(
         t('common.error', 'Erreur'),
         /** @type {any} */ (responseError)?.message || t('requestsHub.actionError', 'Impossible de traiter la demande.'),
@@ -482,7 +513,7 @@ function RequestsHub({ navigation, route }) {
     } finally {
       setProcessingItemId('');
     }
-  }, [interestResponseItem, interestResponsePresetKey, invalidateRequests, t]);
+  }, [interestResponseItem, interestResponsePresetKey, invalidateRequests, openSubscriptionPaywall, t]);
 
   const handleRequesterPress = useCallback((item) => {
     const requesterId = String(item?.meta?.requesterId || '').trim();
@@ -854,6 +885,14 @@ function RequestsHub({ navigation, route }) {
           showsVerticalScrollIndicator={false}
         />
       </WithDataWrapper>
+
+      <SubscriptionPaywallSheet
+        close={closeSubscriptionPaywall}
+        clubDocumentId={subscriptionPaywallClubId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
     </ScreenContainer>
   );
 }

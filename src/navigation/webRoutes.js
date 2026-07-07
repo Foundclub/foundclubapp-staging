@@ -9,6 +9,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.LeagueHomeTab]: '/league',
   [RouteNames.Profile]: '/profile',
   [RouteNames.ProfileEdit]: '/profile/edit',
+  [RouteNames.SubscriptionOverview]: '/profile/subscription',
   [RouteNames.Welcome]: '/onboarding/welcome',
   [RouteNames.UserRole]: '/onboarding/role',
   [RouteNames.UserName]: '/onboarding/name',

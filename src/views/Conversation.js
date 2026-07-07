@@ -95,6 +95,7 @@ import {
 import client from '@/services/client';
 import { useGetEvents } from '@/services/event/eventQueries';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+import { getPendingLeagueActionQueryKey } from '@/services/league/leagueActionQueries';
 import {
   cancelMatch,
   createLeagueProposal,
@@ -723,6 +724,27 @@ function Conversation({ navigation, route }) {
     if (!match) return 'Match FoundClub League';
     return `${match?.team_a?.name || 'Equipe A'} VS ${match?.team_b?.name || 'Adversaire'}`;
   }, [chatData?.league_match]);
+  const pendingLeagueActionTeamId = useMemo(() => {
+    const currentUserId = String(userData?.documentId || '').trim();
+    if (!currentUserId) return '';
+
+    const teamA = chatData?.league_match?.team_a;
+    if (isLeagueCaptain(teamA, currentUserId)) {
+      return getEntityDocumentId(teamA) || '';
+    }
+
+    const teamB = chatData?.league_match?.team_b;
+    if (isLeagueCaptain(teamB, currentUserId)) {
+      return getEntityDocumentId(teamB) || '';
+    }
+
+    return String(userData?.team?.documentId || '').trim();
+  }, [
+    chatData?.league_match?.team_a,
+    chatData?.league_match?.team_b,
+    userData?.documentId,
+    userData?.team?.documentId,
+  ]);
   const isGroupChat = chatData?.type === 'group';
   const groupAdminIds = useMemo(() => {
     if (!Array.isArray(chatData?.groupAdmins)) return [];
@@ -1040,6 +1062,14 @@ function Conversation({ navigation, route }) {
 
   // Event Participation Logic
   const queryClient = useQueryClient();
+  const invalidatePendingLeagueActionQueries = useCallback(() => Promise.allSettled([
+    queryClient.invalidateQueries({ queryKey: getPendingLeagueActionQueryKey(undefined) }),
+    pendingLeagueActionTeamId
+      ? queryClient.invalidateQueries({
+        queryKey: getPendingLeagueActionQueryKey(pendingLeagueActionTeamId),
+      })
+      : Promise.resolve(),
+  ]), [pendingLeagueActionTeamId, queryClient]);
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [joinModalError, setJoinModalError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(/** @type {{ documentId?: string; team?: Team } | undefined} */ (undefined));
@@ -3026,7 +3056,7 @@ function Conversation({ navigation, route }) {
       await createLeagueProposal(matchId, /** @type {any} */ (proposalPayload), { legalAcceptance });
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
-      queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] });
+      await invalidatePendingLeagueActionQueries();
 
       setIsProposalModalVisible(false);
       setCounterProposalContext(null);
@@ -3124,7 +3154,7 @@ function Conversation({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
       queryClient.invalidateQueries({ queryKey: ['league-matches'] });
-      queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] });
+      await invalidatePendingLeagueActionQueries();
     } catch (error) {
       conversationLogger.error('Proposal action failed', error);
       showErrorBanner('Une erreur est survenue lors de la reponse.');

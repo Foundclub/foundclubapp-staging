@@ -124,9 +124,9 @@ export const celebrationCatalog = {
   },
   event_convocation_published: {
     buildCopy: (context) => ({
-      body: `La convocation pour ${toLabel(context?.teamName, 'ton equipe')} est prete.`,
-      eyebrow: 'CONVOCATION',
-      title: 'Convocation publiee',
+      body: `La composition d'equipes pour ${toLabel(context?.teamName, 'ton equipe')} est prete.`,
+      eyebrow: 'COMPOSITION',
+      title: "Composition d'equipes publiee",
     }),
     category: 'event',
     channels: 'both',

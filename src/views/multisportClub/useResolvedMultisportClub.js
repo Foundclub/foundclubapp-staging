@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { useGetMe } from '@/services/auth/authQueries';
+import useAuth from '@/domains/auth/useAuth';
+
 import { getMultisportClubById } from '@/services/multisportClub/multisportClubService';
 
 import { useClubScope } from '@/context/ClubScopeContext';
@@ -23,11 +24,11 @@ const getManagedMultisportClubIds = (userData) => new Set(
 function useResolvedMultisportClub(routeCmId) {
   const clubScope = useClubScope() || {};
   const {
-    data: userData,
-    error: userDataError,
-    isLoading: isLoadingUserData,
-    refetch: refetchUserData,
-  } = useGetMe();
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading: isLoadingUserData,
+  } = useAuth();
 
   const managedMultisportClubIds = getManagedMultisportClubIds(userData);
   const resolvedRouteCmId = normalizeId(routeCmId);

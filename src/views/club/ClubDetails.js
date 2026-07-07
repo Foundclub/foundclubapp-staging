@@ -13,6 +13,7 @@ import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -26,6 +27,7 @@ import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
 import ClubScopeToggle from '@/components/molecules/header/ClubScopeToggle';
 import Input from '@/components/molecules/input/Input';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -54,6 +56,7 @@ import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/te
 import {
   getClubCertificationLabel,
   getClubCertificationPalette,
+  isPartnerClub,
 } from '@/utils/clubCertification';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getImageUrl } from '@/utils/imageUrl';
@@ -190,6 +193,7 @@ function ClubDetails({ navigation, route }) {
   const [isClubPartnerRequestVisible, setIsClubPartnerRequestVisible] = useState(false);
   const [isClubInterestTeamPickerVisible, setIsClubInterestTeamPickerVisible] = useState(false);
   const [isPlayerTeamPickerVisible, setIsPlayerTeamPickerVisible] = useState(false);
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const [activitySearch, setActivitySearch] = useState('');
   const [activitiesToAdd, setActivitiesToAdd] = useState(
     /** @type {string[]} */
@@ -271,6 +275,20 @@ function ClubDetails({ navigation, route }) {
 
   const deleteTrainerMutation = useMutation({
     mutationFn: removeTrainerFromClub,
+    onError: (mutationError) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
+
+      const errorMessage = mutationError?.response?.data?.error?.message
+        || mutationError?.response?.data?.error
+        || mutationError?.message
+        || t('clubDetails.alerts.deleteTrainer.error', 'Impossible de retirer cet entraineur pour le moment.');
+
+      Alert.alert(t('common.error', 'Erreur'), errorMessage);
+    },
     onSuccess: () => {
       refetch();
     },
@@ -278,6 +296,20 @@ function ClubDetails({ navigation, route }) {
 
   const deleteManagerMutation = useMutation({
     mutationFn: removeManagerFromClub,
+    onError: (mutationError) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
+
+      const errorMessage = mutationError?.response?.data?.error?.message
+        || mutationError?.response?.data?.error
+        || mutationError?.message
+        || t('clubDetails.alerts.deleteManager.error', 'Impossible de retirer ce dirigeant pour le moment.');
+
+      Alert.alert(t('common.error', 'Erreur'), errorMessage);
+    },
     onSuccess: () => {
       refetch();
     },
@@ -301,6 +333,20 @@ function ClubDetails({ navigation, route }) {
 
   const updateClubMutation = useMutation({
     mutationFn: updateClub,
+    onError: (mutationError) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
+
+      const errorMessage = mutationError?.response?.data?.error?.message
+        || mutationError?.response?.data?.error
+        || mutationError?.message
+        || t('clubDetails.alerts.update.error', 'Impossible de mettre a jour ce club pour le moment.');
+
+      Alert.alert(t('common.error', 'Erreur'), errorMessage);
+    },
     onSuccess: () => {
       refetch();
     },
@@ -345,7 +391,7 @@ function ClubDetails({ navigation, route }) {
       ).trim();
       const joinedImmediately = Boolean(
         userData?.role?.name === USER_ROLES.coach
-        && club?.isCustomer !== true
+        && !isPartnerClub(club)
         && refreshedUserClubId
         && refreshedUserClubId === String(clubId || '').trim(),
       );
@@ -496,8 +542,8 @@ function ClubDetails({ navigation, route }) {
     }
 
     Alert.alert(
-      t('clubDetails.alerts.claimClub.confirmTitle', "C'est votre club ?"),
-      t('clubDetails.alerts.claimClub.confirmDescription', 'Voulez-vous revendiquer la gestion de ce club ? Une vérification sera effectuée.'),
+      t('clubDetails.alerts.claimClub.confirmTitle', 'Vous dirigez ce club ?'),
+      t('clubDetails.alerts.claimClub.confirmDescription', 'Voulez-vous demander la gestion de ce club ? Une verification sera effectuee.'),
       [
         {
           style: 'cancel',
@@ -884,7 +930,7 @@ function ClubDetails({ navigation, route }) {
     && !isMember
     && clubHasNoTeams
     && (isPlayerRole || isCoachRole)
-    && !(isCoachRole && club?.isCustomer !== true)
+    && !(isCoachRole && !isPartnerClub(club))
   ), [club, clubHasNoTeams, clubId, isCoachRole, isMember, isPlayerRole]);
 
   const {
@@ -2556,7 +2602,7 @@ function ClubDetails({ navigation, route }) {
         headerComponent={(
           <View style={[Alignments.row, Alignments.alignCenter]}>
             <Text numberOfLines={2} style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginRight[16], { flex: 1 }]}>
-              {t('clubDetails.clubPartnerRequest.title', "C'est mon club")}
+              {t('clubDetails.clubPartnerRequest.title', 'Je dirige ce club')}
             </Text>
           </View>
         )}
@@ -2831,7 +2877,7 @@ function ClubDetails({ navigation, route }) {
             <Button
               onPress={() => openClubAuthFlow('club-public-claim-login')}
               style={floatingClubActionButtonStyle}
-              title={t('clubDetails.actions.claimClub', 'C’est mon club')}
+              title={t('clubDetails.actions.manageClub', 'Je dirige ce club')}
               variant="Primary"
             />
           ) : null}
@@ -2848,7 +2894,7 @@ function ClubDetails({ navigation, route }) {
               ]}
               title={hasPendingViewedClubTeamRequest
                 ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t('clubDetails.actions.claimClub', 'C’est mon club')}
+                : t('clubDetails.actions.joinClubMember', 'Je fais partie de ce club')}
               variant="Primary"
             />
           ) : null}
@@ -2865,7 +2911,7 @@ function ClubDetails({ navigation, route }) {
               ]}
               title={hasPendingClubPartneringRequest
                 ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t('clubDetails.actions.claimClub', 'C’est mon club')}
+                : t('clubDetails.actions.manageClub', 'Je dirige ce club')}
               variant="Primary"
             />
           ) : null}
@@ -2880,7 +2926,7 @@ function ClubDetails({ navigation, route }) {
               ]}
               title={hasPendingClubRequest
                 ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t('clubDetails.actions.claimClub', 'C’est mon club')}
+                : t('clubDetails.actions.manageClub', 'Je dirige ce club')}
               variant={hasPendingClubRequest ? 'Secondary' : 'Primary'}
             />
           ) : null}
@@ -2904,6 +2950,13 @@ function ClubDetails({ navigation, route }) {
           ) : null}
         </View>
       ) : null}
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={club?.documentId || clubId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
     </ScreenContainer>
   );
 }

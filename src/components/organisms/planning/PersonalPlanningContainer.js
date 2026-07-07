@@ -1,6 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { addDays, addMonths, addWeeks } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
 import {
   memo, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -31,19 +30,6 @@ import {
 } from '@/utils/planning/planningSlots';
 
 const PERSONAL_PLANNING_STALE_MS = 60 * 1000;
-const SHOULD_PREFETCH_ADJACENT_PLANNING_RANGES = Platform.OS !== 'web';
-
-const shiftPlanningAnchorDate = (currentDate, viewMode, direction) => {
-  if (viewMode === 'month') {
-    return addMonths(currentDate, direction);
-  }
-
-  if (viewMode === '3days') {
-    return addDays(currentDate, direction * 3);
-  }
-
-  return addWeeks(currentDate, direction);
-};
 
 /**
  * Personal planning content.
@@ -52,7 +38,6 @@ const shiftPlanningAnchorDate = (currentDate, viewMode, direction) => {
  */
 function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
   const navigation = useNavigation();
-  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const {
     Alignments,
@@ -84,23 +69,6 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
     hasEmittedReadyRef.current = true;
     onDataResolved?.();
   }, [eventsData, onDataResolved, hasEmittedReadyRef]);
-
-  useEffect(() => {
-    if (!SHOULD_PREFETCH_ADJACENT_PLANNING_RANGES) {
-      return undefined;
-    }
-
-    [-1, 1].forEach((direction) => {
-      const nextAnchorDate = shiftPlanningAnchorDate(currentDate, viewMode, direction);
-      const nextRange = getPlanningRange(nextAnchorDate, viewMode);
-      queryClient.prefetchQuery({
-        queryFn: () => getMyPlanning(nextRange),
-        queryKey: ['planning', 'personal', nextRange.from, nextRange.to],
-        staleTime: PERSONAL_PLANNING_STALE_MS,
-      });
-    });
-    return undefined;
-  }, [currentDate, queryClient, viewMode]);
 
   const viewOptions = useMemo(() => ([
     { label: 'Semaine', value: 'week' },

@@ -27,7 +27,7 @@ import EventWizardVisibility from '@/views/event/wizard/EventWizardVisibility';
 import MatchStatsEditor from '@/views/matchStats/MatchStatsEditor';
 import PendingMatchStatsScreen from '@/views/matchStats/PendingMatchStatsScreen';
 import PlayerMatchResponseScreen from '@/views/matchStats/PlayerMatchResponseScreen';
-import TacticalBoardV2 from '@/views/tactical_v2/TacticalBoard';
+import TacticalBoardV2 from '@/views/tactical_v2/TacticalBoardEntry';
 import TacticalSelectionV2 from '@/views/tactical_v2/TacticalSelection';
 
 import { commonOptions } from '@/navigation/commonOptions';

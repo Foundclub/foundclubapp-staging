@@ -1,7 +1,7 @@
 /* eslint-disable import/order */
 import { useTranslation } from 'react-i18next';
 
-import { useGetMe } from '@/services/auth/authQueries';
+import useAuth from '@/domains/auth/useAuth';
 
 import CMDashboard from './CMDashboard';
 import MultisportStateView from './components/MultisportStateView';
@@ -15,11 +15,11 @@ import { useClubScope } from '@/context/ClubScopeContext';
 function MyClubsScreen({ navigation, route }) {
   const { t } = useTranslation();
   const {
-    data: userData,
-    error: userDataError,
-    isLoading: isLoadingUserData,
-    refetch: refetchUserData,
-  } = useGetMe();
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading: isLoadingUserData,
+  } = useAuth();
   const clubScope = useClubScope() || {};
 
   const fallbackCmId = route?.params?.cmId

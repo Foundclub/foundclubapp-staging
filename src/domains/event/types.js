@@ -12,6 +12,8 @@
  * @property {string} [team] - Associated team
  * @property {string} [type] - Event type
  * @property {'auto' | 'manual'} [validationMode] - How participation requests are validated
+ * @property {number | null} [externalParticipantLimit] - External player quota for open trainings
+ * @property {'auto' | 'manual' | null} [externalParticipantValidationMode] - Validation mode for external players on open trainings
  * @property {boolean} [isRecurrent]
  * @property {string} [recurrenceDay]
  * @property {string} [recurrenceEndDate]
@@ -60,6 +62,8 @@
  * @property {Team} [team] - Associated team
  * @property {FCEventType} [type] - Event type
  * @property {'auto' | 'manual'} validationMode - How participation requests are validated
+ * @property {number | null} [externalParticipantLimit] - External player quota for open trainings
+ * @property {'auto' | 'manual' | null} [externalParticipantValidationMode] - Validation mode for external players on open trainings
  * @property {User[]} participations - List of participants
  * @property {User[]} missings - List of participants who said no
  * @property {string} [recurrenceGroupId] - Recurrence group ID for recurring events

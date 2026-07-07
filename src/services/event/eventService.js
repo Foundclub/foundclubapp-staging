@@ -47,6 +47,8 @@ export const eventSchema = Joi.object({
   geohash: Joi.string().allow('', null).optional(),
   invitedTeams: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
   isFeatured: Joi.boolean().allow(null).optional(),
+  externalParticipantLimit: Joi.number().allow(null).optional(),
+  externalParticipantValidationMode: Joi.string().valid('auto', 'manual').allow(null).optional(),
   location: Joi.object({
     lat: Joi.number().allow(null).optional(),
     lng: Joi.number().allow(null).optional(),
@@ -454,6 +456,23 @@ export const saveEventCompositionDraft = async (eventId, payload) => {
 };
 
 /**
+ * Auto-generate a team composition draft for an event branch.
+ * @param {string} eventId
+ * @param {{ teamId?: string, teamCount: number, teamPresets: Array<{presetKey: string}> }} payload
+ * @returns {Promise<any>}
+ */
+export const generateEventCompositionDraft = async (eventId, payload) => {
+  const response = await client.post(`/events/${eventId}/composition/generate`, {
+    data: {
+      teamCount: Number(payload?.teamCount || 0),
+      teamId: payload?.teamId || null,
+      teamPresets: Array.isArray(payload?.teamPresets) ? payload.teamPresets : [],
+    },
+  });
+  return response?.data?.data || response?.data;
+};
+
+/**
  * Publish team convocation for an event.
  * @param {string} eventId
  * @param {{ teamId?: string }} payload
@@ -549,6 +568,8 @@ const COMPACT_EVENT_CARD_FIELDS = [
   'documentId',
   'endTime',
   'eventFormat',
+  'externalParticipantLimit',
+  'externalParticipantValidationMode',
   'externalAutoSource',
   'featuredRequestStatus',
   'featuredScope',
@@ -572,7 +593,10 @@ const REQUEST_HUB_EVENT_FIELDS = [
   'createdAt',
   'date',
   'documentId',
+  'externalParticipantLimit',
+  'externalParticipantValidationMode',
   'name',
+  'sessionStatus',
   'validationMode',
 ];
 

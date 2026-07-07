@@ -1431,7 +1431,7 @@ function MatchStatsEditor({ navigation, route }) {
                 <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, SpacesAny.padding[20], SpacesAny.gap[8]]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible pour ce rapport.</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
-                    Publie d abord la convocation ou verifie le roster de l equipe pour alimenter cette liste.
+                    Publie d abord la composition d equipe ou verifie le roster de l equipe pour alimenter cette liste.
                   </Text>
                 </View>
               )}

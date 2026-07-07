@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -21,12 +22,14 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
   getParticipationErrorMessage,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
+import { getSubscriptionQuotaItem } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -100,6 +103,9 @@ import {
 const SharePlatform = require('@/platform/share').default;
 
 const EVENT_DETAILS_STALE_MS = 30_000;
+const MIN_PARTICIPANTS = 1;
+const MAX_PARTICIPANTS = 200;
+const DEFAULT_EXTERNAL_PARTICIPANT_LIMIT = 3;
 /**
  * @param {number | string | null | undefined} amountCents
  * @param {string} currency
@@ -112,6 +118,173 @@ const formatCampaignAmount = (amountCents, currency = 'EUR') => {
     return `${((Number(amountCents) || 0) / 100).toFixed(2)} ${currency}`;
   }
 };
+
+/**
+ * @param {number} value
+ * @returns {number}
+ */
+const clampParticipants = (value) => (
+  Math.min(MAX_PARTICIPANTS, Math.max(MIN_PARTICIPANTS, value))
+);
+
+/**
+ * @param {object} props
+ * @param {any} props.Alignments
+ * @param {any} props.ApplicationStyle
+ * @param {any} props.Colors
+ * @param {any} props.Fonts
+ * @param {any} props.Spaces
+ * @param {number | null | undefined} props.initialLimit
+ * @param {'auto' | 'manual' | null | undefined} props.initialValidationMode
+ * @param {boolean} props.isSubmitting
+ * @param {boolean} props.isVisible
+ * @param {() => void} props.onClose
+ * @param {(payload: { externalParticipantLimit: number; externalParticipantValidationMode: 'auto' | 'manual' }) => void} props.onSubmit
+ * @returns {import('react').ReactElement}
+ */
+function TrainingOpenBottomSheet({
+  Alignments,
+  ApplicationStyle,
+  Colors,
+  Fonts,
+  initialLimit,
+  initialValidationMode,
+  isSubmitting,
+  isVisible,
+  onClose,
+  onSubmit,
+  Spaces,
+}) {
+  const resolveInitialLimit = useCallback(
+    () => clampParticipants(Number(initialLimit) || DEFAULT_EXTERNAL_PARTICIPANT_LIMIT),
+    [initialLimit],
+  );
+  const [limitValue, setLimitValue] = useState(resolveInitialLimit);
+  const [validationMode, setValidationMode] = useState(
+    initialValidationMode === 'auto' ? 'auto' : 'manual',
+  );
+
+  useEffect(() => {
+    if (!isVisible) return;
+    setLimitValue(resolveInitialLimit());
+    setValidationMode(initialValidationMode === 'auto' ? 'auto' : 'manual');
+  }, [initialValidationMode, isVisible, resolveInitialLimit]);
+
+  const canDecreaseLimit = limitValue > MIN_PARTICIPANTS;
+  const canIncreaseLimit = limitValue < MAX_PARTICIPANTS;
+  const counterButtonStyle = (isEnabled) => ([
+    ApplicationStyle.card,
+    Alignments.alignCenter,
+    Alignments.justifyCenter,
+    {
+      backgroundColor: isEnabled ? 'rgba(1, 179, 244, 0.12)' : 'rgba(1, 179, 244, 0.06)',
+      borderColor: 'rgba(1, 179, 244, 0.28)',
+      borderRadius: 16,
+      height: 56,
+      opacity: isEnabled ? 1 : 0.45,
+      width: 56,
+    },
+  ]);
+
+  return (
+    <BottomModal
+      close={onClose}
+      isVisible={isVisible}
+      snapPoints={['60%']}
+    >
+      <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
+        <View style={[Spaces.gap[4]]}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Ouvrir l entrainement</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            Definis combien de joueurs externes peuvent rejoindre cet entrainement, puis choisis leur mode de validation.
+          </Text>
+        </View>
+
+        <View style={[Spaces.gap[8]]}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Places externes</Text>
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+            <TouchableOpacity
+              disabled={!canDecreaseLimit}
+              onPress={() => setLimitValue((value) => clampParticipants(value - 1))}
+              style={counterButtonStyle(canDecreaseLimit)}
+            >
+              <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
+            </TouchableOpacity>
+
+            <View style={[Spaces.paddingHorizontal[12]]}>
+              <Text style={[Fonts.h1, Fonts.neutral00, { textAlign: 'center' }]}>
+                {limitValue}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
+                joueurs externes max
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              disabled={!canIncreaseLimit}
+              onPress={() => setLimitValue((value) => clampParticipants(value + 1))}
+              style={counterButtonStyle(canIncreaseLimit)}
+            >
+              <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={[Spaces.gap[8]]}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Validation des joueurs externes</Text>
+          <View style={[Alignments.row, Spaces.gap[8]]}>
+            {[
+              { key: 'auto', label: 'Automatique' },
+              { key: 'manual', label: 'Manuelle' },
+            ].map((option) => {
+              const selected = validationMode === option.key;
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  onPress={() => setValidationMode(option.key)}
+                  style={[
+                    ApplicationStyle.card,
+                    Spaces.paddingHorizontal[16],
+                    Spaces.paddingVertical[12],
+                    {
+                      backgroundColor: selected ? `${Colors.primary500}18` : 'transparent',
+                      borderColor: selected ? Colors.primary500 : `${Colors.primary500}44`,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p2Bold, selected ? Fonts.primary500 : Fonts.neutral100]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
+          <Button
+            disabled={isSubmitting}
+            isLoading={isSubmitting}
+            onPress={() => onSubmit({
+              externalParticipantLimit: limitValue,
+              externalParticipantValidationMode: validationMode,
+            })}
+            title="Confirmer l ouverture"
+            variant="Primary"
+          />
+          <Button
+            disabled={isSubmitting}
+            onPress={onClose}
+            title="Annuler"
+            variant="Secondary"
+          />
+        </View>
+      </View>
+    </BottomModal>
+  );
+}
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 /**
@@ -216,8 +389,8 @@ const getDetectionCandidatePlayers = (event, team) => {
   const adCandidates = Array.isArray(event?.recruitmentAds)
     ? event.recruitmentAds.flatMap((recruitmentAd) => recruitmentAd?.candidates || [])
     : [];
-  const acceptedOrPendingRequests = getActiveParticipationRequests(event)
-    .filter((participation) => ['accepted', 'pending'].includes(String(participation?.participationStatus || '').toLowerCase()))
+  const acceptedRequests = getActiveParticipationRequests(event)
+    .filter((participation) => ['accepted', 'missing'].includes(String(participation?.participationStatus || '').toLowerCase()))
     .map((participation) => participation?.user)
     .filter(Boolean);
   const acceptedParticipations = Array.isArray(event?.participations) ? event.participations : [];
@@ -226,7 +399,7 @@ const getDetectionCandidatePlayers = (event, team) => {
     [
       ...adCandidates,
       ...acceptedParticipations,
-      ...acceptedOrPendingRequests,
+      ...acceptedRequests,
     ],
     excludedKeys,
   );
@@ -239,12 +412,6 @@ const getCompositionPlayersForEvent = (event, team, detectionEnabled) => {
     ...teamPlayers,
     ...getDetectionCandidatePlayers(event, team),
   ]);
-};
-
-const getConvocationSourceLabel = (participantSource) => {
-  if (participantSource === 'detection_candidate') return 'Candidat detection';
-  if (participantSource === 'team_player') return 'Joueur equipe';
-  return '';
 };
 
 // @ts-ignore: FIXME: Baseline TS regression
@@ -278,13 +445,14 @@ const resolveEventStartAt = (event) => {
 };
 
 /**
- * @param {{ navigation: import('@react-navigation/native').NavigationProp<any>; route: { params?: { eventId?: string, fromEventCreation?: boolean, eventCampaignCreationSuggested?: boolean, creationCelebration?: { actionKey?: string, payload?: Record<string, any> } } } }} props
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any>; route: { params?: { eventId?: string, fromEventCreation?: boolean, eventCampaignCreationSuggested?: boolean, creationCelebration?: { actionKey?: string, payload?: Record<string, any> }, subscriptionFollowUp?: { beforeRemaining?: number, consumedCount?: number, quotaType?: string, total?: number } | null } } }} props
  */
 function EventDetails({ navigation, route }) {
   const { eventId } = route?.params ?? {};
   const fromEventCreation = Boolean(route?.params?.fromEventCreation);
   const eventCampaignCreationSuggested = Boolean(route?.params?.eventCampaignCreationSuggested);
   const creationCelebration = route?.params?.creationCelebration || null;
+  const subscriptionFollowUp = route?.params?.subscriptionFollowUp || null;
   // @ts-ignore: FIXME: Baseline TS regression
   const highlightedSection = route?.params?.focusSection || null;
 
@@ -307,6 +475,7 @@ function EventDetails({ navigation, route }) {
   const [tournamentTeamNameDraft, setTournamentTeamNameDraft] = useState('');
   const [pendingTournamentAction, setPendingTournamentAction] = useState(null);
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
+  const [isTrainingOpenModalVisible, setIsTrainingOpenModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
   const [stageDetailsTab, setStageDetailsTab] = useState('overview');
   const [isEventActionsOpen, setIsEventActionsOpen] = useState(true);
@@ -314,6 +483,7 @@ function EventDetails({ navigation, route }) {
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
   const [dismissedMatchStatsPromptKey, setDismissedMatchStatsPromptKey] = useState(null);
   const [areDeferredQueriesEnabled, setAreDeferredQueriesEnabled] = useState(false);
+  const [isSubscriptionFollowUpVisible, setIsSubscriptionFollowUpVisible] = useState(false);
   const firstFocusRefreshRef = useRef(true);
   const lastFocusRefreshAtRef = useRef(0);
   const openedEventIdRef = useRef('');
@@ -321,6 +491,7 @@ function EventDetails({ navigation, route }) {
   const firstRenderedEventIdRef = useRef('');
   const secondaryCompletedEventIdRef = useRef('');
   const creationCelebrationShownRef = useRef(false);
+  const subscriptionFollowUpShownRef = useRef(false);
 
   const [isLateModalVisible, setIsLateModalVisible] = useState(false);
   const [lateModalMode, setLateModalMode] = useState(/** @type {'coach_mark' | 'coach_edit' | 'player_declare' | 'player_update'} */ ('coach_mark'));
@@ -343,9 +514,39 @@ function EventDetails({ navigation, route }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const {
-    canEditClub, canEditEvent, canManageEvent, userData,
+    canEditClub,
+    canEditEvent,
+    canManageEvent,
+    freeUsageSummary,
+    subscriptionAccessLevel,
+    userData,
   } = useAuth();
   const { sendMessage } = useMessaging();
+  const currentEventPublishQuotaItem = useMemo(
+    () => getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', subscriptionAccessLevel),
+    [freeUsageSummary, subscriptionAccessLevel],
+  );
+  const remainingEventPublishQuota = useMemo(() => {
+    if (currentEventPublishQuotaItem) {
+      return currentEventPublishQuotaItem.remaining;
+    }
+
+    return Math.max(
+      0,
+      Number(subscriptionFollowUp?.beforeRemaining || 0) - Number(subscriptionFollowUp?.consumedCount || 1),
+    );
+  }, [
+    currentEventPublishQuotaItem,
+    subscriptionFollowUp?.beforeRemaining,
+    subscriptionFollowUp?.consumedCount,
+  ]);
+  const totalEventPublishQuota = currentEventPublishQuotaItem?.total
+    || Number(subscriptionFollowUp?.total || 0);
+  const shouldSuggestSubscriptionAfterCreate = Boolean(
+    fromEventCreation
+    && subscriptionFollowUp
+    && subscriptionAccessLevel === 'FREE',
+  );
 
   const {
     data: event,
@@ -406,6 +607,37 @@ function EventDetails({ navigation, route }) {
       }
     };
   }, [creationCelebration, event, eventId, fromEventCreation]);
+
+  useEffect(() => {
+    if (!shouldSuggestSubscriptionAfterCreate || subscriptionFollowUpShownRef.current) {
+      return undefined;
+    }
+
+    let openDelay = null;
+    const task = InteractionManager.runAfterInteractions(() => {
+      openDelay = setTimeout(() => {
+        setIsSubscriptionFollowUpVisible(true);
+        subscriptionFollowUpShownRef.current = true;
+        if (typeof navigation?.setParams === 'function') {
+          navigation.setParams({ subscriptionFollowUp: undefined });
+        }
+      }, 620);
+    });
+
+    return () => {
+      task?.cancel?.();
+      if (openDelay) {
+        clearTimeout(openDelay);
+      }
+    };
+  }, [navigation, shouldSuggestSubscriptionAfterCreate]);
+
+  const handleOpenSubscriptionOverview = useCallback(() => {
+    setIsSubscriptionFollowUpVisible(false);
+    navigation.navigate(RouteNames.ProfileStack, {
+      screen: RouteNames.SubscriptionOverview,
+    });
+  }, [navigation]);
 
   useEffect(() => {
     const safeEventId = String(eventId || '');
@@ -623,6 +855,8 @@ function EventDetails({ navigation, route }) {
     return resolvedDescription;
   }, [event?.description, externalMatchDisplay?.contextLabel, externalMatchDisplay?.title]);
   const canEdit = Boolean(canManageEvent(event));
+  const trainingOpenConfig = useMemo(() => resolveTrainingOpenConfig(event || {}), [event]);
+  const canManageTrainingVisibility = Boolean(canEdit && trainingOpenConfig.isTraining);
   const eventClubId = event?.team?.club?.documentId || event?.club?.documentId || '';
   const eventMultisportId = event?.team?.club?.parentMultisport?.documentId || event?.club?.parentMultisport?.documentId || '';
   const userClubId = userData?.club?.documentId || '';
@@ -721,7 +955,6 @@ function EventDetails({ navigation, route }) {
     return players.some((player) => player?.documentId === userDocId)
       || trainers.some((trainer) => trainer?.documentId === userDocId);
   }, [event?.invitedTeams, event?.team, userData?.documentId]);
-
   const trainerKeysForEvent = useMemo(() => {
     const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
     return new Set(
@@ -820,6 +1053,58 @@ function EventDetails({ navigation, route }) {
   });
 
   const mutations = useEventMutations(eventId, refetch, refetchParticipations);
+  const handleSubmitTrainingOpenConfig = useCallback(async ({
+    externalParticipantLimit,
+    externalParticipantValidationMode,
+  }) => {
+    if (!eventId) return;
+
+    if (!Number.isFinite(externalParticipantLimit) || externalParticipantLimit < 1) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        'Indique combien de places externes tu veux ouvrir pour cet entrainement.',
+      );
+      return;
+    }
+
+    try {
+      await mutations.updateEventNoNavMutation.mutateAsync({
+        documentId: eventId,
+        eventData: {
+          externalParticipantLimit,
+          externalParticipantValidationMode,
+          sessionStatus: 'open',
+        },
+      });
+      setIsTrainingOpenModalVisible(false);
+    } catch (trainingOpenError) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        trainingOpenError?.message || 'Impossible d\'ouvrir cet entrainement pour le moment.',
+      );
+    }
+  }, [
+    eventId,
+    mutations.updateEventNoNavMutation,
+    t,
+  ]);
+  const handleCloseTraining = useCallback(async () => {
+    if (!eventId) return;
+
+    try {
+      await mutations.updateEventNoNavMutation.mutateAsync({
+        documentId: eventId,
+        eventData: {
+          sessionStatus: 'closed',
+        },
+      });
+    } catch (trainingCloseError) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        trainingCloseError?.message || 'Impossible de fermer cet entrainement pour le moment.',
+      );
+    }
+  }, [eventId, mutations.updateEventNoNavMutation, t]);
   const approveFeaturedRequestMutation = useMutation({
     mutationFn: approveFeatured,
     onError: (mutationError) => {
@@ -1188,6 +1473,10 @@ function EventDetails({ navigation, route }) {
     }),
     [activeEventParticipations, event?.missings, event?.participations, userData],
   );
+  const canViewPublishedComposition = useMemo(() => {
+    const effectiveStatus = String(currentUserParticipationState?.effectiveStatus || '').trim().toLowerCase();
+    return canEdit || isTeamMember || effectiveStatus === 'accepted' || effectiveStatus === 'missing';
+  }, [canEdit, currentUserParticipationState?.effectiveStatus, isTeamMember]);
 
   const { hasAcceptedRequest, hasPendingRequest } = currentUserParticipationState;
   const isDetectionEvent = useMemo(
@@ -2341,7 +2630,7 @@ function EventDetails({ navigation, route }) {
     const typeName = String(event?.type?.name || '').trim().toLowerCase();
     return typeName.includes('match');
   }, [event?.type?.name]);
-  const supportsEventComposition = isMatchEvent || isDetectionEvent;
+  const supportsEventComposition = Boolean(event?.team?.documentId || (event?.invitedTeams || []).length > 0);
   const eventActionsToggleLabel = isEventActionsOpen
     ? 'Fermer les actions evenement'
     : 'Ouvrir les actions evenement';
@@ -2356,7 +2645,7 @@ function EventDetails({ navigation, route }) {
       case 'last_match':
         return 'Dernier match';
       case 'published':
-        return 'Composition publiee';
+        return "Composition d'equipes publiee";
       default:
         return 'Nouvelle composition';
     }
@@ -2415,8 +2704,8 @@ function EventDetails({ navigation, route }) {
       return preferredLabel.trim();
     }
 
-    return isDetectionEvent ? 'Detection' : 'Match';
-  }, [event?.description, event?.name, eventDescriptionText, externalMatchDisplay?.title, isDetectionEvent]);
+    return event?.type?.name || 'Evenement';
+  }, [event?.description, event?.name, event?.type?.name, eventDescriptionText, externalMatchDisplay?.title]);
 
   const {
     data: staffCompositionPayload,
@@ -2475,7 +2764,7 @@ function EventDetails({ navigation, route }) {
     eventId || '',
     compositionTeamId || undefined,
     {
-      enabled: Boolean(areDeferredQueriesEnabled && eventId && supportsEventComposition && compositionTeamId && isTeamMember),
+      enabled: Boolean(areDeferredQueriesEnabled && eventId && supportsEventComposition && compositionTeamId && canViewPublishedComposition),
     },
   );
 
@@ -2682,30 +2971,47 @@ function EventDetails({ navigation, route }) {
     matchStatsPayload?.score?.waitingOfficial,
   ]);
 
-  const convocationPublished = convocationPayload?.published || null;
-  const convocationSnapshotPlayers = useMemo(
-    () => (Array.isArray(convocationPublished?.snapshotPlayers) ? convocationPublished.snapshotPlayers : []),
-    [convocationPublished?.snapshotPlayers],
+  const convocationBranches = useMemo(() => {
+    if (Array.isArray(convocationPayload?.branches)) {
+      return convocationPayload.branches;
+    }
+
+    if (convocationPayload?.published) {
+      return [{
+        published: convocationPayload.published,
+        team: convocationPayload?.team || {
+          documentId: compositionTeamId,
+          name: compositionEditorTeam?.name || null,
+        },
+        viewer: {
+          inReserve: false,
+          teamEntryIds: [],
+        },
+      }];
+    }
+
+    return [];
+  }, [compositionEditorTeam?.name, compositionTeamId, convocationPayload?.branches, convocationPayload?.published, convocationPayload?.team]);
+  const hasPublishedComposition = convocationBranches.length > 0;
+  const publishedCompositionTeamCount = useMemo(
+    () => convocationBranches.reduce((total, branch) => (
+      total + (Array.isArray(branch?.published?.teams) ? branch.published.teams.length : 0)
+    ), 0),
+    [convocationBranches],
   );
-  const convocationPlayers = useMemo(() => convocationSnapshotPlayers
-    // @ts-ignore: FIXME: Baseline TS regression
-    .map((player) => ({
-      ...player,
-      convoked: Boolean(player?.isConvoked),
-      label: `${String(player?.firstname || '').trim()} ${String(player?.lastname || '').trim()}`.trim() || 'Joueur',
-      rowKey: String(player?.documentId || player?.id || ''),
-      sourceLabel: getConvocationSourceLabel(player?.participantSource),
-    }))
-    // @ts-ignore: FIXME: Baseline TS regression
-    .filter((player) => Boolean(player.rowKey))
-    // @ts-ignore: FIXME: Baseline TS regression
-    .sort((a, b) => {
-      if (a.convoked === b.convoked) return a.label.localeCompare(b.label, 'fr');
-      return a.convoked ? -1 : 1;
-    }), [convocationSnapshotPlayers]);
+  const publishedCompositionReserveCount = useMemo(
+    () => convocationBranches.reduce((total, branch) => (
+      total + (Array.isArray(branch?.published?.reservePlayerIds) ? branch.published.reservePlayerIds.length : 0)
+    ), 0),
+    [convocationBranches],
+  );
+  const compositionEligiblePlayerCount = useMemo(
+    () => (Array.isArray(staffCompositionPayload?.eligiblePlayers) ? staffCompositionPayload.eligiblePlayers.length : 0),
+    [staffCompositionPayload?.eligiblePlayers],
+  );
 
   const compositionPrimaryAction = useMemo(() => {
-    const compositionTitle = isDetectionEvent ? 'Convocation detection' : "Composition d'equipe";
+    const compositionTitle = "Composition d'equipes";
 
     if (staffCompositionPayload?.draft) {
       return {
@@ -2720,8 +3026,8 @@ function EventDetails({ navigation, route }) {
       const publishedVersion = Number(staffCompositionPayload?.published?.version || 1);
       return {
         subtitle: staffCompositionPayload?.published?.publishedAt
-          ? `Composition publiee v${publishedVersion} le ${new Date(staffCompositionPayload.published.publishedAt).toLocaleString('fr-FR')}`
-          : `Composition publiee v${publishedVersion}`,
+          ? `Publication v${publishedVersion} le ${new Date(staffCompositionPayload.published.publishedAt).toLocaleString('fr-FR')}`
+          : `Publication v${publishedVersion}`,
         title: compositionTitle,
       };
     }
@@ -2734,13 +3040,18 @@ function EventDetails({ navigation, route }) {
       };
     }
 
+    if (compositionEligiblePlayerCount === 0) {
+      return {
+        subtitle: 'Tu peux deja creer les equipes meme sans participant: les postes resteront libres et se completeront ensuite.',
+        title: compositionTitle,
+      };
+    }
+
     return {
-      subtitle: isDetectionEvent
-        ? 'Selectionne les candidats et les joueurs, puis organise ta seance.'
-        : 'Selectionne les joueurs puis organise ta composition.',
+      subtitle: 'Cree plusieurs equipes a la main ou genere-les automatiquement, puis publie la version finale.',
       title: compositionTitle,
     };
-  }, [getCompositionSourceLabel, isDetectionEvent, staffCompositionPayload]);
+  }, [compositionEligiblePlayerCount, getCompositionSourceLabel, staffCompositionPayload]);
 
   const matchStatsPrimaryAction = useMemo(() => {
     if (!isMatchFinished) {
@@ -2914,14 +3225,22 @@ function EventDetails({ navigation, route }) {
     if (!eventId || !compositionTeamId) return;
 
     // @ts-ignore: FIXME: Baseline TS regression
-    const playersForBoard = Array.isArray(options.players) && options.players.length > 0
+    let playersForBoard = compositionEditorPlayers;
+    // @ts-ignore: FIXME: Baseline TS regression
+    if (Array.isArray(options.players) && options.players.length > 0) {
       // @ts-ignore: FIXME: Baseline TS regression
-      ? options.players
-      : compositionEditorPlayers;
+      playersForBoard = options.players;
+    // @ts-ignore: FIXME: Baseline TS regression
+    } else if (Array.isArray(options?.teamComposition?.eligiblePlayers) && options.teamComposition.eligiblePlayers.length > 0) {
+      // @ts-ignore: FIXME: Baseline TS regression
+      playersForBoard = options.teamComposition.eligiblePlayers;
+    }
 
     navigation.navigate(RouteNames.TacticalBoardV2, {
       // @ts-ignore: FIXME: Baseline TS regression
       canEdit: Boolean(options.canEdit),
+      // @ts-ignore: FIXME: Baseline TS regression
+      compositionIntent: options.compositionIntent || null,
       // @ts-ignore: FIXME: Baseline TS regression
       editorMode: options.editorMode || 'event',
       // @ts-ignore: FIXME: Baseline TS regression
@@ -2932,7 +3251,17 @@ function EventDetails({ navigation, route }) {
       eventKind: isDetectionEvent ? 'detection' : 'match',
       eventName: compositionEventLabel,
       eventTypeLabel: event?.type?.name || null,
+      // @ts-ignore: FIXME: Baseline TS regression
+      aggregateBranches: Array.isArray(options.aggregateBranches) ? options.aggregateBranches : undefined,
       existingComposition: composition,
+      // @ts-ignore: FIXME: Baseline TS regression
+      multiTeamComposition: Boolean(
+        Array.isArray(options.aggregateBranches)
+          || Array.isArray(composition?.teams)
+          || Number(composition?.schemaVersion) === 3
+          || Array.isArray(options?.teamComposition?.draft?.teams)
+          || Array.isArray(options?.teamComposition?.published?.teams),
+      ),
       players: playersForBoard,
       // @ts-ignore: FIXME: Baseline TS regression
       readOnly: Boolean(options.readOnly),
@@ -2966,6 +3295,7 @@ function EventDetails({ navigation, route }) {
     if (staffCompositionPayload?.draft) {
       openCompositionBoard(staffCompositionPayload.draft, {
         canEdit: true,
+        compositionIntent: staffCompositionPayload?.draft?.mode || 'manual',
         editorSource: 'draft',
         editorSourceLabel: getCompositionSourceLabel('draft'),
         readOnly: false,
@@ -2976,43 +3306,50 @@ function EventDetails({ navigation, route }) {
     if (staffCompositionPayload?.published) {
       openCompositionBoard(staffCompositionPayload.published, {
         canEdit: true,
+        compositionIntent: staffCompositionPayload?.published?.mode || 'manual',
         editorSource: 'published',
         editorSourceLabel: getCompositionSourceLabel('published'),
         players: Array.isArray(staffCompositionPayload?.published?.snapshotPlayers)
           ? staffCompositionPayload.published.snapshotPlayers
           : compositionEditorPlayers,
-        readOnly: true,
+        readOnly: false,
       });
       return;
     }
 
-    navigation.navigate(RouteNames.TacticalSelectionV2, {
-      bootstrapComposition: staffCompositionPayload?.bootstrap?.composition || null,
-      editorMode: 'event',
-      editorSource: staffCompositionPayload?.bootstrap?.source || 'empty',
-      editorSourceLabel: getCompositionSourceLabel(staffCompositionPayload?.bootstrap?.source || 'empty'),
-      eventId,
-      eventKind: isDetectionEvent ? 'detection' : 'match',
-      eventName: compositionEventLabel,
-      eventTypeLabel: event?.type?.name || null,
-      existingComposition: null,
-      players: compositionEditorPlayers,
-      sport: compositionSport,
-      teamId: compositionTeamId,
-      teamName: compositionEditorTeam?.name || staffCompositionPayload?.team?.name || null,
-    });
+    const openNewComposition = (intent = 'manual') => {
+      openCompositionBoard(staffCompositionPayload?.bootstrap?.composition || null, {
+        canEdit: true,
+        compositionIntent: intent,
+        editorSource: staffCompositionPayload?.bootstrap?.source || 'empty',
+        editorSourceLabel: getCompositionSourceLabel(staffCompositionPayload?.bootstrap?.source || 'empty'),
+        readOnly: false,
+      });
+    };
+
+    const hasAutoPresets = Array.isArray(staffCompositionPayload?.availablePresets)
+      && staffCompositionPayload.availablePresets.length > 0;
+
+    if (!hasAutoPresets) {
+      openNewComposition('manual');
+      return;
+    }
+
+    Alert.alert(
+      "Composition d'equipes",
+      'Choisis si tu veux creer les equipes automatiquement ou les faire a la main.',
+      [
+        { style: 'cancel', text: 'Annuler' },
+        { onPress: () => openNewComposition('auto'), text: 'Creation auto' },
+        { onPress: () => openNewComposition('manual'), text: 'Faire a la main' },
+      ],
+    );
   }, [
     compositionEditorPlayers,
-    compositionEditorTeam?.name,
-    compositionSport,
     compositionTeamId,
-    compositionEventLabel,
-    event?.type?.name,
     eventId,
     getCompositionSourceLabel,
     isStaffCompositionFetching,
-    isDetectionEvent,
-    navigation,
     openCompositionBoard,
     staffCompositionPayload,
   ]);
@@ -3914,7 +4251,7 @@ function EventDetails({ navigation, route }) {
               <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions événement</Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  Modifie cet événement, gère son annulation ou ouvre la composition d&apos;équipe.
+                  Modifie cet evenement, gere son annulation ou prepare la composition d&apos;equipes.
                 </Text>
               </View>
               <TouchableOpacity
@@ -4043,7 +4380,7 @@ function EventDetails({ navigation, route }) {
     if (isMatchEvent && compositionTeamId && (canManageMatchStats || isTeamMember)) {
       refetchMatchStats();
     }
-    if (supportsEventComposition && isTeamMember && compositionTeamId) {
+    if (supportsEventComposition && canViewPublishedComposition && compositionTeamId) {
       refetchConvocation();
     }
     if (isMatchEvent && isTeamMember && compositionTeamId) {
@@ -4054,6 +4391,7 @@ function EventDetails({ navigation, route }) {
     canAccessAttendance,
     canEdit,
     canManageMatchStats,
+    canViewPublishedComposition,
     compositionTeamId,
     isMatchEvent,
     isTeamMember,
@@ -4483,6 +4821,50 @@ function EventDetails({ navigation, route }) {
               />
             ) : null}
 
+            {canManageTrainingVisibility ? (
+              <View
+                style={[
+                  ApplicationStyle.backgroundColor.primary900,
+                  ApplicationStyle.borderRadius16,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.padding[16],
+                  Spaces.gap[12],
+                  {
+                    borderColor: `${Colors.primary500}33`,
+                  },
+                ]}
+              >
+                <View style={[Spaces.gap[4]]}>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                    {trainingOpenConfig.isOpenTraining ? 'Entrainement ouvert' : 'Entrainement prive'}
+                  </Text>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    {trainingOpenConfig.isOpenTraining
+                      ? 'Les joueurs externes peuvent rejoindre selon ton quota et ton mode de validation.'
+                      : 'Ouvre l\'entrainement pour autoriser un quota de joueurs externes sans toucher a tes joueurs internes.'}
+                  </Text>
+                </View>
+
+                {trainingOpenConfig.externalParticipantLimit !== null ? (
+                  <Text style={[Fonts.p3, Fonts.primary100]}>
+                    {trainingOpenConfig.isOpenTraining
+                      ? `${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`
+                      : `Dernier reglage memorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`}
+                  </Text>
+                ) : null}
+
+                <Button
+                  disabled={mutations.updateEventNoNavMutation.isPending}
+                  isLoading={mutations.updateEventNoNavMutation.isPending}
+                  onPress={trainingOpenConfig.isOpenTraining
+                    ? handleCloseTraining
+                    : () => setIsTrainingOpenModalVisible(true)}
+                  title={trainingOpenConfig.isOpenTraining ? 'Fermer l\'entrainement' : 'Ouvrir l\'entrainement'}
+                  variant={trainingOpenConfig.isOpenTraining ? 'SecondaryLight' : 'Primary'}
+                />
+              </View>
+            ) : null}
+
             {(!isTournamentEvent || isStageDayEvent) ? (
               <EventParticipants
                 // @ts-ignore: FIXME: Baseline TS regression
@@ -4853,75 +5235,48 @@ function EventDetails({ navigation, route }) {
               </View>
             ) : null}
 
-            {supportsEventComposition && (isTeamMember || canEdit) ? (
+            {supportsEventComposition && (canViewPublishedComposition || canEdit) ? (
               <View style={[Spaces.gap[12]]}>
                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                  {isDetectionEvent ? 'Convocation detection' : 'Convocation'}
+                  Composition d&apos;equipes
                 </Text>
-                {convocationPublished ? (
+                {hasPublishedComposition ? (
                   <View style={[Spaces.gap[8]]}>
                     <Text style={[Fonts.p2, Fonts.neutral300]}>
-                      Publie le
-                      {' '}
-                      {convocationPublished?.publishedAt
-                        ? new Date(convocationPublished.publishedAt).toLocaleString('fr-FR')
-                        : '-'}
+                      {publishedCompositionTeamCount > 0
+                        ? `${publishedCompositionTeamCount} equipe(s) publiee(s)`
+                        : 'Composition publiee'}
                     </Text>
-                    {convocationPlayers.map((/** @type {any} */ player) => (
-                      <View
-                        key={player.rowKey}
-                        style={[
-                          {
-                            alignItems: 'center',
-                            backgroundColor: Colors.neutral800,
-                            borderColor: player.convoked ? Colors.primary500 : Colors.neutral700,
-                            borderRadius: 12,
-                            borderWidth: 1,
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                            paddingHorizontal: 12,
-                            paddingVertical: 10,
-                          },
-                        ]}
-                      >
-                        <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
-                          {player.label}
-                        </Text>
-                        {player.sourceLabel ? (
-                          <Text style={[Fonts.p4, Fonts.neutral300, { marginRight: 10 }]}>
-                            {player.sourceLabel}
-                          </Text>
-                        ) : null}
-                        <Text
-                          style={[
-                            Fonts.p3,
-                            {
-                              color: player.convoked ? Colors.primary500 : Colors.neutral300,
-                              fontWeight: '700',
-                            },
-                          ]}
-                        >
-                          {player.convoked ? 'Convoque' : 'Non convoque'}
-                        </Text>
-                      </View>
-                    ))}
-                    {Array.isArray(convocationPublished?.placements) && convocationPublished.placements.length > 0 ? (
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                      {convocationBranches.length}
+                      {' '}
+                      branche(s) visible(s)
+                      {publishedCompositionReserveCount > 0 ? ` · ${publishedCompositionReserveCount} remplacant(s)` : ''}
+                    </Text>
+                    {convocationBranches[0]?.published?.publishedAt ? (
+                      <Text style={[Fonts.p3, Fonts.neutral300]}>
+                        Publie le
+                        {' '}
+                        {new Date(convocationBranches[0].published.publishedAt).toLocaleString('fr-FR')}
+                      </Text>
+                    ) : null}
+                    {publishedCompositionTeamCount > 0 ? (
                       <Button
-                        onPress={() => openCompositionBoard(convocationPublished, {
+                        onPress={() => openCompositionBoard(convocationBranches[0]?.published || null, {
+                          aggregateBranches: convocationBranches,
                           canEdit: false,
                           editorSource: 'published',
                           editorSourceLabel: getCompositionSourceLabel('published'),
-                          players: convocationSnapshotPlayers,
                           readOnly: true,
                         })}
-                        title="Voir la composition"
+                        title="Voir la composition d'equipes"
                         variant="Secondary"
                       />
                     ) : null}
                   </View>
                 ) : (
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    Aucune convocation publiee pour le moment.
+                    Aucune composition publiee pour le moment.
                   </Text>
                 )}
               </View>
@@ -5178,6 +5533,70 @@ function EventDetails({ navigation, route }) {
         onClose={() => setIsShareModalVisible(false)}
         onSelectChat={handleShareEventInChat}
       />
+
+      <TrainingOpenBottomSheet
+        Alignments={Alignments}
+        ApplicationStyle={ApplicationStyle}
+        Colors={Colors}
+        Fonts={Fonts}
+        initialLimit={trainingOpenConfig.externalParticipantLimit}
+        initialValidationMode={trainingOpenConfig.externalParticipantValidationMode}
+        isSubmitting={mutations.updateEventNoNavMutation.isPending}
+        isVisible={isTrainingOpenModalVisible}
+        onClose={() => setIsTrainingOpenModalVisible(false)}
+        onSubmit={handleSubmitTrainingOpenConfig}
+        Spaces={Spaces}
+      />
+
+      <BottomModal
+        close={() => setIsSubscriptionFollowUpVisible(false)}
+        isVisible={isSubscriptionFollowUpVisible}
+        snapPoints={['44%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
+          <View style={[Spaces.gap[6]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              Bravo, ton evenement est en ligne
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {remainingEventPublishQuota > 0
+                ? `Ton credit gratuit evenement a bien ete utilise. Il t en reste ${remainingEventPublishQuota}${totalEventPublishQuota > 0 ? `/${totalEventPublishQuota}` : ''}.`
+                : 'Ton credit gratuit evenement a bien ete utilise. Les prochaines publications passeront par une offre Team ou Club.'}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary900,
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              Spaces.gap[8],
+              {
+                borderColor: `${Colors.primary500}44`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              Suite logique
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Consulte ton abonnement pour voir les offres FoundClub, tes quotas restants et les droits qui se debloquent ensuite.
+            </Text>
+          </View>
+
+          <Button
+            onPress={handleOpenSubscriptionOverview}
+            title="Voir mon abonnement"
+            variant="Primary"
+          />
+          <Button
+            onPress={() => setIsSubscriptionFollowUpVisible(false)}
+            title="Continuer"
+            variant="Secondary"
+          />
+        </View>
+      </BottomModal>
 
       <BottomModal
         close={closeTournamentParticipationFlow}

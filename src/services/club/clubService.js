@@ -10,6 +10,7 @@ import client from '../client';
 
 /**
  * Club validation schema
+ * @param value
  */
 const extractRelationDocumentId = (value) => {
   if (!value) return null;
@@ -70,11 +71,13 @@ const clubSchema = Joi.object({
   activites: Joi.array().items(activitySchema).optional(),
   address: Joi.object().required(),
   clubMembersPublicVisibility: Joi.boolean().optional(),
+  clubPartner: Joi.boolean().optional().default(false),
+  clubVerified: Joi.boolean().optional().default(false),
   email: Joi.string().allow('', null).optional(),
   geohash: Joi.string().allow('', null).optional(),
   id: Joi.number().required(),
-  isCustomer: Joi.boolean().required().default(false),
-  maxTeamNumber: Joi.number().required().default(0),
+  isCustomer: Joi.boolean().optional().default(false),
+  maxTeamNumber: Joi.number().optional().default(0),
   members: Joi.array().items(Joi.object().unknown(true)).optional(),
   membersAreHidden: Joi.boolean().optional(),
   membersCount: Joi.number().optional(),
@@ -88,6 +91,8 @@ const clubListSchema = Joi.object({
   _type: Joi.string().valid('club', 'multisport').optional(), // Type indicator
   activites: Joi.array().items(activitySchema).optional(),
   address: Joi.object().optional(), // Optional for multisport clubs
+  clubPartner: Joi.boolean().optional().default(false),
+  clubVerified: Joi.boolean().optional().default(false),
   documentId: Joi.string().optional(),
   email: Joi.string().allow('', null).optional(),
   geohash: Joi.string().allow('', null).optional(),
@@ -122,6 +127,7 @@ const validateClubListPayload = async (data, meta) => {
 const buildClubListParams = (params = {}) => {
   const {
     activity,
+    clubPartner,
     geohash,
     isCustomer,
     name,
@@ -143,15 +149,20 @@ const buildClubListParams = (params = {}) => {
       },
     },
     sort: {
-      isCustomer: 'desc',
+      clubPartner: 'desc',
       name: 'asc',
     },
   };
 
-  if (isCustomer !== undefined) {
+  if (clubPartner !== undefined) {
     filters.filters = {
       ...filters.filters,
-      isCustomer,
+      clubPartner,
+    };
+  } else if (isCustomer !== undefined) {
+    filters.filters = {
+      ...filters.filters,
+      clubPartner: isCustomer,
     };
   }
 
@@ -711,8 +722,27 @@ export const updateClubInfo = async (clubData) => {
 
     return validationResult.data;
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to update club info: ${errorToDisplay}`);
+    const requestError = /** @type {any} */ (error);
+    const responseError = requestError?.response?.data?.error;
+    const responseData = requestError?.response?.data;
+    const errorToDisplay = responseError?.message
+      || responseData?.message
+      || (requestError && typeof requestError === 'object' && 'message' in requestError ? requestError.message : requestError)
+      || 'Unknown error';
+    const nextError = /** @type {any} */ (new Error(`Failed to update club info: ${errorToDisplay}`));
+    nextError.code = responseError?.code || responseData?.code || requestError?.code || null;
+    nextError.details = responseError?.details || responseData?.details || requestError?.details || null;
+    nextError.status = Number(
+      requestError?.status
+      || requestError?.response?.status
+      || responseError?.status
+      || responseData?.status
+      || 0,
+    ) || null;
+    if (nextError?.details?.decision) {
+      nextError.decision = nextError.details.decision;
+    }
+    throw nextError;
   }
 };
 

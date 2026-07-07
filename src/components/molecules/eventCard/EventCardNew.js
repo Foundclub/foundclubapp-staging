@@ -15,6 +15,7 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import useAuth from '@/domains/auth/useAuth';
+import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useEvent from '@/domains/event/useEvent';
 import { resolveParticipationFlow } from '@/domains/participation/participationFlow';
@@ -43,15 +44,26 @@ const getBackgroundImage = (typeName, Images) => {
   return Images.eventCardOther;
 };
 
-const getHeaderTitle = (typeName) => {
+const DETECTION_EVENT_CARD_HEADER_TITLE = 'DÉTECTION / SÉANCE D’ESSAI';
+
+const getHeaderTitle = (typeName, eventItem) => {
   const normalizedType = (typeName?.toLowerCase() || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
   if (normalizedType.includes('match')) return 'MATCH';
-  if (normalizedType.includes('entrainement')) return 'ENTRAINEMENT';
-  if (normalizedType.includes('detection')) return 'DETECTION';
+  if (normalizedType.includes('entrainement')) {
+    const trainingConfig = resolveTrainingOpenConfig({
+      ...(eventItem || {}),
+      typeName,
+    });
+    if (trainingConfig?.isOpenTraining && Number(trainingConfig?.externalParticipantLimit || 0) > 0) {
+      return 'ENTRAINEMENT OUVERT';
+    }
+    return 'ENTRAINEMENT';
+  }
+  if (normalizedType.includes('detection')) return DETECTION_EVENT_CARD_HEADER_TITLE;
   if (normalizedType.includes('reservation')) return 'RESERVATION';
-  return typeName?.toUpperCase() || 'ÉVÈNEMENT';
+  return typeName?.toUpperCase() || 'ÉVÉNEMENT';
 };
 
 const getDisplayLabel = (value) => {
@@ -234,7 +246,7 @@ function EventCardNew({
   const isShareMode = mode === 'share';
   const isTeamFocusedCard = displayProfile === 'teamFocused' && !isShareMode && !isReservation;
   const backgroundImage = getBackgroundImage(typeName, Images);
-  const headerTitle = getHeaderTitle(typeName);
+  const headerTitle = getHeaderTitle(typeName, item);
 
   // Sponsors
   const sponsors = item?.club?.sponsor || item?.team?.club?.sponsor || [];
@@ -842,6 +854,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     justifyContent: 'center',
     marginBottom: 6,
+    paddingHorizontal: 8,
     paddingVertical: 3,
     width: '100%',
   },
@@ -854,9 +867,11 @@ const styles = StyleSheet.create({
   },
   headerText: {
     color: '#01B3F4',
+    flexShrink: 1,
     fontFamily: 'Montserrat-Bold',
     fontSize: 13,
     fontWeight: 'bold',
+    textAlign: 'center',
     textTransform: 'uppercase',
   },
   headerTextTeamFocused: {

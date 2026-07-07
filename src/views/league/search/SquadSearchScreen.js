@@ -25,9 +25,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import {
-  useGetInvitedLeagueTeams,
-  useGetMyLeagueTeam,
-  useGetPendingLeagueTeams,
+  useGetLeagueTeamContext,
 } from '@/services/leagueTeam/leagueTeamQueries';
 import { searchSquads } from '@/services/leagueTeam/leagueTeamService';
 
@@ -169,31 +167,25 @@ function SquadSearchScreen() {
   const listBottomPadding = Math.max(sceneBottomInset, 28);
 
   const {
-    data: joinedSquads,
-    error: joinedSquadsError,
-    refetch: refetchJoinedSquads,
-  } = useGetMyLeagueTeam(currentUserId, {
+    data: leagueTeamContext,
+    error: leagueTeamContextError,
+    refetch: refetchLeagueTeamContext,
+  } = useGetLeagueTeamContext(currentUserId, {
     enabled: Boolean(currentUserId),
     staleTime: 30_000,
   });
-
-  const {
-    data: pendingSquads,
-    error: pendingSquadsError,
-    refetch: refetchPendingSquads,
-  } = useGetPendingLeagueTeams(currentUserId, {
-    enabled: Boolean(currentUserId),
-    staleTime: 30_000,
-  });
-
-  const {
-    data: invitedSquads,
-    error: invitedSquadsError,
-    refetch: refetchInvitedSquads,
-  } = useGetInvitedLeagueTeams(currentUserId, {
-    enabled: Boolean(currentUserId),
-    staleTime: 30_000,
-  });
+  const joinedSquads = useMemo(
+    () => (Array.isArray(leagueTeamContext?.squads) ? leagueTeamContext.squads : []),
+    [leagueTeamContext?.squads],
+  );
+  const invitedSquads = useMemo(
+    () => (Array.isArray(leagueTeamContext?.invitedSquads) ? leagueTeamContext.invitedSquads : []),
+    [leagueTeamContext?.invitedSquads],
+  );
+  const pendingSquads = useMemo(
+    () => (Array.isArray(leagueTeamContext?.pendingSquads) ? leagueTeamContext.pendingSquads : []),
+    [leagueTeamContext?.pendingSquads],
+  );
 
   const squadStatusById = useMemo(() => {
     /** @type {Map<string, SearchSquadStatus>} */
@@ -294,13 +286,11 @@ function SquadSearchScreen() {
   const handleRefresh = useCallback(async () => {
     await Promise.allSettled([
       handleSearch(),
-      refetchJoinedSquads(),
-      refetchPendingSquads(),
-      refetchInvitedSquads(),
+      refetchLeagueTeamContext(),
     ]);
-  }, [handleSearch, refetchInvitedSquads, refetchJoinedSquads, refetchPendingSquads]);
+  }, [handleSearch, refetchLeagueTeamContext]);
 
-  const statusQueryError = joinedSquadsError || pendingSquadsError || invitedSquadsError;
+  const statusQueryError = leagueTeamContextError;
 
   useFocusEffect(
     useCallback(() => {

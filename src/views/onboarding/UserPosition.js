@@ -17,7 +17,6 @@ import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStic
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
 // Import positions from centralized constants
@@ -30,17 +29,18 @@ import { getPositionsForSport, SPORTS_WITH_POSITIONS } from '@/constants/positio
 function UserPosition({ navigation, route }) {
   const [selectedPositions, setSelectedPositions] = useState(/** @type {string[]} */ ([]));
 
-  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
+  const {
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
-    refetch: refetchUserData,
-  } = useGetMe();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 

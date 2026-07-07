@@ -17,7 +17,6 @@ import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStic
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
 /**
@@ -51,17 +50,18 @@ const CATEGORIES = [
 function UserCategory({ navigation }) {
   const [selectedCategories, setSelectedCategories] = useState(/** @type {string[]} */ ([]));
 
-  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
+  const {
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
-    refetch: refetchUserData,
-  } = useGetMe();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 

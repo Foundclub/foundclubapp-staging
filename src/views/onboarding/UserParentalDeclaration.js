@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -14,7 +15,6 @@ import OnboardingStateView from '@/views/onboarding/components/OnboardingStateVi
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
 import { buildMinorParentalDeclarationPayload } from '@/constants/parentalDeclaration';
@@ -34,11 +34,11 @@ function UserParentalDeclaration({ navigation }) {
   const queryClient = useQueryClient();
   const [, appDispatch] = useAppContext();
   const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
-    refetch: refetchUserData,
-  } = useGetMe();
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,

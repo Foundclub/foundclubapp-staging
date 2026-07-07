@@ -24,7 +24,6 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
@@ -95,7 +94,6 @@ function ProfileEdit({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { data: fetchedUserData } = useGetMe();
   const { data: sections } = useGetSections();
   const { data: levels } = useGetLevels();
   const {
@@ -103,9 +101,8 @@ function ProfileEdit({ navigation, route }) {
     formatBirthdateToSend,
     profileFields,
     refetchUserData,
-    userData: authUserData,
+    userData,
   } = useAuth();
-  const userData = fetchedUserData || authUserData;
   const { getGeohashForPointAndRadius } = usePlaces();
 
   // local state

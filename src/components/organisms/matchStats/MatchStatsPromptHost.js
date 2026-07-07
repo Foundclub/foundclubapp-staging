@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -39,14 +40,18 @@ import {
 } from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 
-const BLOCKED_ROUTES = new Set([
+const BLOCKED_ROUTES = /** @type {Set<string>} */ (new Set([
   RouteNames.EventDetails,
   RouteNames.LeagueMatchDetails,
   RouteNames.MatchStatsEditor,
   RouteNames.PendingMatchStats,
   RouteNames.PlayerMatchResponse,
-]);
+]));
 
+/**
+ * @param {string | number | Date | null | undefined} value
+ * @returns {string}
+ */
 const formatPromptDate = (value) => {
   if (!value) return 'Date indisponible';
 
@@ -62,6 +67,10 @@ const formatPromptDate = (value) => {
   }
 };
 
+/**
+ * @param {any} prompt
+ * @param {Record<string, any>} Colors
+ */
 const getPromptStatusMeta = (prompt, Colors) => {
   if (prompt?.actionType === 'player_self_report') {
     return {
@@ -116,6 +125,11 @@ const getPromptStatusMeta = (prompt, Colors) => {
   };
 };
 
+/**
+ * @param {any} prompt
+ * @param {Record<string, any>} [overrides]
+ * @returns {boolean}
+ */
 const navigateToPendingMatchStats = (prompt, overrides = {}) => {
   if (!prompt) return false;
 
@@ -163,10 +177,12 @@ const openPendingMatchStatsList = () => navigate(RouteNames.EventStack, {
  */
 function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   const [{ auth }] = useAppContext();
+  const { isBootstrapResolved } = useAuth();
   const queryClient = useQueryClient();
   const [dismissedPromptKey, setDismissedPromptKey] = useState(/** @type {string | null} */ (null));
   const [currentRouteName, setCurrentRouteName] = useState(/** @type {string | null} */ (null));
   const [isNavigationReady, setIsNavigationReady] = useState(navigationRef.isReady());
+  const [allowPromptFallbackFetch, setAllowPromptFallbackFetch] = useState(false);
   const appStateRef = useRef(AppState.currentState);
   const shownPromptKeyRef = useRef(/** @type {string | null} */ (null));
   const { height, width } = useWindowDimensions();
@@ -176,15 +192,18 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   let matchStatsPollInterval = false;
-  if (auth?.token) {
-    matchStatsPollInterval = Platform.OS === 'web' ? getWebBackgroundPollMs() : 60000;
+  if (auth?.token && (isBootstrapResolved || allowPromptFallbackFetch) && Platform.OS === 'web') {
+    matchStatsPollInterval = getWebBackgroundPollMs();
   }
 
   const {
     data: pendingPromptsPayload,
     refetch,
   } = useGetPendingMatchStatsPrompts({
-    enabled: ENABLE_MATCH_STATS_PROMPTS && Boolean(auth?.token) && !skipInitialFetch,
+    enabled: ENABLE_MATCH_STATS_PROMPTS
+      && Boolean(auth?.token)
+      && !skipInitialFetch
+      && (isBootstrapResolved || allowPromptFallbackFetch),
     refetchInterval: matchStatsPollInterval,
     refetchIntervalInBackground: false,
   });
@@ -295,7 +314,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     }
     if (shownPromptKeyRef.current === nextPrompt.key) return;
     shownPromptKeyRef.current = nextPrompt.key;
-    matchStatsPopup.markShown({ promptKey: nextPrompt.key });
+    /** @type {any} */ (matchStatsPopup).markShown({ promptKey: nextPrompt.key });
   }, [isVisible, matchStatsPopup, nextPrompt?.key]);
 
   const handleOpenEditor = useCallback(() => {
@@ -310,6 +329,19 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     dismissPromptForSession();
     navigateToPendingMatchStats(nextPrompt, { forceUnknownStats: true });
   }, [dismissPromptForSession, nextPrompt]);
+
+  useEffect(() => {
+    if (isBootstrapResolved) {
+      setAllowPromptFallbackFetch(false);
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setAllowPromptFallbackFetch(true);
+    }, 2500);
+
+    return () => clearTimeout(timeoutId);
+  }, [isBootstrapResolved]);
 
   useEffect(() => {
     if (!auth?.token) {
@@ -343,7 +375,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
       const wasBackground = /inactive|background/.test(appStateRef.current);
       appStateRef.current = nextState;
 
-      if (wasBackground && nextState === 'active') {
+      if (wasBackground && nextState === 'active' && (isBootstrapResolved || allowPromptFallbackFetch)) {
         setDismissedPromptKey(null);
         queryClient.invalidateQueries({ queryKey: ['pendingMatchStatsPrompts'] });
         refetch();
@@ -351,7 +383,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     });
 
     return () => subscription.remove();
-  }, [auth?.token, queryClient, refetch]);
+  }, [allowPromptFallbackFetch, auth?.token, isBootstrapResolved, queryClient, refetch]);
 
   if (!ENABLE_MATCH_STATS_PROMPTS || !auth?.token || !nextPrompt || !isVisible) {
     return null;

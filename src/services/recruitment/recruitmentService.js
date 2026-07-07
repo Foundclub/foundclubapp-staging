@@ -513,11 +513,26 @@ export const createRecruitmentAd = async (adData) => {
       console.error('[recruitmentService] Response Data:', JSON.stringify(requestError.response.data, null, 2));
       console.error('[recruitmentService] Response Status:', requestError.response.status);
     }
-    const backendMessage = requestError?.response?.data?.error?.message
-      || requestError?.response?.data?.message
+    const responseError = requestError?.response?.data?.error;
+    const responseData = requestError?.response?.data;
+    const backendMessage = responseError?.message
+      || responseData?.message
       || requestError?.message
       || "Impossible de creer l'annonce";
-    throw new Error(backendMessage);
+    const nextError = /** @type {any} */ (new Error(backendMessage));
+    nextError.code = responseError?.code || responseData?.code || requestError?.code || null;
+    nextError.details = responseError?.details || responseData?.details || requestError?.details || null;
+    nextError.status = Number(
+      requestError?.status
+      || requestError?.response?.status
+      || responseError?.status
+      || responseData?.status
+      || 0,
+    ) || null;
+    if (nextError?.details?.decision) {
+      nextError.decision = nextError.details.decision;
+    }
+    throw nextError;
   }
 };
 

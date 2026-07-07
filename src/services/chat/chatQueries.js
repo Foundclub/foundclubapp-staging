@@ -30,6 +30,7 @@ export const useGetChats = (params, options = {}) => {
   const {
     enabled = true,
     refetchOnMount = false,
+    refetchOnWindowFocus = false,
     staleTime = CHATS_STALE_MS,
     ...queryOptions
   } = options || {};
@@ -56,6 +57,7 @@ export const useGetChats = (params, options = {}) => {
       pageSize: params?.pageSize,
     }),
     refetchOnMount,
+    refetchOnWindowFocus,
     staleTime,
     ...queryOptions,
   });
@@ -71,6 +73,7 @@ export const useGetChatById = (chatId, options = {}) => {
   const {
     enabled = true,
     refetchOnMount = false,
+    refetchOnWindowFocus = false,
     serviceOptions = {},
     staleTime = CHAT_DETAIL_STALE_MS,
     ...queryOptions
@@ -84,6 +87,7 @@ export const useGetChatById = (chatId, options = {}) => {
       includeMessages,
     }),
     refetchOnMount,
+    refetchOnWindowFocus,
     staleTime,
     ...queryOptions,
   });
@@ -104,6 +108,7 @@ export const useGetChatMessages = (params, options = {}) => {
   const {
     enabled = true,
     refetchOnMount = false,
+    refetchOnWindowFocus = false,
     staleTime = CHAT_MESSAGES_STALE_MS,
     ...queryOptions
   } = options || {};
@@ -122,6 +127,7 @@ export const useGetChatMessages = (params, options = {}) => {
       payload: 'light',
     }),
     refetchOnMount,
+    refetchOnWindowFocus,
     staleTime,
     ...queryOptions,
   });

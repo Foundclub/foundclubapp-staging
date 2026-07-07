@@ -1,5 +1,8 @@
 import { USER_ROLES } from '@/domains/auth/authUseCases';
-import { normalizeEventTypeLabel } from '@/domains/event/eventUseCases';
+import {
+  normalizeEventTypeLabel,
+  resolveTrainingOpenConfig,
+} from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 
 export const ParticipationFlowKind = Object.freeze({
@@ -154,8 +157,21 @@ const buildEventFlow = (entity, context) => {
   const isClosed = sessionStatus === 'closed';
   const isDetection = normalizeEventTypeLabel(entity?.type?.name).includes('detection');
   const sourceTeam = resolveClientSourceTeamForUser(entity, user);
+  const trainingOpenConfig = resolveTrainingOpenConfig(entity);
+  const isTrainingEvent = trainingOpenConfig?.isTraining === true;
+  const isExternalTrainingParticipant = isTrainingEvent && !sourceTeam;
   const capacity = Number(entity?.capacity || 0);
   const participationsCount = Array.isArray(entity?.participations) ? entity.participations.length : 0;
+  const externalParticipationRequests = Array.isArray(entity?.participationRequests)
+    ? entity.participationRequests.filter((request) => (
+      request?.isActive !== false
+      && ['accepted', 'pending'].includes(String(request?.participationStatus || '').trim().toLowerCase())
+      && !request?.sourceTeam
+    ))
+    : [];
+  const externalActiveRequestsCount = isExternalTrainingParticipant
+    ? externalParticipationRequests.length
+    : 0;
 
   let blockedReason = '';
   if (!isPlayer) {
@@ -166,7 +182,18 @@ const buildEventFlow = (entity, context) => {
     blockedReason = 'Cet evenement est deja passe.';
   } else if (isClosed && !sourceTeam) {
     blockedReason = 'Cet evenement ferme est reserve aux equipes concernees.';
-  } else if (capacity > 0 && participationsCount >= capacity) {
+  } else if (
+    isExternalTrainingParticipant
+    && Number(trainingOpenConfig?.externalParticipantLimit || 0) < 1
+  ) {
+    blockedReason = 'Cet entrainement n accepte pas de joueurs externes pour le moment.';
+  } else if (
+    isExternalTrainingParticipant
+    && Number(trainingOpenConfig?.externalParticipantLimit || 0) > 0
+    && externalActiveRequestsCount >= Number(trainingOpenConfig?.externalParticipantLimit || 0)
+  ) {
+    blockedReason = 'Le quota de joueurs externes pour cet entrainement est deja atteint.';
+  } else if (!isTrainingEvent && capacity > 0 && participationsCount >= capacity) {
     blockedReason = 'Cet evenement est complet.';
   } else if (
     userDocumentId

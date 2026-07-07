@@ -161,9 +161,7 @@ const fetchEventValidationRequests = async (clubId) => {
     page,
     pageSize: 50,
     requestHub: true,
-    sessionStatus: 'open',
     startDateAfter: new Date(),
-    validationMode: 'manual',
   }));
 };
 
@@ -275,7 +273,6 @@ export const getRequestsHubData = async (rawContext = {}) => {
 
     if (source.key === 'event') {
       entries
-        .filter((event) => event?.validationMode === 'manual')
         .forEach((event) => {
           const pendingRequests = getPendingParticipationRequests(event);
 

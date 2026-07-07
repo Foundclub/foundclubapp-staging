@@ -36,117 +36,6 @@ const chatSchema = Joi.object({
   updatedAt: Joi.date().required(),
 }).required();
 
-const chatListPopulate = {
-  archivedBy: {
-    fields: ['documentId'],
-  },
-  club: {
-    fields: ['documentId', 'name'],
-    populate: {
-      logo: {
-        fields: ['url'],
-      },
-    },
-  },
-  league_match: {
-    fields: ['documentId', 'date'],
-  },
-  messages: {
-    fields: ['documentId', 'message', 'createdAt', 'updatedAt', 'composition'],
-    populate: {
-      attachments: {
-        fields: ['documentId', 'mime', 'name'],
-      },
-      sender: {
-        fields: ['documentId', 'firstname', 'lastname'],
-        populate: {
-          avatar: {
-            fields: ['url'],
-          },
-        },
-      },
-    },
-    sort: ['createdAt:desc'],
-  },
-  multisportClub: {
-    fields: ['documentId', 'name'],
-    populate: {
-      admins: {
-        fields: ['documentId'],
-      },
-      logo: {
-        fields: ['url'],
-      },
-    },
-  },
-  participants: {
-    fields: ['documentId', 'firstname', 'lastname'],
-    populate: {
-      avatar: {
-        fields: ['url'],
-      },
-    },
-  },
-  pinnedBy: {
-    fields: ['documentId'],
-  },
-  team: {
-    fields: ['documentId', 'name'],
-    populate: {
-      logo: {
-        fields: ['url'],
-      },
-    },
-  },
-};
-
-const buildChatDetailPopulate = ({ includeMessages = false } = {}) => {
-  const populate = {
-    archivedBy: {
-      populate: ['avatar'],
-    },
-    club: {
-      populate: {
-        logo: true,
-      },
-    },
-    groupAdmins: {
-      populate: ['avatar'],
-    },
-    league_match: {
-      populate: {
-        team_a: { populate: ['captain', 'roster'] },
-        team_b: { populate: ['captain', 'roster'] },
-        winner: true,
-      },
-    },
-    multisportClub: {
-      populate: {
-        admins: true,
-        logo: true,
-      },
-    },
-    participants: {
-      populate: ['avatar'],
-    },
-    pinnedBy: {
-      populate: ['avatar'],
-    },
-    team: {
-      populate: true,
-    },
-  };
-
-  if (includeMessages) {
-    populate.messages = {
-      populate: ['sender', 'sender.avatar', 'attachments', 'replyTo', 'replyTo.sender', 'replyTo.sender.avatar', 'event'],
-      sort: ['createdAt:desc'],
-    };
-  }
-
-  return populate;
-};
-
 /**
  * Get all chats for the current user
  * @param {number} [page] - The page number
@@ -162,13 +51,6 @@ export const getChats = async (page = 1, pageSize = 20) => {
         page,
         pageSize,
       },
-      populate: chatListPopulate,
-      sort: [
-        // Sort by type: league_match(l) > ...
-        // We will rely on updatedAt primarily, but could prioritize types if needed.
-        // For now sticking to simple sort, frontend does the grouping/sorting.
-        'updatedAt:desc',
-      ],
     },
   });
 
@@ -218,9 +100,7 @@ export const getChatById = async (chatId, options = {}) => {
   const response = await client.get(`/chats/${chatId}`, {
     params: {
       chat: chatId,
-      populate: buildChatDetailPopulate({
-        includeMessages: options?.includeMessages === true,
-      }),
+      ...(options?.includeMessages === true ? { includeMessages: true } : {}),
     },
   });
 
@@ -283,50 +163,11 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
   const response = await client.get('/chat-messages', {
     params: {
       chat: chatId,
-      filters: {
-        chat: {
-          documentId: {
-            $eq: chatId,
-          },
-        },
-      },
       pagination: {
         page,
         pageSize,
       },
       payload: 'light',
-      populate: {
-        attachments: true,
-        event: {
-          fields: ['documentId', 'name', 'date', 'startTime', 'endTime', 'location', 'locationDetails'],
-          populate: {
-            club: {
-              fields: ['documentId', 'name'],
-              populate: {
-                logo: {
-                  fields: ['url'],
-                },
-              },
-            },
-            facility: {
-              fields: ['documentId', 'address', 'name'],
-            },
-            team: {
-              fields: ['documentId', 'externalTeamName', 'name'],
-            },
-            type: {
-              fields: ['documentId', 'name'],
-            },
-          },
-        },
-        replyTo: {
-          populate: ['sender', 'sender.avatar'],
-        },
-        sender: {
-          populate: ['avatar'],
-        },
-      },
-      sort: ['createdAt:desc'],
     },
   });
 

@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, FlatList, RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
@@ -20,7 +21,6 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import { cancelEvent, getEvents, updateEvent } from '@/services/event/eventService';
 
 /**
@@ -35,10 +35,10 @@ function RequestsDashboard({ navigation, route }) {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const queryClient = useQueryClient();
-  const { data: userData } = useGetMe();
+  const { userData, userDataLoading } = useAuth();
 
   const clubId = route?.params?.clubId || userData?.trainedTeams?.[0]?.club?.documentId;
-  const isMissingContext = !clubId;
+  const isMissingContext = !clubId && !userDataLoading;
 
   useEffect(() => {
     if (!REQUESTS_HUB_LEGACY_REDIRECT) return;
@@ -60,11 +60,14 @@ function RequestsDashboard({ navigation, route }) {
       if (!clubId) return [];
       const res = await getEvents({
         club: { value: clubId },
-        sessionStatus: 'open',
         startDateAfter: new Date(),
-        validationMode: 'manual',
       });
-      return res.data;
+      return (res.data || []).filter((event) => (
+        Array.isArray(event?.participationRequests)
+        && event.participationRequests.some(
+          (request) => request?.participationStatus === 'pending' && request?.isActive !== false,
+        )
+      ));
     },
     queryKey: ['pendingEvents', clubId],
   });
@@ -72,12 +75,12 @@ function RequestsDashboard({ navigation, route }) {
 
   const updateMutation = useMutation({
     mutationFn: updateEvent,
-    onError: (error) => {
+    onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        error?.message || t(
+        mutationError?.message || t(
           'requests.approvedError',
-          "Impossible de valider cette demande pour le moment.",
+          'Impossible de valider cette demande pour le moment.',
         ),
       );
     },
@@ -89,12 +92,12 @@ function RequestsDashboard({ navigation, route }) {
 
   const cancelMutation = useMutation({
     mutationFn: cancelEvent,
-    onError: (error) => {
+    onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        error?.message || t(
+        mutationError?.message || t(
           'requests.rejectedError',
-          "Impossible de refuser cette demande pour le moment.",
+          'Impossible de refuser cette demande pour le moment.',
         ),
       );
     },
@@ -239,7 +242,11 @@ function RequestsDashboard({ navigation, route }) {
               {t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
             </Text>
           </TouchableOpacity>
-          {isMissingContext ? (
+          {userDataLoading && !clubId ? (
+            <View style={[Alignments.fill, Alignments.mainCenter]}>
+              <Loader />
+            </View>
+          ) : isMissingContext ? (
             <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12], Spaces.padding[16]]}>
               <Text style={[Fonts.h4Black, Fonts.neutral00]}>
                 Club introuvable

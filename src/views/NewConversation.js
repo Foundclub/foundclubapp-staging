@@ -7,12 +7,14 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Loader from '@/components/atoms/loader/Loader';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -143,7 +145,7 @@ function NewConversation({ navigation, route }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
-  const { allMyTeams, userData } = useAuth();
+  const { allMyTeams, clubVerificationSummary, userData } = useAuth();
   const {
     addGroupMembers,
     startGroupChat,
@@ -160,6 +162,7 @@ function NewConversation({ navigation, route }) {
   const [selectedUserIds, setSelectedUserIds] = useState(/** @type {Set<string>} */ (new Set()));
   const [selectedTeamId, setSelectedTeamId] = useState(/** @type {string | null} */ (null));
   const [isCreating, setIsCreating] = useState(false);
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Veuillez reessayer plus tard.');
 
   const resolveConversationErrorMessage = (sourceError, fallbackMessage = '') => {
@@ -322,6 +325,11 @@ function NewConversation({ navigation, route }) {
       }
     } catch (error) {
       newConversationLogger.error('Failed to create chat', error?.message || error);
+      const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
       const safeMessage = resolveConversationErrorMessage(
         error,
         t('messaging.createConversationError', 'Impossible de demarrer cette conversation.'),
@@ -542,6 +550,14 @@ function NewConversation({ navigation, route }) {
           />
         </View>
       )}
+
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={clubVerificationSummary?.clubDocumentId || userData?.club?.documentId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
 
     </ScreenContainer>
   );

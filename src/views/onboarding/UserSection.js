@@ -16,7 +16,6 @@ import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStic
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 import { useGetSections } from '@/services/section/sectionQueries';
 
@@ -41,12 +40,12 @@ const resolveAvailableRoute = (navigation, ...candidates) => {
 function UserSection({ navigation }) {
   // hooks
   const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
-    refetch: refetchUserData,
-  } = useGetMe();
-  const { getNextOnboardingRoute } = useAuth();
+    getNextOnboardingRoute,
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
   const {
     data: sections,
     error: sectionsError,

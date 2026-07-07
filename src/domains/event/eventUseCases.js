@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale/fr';
 
@@ -48,6 +49,92 @@ export const normalizeEventTypeLabel = (value = '') => String(value || '')
 export const isStageEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('stage');
 export const isTournamentEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('tournoi');
 export const isDetectionEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('detection');
+export const isTrainingEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('entrainement');
+
+const normalizeValidationModeValue = (value, fallbackValue = null) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'auto' || normalized === 'manual') {
+    return normalized;
+  }
+  return fallbackValue;
+};
+
+const toNullableInteger = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.trunc(parsed));
+};
+
+const resolveLegacyTrainingExternalLimit = (eventLike = {}) => {
+  const capacity = toNullableInteger(eventLike?.capacity);
+  const totalPlayers = toNullableInteger(eventLike?.totalPlayers);
+
+  if (capacity !== null && totalPlayers !== null) {
+    return Math.max(0, capacity - totalPlayers);
+  }
+
+  if (capacity !== null) {
+    return Math.max(0, capacity);
+  }
+
+  return 0;
+};
+
+export const resolveTrainingOpenConfig = (eventLike = {}) => {
+  const typeName = eventLike?.type?.name || eventLike?.typeName || '';
+  const isTraining = isTrainingEventType(typeName);
+  const sessionStatus = String(eventLike?.sessionStatus || 'open').trim().toLowerCase() === 'closed'
+    ? 'closed'
+    : 'open';
+  const isOpenTraining = isTraining && sessionStatus === 'open';
+  const storedLimit = toNullableInteger(eventLike?.externalParticipantLimit);
+  const storedExternalValidationMode = normalizeValidationModeValue(
+    eventLike?.externalParticipantValidationMode,
+    null,
+  );
+  let externalParticipantLimit = storedLimit;
+  if (externalParticipantLimit === null && isOpenTraining) {
+    externalParticipantLimit = resolveLegacyTrainingExternalLimit(eventLike);
+  }
+  const externalParticipantValidationMode = storedExternalValidationMode
+    || (isOpenTraining ? normalizeValidationModeValue(eventLike?.validationMode, 'manual') : null);
+
+  return {
+    externalParticipantLimit,
+    externalParticipantValidationMode,
+    isOpenTraining,
+    isTraining,
+    sessionStatus,
+  };
+};
+
+const applyTrainingPayloadRules = (payload) => {
+  const trainingConfig = resolveTrainingOpenConfig(payload);
+  const nextPayload = { ...payload };
+
+  if (!trainingConfig.isTraining) {
+    delete nextPayload.externalParticipantLimit;
+    delete nextPayload.externalParticipantValidationMode;
+    return nextPayload;
+  }
+
+  delete nextPayload.capacity;
+
+  if (trainingConfig.externalParticipantLimit === null) {
+    delete nextPayload.externalParticipantLimit;
+  } else {
+    nextPayload.externalParticipantLimit = trainingConfig.externalParticipantLimit;
+  }
+
+  if (!trainingConfig.externalParticipantValidationMode) {
+    delete nextPayload.externalParticipantValidationMode;
+  } else {
+    nextPayload.externalParticipantValidationMode = trainingConfig.externalParticipantValidationMode;
+  }
+
+  return nextPayload;
+};
 
 /**
  * @param {number | string} value
@@ -364,7 +451,9 @@ export const createEventPayload = (event) => {
   if (!formattedData.endTime) delete formattedData.endTime;
   if (!formattedData.startTime) delete formattedData.startTime;
 
-  return formattedData;
+  const finalPayload = applyTrainingPayloadRules(formattedData);
+  delete finalPayload.typeName;
+  return finalPayload;
 };
 
 const EVENT_UPDATE_STRIPPED_FIELDS = [
@@ -615,9 +704,14 @@ export const getReccurrenceDayOptions = (recurrenceFrequency) => {
  */
 export const canEventBeJoined = (
   {
-    capacity, participations, userId, userRole,
+    capacity, participations, type, userId, userRole,
   },
 ) => {
+  if (isTrainingEventType(type?.name || type)) {
+    return userRole?.name === USER_ROLES.player
+      && !participations.some((/** @type {User} */ p) => p.documentId === userId);
+  }
+
   if (!capacity) return true;
   return userRole?.name === USER_ROLES.player && participations.length < capacity
     && !participations.some((/** @type {User} */ p) => p.documentId === userId);

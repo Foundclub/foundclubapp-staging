@@ -31,10 +31,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import useAuth from '@/domains/auth/useAuth';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -144,6 +147,7 @@ function TacticalBoard() {
   const navigation = useNavigation();
   const route = useRoute();
   const queryClient = useQueryClient();
+  const { clubVerificationSummary, userData } = useAuth();
   const skipUnsavedPromptRef = useRef(false);
 
   // Get params
@@ -259,6 +263,7 @@ function TacticalBoard() {
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const [compositionMeta, setCompositionMeta] = useState(isTeamDefaultMode ? teamDefaultComposition : teamComposition);
   const [activePanel, setActivePanel] = useState(/** @type {'bench' | 'actions'} */ ('bench'));
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -308,7 +313,7 @@ function TacticalBoard() {
 
   const playersPlacedCount = fieldPlayers.length;
   const totalPlayersCount = fieldPlayers.length + benchPlayers.length;
-  let primaryActionTitle = 'Publier la convocation';
+  let primaryActionTitle = "Publier la composition d'equipe";
   if (isTeamDefaultMode) {
     primaryActionTitle = isSaving ? 'Enregistrement...' : 'Enregistrer le favori';
   } else if (isPublishing) {
@@ -318,9 +323,9 @@ function TacticalBoard() {
   const resolvedHeaderTitle = (() => {
     if (isTeamDefaultMode) return headerTitle;
     if (readOnly) {
-      return isDetectionEvent ? 'Convocation detection publiee' : headerTitle;
+      return isDetectionEvent ? "Composition d'equipe detection publiee" : headerTitle;
     }
-    return isDetectionEvent ? 'Convocation detection' : headerTitle;
+    return isDetectionEvent ? "Composition d'equipe detection" : headerTitle;
   })();
 
   const resolvedHeaderModeLabel = isTeamDefaultMode
@@ -342,7 +347,7 @@ function TacticalBoard() {
 
   const resolvedPrimaryActionTitle = (
     !isTeamDefaultMode && !isPublishing && isDetectionEvent
-      ? 'Publier la convocation detection'
+      ? "Publier la composition d'equipe detection"
       : primaryActionTitle
   );
 
@@ -934,12 +939,17 @@ function TacticalBoard() {
         ...(published || {}),
       });
       invalidateCompositionQueries();
-      Alert.alert('Succès', 'Convocation publiée.', [
+      Alert.alert('Succès', "Composition d'equipe publiee.", [
         { onPress: () => /** @type {any} */ (navigation).navigate(RouteNames.EventDetails, { eventId }), text: 'OK' },
       ]);
     } catch (error) {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
       console.error('Publish convocation error:', error);
-      Alert.alert('Erreur', getCompositionErrorMessage(error, 'Impossible de publier la convocation.'));
+      Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible de publier la composition d'equipe."));
     } finally {
       setIsPublishing(false);
     }
@@ -1428,6 +1438,17 @@ function TacticalBoard() {
             />
           )}
         </View>
+        <SubscriptionPaywallSheet
+          close={() => setSubscriptionPaywallDecision(null)}
+          clubDocumentId={
+            clubVerificationSummary?.clubDocumentId
+            || userData?.club?.documentId
+            || null
+          }
+          decision={subscriptionPaywallDecision}
+          isVisible={Boolean(subscriptionPaywallDecision)}
+          navigation={navigation}
+        />
       </ImageBackground>
     </GestureHandlerRootView>
   );

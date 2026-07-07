@@ -56,7 +56,7 @@ import {
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 
-const PERSONAL_PLANNING_STALE_MS = 15 * 1000;
+const PERSONAL_PLANNING_STALE_MS = 60 * 1000;
 
 const FULLSCREEN_SOURCE_TYPES = {
   club: 'club',

@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -30,9 +30,12 @@ import {
   formatScoreFlowCountdown,
 } from '@/views/league/match/utils/scoreFlow';
 
-import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
+import { getPendingLeagueActionCacheSnapshot } from '@/services/league/leagueActionQueries';
 import {
-  fetchMatch,
+  loadLeagueMatchWithCache,
+  useGetLeagueMatch,
+} from '@/services/league/leagueMatchQueries';
+import {
   submitMatchScore,
 } from '@/services/league/leagueMatchService';
 import { useLeaguePlatformRuntime } from '@/services/league/leaguePlatformQueries';
@@ -201,13 +204,9 @@ function EndMatchScreen() {
   const queryClient = useQueryClient();
   const { dismissPopup } = usePopupManager();
   const { userData } = /** @type {{userData: User | null}} */ (useAuth());
-  const leaguePlatformRuntimeQuery = useLeaguePlatformRuntime();
+  const leaguePlatformRuntimeQuery = useLeaguePlatformRuntime({ enabled: false });
   const leaguePlatformRuntime = leaguePlatformRuntimeQuery.data || null;
   const matchId = route.params?.matchId ? String(route.params.matchId) : '';
-  const { data: pendingLeagueActionPayload } = usePendingLeagueAction(undefined, {
-    enabled: Boolean(matchId),
-  });
-  const pendingLeagueAction = pendingLeagueActionPayload?.nextAction || null;
 
   const [scoreA, setScoreA] = useState('0');
   const [scoreB, setScoreB] = useState('0');
@@ -227,20 +226,35 @@ function EndMatchScreen() {
     isError: isMatchError,
     isLoading,
     refetch: refetchMatch,
-  } = useQuery({
+  } = useGetLeagueMatch(matchId, {
     enabled: Boolean(matchId),
-    queryFn: () => fetchMatch(matchId),
-    queryKey: ['league-match', matchId],
   });
   const match = /** @type {LeagueMatch | null} */ (matchData || null);
+  const currentUserId = getEntityDocumentId(userData);
+  const pendingLeagueActionTeamId = useMemo(() => {
+    if (isLeagueCaptain(match?.team_a, currentUserId) || isLeagueMember(match?.team_a, currentUserId)) {
+      return getEntityDocumentId(match?.team_a) || undefined;
+    }
+
+    if (isLeagueCaptain(match?.team_b, currentUserId) || isLeagueMember(match?.team_b, currentUserId)) {
+      return getEntityDocumentId(match?.team_b) || undefined;
+    }
+
+    return undefined;
+  }, [currentUserId, match?.team_a, match?.team_b]);
+  const pendingLeagueAction = useMemo(() => {
+    const snapshot = getPendingLeagueActionCacheSnapshot(
+      queryClient,
+      pendingLeagueActionTeamId,
+    );
+    return snapshot?.data?.nextAction || null;
+  }, [pendingLeagueActionTeamId, queryClient]);
   const sportConfig = useMemo(() => getMatchLeagueSportConfig(match), [match]);
   const isPadelMatch = sportConfig.key === LEAGUE_SPORT_KEYS.PADEL;
   const padelScorePayload = useMemo(
     () => (isPadelMatch ? buildPadelScorePayload(padelSets) : null),
     [isPadelMatch, padelSets],
   );
-
-  const currentUserId = getEntityDocumentId(userData);
   const isCaptainA = isLeagueCaptain(match?.team_a, currentUserId);
   const isCaptainB = isLeagueCaptain(match?.team_b, currentUserId);
   const scoreTeamSide = useMemo(() => {
@@ -405,10 +419,16 @@ function EndMatchScreen() {
   };
 
   const relaunchSearchNow = async () => {
-    if (leaguePlatformRuntime?.effectiveMatchmakingIsOpen === false) {
+    let runtime = leaguePlatformRuntime;
+    if (!runtime) {
+      const runtimeResult = await leaguePlatformRuntimeQuery.refetch();
+      runtime = runtimeResult?.data || null;
+    }
+
+    if (runtime?.effectiveMatchmakingIsOpen === false) {
       showLeagueRestrictionAlert({
         code: 'LEAGUE_MATCHMAKING_CLOSED',
-        details: { runtime: leaguePlatformRuntime },
+        details: { runtime },
       });
       return;
     }
@@ -486,7 +506,7 @@ function EndMatchScreen() {
     }
 
     await wait(delayMs);
-    sourceMatch = await fetchMatch(matchId);
+    sourceMatch = await loadLeagueMatchWithCache(queryClient, matchId, { staleTime: 0 });
     return fetchMatchWithReadyFinalRecap(sourceMatch, attemptIndex + 1);
   };
 
@@ -547,7 +567,7 @@ function EndMatchScreen() {
       console.error('[EndMatchScreen] Submit score failed:', error);
 
       try {
-        const refreshedMatch = await fetchMatch(matchId);
+        const refreshedMatch = await loadLeagueMatchWithCache(queryClient, matchId, { staleTime: 0 });
         const recovered = wasScorePersistedDespiteError(
           match,
           refreshedMatch,

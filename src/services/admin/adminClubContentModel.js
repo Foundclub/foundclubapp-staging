@@ -7,11 +7,10 @@ export const CLUB_LIST_FIELDS = [
   'phoneNumber',
   'address',
   'addressDetails',
+  'clubPartner',
+  'clubVerified',
   'geohash',
-  'isCustomer',
   'isReservationProvider',
-  'subscriptionValue',
-  'maxTeamNumber',
   'createdAt',
   'updatedAt',
 ];
@@ -194,14 +193,14 @@ export const toRelationSet = (/** @type {any} */ value, /** @type {boolean} */ i
 export const buildClubListFilters = (params = {}) => {
   const {
     activityDocumentId,
-    isCustomer,
+    clubPartner,
     isReservationProvider,
     parentMultisportDocumentId,
   } = /** @type {AdminClubRecord} */ (params);
   const filters = /** @type {AdminClubRecord} */ ({});
 
-  if (isCustomer === true || isCustomer === false) {
-    filters.isCustomer = isCustomer;
+  if (clubPartner === true || clubPartner === false) {
+    filters.clubPartner = clubPartner;
   }
 
   if (isReservationProvider === true || isReservationProvider === false) {
@@ -236,18 +235,19 @@ export const buildAddressFromForm = (form = {}) => {
 
 export const buildClubWritePayload = (form = {}) => {
   const typedForm = /** @type {AdminClubRecord} */ (form);
+  const clubPartner = Boolean(typedForm.clubPartner);
   const payload = /** @type {AdminClubRecord} */ ({
     address: buildAddressFromForm(form),
     addressDetails: normalizeText(typedForm.addressDetails),
+    clubPartner,
+    clubVerified: Boolean(typedForm.clubVerified),
     email: normalizeText(typedForm.email),
     geohash: normalizeText(typedForm.geohash),
-    isCustomer: Boolean(typedForm.isCustomer),
+    isCustomer: clubPartner,
     isReservationProvider: Boolean(typedForm.isReservationProvider),
-    maxTeamNumber: normalizeNumber(typedForm.maxTeamNumber, 0),
     name: normalizeText(typedForm.name),
     phoneNumber: normalizeText(typedForm.phoneNumber),
     sponsor: Array.isArray(typedForm.sponsor) ? typedForm.sponsor : [],
-    subscriptionValue: normalizeNumber(typedForm.subscriptionValue, 0),
   });
 
   if (typedForm.logo) {
@@ -272,19 +272,18 @@ export const buildClubFormInitialValues = (club = {}) => {
     addressJson: stringifyJson(address),
     addressLabel: getClubAddressLabel(club),
     city: getClubCity(club),
+    clubPartner: typedClub?.clubPartner === true || typedClub?.isCustomer === true,
+    clubVerified: typedClub?.clubVerified === true,
     email: normalizeText(typedClub?.email),
     geohash: normalizeText(typedClub?.geohash),
-    isCustomer: Boolean(typedClub?.isCustomer),
     isReservationProvider: Boolean(typedClub?.isReservationProvider),
     latitude: coordinates.lat === null ? '' : String(coordinates.lat),
     logo: normalizeSingleRelation(typedClub?.logo),
     longitude: coordinates.lng === null ? '' : String(coordinates.lng),
-    maxTeamNumber: String(typedClub?.maxTeamNumber ?? 0),
     name: normalizeText(typedClub?.name),
     parentMultisport: normalizeSingleRelation(typedClub?.parentMultisport),
     phoneNumber: normalizeText(typedClub?.phoneNumber),
     postcode: normalizeText(address?.postcode || address?.zipCode),
     sponsor: Array.isArray(typedClub?.sponsor) ? typedClub.sponsor : [],
-    subscriptionValue: String(typedClub?.subscriptionValue ?? 0),
   };
 };

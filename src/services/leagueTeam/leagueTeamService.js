@@ -94,47 +94,35 @@ export const createLeagueTeam = async (teamData, options = {}) => {
 };
 
 /**
+ * Get the current user's League context from the dedicated lightweight endpoint.
+ * @returns {Promise<{ squads: Team[], invitedSquads: Team[], pendingSquads: Team[], defaultSquadId: string | null }>}
+ */
+export const getLeagueTeamContext = async () => {
+  try {
+    const response = await client.get('/league-teams/mine');
+    const payload = response.data && typeof response.data === 'object' ? response.data : {};
+    return {
+      defaultSquadId: typeof payload.defaultSquadId === 'string' && payload.defaultSquadId.trim().length > 0
+        ? payload.defaultSquadId.trim()
+        : null,
+      invitedSquads: Array.isArray(payload.invitedSquads) ? payload.invitedSquads : [],
+      pendingSquads: Array.isArray(payload.pendingSquads) ? payload.pendingSquads : [],
+      squads: Array.isArray(payload.squads) ? payload.squads : [],
+    };
+  } catch (error) {
+    console.error('Error fetching league team context:', error);
+    throw error;
+  }
+};
+
+/**
  * Get league teams for a user (Captain)
  * @param {string} userId
  * @returns {Promise<Team[]>}
  */
 export const getMyLeagueTeam = async (userId) => {
-  try {
-    const response = await client.get('/league-teams', {
-      params: {
-        filters: {
-          $or: [
-            {
-              captain: {
-                documentId: {
-                  $eq: userId,
-                },
-              },
-            },
-            {
-              co_captains: {
-                documentId: {
-                  $eq: userId,
-                },
-              },
-            },
-            {
-              roster: {
-                documentId: {
-                  $eq: userId,
-                },
-              },
-            },
-          ],
-        },
-        populate: '*',
-      },
-    });
-    return response.data?.data || [];
-  } catch (error) {
-    console.error('Error fetching league team:', error);
-    throw error;
-  }
+  const context = await getLeagueTeamContext(userId);
+  return context.squads;
 };
 
 /**
@@ -143,25 +131,8 @@ export const getMyLeagueTeam = async (userId) => {
  * @returns {Promise<Team[]>}
  */
 export const getPendingLeagueTeams = async (userId) => {
-  try {
-    const response = await client.get('/league-teams', {
-      params: {
-        filters: {
-          join_requests: {
-            documentId: {
-              $eq: userId,
-            },
-          },
-        },
-        populate: ['crest'],
-        sort: ['name:asc'],
-      },
-    });
-    return response.data?.data || [];
-  } catch (error) {
-    console.error('Error fetching pending league teams:', error);
-    throw error;
-  }
+  const context = await getLeagueTeamContext(userId);
+  return context.pendingSquads;
 };
 
 /**
@@ -170,25 +141,8 @@ export const getPendingLeagueTeams = async (userId) => {
  * @returns {Promise<Team[]>}
  */
 export const getInvitedLeagueTeams = async (userId) => {
-  try {
-    const response = await client.get('/league-teams', {
-      params: {
-        filters: {
-          invitations: {
-            documentId: {
-              $eq: userId,
-            },
-          },
-        },
-        populate: ['crest'],
-        sort: ['name:asc'],
-      },
-    });
-    return response.data?.data || [];
-  } catch (error) {
-    console.error('Error fetching invited league teams:', error);
-    throw error;
-  }
+  const context = await getLeagueTeamContext(userId);
+  return context.invitedSquads;
 };
 
 /**
@@ -340,10 +294,10 @@ export const getLeagueTeamById = async (id) => {
           invitations: { populate: ['avatar'] },
           join_requests: { populate: ['avatar'] },
           roster: { populate: ['avatar'] },
+          slots: { populate: ['participants'] },
           source_team: {
             populate: ['activities', 'category', 'cover', 'logo', 'players', 'section', 'trainers'],
           },
-          slots: { populate: ['participants'] },
         },
       },
     });

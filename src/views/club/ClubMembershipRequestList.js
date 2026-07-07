@@ -1,6 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Text, TouchableOpacity, View,
@@ -8,12 +10,14 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -87,7 +91,10 @@ const extractApiErrorMessage = (error) => {
  */
 function ClubMembershipRequestList({ navigation, route }) {
   const { clubId } = route?.params ?? {};
-  const { userData } = useAuth();
+  const {
+    clubVerificationSummary,
+    userData,
+  } = useAuth();
 
   // hooks
   const {
@@ -110,6 +117,7 @@ function ClubMembershipRequestList({ navigation, route }) {
   } = useGetClubMembershipRequests(clubId, {
     pageSize: 10,
   });
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   /**
    * @type {ClubMembershipRequest[]}
@@ -121,7 +129,6 @@ function ClubMembershipRequestList({ navigation, route }) {
     }, [])
     || [], [requestPages]);
   const isMissingClubId = !clubId;
-  const isMutating = acceptRequestMutation.isPending || rejectRequestMutation.isPending;
   const initialErrorMessage = extractApiErrorMessage(error)
     || t(
       'clubMembershipRequestList.errors.load',
@@ -130,8 +137,13 @@ function ClubMembershipRequestList({ navigation, route }) {
 
   const acceptRequestMutation = useMutation({
     mutationFn: acceptClubMembershipRequest,
-    onError: (error) => {
-      const rawMessage = extractApiErrorMessage(error);
+    onError: (mutationError) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
+      const rawMessage = extractApiErrorMessage(mutationError);
       const isMissingRelation = rawMessage.includes('Membership request is missing user or club relation')
         || rawMessage.includes('utilisateur introuvable');
       Alert.alert(
@@ -195,7 +207,12 @@ function ClubMembershipRequestList({ navigation, route }) {
 
   const rejectRequestMutation = useMutation({
     mutationFn: rejectClubMembershipRequest,
-    onError: () => {
+    onError: (mutationError) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
       Alert.alert(
         t('common.error', 'Erreur'),
         t(
@@ -208,6 +225,7 @@ function ClubMembershipRequestList({ navigation, route }) {
       refetch();
     },
   });
+  const isMutating = acceptRequestMutation.isPending || rejectRequestMutation.isPending;
 
   useEffect(() => {
     if (!REQUESTS_HUB_LEGACY_REDIRECT) return;
@@ -351,8 +369,8 @@ function ClubMembershipRequestList({ navigation, route }) {
             <Button
               disabled={isMutating}
               icon="check"
-              isOption
               isLoading={acceptRequestMutation.isPending}
+              isOption
               onPress={() => handleAcceptRequest(item.documentId)}
               style={[Alignments.fill, { minHeight: 42 }]}
               title={t('clubMembershipRequestList.actions.accept')}
@@ -361,8 +379,8 @@ function ClubMembershipRequestList({ navigation, route }) {
             <Button
               disabled={isMutating}
               icon="close"
-              isOption
               isLoading={rejectRequestMutation.isPending}
+              isOption
               onPress={() => handleRejectRequest(item.documentId)}
               style={[Alignments.fill, { borderColor: Colors.error500, minHeight: 42 }]}
               textStyle={[Fonts.error500]}
@@ -546,6 +564,19 @@ function ClubMembershipRequestList({ navigation, route }) {
             </View>
           </OnboardingWrapper>
         </WithDataWrapper>
+
+        <SubscriptionPaywallSheet
+          close={() => setSubscriptionPaywallDecision(null)}
+          clubDocumentId={
+            clubId
+            || clubVerificationSummary?.clubDocumentId
+            || userData?.club?.documentId
+            || null
+          }
+          decision={subscriptionPaywallDecision}
+          isVisible={Boolean(subscriptionPaywallDecision)}
+          navigation={navigation}
+        />
       </ScreenContainer>
     </TutorialFlowBoundary>
   );

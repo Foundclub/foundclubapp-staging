@@ -19,7 +19,6 @@ import OnboardingStateView from '@/views/onboarding/components/OnboardingStateVi
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
 import { getFieldError } from '@/utils/form/formUtils';
@@ -84,12 +83,12 @@ function UserBirthdate({ navigation }) {
   const { Alignments, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
-    refetch: refetchUserData,
-  } = useGetMe();
-  const { getNextOnboardingRoute } = useAuth();
+    getNextOnboardingRoute,
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
   const insets = useSafeAreaInsets();
 
   const updateUserMutation = useMutation({

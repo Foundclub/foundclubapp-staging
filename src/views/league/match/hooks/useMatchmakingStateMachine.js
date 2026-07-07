@@ -185,6 +185,7 @@ const buildSearchStatusLabel = ({
  * @property {(statusData: MatchmakingStatus, options?: {silent?: boolean}) => void} [onMatched]
  * @property {(statusData: MatchmakingStatus) => void} [onSearchingStatus]
  * @property {() => void} [onRecoverFromBackground]
+ * @property {boolean} [isScreenActive]
  * @property {string} viewState
  */
 
@@ -193,6 +194,7 @@ const buildSearchStatusLabel = ({
  * @returns {{searchStatus: string, serverNow: string | null}}
  */
 export const useMatchmakingStateMachine = ({
+  isScreenActive = true,
   matchRequest,
   mySquad,
   onAutoSearchingDetected,
@@ -225,6 +227,7 @@ export const useMatchmakingStateMachine = ({
   }, [onRecoverFromBackground, viewState]);
 
   useEffect(() => {
+    if (!isScreenActive) return undefined;
     if (!POLLING_VIEWS.has(viewState)) return undefined;
     const squadId = getEntityDocumentId(mySquad);
     if (!squadId) return undefined;
@@ -286,6 +289,7 @@ export const useMatchmakingStateMachine = ({
     mySquad,
     onAutoSearchingDetected,
     onConnectionError,
+    isScreenActive,
     onMatched,
     onSearchingStatus,
     searchInsights,

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -9,9 +9,15 @@ import {
   View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
+import {
+  extractSubscriptionDecisionFromError,
+  getSubscriptionQuotaItem,
+} from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
@@ -38,6 +44,10 @@ function TeamWizardRecap({ navigation }) {
   const { dispatch, state } = useTeamWizard();
   const handleExitWizard = useTeamWizardExit(navigation);
   const {
+    freeUsageSummary,
+    subscriptionAccessLevel,
+  } = useAuth();
+  const {
     Alignments,
     ApplicationStyle,
     Colors,
@@ -55,6 +65,11 @@ function TeamWizardRecap({ navigation }) {
   const { data: levels } = levelsQuery;
   const { data: sections } = sectionsQuery;
   const { data: clubData } = clubQuery;
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+  const freeTeamQuotaItem = useMemo(
+    () => getSubscriptionQuotaItem(freeUsageSummary, 'FREE_TEAM', subscriptionAccessLevel),
+    [freeUsageSummary, subscriptionAccessLevel],
+  );
 
   const selectedOverview = useMemo(() => ({
     activity: state.activities || '',
@@ -70,6 +85,11 @@ function TeamWizardRecap({ navigation }) {
   const createTeamMutation = useMutation({
     mutationFn: createTeam,
     onError: (error) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
       const message = error && typeof error === 'object' && 'message' in error
         ? String(error.message)
         : t('APIerrors.unknown');
@@ -78,6 +98,7 @@ function TeamWizardRecap({ navigation }) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
       await queryClient.invalidateQueries({ queryKey: ['get-me'] });
+      await queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
       const targetClubId = selectedOverview.clubId;
       dispatch({ type: 'RESET' });
       const rootRoute = isGold ? RouteNames.LeagueHomeTab : RouteNames.HomeTab;
@@ -191,166 +212,194 @@ function TeamWizardRecap({ navigation }) {
     : t('teamWizard.recap.membership.coachAllowed', 'Demandes délégables aux entraîneurs');
 
   return (
-    <WizardStepLayout
-      isNextDisabled={!isRecapReady || isReferenceLoading || hasReferenceError}
-      isNextLoading={createTeamMutation.isPending}
-      nextLabel={t('teamWizard.actions.create', "Créer l'équipe")}
-      onBack={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
-      onClose={handleExitWizard}
-      onNext={handleSubmit}
-      onSkip={() => {}}
-      stepCount={8}
-      stepIndex={8}
-      subtitle={t('teamWizard.steps.recap.subtitle', "Vérifie les informations avant de créer l'équipe.")}
-      title={t('teamWizard.steps.recap.title', 'Récapitulatif')}
-    >
-      <View style={[Spaces.gap[16]]}>
-        {isReferenceLoading ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
-            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
-              <ActivityIndicator size="small" />
+    <>
+      <WizardStepLayout
+        isNextDisabled={!isRecapReady || isReferenceLoading || hasReferenceError}
+        isNextLoading={createTeamMutation.isPending}
+        nextLabel={t('teamWizard.actions.create', "Créer l'équipe")}
+        onBack={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
+        onClose={handleExitWizard}
+        onNext={handleSubmit}
+        onSkip={() => {}}
+        stepCount={8}
+        stepIndex={8}
+        subtitle={t('teamWizard.steps.recap.subtitle', "Vérifie les informations avant de créer l'équipe.")}
+        title={t('teamWizard.steps.recap.title', 'Récapitulatif')}
+      >
+        <View style={[Spaces.gap[16]]}>
+          {freeTeamQuotaItem ? (
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('teamWizard.recap.freeQuota.title', 'Quota equipe gratuite')}
+              </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                Chargement du recapitulatif de cette equipe...
+                {t(
+                  'teamWizard.recap.freeQuota.description',
+                  '{{remaining}}/{{total}} creation gratuite restante avant de devoir passer sur une offre Team ou Club.',
+                  {
+                    remaining: freeTeamQuotaItem.remaining,
+                    total: freeTeamQuotaItem.total,
+                  },
+                )}
+              </Text>
+            </View>
+          ) : null}
+
+          {isReferenceLoading ? (
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
+              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+                <ActivityIndicator size="small" />
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  Chargement du recapitulatif de cette equipe...
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {hasReferenceError ? (
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                Impossible de charger toutes les informations du recapitulatif.
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                Reessaye avant de creer cette equipe pour verifier le club, les referentiels et les entraineurs.
+              </Text>
+              <Button
+                onPress={() => {
+                  activitiesQuery.refetch();
+                  categoriesQuery.refetch();
+                  levelsQuery.refetch();
+                  sectionsQuery.refetch();
+                  if (state.clubId) {
+                    clubQuery.refetch();
+                  }
+                }}
+                title="Réessayer"
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
+
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[16],
+              Spaces.gap[8],
+              {
+                ...cardSurfaceStyle,
+                borderColor: isRecapReady ? 'rgba(1, 179, 244, 0.45)' : 'rgba(255, 191, 71, 0.35)',
+              },
+            ]}
+          >
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('teamWizard.recap.summaryTitle', 'Vue d\'ensemble')}
+              </Text>
+              <View
+                style={[
+                  ApplicationStyle.card,
+                  Spaces.paddingHorizontal[8],
+                  Spaces.paddingVertical[4],
+                  {
+                    backgroundColor: isRecapReady ? 'rgba(1, 179, 244, 0.18)' : 'rgba(255, 191, 71, 0.18)',
+                    borderColor: isRecapReady ? Colors.primary500 : Colors.gold500,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
+                  {isRecapReady
+                    ? t('teamWizard.recap.ready', 'Prêt à créer')
+                    : t('teamWizard.recap.incomplete', 'Champs manquants')}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t('teamWizard.recap.quickHint', 'Nom, section, sport, catégorie, niveau, club et entraîneur sont requis.')}
+            </Text>
+          </View>
+
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>
+                {t('teamWizard.recap.organization', 'Organisation')}
+              </Text>
+              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.TeamWizardName)}>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit', 'Modifier')}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p2, Fonts.neutral00]}>{selectedOverview.name || t('eventWizard.recap.notSet', 'Non renseigné')}</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>{clubLabel}</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>{selectedOverview.description || t('eventWizard.recap.noDescription', 'Aucune description')}</Text>
+            </View>
+          </View>
+
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>
+                {t('teamWizard.recap.sportProfile', 'Profil sportif')}
+              </Text>
+              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.TeamWizardSection)}>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit', 'Modifier')}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {t('teamEdit.fields.section.label')}
+                :
+                {sectionLabel}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {t('teamEdit.fields.activities.label')}
+                :
+                {activityLabel}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {t('teamEdit.fields.category.label')}
+                :
+                {categoryLabel}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {t('teamEdit.fields.level.label')}
+                :
+                {levelLabel}
               </Text>
             </View>
           </View>
-        ) : null}
 
-        {hasReferenceError ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              Impossible de charger toutes les informations du recapitulatif.
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Reessaye avant de creer cette equipe pour verifier le club, les referentiels et les entraineurs.
-            </Text>
-            <Button
-              onPress={() => {
-                activitiesQuery.refetch();
-                categoriesQuery.refetch();
-                levelsQuery.refetch();
-                sectionsQuery.refetch();
-                if (state.clubId) {
-                  clubQuery.refetch();
-                }
-              }}
-              title="Réessayer"
-              variant="Secondary"
-            />
-          </View>
-        ) : null}
-
-        <View
-          style={[
-            ApplicationStyle.card,
-            Spaces.padding[16],
-            Spaces.gap[8],
-            {
-              ...cardSurfaceStyle,
-              borderColor: isRecapReady ? 'rgba(1, 179, 244, 0.45)' : 'rgba(255, 191, 71, 0.35)',
-            },
-          ]}
-        >
-          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-              {t('teamWizard.recap.summaryTitle', 'Vue d\'ensemble')}
-            </Text>
-            <View
-              style={[
-                ApplicationStyle.card,
-                Spaces.paddingHorizontal[8],
-                Spaces.paddingVertical[4],
-                {
-                  backgroundColor: isRecapReady ? 'rgba(1, 179, 244, 0.18)' : 'rgba(255, 191, 71, 0.18)',
-                  borderColor: isRecapReady ? Colors.primary500 : Colors.gold500,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
-                {isRecapReady
-                  ? t('teamWizard.recap.ready', 'Prêt à créer')
-                  : t('teamWizard.recap.incomplete', 'Champs manquants')}
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>
+                {t('teamWizard.recap.staff', 'Encadrement')}
               </Text>
+              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.TeamWizardTrainers)}>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit', 'Modifier')}</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {t('teamWizard.recap.quickHint', 'Nom, section, sport, catégorie, niveau, club et entraîneur sont requis.')}
-          </Text>
-        </View>
-
-        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
-          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-            <Text style={[Fonts.h4, Fonts.neutral00]}>
-              {t('teamWizard.recap.organization', 'Organisation')}
-            </Text>
-            <TouchableOpacity onPress={() => navigation.navigate(RouteNames.TeamWizardName)}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit', 'Modifier')}</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={[Spaces.gap[8]]}>
-            <Text style={[Fonts.p2, Fonts.neutral00]}>{selectedOverview.name || t('eventWizard.recap.notSet', 'Non renseigné')}</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>{clubLabel}</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>{selectedOverview.description || t('eventWizard.recap.noDescription', 'Aucune description')}</Text>
-          </View>
-        </View>
-
-        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
-          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-            <Text style={[Fonts.h4, Fonts.neutral00]}>
-              {t('teamWizard.recap.sportProfile', 'Profil sportif')}
-            </Text>
-            <TouchableOpacity onPress={() => navigation.navigate(RouteNames.TeamWizardSection)}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit', 'Modifier')}</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={[Spaces.gap[8]]}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('teamEdit.fields.section.label')}
-              :
-              {sectionLabel}
+              {t('teamWizard.recap.trainersCount', {
+                count: selectedOverview.trainers.length,
+                defaultValue: `${selectedOverview.trainers.length} entraîneur(s)`,
+              })}
             </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('teamEdit.fields.activities.label')}
-              :
-              {activityLabel}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('teamEdit.fields.category.label')}
-              :
-              {categoryLabel}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('teamEdit.fields.level.label')}
-              :
-              {levelLabel}
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {teamMembershipModeLabel}
             </Text>
           </View>
         </View>
+      </WizardStepLayout>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
-          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-            <Text style={[Fonts.h4, Fonts.neutral00]}>
-              {t('teamWizard.recap.staff', 'Encadrement')}
-            </Text>
-            <TouchableOpacity onPress={() => navigation.navigate(RouteNames.TeamWizardTrainers)}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit', 'Modifier')}</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {t('teamWizard.recap.trainersCount', {
-              count: selectedOverview.trainers.length,
-              defaultValue: `${selectedOverview.trainers.length} entraîneur(s)`,
-            })}
-          </Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {teamMembershipModeLabel}
-          </Text>
-        </View>
-      </View>
-    </WizardStepLayout>
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={selectedOverview.clubId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
+    </>
   );
 }
 

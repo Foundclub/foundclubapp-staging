@@ -1,10 +1,10 @@
 const WEB_RUNTIME_DEFAULTS = {
   backgroundHostsDelayMs: 2500,
-  backgroundPollMs: 60000,
+  backgroundPollMs: 90000,
   fullUserFetchDelayMs: 350,
   notificationBootstrapDelayMs: 0,
   unreadBadgeDelayMs: 1200,
-  unreadPollMs: 60000,
+  unreadPollMs: 120000,
 };
 
 const clampFiniteNumber = (rawValue, fallbackValue, minValue = 0, maxValue = 300000) => {

@@ -19,7 +19,6 @@ import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStic
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
-import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
 const searchIcon = require('@/assets/icons/search.png');
@@ -46,17 +45,18 @@ function UserSport({ navigation }) {
   const [selectedSport, setSelectedSport] = useState(/** @type {string | null} */ (null));
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
+  const {
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
-    refetch: refetchUserData,
-  } = useGetMe();
   const {
     data: activities,
     error: activitiesError,

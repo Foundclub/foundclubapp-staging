@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -16,12 +17,12 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { useGetMe } from '@/services/auth/authQueries';
-import { useClubScope } from '@/context/ClubScopeContext';
 import { getMultisportClubById, updateMultisportClub } from '@/services/multisportClub/multisportClubService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+import { useClubScope } from '@/context/ClubScopeContext';
+// eslint-disable-next-line perfectionist/sort-imports
 import MultisportStateView from './components/MultisportStateView';
 
 /** @typedef {import('@/domains/auth/types').Avatar} Avatar */
@@ -56,11 +57,11 @@ const clubSchema = Joi.object({
 function MultisportClubEditDetails({ navigation, route }) {
   const { cmId } = route?.params ?? {};
   const {
-    data: userData,
-    error: userDataError,
-    isLoading: isLoadingUserData,
-    refetch: refetchUserData,
-  } = useGetMe();
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading: isLoadingUserData,
+  } = useAuth();
   const clubScope = useClubScope() || {};
   const resolvedCmId = cmId
     || clubScope.activeMultisportClubId
@@ -172,7 +173,7 @@ function MultisportClubEditDetails({ navigation, route }) {
     return (
       <MultisportStateView
         actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.edit.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
+        description={t('multisport.edit.userError', 'Impossible de retrouver votre structure multisport pour le moment.')}
         onAction={() => refetchUserData()}
         title={t('multisport.edit.userErrorTitle', 'Edition indisponible')}
       />
@@ -202,7 +203,7 @@ function MultisportClubEditDetails({ navigation, route }) {
     return (
       <MultisportStateView
         actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.edit.error', "Impossible de charger cette fiche multisport pour le moment.")}
+        description={t('multisport.edit.error', 'Impossible de charger cette fiche multisport pour le moment.')}
         onAction={() => refetch()}
         title={t('multisport.edit.errorTitle', 'Edition indisponible')}
       />
@@ -213,7 +214,7 @@ function MultisportClubEditDetails({ navigation, route }) {
     return (
       <MultisportStateView
         actionLabel={t('common.retry', 'Actualiser')}
-        description={t('multisport.edit.notFound', "Cette structure multisport est introuvable ou n est plus accessible.")}
+        description={t('multisport.edit.notFound', 'Cette structure multisport est introuvable ou n est plus accessible.')}
         onAction={() => refetch()}
         title={t('multisport.edit.notFoundTitle', 'Club introuvable')}
       />

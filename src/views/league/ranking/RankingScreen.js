@@ -1,5 +1,11 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   FlatList,
   Image,
@@ -20,13 +26,15 @@ import LeagueStateView from '@/views/league/components/LeagueStateView';
 
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
-import { getMyLeagueTeam, getRanking } from '@/services/leagueTeam/leagueTeamService';
+import { loadLeagueTeamContextWithCache } from '@/services/leagueTeam/leagueTeamQueries';
+import { getRanking } from '@/services/leagueTeam/leagueTeamService';
 
 import { getEntityDocumentId } from '@/utils/entityId';
 import { clampLeagueDivision } from '@/utils/league/division';
 
 const getLeaguePoints = (team) => Number(team?.division_points ?? team?.divisionPoints ?? 0);
 const getHighestStreak = (team) => Math.max(0, Number(team?.highest_streak ?? team?.highestStreak ?? 0));
+const RANKING_FOCUS_REFRESH_MIN_INTERVAL_MS = 120000;
 
 const formatCurrentStreak = (value) => {
   const streak = Number(value || 0);
@@ -41,6 +49,7 @@ const formatCurrentStreak = (value) => {
 function RankingScreen() {
   const { Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
+  const queryClient = useQueryClient();
   const route = /** @type {any} */ (useRoute());
   const { sceneBottomInset } = useBottomDockLayout();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
@@ -51,6 +60,7 @@ function RankingScreen() {
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [ranking, setRanking] = useState(/** @type {Team[]} */ ([]));
+  const lastRankingFocusLoadRef = useRef({ division: null, loadedAt: 0 });
 
   const leagueSurface = {
     backgroundColor: 'rgba(10, 28, 43, 0.82)',
@@ -68,16 +78,24 @@ function RankingScreen() {
     const init = async () => {
       if (!userData) return;
       try {
-        const teams = await getMyLeagueTeam(getEntityDocumentId(userData));
-        if (teams && teams.length > 0) {
-          setDivision(clampLeagueDivision(teams[0].division));
+        const context = await loadLeagueTeamContextWithCache(
+          queryClient,
+          getEntityDocumentId(userData),
+        );
+        const teams = Array.isArray(context?.squads) ? context.squads : [];
+        const defaultSquad = context?.defaultSquadId
+          ? teams.find((team) => getEntityDocumentId(team) === context.defaultSquadId)
+          : null;
+        const resolvedSquad = defaultSquad || teams[0] || null;
+        if (resolvedSquad) {
+          setDivision(clampLeagueDivision(resolvedSquad.division));
         }
       } catch (error) {
         console.log(error);
       }
     };
     init();
-  }, [routeDivision, userData]);
+  }, [queryClient, routeDivision, userData]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -96,13 +114,24 @@ function RankingScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      const hasWarmRankingState = ranking.length > 0 || Boolean(loadError);
+      const lastFocusedLoad = lastRankingFocusLoadRef.current;
+      if (
+        hasWarmRankingState
+        && lastFocusedLoad.division === division
+        && now - Number(lastFocusedLoad.loadedAt || 0) < RANKING_FOCUS_REFRESH_MIN_INTERVAL_MS
+      ) {
+        return undefined;
+      }
+      lastRankingFocusLoadRef.current = {
+        division,
+        loadedAt: now,
+      };
       loadData();
-    }, [loadData]),
+      return undefined;
+    }, [division, loadData, loadError, ranking.length]),
   );
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const changeDivision = (/** @type {number} */ delta) => {
     const nextDivision = division + delta;

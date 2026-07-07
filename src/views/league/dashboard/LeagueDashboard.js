@@ -1,8 +1,9 @@
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused, useNavigation } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
-  useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -32,12 +33,10 @@ import { getMatchDerivedPhase, shouldMaskOpponentIdentity } from '@/views/league
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
-import { getMatch, getMatchHistory } from '@/services/league/leagueMatchService';
 import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
+import { getMatch, getMatchHistory } from '@/services/league/leagueMatchService';
+import { loadLeagueTeamContextWithCache } from '@/services/leagueTeam/leagueTeamQueries';
 import {
-  getInvitedLeagueTeams,
-  getMyLeagueTeam,
-  getPendingLeagueTeams,
   getRanking,
 } from '@/services/leagueTeam/leagueTeamService';
 
@@ -275,6 +274,8 @@ const resolveLeagueActionStateKey = (leagueActionState) => {
   return directState || 'idle';
 };
 
+const DASHBOARD_FOCUS_REFRESH_MIN_INTERVAL_MS = 120000;
+
 /**
  *
  */
@@ -282,8 +283,10 @@ function LeagueDashboard() {
   const {
     Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
+  const queryClient = useQueryClient();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const navigation = /** @type {any} */ (useNavigation());
+  const isFocused = useIsFocused();
   const { sceneBottomInset } = useBottomDockLayout();
   const scrollBottomPadding = Math.max(sceneBottomInset, 100);
 
@@ -297,16 +300,16 @@ function LeagueDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [isSquadSelectorVisible, setIsSquadSelectorVisible] = useState(false);
-  const [leagueActionState, setLeagueActionState] = useState(/** @type {any | null} */ (null));
   const [conversationFallbackState, setConversationFallbackState] = useState(/** @type {any | null} */ (null));
+  const lastDashboardFocusLoadAtRef = useRef(0);
   const pendingLeagueActionTeamId = activeSquadId || getEntityDocumentId(userTeam) || undefined;
   const {
     data: pendingLeagueActionPayload,
-    refetch: refetchPendingLeagueAction,
   } = usePendingLeagueAction(pendingLeagueActionTeamId, {
-    enabled: Boolean(pendingLeagueActionTeamId),
-    refetchOnMount: true,
+    enabled: isFocused && Boolean(pendingLeagueActionTeamId),
+    refetchOnMount: false,
   });
+  const leagueActionState = pendingLeagueActionPayload?.nextAction || null;
   const leagueSurface = {
     backgroundColor: 'rgba(10, 28, 43, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.22)',
@@ -314,7 +317,6 @@ function LeagueDashboard() {
 
   const hydrateSquadDashboard = useCallback(async (/** @type {Team | null} */ team) => {
     setUserTeam(team);
-    setLeagueActionState(null);
     setMatchHistory([]);
     setRankingData([]);
 
@@ -332,18 +334,8 @@ function LeagueDashboard() {
       console.log('Data fetch error:', historyErr);
       setMatchHistory([]);
       setRankingData([]);
-      setLeagueActionState(null);
     }
   }, []);
-
-  useEffect(() => {
-    if (!pendingLeagueActionTeamId) {
-      setLeagueActionState(null);
-      return;
-    }
-
-    setLeagueActionState(pendingLeagueActionPayload?.nextAction || null);
-  }, [pendingLeagueActionPayload?.nextAction, pendingLeagueActionTeamId]);
 
   const loadDashboard = useCallback(async () => {
     if (!userData) return;
@@ -351,21 +343,19 @@ function LeagueDashboard() {
     setLoadError('');
     try {
       const userId = getEntityDocumentId(userData);
-      const [squadsResult, invitationResults, pendingResults] = await Promise.all([
-        getMyLeagueTeam(userId),
-        getInvitedLeagueTeams(userId),
-        getPendingLeagueTeams(userId),
-      ]);
-
-      const squads = Array.isArray(squadsResult) ? squadsResult : [];
+      const context = await loadLeagueTeamContextWithCache(queryClient, userId);
+      const squads = Array.isArray(context?.squads) ? context.squads : [];
       setAllSquads(squads);
-      setInvitedSquads(Array.isArray(invitationResults) ? invitationResults : []);
-      setPendingSquads(Array.isArray(pendingResults) ? pendingResults : []);
+      setInvitedSquads(Array.isArray(context?.invitedSquads) ? context.invitedSquads : []);
+      setPendingSquads(Array.isArray(context?.pendingSquads) ? context.pendingSquads : []);
 
       const selectedSquad = activeSquadId
         ? squads.find((squad) => areSameEntityId(getEntityDocumentId(squad), activeSquadId))
         : null;
-      const team = selectedSquad || squads[0] || null;
+      const defaultSquad = context?.defaultSquadId
+        ? squads.find((squad) => areSameEntityId(getEntityDocumentId(squad), context.defaultSquadId))
+        : null;
+      const team = selectedSquad || defaultSquad || squads[0] || null;
       const teamId = getEntityDocumentId(team);
       if (teamId && !activeSquadId) {
         setActiveSquadId(teamId);
@@ -380,20 +370,43 @@ function LeagueDashboard() {
       setUserTeam(null);
       setMatchHistory([]);
       setRankingData([]);
-      setLeagueActionState(null);
       setLoadError('Impossible de charger le dashboard League pour le moment.');
     } finally {
       setLoading(false);
     }
-  }, [activeSquadId, hydrateSquadDashboard, userData]);
+  }, [activeSquadId, hydrateSquadDashboard, queryClient, userData]);
 
   useFocusEffect(
     useCallback(() => {
-      loadDashboard();
-      if (pendingLeagueActionTeamId) {
-        refetchPendingLeagueAction();
+      const hasWarmDashboardState = Boolean(
+        userTeam
+        || allSquads.length > 0
+        || invitedSquads.length > 0
+        || pendingSquads.length > 0
+        || matchHistory.length > 0
+        || rankingData.length > 0
+        || loadError,
+      );
+      const now = Date.now();
+      if (
+        hasWarmDashboardState
+        && now - lastDashboardFocusLoadAtRef.current < DASHBOARD_FOCUS_REFRESH_MIN_INTERVAL_MS
+      ) {
+        return undefined;
       }
-    }, [loadDashboard, pendingLeagueActionTeamId, refetchPendingLeagueAction]),
+      lastDashboardFocusLoadAtRef.current = now;
+      loadDashboard();
+      return undefined;
+    }, [
+      allSquads.length,
+      invitedSquads.length,
+      loadDashboard,
+      loadError,
+      matchHistory.length,
+      pendingSquads.length,
+      rankingData.length,
+      userTeam,
+    ]),
   );
 
   const handleSquadSwitch = useCallback(async (/** @type {Team} */ squad) => {
@@ -544,7 +557,7 @@ function LeagueDashboard() {
     }
 
     navigation.navigate(RouteNames.LeagueMatchTab);
-  }, [leagueActionState, navigation, openLeagueConversation, openLeagueMatchDetails, openLeagueProposalComposer]);
+  }, [leagueActionState, navigation, openLeagueMatchDetails, openLeagueProposalComposer]);
 
   const handleSecondaryLeagueAction = useCallback(() => {
     const state = resolveLeagueActionStateKey(leagueActionState);

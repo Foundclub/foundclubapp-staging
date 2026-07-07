@@ -15,6 +15,11 @@ const connectionSubscribers = new Set();
 
 const getSocketUrl = () => getSocketBaseUrl();
 
+const shouldEnableSocketPollingFallback = () => {
+  const rawValue = String(process.env.FC_ENABLE_SOCKET_POLLING_FALLBACK || '').trim().toLowerCase();
+  return rawValue === '1' || rawValue === 'true' || rawValue === 'yes';
+};
+
 const notifyConnectionSubscribers = (isConnected) => {
   connectionSubscribers.forEach((subscriber) => {
     try {
@@ -101,7 +106,9 @@ export const connectSharedSocket = (token) => {
     reconnectionDelayMax: 10000,
     secure: false,
     timeout: 20000,
-    transports: ['websocket', 'polling'],
+    transports: shouldEnableSocketPollingFallback()
+      ? ['websocket', 'polling']
+      : ['websocket'],
   });
   sharedToken = token;
   attachInternalListeners(sharedSocket);

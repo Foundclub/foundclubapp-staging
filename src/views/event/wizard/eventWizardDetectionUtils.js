@@ -9,6 +9,7 @@ export const normalizeTypeLabel = (/** @type {any} */ value = '') => String(valu
 export const isDetectionEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('detection');
 export const isStageEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('stage');
 export const isTournamentEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('tournoi');
+export const isTrainingEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('entrainement');
 
 const hasNonEmptyValue = (/** @type {any} */ value) => {
   if (!value) return false;
@@ -73,12 +74,18 @@ export const shouldExplainDetectionSlotsDisabled = (/** @type {any} */ state = {
   return sportHasPositions(getEventWizardSportName(state));
 };
 
+export const shouldSkipEventWizardParticipantsStep = (/** @type {any} */ state = {}) => (
+  isTrainingEventType(state?.type?.name)
+  && String(state?.sessionStatus || 'open').trim().toLowerCase() === 'closed'
+);
+
 export const getEventWizardStepCount = (/** @type {any} */ state = {}) => {
   if (isStageEventType(state?.type?.name)) return 9;
   if (isTournamentEventType(state?.type?.name)) {
     return 10;
   }
-  return shouldShowDetectionSlotsStep(state) ? 11 : 10;
+  const baseStepCount = shouldShowDetectionSlotsStep(state) ? 11 : 10;
+  return shouldSkipEventWizardParticipantsStep(state) ? baseStepCount - 1 : baseStepCount;
 };
 
 export const getEventWizardLogisticsStepIndex = (/** @type {any} */ state = {}) => {
@@ -122,20 +129,20 @@ export const getEventWizardStageProgramStepIndex = (/** @type {any} */ state = {
 export const getEventWizardValidationStepIndex = (/** @type {any} */ state = {}) => {
   if (isStageEventType(state?.type?.name)) return 7;
   if (isTournamentEventType(state?.type?.name)) return 0;
-  if (shouldShowDetectionSlotsStep(state)) return 9;
-  return 8;
+  const baseStepIndex = shouldShowDetectionSlotsStep(state) ? 9 : 8;
+  return shouldSkipEventWizardParticipantsStep(state) ? baseStepIndex - 1 : baseStepIndex;
 };
 
 export const getEventWizardDescriptionStepIndex = (/** @type {any} */ state = {}) => {
   if (isStageEventType(state?.type?.name)) return 8;
   if (isTournamentEventType(state?.type?.name)) return 9;
-  if (shouldShowDetectionSlotsStep(state)) return 10;
-  return 9;
+  const baseStepIndex = shouldShowDetectionSlotsStep(state) ? 10 : 9;
+  return shouldSkipEventWizardParticipantsStep(state) ? baseStepIndex - 1 : baseStepIndex;
 };
 
 export const getEventWizardRecapStepIndex = (/** @type {any} */ state = {}) => {
   if (isStageEventType(state?.type?.name)) return 9;
   if (isTournamentEventType(state?.type?.name)) return 10;
-  if (shouldShowDetectionSlotsStep(state)) return 11;
-  return 10;
+  const baseStepIndex = shouldShowDetectionSlotsStep(state) ? 11 : 10;
+  return shouldSkipEventWizardParticipantsStep(state) ? baseStepIndex - 1 : baseStepIndex;
 };

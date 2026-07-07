@@ -17,7 +17,6 @@ import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStic
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 import { useGetLevels } from '@/services/level/levelQueries';
 
@@ -28,17 +27,18 @@ import { useGetLevels } from '@/services/level/levelQueries';
 function UserLevel({ navigation }) {
   const [selectedLevel, setSelectedLevel] = useState(/** @type {string | null} */ (null));
 
-  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
+  const {
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
-    refetch: refetchUserData,
-  } = useGetMe();
   const {
     data: levels,
     error: levelsError,

@@ -54,6 +54,7 @@ import {
 import {
   getClubCertificationLabel,
   getClubCertificationPalette,
+  isVerifiedClub,
 } from '@/utils/clubCertification';
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getImageUrl } from '@/utils/imageUrl';
@@ -1223,7 +1224,7 @@ function RecruitmentAdDetails() {
                 marginTop: 8,
               }}
               text={clubCertificationLabel}
-              textColor={club?.isCustomer === true ? 'success500' : 'neutral100'}
+              textColor={isVerifiedClub(club) ? 'success500' : 'neutral100'}
               textStyle={{ fontWeight: '700' }}
             />
             {team?.name && (

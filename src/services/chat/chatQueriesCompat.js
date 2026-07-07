@@ -19,6 +19,7 @@ const useFallbackGetChats = (params, options = {}) => {
   const {
     enabled = true,
     refetchOnMount = false,
+    refetchOnWindowFocus = false,
     staleTime = CHATS_STALE_MS,
     ...queryOptions
   } = options || {};
@@ -45,6 +46,7 @@ const useFallbackGetChats = (params, options = {}) => {
       pageSize: params?.pageSize,
     }),
     refetchOnMount,
+    refetchOnWindowFocus,
     staleTime,
     ...queryOptions,
   });
@@ -54,6 +56,7 @@ const useFallbackGetChatById = (chatId, options = {}) => {
   const {
     enabled = true,
     refetchOnMount = false,
+    refetchOnWindowFocus = false,
     serviceOptions = {},
     staleTime = CHAT_DETAIL_STALE_MS,
     ...queryOptions
@@ -67,6 +70,7 @@ const useFallbackGetChatById = (chatId, options = {}) => {
       includeMessages,
     }),
     refetchOnMount,
+    refetchOnWindowFocus,
     staleTime,
     ...queryOptions,
   });
@@ -76,6 +80,7 @@ const useFallbackGetChatMessages = (params, options = {}) => {
   const {
     enabled = true,
     refetchOnMount = false,
+    refetchOnWindowFocus = false,
     staleTime = CHAT_MESSAGES_STALE_MS,
     ...queryOptions
   } = options || {};
@@ -94,6 +99,7 @@ const useFallbackGetChatMessages = (params, options = {}) => {
       payload: 'light',
     }),
     refetchOnMount,
+    refetchOnWindowFocus,
     staleTime,
     ...queryOptions,
   });

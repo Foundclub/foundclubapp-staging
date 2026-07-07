@@ -9,6 +9,7 @@ import HistoryWizardPeriod from '@/views/historyWizard/HistoryWizardPeriod';
 import HistoryWizardRecap from '@/views/historyWizard/HistoryWizardRecap';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
+import SubscriptionOverview from '@/views/profile/SubscriptionOverview';
 import UserDetails from '@/views/profile/UserDetails';
 
 import { commonOptions } from '@/navigation/commonOptions';
@@ -44,6 +45,14 @@ function ProfileStack() {
           options={{
             ...commonOptions,
             headerTitle: t('profile.titles.edit'),
+          }}
+        />
+        <Stack.Screen
+          component={SubscriptionOverview}
+          name={RouteNames.SubscriptionOverview}
+          options={{
+            ...commonOptions,
+            headerTitle: t('profile.subscription.title', 'Mon abonnement'),
           }}
         />
         <Stack.Screen

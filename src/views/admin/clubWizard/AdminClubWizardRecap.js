@@ -112,12 +112,12 @@ function AdminClubWizardRecap({ navigation }) {
     {
       action: RouteNames.AdminClubWizardBusiness,
       lines: [
-        state.isCustomer ? 'Club client' : 'Club prospect',
+        state.clubPartner ? 'Club partenaire' : 'Club standard',
+        state.clubVerified ? 'Club verifie' : 'Club non verifie',
         state.isReservationProvider ? 'Reservation active' : 'Pas reservation',
-        `Abonnement: ${normalizeText(state.subscriptionValue) || '0'} EUR`,
-        `Max equipes: ${normalizeText(state.maxTeamNumber) || '0'}`,
+        'Abonnements et capacite Team geres depuis les operations abonnements',
       ],
-      title: 'Business',
+      title: 'Statut',
     },
     {
       action: RouteNames.AdminClubWizardMultisport,

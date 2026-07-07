@@ -8,7 +8,6 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
-import Input from '@/components/molecules/input/Input';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -80,37 +79,25 @@ function AdminClubWizardBusiness({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardMultisport)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={5}
-      subtitle="On reprend les donnees business du formulaire admin classique, mais en les isolant dans une etape claire pour garder le tunnel fluide."
-      title="Business et capacite"
+      subtitle="On fixe ici le partenariat, la verification et la reservation. Les abonnements et la capacite Team se pilotent ensuite depuis les operations abonnements."
+      title="Statut et gouvernance"
     >
       <View style={[Spaces.gap[18]]}>
         {renderToggle(
-          'Club client',
-          'isCustomer',
-          'Active si le club est deja client ou doit etre suivi comme tel dans la console.',
+          'Club partenaire',
+          'clubPartner',
+          'Signal commercial et interne uniquement. Ce statut n ouvre aucun droit produit a lui seul.',
+        )}
+        {renderToggle(
+          'Club verifie',
+          'clubVerified',
+          'Badge public et legitimite dirigeant. A activer seulement apres review claim, migration approuvee ou action superadmin auditee.',
         )}
         {renderToggle(
           'Fournisseur de reservation',
           'isReservationProvider',
           'Active si le club peut proposer des installations et des reservations.',
         )}
-
-        <Input
-          inputMode="numeric"
-          keyboardType="numeric"
-          label="Valeur abonnement"
-          onChangeText={(value) => setField('subscriptionValue', value)}
-          placeholder="0"
-          value={state.subscriptionValue}
-        />
-        <Input
-          inputMode="numeric"
-          keyboardType="numeric"
-          label="Nombre maximum d'equipes"
-          onChangeText={(value) => setField('maxTeamNumber', value)}
-          placeholder="0"
-          value={state.maxTeamNumber}
-        />
       </View>
     </WizardStepLayout>
   );

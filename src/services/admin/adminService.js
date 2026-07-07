@@ -58,6 +58,36 @@ export const updateNonPartnerCoachAffiliation = async (userDocumentId, clubDocum
   return result.data;
 };
 
+export const getSubscriptionOps = async () => {
+  const result = await client.get('/admin-dashboard/subscription-ops');
+  return result.data;
+};
+
+export const createManualSubscription = async (payload = {}) => {
+  const result = await client.post('/admin-dashboard/subscription-ops/subscriptions/manual', payload);
+  return result.data;
+};
+
+export const createManualEntitlement = async (payload = {}) => {
+  const result = await client.post('/admin-dashboard/subscription-ops/entitlements/manual', payload);
+  return result.data;
+};
+
+export const updateManualEntitlement = async (documentId, payload = {}) => {
+  const result = await client.put(`/admin-dashboard/subscription-ops/entitlements/${encodeURIComponent(String(documentId || '').trim())}`, payload);
+  return result.data;
+};
+
+export const syncSubscriptionTeamEntitlements = async (documentId, payload = {}) => {
+  const result = await client.post(`/admin-dashboard/subscription-ops/subscriptions/${encodeURIComponent(String(documentId || '').trim())}/sync-team-entitlements`, payload);
+  return result.data;
+};
+
+export const migrateLegacySubscriptions = async (payload = {}) => {
+  const result = await client.post('/admin-dashboard/subscription-ops/migrate-legacy', payload);
+  return result.data;
+};
+
 export const getNotificationsHealth = async () => {
   const result = await client.get('/notifications/health', {
     params: {

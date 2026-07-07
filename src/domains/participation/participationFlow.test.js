@@ -114,4 +114,62 @@ describe('participationFlow', () => {
     expect(flow.canAct).toBe(true);
     expect(flow.canWithdraw).toBe(false);
   });
+
+  test('blocks external users when the external training quota is full', () => {
+    const event = {
+      date: '2099-01-01T10:00:00.000Z',
+      externalParticipantLimit: 2,
+      participationRequests: [
+        {
+          documentId: 'request-1',
+          isActive: true,
+          participationStatus: 'accepted',
+          user: { documentId: 'user-a' },
+        },
+        {
+          documentId: 'request-2',
+          isActive: true,
+          participationStatus: 'pending',
+          user: { documentId: 'user-b' },
+        },
+      ],
+      participations: [],
+      sessionStatus: 'open',
+      team: { documentId: 'team-1', players: [] },
+      type: { name: 'Entrainement' },
+    };
+
+    const flow = resolveParticipationFlow(event, { user: playerUser });
+
+    expect(flow.canAct).toBe(false);
+    expect(flow.blockedReason).toContain('quota');
+  });
+
+  test('keeps internal members eligible even when the external training quota is full', () => {
+    const event = {
+      date: '2099-01-01T10:00:00.000Z',
+      externalParticipantLimit: 1,
+      participationRequests: [
+        {
+          documentId: 'request-1',
+          isActive: true,
+          participationStatus: 'accepted',
+          user: { documentId: 'user-a' },
+        },
+      ],
+      participations: [],
+      sessionStatus: 'open',
+      team: { documentId: 'team-1', players: [] },
+      type: { name: 'Entrainement' },
+    };
+    const internalUser = {
+      ...playerUser,
+      myTeams: [{ documentId: 'team-1' }],
+    };
+
+    const flow = resolveParticipationFlow(event, { user: internalUser });
+
+    expect(flow.canAct).toBe(true);
+    expect(flow.submitMode).toBe('createEventParticipation');
+  });
 });

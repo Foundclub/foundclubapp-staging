@@ -231,6 +231,12 @@ describe('authUseCases', () => {
       expect(getUserRoleKey('ClubAdmin')).toBe('president');
     });
 
+    it('treats missing roles as onboarding-safe new users', () => {
+      expect(getUserRoleKey(undefined)).toBe('new');
+      expect(getUserRoleKey(null)).toBe('new');
+      expect(getUserRoleKey('')).toBe('new');
+    });
+
     it('finds coach role document id from role aliases and backend type', () => {
       const roles = [
         { documentId: 'role-player', name: 'Joueur', type: 'joueur' },

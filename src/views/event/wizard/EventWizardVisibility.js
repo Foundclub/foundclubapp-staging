@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
@@ -12,6 +12,7 @@ import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardStepCount,
   getEventWizardVisibilityStepIndex,
+  shouldSkipEventWizardParticipantsStep,
 } from './eventWizardDetectionUtils';
 
 const VISIBILITY_OPTIONS = [
@@ -71,6 +72,11 @@ function EventWizardVisibility({ navigation }) {
     state.participantIdentityVisibility || 'VISIBLE',
   );
   const [sessionStatus, setSessionStatus] = useState(state.sessionStatus || 'open');
+  const projectedState = useMemo(() => ({
+    ...state,
+    participantIdentityVisibility,
+    sessionStatus,
+  }), [participantIdentityVisibility, sessionStatus, state]);
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.24)',
@@ -158,15 +164,19 @@ function EventWizardVisibility({ navigation }) {
       },
       type: 'SET_META',
     });
-    navigation.navigate(RouteNames.EventWizardParticipants);
+    navigation.navigate(
+      shouldSkipEventWizardParticipantsStep(projectedState)
+        ? RouteNames.EventWizardValidationMode
+        : RouteNames.EventWizardParticipants,
+    );
   };
 
   return (
     <WizardStepLayout
       onBack={() => navigation.goBack()}
       onNext={handleNext}
-      stepCount={getEventWizardStepCount(state)}
-      stepIndex={getEventWizardVisibilityStepIndex(state)}
+      stepCount={getEventWizardStepCount(projectedState)}
+      stepIndex={getEventWizardVisibilityStepIndex(projectedState)}
       subtitle={t(
         'eventWizard.steps.visibility.subtitle',
         "Choisis d'abord si l'evenement est public ou prive, puis regle la visibilite des participants.",

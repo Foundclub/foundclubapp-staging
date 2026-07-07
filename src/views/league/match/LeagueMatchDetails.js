@@ -1,4 +1,4 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -54,13 +54,16 @@ import {
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
-import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
+import {
+  getPendingLeagueActionQueryKey,
+  usePendingLeagueAction,
+} from '@/services/league/leagueActionQueries';
+import { loadLeagueMatchWithCache } from '@/services/league/leagueMatchQueries';
 import {
   cancelMatch,
   confirmParticipation,
   createLeagueProposal,
   declineParticipation,
-  fetchMatch,
   markVenueBooked,
   respondToLeagueProposal,
   submitPostSlotResponse,
@@ -117,6 +120,18 @@ const getParticipantDisplayName = (/** @type {User | null | undefined} */ partic
   return 'Joueur';
 };
 
+const LIVE_MATCH_POLLING_PHASES = new Set([
+  'disputed',
+  'opponent_found',
+  'pending_validation',
+  'post_slot_resolution',
+  'proposal_received',
+  'proposal_sent_waiting',
+  'waiting_proposal',
+  'waiting_score',
+  'waiting_venue',
+]);
+
 const isAlreadyResolvedError = (error) => {
   const status = Number(error?.response?.status || error?.status || 0);
   const code = String(error?.response?.data?.error?.code || error?.code || '');
@@ -131,6 +146,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const { matchId } = route.params;
   const highlightedSection = route?.params?.focusSection || null;
   const queryClient = useQueryClient();
+  const isFocused = useIsFocused();
   const { Colors, Fonts, Images } = useTheme();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const { showBanner } = useAppFeedback();
@@ -157,7 +173,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
   const userId = getEntityDocumentId(userData);
 
-  const loadMatch = useCallback(async () => {
+  const loadMatch = useCallback(async (options = {}) => {
     if (!matchId) {
       setLoadError("Aucun match n'est associe a ce lien.");
       setMatch(null);
@@ -168,7 +184,9 @@ function LeagueMatchDetails({ navigation, route }) {
 
     try {
       setLoadError('');
-      const data = await fetchMatch(matchId);
+      const data = await loadLeagueMatchWithCache(queryClient, matchId, {
+        staleTime: options?.forceFresh ? 0 : 30_000,
+      });
       setMatch(data);
     } catch (error) {
       console.error('Error loading match:', error);
@@ -178,12 +196,24 @@ function LeagueMatchDetails({ navigation, route }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [matchId]);
+  }, [matchId, queryClient]);
+
+  const matchPhase = useMemo(() => getMatchDerivedPhase(match), [match]);
+  const shouldPollLiveMatch = LIVE_MATCH_POLLING_PHASES.has(String(matchPhase || '').trim().toLowerCase());
 
   useFocusEffect(
     useCallback(() => {
       loadMatch();
-    }, [loadMatch]),
+      if (!shouldPollLiveMatch) {
+        return undefined;
+      }
+
+      const interval = setInterval(() => {
+        loadMatch({ forceFresh: true });
+      }, 15000);
+
+      return () => clearInterval(interval);
+    }, [loadMatch, shouldPollLiveMatch]),
   );
 
   useEffect(() => {
@@ -191,13 +221,6 @@ function LeagueMatchDetails({ navigation, route }) {
     setSelectedContentTab('match');
     setIsNegotiationResponseSheetVisible(false);
   }, [matchId]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadMatch();
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [loadMatch]);
 
   const isInTeamA = useMemo(() => {
     const membersA = match?.team_a?.members || [];
@@ -230,7 +253,8 @@ function LeagueMatchDetails({ navigation, route }) {
     data: pendingLeagueActionPayload,
     refetch: refetchPendingLeagueAction,
   } = usePendingLeagueAction(myTeamId || undefined, {
-    enabled: Boolean(myTeamId),
+    enabled: isFocused && Boolean(myTeamId),
+    refetchOnMount: false,
   });
 
   const {
@@ -238,14 +262,14 @@ function LeagueMatchDetails({ navigation, route }) {
     isFetching: isLeagueMatchStatsFetching,
     refetch: refetchLeagueMatchStats,
   } = useGetLeagueMatchStats(matchId, myTeamId || undefined, {
-    enabled: Boolean(matchId && myTeamId && String(match?.status || '').toLowerCase() === 'valid'),
+    enabled: isFocused && Boolean(matchId && myTeamId && String(match?.status || '').toLowerCase() === 'valid'),
   });
   const {
     data: leagueMyMatchResponsePayload,
     isFetching: isLeagueMyMatchResponseFetching,
     refetch: refetchLeagueMyMatchResponse,
   } = useGetLeagueMyMatchResponse(matchId, myTeamId || undefined, {
-    enabled: Boolean(matchId && myTeamId && String(match?.status || '').toLowerCase() === 'valid'),
+    enabled: isFocused && Boolean(matchId && myTeamId && String(match?.status || '').toLowerCase() === 'valid'),
   });
 
   const isCaptainA = isLeagueCaptain(match?.team_a, userId);
@@ -267,7 +291,6 @@ function LeagueMatchDetails({ navigation, route }) {
     const right = isAnonymous ? 'Adversaire' : (match?.team_b?.name || 'Equipe B');
     return `${left} VS ${right}`;
   }, [isAnonymous, match?.team_a?.name, match?.team_b?.name]);
-  const matchPhase = useMemo(() => getMatchDerivedPhase(match), [match]);
   const scoreFlow = useMemo(
     () => buildLocalScoreFlow(match, { isCaptainA, isCaptainB, teamSide }),
     [isCaptainA, isCaptainB, match, teamSide],
@@ -1319,14 +1342,18 @@ function LeagueMatchDetails({ navigation, route }) {
       <View style={[styles.sectionHeaderLine, { backgroundColor: `${accentColor}33` }]} />
     </View>
   ), [Fonts.h4, leagueCardTextColor]);
-  const invalidateLeagueQueries = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] });
-    queryClient.invalidateQueries({ queryKey: ['leagueMatchStats'] });
-    queryClient.invalidateQueries({ queryKey: ['leagueMyMatchResponse'] });
-    queryClient.invalidateQueries({ queryKey: ['chat', getEntityDocumentId(match?.chat)] });
-    queryClient.invalidateQueries({ queryKey: ['chat-messages', getEntityDocumentId(match?.chat)] });
-    queryClient.invalidateQueries({ queryKey: ['league-matches'] });
-  }, [match?.chat, queryClient]);
+  const invalidateLeagueQueries = useCallback(() => Promise.all([
+    queryClient.invalidateQueries({ queryKey: getPendingLeagueActionQueryKey(undefined) }),
+    myTeamId
+      ? queryClient.invalidateQueries({ queryKey: getPendingLeagueActionQueryKey(myTeamId) })
+      : Promise.resolve(),
+    queryClient.invalidateQueries({ queryKey: ['leagueMatchStats', matchId] }),
+    queryClient.invalidateQueries({ queryKey: ['leagueMyMatchResponse', matchId] }),
+    queryClient.invalidateQueries({ queryKey: ['chat', getEntityDocumentId(match?.chat)] }),
+    queryClient.invalidateQueries({ queryKey: ['chat-messages', getEntityDocumentId(match?.chat)] }),
+    queryClient.invalidateQueries({ queryKey: ['league-match', matchId] }),
+    queryClient.invalidateQueries({ queryKey: ['league-matches'] }),
+  ]), [match?.chat, matchId, myTeamId, queryClient]);
   const handleGoToScoreEntry = useCallback(() => {
     if (isScoreLockedByTime) {
       Alert.alert(
@@ -1362,7 +1389,7 @@ function LeagueMatchDetails({ navigation, route }) {
         title: 'Presence confirmee',
         tone: 'league',
       });
-      await loadMatch();
+      await loadMatch({ forceFresh: true });
     } catch (error) {
       console.error(error);
       showBanner({
@@ -1385,7 +1412,7 @@ function LeagueMatchDetails({ navigation, route }) {
         title: 'Participation annulee',
         tone: 'league',
       });
-      await loadMatch();
+      await loadMatch({ forceFresh: true });
     } catch (error) {
       console.error(error);
       showBanner({
@@ -1402,10 +1429,10 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       await markVenueBooked(matchId);
-      invalidateLeagueQueries();
+      await invalidateLeagueQueries();
       await refetchPendingLeagueAction();
       Alert.alert('Succes', 'Terrain marque comme reserve.');
-      await loadMatch();
+      await loadMatch({ forceFresh: true });
     } catch (error) {
       console.error(error);
       Alert.alert('Erreur', 'Impossible de mettre a jour le statut');
@@ -1435,9 +1462,9 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       const response = await submitPostSlotResponse(matchId, payload);
-      invalidateLeagueQueries();
+      await invalidateLeagueQueries();
       await refetchPendingLeagueAction();
-      await loadMatch();
+      await loadMatch({ forceFresh: true });
       handleClosePostSlotResolution();
 
       const resolution = String(response?.resolution || response?.data?.resolution || '').trim().toLowerCase();
@@ -1562,18 +1589,18 @@ function LeagueMatchDetails({ navigation, route }) {
 
       setActionLoading(true);
       await respondToLeagueProposal(matchId, negotiationProposalMessageId, 'accept', { legalAcceptance });
-      invalidateLeagueQueries();
+      await invalidateLeagueQueries();
       await refetchPendingLeagueAction();
-      await loadMatch();
+      await loadMatch({ forceFresh: true });
       navigation.navigate(RouteNames.LeagueMatchDetails, {
         focusSection: primaryFocusSection,
         matchId,
       });
     } catch (error) {
       if (isAlreadyResolvedError(error)) {
-        invalidateLeagueQueries();
+        await invalidateLeagueQueries();
         await refetchPendingLeagueAction();
-        await loadMatch();
+        await loadMatch({ forceFresh: true });
         return;
       }
       Alert.alert('Erreur', 'Impossible d accepter la proposition pour le moment.');
@@ -1599,15 +1626,15 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       await respondToLeagueProposal(matchId, negotiationProposalMessageId, 'decline');
-      invalidateLeagueQueries();
+      await invalidateLeagueQueries();
       await refetchPendingLeagueAction();
-      await loadMatch();
+      await loadMatch({ forceFresh: true });
       setIsNegotiationModalVisible(true);
     } catch (error) {
       if (isAlreadyResolvedError(error)) {
-        invalidateLeagueQueries();
+        await invalidateLeagueQueries();
         await refetchPendingLeagueAction();
-        await loadMatch();
+        await loadMatch({ forceFresh: true });
         return;
       }
       Alert.alert('Erreur', 'Impossible de refuser la proposition pour le moment.');
@@ -1671,9 +1698,9 @@ function LeagueMatchDetails({ navigation, route }) {
 
       setActionLoading(true);
       const result = await createLeagueProposal(matchId, proposalPayload, { legalAcceptance });
-      invalidateLeagueQueries();
+      await invalidateLeagueQueries();
       await refetchPendingLeagueAction();
-      await loadMatch();
+      await loadMatch({ forceFresh: true });
       setIsNegotiationModalVisible(false);
       const nextChatId = getEntityDocumentId(result?.match?.chat) || chatId;
       if (nextChatId) {
@@ -1689,9 +1716,9 @@ function LeagueMatchDetails({ navigation, route }) {
       }
     } catch (error) {
       if (isAlreadyResolvedError(error)) {
-        invalidateLeagueQueries();
+        await invalidateLeagueQueries();
         await refetchPendingLeagueAction();
-        await loadMatch();
+        await loadMatch({ forceFresh: true });
         setIsNegotiationModalVisible(false);
         return;
       }
@@ -1817,7 +1844,7 @@ function LeagueMatchDetails({ navigation, route }) {
         description={loadError}
         onAction={() => {
           setLoading(true);
-          loadMatch();
+          loadMatch({ forceFresh: true });
         }}
         title="Chargement impossible"
       />
@@ -1868,7 +1895,7 @@ function LeagueMatchDetails({ navigation, route }) {
                   refetchLeagueMatchStats();
                   refetchLeagueMyMatchResponse();
                 }
-                loadMatch();
+                loadMatch({ forceFresh: true });
               }}
               refreshing={refreshing}
               tintColor={Colors.primary500}
@@ -2140,7 +2167,7 @@ function LeagueMatchDetails({ navigation, route }) {
                         disabled={actionLoading}
                         onPress={() => {
                           refetchPendingLeagueAction();
-                          loadMatch();
+                          loadMatch({ forceFresh: true });
                         }}
                         title="Réessayer"
                         variant="SecondaryLight"

@@ -25,6 +25,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -37,6 +38,7 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import StatRow from '@/components/molecules/statRow/StatRow';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TeamSlotList from '@/components/molecules/teamSlotList/TeamSlotList';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
@@ -172,6 +174,7 @@ function TeamDetails({ navigation, route }) {
   const [calendarDisplayMode, setCalendarDisplayMode] = useState(/** @type {'upcoming' | 'results' | 'all'} */ ('upcoming'));
   const [isTeamActionsPanelOpen, setIsTeamActionsPanelOpen] = useState(false);
   const [trainerSearch, setTrainerSearch] = useState('');
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const autoOpenedTeamActionsKeyRef = useRef(/** @type {string | null} */ (null));
 
   // FFBB Modal states
@@ -211,6 +214,19 @@ function TeamDetails({ navigation, route }) {
     }
     return resolvedMessage || fallback || genericErrorMessage;
   }, [genericErrorMessage]);
+  const handleSubscriptionMutationError = useCallback((mutationError, fallbackMessage) => {
+    const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+    if (subscriptionDecision) {
+      setSubscriptionPaywallDecision(subscriptionDecision);
+      return true;
+    }
+
+    Alert.alert(
+      t('common.error', 'Erreur'),
+      getErrorMessage(mutationError, fallbackMessage),
+    );
+    return false;
+  }, [getErrorMessage, t]);
 
   /**
    * @param {unknown} sourceError
@@ -588,6 +604,12 @@ function TeamDetails({ navigation, route }) {
 
   const deleteTrainerMutation = /** @type {any} */ (useMutation({
     mutationFn: removeTrainerFromClub,
+    onError: (/** @type {any} */ mutationError) => {
+      handleSubscriptionMutationError(
+        mutationError,
+        t('teamDetails.alerts.deleteTrainerError', 'Impossible de retirer cet entraîneur'),
+      );
+    },
     onSuccess: () => {
       refetch();
     },
@@ -595,6 +617,12 @@ function TeamDetails({ navigation, route }) {
 
   const removePlayerMutation = /** @type {any} */ (useMutation({
     mutationFn: (/** @type {{ teamId: string; playerId: string }} */ payload) => removePlayerFromTeam(payload.teamId, payload.playerId),
+    onError: (/** @type {any} */ mutationError) => {
+      handleSubscriptionMutationError(
+        mutationError,
+        t('teamDetails.alerts.removePlayerError', 'Impossible de retirer ce joueur de l equipe'),
+      );
+    },
     onSuccess: () => {
       refetch();
     },
@@ -603,9 +631,9 @@ function TeamDetails({ navigation, route }) {
   const addTrainerToTeamMutation = /** @type {any} */ (useMutation({
     mutationFn: (/** @type {any} */ payload) => updateTeam(payload),
     onError: (/** @type {any} */ mutationError) => {
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraîneur')),
+      handleSubscriptionMutationError(
+        mutationError,
+        t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraîneur'),
       );
     },
     onSuccess: () => {
@@ -617,9 +645,9 @@ function TeamDetails({ navigation, route }) {
   const saveTeamTrainersMutation = /** @type {any} */ (useMutation({
     mutationFn: (/** @type {any} */ payload) => updateTeam(payload),
     onError: (/** @type {any} */ mutationError) => {
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre à jour les entraîneurs')),
+      handleSubscriptionMutationError(
+        mutationError,
+        t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre à jour les entraîneurs'),
       );
     },
     onSuccess: () => {
@@ -4000,6 +4028,13 @@ function TeamDetails({ navigation, route }) {
         isVisible={isCreateTrainerModalVisible}
         onClose={() => setIsCreateTrainerModalVisible(false)}
         onTrainerCreated={handleTrainerCreated}
+      />
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={team?.club?.documentId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
       />
 
       {/* FFBB URL Configuration Modal */}

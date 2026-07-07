@@ -37,9 +37,9 @@ const { getMe, switchManagedClub } = require('./authService');
 const buildProfilePayload = () => ({
   clubs: [
     {
+      clubPartner: true,
       documentId: 'club-section-1',
       id: 101,
-      isCustomer: true,
       logo: { url: '/uploads/club.png' },
       name: 'Section Football',
       parentMultisport: {

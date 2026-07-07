@@ -17,6 +17,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import useEvent from '@/domains/event/useEvent';
 import useTheme from '@/theme/themeContext';
 
@@ -30,7 +31,6 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import {
   useGetEventForEdit,
   useGetEventTypes,
@@ -53,6 +53,8 @@ const defaultValues = {
   description: '',
   endTime: '',
   eventTasks: [],
+  externalParticipantLimit: null,
+  externalParticipantValidationMode: 'manual',
   facility: null,
   invitedTeams: /** @type {string[]} */ ([]),
   isRecurrent: false,
@@ -158,6 +160,8 @@ const eventSchema = Joi.object({
   documentId: Joi.string().allow(null, '').optional(),
   endTime: Joi.string().pattern(/^(\d{2}:\d{2})?$/).allow('').optional(),
   eventTasks: Joi.array().items(Joi.object().unknown(true)).optional(),
+  externalParticipantLimit: Joi.number().allow(null, '').optional(),
+  externalParticipantValidationMode: Joi.string().valid('auto', 'manual').allow(null, '').optional(),
   facility: Joi.string().allow(null, '').optional(),
   invitedTeams: Joi.array().items(Joi.string()).optional(),
   isRecurrent: Joi.boolean().required(),
@@ -207,7 +211,7 @@ function EventEdit({ navigation, route }) {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
+  const { userData } = useAuth();
   const { data: event } = useGetEventForEdit(eventId);
   const { data: eventTypes } = useGetEventTypes();
   const {
@@ -218,10 +222,16 @@ function EventEdit({ navigation, route }) {
     getDateFromDateInput,
     getEventEditSupport,
     getReccurrenceDayOptions,
+    isTrainingEventType,
     recurrenceFrequencyOptions,
+    resolveTrainingOpenConfig,
     sessionStatusOptions,
     validationModeOptions,
   } = useEvent();
+  const initialTrainingOpenConfig = useMemo(
+    () => resolveTrainingOpenConfig(event || {}),
+    [event, resolveTrainingOpenConfig],
+  );
 
   const isClubManager = userData?.role?.name === USER_ROLES.president;
 
@@ -284,6 +294,8 @@ function EventEdit({ navigation, route }) {
       description: event?.description || '',
       endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
       eventTasks: Array.isArray(event?.eventTasks) ? event.eventTasks : [],
+      externalParticipantLimit: initialTrainingOpenConfig.externalParticipantLimit,
+      externalParticipantValidationMode: initialTrainingOpenConfig.externalParticipantValidationMode || 'manual',
       facility: event?.facility?.documentId || null,
       invitedTeams: event?.invitedTeams?.map(
         (/** @type {Team} */ invitedTeam) => invitedTeam.documentId || '',
@@ -314,6 +326,7 @@ function EventEdit({ navigation, route }) {
   const selectedDate = watch('date');
   const selectedStartTime = watch('startTime');
   const selectedEndTime = watch('endTime');
+  const selectedSessionStatus = watch('sessionStatus');
   const selectedFacilityId = watch('facility');
   const isRecurrent = watch('isRecurrent');
   const occupancyWindow = useMemo(
@@ -324,6 +337,11 @@ function EventEdit({ navigation, route }) {
     () => eventTypes?.find((eventType) => eventType.documentId === selectedType) || event?.type || null,
     [event?.type, eventTypes, selectedType],
   );
+  const isTrainingType = useMemo(
+    () => isTrainingEventType(selectedTypeData?.name),
+    [isTrainingEventType, selectedTypeData?.name],
+  );
+  const isOpenTrainingType = isTrainingType && selectedSessionStatus !== 'closed';
   const editSupport = useMemo(
     () => getEventEditSupport(event, selectedTypeData?.name),
     [event, getEventEditSupport, selectedTypeData?.name],
@@ -446,6 +464,8 @@ function EventEdit({ navigation, route }) {
         description: event?.description || '',
         endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
         eventTasks: Array.isArray(event?.eventTasks) ? event.eventTasks : [],
+        externalParticipantLimit: resolveTrainingOpenConfig(event).externalParticipantLimit,
+        externalParticipantValidationMode: resolveTrainingOpenConfig(event).externalParticipantValidationMode || 'manual',
         facility: event?.facility?.documentId || null,
         invitedTeams: event?.invitedTeams?.map(
           (/** @type {Team} */ invitedTeam) => invitedTeam.documentId || '',
@@ -466,7 +486,7 @@ function EventEdit({ navigation, route }) {
         validationMode: event?.validationMode || 'auto',
       });
     }
-  }, [event, reset]);
+  }, [event, reset, resolveTrainingOpenConfig]);
 
   // Set navigation options to change the header title based on whether editing or creating
   useEffect(() => {
@@ -497,10 +517,40 @@ function EventEdit({ navigation, route }) {
         return;
       }
 
+      if (isTrainingType && data.sessionStatus !== 'closed') {
+        const externalParticipantLimit = Number(data.externalParticipantLimit || 0);
+        if (!Number.isFinite(externalParticipantLimit) || externalParticipantLimit < 1) {
+          Alert.alert(
+            t('common.error', 'Erreur'),
+            t(
+              'eventEdit.trainingOpen.externalLimitRequired',
+              'Indique combien de places externes tu ouvres pour cet entrainement.',
+            ),
+          );
+          return;
+        }
+
+        if (!String(data.externalParticipantValidationMode || '').trim()) {
+          Alert.alert(
+            t('common.error', 'Erreur'),
+            t(
+              'eventEdit.trainingOpen.externalValidationRequired',
+              'Choisis un mode de validation pour les joueurs externes.',
+            ),
+          );
+          return;
+        }
+      }
+
       console.log('Form submitted with data:', data);
+      const payloadData = {
+        ...data,
+        totalPlayers: isTrainingType && data.sessionStatus !== 'closed' ? null : data.totalPlayers,
+        typeName: selectedTypeData?.name || event?.type?.name || '',
+      };
       const normalizedEvents = eventId
-        ? [createEventUpdatePayload(data)]
-        : createReccurrentEventPayload(data);
+        ? [createEventUpdatePayload(payloadData)]
+        : createReccurrentEventPayload(payloadData);
       console.log('Formatted events:', normalizedEvents);
 
       if (eventId) {
@@ -818,7 +868,9 @@ function EventEdit({ navigation, route }) {
               }) => (
                 <AutocompleteSelect
                   error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('eventEdit.fields.validationMode.label')}
+                  label={isTrainingType
+                    ? t('eventEdit.fields.trainingValidationMode.label', 'Validation des membres internes')
+                    : t('eventEdit.fields.validationMode.label')}
                   onBlur={onBlur}
                   options={validationModeOptions}
                   setValue={(/** @type {Option} */option) => {
@@ -828,6 +880,29 @@ function EventEdit({ navigation, route }) {
                 />
               )}
             />
+
+            {isOpenTrainingType ? (
+              <Controller
+                control={control}
+                name="externalParticipantValidationMode"
+                render={({
+                  field: {
+                    name, onBlur, onChange, value,
+                  },
+                }) => (
+                  <AutocompleteSelect
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    label={t('eventEdit.fields.externalParticipantValidationMode.label', 'Validation des joueurs externes')}
+                    onBlur={onBlur}
+                    options={validationModeOptions}
+                    setValue={(/** @type {Option} */option) => {
+                      onChange(option?.value || 'manual');
+                    }}
+                    value={validationModeOptions.find((option) => option.value === value)?.label || ''}
+                  />
+                )}
+              />
+            ) : null}
 
             <Controller
               control={control}
@@ -856,29 +931,31 @@ function EventEdit({ navigation, route }) {
               )}
             />
 
-            <Controller
-              control={control}
-              name="capacity"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <Input
-                  enterKeyHint="next"
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  inputMode="numeric"
-                  keyboardType="number-pad"
-                  label={t('eventEdit.fields.capacity.label')}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  onSubmitEditing={() => setFocus('type')}
-                  placeholder={t('eventEdit.fields.capacity.placeholder')}
-                  ref={ref}
-                  value={value?.toString() || ''}
-                />
-              )}
-            />
+            {!isTrainingType ? (
+              <Controller
+                control={control}
+                name="capacity"
+                render={({
+                  field: {
+                    name, onBlur, onChange, ref, value,
+                  },
+                }) => (
+                  <Input
+                    enterKeyHint="next"
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    inputMode="numeric"
+                    keyboardType="number-pad"
+                    label={t('eventEdit.fields.capacity.label')}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    onSubmitEditing={() => setFocus('type')}
+                    placeholder={t('eventEdit.fields.capacity.placeholder')}
+                    ref={ref}
+                    value={value?.toString() || ''}
+                  />
+                )}
+              />
+            ) : null}
 
             {isReservationType && (
               <>
@@ -978,6 +1055,60 @@ function EventEdit({ navigation, route }) {
 
               </>
             )}
+
+            {isTrainingType ? (
+              <>
+                {!isOpenTrainingType ? (
+                  <Controller
+                    control={control}
+                    name="totalPlayers"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="next"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        inputMode="numeric"
+                        keyboardType="number-pad"
+                        label={t('eventEdit.fields.trainingTotalPlayers.label', 'Joueurs attendus (interne)')}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        placeholder={t('eventEdit.fields.trainingTotalPlayers.placeholder', 'Nombre de joueurs de vos equipes attendus')}
+                        ref={ref}
+                        value={value?.toString() || ''}
+                      />
+                    )}
+                  />
+                ) : null}
+
+                {isOpenTrainingType ? (
+                  <Controller
+                    control={control}
+                    name="externalParticipantLimit"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="next"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        inputMode="numeric"
+                        keyboardType="number-pad"
+                        label={t('eventEdit.fields.externalParticipantLimit.label', 'Places externes')}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        placeholder={t('eventEdit.fields.externalParticipantLimit.placeholder', 'Combien de joueurs externes acceptes ?')}
+                        ref={ref}
+                        value={value?.toString() || ''}
+                      />
+                    )}
+                  />
+                ) : null}
+              </>
+            ) : null}
 
             <Controller
               control={control}

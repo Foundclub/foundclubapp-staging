@@ -1,6 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Text, TouchableOpacity, View,
@@ -8,6 +10,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
@@ -15,6 +18,7 @@ import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -51,7 +55,10 @@ function TeamMembershipRequestList({ navigation, route }) {
   } else if (routeParams.teamId) {
     teamIds = [routeParams.teamId];
   }
-  const { userData } = useAuth();
+  const {
+    clubVerificationSummary,
+    userData,
+  } = useAuth();
 
   // hooks
   const {
@@ -62,6 +69,7 @@ function TeamMembershipRequestList({ navigation, route }) {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   const {
     data: requestPages,
@@ -78,6 +86,11 @@ function TeamMembershipRequestList({ navigation, route }) {
   const acceptRequestMutation = useMutation({
     mutationFn: acceptTeamMembershipRequest,
     onError: (mutationError) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
       Alert.alert(
         t('common.error', 'Erreur'),
         extractApiErrorMessage(mutationError)
@@ -95,6 +108,11 @@ function TeamMembershipRequestList({ navigation, route }) {
   const rejectRequestMutation = useMutation({
     mutationFn: rejectTeamMembershipRequest,
     onError: (mutationError) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
       Alert.alert(
         t('common.error', 'Erreur'),
         extractApiErrorMessage(mutationError)
@@ -476,6 +494,18 @@ function TeamMembershipRequestList({ navigation, route }) {
             </View>
           </OnboardingWrapper>
         </WithDataWrapper>
+
+        <SubscriptionPaywallSheet
+          close={() => setSubscriptionPaywallDecision(null)}
+          clubDocumentId={
+            clubVerificationSummary?.clubDocumentId
+            || userData?.club?.documentId
+            || null
+          }
+          decision={subscriptionPaywallDecision}
+          isVisible={Boolean(subscriptionPaywallDecision)}
+          navigation={navigation}
+        />
       </ScreenContainer>
     </TutorialFlowBoundary>
   );

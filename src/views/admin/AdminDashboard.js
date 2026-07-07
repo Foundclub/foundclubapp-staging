@@ -23,6 +23,7 @@ import AdminStateView from '@/views/admin/components/AdminStateView';
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  useCreateManualSubscription,
   useGenerateTestTournament,
   useGetAdminStats,
   useGetDetectionVerificationQueue,
@@ -30,6 +31,10 @@ import {
   useGetNonPartnerCoachAffiliations,
   useGetPendingClubClaims,
   useGetPendingClubOnboardingRequests,
+  useGetSubscriptionOps,
+  useMigrateLegacySubscriptions,
+  useSaveManualEntitlement,
+  useSyncSubscriptionTeamEntitlements,
   useUpdateDetectionVerification,
   useUpdateNonPartnerCoachAffiliation,
   useUpdateNonPartnerCoachGovernance,
@@ -57,6 +62,38 @@ const sanitizePhoneNumber = (value) => String(value || '')
   .replace(/[^\d+]/g, '')
   .trim();
 
+const formatPlanCode = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return 'Plan inconnu';
+  return normalized.replace(/^fc_/i, '').replace(/_/g, ' ').toUpperCase();
+};
+
+const buildManualSubscriptionForm = (defaults = {}) => ({
+  billingPeriod: 'manual',
+  payerUserDocumentId: '',
+  planCode: 'fc_team_1_monthly',
+  provider: 'manual',
+  providerProductId: '',
+  providerTransactionId: '',
+  reason: 'support-manual-grant',
+  status: 'active',
+  ...defaults,
+});
+
+const buildManualEntitlementForm = (defaults = {}) => ({
+  capability: '*',
+  clubDocumentId: '',
+  documentId: '',
+  endsAt: '',
+  reason: 'support-entitlement-grant',
+  scopeType: 'TEAM',
+  startsAt: '',
+  status: 'active',
+  subscriptionDocumentId: '',
+  teamDocumentId: '',
+  ...defaults,
+});
+
 const REVIEWABLE_STATUSES = [
   { key: 'pending', label: 'En attente' },
   { key: 'verified', label: 'Verifiee' },
@@ -75,7 +112,11 @@ function AdminDashboard() {
     Spaces,
   } = useTheme();
   const navigation = useNavigation();
+  const createManualSubscriptionMutation = useCreateManualSubscription();
   const generateTestTournamentMutation = useGenerateTestTournament();
+  const migrateLegacySubscriptionsMutation = useMigrateLegacySubscriptions();
+  const saveManualEntitlementMutation = useSaveManualEntitlement();
+  const syncSubscriptionTeamEntitlementsMutation = useSyncSubscriptionTeamEntitlements();
   const updateDetectionVerificationMutation = useUpdateDetectionVerification();
   const updateNonPartnerCoachGovernanceMutation = useUpdateNonPartnerCoachGovernance();
   const updateNonPartnerCoachAffiliationMutation = useUpdateNonPartnerCoachAffiliation();
@@ -83,6 +124,12 @@ function AdminDashboard() {
   const [reviewItem, setReviewItem] = useState(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [reviewStatus, setReviewStatus] = useState('pending');
+  const [isLegacyMigrationModalVisible, setIsLegacyMigrationModalVisible] = useState(false);
+  const [isManualEntitlementModalVisible, setIsManualEntitlementModalVisible] = useState(false);
+  const [isManualSubscriptionModalVisible, setIsManualSubscriptionModalVisible] = useState(false);
+  const [legacyMigrationClubDocumentId, setLegacyMigrationClubDocumentId] = useState('');
+  const [manualEntitlementForm, setManualEntitlementForm] = useState(() => buildManualEntitlementForm());
+  const [manualSubscriptionForm, setManualSubscriptionForm] = useState(() => buildManualSubscriptionForm());
 
   const {
     data: featuredRequestsData,
@@ -125,6 +172,13 @@ function AdminDashboard() {
     isLoading: isGovernanceAffiliationsLoading,
     refetch: refetchGovernanceAffiliations,
   } = useGetNonPartnerCoachAffiliations(governanceAffiliationParams);
+
+  const {
+    data: subscriptionOpsData,
+    error: subscriptionOpsError,
+    isLoading: isSubscriptionOpsLoading,
+    refetch: refetchSubscriptionOps,
+  } = useGetSubscriptionOps();
 
   const {
     data: claimsData,
@@ -174,6 +228,7 @@ function AdminDashboard() {
     governanceAffiliationsError,
     leagueDisputesError,
     popupCampaignsError,
+    subscriptionOpsError,
   ].filter(Boolean);
 
   const partialDashboardDescription = secondaryDashboardErrors.length > 0
@@ -190,6 +245,7 @@ function AdminDashboard() {
       refetchClubOnboarding();
       refetchLeagueDisputes();
       refetchPopupCampaigns();
+      refetchSubscriptionOps();
     }, [
       refetchClaims,
       refetchClubOnboarding,
@@ -198,6 +254,7 @@ function AdminDashboard() {
       refetchGovernanceAffiliations,
       refetchLeagueDisputes,
       refetchPopupCampaigns,
+      refetchSubscriptionOps,
       refetchStats,
     ]),
   );
@@ -211,6 +268,29 @@ function AdminDashboard() {
   const publishingGovernance = stats?.publishingGovernance || {};
   const recentFirstTeamEvents = Array.isArray(stats?.recentFirstTeamEvents)
     ? stats.recentFirstTeamEvents
+    : [];
+  const subscriptionOpsCounts = subscriptionOpsData?.counts || {};
+  const subscriptionOpsPreviews = subscriptionOpsData?.previews || {};
+  const subscriptionPreviewItems = Array.isArray(subscriptionOpsPreviews?.subscriptions)
+    ? subscriptionOpsPreviews.subscriptions
+    : [];
+  const entitlementPreviewItems = Array.isArray(subscriptionOpsPreviews?.entitlements)
+    ? subscriptionOpsPreviews.entitlements
+    : [];
+  const quotaPreviewItems = Array.isArray(subscriptionOpsPreviews?.quotas)
+    ? subscriptionOpsPreviews.quotas
+    : [];
+  const billingEventPreviewItems = Array.isArray(subscriptionOpsPreviews?.billingEvents)
+    ? subscriptionOpsPreviews.billingEvents
+    : [];
+  const claimRequestPreviewItems = Array.isArray(subscriptionOpsPreviews?.claimRequests)
+    ? subscriptionOpsPreviews.claimRequests
+    : [];
+  const legacyCandidatePreviewItems = Array.isArray(subscriptionOpsPreviews?.legacyCandidates)
+    ? subscriptionOpsPreviews.legacyCandidates
+    : [];
+  const subscriptionCatalog = Array.isArray(subscriptionOpsPreviews?.catalog)
+    ? subscriptionOpsPreviews.catalog
     : [];
   const governanceAffiliations = Array.isArray(governanceAffiliationsData?.data)
     ? governanceAffiliationsData.data
@@ -244,6 +324,7 @@ function AdminDashboard() {
     || isClubOnboardingLoading
     || isLeagueDisputesLoading
     || isPopupCampaignsLoading
+    || isSubscriptionOpsLoading
   );
 
   const openEventDetails = useCallback((eventDocumentId) => {
@@ -412,8 +493,200 @@ function AdminDashboard() {
     );
   }, [updateNonPartnerCoachAffiliationMutation]);
 
-  const getPartnerStatusMeta = useCallback((isCustomer) => (
-    isCustomer === true
+  const openLegacyMigrationModal = useCallback((clubDocumentId = '') => {
+    setLegacyMigrationClubDocumentId(String(clubDocumentId || '').trim());
+    setIsLegacyMigrationModalVisible(true);
+  }, []);
+
+  const closeLegacyMigrationModal = useCallback(() => {
+    setIsLegacyMigrationModalVisible(false);
+    setLegacyMigrationClubDocumentId('');
+  }, []);
+
+  const openManualSubscriptionModal = useCallback(() => {
+    setManualSubscriptionForm(buildManualSubscriptionForm());
+    setIsManualSubscriptionModalVisible(true);
+  }, []);
+
+  const closeManualSubscriptionModal = useCallback(() => {
+    setIsManualSubscriptionModalVisible(false);
+    setManualSubscriptionForm(buildManualSubscriptionForm());
+  }, []);
+
+  const openManualEntitlementModal = useCallback((item = null, subscriptionDocumentId = '') => {
+    if (item?.documentId) {
+      setManualEntitlementForm(buildManualEntitlementForm({
+        capability: item?.capability || '*',
+        clubDocumentId: item?.scopeClub?.documentId || '',
+        documentId: item?.documentId || '',
+        endsAt: item?.endsAt || '',
+        reason: 'support-entitlement-correction',
+        scopeType: item?.scopeType || 'TEAM',
+        startsAt: item?.startsAt || '',
+        status: item?.status || 'active',
+        subscriptionDocumentId: item?.subscription?.documentId || '',
+        teamDocumentId: item?.scopeTeam?.documentId || '',
+      }));
+    } else {
+      setManualEntitlementForm(buildManualEntitlementForm({
+        subscriptionDocumentId,
+      }));
+    }
+    setIsManualEntitlementModalVisible(true);
+  }, []);
+
+  const closeManualEntitlementModal = useCallback(() => {
+    setIsManualEntitlementModalVisible(false);
+    setManualEntitlementForm(buildManualEntitlementForm());
+  }, []);
+
+  const handleRunLegacyMigration = useCallback((apply = false) => {
+    if (migrateLegacySubscriptionsMutation.isPending) return;
+
+    migrateLegacySubscriptionsMutation.mutate(
+      {
+        apply,
+        clubDocumentId: String(legacyMigrationClubDocumentId || '').trim() || undefined,
+      },
+      {
+        onError: (error) => {
+          Alert.alert(
+            apply ? 'Migration impossible' : 'Preview impossible',
+            getErrorMessage(error, 'generic') || 'Impossible d executer la migration legacy.',
+          );
+        },
+        onSuccess: (response) => {
+          const migratedCount = Number(response?.meta?.migratedCount || 0);
+          const label = apply ? 'Migration executee' : 'Preview terminee';
+          const scopeLabel = legacyMigrationClubDocumentId
+            ? `Club cible: ${legacyMigrationClubDocumentId}\n`
+            : '';
+          Alert.alert(
+            label,
+            `${scopeLabel}${migratedCount} club${migratedCount > 1 ? 's' : ''} analyse${migratedCount > 1 ? 's' : ''}.`,
+          );
+          closeLegacyMigrationModal();
+        },
+      },
+    );
+  }, [closeLegacyMigrationModal, legacyMigrationClubDocumentId, migrateLegacySubscriptionsMutation]);
+
+  const handleSubmitManualSubscription = useCallback(() => {
+    if (createManualSubscriptionMutation.isPending) return;
+
+    createManualSubscriptionMutation.mutate(
+      {
+        billingPeriod: String(manualSubscriptionForm?.billingPeriod || '').trim(),
+        payerUserDocumentId: String(manualSubscriptionForm?.payerUserDocumentId || '').trim(),
+        planCode: String(manualSubscriptionForm?.planCode || '').trim(),
+        provider: String(manualSubscriptionForm?.provider || '').trim(),
+        providerProductId: String(manualSubscriptionForm?.providerProductId || '').trim(),
+        providerTransactionId: String(manualSubscriptionForm?.providerTransactionId || '').trim(),
+        reason: String(manualSubscriptionForm?.reason || '').trim(),
+        status: String(manualSubscriptionForm?.status || '').trim(),
+      },
+      {
+        onError: (error) => {
+          Alert.alert(
+            'Creation impossible',
+            getErrorMessage(error, 'generic') || 'Impossible de creer cette subscription manuelle.',
+          );
+        },
+        onSuccess: () => {
+          Alert.alert('Subscription creee', 'La subscription manuelle a ete enregistree et auditee.');
+          closeManualSubscriptionModal();
+        },
+      },
+    );
+  }, [closeManualSubscriptionModal, createManualSubscriptionMutation, manualSubscriptionForm]);
+
+  const handleSubmitManualEntitlement = useCallback(() => {
+    if (saveManualEntitlementMutation.isPending) return;
+
+    const payload = {
+      capability: String(manualEntitlementForm?.capability || '').trim(),
+      clubDocumentId: String(manualEntitlementForm?.clubDocumentId || '').trim(),
+      endsAt: String(manualEntitlementForm?.endsAt || '').trim(),
+      reason: String(manualEntitlementForm?.reason || '').trim(),
+      scopeType: String(manualEntitlementForm?.scopeType || '').trim(),
+      startsAt: String(manualEntitlementForm?.startsAt || '').trim(),
+      status: String(manualEntitlementForm?.status || '').trim(),
+      subscriptionDocumentId: String(manualEntitlementForm?.subscriptionDocumentId || '').trim(),
+      teamDocumentId: String(manualEntitlementForm?.teamDocumentId || '').trim(),
+    };
+
+    saveManualEntitlementMutation.mutate(
+      {
+        documentId: String(manualEntitlementForm?.documentId || '').trim() || undefined,
+        payload,
+      },
+      {
+        onError: (error) => {
+          Alert.alert(
+            'Enregistrement impossible',
+            getErrorMessage(error, 'generic') || 'Impossible de sauvegarder cet entitlement.',
+          );
+        },
+        onSuccess: () => {
+          Alert.alert(
+            manualEntitlementForm?.documentId ? 'Entitlement corrige' : 'Entitlement cree',
+            'La mutation manuelle a bien ete auditee.',
+          );
+          closeManualEntitlementModal();
+        },
+      },
+    );
+  }, [closeManualEntitlementModal, manualEntitlementForm, saveManualEntitlementMutation]);
+
+  const handleSyncTeamEntitlements = useCallback((item) => {
+    const documentId = String(item?.documentId || '').trim();
+    if (!documentId || syncSubscriptionTeamEntitlementsMutation.isPending) return;
+
+    Alert.alert(
+      'Resynchroniser les droits Team ?',
+      `Cela va recalculer les entitlements TEAM de la subscription ${formatPlanCode(item?.planCode)}.`,
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: () => {
+            syncSubscriptionTeamEntitlementsMutation.mutate(
+              {
+                documentId,
+                reason: 'backoffice-team-entitlement-sync',
+              },
+              {
+                onError: (error) => {
+                  Alert.alert(
+                    'Resync impossible',
+                    getErrorMessage(error, 'generic') || 'Impossible de resynchroniser cette subscription.',
+                  );
+                },
+                onSuccess: (response) => {
+                  const syncedCount = Number(response?.meta?.syncedSlotCount || 0);
+                  Alert.alert(
+                    'Resync terminee',
+                    `${syncedCount} slot${syncedCount > 1 ? 's' : ''} resynchronise${syncedCount > 1 ? 's' : ''}.`,
+                  );
+                },
+              },
+            );
+          },
+          text: 'Resynchroniser',
+        },
+      ],
+    );
+  }, [syncSubscriptionTeamEntitlementsMutation]);
+
+  const openClaimPreviewDetail = useCallback((item) => {
+    if (!item?.documentId) return;
+    navigation.navigate(RouteNames.AdminClaimDetail, {
+      requestId: item.documentId,
+      requestType: 'claim',
+    });
+  }, [navigation]);
+
+  const getPartnerStatusMeta = useCallback((clubVerified) => (
+    clubVerified === true
       ? {
         backgroundColor: `${Colors.success500}18`,
         borderColor: `${Colors.success500}44`,
@@ -452,6 +725,7 @@ function AdminDashboard() {
           refetchClubOnboarding();
           refetchLeagueDisputes();
           refetchPopupCampaigns();
+          refetchSubscriptionOps();
         }}
         title="Chargement impossible"
       />
@@ -510,7 +784,7 @@ function AdminDashboard() {
     const organizerName = formatPersonName(item?.organizer);
     const phoneNumber = item?.organizer?.phoneNumber || '';
     const phoneLabel = sanitizePhoneNumber(phoneNumber);
-    const partnerStatusMeta = getPartnerStatusMeta(item?.club?.isCustomer === true);
+    const partnerStatusMeta = getPartnerStatusMeta(item?.club?.clubVerified === true);
 
     return (
       <View
@@ -640,7 +914,7 @@ function AdminDashboard() {
   };
 
   const renderFirstTeamEventItem = (item) => {
-    const partnerStatusMeta = getPartnerStatusMeta(item?.club?.isCustomer === true);
+    const partnerStatusMeta = getPartnerStatusMeta(item?.club?.clubVerified === true);
 
     return (
       <TouchableOpacity
@@ -816,6 +1090,313 @@ function AdminDashboard() {
       </View>
     );
   };
+
+  const renderSubscriptionPreviewItem = (item) => {
+    const status = String(item?.status || 'pending').trim().toLowerCase();
+    const statusMeta = status === 'active'
+      ? { backgroundColor: `${Colors.success500}18`, borderColor: `${Colors.success500}44`, textColor: Colors.success500 }
+      : status === 'grace_period'
+        ? { backgroundColor: `${Colors.warning500}18`, borderColor: `${Colors.warning500}44`, textColor: Colors.warning500 }
+        : { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}16`, textColor: Colors.neutral00 };
+
+    return (
+      <View
+        key={`subscription-preview-${item?.documentId || item?.planCode || 'row'}`}
+        style={[
+          styles.detailCard,
+          {
+            backgroundColor: Colors.primary700,
+            borderColor: `${Colors.primary500}22`,
+          },
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {formatPlanCode(item?.planCode)}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item?.provider || 'provider inconnu'}
+              {item?.billingPeriod ? ` - ${item.billingPeriod}` : ''}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item?.payerUser
+                ? `Payeur: ${formatPersonName(item.payerUser)}`
+                : 'Payeur non renseigne'}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item?.providerTransactionId || item?.documentId || 'Sans transaction'}
+            </Text>
+          </View>
+          <View style={[styles.statusPill, { backgroundColor: statusMeta.backgroundColor, borderColor: statusMeta.borderColor }]}>
+            <Text style={[Fonts.p4Bold, { color: statusMeta.textColor }]}>
+              {status || 'pending'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.inlineActionsRow}>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={() => openManualEntitlementModal(null, item?.documentId || '')}
+            style={[styles.inlineActionButton, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}44` }]}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Entitlement</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={() => handleSyncTeamEntitlements(item)}
+            style={[styles.inlineActionButton, { backgroundColor: `${Colors.success500}14`, borderColor: `${Colors.success500}33` }]}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>Resync Team</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderEntitlementPreviewItem = (item) => {
+    const status = String(item?.status || 'inactive').trim().toLowerCase();
+    const statusMeta = status === 'active'
+      ? { backgroundColor: `${Colors.success500}18`, borderColor: `${Colors.success500}44`, textColor: Colors.success500 }
+      : { backgroundColor: `${Colors.warning500}18`, borderColor: `${Colors.warning500}44`, textColor: Colors.warning500 };
+    const scopeLabel = item?.scopeType === 'CLUB'
+      ? (item?.scopeClub?.name || item?.scopeClub?.documentId || 'Club')
+      : (item?.scopeTeam?.name || item?.scopeTeam?.documentId || 'Equipe');
+
+    return (
+      <View
+        key={`entitlement-preview-${item?.documentId || scopeLabel}`}
+        style={[
+          styles.detailCard,
+          {
+            backgroundColor: Colors.primary700,
+            borderColor: `${Colors.primary200}22`,
+          },
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {item?.capability || '*'}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item?.scopeType || 'Scope inconnu'}
+              {' - '}
+              {scopeLabel}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              Subscription: {formatPlanCode(item?.subscription?.planCode)}
+            </Text>
+            {item?.sourceTeamSlot?.documentId ? (
+              <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+                Slot source: #{item?.sourceTeamSlot?.slotNumber || 0}
+              </Text>
+            ) : null}
+          </View>
+          <View style={[styles.statusPill, { backgroundColor: statusMeta.backgroundColor, borderColor: statusMeta.borderColor }]}>
+            <Text style={[Fonts.p4Bold, { color: statusMeta.textColor }]}>
+              {status}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.inlineActionsRow}>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={() => openManualEntitlementModal(item)}
+            style={[styles.inlineActionButton, { backgroundColor: `${Colors.primary200}16`, borderColor: `${Colors.primary200}33` }]}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>Corriger</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderQuotaPreviewItem = (item) => (
+    <View
+      key={`quota-preview-${item?.documentId || item?.quotaType || 'row'}`}
+      style={[
+        styles.detailCard,
+        {
+          backgroundColor: Colors.primary700,
+          borderColor: `${Colors.neutral00}14`,
+        },
+      ]}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {item?.quotaType || 'Quota'}
+      </Text>
+      <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+        {item?.user ? formatPersonName(item.user) : 'Utilisateur inconnu'}
+        {item?.team?.name ? ` - ${item.team.name}` : ''}
+      </Text>
+      <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginTop[12]]}>
+        <View style={[styles.statusPill, { backgroundColor: `${Colors.primary500}14`, borderColor: `${Colors.primary500}33` }]}>
+          <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+            {Number(item?.used || 0)} / {Number(item?.limit || 0)}
+          </Text>
+        </View>
+        <View style={[styles.statusPill, { backgroundColor: `${Colors.warning500}14`, borderColor: `${Colors.warning500}33` }]}>
+          <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>
+            reste {Number(item?.remaining || 0)}
+          </Text>
+        </View>
+      </View>
+      {item?.lastUsedAt ? (
+        <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[12]]}>
+          Dernier usage: {formatDateTime(item.lastUsedAt)}
+        </Text>
+      ) : null}
+    </View>
+  );
+
+  const renderBillingEventPreviewItem = (item) => {
+    const status = String(item?.processingStatus || 'pending').trim().toLowerCase();
+    const isFailed = status === 'failed';
+    return (
+      <View
+        key={`billing-preview-${item?.documentId || item?.providerEventId || 'row'}`}
+        style={[
+          styles.detailCard,
+          {
+            backgroundColor: Colors.primary700,
+            borderColor: isFailed ? `${Colors.error500}33` : `${Colors.neutral00}14`,
+          },
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {item?.eventType || 'billing-event'}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item?.provider || 'provider inconnu'}
+              {item?.providerEventId ? ` - ${item.providerEventId}` : ''}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              Recu le {formatDateTime(item?.receivedAt)}
+            </Text>
+          </View>
+          <View style={[styles.statusPill, { backgroundColor: isFailed ? `${Colors.error500}18` : `${Colors.success500}18`, borderColor: isFailed ? `${Colors.error500}44` : `${Colors.success500}44` }]}>
+            <Text style={[Fonts.p4Bold, { color: isFailed ? Colors.error500 : Colors.success500 }]}>
+              {status}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderClaimRequestPreviewItem = (item) => {
+    const status = String(item?.verificationStatus || item?.state || 'pending').trim().toLowerCase();
+    const isApproved = status === 'approved' || status === 'verified' || status === 'processed';
+    const isRejected = status === 'rejected' || status === 'refused';
+    return (
+      <TouchableOpacity
+        key={`claim-preview-${item?.documentId || item?.club?.documentId || 'row'}`}
+        activeOpacity={0.86}
+        onPress={() => openClaimPreviewDetail(item)}
+        style={[
+          styles.detailCard,
+          {
+            backgroundColor: Colors.primary700,
+            borderColor: `${Colors.warning500}22`,
+          },
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {item?.club?.name || 'Club inconnu'}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item?.user ? formatPersonName(item.user) : 'Utilisateur inconnu'}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              {item?.proofType || 'Preuve non renseignee'}
+            </Text>
+          </View>
+          <View style={[styles.statusPill, {
+            backgroundColor: isApproved
+              ? `${Colors.success500}18`
+              : isRejected
+                ? `${Colors.error500}18`
+                : `${Colors.warning500}18`,
+            borderColor: isApproved
+              ? `${Colors.success500}44`
+              : isRejected
+                ? `${Colors.error500}44`
+                : `${Colors.warning500}44`,
+          }]}
+          >
+            <Text style={[Fonts.p4Bold, {
+              color: isApproved
+                ? Colors.success500
+                : isRejected
+                  ? Colors.error500
+                  : Colors.warning500,
+            }]}
+            >
+              {status}
+            </Text>
+          </View>
+        </View>
+        {item?.rejectionReason ? (
+          <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[12]]}>
+            Motif: {item.rejectionReason}
+          </Text>
+        ) : null}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderLegacyCandidateItem = (item) => (
+    <View
+      key={`legacy-candidate-${item?.documentId || item?.name || 'row'}`}
+      style={[
+        styles.detailCard,
+        {
+          backgroundColor: Colors.primary700,
+          borderColor: `${Colors.primary500}22`,
+        },
+      ]}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {item?.name || 'Club legacy'}
+      </Text>
+      <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+        {item?.documentId || 'Sans documentId'}
+      </Text>
+      <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginTop[12]]}>
+        <View style={[styles.statusPill, { backgroundColor: `${Colors.success500}14`, borderColor: `${Colors.success500}33` }]}>
+          <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>
+            {item?.clubPartner ? 'Partenaire' : 'A migrer'}
+          </Text>
+        </View>
+        <View style={[styles.statusPill, { backgroundColor: `${Colors.primary200}14`, borderColor: `${Colors.primary200}33` }]}>
+          <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>
+            Legacy {Number(item?.subscriptionValue || 0)} EUR
+          </Text>
+        </View>
+        <View style={[styles.statusPill, { backgroundColor: `${Colors.primary500}14`, borderColor: `${Colors.primary500}33` }]}>
+          <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+            Legacy {Number(item?.maxTeamNumber || 0)} equipe{Number(item?.maxTeamNumber || 0) > 1 ? 's' : ''}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.inlineActionsRow}>
+        <TouchableOpacity
+          activeOpacity={0.86}
+          onPress={() => openLegacyMigrationModal(item?.documentId || '')}
+          style={[styles.inlineActionButton, { backgroundColor: `${Colors.warning500}16`, borderColor: `${Colors.warning500}33` }]}
+        >
+          <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>Dry-run cible</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <ScreenContainer
@@ -1094,6 +1675,152 @@ function AdminDashboard() {
             styles.sectionCard,
             {
               backgroundColor: Colors.primary700,
+              borderColor: `${Colors.primary500}33`,
+            },
+          ]}
+        >
+          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Subscription Ops</Text>
+              <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
+                Pilote la migration legacy, les subscriptions manuelles, les entitlements et les signaux billing depuis le meme back-office.
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={refetchSubscriptionOps}
+              style={[styles.refreshButton, { borderColor: `${Colors.primary500}44` }]}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Rafraichir</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginTop[16]]}>
+            <View style={[styles.statusPill, { backgroundColor: `${Colors.primary500}14`, borderColor: `${Colors.primary500}33` }]}>
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                {Number(subscriptionOpsCounts?.subscriptions || 0)} subscriptions
+              </Text>
+            </View>
+            <View style={[styles.statusPill, { backgroundColor: `${Colors.success500}14`, borderColor: `${Colors.success500}33` }]}>
+              <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>
+                {Number(subscriptionOpsCounts?.entitlements || 0)} entitlements
+              </Text>
+            </View>
+            <View style={[styles.statusPill, { backgroundColor: `${Colors.warning500}14`, borderColor: `${Colors.warning500}33` }]}>
+              <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>
+                {Number(subscriptionOpsCounts?.legacyCandidateClubs || 0)} legacy
+              </Text>
+            </View>
+            <View style={[styles.statusPill, { backgroundColor: `${Colors.error500}14`, borderColor: `${Colors.error500}33` }]}>
+              <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>
+                {Number(subscriptionOpsCounts?.failedBillingEvents || 0)} billing KO
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.inlineActionsRow}>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={() => openLegacyMigrationModal('')}
+              style={[styles.inlineActionButton, { backgroundColor: `${Colors.warning500}16`, borderColor: `${Colors.warning500}33` }]}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>Migration legacy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={openManualSubscriptionModal}
+              style={[styles.inlineActionButton, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}44` }]}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Subscription manuelle</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={() => openManualEntitlementModal()}
+              style={[styles.inlineActionButton, { backgroundColor: `${Colors.primary200}16`, borderColor: `${Colors.primary200}33` }]}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>Entitlement manuel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={() => navigation.navigate(RouteNames.AdminClaimList)}
+              style={[styles.inlineActionButton, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}16` }]}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Claims</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[20], Spaces.marginBottom[12]]}>
+            Subscriptions recentes
+          </Text>
+          {subscriptionPreviewItems.length > 0 ? (
+            subscriptionPreviewItems.map(renderSubscriptionPreviewItem)
+          ) : (
+            <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucune subscription a afficher</Text>
+            </View>
+          )}
+
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
+            Entitlements recents
+          </Text>
+          {entitlementPreviewItems.length > 0 ? (
+            entitlementPreviewItems.map(renderEntitlementPreviewItem)
+          ) : (
+            <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun entitlement a afficher</Text>
+            </View>
+          )}
+
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
+            Clubs legacy candidats
+          </Text>
+          {legacyCandidatePreviewItems.length > 0 ? (
+            legacyCandidatePreviewItems.map(renderLegacyCandidateItem)
+          ) : (
+            <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun candidat legacy</Text>
+            </View>
+          )}
+
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
+            Claims a revoir
+          </Text>
+          {claimRequestPreviewItems.length > 0 ? (
+            claimRequestPreviewItems.map(renderClaimRequestPreviewItem)
+          ) : (
+            <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun claim en preview</Text>
+            </View>
+          )}
+
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
+            Quotas free
+          </Text>
+          {quotaPreviewItems.length > 0 ? (
+            quotaPreviewItems.map(renderQuotaPreviewItem)
+          ) : (
+            <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun quota en preview</Text>
+            </View>
+          )}
+
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
+            Billing events
+          </Text>
+          {billingEventPreviewItems.length > 0 ? (
+            billingEventPreviewItems.map(renderBillingEventPreviewItem)
+          ) : (
+            <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun billing event en preview</Text>
+            </View>
+          )}
+        </View>
+
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: Colors.primary700,
               borderColor: `${Colors.neutral00}18`,
             },
           ]}
@@ -1305,6 +2032,397 @@ function AdminDashboard() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={closeLegacyMigrationModal}
+        transparent
+        visible={isLegacyMigrationModalVisible}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.warning500}44` }]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Migration legacy</Text>
+            <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
+              Lance un dry-run global ou cible un club precis avant l apply reel.
+            </Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.warning500 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+              Club documentId optionnel
+            </Text>
+            <TextInput
+              autoCapitalize="none"
+              onChangeText={setLegacyMigrationClubDocumentId}
+              placeholder="club-document-id"
+              placeholderTextColor={Colors.neutral400}
+              style={[
+                styles.formInput,
+                {
+                  borderColor: `${Colors.neutral00}18`,
+                  color: Colors.neutral00,
+                },
+              ]}
+              value={legacyMigrationClubDocumentId}
+            />
+            <View style={styles.modalActionsRow}>
+              <TouchableOpacity
+                activeOpacity={0.86}
+                disabled={migrateLegacySubscriptionsMutation.isPending}
+                onPress={() => handleRunLegacyMigration(false)}
+                style={[styles.modalActionButton, { backgroundColor: `${Colors.warning500}16`, borderColor: `${Colors.warning500}33` }]}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>
+                  {migrateLegacySubscriptionsMutation.isPending ? '...' : 'Dry-run'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.86}
+                disabled={migrateLegacySubscriptionsMutation.isPending}
+                onPress={() => handleRunLegacyMigration(true)}
+                style={[styles.modalActionButton, { backgroundColor: Colors.warning500, borderColor: Colors.warning500 }]}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
+                  {migrateLegacySubscriptionsMutation.isPending ? '...' : 'Apply'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={closeLegacyMigrationModal}
+              style={[styles.linkButton, Spaces.marginTop[12]]}
+            >
+              <Text style={[Fonts.p4Bold, Fonts.neutral300]}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={closeManualSubscriptionModal}
+        transparent
+        visible={isManualSubscriptionModalVisible}
+      >
+        <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary500}44` }]}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Subscription manuelle</Text>
+              <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
+                Cree une subscription auditee pour support, migration ciblee ou intervention superadmin.
+              </Text>
+
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+                Plan
+              </Text>
+              <View style={styles.statusSelectorRow}>
+                {subscriptionCatalog.map((entry) => {
+                  const isActive = manualSubscriptionForm.planCode === entry.planCode;
+                  return (
+                    <TouchableOpacity
+                      key={entry.planCode}
+                      activeOpacity={0.86}
+                      onPress={() => setManualSubscriptionForm((current) => ({
+                        ...current,
+                        planCode: entry.planCode,
+                        providerProductId: entry.providerProductId || current.providerProductId,
+                      }))}
+                      style={[
+                        styles.statusOptionButton,
+                        {
+                          backgroundColor: isActive ? `${Colors.primary500}20` : `${Colors.neutral00}06`,
+                          borderColor: isActive ? `${Colors.primary500}66` : `${Colors.neutral00}16`,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: isActive ? Colors.primary500 : Colors.neutral00 }]}>
+                        {formatPlanCode(entry.planCode)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+                Payeur user documentId
+              </Text>
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setManualSubscriptionForm((current) => ({ ...current, payerUserDocumentId: value }))}
+                placeholder="user-document-id"
+                placeholderTextColor={Colors.neutral400}
+                style={[styles.formInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                value={manualSubscriptionForm.payerUserDocumentId}
+              />
+
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+                Provider / statut / periode
+              </Text>
+              <View style={styles.statusSelectorRow}>
+                {['manual', 'apple', 'google', 'web', 'legacy'].map((provider) => {
+                  const isActive = manualSubscriptionForm.provider === provider;
+                  return (
+                    <TouchableOpacity
+                      key={provider}
+                      activeOpacity={0.86}
+                      onPress={() => setManualSubscriptionForm((current) => ({ ...current, provider }))}
+                      style={[styles.statusOptionButton, {
+                        backgroundColor: isActive ? `${Colors.primary500}20` : `${Colors.neutral00}06`,
+                        borderColor: isActive ? `${Colors.primary500}66` : `${Colors.neutral00}16`,
+                      }]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: isActive ? Colors.primary500 : Colors.neutral00 }]}>{provider}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <View style={[styles.statusSelectorRow, Spaces.marginTop[10]]}>
+                {['active', 'pending', 'grace_period', 'expired'].map((status) => {
+                  const isActive = manualSubscriptionForm.status === status;
+                  return (
+                    <TouchableOpacity
+                      key={status}
+                      activeOpacity={0.86}
+                      onPress={() => setManualSubscriptionForm((current) => ({ ...current, status }))}
+                      style={[styles.statusOptionButton, {
+                        backgroundColor: isActive ? `${Colors.success500}20` : `${Colors.neutral00}06`,
+                        borderColor: isActive ? `${Colors.success500}66` : `${Colors.neutral00}16`,
+                      }]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: isActive ? Colors.success500 : Colors.neutral00 }]}>{status}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <View style={[styles.statusSelectorRow, Spaces.marginTop[10]]}>
+                {['manual', 'monthly', 'yearly', 'legacy'].map((billingPeriod) => {
+                  const isActive = manualSubscriptionForm.billingPeriod === billingPeriod;
+                  return (
+                    <TouchableOpacity
+                      key={billingPeriod}
+                      activeOpacity={0.86}
+                      onPress={() => setManualSubscriptionForm((current) => ({ ...current, billingPeriod }))}
+                      style={[styles.statusOptionButton, {
+                        backgroundColor: isActive ? `${Colors.primary200}20` : `${Colors.neutral00}06`,
+                        borderColor: isActive ? `${Colors.primary200}66` : `${Colors.neutral00}16`,
+                      }]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: isActive ? Colors.primary200 : Colors.neutral00 }]}>{billingPeriod}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+                Provider productId / transactionId / raison
+              </Text>
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setManualSubscriptionForm((current) => ({ ...current, providerProductId: value }))}
+                placeholder="providerProductId"
+                placeholderTextColor={Colors.neutral400}
+                style={[styles.formInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                value={manualSubscriptionForm.providerProductId}
+              />
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setManualSubscriptionForm((current) => ({ ...current, providerTransactionId: value }))}
+                placeholder="providerTransactionId (optionnel)"
+                placeholderTextColor={Colors.neutral400}
+                style={[styles.formInput, styles.formInputSpacing, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                value={manualSubscriptionForm.providerTransactionId}
+              />
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setManualSubscriptionForm((current) => ({ ...current, reason: value }))}
+                placeholder="reason obligatoire"
+                placeholderTextColor={Colors.neutral400}
+                style={[styles.formInput, styles.formInputSpacing, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                value={manualSubscriptionForm.reason}
+              />
+
+              <View style={styles.modalActionsRow}>
+                <TouchableOpacity
+                  activeOpacity={0.86}
+                  onPress={closeManualSubscriptionModal}
+                  style={[styles.modalActionButton, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}16` }]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.86}
+                  disabled={createManualSubscriptionMutation.isPending}
+                  onPress={handleSubmitManualSubscription}
+                  style={[styles.modalActionButton, { backgroundColor: Colors.primary500, borderColor: Colors.primary500 }]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
+                    {createManualSubscriptionMutation.isPending ? 'Creation...' : 'Creer'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={closeManualEntitlementModal}
+        transparent
+        visible={isManualEntitlementModalVisible}
+      >
+        <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary200}44` }]}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                {manualEntitlementForm.documentId ? 'Corriger un entitlement' : 'Entitlement manuel'}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
+                Scope, capability et subscription restent alignes avec la source de verite backend.
+              </Text>
+
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+                Subscription documentId
+              </Text>
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, subscriptionDocumentId: value }))}
+                placeholder="subscription-document-id"
+                placeholderTextColor={Colors.neutral400}
+                style={[styles.formInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                value={manualEntitlementForm.subscriptionDocumentId}
+              />
+
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+                Scope / statut
+              </Text>
+              <View style={styles.statusSelectorRow}>
+                {['TEAM', 'CLUB'].map((scopeType) => {
+                  const isActive = manualEntitlementForm.scopeType === scopeType;
+                  return (
+                    <TouchableOpacity
+                      key={scopeType}
+                      activeOpacity={0.86}
+                      onPress={() => setManualEntitlementForm((current) => ({ ...current, scopeType }))}
+                      style={[styles.statusOptionButton, {
+                        backgroundColor: isActive ? `${Colors.primary200}20` : `${Colors.neutral00}06`,
+                        borderColor: isActive ? `${Colors.primary200}66` : `${Colors.neutral00}16`,
+                      }]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: isActive ? Colors.primary200 : Colors.neutral00 }]}>{scopeType}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                {['active', 'inactive', 'revoked'].map((status) => {
+                  const isActive = manualEntitlementForm.status === status;
+                  return (
+                    <TouchableOpacity
+                      key={status}
+                      activeOpacity={0.86}
+                      onPress={() => setManualEntitlementForm((current) => ({ ...current, status }))}
+                      style={[styles.statusOptionButton, {
+                        backgroundColor: isActive ? `${Colors.success500}20` : `${Colors.neutral00}06`,
+                        borderColor: isActive ? `${Colors.success500}66` : `${Colors.neutral00}16`,
+                      }]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: isActive ? Colors.success500 : Colors.neutral00 }]}>{status}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+                Capability
+              </Text>
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, capability: value }))}
+                placeholder="* ou capability precise"
+                placeholderTextColor={Colors.neutral400}
+                style={[styles.formInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                value={manualEntitlementForm.capability}
+              />
+
+              {manualEntitlementForm.scopeType === 'TEAM' ? (
+                <>
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+                    Team documentId
+                  </Text>
+                  <TextInput
+                    autoCapitalize="none"
+                    onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, teamDocumentId: value }))}
+                    placeholder="team-document-id"
+                    placeholderTextColor={Colors.neutral400}
+                    style={[styles.formInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                    value={manualEntitlementForm.teamDocumentId}
+                  />
+                </>
+              ) : (
+                <>
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+                    Club documentId
+                  </Text>
+                  <TextInput
+                    autoCapitalize="none"
+                    onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, clubDocumentId: value }))}
+                    placeholder="club-document-id"
+                    placeholderTextColor={Colors.neutral400}
+                    style={[styles.formInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                    value={manualEntitlementForm.clubDocumentId}
+                  />
+                </>
+              )}
+
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
+                StartsAt / EndsAt / raison
+              </Text>
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, startsAt: value }))}
+                placeholder="startsAt ISO optionnel"
+                placeholderTextColor={Colors.neutral400}
+                style={[styles.formInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                value={manualEntitlementForm.startsAt}
+              />
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, endsAt: value }))}
+                placeholder="endsAt ISO optionnel"
+                placeholderTextColor={Colors.neutral400}
+                style={[styles.formInput, styles.formInputSpacing, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                value={manualEntitlementForm.endsAt}
+              />
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, reason: value }))}
+                placeholder="reason obligatoire"
+                placeholderTextColor={Colors.neutral400}
+                style={[styles.formInput, styles.formInputSpacing, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
+                value={manualEntitlementForm.reason}
+              />
+
+              <View style={styles.modalActionsRow}>
+                <TouchableOpacity
+                  activeOpacity={0.86}
+                  onPress={closeManualEntitlementModal}
+                  style={[styles.modalActionButton, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}16` }]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.86}
+                  disabled={saveManualEntitlementMutation.isPending}
+                  onPress={handleSubmitManualEntitlement}
+                  style={[styles.modalActionButton, { backgroundColor: Colors.primary200, borderColor: Colors.primary200 }]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
+                    {saveManualEntitlementMutation.isPending
+                      ? 'Enregistrement...'
+                      : (manualEntitlementForm.documentId ? 'Corriger' : 'Creer')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -1401,6 +2519,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
+  formInput: {
+    borderRadius: 16,
+    borderWidth: 1,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  formInputSpacing: {
+    marginTop: 10,
+  },
   headerDescription: {
     marginTop: 8,
     maxWidth: 460,
@@ -1425,6 +2553,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
     marginTop: 16,
+  },
+  linkButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 42,
   },
   modalActionButton: {
     alignItems: 'center',
@@ -1453,6 +2586,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    width: '100%',
   },
   notesBlock: {
     borderRadius: 16,

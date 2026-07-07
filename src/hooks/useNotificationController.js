@@ -15,9 +15,11 @@ import {
 const PAGE_SIZE = 20;
 export const NOTIFICATIONS_QUERY_KEY = ['notifications'];
 export const UNREAD_COUNT_QUERY_KEY = ['notifications', 'unread-count'];
-const NOTIFICATIONS_STALE_MS = 10000;
-const UNREAD_POLL_MS = 60000;
+const NOTIFICATIONS_LIST_STALE_MS = 10000;
+const UNREAD_COUNT_STALE_MS = 120000;
+const UNREAD_POLL_MS = 120000;
 const FOCUS_REFRESH_THROTTLE_MS = 8000;
+const UNREAD_FOCUS_REFRESH_MIN_AGE_MS = 45000;
 
 /**
  * @typedef {{ documentId?: string; read?: boolean }} NotificationItem
@@ -72,6 +74,13 @@ const findNotificationByDocumentId = (data, documentId) => {
     .find((item) => item?.documentId === documentId) || null;
 };
 
+const getQueryAgeMs = (queryClient, queryKey) => {
+  const queryState = queryClient.getQueryState(queryKey);
+  const updatedAt = Number(queryState?.dataUpdatedAt || 0);
+  if (!updatedAt) return Number.POSITIVE_INFINITY;
+  return Math.max(0, Date.now() - updatedAt);
+};
+
 export const useNotificationController = (options = {}) => {
   const {
     notificationsEnabled = true,
@@ -103,7 +112,7 @@ export const useNotificationController = (options = {}) => {
     queryFn: ({ pageParam = 1 }) => getNotifications({ page: pageParam, pageSize: PAGE_SIZE }),
     queryKey: NOTIFICATIONS_QUERY_KEY,
     refetchOnMount: false,
-    staleTime: NOTIFICATIONS_STALE_MS,
+    staleTime: NOTIFICATIONS_LIST_STALE_MS,
   });
 
   // Flatten notifications from all pages
@@ -120,7 +129,7 @@ export const useNotificationController = (options = {}) => {
     refetchInterval: unreadCountEnabled ? unreadPollMs : false,
     refetchIntervalInBackground: false,
     refetchOnMount: false,
-    staleTime: NOTIFICATIONS_STALE_MS,
+    staleTime: UNREAD_COUNT_STALE_MS,
   });
 
   const invalidateNotificationQueries = useCallback(() => {
@@ -149,7 +158,10 @@ export const useNotificationController = (options = {}) => {
         refetch();
       }
       if (unreadCountEnabled) {
-        queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+        const unreadCountAgeMs = getQueryAgeMs(queryClient, UNREAD_COUNT_QUERY_KEY);
+        if (unreadCountAgeMs >= UNREAD_FOCUS_REFRESH_MIN_AGE_MS) {
+          queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+        }
       }
       return undefined;
     }, [
@@ -306,7 +318,10 @@ export const useNotificationController = (options = {}) => {
         refetch();
       }
       if (unreadCountEnabled) {
-        queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+        const unreadCountAgeMs = getQueryAgeMs(queryClient, UNREAD_COUNT_QUERY_KEY);
+        if (unreadCountAgeMs >= UNREAD_FOCUS_REFRESH_MIN_AGE_MS) {
+          queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+        }
       }
     },
     unreadCount: (/** @type {UnreadCountData | undefined} */ (unreadCountData))?.count || 0,

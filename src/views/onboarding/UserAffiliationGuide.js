@@ -516,7 +516,7 @@ function UserAffiliationGuideContent({ navigation }) {
       }
       return t(
         'onboardingAffiliation.tutorial.stepResultDescriptionClub',
-        "Ouvre la fiche du club pour utiliser le bouton C'est mon club.",
+        'Ouvre la fiche du club pour utiliser le bouton Je dirige ce club.',
       );
     })();
     const resultTutorialTitle = isClubFlow
@@ -717,7 +717,7 @@ function UserAffiliationGuideContent({ navigation }) {
     }
     return t(
       'onboardingAffiliation.subtitleClub',
-      "Recherche ton club puis ouvre sa fiche pour valider « C'est mon club ».",
+      'Recherche ton club puis ouvre sa fiche pour valider « Je dirige ce club ».',
     );
   })();
 

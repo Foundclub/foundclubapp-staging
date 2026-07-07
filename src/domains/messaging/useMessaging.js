@@ -237,7 +237,7 @@ const useMessaging = (currentChatId) => {
     const response = await queryClient.fetchQuery({
       queryFn: () => getChats(1, 20, chatsLookupFilters),
       queryKey: chatsLookupQueryKey,
-      staleTime: 15000,
+      staleTime: 30000,
     });
 
     return Array.isArray(response?.data) ? response.data : [];

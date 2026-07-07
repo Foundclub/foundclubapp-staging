@@ -45,6 +45,9 @@ export const useGetLeagueMatchStats = (matchId, teamId, options = {}) => useQuer
   enabled: Boolean(matchId),
   queryFn: () => getLeagueMatchStats(matchId, teamId),
   queryKey: ['leagueMatchStats', matchId, teamId || 'auto'],
+  refetchOnMount: options?.refetchOnMount ?? false,
+  refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
+  staleTime: options?.staleTime ?? MATCH_STATS_STALE_MS,
   ...options,
 });
 
@@ -52,6 +55,9 @@ export const useGetLeagueMyMatchResponse = (matchId, teamId, options = {}) => us
   enabled: Boolean(matchId),
   queryFn: () => getLeagueMyMatchResponse(matchId, teamId),
   queryKey: ['leagueMyMatchResponse', matchId, teamId || 'auto'],
+  refetchOnMount: options?.refetchOnMount ?? false,
+  refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
+  staleTime: options?.staleTime ?? MATCH_STATS_STALE_MS,
   ...options,
 });
 
@@ -82,6 +88,8 @@ export const useGetLeagueTeamPerformanceStats = (teamId, options = {}) => useQue
 export const useGetPendingMatchStatsPrompts = (options = {}) => useQuery({
   queryFn: () => getPendingMatchStatsPrompts(),
   queryKey: ['pendingMatchStatsPrompts'],
-  staleTime: 1000 * 30,
+  refetchOnMount: options?.refetchOnMount ?? false,
+  refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
+  staleTime: options?.staleTime ?? 1000 * 30,
   ...options,
 });

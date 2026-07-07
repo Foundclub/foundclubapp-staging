@@ -45,7 +45,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 const RELATION_PICKERS = {
   activites: {
     isMany: true,
-    label: 'Activités',
+    label: 'ActivitÃ©s',
     targetUid: 'api::activity.activity',
   },
   parentMultisport: {
@@ -102,7 +102,7 @@ function AdminClubForm() {
   const formTitle = (() => {
     if (isEditing) return 'Modifier le club';
     if (duplicateFrom) return 'Dupliquer le club';
-    return 'Créer un club';
+    return 'CrÃ©er un club';
   })();
 
   useEffect(() => {
@@ -253,7 +253,7 @@ function AdminClubForm() {
   const handleSave = useCallback(async () => {
     if (!validateForm()) return;
 
-    const reason = normalizeText(saveReason) || (isEditing ? 'Mise à jour Club SuperAdmin' : 'Création Club SuperAdmin');
+    const reason = normalizeText(saveReason) || (isEditing ? 'Mise Ã  jour Club SuperAdmin' : 'CrÃ©ation Club SuperAdmin');
     const payload = buildClubWritePayload(formValues);
     if (formValues.logo === null) {
       payload.logo = { set: [] };
@@ -286,10 +286,10 @@ function AdminClubForm() {
     }
 
     Alert.alert(
-      'Modifications non sauvegardées',
+      'Modifications non sauvegardÃ©es',
       'Quitter sans sauvegarder ?',
       [
-        { style: 'cancel', text: 'Continuer l’édition' },
+        { style: 'cancel', text: 'Continuer lâ€™Ã©dition' },
         { onPress: () => navigation.goBack(), style: 'destructive', text: 'Quitter' },
       ],
     );
@@ -364,7 +364,7 @@ function AdminClubForm() {
   if (sourceDocumentId && isLoading && !sourceClub) {
     return (
       <AdminStateView
-        description="Nous préparons le formulaire Club."
+        description="Nous prÃ©parons le formulaire Club."
         isLoading
         title="Chargement du club"
       />
@@ -374,7 +374,7 @@ function AdminClubForm() {
   if (sourceDocumentId && error && !sourceClub) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
+        actionLabel="RÃ©essayer"
         description={getErrorMessage(error, 'generic') || 'Impossible de charger ce club.'}
         onAction={refetch}
         title="Chargement impossible"
@@ -391,14 +391,14 @@ function AdminClubForm() {
               {formTitle}
             </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-              Formulaire dédié compatible Content Manager.
+              Formulaire dÃ©diÃ© compatible Content Manager.
             </Text>
           </View>
           <Button onPress={confirmCancel} size="sm" title="Annuler" variant="Secondary" />
         </View>
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[14], Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Identité</Text>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>IdentitÃ©</Text>
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
             <View
               style={[
@@ -425,29 +425,31 @@ function AdminClubForm() {
           </View>
           {renderInput('Nom du club', 'name')}
           {renderInput('Email', 'email', { keyboardType: 'email-address' })}
-          {renderInput('Téléphone', 'phoneNumber', { keyboardType: 'phone-pad' })}
+          {renderInput('TÃ©lÃ©phone', 'phoneNumber', { keyboardType: 'phone-pad' })}
         </View>
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[14], Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Business</Text>
-          {renderToggle('Club client', 'isCustomer')}
-          {renderToggle('Fournisseur de réservation', 'isReservationProvider')}
-          {renderInput('Valeur abonnement', 'subscriptionValue', { keyboardType: 'numeric' })}
-          {renderInput('Nombre maximum d’équipes', 'maxTeamNumber', { keyboardType: 'numeric' })}
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Statut et gouvernance</Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+            Cette fiche pilote le partenariat, la verification et la reservation. Les abonnements et la couverture Team se gerent dans les operations abonnements.
+          </Text>
+          {renderToggle('Club partenaire', 'clubPartner')}
+          {renderToggle('Club verifie', 'clubVerified')}
+          {renderToggle('Fournisseur de reservation', 'isReservationProvider')}
         </View>
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[14], Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Adresse</Text>
-          {renderInput('Adresse affichée', 'addressLabel')}
+          {renderInput('Adresse affichÃ©e', 'addressLabel')}
           {renderInput('Ville', 'city')}
           {renderInput('Code postal', 'postcode')}
           {renderInput('Latitude', 'latitude', { keyboardType: 'numeric' })}
           {renderInput('Longitude', 'longitude', { keyboardType: 'numeric' })}
-          {renderInput('Détails adresse', 'addressDetails')}
+          {renderInput('DÃ©tails adresse', 'addressDetails')}
           {renderInput('Geohash', 'geohash')}
           <Button
             onPress={() => setShowAdvancedAddress((previous) => !previous)}
-            title={showAdvancedAddress ? 'Masquer JSON avancé' : 'Adresse JSON avancée'}
+            title={showAdvancedAddress ? 'Masquer JSON avancÃ©' : 'Adresse JSON avancÃ©e'}
             variant="Secondary"
           />
           {showAdvancedAddress ? renderInput('Adresse JSON', 'addressJson', { multiline: true }) : null}
@@ -455,7 +457,7 @@ function AdminClubForm() {
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[14], Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Relations principales</Text>
-          <Button onPress={() => openRelationPicker('activites')} title="Ajouter une activité" variant="Secondary" />
+          <Button onPress={() => openRelationPicker('activites')} title="Ajouter une activitÃ©" variant="Secondary" />
           {(formValues.activites || []).map((activity) => (
             <View key={getDocumentId(activity)} style={[Alignments.row, Alignments.alignCenter, Spaces.gap[10]]}>
               <Text numberOfLines={1} style={[Fonts.p2, { color: Colors.neutral100, flex: 1 }]}>{getClubRelationLabel(activity)}</Text>
@@ -524,7 +526,7 @@ function AdminClubForm() {
           />
         </View>
 
-        <Button isLoading={isSaving} onPress={handleSave} title={isEditing ? 'Sauvegarder' : 'Créer le club'} />
+        <Button isLoading={isSaving} onPress={handleSave} title={isEditing ? 'Sauvegarder' : 'CrÃ©er le club'} />
       </ScrollView>
 
       <BottomModal close={closeRelationPicker} isVisible={Boolean(relationPicker)} snapPoints={['78%']}>

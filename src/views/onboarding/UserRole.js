@@ -19,7 +19,7 @@ import OnboardingStateView from '@/views/onboarding/components/OnboardingStateVi
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe, useGetRoles } from '@/services/auth/authQueries';
+import { useGetRoles } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
 /**
@@ -29,12 +29,13 @@ import { updateMe } from '@/services/auth/authService';
  */
 function UserRole({ navigation }) {
   const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
-    refetch: refetchUserData,
-  } = useGetMe();
-  const { getNextOnboardingRoute, USER_ROLES } = useAuth();
+    getNextOnboardingRoute,
+    refetchUserData,
+    USER_ROLES,
+    userData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
   const insets = useSafeAreaInsets();
   // local state
   const [role, setRole] = useState(

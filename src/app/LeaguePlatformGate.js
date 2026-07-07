@@ -42,9 +42,10 @@ function LeaguePlatformGate({ children }) {
   const isLeaguePath = currentWebPath === '/league' || currentWebPath.startsWith('/league/');
   const currentRoleKey = getUserRoleKey(auth?.user?.role?.type || auth?.user?.role?.name);
   const isSuperAdmin = currentRoleKey === 'superAdmin';
+  const shouldCheckLeagueRuntime = !isSuperAdmin && (isGold || isLeaguePath);
 
   const runtimeQuery = useLeaguePlatformRuntime({
-    enabled: !isSuperAdmin,
+    enabled: shouldCheckLeagueRuntime,
   });
 
   const handleGoToLogin = useCallback(() => {
@@ -61,7 +62,6 @@ function LeaguePlatformGate({ children }) {
   }, [setMode]);
 
   const runtime = runtimeQuery.data || null;
-  const shouldCheckLeagueRuntime = !isSuperAdmin && (isGold || isLeaguePath);
   const shouldShowLoadingState = shouldCheckLeagueRuntime
     && runtimeQuery.isLoading
     && !runtime;

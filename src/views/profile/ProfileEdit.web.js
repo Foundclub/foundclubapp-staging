@@ -27,7 +27,6 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
@@ -131,13 +130,15 @@ function ProfileEditWeb({ navigation, route }) {
     Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { data: fetchedUserData } = useGetMe();
   const { data: sections } = useGetSections();
   const { data: levels } = useGetLevels();
   const {
-    formatBirthdateToDisplay, formatBirthdateToSend, profileFields, userData: authUserData,
+    formatBirthdateToDisplay,
+    formatBirthdateToSend,
+    profileFields,
+    refetchUserData,
+    userData,
   } = useAuth();
-  const userData = fetchedUserData || authUserData;
   const { getGeohashForPointAndRadius } = usePlaces();
 
   const [avatar, setAvatar] = useState(
@@ -167,8 +168,9 @@ function ProfileEditWeb({ navigation, route }) {
     onError: (error) => {
       setSubmitErrorMessage(error?.message || 'Impossible de mettre a jour votre profil.');
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setSubmitErrorMessage('');
+      await refetchUserData?.();
       navigation.goBack();
     },
   });

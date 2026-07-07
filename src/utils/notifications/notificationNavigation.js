@@ -298,7 +298,7 @@ const eventLineupDestination = (eventId) => {
   return {
     params: {
       params: { eventId: safeEventId },
-      screen: RouteNames.TacticalSelectionV2,
+      screen: RouteNames.EventDetails,
     },
     route: RouteNames.EventStack,
   };

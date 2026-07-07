@@ -37,6 +37,7 @@ import {
   haveSameSanitizedUser,
   sanitizeUser,
 } from '@/domains/auth/authSanitizer';
+import { getSubscriptionAccessLevel } from '@/domains/subscription/subscriptionDecision';
 import {
   canUserEditClub,
   formatBirthdateToDisplay,
@@ -45,6 +46,7 @@ import {
   getAuthTokens,
   getClubIds,
   getOnboardingViews,
+  getUserRoleKey,
   hasClubAccess as hasClubAccessForUser,
   profileFieldToDisplay,
   USER_ROLES,
@@ -208,6 +210,7 @@ const useAuth = () => {
     queryFn: getAppBootstrap,
     queryKey: ['app-bootstrap', auth?.token || 'no-token'],
     refetchOnMount: false,
+    refetchOnWindowFocus: false,
     retry: false,
     staleTime: 1000 * 30,
   });
@@ -284,9 +287,8 @@ const useAuth = () => {
     && isFullUserFetchReady
     && (
       disableAppBootstrap
-      || Boolean(bootstrapData?.serverTime)
       || Boolean(bootstrapError)
-      || !auth?.user
+      || !bootstrapData?.userSummary?.documentId
     );
 
   const {
@@ -300,6 +302,7 @@ const useAuth = () => {
     // Scope by current token to avoid cross-account stale cache reuse
     queryKey: ['get-me', auth?.token || 'no-token'],
     refetchOnMount: false,
+    refetchOnWindowFocus: false,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -371,6 +374,16 @@ const useAuth = () => {
       nextAction: bootstrapData?.pendingLeagueActionSummary || null,
       serverNow: bootstrapData?.serverTime || null,
     });
+
+    const bootstrapPendingLeagueTeamId = String(
+      bootstrapData?.pendingLeagueActionSummary?.teamId || '',
+    ).trim();
+    if (bootstrapPendingLeagueTeamId) {
+      queryClient.setQueryData(['pendingLeagueAction', bootstrapPendingLeagueTeamId], {
+        nextAction: bootstrapData?.pendingLeagueActionSummary || null,
+        serverNow: bootstrapData?.serverTime || null,
+      });
+    }
 
     if (bootstrapData?.pendingMatchStatsSummary) {
       queryClient.setQueryData(
@@ -519,16 +532,19 @@ const useAuth = () => {
     [userData],
   );
 
+  const userRoleKey = useMemo(
+    () => getUserRoleKey(userData?.role?.type || userData?.role?.name),
+    [userData?.role?.name, userData?.role?.type],
+  );
+
   const canEditEvent = useCallback(
-    (/** @type {string} */teamId) => (userData?.role.name
-      === USER_ROLES.coach || userData?.role.name === USER_ROLES.president)
+    (/** @type {string} */teamId) => (userRoleKey === 'coach' || userRoleKey === 'president')
       && userData?.trainedTeams?.map((/** @type {any} */ { documentId }) => documentId)?.includes(teamId),
-    [userData],
+    [userData, userRoleKey],
   );
 
   const canManageEvent = useCallback((/** @type {any} */ event) => {
-    const roleName = userData?.role?.name;
-    if (roleName !== USER_ROLES.coach && roleName !== USER_ROLES.president) {
+    if (userRoleKey !== 'coach' && userRoleKey !== 'president') {
       return false;
     }
 
@@ -554,43 +570,88 @@ const useAuth = () => {
 
     if (organizerTeamId && trainedTeamIds.has(organizerTeamId)) return true;
     return invitedTeamIds.some((/** @type {any} */ teamId) => trainedTeamIds.has(teamId));
-  }, [userData]);
+  }, [userData, userRoleKey]);
 
-  const canJoinClub = useMemo(() => {
-    const roleName = userData?.role?.name;
-    return roleName === USER_ROLES.coach;
-  }, [userData]);
+  const canJoinClub = useMemo(
+    () => userRoleKey === 'coach',
+    [userRoleKey],
+  );
 
-  const canContactAdmin = useMemo(() => {
-    const roleName = userData?.role?.name;
-    return roleName === USER_ROLES.president;
-  }, [userData]);
+  const canContactAdmin = useMemo(
+    () => userRoleKey === 'president',
+    [userRoleKey],
+  );
 
   const canJoinTeam = useCallback((/** @type {string} */teamId) => {
-    if (userData?.role.name === USER_ROLES.player) {
+    if (userRoleKey === 'player') {
       return !userData?.myTeams?.some((/** @type {any} */ { documentId }) => documentId === teamId);
     }
     return false;
-  }, [userData]);
+  }, [userData, userRoleKey]);
 
   const canManageTeam = useMemo(
-    () => userData?.role.name === USER_ROLES.coach
-      || userData?.role.name === USER_ROLES.president,
-    [userData],
+    () => userRoleKey === 'coach' || userRoleKey === 'president',
+    [userRoleKey],
   );
 
   const canManageEvents = useMemo(
-    () => userData?.role.name === USER_ROLES.coach
-      || userData?.role.name === USER_ROLES.president,
-    [userData],
+    () => userRoleKey === 'coach' || userRoleKey === 'president',
+    [userRoleKey],
   );
 
   const nonPartnerCoachPublishingAccess = useMemo(
     () => userData?.nonPartnerCoachPublishingAccess || null,
     [userData?.nonPartnerCoachPublishingAccess],
   );
+  const typedBootstrapData = /** @type {any} */ (bootstrapData || null);
 
-  const isCurrentClubPartner = userData?.club?.isCustomer === true;
+  const subscriptionSummary = useMemo(
+    () => typedBootstrapData?.subscriptionSummary || null,
+    [typedBootstrapData?.subscriptionSummary],
+  );
+
+  const entitlementsSummary = useMemo(
+    () => (Array.isArray(typedBootstrapData?.entitlementsSummary) ? typedBootstrapData.entitlementsSummary : []),
+    [typedBootstrapData?.entitlementsSummary],
+  );
+
+  const freeUsageSummary = useMemo(
+    () => (Array.isArray(typedBootstrapData?.freeUsageSummary) ? typedBootstrapData.freeUsageSummary : []),
+    [typedBootstrapData?.freeUsageSummary],
+  );
+
+  const clubVerificationSummary = useMemo(
+    () => typedBootstrapData?.clubVerificationSummary || null,
+    [typedBootstrapData?.clubVerificationSummary],
+  );
+
+  const isCurrentClubPartner = useMemo(() => (
+    clubVerificationSummary?.clubPartner === true
+    || userData?.club?.clubPartner === true
+  ), [
+    clubVerificationSummary?.clubPartner,
+    userData?.club?.clubPartner,
+  ]);
+
+  const isCurrentClubVerified = useMemo(() => (
+    clubVerificationSummary?.clubVerified === true
+    || userData?.club?.clubVerified === true
+  ), [
+    clubVerificationSummary?.clubVerified,
+    userData?.club?.clubVerified,
+  ]);
+
+  const subscriptionAccessLevel = useMemo(() => getSubscriptionAccessLevel({
+    clubVerificationSummary,
+    entitlementsSummary,
+    subscriptionSummary,
+    userClub: userData?.club,
+  }), [
+    clubVerificationSummary,
+    entitlementsSummary,
+    subscriptionSummary,
+    userData?.club,
+  ]);
 
   const isNonPartnerCoach = nonPartnerCoachPublishingAccess?.isNonPartnerCoach === true;
 
@@ -641,11 +702,11 @@ const useAuth = () => {
   }, [appDispatch, queryClient]);
 
   return {
+    activeClubId,
     addAccount,
     allMyTeams,
     appBootstrapData: bootstrapData || null,
     authSessions,
-    activeClubId,
     cancelAddAccount,
     canContactAdmin,
     canEditClub,
@@ -658,14 +719,19 @@ const useAuth = () => {
     canPublishGovernedClubContent,
     canSendMessageToUser,
     canShowCodeButton: !!confirm,
-    confirm,
+    clubIds,
     clubs,
+    clubVerificationSummary,
+    confirm,
+    entitlementsSummary,
     formatBirthdateToDisplay,
     formatBirthdateToSend,
+    freeUsageSummary,
     getAuthTokens,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
     governedPublishingBlockReason,
+    hasClubAccess,
     inviteTeamPlayers,
     inviteTrainer,
     isAddingAccount,
@@ -674,18 +740,19 @@ const useAuth = () => {
       || isAddingAccount
       || Boolean(bootstrapData?.serverTime || bootstrapError),
     isCurrentClubPartner,
+    isCurrentClubVerified,
     isLoading: otpMutation.isPending || loginMutation.isPending,
     isNonPartnerCoach,
     loginMutation,
     logoutMutation,
-    clubIds,
     nonPartnerCoachPublishingAccess,
     onboardingViews,
     otpMutation,
     profileFields,
     refetchUserData,
-    hasClubAccess,
     setConfirm,
+    subscriptionAccessLevel,
+    subscriptionSummary,
     switchAccount,
     USER_ROLES,
     userData,

@@ -17,6 +17,12 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
+import {
+  getSubscriptionPlanLabels,
+  getSubscriptionQuotaItems,
+  getSubscriptionStatusMeta,
+  getSubscriptionTeamSlotSummary,
+} from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
@@ -38,6 +44,23 @@ import { deleteAccount } from '@/services/auth/authService';
 /** @typedef {import('@/store/types').AuthSession} AuthSession */
 
 /**
+ * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [subscriptionAccessLevel]
+ * @returns {string}
+ */
+const getSubscriptionChipBackgroundColor = (subscriptionAccessLevel) => {
+  switch (subscriptionAccessLevel) {
+    case 'CLUB':
+      return '#0F766E';
+    case 'CLUB_UNVERIFIED':
+      return '#B45309';
+    case 'TEAM':
+      return '#1D4ED8';
+    default:
+      return '#475569';
+  }
+};
+
+/**
  * Profile screen component. Displays user information and profile management options.
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Profile screen component
@@ -54,8 +77,12 @@ function Profile({ navigation, route }) {
     canEditClub,
     canJoinClub,
     canManageTeam,
+    clubVerificationSummary,
+    freeUsageSummary,
     logoutMutation,
     refetchUserData,
+    subscriptionAccessLevel,
+    subscriptionSummary,
     switchAccount,
     userData,
     userDataError,
@@ -65,7 +92,11 @@ function Profile({ navigation, route }) {
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
   const [switchingAccountId, setSwitchingAccountId] = useState(/** @type {string | null} */ (null));
   const safeAuthSessions = authSessions || [];
+  const hasMultipleConnectedAccounts = safeAuthSessions.length > 1;
   const currentRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  const canShowSubscriptionExperience = currentRoleKey === 'coach'
+    || currentRoleKey === 'president'
+    || currentRoleKey === 'superAdmin';
   const isPresident = currentRoleKey === 'president';
   const isSuperAdmin = currentRoleKey === 'superAdmin';
   const multisportClubs = useMemo(
@@ -86,6 +117,62 @@ function Profile({ navigation, route }) {
     return canEditClub(userData?.club?.documentId);
   }, [userData, canEditClub]);
 
+  const subscriptionStatusMeta = useMemo(
+    () => getSubscriptionStatusMeta(subscriptionAccessLevel),
+    [subscriptionAccessLevel],
+  );
+  const subscriptionPlanLabels = useMemo(
+    () => getSubscriptionPlanLabels(subscriptionSummary),
+    [subscriptionSummary],
+  );
+  const visibleSubscriptionQuotaItems = useMemo(
+    () => getSubscriptionQuotaItems(freeUsageSummary, subscriptionAccessLevel).slice(0, 2),
+    [freeUsageSummary, subscriptionAccessLevel],
+  );
+  const subscriptionTeamSlotSummary = useMemo(
+    () => getSubscriptionTeamSlotSummary(subscriptionSummary),
+    [subscriptionSummary],
+  );
+  const subscriptionVerificationLabel = useMemo(() => {
+    if (!clubVerificationSummary?.clubDocumentId) {
+      return t('profile.subscription.states.noClub', 'Sans club rattache');
+    }
+    if (clubVerificationSummary?.clubVerified === true) {
+      return t('profile.subscription.states.verified', 'Club verifie');
+    }
+    if (clubVerificationSummary?.requiresClubVerification === true) {
+      return t('profile.subscription.states.unverified', 'Verification en attente');
+    }
+    return t('profile.subscription.states.standard', 'Club non verifie');
+  }, [
+    clubVerificationSummary?.clubDocumentId,
+    clubVerificationSummary?.clubVerified,
+    clubVerificationSummary?.requiresClubVerification,
+    t,
+  ]);
+  const subscriptionSecondaryLabel = useMemo(() => {
+    if (visibleSubscriptionQuotaItems.length > 0) {
+      return null;
+    }
+    if (subscriptionTeamSlotSummary.total > 0) {
+      return t(
+        'profile.subscription.card.teamSlots',
+        '{{assigned}}/{{total}} slots Team utilises',
+        {
+          assigned: subscriptionTeamSlotSummary.assigned,
+          total: subscriptionTeamSlotSummary.total,
+        },
+      );
+    }
+    return subscriptionVerificationLabel;
+  }, [
+    subscriptionTeamSlotSummary.assigned,
+    subscriptionTeamSlotSummary.total,
+    subscriptionVerificationLabel,
+    t,
+    visibleSubscriptionQuotaItems.length,
+  ]);
+
   // Check if user is admin of a MultisportClub
   const canManageMultisportClub = useMemo(() => multisportClubs.length > 0, [multisportClubs]);
 
@@ -100,6 +187,13 @@ function Profile({ navigation, route }) {
     navigation.navigate(RouteNames.UserDetails);
   };
 
+  const handleOpenSubscriptionOverview = () => {
+    if (!canShowSubscriptionExperience) {
+      return;
+    }
+    navigation.navigate(RouteNames.SubscriptionOverview);
+  };
+
   const handleFindClub = () => {
     navigation.navigate(RouteNames.ClubStack, {
       screen: RouteNames.ClubList,
@@ -112,6 +206,11 @@ function Profile({ navigation, route }) {
 
   const handleLogout = () => {
     logoutMutation.mutate(fcmToken || '');
+  };
+
+  const handleLogoutFromAccountSwitcher = () => {
+    setIsAccountModalVisible(false);
+    handleLogout();
   };
 
   const handleOpenClub = () => {
@@ -460,6 +559,14 @@ function Profile({ navigation, route }) {
 
   const accountSwitcherContent = (
     <View style={[Spaces.gap[12], Spaces.paddingVertical[16]]}>
+      {!hasMultipleConnectedAccounts ? (
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t(
+            'profile.accountSwitcher.singleAccountHint',
+            'Ce compte est le seul connecte sur cet appareil. Vous pouvez en ajouter un autre ou vous deconnecter.',
+          )}
+        </Text>
+      ) : null}
       {safeAuthSessions.map((session, index) => {
         const isCurrent = session?.user?.documentId === userData?.documentId;
         const sessionKey = session?.user?.documentId || session?.user?.id || `session-${index}`;
@@ -514,6 +621,13 @@ function Profile({ navigation, route }) {
       <Button
         onPress={handleAddAccount}
         title={t('profile.actions.addAccount', 'Ajouter un compte')}
+        variant="Secondary"
+      />
+      <Button
+        disabled={logoutMutation.isPending}
+        isLoading={logoutMutation.isPending}
+        onPress={handleLogoutFromAccountSwitcher}
+        title={t('profile.actions.logout', 'Déconnexion')}
         variant="Secondary"
       />
     </View>
@@ -659,6 +773,84 @@ function Profile({ navigation, route }) {
               )}
             </View>
           </WithDataWrapper>
+          {canShowSubscriptionExperience ? (
+            <TouchableOpacity
+              onPress={handleOpenSubscriptionOverview}
+              style={[
+                Spaces.gap[12],
+                Spaces.padding[16],
+                ApplicationStyle.borderRadius12,
+                ApplicationStyle.borderWidth1,
+                ApplicationStyle.borderColor.primary100,
+                ApplicationStyle.backgroundColor.primary700,
+              ]}
+            >
+              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                    {t('profile.subscription.card.title', 'Abonnement FoundClub')}
+                  </Text>
+                  <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral200]}>
+                    {subscriptionPlanLabels[0]
+                      || t('profile.subscription.card.freePlan', 'Offre gratuite FoundClub')}
+                  </Text>
+                </View>
+                <View style={[
+                  Spaces.paddingHorizontal[12],
+                  Spaces.paddingVertical[8],
+                  ApplicationStyle.borderRadius12,
+                  {
+                    backgroundColor: getSubscriptionChipBackgroundColor(subscriptionAccessLevel),
+                  },
+                ]}
+                >
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {subscriptionStatusMeta.label}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={[Fonts.p2, Fonts.neutral200]}>
+                {subscriptionAccessLevel === 'CLUB_UNVERIFIED'
+                  ? t(
+                    'profile.subscription.card.unverifiedDescription',
+                    'Paiement Club actif, verification dirigeant encore requise.',
+                  )
+                  : subscriptionStatusMeta.description}
+              </Text>
+
+              {visibleSubscriptionQuotaItems.length ? (
+                <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                  {visibleSubscriptionQuotaItems.map((item) => (
+                    <View
+                      key={item.quotaType}
+                      style={[
+                        Spaces.paddingHorizontal[12],
+                        Spaces.paddingVertical[8],
+                        ApplicationStyle.borderRadius12,
+                        ApplicationStyle.backgroundColor.neutral700,
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                        {item.label}
+                      </Text>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                        {`${item.remaining}/${item.total}`}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={[Fonts.p2, Fonts.primary100]}>
+                  {subscriptionSecondaryLabel}
+                </Text>
+              )}
+
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('profile.subscription.card.cta', 'Voir le detail')}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           {isProfileMainTutorial ? (
             <OnboardingWrapper
               description="Depuis cette zone, vous pouvez modifier votre profil, gerer vos demandes et changer de compte."

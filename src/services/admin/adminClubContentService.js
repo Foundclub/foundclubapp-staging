@@ -23,7 +23,8 @@ import {
 const SORTS = {
   alpha: ['name:asc'],
   created: ['createdAt:desc'],
-  customer: ['isCustomer:desc', 'name:asc'],
+  customer: ['clubPartner:desc', 'name:asc'],
+  partner: ['clubPartner:desc', 'name:asc'],
   updated: ['updatedAt:desc'],
 };
 

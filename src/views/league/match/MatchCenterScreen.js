@@ -1,6 +1,12 @@
 /* eslint-disable import/order, perfectionist/sort-imports */
 import Slider from '@react-native-community/slider';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useIsFocused,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
@@ -72,7 +78,7 @@ import SectionHeader from '../../../components/atoms/SectionHeader/SectionHeader
 import AutocompleteAddressInput from '../../../components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import useAuth from '../../../domains/auth/useAuth';
 import MatchmakingService from '../../../services/league/MatchmakingService';
-import { getMyLeagueTeam } from '../../../services/leagueTeam/leagueTeamService';
+import { loadLeagueTeamContextWithCache } from '../../../services/leagueTeam/leagueTeamQueries';
 import { formatDateWithDayPrefix as formatDate } from '../../../utils/date';
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
@@ -262,9 +268,11 @@ const withLeagueMatchActionMetadata = (match, payload) => {
  *
  */
 function MatchCenterScreen() {
+  const MATCH_CENTER_FOCUS_REFRESH_MIN_INTERVAL_MS = 120000;
   const swordsIcon = '\u2694\uFE0F';
   const radarIcon = '\uD83D\uDCE1';
   const navigation = /** @type {any} */ (useNavigation());
+  const queryClient = useQueryClient();
   const route = /** @type {any} */ (useRoute());
   const { sceneBottomInset } = useBottomDockLayout();
   const { userData } = useAuth();
@@ -541,6 +549,7 @@ function MatchCenterScreen() {
   );
   const shownInitialProposalMatchIdRef = useRef('');
   const consumedRouteOpenProposalTokenRef = useRef('');
+  const lastMatchCenterFocusLoadAtRef = useRef(0);
 
   const shouldOpenInitialProposalModal = useCallback((/** @type {LeagueMatch | null | undefined} */ match) => {
     const normalizedStatus = String(match?.status || '').trim().toLowerCase();
@@ -649,7 +658,8 @@ function MatchCenterScreen() {
     setLoadError('');
     try {
       // A. Fetch User's LEAGUE Squads
-      const squads = await getMyLeagueTeam(userId);
+      const context = await loadLeagueTeamContextWithCache(queryClient, userId);
+      const squads = Array.isArray(context?.squads) ? context.squads : [];
       setAllSquads(squads);
 
       if (squads.length === 0) {
@@ -666,7 +676,10 @@ function MatchCenterScreen() {
       const matchedCurrentSquad = mySquadId
         ? squads.find((/** @type {Team} */ s) => areSameEntityId(getEntityDocumentId(s), mySquadId))
         : null;
-      const initialSquad = matchedRouteSquad || matchedCurrentSquad || squads[0];
+      const defaultSquad = context?.defaultSquadId
+        ? squads.find((/** @type {Team} */ s) => areSameEntityId(getEntityDocumentId(s), context.defaultSquadId))
+        : null;
+      const initialSquad = matchedRouteSquad || matchedCurrentSquad || defaultSquad || squads[0];
 
       // Allow fetchMatchData to set mySquad and viewState
       await fetchMatchData(initialSquad);
@@ -676,15 +689,16 @@ function MatchCenterScreen() {
       setLoadError('Impossible de charger le Match Center League.');
       setLoading(false);
     }
-  }, [fetchMatchData, mySquadId, routeActiveSquadId, userId]);
+  }, [fetchMatchData, mySquadId, queryClient, routeActiveSquadId, userId]);
 
+  /*
   const refreshMatchmakingStatus = useCallback(async () => {
     if (!mySquad || viewState === 'no_squad' || viewState === 'connection_error') return;
-    
+
     try {
       const squadId = getEntityDocumentId(mySquad);
       const status = await MatchmakingService.getActiveRequest(squadId);
-      
+
       if (status && status.state === 'searching') {
         const wasSearching = viewState === 'radar' || viewState === 'searching_start';
         if (!wasSearching) {
@@ -713,12 +727,47 @@ function MatchCenterScreen() {
     const interval = setInterval(refreshMatchmakingStatus, 5000);
     return () => clearInterval(interval);
   }, [refreshMatchmakingStatus]);
+  */
 
   // 2. Load Squads & State on Focus
   useFocusEffect(
     useCallback(() => {
+      const hasWarmMatchCenterState = Boolean(
+        allSquads.length > 0
+        || mySquad
+        || activeSlot
+        || currentMatch
+        || matchRequest
+        || loadError
+        || viewState !== 'loading',
+      );
+      const hasPendingRouteSquadSwitch = Boolean(
+        routeActiveSquadId
+        && (!mySquadId || !areSameEntityId(routeActiveSquadId, mySquadId)),
+      );
+      const now = Date.now();
+      if (
+        !hasPendingRouteSquadSwitch
+        && hasWarmMatchCenterState
+        && now - lastMatchCenterFocusLoadAtRef.current < MATCH_CENTER_FOCUS_REFRESH_MIN_INTERVAL_MS
+      ) {
+        return undefined;
+      }
+      lastMatchCenterFocusLoadAtRef.current = now;
       loadMatchCenter();
-    }, [loadMatchCenter]),
+      return undefined;
+    }, [
+      activeSlot,
+      allSquads.length,
+      currentMatch,
+      loadError,
+      loadMatchCenter,
+      matchRequest,
+      mySquad,
+      mySquadId,
+      routeActiveSquadId,
+      viewState,
+    ]),
   );
 
   const handleSquadSwitch = async (/** @type {Team} */ squad) => {
@@ -917,8 +966,10 @@ function MatchCenterScreen() {
   const handleRecoverFromBackground = useCallback(() => {
     setViewState('radar');
   }, []);
+  const isScreenActive = useIsFocused();
 
   const { searchStatus, serverNow: pollingServerNow } = useMatchmakingStateMachine({
+    isScreenActive,
     matchRequest,
     mySquad,
     onAutoSearchingDetected: handleAutoSearchingDetected,
@@ -2477,6 +2528,7 @@ function MatchCenterScreen() {
             renderItem={({ index, item }) => {
               if (!item) return null;
               const isLast = index === displayedSlots.length - 1;
+              const isSlotFull = (item.rsvp_count || 0) >= squadRequiredPlayers;
               const baseDate = item.start_time || item.date || '';
               const recurringStart = item.start_hour ? item.start_hour.substring(0, 5) : null;
               const recurringEnd = item.end_hour ? item.end_hour.substring(0, 5) : null;
@@ -2510,43 +2562,39 @@ function MatchCenterScreen() {
                     </View>
                   </View>
                   {/* Status Chip */}
-                  {(() => {
-                    const isSlotFull = (item.rsvp_count || 0) >= squadRequiredPlayers;
-                    return (
-                      <View style={{
-                        backgroundColor: isSlotFull ? 'rgba(76, 175, 80, 0.15)' : 'rgba(1, 179, 244, 0.1)',
-                        borderRadius: 12,
-                        paddingHorizontal: 10,
-                        paddingVertical: 4,
-                        position: 'absolute',
-                        right: 10,
-                        top: 0,
-                      }}
-                      >
-                        <Text style={[Fonts.p3Bold, { color: isSlotFull ? '#4CAF50' : Colors.primary500 }]}>
-                          {isSlotFull ? 'COMPLET' : 'OUVERT'}
-                        </Text>
-                      </View>
-                    );
-                  })()}
+                  <View
+                    style={{
+                      backgroundColor: isSlotFull ? 'rgba(76, 175, 80, 0.15)' : 'rgba(1, 179, 244, 0.1)',
+                      borderRadius: 12,
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      position: 'absolute',
+                      right: 10,
+                      top: 0,
+                    }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: isSlotFull ? '#4CAF50' : Colors.primary500 }]}>
+                      {isSlotFull ? 'COMPLET' : 'OUVERT'}
+                    </Text>
+                  </View>
 
                   {/* Visual Roster */}
                   <View style={{ marginTop: 16 }}>
                     <Text style={[Fonts.p3, { color: Colors.neutral300, textTransform: 'uppercase' }]}>
                       EFFECTIF
                       {' '}
-                        <Text style={{ color: Colors.gold500 }}>
-                          {item.rsvp_count || 0}
+                      <Text style={{ color: Colors.gold500 }}>
+                        {item.rsvp_count || 0}
                         /
                         {squadRequiredPlayers}
-                        </Text>
                       </Text>
-                      <VisualRoster
-                        Colors={Colors}
-                        Images={Images}
-                        rsvpCount={item.rsvp_count || 0}
-                        total={squadRequiredPlayers}
-                      />
+                    </Text>
+                    <VisualRoster
+                      Colors={Colors}
+                      Images={Images}
+                      rsvpCount={item.rsvp_count || 0}
+                      total={squadRequiredPlayers}
+                    />
                   </View>
 
                   {/* Navigation Indicators (Dots) */}
@@ -2798,10 +2846,10 @@ function MatchCenterScreen() {
             </View>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', height: 40, width: 1 }} />
             <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text 
+              <Text
                 adjustsFontSizeToFit
                 minimumFontScale={0.5}
-                numberOfLines={1} 
+                numberOfLines={1}
                 style={[Fonts.h1Bold, { color: Colors.gold500 }]}
               >
                 {streakValue}

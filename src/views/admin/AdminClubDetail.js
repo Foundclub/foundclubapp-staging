@@ -49,19 +49,19 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 
 const RELATION_CONFIGS = [
   {
-    field: 'activites', isMany: true, label: 'Activités', targetUid: 'api::activity.activity',
+    field: 'activites', isMany: true, label: 'Activites', targetUid: 'api::activity.activity',
   },
   {
     field: 'members', isMany: true, label: 'Membres', targetUid: 'plugin::users-permissions.user',
   },
   {
-    field: 'teams', isMany: true, label: 'Équipes', targetUid: 'api::team.team',
+    field: 'teams', isMany: true, label: 'Equipes', targetUid: 'api::team.team',
   },
   {
     field: 'clubMembershipRequests', isMany: true, label: 'Demandes', targetUid: 'api::club-membership-request.club-membership-request',
   },
   {
-    field: 'evenements', isMany: true, label: 'Événements', targetUid: 'api::event.event',
+    field: 'evenements', isMany: true, label: 'Evenements', targetUid: 'api::event.event',
   },
   {
     field: 'facilities', isMany: true, label: 'Terrains', targetUid: 'api::facility.facility',
@@ -163,8 +163,8 @@ function AdminClubDetail() {
 
   const stats = useMemo(() => ([
     { label: 'Membres', value: members.length },
-    { label: 'Équipes', value: teams.length },
-    { label: 'Événements', value: events.length },
+    { label: 'Equipes', value: teams.length },
+    { label: 'Evenements', value: events.length },
     { label: 'Terrains', value: facilities.length },
     { label: 'Demandes', value: requests.length },
     { label: 'Sponsors', value: Array.isArray(club?.sponsor) ? club.sponsor.length : 0 },
@@ -172,14 +172,18 @@ function AdminClubDetail() {
 
   const heroBadges = useMemo(() => ([
     {
-      label: club?.isCustomer ? 'Client' : 'Prospect',
-      tone: club?.isCustomer ? 'success' : 'neutral',
+      label: club?.clubPartner ? 'Partenaire' : 'Standard',
+      tone: club?.clubPartner ? 'primary' : 'neutral',
     },
     {
-      label: club?.isReservationProvider ? 'Réservation active' : 'Pas réservation',
+      label: club?.isReservationProvider ? 'Reservation active' : 'Pas reservation',
       tone: club?.isReservationProvider ? 'primary' : 'neutral',
     },
-  ]), [club?.isCustomer, club?.isReservationProvider]);
+    {
+      label: club?.clubVerified ? 'Verifie' : 'Non verifie',
+      tone: club?.clubVerified ? 'success' : 'neutral',
+    },
+  ]), [club?.clubPartner, club?.clubVerified, club?.isReservationProvider]);
 
   const panelStyle = useMemo(() => ([
     ApplicationStyle.backgroundColor.primary700,
@@ -247,7 +251,7 @@ function AdminClubDetail() {
   const confirmDelete = useCallback(async () => {
     const reason = normalizeText(deleteReason);
     if (reason.length < 3) {
-      Alert.alert('Raison requise', 'Ajoutez une raison d’au moins 3 caractères.');
+      Alert.alert('Raison requise', "Ajoutez une raison d'au moins 3 caracteres.");
       return;
     }
 
@@ -328,7 +332,7 @@ function AdminClubDetail() {
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
               {items.length}
               {' '}
-              élément(s)
+              element(s)
             </Text>
           </View>
           <Button onPress={() => openRelationModal(config)} size="sm" title="Ajouter" />
@@ -352,7 +356,7 @@ function AdminClubDetail() {
               +
               {items.length - 6}
               {' '}
-              autres éléments
+              autres elements
             </Text>
           ) : null}
         </View>
@@ -401,7 +405,7 @@ function AdminClubDetail() {
   if (error && !club) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
+        actionLabel="Reessayer"
         description={getErrorMessage(error, 'generic') || 'Impossible de charger ce club.'}
         onAction={refetch}
         title="Chargement impossible"
@@ -413,7 +417,7 @@ function AdminClubDetail() {
     return (
       <AdminStateView
         actionLabel="Retour"
-        description="Le club demandé n'existe pas ou n'est plus accessible."
+        description="Le club demande n'existe pas ou n'est plus accessible."
         onAction={() => navigation.goBack()}
         title="Club introuvable"
       />
@@ -469,7 +473,7 @@ function AdminClubDetail() {
                 {club.name || 'Club sans nom'}
               </Text>
               <Text numberOfLines={2} style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8 }]}>
-                {[city, activityLabel].filter(Boolean).join(' • ') || 'Aucune information de localisation'}
+                {[city, activityLabel].filter(Boolean).join(' - ') || 'Aucune information de localisation'}
               </Text>
 
               <View style={[Alignments.row, styles.heroBadges, { marginTop: 12 }]}>
@@ -561,8 +565,8 @@ function AdminClubDetail() {
             <View style={[panelStyle, Spaces.padding[18], styles.sectionCard]}>
               {renderInfoRows([
                 { compact: true, label: 'DocumentId', value: getDocumentId(club) },
-                { label: 'Dernière mise à jour', value: formatAuditDate(club.updatedAt) },
-                { label: 'Création', value: formatAuditDate(club.createdAt) },
+                { label: 'Derniere mise a jour', value: formatAuditDate(club.updatedAt) },
+                { label: 'Creation', value: formatAuditDate(club.createdAt) },
               ])}
             </View>
           </View>
@@ -573,13 +577,15 @@ function AdminClubDetail() {
             {renderInfoRows([
               { label: 'Nom', value: club.name },
               { label: 'Email', value: club.email },
-              { label: 'Téléphone', value: club.phoneNumber },
-              { label: 'Client', value: club.isCustomer ? 'Oui' : 'Non' },
-              { label: 'Réservation', value: club.isReservationProvider ? 'Oui' : 'Non' },
-              { label: 'Abonnement', value: `${club.subscriptionValue || 0} €` },
-              { label: 'Max équipes', value: club.maxTeamNumber },
+              { label: 'Telephone', value: club.phoneNumber },
+              { label: 'Partenariat', value: club.clubPartner ? 'Oui' : 'Non' },
+              { label: 'Club verifie', value: club.clubVerified ? 'Oui' : 'Non' },
+              { label: 'Reservation', value: club.isReservationProvider ? 'Oui' : 'Non' },
               { label: 'Multisport parent', value: getClubRelationLabel(parentMultisport) },
             ])}
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[12]]}>
+              Les abonnements, entitlements et capacites Team sont pilotes depuis les operations abonnements, plus depuis la fiche club.
+            </Text>
           </View>
         ) : null}
 
@@ -621,7 +627,7 @@ function AdminClubDetail() {
                 />
               </View>
             )) : (
-              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucun sponsor configuré.</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucun sponsor configure.</Text>
             )}
             <Button
               onPress={() => navigation.navigate(RouteNames.AdminClubForm, { clubId })}
@@ -656,7 +662,7 @@ function AdminClubDetail() {
                 </Text>
               </View>
             )) : (
-              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucune demande liée.</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucune demande liee.</Text>
             )}
           </View>
         ) : null}
@@ -665,7 +671,7 @@ function AdminClubDetail() {
           <View style={[panelStyle, Spaces.padding[18], styles.sectionCard]}>
             <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Historique</Text>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-              Les actions sensibles passent par les mutations SuperAdmin et alimentent l’audit backend.
+              Les actions sensibles passent par les mutations SuperAdmin et alimentent l audit backend.
             </Text>
           </View>
         ) : null}
@@ -674,7 +680,7 @@ function AdminClubDetail() {
           <View style={[panelStyle, Spaces.padding[18], styles.sectionCard, { borderColor: Colors.error500 }]}>
             <Text style={[Fonts.h4Bold, { color: Colors.error500 }]}>Danger zone</Text>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-              Suppression définitive du club dans le Content Manager. Cette action doit être utilisée avec prudence.
+              Suppression definitive du club dans le Content Manager. Cette action doit etre utilisee avec prudence.
             </Text>
             <Button
               onPress={() => setIsDeleteVisible(true)}
@@ -722,7 +728,7 @@ function AdminClubDetail() {
         </Text>
         <TextInput
           onChangeText={setRelationQuery}
-          placeholder="Rechercher une entrée"
+          placeholder="Rechercher une entree"
           placeholderTextColor={Colors.neutral300}
           style={[
             panelStyle,
@@ -735,7 +741,7 @@ function AdminClubDetail() {
         />
         <TextInput
           onChangeText={setRelationReason}
-          placeholder="Raison d’audit"
+          placeholder="Raison d'audit"
           placeholderTextColor={Colors.neutral300}
           style={[
             panelStyle,
@@ -772,7 +778,7 @@ function AdminClubDetail() {
       <BottomModal close={() => setIsDeleteVisible(false)} isVisible={isDeleteVisible} snapPoints={['46%']}>
         <Text style={[Fonts.h3, { color: Colors.error500 }]}>Supprimer le club</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-          Cette action est irréversible. Ajoutez une raison pour l’audit.
+          Cette action est irreversible. Ajoutez une raison pour l audit.
         </Text>
         <TextInput
           multiline

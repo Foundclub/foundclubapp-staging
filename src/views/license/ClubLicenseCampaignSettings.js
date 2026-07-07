@@ -10,10 +10,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey, USER_ROLES } from '@/domains/auth/authUseCases';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -1169,6 +1171,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const routeCampaign = route?.params?.campaign;
   const routeEventId = String(route?.params?.eventId || '').trim();
   const routeEvent = route?.params?.event || null;
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const createNewCampaign = Boolean(route?.params?.createNew || (routeEventId && !routeCampaignId));
   const todayIsoDateValue = useMemo(() => getTodayIsoDateValue(), []);
   const eventCampaignDefaults = useMemo(() => buildEventCampaignDefaults({
@@ -1784,6 +1787,17 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       return;
     }
     saveMutation.mutate({ status: requestedStatus }, {
+      onError: (error) => {
+        const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+        if (subscriptionDecision) {
+          setSubscriptionPaywallDecision(subscriptionDecision);
+          return;
+        }
+        Alert.alert(
+          'Campagne impossible',
+          error?.message || 'Impossible de sauvegarder cette campagne pour le moment.',
+        );
+      },
       onSuccess: async (saved) => {
         const savedCampaignId = saved?.documentId || saved?.id || campaignId;
         const activeDocumentRequests = documentRequests
@@ -2796,25 +2810,35 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   }
 
   return (
-    <WizardStepLayout
-      collapsibleHeader
-      isNextDisabled={isWizardNextDisabled}
-      isNextLoading={saveMutation.isPending}
-      nextLabel={finalSaveLabel}
-      onBack={handleWizardBack}
-      onClose={exitWizardScreen}
-      onNext={handleWizardNext}
-      stepCount={wizardStepCount}
-      stepIndex={wizardStepIndex + 1}
-      subtitle={activeWizardStep.subtitle}
-      title={activeWizardStep.title}
-    >
-      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
-        {stepContent}
+    <>
+      <WizardStepLayout
+        collapsibleHeader
+        isNextDisabled={isWizardNextDisabled}
+        isNextLoading={saveMutation.isPending}
+        nextLabel={finalSaveLabel}
+        onBack={handleWizardBack}
+        onClose={exitWizardScreen}
+        onNext={handleWizardNext}
+        stepCount={wizardStepCount}
+        stepIndex={wizardStepIndex + 1}
+        subtitle={activeWizardStep.subtitle}
+        title={activeWizardStep.title}
+      >
+        <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+          {stepContent}
 
-        <View style={{ paddingBottom: Math.max(insets.bottom + 8, 16) }} />
-      </View>
-    </WizardStepLayout>
+          <View style={{ paddingBottom: Math.max(insets.bottom + 8, 16) }} />
+        </View>
+      </WizardStepLayout>
+
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={clubId || club?.documentId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
+    </>
   );
 }
 

@@ -74,14 +74,15 @@ const normalizeComparableState = (state = {}) => {
     city: normalizeText(nextState.city),
     email: normalizeText(nextState.email),
     geohash: normalizeText(nextState.geohash),
+    isCustomer: undefined,
     latitude: normalizeText(nextState.latitude),
     longitude: normalizeText(nextState.longitude),
-    maxTeamNumber: normalizeText(nextState.maxTeamNumber),
+    maxTeamNumber: undefined,
     name: normalizeText(nextState.name),
     phoneNumber: normalizeText(nextState.phoneNumber),
     postcode: normalizeText(nextState.postcode),
     saveReason: normalizeText(nextState.saveReason),
-    subscriptionValue: normalizeText(nextState.subscriptionValue),
+    subscriptionValue: undefined,
   };
 };
 

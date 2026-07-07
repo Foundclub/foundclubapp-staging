@@ -1,5 +1,5 @@
 import { joiResolver } from '@hookform/resolvers/joi';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -17,6 +17,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -24,6 +25,7 @@ import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -160,22 +162,50 @@ function TeamEdit({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { userData } = useAuth();
+  const queryClient = useQueryClient();
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   const teamMutation = useMutation({
     mutationFn: teamId ? updateTeam : createTeam,
-    onSuccess: () => {
+    onError: (mutationError) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
+
+      const errorMessage = mutationError?.response?.data?.error?.message
+        || mutationError?.response?.data?.error
+        || mutationError?.message
+        || t('teamEdit.actions.saveError', 'Impossible d enregistrer l equipe.');
+
+      Alert.alert(t('common.error', 'Erreur'), errorMessage);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
+      await queryClient.invalidateQueries({ queryKey: ['get-me'] });
+      await queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
       navigation.goBack();
     },
   });
   const deleteTeamMutation = useMutation({
     mutationFn: deleteTeam,
-    onError: () => {
+    onError: (mutationError) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
+
       Alert.alert(
         t('common.error', 'Erreur'),
         t('teamEdit.actions.deleteError', 'Impossible de supprimer l\'équipe.'),
       );
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
+      await queryClient.invalidateQueries({ queryKey: ['get-me'] });
+      await queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
       navigation.navigate(RouteNames.TeamList);
     },
   });
@@ -871,6 +901,13 @@ function TeamEdit({ navigation, route }) {
         isVisible={isCreateTrainerModalVisible}
         onClose={() => setIsCreateTrainerModalVisible(false)}
         onTrainerCreated={handleTrainerCreated}
+      />
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={effectiveClubId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
       />
     </ScreenContainer>
   );

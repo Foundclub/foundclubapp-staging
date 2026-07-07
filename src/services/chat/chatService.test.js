@@ -55,7 +55,6 @@ describe('chatService', () => {
     expect(mockGet).toHaveBeenCalledWith('/chats/chat-multisport-1', {
       params: {
         chat: 'chat-multisport-1',
-        populate: expect.any(Object),
       },
     });
   });

@@ -241,29 +241,13 @@ export const getCancellationPenalty = (hoursUntilMatch) => {
 };
 
 /**
- * Fetch a single match with full details
+ * Fetch a single match with the cached screen summary payload
  * @param {string} matchId - The match documentId
  * @returns {Promise<LeagueMatch>}
  */
 export const fetchMatch = async (matchId) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
-  const response = await client.get(`/league-matches/${normalizedMatchId}`, {
-    params: {
-      populate: {
-        cancelled_by: true,
-        chat: true,
-        participations_a: true,
-        participations_b: true,
-        team_a: {
-          populate: ['captain', 'co_captains', 'crest', 'roster'],
-        },
-        team_b: {
-          populate: ['captain', 'co_captains', 'crest', 'roster'],
-        },
-        winner: true,
-      },
-    },
-  });
+  const response = await client.get(`/league-matches/${normalizedMatchId}/summary`);
   return response.data?.data || response.data;
 };
 
@@ -277,26 +261,10 @@ export const getMatchHistory = async (teamId, limit = 10) => {
   const normalizedTeamId = requireDocumentId(teamId, 'team');
   const parsedNumericId = Number.parseInt(normalizedTeamId, 10);
   const isNumericTeamId = Number.isFinite(parsedNumericId) && String(parsedNumericId) === normalizedTeamId;
-  const teamFilterOr = /** @type {Array<Record<string, unknown>>} */ ([
-    { team_a: { documentId: { $eq: normalizedTeamId } } },
-    { team_b: { documentId: { $eq: normalizedTeamId } } },
-  ]);
-  if (isNumericTeamId) {
-    teamFilterOr.push({ team_a: { id: { $eq: parsedNumericId } } });
-    teamFilterOr.push({ team_b: { id: { $eq: parsedNumericId } } });
-  }
-
-  const response = await client.get('/league-matches', {
+  const response = await client.get('/league-matches/history', {
     params: {
-      filters: {
-        $and: [
-          { $or: teamFilterOr },
-          { status: { $in: ['valid', 'cancelled', 'forfeit', 'no_show'] } },
-        ],
-      },
-      pagination: { limit },
-      populate: ['team_a', 'team_a.crest', 'team_b', 'team_b.crest', 'winner'],
-      sort: 'date:desc',
+      limit,
+      teamId: normalizedTeamId,
     },
   });
 
@@ -355,11 +323,7 @@ export const getMatchHistory = async (teamId, limit = 10) => {
  */
 export const getMatch = async (matchId) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
-  const response = await client.get(`/league-matches/${normalizedMatchId}`, {
-    params: {
-      populate: ['team_a', 'team_a.captain', 'team_a.co_captains', 'team_a.crest', 'team_b', 'team_b.captain', 'team_b.co_captains', 'team_b.crest', 'winner', 'chat'],
-    },
-  });
+  const response = await client.get(`/league-matches/${normalizedMatchId}/summary`);
   return response.data?.data || response.data;
 };
 

@@ -24,6 +24,10 @@ import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
+import {
+  getSubscriptionQuotaItem,
+  getSubscriptionStatusMeta,
+} from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { scrollTutorialTargetIntoViewOnWeb } from '@/domains/tutorial/tutorialWebRuntime';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
@@ -301,9 +305,11 @@ function HomeHubContent({ auth, navigation, route }) {
   } = useStartupPhase();
   const {
     canPublishGovernedClubContent,
+    freeUsageSummary,
     governedPublishingBlockReason,
     logoutMutation,
     nonPartnerCoachPublishingAccess,
+    subscriptionAccessLevel,
     userData,
   } = auth;
   const clubScope = useClubScope() || {};
@@ -348,6 +354,7 @@ function HomeHubContent({ auth, navigation, route }) {
   const roleKey = getUserRoleKey(roleName);
   const isCoach = roleKey === 'coach';
   const isPresident = roleKey === 'president';
+  const canShowSubscriptionExperience = isCoach || isPresident || roleKey === 'superAdmin';
   const hasManageSection = isCoach || isPresident;
   const isGovernedNonPartnerCoach = nonPartnerCoachPublishingAccess?.isNonPartnerCoach === true;
   const isPublishingGovernedBlocked = isGovernedNonPartnerCoach
@@ -398,6 +405,14 @@ function HomeHubContent({ auth, navigation, route }) {
     && !isHomeHubEntryGateVisible;
 
   const legacySearchTarget = useMemo(() => resolveLegacySearchTarget(routeParams, userData), [routeParams, userData]);
+  const subscriptionStatusMeta = useMemo(
+    () => getSubscriptionStatusMeta(subscriptionAccessLevel),
+    [subscriptionAccessLevel],
+  );
+  const eventPublishQuotaItem = useMemo(
+    () => getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', subscriptionAccessLevel),
+    [freeUsageSummary, subscriptionAccessLevel],
+  );
 
   const lastLegacyRedirectRef = useRef('');
   useEffect(() => {
@@ -1280,6 +1295,12 @@ function HomeHubContent({ auth, navigation, route }) {
     });
   }, [navigation, userData?.documentId, userData?.id]);
 
+  const handleOpenSubscriptionOverview = useCallback(() => {
+    navigation.navigate(RouteNames.ProfileStack, {
+      screen: RouteNames.SubscriptionOverview,
+    });
+  }, [navigation]);
+
   const handleEditProfile = useCallback(() => {
     navigation.navigate(RouteNames.ProfileStack, { screen: RouteNames.ProfileEdit });
   }, [navigation]);
@@ -1735,63 +1756,85 @@ function HomeHubContent({ auth, navigation, route }) {
   ]), [Colors.gold500, handleOpenLeague, makeTutorial, scrollDownLabel, scrollToProfileSection, t]);
 
   /** @type {HomeCard[]} */
-  const profileCards = useMemo(() => ([
-    {
-      accentColor: Colors.primary500,
-      icon: 'users',
-      key: 'profile-view',
-      onPress: handleOpenProfile,
-      subtitle: t('homeHub.cards.profile.view.subtitle'),
-      title: t('homeHub.cards.profile.view.title'),
-      tutorial: makeTutorial('profileView', 30, 'Voir mon profil', 'Consultez votre page profil complete.'),
-    },
-    {
-      accentColor: Colors.primary500,
-      icon: 'edit',
-      key: 'profile-edit',
-      onPress: handleEditProfile,
-      subtitle: t('homeHub.cards.profile.edit.subtitle'),
-      title: t('homeHub.cards.profile.edit.title'),
-      tutorial: makeTutorial('profileEdit', 31, 'Modifier mon profil', 'Modifiez vos informations personnelles et sportives.'),
-    },
-    {
-      accentColor: Colors.primary500,
-      icon: 'clock',
-      key: 'profile-history',
-      onPress: handleOpenHistory,
-      subtitle: t('homeHub.cards.profile.history.subtitle'),
-      title: t('homeHub.cards.profile.history.title'),
-      tutorial: makeTutorial('profileHistory', 32, 'Historique sportif', 'Ajoutez vos experiences via le wizard historique.'),
-    },
-    {
-      accentColor: Colors.primary500,
-      icon: 'bell',
-      key: 'profile-alerts',
-      onPress: handleOpenSearchAlerts,
-      subtitle: t('homeHub.cards.profile.alerts.subtitle'),
-      title: t('homeHub.cards.profile.alerts.title'),
-      tutorial: makeTutorial(
-        'profileAlerts',
-        33,
-        'Gérer mes alertes',
-        'Configurez des alertes personnalisees selon vos recherches.',
-        {
-          nextAction: 'scrollDown',
-          nextLabel: scrollDownLabel,
-          nextTargetStepId: 'homehub-quickPlanning',
-          onNext: scrollToQuickSection,
-        },
-      ),
-    },
-  ]), [
+  const profileCards = useMemo(() => {
+    const cards = [
+      {
+        accentColor: Colors.primary500,
+        icon: 'users',
+        key: 'profile-view',
+        onPress: handleOpenProfile,
+        subtitle: t('homeHub.cards.profile.view.subtitle'),
+        title: t('homeHub.cards.profile.view.title'),
+        tutorial: makeTutorial('profileView', 30, 'Voir mon profil', 'Consultez votre page profil complete.'),
+      },
+      {
+        accentColor: Colors.primary500,
+        icon: 'edit',
+        key: 'profile-edit',
+        onPress: handleEditProfile,
+        subtitle: t('homeHub.cards.profile.edit.subtitle'),
+        title: t('homeHub.cards.profile.edit.title'),
+        tutorial: makeTutorial('profileEdit', 31, 'Modifier mon profil', 'Modifiez vos informations personnelles et sportives.'),
+      },
+      {
+        accentColor: Colors.primary500,
+        icon: 'clock',
+        key: 'profile-history',
+        onPress: handleOpenHistory,
+        subtitle: t('homeHub.cards.profile.history.subtitle'),
+        title: t('homeHub.cards.profile.history.title'),
+        tutorial: makeTutorial('profileHistory', 32, 'Historique sportif', 'Ajoutez vos experiences via le wizard historique.'),
+      },
+      {
+        accentColor: Colors.primary500,
+        icon: 'bell',
+        key: 'profile-alerts',
+        onPress: handleOpenSearchAlerts,
+        subtitle: t('homeHub.cards.profile.alerts.subtitle'),
+        title: t('homeHub.cards.profile.alerts.title'),
+        tutorial: makeTutorial(
+          'profileAlerts',
+          33,
+          'Gérer mes alertes',
+          'Configurez des alertes personnalisees selon vos recherches.',
+          {
+            nextAction: 'scrollDown',
+            nextLabel: scrollDownLabel,
+            nextTargetStepId: 'homehub-quickPlanning',
+            onNext: scrollToQuickSection,
+          },
+        ),
+      },
+    ];
+
+    if (canShowSubscriptionExperience) {
+      cards.unshift({
+        accentColor: Colors.primary500,
+        icon: 'euroCircle',
+        key: 'profile-subscription',
+        layout: 'full',
+        onPress: handleOpenSubscriptionOverview,
+        subtitle: eventPublishQuotaItem
+          ? `${subscriptionStatusMeta.label} - ${eventPublishQuotaItem.remaining}/${eventPublishQuotaItem.total} evenement gratuit restant`
+          : 'Consultez vos offres, quotas gratuits et equipes couvertes.',
+        title: 'Mon abonnement',
+      });
+    }
+
+    return cards;
+  }, [
     Colors.primary500,
+    canShowSubscriptionExperience,
+    eventPublishQuotaItem,
     handleEditProfile,
     handleOpenHistory,
     handleOpenProfile,
     handleOpenSearchAlerts,
+    handleOpenSubscriptionOverview,
     makeTutorial,
     scrollDownLabel,
     scrollToQuickSection,
+    subscriptionStatusMeta.label,
     t,
   ]);
 

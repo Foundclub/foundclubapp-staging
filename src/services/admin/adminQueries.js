@@ -4,6 +4,8 @@ import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import {
   approveClubClaim,
+  createManualEntitlement,
+  createManualSubscription,
   generateTestTournament,
   getAdminClub,
   getAdminClubs,
@@ -20,6 +22,8 @@ import {
   getNotificationsHealth,
   getPendingClubClaims,
   getPendingClubOnboardingRequests,
+  getSubscriptionOps,
+  migrateLegacySubscriptions,
   processAffiliationHelpRequest,
   purgeNotificationDeliveries,
   refuseAffiliationHelpRequest,
@@ -27,9 +31,11 @@ import {
   resolveLeagueDispute,
   retryNotificationDelivery,
   sendNotificationsHealthTest,
+  syncSubscriptionTeamEntitlements,
   updateAdminClub,
   updateAdminUser,
   updateDetectionVerification,
+  updateManualEntitlement,
   updateNonPartnerCoachAffiliation,
   updateNonPartnerCoachGovernance,
 } from './adminService';
@@ -161,6 +167,64 @@ export const useGetNonPartnerCoachAffiliations = (params) => useQuery({
   queryFn: () => getNonPartnerCoachAffiliations(params),
   queryKey: buildNormalizedQueryKey(['admin', 'non-partner-coach-affiliations'], params),
 });
+
+export const useGetSubscriptionOps = () => useQuery({
+  queryFn: getSubscriptionOps,
+  queryKey: ['admin', 'subscription-ops'],
+});
+
+export const useCreateManualSubscription = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createManualSubscription,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'subscription-ops'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+    },
+  });
+};
+
+export const useSaveManualEntitlement = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      /** @type {{ documentId?: string; payload: any }} */ params,
+    ) => (
+      params?.documentId
+        ? updateManualEntitlement(params.documentId, params.payload)
+        : createManualEntitlement(params?.payload || {})
+    ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'subscription-ops'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+    },
+  });
+};
+
+export const useSyncSubscriptionTeamEntitlements = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      /** @type {{ documentId: string; reason: string }} */ payload,
+    ) => syncSubscriptionTeamEntitlements(payload.documentId, { reason: payload.reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'subscription-ops'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+    },
+  });
+};
+
+export const useMigrateLegacySubscriptions = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: migrateLegacySubscriptions,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'subscription-ops'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'claims'] });
+    },
+  });
+};
 
 export const useUpdateNonPartnerCoachAffiliation = () => {
   const queryClient = useQueryClient();

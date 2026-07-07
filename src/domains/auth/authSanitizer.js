@@ -46,9 +46,10 @@ const sanitizeMultisportClubSummary = (/** @type {any} */ club) => {
     admins: Array.isArray(club?.admins)
       ? club.admins.map(sanitizeUserLiteSummary).filter(Boolean)
       : [],
+    clubPartner: typeof club?.clubPartner === 'boolean' ? club.clubPartner : null,
+    clubVerified: typeof club?.clubVerified === 'boolean' ? club.clubVerified : null,
     documentId: normalizeString(club?.documentId),
     id: club?.id ?? null,
-    isCustomer: typeof club?.isCustomer === 'boolean' ? club.isCustomer : null,
     logo: sanitizeImageSummary(club?.logo),
     name: normalizeString(club?.name),
     sections: Array.isArray(club?.sections)
@@ -60,9 +61,10 @@ const sanitizeMultisportClubSummary = (/** @type {any} */ club) => {
 const sanitizeClubSummary = (/** @type {any} */ club) => {
   if (!club) return null;
   return {
+    clubPartner: typeof club?.clubPartner === 'boolean' ? club.clubPartner : null,
+    clubVerified: typeof club?.clubVerified === 'boolean' ? club.clubVerified : null,
     documentId: normalizeString(club?.documentId),
     id: club?.id ?? null,
-    isCustomer: typeof club?.isCustomer === 'boolean' ? club.isCustomer : null,
     logo: sanitizeImageSummary(club?.logo),
     name: normalizeString(club?.name),
     parentMultisport: sanitizeMultisportClubSummary(club?.parentMultisport),
@@ -165,12 +167,21 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
       ? user.clubs.map((/** @type {any} */ club) => normalizeString(club?.documentId))
       : []),
     ...(Array.isArray(user?.clubAffiliations)
-      ? user.clubAffiliations.map((/** @type {any} */ affiliation) => normalizeString(affiliation?.club?.documentId))
+      ? user.clubAffiliations.map(
+        (/** @type {any} */ affiliation) => normalizeString(affiliation?.club?.documentId),
+      )
       : []),
   ]),
-  clubIsCustomer: typeof user?.club?.isCustomer === 'boolean' ? user.club.isCustomer : null,
+  clubIsPartner: typeof user?.club?.clubPartner === 'boolean'
+    ? user.club.clubPartner
+    : null,
+  clubIsVerified: typeof user?.club?.clubVerified === 'boolean'
+    ? user.club.clubVerified
+    : null,
   clubMembershipRequestIds: normalizeIdList(
-    user?.clubMembershipRequests?.map((/** @type {any} */ request) => normalizeString(request?.documentId)),
+    user?.clubMembershipRequests?.map(
+      (/** @type {any} */ request) => normalizeString(request?.documentId),
+    ),
   ),
   documentId: normalizeString(user?.documentId),
   firstname: normalizeString(user?.firstname),

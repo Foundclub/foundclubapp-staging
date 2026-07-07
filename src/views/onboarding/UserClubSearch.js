@@ -17,7 +17,6 @@ import OnboardingStateView from '@/views/onboarding/components/OnboardingStateVi
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
 /**
@@ -27,17 +26,17 @@ import { updateMe } from '@/services/auth/authService';
 function UserClubSearch({ navigation }) {
   const [isLooking, setIsLooking] = useState(/** @type {boolean | null} */ (null));
 
-  const { getNextOnboardingRoute } = useAuth();
+  const {
+    getNextOnboardingRoute,
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const {
-    data: userData,
-    error: userDataError,
-    isLoading: userDataLoading,
-    refetch: refetchUserData,
-  } = useGetMe();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
@@ -106,7 +105,6 @@ function UserClubSearch({ navigation }) {
   return (
     <FormScreenContainer
       bgImage="bg2"
-      contentWidth="readable"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
         { marginBottom: insets.bottom },
@@ -114,6 +112,7 @@ function UserClubSearch({ navigation }) {
         Alignments.column,
         Alignments.fill,
       ]}
+      contentWidth="readable"
     >
       <View style={[Spaces.gap[40]]}>
         <View style={[Spaces.gap[16]]}>

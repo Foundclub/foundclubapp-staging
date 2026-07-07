@@ -50,7 +50,7 @@ const SORT_OPTIONS = [
   { key: 'updated', label: 'MAJ' },
   { key: 'alpha', label: 'A-Z' },
   { key: 'created', label: 'Créés' },
-  { key: 'customer', label: 'Clients' },
+  { key: 'partner', label: 'Partenaires' },
 ];
 
 const BOOLEAN_FILTERS = [
@@ -60,7 +60,8 @@ const BOOLEAN_FILTERS = [
 ];
 
 const getStatusBadges = (club = {}) => [
-  club?.isCustomer ? { label: 'Client', tone: 'success' } : { label: 'Prospect', tone: 'neutral' },
+  club?.clubPartner ? { label: 'Partenaire', tone: 'primary' } : { label: 'Standard', tone: 'neutral' },
+  club?.clubVerified ? { label: 'Verifie', tone: 'success' } : { label: 'Non verifie', tone: 'neutral' },
   club?.isReservationProvider ? { label: 'Réservation', tone: 'primary' } : null,
 ].filter(Boolean);
 
@@ -104,7 +105,7 @@ function AdminClubList() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [city, setCity] = useState('');
-  const [customerFilter, setCustomerFilter] = useState('all');
+  const [partnerFilter, setPartnerFilter] = useState('all');
   const [reservationFilter, setReservationFilter] = useState('all');
   const [sortMode, setSortMode] = useState('updated');
   const [selectionMode, setSelectionMode] = useState(false);
@@ -119,13 +120,13 @@ function AdminClubList() {
 
   const params = useMemo(() => ({
     city,
-    isCustomer: BOOLEAN_FILTERS.find((filter) => filter.key === customerFilter)?.value,
+    clubPartner: BOOLEAN_FILTERS.find((filter) => filter.key === partnerFilter)?.value,
     isReservationProvider: BOOLEAN_FILTERS.find((filter) => filter.key === reservationFilter)?.value,
     page: 1,
     pageSize: 40,
     q: debouncedQuery,
     sortMode,
-  }), [city, customerFilter, debouncedQuery, reservationFilter, sortMode]);
+  }), [city, debouncedQuery, partnerFilter, reservationFilter, sortMode]);
 
   const {
     data,
@@ -193,10 +194,10 @@ function AdminClubList() {
     try {
       if (dangerAction === 'delete') {
         await bulkDeleteMutation.mutateAsync({ documentIds: selectedIds, reason });
-      } else if (dangerAction === 'customer-on') {
-        await bulkUpdateMutation.mutateAsync({ data: { isCustomer: true }, documentIds: selectedIds, reason });
-      } else if (dangerAction === 'customer-off') {
-        await bulkUpdateMutation.mutateAsync({ data: { isCustomer: false }, documentIds: selectedIds, reason });
+      } else if (dangerAction === 'partner-on') {
+        await bulkUpdateMutation.mutateAsync({ data: { clubPartner: true, isCustomer: true }, documentIds: selectedIds, reason });
+      } else if (dangerAction === 'partner-off') {
+        await bulkUpdateMutation.mutateAsync({ data: { clubPartner: false, isCustomer: false }, documentIds: selectedIds, reason });
       } else if (dangerAction === 'reservation-on') {
         await bulkUpdateMutation.mutateAsync({ data: { isReservationProvider: true }, documentIds: selectedIds, reason });
       } else if (dangerAction === 'reservation-off') {
@@ -503,11 +504,11 @@ function AdminClubList() {
           )),
         )}
         {renderFilterGroup(
-          'Client',
+          'Partenariat',
           BOOLEAN_FILTERS.map((option) => renderChip(
             option.label,
-            customerFilter === option.key,
-            () => setCustomerFilter(option.key),
+            partnerFilter === option.key,
+            () => setPartnerFilter(option.key),
           )),
         )}
         {renderFilterGroup(
@@ -555,8 +556,8 @@ function AdminClubList() {
               clubs sélectionnés
             </Text>
             <View style={[Alignments.row, styles.bulkActions]}>
-              <Button onPress={() => openDangerAction('customer-on')} size="sm" title="Client oui" variant="Secondary" />
-              <Button onPress={() => openDangerAction('customer-off')} size="sm" title="Client non" variant="Secondary" />
+              <Button onPress={() => openDangerAction('partner-on')} size="sm" title="Partenaire oui" variant="Secondary" />
+              <Button onPress={() => openDangerAction('partner-off')} size="sm" title="Partenaire non" variant="Secondary" />
               <Button onPress={() => openDangerAction('reservation-on')} size="sm" title="Résa oui" variant="Secondary" />
               <Button onPress={() => openDangerAction('reservation-off')} size="sm" title="Résa non" variant="Secondary" />
               <Button onPress={() => openDangerAction('delete')} size="sm" title="Supprimer" variant="SecondaryLight" />

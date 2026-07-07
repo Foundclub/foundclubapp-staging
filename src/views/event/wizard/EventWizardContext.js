@@ -70,8 +70,10 @@ const createInitialState = () => {
     // Step 5: Participants
     capacity: null,
     detectionSlots: [],
+    externalParticipantLimit: null,
     totalPlayers: null,
     // Step 6: Validation mode
+    externalParticipantValidationMode: 'manual',
     validationMode: 'auto',
 
     // Step 7+: Meta
@@ -260,6 +262,9 @@ function eventWizardReducer(state, action) {
       };
     }
     case 'SET_VALIDATION_MODE':
+      if (action.payload && typeof action.payload === 'object' && !Array.isArray(action.payload)) {
+        return { ...state, ...action.payload };
+      }
       return { ...state, validationMode: action.payload };
     default:
       return state;

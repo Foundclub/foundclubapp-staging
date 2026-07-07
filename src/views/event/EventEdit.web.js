@@ -8,6 +8,8 @@ import {
   createEventPayload,
   createEventUpdatePayload,
   getEventEditSupport,
+  isTrainingEventType,
+  resolveTrainingOpenConfig,
 } from '@/domains/event/eventUseCases';
 import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -99,6 +101,8 @@ function EventEdit({ navigation, route }) {
     description: '',
     endTime: '',
     eventTasks: [],
+    externalParticipantLimit: '',
+    externalParticipantValidationMode: 'manual',
     facility: '',
     invitedTeams: [],
     locationLabel: '',
@@ -134,12 +138,17 @@ function EventEdit({ navigation, route }) {
 
   useEffect(() => {
     if (!event) return;
+    const trainingOpenConfig = resolveTrainingOpenConfig(event);
     setFormState({
       capacity: event?.capacity != null ? String(event.capacity) : '',
       date: toDateInputValue(event?.date),
       description: String(event?.description || ''),
       endTime: toTimeInputValue(event?.endTime),
       eventTasks: Array.isArray(event?.eventTasks) ? event.eventTasks : [],
+      externalParticipantLimit: trainingOpenConfig.externalParticipantLimit != null
+        ? String(trainingOpenConfig.externalParticipantLimit)
+        : '',
+      externalParticipantValidationMode: trainingOpenConfig.externalParticipantValidationMode || 'manual',
       facility: getEntityDocumentId(event?.facility),
       invitedTeams: Array.isArray(event?.invitedTeams)
         ? event.invitedTeams.map((team) => getEntityDocumentId(team)).filter(Boolean)
@@ -201,6 +210,15 @@ function EventEdit({ navigation, route }) {
     () => typeOptions.find((eventType) => getEntityDocumentId(eventType) === formState.type) || event?.type || null,
     [event?.type, formState.type, typeOptions],
   );
+  const isReservationType = useMemo(
+    () => selectedTypeData?.name === 'Réservation',
+    [selectedTypeData?.name],
+  );
+  const isTrainingType = useMemo(
+    () => isTrainingEventType(selectedTypeData?.name),
+    [selectedTypeData?.name],
+  );
+  const isOpenTrainingType = isTrainingType && formState.sessionStatus !== 'closed';
   const editSupport = useMemo(
     () => getEventEditSupport(event, selectedTypeData?.name),
     [event, selectedTypeData?.name],
@@ -337,12 +355,33 @@ function EventEdit({ navigation, route }) {
       return;
     }
 
+    if (isTrainingType && formState.sessionStatus !== 'closed') {
+      const externalParticipantLimit = Number(formState.externalParticipantLimit || 0);
+      if (!Number.isFinite(externalParticipantLimit) || externalParticipantLimit < 1) {
+        setSubmitError('Indique combien de places externes tu ouvres pour cet entrainement.');
+        return;
+      }
+
+      if (!String(formState.externalParticipantValidationMode || '').trim()) {
+        setSubmitError('Choisis un mode de validation pour les joueurs externes.');
+        return;
+      }
+    }
+
+    let normalizedTotalPlayers = null;
+    if (!(isTrainingType && formState.sessionStatus !== 'closed')) {
+      normalizedTotalPlayers = formState.totalPlayers ? Number(formState.totalPlayers) : null;
+    }
     const baseFormPayload = {
       capacity: formState.capacity ? Number(formState.capacity) : null,
       date: toDisplayDateValue(formState.date),
       description: formState.description,
       endTime: formState.endTime,
       eventTasks: Array.isArray(formState.eventTasks) ? formState.eventTasks : [],
+      externalParticipantLimit: formState.externalParticipantLimit
+        ? Number(formState.externalParticipantLimit)
+        : null,
+      externalParticipantValidationMode: formState.externalParticipantValidationMode || null,
       facility: formState.facility || null,
       invitedTeams: formState.invitedTeams,
       location: formState.locationLabel
@@ -353,8 +392,9 @@ function EventEdit({ navigation, route }) {
       startTime: formState.startTime,
       team: formState.team,
       teamAudiences: Array.isArray(formState.teamAudiences) ? formState.teamAudiences : [],
-      totalPlayers: formState.totalPlayers ? Number(formState.totalPlayers) : null,
+      totalPlayers: normalizedTotalPlayers,
       type: formState.type,
+      typeName: selectedTypeData?.name || event?.type?.name || '',
       validationMode: formState.validationMode,
     };
     const payload = eventId
@@ -584,28 +624,55 @@ function EventEdit({ navigation, route }) {
                   <input onChange={(eventObject) => updateField('locationLabel', eventObject.target.value)} placeholder="Adresse ou lieu" style={fieldStyle} value={formState.locationLabel} />
                 </label>
 
-                <label style={{ display: 'grid', gap: 8 }}>
-                  <span style={{ color: mutedTextColor, fontSize: 13 }}>Capacite</span>
-                  <input min="0" onChange={(eventObject) => updateField('capacity', eventObject.target.value)} style={fieldStyle} type="number" value={formState.capacity} />
-                </label>
+                {!isTrainingType ? (
+                  <label style={{ display: 'grid', gap: 8 }}>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Capacite</span>
+                    <input min="0" onChange={(eventObject) => updateField('capacity', eventObject.target.value)} style={fieldStyle} type="number" value={formState.capacity} />
+                  </label>
+                ) : null}
+
+                {(!isTrainingType || !isOpenTrainingType) ? (
+                  <label style={{ display: 'grid', gap: 8 }}>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                      {isTrainingType ? 'Joueurs attendus (interne)' : 'Joueurs attendus'}
+                    </span>
+                    <input min="0" onChange={(eventObject) => updateField('totalPlayers', eventObject.target.value)} style={fieldStyle} type="number" value={formState.totalPlayers} />
+                  </label>
+                ) : null}
+
+                {isReservationType ? (
+                  <label style={{ display: 'grid', gap: 8 }}>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Prix par personne</span>
+                    <input min="0" onChange={(eventObject) => updateField('pricePerPerson', eventObject.target.value)} step="0.01" style={fieldStyle} type="number" value={formState.pricePerPerson} />
+                  </label>
+                ) : null}
 
                 <label style={{ display: 'grid', gap: 8 }}>
-                  <span style={{ color: mutedTextColor, fontSize: 13 }}>Joueurs attendus</span>
-                  <input min="0" onChange={(eventObject) => updateField('totalPlayers', eventObject.target.value)} style={fieldStyle} type="number" value={formState.totalPlayers} />
-                </label>
-
-                <label style={{ display: 'grid', gap: 8 }}>
-                  <span style={{ color: mutedTextColor, fontSize: 13 }}>Prix par personne</span>
-                  <input min="0" onChange={(eventObject) => updateField('pricePerPerson', eventObject.target.value)} step="0.01" style={fieldStyle} type="number" value={formState.pricePerPerson} />
-                </label>
-
-                <label style={{ display: 'grid', gap: 8 }}>
-                  <span style={{ color: mutedTextColor, fontSize: 13 }}>Validation</span>
+                  <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                    {isTrainingType ? 'Validation des membres internes' : 'Validation'}
+                  </span>
                   <select onChange={(eventObject) => updateField('validationMode', eventObject.target.value)} style={fieldStyle} value={formState.validationMode}>
                     <option value="auto">Automatique</option>
                     <option value="manual">Manuelle</option>
                   </select>
                 </label>
+
+                {isOpenTrainingType ? (
+                  <>
+                    <label style={{ display: 'grid', gap: 8 }}>
+                      <span style={{ color: mutedTextColor, fontSize: 13 }}>Places externes</span>
+                      <input min="0" onChange={(eventObject) => updateField('externalParticipantLimit', eventObject.target.value)} style={fieldStyle} type="number" value={formState.externalParticipantLimit} />
+                    </label>
+
+                    <label style={{ display: 'grid', gap: 8 }}>
+                      <span style={{ color: mutedTextColor, fontSize: 13 }}>Validation des joueurs externes</span>
+                      <select onChange={(eventObject) => updateField('externalParticipantValidationMode', eventObject.target.value)} style={fieldStyle} value={formState.externalParticipantValidationMode}>
+                        <option value="auto">Automatique</option>
+                        <option value="manual">Manuelle</option>
+                      </select>
+                    </label>
+                  </>
+                ) : null}
 
                 <label style={{ display: 'grid', gap: 8 }}>
                   <span style={{ color: mutedTextColor, fontSize: 13 }}>

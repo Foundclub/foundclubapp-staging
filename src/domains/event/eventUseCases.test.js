@@ -12,6 +12,7 @@ import {
   isValidDate,
   isValidTime,
   RECURRENCE_FREQUENCY_OPTIONS,
+  resolveTrainingOpenConfig,
   SESSIONS_STATUS_OPTIONS,
   VALIDATION_MODE_OPTIONS,
 } from './eventUseCases';
@@ -294,6 +295,31 @@ describe('Event Use Cases', () => {
       expect(result).not.toHaveProperty('highlightRequests');
       expect(result).not.toHaveProperty('isFeatured');
     });
+
+    test('should keep external training settings and strip capacity for training payloads', () => {
+      const result = createEventPayload({
+        capacity: 28,
+        date: '15/05/2025',
+        externalParticipantLimit: 6,
+        externalParticipantValidationMode: 'manual',
+        sessionStatus: 'open',
+        startTime: '18:30',
+        team: 'team-123',
+        totalPlayers: 18,
+        type: 'type-entrainement',
+        typeName: 'Entrainement',
+        validationMode: 'auto',
+      });
+
+      expect(result).not.toHaveProperty('capacity');
+      expect(result).toEqual(expect.objectContaining({
+        externalParticipantLimit: 6,
+        externalParticipantValidationMode: 'manual',
+        totalPlayers: 18,
+        type: 'type-entrainement',
+      }));
+      expect(result).not.toHaveProperty('typeName');
+    });
   });
 
   describe('createEventUpdatePayload', () => {
@@ -475,6 +501,35 @@ describe('Event Use Cases', () => {
         userRole: { name: 'Joueur' },
       });
       expect(result).toBe(false);
+    });
+
+    test('should ignore legacy capacity limits for training events', () => {
+      const result = canEventBeJoined({
+        capacity: 1,
+        participations: [{ documentId: 'user1' }],
+        type: { name: 'Entrainement' },
+        userId: 'user2',
+        userRole: { name: 'Joueur' },
+      });
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('resolveTrainingOpenConfig', () => {
+    test('should derive legacy external quota for open trainings', () => {
+      expect(resolveTrainingOpenConfig({
+        capacity: 22,
+        sessionStatus: 'open',
+        totalPlayers: 18,
+        type: { name: 'Entrainement' },
+        validationMode: 'auto',
+      })).toEqual(expect.objectContaining({
+        externalParticipantLimit: 4,
+        externalParticipantValidationMode: 'auto',
+        isOpenTraining: true,
+        isTraining: true,
+      }));
     });
   });
 

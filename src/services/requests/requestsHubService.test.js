@@ -53,15 +53,18 @@ describe('requestsHubService', () => {
     jest.clearAllMocks();
   });
 
-  test('keeps event participation requests when a pending request exists', async () => {
+  test('keeps pending event participation requests even after a training is closed again', async () => {
     getEvents.mockResolvedValue({
       data: [
         {
           documentId: 'event-1',
+          externalParticipantLimit: 3,
+          externalParticipantValidationMode: 'manual',
           participationRequests: [
             {
               createdAt: '2026-03-27T15:00:00.000Z',
               documentId: 'request-1',
+              isActive: true,
               participationStatus: 'pending',
               user: {
                 documentId: 'user-1',
@@ -70,9 +73,9 @@ describe('requestsHubService', () => {
               },
             },
           ],
+          sessionStatus: 'closed',
           team: { name: 'Senior 2' },
           type: { name: 'Detection / Seance d essai' },
-          validationMode: 'manual',
         },
       ],
       meta: emptyPaginatedResponse.meta,
@@ -96,7 +99,6 @@ describe('requestsHubService', () => {
           participationRequests: [],
           team: { name: 'Senior 2' },
           type: { name: 'Detection / Seance d essai' },
-          validationMode: 'manual',
         },
       ],
       meta: emptyPaginatedResponse.meta,

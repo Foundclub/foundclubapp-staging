@@ -34,9 +34,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import {
-  useGetInvitedLeagueTeams,
-  useGetMyLeagueTeam,
-  useGetPendingLeagueTeams,
+  useGetLeagueTeamContext,
 } from '@/services/leagueTeam/leagueTeamQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
 
@@ -145,25 +143,23 @@ function TeamListContent({
   });
 
   const {
-    data: leagueData,
+    data: leagueTeamContext,
     error: leagueError,
     isLoading: isLoadingLeague,
     refetch: refetchLeague,
-  } = useGetMyLeagueTeam(userData?.documentId || '', { enabled: isLeagueMode && !!userData });
-
-  const {
-    data: invitedLeagueData,
-    error: invitedLeagueError,
-    isLoading: isLoadingInvitedLeague,
-    refetch: refetchInvitedLeague,
-  } = useGetInvitedLeagueTeams(userData?.documentId || '', { enabled: isLeagueMode && !!userData });
-
-  const {
-    data: pendingLeagueData,
-    error: pendingLeagueError,
-    isLoading: isLoadingPendingLeague,
-    refetch: refetchPendingLeague,
-  } = useGetPendingLeagueTeams(userData?.documentId || '', { enabled: isLeagueMode && !!userData });
+  } = useGetLeagueTeamContext(userData?.documentId || '', { enabled: isLeagueMode && !!userData });
+  const leagueData = useMemo(
+    () => (Array.isArray(leagueTeamContext?.squads) ? leagueTeamContext.squads : []),
+    [leagueTeamContext?.squads],
+  );
+  const invitedLeagueData = useMemo(
+    () => (Array.isArray(leagueTeamContext?.invitedSquads) ? leagueTeamContext.invitedSquads : []),
+    [leagueTeamContext?.invitedSquads],
+  );
+  const pendingLeagueData = useMemo(
+    () => (Array.isArray(leagueTeamContext?.pendingSquads) ? leagueTeamContext.pendingSquads : []),
+    [leagueTeamContext?.pendingSquads],
+  );
 
   const teams = useMemo(() => {
     if (isLeagueMode) return (leagueData || []).filter(Boolean);
@@ -188,15 +184,15 @@ function TeamListContent({
   }, [isLeagueMode, myTeamIds, showOnlyMyTeams, teams]);
 
   const isLoadingTeams = isLeagueMode
-    ? (isLoadingLeague || isLoadingInvitedLeague || isLoadingPendingLeague)
+    ? isLoadingLeague
     : isLoadingClassic;
   const refetchTeams = useCallback(() => {
     if (isLeagueMode) {
-      return Promise.all([refetchLeague(), refetchInvitedLeague(), refetchPendingLeague()]);
+      return refetchLeague();
     }
     return refetchClassic();
-  }, [isLeagueMode, refetchClassic, refetchInvitedLeague, refetchLeague, refetchPendingLeague]);
-  const error = isLeagueMode ? (leagueError || invitedLeagueError || pendingLeagueError) : classicError;
+  }, [isLeagueMode, refetchClassic, refetchLeague]);
+  const error = isLeagueMode ? leagueError : classicError;
 
   const {
     invitedTeams,
