@@ -36,8 +36,8 @@ import TeamLocationIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
+import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import StatRow from '@/components/molecules/statRow/StatRow';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TeamSlotList from '@/components/molecules/teamSlotList/TeamSlotList';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -1229,16 +1229,6 @@ function TeamDetails({ navigation, route }) {
     };
   }, [team?.externalStandingData, team?.externalTeamId, team?.externalTeamName]);
 
-  const statsColumns = useMemo(
-    () => ([
-      { key: 'attendanceCount', label: 'Pres.' },
-      { key: 'absenceCount', label: 'Abs.' },
-      { key: 'lateCount', label: 'Ret.' },
-      { key: 'lateMinutesTotal', label: 'Min ret.' },
-    ]),
-    [],
-  );
-
   const teamStatsRows = useMemo(() => {
     const rows = Array.isArray(teamStatsData?.data) ? teamStatsData.data : [];
     return rows.map((/** @type {any} */ row) => ({
@@ -1269,6 +1259,8 @@ function TeamDetails({ navigation, route }) {
         : 0);
 
     return {
+      absenceCount: Number(totals?.absenceCount || 0),
+      attendanceCount: Number(totals?.attendanceCount || 0),
       baselineAt: teamStatsData?.baselineAt || null,
       lateCount: Number(totals?.lateCount || 0),
       lateMinutesAvg,
@@ -3973,67 +3965,154 @@ function TeamDetails({ navigation, route }) {
 
             {statsMode === 'attendance' ? (
               <>
-                <View
-                  style={[
-                    Alignments.row,
-                    Alignments.justifySpaceBetween,
-                    ApplicationStyle.backgroundColor.primary700,
-                    ApplicationStyle.borderRadius24,
-                    Spaces.padding[16],
-                  ]}
-                >
-                  <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                    <Text style={[Fonts.h3Bold, Fonts.primary500]}>{statsSummary.rowCount}</Text>
-                    <Text style={[Fonts.p3, Fonts.neutral00]}>Joueurs</Text>
-                  </View>
-                  <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.totalEvents}</Text>
-                    <Text style={[Fonts.p3, Fonts.neutral00]}>Événements</Text>
-                  </View>
-                  <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.lateCount}</Text>
-                    <Text style={[Fonts.p3, Fonts.neutral00]}>Retards</Text>
-                  </View>
-                  <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                      {statsSummary.lateMinutesAvg}
-                      m
-                    </Text>
-                    <Text style={[Fonts.p3, Fonts.neutral00]}>Moyenne</Text>
-                  </View>
-                </View>
-
-                <View style={[Spaces.gap[8]]}>
-                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.paddingHorizontal[12]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1 }]}>Joueur</Text>
-                    <View style={[Alignments.row, Spaces.gap[8]]}>
-                      {statsColumns.map((column) => (
-                        <View key={column.key} style={[Alignments.alignCenter, { width: 44 }]}>
-                          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>{column.label}</Text>
+                {(() => {
+                  const presenceTotal = statsSummary.attendanceCount + statsSummary.absenceCount;
+                  const attendanceRatio = presenceTotal > 0
+                    ? statsSummary.attendanceCount / presenceTotal
+                    : null;
+                  /**
+                   * Ton de couleur presence (handoff 9e).
+                   * @param {number} ratio
+                   * @returns {string}
+                   */
+                  const getPresenceTone = (ratio) => {
+                    if (ratio >= 0.85) return Colors.success500;
+                    if (ratio >= 0.65) return Colors.warning400;
+                    return Colors.error500;
+                  };
+                  return (
+                    <>
+                      <View
+                        style={[
+                          Alignments.row,
+                          Alignments.justifySpaceBetween,
+                          {
+                            backgroundColor: 'rgba(4,31,44,0.82)',
+                            borderColor: 'rgba(1,179,244,0.24)',
+                            borderRadius: 18,
+                            borderWidth: 1,
+                            paddingHorizontal: 6,
+                            paddingVertical: 14,
+                          },
+                        ]}
+                      >
+                        <View style={[Alignments.alignCenter, { flex: 1 }]}>
+                          <Text style={[Fonts.h3Bold, Fonts.primary500]}>
+                            {attendanceRatio === null ? '—' : `${Math.round(attendanceRatio * 100)} %`}
+                          </Text>
+                          <Text style={[Fonts.p4, Fonts.neutral400]}>Assiduité</Text>
                         </View>
-                      ))}
-                    </View>
-                  </View>
+                        <View style={[Alignments.alignCenter, { flex: 1 }]}>
+                          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.lateCount}</Text>
+                          <Text style={[Fonts.p4, Fonts.neutral400]}>Retards</Text>
+                        </View>
+                        <View style={[Alignments.alignCenter, { flex: 1 }]}>
+                          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                            {`${statsSummary.lateMinutesAvg} min`}
+                          </Text>
+                          <Text style={[Fonts.p4, Fonts.neutral400]}>Retard moyen</Text>
+                        </View>
+                      </View>
 
-                  {isTeamStatsLoading ? (
-                    <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                      {t('common.loading', 'Chargement...')}
-                    </Text>
-                  ) : teamStatsRows.length ? (
-                    teamStatsRows.map((/** @type {any} */ row, /** @type {number} */ index) => (
-                      <StatRow
-                        columns={statsColumns}
-                        isEven={index % 2 === 0}
-                        key={row?.user?.documentId || `stats-${index}`}
-                        player={row}
-                      />
-                    ))
-                  ) : (
-                    <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                      {t('teamDetails.stats.noData', 'Aucune statistique disponible pour le moment.')}
-                    </Text>
-                  )}
-                </View>
+                      <View style={[Spaces.gap[8]]}>
+                        <View style={[Alignments.row, Alignments.justifySpaceBetween, { alignItems: 'baseline' }]}>
+                          <Text
+                            style={[
+                              Fonts.p4Bold,
+                              Fonts.neutral300,
+                              { letterSpacing: 1, textTransform: 'uppercase' },
+                            ]}
+                          >
+                            Présences
+                          </Text>
+                          <Text style={[Fonts.p4, Fonts.neutral400]}>
+                            {`${statsSummary.rowCount} joueur·se·s · ${statsSummary.totalEvents} événements`}
+                          </Text>
+                        </View>
+
+                        {isTeamStatsLoading ? (
+                          <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                            {t('common.loading', 'Chargement...')}
+                          </Text>
+                        ) : teamStatsRows.length ? (
+                          teamStatsRows.map((/** @type {any} */ row, /** @type {number} */ index) => {
+                            const attendance = Number(row?.attendanceCount || 0);
+                            const denominator = statsSummary.totalEvents > 0
+                              ? statsSummary.totalEvents
+                              : attendance + Number(row?.absenceCount || 0);
+                            const presenceRatio = denominator > 0 ? attendance / denominator : 0;
+                            const rowTone = getPresenceTone(presenceRatio);
+                            const lateCount = Number(row?.lateCount || 0);
+                            const playerName = `${row?.user?.firstname || ''} ${row?.user?.lastname || ''}`.trim()
+                              || 'Joueur·se';
+                            return (
+                              <View
+                                key={row?.user?.documentId || `stats-${index}`}
+                                style={[
+                                  Alignments.row,
+                                  Alignments.alignCenter,
+                                  {
+                                    backgroundColor: 'rgba(255,255,255,0.04)',
+                                    borderColor: 'rgba(255,255,255,0.09)',
+                                    borderRadius: 14,
+                                    borderWidth: 1,
+                                    columnGap: 11,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 9,
+                                  },
+                                ]}
+                              >
+                                <MemberAvatar
+                                  avatarUrl={row?.user?.avatar?.url ? getImageUrl(row.user.avatar.url) : null}
+                                  firstname={row?.user?.firstname}
+                                  lastname={row?.user?.lastname}
+                                  size={36}
+                                />
+                                <View style={[Alignments.fill, { minWidth: 0 }]}>
+                                  <View style={[Alignments.row, { alignItems: 'baseline', columnGap: 7 }]}>
+                                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flexShrink: 1 }]}>
+                                      {playerName}
+                                    </Text>
+                                    {lateCount > 0 ? (
+                                      <Text style={[Fonts.p4Bold, Fonts.warning400]}>
+                                        {`${lateCount} retard${lateCount > 1 ? 's' : ''}`}
+                                      </Text>
+                                    ) : null}
+                                  </View>
+                                  <View
+                                    style={{
+                                      backgroundColor: 'rgba(255,255,255,0.08)',
+                                      borderRadius: 999,
+                                      height: 5,
+                                      marginTop: 7,
+                                      overflow: 'hidden',
+                                    }}
+                                  >
+                                    <View
+                                      style={{
+                                        backgroundColor: rowTone,
+                                        borderRadius: 999,
+                                        height: '100%',
+                                        width: `${Math.min(100, Math.round(presenceRatio * 100))}%`,
+                                      }}
+                                    />
+                                  </View>
+                                </View>
+                                <Text style={[Fonts.p3Bold, { color: rowTone }]}>
+                                  {`${attendance}/${denominator}`}
+                                </Text>
+                              </View>
+                            );
+                          })
+                        ) : (
+                          <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                            {t('teamDetails.stats.noData', 'Aucune statistique disponible pour le moment.')}
+                          </Text>
+                        )}
+                      </View>
+                    </>
+                  );
+                })()}
 
                 {statsBaselineLabel ? (
                   <Text style={[Fonts.p3, Fonts.primary100]}>
@@ -4065,6 +4144,11 @@ function TeamDetails({ navigation, route }) {
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
                     Lecture des stats publiées de l'équipe, avec prise en compte des réponses joueur quand elles sont disponibles.
                   </Text>
+                  {performanceSummary.playerCollectiveRatingCount > 0 ? (
+                    <Text style={[Fonts.p4, Fonts.neutral400]}>
+                      {`d'après ${performanceSummary.playerCollectiveRatingCount} retour${performanceSummary.playerCollectiveRatingCount > 1 ? 's' : ''} post-match`}
+                    </Text>
+                  ) : null}
                 </View>
 
                 <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
