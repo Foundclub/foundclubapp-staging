@@ -936,6 +936,11 @@ function TeamListContent({
             data={otherTeams}
             estimatedItemSize={200}
             keyExtractor={(item) => item?.documentId || 'unknown'}
+            ListEmptyComponent={
+              myTeams.length === 0 && pendingTeams.length === 0 && invitedTeams.length === 0
+                ? renderEmptyList
+                : null
+            }
             ListFooterComponent={renderNewTeamFooterCard}
             ListHeaderComponent={headerComponent}
             onEndReached={handleEndReached}
