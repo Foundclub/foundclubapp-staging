@@ -88,6 +88,17 @@ function TeamWizardName({ navigation, route }) {
   );
   const shouldOfferChooser = clubTeams.length > 0 && !isChooserDismissed;
 
+  // Equipes que je coache/dont je suis membre : signal fiable (le populate club
+  // ne renvoie pas toujours les trainers imbriques).
+  const myTeamIds = useMemo(() => {
+    const source = /** @type {any} */ (userData);
+    const ids = [
+      ...(Array.isArray(source?.trainedTeams) ? source.trainedTeams : []),
+      ...(Array.isArray(source?.myTeams) ? source.myTeams : []),
+    ].map((/** @type {any} */ team) => team?.documentId).filter(Boolean);
+    return new Set(ids);
+  }, [userData]);
+
   const goToTeamDetails = (/** @type {string} */ teamDocumentId) => {
     setIsChooserDismissed(true);
     /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
@@ -287,14 +298,24 @@ function TeamWizardName({ navigation, route }) {
 
           <View style={[Spaces.gap[8]]}>
             {clubTeams.map((/** @type {any} */ team) => {
+              const isMine = myTeamIds.has(team?.documentId);
               const activeTrainers = (Array.isArray(team?.trainers) ? team.trainers : [])
                 .filter((/** @type {any} */ trainer) => !isDeletedTrainer(trainer));
-              const isOrphan = activeTrainers.length === 0;
-              const subtitle = isOrphan
-                ? 'Sans entraîneur·e — reprends-la'
-                : `${activeTrainers.length} entraîneur·e${activeTrainers.length > 1 ? 's' : ''}`;
+              // Orpheline seulement si ce n'est pas mon equipe et qu'aucun
+              // entraineur actif n'est presente par l'API.
+              const isOrphan = !isMine && activeTrainers.length === 0;
               const isClaimingThis = claimTeamMutation.isPending
                 && claimTeamMutation.variables === team?.documentId;
+              let subtitle;
+              let tag;
+              if (isMine) {
+                subtitle = 'Tu y es déjà — ouvrir';
+              } else if (isOrphan) {
+                subtitle = 'Sans entraîneur·e — reprends-la';
+                tag = 'Reprendre';
+              } else {
+                subtitle = `${activeTrainers.length} entraîneur·e${activeTrainers.length > 1 ? 's' : ''}`;
+              }
               return (
                 <WizardOptionCard
                   compact
@@ -310,7 +331,7 @@ function TeamWizardName({ navigation, route }) {
                     }
                   }}
                   subtitle={isClaimingThis ? 'Reprise en cours…' : subtitle}
-                  tag={isOrphan ? 'Reprendre' : undefined}
+                  tag={tag}
                   title={team?.name || 'Équipe'}
                 />
               );
