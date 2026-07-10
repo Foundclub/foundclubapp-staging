@@ -40,7 +40,9 @@ export const getSubscriptionAccessLevel = ({
 /** @type {Record<string, string>} */
 const DEFAULT_REASON_LABELS = {
   AUTH_REQUIRED: 'Connexion requise',
+  CLUB_TIER_LIMIT_REACHED: 'Limite d equipes de votre offre Club atteinte',
   CLUB_VERIFICATION_REQUIRED: 'Verification du club requise',
+  FREE_INCLUDED: 'Inclus dans le plan gratuit',
   FREE_QUOTA_AVAILABLE: 'Quota gratuit disponible',
   FREE_QUOTA_EXHAUSTED: 'Quota gratuit epuise',
   SUBSCRIPTION_REQUIRED: 'Abonnement requis',
@@ -48,6 +50,7 @@ const DEFAULT_REASON_LABELS = {
 
 /** @type {Record<string, string>} */
 const DEFAULT_PAYWALL_KEYS = {
+  CLUB_TIER_TEAM_LIMIT: 'club-tier-team-limit',
   CLUB_VERIFICATION_REQUIRED: 'club-verification-required',
   DUES_LIMIT: 'dues-limit',
   EVENT_LIMIT: 'event-limit',
@@ -55,6 +58,50 @@ const DEFAULT_PAYWALL_KEYS = {
   PROFILE_CONTACT_LIMIT: 'profile-contact-limit',
   RECRUITMENT_AD_LIMIT: 'recruitment-ad-limit',
   TEAM_LIMIT: 'team-limit',
+};
+
+/** @type {string[]} */
+const CLUB_PAYWALL_BENEFITS = [
+  'Toutes les equipes du club couvertes',
+  'Droits club et gestion centralisee',
+  'Cotisations et recrutement illimites',
+];
+
+/** @type {Record<string, string[]>} */
+const PAYWALL_BENEFITS_BY_KEY = {
+  'club-tier-team-limit': CLUB_PAYWALL_BENEFITS,
+  'club-verification-required': CLUB_PAYWALL_BENEFITS,
+  'dues-limit': [
+    'Campagnes de cotisation illimitees',
+    'Suivi des paiements simplifie',
+    'Relances des membres en un clic',
+  ],
+  'event-limit': [
+    'Evenements et matchs illimites',
+    'Composition et convocations',
+    'Toute l equipe en profite',
+  ],
+  'match-limit': [
+    'Matchs et evenements illimites',
+    'Composition et convocations',
+    'Suivi des presences simplifie',
+  ],
+  'recruitment-ad-limit': [
+    'Annonces de recrutement illimitees',
+    'Visibilite aupres des joueurs',
+    'Contacts sans limite',
+  ],
+  'team-limit': [
+    'Ajoute autant d equipes que besoin',
+    'Evenements et matchs illimites',
+    'Gestion complete de chaque equipe',
+  ],
+};
+
+/** @type {Record<string, string>} */
+const RECOMMENDED_PLAN_CODES = {
+  CLUB: 'fc_club_tier_1_yearly',
+  TEAM: 'fc_team_1_yearly',
 };
 
 /** @type {Record<string, string>} */
@@ -232,6 +279,12 @@ export const getSubscriptionPaywallContent = (decision) => {
     : '';
 
   switch (paywall.paywallKey) {
+    case 'club-tier-team-limit':
+      return {
+        ctaLabel: 'Voir mon abonnement',
+        description: 'Votre offre Club a atteint son nombre maximum d equipes. Passez au palier superieur pour ajouter de nouvelles equipes.',
+        title: 'Limite d equipes atteinte',
+      };
     case 'club-verification-required':
       return {
         ctaLabel: 'Voir mon club',
@@ -281,6 +334,108 @@ export const getSubscriptionPaywallContent = (decision) => {
         title: 'Abonnement FoundClub requis',
       };
   }
+};
+
+/**
+ * Contenu de la sheet de quota v2 (handoff, decision 1) : rappelle CE QUE
+ * l'utilisateur essayait de faire, sans paragraphe. Retourne null pour les
+ * paywalls non-quota (verification club, palier club, cotisations…) qui
+ * gardent la presentation legacy.
+ * @type {Record<string, {
+ *   kicker: string;
+ *   preselectedSlotCount: number;
+ *   successCtaLabel: string;
+ *   benefits: string[];
+ *   title: string;
+ * }>}
+ */
+const QUOTA_SHEET_CONTENT_BY_KEY = {
+  'event-limit': {
+    benefits: [
+      'Événements et matchs illimités',
+      'Présences en temps réel, relances auto',
+      'Convocations envoyées en 2 taps',
+    ],
+    kicker: 'Offre Équipe',
+    preselectedSlotCount: 1,
+    successCtaLabel: 'Publier mon événement',
+    title: 'Tu veux publier un 2ᵉ événement ?',
+  },
+  'match-limit': {
+    benefits: [
+      'Matchs et événements illimités',
+      'Présences en temps réel, relances auto',
+      'Convocations envoyées en 2 taps',
+    ],
+    kicker: 'Offre Équipe',
+    preselectedSlotCount: 1,
+    successCtaLabel: 'Publier mon match',
+    title: 'Tu veux publier un 2ᵉ match ?',
+  },
+  'recruitment-ad-limit': {
+    benefits: [
+      'Annonces de recrutement illimitées',
+      'Visible par tous les joueurs de ta zone',
+      'Candidatures directement dans tes messages',
+    ],
+    kicker: 'Offre Équipe',
+    preselectedSlotCount: 1,
+    successCtaLabel: 'Publier mon annonce',
+    title: 'Tu veux publier une 2ᵉ annonce ?',
+  },
+  'team-limit': {
+    benefits: [
+      'Toutes tes équipes, événements illimités',
+      'Convoque toute ton équipe en 2 taps',
+      'Encaisse la cotisation de chaque équipe',
+    ],
+    kicker: 'Offre Équipe',
+    preselectedSlotCount: 2,
+    successCtaLabel: 'Créer ma 2ᵉ équipe',
+    title: 'Tu veux créer une 2ᵉ équipe ?',
+  },
+};
+
+/**
+ * @param {any} decision
+ * @returns {{
+ *   kicker: string;
+ *   preselectedSlotCount: number;
+ *   successCtaLabel: string;
+ *   benefits: string[];
+ *   title: string;
+ * } | null}
+ */
+export const getSubscriptionQuotaSheetContent = (decision) => {
+  const paywall = mapSubscriptionDecisionToPaywall(decision);
+  return QUOTA_SHEET_CONTENT_BY_KEY[paywall.paywallKey] || null;
+};
+
+/**
+ * @param {any} decision
+ * @returns {string[]}
+ */
+export const getSubscriptionPaywallBenefits = (decision) => {
+  const paywall = mapSubscriptionDecisionToPaywall(decision);
+  const benefits = PAYWALL_BENEFITS_BY_KEY[paywall.paywallKey] || CLUB_PAYWALL_BENEFITS;
+  return benefits.slice(0, 3);
+};
+
+/**
+ * @param {any} decision
+ * @returns {string}
+ */
+export const getSubscriptionRecommendedPlanCode = (decision) => {
+  const paywall = mapSubscriptionDecisionToPaywall(decision);
+  const requiredPlans = paywall.requiredPlan
+    .map((planCode) => String(planCode || '').trim().toUpperCase())
+    .filter(Boolean);
+
+  if (requiredPlans.includes('CLUB') && !requiredPlans.includes('TEAM')) {
+    return RECOMMENDED_PLAN_CODES.CLUB;
+  }
+
+  return RECOMMENDED_PLAN_CODES.TEAM;
 };
 
 /**
