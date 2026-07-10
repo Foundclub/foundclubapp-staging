@@ -31,6 +31,7 @@ export const colors = {
   primary800: '#0b2530',
   primary900: '#001218',
   success100: '#d4fcf0',
+  success200: '#8ae9cd',
   success500: '#27d6a3',
 
   success700: '#399379',

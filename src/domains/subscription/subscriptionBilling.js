@@ -57,28 +57,68 @@ export const sortSubscriptionCatalogEntries = (entries) => {
 };
 
 /**
+ * @param {number | null | undefined} priceEurCents
+ * @param {'monthly' | 'yearly' | string} billingPeriod
+ * @returns {string}
+ */
+export const formatSubscriptionPriceLabel = (priceEurCents, billingPeriod) => {
+  const cents = Number(priceEurCents);
+  if (!Number.isFinite(cents) || cents < 0) {
+    return '';
+  }
+  const amount = (cents / 100).toFixed(2).replace('.', ',');
+  const normalizedPeriod = String(billingPeriod || '').trim().toLowerCase();
+  let periodSuffix = '';
+  if (normalizedPeriod === 'yearly') {
+    periodSuffix = '/an';
+  } else if (normalizedPeriod === 'monthly') {
+    periodSuffix = '/mois';
+  }
+  return `${amount} €${periodSuffix}`;
+};
+
+/**
+ * Equivalence mensuelle exacte d'un prix annuel (« soit 5,00 €/mois »).
+ * Une seule ancre prix par surface : ce libelle accompagne toujours l'ancre annuelle,
+ * jamais les segments de palier ni le sous-texte d'un CTA.
+ * @param {number | null | undefined} yearlyPriceEurCents
+ * @returns {string}
+ */
+export const formatSubscriptionMonthlyEquivalentLabel = (yearlyPriceEurCents) => {
+  const cents = Number(yearlyPriceEurCents);
+  if (!Number.isFinite(cents) || cents <= 0) {
+    return '';
+  }
+  return `soit ${(cents / 12 / 100).toFixed(2).replace('.', ',')} €/mois`;
+};
+
+/**
  * @param {any} entry
- * @returns {{ description: string; label: string; secondaryLabel: string }}
+ * @returns {{ description: string; label: string; priceLabel: string; secondaryLabel: string }}
  */
 export const getSubscriptionCatalogEntryMeta = (entry) => {
   const scopeType = String(entry?.scopeType || '').trim().toUpperCase();
   const billingPeriod = String(entry?.billingPeriod || '').trim().toLowerCase();
   const slotCount = Number(entry?.slotCount || 0);
   const periodLabel = billingPeriod === 'yearly' ? 'Annuel' : 'Mensuel';
+  const displayName = String(entry?.displayName || '').trim();
+  const priceLabel = formatSubscriptionPriceLabel(entry?.referencePriceEurCents, billingPeriod);
 
   if (scopeType === TEAM_SCOPE) {
     const slotsLabel = `${slotCount} equipe${slotCount > 1 ? 's' : ''} couverte${slotCount > 1 ? 's' : ''}`;
     return {
       description: 'Publie et gere les equipes couvertes par tes slots Team.',
-      label: formatSubscriptionPlanLabel(entry?.planCode),
-      secondaryLabel: `${slotsLabel} - ${periodLabel}`,
+      label: displayName || formatSubscriptionPlanLabel(entry?.planCode),
+      priceLabel,
+      secondaryLabel: [slotsLabel, periodLabel, priceLabel].filter(Boolean).join(' - '),
     };
   }
 
   return {
     description: 'Debloque les droits club. La verification dirigeant reste obligatoire.',
-    label: formatSubscriptionPlanLabel(entry?.planCode),
-    secondaryLabel: `Droits Club - ${periodLabel}`,
+    label: displayName || formatSubscriptionPlanLabel(entry?.planCode),
+    priceLabel,
+    secondaryLabel: ['Droits Club', periodLabel, priceLabel].filter(Boolean).join(' - '),
   };
 };
 
@@ -251,6 +291,14 @@ export const getSubscriptionBillingErrorMessage = (error) => {
 
   if (message === 'TEAM_SLOT_COUNT_EXCEEDED') {
     return 'Cette offre n a pas assez de slots pour couvrir autant d equipes. Ajuste la selection avant de continuer.';
+  }
+
+  if (message === 'CLUB_ALREADY_COVERED') {
+    return 'Ce club est deja couvert par une offre Club active (souscrite par un autre membre). Inutile de payer deux fois : les droits sont partages.';
+  }
+
+  if (message === 'TEAM_ALREADY_COVERED') {
+    return 'Cette equipe est deja couverte par une autre offre active. Choisis une equipe non couverte ou libere son slot actuel.';
   }
 
   if (message === 'clubDocumentId obligatoire pour une offre CLUB.' || message === 'Club introuvable pour entitlement CLUB.') {

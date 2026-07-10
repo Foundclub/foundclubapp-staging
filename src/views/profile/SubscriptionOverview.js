@@ -1,13 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Alert, Platform, ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
   buildSubscriptionChangePlanPayload,
   buildSubscriptionPurchasePayload,
+  formatSubscriptionMonthlyEquivalentLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
@@ -17,8 +22,8 @@ import {
   sortSubscriptionCatalogEntries,
 } from '@/domains/subscription/subscriptionBilling';
 import {
+  formatSubscriptionPlanLabel,
   getCoveredTeamCount,
-  getSubscriptionPlanLabels,
   getSubscriptionQuotaItems,
   getSubscriptionStatusMeta,
   getSubscriptionTeamSlotSummary,
@@ -28,41 +33,94 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+
 import {
   changeSubscriptionPlan,
   getSubscriptionCatalog,
   restoreSubscriptionPurchases,
   validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
+
 import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
 
 /**
  * @typedef {{
  *   billingPeriod?: string | null;
+ *   displayName?: string | null;
+ *   featureKeys?: string[] | null;
  *   isActive?: boolean | null;
+ *   maxTeams?: number | null;
  *   planCode?: string | null;
  *   providerProductId?: string | null;
+ *   referencePriceEurCents?: number | null;
  *   requiresClubVerification?: boolean | null;
  *   scopeType?: string | null;
  *   slotCount?: number | null;
  * }} SubscriptionCatalogEntry
- *
  * @typedef {{
  *   actionMode: 'purchase' | 'change' | 'manage-team-slots';
  *   catalogEntry: SubscriptionCatalogEntry | null;
  *   selectedTeamDocumentIds: string[];
  * }} TeamPlanModalState
- *
  * @typedef {{
  *   action: 'change' | 'purchase';
  *   catalogEntry: SubscriptionCatalogEntry;
  *   payload: Record<string, any>;
  *   successMessage?: string;
  * }} SubscriptionMutationInput
+ * @typedef {{
+ *   entry: SubscriptionCatalogEntry;
+ *   maxTeamsLabel: string;
+ *   priceLabel: string;
+ *   tier: number;
+ *   tierLetter: string;
+ * }} ClubTierOption
  */
+
+/** @type {Record<string, string>} */
+const SUBSCRIPTION_FEATURE_LABELS = {
+  'club.broadcast': 'Canal de diffusion',
+  'club.multi_teams': 'Toutes les equipes du club',
+  'club.profile': 'Fiche club complete',
+  'club.roles': 'Roles du club',
+  composition: 'Composition d equipe',
+  convocation: 'Convocations',
+  'dues.club': 'Cotisations du club',
+  'dues.team': 'Cotisations de l equipe',
+  'events.unlimited': 'Evenements illimites',
+  facilities: 'Installations',
+  'matches.unlimited': 'Matchs illimites',
+  'recruitment.unlimited': 'Annonces illimitees',
+  sponsors: 'Sponsors et partenaires',
+};
+
+/** @type {Record<string, string>} */
+const TRIAL_PLAN_LABELS = {
+  fc_trial_club: 'Apercu Club (essai 30 jours)',
+  fc_trial_team: 'Apercu Equipe (essai 30 jours)',
+};
+
+/** @type {Record<number, string>} */
+const CLUB_TIER_LETTERS = {
+  1: 'S',
+  2: 'M',
+  3: 'L',
+};
+
+const FREE_PLAN_INCLUDED_LABELS = [
+  '1 equipe gratuite',
+  'Evenements et matchs en quantite limitee',
+  'Annonces de recrutement limitees',
+];
+
+const OFFER_BILLING_PERIOD_OPTIONS = [
+  { key: 'monthly', label: 'Mensuel', subLabel: '' },
+  { key: 'yearly', label: 'Annuel', subLabel: '2 mois offerts' },
+];
 
 /**
  * @param {any} clubVerificationSummary
@@ -105,6 +163,20 @@ const getStatusChipStyle = (subscriptionAccessLevel) => {
 const getCatalogEntryScopeType = (entry) => String(entry?.scopeType || '').trim().toUpperCase();
 
 /**
+ * @param {SubscriptionCatalogEntry | null | undefined} entry
+ * @returns {string}
+ */
+const getCatalogEntryBillingPeriod = (entry) => String(entry?.billingPeriod || '').trim().toLowerCase();
+
+/**
+ * @param {SubscriptionCatalogEntry | null | undefined} entry
+ * @returns {number}
+ */
+const getCatalogEntryClubTier = (entry) => (
+  Number(String(entry?.planCode || '').match(/tier_(\d+)/)?.[1] || 0)
+);
+
+/**
  * @param {any} payload
  * @returns {SubscriptionCatalogEntry[]}
  */
@@ -119,6 +191,306 @@ const getCatalogEntriesFromResponse = (payload) => {
 
   return [];
 };
+
+/**
+ * @param {any} subscriptionSummary
+ * @returns {any | null}
+ */
+const getActiveTrialSubscription = (subscriptionSummary) => {
+  const payerSubscriptions = Array.isArray(subscriptionSummary?.payerSubscriptionsSummary)
+    ? subscriptionSummary.payerSubscriptionsSummary
+    : [];
+
+  return payerSubscriptions.find(/** @param {any} entry */ (entry) => entry?.isTrial === true
+    && ['active', 'grace_period'].includes(String(entry?.status || '').trim().toLowerCase())) || null;
+};
+
+/**
+ * @param {string | null | undefined} currentPeriodEnd
+ * @returns {number}
+ */
+const getTrialRemainingDays = (currentPeriodEnd) => {
+  const endTime = new Date(String(currentPeriodEnd || '')).getTime();
+  if (!Number.isFinite(endTime)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.ceil((endTime - Date.now()) / (1000 * 60 * 60 * 24)));
+};
+
+/**
+ * @param {string | null | undefined} planCode
+ * @returns {string}
+ */
+const getTrialScopeLabel = (planCode) => (
+  String(planCode || '').trim().toLowerCase().includes('club') ? 'Club' : 'Equipe'
+);
+
+/**
+ * @param {string | null | undefined} planCode
+ * @returns {string}
+ */
+const formatSubscriptionPlanLabelWithTrial = (planCode) => (
+  TRIAL_PLAN_LABELS[String(planCode || '').trim().toLowerCase()]
+    || formatSubscriptionPlanLabel(planCode)
+);
+
+/**
+ * @param {SubscriptionCatalogEntry | null | undefined} entry
+ * @returns {string}
+ */
+const getYearlyMonthlyEquivalentLabel = (entry) => {
+  if (getCatalogEntryBillingPeriod(entry) !== 'yearly') {
+    return '';
+  }
+
+  return formatSubscriptionMonthlyEquivalentLabel(entry?.referencePriceEurCents);
+};
+
+/**
+ * @param {{ trialSubscription: any }} props
+ * @returns {import('react').ReactElement}
+ */
+function SubscriptionTrialBanner({ trialSubscription }) {
+  const { ApplicationStyle, Fonts, Spaces } = useTheme();
+  const remainingDays = getTrialRemainingDays(trialSubscription?.currentPeriodEnd);
+
+  return (
+    <View style={[
+      Spaces.gap[4],
+      Spaces.padding[16],
+      ApplicationStyle.borderRadius12,
+      ApplicationStyle.borderWidth1,
+      ApplicationStyle.borderColor.primary700,
+      ApplicationStyle.backgroundColor.primary100,
+    ]}
+    >
+      <Text style={[Fonts.p1Bold, Fonts.primary700]}>
+        {`Apercu ${getTrialScopeLabel(trialSubscription?.planCode)} · J-${remainingDays}`}
+      </Text>
+      <Text style={[Fonts.p2, Fonts.primary700]}>
+        Aucune carte requise. Retour au plan gratuit ensuite.
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * @param {{
+ *   billingPeriod: string;
+ *   onChangeBillingPeriod: (billingPeriod: string) => void;
+ * }} props
+ * @returns {import('react').ReactElement}
+ */
+function OfferBillingPeriodToggle({ billingPeriod, onChangeBillingPeriod }) {
+  const {
+    Alignments, ApplicationStyle, Fonts, Spaces,
+  } = useTheme();
+
+  return (
+    <View style={[
+      Alignments.row,
+      Spaces.gap[4],
+      Spaces.padding[4],
+      ApplicationStyle.borderRadius12,
+      ApplicationStyle.backgroundColor.neutral700,
+    ]}
+    >
+      {OFFER_BILLING_PERIOD_OPTIONS.map((option) => {
+        const isSelected = option.key === billingPeriod;
+
+        return (
+          <TouchableOpacity
+            key={option.key}
+            onPress={() => onChangeBillingPeriod(option.key)}
+            style={[
+              Alignments.alignCenter,
+              Alignments.fill,
+              Spaces.paddingVertical[8],
+              ApplicationStyle.borderRadius8,
+              isSelected ? ApplicationStyle.backgroundColor.primary500 : null,
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, isSelected ? Fonts.primary700 : Fonts.neutral200]}>
+              {option.label}
+            </Text>
+            {option.subLabel ? (
+              <Text style={[Fonts.p4Bold, isSelected ? Fonts.primary700 : Fonts.success500]}>
+                {option.subLabel}
+              </Text>
+            ) : null}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * @param {{
+ *   onSelectSlotCount: (slotCount: number) => void;
+ *   selectedSlotCount: number;
+ *   slotCountOptions: number[];
+ * }} props
+ * @returns {import('react').ReactElement}
+ */
+function OfferTeamCountStepper({ onSelectSlotCount, selectedSlotCount, slotCountOptions }) {
+  const {
+    Alignments, ApplicationStyle, Fonts, Spaces,
+  } = useTheme();
+
+  return (
+    <View style={[Spaces.gap[8]]}>
+      <Text style={[Fonts.p4Bold, Fonts.primary100]}>Nombre d equipes couvertes</Text>
+      <View style={[Alignments.row, Spaces.gap[8]]}>
+        {slotCountOptions.map((slotCount) => {
+          const isSelected = slotCount === selectedSlotCount;
+
+          return (
+            <TouchableOpacity
+              key={slotCount}
+              onPress={() => onSelectSlotCount(slotCount)}
+              style={[
+                Alignments.alignCenter,
+                Alignments.fill,
+                Spaces.paddingVertical[8],
+                ApplicationStyle.borderRadius8,
+                ApplicationStyle.borderWidth1,
+                isSelected
+                  ? ApplicationStyle.borderColor.primary500
+                  : ApplicationStyle.borderColor.neutral600,
+                isSelected ? ApplicationStyle.backgroundColor.primary500 : null,
+              ]}
+            >
+              <Text style={[Fonts.p2Bold, isSelected ? Fonts.primary700 : Fonts.neutral00]}>
+                {String(slotCount)}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * @param {{ featureKeys?: string[] | null }} props
+ * @returns {import('react').ReactElement | null}
+ */
+function OfferFeatureList({ featureKeys }) {
+  const { Alignments, Fonts, Spaces } = useTheme();
+  const safeFeatureKeys = Array.isArray(featureKeys) ? featureKeys.filter(Boolean) : [];
+
+  if (safeFeatureKeys.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={[Spaces.gap[4]]}>
+      {safeFeatureKeys.map((featureKey) => (
+        <View key={String(featureKey)} style={[Alignments.row, Spaces.gap[8]]}>
+          <Text style={[Fonts.p2Bold, Fonts.success500]}>✓</Text>
+          <Text style={[Alignments.fill, Fonts.p2, Fonts.neutral100]}>
+            {SUBSCRIPTION_FEATURE_LABELS[String(featureKey)] || String(featureKey)}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * @param {{ isCurrentPlan: boolean }} props
+ * @returns {import('react').ReactElement}
+ */
+function FreeOfferCard({ isCurrentPlan }) {
+  const {
+    Alignments, ApplicationStyle, Fonts, Spaces,
+  } = useTheme();
+
+  return (
+    <View style={[
+      Spaces.gap[12],
+      Spaces.padding[16],
+      ApplicationStyle.borderRadius12,
+      ApplicationStyle.borderWidth1,
+      ApplicationStyle.borderColor.neutral600,
+      ApplicationStyle.backgroundColor.neutral700,
+    ]}
+    >
+      <View style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        Alignments.justifySpaceBetween,
+        Spaces.gap[12],
+      ]}
+      >
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Gratuit</Text>
+        {isCurrentPlan ? (
+          <View style={[
+            Spaces.paddingHorizontal[12],
+            Spaces.paddingVertical[8],
+            ApplicationStyle.borderRadius12,
+            { backgroundColor: 'rgba(71, 85, 105, 0.22)' },
+          ]}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Votre plan actuel</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={[Fonts.p2, Fonts.neutral200]}>
+        Continue en gratuit avec les quotas serveur affiches ci-dessus.
+      </Text>
+      <View style={[Spaces.gap[4]]}>
+        {FREE_PLAN_INCLUDED_LABELS.map((label) => (
+          <View key={label} style={[Alignments.row, Spaces.gap[8]]}>
+            <Text style={[Fonts.p2Bold, Fonts.success500]}>✓</Text>
+            <Text style={[Alignments.fill, Fonts.p2, Fonts.neutral100]}>{label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * @param {{
+ *   isSelected: boolean;
+ *   onSelect: () => void;
+ *   tierOption: ClubTierOption;
+ * }} props
+ * @returns {import('react').ReactElement}
+ */
+function ClubTierOptionRow({ isSelected, onSelect, tierOption }) {
+  const {
+    Alignments, ApplicationStyle, Fonts, Spaces,
+  } = useTheme();
+
+  return (
+    <TouchableOpacity
+      onPress={onSelect}
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        Alignments.justifySpaceBetween,
+        Spaces.gap[12],
+        Spaces.padding[12],
+        ApplicationStyle.borderRadius12,
+        ApplicationStyle.borderWidth1,
+        isSelected
+          ? ApplicationStyle.borderColor.primary500
+          : ApplicationStyle.borderColor.neutral600,
+        isSelected ? { backgroundColor: 'rgba(1, 179, 244, 0.12)' } : null,
+      ]}
+    >
+      <View style={[Alignments.fill, Spaces.gap[4]]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{`Club ${tierOption.tierLetter}`}</Text>
+        <Text style={[Fonts.p4, Fonts.neutral200]}>{tierOption.maxTeamsLabel}</Text>
+      </View>
+      <Text style={[Fonts.p2Bold, Fonts.primary100]}>{tierOption.priceLabel}</Text>
+    </TouchableOpacity>
+  );
+}
 
 /**
  * @param {{ navigation?: any }} props
@@ -149,6 +521,10 @@ function SubscriptionOverview({ navigation }) {
     catalogEntry: null,
     selectedTeamDocumentIds: [],
   }));
+  const [offerBillingPeriod, setOfferBillingPeriod] = useState('yearly');
+  const [offerTeamSlotCount, setOfferTeamSlotCount] = useState(1);
+  const [offerClubTier, setOfferClubTier] = useState(1);
+  const hasSyncedOfferSelectionRef = useRef(false);
 
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
   const canShowSubscriptionExperience = roleKey === 'coach'
@@ -211,8 +587,8 @@ function SubscriptionOverview({ navigation }) {
     [subscriptionAccessLevel],
   );
   const planLabels = useMemo(
-    () => getSubscriptionPlanLabels(subscriptionSummary),
-    [subscriptionSummary],
+    () => activePlanCodes.map(/** @param {string} planCode */ (planCode) => formatSubscriptionPlanLabelWithTrial(planCode)),
+    [activePlanCodes],
   );
   const quotaItems = useMemo(
     () => getSubscriptionQuotaItems(freeUsageSummary, subscriptionAccessLevel),
@@ -230,6 +606,10 @@ function SubscriptionOverview({ navigation }) {
     () => entitlementsSummary.filter(/** @param {any} entry */ (entry) => entry?.scopeType === 'CLUB').length,
     [entitlementsSummary],
   );
+  const activeTrialSubscription = useMemo(
+    () => getActiveTrialSubscription(subscriptionSummary),
+    [subscriptionSummary],
+  );
   const verificationLabel = getVerificationLabel(clubVerificationSummary);
   const activePlanLabel = planLabels[0] || 'Aucun plan payant actif';
   const coveredTeamNames = useMemo(() => (
@@ -237,18 +617,95 @@ function SubscriptionOverview({ navigation }) {
       .map((teamDocumentId) => teamOptionsById.get(String(teamDocumentId || '').trim())?.name || null)
       .filter(Boolean)
   ), [teamOptionsById, teamSlotSummary.coveredTeamDocumentIds]);
-  const currentTeamCatalogEntry = useMemo(() => (
-    catalogEntries.find((entry) => (
-      getCatalogEntryScopeType(entry) === 'TEAM'
-      && (
-        activePlanCodes.includes(entry?.planCode)
-        || (
-          subscriptionAccessLevel === 'TEAM'
-          && Number(entry?.slotCount || 0) === teamSlotSummary.total
-        )
-      )
+
+  const teamCatalogEntries = useMemo(
+    () => catalogEntries.filter((entry) => getCatalogEntryScopeType(entry) === 'TEAM'),
+    [catalogEntries],
+  );
+  const clubCatalogEntries = useMemo(
+    () => catalogEntries.filter((entry) => getCatalogEntryScopeType(entry) === 'CLUB'),
+    [catalogEntries],
+  );
+  const teamSlotCountOptions = useMemo(() => {
+    const slotCounts = Array.from(new Set(
+      teamCatalogEntries
+        .map((entry) => Number(entry?.slotCount || 0))
+        .filter((slotCount) => slotCount > 0),
+    )).sort((left, right) => left - right);
+
+    return slotCounts.length ? slotCounts : [1, 2, 3];
+  }, [teamCatalogEntries]);
+  const selectedTeamOfferEntry = useMemo(() => (
+    teamCatalogEntries.find((entry) => (
+      getCatalogEntryBillingPeriod(entry) === offerBillingPeriod
+      && Number(entry?.slotCount || 0) === offerTeamSlotCount
     )) || null
-  ), [activePlanCodes, catalogEntries, subscriptionAccessLevel, teamSlotSummary.total]);
+  ), [offerBillingPeriod, offerTeamSlotCount, teamCatalogEntries]);
+  const clubTierOptions = useMemo(() => (
+    clubCatalogEntries
+      .filter((entry) => getCatalogEntryBillingPeriod(entry) === offerBillingPeriod)
+      .map((entry) => {
+        const tier = getCatalogEntryClubTier(entry);
+        const maxTeams = Number(entry?.maxTeams || 0);
+
+        return /** @type {ClubTierOption} */ ({
+          entry,
+          maxTeamsLabel: maxTeams > 0 ? `Jusqu a ${maxTeams} equipes` : 'Equipes illimitees',
+          priceLabel: getSubscriptionCatalogEntryMeta(entry).priceLabel,
+          tier,
+          tierLetter: CLUB_TIER_LETTERS[tier] || String(tier || '?'),
+        });
+      })
+      .sort((left, right) => left.tier - right.tier)
+  ), [clubCatalogEntries, offerBillingPeriod]);
+  const resolvedClubTier = clubTierOptions.some((option) => option.tier === offerClubTier)
+    ? offerClubTier
+    : (clubTierOptions[0]?.tier || 0);
+  const selectedClubOfferEntry = clubTierOptions
+    .find((option) => option.tier === resolvedClubTier)?.entry || null;
+
+  const isPopularTeamOffer = offerBillingPeriod === 'yearly' && offerTeamSlotCount === 1;
+  const teamOfferMeta = selectedTeamOfferEntry
+    ? getSubscriptionCatalogEntryMeta(selectedTeamOfferEntry)
+    : null;
+  const teamOfferMonthlyEquivalentLabel = getYearlyMonthlyEquivalentLabel(selectedTeamOfferEntry);
+  const clubOfferMonthlyEquivalentLabel = getYearlyMonthlyEquivalentLabel(selectedClubOfferEntry);
+  const isTeamOfferMissingTeams = teamOptions.length === 0 && teamSlotSummary.total === 0;
+  const isSelectedTeamOfferActivePlan = Boolean(selectedTeamOfferEntry
+    && activePlanCodes.includes(selectedTeamOfferEntry?.planCode));
+  const isSelectedClubOfferActivePlan = Boolean(selectedClubOfferEntry
+    && activePlanCodes.includes(selectedClubOfferEntry?.planCode));
+
+  useEffect(() => {
+    if (hasSyncedOfferSelectionRef.current) {
+      return;
+    }
+
+    const activeCatalogEntry = catalogEntries
+      .find((entry) => activePlanCodes.includes(entry?.planCode));
+    if (!activeCatalogEntry) {
+      return;
+    }
+
+    hasSyncedOfferSelectionRef.current = true;
+    const activeBillingPeriod = getCatalogEntryBillingPeriod(activeCatalogEntry);
+    if (activeBillingPeriod === 'monthly' || activeBillingPeriod === 'yearly') {
+      setOfferBillingPeriod(activeBillingPeriod);
+    }
+
+    if (getCatalogEntryScopeType(activeCatalogEntry) === 'TEAM') {
+      const activeSlotCount = Number(activeCatalogEntry?.slotCount || 0);
+      if (activeSlotCount > 0) {
+        setOfferTeamSlotCount(activeSlotCount);
+      }
+      return;
+    }
+
+    const activeClubTier = getCatalogEntryClubTier(activeCatalogEntry);
+    if (activeClubTier > 0) {
+      setOfferClubTier(activeClubTier);
+    }
+  }, [activePlanCodes, catalogEntries]);
 
   /** @param {{ action: 'change' | 'purchase'; payload: Record<string, any> }} params */
   const runSubscriptionMutation = async ({ action, payload }) => {
@@ -281,11 +738,13 @@ function SubscriptionOverview({ navigation }) {
     ]);
   }, [queryClient]);
 
-  const commitSubscriptionMutation = useCallback(/**
+  /**
    * @param {SubscriptionMutationInput} params
    * @returns {Promise<any>}
    */
-  async (params) => {
+  const commitSubscriptionMutation = useCallback(async (
+    /** @type {SubscriptionMutationInput} */ params,
+  ) => {
     const {
       action,
       catalogEntry,
@@ -314,11 +773,14 @@ function SubscriptionOverview({ navigation }) {
     }
   }, [closeTeamPlanModal, refreshSubscriptionContext, subscriptionMutation]);
 
-  const openTeamPlanModal = useCallback(/**
+  /**
    * @param {SubscriptionCatalogEntry} catalogEntry
    * @param {'purchase' | 'change' | 'manage-team-slots'} [actionMode]
    */
-  (catalogEntry, actionMode = 'purchase') => {
+  const openTeamPlanModal = useCallback((
+    /** @type {SubscriptionCatalogEntry} */ catalogEntry,
+    actionMode = 'purchase',
+  ) => {
     const slotCount = Number(catalogEntry?.slotCount || 0);
     setTeamPlanModalState(/** @type {TeamPlanModalState} */ ({
       actionMode,
@@ -331,10 +793,12 @@ function SubscriptionOverview({ navigation }) {
     }));
   }, [teamOptions, teamSlotSummary.coveredTeamDocumentIds]);
 
-  const handleCatalogAction = useCallback(/**
+  /**
    * @param {SubscriptionCatalogEntry} catalogEntry
    */
-  async (catalogEntry) => {
+  const handleCatalogAction = useCallback(async (
+    /** @type {SubscriptionCatalogEntry} */ catalogEntry,
+  ) => {
     const scopeType = getCatalogEntryScopeType(catalogEntry);
     const hasPaidSubscription = Boolean(primarySubscriptionDocumentId);
     const action = hasPaidSubscription ? 'change' : 'purchase';
@@ -398,9 +862,11 @@ function SubscriptionOverview({ navigation }) {
   const selectedTeamPlanEntry = teamPlanModalState.catalogEntry;
   const selectedTeamSlotCount = Number(selectedTeamPlanEntry?.slotCount || 0);
   /** @type {string[]} */
-  const selectedTeamIds = Array.isArray(teamPlanModalState.selectedTeamDocumentIds)
-    ? teamPlanModalState.selectedTeamDocumentIds
-    : [];
+  const selectedTeamIds = useMemo(() => (
+    Array.isArray(teamPlanModalState.selectedTeamDocumentIds)
+      ? teamPlanModalState.selectedTeamDocumentIds
+      : []
+  ), [teamPlanModalState.selectedTeamDocumentIds]);
   const hasAtLeastOneSelectedTeam = selectedTeamIds.length > 0;
   const isSelectedTeamCountInvalid = selectedTeamIds.length > selectedTeamSlotCount;
   const isTeamSelectionConfirmDisabled = !selectedTeamPlanEntry
@@ -410,10 +876,12 @@ function SubscriptionOverview({ navigation }) {
     || !isBillingTestModeEnabled
     || subscriptionMutation.isPending;
 
-  const handleToggleTeamSelection = useCallback(/**
+  /**
    * @param {string} teamDocumentId
    */
-  (teamDocumentId) => {
+  const handleToggleTeamSelection = useCallback((
+    /** @type {string} */ teamDocumentId,
+  ) => {
     setTeamPlanModalState((currentState) => {
       const currentSelection = Array.isArray(currentState.selectedTeamDocumentIds)
         ? currentState.selectedTeamDocumentIds
@@ -520,10 +988,12 @@ function SubscriptionOverview({ navigation }) {
     }
   }, [refreshSubscriptionContext, restoreMutation]);
 
-  const renderOfferAction = useCallback(/**
+  /**
    * @param {SubscriptionCatalogEntry} catalogEntry
    */
-  (catalogEntry) => {
+  const renderOfferAction = useCallback((
+    /** @type {SubscriptionCatalogEntry} */ catalogEntry,
+  ) => {
     const planCode = String(catalogEntry?.planCode || '').trim();
     const isActivePlan = activePlanCodes.includes(planCode);
     const scopeType = getCatalogEntryScopeType(catalogEntry);
@@ -569,10 +1039,13 @@ function SubscriptionOverview({ navigation }) {
   }, [
     activeActionPlanCode,
     activePlanCodes,
+    ApplicationStyle,
+    Fonts,
     handleCatalogAction,
     isBillingTestModeEnabled,
     openTeamPlanModal,
     primarySubscriptionDocumentId,
+    Spaces,
     subscriptionMutation.isPending,
   ]);
 
@@ -592,6 +1065,10 @@ function SubscriptionOverview({ navigation }) {
         contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[24]]}
         showsVerticalScrollIndicator={false}
       >
+        {activeTrialSubscription ? (
+          <SubscriptionTrialBanner trialSubscription={activeTrialSubscription} />
+        ) : null}
+
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {t('profile.subscription.title', 'Mon abonnement')}
@@ -859,37 +1336,6 @@ function SubscriptionOverview({ navigation }) {
             </Text>
           </View>
 
-          <View style={[
-            Spaces.gap[12],
-            Spaces.padding[16],
-            ApplicationStyle.borderRadius12,
-            ApplicationStyle.backgroundColor.neutral700,
-          ]}
-          >
-            <View style={[Spaces.gap[4]]}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Free</Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Continue en gratuit avec les quotas serveur affiches ci-dessus.
-              </Text>
-            </View>
-            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12], { flexWrap: 'wrap' }]}>
-              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                {subscriptionAccessLevel === 'FREE' ? 'Etat actuel' : 'Toujours disponible'}
-              </Text>
-              {subscriptionAccessLevel === 'FREE' ? (
-                <View style={[
-                  Spaces.paddingHorizontal[12],
-                  Spaces.paddingVertical[8],
-                  ApplicationStyle.borderRadius12,
-                  { backgroundColor: 'rgba(71, 85, 105, 0.22)' },
-                ]}
-                >
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Plan actuel</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-
           {catalogQuery.isLoading && !catalogEntries.length ? (
             <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement du catalogue abonnement...</Text>
           ) : null}
@@ -900,47 +1346,168 @@ function SubscriptionOverview({ navigation }) {
             </Text>
           ) : null}
 
-          {catalogEntries.map((entry) => {
-            const entryMeta = getSubscriptionCatalogEntryMeta(entry);
-            const isCurrentPlan = activePlanCodes.includes(entry?.planCode);
-            const isTeamEntry = getCatalogEntryScopeType(entry) === 'TEAM';
-            const isEntryDisabled = isTeamEntry && teamOptions.length === 0 && teamSlotSummary.total === 0;
+          <FreeOfferCard isCurrentPlan={subscriptionAccessLevel === 'FREE'} />
 
-            return (
-              <View
-                key={entry?.planCode || `${entry?.scopeType}-${entry?.billingPeriod}`}
-                style={[
-                  Spaces.gap[12],
-                  Spaces.padding[16],
-                  ApplicationStyle.borderRadius12,
-                  ApplicationStyle.borderWidth1,
-                  ApplicationStyle.borderColor.primary100,
-                  ApplicationStyle.backgroundColor.neutral700,
-                  isCurrentPlan ? { borderColor: 'rgba(110, 231, 183, 0.55)' } : null,
-                ]}
+          {catalogEntries.length ? (
+            <OfferBillingPeriodToggle
+              billingPeriod={offerBillingPeriod}
+              onChangeBillingPeriod={setOfferBillingPeriod}
+            />
+          ) : null}
+
+          {teamCatalogEntries.length ? (
+            <View style={[
+              Spaces.gap[12],
+              Spaces.padding[16],
+              ApplicationStyle.borderRadius12,
+              ApplicationStyle.borderWidth1,
+              isPopularTeamOffer
+                ? ApplicationStyle.borderColor.primary500
+                : ApplicationStyle.borderColor.neutral600,
+              ApplicationStyle.backgroundColor.neutral700,
+              isSelectedTeamOfferActivePlan ? { borderColor: 'rgba(110, 231, 183, 0.55)' } : null,
+            ]}
+            >
+              <View style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Alignments.justifySpaceBetween,
+                Spaces.gap[12],
+              ]}
               >
-                <View style={[Spaces.gap[4]]}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{entryMeta.label}</Text>
-                  <Text style={[Fonts.p4Bold, Fonts.primary100]}>{entryMeta.secondaryLabel}</Text>
-                  <Text style={[Fonts.p2, Fonts.neutral200]}>{entryMeta.description}</Text>
-                  {entry?.requiresClubVerification ? (
-                    <Text style={[Fonts.p4, Fonts.neutral200]}>
-                      Verification dirigeant obligatoire avant ouverture des droits Club sensibles.
+                <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Équipe</Text>
+                {isPopularTeamOffer ? (
+                  <View style={[
+                    Spaces.paddingHorizontal[12],
+                    Spaces.paddingVertical[4],
+                    ApplicationStyle.borderRadius12,
+                    ApplicationStyle.backgroundColor.primary500,
+                  ]}
+                  >
+                    <Text style={[Fonts.p4Bold, Fonts.primary900]}>Populaire</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>
+                Publie et gere sans limite les equipes couvertes par tes slots Team.
+              </Text>
+
+              <OfferTeamCountStepper
+                onSelectSlotCount={setOfferTeamSlotCount}
+                selectedSlotCount={offerTeamSlotCount}
+                slotCountOptions={teamSlotCountOptions}
+              />
+
+              {selectedTeamOfferEntry ? (
+                <View style={[Spaces.gap[12]]}>
+                  <View style={[Spaces.gap[4]]}>
+                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                      {teamOfferMeta?.priceLabel || ''}
                     </Text>
-                  ) : null}
-                  {isEntryDisabled ? (
+                    {teamOfferMonthlyEquivalentLabel ? (
+                      <Text style={[Fonts.p4, Fonts.primary100]}>
+                        {teamOfferMonthlyEquivalentLabel}
+                      </Text>
+                    ) : null}
+                    {isPopularTeamOffer ? (
+                      <Text style={[Fonts.p4, Fonts.primary100]}>≈0,33 €/joueur/mois</Text>
+                    ) : null}
+                  </View>
+
+                  <OfferFeatureList featureKeys={selectedTeamOfferEntry?.featureKeys} />
+
+                  {isTeamOfferMissingTeams ? (
                     <Text style={[Fonts.p4, Fonts.neutral200]}>
                       Ajoute ou rattache d abord une equipe pour activer utilement une offre Team.
                     </Text>
                   ) : null}
-                </View>
 
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12], { flexWrap: 'wrap' }]}>
-                  {renderOfferAction(entry)}
+                  <View style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
+                    Spaces.gap[12],
+                    { flexWrap: 'wrap' },
+                  ]}
+                  >
+                    {renderOfferAction(selectedTeamOfferEntry)}
+                  </View>
                 </View>
+              ) : (
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Aucune offre Equipe disponible pour cette combinaison.
+                </Text>
+              )}
+            </View>
+          ) : null}
+
+          {clubCatalogEntries.length ? (
+            <View style={[
+              Spaces.gap[12],
+              Spaces.padding[16],
+              ApplicationStyle.borderRadius12,
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.neutral600,
+              ApplicationStyle.backgroundColor.neutral700,
+              isSelectedClubOfferActivePlan ? { borderColor: 'rgba(110, 231, 183, 0.55)' } : null,
+            ]}
+            >
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Club</Text>
+                <Text style={[Fonts.p4Bold, Fonts.primary100]}>Pour les dirigeants</Text>
               </View>
-            );
-          })}
+
+              {clubTierOptions.length ? (
+                <View style={[Spaces.gap[8]]}>
+                  {clubTierOptions.map((tierOption) => (
+                    <ClubTierOptionRow
+                      isSelected={tierOption.tier === resolvedClubTier}
+                      key={tierOption.entry?.planCode || String(tierOption.tier)}
+                      onSelect={() => setOfferClubTier(tierOption.tier)}
+                      tierOption={tierOption}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Aucune offre Club disponible pour cette periode.
+                </Text>
+              )}
+
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                Toutes vos equipes incluses + gestion complete du club.
+              </Text>
+
+              {selectedClubOfferEntry ? (
+                <View style={[Spaces.gap[12]]}>
+                  {clubOfferMonthlyEquivalentLabel ? (
+                    <Text style={[Fonts.p4, Fonts.primary100]}>
+                      {clubOfferMonthlyEquivalentLabel}
+                    </Text>
+                  ) : null}
+
+                  <OfferFeatureList featureKeys={selectedClubOfferEntry?.featureKeys} />
+
+                  {selectedClubOfferEntry?.requiresClubVerification ? (
+                    <Text style={[Fonts.p4, Fonts.neutral200]}>
+                      Verification dirigeant obligatoire avant ouverture des droits Club sensibles.
+                    </Text>
+                  ) : null}
+
+                  <View style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
+                    Spaces.gap[12],
+                    { flexWrap: 'wrap' },
+                  ]}
+                  >
+                    {renderOfferAction(selectedClubOfferEntry)}
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         <View style={[
@@ -964,6 +1531,7 @@ function SubscriptionOverview({ navigation }) {
             title="Restaurer mes achats"
             variant="SecondaryLight"
           />
+          <LegalFooter restore={false} />
         </View>
 
         {currentClubDocumentId ? (
@@ -1070,11 +1638,11 @@ function SubscriptionOverview({ navigation }) {
 
           <View style={[Spaces.gap[8]]}>
             <Button
+              disabled={isTeamSelectionConfirmDisabled}
               isLoading={subscriptionMutation.isPending}
               onPress={handleConfirmTeamPlan}
               title={primarySubscriptionDocumentId ? 'Confirmer le changement' : 'Activer cette offre Team'}
               variant="PrimaryLight"
-              disabled={isTeamSelectionConfirmDisabled}
             />
             <Button
               onPress={closeTeamPlanModal}
