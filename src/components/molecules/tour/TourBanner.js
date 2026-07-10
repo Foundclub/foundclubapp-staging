@@ -166,7 +166,7 @@ function TourBanner() {
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{currentStep.title}</Text>
       <Text style={[Fonts.p3, Fonts.neutral200]}>{currentStep.instruction}</Text>
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16], Spaces.marginTop[4]]}>
-        {currentStep.success?.type === 'manual' ? (
+        {currentStep.success?.type === 'manual' || currentStep.manualLabel ? (
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => completeCurrentStep()}

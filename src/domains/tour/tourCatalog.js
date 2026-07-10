@@ -111,6 +111,18 @@ const COACH_TOUR_STEPS = [
     title: 'Crée ton équipe',
   },
   {
+    // Semi-etape pedagogique : le coach apprend OU se cree un evenement (carte
+    // de l'accueil) — la validation = arrivee sur le tunnel evenement.
+    fallbackTarget: homeTarget,
+    id: 'coach_find_event_card',
+    instruction: 'Ton équipe est prête ! Sur ton accueil, touche la carte « Ajouter un événement ».',
+    manualLabel: "M'y emmener",
+    navTarget: homeTarget,
+    success: { key: RouteNames.EventWizardType, type: 'route' },
+    successMessage: "Bien trouvé ! C'est ici que tout se crée.",
+    title: 'Trouve la carte « Ajouter un événement »',
+  },
+  {
     fallbackTarget: planningTarget,
     id: 'coach_create_event',
     instruction: 'Crée ton premier événement — il est offert.',
