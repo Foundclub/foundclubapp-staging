@@ -21,6 +21,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -31,6 +32,7 @@ import {
   useGetLeagueMatchStats,
 } from '@/services/matchStats/matchStatsQueries';
 import {
+  remindEventMatchResponses,
   saveEventMatchStatsDraft,
   saveLeagueMatchStatsDraft,
   submitEventMatchStats,
@@ -457,6 +459,51 @@ function MatchStatsEditor({ navigation, route }) {
     () => playerLines.filter((line) => isLineCompleted(line, sport)).length,
     [playerLines, sport],
   );
+
+  // Resume des retours joueur (handoff 10c).
+  const responseItems = useMemo(
+    () => (Array.isArray(statsPayload?.playerResponses) ? statsPayload.playerResponses : []),
+    [statsPayload?.playerResponses],
+  );
+  const responseEligibleCount = responseItems.length;
+  const responseCompletionCount = useMemo(
+    () => responseItems.filter((/** @type {any} */ item) => item?.status === 'submitted').length,
+    [responseItems],
+  );
+  const missingResponseCount = Math.max(0, responseEligibleCount - responseCompletionCount);
+
+  // Buteur·se·s / marqueur·se·s a partir des lignes en cours (handoff 10c).
+  const topScorers = useMemo(() => {
+    const scorerField = normalizeSport(sport) === 'basketball' ? 'points' : 'goals';
+    return playerLines
+      .map((line) => ({
+        key: line?.key || line?.label,
+        label: String(line?.label || 'Joueur·se'),
+        value: getNumericStatValue(line?.[scorerField]),
+      }))
+      .filter((entry) => entry.value > 0)
+      .sort((left, right) => right.value - left.value)
+      .slice(0, 5);
+  }, [playerLines, sport]);
+
+  const remindResponsesMutation = useMutation({
+    mutationFn: () => remindEventMatchResponses(
+      eventId || '',
+      statsPayload?.team?.documentId || requestedTeamId,
+    ),
+    onError: (/** @type {any} */ error) => {
+      Alert.alert('Erreur', getApiErrorMessage(error, "Impossible d'envoyer la relance."));
+    },
+    onSuccess: (/** @type {any} */ result) => {
+      const remindedCount = Number(result?.remindedCount || 0);
+      Alert.alert(
+        'Relance envoyée',
+        remindedCount > 0
+          ? `${remindedCount} joueur·se·s relancé·e·s pour leur retour post-match.`
+          : 'Aucune relance nécessaire pour ce match.',
+      );
+    },
+  });
 
   const consistencyIssues = useMemo(() => buildMatchStatsConsistencyIssues({
     playerLines,
@@ -1298,6 +1345,109 @@ function MatchStatsEditor({ navigation, route }) {
                     </View>
                   ))}
                 </View>
+              </View>
+            ) : null}
+
+            {topScorers.length ? (
+              <View style={[SpacesAny.gap[8]]}>
+                <Text
+                  style={[
+                    Fonts.p4Bold,
+                    Fonts.neutral300,
+                    { letterSpacing: 1, textTransform: 'uppercase' },
+                  ]}
+                >
+                  {normalizeSport(sport) === 'basketball' ? 'Marqueur·se·s' : 'Buteur·se·s'}
+                </Text>
+                {topScorers.map((scorer) => (
+                  <View
+                    key={scorer.key}
+                    style={[Alignments.row, Alignments.alignCenter, { columnGap: 11 }]}
+                  >
+                    <MemberAvatar
+                      firstname={scorer.label.split(' ')[0]}
+                      lastname={scorer.label.split(' ').slice(1).join(' ')}
+                      size={32}
+                    />
+                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral100, { flex: 1 }]}>
+                      {scorer.label}
+                    </Text>
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                      {`×${scorer.value}`}
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.08)',
+                        borderRadius: 999,
+                        height: 5,
+                        overflow: 'hidden',
+                        width: 90,
+                      }}
+                    >
+                      <View
+                        style={{
+                          backgroundColor: Colors.primary500,
+                          borderRadius: 999,
+                          height: '100%',
+                          width: `${Math.min(100, Math.round((scorer.value / (topScorers[0]?.value || 1)) * 100))}%`,
+                        }}
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            {sourceType === 'event' && responseEligibleCount > 0 ? (
+              <View
+                style={[
+                  SpacesAny.gap[8],
+                  {
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    borderColor: 'rgba(255,255,255,0.10)',
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                  },
+                ]}
+              >
+                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Retours post-match</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {`${responseCompletionCount}/${responseEligibleCount} reçus`}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.08)',
+                    borderRadius: 999,
+                    height: 6,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: Colors.success500,
+                      borderRadius: 999,
+                      height: '100%',
+                      width: `${Math.round((responseCompletionCount / responseEligibleCount) * 100)}%`,
+                    }}
+                  />
+                </View>
+                {missingResponseCount > 0 && !isReadOnly ? (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    disabled={remindResponsesMutation.isPending}
+                    onPress={() => remindResponsesMutation.mutate()}
+                  >
+                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                      {remindResponsesMutation.isPending
+                        ? 'Relance en cours…'
+                        : `Relancer les ${missingResponseCount} manquant·e·s →`}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             ) : null}
 

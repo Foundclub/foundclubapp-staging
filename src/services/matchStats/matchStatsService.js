@@ -104,6 +104,21 @@ export const submitEventMatchStats = async (eventId, payload) => {
 };
 
 /**
+ * Relance les joueur·se·s sans retour post-match soumis (handoff 10c).
+ * @param {string} eventId
+ * @param {string | null | undefined} teamId
+ * @returns {Promise<{ missingCount: number, remindedCount: number } | null>}
+ */
+export const remindEventMatchResponses = async (eventId, teamId) => {
+  const response = await client.post(`/events/${eventId}/match-stats/remind-responses`, {
+    data: {
+      teamId: teamId || null,
+    },
+  });
+  return unwrapResponse(response);
+};
+
+/**
  * @param {string} matchId
  * @param {string | undefined} teamId
  * @returns {Promise<any>}
