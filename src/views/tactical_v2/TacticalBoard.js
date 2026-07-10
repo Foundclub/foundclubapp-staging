@@ -22,16 +22,20 @@ import {
   Gesture, GestureDetector, GestureHandlerRootView, ScrollView,
 } from 'react-native-gesture-handler';
 import Animated, {
+  cancelAnimation,
   runOnJS,
   useAnimatedRef,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
@@ -55,6 +59,8 @@ import {
   getTacticalFieldAspectRatio,
 } from '@/utils/tacticalField';
 
+import { useTour } from '@/context/TourContext';
+// eslint-disable-next-line perfectionist/sort-imports
 import DraggableToken from './DraggableToken';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -73,6 +79,35 @@ const FIELD_TOKEN_WIDTH = 58;
 const FIELD_TOKEN_HEIGHT = 72;
 const PANEL_COLLAPSED_HEIGHT = 64;
 const PANEL_BENCH_HEIGHT = 276;
+
+// Distance minimale (en % du terrain) entre un joueur auto-placé et un point occupé.
+const GUIDED_AUTO_MIN_DISTANCE = 12;
+
+/**
+ * Positions automatiques (pourcentages terrain) pour la simulation guidée :
+ * grille de lignes réparties de la défense à l'attaque, en évitant les points
+ * déjà occupés (le board legacy n'a pas de structure de slots).
+ * @param {number} count
+ * @param {{ x: number; y: number }[]} occupied
+ * @returns {{ x: number; y: number }[]}
+ */
+const buildGuidedAutoPositions = (count, occupied = []) => {
+  if (count <= 0) return [];
+  const perRow = 4;
+  const rowCount = Math.max(2, Math.ceil((count + occupied.length) / perRow) + 1);
+  const candidates = [];
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+    const y = 18 + ((rowIndex * 64) / (rowCount - 1));
+    for (let columnIndex = 0; columnIndex < perRow; columnIndex += 1) {
+      candidates.push({ x: 14 + ((columnIndex * 72) / (perRow - 1)), y });
+    }
+  }
+  const freeCandidates = candidates.filter((candidate) => occupied.every((point) => (
+    Math.hypot(candidate.x - point.x, candidate.y - point.y) >= GUIDED_AUTO_MIN_DISTANCE
+  )));
+  const pool = freeCandidates.length >= count ? freeCandidates : candidates;
+  return pool.slice(0, count);
+};
 
 const normalizeMatchLabel = (value) => {
   const label = String(value || '').trim();
@@ -151,7 +186,7 @@ function TacticalBoard() {
   const skipUnsavedPromptRef = useRef(false);
 
   // Get params
-  /** @type {{selectedPlayers?: TacticalPlayer[], players?: any[], eventId?: string, eventName?: string, sport?: string, existingComposition?: any, teamId?: string, teamName?: string, readOnly?: boolean, canEdit?: boolean, manualPlayers?: any[], selectedPlayerIds?: string[], teamComposition?: any, teamDefaultComposition?: any, editorMode?: 'event' | 'team-default', editorSource?: string, editorSourceLabel?: string, eventKind?: 'match' | 'detection', eventTypeLabel?: string | null}} */
+  /** @type {{selectedPlayers?: TacticalPlayer[], players?: any[], eventId?: string, eventName?: string, sport?: string, existingComposition?: any, teamId?: string, teamName?: string, readOnly?: boolean, canEdit?: boolean, manualPlayers?: any[], selectedPlayerIds?: string[], teamComposition?: any, teamDefaultComposition?: any, editorMode?: 'event' | 'team-default', editorSource?: string, editorSourceLabel?: string, eventKind?: 'match' | 'detection', eventTypeLabel?: string | null, simulationMode?: boolean}} */
   const params = route.params || {};
   const {
     canEdit = false,
@@ -168,6 +203,7 @@ function TacticalBoard() {
     readOnly = false,
     selectedPlayers = [],
     selectedPlayerIds: selectedPlayerIdsParam = [],
+    simulationMode = false,
     sport = 'football',
     teamDefaultComposition = null,
     teamComposition = null,
@@ -176,6 +212,16 @@ function TacticalBoard() {
   } = params;
   const isTeamDefaultMode = editorMode === 'team-default';
   const isDetectionEvent = eventKind === 'detection';
+
+  // === TOUR GUIDÉ (étape « Préparer une composition ») ===
+  // Actif uniquement en simulation quand l'étape coach_composition est en cours.
+  // Phase 'drag' : banc illuminé, l'utilisateur dépose un premier joueur ;
+  // phase 'publish' : le reste du banc est auto-placé, bouton Publier illuminé.
+  const { currentStep: tourCurrentStep } = useTour();
+  const isGuidedComposition = Boolean(simulationMode && tourCurrentStep?.id === 'coach_composition');
+  const [guidedPhase, setGuidedPhase] = useState(/** @type {'drag' | 'publish'} */ ('drag'));
+  const showGuidedBenchHighlight = isGuidedComposition && guidedPhase === 'drag';
+  const showGuidedPublishHighlight = isGuidedComposition && guidedPhase === 'publish';
 
   // Use poolPlayers for reconstruction (selectedPlayers from editor, players from viewer)
   const poolPlayers = useMemo(() => {
@@ -269,6 +315,35 @@ function TacticalBoard() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const panelHeight = useSharedValue(PANEL_COLLAPSED_HEIGHT);
   const panelDragStartHeight = useSharedValue(PANEL_COLLAPSED_HEIGHT);
+
+  // Anneau lumineux pulsé du tour guidé (même pattern visuel que HomeActionCard).
+  const guidedPulseOpacity = useSharedValue(0.35);
+  useEffect(() => {
+    if (!isGuidedComposition) return undefined;
+    guidedPulseOpacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 700 }),
+        withTiming(0.35, { duration: 700 }),
+      ),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(guidedPulseOpacity);
+      guidedPulseOpacity.value = 0.35;
+    };
+  }, [guidedPulseOpacity, isGuidedComposition]);
+  const guidedPulseStyle = useAnimatedStyle(() => ({
+    opacity: guidedPulseOpacity.value,
+  }));
+
+  // Tour guidé : ouvre automatiquement le panneau visé par la phase courante
+  // (banc pour le premier drag, actions pour la publication simulée).
+  useEffect(() => {
+    if (!isGuidedComposition) return;
+    setActivePanel(guidedPhase === 'publish' ? 'actions' : 'bench');
+    setIsPanelOpen(true);
+  }, [guidedPhase, isGuidedComposition]);
 
   // Sport specific
   const aspectRatio = getTacticalFieldAspectRatio(sport);
@@ -475,6 +550,29 @@ function TacticalBoard() {
   // Get player by ID from pool (includes team players + manual players)
   const getPlayerById = useCallback((/** @type {string} */ id) => poolPlayers.find((p) => (p.id || p.documentId) === id), [poolPlayers]);
 
+  // Tour guidé : après le premier dépôt manuel, place automatiquement le reste
+  // du banc sur des positions libres puis passe à la phase « publication ».
+  const autoPlaceRemainingBenchPlayers = useCallback((/** @type {string} */ droppedPlayerId, /** @type {{ x: number; y: number }} */ droppedPosition) => {
+    const remainingPlayers = benchPlayers.filter((player) => (player.id || player.documentId) !== droppedPlayerId);
+    if (remainingPlayers.length > 0) {
+      const autoPositions = buildGuidedAutoPositions(remainingPlayers.length, [droppedPosition]);
+      setFieldPlayers((/** @type {FieldPlayer[]} */ prev) => {
+        const placedIds = new Set(prev.map((player) => player.id || player.documentId));
+        const additions = remainingPlayers
+          .filter((player) => !placedIds.has(player.id || player.documentId))
+          .map((player, index) => ({
+            ...player,
+            id: player.id || player.documentId,
+            x: autoPositions[index]?.x ?? 50,
+            y: autoPositions[index]?.y ?? 50,
+          }));
+        return [...prev, ...additions];
+      });
+      setBenchPlayers([]);
+    }
+    setGuidedPhase('publish');
+  }, [benchPlayers]);
+
   // === DRAG HANDLERS ===
 
   // Start drag from bench
@@ -566,6 +664,11 @@ function TacticalBoard() {
       // Remove from bench if coming from bench
       if (dragSource === 'bench') {
         setBenchPlayers((/** @type {TacticalPlayer[]} */ prev) => prev.filter((p) => (p.id || p.documentId) !== playerId));
+
+        // Tour guidé : le premier dépôt déclenche l'auto-placement du reste du banc.
+        if (isGuidedComposition && guidedPhase === 'drag') {
+          autoPlaceRemainingBenchPlayers(playerId, { x: clampedX, y: clampedY });
+        }
       }
     } else if (dragSource === 'field') {
       // Dropped outside field - return to bench
@@ -586,7 +689,7 @@ function TacticalBoard() {
     dropZoneActive.value = 0;
     setActiveDragPlayer(null);
     setDragSource(null);
-  }, [activeDragPlayer, dragSource, getPlayerById, fieldX, fieldY, fieldW, fieldH, ghostScale, ghostOpacity, dropZoneActive]);
+  }, [activeDragPlayer, autoPlaceRemainingBenchPlayers, dragSource, getPlayerById, guidedPhase, isGuidedComposition, fieldX, fieldY, fieldW, fieldH, ghostScale, ghostOpacity, dropZoneActive]);
 
   // === GESTURE HANDLERS ===
 
@@ -824,7 +927,19 @@ function TacticalBoard() {
     teamName,
   ]);
 
+  // En mode apercu (simulation guidee), aucune ecriture serveur: on informe simplement l'utilisateur.
+  const notifySimulationAction = useCallback(() => {
+    Alert.alert(
+      'Mode apercu',
+      'Ceci est un apercu — publie tes vraies compos depuis un evenement.',
+    );
+  }, []);
+
   const handleSave = useCallback(async (options = {}) => {
+    if (simulationMode) {
+      notifySimulationAction();
+      return false;
+    }
     const normalizedOptions = options && typeof options === 'object' && !('nativeEvent' in options) ? options : {};
     const { showSuccess = true } = normalizedOptions;
 
@@ -878,7 +993,9 @@ function TacticalBoard() {
     getCompositionErrorMessage,
     invalidateCompositionQueries,
     isTeamDefaultMode,
+    notifySimulationAction,
     queryClient,
+    simulationMode,
     teamId,
   ]);
 
@@ -917,6 +1034,14 @@ function TacticalBoard() {
   }, [navigation]);
 
   const handlePublish = useCallback(async () => {
+    if (simulationMode) {
+      // Signal métier pour le tour guidé (étape coach_composition) : la
+      // publication reste simulée, rien n'est écrit côté serveur.
+      emitGuidanceAction('composition.simulated.published');
+      notifySimulationAction();
+      return;
+    }
+
     if (isTeamDefaultMode) {
       return;
     }
@@ -953,7 +1078,7 @@ function TacticalBoard() {
     } finally {
       setIsPublishing(false);
     }
-  }, [buildDraftPayload, eventId, getCompositionErrorMessage, invalidateCompositionQueries, isTeamDefaultMode, navigation, teamId]);
+  }, [buildDraftPayload, eventId, getCompositionErrorMessage, invalidateCompositionQueries, isTeamDefaultMode, navigation, notifySimulationAction, simulationMode, teamId]);
 
   const handleSaveAsTeamDefault = useCallback(async () => {
     if (!teamId) {
@@ -1057,13 +1182,13 @@ function TacticalBoard() {
   }, []);
 
   useEffect(() => navigation.addListener('beforeRemove', (event) => {
-    if (skipUnsavedPromptRef.current || !hasUnsavedChanges || isSaving || isPublishing) {
+    if (skipUnsavedPromptRef.current || simulationMode || !hasUnsavedChanges || isSaving || isPublishing) {
       return;
     }
 
     event.preventDefault();
     confirmExitWithUnsavedChanges(() => leaveWithoutUnsavedPrompt(event.data.action));
-  }), [confirmExitWithUnsavedChanges, hasUnsavedChanges, isPublishing, isSaving, leaveWithoutUnsavedPrompt, navigation]);
+  }), [confirmExitWithUnsavedChanges, hasUnsavedChanges, isPublishing, isSaving, leaveWithoutUnsavedPrompt, navigation, simulationMode]);
 
   const panelPanGesture = useMemo(
     () => Gesture.Pan()
@@ -1222,6 +1347,12 @@ function TacticalBoard() {
             },
           ]}
         >
+          {showGuidedBenchHighlight ? (
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.guidedPulseRing, { borderColor: Colors.primary500 }, guidedPulseStyle]}
+            />
+          ) : null}
           <GestureDetector gesture={panelPanGesture}>
             <TouchableOpacity
               activeOpacity={0.9}
@@ -1277,9 +1408,17 @@ function TacticalBoard() {
 
           {isPanelOpen && activePanel === 'bench' ? (
             <View style={styles.panelContent}>
-              <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
-                Maintiens un joueur puis glisse-le sur le terrain.
-              </Text>
+              {showGuidedBenchHighlight ? (
+                <View style={[styles.guidedHint, { backgroundColor: 'rgba(4,31,44,0.97)', borderColor: `${Colors.primary500}59` }]}>
+                  <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                    Fais glisser un joueur sur le terrain
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
+                  Maintiens un joueur puis glisse-le sur le terrain.
+                </Text>
+              )}
 
               {benchPlayers.length > 0 ? (
                 <ScrollView
@@ -1357,6 +1496,13 @@ function TacticalBoard() {
 
               {!readOnly ? (
                 <>
+                  {showGuidedPublishHighlight ? (
+                    <View style={[styles.guidedHint, { backgroundColor: 'rgba(4,31,44,0.97)', borderColor: `${Colors.primary500}59` }]}>
+                      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                        Publie ta compo
+                      </Text>
+                    </View>
+                  ) : null}
                   <View style={styles.footerPrimaryAction}>
                     <Button
                       disabled={isSaving || isPublishing}
@@ -1364,6 +1510,12 @@ function TacticalBoard() {
                       title={resolvedPrimaryActionTitle}
                       variant="Primary"
                     />
+                    {showGuidedPublishHighlight ? (
+                      <Animated.View
+                        pointerEvents="none"
+                        style={[styles.guidedButtonRing, { borderColor: Colors.primary500 }, guidedPulseStyle]}
+                      />
+                    ) : null}
                   </View>
 
                   <View style={styles.footerTertiaryAction}>
@@ -1548,6 +1700,27 @@ const styles = StyleSheet.create({
   },
   footerTertiaryAction: {
     marginTop: 2,
+  },
+  guidedButtonRing: {
+    borderRadius: 14,
+    borderWidth: 2.5,
+    bottom: -3,
+    left: -3,
+    position: 'absolute',
+    right: -3,
+    top: -3,
+  },
+  guidedHint: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  guidedPulseRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    borderWidth: 2.5,
+    zIndex: 5,
   },
   header: {
     alignItems: 'center',

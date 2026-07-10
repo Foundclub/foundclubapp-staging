@@ -144,9 +144,11 @@ const COACH_TOUR_STEPS = [
   {
     id: 'coach_composition',
     instruction: "Prépare ta compo — terrain d'essai, rien n'est publié.",
+    // Échappatoire : le bandeau garde le bouton manuel même sur cette étape à signal.
     manualLabel: "J'ai testé",
     navTarget: compositionSimulationTarget,
-    success: { type: 'manual' },
+    // Émis par TacticalBoard au tap sur « Publier » en mode simulation guidée.
+    success: { key: 'composition.simulated.published', type: 'action' },
     successMessage: 'Compo maîtrisée ! (Publier une convocation = offre Équipe)',
     title: 'Préparer une composition',
   },
