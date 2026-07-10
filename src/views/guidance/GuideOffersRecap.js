@@ -62,6 +62,12 @@ const CLUB_TIER_OFFER_LABELS = {
   3: 'Club L',
 };
 
+// Selecteur de periode de facturation, global a l'ecran (defaut produit : annuel).
+const BILLING_PERIOD_OPTIONS = [
+  { id: 'yearly', label: 'Annuel · 2 mois offerts' },
+  { id: 'monthly', label: 'Mensuel' },
+];
+
 /**
  * @param {any} payload
  * @returns {any[]}
@@ -194,6 +200,7 @@ function GuideOffersRecap({ navigation }) {
   }, []);
   const [teamSlotCount, setTeamSlotCount] = useState(1);
   const [clubTier, setClubTier] = useState(1);
+  const [billingPeriod, setBillingPeriod] = useState('yearly');
 
   const catalogQuery = useQuery({
     queryFn: getSubscriptionCatalog,
@@ -207,16 +214,19 @@ function GuideOffersRecap({ navigation }) {
   );
   const teamTierEntries = useMemo(() => catalogEntries
     .filter((entry) => getCatalogEntryScopeType(entry) === 'TEAM'
-      && getCatalogEntryBillingPeriod(entry) === 'yearly')
+      && getCatalogEntryBillingPeriod(entry) === billingPeriod)
     .sort((left, right) => (
       Number(left?.slotCount || 0) - Number(right?.slotCount || 0)
-    )), [catalogEntries]);
+    )), [billingPeriod, catalogEntries]);
   const clubTierEntries = useMemo(() => catalogEntries
     .filter((entry) => getCatalogEntryScopeType(entry) === 'CLUB'
-      && getCatalogEntryBillingPeriod(entry) === 'yearly')
+      && getCatalogEntryBillingPeriod(entry) === billingPeriod)
     .sort((left, right) => (
       getCatalogEntryClubTier(left) - getCatalogEntryClubTier(right)
-    )), [catalogEntries]);
+    )), [billingPeriod, catalogEntries]);
+  const hasMonthlyEntries = useMemo(() => catalogEntries
+    .some((entry) => getCatalogEntryScopeType(entry) === 'TEAM'
+      && getCatalogEntryBillingPeriod(entry) === 'monthly'), [catalogEntries]);
 
   const selectedTeamEntry = useMemo(
     () => teamTierEntries.find((entry) => Number(entry?.slotCount || 0) === teamSlotCount)
@@ -242,6 +252,8 @@ function GuideOffersRecap({ navigation }) {
     ? (CLUB_TIER_OFFER_LABELS[getCatalogEntryClubTier(selectedClubEntry)] || 'Club')
     : 'Équipe';
   const selectedPriceAmountLabel = getEntryPriceAmountLabel(selectedEntry);
+  const isYearlyPeriod = billingPeriod === 'yearly';
+  const billingPeriodSuffix = isYearlyPeriod ? '/an' : '/mois';
 
   const purchaseMutation = useMutation({
     mutationFn: async (/** @type {any} */ purchaseInput) => (
@@ -319,7 +331,11 @@ function GuideOffersRecap({ navigation }) {
         queryClient.invalidateQueries({ queryKey: ['get-me'] }),
       ]);
       const renewalDate = new Date();
-      renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+      if (getCatalogEntryBillingPeriod(selectedEntry) === 'monthly') {
+        renewalDate.setMonth(renewalDate.getMonth() + 1);
+      } else {
+        renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+      }
       navigation.navigate(RouteNames.SubscriptionSuccess, {
         offerLabel: isClubPurchase
           ? selectedOfferName
@@ -367,9 +383,10 @@ function GuideOffersRecap({ navigation }) {
     const selectedTierId = isClub ? clubTier : teamSlotCount;
     const cardEntry = isClub ? selectedClubEntry : selectedTeamEntry;
     const cardPriceAmount = getEntryPriceAmountLabel(cardEntry);
-    const cardMonthlyLabel = formatSubscriptionMonthlyEquivalentLabel(
-      cardEntry?.referencePriceEurCents,
-    );
+    // Equivalence mensuelle : uniquement sur l'ancre annuelle.
+    const cardMonthlyLabel = isYearlyPeriod
+      ? formatSubscriptionMonthlyEquivalentLabel(cardEntry?.referencePriceEurCents)
+      : '';
 
     let cardBackgroundColor = 'rgba(255,255,255,0.04)';
     if (isDisabled) {
@@ -518,7 +535,7 @@ function GuideOffersRecap({ navigation }) {
               <Text style={[Fonts.h2Bold, Fonts.neutral00]}>
                 {cardPriceAmount}
               </Text>
-              <Text style={[Fonts.p3Bold, Fonts.neutral300]}>/an</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral300]}>{billingPeriodSuffix}</Text>
               <View style={Alignments.fill} />
               <Text style={[Fonts.p3Bold, Fonts.primary200]}>
                 {cardMonthlyLabel}
@@ -558,7 +575,7 @@ function GuideOffersRecap({ navigation }) {
               </Text>
               <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
                 {getEntryPriceAmountLabel(firstEntry)}
-                /an
+                {billingPeriodSuffix}
               </Text>
             </View>
             <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[8]]}>
@@ -576,7 +593,7 @@ function GuideOffersRecap({ navigation }) {
   } else if (isCatalogError) {
     ctaTitle = 'Tarifs indisponibles';
   } else if (selectedPriceAmountLabel) {
-    ctaTitle = `Débloquer ${selectedOfferName} · ${selectedPriceAmountLabel}/an`;
+    ctaTitle = `Débloquer ${selectedOfferName} · ${selectedPriceAmountLabel}${billingPeriodSuffix}`;
   }
 
   return (
@@ -626,6 +643,13 @@ function GuideOffersRecap({ navigation }) {
             </View>
           ) : (
             <>
+              {hasMonthlyEntries && !isCatalogLoading ? (
+                <TierSelector
+                  onChange={(periodId) => setBillingPeriod(String(periodId))}
+                  options={BILLING_PERIOD_OPTIONS}
+                  value={billingPeriod}
+                />
+              ) : null}
               {renderOfferCard('team')}
               {renderOfferCard('club')}
               <Text style={[Fonts.p4, Fonts.neutral300, Fonts.textCenter]}>

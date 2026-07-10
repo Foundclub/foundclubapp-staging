@@ -64,14 +64,22 @@ const getCatalogEntriesFromResponse = (payload) => {
 };
 
 /**
- * Paliers Équipe annuels du catalogue, tries par nombre d'equipes couvertes.
+ * Paliers Équipe du catalogue pour une periode de facturation donnee,
+ * tries par nombre d'equipes couvertes.
  * @param {any[]} entries
+ * @param {string} billingPeriod - 'monthly' ou 'yearly'.
  * @returns {any[]}
  */
-const getTeamYearlyEntries = (entries) => entries
+const getTeamEntriesForPeriod = (entries, billingPeriod) => entries
   .filter((entry) => String(entry?.scopeType || '').trim().toUpperCase() === 'TEAM'
-    && String(entry?.billingPeriod || '').trim().toLowerCase() === 'yearly')
+    && String(entry?.billingPeriod || '').trim().toLowerCase() === billingPeriod)
   .sort((left, right) => Number(left?.slotCount || 0) - Number(right?.slotCount || 0));
+
+// Selecteur de periode de facturation (defaut produit : annuel, 2 mois offerts).
+const BILLING_PERIOD_OPTIONS = [
+  { id: 'yearly', label: 'Annuel · 2 mois offerts' },
+  { id: 'monthly', label: 'Mensuel' },
+];
 
 /**
  * Sheet de quota v2 (handoff, decision 1) : une seule ancre prix, segments de
@@ -148,8 +156,19 @@ function SubscriptionPaywallSheet({
     () => getCatalogEntriesFromResponse(catalogQuery.data),
     [catalogQuery.data],
   );
+  const [billingPeriod, setBillingPeriod] = useState('yearly');
   const teamTierEntries = useMemo(
-    () => getTeamYearlyEntries(catalogEntries),
+    () => getTeamEntriesForPeriod(catalogEntries, billingPeriod),
+    [billingPeriod, catalogEntries],
+  );
+  // Paliers annuels : base stable pour la preselection (les slots 1/2/3 sont
+  // identiques d'une periode a l'autre, on ne reset pas le palier au toggle).
+  const teamYearlyEntries = useMemo(
+    () => getTeamEntriesForPeriod(catalogEntries, 'yearly'),
+    [catalogEntries],
+  );
+  const hasMonthlyTeamEntries = useMemo(
+    () => getTeamEntriesForPeriod(catalogEntries, 'monthly').length > 0,
     [catalogEntries],
   );
   const recommendedEntry = useMemo(() => {
@@ -162,12 +181,14 @@ function SubscriptionPaywallSheet({
   const funnelAbBucket = getSubscriptionTierAbBucket(userData?.documentId);
 
   // Palier preselectionne a chaque ouverture (2e equipe -> palier 2), borne au
-  // catalogue. Si le test A/B est actif, le bucket prime (handoff 13).
+  // catalogue, et retour a la periode annuelle recommandee. Si le test A/B est
+  // actif, le bucket prime (handoff 13).
   useEffect(() => {
-    if (!isVisible || !quotaSheetContent || teamTierEntries.length === 0) {
+    if (!isVisible || !quotaSheetContent || teamYearlyEntries.length === 0) {
       return;
     }
-    const availableSlotCounts = teamTierEntries.map((entry) => Number(entry?.slotCount || 0));
+    setBillingPeriod('yearly');
+    const availableSlotCounts = teamYearlyEntries.map((entry) => Number(entry?.slotCount || 0));
     const wantedSlotCount = SUBSCRIPTION_TIER_AB_TEST_ENABLED
       ? getSubscriptionPreselectedSlotCount(funnelAbBucket)
       : quotaSheetContent.preselectedSlotCount;
@@ -175,7 +196,7 @@ function SubscriptionPaywallSheet({
       ? wantedSlotCount
       : availableSlotCounts[0];
     setSelectedSlotCount(preselected);
-  }, [funnelAbBucket, isVisible, quotaSheetContent, teamTierEntries]);
+  }, [funnelAbBucket, isVisible, quotaSheetContent, teamYearlyEntries]);
 
   // Jalon funnel : ouverture de la sheet quota (handoff 13).
   useEffect(() => {
@@ -317,7 +338,11 @@ function SubscriptionPaywallSheet({
       ]);
       close();
       const renewalDate = new Date();
-      renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+      if (String(selectedEntry?.billingPeriod || '').trim().toLowerCase() === 'monthly') {
+        renewalDate.setMonth(renewalDate.getMonth() + 1);
+      } else {
+        renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+      }
       navigation.navigate(RouteNames.SubscriptionSuccess, {
         offerLabel: `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
         renewalDateLabel: format(renewalDate, 'd MMMM yyyy', { locale: fr }),
@@ -350,9 +375,12 @@ function SubscriptionPaywallSheet({
     const priceAmountLabel = Number.isFinite(priceCents) && priceCents > 0
       ? `${(priceCents / 100).toFixed(2).replace('.', ',')} €`
       : '';
-    const monthlyLabel = formatSubscriptionMonthlyEquivalentLabel(
-      selectedEntry?.referencePriceEurCents,
-    );
+    const isYearlySelected = billingPeriod === 'yearly';
+    const priceSuffix = isYearlySelected ? '/an' : '/mois';
+    // Equivalence mensuelle : uniquement sur l'ancre annuelle.
+    const monthlyLabel = isYearlySelected
+      ? formatSubscriptionMonthlyEquivalentLabel(selectedEntry?.referencePriceEurCents)
+      : '';
     const isCatalogLoading = catalogQuery.isLoading || teamTierEntries.length === 0;
     const purchasing = purchaseMutation.isPending;
     let ctaLabel = 'Chargement des tarifs…';
@@ -426,6 +454,13 @@ function SubscriptionPaywallSheet({
             </View>
           ) : (
             <>
+              {hasMonthlyTeamEntries ? (
+                <TierSelector
+                  onChange={(periodId) => setBillingPeriod(String(periodId))}
+                  options={BILLING_PERIOD_OPTIONS}
+                  value={billingPeriod}
+                />
+              ) : null}
               <TierSelector
                 onChange={(slotCount) => {
                   setSelectedSlotCount(Number(slotCount));
@@ -442,7 +477,7 @@ function SubscriptionPaywallSheet({
                 <Text style={[Fonts.h1Bold, Fonts.neutral00]}>
                   {priceAmountLabel}
                 </Text>
-                <Text style={[Fonts.p2Bold, Fonts.neutral300]}>/an</Text>
+                <Text style={[Fonts.p2Bold, Fonts.neutral300]}>{priceSuffix}</Text>
                 <View style={Alignments.fill} />
                 <Text style={[Fonts.p3Bold, Fonts.primary200]}>
                   {monthlyLabel}

@@ -127,6 +127,12 @@ const OFFER_BILLING_PERIOD_OPTIONS = [
   { key: 'yearly', label: 'Annuel', subLabel: '2 mois offerts' },
 ];
 
+// Selecteur de periode de la carte payeur (defaut produit : annuel).
+const PAYER_BILLING_PERIOD_OPTIONS = [
+  { id: 'yearly', label: 'Annuel · 2 mois offerts' },
+  { id: 'monthly', label: 'Mensuel' },
+];
+
 /**
  * @param {any} clubVerificationSummary
  * @returns {string}
@@ -624,27 +630,32 @@ function SubscriptionOverview({ navigation }) {
   // --- Vue payeur (handoff 10f) : mon offre Équipe, equipes couvertes, palier in situ ---
   const activeTeamPlanCode = useMemo(
     () => activePlanCodes.find(
-      (/** @type {string} */ code) => /^fc_team_\d+_yearly$/.test(String(code || '').trim()),
+      (/** @type {string} */ code) => /^fc_team_\d+_(?:monthly|yearly)$/.test(String(code || '').trim()),
     ) || '',
     [activePlanCodes],
   );
   const activeTeamPlanSlotCount = Number(
     String(activeTeamPlanCode).match(/^fc_team_(\d+)_/)?.[1] || 0,
   );
+  const activeTeamPlanBillingPeriod = String(activeTeamPlanCode).endsWith('_monthly')
+    ? 'monthly'
+    : 'yearly';
   const [payerSelectedSlotCount, setPayerSelectedSlotCount] = useState(0);
+  const [payerBillingPeriod, setPayerBillingPeriod] = useState('yearly');
   useEffect(() => {
     if (activeTeamPlanSlotCount > 0) {
       setPayerSelectedSlotCount(activeTeamPlanSlotCount);
+      setPayerBillingPeriod(activeTeamPlanBillingPeriod);
     }
-  }, [activeTeamPlanSlotCount]);
+  }, [activeTeamPlanBillingPeriod, activeTeamPlanSlotCount]);
   const payerTeamTierEntries = useMemo(
     () => catalogEntries
       .filter((/** @type {any} */ entry) => getCatalogEntryScopeType(entry) === 'TEAM'
-        && getCatalogEntryBillingPeriod(entry) === 'yearly')
+        && getCatalogEntryBillingPeriod(entry) === payerBillingPeriod)
       .sort((/** @type {any} */ left, /** @type {any} */ right) => (
         Number(left?.slotCount || 0) - Number(right?.slotCount || 0)
       )),
-    [catalogEntries],
+    [catalogEntries, payerBillingPeriod],
   );
   const payerSelectedEntry = useMemo(
     () => payerTeamTierEntries.find(
@@ -653,11 +664,24 @@ function SubscriptionOverview({ navigation }) {
     [payerSelectedSlotCount, payerTeamTierEntries],
   );
   const payerCurrentEntry = useMemo(
-    () => payerTeamTierEntries.find(
+    () => catalogEntries.find(
       (/** @type {any} */ entry) => String(entry?.planCode || '').trim() === activeTeamPlanCode,
     ) || null,
-    [activeTeamPlanCode, payerTeamTierEntries],
+    [activeTeamPlanCode, catalogEntries],
   );
+  // Palier + periode identiques au plan actif -> rien a changer.
+  const isPayerSelectionCurrentPlan = payerSelectedSlotCount === activeTeamPlanSlotCount
+    && payerBillingPeriod === activeTeamPlanBillingPeriod;
+  const payerSelectedPriceLabel = formatSubscriptionPriceLabel(
+    payerSelectedEntry?.referencePriceEurCents,
+    payerBillingPeriod,
+  );
+  const payerPeriodWord = payerBillingPeriod === 'monthly' ? 'mensuel' : 'annuel';
+  const payerTierWord = `${payerSelectedSlotCount} équipe${payerSelectedSlotCount > 1 ? 's' : ''}`;
+  // CTA : nomme le changement (periode seule ou nouveau palier) + prix cible.
+  const payerChangeCtaTitle = payerSelectedSlotCount === activeTeamPlanSlotCount
+    ? `Passer au ${payerPeriodWord} · ${payerSelectedPriceLabel}`
+    : `Passer à ${payerTierWord} · ${payerSelectedPriceLabel}`;
   const payerRenewalEntitlement = useMemo(
     () => entitlementsSummary.find(
       (/** @type {any} */ entry) => entry?.paidBy?.documentId
@@ -1401,7 +1425,7 @@ function SubscriptionOverview({ navigation }) {
               <Text style={[Fonts.p3Bold, Fonts.primary200]}>
                 {formatSubscriptionPriceLabel(
                   payerCurrentEntry?.referencePriceEurCents,
-                  'yearly',
+                  activeTeamPlanBillingPeriod,
                 )}
               </Text>
             </View>
@@ -1463,6 +1487,11 @@ function SubscriptionOverview({ navigation }) {
               Changer de palier
             </Text>
             <TierSelector
+              onChange={(periodId) => setPayerBillingPeriod(String(periodId))}
+              options={PAYER_BILLING_PERIOD_OPTIONS}
+              value={payerBillingPeriod}
+            />
+            <TierSelector
               onChange={(slotCount) => setPayerSelectedSlotCount(Number(slotCount))}
               options={payerTeamTierEntries.map((/** @type {any} */ entry) => {
                 const slotCount = Number(entry?.slotCount || 0);
@@ -1474,20 +1503,17 @@ function SubscriptionOverview({ navigation }) {
               value={payerSelectedSlotCount}
             />
             <Text style={[Fonts.p4, Fonts.neutral400]}>
-              {payerSelectedSlotCount === activeTeamPlanSlotCount
+              {isPayerSelectionCurrentPlan
                 ? 'Palier actuel.'
-                : `${formatSubscriptionPriceLabel(
-                  payerSelectedEntry?.referencePriceEurCents,
-                  'yearly',
-                )} — appliqué immédiatement, prorata géré par le store.`}
+                : `${payerSelectedPriceLabel} — appliqué immédiatement, prorata géré par le store.`}
             </Text>
-            {payerSelectedSlotCount !== activeTeamPlanSlotCount && payerSelectedEntry ? (
+            {!isPayerSelectionCurrentPlan && payerSelectedEntry ? (
               <Button
                 disabled={!isBillingTestModeEnabled}
                 isLoading={subscriptionMutation.isPending
                   && activeActionPlanCode === String(payerSelectedEntry?.planCode || '')}
                 onPress={() => handleCatalogAction(payerSelectedEntry)}
-                title={`Passer à ${payerSelectedSlotCount} équipe${payerSelectedSlotCount > 1 ? 's' : ''} · ${formatSubscriptionPriceLabel(payerSelectedEntry?.referencePriceEurCents, 'yearly')}`}
+                title={payerChangeCtaTitle}
                 variant="Primary"
               />
             ) : null}
