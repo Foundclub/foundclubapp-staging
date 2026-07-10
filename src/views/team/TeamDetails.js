@@ -3266,8 +3266,8 @@ function TeamDetails({ navigation, route }) {
                 {/* Calendar filters + list */}
                 {(() => {
                   const modeOptions = /** @type {{ key: any; label: any }[]} */ ([
-                    { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon équipe') },
-                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'Résultats poule') },
+                    { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'À venir') },
+                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'Joués') },
                     { key: 'all', label: t('teamDetails.calendar.filters.poolCalendar', 'Calendrier poule') },
                   ]);
 
@@ -3701,9 +3701,27 @@ function TeamDetails({ navigation, route }) {
                             {group.matches.map((/** @type {any} */ match) => {
                               const isMyHomeTeam = Boolean(match?._isMyHomeTeam);
                               const isMyAwayTeam = Boolean(match?._isMyAwayTeam);
-                              const statusLabel = match._isPlayed
+                              const isPlayedMatch = Boolean(match?._isPlayed);
+                              // Chip resultat V/N/D pour mon equipe (handoff 9d) — sinon statut neutre.
+                              let myResult = '';
+                              if (isPlayedMatch && (isMyHomeTeam || isMyAwayTeam)) {
+                                const myScore = Number(isMyHomeTeam ? match.homeScore : match.awayScore);
+                                const otherScore = Number(isMyHomeTeam ? match.awayScore : match.homeScore);
+                                if (Number.isFinite(myScore) && Number.isFinite(otherScore)) {
+                                  if (myScore > otherScore) myResult = 'V';
+                                  else if (myScore < otherScore) myResult = 'D';
+                                  else myResult = 'N';
+                                }
+                              }
+                              let resultChipColor = Colors.neutral300;
+                              if (myResult === 'V') resultChipColor = Colors.success500;
+                              else if (myResult === 'D') resultChipColor = Colors.error500;
+                              let homeAwayLabel = '';
+                              if (isMyHomeTeam) homeAwayLabel = 'Domicile';
+                              else if (isMyAwayTeam) homeAwayLabel = 'Extérieur';
+                              const statusLabel = isPlayedMatch
                                 ? t('teamDetails.calendar.status.played', 'Terminé')
-                                : t('teamDetails.calendar.status.upcoming', 'A venir');
+                                : t('teamDetails.calendar.status.upcoming', 'À venir');
                               const dateLabel = match._dateObj
                                 ? match._dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', weekday: 'short' })
                                 : t('teamDetails.calendar.dateUnknown', 'Date à confirmer');
@@ -3732,21 +3750,38 @@ function TeamDetails({ navigation, route }) {
                                   ]}
                                 >
                                   <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[8]]}>
-                                    <Text style={[Fonts.p3, Fonts.primary100]}>
-                                      {`${dateLabel} - ${timeLabel}`}
+                                    <Text numberOfLines={1} style={[Fonts.p3, Fonts.primary100, { flexShrink: 1 }]}>
+                                      {`${dateLabel} - ${timeLabel}${homeAwayLabel ? ` · ${homeAwayLabel}` : ''}`}
                                     </Text>
-                                    <View
-                                      style={[
-                                        Spaces.paddingVertical[4],
-                                        Spaces.paddingHorizontal[10],
-                                        ApplicationStyle.borderRadius24,
-                                        { backgroundColor: match._isPlayed ? '#FFFFFF22' : `${Colors.primary500}22` },
-                                      ]}
-                                    >
-                                      <Text style={[Fonts.p3Bold, match._isPlayed ? Fonts.neutral00 : Fonts.primary500]}>
-                                        {statusLabel}
-                                      </Text>
-                                    </View>
+                                    {myResult ? (
+                                      <View
+                                        style={{
+                                          alignItems: 'center',
+                                          backgroundColor: `${resultChipColor}29`,
+                                          borderRadius: 8,
+                                          height: 26,
+                                          justifyContent: 'center',
+                                          width: 26,
+                                        }}
+                                      >
+                                        <Text style={[Fonts.p3Bold, { color: resultChipColor }]}>
+                                          {myResult}
+                                        </Text>
+                                      </View>
+                                    ) : (
+                                      <View
+                                        style={[
+                                          Spaces.paddingVertical[4],
+                                          Spaces.paddingHorizontal[10],
+                                          ApplicationStyle.borderRadius24,
+                                          { backgroundColor: isPlayedMatch ? '#FFFFFF22' : `${Colors.primary500}22` },
+                                        ]}
+                                      >
+                                        <Text style={[Fonts.p3Bold, isPlayedMatch ? Fonts.neutral00 : Fonts.primary500]}>
+                                          {statusLabel}
+                                        </Text>
+                                      </View>
+                                    )}
                                   </View>
 
                                   <View style={[Alignments.row, Alignments.alignCenter]}>
@@ -3756,7 +3791,7 @@ function TeamDetails({ navigation, route }) {
                                       </Text>
                                       {isMyHomeTeam ? (
                                         <Text style={[Fonts.p3, Fonts.primary100]}>
-                                          {t('teamDetails.calendar.you', 'Vous')}
+                                          {t('teamDetails.calendar.you', 'Toi')}
                                         </Text>
                                       ) : null}
                                     </View>
@@ -3782,7 +3817,7 @@ function TeamDetails({ navigation, route }) {
                                       </Text>
                                       {isMyAwayTeam ? (
                                         <Text style={[Fonts.p3, Fonts.primary100]}>
-                                          {t('teamDetails.calendar.you', 'Vous')}
+                                          {t('teamDetails.calendar.you', 'Toi')}
                                         </Text>
                                       ) : null}
                                     </View>
