@@ -71,7 +71,6 @@ export const RouteNames = /** @type {const} */ ({
   MatchStatsEditor: 'MatchStatsEditor',
   MercatoFilters: 'MercatoFilters',
   MissingPlayersView: 'MissingPlayersView',
-  MissionCenter: 'MissionCenter',
   MultisportClubDetails: 'MultisportClubDetails',
   MultisportClubEdit: 'MultisportClubEdit',
   MyClubs: 'MyClubs',

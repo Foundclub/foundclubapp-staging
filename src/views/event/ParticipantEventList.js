@@ -24,7 +24,6 @@ import {
   FeaturedEvents,
   JoinEventModal,
   LeagueHeaderSwitch,
-  MissionDock,
   NotificationBadge,
   ProfileButton,
 } from '@/views/event/ParticipantEventListDeferred';
@@ -517,9 +516,7 @@ function ParticipantEventList({ navigation }) {
         </View>
 
         {shouldLoadSecondaryPlanningData ? (
-          <Suspense fallback={null}>
-            <MissionDock />
-          </Suspense>
+          <Suspense fallback={null} />
         ) : null}
 
         {/* Calendar Section */}

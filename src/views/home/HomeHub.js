@@ -37,7 +37,6 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
-import MissionHomeCard from '@/components/molecules/guidance/MissionHomeCard';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
@@ -866,12 +865,6 @@ function HomeHubContent({ auth, navigation, route }) {
     scrollToTutorialTarget,
     scrollToTop,
   ]);
-
-  const handleOpenMissionCenter = useCallback(() => {
-    navigation.navigate(RouteNames.MissionCenter, {
-      initialTab: 'next',
-    });
-  }, [navigation]);
 
   const openFeatureTutorialPicker = useCallback(() => {
     setActiveTutorialModal('feature');
@@ -1947,20 +1940,11 @@ function HomeHubContent({ auth, navigation, route }) {
       tone: 'destructive',
       tutorial: makeTutorial('accountLogout', 51, 'Déconnexion', 'Déconnectez-vous proprement de l\'appareil actuel.'),
     },
-    {
-      accentColor: Colors.primary500,
-      icon: 'trophy',
-      key: 'account-missions-center',
-      onPress: handleOpenMissionCenter,
-      subtitle: t('homeHub.cards.account.missions.subtitle', 'Consulte ta progression FoundClub.'),
-      title: t('homeHub.cards.account.missions.title', 'Missions'),
-    },
   ]), [
     Colors.error500,
     Colors.primary500,
     handleLogout,
     handleOpenAccountSwitcher,
-    handleOpenMissionCenter,
     logoutMutation.isPending,
     makeTutorial,
     t,
@@ -2008,8 +1992,6 @@ function HomeHubContent({ auth, navigation, route }) {
             <Text style={[Fonts.p2Bold, Fonts.primary500]}>{roleLabel.toUpperCase()}</Text>
           </View>
         </OnboardingWrapper>
-
-        <MissionHomeCard />
 
         <View onLayout={(event) => registerSectionAnchor('manage', event)} ref={(node) => registerSectionViewRef('manage', node)}>
           {isPublishingGovernedBlocked ? (

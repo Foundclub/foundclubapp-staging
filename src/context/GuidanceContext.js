@@ -32,7 +32,6 @@ import {
 } from '@/domains/guidance/guidanceStorage';
 
 import { navigate as navigateRoot } from '@/navigation/navigationService';
-import { RouteNames } from '@/navigation/routeNames';
 
 import { patchGuidanceState } from '@/services/guidance/guidanceService';
 
@@ -48,8 +47,6 @@ const GuidanceContext = createContext({
   markMissionViewed: () => {},
   missionState: createEmptyGuidanceState(),
   openMission: () => false,
-  openMissionCenter: () => false,
-  openMissionDetail: () => false,
   programs: [],
   resetGuidanceProgress: () => {},
   snapshot: {
@@ -90,6 +87,9 @@ export function GuidanceProvider({ children }) {
     appBootstrapData,
     canEditClub,
     canManageTeam,
+    entitlementsSummary,
+    freeUsageSummary,
+    subscriptionAccessLevel,
     userData,
   } = useAuth();
   const { isGold } = useAppMode();
@@ -116,9 +116,20 @@ export function GuidanceProvider({ children }) {
   const audienceContext = useMemo(() => buildGuidanceAudienceContext({
     canEditClub,
     canManageTeam,
+    entitlementsSummary,
+    freeUsageSummary,
     isGold,
+    subscriptionAccessLevel,
     userData,
-  }), [canEditClub, canManageTeam, isGold, userData]);
+  }), [
+    canEditClub,
+    canManageTeam,
+    entitlementsSummary,
+    freeUsageSummary,
+    isGold,
+    subscriptionAccessLevel,
+    userData,
+  ]);
 
   useEffect(() => {
     currentUserIdRef.current = currentUserId;
@@ -550,17 +561,6 @@ export function GuidanceProvider({ children }) {
     return navigateRoot(routeName, routeParams);
   }, []);
 
-  const openMissionCenter = useCallback((params = {}) => navigateRoot(RouteNames.MissionCenter, params), []);
-
-  const openMissionDetail = useCallback((missionId) => {
-    if (!missionId) return false;
-    markMissionViewed(missionId);
-    return navigateRoot(RouteNames.MissionCenter, {
-      focusMissionId: missionId,
-      openDetail: true,
-    });
-  }, [markMissionViewed]);
-
   const resetGuidanceProgress = useCallback(() => {
     if (currentUserId) {
       clearStoredGuidanceState(currentUserId);
@@ -591,8 +591,6 @@ export function GuidanceProvider({ children }) {
     markMissionViewed,
     missionState: snapshot.preparedState,
     openMission,
-    openMissionCenter,
-    openMissionDetail,
     programs: snapshot.programs,
     reopenDock,
     resetGuidanceProgress,
@@ -606,8 +604,6 @@ export function GuidanceProvider({ children }) {
     isHydrated,
     markMissionViewed,
     openMission,
-    openMissionCenter,
-    openMissionDetail,
     reopenDock,
     resetGuidanceProgress,
     snapshot,

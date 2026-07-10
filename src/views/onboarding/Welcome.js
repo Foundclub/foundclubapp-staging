@@ -142,6 +142,10 @@ function Welcome({ navigation }) {
 
   const handleContinue = () => {
     finalizeOnboarding();
+    // Tour leger joueur (4 etapes, zero vente) : demarre a la sortie du Welcome.
+    if (roleKey === 'player' && startTour('player')) {
+      return;
+    }
     navigateAfterOnboarding(getPostOnboardingHomeRoute());
   };
 

@@ -23,6 +23,9 @@ const NEXT_PHASE_MS = Platform.OS === 'web' ? 2600 : 2200;
 const EXIT_DURATION_MS = 220;
 const IS_WEB = Platform.OS === 'web';
 
+/**
+ *
+ */
 function MissionCelebrationHost() {
   const { Colors, Fonts } = useTheme();
   const insets = useSafeAreaInsets();
@@ -30,7 +33,6 @@ function MissionCelebrationHost() {
     activeCelebration,
     dismissCelebration,
     openMission,
-    openMissionCenter,
     snapshot,
   } = useGuidance();
   const [phase, setPhase] = useState('success');
@@ -183,7 +185,7 @@ function MissionCelebrationHost() {
       return;
     }
 
-    openMissionCenter({ initialTab: 'atlas' });
+    // Centre de missions supprime (tour v2) : la celebration se ferme simplement.
     dismissCelebration();
   };
 

@@ -26,7 +26,6 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
-import MissionDock from '@/components/molecules/guidance/MissionDock';
 import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedItem';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -785,7 +784,6 @@ function RequestsHub({ navigation, route }) {
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
           {t('requestsHub.title', 'Demandes')}
         </Text>
-        <MissionDock />
         <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginBottom[8]]}>
           {filterChips.map((chip) => {
             const isActive = chip.key === activeFilter;

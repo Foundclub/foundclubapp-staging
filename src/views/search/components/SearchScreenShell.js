@@ -13,7 +13,6 @@ import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
 import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
-import MissionDock from '@/components/molecules/guidance/MissionDock';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -255,8 +254,6 @@ function SearchScreenShell({
           />
         </View>
       )}
-
-      <MissionDock style={{ marginTop: 16 }} />
 
       <View style={[Alignments.fill, Spaces.marginTop[4]]}>
         {children}

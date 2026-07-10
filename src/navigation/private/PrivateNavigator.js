@@ -532,13 +532,6 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          getComponent={() => require('@/views/guidance/MissionCenter').default}
-          name={RouteNames.MissionCenter}
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
           getComponent={() => require('@/views/guidance/GuideOffersRecap').default}
           name={RouteNames.GuideOffersRecap}
           options={{
