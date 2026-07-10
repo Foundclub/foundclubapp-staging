@@ -2382,17 +2382,20 @@ function TeamDetails({ navigation, route }) {
         Alignments.justifyCenter,
         Alignments.alignCenter]}
       >
-        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {t(`teamDetails.${isMyTeam ? 'myTitle' : 'title'}`).toUpperCase()}
+        <Text numberOfLines={1} style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}>
+          {String(team?.name || t(`teamDetails.${isMyTeam ? 'myTitle' : 'title'}`)).toUpperCase()}
         </Text>
         <View style={[
           ApplicationStyle.separator,
           ApplicationStyle.backgroundColor.neutral00,
-          { width: 120 }]}
+          { width: 90 }]}
         />
-        {primaryActivityLabel ? (
-          <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-            {primaryActivityLabel.toUpperCase()}
+        {primaryActivityLabel || team?.club?.name ? (
+          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.primary500, { letterSpacing: 1 }]}>
+            {[primaryActivityLabel, team?.club?.name]
+              .filter(Boolean)
+              .join(' · ')
+              .toUpperCase()}
           </Text>
         ) : null}
       </View>
@@ -2424,7 +2427,7 @@ function TeamDetails({ navigation, route }) {
             ? renderTab('calendar', t('teamDetails.tabs.calendar', 'Calendrier'))
             : null}
           {showStatsTab
-            ? renderTab('stats', t('teamDetails.tabs.stats', 'Statistiques'))
+            ? renderTab('stats', t('teamDetails.tabs.stats', 'Stats'))
             : null}
         </View>
       ) : null}
