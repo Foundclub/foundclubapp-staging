@@ -34,6 +34,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamLocationIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
 import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
@@ -166,6 +167,7 @@ function TeamDetails({ navigation, route }) {
 
   const [activeTab, setActiveTab] = useState('infos');
   const [statsMode, setStatsMode] = useState(/** @type {'attendance' | 'performance'} */ ('attendance'));
+  const [selectedStatsPlayer, setSelectedStatsPlayer] = useState(/** @type {any} */ (null));
   const [isCreateTrainerModalVisible, setIsCreateTrainerModalVisible] = useState(false);
   const [isTrainerPickerVisible, setIsTrainerPickerVisible] = useState(false);
   const [selectedTrainerIds, setSelectedTrainerIds] = useState(/** @type {string[]} */ ([]));
@@ -1608,6 +1610,24 @@ function TeamDetails({ navigation, route }) {
           screen: RouteNames.UserDetails,
         });
       }
+    }
+  };
+
+  // Ouvre une conversation privee avec un·e joueur·se (handoff 10d).
+  const handleWriteToPlayer = async (/** @type {any} */ playerUser) => {
+    const playerDocumentId = playerUser?.documentId;
+    if (!playerDocumentId) return;
+    setSelectedStatsPlayer(null);
+    try {
+      const chat = await startWhisperChat([playerDocumentId]);
+      if (chat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+      }
+    } catch (contactError) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        getErrorMessage(contactError, 'Impossible de démarrer la conversation.'),
+      );
     }
   };
 
@@ -4073,8 +4093,17 @@ function TeamDetails({ navigation, route }) {
                             const playerName = `${row?.user?.firstname || ''} ${row?.user?.lastname || ''}`.trim()
                               || 'Joueur·se';
                             return (
-                              <View
+                              <TouchableOpacity
                                 key={row?.user?.documentId || `stats-${index}`}
+                                onPress={() => setSelectedStatsPlayer({
+                                  attendance,
+                                  denominator,
+                                  lateCount,
+                                  playerName,
+                                  presenceRatio,
+                                  row,
+                                  rowTone,
+                                })}
                                 style={[
                                   Alignments.row,
                                   Alignments.alignCenter,
@@ -4128,7 +4157,8 @@ function TeamDetails({ navigation, route }) {
                                 <Text style={[Fonts.p3Bold, { color: rowTone }]}>
                                   {`${attendance}/${denominator}`}
                                 </Text>
-                              </View>
+                                <Text style={[Fonts.p2, Fonts.neutral400]}>›</Text>
+                              </TouchableOpacity>
                             );
                           })
                         ) : (
@@ -4686,6 +4716,154 @@ function TeamDetails({ navigation, route }) {
         </View>
       </Modal>
 
+      <BottomModal
+        close={() => setSelectedStatsPlayer(null)}
+        isVisible={Boolean(selectedStatsPlayer)}
+      >
+        {selectedStatsPlayer ? (
+          <View style={[Spaces.gap[16], Spaces.paddingBottom[16]]}>
+            <View style={[Alignments.alignCenter, Spaces.gap[8]]}>
+              <MemberAvatar
+                avatarUrl={selectedStatsPlayer.row?.user?.avatar?.url
+                  ? getImageUrl(selectedStatsPlayer.row.user.avatar.url)
+                  : null}
+                firstname={selectedStatsPlayer.row?.user?.firstname}
+                lastname={selectedStatsPlayer.row?.user?.lastname}
+                outlined
+                size={74}
+              />
+              <Text style={[Fonts.h3Bold, Fonts.neutral00, Fonts.textCenter]}>
+                {selectedStatsPlayer.playerName}
+              </Text>
+              {team?.category?.name ? (
+                <View
+                  style={{
+                    backgroundColor: `${Colors.primary500}1F`,
+                    borderRadius: 999,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                  }}
+                >
+                  <Text style={[Fonts.p4Bold, Fonts.primary200]}>
+                    {team.category.name}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            <View style={[Spaces.gap[8]]}>
+              <Text
+                style={[
+                  Fonts.p4Bold,
+                  Fonts.neutral300,
+                  { letterSpacing: 1, textTransform: 'uppercase' },
+                ]}
+              >
+                Vie d&apos;équipe
+              </Text>
+              <View
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  borderColor: 'rgba(255,255,255,0.09)',
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                }}
+              >
+                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+                  <Text style={[Fonts.p3Bold, Fonts.neutral100]}>Présences</Text>
+                  <Text style={[Fonts.p3Bold, { color: selectedStatsPlayer.rowTone }]}>
+                    {`${selectedStatsPlayer.attendance}/${selectedStatsPlayer.denominator} · ${Math.round(selectedStatsPlayer.presenceRatio * 100)} %`}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.08)',
+                    borderRadius: 999,
+                    height: 6,
+                    marginTop: 9,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: selectedStatsPlayer.rowTone,
+                      borderRadius: 999,
+                      height: '100%',
+                      width: `${Math.min(100, Math.round(selectedStatsPlayer.presenceRatio * 100))}%`,
+                    }}
+                  />
+                </View>
+                <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[8]]}>
+                  {`${selectedStatsPlayer.lateCount} retard${selectedStatsPlayer.lateCount > 1 ? 's' : ''} · ${Number(selectedStatsPlayer.row?.absenceCount || 0)} absence${Number(selectedStatsPlayer.row?.absenceCount || 0) > 1 ? 's' : ''}`}
+                </Text>
+              </View>
+            </View>
+
+            {(() => {
+              const perfEntry = teamPerformancePlayers.find(
+                (/** @type {any} */ perf) => perf?.documentId
+                  && perf.documentId === selectedStatsPlayer.row?.user?.documentId,
+              );
+              if (!perfEntry) return null;
+              const perfStats = performanceSummary.sport === 'basketball'
+                ? [
+                  { label: 'matchs', value: String(Number(perfEntry?.matches || 0)) },
+                  { label: 'points', value: String(Number(perfEntry?.points || 0)) },
+                  { label: 'passes', value: String(Number(perfEntry?.assists || 0)) },
+                ]
+                : [
+                  { label: 'matchs', value: String(Number(perfEntry?.matches || 0)) },
+                  { label: 'buts', value: String(Number(perfEntry?.goals || 0)) },
+                  { label: 'temps de jeu', value: `${Number(perfEntry?.minutesPlayed || 0)} min` },
+                ];
+              return (
+                <View style={[Spaces.gap[8]]}>
+                  <Text
+                    style={[
+                      Fonts.p4Bold,
+                      Fonts.neutral300,
+                      { letterSpacing: 1, textTransform: 'uppercase' },
+                    ]}
+                  >
+                    Performance · saison
+                  </Text>
+                  <View
+                    style={[
+                      Alignments.row,
+                      {
+                        backgroundColor: 'rgba(4,31,44,0.82)',
+                        borderColor: 'rgba(1,179,244,0.24)',
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        paddingHorizontal: 6,
+                        paddingVertical: 13,
+                      },
+                    ]}
+                  >
+                    {perfStats.map((stat) => (
+                      <View key={stat.label} style={[Alignments.alignCenter, { flex: 1 }]}>
+                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{stat.value}</Text>
+                        <Text style={[Fonts.p4, Fonts.neutral400, { marginTop: 2 }]}>{stat.label}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              );
+            })()}
+
+            {selectedStatsPlayer.row?.user?.documentId
+              && selectedStatsPlayer.row.user.documentId !== currentUser?.documentId ? (
+                <Button
+                  onPress={() => handleWriteToPlayer(selectedStatsPlayer.row?.user)}
+                  title={`Écrire à ${selectedStatsPlayer.row?.user?.firstname || 'ce membre'}`}
+                  variant="Secondary"
+                />
+              ) : null}
+          </View>
+        ) : null}
+      </BottomModal>
       <CreateTrainerModal
         clubId={team?.club?.documentId}
         isVisible={isCreateTrainerModalVisible}
