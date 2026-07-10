@@ -61,6 +61,7 @@ export const RouteNames = /** @type {const} */ ({
   FacilityList: 'FacilityList',
   FeaturedRequests: 'FeaturedRequests',
   FeaturedRequestsList: 'FeaturedRequestsList',
+  GuideOffersRecap: 'GuideOffersRecap',
   HighlightRequestsInbox: 'HighlightRequestsInbox',
   HomeTab: 'HomeTab',
   LicenseCheckoutStatus: 'LicenseCheckoutStatus',
@@ -105,6 +106,7 @@ export const RouteNames = /** @type {const} */ ({
   SquadDetails: 'SquadDetails', // New route for League Squad Details
   SquadEdit: 'SquadEdit',
   SubscriptionOverview: 'SubscriptionOverview',
+  SubscriptionSuccess: 'SubscriptionSuccess',
   SuperAdminContentExplorer: 'SuperAdminContentExplorer',
   SuperAdminDashboard: 'SuperAdminDashboard',
   SuperAdminEntryDetail: 'SuperAdminEntryDetail',
