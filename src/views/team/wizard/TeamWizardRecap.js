@@ -84,6 +84,9 @@ function TeamWizardRecap({ navigation }) {
   }), [state]);
 
   const createTeamMutation = useMutation({
+    // Erreurs gerees localement (sheet de quota ou alerte dediee) : on coupe
+    // l'alerte globale onMutationError pour eviter le double affichage.
+    meta: { preventToastError: true },
     mutationFn: createTeam,
     onError: (error) => {
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);

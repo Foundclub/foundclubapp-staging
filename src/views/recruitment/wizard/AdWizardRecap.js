@@ -161,6 +161,7 @@ function AdWizardRecap({ navigation }) {
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   const createAdMutation = useMutation({
+    meta: { preventToastError: true },
     mutationFn: createRecruitmentAd,
   });
   const isCoachAd = state?.audienceType === 'coach';
