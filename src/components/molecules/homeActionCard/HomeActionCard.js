@@ -8,9 +8,24 @@ import {
 import useTheme from '@/theme/themeContext';
 
 /**
- * @typedef {'half' | 'full'} HomeCardLayout
  * @typedef {'default' | 'primary'} HomeCardEmphasis
+ * @typedef {'default' | 'destructive'} HomeCardTone
+ * @typedef {{ bottom?: number; height?: number; right?: number; width?: number }} HomeCardIllustrationPlacement
  */
+
+const DEFAULT_ILLUSTRATION_PLACEMENT = {
+  bottom: -26,
+  height: 138,
+  right: -20,
+  width: 138,
+};
+
+const GHOST_ICON_PLACEMENT = {
+  bottom: -20,
+  height: 112,
+  right: -16,
+  width: 112,
+};
 
 /**
  * Home action card used by the HomeHub sections.
@@ -21,8 +36,10 @@ import useTheme from '@/theme/themeContext';
  * @param {boolean} [props.disabled]
  * @param {keyof import('@/theme/types').AllImages} [props.icon]
  * @param {string} [props.accentColor]
- * @param {HomeCardLayout} [props.layout]
+ * @param {import('react-native').ImageSourcePropType} [props.illustration]
+ * @param {HomeCardIllustrationPlacement} [props.illustrationPlacement]
  * @param {HomeCardEmphasis} [props.emphasis]
+ * @param {HomeCardTone} [props.tone]
  * @param {1 | 2} [props.subtitleLines]
  * @param {((node: any) => void) | { current: any }} [props.tutorialTargetRef]
  * @returns {import('react').ReactElement}
@@ -32,11 +49,13 @@ function HomeActionCard({
   disabled = false,
   emphasis = 'default',
   icon = 'search',
-  layout = 'half',
+  illustration,
+  illustrationPlacement,
   onPress,
   subtitle,
   subtitleLines = 2,
   title,
+  tone = 'default',
   tutorialTargetRef,
 }) {
   const {
@@ -49,12 +68,16 @@ function HomeActionCard({
   } = useTheme();
 
   const resolvedAccentColor = accentColor || Colors.primary500;
-  const accentBorderColor = emphasis === 'primary'
-    ? resolvedAccentColor
-    : `${resolvedAccentColor}CC`;
-  const borderColor = disabled ? `${resolvedAccentColor}66` : accentBorderColor;
-  const minHeight = layout === 'full' ? 148 : 172;
-  const cardBackgroundColor = disabled ? 'rgba(23, 56, 68, 0.62)' : 'rgba(23, 56, 68, 0.96)';
+  let borderColor = `${resolvedAccentColor}47`;
+  if (emphasis === 'primary') {
+    borderColor = resolvedAccentColor;
+  } else if (tone === 'destructive') {
+    borderColor = `${resolvedAccentColor}61`;
+  }
+  const resolvedIllustrationPlacement = {
+    ...DEFAULT_ILLUSTRATION_PLACEMENT,
+    ...(illustrationPlacement || {}),
+  };
 
   return (
     <Pressable
@@ -82,25 +105,56 @@ function HomeActionCard({
         style={[
           ApplicationStyle.card,
           {
-            backgroundColor: cardBackgroundColor,
+            backgroundColor: `${Colors.primary700}59`,
             borderColor,
             borderRadius: 16,
             borderWidth: 1,
             justifyContent: 'space-between',
-            minHeight,
+            minHeight: 140,
+            overflow: 'hidden',
             paddingHorizontal: 16,
             paddingVertical: 16,
           },
         ]}
       >
-        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+        {illustration ? (
+          <Image
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            resizeMode="contain"
+            source={illustration}
+            style={{
+              bottom: resolvedIllustrationPlacement.bottom,
+              height: resolvedIllustrationPlacement.height,
+              position: 'absolute',
+              right: resolvedIllustrationPlacement.right,
+              width: resolvedIllustrationPlacement.width,
+            }}
+          />
+        ) : (
+          <Image
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            resizeMode="contain"
+            source={Images[icon]}
+            style={{
+              bottom: GHOST_ICON_PLACEMENT.bottom,
+              height: GHOST_ICON_PLACEMENT.height,
+              opacity: 0.12,
+              position: 'absolute',
+              right: GHOST_ICON_PLACEMENT.right,
+              width: GHOST_ICON_PLACEMENT.width,
+            }}
+            tintColor={resolvedAccentColor}
+          />
+        )}
+
+        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, { position: 'relative', zIndex: 1 }]}>
           <View
             style={{
               alignItems: 'center',
-              backgroundColor: `${resolvedAccentColor}24`,
-              borderColor: `${resolvedAccentColor}66`,
+              backgroundColor: `${resolvedAccentColor}1F`,
               borderRadius: 12,
-              borderWidth: 1,
               height: 38,
               justifyContent: 'center',
               width: 38,
@@ -115,8 +169,8 @@ function HomeActionCard({
           <View
             style={{
               alignItems: 'center',
-              backgroundColor: `${resolvedAccentColor}22`,
-              borderColor: `${resolvedAccentColor}55`,
+              backgroundColor: `${resolvedAccentColor}1A`,
+              borderColor: `${resolvedAccentColor}66`,
               borderRadius: 10,
               borderWidth: 1,
               height: 26,
@@ -132,9 +186,18 @@ function HomeActionCard({
           </View>
         </View>
 
-        <View style={[Spaces.marginTop[16], Spaces.gap[8]]}>
-          <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
-          <Text numberOfLines={subtitleLines} style={[Fonts.p3, Fonts.neutral200]}>{subtitle}</Text>
+        <View style={[Spaces.marginTop[16], Spaces.gap[8], { position: 'relative', zIndex: 1 }]}>
+          <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { fontSize: 13.5, lineHeight: 20 }]}>{title}</Text>
+          <Text
+            numberOfLines={subtitleLines}
+            style={[
+              Fonts.small,
+              Fonts.neutral200,
+              subtitleLines === 2 && { minHeight: 32 },
+            ]}
+          >
+            {subtitle}
+          </Text>
         </View>
       </View>
     </Pressable>

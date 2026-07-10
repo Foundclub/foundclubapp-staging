@@ -1122,7 +1122,7 @@ export default {
   },
   homeHub: {
     account: {
-      logoutDescription: 'Voulez-vous vous déconnecter de votre compte ?',
+      logoutDescription: 'Veux-tu te déconnecter de ton compte ?',
       logoutTitle: 'Déconnexion',
     },
     alerts: {
@@ -1146,11 +1146,15 @@ export default {
     cards: {
       account: {
         logout: {
-          subtitle: 'Fermer votre session sur cet appareil.',
+          subtitle: 'Ferme ta session sur cet appareil.',
           title: 'Déconnexion',
         },
+        missions: {
+          subtitle: 'Consulte ta progression FoundClub.',
+          title: 'Missions',
+        },
         switch: {
-          subtitle: 'Basculer vers un autre compte connecte.',
+          subtitle: 'Bascule vers un autre compte connecté.',
           title: 'Changer de compte',
         },
         tutorial: {
@@ -1159,16 +1163,16 @@ export default {
         },
       },
       league: {
-        subtitle: 'Accéder à FoundClub League et à ses fonctionnalités compétitives.',
+        subtitle: 'Le mode compétitif de FoundClub.',
         title: 'FoundClub League',
       },
       manage: {
         addAd: {
-          subtitle: 'Publier une annonce pour rechercher un profil particulier.',
+          subtitle: 'Publie une annonce de recrutement.',
           title: 'Ajouter une annonce',
         },
         addEvent: {
-          subtitle: "Cr\u00e9e rapidement un entra\u00eenement, match ou s\u00e9ance d'essai.",
+          subtitle: 'Cr\u00e9e un entra\u00eenement, un match\u2026',
           title: 'Ajouter un \u00e9v\u00e9nement',
         },
         clubRequests: {
@@ -1179,12 +1183,20 @@ export default {
           subtitle: 'Traite les demandes d \u00e9v\u00e9nements \u00e0 la une du club.',
           title: 'Demandes \u00e9v\u00e9nements \u00e0 la une',
         },
+        licenses: {
+          subtitle: 'Suis les statuts de tes membres.',
+          title: 'Cotisations',
+        },
         manageClub: {
-          subtitle: 'Acc\u00e9dez \u00e0 votre espace club pour piloter votre organisation.',
+          subtitle: 'Ton espace club pour tout piloter.',
           title: 'G\u00e9rer mon club',
         },
+        myAds: {
+          subtitle: 'Consulte et g\u00e8re tes annonces.',
+          title: 'Mes annonces',
+        },
         requests: {
-          subtitle: 'Traitez toutes les demandes de votre organisation depuis un seul écran.',
+          subtitle: 'Traite les demandes de ton organisation.',
           title: 'Demandes',
         },
         teamRequests: {
@@ -1194,33 +1206,41 @@ export default {
       },
       profile: {
         alerts: {
-          subtitle: 'Créer des alertes pour recevoir des notifications personnalisees selon vos recherches.',
+          subtitle: 'Reçois des notifications ciblées.',
           title: 'G\u00e9rer mes alertes',
         },
         edit: {
-          subtitle: 'Mettre à jour vos informations personnelles et sportives.',
+          subtitle: 'Mets à jour tes informations.',
           title: 'Modifier mon profil',
         },
         history: {
-          subtitle: 'Ajouter ou ajuster votre historique sportif.',
+          subtitle: 'Ajoute ou ajuste ton parcours.',
           title: 'Historique sportif',
         },
+        subscription: {
+          fallbackSubtitle: 'Consulte tes offres, quotas gratuits et équipes couvertes.',
+          title: 'Mon abonnement',
+        },
         view: {
-          subtitle: 'Consulter les informations de votre compte.',
+          subtitle: 'Consulte les infos de ton profil.',
           title: 'Voir mon profil',
         },
       },
       quick: {
         chat: {
-          subtitle: 'Ouvrir rapidement votre messagerie.',
+          subtitle: 'Ouvre ta messagerie.',
           title: 'Messagerie',
         },
+        license: {
+          subtitle: 'Ton statut et ton reste à payer.',
+          title: 'Ma cotisation',
+        },
         planning: {
-          subtitle: 'Retrouver vos événements à venir et votre planning personnel.',
+          subtitle: 'Retrouve tes événements à venir.',
           title: 'Mon planning',
         },
         teams: {
-          subtitle: 'Accéder à vos équipes et à leurs informations.',
+          subtitle: 'Accède à tes équipes et leurs infos.',
           title: 'Mes équipes',
         },
       },
@@ -1230,15 +1250,19 @@ export default {
           title: 'Annonces',
         },
         clubs: {
-          subtitle: 'Trouver votre page club pour voir toutes ses informations.',
+          subtitle: 'Trouve la page d\u2019un club.',
           title: 'Club',
         },
         events: {
-          subtitle: "Trouve des d\u00e9tections, s\u00e9ances d'essai, entra\u00eenements et matchs.",
+          subtitle: 'D\u00e9tections, s\u00e9ances d\u2019essai, matchs\u2026',
           title: '\u00c9v\u00e9nement',
         },
+        profiles: {
+          subtitle: 'Trouve des profils ouverts.',
+          title: 'Profils',
+        },
         reservations: {
-          subtitle: 'R\u00e9serve rapidement un terrain (foot \u00e0 5, padel, etc.).',
+          subtitle: 'R\u00e9serve un terrain (foot \u00e0 5\u2026).',
           title: 'Réservations',
         },
       },

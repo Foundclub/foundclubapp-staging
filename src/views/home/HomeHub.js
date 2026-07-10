@@ -90,8 +90,11 @@ const ScreenContainerView = /** @type {any} */ (ScreenContainer);
  *  disabled?: boolean;
  *  icon?: any;
  *  accentColor?: string;
+ *  illustration?: import('react-native').ImageSourcePropType;
+ *  illustrationPlacement?: { bottom?: number; height?: number; right?: number; width?: number };
  *  layout?: 'half' | 'full';
  *  emphasis?: 'default' | 'primary';
+ *  tone?: 'default' | 'destructive';
  *  subtitleLines?: 1 | 2;
  *  tutorial?: any;
  * }} HomeCard
@@ -157,11 +160,13 @@ function HomeSection({
               disabled={card.disabled}
               emphasis={card.emphasis}
               icon={card.icon}
-              layout={isFullCard ? 'full' : 'half'}
+              illustration={card.illustration}
+              illustrationPlacement={card.illustrationPlacement}
               onPress={card.onPress}
               subtitle={card.subtitle}
               subtitleLines={card.subtitleLines}
               title={card.title}
+              tone={card.tone}
               tutorialTargetRef={card.tutorial ? assignTutorialTargetRef : undefined}
             />
           );
@@ -1417,7 +1422,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'users',
           key: 'manage-club',
           onPress: handleOpenManageClub,
-          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Accédez à votre espace club et gérez votre organisation.'),
+          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Ton espace club pour tout piloter.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.manageClub.title', 'Gérer mon club'),
           tutorial: makeTutorial('manageClub', 2, 'Gérer mon club', 'Accédez à votre espace club pour piloter votre organisation.'),
@@ -1458,7 +1463,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'running',
           key: 'manage-add-ad',
           onPress: handleAddRecruitmentAd,
-          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publiez une annonce pour rechercher un profil précis.'),
+          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publie une annonce de recrutement.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
           tutorial: makeTutorial(
@@ -1479,7 +1484,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'running',
           key: 'manage-my-ads',
           onPress: handleOpenMyRecruitmentAds,
-          subtitle: t('homeHub.cards.manage.myAds.subtitle', 'Consultez et gérez les annonces de vos équipes.'),
+          subtitle: t('homeHub.cards.manage.myAds.subtitle', 'Consulte et gère tes annonces.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.myAds.title', 'Mes annonces'),
           tutorial: makeTutorial(
@@ -1500,7 +1505,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'euroCircle',
           key: 'manage-licenses',
           onPress: handleOpenClubLicenses,
-          subtitle: t('homeHub.cards.manage.licenses.subtitle', 'Suivez les paiements, relances et echeances des cotisations.'),
+          subtitle: t('homeHub.cards.manage.licenses.subtitle', 'Suis les statuts de tes membres.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.licenses.title', 'Cotisations'),
           tutorial: makeTutorial(
@@ -1527,7 +1532,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'users',
           key: 'manage-club',
           onPress: handleOpenManageClub,
-          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Accédez à votre espace club et gérez votre organisation.'),
+          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Ton espace club pour tout piloter.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.manageClub.title', 'Gérer mon club'),
           tutorial: makeTutorial('manageClub', 2, 'Gérer mon club', 'Accédez à votre espace club pour piloter votre organisation.'),
@@ -1563,7 +1568,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'running',
           key: 'manage-add-ad',
           onPress: handleAddRecruitmentAd,
-          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publiez une annonce pour rechercher un profil précis.'),
+          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publie une annonce de recrutement.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
           tutorial: makeTutorial(
@@ -1584,7 +1589,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'running',
           key: 'manage-my-ads',
           onPress: handleOpenMyRecruitmentAds,
-          subtitle: t('homeHub.cards.manage.myAds.subtitle', 'Consultez et gérez les annonces de vos équipes.'),
+          subtitle: t('homeHub.cards.manage.myAds.subtitle', 'Consulte et gère tes annonces.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.myAds.title', 'Mes annonces'),
           tutorial: makeTutorial(
@@ -1605,7 +1610,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'euroCircle',
           key: 'manage-licenses',
           onPress: handleOpenClubLicenses,
-          subtitle: t('homeHub.cards.manage.licensesCoach.subtitle', 'Suivez les statuts cotisation de vos joueurs et relancez si besoin.'),
+          subtitle: t('homeHub.cards.manage.licenses.subtitle', 'Suis les statuts de tes membres.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.licenses.title', 'Cotisations'),
           tutorial: makeTutorial(
@@ -1684,9 +1689,9 @@ function HomeHubContent({ auth, navigation, route }) {
         }),
         subtitle: t(
           'homeHub.cards.search.profiles.subtitle',
-          'Trouvez des profils ouverts a un club et lancez votre recrutement.',
+          'Trouve des profils ouverts.',
         ),
-        title: t('homeHub.cards.search.profiles.title', 'Rechercher des profils'),
+        title: t('homeHub.cards.search.profiles.title', 'Profils'),
         tutorial: makeTutorial(
           'searchProfiles',
           13,
@@ -1808,6 +1813,8 @@ function HomeHubContent({ auth, navigation, route }) {
     ];
 
     if (canShowSubscriptionExperience) {
+      const remainingFreeEvents = eventPublishQuotaItem?.remaining ?? 0;
+      const quotaPlural = remainingFreeEvents > 1 ? 's' : '';
       cards.unshift({
         accentColor: Colors.primary500,
         icon: 'euroCircle',
@@ -1815,9 +1822,10 @@ function HomeHubContent({ auth, navigation, route }) {
         layout: 'full',
         onPress: handleOpenSubscriptionOverview,
         subtitle: eventPublishQuotaItem
-          ? `${subscriptionStatusMeta.label} - ${eventPublishQuotaItem.remaining}/${eventPublishQuotaItem.total} evenement gratuit restant`
-          : 'Consultez vos offres, quotas gratuits et equipes couvertes.',
-        title: 'Mon abonnement',
+          ? `${subscriptionStatusMeta.label} · ${remainingFreeEvents} événement${quotaPlural} offert${quotaPlural} restant${quotaPlural}`
+          : t('homeHub.cards.profile.subscription.fallbackSubtitle', 'Consulte tes offres, quotas gratuits et équipes couvertes.'),
+        subtitleLines: 1,
+        title: t('homeHub.cards.profile.subscription.title', 'Mon abonnement'),
       });
     }
 
@@ -1863,7 +1871,7 @@ function HomeHubContent({ auth, navigation, route }) {
       icon: 'euroCircle',
       key: 'quick-license',
       onPress: handleOpenMyLicense,
-      subtitle: t('homeHub.cards.quick.license.subtitle', 'Consulte ton statut, le reste a payer et les moyens de paiement.'),
+      subtitle: t('homeHub.cards.quick.license.subtitle', 'Ton statut et ton reste à payer.'),
       title: t('homeHub.cards.quick.license.title', 'Ma cotisation'),
       tutorial: makeTutorial('quickLicense', 42, 'Ma cotisation', 'Suivez votre cotisation et vos paiements depuis l accueil.'),
     },
@@ -1918,6 +1926,7 @@ function HomeHubContent({ auth, navigation, route }) {
       onPress: handleLogout,
       subtitle: t('homeHub.cards.account.logout.subtitle'),
       title: t('homeHub.cards.account.logout.title'),
+      tone: 'destructive',
       tutorial: makeTutorial('accountLogout', 51, 'Déconnexion', 'Déconnectez-vous proprement de l\'appareil actuel.'),
     },
     {
@@ -1925,7 +1934,7 @@ function HomeHubContent({ auth, navigation, route }) {
       icon: 'trophy',
       key: 'account-missions-center',
       onPress: handleOpenMissionCenter,
-      subtitle: t('homeHub.cards.account.missions.subtitle', 'Consultez votre progression et ouvrez le centre des missions.'),
+      subtitle: t('homeHub.cards.account.missions.subtitle', 'Consulte ta progression FoundClub.'),
       title: t('homeHub.cards.account.missions.title', 'Missions'),
     },
   ]), [

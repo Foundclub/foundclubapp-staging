@@ -74,8 +74,8 @@ function MissionHomeCard() {
   }
 
   const expandedDescription = isCompleted
-    ? 'Votre progression principale est a jour. Vous pouvez revoir toutes les missions, revisiter les etapes terminees et relancer un guide si besoin.'
-    : currentMission?.rewardText || currentMission?.longDescription || 'Reprenez la mission en cours pour avancer vers les outils suivants.';
+    ? 'Ta progression principale est à jour. Tu peux revoir toutes les missions, revisiter les étapes terminées et relancer un guide si besoin.'
+    : currentMission?.rewardText || currentMission?.longDescription || 'Reprends la mission en cours pour avancer vers les outils suivants.';
 
   return (
     <View
@@ -106,7 +106,7 @@ function MissionHomeCard() {
                 /
                 {summary.totalCount || 1}
               </Text>
-              <Text style={[Fonts.p4Bold, Fonts.neutral300]}>{isExpanded ? 'REDUIRE' : 'DEPLIER'}</Text>
+              <Text style={[Fonts.p4Bold, Fonts.neutral300]}>{isExpanded ? 'RÉDUIRE' : 'DÉPLIER'}</Text>
             </View>
           </View>
 
@@ -118,51 +118,75 @@ function MissionHomeCard() {
         </View>
       </TouchableOpacity>
 
-      <View style={[isExpanded ? Spaces.gap[8] : Spaces.gap[4]]}>
-        {missionPreview.recentCompleted.map((mission) => (
-          <MissionStatusRow
-            description={mission.shortDescription}
-            isCompact={!isExpanded}
-            key={mission.id}
-            label="TERMINEE"
-            onPress={() => openMissionDetail(mission.id)}
-            title={mission.title}
-            tone="completed"
-          />
-        ))}
+      {!isExpanded && currentMission ? (
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => openMission(currentMission, { tutorialSource: 'home_card' })}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.paddingHorizontal[12],
+            Spaces.paddingVertical[8],
+            {
+              backgroundColor: `${Colors.primary500}1A`,
+              borderColor: `${Colors.primary500}47`,
+              borderRadius: 999,
+              borderWidth: 1,
+            },
+          ]}
+        >
+          <Text numberOfLines={1} style={[Fonts.small, Fonts.neutral100]}>
+            {'Prochaine étape : '}
+            <Text style={[Fonts.label, Fonts.neutral00]}>{currentMission.title}</Text>
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={[isExpanded ? Spaces.gap[8] : Spaces.gap[4]]}>
+          {missionPreview.recentCompleted.map((mission) => (
+            <MissionStatusRow
+              description={mission.shortDescription}
+              isCompact={!isExpanded}
+              key={mission.id}
+              label="TERMINÉE"
+              onPress={() => openMissionDetail(mission.id)}
+              title={mission.title}
+              tone="completed"
+            />
+          ))}
 
-        {currentMission ? (
-          <MissionStatusRow
-            description={currentMission.shortDescription}
-            isCompact={!isExpanded}
-            label="EN COURS"
-            onPress={() => openMission(currentMission, { tutorialSource: 'home_card' })}
-            title={currentMission.title}
-            tone="current"
-          />
-        ) : (
-          <MissionStatusRow
-            description="La progression principale est terminee. Toutes les missions restent disponibles pour revoir chaque fonctionnalite."
-            isCompact={!isExpanded}
-            label="TERMINE"
-            onPress={() => openMissionCenter({ initialTab: 'atlas' })}
-            title="Progression principale complete"
-            tone="completed"
-          />
-        )}
+          {currentMission ? (
+            <MissionStatusRow
+              description={currentMission.shortDescription}
+              isCompact={!isExpanded}
+              label="EN COURS"
+              onPress={() => openMission(currentMission, { tutorialSource: 'home_card' })}
+              title={currentMission.title}
+              tone="current"
+            />
+          ) : (
+            <MissionStatusRow
+              description="La progression principale est terminée. Toutes les missions restent disponibles pour revoir chaque fonctionnalité."
+              isCompact={!isExpanded}
+              label="TERMINÉ"
+              onPress={() => openMissionCenter({ initialTab: 'atlas' })}
+              title="Progression principale complète"
+              tone="completed"
+            />
+          )}
 
-        {missionPreview.upcomingMissions.map((mission) => (
-          <MissionStatusRow
-            description={mission.shortDescription}
-            isCompact={!isExpanded}
-            key={mission.id}
-            label="A VENIR"
-            onPress={() => openMissionDetail(mission.id)}
-            title={mission.title}
-            tone="upcoming"
-          />
-        ))}
-      </View>
+          {missionPreview.upcomingMissions.map((mission) => (
+            <MissionStatusRow
+              description={mission.shortDescription}
+              isCompact={!isExpanded}
+              key={mission.id}
+              label="À VENIR"
+              onPress={() => openMissionDetail(mission.id)}
+              title={mission.title}
+              tone="upcoming"
+            />
+          ))}
+        </View>
+      )}
 
       {isExpanded ? (
         <View style={[Spaces.gap[12]]}>
