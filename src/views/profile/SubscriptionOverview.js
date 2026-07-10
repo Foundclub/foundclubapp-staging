@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format as formatDate } from 'date-fns';
+import { fr as frLocale } from 'date-fns/locale';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -13,6 +15,7 @@ import {
   buildSubscriptionChangePlanPayload,
   buildSubscriptionPurchasePayload,
   formatSubscriptionMonthlyEquivalentLabel,
+  formatSubscriptionPriceLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
@@ -34,6 +37,7 @@ import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
+import TierSelector from '@/components/molecules/tierSelector/TierSelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import SubscriptionCoveredHero from '@/views/profile/SubscriptionCoveredHero';
 
@@ -501,6 +505,7 @@ function SubscriptionOverview({ navigation }) {
   const {
     Alignments,
     ApplicationStyle,
+    Colors,
     Fonts,
     Spaces,
   } = useTheme();
@@ -616,6 +621,52 @@ function SubscriptionOverview({ navigation }) {
     () => getSubscriptionQuotaItems(freeUsageSummary, subscriptionAccessLevel),
     [freeUsageSummary, subscriptionAccessLevel],
   );
+  // --- Vue payeur (handoff 10f) : mon offre Équipe, equipes couvertes, palier in situ ---
+  const activeTeamPlanCode = useMemo(
+    () => activePlanCodes.find(
+      (/** @type {string} */ code) => /^fc_team_\d+_yearly$/.test(String(code || '').trim()),
+    ) || '',
+    [activePlanCodes],
+  );
+  const activeTeamPlanSlotCount = Number(
+    String(activeTeamPlanCode).match(/^fc_team_(\d+)_/)?.[1] || 0,
+  );
+  const [payerSelectedSlotCount, setPayerSelectedSlotCount] = useState(0);
+  useEffect(() => {
+    if (activeTeamPlanSlotCount > 0) {
+      setPayerSelectedSlotCount(activeTeamPlanSlotCount);
+    }
+  }, [activeTeamPlanSlotCount]);
+  const payerTeamTierEntries = useMemo(
+    () => catalogEntries
+      .filter((/** @type {any} */ entry) => getCatalogEntryScopeType(entry) === 'TEAM'
+        && getCatalogEntryBillingPeriod(entry) === 'yearly')
+      .sort((/** @type {any} */ left, /** @type {any} */ right) => (
+        Number(left?.slotCount || 0) - Number(right?.slotCount || 0)
+      )),
+    [catalogEntries],
+  );
+  const payerSelectedEntry = useMemo(
+    () => payerTeamTierEntries.find(
+      (/** @type {any} */ entry) => Number(entry?.slotCount || 0) === payerSelectedSlotCount,
+    ) || null,
+    [payerSelectedSlotCount, payerTeamTierEntries],
+  );
+  const payerCurrentEntry = useMemo(
+    () => payerTeamTierEntries.find(
+      (/** @type {any} */ entry) => String(entry?.planCode || '').trim() === activeTeamPlanCode,
+    ) || null,
+    [activeTeamPlanCode, payerTeamTierEntries],
+  );
+  const payerRenewalEntitlement = useMemo(
+    () => entitlementsSummary.find(
+      (/** @type {any} */ entry) => entry?.paidBy?.documentId
+        && entry.paidBy.documentId === String(userData?.documentId || '')
+        && entry?.subscriptionCurrentPeriodEnd,
+    ) || null,
+    [entitlementsSummary, userData?.documentId],
+  );
+
   const teamSlotSummary = useMemo(
     () => getSubscriptionTeamSlotSummary(subscriptionSummary),
     [subscriptionSummary],
@@ -1312,6 +1363,136 @@ function SubscriptionOverview({ navigation }) {
             ) : null}
           </View>
         </View>
+
+        {activeTeamPlanSlotCount > 0 ? (
+          <View
+            style={[
+              Spaces.gap[12],
+              Spaces.padding[16],
+              {
+                backgroundColor: 'rgba(4,31,44,0.82)',
+                borderColor: 'rgba(1,179,244,0.24)',
+                borderRadius: 18,
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+              <Text style={[Fonts.h5Bold, Fonts.neutral00]}>Offre Équipe</Text>
+              <View
+                style={{
+                  backgroundColor: Colors.primary500,
+                  borderRadius: 999,
+                  paddingHorizontal: 9,
+                  paddingVertical: 3,
+                }}
+              >
+                <Text
+                  style={[
+                    Fonts.p4Bold,
+                    Fonts.primary900,
+                    { letterSpacing: 0.6, textTransform: 'uppercase' },
+                  ]}
+                >
+                  Payée par toi
+                </Text>
+              </View>
+              <View style={Alignments.fill} />
+              <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                {formatSubscriptionPriceLabel(
+                  payerCurrentEntry?.referencePriceEurCents,
+                  'yearly',
+                )}
+              </Text>
+            </View>
+            {payerRenewalEntitlement?.subscriptionCurrentPeriodEnd ? (
+              <View
+                style={[
+                  Alignments.row,
+                  Alignments.justifySpaceBetween,
+                  {
+                    borderTopColor: 'rgba(255,255,255,0.08)',
+                    borderTopWidth: 1,
+                    paddingTop: 10,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4, Fonts.neutral400]}>Renouvellement</Text>
+                <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
+                  {formatDate(
+                    new Date(payerRenewalEntitlement.subscriptionCurrentPeriodEnd),
+                    'd MMMM yyyy',
+                    { locale: frLocale },
+                  )}
+                </Text>
+              </View>
+            ) : null}
+
+            <Text
+              style={[
+                Fonts.p4Bold,
+                Fonts.neutral300,
+                { letterSpacing: 1.2, textTransform: 'uppercase' },
+              ]}
+            >
+              {`Équipes couvertes · ${teamSlotSummary.assigned}/${teamSlotSummary.total}`}
+            </Text>
+            {coveredTeamNames.length > 0 ? coveredTeamNames.map((teamName) => (
+              <View
+                key={teamName}
+                style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
+              >
+                <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>✓</Text>
+                <Text numberOfLines={1} style={[Fonts.p3Bold, Fonts.neutral100, { flex: 1 }]}>
+                  {teamName}
+                </Text>
+              </View>
+            )) : (
+              <Text style={[Fonts.p4, Fonts.neutral400]}>
+                Aucun slot attribué pour le moment.
+              </Text>
+            )}
+
+            <Text
+              style={[
+                Fonts.p4Bold,
+                Fonts.neutral300,
+                { letterSpacing: 1.2, textTransform: 'uppercase' },
+              ]}
+            >
+              Changer de palier
+            </Text>
+            <TierSelector
+              onChange={(slotCount) => setPayerSelectedSlotCount(Number(slotCount))}
+              options={payerTeamTierEntries.map((/** @type {any} */ entry) => {
+                const slotCount = Number(entry?.slotCount || 0);
+                return {
+                  id: slotCount,
+                  label: `${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+                };
+              })}
+              value={payerSelectedSlotCount}
+            />
+            <Text style={[Fonts.p4, Fonts.neutral400]}>
+              {payerSelectedSlotCount === activeTeamPlanSlotCount
+                ? 'Palier actuel.'
+                : `${formatSubscriptionPriceLabel(
+                  payerSelectedEntry?.referencePriceEurCents,
+                  'yearly',
+                )} — appliqué immédiatement, prorata géré par le store.`}
+            </Text>
+            {payerSelectedSlotCount !== activeTeamPlanSlotCount && payerSelectedEntry ? (
+              <Button
+                disabled={!isBillingTestModeEnabled}
+                isLoading={subscriptionMutation.isPending
+                  && activeActionPlanCode === String(payerSelectedEntry?.planCode || '')}
+                onPress={() => handleCatalogAction(payerSelectedEntry)}
+                title={`Passer à ${payerSelectedSlotCount} équipe${payerSelectedSlotCount > 1 ? 's' : ''} · ${formatSubscriptionPriceLabel(payerSelectedEntry?.referencePriceEurCents, 'yearly')}`}
+                variant="Primary"
+              />
+            ) : null}
+          </View>
+        ) : null}
 
         <View style={[
           Spaces.gap[12],
