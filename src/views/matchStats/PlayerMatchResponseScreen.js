@@ -180,7 +180,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
   const [rating, setRating] = useState(null);
   const [teamRating, setTeamRating] = useState(null);
   const [comment, setComment] = useState('');
-  const [quantitative, setQuantitative] = useState({});
+  const [quantitative, setQuantitative] = useState(/** @type {any} */ ({}));
   const isCompactMobile = width < 390;
   const sectionPadding = isCompactMobile ? 16 : 24;
   const sectionGap = isCompactMobile ? 12 : 16;
@@ -237,9 +237,9 @@ function PlayerMatchResponseScreen({ navigation, route }) {
   const heroMatchLabel = headerMatchLabel || 'Match';
   const isSubmitted = responsePayload?.response?.status === 'submitted';
   const isDraft = responsePayload?.response?.status === 'draft';
-  let statusLabel = 'A faire';
+  let statusLabel = 'À faire';
   if (isSubmitted) {
-    statusLabel = 'Envoye';
+    statusLabel = 'Envoyé';
   } else if (isDraft) {
     statusLabel = 'Brouillon';
   }
@@ -265,6 +265,18 @@ function PlayerMatchResponseScreen({ navigation, route }) {
       [field]: field === 'cleanSheet' ? Boolean(value) : sanitizeNumericInput(value),
     }));
   }, []);
+
+  // Clean sheet automatique : 0 but encaissé => activé (handoff 9f).
+  useEffect(() => {
+    if (normalizeSport(sport) !== 'football' || participation !== 'played' || !doesKnowStats) return;
+    const conceded = Number.parseInt(String(quantitative?.goalsConceded ?? ''), 10);
+    if (Number.isNaN(conceded)) return;
+    setQuantitative((current) => {
+      const shouldBeActive = conceded === 0;
+      if (Boolean(current?.cleanSheet) === shouldBeActive) return current;
+      return { ...current, cleanSheet: shouldBeActive };
+    });
+  }, [doesKnowStats, participation, quantitative?.goalsConceded, sport]);
 
   const adjustNumericField = useCallback((field, delta) => {
     setQuantitative((current) => {
@@ -386,20 +398,20 @@ function PlayerMatchResponseScreen({ navigation, route }) {
       return saveLeagueMyMatchResponse(matchId, payload);
     },
     onError: (error) => {
-      Alert.alert('Erreur', getApiErrorMessage(error, 'Impossible d enregistrer ta reponse.'));
+      Alert.alert('Erreur', getApiErrorMessage(error, "Impossible d'enregistrer ta réponse."));
     },
     onSuccess: async (_result, status) => {
       await invalidateQueries();
       await responseQuery.refetch();
       if (status === 'draft') {
-        Alert.alert('Brouillon enregistre', 'Tu peux reprendre ta reponse plus tard.');
+        Alert.alert('Brouillon enregistré', 'Tu peux reprendre ta réponse plus tard.');
         return;
       }
       Alert.alert(
         'Merci',
         participation === 'played'
-          ? 'Ton match est enregistre.'
-          : 'Ton retour post-match a bien ete enregistre.',
+          ? 'Ton match est enregistré.'
+          : 'Ton retour post-match a bien été enregistré.',
         [{ onPress: redirectToReviewScreen, text: 'OK' }],
       );
     },
@@ -407,11 +419,11 @@ function PlayerMatchResponseScreen({ navigation, route }) {
 
   const handleSaveDraft = useCallback(() => {
     if (!participation) {
-      Alert.alert('Participation', 'Indique d abord si tu as joue ce match.');
+      Alert.alert('Participation', "Indique d'abord si tu as joué ce match.");
       return;
     }
     if (consistencyIssues.length > 0) {
-      Alert.alert('Verifier tes stats', consistencyIssues[0]);
+      Alert.alert('Vérifier tes stats', consistencyIssues[0]);
       return;
     }
     saveMutation.mutate('draft');
@@ -419,11 +431,11 @@ function PlayerMatchResponseScreen({ navigation, route }) {
 
   const handleSubmit = useCallback(() => {
     if (!participation) {
-      Alert.alert('Participation', 'Indique d abord si tu as joue ce match.');
+      Alert.alert('Participation', "Indique d'abord si tu as joué ce match.");
       return;
     }
     if (consistencyIssues.length > 0) {
-      Alert.alert('Verifier tes stats', consistencyIssues[0]);
+      Alert.alert('Vérifier tes stats', consistencyIssues[0]);
       return;
     }
     saveMutation.mutate('submitted');
@@ -672,26 +684,26 @@ function PlayerMatchResponseScreen({ navigation, route }) {
           <>
             <View style={[ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap], { backgroundColor: cardSurfaceColor }]}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>As-tu participe au match ?</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>As-tu participé au match ?</Text>
                 <Text style={[Fonts.p2, { color: secondaryTextColor }]}>
-                  Choisis le cas qui correspond le mieux a ta situation pour ce match.
+                  Choisis le cas qui correspond le mieux à ta situation pour ce match.
                 </Text>
               </View>
               <View style={[Spaces.gap[12]]}>
                 {[
                   {
                     description: 'Tu peux ensuite renseigner tes stats et ton ressenti.',
-                    label: "J'ai joue",
+                    label: "J'ai joué",
                     value: 'played',
                   },
                   {
                     description: 'Tu peux laisser une note et un commentaire, sans chiffres de match.',
-                    label: "J'etais la mais je n'ai pas joue",
+                    label: "J'étais là mais je n'ai pas joué",
                     value: 'present_no_play',
                   },
                   {
-                    description: 'Tu ne seras plus relance pour ce match.',
-                    label: "Je n'etais pas concerne",
+                    description: 'Tu ne seras plus relancé·e pour ce match.',
+                    label: "Je n'étais pas concerné·e",
                     value: 'not_involved',
                   },
                 ].map((option) => {
@@ -730,16 +742,66 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                       Renseigne tes chiffres personnels, ou indique que tu ne les connais pas.
                     </Text>
                   </View>
-                  <Button
+                  <Pressable
+                    accessibilityRole="button"
                     onPress={() => setDoesKnowStats((current) => !current)}
-                    title={doesKnowStats ? 'Je ne sais pas mes stats' : 'Je connais mes stats'}
-                    variant="Secondary"
-                  />
+                  >
+                    <Text style={[Fonts.p3Bold, Fonts.neutral300, Fonts.textCenter]}>
+                      {doesKnowStats ? 'Je ne connais pas mes stats' : 'Je connais mes stats'}
+                    </Text>
+                  </Pressable>
                 </View>
 
                 {doesKnowStats ? (
                   <>
-                    {renderCounterField({ field: 'minutesPlayed', label: 'Temps de jeu (minutes)' })}
+                    <View style={[Spaces.gap[8]]}>
+                      <Text style={[Fonts.p4Bold, Fonts.neutral100]}>Temps de jeu</Text>
+                      <View style={[Alignments.row, Spaces.gap[8]]}>
+                        {(normalizeSport(sport) === 'basketball'
+                          ? [
+                            { label: 'Pas joué', minutes: 0 },
+                            { label: 'Une mi-temps', minutes: 20 },
+                            { label: 'Tout le match', minutes: 40 },
+                          ]
+                          : [
+                            { label: 'Pas joué', minutes: 0 },
+                            { label: 'Une mi-temps', minutes: 45 },
+                            { label: 'Tout le match', minutes: 90 },
+                          ]
+                        ).map((preset) => {
+                          const isPresetActive = Number.parseInt(String(quantitative?.minutesPlayed || '0'), 10) === preset.minutes;
+                          return (
+                            <Pressable
+                              key={preset.label}
+                              onPress={() => updateField('minutesPlayed', String(preset.minutes))}
+                              style={{
+                                backgroundColor: isPresetActive ? Colors.primary500 : 'transparent',
+                                borderColor: isPresetActive ? Colors.primary500 : `${Colors.primary500}4D`,
+                                borderRadius: 999,
+                                borderWidth: 1.5,
+                                flex: 1,
+                                paddingHorizontal: 4,
+                                paddingVertical: 10,
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  Fonts.p4Bold,
+                                  isPresetActive ? Fonts.primary900 : Fonts.neutral100,
+                                  Fonts.textCenter,
+                                ]}
+                              >
+                                {preset.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                      <Text style={[Fonts.p4, Fonts.neutral400]}>
+                        {`${Number.parseInt(String(quantitative?.minutesPlayed || '0'), 10) || 0} min — ajuste si besoin ci-dessous.`}
+                      </Text>
+                    </View>
+                    {renderCounterField({ field: 'minutesPlayed', label: 'Temps de jeu (min)' })}
                     {fieldRows.map((row) => (
                       <View key={row.map((field) => field.key).join(':')} style={[Alignments.row, Spaces.gap[12]]}>
                         {row.map((field) => (
@@ -753,39 +815,81 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                       <Pressable
                         onPress={() => updateField('cleanSheet', !quantitative?.cleanSheet)}
                         style={[
-                          ApplicationStyle.borderRadius16,
-                          Spaces.padding[16],
+                          Alignments.row,
+                          Alignments.alignCenter,
+                          Spaces.gap[12],
                           {
-                            backgroundColor: quantitative?.cleanSheet ? activeSurfaceColor : insetSurfaceColor,
-                            borderColor: quantitative?.cleanSheet ? activeBorderColor : subtleBorderColor,
+                            backgroundColor: quantitative?.cleanSheet
+                              ? 'rgba(39,214,163,0.07)'
+                              : insetSurfaceColor,
+                            borderColor: quantitative?.cleanSheet
+                              ? `${Colors.success500}59`
+                              : subtleBorderColor,
+                            borderRadius: 14,
                             borderWidth: 1,
+                            paddingHorizontal: 14,
+                            paddingVertical: 11,
                           },
                         ]}
                       >
-                        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                          {quantitative?.cleanSheet ? 'Clean sheet validé' : 'Ajouter clean sheet'}
-                        </Text>
+                        <View style={[Alignments.fill]}>
+                          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Clean sheet</Text>
+                          <Text
+                            style={[
+                              Fonts.p4,
+                              quantitative?.cleanSheet ? Fonts.success200 : Fonts.neutral400,
+                              { marginTop: 1 },
+                            ]}
+                          >
+                            {quantitative?.cleanSheet
+                              ? 'Activé automatiquement — 0 but encaissé'
+                              : "S'active à 0 but encaissé"}
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            backgroundColor: quantitative?.cleanSheet
+                              ? `${Colors.success500}E6`
+                              : 'rgba(255,255,255,0.14)',
+                            borderRadius: 999,
+                            height: 28,
+                            width: 48,
+                          }}
+                        >
+                          <View
+                            style={{
+                              backgroundColor: Colors.neutral00,
+                              borderRadius: 999,
+                              height: 22,
+                              left: quantitative?.cleanSheet ? undefined : 3,
+                              position: 'absolute',
+                              right: quantitative?.cleanSheet ? 3 : undefined,
+                              top: 3,
+                              width: 22,
+                            }}
+                          />
+                        </View>
                       </Pressable>
                     ) : null}
                     {consistencyIssues.length ? (
                       <View style={[{ borderRadius: 20 }, Spaces.padding[16], Spaces.gap[8], { backgroundColor: activeSurfaceColor, borderColor: `${Colors.warning500}66`, borderWidth: 1 }]}>
-                        <Text style={[Fonts.p3Bold, Fonts.warning500]}>Verification de coherence</Text>
+                        <Text style={[Fonts.p3Bold, Fonts.warning500]}>Vérification de cohérence</Text>
                         {consistencyIssues.map((issue) => (
                           <Text key={issue} style={[Fonts.p3, Fonts.neutral100]}>
                             {`- ${issue}`}
                           </Text>
                         ))}
                         <Text style={[Fonts.p4, Fonts.neutral200]}>
-                          Le score officiel ne sera jamais modifie. Corrige simplement les chiffres avant l envoi.
+                          Le score officiel ne sera jamais modifié. Corrige simplement les chiffres avant l&apos;envoi.
                         </Text>
                       </View>
                     ) : null}
                   </>
                 ) : (
                   <View style={[{ borderRadius: 20 }, Spaces.padding[16], Spaces.gap[8], { backgroundColor: insetSurfaceColor, borderColor: subtleBorderColor, borderWidth: 1 }]}>
-                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aucun probleme.</Text>
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aucun problème.</Text>
                     <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
-                      On enregistre que tu ne connais pas tes stats individuelles pour ce match. Tu peux quand meme laisser ta note et ton ressenti.
+                      On enregistre que tu ne connais pas tes stats individuelles pour ce match. Tu peux quand même laisser ta note et ton ressenti.
                     </Text>
                   </View>
                 )}
@@ -797,21 +901,21 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                 <View style={[Spaces.gap[8]]}>
                   <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Mon ressenti</Text>
                   <Text style={[Fonts.p2, { color: secondaryTextColor }]}>
-                    Note ton match et le match de l equipe, puis ajoute un commentaire si tu le souhaites.
+                    Note ton match et le match de l&apos;équipe, puis ajoute un commentaire si tu le souhaites.
                   </Text>
                 </View>
 
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Ma performance</Text>
                   <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
-                    Comment tu evaluerais ta contribution personnelle sur ce match ?
+                    Comment tu évaluerais ta contribution personnelle sur ce match ?
                   </Text>
                   {renderRatingScale(rating, setRating)}
                 </View>
 
                 {participation === 'played' || participation === 'present_no_play' ? (
                   <View style={[Spaces.gap[12]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Le match de l equipe</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Le match de l&apos;équipe</Text>
                     <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
                       Donne ton ressenti collectif sur la performance du groupe.
                     </Text>
@@ -823,7 +927,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                   multiline
                   numberOfLines={4}
                   onChangeText={setComment}
-                  placeholder="Mon ressenti, ce qui a bien marche, ce qui etait plus complique..."
+                  placeholder="Mon ressenti, ce qui a bien marché, ce qui était plus compliqué…"
                   placeholderTextColor={Colors.neutral400}
                   style={[
                     Fonts.p2,
