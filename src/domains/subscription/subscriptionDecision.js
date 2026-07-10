@@ -58,6 +58,7 @@ const DEFAULT_PAYWALL_KEYS = {
   PROFILE_CONTACT_LIMIT: 'profile-contact-limit',
   RECRUITMENT_AD_LIMIT: 'recruitment-ad-limit',
   TEAM_LIMIT: 'team-limit',
+  TEAM_OFFER_UNLOCK: 'team-offer-unlock',
 };
 
 /** @type {string[]} */
@@ -393,6 +394,18 @@ const QUOTA_SHEET_CONTENT_BY_KEY = {
     preselectedSlotCount: 2,
     successCtaLabel: 'Créer ma 2ᵉ équipe',
     title: 'Tu veux créer une 2ᵉ équipe ?',
+  },
+  // Deblocage direct de l'offre Équipe depuis la sheet Actions d'équipe (decision 7).
+  'team-offer-unlock': {
+    benefits: [
+      'Composition type et convocations en 2 taps',
+      'Événements et matchs illimités',
+      "Cotisation de l'équipe encaissée dans l'app",
+    ],
+    kicker: 'Offre Équipe',
+    preselectedSlotCount: 1,
+    successCtaLabel: "C'est parti !",
+    title: "Débloque tes outils d'équipe",
   },
 };
 

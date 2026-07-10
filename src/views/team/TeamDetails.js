@@ -98,7 +98,7 @@ function TeamDetails({ navigation, route }) {
 
   // hooks
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = /** @type {any} */ (useTheme());
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -106,10 +106,12 @@ function TeamDetails({ navigation, route }) {
     canEditClub,
     canJoinTeam,
     canManageTeam,
+    entitlementsSummary,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
     inviteTeamPlayers,
     refetchUserData,
+    subscriptionAccessLevel,
     USER_ROLES: AUTH_USER_ROLES,
     userData: currentUser,
   } = /** @type {any} */ (useAuth());
@@ -1663,6 +1665,21 @@ function TeamDetails({ navigation, route }) {
   const showLeaveAction = isMyTeam;
   const showContactTrainersAction = canContactViewedTeamTrainers;
   const showJoinAction = !isAuthenticated || canJoinTeam(teamId) || canCoachRequestJoinViewedTeam;
+  // Deblocage par offre (handoff decision 7) : l'offre Équipe est consideree active
+  // pour CETTE equipe si elle est couverte (slot Team ou offre Club du club).
+  const isTeamOfferUnlocked = (Array.isArray(entitlementsSummary) ? entitlementsSummary : [])
+    .some((/** @type {any} */ entry) => entry?.status === 'active'
+      && (entry?.scopeTeamDocumentId === team?.documentId
+        || (String(entry?.scopeType || '').toUpperCase() === 'CLUB'
+          && entry?.scopeClubDocumentId === team?.club?.documentId)));
+  const isClubOfferUnlocked = subscriptionAccessLevel === 'CLUB';
+  const openTeamOfferUnlockSheet = () => setSubscriptionPaywallDecision(/** @type {any} */ ({
+    allowed: false,
+    paywall: 'TEAM_OFFER_UNLOCK',
+    reason: 'SUBSCRIPTION_REQUIRED',
+    requiredPlan: ['TEAM'],
+  }));
+  const openClubOfferRecap = () => navigation.navigate(RouteNames.GuideOffersRecap);
   const joinActionTitle = (() => {
     if (pendingRequest) {
       return t('teamDetails.actions.requestPending', 'Demande en attente');
@@ -2365,6 +2382,126 @@ function TeamDetails({ navigation, route }) {
       </ScreenContainer>
     );
   }
+
+  // --- Sheet Actions d'equipe v2 (handoff decision 7) : lignes groupees par offre ---
+  const teamActionsListStyle = {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.09)',
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  };
+
+  /**
+   * @param {{ actionLabel?: string | null; label: string; onActionPress?: () => void }} params
+   * @returns {import('react').ReactElement}
+   */
+  const renderTeamActionsGroupHead = ({ actionLabel, label, onActionPress }) => (
+    <View
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        Alignments.justifySpaceBetween,
+        Spaces.marginTop[8],
+        Spaces.paddingHorizontal[4],
+      ]}
+    >
+      <Text style={[Fonts.p4Bold, Fonts.neutral300, { letterSpacing: 1.2, textTransform: 'uppercase' }]}>
+        {label}
+      </Text>
+      {actionLabel ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={onActionPress}
+          style={Spaces.paddingVertical[4]}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>{actionLabel}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+
+  /**
+   * @param {{
+   *   destructive?: boolean;
+   *   icon: string;
+   *   label: string;
+   *   last?: boolean;
+   *   lock?: 'team' | 'club' | null;
+   *   onPress?: () => void;
+   * }} params
+   * @returns {import('react').ReactElement}
+   */
+  const renderTeamActionRow = ({
+    destructive = false,
+    icon,
+    label,
+    last = false,
+    lock = null,
+    onPress,
+  }) => {
+    let labelColor = Fonts.neutral00;
+    if (destructive) {
+      labelColor = /** @type {any} */ ({ color: Colors.error500 });
+    } else if (lock) {
+      labelColor = Fonts.neutral300;
+    }
+    const lockColor = lock === 'club' ? Colors.violet500 : Colors.primary500;
+    return (
+      <TouchableOpacity
+        accessibilityRole="button"
+        key={label}
+        onPress={onPress}
+        style={[
+          Alignments.row,
+          Alignments.alignCenter,
+          Spaces.gap[12],
+          {
+            borderBottomColor: 'rgba(255,255,255,0.07)',
+            borderBottomWidth: last ? 0 : 1,
+            minHeight: 52,
+            paddingHorizontal: 16,
+          },
+        ]}
+      >
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: destructive ? 'rgba(255,40,79,0.10)' : 'rgba(1,179,244,0.10)',
+            borderRadius: 12,
+            height: 32,
+            justifyContent: 'center',
+            opacity: lock ? 0.55 : 1,
+            width: 32,
+          }}
+        >
+          <Image
+            source={/** @type {any} */ (Images)[icon]}
+            style={{
+              height: 15,
+              tintColor: destructive ? Colors.error500 : Colors.primary500,
+              width: 15,
+            }}
+          />
+        </View>
+        <Text numberOfLines={1} style={[Fonts.p2Bold, labelColor, { flex: 1 }]}>
+          {label}
+        </Text>
+        {lock ? (
+          <View
+            style={{
+              backgroundColor: lockColor,
+              borderRadius: 999,
+              height: 8,
+              width: 8,
+            }}
+          />
+        ) : (
+          <Text style={[Fonts.p2, Fonts.neutral500]}>›</Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <ScreenContainer
@@ -3877,7 +4014,7 @@ function TeamDetails({ navigation, route }) {
             </TouchableOpacity>
 
             {isTeamActionsPanelOpen ? (
-              <View style={[Spaces.gap[12], Spaces.paddingBottom[16]]}>
+              <View style={[Spaces.gap[8], Spaces.paddingBottom[16]]}>
                 {showJoinAction ? (
                   <Button
                     disabled={!!pendingRequest}
@@ -3887,60 +4024,115 @@ function TeamDetails({ navigation, route }) {
                   />
                 ) : null}
 
-                {(showEditAction || showTeamChatAction) ? (
-                  <View style={[Alignments.row, Spaces.gap[16]]}>
-                    {showEditAction ? (
-                      <Button
-                        onPress={handleEditTeam}
-                        style={Alignments.fill}
-                        title={t('teamDetails.actions.edit')}
-                        variant="Primary"
-                      />
-                    ) : null}
-                    {showTeamChatAction ? (
-                      <Button
-                        icon="envelope"
-                        iconPosition="before"
-                        onPress={handleStartChat}
-                        style={Alignments.fill}
-                        title={t('teamDetails.actions.teamChat', 'Equipe')}
-                        variant="PrimaryLight"
-                      />
-                    ) : null}
+                {(showEditAction || canManageTeam || showTeamChatAction || showContactTrainersAction) ? (
+                  <View style={teamActionsListStyle}>
+                    {showEditAction ? renderTeamActionRow({
+                      icon: 'edit',
+                      label: t('teamDetails.actions.edit', "Modifier l'équipe"),
+                      onPress: handleEditTeam,
+                    }) : null}
+                    {canManageTeam ? renderTeamActionRow({
+                      icon: 'share',
+                      label: t('teamDetails.actions.invitePlayers', 'Inviter des joueur·se·s'),
+                      onPress: () => inviteTeamPlayers({
+                        clubName: team?.club?.name,
+                        teamId: team?.documentId || teamId,
+                        teamName: team?.name,
+                      }),
+                    }) : null}
+                    {showTeamChatAction ? renderTeamActionRow({
+                      icon: 'envelope',
+                      label: t('teamDetails.actions.teamChatFull', "Discussion d'équipe"),
+                      onPress: handleStartChat,
+                    }) : null}
+                    {showContactTrainersAction ? renderTeamActionRow({
+                      icon: 'envelope',
+                      label: trainerContactIds.length > 1
+                        ? t('teamDetails.actions.contactTrainers', 'Contacter les entraîneur·e·s')
+                        : t('teamDetails.actions.contactTrainer', "Contacter l'entraîneur·e"),
+                      last: true,
+                      onPress: handleContactTeamTrainers,
+                    }) : null}
                   </View>
                 ) : null}
 
-                {showDefaultCompositionAction ? (
-                  <Button
-                    onPress={handleManageDefaultComposition}
-                    title={t('teamDetails.actions.defaultComposition', 'Composition type')}
-                    variant="Secondary"
-                  />
-                ) : null}
+                {canManageTeam ? (
+                  <>
+                    {renderTeamActionsGroupHead({
+                      actionLabel: isTeamOfferUnlocked ? null : 'Débloquer →',
+                      label: "Avec l'offre Équipe",
+                      onActionPress: openTeamOfferUnlockSheet,
+                    })}
+                    <View style={teamActionsListStyle}>
+                      {renderTeamActionRow({
+                        icon: 'users',
+                        label: t('teamDetails.actions.defaultComposition', 'Composition type'),
+                        lock: isTeamOfferUnlocked ? null : 'team',
+                        onPress: isTeamOfferUnlocked
+                          ? handleManageDefaultComposition
+                          : openTeamOfferUnlockSheet,
+                      })}
+                      {renderTeamActionRow({
+                        icon: 'send',
+                        label: t('teamDetails.actions.convocations', 'Convocations'),
+                        lock: isTeamOfferUnlocked ? null : 'team',
+                        onPress: isTeamOfferUnlocked
+                          ? () => setActiveTab('calendar')
+                          : openTeamOfferUnlockSheet,
+                      })}
+                      {renderTeamActionRow({
+                        icon: 'euroCircle',
+                        label: t('teamDetails.actions.teamDues', "Cotisation de l'équipe"),
+                        last: true,
+                        lock: isTeamOfferUnlocked ? null : 'team',
+                        onPress: isTeamOfferUnlocked
+                          ? () => navigation.navigate(RouteNames.ClubLicenses)
+                          : openTeamOfferUnlockSheet,
+                      })}
+                    </View>
 
-                {showContactTrainersAction ? (
-                  <Button
-                    icon="envelope"
-                    iconPosition="before"
-                    onPress={handleContactTeamTrainers}
-                    style={[Spaces.paddingHorizontal[24], { height: 52 }]}
-                    title={
-                      trainerContactIds.length > 1
-                        ? t('teamDetails.actions.contactTrainers', 'Contacter les entraîneurs')
-                        : t('teamDetails.actions.contactTrainer', "Contacter l'entraîneur")
-                    }
-                    variant="Secondary"
-                  />
+                    {renderTeamActionsGroupHead({
+                      actionLabel: isClubOfferUnlocked ? null : "Voir l'offre →",
+                      label: "Avec l'offre Club",
+                      onActionPress: openClubOfferRecap,
+                    })}
+                    <View style={teamActionsListStyle}>
+                      {renderTeamActionRow({
+                        icon: 'stadium',
+                        label: t('teamDetails.actions.facilities', 'Installations'),
+                        lock: isClubOfferUnlocked ? null : 'club',
+                        onPress: isClubOfferUnlocked
+                          ? () => navigation.navigate(RouteNames.FacilityList, {
+                            clubId: team?.club?.documentId,
+                          })
+                          : openClubOfferRecap,
+                      })}
+                      {renderTeamActionRow({
+                        icon: 'trophy',
+                        label: t('teamDetails.actions.sponsors', 'Sponsors & partenaires'),
+                        last: true,
+                        lock: isClubOfferUnlocked ? null : 'club',
+                        onPress: isClubOfferUnlocked && team?.club?.documentId
+                          ? () => navigation.navigate(RouteNames.ClubStack, {
+                            params: { clubId: team.club.documentId },
+                            screen: RouteNames.Club,
+                          })
+                          : openClubOfferRecap,
+                      })}
+                    </View>
+                  </>
                 ) : null}
 
                 {showLeaveAction ? (
-                  <Button
-                    onPress={handleAskToLeave}
-                    style={{ backgroundColor: `${Colors.error500}12`, borderColor: Colors.error500 }}
-                    textStyle={{ color: Colors.error500 }}
-                    title={t('teamDetails.actions.leave')}
-                    variant="Secondary"
-                  />
+                  <View style={[teamActionsListStyle, Spaces.marginTop[8]]}>
+                    {renderTeamActionRow({
+                      destructive: true,
+                      icon: 'close',
+                      label: t('teamDetails.actions.leave', "Quitter l'équipe"),
+                      last: true,
+                      onPress: handleAskToLeave,
+                    })}
+                  </View>
                 ) : null}
 
               </View>

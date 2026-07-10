@@ -49,6 +49,9 @@ export const colors = {
   textSecondary: '#adb1b2',
 
   transparent: 'transparent',
+
+  // Verrou des fonctionnalites de l'offre Club (handoff design, decision 7).
+  violet500: '#8567ff',
 };
 
 /**
