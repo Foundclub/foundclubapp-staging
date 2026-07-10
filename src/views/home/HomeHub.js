@@ -95,6 +95,7 @@ const ScreenContainerView = /** @type {any} */ (ScreenContainer);
  *  layout?: 'half' | 'full';
  *  emphasis?: 'default' | 'primary';
  *  tone?: 'default' | 'destructive';
+ *  premiumScope?: 'club' | 'team';
  *  subtitleLines?: 1 | 2;
  *  tutorial?: any;
  * }} HomeCard
@@ -163,6 +164,7 @@ function HomeSection({
               illustration={card.illustration}
               illustrationPlacement={card.illustrationPlacement}
               onPress={card.onPress}
+              premiumScope={card.premiumScope}
               subtitle={card.subtitle}
               subtitleLines={card.subtitleLines}
               title={card.title}
@@ -1412,6 +1414,14 @@ function HomeHubContent({ auth, navigation, route }) {
     title: t(`homeHubTutorial.steps.${id}.title`, fallbackTitle),
   }), [t]);
 
+  // Badges d'offre informatifs sur les cartes du hub (handoff 12).
+  const teamCardPremiumScope = (subscriptionAccessLevel === 'TEAM' || subscriptionAccessLevel === 'CLUB')
+    ? undefined
+    : /** @type {'team'} */ ('team');
+  const clubCardPremiumScope = subscriptionAccessLevel === 'CLUB'
+    ? undefined
+    : /** @type {'club'} */ ('club');
+
   /** @type {HomeCard[]} */
   const manageSectionCards = useMemo(() => {
     if (isPresident) {
@@ -1447,6 +1457,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'calendar',
           key: 'manage-add-event',
           onPress: handleAddEvent,
+          premiumScope: teamCardPremiumScope,
           subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addEvent.title'),
@@ -1463,6 +1474,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'running',
           key: 'manage-add-ad',
           onPress: handleAddRecruitmentAd,
+          premiumScope: teamCardPremiumScope,
           subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publie une annonce de recrutement.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
@@ -1505,6 +1517,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'euroCircle',
           key: 'manage-licenses',
           onPress: handleOpenClubLicenses,
+          premiumScope: clubCardPremiumScope,
           subtitle: t('homeHub.cards.manage.licenses.subtitle', 'Suis les statuts de tes membres.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.licenses.title', 'Cotisations'),
@@ -1557,6 +1570,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'calendar',
           key: 'manage-add-event',
           onPress: handleAddEvent,
+          premiumScope: teamCardPremiumScope,
           subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addEvent.title'),
@@ -1568,6 +1582,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'running',
           key: 'manage-add-ad',
           onPress: handleAddRecruitmentAd,
+          premiumScope: teamCardPremiumScope,
           subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publie une annonce de recrutement.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
@@ -1610,6 +1625,7 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'euroCircle',
           key: 'manage-licenses',
           onPress: handleOpenClubLicenses,
+          premiumScope: clubCardPremiumScope,
           subtitle: t('homeHub.cards.manage.licenses.subtitle', 'Suis les statuts de tes membres.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.licenses.title', 'Cotisations'),
@@ -1631,6 +1647,7 @@ function HomeHubContent({ auth, navigation, route }) {
 
     return [];
   }, [
+    clubCardPremiumScope,
     Colors.primary500,
     handleAddEvent,
     handleAddRecruitmentAd,
@@ -1645,6 +1662,7 @@ function HomeHubContent({ auth, navigation, route }) {
     scrollDownLabel,
     scrollToSearchSection,
     t,
+    teamCardPremiumScope,
   ]);
 
   /** @type {HomeCard[]} */

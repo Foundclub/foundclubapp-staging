@@ -7,6 +7,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import PremiumBadge from '@/components/molecules/premiumBadge/PremiumBadge';
+
 /**
  * @typedef {'default' | 'primary'} HomeCardEmphasis
  * @typedef {'default' | 'destructive'} HomeCardTone
@@ -40,6 +42,7 @@ const GHOST_ICON_PLACEMENT = {
  * @param {HomeCardIllustrationPlacement} [props.illustrationPlacement]
  * @param {HomeCardEmphasis} [props.emphasis]
  * @param {HomeCardTone} [props.tone]
+ * @param {'club' | 'team'} [props.premiumScope] - Offre couvrant l'action (badge informatif, handoff 12)
  * @param {1 | 2} [props.subtitleLines]
  * @param {((node: any) => void) | { current: any }} [props.tutorialTargetRef]
  * @returns {import('react').ReactElement}
@@ -52,6 +55,7 @@ function HomeActionCard({
   illustration,
   illustrationPlacement,
   onPress,
+  premiumScope,
   subtitle,
   subtitleLines = 2,
   title,
@@ -187,6 +191,11 @@ function HomeActionCard({
         </View>
 
         <View style={[Spaces.marginTop[16], Spaces.gap[8], { position: 'relative', zIndex: 1 }]}>
+          {premiumScope ? (
+            <View style={[Alignments.row]}>
+              <PremiumBadge scope={premiumScope} />
+            </View>
+          ) : null}
           <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { fontSize: 13.5, lineHeight: 20 }]}>{title}</Text>
           <Text
             numberOfLines={subtitleLines}
