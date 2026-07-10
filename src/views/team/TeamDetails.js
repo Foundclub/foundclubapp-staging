@@ -48,10 +48,6 @@ import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueN
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
-import {
-  getClubCertificationLabel,
-  getClubCertificationPalette,
-} from '@/utils/clubCertification';
 
 import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
@@ -70,6 +66,10 @@ import {
 } from '@/services/team/teamService';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
+import {
+  getClubCertificationLabel,
+  getClubCertificationPalette,
+} from '@/utils/clubCertification';
 import { getErrorMessage as getDisplayErrorMessage } from '@/utils/errors/displayError';
 import { getImageUrl } from '@/utils/imageUrl';
 
@@ -1320,7 +1320,7 @@ function TeamDetails({ navigation, route }) {
     };
   }, [teamPerformanceStats?.recentReports, teamPerformanceStats?.sport, teamPerformanceStats?.totals]);
 
-    const canResetTeamStats = useMemo(
+  const canResetTeamStats = useMemo(
     () => Boolean(canManageTeam && isMyTeam),
     [canManageTeam, isMyTeam],
   );
@@ -2041,32 +2041,44 @@ function TeamDetails({ navigation, route }) {
           ) : null}
           {externalSyncSourceResolutionLabel ? (
             <Text style={[Fonts.p4, Fonts.primary100]}>
-              {t('teamDetails.external.resolutionMode', 'Mode de résolution')}: {externalSyncSourceResolutionLabel}
+              {t('teamDetails.external.resolutionMode', 'Mode de résolution')}
+              :
+              {externalSyncSourceResolutionLabel}
             </Text>
           ) : null}
           {externalSyncSelectedTeamName ? (
             <Text style={[Fonts.p3, Fonts.neutral00]}>
-              {t('teamDetails.external.followedTeam', 'Equipe suivie')}: {externalSyncSelectedTeamName}
+              {t('teamDetails.external.followedTeam', 'Equipe suivie')}
+              :
+              {externalSyncSelectedTeamName}
             </Text>
           ) : null}
           {externalSyncPouleName ? (
             <Text style={[Fonts.p3, Fonts.neutral00]}>
-              {t('teamDetails.external.pool', 'Poule')}: {externalSyncPouleName}
+              {t('teamDetails.external.pool', 'Poule')}
+              :
+              {externalSyncPouleName}
             </Text>
           ) : null}
           {externalSyncUpdatedLabel ? (
             <Text style={[Fonts.p3, Fonts.primary100]}>
-              {t('teamDetails.external.lastSync', 'Dernière synchronisation')}: {externalSyncUpdatedLabel}
+              {t('teamDetails.external.lastSync', 'Dernière synchronisation')}
+              :
+              {externalSyncUpdatedLabel}
             </Text>
           ) : null}
           {externalSyncRequestedUrl ? (
             <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary100]}>
-              {t('teamDetails.external.requestedSource', 'Lien demande')}: {externalSyncRequestedUrl}
+              {t('teamDetails.external.requestedSource', 'Lien demande')}
+              :
+              {externalSyncRequestedUrl}
             </Text>
           ) : null}
           {externalSyncResolvedSourceUrl && externalSyncResolvedSourceUrl !== externalSyncRequestedUrl ? (
             <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary100]}>
-              {t('teamDetails.external.resolvedSource', 'Source resolue')}: {externalSyncResolvedSourceUrl}
+              {t('teamDetails.external.resolvedSource', 'Source resolue')}
+              :
+              {externalSyncResolvedSourceUrl}
             </Text>
           ) : null}
           {externalSyncStrategyLabel ? (
@@ -2076,17 +2088,23 @@ function TeamDetails({ navigation, route }) {
           ) : null}
           {externalConfigUpdatedLabel ? (
             <Text style={[Fonts.p4, Fonts.primary100]}>
-              {t('teamDetails.external.lastConfigUpdate', 'Lien mis à jour')}: {externalConfigUpdatedLabel}
+              {t('teamDetails.external.lastConfigUpdate', 'Lien mis à jour')}
+              :
+              {externalConfigUpdatedLabel}
             </Text>
           ) : null}
           {externalConfigUpdatedByLabel ? (
             <Text style={[Fonts.p4, Fonts.primary100]}>
-              {t('teamDetails.external.lastConfigUpdateBy', 'Mis à jour par')}: {externalConfigUpdatedByLabel}
+              {t('teamDetails.external.lastConfigUpdateBy', 'Mis à jour par')}
+              :
+              {externalConfigUpdatedByLabel}
             </Text>
           ) : null}
           {externalSyncReport?.mode ? (
             <Text style={[Fonts.p4, Fonts.primary100]}>
-              {t('teamDetails.external.lastMode', 'Origine')}: {externalSyncModeMeta.label}
+              {t('teamDetails.external.lastMode', 'Origine')}
+              :
+              {externalSyncModeMeta.label}
             </Text>
           ) : null}
         </View>
@@ -2795,43 +2813,43 @@ function TeamDetails({ navigation, route }) {
                   {areTeamMembersHidden ? renderMembersHiddenCard(
                     t(
                       'teamDetails.sections.trainersHidden',
-                      "Le club masque les entraîneurs de cette équipe pour les visiteurs externes.",
+                      'Le club masque les entraîneurs de cette équipe pour les visiteurs externes.',
                     ),
                   ) : (
                     <>
                       {team?.trainers?.map((/** @type {User} */ trainer) => (
-                    <TouchableOpacity
-                      key={trainer.documentId}
-                      onPress={() => handleUserPress(trainer)}
-                      style={[
-                        ApplicationStyle.borderRadius24,
-                        ApplicationStyle.backgroundColor.primary700,
-                        Alignments.row,
-                        Alignments.fill,
-                        Alignments.alignCenter,
-                        Alignments.justifySpaceBetween,
-                        Spaces.padding[16],
-                        Spaces.gap[16]]}
-                    >
-                      <View
-                        style={[
-                          Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
-                      >
-                        <ProfileAvatar
-                          imageStyle={{ borderRadius: 40 }}
-                          imageUrl={trainer?.avatar?.url}
-                          size={40}
+                        <TouchableOpacity
+                          key={trainer.documentId}
+                          onPress={() => handleUserPress(trainer)}
                           style={[
-                            ApplicationStyle.borderWidth1,
-                            ApplicationStyle.borderColor.neutral00,
-                            { borderRadius: 40 },
-                          ]}
-                        />
-                        <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                          {`${trainer.firstname} ${trainer.lastname}`}
-                        </Text>
-                      </View>
-                      {team?.club?.documentId && canEditClub(team?.club?.documentId)
+                            ApplicationStyle.borderRadius24,
+                            ApplicationStyle.backgroundColor.primary700,
+                            Alignments.row,
+                            Alignments.fill,
+                            Alignments.alignCenter,
+                            Alignments.justifySpaceBetween,
+                            Spaces.padding[16],
+                            Spaces.gap[16]]}
+                        >
+                          <View
+                            style={[
+                              Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
+                          >
+                            <ProfileAvatar
+                              imageStyle={{ borderRadius: 40 }}
+                              imageUrl={trainer?.avatar?.url}
+                              size={40}
+                              style={[
+                                ApplicationStyle.borderWidth1,
+                                ApplicationStyle.borderColor.neutral00,
+                                { borderRadius: 40 },
+                              ]}
+                            />
+                            <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                              {`${trainer.firstname} ${trainer.lastname}`}
+                            </Text>
+                          </View>
+                          {team?.club?.documentId && canEditClub(team?.club?.documentId)
                         && trainer?.role?.name === USER_ROLES.coach ? (
                           <View style={[Alignments.row, Spaces.gap[8]]}>
                             <Button
@@ -2841,21 +2859,21 @@ function TeamDetails({ navigation, route }) {
                               variant="SecondaryLight"
                             />
                           </View>
-                        ) : null}
-                    </TouchableOpacity>
-                  ))}
+                            ) : null}
+                        </TouchableOpacity>
+                      ))}
                       {!trainersCount ? (
-                    <View
-                      style={[
-                        ApplicationStyle.borderRadius24,
-                        ApplicationStyle.backgroundColor.primary700,
-                        Spaces.padding[16],
-                      ]}
-                    >
-                      <Text style={[Fonts.p2, Fonts.primary100]}>
-                        {t('teamDetails.sections.noTrainer', 'Aucun entraîneur pour le moment')}
-                      </Text>
-                    </View>
+                        <View
+                          style={[
+                            ApplicationStyle.borderRadius24,
+                            ApplicationStyle.backgroundColor.primary700,
+                            Spaces.padding[16],
+                          ]}
+                        >
+                          <Text style={[Fonts.p2, Fonts.primary100]}>
+                            {t('teamDetails.sections.noTrainer', 'Aucun entraîneur pour le moment')}
+                          </Text>
+                        </View>
                       ) : null}
                     </>
                   )}
@@ -2885,55 +2903,55 @@ function TeamDetails({ navigation, route }) {
                   {areTeamMembersHidden ? renderMembersHiddenCard(
                     t(
                       'teamDetails.sections.playersHidden',
-                      "Le club masque les joueurs de cette équipe pour les visiteurs externes.",
+                      'Le club masque les joueurs de cette équipe pour les visiteurs externes.',
                     ),
                   ) : (
                     <>
                       {filteredPlayers.map((/** @type {User} */ player) => (
-                    <View
-                      key={player.documentId}
-                      style={[
-                        ApplicationStyle.borderRadius24,
-                        ApplicationStyle.backgroundColor.primary700,
-                        Alignments.row,
-                        Alignments.alignCenter,
-                        Alignments.justifySpaceBetween,
-                        Alignments.fill,
-                        Spaces.padding[16],
-                        Spaces.gap[16],
-                      ]}
-                    >
-                      <TouchableOpacity
-                        onPress={() => handleUserPress(player)}
-                        style={[
-                          Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
-                      >
-                        <ProfileAvatar
-                          imageStyle={{ borderRadius: 40 }}
-                          imageUrl={player?.avatar?.url}
-                          size={40}
+                        <View
+                          key={player.documentId}
                           style={[
-                            ApplicationStyle.borderWidth1,
-                            ApplicationStyle.borderColor.neutral00,
-                            { borderRadius: 40 },
+                            ApplicationStyle.borderRadius24,
+                            ApplicationStyle.backgroundColor.primary700,
+                            Alignments.row,
+                            Alignments.alignCenter,
+                            Alignments.justifySpaceBetween,
+                            Alignments.fill,
+                            Spaces.padding[16],
+                            Spaces.gap[16],
                           ]}
-                        />
-                        <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                          {`${player.firstname} ${player.lastname}`}
-                        </Text>
-                      </TouchableOpacity>
-                      {canManageTeam && (
-                        <View style={[Alignments.row, Spaces.gap[8]]}>
-                          <Button
-                            icon="trash"
-                            isOption
-                            onPress={() => handleRemovePlayer(player.documentId || '')}
-                            variant="SecondaryLight"
-                          />
+                        >
+                          <TouchableOpacity
+                            onPress={() => handleUserPress(player)}
+                            style={[
+                              Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
+                          >
+                            <ProfileAvatar
+                              imageStyle={{ borderRadius: 40 }}
+                              imageUrl={player?.avatar?.url}
+                              size={40}
+                              style={[
+                                ApplicationStyle.borderWidth1,
+                                ApplicationStyle.borderColor.neutral00,
+                                { borderRadius: 40 },
+                              ]}
+                            />
+                            <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                              {`${player.firstname} ${player.lastname}`}
+                            </Text>
+                          </TouchableOpacity>
+                          {canManageTeam && (
+                          <View style={[Alignments.row, Spaces.gap[8]]}>
+                            <Button
+                              icon="trash"
+                              isOption
+                              onPress={() => handleRemovePlayer(player.documentId || '')}
+                              variant="SecondaryLight"
+                            />
+                          </View>
+                          )}
                         </View>
-                      )}
-                    </View>
-                  ))}
+                      ))}
                     </>
                   )}
                 </View>
@@ -2962,52 +2980,265 @@ function TeamDetails({ navigation, route }) {
           {showStandingsTab && activeTab === 'standings' && (
           <View style={[Spaces.padding[16], Alignments.alignCenter, Spaces.gap[16]]}>
             {team?.externalStandingData && team.externalStandingData.length > 0 ? (
-              <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[16], Alignments.fullWidth]}>
-                <View style={[Alignments.row, Spaces.paddingBottom[8], { borderBottomColor: '#FFFFFF33', borderBottomWidth: 1 }]}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { width: 25 }]}>#</Text>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>Equipe</Text>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>Pts</Text>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>J</Text>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>M</Text>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>E</Text>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 30 }]}>D</Text>
-                </View>
-                {team.externalStandingData
+              (() => {
+                const sortedRows = team.externalStandingData
                   .slice()
                   .sort((/** @type {any} */ a, /** @type {any} */ b) => {
                     const aRank = Number(a?.rank ?? Number.MAX_SAFE_INTEGER);
                     const bRank = Number(b?.rank ?? Number.MAX_SAFE_INTEGER);
                     return aRank - bRank;
+                  });
+                const totalRows = sortedRows.length;
+                const maxPlayed = sortedRows.reduce(
+                  (/** @type {number} */ acc, /** @type {any} */ row) => Math.max(acc, Number(row?.played || 0)),
+                  0,
+                );
+                /**
+                 * Zone de classement (heuristique : 2 premiers = montee, 2 derniers = descente).
+                 * @param {number} rank
+                 * @returns {'up' | 'down' | ''}
+                 */
+                const getRowZone = (rank) => {
+                  if (totalRows >= 4 && rank <= 2) return 'up';
+                  if (totalRows >= 4 && rank >= totalRows - 1) return 'down';
+                  return '';
+                };
+                // Forme V/N/D de mon equipe sur les 5 derniers matchs joues du calendrier externe.
+                const myFormResults = (Array.isArray(team?.externalCalendarData) ? team.externalCalendarData : [])
+                  .filter((/** @type {any} */ match) => {
+                    const hasScore = match?.homeScore !== null && match?.homeScore !== undefined
+                      && match?.awayScore !== null && match?.awayScore !== undefined;
+                    if (!hasScore) return false;
+                    return isSameExternalTeamName(match?.homeTeam, team?.externalTeamName)
+                      || isSameExternalTeamName(match?.awayTeam, team?.externalTeamName);
                   })
-                  .map((/** @type {any} */ row, /** @type {number} */ index) => {
-                    const isMyTeam = isExternalRowMyTeam(row);
-                    const rowRank = row?.rank ?? index + 1;
-                    return (
+                  .sort((/** @type {any} */ a, /** @type {any} */ b) => (
+                    new Date(b?.date || 0).getTime() - new Date(a?.date || 0).getTime()
+                  ))
+                  .slice(0, 5)
+                  .map((/** @type {any} */ match) => {
+                    const isHome = isSameExternalTeamName(match?.homeTeam, team?.externalTeamName);
+                    const myScore = Number(isHome ? match.homeScore : match.awayScore);
+                    const otherScore = Number(isHome ? match.awayScore : match.homeScore);
+                    if (myScore > otherScore) return 'V';
+                    if (myScore < otherScore) return 'D';
+                    return 'N';
+                  });
+                /**
+                 * @param {string} result
+                 * @returns {string}
+                 */
+                const getFormColor = (/** @type {string} */ result) => {
+                  if (result === 'V') return Colors.success500;
+                  if (result === 'D') return Colors.error500;
+                  return Colors.neutral300;
+                };
+
+                return (
+                  <View style={[Alignments.fullWidth, Spaces.gap[8]]}>
+                    <View style={[Alignments.row, Alignments.justifySpaceBetween, { alignItems: 'baseline' }]}>
+                      <Text
+                        style={[
+                          Fonts.p4Bold,
+                          Fonts.neutral300,
+                          { letterSpacing: 1, textTransform: 'uppercase' },
+                        ]}
+                      >
+                        {String(team?.level?.name || team?.level || 'Classement')}
+                      </Text>
+                      {maxPlayed > 0 ? (
+                        <Text style={[Fonts.p4, Fonts.neutral400]}>
+                          {`Journée ${maxPlayed}`}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(23,56,68,0.4)',
+                        borderColor: 'rgba(255,255,255,0.09)',
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        overflow: 'hidden',
+                        width: '100%',
+                      }}
+                    >
                       <View
-                        key={`${row.teamName}-${index}`}
                         style={[
                           Alignments.row,
-                          Spaces.paddingVertical[8],
-                          { borderBottomColor: '#FFFFFF11', borderBottomWidth: 1 },
-                          isMyTeam && {
-                            backgroundColor: `${Colors.primary500}33`, borderRadius: 8, marginHorizontal: -8, paddingHorizontal: 8,
+                          Spaces.gap[10],
+                          {
+                            borderBottomColor: 'rgba(255,255,255,0.08)',
+                            borderBottomWidth: 1,
+                            paddingHorizontal: 14,
+                            paddingVertical: 10,
                           },
                         ]}
                       >
-                        <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { width: 25 }]}>{rowRank}</Text>
-                        <Text numberOfLines={1} style={[Fonts.p2Bold, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { flex: 1 }]}>
-                          {isMyTeam && '* '}
-                          {row.teamName}
-                        </Text>
-                        <Text style={[Fonts.p2Bold, Fonts.primary500, { textAlign: 'center', width: 25 }]}>{row.points}</Text>
-                        <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { textAlign: 'center', width: 25 }]}>{row.played}</Text>
-                        <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { fontSize: 10, textAlign: 'center', width: 25 }]}>{row.goalFor || '-'}</Text>
-                        <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { fontSize: 10, textAlign: 'center', width: 25 }]}>{row.goalAgainst || '-'}</Text>
-                        <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { fontSize: 10, textAlign: 'center', width: 30 }]}>{row.goalDiff || '-'}</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.neutral400, { width: 24 }]}>#</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.neutral400, { flex: 1 }]}>Équipe</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.neutral400, { textAlign: 'right', width: 30 }]}>Pts</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.neutral400, { textAlign: 'right', width: 40 }]}>Diff</Text>
                       </View>
-                    );
-                  })}
-              </View>
+                      {sortedRows.map((/** @type {any} */ row, /** @type {number} */ index) => {
+                        const isMyRow = isExternalRowMyTeam(row);
+                        const rowRank = Number(row?.rank ?? index + 1);
+                        const zone = getRowZone(rowRank);
+                        const diffValue = Number(row?.goalDiff || 0);
+                        const diffLabel = diffValue > 0 ? `+${diffValue}` : String(diffValue);
+                        let rankBackground = 'rgba(255,255,255,0.06)';
+                        let rankColor = Colors.neutral300;
+                        if (zone === 'up') {
+                          rankBackground = 'rgba(39,214,163,0.16)';
+                          rankColor = Colors.success500;
+                        } else if (zone === 'down') {
+                          rankBackground = 'rgba(255,40,79,0.16)';
+                          rankColor = Colors.error500;
+                        }
+                        return (
+                          <View
+                            key={`${row.teamName}-${index}`}
+                            style={{
+                              backgroundColor: isMyRow ? 'rgba(1,179,244,0.10)' : 'transparent',
+                              borderBottomColor: 'rgba(255,255,255,0.06)',
+                              borderBottomWidth: index === totalRows - 1 ? 0 : 1,
+                              borderLeftColor: isMyRow ? Colors.primary500 : 'transparent',
+                              borderLeftWidth: 3,
+                              paddingHorizontal: 11,
+                              paddingVertical: isMyRow ? 9 : 0,
+                            }}
+                          >
+                            <View
+                              style={[
+                                Alignments.row,
+                                Alignments.alignCenter,
+                                Spaces.gap[10],
+                                { minHeight: isMyRow ? 24 : 44 },
+                              ]}
+                            >
+                              <View
+                                style={{
+                                  alignItems: 'center',
+                                  backgroundColor: rankBackground,
+                                  borderRadius: 8,
+                                  height: 24,
+                                  justifyContent: 'center',
+                                  width: 24,
+                                }}
+                              >
+                                <Text style={[Fonts.p4Bold, { color: isMyRow ? Colors.primary500 : rankColor }]}>
+                                  {rowRank}
+                                </Text>
+                              </View>
+                              <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 7, flex: 1, minWidth: 0 }]}>
+                                <Text
+                                  numberOfLines={1}
+                                  style={[
+                                    isMyRow ? Fonts.p2Bold : Fonts.p2,
+                                    isMyRow ? Fonts.neutral00 : Fonts.neutral100,
+                                    { flexShrink: 1 },
+                                  ]}
+                                >
+                                  {row.teamName}
+                                </Text>
+                                {isMyRow ? (
+                                  <View
+                                    style={{
+                                      backgroundColor: Colors.primary500,
+                                      borderRadius: 999,
+                                      paddingHorizontal: 7,
+                                      paddingVertical: 2,
+                                    }}
+                                  >
+                                    <Text
+                                      style={[
+                                        Fonts.p4Bold,
+                                        Fonts.primary900,
+                                        { textTransform: 'uppercase' },
+                                      ]}
+                                    >
+                                      Toi
+                                    </Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                              <Text
+                                style={[
+                                  Fonts.p2Bold,
+                                  isMyRow ? Fonts.primary500 : Fonts.neutral00,
+                                  { textAlign: 'right', width: 30 },
+                                ]}
+                              >
+                                {row.points}
+                              </Text>
+                              <Text
+                                style={[
+                                  Fonts.p3Bold,
+                                  { color: diffValue >= 0 ? Colors.success500 : Colors.error500 },
+                                  { textAlign: 'right', width: 40 },
+                                ]}
+                              >
+                                {diffLabel}
+                              </Text>
+                            </View>
+                            {isMyRow && myFormResults.length > 0 ? (
+                              <View
+                                style={[
+                                  Alignments.row,
+                                  Alignments.alignCenter,
+                                  Spaces.gap[8],
+                                  { marginTop: 7, paddingLeft: 34 },
+                                ]}
+                              >
+                                <View style={[Alignments.row, { columnGap: 4 }]}>
+                                  {myFormResults.map((/** @type {string} */ result, /** @type {number} */ formIndex) => (
+                                    <View
+                                      // eslint-disable-next-line react/no-array-index-key
+                                      key={`form-${formIndex}-${result}`}
+                                      style={{
+                                        alignItems: 'center',
+                                        backgroundColor: getFormColor(result),
+                                        borderRadius: 999,
+                                        height: 15,
+                                        justifyContent: 'center',
+                                        width: 15,
+                                      }}
+                                    >
+                                      <Text style={{ color: Colors.primary900, fontSize: 8.5, fontWeight: '900' }}>
+                                        {result}
+                                      </Text>
+                                    </View>
+                                  ))}
+                                </View>
+                                {row?.goalFor || row?.goalAgainst ? (
+                                  <Text style={[Fonts.p4Bold, Fonts.primary200]}>
+                                    {`buts ${row?.goalFor || 0}–${row?.goalAgainst || 0}`}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            ) : null}
+                          </View>
+                        );
+                      })}
+                    </View>
+                    <View style={[Alignments.row, Alignments.justifyCenter, { columnGap: 16 }]}>
+                      <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 6 }]}>
+                        <View style={{
+                          backgroundColor: Colors.success500, borderRadius: 999, height: 7, width: 7,
+                        }}
+                        />
+                        <Text style={[Fonts.p4, Fonts.neutral400]}>Montée</Text>
+                      </View>
+                      <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 6 }]}>
+                        <View style={{
+                          backgroundColor: Colors.error500, borderRadius: 999, height: 7, width: 7,
+                        }}
+                        />
+                        <Text style={[Fonts.p4, Fonts.neutral400]}>Descente</Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })()
             ) : (
               <View style={[Alignments.alignCenter, Spaces.gap[16]]}>
                 <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>
@@ -3069,18 +3300,18 @@ function TeamDetails({ navigation, route }) {
                     const homeTeamId = match?.homeTeamId ? String(match.homeTeamId) : '';
                     const awayTeamId = match?.awayTeamId ? String(match.awayTeamId) : '';
                     const isMyHomeTeamById = Boolean(
-                      selectedExternalTeamId && homeTeamId && homeTeamId === selectedExternalTeamId
+                      selectedExternalTeamId && homeTeamId && homeTeamId === selectedExternalTeamId,
                     );
                     const isMyAwayTeamById = Boolean(
-                      selectedExternalTeamId && awayTeamId && awayTeamId === selectedExternalTeamId
+                      selectedExternalTeamId && awayTeamId && awayTeamId === selectedExternalTeamId,
                     );
                     const isMyHomeTeamByName = Boolean(
                       normalizedExternalTeamName
-                      && isSameExternalTeamName(match?.homeTeam, team?.externalTeamName)
+                      && isSameExternalTeamName(match?.homeTeam, team?.externalTeamName),
                     );
                     const isMyAwayTeamByName = Boolean(
                       normalizedExternalTeamName
-                      && isSameExternalTeamName(match?.awayTeam, team?.externalTeamName)
+                      && isSameExternalTeamName(match?.awayTeam, team?.externalTeamName),
                     );
                     const isMyTeamMatch = (
                       isMyHomeTeamById
@@ -3092,8 +3323,13 @@ function TeamDetails({ navigation, route }) {
 
                     return {
                       ...match,
+                      _awayTeamId: awayTeamId,
                       _dateObj: matchDate,
                       _dateTs: dateTs,
+                      _homeTeamId: homeTeamId,
+                      _isMyAwayTeam: isMyAwayTeamById || isMyAwayTeamByName,
+                      _isMyHomeTeam: isMyHomeTeamById || isMyHomeTeamByName,
+                      _isMyTeamMatch: isMyTeamMatch,
                       _isPlayed: isPlayed,
                       _isUpcoming: isUpcoming,
                       _key: match?.matchId
@@ -3101,23 +3337,18 @@ function TeamDetails({ navigation, route }) {
                         : `${match?.homeTeam || 'home'}-${match?.awayTeam || 'away'}-${match?.date || 'no-date'}-${index}`,
                       _monthKey: monthKey,
                       _monthLabel: monthLabel,
-                      _isMyTeamMatch: isMyTeamMatch,
-                      _isMyHomeTeam: isMyHomeTeamById || isMyHomeTeamByName,
-                      _isMyAwayTeam: isMyAwayTeamById || isMyAwayTeamByName,
-                      _homeTeamId: homeTeamId,
-                      linkedEventDocumentIdResolved: match?.linkedEventDocumentId || null,
-                      _awayTeamId: awayTeamId,
                       _roundLabel: roundLabel,
+                      linkedEventDocumentIdResolved: match?.linkedEventDocumentId || null,
                     };
                   });
 
                   const isUpcomingMode = calendarDisplayMode === 'upcoming';
                   const isMonthFilterMode = !isUpcomingMode;
                   const useRoundFilters = Boolean(
-                    team?.externalProvider === 'ffbb' && !isUpcomingMode
+                    team?.externalProvider === 'ffbb' && !isUpcomingMode,
                   );
                   const hasSelectedExternalTeam = Boolean(
-                    selectedExternalTeamId || normalizedExternalTeamName
+                    selectedExternalTeamId || normalizedExternalTeamName,
                   );
 
                   const modeScopedMatches = normalizedMatches.filter((/** @type {any} */ match) => {
@@ -4354,17 +4585,23 @@ function TeamDetails({ navigation, route }) {
             {externalPreviewContext?.requestedUrl ? (
               <View style={[Spaces.gap[4], Spaces.marginBottom[12]]}>
                 <Text style={[Fonts.p4, Fonts.primary100]}>
-                  {t('teamDetails.external.requestedSource', 'Lien demandé')}: {externalPreviewContext.requestedUrl}
+                  {t('teamDetails.external.requestedSource', 'Lien demandé')}
+                  :
+                  {externalPreviewContext.requestedUrl}
                 </Text>
                 {externalPreviewContext?.sourceUrl
                 && externalPreviewContext.sourceUrl !== externalPreviewContext.requestedUrl ? (
                   <Text style={[Fonts.p4, Fonts.primary100]}>
-                    {t('teamDetails.external.resolvedSource', 'Source résolue')}: {externalPreviewContext.sourceUrl}
+                    {t('teamDetails.external.resolvedSource', 'Source résolue')}
+                    :
+                    {externalPreviewContext.sourceUrl}
                   </Text>
                   ) : null}
                 {externalPreviewContext?.sourceResolution ? (
                   <Text style={[Fonts.p4, Fonts.primary100]}>
-                    {t('teamDetails.external.resolutionMode', 'Mode de résolution')}: {formatExternalSourceResolutionLabel(externalPreviewContext.sourceResolution)}
+                    {t('teamDetails.external.resolutionMode', 'Mode de résolution')}
+                    :
+                    {formatExternalSourceResolutionLabel(externalPreviewContext.sourceResolution)}
                   </Text>
                 ) : null}
               </View>
@@ -4599,12 +4836,16 @@ function TeamDetails({ navigation, route }) {
 
               {externalSyncUpdatedLabel ? (
                 <Text style={[Fonts.p3, Fonts.primary100]}>
-                  {t('teamDetails.external.lastSync', 'Dernière synchronisation')}: {externalSyncUpdatedLabel}
+                  {t('teamDetails.external.lastSync', 'Dernière synchronisation')}
+                  :
+                  {externalSyncUpdatedLabel}
                 </Text>
               ) : null}
               {externalSyncReport?.mode ? (
                 <Text style={[Fonts.p3, Fonts.primary100]}>
-                  {t('teamDetails.external.lastMode', 'Origine')}: {externalSyncModeMeta.label}
+                  {t('teamDetails.external.lastMode', 'Origine')}
+                  :
+                  {externalSyncModeMeta.label}
                 </Text>
               ) : null}
 
