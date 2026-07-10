@@ -647,6 +647,16 @@ function TeamEdit({ navigation, route }) {
               )}
             />
 
+            <Text
+              style={[
+                Fonts.p4Bold,
+                Fonts.neutral300,
+                { letterSpacing: 1.2, marginBottom: -16, textTransform: 'uppercase' },
+              ]}
+            >
+              {t('teamEdit.sections.sportProfile', 'Profil sportif')}
+            </Text>
+
             <Controller
               control={control}
               name="section"
