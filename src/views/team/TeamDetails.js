@@ -3766,15 +3766,42 @@ function TeamDetails({ navigation, route }) {
                         </Text>
                         {groupedMatches.length > 0 ? groupedMatches.map((group, groupIndex) => (
                           <View key={`${group.label}-${groupIndex}`} style={[groupIndex > 0 && Spaces.marginTop[16]]}>
-                            <Text style={[
-                              Fonts.p3Bold,
-                              Fonts.primary100,
-                              Spaces.marginBottom[8],
-                              { textTransform: 'capitalize' },
-                            ]}
-                            >
-                              {group.label}
-                            </Text>
+                            <View style={[Alignments.row, Alignments.justifySpaceBetween, { alignItems: 'baseline' }]}>
+                              <Text style={[
+                                Fonts.p3Bold,
+                                Fonts.primary100,
+                                Spaces.marginBottom[8],
+                                { textTransform: 'capitalize' },
+                              ]}
+                              >
+                                {group.label}
+                              </Text>
+                              {(() => {
+                                // Bilan V/N/D du groupe pour mon equipe (handoff 10b).
+                                const tally = { D: 0, N: 0, V: 0 };
+                                group.matches.forEach((/** @type {any} */ groupMatch) => {
+                                  const {
+                                    _isMyAwayTeam: isAway,
+                                    _isMyHomeTeam: isHome,
+                                    _isPlayed: isGroupMatchPlayed,
+                                  } = groupMatch || {};
+                                  if (!isGroupMatchPlayed || (!isHome && !isAway)) return;
+                                  const mine = Number(isHome ? groupMatch.homeScore : groupMatch.awayScore);
+                                  const other = Number(isHome ? groupMatch.awayScore : groupMatch.homeScore);
+                                  if (!Number.isFinite(mine) || !Number.isFinite(other)) return;
+                                  if (mine > other) tally.V += 1;
+                                  else if (mine < other) tally.D += 1;
+                                  else tally.N += 1;
+                                });
+                                const bilan = ['V', 'N', 'D']
+                                  .filter((key) => tally[/** @type {'V' | 'N' | 'D'} */ (key)] > 0)
+                                  .map((key) => `${tally[/** @type {'V' | 'N' | 'D'} */ (key)]}${key}`)
+                                  .join(' · ');
+                                return bilan ? (
+                                  <Text style={[Fonts.p4, Fonts.neutral400]}>{bilan}</Text>
+                                ) : null;
+                              })()}
+                            </View>
                             {group.subtitle ? (
                               <Text style={[Fonts.p4, Fonts.primary100, Spaces.marginBottom[8]]}>
                                 {group.subtitle}
