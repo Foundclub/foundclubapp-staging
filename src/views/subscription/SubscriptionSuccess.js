@@ -49,18 +49,24 @@ function SubscriptionSuccess({ navigation, route }) {
   const offerLabel = String(route?.params?.offerLabel || 'Équipe');
   const resumeCtaLabel = String(route?.params?.resumeCtaLabel || 'Reprendre');
   const renewalDateLabel = String(route?.params?.renewalDateLabel || '');
+  // 'back' (defaut) = la tache interrompue vit sous cet ecran dans la pile ;
+  // 'home' = achat depuis le Recap de fin de tour, on repart sur l'accueil.
+  const resumeMode = String(route?.params?.resumeMode || 'back');
   const storeLabel = Platform.OS === 'ios' ? 'App Store' : 'Google Play';
-
-  // La tache interrompue vit juste sous cet ecran dans la pile : reprendre = revenir.
-  const handleResume = () => {
-    navigation.goBack();
-  };
 
   const handleGoHome = () => {
     navigation.reset({
       index: 0,
       routes: [{ name: RouteNames.HomeTab }],
     });
+  };
+
+  const handleResume = () => {
+    if (resumeMode === 'home') {
+      handleGoHome();
+      return;
+    }
+    navigation.goBack();
   };
 
   const handleOpenSubscription = () => {

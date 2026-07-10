@@ -1,44 +1,69 @@
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { useMemo, useState } from 'react';
 import {
-  ScrollView, Text, useWindowDimensions, View,
+  Alert, Platform, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import {
+  buildSubscriptionPurchasePayload,
   formatSubscriptionMonthlyEquivalentLabel,
-  formatSubscriptionPriceLabel,
-  sortSubscriptionCatalogEntries,
+  getInitialTeamSelection,
+  getSubscriptionBillingErrorMessage,
+  getSubscriptionTestProvider,
+  isSubscriptionBillingTestModeEnabled,
 } from '@/domains/subscription/subscriptionBilling';
+import { getSubscriptionTeamSlotSummary } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
+import TierSelector from '@/components/molecules/tierSelector/TierSelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { getSubscriptionCatalog } from '@/services/subscription/subscriptionService';
+import {
+  getSubscriptionCatalog,
+  validateSubscriptionPurchase,
+} from '@/services/subscription/subscriptionService';
 
-const PRICE_UNAVAILABLE_LABEL = "Tarif détaillé dans l'offre complète";
+import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
 
-const TEAM_OFFER_FEATURES = [
-  'Événements illimités',
-  "Composition d'équipe",
-  'Convocations',
-  'Cotisations de ton équipe',
+// Resume 1 ligne des cartes repliees (decision 3 — carte non selectionnee).
+const TEAM_SUMMARY = "Événements illimités, compo, convocations, cotisation d'équipe…";
+const CLUB_SUMMARY = 'Installations, sponsors, canal de diffusion, cotisations du club…';
+
+// Benefices des cartes depliees (handoff pw-core PRICING).
+const TEAM_BENEFITS = [
+  'Événements et matchs illimités',
+  'Composition et convocations en 2 taps',
+  "Cotisation d'équipe encaissée dans l'app",
+];
+const CLUB_BENEFITS = [
+  'Toutes les équipes du club incluses',
+  'Installations et réservations',
+  'Sponsors, partenaires, canal de diffusion',
+  "Cotisations du club encaissées dans l'app",
 ];
 
-const CLUB_OFFER_FEATURES = [
-  'Toutes tes équipes incluses',
-  'Installations et planning du club',
-  'Sponsors et partenaires',
-  'Canal de diffusion',
-  'Cotisations du club',
-];
+// Segments de palier Club (S/M/L) par numero de tier du planCode.
+/** @type {Record<number, string>} */
+const CLUB_TIER_SEGMENT_LABELS = {
+  1: 'S · ≤ 3',
+  2: 'M · ≤ 8',
+  3: 'L · illim.',
+};
+/** @type {Record<number, string>} */
+const CLUB_TIER_OFFER_LABELS = {
+  1: 'Club S',
+  2: 'Club M',
+  3: 'Club L',
+};
 
 /**
- * Extract the catalog entries array from the raw catalog response payload.
  * @param {any} payload
  * @returns {any[]}
  */
@@ -55,14 +80,12 @@ const getCatalogEntriesFromResponse = (payload) => {
 };
 
 /**
- * Normalize the scope type of a catalog entry.
  * @param {any} entry
  * @returns {string}
  */
 const getCatalogEntryScopeType = (entry) => String(entry?.scopeType || '').trim().toUpperCase();
 
 /**
- * Normalize the billing period of a catalog entry.
  * @param {any} entry
  * @returns {string}
  */
@@ -71,7 +94,6 @@ const getCatalogEntryBillingPeriod = (entry) => (
 );
 
 /**
- * Extract the club tier number encoded in the plan code.
  * @param {any} entry
  * @returns {number}
  */
@@ -80,16 +102,15 @@ const getCatalogEntryClubTier = (entry) => (
 );
 
 /**
- * Build the "soit X €/mois" helper label for a yearly catalog entry.
  * @param {any} entry
  * @returns {string}
  */
-const getYearlyMonthlyEquivalentLabel = (entry) => {
-  if (getCatalogEntryBillingPeriod(entry) !== 'yearly') {
+const getEntryPriceAmountLabel = (entry) => {
+  const cents = Number(entry?.referencePriceEurCents);
+  if (!Number.isFinite(cents) || cents <= 0) {
     return '';
   }
-
-  return formatSubscriptionMonthlyEquivalentLabel(entry?.referencePriceEurCents);
+  return `${(cents / 100).toFixed(2).replace('.', ',')} €`;
 };
 
 // Ce que l'utilisateur vient de creer pendant le tour (fusion preuve + Gratuit, decision 5b).
@@ -125,7 +146,13 @@ function AcquisCard() {
           paddingVertical: 3,
         }}
         >
-          <Text style={[Fonts.p4Bold, Fonts.neutral300, { letterSpacing: 0.8, textTransform: 'uppercase' }]}>
+          <Text
+            style={[
+              Fonts.p4Bold,
+              Fonts.neutral300,
+              { letterSpacing: 0.8, textTransform: 'uppercase' },
+            ]}
+          >
             Tu y es
           </Text>
         </View>
@@ -146,110 +173,23 @@ function AcquisCard() {
 }
 
 /**
- * A single offer card used inside the guided tour recap screen.
- * @param {{
- *   badgeLabel: string | null;
- *   features: string[];
- *   highlighted: boolean;
- *   isWide: boolean;
- *   priceHint: string | null;
- *   priceLabel: string;
- *   pricePrefix: string | null;
- *   subtitle: string;
- *   title: string;
- * }} props
- * @returns {import('react').ReactElement}
- */
-function OfferCard({
-  badgeLabel,
-  features,
-  highlighted,
-  isWide,
-  priceHint,
-  priceLabel,
-  pricePrefix,
-  subtitle,
-  title,
-}) {
-  const {
-    Alignments, ApplicationStyle, Fonts, Spaces,
-  } = useTheme();
-
-  return (
-    <View style={[
-      isWide ? Alignments.fill : null,
-      Spaces.gap[12],
-      Spaces.padding[16],
-      ApplicationStyle.borderRadius16,
-      ApplicationStyle.borderWidth1,
-      highlighted
-        ? ApplicationStyle.borderColor.primary500
-        : ApplicationStyle.borderColor.neutral600,
-      ApplicationStyle.backgroundColor.neutral700,
-    ]}
-    >
-      <View style={[
-        Alignments.row,
-        Alignments.alignCenter,
-        Alignments.justifySpaceBetween,
-        Spaces.gap[8],
-      ]}
-      >
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{title}</Text>
-        {badgeLabel ? (
-          <View style={[
-            Spaces.paddingHorizontal[12],
-            Spaces.paddingVertical[4],
-            ApplicationStyle.borderRadius12,
-            ApplicationStyle.backgroundColor.primary500,
-          ]}
-          >
-            <Text style={[Fonts.p4Bold, Fonts.primary900]}>{badgeLabel}</Text>
-          </View>
-        ) : null}
-      </View>
-
-      <Text style={[Fonts.p2, Fonts.neutral200]}>{subtitle}</Text>
-
-      <View style={[Spaces.gap[4]]}>
-        {priceLabel && pricePrefix ? (
-          <Text style={[Fonts.p4, Fonts.primary100]}>{pricePrefix}</Text>
-        ) : null}
-        {priceLabel ? (
-          <Text style={[Fonts.h4Black, Fonts.neutral00]}>{priceLabel}</Text>
-        ) : null}
-        {priceLabel && priceHint ? (
-          <Text style={[Fonts.p4, Fonts.primary100]}>{priceHint}</Text>
-        ) : null}
-        {!priceLabel ? (
-          <Text style={[Fonts.p4, Fonts.neutral200]}>{PRICE_UNAVAILABLE_LABEL}</Text>
-        ) : null}
-      </View>
-
-      <View style={[Spaces.gap[4]]}>
-        {features.map((feature) => (
-          <View key={feature} style={[Alignments.row, Spaces.gap[8]]}>
-            <Text style={[Fonts.p2Bold, Fonts.success500]}>✓</Text>
-            <Text style={[Alignments.fill, Fonts.p2, Fonts.neutral100]}>{feature}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-/**
- * Guided tour recap screen presenting the Free / Team / Club offers with prices.
- * @param {{ navigation?: any }} props
+ * Ecran Recap des offres, version validee (corps 4a + en-tete 5b).
+ * LE moment de vente unique : carte non selectionnee repliee « a partir de »,
+ * carte selectionnee depliee (segments -> ancre prix -> benefices), CTA collant
+ * qui reflete la selection, achat direct.
+ * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement}
  */
 function GuideOffersRecap({ navigation }) {
   const {
-    Alignments, Fonts, Spaces,
+    Alignments, Colors, Fonts, Spaces,
   } = useTheme();
-  const { getPostOnboardingHomeRoute } = useAuth();
-  const { width } = useWindowDimensions();
-  const isWide = width >= 900;
+  const queryClient = useQueryClient();
+  const { getPostOnboardingHomeRoute, subscriptionSummary, userData } = useAuth();
+
+  const [selectedOffer, setSelectedOffer] = useState('team');
+  const [teamSlotCount, setTeamSlotCount] = useState(1);
+  const [clubTier, setClubTier] = useState(1);
 
   const catalogQuery = useQuery({
     queryFn: getSubscriptionCatalog,
@@ -258,45 +198,52 @@ function GuideOffersRecap({ navigation }) {
   });
 
   const catalogEntries = useMemo(
-    () => sortSubscriptionCatalogEntries(getCatalogEntriesFromResponse(catalogQuery.data)),
+    () => getCatalogEntriesFromResponse(catalogQuery.data),
     [catalogQuery.data],
   );
+  const teamTierEntries = useMemo(() => catalogEntries
+    .filter((entry) => getCatalogEntryScopeType(entry) === 'TEAM'
+      && getCatalogEntryBillingPeriod(entry) === 'yearly')
+    .sort((left, right) => (
+      Number(left?.slotCount || 0) - Number(right?.slotCount || 0)
+    )), [catalogEntries]);
+  const clubTierEntries = useMemo(() => catalogEntries
+    .filter((entry) => getCatalogEntryScopeType(entry) === 'CLUB'
+      && getCatalogEntryBillingPeriod(entry) === 'yearly')
+    .sort((left, right) => (
+      getCatalogEntryClubTier(left) - getCatalogEntryClubTier(right)
+    )), [catalogEntries]);
 
-  const teamOfferEntry = useMemo(() => {
-    const teamYearlyEntries = catalogEntries.filter(
-      (entry) => getCatalogEntryScopeType(entry) === 'TEAM'
-        && getCatalogEntryBillingPeriod(entry) === 'yearly',
-    );
+  const selectedTeamEntry = useMemo(
+    () => teamTierEntries.find((entry) => Number(entry?.slotCount || 0) === teamSlotCount)
+      || teamTierEntries[0]
+      || null,
+    [teamSlotCount, teamTierEntries],
+  );
+  const selectedClubEntry = useMemo(
+    () => clubTierEntries.find((entry) => getCatalogEntryClubTier(entry) === clubTier)
+      || clubTierEntries[0]
+      || null,
+    [clubTier, clubTierEntries],
+  );
 
-    return teamYearlyEntries.find((entry) => Number(entry?.slotCount || 0) === 1)
-      || teamYearlyEntries[0]
-      || null;
-  }, [catalogEntries]);
+  const isClubVerified = userData?.club?.clubVerified === true;
+  const currentClubDocumentId = String(userData?.club?.documentId || '').trim();
+  const isCatalogLoading = catalogQuery.isLoading;
+  const isCatalogError = catalogQuery.isError
+    || (!catalogQuery.isLoading && teamTierEntries.length === 0);
 
-  const clubOfferEntry = useMemo(() => {
-    const clubYearlyEntries = catalogEntries
-      .filter((entry) => getCatalogEntryScopeType(entry) === 'CLUB'
-        && getCatalogEntryBillingPeriod(entry) === 'yearly')
-      .sort((left, right) => getCatalogEntryClubTier(left) - getCatalogEntryClubTier(right));
+  const selectedEntry = selectedOffer === 'club' ? selectedClubEntry : selectedTeamEntry;
+  const selectedOfferName = selectedOffer === 'club'
+    ? (CLUB_TIER_OFFER_LABELS[getCatalogEntryClubTier(selectedClubEntry)] || 'Club')
+    : 'Équipe';
+  const selectedPriceAmountLabel = getEntryPriceAmountLabel(selectedEntry);
 
-    return clubYearlyEntries.find((entry) => getCatalogEntryClubTier(entry) === 1)
-      || clubYearlyEntries[0]
-      || null;
-  }, [catalogEntries]);
-
-  const teamPriceLabel = teamOfferEntry
-    ? formatSubscriptionPriceLabel(teamOfferEntry?.referencePriceEurCents, 'yearly')
-    : '';
-  const teamMonthlyLabel = getYearlyMonthlyEquivalentLabel(teamOfferEntry);
-  const clubPriceLabel = clubOfferEntry
-    ? formatSubscriptionPriceLabel(clubOfferEntry?.referencePriceEurCents, 'yearly')
-    : '';
-
-  const handleChooseOffer = () => {
-    navigation.navigate(RouteNames.ProfileStack, {
-      screen: RouteNames.SubscriptionOverview,
-    });
-  };
+  const purchaseMutation = useMutation({
+    mutationFn: async (/** @type {Record<string, any>} */ payload) => (
+      validateSubscriptionPurchase(payload)
+    ),
+  });
 
   const handleLater = () => {
     const homeRoute = typeof getPostOnboardingHomeRoute === 'function'
@@ -305,62 +252,390 @@ function GuideOffersRecap({ navigation }) {
     navigation.navigate(homeRoute);
   };
 
+  const handleVerifyClub = () => {
+    if (!currentClubDocumentId) {
+      handleLater();
+      return;
+    }
+    navigation.navigate(RouteNames.ClubStack, {
+      params: { clubId: currentClubDocumentId },
+      screen: RouteNames.Club,
+    });
+  };
+
+  // Achat direct depuis le Recap (mode test backend — RevenueCat a l'item 14).
+  const handleUnlock = async () => {
+    if (!selectedEntry || purchaseMutation.isPending || isCatalogLoading || isCatalogError) {
+      return;
+    }
+
+    if (!isSubscriptionBillingTestModeEnabled(APP_RUNTIME_ENV)) {
+      Alert.alert(
+        'Checkout indisponible',
+        'Le checkout store réel sera branché dans une prochaine vague. Utilise le mode test local ou staging pour la recette complète.',
+      );
+      return;
+    }
+
+    const isClubPurchase = selectedOffer === 'club';
+    if (isClubPurchase && !currentClubDocumentId) {
+      Alert.alert(
+        'Club requis',
+        "Rattache d'abord ton compte à un club avant de prendre une offre Club.",
+      );
+      return;
+    }
+
+    const slotCount = Number(selectedEntry?.slotCount || 0);
+    const availableTeams = (userData?.myTeams || []).concat(userData?.trainedTeams || []);
+    const payload = buildSubscriptionPurchasePayload({
+      catalogEntry: selectedEntry,
+      clubDocumentId: isClubPurchase ? currentClubDocumentId : undefined,
+      provider: getSubscriptionTestProvider(Platform.OS),
+      teamDocumentIds: isClubPurchase ? [] : getInitialTeamSelection({
+        availableTeams,
+        coveredTeamDocumentIds: getSubscriptionTeamSlotSummary(subscriptionSummary)
+          .coveredTeamDocumentIds,
+        slotCount,
+      }),
+      trustedValidation: true,
+    });
+
+    try {
+      await purchaseMutation.mutateAsync(payload);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] }),
+        queryClient.invalidateQueries({ queryKey: ['get-me'] }),
+      ]);
+      const renewalDate = new Date();
+      renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+      navigation.navigate(RouteNames.SubscriptionSuccess, {
+        offerLabel: isClubPurchase
+          ? selectedOfferName
+          : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+        renewalDateLabel: format(renewalDate, 'd MMMM yyyy', { locale: fr }),
+        resumeCtaLabel: "C'est parti !",
+        resumeMode: 'home',
+      });
+    } catch (error) {
+      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+    }
+  };
+
+  /**
+   * Carte d'offre selectionnable (repliee / depliee / verrouillee).
+   * @param {'team' | 'club'} offerKey
+   * @returns {import('react').ReactElement}
+   */
+  const renderOfferCard = (offerKey) => {
+    const isClub = offerKey === 'club';
+    const isDisabled = isClub && !isClubVerified;
+    const isSelected = selectedOffer === offerKey && !isDisabled;
+    const offerName = isClub ? 'Club' : 'Équipe';
+    const offerSub = isClub
+      ? 'Pour les dirigeants — tout le club'
+      : 'Pour les coachs — ta ou tes équipes';
+    const entries = isClub ? clubTierEntries : teamTierEntries;
+    const firstEntry = entries[0] || null;
+    const summary = isClub ? CLUB_SUMMARY : TEAM_SUMMARY;
+    const benefits = isClub ? CLUB_BENEFITS : TEAM_BENEFITS;
+    const tierOptions = isClub
+      ? entries.map((entry) => {
+        const tier = getCatalogEntryClubTier(entry);
+        return { id: tier, label: CLUB_TIER_SEGMENT_LABELS[tier] || `Tier ${tier}` };
+      })
+      : entries.map((entry) => {
+        const slotCount = Number(entry?.slotCount || 0);
+        return { id: slotCount, label: `${slotCount} équipe${slotCount > 1 ? 's' : ''}` };
+      });
+    const selectedTierId = isClub ? clubTier : teamSlotCount;
+    const cardEntry = isClub ? selectedClubEntry : selectedTeamEntry;
+    const cardPriceAmount = getEntryPriceAmountLabel(cardEntry);
+    const cardMonthlyLabel = formatSubscriptionMonthlyEquivalentLabel(
+      cardEntry?.referencePriceEurCents,
+    );
+
+    let cardBackgroundColor = 'rgba(255,255,255,0.04)';
+    if (isDisabled) {
+      cardBackgroundColor = 'rgba(255,255,255,0.025)';
+    } else if (isSelected) {
+      cardBackgroundColor = 'rgba(1,179,244,0.10)';
+    }
+
+    return (
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityState={{ disabled: isDisabled, selected: isSelected }}
+        activeOpacity={0.9}
+        disabled={isDisabled}
+        key={offerKey}
+        onPress={() => setSelectedOffer(offerKey)}
+        style={{
+          backgroundColor: cardBackgroundColor,
+          borderColor: isSelected ? Colors.primary500 : 'rgba(255,255,255,0.10)',
+          borderRadius: 20,
+          borderWidth: 1.5,
+          opacity: isDisabled ? 0.75 : 1,
+          paddingBottom: 18,
+          paddingHorizontal: 16,
+          paddingTop: 16,
+        }}
+      >
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+          <Text style={[Fonts.h4Black, isDisabled ? Fonts.neutral400 : Fonts.neutral00]}>
+            {offerName}
+          </Text>
+          {!isClub && !isDisabled ? (
+            <View style={{
+              backgroundColor: Colors.primary500,
+              borderRadius: 999,
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+            }}
+            >
+              <Text
+                style={[
+                  Fonts.p4Bold,
+                  Fonts.primary900,
+                  { letterSpacing: 0.8, textTransform: 'uppercase' },
+                ]}
+              >
+                Populaire
+              </Text>
+            </View>
+          ) : null}
+          {isClub && !isDisabled ? (
+            <Text style={[Fonts.p4Bold, Fonts.primary200]}>
+              club vérifié requis
+            </Text>
+          ) : null}
+          {isDisabled ? (
+            <View style={{
+              backgroundColor: 'rgba(1,179,244,0.10)',
+              borderColor: 'rgba(1,179,244,0.28)',
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+            }}
+            >
+              <Text style={[Fonts.p4Bold, Fonts.primary200, { textTransform: 'uppercase' }]}>
+                club vérifié
+              </Text>
+            </View>
+          ) : null}
+          <View style={Alignments.fill} />
+          {!isDisabled ? (
+            <View style={{
+              alignItems: 'center',
+              backgroundColor: isSelected ? Colors.primary500 : 'transparent',
+              borderColor: isSelected ? Colors.primary500 : Colors.neutral600,
+              borderRadius: 999,
+              borderWidth: 2,
+              height: 22,
+              justifyContent: 'center',
+              width: 22,
+            }}
+            >
+              {isSelected ? (
+                <Text style={{ color: Colors.primary900, fontSize: 12, fontWeight: '900' }}>✓</Text>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+        <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[4]]}>
+          {offerSub}
+        </Text>
+
+        {isDisabled ? (
+          <>
+            <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[12]]}>
+              Réservée aux clubs vérifiés. Fais vérifier ton club pour la débloquer.
+            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={handleVerifyClub}
+              style={[Spaces.paddingVertical[8], { alignSelf: 'flex-start' }]}
+            >
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                Vérifier mon club →
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : null}
+
+        {!isDisabled && isCatalogLoading ? (
+          <View style={[Spaces.gap[8], Spaces.marginTop[12]]}>
+            <View style={{
+              backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 8, height: 26, width: 128,
+            }}
+            />
+            <View style={{
+              backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 7, height: 12, width: 94,
+            }}
+            />
+          </View>
+        ) : null}
+
+        {!isDisabled && !isCatalogLoading && isSelected ? (
+          <>
+            <View style={Spaces.marginTop[12]}>
+              <TierSelector
+                onChange={(tierId) => (isClub
+                  ? setClubTier(Number(tierId))
+                  : setTeamSlotCount(Number(tierId)))}
+                options={tierOptions}
+                value={selectedTierId}
+              />
+            </View>
+            <View
+              style={[
+                Alignments.row,
+                { alignItems: 'baseline' },
+                Spaces.gap[8],
+                Spaces.marginTop[12],
+              ]}
+            >
+              <Text style={[Fonts.h2Bold, Fonts.neutral00]}>
+                {cardPriceAmount}
+              </Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral300]}>/an</Text>
+              <View style={Alignments.fill} />
+              <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                {cardMonthlyLabel}
+              </Text>
+            </View>
+            <View style={[Spaces.gap[8], Spaces.marginTop[12]]}>
+              {benefits.map((benefit) => (
+                <View key={benefit} style={[Alignments.row, Spaces.gap[8]]}>
+                  <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>✓</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral100, { flex: 1 }]}>
+                    {benefit}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        {!isDisabled && !isCatalogLoading && !isSelected ? (
+          <>
+            <View
+              style={[
+                Alignments.row,
+                { alignItems: 'baseline' },
+                Spaces.gap[8],
+                Spaces.marginTop[12],
+              ]}
+            >
+              <Text
+                style={[
+                  Fonts.p4Bold,
+                  Fonts.primary200,
+                  { textTransform: 'uppercase' },
+                ]}
+              >
+                à partir de
+              </Text>
+              <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
+                {getEntryPriceAmountLabel(firstEntry)}
+                /an
+              </Text>
+            </View>
+            <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[8]]}>
+              {summary}
+            </Text>
+          </>
+        ) : null}
+      </TouchableOpacity>
+    );
+  };
+
+  let ctaTitle = `Débloquer ${selectedOfferName}`;
+  if (isCatalogLoading) {
+    ctaTitle = 'Chargement des tarifs…';
+  } else if (isCatalogError) {
+    ctaTitle = 'Tarifs indisponibles';
+  } else if (selectedPriceAmountLabel) {
+    ctaTitle = `Débloquer ${selectedOfferName} · ${selectedPriceAmountLabel}/an`;
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
       contentContainerStyle={[Spaces.paddingBottom[12], Spaces.paddingTop[0]]}
     >
-      <ScrollView
-        contentContainerStyle={[Spaces.gap[24], Spaces.paddingBottom[24], Spaces.paddingTop[12]]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={[Spaces.gap[8]]}>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            Voilà tout ce que FoundClub peut faire pour toi
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Récapitulatif de ton tour guidé. Choisis l&apos;offre qui colle à ton équipe
-            ou à ton club.
-          </Text>
-        </View>
-
-        <View style={[
-          isWide ? Alignments.row : Alignments.column,
-          isWide ? Alignments.alignStretch : null,
-          Spaces.gap[16],
-        ]}
+      <View style={[Alignments.fill]}>
+        <ScrollView
+          contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[24], Spaces.paddingTop[12]]}
+          showsVerticalScrollIndicator={false}
         >
-          <AcquisCard />
-          <OfferCard
-            badgeLabel="Populaire"
-            features={TEAM_OFFER_FEATURES}
-            highlighted
-            isWide={isWide}
-            priceHint={teamMonthlyLabel || null}
-            priceLabel={teamPriceLabel}
-            pricePrefix={null}
-            subtitle="Pour ta ou tes équipes"
-            title="Équipe"
-          />
-          <OfferCard
-            badgeLabel={null}
-            features={CLUB_OFFER_FEATURES}
-            highlighted={false}
-            isWide={isWide}
-            priceHint={null}
-            priceLabel={clubPriceLabel}
-            pricePrefix={clubPriceLabel ? 'à partir de' : null}
-            subtitle="Pour tout le club"
-            title="Club"
-          />
-        </View>
+          <Text style={[Fonts.h2Bold, Fonts.neutral00]}>
+            Ton équipe est prête.
+            {' '}
+            <Text style={[Fonts.h2Bold, Fonts.primary500]}>Débloque la suite.</Text>
+          </Text>
 
-        <View style={[Spaces.gap[12]]}>
-          <Button onPress={handleChooseOffer} title="Choisir mon offre" variant="Primary" />
-          <Button onPress={handleLater} title="Plus tard" variant="SecondaryLight" />
+          <AcquisCard />
+
+          {isCatalogError ? (
+            <View
+              style={[
+                Alignments.alignCenter,
+                Spaces.gap[12],
+                {
+                  backgroundColor: 'rgba(255,40,79,0.07)',
+                  borderColor: 'rgba(255,40,79,0.45)',
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  paddingHorizontal: 20,
+                  paddingVertical: 26,
+                },
+              ]}
+            >
+              <Text style={[Fonts.h5Bold, Fonts.neutral00, Fonts.textCenter]}>
+                Impossible de charger les tarifs
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
+                Vérifie ta connexion et réessaie. Tes créations sont bien enregistrées.
+              </Text>
+              <Button
+                onPress={() => catalogQuery.refetch()}
+                title="Réessayer"
+                variant="Secondary"
+              />
+            </View>
+          ) : (
+            <>
+              {renderOfferCard('team')}
+              {renderOfferCard('club')}
+              <Text style={[Fonts.p4, Fonts.neutral300, Fonts.textCenter]}>
+                Résiliable à tout moment · Paiement App Store / Google Play
+              </Text>
+            </>
+          )}
+        </ScrollView>
+
+        <View style={[Spaces.gap[4], Spaces.paddingTop[8]]}>
+          <Button
+            disabled={isCatalogLoading || isCatalogError}
+            isLoading={purchaseMutation.isPending}
+            onPress={handleUnlock}
+            title={purchaseMutation.isPending ? 'Achat en cours…' : ctaTitle}
+            variant="Primary"
+          />
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={handleLater}
+            style={Spaces.paddingVertical[12]}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral200, Fonts.textCenter]}>
+              Plus tard
+            </Text>
+          </TouchableOpacity>
           <LegalFooter />
         </View>
-      </ScrollView>
+      </View>
     </ScreenContainer>
   );
 }
