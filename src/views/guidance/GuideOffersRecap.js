@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert, Platform, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -27,6 +27,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   getSubscriptionCatalog,
+  trackSubscriptionFunnelEvent,
   validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
 
@@ -188,6 +189,11 @@ function GuideOffersRecap({ navigation }) {
   const { getPostOnboardingHomeRoute, subscriptionSummary, userData } = useAuth();
 
   const [selectedOffer, setSelectedOffer] = useState('team');
+
+  // Jalon funnel : arrivee sur le recap des offres (handoff 13).
+  useEffect(() => {
+    trackSubscriptionFunnelEvent('recap_viewed', { source: 'guide-offers-recap' });
+  }, []);
   const [teamSlotCount, setTeamSlotCount] = useState(1);
   const [clubTier, setClubTier] = useState(1);
 
@@ -287,6 +293,11 @@ function GuideOffersRecap({ navigation }) {
     }
 
     const slotCount = Number(selectedEntry?.slotCount || 0);
+    trackSubscriptionFunnelEvent('recap_unlock_started', {
+      planCode: String(selectedEntry?.planCode || ''),
+      slotCount,
+      source: selectedOffer,
+    });
     const availableTeams = (userData?.myTeams || []).concat(userData?.trainedTeams || []);
     const payload = buildSubscriptionPurchasePayload({
       catalogEntry: selectedEntry,
@@ -303,6 +314,11 @@ function GuideOffersRecap({ navigation }) {
 
     try {
       await purchaseMutation.mutateAsync(payload);
+      trackSubscriptionFunnelEvent('recap_unlock_succeeded', {
+        planCode: String(selectedEntry?.planCode || ''),
+        slotCount,
+        source: selectedOffer,
+      });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] }),
         queryClient.invalidateQueries({ queryKey: ['get-me'] }),
@@ -318,6 +334,11 @@ function GuideOffersRecap({ navigation }) {
         resumeMode: 'home',
       });
     } catch (error) {
+      trackSubscriptionFunnelEvent('recap_unlock_failed', {
+        planCode: String(selectedEntry?.planCode || ''),
+        slotCount,
+        source: selectedOffer,
+      });
       Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
     }
   };
@@ -369,7 +390,10 @@ function GuideOffersRecap({ navigation }) {
         activeOpacity={0.9}
         disabled={isDisabled}
         key={offerKey}
-        onPress={() => setSelectedOffer(offerKey)}
+        onPress={() => {
+          setSelectedOffer(offerKey);
+          trackSubscriptionFunnelEvent('recap_offer_selected', { source: offerKey });
+        }}
         style={{
           backgroundColor: cardBackgroundColor,
           borderColor: isSelected ? Colors.primary500 : 'rgba(255,255,255,0.10)',

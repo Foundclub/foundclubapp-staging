@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   Platform, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -8,6 +9,8 @@ import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { trackSubscriptionFunnelEvent } from '@/services/subscription/subscriptionService';
 
 // Confettis statiques de la celebration compacte (positions relatives du handoff 6a).
 const CELEBRATION_DOTS = [
@@ -61,7 +64,14 @@ function SubscriptionSuccess({ navigation, route }) {
     });
   };
 
+  // Jalon funnel : ecran succes affiche (handoff 13).
+  useEffect(() => {
+    trackSubscriptionFunnelEvent('success_screen_viewed', { source: resumeMode });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleResume = () => {
+    trackSubscriptionFunnelEvent('success_resume_clicked', { source: resumeMode });
     if (resumeMode === 'home') {
       handleGoHome();
       return;

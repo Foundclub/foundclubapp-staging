@@ -6,6 +6,22 @@ import client from '@/services/client';
  */
 const getResponsePayload = (response) => response?.data || null;
 
+/**
+ * Jalon du funnel paywall (handoff 12-13). Fire-and-forget : le tracking ne
+ * doit jamais bloquer ni casser un flux utilisateur.
+ * @param {string} eventName
+ * @param {Record<string, any>} [payload]
+ * @returns {void}
+ */
+export const trackSubscriptionFunnelEvent = (eventName, payload = {}) => {
+  client.post('/subscriptions/funnel-events', {
+    data: {
+      ...payload,
+      eventName,
+    },
+  }).catch(() => {});
+};
+
 export const getSubscriptionCatalog = async () => {
   const response = await client.get('/subscriptions/catalog');
   return getResponsePayload(response);

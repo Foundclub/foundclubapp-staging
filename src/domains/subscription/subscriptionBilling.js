@@ -2,6 +2,35 @@ import { formatSubscriptionPlanLabel } from './subscriptionDecision';
 
 const TEAM_SCOPE = 'TEAM';
 
+// A/B palier preselectionne (handoff item 13) : OFF par defaut — tout le monde
+// voit le palier 2. Passer a true pour activer le test (bucket B = palier 1).
+export const SUBSCRIPTION_TIER_AB_TEST_ENABLED = false;
+
+/**
+ * Bucket A/B stable derive de l'identifiant utilisateur (pas de hasard runtime).
+ * @param {string | null | undefined} userDocumentId
+ * @returns {'A' | 'B'}
+ */
+export const getSubscriptionTierAbBucket = (userDocumentId) => {
+  const raw = String(userDocumentId || '');
+  if (!raw) return 'A';
+  let hash = 0;
+  for (let index = 0; index < raw.length; index += 1) {
+    hash = ((hash * 31) + raw.charCodeAt(index)) % 997;
+  }
+  return hash % 2 === 0 ? 'A' : 'B';
+};
+
+/**
+ * Palier preselectionne dans la sheet quota selon le bucket.
+ * @param {'A' | 'B'} bucket
+ * @returns {number}
+ */
+export const getSubscriptionPreselectedSlotCount = (bucket) => {
+  if (!SUBSCRIPTION_TIER_AB_TEST_ENABLED) return 2;
+  return bucket === 'B' ? 1 : 2;
+};
+
 /**
  * @param {string | undefined | null} runtimeEnv
  * @returns {boolean}

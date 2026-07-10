@@ -16,8 +16,11 @@ import {
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
+  getSubscriptionPreselectedSlotCount,
   getSubscriptionTestProvider,
+  getSubscriptionTierAbBucket,
   isSubscriptionBillingTestModeEnabled,
+  SUBSCRIPTION_TIER_AB_TEST_ENABLED,
 } from '@/domains/subscription/subscriptionBilling';
 import {
   formatSubscriptionRequiredPlanText,
@@ -40,6 +43,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   getSubscriptionCatalog,
+  trackSubscriptionFunnelEvent,
   validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
 
@@ -157,18 +161,33 @@ function SubscriptionPaywallSheet({
   }, [catalogEntries, decision]);
 
   const [selectedSlotCount, setSelectedSlotCount] = useState(0);
+  const funnelAbBucket = getSubscriptionTierAbBucket(userData?.documentId);
 
-  // Palier preselectionne a chaque ouverture (2e equipe -> palier 2), borne au catalogue.
+  // Palier preselectionne a chaque ouverture (2e equipe -> palier 2), borne au
+  // catalogue. Si le test A/B est actif, le bucket prime (handoff 13).
   useEffect(() => {
     if (!isVisible || !quotaSheetContent || teamTierEntries.length === 0) {
       return;
     }
     const availableSlotCounts = teamTierEntries.map((entry) => Number(entry?.slotCount || 0));
-    const preselected = availableSlotCounts.includes(quotaSheetContent.preselectedSlotCount)
-      ? quotaSheetContent.preselectedSlotCount
+    const wantedSlotCount = SUBSCRIPTION_TIER_AB_TEST_ENABLED
+      ? getSubscriptionPreselectedSlotCount(funnelAbBucket)
+      : quotaSheetContent.preselectedSlotCount;
+    const preselected = availableSlotCounts.includes(wantedSlotCount)
+      ? wantedSlotCount
       : availableSlotCounts[0];
     setSelectedSlotCount(preselected);
-  }, [isVisible, quotaSheetContent, teamTierEntries]);
+  }, [funnelAbBucket, isVisible, quotaSheetContent, teamTierEntries]);
+
+  // Jalon funnel : ouverture de la sheet quota (handoff 13).
+  useEffect(() => {
+    if (!isVisible || !quotaSheetContent) return;
+    trackSubscriptionFunnelEvent('paywall_quota_sheet_viewed', {
+      abBucket: funnelAbBucket,
+      paywallKey: paywall.paywallKey,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible]);
 
   const selectedEntry = useMemo(
     () => teamTierEntries
@@ -237,8 +256,21 @@ function SubscriptionPaywallSheet({
   };
 
   const handleCompareOffers = () => {
+    trackSubscriptionFunnelEvent('paywall_compare_offers_opened', {
+      abBucket: funnelAbBucket,
+      paywallKey: paywall.paywallKey,
+    });
     close();
     navigation.navigate(RouteNames.GuideOffersRecap);
+  };
+
+  const handleDismissLater = () => {
+    trackSubscriptionFunnelEvent('paywall_dismissed', {
+      abBucket: funnelAbBucket,
+      paywallKey: paywall.paywallKey,
+      slotCount: selectedSlotCount,
+    });
+    close();
   };
 
   // Achat direct dans la sheet. Aujourd'hui : mode test backend (trustedValidation) —
@@ -257,6 +289,12 @@ function SubscriptionPaywallSheet({
     }
 
     const slotCount = Number(selectedEntry?.slotCount || 0);
+    trackSubscriptionFunnelEvent('paywall_purchase_started', {
+      abBucket: funnelAbBucket,
+      paywallKey: paywall.paywallKey,
+      planCode: String(selectedEntry?.planCode || ''),
+      slotCount,
+    });
     const availableTeams = (userData?.myTeams || []).concat(userData?.trainedTeams || []);
     const payload = buildSubscriptionPurchasePayload({
       catalogEntry: selectedEntry,
@@ -272,6 +310,12 @@ function SubscriptionPaywallSheet({
 
     try {
       await purchaseMutation.mutateAsync(payload);
+      trackSubscriptionFunnelEvent('paywall_purchase_succeeded', {
+        abBucket: funnelAbBucket,
+        paywallKey: paywall.paywallKey,
+        planCode: String(selectedEntry?.planCode || ''),
+        slotCount,
+      });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] }),
         queryClient.invalidateQueries({ queryKey: ['get-me'] }),
@@ -285,6 +329,12 @@ function SubscriptionPaywallSheet({
         resumeCtaLabel: quotaSheetContent?.successCtaLabel || 'Reprendre',
       });
     } catch (error) {
+      trackSubscriptionFunnelEvent('paywall_purchase_failed', {
+        abBucket: funnelAbBucket,
+        paywallKey: paywall.paywallKey,
+        planCode: String(selectedEntry?.planCode || ''),
+        slotCount,
+      });
       Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
     }
   };
@@ -382,7 +432,14 @@ function SubscriptionPaywallSheet({
           ) : (
             <>
               <TierSelector
-                onChange={(slotCount) => setSelectedSlotCount(Number(slotCount))}
+                onChange={(slotCount) => {
+                  setSelectedSlotCount(Number(slotCount));
+                  trackSubscriptionFunnelEvent('paywall_tier_selected', {
+                    abBucket: funnelAbBucket,
+                    paywallKey: paywall.paywallKey,
+                    slotCount: Number(slotCount),
+                  });
+                }}
                 options={tierOptions}
                 value={selectedSlotCount}
               />
@@ -440,7 +497,7 @@ function SubscriptionPaywallSheet({
               </TouchableOpacity>
               <TouchableOpacity
                 accessibilityRole="button"
-                onPress={close}
+                onPress={handleDismissLater}
                 style={Spaces.paddingVertical[12]}
               >
                 <Text style={[Fonts.p2Bold, Fonts.neutral300]}>
