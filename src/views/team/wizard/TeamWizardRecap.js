@@ -223,12 +223,24 @@ function TeamWizardRecap({ navigation }) {
     const member = clubData?.members?.find(
       (/** @param {any} candidate */ candidate) => candidate?.documentId === trainerDocumentId,
     );
+    const isSelf = trainerDocumentId === userData?.documentId;
+    // Fallback userData pour soi-meme : un compte fraichement affilie n'est pas
+    // encore dans clubData.members — et on n'affiche JAMAIS un documentId brut.
+    const firstname = member?.firstname || (isSelf ? userData?.firstname : '') || '';
+    const lastname = member?.lastname || (isSelf ? userData?.lastname : '') || '';
+    const fullName = `${firstname} ${lastname}`.trim();
+    const roleName = member?.role?.name || (isSelf ? userData?.role?.name : '');
+    const roleLabel = roleName === 'Dirigeant' ? 'dirigeant·e' : 'coach';
+    let displayName = fullName;
+    if (!displayName) {
+      displayName = isSelf ? 'Toi' : 'Entraîneur·e';
+    }
     return {
+      displayName,
       documentId: trainerDocumentId,
-      firstname: member?.firstname || '',
-      isSelf: trainerDocumentId === userData?.documentId,
-      lastname: member?.lastname || '',
-      roleLabel: member?.role?.name === 'Dirigeant' ? 'dirigeant·e' : 'coach',
+      hasName: Boolean(fullName),
+      isSelf,
+      roleLabel,
     };
   });
 
@@ -425,14 +437,19 @@ function TeamWizardRecap({ navigation }) {
                       }}
                     >
                       <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                        {`${trainer.firstname.charAt(0)}${trainer.lastname.charAt(0)}`.toUpperCase() || '·'}
+                        {trainer.displayName
+                          .split(/\s+/)
+                          .map((/** @type {string} */ word) => word.charAt(0))
+                          .join('')
+                          .slice(0, 2)
+                          .toUpperCase() || '·'}
                       </Text>
                     </View>
                     <Text style={[Fonts.p3Bold, Fonts.neutral100, { flexShrink: 1 }]}>
-                      {`${trainer.firstname} ${trainer.lastname}`.trim() || trainer.documentId}
+                      {trainer.displayName}
                       {trainer.isSelf ? (
                         <Text style={[Fonts.p3, Fonts.neutral400]}>
-                          {` — toi, ${trainer.roleLabel}`}
+                          {trainer.hasName ? ` — toi, ${trainer.roleLabel}` : ` — ${trainer.roleLabel}`}
                         </Text>
                       ) : null}
                     </Text>
