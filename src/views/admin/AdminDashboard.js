@@ -696,7 +696,7 @@ function AdminDashboard() {
       : {
         backgroundColor: `${Colors.neutral300}18`,
         borderColor: `${Colors.neutral300}44`,
-        label: 'Non certifiee',
+        label: 'Non certifiée',
         textColor: Colors.neutral100,
       }
   ), [Colors.neutral100, Colors.neutral300, Colors.success500]);

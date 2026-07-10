@@ -2377,7 +2377,7 @@ function SquadDetailsScreen({ navigation, route }) {
                       { label: 'Matchs', value: leaguePerformanceSummary.matches },
                       { label: 'Minutes', value: leaguePerformanceSummary.minutesPlayed },
                       { label: 'Buts', value: leaguePerformanceSummary.goals },
-                      { label: 'Passes D', value: leaguePerformanceSummary.assists },
+                      { label: 'Passes décisives', value: leaguePerformanceSummary.assists },
                     ].map((stat) => (
                       <View
                         key={stat.label}
@@ -2409,7 +2409,7 @@ function SquadDetailsScreen({ navigation, route }) {
                       {`Score cumule: ${leaguePerformanceSummary.scoreForTotal} - ${leaguePerformanceSummary.scoreAgainstTotal}`}
                     </Text>
                     <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-                      {`${leaguePerformanceSummary.cleanSheets} clean sheets - ${leaguePerformanceSummary.scoreAgainstTotal} buts encaisses`}
+                      {`${leaguePerformanceSummary.cleanSheets} clean sheets - ${leaguePerformanceSummary.scoreAgainstTotal} buts encaissés`}
                     </Text>
                   </View>
 

@@ -43,13 +43,13 @@ import {
 
 const FOOTBALL_FIELDS = [
   { key: 'goals', label: 'Buts' },
-  { key: 'assists', label: 'Passes D' },
-  { key: 'goalsConceded', label: 'Buts encaisses' },
+  { key: 'assists', label: 'Passes décisives' },
+  { key: 'goalsConceded', label: 'Buts encaissés' },
 ];
 
 const BASKETBALL_FIELDS = [
   { key: 'points', label: 'Points' },
-  { key: 'assists', label: 'Passes D' },
+  { key: 'assists', label: 'Passes décisives' },
   { key: 'rebounds', label: 'Rebonds' },
   { key: 'threePointsMade', label: '3 pts' },
 ];
@@ -212,7 +212,7 @@ const getApiErrorMessage = (/** @type {any} */ error, /** @type {string} */ fall
 );
 
 const getScoreSourceLabel = (/** @type {any} */ score) => {
-  if (score?.source === 'league_validated') return 'Score ligue valide';
+  if (score?.source === 'league_validated') return 'Score ligue validé';
   if (score?.source === 'external_sync') return 'Score officiel synchronise';
   if (score?.source === 'manual') return 'Score saisi dans FoundClub';
   return 'Score en attente';
@@ -330,7 +330,7 @@ const buildMatchStatsConsistencyIssues = ({
       getNumericStatValue(line?.goalsConceded) > resolvedScoreAgainst
     ));
     if (invalidConcededLine) {
-      issues.push(`Les buts encaisses de ${invalidConcededLine?.label || 'ce joueur'} depassent le score adverse (${resolvedScoreAgainst}).`);
+      issues.push(`Les buts encaissés de ${invalidConcededLine?.label || 'ce joueur'} dépassent le score adverse (${resolvedScoreAgainst}).`);
     }
 
     if (resolvedScoreAgainst > 0 && lines.some((/** @type {MatchStatsLine} */ line) => Boolean(line?.cleanSheet))) {
@@ -342,7 +342,7 @@ const buildMatchStatsConsistencyIssues = ({
     Boolean(line?.cleanSheet) && getNumericStatValue(line?.goalsConceded) > 0
   ));
   if (invalidCleanSheetLine) {
-    issues.push(`Le clean sheet de ${invalidCleanSheetLine?.label || 'ce joueur'} impose 0 but encaisse.`);
+    issues.push(`Le clean sheet de ${invalidCleanSheetLine?.label || 'ce joueur'} impose 0 but encaissé.`);
   }
 
   return issues;
@@ -1097,7 +1097,7 @@ function MatchStatsEditor({ navigation, route }) {
 
               {sourceType === 'league' ? (
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  Le score ligue valide reste la source officielle pour ce rapport.
+                  Le score ligue validé reste la source officielle pour ce rapport.
                 </Text>
               ) : null}
             </View>
@@ -1391,7 +1391,7 @@ function MatchStatsEditor({ navigation, route }) {
                       >
                         <Text style={[Fonts.p4Bold, Fonts.primary100]}>Quantites verrouillees</Text>
                         <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          Ce joueur a deja valide ses stats personnelles. Les chiffres restent proteges, mais tu peux toujours ajouter un retour qualitatif plus haut.
+                          Ce joueur a déjà validé ses stats personnelles. Les chiffres restent proteges, mais tu peux toujours ajouter un retour qualitatif plus haut.
                         </Text>
                       </View>
                     ) : null}

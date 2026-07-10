@@ -125,7 +125,7 @@ function CMMembersScreen({ navigation, route }) {
   const tabs = [
     { label: 'Tous', value: 'all' },
     { label: 'Dirigeants', value: 'presidents' },
-    { label: 'Entraineurs', value: 'coaches' },
+    { label: 'Entraîneur·e·s', value: 'coaches' },
     { label: 'Joueurs', value: 'players' },
   ];
 

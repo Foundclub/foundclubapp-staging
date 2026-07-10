@@ -58,9 +58,9 @@ const campaignTypeLabel = {
   tournament: 'Tournoi',
 };
 const roleDisplayLabel = {
-  coach: 'Entraineur',
+  coach: 'Entraîneur·e',
   dirigeant: 'Dirigeant',
-  entraineur: 'Entraineur',
+  entraineur: 'Entraîneur·e',
   joueur: 'Joueur',
   president: 'Dirigeant',
   superadmin: 'Super admin',

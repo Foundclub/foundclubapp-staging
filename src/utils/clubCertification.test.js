@@ -13,9 +13,9 @@ describe('clubCertification utils', () => {
 
   test('keeps certification tied to clubVerified when available', () => {
     expect(isVerifiedClub({ clubPartner: true, clubVerified: false })).toBe(false);
-    expect(getClubCertificationLabel({ clubPartner: true, clubVerified: false })).toBe('Non certifiee');
+    expect(getClubCertificationLabel({ clubPartner: true, clubVerified: false })).toBe('Non certifiée');
     expect(isVerifiedClub({ clubPartner: true, clubVerified: true })).toBe(true);
-    expect(getClubCertificationLabel({ clubPartner: true, clubVerified: true })).toBe('Verifie');
+    expect(getClubCertificationLabel({ clubPartner: true, clubVerified: true })).toBe('Vérifié');
     expect(isVerifiedClub({ clubPartner: true })).toBe(false);
   });
 });

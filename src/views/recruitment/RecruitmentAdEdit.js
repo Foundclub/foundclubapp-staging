@@ -53,7 +53,7 @@ const buildDefaultValues = (ad) => ({
 });
 
 const COACH_ROLE_OPTIONS = [
-  { label: 'Entraineur principal', value: 'entraineur_principal' },
+  { label: 'Entraîneur·e principal·e', value: 'entraineur_principal' },
   { label: 'Entraineur adjoint', value: 'entraineur_adjoint' },
   { label: 'Preparateur physique', value: 'preparateur_physique' },
   { label: 'Entraineur gardiens', value: 'entraineur_gardiens' },

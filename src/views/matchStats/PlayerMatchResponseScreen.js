@@ -36,13 +36,13 @@ import {
 
 const FOOTBALL_FIELDS = [
   { key: 'goals', label: 'Buts' },
-  { key: 'assists', label: 'Passes D' },
-  { key: 'goalsConceded', label: 'Buts encaisses' },
+  { key: 'assists', label: 'Passes décisives' },
+  { key: 'goalsConceded', label: 'Buts encaissés' },
 ];
 
 const BASKETBALL_FIELDS = [
   { key: 'points', label: 'Points' },
-  { key: 'assists', label: 'Passes D' },
+  { key: 'assists', label: 'Passes décisives' },
   { key: 'rebounds', label: 'Rebonds' },
   { key: 'threePointsMade', label: '3 pts' },
 ];
@@ -98,7 +98,7 @@ const buildPlayerConsistencyIssues = ({
     issues.push(`Tes buts ne peuvent pas depasser le score officiel de ton equipe (${scoreFor}).`);
   }
   if (scoreAgainst !== null && goalsConceded > scoreAgainst) {
-    issues.push(`Les buts encaisses ne peuvent pas depasser le score officiel adverse (${scoreAgainst}).`);
+    issues.push(`Les buts encaissés ne peuvent pas dépasser le score officiel adverse (${scoreAgainst}).`);
   }
   if (scoreAgainst !== null && cleanSheet && scoreAgainst > 0) {
     issues.push('Un clean sheet est impossible si le score officiel indique un but adverse.');
@@ -111,7 +111,7 @@ const buildPlayerConsistencyIssues = ({
 };
 
 const getScoreSourceLabel = (score) => {
-  if (score?.source === 'league_validated') return 'Score ligue valide';
+  if (score?.source === 'league_validated') return 'Score ligue validé';
   if (score?.source === 'external_sync') return 'Score officiel synchronise';
   if (score?.source === 'manual') return 'Score saisi dans FoundClub';
   return 'Score en attente';
@@ -763,7 +763,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                         ]}
                       >
                         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                          {quantitative?.cleanSheet ? 'Clean sheet valide' : 'Ajouter clean sheet'}
+                          {quantitative?.cleanSheet ? 'Clean sheet validé' : 'Ajouter clean sheet'}
                         </Text>
                       </Pressable>
                     ) : null}

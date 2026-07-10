@@ -21,7 +21,7 @@ export const isVerifiedClub = (club) => (
  * @returns {string}
  */
 export const getClubCertificationLabel = (club) => (
-  isVerifiedClub(club) ? 'Verifie' : 'Non certifiee'
+  isVerifiedClub(club) ? 'Vérifié' : 'Non certifiée'
 );
 
 /**

@@ -1126,7 +1126,7 @@ function LeagueMatchDetails({ navigation, route }) {
     const nextStep = leagueWorkflowSteps.find((step) => step.state !== 'done');
     if (nextStep?.label) return nextStep.label;
 
-    return 'Termine';
+    return 'Terminé';
   }, [leagueWorkflowSteps]);
   const heroSummaryChips = useMemo(() => {
     const chips = [
@@ -1137,7 +1137,7 @@ function LeagueMatchDetails({ navigation, route }) {
       },
       {
         key: 'workflow',
-        tone: activeWorkflowStepLabel === 'Termine' ? 'success' : 'neutral',
+        tone: activeWorkflowStepLabel === 'Terminé' ? 'success' : 'neutral',
         value: activeWorkflowStepLabel,
       },
     ];

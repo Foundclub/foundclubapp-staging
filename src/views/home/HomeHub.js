@@ -1185,7 +1185,7 @@ function HomeHubContent({ auth, navigation, route }) {
       showBanner({
         body: t(
           'homeHub.alerts.nonPartnerCoachPublishingBlocked.description',
-          'Votre club n est pas encore certifie sur FoundClub. Un superadmin doit autoriser la publication avant de creer un evenement.',
+          "Ton club n'est pas encore certifié sur FoundClub. Un superadmin doit autoriser la publication avant de créer un événement.",
         ),
         title: t(
           'homeHub.alerts.nonPartnerCoachPublishingBlocked.title',
@@ -1204,7 +1204,7 @@ function HomeHubContent({ auth, navigation, route }) {
       showBanner({
         body: t(
           'homeHub.alerts.nonPartnerCoachPublishingBlocked.adDescription',
-          'Votre club n est pas encore certifie sur FoundClub. Un superadmin doit autoriser la publication avant de creer une annonce.',
+          "Ton club n'est pas encore certifié sur FoundClub. Un superadmin doit autoriser la publication avant de créer une annonce.",
         ),
         title: t(
           'homeHub.alerts.nonPartnerCoachPublishingBlocked.title',
@@ -2000,12 +2000,12 @@ function HomeHubContent({ auth, navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Publication reservee aux clubs certifies
+                Publication réservée aux clubs certifiés
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {governedPublishingBlockReason === 'requires_superadmin_authorization'
-                  ? 'Votre club n est pas encore certifie. Vous pouvez gerer votre organisation, mais un superadmin doit encore autoriser la publication des evenements et des annonces.'
-                  : 'La publication est temporairement bloqueee pour ce club non certifie.'}
+                  ? "Ton club n'est pas encore certifié. Tu peux gérer ton organisation, mais un superadmin doit encore autoriser la publication des événements et des annonces."
+                  : 'La publication est temporairement bloquée pour ce club non certifié.'}
               </Text>
             </View>
           ) : null}

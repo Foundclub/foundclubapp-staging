@@ -159,7 +159,8 @@ function TeamDetails({ navigation, route }) {
     isLoading: isTeamPerformanceLoading,
     refetch: refetchTeamPerformanceStats,
   } = useGetTeamPerformanceStats(teamId || '', {
-    enabled: Boolean(teamId),
+    // Route reservee aux membres (is-team-member) : requeter une autre equipe = 403 garanti.
+    enabled: Boolean(teamId && isMyTeam),
     staleTime: 1000 * 60,
   });
   const teamPerformanceStats = /** @type {any} */ (rawTeamPerformanceStats);
@@ -3330,7 +3331,7 @@ function TeamDetails({ navigation, route }) {
                               const isMyHomeTeam = Boolean(match?._isMyHomeTeam);
                               const isMyAwayTeam = Boolean(match?._isMyAwayTeam);
                               const statusLabel = match._isPlayed
-                                ? t('teamDetails.calendar.status.played', 'Termine')
+                                ? t('teamDetails.calendar.status.played', 'Terminé')
                                 : t('teamDetails.calendar.status.upcoming', 'A venir');
                               const dateLabel = match._dateObj
                                 ? match._dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', weekday: 'short' })
