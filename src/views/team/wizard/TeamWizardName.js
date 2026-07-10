@@ -1,15 +1,19 @@
-import { useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Text, TouchableOpacity, View,
+  Alert, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import SubscriptionQuotaBanner from '@/components/molecules/subscriptionQuotaBanner/SubscriptionQuotaBanner';
+import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
@@ -17,11 +21,27 @@ import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetClub } from '@/services/club/clubQueries';
+import { claimTeamAsCoach } from '@/services/team/teamService';
 
 // Suggestions de noms du handoff (chips « choisir = toucher », tunnel 1/8).
 const NAME_SUGGESTIONS = ['Seniors A', 'U15 Filles', 'Loisir mixte'];
 
-const sanitizeRouteParam = (value) => {
+/**
+ * Un compte entraineur supprime (RGPD) est anonymise et bloque : il ne compte
+ * pas comme entraineur actif (aligne sur le backend claimCoach).
+ * @param {any} trainer
+ * @returns {boolean}
+ */
+const isDeletedTrainer = (trainer) => {
+  if (!trainer?.blocked) {
+    return false;
+  }
+  const username = String(trainer?.username || '');
+  const email = String(trainer?.email || '').toLowerCase();
+  return username.startsWith('deleted_user_') || email.endsWith('@deleted.com');
+};
+
+const sanitizeRouteParam = (/** @type {any} */ value) => {
   const normalizedValue = String(value || '').trim();
   if (!normalizedValue || normalizedValue.startsWith(':')) {
     return '';
@@ -42,7 +62,9 @@ function TeamWizardName({ navigation, route }) {
   } = useTheme();
   const { userData } = useAuth();
   const { dispatch, state } = useTeamWizard();
-  const handleExitWizard = useTeamWizardExit(navigation);
+  const queryClient = useQueryClient();
+  const handleExitWizard = useTeamWizardExit(/** @type {any} */ (navigation));
+  const [isChooserDismissed, setIsChooserDismissed] = useState(false);
   const routeClubId = sanitizeRouteParam(route?.params?.clubId);
   const routePreselectedTrainerId = sanitizeRouteParam(route?.params?.preselectedTrainerId);
   const accountClubId = sanitizeRouteParam(userData?.club?.documentId || userData?.club?.id);
@@ -55,6 +77,50 @@ function TeamWizardName({ navigation, route }) {
     .join('')
     .slice(0, 3)
     .toUpperCase();
+
+  // Equipes deja presentes dans le club (chooser rejoindre/reprendre/creer).
+  const clubTeams = useMemo(
+    () => {
+      const clubData = /** @type {any} */ (clubQuery.data);
+      return Array.isArray(clubData?.teams) ? clubData.teams : [];
+    },
+    [clubQuery.data],
+  );
+  const shouldOfferChooser = clubTeams.length > 0 && !isChooserDismissed;
+
+  const goToTeamDetails = (/** @type {string} */ teamDocumentId) => {
+    setIsChooserDismissed(true);
+    /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
+      params: { teamId: teamDocumentId },
+      screen: RouteNames.TeamDetails,
+    });
+  };
+
+  const claimTeamMutation = useMutation({
+    mutationFn: (/** @type {string} */ teamDocumentId) => claimTeamAsCoach(teamDocumentId),
+    onError: (/** @type {any} */ error) => {
+      const message = error?.response?.data?.error?.message
+        || 'Impossible de reprendre cette équipe pour le moment.';
+      Alert.alert(t('common.error', 'Erreur'), message);
+    },
+    onSuccess: async (/** @type {any} */ _result, /** @type {string} */ teamDocumentId) => {
+      // Valide l'etape « Cree ton equipe » du tour guide (equipe reprise = equipe active).
+      emitGuidanceAction('team.created');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['teams'] }),
+        queryClient.invalidateQueries({ queryKey: ['get-me'] }),
+        queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] }),
+      ]);
+      const claimedTeam = clubTeams.find(
+        (/** @type {any} */ team) => team?.documentId === teamDocumentId,
+      );
+      Alert.alert(
+        t('common.success', 'C\'est fait !'),
+        `Tu es maintenant l'entraîneur·e de ${claimedTeam?.name || 'cette équipe'}.`,
+      );
+      goToTeamDetails(teamDocumentId);
+    },
+  });
 
   useEffect(() => {
     const nextClubId = routeClubId || accountClubId;
@@ -203,6 +269,61 @@ function TeamWizardName({ navigation, route }) {
           })}
         </View>
       </View>
+
+      <BottomModal
+        close={() => setIsChooserDismissed(true)}
+        isVisible={shouldOfferChooser}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[16]]}>
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              Ton club a déjà des équipes
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral300]}>
+              Rejoins une équipe existante, reprends-en une sans entraîneur·e, ou crée
+              la tienne.
+            </Text>
+          </View>
+
+          <View style={[Spaces.gap[8]]}>
+            {clubTeams.map((/** @type {any} */ team) => {
+              const activeTrainers = (Array.isArray(team?.trainers) ? team.trainers : [])
+                .filter((/** @type {any} */ trainer) => !isDeletedTrainer(trainer));
+              const isOrphan = activeTrainers.length === 0;
+              const subtitle = isOrphan
+                ? 'Sans entraîneur·e — reprends-la'
+                : `${activeTrainers.length} entraîneur·e${activeTrainers.length > 1 ? 's' : ''}`;
+              const isClaimingThis = claimTeamMutation.isPending
+                && claimTeamMutation.variables === team?.documentId;
+              return (
+                <WizardOptionCard
+                  compact
+                  key={team?.documentId || team?.name}
+                  onPress={() => {
+                    if (claimTeamMutation.isPending) {
+                      return;
+                    }
+                    if (isOrphan) {
+                      claimTeamMutation.mutate(team?.documentId);
+                    } else {
+                      goToTeamDetails(team?.documentId);
+                    }
+                  }}
+                  subtitle={isClaimingThis ? 'Reprise en cours…' : subtitle}
+                  tag={isOrphan ? 'Reprendre' : undefined}
+                  title={team?.name || 'Équipe'}
+                />
+              );
+            })}
+          </View>
+
+          <Button
+            onPress={() => setIsChooserDismissed(true)}
+            title="Créer une nouvelle équipe"
+            variant="Primary"
+          />
+        </View>
+      </BottomModal>
     </WizardStepLayout>
   );
 }

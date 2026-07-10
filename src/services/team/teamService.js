@@ -564,6 +564,16 @@ export const leaveTeam = async (teamId) => {
 };
 
 /**
+ * Reprendre une équipe orpheline (sans entraîneur actif) en tant que coach.
+ * @param {string} teamId
+ * @returns {Promise<object>}
+ */
+export const claimTeamAsCoach = async (teamId) => {
+  const response = await client.post(`/teams/${teamId}/claim-coach`);
+  return response.data;
+};
+
+/**
  * Remove a player from a team
  * @param {string} teamId
  * @param {string} playerId
