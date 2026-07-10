@@ -64,6 +64,7 @@ import { useClubScope } from '@/context/ClubScopeContext';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 import { useStartupPhase } from '@/context/StartupPhaseContext';
+import { useTour } from '@/context/TourContext';
 
 const ScreenContainerView = /** @type {any} */ (ScreenContainer);
 
@@ -94,6 +95,7 @@ const ScreenContainerView = /** @type {any} */ (ScreenContainer);
  *  layout?: 'half' | 'full';
  *  emphasis?: 'default' | 'primary';
  *  tone?: 'default' | 'destructive';
+ *  highlighted?: boolean;
  *  premiumScope?: 'club' | 'team';
  *  subtitleLines?: 1 | 2;
  *  tutorial?: any;
@@ -159,6 +161,7 @@ function HomeSection({
               accentColor={card.accentColor}
               disabled={card.disabled}
               emphasis={card.emphasis}
+              highlighted={card.highlighted}
               icon={card.icon}
               illustration={card.illustration}
               illustrationPlacement={card.illustrationPlacement}
@@ -1407,6 +1410,10 @@ function HomeHubContent({ auth, navigation, route }) {
     title: t(`homeHubTutorial.steps.${id}.title`, fallbackTitle),
   }), [t]);
 
+  // Surbrillance de la carte « Ajouter un événement » pendant la semi-étape du tour.
+  const { currentStep: tourCurrentStep } = useTour();
+  const highlightAddEventCard = tourCurrentStep?.id === 'coach_find_event_card';
+
   // Badges d'offre informatifs sur les cartes du hub (handoff 12).
   const teamCardPremiumScope = (subscriptionAccessLevel === 'TEAM' || subscriptionAccessLevel === 'CLUB')
     ? undefined
@@ -1447,6 +1454,7 @@ function HomeHubContent({ auth, navigation, route }) {
         {
           accentColor: Colors.primary500,
           disabled: isPublishingGovernedBlocked,
+          highlighted: highlightAddEventCard,
           icon: 'calendar',
           key: 'manage-add-event',
           onPress: handleAddEvent,
@@ -1560,6 +1568,7 @@ function HomeHubContent({ auth, navigation, route }) {
         {
           accentColor: Colors.primary500,
           disabled: isPublishingGovernedBlocked,
+          highlighted: highlightAddEventCard,
           icon: 'calendar',
           key: 'manage-add-event',
           onPress: handleAddEvent,
@@ -1641,6 +1650,7 @@ function HomeHubContent({ auth, navigation, route }) {
     return [];
   }, [
     clubCardPremiumScope,
+    highlightAddEventCard,
     Colors.primary500,
     handleAddEvent,
     handleAddRecruitmentAd,

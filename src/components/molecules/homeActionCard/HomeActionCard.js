@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react';
 import {
+  Animated,
   Image,
   Pressable,
   Text,
@@ -42,6 +44,7 @@ const GHOST_ICON_PLACEMENT = {
  * @param {HomeCardIllustrationPlacement} [props.illustrationPlacement]
  * @param {HomeCardEmphasis} [props.emphasis]
  * @param {HomeCardTone} [props.tone]
+ * @param {boolean} [props.highlighted] - Surbrillance pulsée (étape du tour guidé)
  * @param {'club' | 'team'} [props.premiumScope] - Offre couvrant l'action (badge informatif, handoff 12)
  * @param {1 | 2} [props.subtitleLines]
  * @param {((node: any) => void) | { current: any }} [props.tutorialTargetRef]
@@ -51,6 +54,7 @@ function HomeActionCard({
   accentColor,
   disabled = false,
   emphasis = 'default',
+  highlighted = false,
   icon = 'search',
   illustration,
   illustrationPlacement,
@@ -72,7 +76,22 @@ function HomeActionCard({
   } = useTheme();
 
   const resolvedAccentColor = accentColor || Colors.primary500;
+  const pulseOpacity = useRef(new Animated.Value(0.35)).current;
+
+  // Anneau lumineux pulse quand le tour guide pointe cette carte.
+  useEffect(() => {
+    if (!highlighted) return undefined;
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulseOpacity, { duration: 700, toValue: 1, useNativeDriver: true }),
+      Animated.timing(pulseOpacity, { duration: 700, toValue: 0.35, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [highlighted, pulseOpacity]);
   let borderColor = `${resolvedAccentColor}47`;
+  if (highlighted) {
+    borderColor = resolvedAccentColor;
+  }
   if (emphasis === 'primary') {
     borderColor = resolvedAccentColor;
   } else if (tone === 'destructive') {
@@ -121,6 +140,23 @@ function HomeActionCard({
           },
         ]}
       >
+        {highlighted ? (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              borderColor: resolvedAccentColor,
+              borderRadius: 16,
+              borderWidth: 2.5,
+              bottom: 0,
+              left: 0,
+              opacity: pulseOpacity,
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              zIndex: 2,
+            }}
+          />
+        ) : null}
         {illustration ? (
           <Image
             accessibilityElementsHidden
