@@ -4,22 +4,19 @@ import { fr } from 'date-fns/locale';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Platform, Text, TouchableOpacity, View,
+  Alert, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
-  buildSubscriptionPurchasePayload,
   formatSubscriptionMonthlyEquivalentLabel,
   formatSubscriptionPriceLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
   getSubscriptionPreselectedSlotCount,
-  getSubscriptionTestProvider,
   getSubscriptionTierAbBucket,
-  isSubscriptionBillingTestModeEnabled,
   SUBSCRIPTION_TIER_AB_TEST_ENABLED,
 } from '@/domains/subscription/subscriptionBilling';
 import {
@@ -32,6 +29,10 @@ import {
   getSubscriptionTeamSlotSummary,
   mapSubscriptionDecisionToPaywall,
 } from '@/domains/subscription/subscriptionDecision';
+import {
+  isSubscriptionPurchaseAvailable,
+  performSubscriptionPurchase,
+} from '@/domains/subscription/subscriptionPurchaseRail';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -44,10 +45,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   getSubscriptionCatalog,
   trackSubscriptionFunnelEvent,
-  validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
-
-import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
 
 /**
  * @param {any} payload
@@ -196,8 +194,8 @@ function SubscriptionPaywallSheet({
   );
 
   const purchaseMutation = useMutation({
-    mutationFn: async (/** @type {Record<string, any>} */ payload) => (
-      validateSubscriptionPurchase(payload)
+    mutationFn: async (/** @type {any} */ purchaseInput) => (
+      performSubscriptionPurchase(purchaseInput)
     ),
   });
 
@@ -280,7 +278,7 @@ function SubscriptionPaywallSheet({
       return;
     }
 
-    if (!isSubscriptionBillingTestModeEnabled(APP_RUNTIME_ENV)) {
+    if (!isSubscriptionPurchaseAvailable()) {
       Alert.alert(
         'Checkout indisponible',
         'Le checkout store réel sera branché dans une prochaine vague. Utilise le mode test local ou staging pour la recette complète.',
@@ -296,20 +294,17 @@ function SubscriptionPaywallSheet({
       slotCount,
     });
     const availableTeams = (userData?.myTeams || []).concat(userData?.trainedTeams || []);
-    const payload = buildSubscriptionPurchasePayload({
-      catalogEntry: selectedEntry,
-      provider: getSubscriptionTestProvider(Platform.OS),
-      teamDocumentIds: getInitialTeamSelection({
-        availableTeams,
-        coveredTeamDocumentIds: getSubscriptionTeamSlotSummary(subscriptionSummary)
-          .coveredTeamDocumentIds,
-        slotCount,
-      }),
-      trustedValidation: true,
-    });
 
     try {
-      await purchaseMutation.mutateAsync(payload);
+      await purchaseMutation.mutateAsync({
+        catalogEntry: selectedEntry,
+        teamDocumentIds: getInitialTeamSelection({
+          availableTeams,
+          coveredTeamDocumentIds: getSubscriptionTeamSlotSummary(subscriptionSummary)
+            .coveredTeamDocumentIds,
+          slotCount,
+        }),
+      });
       trackSubscriptionFunnelEvent('paywall_purchase_succeeded', {
         abBucket: funnelAbBucket,
         paywallKey: paywall.paywallKey,

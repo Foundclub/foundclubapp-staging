@@ -1,4 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import client from '@/services/client';
+
+// Cache catalogue persistant (handoff item 14) : le paywall affiche les prix
+// immediatement meme hors ligne, avec le dernier catalogue connu.
+const SUBSCRIPTION_CATALOG_CACHE_KEY = 'fc:subscription-catalog:v1';
 
 /**
  * @param {import('axios').AxiosResponse<any>} response
@@ -23,8 +29,24 @@ export const trackSubscriptionFunnelEvent = (eventName, payload = {}) => {
 };
 
 export const getSubscriptionCatalog = async () => {
-  const response = await client.get('/subscriptions/catalog');
-  return getResponsePayload(response);
+  try {
+    const response = await client.get('/subscriptions/catalog');
+    const payload = getResponsePayload(response);
+    if (payload) {
+      AsyncStorage.setItem(SUBSCRIPTION_CATALOG_CACHE_KEY, JSON.stringify(payload)).catch(() => {});
+    }
+    return payload;
+  } catch (error) {
+    const cached = await AsyncStorage.getItem(SUBSCRIPTION_CATALOG_CACHE_KEY).catch(() => null);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (parseError) {
+        // cache illisible : on retombe sur l'erreur reseau d'origine
+      }
+    }
+    throw error;
+  }
 };
 
 /**

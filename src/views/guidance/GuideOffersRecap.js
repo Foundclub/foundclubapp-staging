@@ -3,19 +3,20 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert, Platform, ScrollView, Text, TouchableOpacity, View,
+  Alert, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import {
-  buildSubscriptionPurchasePayload,
   formatSubscriptionMonthlyEquivalentLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
-  getSubscriptionTestProvider,
-  isSubscriptionBillingTestModeEnabled,
 } from '@/domains/subscription/subscriptionBilling';
 import { getSubscriptionTeamSlotSummary } from '@/domains/subscription/subscriptionDecision';
+import {
+  isSubscriptionPurchaseAvailable,
+  performSubscriptionPurchase,
+} from '@/domains/subscription/subscriptionPurchaseRail';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -28,10 +29,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   getSubscriptionCatalog,
   trackSubscriptionFunnelEvent,
-  validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
-
-import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
 
 // Resume 1 ligne des cartes repliees (decision 3 — carte non selectionnee).
 const TEAM_SUMMARY = "Événements illimités, compo, convocations, cotisation d'équipe…";
@@ -246,8 +244,8 @@ function GuideOffersRecap({ navigation }) {
   const selectedPriceAmountLabel = getEntryPriceAmountLabel(selectedEntry);
 
   const purchaseMutation = useMutation({
-    mutationFn: async (/** @type {Record<string, any>} */ payload) => (
-      validateSubscriptionPurchase(payload)
+    mutationFn: async (/** @type {any} */ purchaseInput) => (
+      performSubscriptionPurchase(purchaseInput)
     ),
   });
 
@@ -275,7 +273,7 @@ function GuideOffersRecap({ navigation }) {
       return;
     }
 
-    if (!isSubscriptionBillingTestModeEnabled(APP_RUNTIME_ENV)) {
+    if (!isSubscriptionPurchaseAvailable()) {
       Alert.alert(
         'Checkout indisponible',
         'Le checkout store réel sera branché dans une prochaine vague. Utilise le mode test local ou staging pour la recette complète.',
@@ -299,21 +297,18 @@ function GuideOffersRecap({ navigation }) {
       source: selectedOffer,
     });
     const availableTeams = (userData?.myTeams || []).concat(userData?.trainedTeams || []);
-    const payload = buildSubscriptionPurchasePayload({
-      catalogEntry: selectedEntry,
-      clubDocumentId: isClubPurchase ? currentClubDocumentId : undefined,
-      provider: getSubscriptionTestProvider(Platform.OS),
-      teamDocumentIds: isClubPurchase ? [] : getInitialTeamSelection({
-        availableTeams,
-        coveredTeamDocumentIds: getSubscriptionTeamSlotSummary(subscriptionSummary)
-          .coveredTeamDocumentIds,
-        slotCount,
-      }),
-      trustedValidation: true,
-    });
 
     try {
-      await purchaseMutation.mutateAsync(payload);
+      await purchaseMutation.mutateAsync({
+        catalogEntry: selectedEntry,
+        clubDocumentId: isClubPurchase ? currentClubDocumentId : undefined,
+        teamDocumentIds: isClubPurchase ? [] : getInitialTeamSelection({
+          availableTeams,
+          coveredTeamDocumentIds: getSubscriptionTeamSlotSummary(subscriptionSummary)
+            .coveredTeamDocumentIds,
+          slotCount,
+        }),
+      });
       trackSubscriptionFunnelEvent('recap_unlock_succeeded', {
         planCode: String(selectedEntry?.planCode || ''),
         slotCount,
