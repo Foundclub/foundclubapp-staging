@@ -7,11 +7,13 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import SubscriptionQuotaBanner from '@/components/molecules/subscriptionQuotaBanner/SubscriptionQuotaBanner';
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -65,6 +67,7 @@ function TeamWizardName({ navigation, route }) {
   const queryClient = useQueryClient();
   const handleExitWizard = useTeamWizardExit(/** @type {any} */ (navigation));
   const [isChooserDismissed, setIsChooserDismissed] = useState(false);
+  const [claimPaywallDecision, setClaimPaywallDecision] = useState(/** @type {any} */ (null));
   const routeClubId = sanitizeRouteParam(route?.params?.clubId);
   const routePreselectedTrainerId = sanitizeRouteParam(route?.params?.preselectedTrainerId);
   const accountClubId = sanitizeRouteParam(userData?.club?.documentId || userData?.club?.id);
@@ -110,6 +113,13 @@ function TeamWizardName({ navigation, route }) {
   const claimTeamMutation = useMutation({
     mutationFn: (/** @type {string} */ teamDocumentId) => claimTeamAsCoach(teamDocumentId),
     onError: (/** @type {any} */ error) => {
+      // Quota depasse -> meme paywall que la creation d'equipe.
+      const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+      if (subscriptionDecision) {
+        setIsChooserDismissed(true);
+        setClaimPaywallDecision(subscriptionDecision);
+        return;
+      }
       const message = error?.response?.data?.error?.message
         || 'Impossible de reprendre cette équipe pour le moment.';
       Alert.alert(t('common.error', 'Erreur'), message);
@@ -345,6 +355,14 @@ function TeamWizardName({ navigation, route }) {
           />
         </View>
       </BottomModal>
+
+      <SubscriptionPaywallSheet
+        close={() => setClaimPaywallDecision(null)}
+        clubDocumentId={state.clubId || null}
+        decision={claimPaywallDecision}
+        isVisible={Boolean(claimPaywallDecision)}
+        navigation={navigation}
+      />
     </WizardStepLayout>
   );
 }
