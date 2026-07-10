@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,13 +19,25 @@ function TourBanner() {
   const {
     completeCurrentStep,
     currentStep,
-    exitTour,
     isTourActive,
     resumeTour,
     stepIndex,
     totalSteps,
     tourStatus,
   } = useTour();
+
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isSignalStep = currentStep?.success?.type !== 'manual';
+
+  // Etape a validation automatique (ex. tunnel equipe/evenement) : la page a ses
+  // propres CTA — le bandeau se replie en pastille pour ne jamais les masquer.
+  useEffect(() => {
+    setIsCollapsed(false);
+    if (!currentStep || currentStep.success?.type === 'manual') return undefined;
+    const timer = setTimeout(() => setIsCollapsed(true), 3500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep?.id, tourStatus]);
 
   if (!isTourActive || !currentStep) return null;
 
@@ -63,9 +76,6 @@ function TourBanner() {
           >
             <Text style={[Fonts.p3Bold, Fonts.primary900]}>Reprendre le tour</Text>
           </TouchableOpacity>
-          <TouchableOpacity accessibilityRole="button" onPress={exitTour}>
-            <Text style={[Fonts.p3Bold, Fonts.neutral400]}>Plus tard</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -102,21 +112,56 @@ function TourBanner() {
     );
   }
 
+  if (isCollapsed) {
+    return (
+      <TouchableOpacity
+        accessibilityLabel="Afficher le tour guidé"
+        accessibilityRole="button"
+        onPress={() => setIsCollapsed(false)}
+        style={{
+          alignItems: 'center',
+          backgroundColor: 'rgba(4,31,44,0.97)',
+          borderColor: `${Colors.primary500}59`,
+          borderRadius: 999,
+          borderWidth: 1,
+          bottom: Math.max(insets.bottom, 12) + 158,
+          columnGap: 6,
+          elevation: 12,
+          flexDirection: 'row',
+          left: 12,
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          position: 'absolute',
+        }}
+      >
+        <View style={{
+          backgroundColor: Colors.primary500, borderRadius: 999, height: 7, width: 7,
+        }}
+        />
+        <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
+          {`Tour ${stepIndex + 1}/${totalSteps}`}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <View style={[containerStyle, Spaces.padding[16], Spaces.gap[8]]}>
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
         <Text style={[Fonts.p4Bold, Fonts.primary500, { letterSpacing: 1, textTransform: 'uppercase' }]}>
-          {`Tour guidé · ${stepIndex + 1}/${totalSteps}`}
+          {`Tour guidé · étape ${stepIndex + 1} sur ${totalSteps}`}
         </Text>
         <View style={Alignments.fill} />
-        <TouchableOpacity
-          accessibilityLabel="Quitter le tour"
-          accessibilityRole="button"
-          hitSlop={10}
-          onPress={exitTour}
-        >
-          <Text style={[Fonts.p2Bold, Fonts.neutral400]}>✕</Text>
-        </TouchableOpacity>
+        {isSignalStep ? (
+          <TouchableOpacity
+            accessibilityLabel="Réduire le tour"
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={() => setIsCollapsed(true)}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral400]}>—</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{currentStep.title}</Text>
       <Text style={[Fonts.p3, Fonts.neutral200]}>{currentStep.instruction}</Text>
