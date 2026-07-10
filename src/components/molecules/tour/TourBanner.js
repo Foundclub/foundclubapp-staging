@@ -1,0 +1,153 @@
+import { Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import useTheme from '@/theme/themeContext';
+
+import { useTour } from '@/context/TourContext';
+
+/**
+ * Bandeau flottant du tour guidé v2 : instruction de l'étape courante,
+ * progression x/y, validation manuelle et message de succès. Monté une seule
+ * fois au-dessus du navigateur (voir AppProviders).
+ */
+function TourBanner() {
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
+  const insets = useSafeAreaInsets();
+  const {
+    completeCurrentStep,
+    currentStep,
+    exitTour,
+    isTourActive,
+    resumeTour,
+    stepIndex,
+    totalSteps,
+    tourStatus,
+  } = useTour();
+
+  if (!isTourActive || !currentStep) return null;
+
+  const containerStyle = {
+    backgroundColor: 'rgba(4,31,44,0.97)',
+    borderColor: `${Colors.primary500}59`,
+    borderRadius: 20,
+    borderWidth: 1,
+    bottom: Math.max(insets.bottom, 12) + 92,
+    elevation: 12,
+    left: 12,
+    position: /** @type {'absolute'} */ ('absolute'),
+    right: 12,
+    shadowColor: '#000',
+    shadowOffset: { height: 6, width: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+  };
+
+  if (tourStatus === 'paused') {
+    return (
+      <View style={[containerStyle, Spaces.padding[16], Spaces.gap[12]]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {`Ton tour guidé t'attend (étape ${stepIndex + 1}/${totalSteps})`}
+        </Text>
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={resumeTour}
+            style={{
+              backgroundColor: Colors.primary500,
+              borderRadius: 999,
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, Fonts.primary900]}>Reprendre le tour</Text>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" onPress={exitTour}>
+            <Text style={[Fonts.p3Bold, Fonts.neutral400]}>Plus tard</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  if (tourStatus === 'success') {
+    return (
+      <View
+        style={[
+          containerStyle,
+          Spaces.padding[16],
+          Alignments.row,
+          Alignments.alignCenter,
+          Spaces.gap[12],
+          { borderColor: `${Colors.success500}66` },
+        ]}
+      >
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: `${Colors.success500}29`,
+            borderRadius: 999,
+            height: 30,
+            justifyContent: 'center',
+            width: 30,
+          }}
+        >
+          <Text style={[Fonts.p2Bold, { color: Colors.success500 }]}>✓</Text>
+        </View>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+          {currentStep.successMessage}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[containerStyle, Spaces.padding[16], Spaces.gap[8]]}>
+      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+        <Text style={[Fonts.p4Bold, Fonts.primary500, { letterSpacing: 1, textTransform: 'uppercase' }]}>
+          {`Tour guidé · ${stepIndex + 1}/${totalSteps}`}
+        </Text>
+        <View style={Alignments.fill} />
+        <TouchableOpacity
+          accessibilityLabel="Quitter le tour"
+          accessibilityRole="button"
+          hitSlop={10}
+          onPress={exitTour}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral400]}>✕</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{currentStep.title}</Text>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>{currentStep.instruction}</Text>
+      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16], Spaces.marginTop[4]]}>
+        {currentStep.success?.type === 'manual' ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => completeCurrentStep()}
+            style={{
+              backgroundColor: Colors.primary500,
+              borderRadius: 999,
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, Fonts.primary900]}>
+              {currentStep.manualLabel || 'Étape suivante'}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+        {currentStep.skipLabel ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => completeCurrentStep({ skipped: true })}
+          >
+            <Text style={[Fonts.p3Bold, Fonts.neutral400]}>{currentStep.skipLabel}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+export default TourBanner;

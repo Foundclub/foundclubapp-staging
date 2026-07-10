@@ -12,6 +12,7 @@ import { GuidanceProvider } from '@/context/GuidanceContext';
 import { PopupManagerProvider } from '@/context/PopupManagerContext';
 import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 import { StartupPhaseProvider } from '@/context/StartupPhaseContext';
+import { TourProvider } from '@/context/TourContext';
 
 /**
  * Shared provider stack used by native and web runtimes.
@@ -51,7 +52,11 @@ function SharedAppProviders({ children, queryClient }) {
                     React.createElement(
                       BlockingOverlayProvider,
                       null,
-                      React.createElement(GuidanceProvider, null, children),
+                      React.createElement(
+                        GuidanceProvider,
+                        null,
+                        React.createElement(TourProvider, null, children),
+                      ),
                     ),
                   ),
                 ),

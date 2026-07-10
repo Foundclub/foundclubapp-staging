@@ -4,6 +4,8 @@ import { Platform, StatusBar } from 'react-native';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
+import TourBanner from '@/components/molecules/tour/TourBanner';
+
 import { navigationRef } from '@/navigation/navigationService';
 import PrivateNavigator from '@/navigation/private/PrivateNavigator';
 
@@ -35,6 +37,7 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
   const shouldAvoidDeprecatedSystemBarColors = Platform.OS === 'android'
     && typeof Platform.Version === 'number'
     && Platform.Version >= 35;
+  const isPrivateMode = Boolean(auth?.token) && !isAddingAccount;
 
   const linking = {
     config: {
@@ -59,7 +62,23 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
         [RouteNames.Login]: 'login',
         [RouteNames.Register]: 'register',
         [RouteNames.SquadDetails]: 'squad/:teamId',
-        [RouteNames.TeamDetails]: 'team/:teamId',
+        // En mode connecte, TeamDetails est imbrique dans PrivateNavigator > TeamStack :
+        // le mapping linking doit refleter cette hierarchie pour que foundclub://team/:teamId
+        // resolve. En mode public, TeamDetails reste a la racine du navigateur.
+        // Le meme pattern ne peut pas etre declare deux fois (React Navigation le rejette),
+        // d'ou le mapping conditionnel ; le NavigationContainer est re-monte au changement
+        // d'auth (via navigationContainerKey), la config est donc reevaluee.
+        ...(isPrivateMode
+          ? {
+            [RouteNames.TeamStack]: {
+              screens: {
+                [RouteNames.TeamDetails]: 'team/:teamId',
+              },
+            },
+          }
+          : {
+            [RouteNames.TeamDetails]: 'team/:teamId',
+          }),
       },
     },
     prefixes: [
@@ -98,7 +117,8 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
           translucent={false}
         />
       )}
-      {auth?.token && !isAddingAccount ? <PrivateNavigator /> : <PublicNavigator />}
+      {isPrivateMode ? <PrivateNavigator /> : <PublicNavigator />}
+      {isPrivateMode ? <TourBanner /> : null}
     </NavigationContainer>
   );
 }

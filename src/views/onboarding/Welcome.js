@@ -17,10 +17,9 @@ import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
-import { useGuidance } from '@/context/GuidanceContext';
+import { useTour } from '@/context/TourContext';
 
 // Pack du tour guide coach dans guidanceCatalog (missions coach_tour_*).
-const COACH_TOUR_PACK_ID = 'coach_tour';
 
 /**
  * Welcome screen component shown after completing onboarding.
@@ -43,21 +42,13 @@ function Welcome({ navigation }) {
     userDataError,
     userDataLoading,
   } = useAuth();
-  const { openMission, snapshot } = /** @type {any} */ (useGuidance());
+  const { startTour } = useTour();
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
   const canShowSubscriptionWelcome = roleKey === 'coach'
     || roleKey === 'president'
     || roleKey === 'superAdmin';
-  // Seuls coach et dirigeant demarrent le tour guide (joueur/superadmin gardent le flux actuel).
-  const canStartGuidedTour = roleKey === 'coach' || roleKey === 'president';
-  // 1ere mission du tour (missions triees par priorite -> coach_tour_welcome en tete).
-  // Absente si la guidance n'est pas hydratee ou si le programme du role ne contient pas le tour.
-  const guidedTourFirstMission = /** @type {any[]} */ (snapshot?.missions || []).find(
-    (/** @type {any} */ mission) => mission.packId === COACH_TOUR_PACK_ID,
-  ) || null;
-  // On ne propose le bouton "Demarrer le tour" que si le tour est reellement disponible pour le
-  // role courant, pour ne jamais afficher un bouton qui retomberait silencieusement sur le home.
-  const shouldOfferGuidedTour = canStartGuidedTour && Boolean(guidedTourFirstMission);
+  // Seuls coach et dirigeant demarrent le tour guide v2 (joueur = tour leger a venir).
+  const shouldOfferGuidedTour = roleKey === 'coach' || roleKey === 'president';
 
   // Les quotas gratuits sont des constantes produit : des puces statiques evitent l'etat
   // "resume pas encore charge" qui affichait un texte vague au moment le plus vendeur.
@@ -156,13 +147,9 @@ function Welcome({ navigation }) {
 
   const handleStartTour = () => {
     finalizeOnboarding();
-    // Demarre le tour via le moteur de missions existant (spotlight + suivi d'etapes).
-    // Si le tour n'est pas disponible (guidance non hydratee, role sans programme), fallback home.
-    const started = guidedTourFirstMission
-      && openMission(guidedTourFirstMission, {
-        startTutorial: true,
-        tutorialSource: 'onboarding',
-      });
+    // Tour guide v2 : navigation directe page par page avec messages de succes
+    // (docs/PLAN_TOUR_GUIDE_V2_2026_07_10.md). Fallback home si pas de script.
+    const started = startTour(roleKey === 'president' ? 'president' : 'coach');
     if (started) {
       return;
     }
