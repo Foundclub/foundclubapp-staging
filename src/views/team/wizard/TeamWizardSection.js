@@ -1,4 +1,3 @@
-import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -6,8 +5,10 @@ import {
   View,
 } from 'react-native';
 
+import useTheme from '@/theme/themeContext';
+
 import Button from '@/components/atoms/button/Button';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
@@ -16,36 +17,32 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetSections } from '@/services/section/sectionQueries';
 
-/** @typedef {{ label: string; value: string }} Option */
+// Sous-titres d'aide des sections (handoff tunnel 3/8).
+/** @type {Record<string, string>} */
+const SECTION_SUBTITLES = {
+  mixte: 'Ouverte à toutes et tous',
+};
 
 /**
+ * Etape 3/8 du tunnel equipe — « choisir = toucher » : les sections en liste
+ * pleine page, la selection avance directement (handoff decision 2).
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  * @returns {import('react').ReactElement}
  */
 function TeamWizardSection({ navigation }) {
   const { t } = useTranslation();
+  const { Fonts, Spaces } = useTheme();
   const { dispatch, state } = useTeamWizard();
   const handleExitWizard = useTeamWizardExit(navigation);
-  const [searchValue, setSearchValue] = useState('');
   const sectionsQuery = useGetSections();
   const { data: sections } = sectionsQuery;
-  const isLoading = sectionsQuery.isLoading;
+  const { isLoading } = sectionsQuery;
   const hasError = Boolean(sectionsQuery.error);
 
-  const options = useMemo(() => {
-    const all = sections?.map((section) => ({
-      label: section.name,
-      value: section.documentId || '',
-    })) || [];
-
-    if (!searchValue.trim()) return all;
-    return all.filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()));
-  }, [searchValue, sections]);
-
-  const selectedLabel = useMemo(
-    () => options.find((option) => option.value === state.section)?.label || '',
-    [options, state.section],
-  );
+  const handleSelectSection = (/** @type {string} */ sectionDocumentId) => {
+    dispatch({ payload: sectionDocumentId, type: 'SET_SECTION' });
+    navigation.navigate(RouteNames.TeamWizardActivity);
+  };
 
   return (
     <WizardStepLayout
@@ -54,39 +51,43 @@ function TeamWizardSection({ navigation }) {
       onBack={() => navigation.navigate(RouteNames.TeamWizardDescription)}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.TeamWizardActivity)}
-      onSkip={() => {}}
       stepCount={8}
       stepIndex={3}
-      subtitle={t('teamWizard.steps.section.subtitle', "Sélectionne la section de l'équipe.")}
+      subtitle={t('teamWizard.steps.section.subtitle', 'Dans quelle section joue cette équipe ?')}
       title={t('teamWizard.steps.section.title', 'Section')}
     >
       <View>
         {isLoading ? (
-          <View style={{ alignItems: 'center', flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+          <View style={[{ alignItems: 'center', flexDirection: 'row' }, Spaces.gap[12], Spaces.marginBottom[16]]}>
             <ActivityIndicator size="small" />
-            <Text>Chargement des sections disponibles...</Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              Chargement des sections disponibles…
+            </Text>
           </View>
         ) : null}
 
         {hasError ? (
-          <View style={{ marginBottom: 16 }}>
-            <Text style={{ marginBottom: 12 }}>
-              Impossible de charger les sections. Reessayez pour continuer.
+          <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Impossible de charger les sections. Réessaie pour continuer.
             </Text>
             <Button onPress={() => sectionsQuery.refetch()} title="Réessayer" variant="Secondary" />
           </View>
         ) : null}
 
-        <AutocompleteSelect
-          isSearchable
-          label={t('teamEdit.fields.section.label')}
-          options={options}
-          placeholder={t('teamEdit.fields.section.placeholder')}
-          searchValue={searchValue}
-          setSearchValue={setSearchValue}
-          setValue={(/** @type {Option} */ option) => dispatch({ payload: option?.value || '', type: 'SET_SECTION' })}
-          value={selectedLabel}
-        />
+        {(sections || []).map((section) => {
+          const sectionDocumentId = section.documentId || '';
+          const normalizedName = String(section.name || '').trim().toLowerCase();
+          return (
+            <WizardOptionCard
+              key={sectionDocumentId || section.name}
+              onPress={() => handleSelectSection(sectionDocumentId)}
+              selected={state.section === sectionDocumentId}
+              subtitle={SECTION_SUBTITLES[normalizedName]}
+              title={section.name}
+            />
+          );
+        })}
       </View>
     </WizardStepLayout>
   );

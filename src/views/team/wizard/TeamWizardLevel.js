@@ -1,4 +1,3 @@
-import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -6,8 +5,10 @@ import {
   View,
 } from 'react-native';
 
+import useTheme from '@/theme/themeContext';
+
 import Button from '@/components/atoms/button/Button';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
@@ -16,36 +17,26 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetLevels } from '@/services/level/levelQueries';
 
-/** @typedef {{ label: string; value: string }} Option */
-
 /**
+ * Etape 6/8 du tunnel equipe — niveaux en liste compacte pleine page,
+ * la selection avance directement (handoff decision 2).
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  * @returns {import('react').ReactElement}
  */
 function TeamWizardLevel({ navigation }) {
   const { t } = useTranslation();
+  const { Fonts, Spaces } = useTheme();
   const { dispatch, state } = useTeamWizard();
   const handleExitWizard = useTeamWizardExit(navigation);
-  const [searchValue, setSearchValue] = useState('');
   const levelsQuery = useGetLevels();
   const { data: levels } = levelsQuery;
-  const isLoading = levelsQuery.isLoading;
+  const { isLoading } = levelsQuery;
   const hasError = Boolean(levelsQuery.error);
 
-  const options = useMemo(() => {
-    const all = levels?.map((level) => ({
-      label: level.name,
-      value: level.documentId || '',
-    })) || [];
-
-    if (!searchValue.trim()) return all;
-    return all.filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()));
-  }, [levels, searchValue]);
-
-  const selectedLabel = useMemo(
-    () => options.find((option) => option.value === state.level)?.label || '',
-    [options, state.level],
-  );
+  const handleSelectLevel = (/** @type {string} */ levelDocumentId) => {
+    dispatch({ payload: levelDocumentId, type: 'SET_LEVEL' });
+    navigation.navigate(RouteNames.TeamWizardTrainers);
+  };
 
   return (
     <WizardStepLayout
@@ -54,39 +45,42 @@ function TeamWizardLevel({ navigation }) {
       onBack={() => navigation.navigate(RouteNames.TeamWizardCategory)}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
-      onSkip={() => {}}
       stepCount={8}
       stepIndex={6}
-      subtitle={t('teamWizard.steps.level.subtitle', "Sélectionne le niveau sportif de l'équipe.")}
+      subtitle={t('teamWizard.steps.level.subtitle', "Le niveau de compétition de l'équipe.")}
       title={t('teamWizard.steps.level.title', 'Niveau')}
     >
       <View>
         {isLoading ? (
-          <View style={{ alignItems: 'center', flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+          <View style={[{ alignItems: 'center', flexDirection: 'row' }, Spaces.gap[12], Spaces.marginBottom[16]]}>
             <ActivityIndicator size="small" />
-            <Text>Chargement des niveaux disponibles...</Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              Chargement des niveaux disponibles…
+            </Text>
           </View>
         ) : null}
 
         {hasError ? (
-          <View style={{ marginBottom: 16 }}>
-            <Text style={{ marginBottom: 12 }}>
-              Impossible de charger les niveaux. Reessayez pour continuer.
+          <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Impossible de charger les niveaux. Réessaie pour continuer.
             </Text>
             <Button onPress={() => levelsQuery.refetch()} title="Réessayer" variant="Secondary" />
           </View>
         ) : null}
 
-        <AutocompleteSelect
-          isSearchable
-          label={t('teamEdit.fields.level.label')}
-          options={options}
-          placeholder={t('teamEdit.fields.level.placeholder')}
-          searchValue={searchValue}
-          setSearchValue={setSearchValue}
-          setValue={(/** @type {Option} */ option) => dispatch({ payload: option?.value || '', type: 'SET_LEVEL' })}
-          value={selectedLabel}
-        />
+        {(levels || []).map((level) => {
+          const levelDocumentId = level.documentId || '';
+          return (
+            <WizardOptionCard
+              compact
+              key={levelDocumentId || level.name}
+              onPress={() => handleSelectLevel(levelDocumentId)}
+              selected={state.level === levelDocumentId}
+              title={level.name}
+            />
+          );
+        })}
       </View>
     </WizardStepLayout>
   );

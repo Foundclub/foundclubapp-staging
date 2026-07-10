@@ -46,6 +46,7 @@ function TeamWizardRecap({ navigation }) {
   const {
     freeUsageSummary,
     subscriptionAccessLevel,
+    userData,
   } = useAuth();
   const {
     Alignments,
@@ -207,9 +208,66 @@ function TeamWizardRecap({ navigation }) {
   const categoryLabel = getLabelFromCollection(categories, selectedOverview.category);
   const levelLabel = getLabelFromCollection(levels, selectedOverview.level);
   const clubLabel = clubData?.name || t('eventWizard.recap.notSet', 'Non renseigné');
-  const teamMembershipModeLabel = clubData?.membershipRequestManagementMode === 'CLUB_OWNER_ONLY'
-    ? t('teamWizard.recap.membership.ownerOnly', 'Demandes traitées par le dirigeant')
-    : t('teamWizard.recap.membership.coachAllowed', 'Demandes délégables aux entraîneurs');
+  const heroChips = [activityLabel, categoryLabel, sectionLabel, levelLabel]
+    .filter((chip) => chip && chip !== t('eventWizard.recap.notSet', 'Non renseigné'));
+  const teamInitials = String(selectedOverview.name || '')
+    .split(/\s+/)
+    .map((word) => word.charAt(0))
+    .join('')
+    .slice(0, 3)
+    .toUpperCase() || '·';
+  const selectedTrainerRows = selectedOverview.trainers.map((trainerDocumentId) => {
+    const member = clubData?.members?.find(
+      (/** @param {any} candidate */ candidate) => candidate?.documentId === trainerDocumentId,
+    );
+    return {
+      documentId: trainerDocumentId,
+      firstname: member?.firstname || '',
+      isSelf: trainerDocumentId === userData?.documentId,
+      lastname: member?.lastname || '',
+      roleLabel: member?.role?.name === 'Dirigeant' ? 'dirigeant·e' : 'coach',
+    };
+  });
+
+  /**
+   * Carte de section du recap avec action « Modifier » (handoff tunnel 8/8).
+   * @param {{ children: import('react').ReactNode; onEdit: () => void; title: string }} props
+   * @returns {import('react').ReactElement}
+   */
+  const renderRecapCard = ({ children, onEdit, title }) => (
+    <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
+      <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={onEdit}
+          style={[Spaces.paddingVertical[4], Spaces.paddingHorizontal[4]]}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+            {t('eventWizard.recap.actions.edit', 'Modifier')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      {children}
+    </View>
+  );
+
+  /**
+   * Ligne cle/valeur du recap.
+   * @param {{ label: string; value: string }} props
+   * @returns {import('react').ReactElement}
+   */
+  const renderRecapRow = ({ label, value }) => (
+    <View
+      key={label}
+      style={[Alignments.row, Alignments.justifySpaceBetween, Spaces.gap[12], Spaces.paddingVertical[4]]}
+    >
+      <Text style={[Fonts.p3, Fonts.neutral400]}>{label}</Text>
+      <Text style={[Fonts.p3Bold, Fonts.neutral100, { flexShrink: 1, textAlign: 'right' }]}>
+        {value}
+      </Text>
+    </View>
+  );
 
   return (
     <>
@@ -220,37 +278,18 @@ function TeamWizardRecap({ navigation }) {
         onBack={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
         onClose={handleExitWizard}
         onNext={handleSubmit}
-        onSkip={() => {}}
         stepCount={8}
         stepIndex={8}
-        subtitle={t('teamWizard.steps.recap.subtitle', "Vérifie les informations avant de créer l'équipe.")}
+        subtitle={t('teamWizard.steps.recap.subtitle', 'Vérifie, puis crée ton équipe.')}
         title={t('teamWizard.steps.recap.title', 'Récapitulatif')}
       >
-        <View style={[Spaces.gap[16]]}>
-          {freeTeamQuotaItem ? (
-            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                {t('teamWizard.recap.freeQuota.title', 'Quota equipe gratuite')}
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {t(
-                  'teamWizard.recap.freeQuota.description',
-                  '{{remaining}}/{{total}} creation gratuite restante avant de devoir passer sur une offre Team ou Club.',
-                  {
-                    remaining: freeTeamQuotaItem.remaining,
-                    total: freeTeamQuotaItem.total,
-                  },
-                )}
-              </Text>
-            </View>
-          ) : null}
-
+        <View style={[Spaces.gap[12]]}>
           {isReferenceLoading ? (
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
                 <ActivityIndicator size="small" />
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  Chargement du recapitulatif de cette equipe...
+                  Chargement du récapitulatif de cette équipe…
                 </Text>
               </View>
             </View>
@@ -259,10 +298,11 @@ function TeamWizardRecap({ navigation }) {
           {hasReferenceError ? (
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Impossible de charger toutes les informations du recapitulatif.
+                Impossible de charger toutes les informations du récapitulatif.
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                Reessaye avant de creer cette equipe pour verifier le club, les referentiels et les entraineurs.
+                Réessaie avant de créer cette équipe pour vérifier le club, les référentiels et les
+                entraîneur·e·s.
               </Text>
               <Button
                 onPress={() => {
@@ -282,113 +322,137 @@ function TeamWizardRecap({ navigation }) {
 
           <View
             style={[
-              ApplicationStyle.card,
-              Spaces.padding[16],
-              Spaces.gap[8],
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.gap[12],
               {
-                ...cardSurfaceStyle,
-                borderColor: isRecapReady ? 'rgba(1, 179, 244, 0.45)' : 'rgba(255, 191, 71, 0.35)',
+                backgroundColor: 'rgba(1,179,244,0.08)',
+                borderColor: Colors.primary500,
+                borderRadius: 18,
+                borderWidth: 1.5,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
               },
             ]}
           >
-            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                {t('teamWizard.recap.summaryTitle', 'Vue d\'ensemble')}
+            <View
+              style={{
+                alignItems: 'center',
+                backgroundColor: 'rgba(1,179,244,0.16)',
+                borderRadius: 999,
+                height: 52,
+                justifyContent: 'center',
+                width: 52,
+              }}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>{teamInitials}</Text>
+            </View>
+            <View style={Alignments.fill}>
+              <Text numberOfLines={1} style={[Fonts.h5Bold, Fonts.neutral00]}>
+                {selectedOverview.name || t('eventWizard.recap.notSet', 'Non renseigné')}
               </Text>
-              <View
-                style={[
-                  ApplicationStyle.card,
-                  Spaces.paddingHorizontal[8],
-                  Spaces.paddingVertical[4],
-                  {
-                    backgroundColor: isRecapReady ? 'rgba(1, 179, 244, 0.18)' : 'rgba(255, 191, 71, 0.18)',
-                    borderColor: isRecapReady ? Colors.primary500 : Colors.gold500,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
-                  {isRecapReady
-                    ? t('teamWizard.recap.ready', 'Prêt à créer')
-                    : t('teamWizard.recap.incomplete', 'Champs manquants')}
-                </Text>
+              <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300, { marginTop: 2 }]}>
+                {clubLabel}
+              </Text>
+              {heroChips.length > 0 ? (
+                <View
+                  style={[
+                    Alignments.row,
+                    Spaces.marginTop[8],
+                    { columnGap: 6, flexWrap: 'wrap', rowGap: 6 },
+                  ]}
+                >
+                  {heroChips.map((chip) => (
+                    <View
+                      key={chip}
+                      style={{
+                        backgroundColor: 'rgba(1,179,244,0.12)',
+                        borderRadius: 999,
+                        paddingHorizontal: 9,
+                        paddingVertical: 3,
+                      }}
+                    >
+                      <Text style={[Fonts.p4Bold, Fonts.primary200]}>{chip}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          </View>
+
+          {renderRecapCard({
+            children: (
+              <View>
+                {renderRecapRow({
+                  label: t('teamEdit.fields.name.label'),
+                  value: selectedOverview.name || t('eventWizard.recap.notSet', 'Non renseigné'),
+                })}
+                {renderRecapRow({
+                  label: t('teamEdit.fields.description.label'),
+                  value: selectedOverview.description
+                    || t('teamWizard.recap.noDescription', 'Aucune — ajouter ?'),
+                })}
               </View>
-            </View>
+            ),
+            onEdit: () => navigation.navigate(RouteNames.TeamWizardName),
+            title: t('teamWizard.recap.identity', 'Identité'),
+          })}
 
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('teamWizard.recap.quickHint', 'Nom, section, sport, catégorie, niveau, club et entraîneur sont requis.')}
+          {renderRecapCard({
+            children: (
+              <View>
+                {selectedTrainerRows.map((trainer) => (
+                  <View
+                    key={trainer.documentId}
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Spaces.gap[8],
+                      Spaces.paddingVertical[4],
+                    ]}
+                  >
+                    <View
+                      style={{
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(1,179,244,0.16)',
+                        borderRadius: 999,
+                        height: 30,
+                        justifyContent: 'center',
+                        width: 30,
+                      }}
+                    >
+                      <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                        {`${trainer.firstname.charAt(0)}${trainer.lastname.charAt(0)}`.toUpperCase() || '·'}
+                      </Text>
+                    </View>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral100, { flexShrink: 1 }]}>
+                      {`${trainer.firstname} ${trainer.lastname}`.trim() || trainer.documentId}
+                      {trainer.isSelf ? (
+                        <Text style={[Fonts.p3, Fonts.neutral400]}>
+                          {` — toi, ${trainer.roleLabel}`}
+                        </Text>
+                      ) : null}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ),
+            onEdit: () => navigation.navigate(RouteNames.TeamWizardTrainers),
+            title: t('teamWizard.recap.staff', 'Encadrement'),
+          })}
+
+          {freeTeamQuotaItem ? (
+            <Text style={[Fonts.p4, Fonts.neutral300, Spaces.paddingHorizontal[4]]}>
+              {t(
+                'teamWizard.recap.freeQuota.footnote',
+                'Cette équipe utilise ta création gratuite ({{used}}/{{total}}).',
+                {
+                  total: freeTeamQuotaItem.total,
+                  used: Math.min(freeTeamQuotaItem.total, freeTeamQuotaItem.used + 1),
+                },
+              )}
             </Text>
-          </View>
-
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
-            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-              <Text style={[Fonts.h4, Fonts.neutral00]}>
-                {t('teamWizard.recap.organization', 'Organisation')}
-              </Text>
-              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.TeamWizardName)}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit', 'Modifier')}</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p2, Fonts.neutral00]}>{selectedOverview.name || t('eventWizard.recap.notSet', 'Non renseigné')}</Text>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>{clubLabel}</Text>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>{selectedOverview.description || t('eventWizard.recap.noDescription', 'Aucune description')}</Text>
-            </View>
-          </View>
-
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
-            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-              <Text style={[Fonts.h4, Fonts.neutral00]}>
-                {t('teamWizard.recap.sportProfile', 'Profil sportif')}
-              </Text>
-              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.TeamWizardSection)}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit', 'Modifier')}</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {t('teamEdit.fields.section.label')}
-                :
-                {sectionLabel}
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {t('teamEdit.fields.activities.label')}
-                :
-                {activityLabel}
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {t('teamEdit.fields.category.label')}
-                :
-                {categoryLabel}
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {t('teamEdit.fields.level.label')}
-                :
-                {levelLabel}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
-            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-              <Text style={[Fonts.h4, Fonts.neutral00]}>
-                {t('teamWizard.recap.staff', 'Encadrement')}
-              </Text>
-              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.TeamWizardTrainers)}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit', 'Modifier')}</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('teamWizard.recap.trainersCount', {
-                count: selectedOverview.trainers.length,
-                defaultValue: `${selectedOverview.trainers.length} entraîneur(s)`,
-              })}
-            </Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {teamMembershipModeLabel}
-            </Text>
-          </View>
+          ) : null}
         </View>
       </WizardStepLayout>
 
