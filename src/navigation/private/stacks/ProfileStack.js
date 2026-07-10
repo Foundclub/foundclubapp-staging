@@ -52,7 +52,8 @@ function ProfileStack() {
           name={RouteNames.SubscriptionOverview}
           options={{
             ...commonOptions,
-            headerTitle: t('profile.subscription.title', 'Mon abonnement'),
+            // Header court (handoff 7b) : le titre long entrait en collision avec la fleche.
+            headerTitle: t('profile.subscription.headerTitle', 'Abonnement'),
           }}
         />
         <Stack.Screen

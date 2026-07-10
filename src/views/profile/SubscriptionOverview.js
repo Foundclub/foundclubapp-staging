@@ -35,6 +35,7 @@ import Checkable from '@/components/atoms/checkable/Checkable';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import SubscriptionCoveredHero from '@/views/profile/SubscriptionCoveredHero';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -546,6 +547,27 @@ function SubscriptionOverview({ navigation }) {
       : '',
   ).trim();
 
+  // « Deja couvert » (handoff 7b) : quelqu'un d'autre paie pour mon equipe/club
+  // et je n'ai aucun plan actif en tant que payeur -> page heros dediee.
+  const coveringEntitlement = useMemo(() => {
+    if (activePlanCodes.length > 0) {
+      return null;
+    }
+    const myDocumentId = String(userData?.documentId || '').trim();
+    const candidates = entitlementsSummary.filter(
+      /** @param {any} entry */ (entry) => entry?.paidBy?.documentId
+        && entry.paidBy.documentId !== myDocumentId,
+    );
+    return candidates.find(/** @param {any} entry */ (entry) => entry?.scopeType === 'CLUB')
+      || candidates[0]
+      || null;
+  }, [activePlanCodes, entitlementsSummary, userData?.documentId]);
+  const coveredByOtherTeamNames = useMemo(() => Array.from(new Set(
+    entitlementsSummary
+      .filter(/** @param {any} entry */ (entry) => entry?.scopeType === 'TEAM' && entry?.scopeTeamName)
+      .map(/** @param {any} entry */ (entry) => String(entry.scopeTeamName)),
+  )), [entitlementsSummary]);
+
   useEffect(() => {
     if (canShowSubscriptionExperience) {
       return;
@@ -1051,6 +1073,24 @@ function SubscriptionOverview({ navigation }) {
 
   if (!canShowSubscriptionExperience) {
     return null;
+  }
+
+  if (coveringEntitlement) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingBottom[12],
+          Spaces.paddingTop[0],
+        ]}
+      >
+        <SubscriptionCoveredHero
+          coveredTeamNames={coveredByOtherTeamNames}
+          coveringEntitlement={coveringEntitlement}
+          navigation={navigation}
+        />
+      </ScreenContainer>
+    );
   }
 
   return (
