@@ -66,10 +66,7 @@ import {
 } from '@/services/team/teamService';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
-import {
-  getClubCertificationLabel,
-  getClubCertificationPalette,
-} from '@/utils/clubCertification';
+import { isVerifiedClub } from '@/utils/clubCertification';
 import { getErrorMessage as getDisplayErrorMessage } from '@/utils/errors/displayError';
 import { getImageUrl } from '@/utils/imageUrl';
 
@@ -2644,22 +2641,6 @@ function TeamDetails({ navigation, route }) {
                 <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
                   {team?.name}
                 </Text>
-                <View
-                  style={[
-                    ApplicationStyle.borderRadius24,
-                    Spaces.paddingVertical[4],
-                    Spaces.paddingHorizontal[12],
-                    {
-                      backgroundColor: getClubCertificationPalette(team?.club, Colors).backgroundColor,
-                      borderColor: getClubCertificationPalette(team?.club, Colors).borderColor,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p4Bold, { color: getClubCertificationPalette(team?.club, Colors).textColor }]}>
-                    {getClubCertificationLabel(team?.club)}
-                  </Text>
-                </View>
                 {primaryActivityLabel ? (
                   <View
                     style={[
@@ -2704,7 +2685,10 @@ function TeamDetails({ navigation, route }) {
                   width={14}
                 />
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  {team?.address?.properties?.label || team?.city || team?.club?.address?.properties?.label || team?.club?.city}
+                  {[
+                    team?.city || team?.club?.city || team?.address?.properties?.label || team?.club?.address?.properties?.label,
+                    team?.club?.name,
+                  ].filter(Boolean).join(' · ')}
                 </Text>
               </View>
 
@@ -2734,32 +2718,53 @@ function TeamDetails({ navigation, route }) {
                 Alignments.justifyCenter,
               ]}
               >
-                {team?.section ? (
-                  <Text style={[Fonts.p2Bold, Fonts.primary100]}>
-                    {t('teamList.fields.section')}
-                    {' : '}
-                    <Text style={[Fonts.p2, Fonts.primary100]}>
-                      {team?.section?.name}
-                    </Text>
-                  </Text>
-                ) : null}
-                {team?.category ? (
-                  <Text style={[Fonts.p2Bold, Fonts.primary100]}>
-                    {t('teamList.fields.category')}
-                    {' : '}
-                    <Text style={[Fonts.p2, Fonts.primary100]}>
-                      {team?.category?.name}
-                    </Text>
-                  </Text>
-                ) : null}
-                {team?.level ? (
-                  <Text style={[Fonts.p2Bold, Fonts.primary100]}>
-                    {t('teamList.fields.level')}
-                    {' : '}
-                    <Text style={[Fonts.p2, Fonts.primary100]}>
-                      {team?.level?.name}
-                    </Text>
-                  </Text>
+                {[team?.section?.name, team?.category?.name, team?.level?.name]
+                  .filter(Boolean)
+                  .map((/** @type {any} */ chipLabel) => (
+                    <View
+                      key={String(chipLabel)}
+                      style={{
+                        backgroundColor: `${Colors.primary500}1F`,
+                        borderRadius: 999,
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                      }}
+                    >
+                      <Text style={[Fonts.p4Bold, Fonts.primary200]}>
+                        {String(chipLabel)}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
+              <View
+                style={[
+                  Alignments.fullWidth,
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Alignments.justifySpaceBetween,
+                  {
+                    borderTopColor: 'rgba(255,255,255,0.08)',
+                    borderTopWidth: 1,
+                    paddingTop: 10,
+                  },
+                ]}
+              >
+                <Text style={isVerifiedClub(team?.club)
+                  ? [Fonts.p3, { color: Colors.success500 }]
+                  : [Fonts.p3, Fonts.neutral300]}
+                >
+                  {isVerifiedClub(team?.club) ? 'Équipe certifiée' : 'Équipe non certifiée'}
+                </Text>
+                {!isVerifiedClub(team?.club) && team?.club?.documentId ? (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() => navigation.navigate(RouteNames.ClubStack, {
+                      params: { clubId: team?.club?.documentId },
+                      screen: RouteNames.Club,
+                    })}
+                  >
+                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>Certifier →</Text>
+                  </TouchableOpacity>
                 ) : null}
               </View>
             </View>
@@ -2952,6 +2957,49 @@ function TeamDetails({ navigation, route }) {
                           )}
                         </View>
                       ))}
+                      {!playersCount && canManageTeam ? (
+                        <TouchableOpacity
+                          accessibilityRole="button"
+                          onPress={() => inviteTeamPlayers({
+                            clubName: team?.club?.name,
+                            teamId: team?.documentId || teamId,
+                            teamName: team?.name,
+                          })}
+                          style={[
+                            Alignments.row,
+                            Alignments.alignCenter,
+                            Spaces.gap[12],
+                            {
+                              borderColor: 'rgba(1,179,244,0.45)',
+                              borderRadius: 16,
+                              borderStyle: 'dashed',
+                              borderWidth: 1.5,
+                              paddingHorizontal: 14,
+                              paddingVertical: 13,
+                            },
+                          ]}
+                        >
+                          <View style={[Alignments.fill]}>
+                            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                              Personne pour l&apos;instant
+                            </Text>
+                            <Text style={[Fonts.p4, Fonts.neutral400, { marginTop: 2 }]}>
+                              Invite tes joueur·se·s — ils·elles reçoivent un lien d&apos;inscription.
+                            </Text>
+                          </View>
+                          <View
+                            style={{
+                              borderColor: Colors.primary500,
+                              borderRadius: 999,
+                              borderWidth: 1.5,
+                              paddingHorizontal: 14,
+                              paddingVertical: 8,
+                            }}
+                          >
+                            <Text style={[Fonts.p3Bold, Fonts.primary500]}>Inviter</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ) : null}
                     </>
                   )}
                 </View>
@@ -2969,6 +3017,48 @@ function TeamDetails({ navigation, route }) {
                     ...(!isMyTeam ? { sessionStatus: 'open' } : {}),
                     teamIds: [team?.documentId || ''],
                   }}
+                  customEmptyComponent={canManageTeam ? (
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      onPress={() => navigation.navigate(RouteNames.EventStack, {
+                        params: { teamId: team?.documentId },
+                        screen: RouteNames.EventWizardType,
+                      })}
+                      style={[
+                        Alignments.row,
+                        Alignments.alignCenter,
+                        Spaces.gap[12],
+                        {
+                          borderColor: 'rgba(1,179,244,0.45)',
+                          borderRadius: 16,
+                          borderStyle: 'dashed',
+                          borderWidth: 1.5,
+                          paddingHorizontal: 14,
+                          paddingVertical: 13,
+                        },
+                      ]}
+                    >
+                      <View style={[Alignments.fill]}>
+                        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                          Aucun événement prévu
+                        </Text>
+                        <Text style={[Fonts.p4, Fonts.neutral400, { marginTop: 2 }]}>
+                          Ton 1ᵉʳ événement est offert — entraînement, match…
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          borderColor: Colors.primary500,
+                          borderRadius: 999,
+                          borderWidth: 1.5,
+                          paddingHorizontal: 14,
+                          paddingVertical: 8,
+                        }}
+                      >
+                        <Text style={[Fonts.p3Bold, Fonts.primary500]}>Créer</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ) : null}
                   showFilters={false}
                 />
               </View>

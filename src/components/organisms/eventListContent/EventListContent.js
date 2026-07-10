@@ -148,12 +148,14 @@ function EventListSeparator() {
  * @param {boolean} [props.isPlanning] - Whether the list is displayed in planning mode (optional)
  * @param {(key: 'filters' | 'card', layout: { x: number; y: number; width: number; height: number }) => void} [props.onTutorialLayout]
  * @param {boolean} [props.enableMapMode]
+ * @param {import('react').ReactElement | null} [props.customEmptyComponent] - Custom empty state (optional)
  * @param {number} [props.refreshSignal]
  * @param {boolean} [props.screenActive]
  * @returns {import('react').ReactElement} Event list content component
  */
 function EventListContent({
   additionalFilters,
+  customEmptyComponent = null,
   enableMapMode = false,
   events: propEvents,
   isLoading: propIsLoading,
@@ -1231,13 +1233,15 @@ function EventListContent({
         title={t('eventList.loadingTitle', 'Chargement des \u00E9v\u00E9nements')}
       />
     ) : (
-      <EmptyState
-        actionLabel={!showFilters ? t('eventList.actions.findEvent') : undefined}
-        description={!showFilters ? t('eventList.emptyDesc', 'Essayez de modifier vos filtres ou lancez une nouvelle recherche.') : undefined}
-        icon={Images.search}
-        onAction={!showFilters ? handleFindEvent : undefined}
-        title={t('eventList.noData')}
-      />
+      customEmptyComponent || (
+        <EmptyState
+          actionLabel={!showFilters ? t('eventList.actions.findEvent') : undefined}
+          description={!showFilters ? t('eventList.emptyDesc', 'Essayez de modifier vos filtres ou lancez une nouvelle recherche.') : undefined}
+          icon={Images.search}
+          onAction={!showFilters ? handleFindEvent : undefined}
+          title={t('eventList.noData')}
+        />
+      )
     )
   );
   const renderLoadingHint = (label, fullWidth = false) => (
