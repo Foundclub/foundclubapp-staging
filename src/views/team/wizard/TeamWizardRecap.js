@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import {
   extractSubscriptionDecisionFromError,
   getSubscriptionQuotaItem,
@@ -100,6 +101,7 @@ function TeamWizardRecap({ navigation }) {
       Alert.alert(t('common.error', 'Erreur'), message);
     },
     onSuccess: async () => {
+      emitGuidanceAction('team.created');
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
       await queryClient.invalidateQueries({ queryKey: ['get-me'] });
       await queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });

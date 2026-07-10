@@ -112,17 +112,24 @@ export function TourProvider({ children }) {
     const profile = getTourProfile(profileKey);
     if (!profile || profile.steps.length === 0) return false;
     clearSuccessTimer();
+    // Les etapes deja accomplies (ex. equipe deja creee) sont sautees au demarrage.
+    let startIndex = 0;
+    while (startIndex < profile.steps.length - 1
+      && typeof profile.steps[startIndex].isAlreadyDone === 'function'
+      && /** @type {any} */ (profile.steps[startIndex].isAlreadyDone)({ userData })) {
+      startIndex += 1;
+    }
     const nextState = {
       profileKey,
       skippedStepIds: [],
       status: 'active',
-      stepIndex: 0,
+      stepIndex: startIndex,
     };
     setTourState(nextState);
     persist(nextState);
-    goToStep(nextState, 0);
+    goToStep(nextState, nextState.stepIndex);
     return true;
-  }, [goToStep, persist]);
+  }, [goToStep, persist, userData]);
 
   const finishTour = useCallback(() => {
     clearSuccessTimer();

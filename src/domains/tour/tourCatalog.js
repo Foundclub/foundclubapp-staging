@@ -14,6 +14,7 @@ import { RouteNames } from '@/navigation/routeNames';
  *   id: string;
  *   instruction: string;
  *   manualLabel?: string;
+ *   isAlreadyDone?: (context: any) => boolean;
  *   navTarget: { params?: any; routeName: string };
  *   skipLabel?: string;
  *   success: { key?: string; type: 'action' | 'interaction' | 'manual' | 'route' };
@@ -38,6 +39,13 @@ const homeTarget = {
   // L'accueil (HomeHub) est enregistre sous 'SearchHome' dans le SearchStack.
   params: { screen: 'SearchHome' },
   routeName: RouteNames.HomeTab,
+};
+const teamWizardTarget = {
+  params: (/** @type {any} */ context) => ({
+    params: { clubId: context?.userData?.club?.documentId },
+    screen: RouteNames.TeamWizardName,
+  }),
+  routeName: RouteNames.TeamStack,
 };
 const eventWizardTarget = {
   params: { screen: RouteNames.EventWizardType },
@@ -87,13 +95,20 @@ const compositionSimulationTarget = {
 /** @type {TourStep[]} */
 const COACH_TOUR_STEPS = [
   {
-    id: 'coach_home',
-    instruction: "Voici ton accueil de coach : tout part d'ici.",
-    manualLabel: "C'est parti",
-    navTarget: homeTarget,
-    success: { type: 'manual' },
-    successMessage: 'En route !',
-    title: 'Bienvenue',
+    // Sans equipe, rien n'est possible (evenement, compo...) : le tour commence ici.
+    // Sautee automatiquement si le coach a deja une equipe (isAlreadyDone).
+    fallbackTarget: homeTarget,
+    id: 'coach_create_team',
+    instruction: 'Crée ton équipe — tout le reste en découle (ta 1ʳᵉ équipe est offerte).',
+    isAlreadyDone: (/** @type {any} */ context) => (
+      (Array.isArray(context?.userData?.trainedTeams) && context.userData.trainedTeams.length > 0)
+      || (Array.isArray(context?.userData?.myTeams) && context.userData.myTeams.length > 0)
+    ),
+    navTarget: teamWizardTarget,
+    skipLabel: 'Créer plus tard',
+    success: { key: 'team.created', type: 'action' },
+    successMessage: '🎉 Ton équipe est créée !',
+    title: 'Crée ton équipe',
   },
   {
     fallbackTarget: planningTarget,
