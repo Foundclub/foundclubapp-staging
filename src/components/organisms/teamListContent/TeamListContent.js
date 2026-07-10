@@ -16,6 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import { getSubscriptionQuotaItem } from '@/domains/subscription/subscriptionDecision';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -75,7 +76,9 @@ function TeamListContent({
     Spaces,
   } = useTheme();
 
-  const { userData } = useAuth();
+  const {
+    canManageTeam, freeUsageSummary, subscriptionAccessLevel, userData,
+  } = /** @type {any} */ (useAuth());
   const [{ teamFilters }] = useAppContext();
   const navigation = useNavigation();
   const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
@@ -358,6 +361,66 @@ function TeamListContent({
     });
   }, [navigation]);
 
+  // Carte pointillee « Nouvelle équipe » avec statut du quota (handoff 9a).
+  const renderNewTeamFooterCard = useCallback(() => {
+    if (isLeagueMode || !canManageTeam) {
+      return null;
+    }
+    const freeTeamQuota = getSubscriptionQuotaItem(
+      freeUsageSummary,
+      'FREE_TEAM',
+      subscriptionAccessLevel,
+    );
+    let quotaHint = 'Crée une équipe pour ton club.';
+    if (freeTeamQuota) {
+      quotaHint = freeTeamQuota.remaining > 0
+        ? `Il te reste ${freeTeamQuota.remaining} création gratuite`
+        : "Ta création gratuite est utilisée — débloque l'offre Équipe";
+    }
+    return (
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
+          params: { clubId },
+          screen: RouteNames.TeamWizardName,
+        })}
+        style={[
+          Alignments.row,
+          Alignments.alignCenter,
+          Spaces.gap[12],
+          {
+            borderColor: 'rgba(1,179,244,0.45)',
+            borderRadius: 20,
+            borderStyle: 'dashed',
+            borderWidth: 1.5,
+            marginTop: 12,
+            minHeight: 64,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+          },
+        ]}
+      >
+        <Text style={[Fonts.p1Bold, Fonts.primary500]}>+</Text>
+        <View style={[Alignments.fill]}>
+          <Text style={[Fonts.p2Bold, Fonts.primary500]}>Nouvelle équipe</Text>
+          <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral400, { marginTop: 1 }]}>
+            {quotaHint}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [
+    Alignments,
+    canManageTeam,
+    clubId,
+    Fonts,
+    freeUsageSummary,
+    isLeagueMode,
+    navigation,
+    Spaces,
+    subscriptionAccessLevel,
+  ]);
+
   const renderTeamCard = useCallback((/** @type {Team} */ item, stateVariant = null) => {
     const isPending = stateVariant === 'pending';
     const isInvitation = stateVariant === 'invited';
@@ -427,123 +490,144 @@ function TeamListContent({
       );
     }
 
-    const renderClassicContent = () => (
-      <>
-        <View
-          style={[
-            Alignments.fullWidth,
-            Alignments.row,
-            Alignments.alignCenter,
-            Alignments.justifySpaceBetween,
-            Spaces.gap[8],
-          ]}
-        >
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { flex: 1, paddingRight: 8 }]}>
+    const renderClassicContent = () => {
+      const isSelfTrainer = Array.isArray(item?.trainers)
+        && item.trainers.some(
+          (/** @type {any} */ trainer) => trainer?.documentId === userData?.documentId,
+        );
+      const isSelfPlayer = Array.isArray(item?.players)
+        && item.players.some(
+          (/** @type {any} */ player) => player?.documentId === userData?.documentId,
+        );
+      let roleTagLabel = '';
+      if (isSelfTrainer) {
+        roleTagLabel = 'Coach';
+      } else if (isSelfPlayer) {
+        roleTagLabel = 'Joueur·se';
+      }
+      const getUniqueMemberCount = () => {
+        const ids = new Set();
+        const collect = (list = []) => {
+          list.forEach((member) => {
+            if (!member) return;
+            const memberId = member.documentId || member.id || member.phoneNumber;
+            if (memberId) ids.add(String(memberId));
+          });
+        };
+
+        collect(item?.players);
+        collect(item?.trainers);
+        collect(item?.members);
+
+        if (ids.size > 0) return ids.size;
+        return Number(item?.players?.length || 0) + Number(item?.trainers?.length || 0);
+      };
+      const memberCount = getUniqueMemberCount();
+      const metaLine = [
+        sportLabel,
+        item?.section?.name,
+        item?.category?.name || item?.category,
+        item?.level?.name || item?.level,
+      ].filter(Boolean).join(' · ');
+      const allSponsors = Array.isArray(item?.club?.sponsor) ? item.club.sponsor.filter(Boolean) : [];
+      const sponsors = allSponsors.slice(0, 5);
+
+      return (
+        <>
+          <View
+            style={[
+              Alignments.fullWidth,
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.gap[12],
+            ]}
+          >
             <View>{identityAvatar}</View>
-            <View style={[Alignments.fill]}>
-              <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
+            <View style={[Alignments.fill, { minWidth: 0 }]}>
+              <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
                 {item.name}
               </Text>
+              {item?.club?.name ? (
+                <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300, { marginTop: 2 }]}>
+                  {item.club.name}
+                </Text>
+              ) : null}
             </View>
+            {roleTagLabel ? (
+              <Tag
+                style={{
+                  backgroundColor: `${Colors.primary500}14`,
+                  borderColor: Colors.primary500,
+                }}
+                text={roleTagLabel}
+                textStyle={Fonts.p3Bold}
+              />
+            ) : null}
           </View>
-          {activityTag}
-        </View>
 
-        <View
-          style={[
-            Alignments.fullWidth,
-            Spaces.marginTop[12],
-            Spaces.marginBottom[12],
-            ApplicationStyle.separator,
-            { backgroundColor: `${cardAccentColor}40` },
-          ]}
-        />
+          {metaLine ? (
+            <Text
+              numberOfLines={1}
+              style={[Fonts.p3Bold, Fonts.primary200, Spaces.marginTop[12], Alignments.fullWidth]}
+            >
+              {metaLine}
+            </Text>
+          ) : null}
 
-        <View style={[Alignments.fullWidth, Alignments.row, Alignments.wrap, Spaces.gap[10]]}>
-          {(() => {
-            const getUniqueMemberCount = () => {
-              const ids = new Set();
-              const collect = (list = []) => {
-                list.forEach((member) => {
-                  if (!member) return;
-                  const memberId = member.documentId || member.id || member.phoneNumber;
-                  if (memberId) ids.add(String(memberId));
-                });
-              };
+          <View
+            style={[
+              Alignments.fullWidth,
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.marginTop[12],
+              Spaces.gap[12],
+              {
+                borderTopColor: 'rgba(255,255,255,0.08)',
+                borderTopWidth: 1,
+                paddingTop: 12,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+              {`${memberCount} membre${memberCount > 1 ? 's' : ''}`}
+            </Text>
+          </View>
 
-              collect(item?.players);
-              collect(item?.trainers);
-              collect(item?.members);
-
-              if (ids.size > 0) return ids.size;
-              return Number(item?.players?.length || 0) + Number(item?.trainers?.length || 0);
-            };
-
-            const sectionLabel = item?.section?.name;
-            const categoryLabel = item?.category?.name || item?.category;
-            const levelLabel = item?.level?.name || item?.level;
-            const membersLabel = String(getUniqueMemberCount());
-            const allSponsors = Array.isArray(item?.club?.sponsor) ? item.club.sponsor.filter(Boolean) : [];
-            const sponsors = allSponsors.slice(0, 5);
-
-            const metaItems = [
-              { label: t('teamList.fields.section', 'Section'), value: sectionLabel },
-              { label: t('teamList.fields.category', 'Catégorie'), value: categoryLabel },
-              { label: t('teamList.fields.level', 'Niveau'), value: levelLabel },
-              { label: t('teamList.fields.members', 'Membres'), value: membersLabel },
-            ].filter((meta) => String(meta?.value || '').trim().length > 0);
-
-            return (
-              <>
-                {sponsors.length > 0 ? (
-                  <View style={[Alignments.fullWidth, Spaces.marginBottom[12], Spaces.gap[8]]}>
-                    <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
-                      {sponsors.map((sponsor) => (
-                        <SponsorLogoTile
-                          borderRadius={16}
-                          containerStyle={{ minWidth: isCompactScreen ? 86 : 94 }}
-                          height={isCompactScreen ? 34 : 38}
-                          imageUrl={sponsor?.logo?.url}
-                          key={sponsor?.documentId || sponsor?.id || sponsor?.link || sponsor?.title}
-                          link={sponsor?.link}
-                          title={sponsor?.title || sponsor?.name}
-                          titleLines={2}
-                          titleStyle={[
-                            Fonts.p4Bold,
-                            Fonts.neutral100,
-                            {
-                              lineHeight: 14,
-                              marginTop: 4,
-                            },
-                          ]}
-                          width={isCompactScreen ? 86 : 94}
-                        />
-                      ))}
-                    </View>
-                    {allSponsors.length > sponsors.length ? (
-                      <Text style={[Fonts.p3Bold, Fonts.primary100]}>
-                        {`+${allSponsors.length - sponsors.length} autres sponsors`}
-                      </Text>
-                    ) : null}
-                  </View>
-                ) : null}
-                {metaItems.map((meta) => (
-                  <View
-                    key={`${meta.label}-${meta.value}`}
-                    style={{ minWidth: isCompactScreen ? 128 : 144, width: '47%' }}
-                  >
-                    <Text style={[Fonts.p3, Fonts.neutral300]}>{meta.label}</Text>
-                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                      {meta.value}
-                    </Text>
-                  </View>
+          {sponsors.length > 0 ? (
+            <View style={[Alignments.fullWidth, Spaces.marginTop[12], Spaces.gap[8]]}>
+              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+                {sponsors.map((sponsor) => (
+                  <SponsorLogoTile
+                    borderRadius={16}
+                    containerStyle={{ minWidth: isCompactScreen ? 86 : 94 }}
+                    height={isCompactScreen ? 34 : 38}
+                    imageUrl={sponsor?.logo?.url}
+                    key={sponsor?.documentId || sponsor?.id || sponsor?.link || sponsor?.title}
+                    link={sponsor?.link}
+                    title={sponsor?.title || sponsor?.name}
+                    titleLines={2}
+                    titleStyle={[
+                      Fonts.p4Bold,
+                      Fonts.neutral100,
+                      {
+                        lineHeight: 14,
+                        marginTop: 4,
+                      },
+                    ]}
+                    width={isCompactScreen ? 86 : 94}
+                  />
                 ))}
-              </>
-            );
-          })()}
-        </View>
-      </>
-    );
+              </View>
+              {allSponsors.length > sponsors.length ? (
+                <Text style={[Fonts.p3Bold, Fonts.primary100]}>
+                  {`+${allSponsors.length - sponsors.length} autres sponsors`}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+        </>
+      );
+    };
 
     const renderLeagueContent = () => (
       <View style={[Alignments.fullWidth, { flex: 1, position: 'relative' }]}>
@@ -689,7 +773,18 @@ function TeamListContent({
         </TouchableOpacity>
       </View>
     );
-  }, [Alignments, ApplicationStyle, Colors, Fonts, Spaces, getClubInitials, handleTeamSelect, isCompactScreen, isLeagueMode, t]);
+  }, [
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
+    getClubInitials,
+    handleTeamSelect,
+    isCompactScreen,
+    isLeagueMode,
+    userData?.documentId,
+  ]);
 
   const headerComponent = useMemo(() => (
     <View>
@@ -841,7 +936,7 @@ function TeamListContent({
             data={otherTeams}
             estimatedItemSize={200}
             keyExtractor={(item) => item?.documentId || 'unknown'}
-            ListEmptyComponent={myTeams.length === 0 && pendingTeams.length === 0 && invitedTeams.length === 0 ? renderEmptyList : null}
+            ListFooterComponent={renderNewTeamFooterCard}
             ListHeaderComponent={headerComponent}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
