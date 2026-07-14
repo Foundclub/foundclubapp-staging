@@ -127,7 +127,6 @@ const QUOTA_ORDER = [
   'EVENT_PUBLISH',
   'MATCH_PUBLISH',
   'RECRUITMENT_AD_PUBLISH',
-  'PROFILE_CONTACT',
   'FREE_TEAM',
 ];
 
@@ -136,9 +135,12 @@ const QUOTA_LABELS = {
   EVENT_PUBLISH: 'Evenements',
   FREE_TEAM: 'Equipes',
   MATCH_PUBLISH: 'Matchs',
-  PROFILE_CONTACT: 'Contacts',
   RECRUITMENT_AD_PUBLISH: 'Recrutement',
 };
+
+// Quota retire de la matrice (decision #6 du 2026-07-09 : chat/contact 100 % libre).
+// Le serveur ne le renvoie plus, mais d'anciennes lignes DB ne doivent jamais s'afficher.
+const RETIRED_QUOTA_TYPES = new Set(['PROFILE_CONTACT']);
 
 /** @type {Record<string, { description: string; label: string }>} */
 const SUBSCRIPTION_STATUS_META = {
@@ -578,7 +580,7 @@ export const getSubscriptionQuotaItems = (freeUsageSummary, subscriptionAccessLe
       const total = Number(entry?.limit || 0);
       const used = Number(entry?.used || 0);
       const remaining = Number(entry?.remaining || Math.max(0, total - used));
-      if (!quotaType || total <= 0) {
+      if (!quotaType || total <= 0 || RETIRED_QUOTA_TYPES.has(quotaType)) {
         return itemsByType;
       }
 

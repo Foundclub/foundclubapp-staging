@@ -184,6 +184,8 @@ describe('subscriptionDecision', () => {
       },
     ];
 
+    // PROFILE_CONTACT est retire de la matrice (contact 100 % libre) : d'anciennes
+    // lignes renvoyees par un serveur pas a jour ne doivent jamais s'afficher.
     expect(getSubscriptionQuotaItems(freeUsageSummary, 'FREE')).toEqual([
       {
         label: 'Evenements',
@@ -192,15 +194,8 @@ describe('subscriptionDecision', () => {
         total: 1,
         used: 1,
       },
-      {
-        label: 'Contacts',
-        quotaType: 'PROFILE_CONTACT',
-        remaining: 2,
-        total: 3,
-        used: 1,
-      },
     ]);
-    expect(getSubscriptionQuotaItems(freeUsageSummary, 'CLUB_UNVERIFIED')).toHaveLength(2);
+    expect(getSubscriptionQuotaItems(freeUsageSummary, 'CLUB_UNVERIFIED')).toHaveLength(1);
     expect(getSubscriptionQuotaItems(freeUsageSummary, 'TEAM')).toEqual([]);
     expect(getSubscriptionQuotaItems(freeUsageSummary, 'CLUB')).toEqual([]);
     expect(getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', 'FREE')).toEqual({
