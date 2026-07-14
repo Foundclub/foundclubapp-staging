@@ -4,10 +4,13 @@ import {
   formatSubscriptionRequiredPlanText,
   getCoveredTeamCount,
   getSubscriptionAccessLevel,
+  getSubscriptionPaywallBenefits,
   getSubscriptionPaywallContent,
   getSubscriptionPlanLabels,
   getSubscriptionQuotaItem,
   getSubscriptionQuotaItems,
+  getSubscriptionQuotaSheetContent,
+  getSubscriptionRecommendedPlanCode,
   getSubscriptionRequiredPlanLabels,
   getSubscriptionStatusMeta,
   getSubscriptionTeamSlotSummary,
@@ -51,6 +54,29 @@ describe('subscriptionDecision', () => {
       remainingFreeUses: 0,
       requiredPlan: ['TEAM', 'CLUB'],
     });
+  });
+
+  test('maps the composition plan-only refusal to its dedicated paywall and sheet', () => {
+    const decision = {
+      allowed: false,
+      paywall: 'COMPOSITION_MANAGE_REQUIRED',
+      reason: 'SUBSCRIPTION_REQUIRED',
+      remainingFreeUses: 0,
+      requiredPlan: ['TEAM', 'CLUB'],
+    };
+
+    expect(mapSubscriptionDecisionToPaywall(decision).paywallKey).toBe('composition-required');
+    expect(getSubscriptionPaywallContent(decision)).toEqual({
+      ctaLabel: 'Voir mon abonnement',
+      description: 'La composition d equipe est reservee a l offre Equipe. Offre conseillee: Team ou Club.',
+      title: 'Composition reservee',
+    });
+    expect(getSubscriptionQuotaSheetContent(decision)).toMatchObject({
+      kicker: 'Offre Équipe',
+      preselectedSlotCount: 1,
+      title: "La composition d'équipe est réservée à l'offre Équipe",
+    });
+    expect(getSubscriptionPaywallBenefits(decision)).toHaveLength(3);
   });
 
   test('extracts subscription decisions from policy-style backend errors', () => {
@@ -185,6 +211,44 @@ describe('subscriptionDecision', () => {
       used: 1,
     });
     expect(getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', 'TEAM')).toBeNull();
+  });
+
+  test('derives three paywall benefits per paywall key for the paywall sheet', () => {
+    expect(getSubscriptionPaywallBenefits({
+      allowed: false,
+      paywall: 'EVENT_LIMIT',
+      reason: 'FREE_QUOTA_EXHAUSTED',
+    })).toEqual([
+      'Evenements et matchs illimites',
+      'Composition et convocations',
+      'Toute l equipe en profite',
+    ]);
+    expect(getSubscriptionPaywallBenefits({ paywall: 'TEAM_LIMIT' })).toEqual([
+      'Ajoute autant d equipes que besoin',
+      'Evenements et matchs illimites',
+      'Gestion complete de chaque equipe',
+    ]);
+    expect(getSubscriptionPaywallBenefits({ paywall: 'MATCH_LIMIT' })).toHaveLength(3);
+    expect(getSubscriptionPaywallBenefits({ paywall: 'RECRUITMENT_AD_LIMIT' })).toHaveLength(3);
+    expect(getSubscriptionPaywallBenefits({ paywall: 'DUES_LIMIT' })).toHaveLength(3);
+    expect(getSubscriptionPaywallBenefits({ paywall: 'CLUB_TIER_TEAM_LIMIT' })).toEqual([
+      'Toutes les equipes du club couvertes',
+      'Droits club et gestion centralisee',
+      'Cotisations et recrutement illimites',
+    ]);
+    expect(getSubscriptionPaywallBenefits({ paywall: 'CLUB_VERIFICATION_REQUIRED' }))
+      .toEqual(getSubscriptionPaywallBenefits({ paywall: 'CLUB_TIER_TEAM_LIMIT' }));
+    expect(getSubscriptionPaywallBenefits({}))
+      .toEqual(getSubscriptionPaywallBenefits({ paywall: 'CLUB_TIER_TEAM_LIMIT' }));
+  });
+
+  test('recommends a yearly catalog entry from the decision required plans', () => {
+    expect(getSubscriptionRecommendedPlanCode({ requiredPlan: ['TEAM'] })).toBe('fc_team_1_yearly');
+    expect(getSubscriptionRecommendedPlanCode({ requiredPlan: ['CLUB'] })).toBe('fc_club_tier_1_yearly');
+    expect(getSubscriptionRecommendedPlanCode({ requiredPlan: ['TEAM', 'CLUB'] })).toBe('fc_team_1_yearly');
+    expect(getSubscriptionRecommendedPlanCode({ requiredPlan: ['CLUB', 'TEAM'] })).toBe('fc_team_1_yearly');
+    expect(getSubscriptionRecommendedPlanCode({ requiredPlan: [] })).toBe('fc_team_1_yearly');
+    expect(getSubscriptionRecommendedPlanCode(null)).toBe('fc_team_1_yearly');
   });
 
   test('exposes stable subscription status copy for UI surfaces', () => {

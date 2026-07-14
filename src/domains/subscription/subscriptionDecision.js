@@ -52,6 +52,7 @@ const DEFAULT_REASON_LABELS = {
 const DEFAULT_PAYWALL_KEYS = {
   CLUB_TIER_TEAM_LIMIT: 'club-tier-team-limit',
   CLUB_VERIFICATION_REQUIRED: 'club-verification-required',
+  COMPOSITION_MANAGE_REQUIRED: 'composition-required',
   DUES_LIMIT: 'dues-limit',
   EVENT_LIMIT: 'event-limit',
   MATCH_LIMIT: 'match-limit',
@@ -72,6 +73,11 @@ const CLUB_PAYWALL_BENEFITS = [
 const PAYWALL_BENEFITS_BY_KEY = {
   'club-tier-team-limit': CLUB_PAYWALL_BENEFITS,
   'club-verification-required': CLUB_PAYWALL_BENEFITS,
+  'composition-required': [
+    'Composition et convocations en 2 taps',
+    'Evenements et matchs illimites',
+    'Toute l equipe en profite',
+  ],
   'dues-limit': [
     'Campagnes de cotisation illimitees',
     'Suivi des paiements simplifie',
@@ -292,6 +298,12 @@ export const getSubscriptionPaywallContent = (decision) => {
         description: 'Votre offre Club est active, mais les droits club restent bloques tant que la verification du dirigeant n est pas terminee.',
         title: 'Verification du club requise',
       };
+    case 'composition-required':
+      return {
+        ctaLabel: 'Voir mon abonnement',
+        description: `La composition d equipe est reservee a l offre Equipe.${requiredPlanSuffix}`.trim(),
+        title: 'Composition reservee',
+      };
     case 'dues-limit':
       return {
         ctaLabel: 'Voir mon abonnement',
@@ -351,6 +363,18 @@ export const getSubscriptionPaywallContent = (decision) => {
  * }>}
  */
 const QUOTA_SHEET_CONTENT_BY_KEY = {
+  // Paywall plan-only (pas un quota) : la compo/convocation est reservee aux offres.
+  'composition-required': {
+    benefits: [
+      'Composition et convocations en 2 taps',
+      'Événements et matchs illimités',
+      "Toute l'équipe en profite",
+    ],
+    kicker: 'Offre Équipe',
+    preselectedSlotCount: 1,
+    successCtaLabel: 'Préparer ma compo',
+    title: "La composition d'équipe est réservée à l'offre Équipe",
+  },
   'event-limit': {
     benefits: [
       'Événements et matchs illimités',

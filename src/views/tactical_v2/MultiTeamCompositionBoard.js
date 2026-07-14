@@ -192,6 +192,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     existingComposition = null,
     players = [],
     readOnly = false,
+    selectedPlayers = [],
     sport = 'football',
     teamComposition = null,
     teamId,
@@ -202,11 +203,25 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     () => normalizeAvailablePresets(teamComposition?.availablePresets || availablePresetsParam),
     [availablePresetsParam, teamComposition?.availablePresets],
   );
+  // Selection explicite de joueurs transmise par TacticalSelection (etape "Modifier les joueurs").
+  // Invariant : quand elle est fournie, elle definit exactement la liste des joueurs affectables
+  // et prime sur teamComposition.eligiblePlayers / params.players, sinon la selection cochee
+  // par le coach serait perdue au retour sur ce board.
+  const explicitSelectedPlayers = useMemo(
+    () => (Array.isArray(selectedPlayers) ? selectedPlayers.filter(Boolean) : []),
+    [selectedPlayers],
+  );
+  const hasExplicitSelection = explicitSelectedPlayers.length > 0;
   const editablePlayers = useMemo(
-    () => (Array.isArray(teamComposition?.eligiblePlayers) && teamComposition.eligiblePlayers.length > 0
-      ? teamComposition.eligiblePlayers
-      : Array.isArray(players) ? players : []),
-    [players, teamComposition?.eligiblePlayers],
+    () => {
+      if (hasExplicitSelection) {
+        return explicitSelectedPlayers;
+      }
+      return Array.isArray(teamComposition?.eligiblePlayers) && teamComposition.eligiblePlayers.length > 0
+        ? teamComposition.eligiblePlayers
+        : Array.isArray(players) ? players : [];
+    },
+    [explicitSelectedPlayers, hasExplicitSelection, players, teamComposition?.eligiblePlayers],
   );
   const initialPackSource = useMemo(
     () => existingComposition
@@ -217,11 +232,38 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     [existingComposition, teamComposition?.bootstrap?.composition, teamComposition?.draft, teamComposition?.published],
   );
   const initialPack = useMemo(
-    () => normalizeMultiTeamPack(initialPackSource, {
-      availablePresets,
-      sportContext: initialPackSource?.sportContext || sport,
-    }),
-    [availablePresets, initialPackSource, sport],
+    () => {
+      const normalizedPack = normalizeMultiTeamPack(initialPackSource, {
+        availablePresets,
+        sportContext: initialPackSource?.sportContext || sport,
+      });
+      if (!hasExplicitSelection) {
+        return normalizedPack;
+      }
+
+      // Avec une selection explicite, on restreint le pack aux joueurs selectionnes
+      // (+ joueurs manuels deja presents dans le pack) : deselectionner un joueur
+      // retire aussi ses placements et sa place en reserve, comme sur le board legacy.
+      const allowedIds = new Set([
+        ...explicitSelectedPlayers.map((player) => getCompositionPlayerId(player)),
+        ...(Array.isArray(normalizedPack?.manualPlayers) ? normalizedPack.manualPlayers : [])
+          .map((player) => getCompositionPlayerId(player)),
+      ].filter(Boolean));
+
+      return {
+        ...normalizedPack,
+        reservePlayerIds: (Array.isArray(normalizedPack?.reservePlayerIds) ? normalizedPack.reservePlayerIds : [])
+          .filter((playerId) => allowedIds.has(playerId)),
+        reserveSnapshotPlayers: (Array.isArray(normalizedPack?.reserveSnapshotPlayers) ? normalizedPack.reserveSnapshotPlayers : [])
+          .filter((player) => allowedIds.has(getCompositionPlayerId(player))),
+        teams: (Array.isArray(normalizedPack?.teams) ? normalizedPack.teams : []).map((team) => ({
+          ...team,
+          placements: (Array.isArray(team?.placements) ? team.placements : [])
+            .filter((placement) => allowedIds.has(String(placement?.playerId || ''))),
+        })),
+      };
+    },
+    [availablePresets, explicitSelectedPlayers, hasExplicitSelection, initialPackSource, sport],
   );
   const resolvedReadOnlyBranches = useMemo(() => {
     if (Array.isArray(aggregateBranches) && aggregateBranches.length > 0) {
@@ -471,6 +513,11 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       await invalidateQueries();
       showAlert('Succes', 'Brouillon de composition enregistre.');
     } catch (error) {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
       showAlert('Erreur', getErrorMessage(error, 'Impossible d\'enregistrer ce brouillon.'));
     } finally {
       setIsSaving(false);
@@ -536,6 +583,11 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       await invalidateQueries();
       showAlert('Succes', 'Brouillon genere automatiquement. Tu peux maintenant ajuster les equipes a la main.');
     } catch (error) {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
       showAlert('Erreur', getErrorMessage(error, 'Impossible de generer cette composition automatiquement.'));
     } finally {
       setIsSaving(false);

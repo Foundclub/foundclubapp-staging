@@ -980,6 +980,11 @@ function TacticalBoard() {
       }
       return true;
     } catch (error) {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return false;
+      }
       console.error('Save draft error:', error);
       Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible d'enregistrer le brouillon."));
       return false;
