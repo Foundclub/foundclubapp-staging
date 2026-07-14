@@ -33,7 +33,7 @@ import {
 
 // Resume 1 ligne des cartes repliees (decision 3 — carte non selectionnee).
 const TEAM_SUMMARY = "Événements illimités, compo, convocations, cotisation d'équipe…";
-const CLUB_SUMMARY = 'Installations, sponsors, canal de diffusion, cotisations du club…';
+const CLUB_SUMMARY = 'Installations, sponsors, cotisations du club…';
 
 // Benefices des cartes depliees (handoff pw-core PRICING).
 const TEAM_BENEFITS = [
@@ -44,7 +44,7 @@ const TEAM_BENEFITS = [
 const CLUB_BENEFITS = [
   'Toutes les équipes du club incluses',
   'Installations et réservations',
-  'Sponsors, partenaires, canal de diffusion',
+  'Sponsors et partenaires du club',
   "Cotisations du club encaissées dans l'app",
 ];
 

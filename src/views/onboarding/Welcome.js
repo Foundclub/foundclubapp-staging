@@ -82,7 +82,7 @@ function Welcome({ navigation }) {
       bullets: [
         t('welcome.subscription.club.bullet1', 'Toutes tes équipes incluses'),
         t('welcome.subscription.club.bullet2', 'Installations et planning du club'),
-        t('welcome.subscription.club.bullet3', 'Sponsors et canal de diffusion'),
+        t('welcome.subscription.club.bullet3', 'Sponsors et partenaires du club'),
       ],
       eyebrow: t('welcome.subscription.club.eyebrow', 'Club'),
       fillColor: 'rgba(16, 185, 129, 0.08)',

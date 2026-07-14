@@ -271,7 +271,7 @@ const PRESIDENT_TOUR_STEPS = [
   },
   {
     id: 'president_messaging',
-    instruction: 'Groupes et canal de diffusion du club.',
+    instruction: 'Groupes de discussion du club.',
     manualLabel: "J'ai vu",
     navTarget: messagingTarget,
     success: { type: 'manual' },
