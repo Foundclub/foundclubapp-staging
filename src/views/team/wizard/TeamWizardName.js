@@ -180,6 +180,47 @@ function TeamWizardName({ navigation, route }) {
     navigation.navigate(RouteNames.TeamWizardDescription);
   };
 
+  // Aiguillage « pas de club » : rechercher son club (pour le rejoindre/revendiquer)
+  // ou ouvrir le tunnel de création de club (« je ne trouve pas mon club »).
+  const handleSearchClub = () => {
+    /** @type {any} */ (navigation).navigate(RouteNames.Search, {
+      screen: RouteNames.SearchClubs,
+    });
+  };
+  const handleCreateClub = () => {
+    /** @type {any} */ (navigation).navigate(RouteNames.ClubStack, {
+      params: { entry: 'search' },
+      screen: RouteNames.ClubWizardName,
+    });
+  };
+
+  // Un entraineur sans club ne peut pas creer d'equipe : etape d'aiguillage dediee.
+  if (!hasClubContext) {
+    return (
+      <WizardStepLayout
+        onClose={handleExitWizard}
+        subtitle={t(
+          'teamWizard.clubRequired.subtitle',
+          'Une équipe appartient toujours à un club. Rejoins ton club ou crée-le, puis reviens créer ton équipe.',
+        )}
+        title={t('teamWizard.clubRequired.title', "Il te faut d'abord un club")}
+      >
+        <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
+          <Button
+            onPress={handleSearchClub}
+            title={t('teamWizard.clubRequired.searchCta', 'Rechercher mon club')}
+            variant="Primary"
+          />
+          <Button
+            onPress={handleCreateClub}
+            title={t('teamWizard.clubRequired.createCta', 'Je ne trouve pas mon club')}
+            variant="Secondary"
+          />
+        </View>
+      </WizardStepLayout>
+    );
+  }
+
   return (
     <WizardStepLayout
       isNextDisabled={!state.name?.trim() || !hasClubContext}
@@ -227,19 +268,6 @@ function TeamWizardName({ navigation, route }) {
           </View>
         ) : null}
         <SubscriptionQuotaBanner label="Équipes" quotaType="FREE_TEAM" />
-        {!hasClubContext ? (
-          <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Impossible de démarrer la création de l&apos;équipe sans club. Reviens à la
-              liste des équipes ou à la fiche club puis relance le wizard.
-            </Text>
-            <Button
-              onPress={handleExitWizard}
-              title="Retour à mes équipes"
-              variant="Secondary"
-            />
-          </View>
-        ) : null}
         <Input
           autoFocus
           label={t('teamEdit.fields.name.label')}
