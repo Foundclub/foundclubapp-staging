@@ -33,13 +33,52 @@ function TourBanner() {
   // propres CTA — le bandeau se replie en pastille pour ne jamais les masquer.
   useEffect(() => {
     setIsCollapsed(false);
-    if (!currentStep || currentStep.success?.type === 'manual') return undefined;
+    // L'auto-repli ne concerne que les etapes actives a signal automatique ; le
+    // bandeau « en pause » (Reprendre le tour) se replie uniquement a la main.
+    if (!currentStep || currentStep.success?.type === 'manual' || tourStatus === 'paused') {
+      return undefined;
+    }
     const timer = setTimeout(() => setIsCollapsed(true), 3500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep?.id, tourStatus]);
 
   if (!isTourActive || !currentStep) return null;
+
+  // Pastille repliee (toucher pour rouvrir) — disponible depuis tous les etats,
+  // y compris « en pause », pour liberer l'espace en bas de l'ecran.
+  if (isCollapsed) {
+    return (
+      <TouchableOpacity
+        accessibilityLabel="Afficher le tour guidé"
+        accessibilityRole="button"
+        onPress={() => setIsCollapsed(false)}
+        style={{
+          alignItems: 'center',
+          backgroundColor: 'rgba(4,31,44,0.97)',
+          borderColor: `${Colors.primary500}59`,
+          borderRadius: 999,
+          borderWidth: 1,
+          bottom: Math.max(insets.bottom, 12) + 158,
+          columnGap: 6,
+          elevation: 12,
+          flexDirection: 'row',
+          left: 12,
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          position: 'absolute',
+        }}
+      >
+        <View style={{
+          backgroundColor: Colors.primary500, borderRadius: 999, height: 7, width: 7,
+        }}
+        />
+        <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
+          {`Tour ${stepIndex + 1}/${totalSteps}`}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
 
   const containerStyle = {
     backgroundColor: 'rgba(4,31,44,0.97)',
@@ -60,9 +99,19 @@ function TourBanner() {
   if (tourStatus === 'paused') {
     return (
       <View style={[containerStyle, Spaces.padding[16], Spaces.gap[12]]}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {`Ton tour guidé t'attend (étape ${stepIndex + 1}/${totalSteps})`}
-        </Text>
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+            {`Ton tour guidé t'attend (étape ${stepIndex + 1}/${totalSteps})`}
+          </Text>
+          <TouchableOpacity
+            accessibilityLabel="Réduire le tour"
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={() => setIsCollapsed(true)}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral400]}>—</Text>
+          </TouchableOpacity>
+        </View>
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
           <TouchableOpacity
             accessibilityRole="button"
@@ -109,39 +158,6 @@ function TourBanner() {
           {currentStep.successMessage}
         </Text>
       </View>
-    );
-  }
-
-  if (isCollapsed) {
-    return (
-      <TouchableOpacity
-        accessibilityLabel="Afficher le tour guidé"
-        accessibilityRole="button"
-        onPress={() => setIsCollapsed(false)}
-        style={{
-          alignItems: 'center',
-          backgroundColor: 'rgba(4,31,44,0.97)',
-          borderColor: `${Colors.primary500}59`,
-          borderRadius: 999,
-          borderWidth: 1,
-          bottom: Math.max(insets.bottom, 12) + 158,
-          columnGap: 6,
-          elevation: 12,
-          flexDirection: 'row',
-          left: 12,
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          position: 'absolute',
-        }}
-      >
-        <View style={{
-          backgroundColor: Colors.primary500, borderRadius: 999, height: 7, width: 7,
-        }}
-        />
-        <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
-          {`Tour ${stepIndex + 1}/${totalSteps}`}
-        </Text>
-      </TouchableOpacity>
     );
   }
 
