@@ -1,0 +1,233 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Alert, Text, View } from 'react-native';
+
+import { markOnboardingComplete } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
+import useTheme from '@/theme/themeContext';
+
+import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetActivities } from '@/services/activity/activityQueries';
+import { createSelfOnboardClub } from '@/services/club/clubService';
+
+import { useClubWizard } from './ClubWizardContext';
+
+const STEP_COUNT = 5;
+
+/**
+ * @param {any} props
+ * @returns {import('react').ReactElement}
+ */
+function RecapRow({ label, value }) {
+  const { Alignments, Fonts, Spaces } = useTheme();
+  return (
+    <View style={[Alignments.row, Alignments.justifySpaceBetween, Spaces.marginBottom[12]]}>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>{label}</Text>
+      <Text style={[Fonts.p3Bold, Fonts.neutral00, { flexShrink: 1, textAlign: 'right' }]}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * Étape 5/5 — récapitulatif + création. Gère le 409 doublon (suggestions +
+ * « créer quand même ») et la reprise du parcours selon le point d'entrée.
+ * @param {any} props
+ * @returns {import('react').ReactElement}
+ */
+function ClubWizardRecap({ navigation, route }) {
+  const { t } = useTranslation();
+  const {
+    ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
+  const { dispatch, state } = useClubWizard();
+  const {
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    refetchUserData,
+    userData,
+  } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: activities } = useGetActivities();
+
+  const entry = route?.params?.entry || 'search';
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [duplicates, setDuplicates] = useState(/** @type {any[]} */ ([]));
+
+  const activityNames = useMemo(() => {
+    const list = Array.isArray(activities) ? activities : [];
+    const selected = Array.isArray(state.activityDocumentIds) ? state.activityDocumentIds : [];
+    return list
+      .filter((activity) => selected.includes(activity.documentId))
+      .map((activity) => activity.name);
+  }, [activities, state.activityDocumentIds]);
+
+  const resumeAfterSuccess = (createdClub) => {
+    dispatch({ type: 'RESET' });
+    queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
+    queryClient.invalidateQueries({ queryKey: ['get-me'] });
+    queryClient.invalidateQueries({ queryKey: ['clubs'] });
+    if (typeof refetchUserData === 'function') {
+      refetchUserData();
+    }
+
+    const clubDocumentId = createdClub?.documentId;
+
+    if (entry === 'onboarding') {
+      const parentNavigation = navigation.getParent?.() || navigation;
+      const nextRoute = typeof getNextOnboardingRoute === 'function'
+        ? getNextOnboardingRoute(RouteNames.UserAffiliationGuide)
+        : null;
+      if (nextRoute) {
+        parentNavigation.navigate(nextRoute);
+        return;
+      }
+      markOnboardingComplete(userData?.documentId);
+      parentNavigation.reset({
+        index: 0,
+        routes: [{ name: getPostOnboardingHomeRoute() }],
+      });
+      return;
+    }
+
+    if (clubDocumentId) {
+      navigation.navigate(RouteNames.Club, { clubId: clubDocumentId });
+    } else {
+      navigation.goBack();
+    }
+  };
+
+  const submit = async ({ forceCreate = false } = {}) => {
+    const option = state.addressOption || {};
+    const hasCoordinates = Number.isFinite(option?.lat) && Number.isFinite(option?.lng);
+    if (!String(state.name || '').trim() || !hasCoordinates) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('clubWizard.recap.missing', 'Renseigne au moins le nom et l\'adresse du club.'),
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await createSelfOnboardClub({
+        activityDocumentIds: state.activityDocumentIds,
+        addressDetails: option?.label,
+        addressLabel: option?.label,
+        alsoDirector: state.alsoDirector === true,
+        coordinates: { lat: option.lat, lng: option.lng },
+        email: state.email,
+        forceCreate,
+        name: String(state.name).trim(),
+        phoneNumber: state.phoneNumber,
+        screen: 'club_wizard',
+      });
+
+      if (result?.duplicate) {
+        setDuplicates(Array.isArray(result.suggestions) ? result.suggestions : []);
+        return;
+      }
+
+      Alert.alert(
+        t('clubWizard.recap.successTitle', 'Club créé !'),
+        t(
+          'clubWizard.recap.successDescription',
+          'Ton club est en ligne. Notre équipe le vérifiera prochainement.',
+        ),
+        [{ onPress: () => resumeAfterSuccess(result?.club), text: t('common.actions.ok', 'OK') }],
+        { cancelable: false },
+      );
+    } catch (error) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        error?.message || t('clubWizard.recap.error', 'Impossible de créer le club.'),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const hasDuplicates = duplicates.length > 0;
+
+  return (
+    <WizardStepLayout
+      isNextLoading={isSubmitting}
+      nextLabel={hasDuplicates
+        ? t('clubWizard.recap.createAnyway', 'Créer quand même')
+        : t('clubWizard.recap.create', 'Créer mon club')}
+      onBack={() => navigation.goBack()}
+      onClose={() => navigation.goBack()}
+      onNext={() => submit({ forceCreate: hasDuplicates })}
+      stepCount={STEP_COUNT}
+      stepIndex={5}
+      subtitle={t('clubWizard.recap.subtitle', 'Vérifie les informations avant de créer ton club.')}
+      title={t('clubWizard.recap.title', 'Récapitulatif')}
+    >
+      <View
+        style={[
+          ApplicationStyle.card,
+          Spaces.padding[16],
+          {
+            backgroundColor: 'rgba(255,255,255,0.03)',
+            borderColor: 'rgba(255,255,255,0.10)',
+            borderRadius: 16,
+            borderWidth: 1,
+          },
+        ]}
+      >
+        <RecapRow label={t('clubWizard.recap.name', 'Nom')} value={state.name || '—'} />
+        <RecapRow
+          label={t('clubWizard.recap.address', 'Adresse')}
+          value={state.addressOption?.label || '—'}
+        />
+        <RecapRow
+          label={t('clubWizard.recap.sports', 'Sports')}
+          value={activityNames.length ? activityNames.join(', ') : '—'}
+        />
+        <RecapRow
+          label={t('clubWizard.recap.email', 'Email')}
+          value={state.email || '—'}
+        />
+        <RecapRow
+          label={t('clubWizard.recap.phone', 'Téléphone')}
+          value={state.phoneNumber || '—'}
+        />
+      </View>
+
+      {hasDuplicates ? (
+        <View style={[Spaces.marginTop[24]]}>
+          <Text style={[Fonts.p3Bold, { color: Colors.error700 }, Spaces.marginBottom[8]]}>
+            {t('clubWizard.recap.duplicateTitle', 'Un club très proche existe déjà')}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginBottom[12]]}>
+            {t(
+              'clubWizard.recap.duplicateHint',
+              'Rejoins-le s\'il s\'agit du tien, ou touche « Créer quand même » si c\'est un autre club.',
+            )}
+          </Text>
+          {duplicates.map((club) => (
+            <View key={club.documentId} style={[Spaces.marginBottom[8]]}>
+              <WizardOptionCard
+                compact
+                onPress={() => navigation.navigate(RouteNames.Club, {
+                  clubId: club.documentId,
+                  ...(entry === 'onboarding' ? { fromOnboardingAffiliation: true } : {}),
+                })}
+                subtitle={club?.addressDetails || undefined}
+                title={club?.name}
+              />
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </WizardStepLayout>
+  );
+}
+
+export default ClubWizardRecap;

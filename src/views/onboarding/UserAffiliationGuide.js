@@ -293,6 +293,16 @@ function UserAffiliationGuideContent({ navigation }) {
     setIsNotFoundModalVisible(true);
   }, [searchValue]);
 
+  // Coach/dirigeant qui ne trouve pas son club : ouverture du tunnel de création
+  // (le club est créé immédiatement, plus de blocage). Le flux « demande d'aide »
+  // reste accessible en lien discret (décision B4).
+  const handleOpenClubWizard = useCallback(() => {
+    navigation.navigate(RouteNames.ClubStack, {
+      params: { entry: 'onboarding', initialName: searchValue.trim() },
+      screen: RouteNames.ClubWizardName,
+    });
+  }, [navigation, searchValue]);
+
   const handleOpenClubFilters = useCallback(() => {
     navigation.navigate(RouteNames.ClubStack, {
       params: { fromOnboardingAffiliation: true },
@@ -516,7 +526,7 @@ function UserAffiliationGuideContent({ navigation }) {
       }
       return t(
         'onboardingAffiliation.tutorial.stepResultDescriptionClub',
-        'Ouvre la fiche du club pour utiliser le bouton Je dirige ce club.',
+        'Ouvre la fiche du club pour le rejoindre ou le revendiquer.',
       );
     })();
     const resultTutorialTitle = isClubFlow
@@ -717,7 +727,7 @@ function UserAffiliationGuideContent({ navigation }) {
     }
     return t(
       'onboardingAffiliation.subtitleClub',
-      'Recherche ton club puis ouvre sa fiche pour valider « Je dirige ce club ».',
+      'Recherche ton club puis ouvre sa fiche pour le rejoindre ou le revendiquer.',
     );
   })();
 
@@ -978,13 +988,24 @@ function UserAffiliationGuideContent({ navigation }) {
               accessibilityLabel={isClubFlow
                 ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
                 : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
-              onPress={handleOpenNotFoundModal}
+              onPress={isStaffAffiliationFlow ? handleOpenClubWizard : handleOpenNotFoundModal}
               title={isClubFlow
                 ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
                 : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
               variant="Secondary"
             />
           </AffiliationTutorialStep>
+          {isStaffAffiliationFlow ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={handleOpenNotFoundModal}
+              style={Spaces.paddingVertical[8]}
+            >
+              <Text style={[Fonts.p3, Fonts.primary500, Fonts.textCenter]}>
+                {t('onboardingAffiliation.actions.askForHelp', 'Besoin d\'aide ? Nous contacter')}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
 
           <OnboardingOptionalHint />
           <Button

@@ -540,6 +540,57 @@ export default {
       unavailableTitle: 'Vocal indisponible',
     },
   },
+  clubWizard: {
+    activities: {
+      empty: 'Aucun sport ne correspond.',
+      searchLabel: 'Rechercher un sport',
+      searchPlaceholder: 'Football, basket…',
+      subtitle: 'Sélectionne les sports pratiqués dans ton club (tu pourras en ajouter plus tard).',
+      title: 'Quels sports pratiquez-vous ?',
+    },
+    address: {
+      label: 'Adresse du club',
+      placeholder: 'Rue, ville…',
+      subtitle: 'Recherche l\'adresse de ton club. Elle le rend visible sur la carte et près des joueurs.',
+      title: 'Où se trouve ton club ?',
+    },
+    contact: {
+      alsoDirector: 'Je suis aussi dirigeant de ce club',
+      alsoDirectorSubtitle: 'Coche si tu gères aussi le club (et pas seulement une équipe).',
+      emailInvalid: 'Adresse email invalide.',
+      emailLabel: 'Email du club (facultatif)',
+      emailPlaceholder: 'contact@club.fr',
+      phoneLabel: 'Téléphone du club (facultatif)',
+      phonePlaceholder: '0612345678',
+      skip: 'Passer cette étape',
+      subtitle: 'Ces coordonnées aident les joueurs à contacter ton club. Tu peux les ajouter plus tard.',
+      title: 'Coordonnées du club',
+    },
+    name: {
+      duplicateHint: 'C\'est peut-être l\'un de ceux-ci ?',
+      label: 'Nom du club',
+      placeholder: 'FC Marseille',
+      subtitle: 'Donne le nom officiel de ton club. On vérifie au passage qu\'il n\'existe pas déjà.',
+      title: 'Quel est le nom de ton club ?',
+    },
+    recap: {
+      address: 'Adresse',
+      create: 'Créer mon club',
+      createAnyway: 'Créer quand même',
+      duplicateHint: 'Rejoins-le s\'il s\'agit du tien, ou touche « Créer quand même » si c\'est un autre club.',
+      duplicateTitle: 'Un club très proche existe déjà',
+      email: 'Email',
+      error: 'Impossible de créer le club.',
+      missing: 'Renseigne au moins le nom et l\'adresse du club.',
+      name: 'Nom',
+      phone: 'Téléphone',
+      sports: 'Sports',
+      subtitle: 'Vérifie les informations avant de créer ton club.',
+      successDescription: 'Ton club est en ligne. Notre équipe le vérifiera prochainement.',
+      successTitle: 'Club créé !',
+      title: 'Récapitulatif',
+    },
+  },
   createClubRequest: {
     actions: {
       create: 'Ajouter le club',
@@ -1642,6 +1693,7 @@ export default {
       tooltipSkipHint: 'Quitte le tutoriel guide.',
     },
     actions: {
+      askForHelp: 'Besoin d\'aide ? Nous contacter',
       changeClub: 'Changer de club',
       continueLater: 'Continuer plus tard',
       notFoundClub: 'Je ne trouve pas mon club',
@@ -2042,6 +2094,7 @@ export default {
     story: 'Story / Post',
     subtitle: 'Fais-le voir. Plus il est vu, plus tu remplis.',
     title: 'Ton événement est en ligne',
+    variantHint: 'Choisir le style {{label}}',
   },
   squadDetails: {
     actions: {

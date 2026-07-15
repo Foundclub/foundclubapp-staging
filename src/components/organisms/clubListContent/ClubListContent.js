@@ -498,8 +498,11 @@ function ClubListContent({
   }, [appDispatch, clubFilters]);
 
   const handleCreateClub = useCallback(() => {
+    // Tunnel de création de club self-service (le serveur autorise coach/dirigeant
+    // et refuse proprement les autres rôles). Remplace l'ancien formulaire de demande.
     navigation.navigate(RouteNames.ClubStack, {
-      screen: RouteNames.CreateClub,
+      params: { entry: 'search' },
+      screen: RouteNames.ClubWizardName,
     });
   }, [navigation]);
 

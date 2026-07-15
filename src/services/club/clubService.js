@@ -71,13 +71,13 @@ const clubSchema = Joi.object({
   activites: Joi.array().items(activitySchema).optional(),
   address: Joi.object().required(),
   clubMembersPublicVisibility: Joi.boolean().optional(),
-  clubPartner: Joi.boolean().optional().default(false),
-  clubVerified: Joi.boolean().optional().default(false),
+  clubPartner: Joi.boolean().allow(null).optional().default(false),
+  clubVerified: Joi.boolean().allow(null).optional().default(false),
   email: Joi.string().allow('', null).optional(),
   geohash: Joi.string().allow('', null).optional(),
   id: Joi.number().required(),
-  isCustomer: Joi.boolean().optional().default(false),
-  maxTeamNumber: Joi.number().optional().default(0),
+  isCustomer: Joi.boolean().allow(null).optional().default(false),
+  maxTeamNumber: Joi.number().allow(null).optional().default(0),
   members: Joi.array().items(Joi.object().unknown(true)).optional(),
   membersAreHidden: Joi.boolean().optional(),
   membersCount: Joi.number().optional(),
@@ -91,13 +91,13 @@ const clubListSchema = Joi.object({
   _type: Joi.string().valid('club', 'multisport').optional(), // Type indicator
   activites: Joi.array().items(activitySchema).optional(),
   address: Joi.object().optional(), // Optional for multisport clubs
-  clubPartner: Joi.boolean().optional().default(false),
-  clubVerified: Joi.boolean().optional().default(false),
+  clubPartner: Joi.boolean().allow(null).optional().default(false),
+  clubVerified: Joi.boolean().allow(null).optional().default(false),
   documentId: Joi.string().optional(),
   email: Joi.string().allow('', null).optional(),
   geohash: Joi.string().allow('', null).optional(),
   id: Joi.number().required(),
-  isCustomer: Joi.boolean().optional().default(false), // Optional for multisport
+  isCustomer: Joi.boolean().allow(null).optional().default(false), // Optional for multisport
   maxSectionNumber: Joi.number().optional(), // For multisport clubs
   maxTeamNumber: Joi.number().optional(), // Optional - multisport uses maxSectionNumber
   name: Joi.string().required(),
@@ -758,5 +758,53 @@ export const claimClub = async (clubId) => {
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to claim club: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Création self-service d'un club (coach/dirigeant qui ne trouve pas son club).
+ * Le serveur crée le club immédiatement (non vérifié) et notifie les superadmins.
+ * @param {{
+ *   name: string;
+ *   coordinates?: { lat: number; lng: number } | null;
+ *   addressLabel?: string;
+ *   addressDetails?: string;
+ *   activityDocumentIds?: string[];
+ *   email?: string;
+ *   phoneNumber?: string;
+ *   alsoDirector?: boolean;
+ *   forceCreate?: boolean;
+ *   screen?: string;
+ * }} payload
+ * @returns {Promise<{
+ *   duplicate?: boolean;
+ *   suggestions?: Array<{ documentId: string; name: string; addressDetails: string | null }>;
+ *   club?: any;
+ *   clubRequestDocumentId?: string | null;
+ * }>}
+ */
+export const createSelfOnboardClub = async (payload) => {
+  try {
+    const response = await client.post('/clubs/self-onboard', { data: payload });
+    // 201 : { data: club, clubRequestDocumentId }
+    return {
+      club: response.data?.data || response.data,
+      clubRequestDocumentId: response.data?.clubRequestDocumentId || null,
+      duplicate: false,
+    };
+  } catch (error) {
+    // 409 : doublon suspecté → on renvoie les suggestions au tunnel (choix explicite).
+    const status = error?.response?.status;
+    const details = error?.response?.data?.error?.details;
+    if (status === 409 && details?.code === 'CLUB_DUPLICATE_SUSPECTED') {
+      return {
+        duplicate: true,
+        suggestions: Array.isArray(details.suggestions) ? details.suggestions : [],
+      };
+    }
+    const message = error?.response?.data?.error?.message
+      || (error && typeof error === 'object' && 'message' in error ? error.message : null)
+      || 'Impossible de creer le club.';
+    throw new Error(String(message));
   }
 };
