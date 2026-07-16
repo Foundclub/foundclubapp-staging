@@ -94,6 +94,9 @@ jobs:
         shell: bash
         env:
           TOMTOM_API_KEY_PRODUCTION: ${{ secrets.TOMTOM_API_KEY_PRODUCTION }}
+          # Clé publique SDK RevenueCat Android (goog_...). Vide tant que le secret
+          # n'est pas configuré : le rail d'achat store reste "Checkout indisponible".
+          REVENUECAT_GOOGLE_API_KEY: ${{ secrets.REVENUECAT_GOOGLE_API_KEY }}
         run: |
           cat > .env.production <<EOF
           APP_ENV=production
@@ -106,6 +109,7 @@ jobs:
           FC_ENABLE_NOTIFICATION_TEST_TRIGGER=0
           FC_SEARCH_MAP_PROVIDER=tomtom
           TOMTOM_API_KEY=${TOMTOM_API_KEY_PRODUCTION}
+          REVENUECAT_GOOGLE_API_KEY=${REVENUECAT_GOOGLE_API_KEY}
           DELETE_ACCOUNT_URL=https://api.foundclubpro.com/suppression.html
           CONTACT_URL=https://foundclubpro.com
           EOF
