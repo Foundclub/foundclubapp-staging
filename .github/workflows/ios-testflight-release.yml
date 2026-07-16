@@ -36,10 +36,13 @@ jobs:
           echo "Installed Xcode applications:"
           ls -1d /Applications/Xcode*.app 2>/dev/null || true
 
-          # Ordre DECROISSANT de version : on prend le Xcode 26 le PLUS RECENT. Les images GitHub
-          # embarquent plusieurs Xcode 26.x mais ne provisionnent la plateforme iOS que sur les
-          # plus recents ; prendre le 1er du glob (26.0.1) donnait "iOS 26.0 Platform Not Installed".
-          for candidate in $(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -Vr) /Applications/Xcode.app; do
+          # Ordre CROISSANT : on prend le Xcode 26 le PLUS ANCIEN qui satisfait l'exigence Apple
+          # (majeure >= 26 pour les uploads apres 2026-04-28). RAISON : le pod `fmt` (11.0.2, impose
+          # par RCT-Folly de RN 0.78) NE COMPILE PAS avec le Clang des Xcode 26 recents (26.6) ->
+          # "call to consteval function ... is not a constant expression" dans format-inl.h.
+          # Xcode 26.0.x compile fmt correctement. La plateforme iOS eventuellement manquante est
+          # installee par l'etape suivante (-downloadPlatform), donc prendre un Xcode ancien est sans risque.
+          for candidate in $(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V) /Applications/Xcode.app; do
             if [ ! -x "$candidate/Contents/Developer/usr/bin/xcodebuild" ]; then
               continue
             fi
