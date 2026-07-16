@@ -1,5 +1,6 @@
 /* eslint-disable max-len, perfectionist/sort-imports, perfectionist/sort-objects */
 // @ts-nocheck
+import { getSimulationRoster } from '@/domains/tactical/simulationRosters';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -16,6 +17,17 @@ const tutorialTarget = (tutorialId, routeName, params = undefined) => ({
   tutorialId,
 });
 
+// Contrat (tous optionnels et retro-compatibles) des champs d'abonnement d'une mission :
+// - audience.requiresAccessLevel : contrainte de VISIBILITE. Valeur string ou string[] parmi
+//   'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'. La mission n'est visible que si le
+//   subscriptionAccessLevel courant du contexte est inclus. Champ absent = aucune contrainte
+//   d'abonnement (comportement historique strictement inchange). Ex : requiresAccessLevel: 'FREE'
+//   rend la mission visible seulement pour un compte encore gratuit, masquee des qu'il passe TEAM/CLUB.
+// - premiumFeature : METADONNEE pure (booleen) lue par l'UI. N'affecte PAS la visibilite. L'UI affiche
+//   un badge Premium sur la mission si premiumFeature === true ET que le contexte n'est pas deja couvert
+//   (context.hasActiveEntitlement === false).
+// Contexte d'audience expose par buildGuidanceAudienceContext (guidanceEngine.js) pour l'UI et le moteur :
+// subscriptionAccessLevel, hasActiveEntitlement, entitlementsSummary, freeUsageSummary.
 const mission = (definition) => definition;
 
 const planningTarget = tutorialTarget(TutorialIds.PLANNING, RouteNames.HomeTab, {
@@ -53,6 +65,45 @@ const requestsTarget = tutorialTarget(TutorialIds.REQUESTS_DASHBOARD, RouteNames
 const leagueDashboardTarget = {
   params: { screen: RouteNames.LeagueDashboard },
   routeName: RouteNames.LeagueHomeTab,
+};
+
+// --- Cibles du tour guide coach (declenche en fin d'onboarding) ---
+// Etape creation : ouvre le vrai wizard evenement depuis l'EventStack, avec le spotlight dedie.
+const eventWizardTarget = tutorialTarget(TutorialIds.EVENT_WIZARD_TYPE, RouteNames.EventStack, {
+  screen: RouteNames.EventWizardType,
+});
+// Etape composition : board en MODE SIMULATION (aucune ecriture serveur). Le roster fictif est
+// derive du sport de l'equipe entrainee (sinon sport prefere du profil, sinon football) pour que
+// terrain ET postes collent au sport reel du coach; simulationMode:true active le sandbox.
+const resolveCoachSimulationSport = (context) => {
+  const userData = context?.userData;
+  const trainedTeamSport = (Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : [])
+    .flatMap((team) => (Array.isArray(team?.activities) ? team.activities : []))
+    .map((activity) => activity?.name)
+    .find(Boolean);
+  return trainedTeamSport || userData?.preferredSport || 'football';
+};
+const compositionSimulationTarget = {
+  params: (context) => {
+    const simulationSport = resolveCoachSimulationSport(context);
+    return {
+      params: {
+        canEdit: true,
+        editorMode: 'event',
+        players: getSimulationRoster(simulationSport),
+        simulationMode: true,
+        sport: simulationSport,
+        teamName: 'Equipe demo',
+      },
+      screen: RouteNames.TacticalBoardV2,
+    };
+  },
+  routeName: RouteNames.EventStack,
+};
+// Etape finale du tour : ecran recap des offres (Gratuit / Equipe / Club avec prix),
+// le seul moment de vente. Enregistre dans PrivateNavigator (route GuideOffersRecap).
+const offersRecapTarget = {
+  routeName: RouteNames.GuideOffersRecap,
 };
 
 export const guidanceCatalog = Object.freeze({
@@ -104,6 +155,14 @@ export const guidanceCatalog = Object.freeze({
       programId: GuidanceProgramIds.coach,
       teaser: 'Aller jusqu’au recrutement, aux filtres avancés et aux alertes.',
       title: 'Recrutement et suivi',
+    },
+    {
+      id: 'coach_tour',
+      order: 4,
+      phase: 'Tour guide',
+      programId: GuidanceProgramIds.coach,
+      teaser: 'Rejouer pas a pas le tour guide de decouverte lance en fin d onboarding.',
+      title: 'Tour guide coach',
     },
     {
       id: 'president_foundations',
@@ -698,6 +757,154 @@ export const guidanceCatalog = Object.freeze({
       rewardText: 'Vous avez couvert aussi la porte d’entrée League côté coach.',
       shortDescription: 'Ouvrir League.',
       title: 'Découvrir League',
+    }),
+
+    // --- Tour guide coach (declenche a la fin de l'onboarding depuis l'ecran Welcome) ---
+    // Etapes lineaires (chaque etape debloque la suivante), priorites hautes (300+) pour ne
+    // jamais perturber la mission courante d'un coach existant. Toutes visibles des l'inscription
+    // (aucun prerequis d'equipe/club) afin que le tour se joue meme sans equipe encore creee.
+    mission({
+      actionsToTry: ['Parcourir les etapes du tour guide', 'Reperer la prochaine action proposee'],
+      audience: { roleKeys: ['coach'] },
+      completionMode: 'auto',
+      completionSignal: { routeName: RouteNames.MissionCenter, type: 'route' },
+      id: 'coach_tour_welcome',
+      longDescription: "Bienvenue dans FoundClub. Ce tour guide t'accompagne sur tes premiers reflexes de coach : creer un evenement, suivre les presences, preparer une compo, ouvrir ton planning, ton equipe et ta messagerie. Chaque etape est facultative et tu peux la passer a tout moment.",
+      module: 'intro',
+      navTarget: { routeName: RouteNames.MissionCenter },
+      packId: 'coach_tour',
+      prerequisiteMissionIds: [],
+      priority: 300,
+      programId: GuidanceProgramIds.coach,
+      rewardText: 'Tu sais ou retrouver ton tour guide et le rejouer quand tu veux.',
+      shortDescription: 'Demarre ton tour guide de coach.',
+      title: 'Bienvenue dans FoundClub',
+    }),
+    mission({
+      actionsToTry: ["Ouvrir l'assistant evenement", "Choisir un type d'evenement"],
+      audience: { roleKeys: ['coach'] },
+      completionMode: 'manual_fallback',
+      completionSignal: { key: 'event.created', type: 'action' },
+      id: 'coach_tour_create_event',
+      longDescription: "Tout commence par un evenement. L'assistant te guide pour creer ton premier entrainement, match ou detection : choisis un type, renseigne les infos cles et publie. C'est le point de depart de la vie de ton equipe sur FoundClub.",
+      module: 'event',
+      navTarget: eventWizardTarget,
+      packId: 'coach_tour',
+      prerequisiteMissionIds: ['coach_tour_welcome'],
+      priority: 310,
+      programId: GuidanceProgramIds.coach,
+      rewardText: 'Tu maitrises le geste central du coach : creer un evenement.',
+      shortDescription: 'Cree ton premier evenement.',
+      title: 'Creer ton premier evenement',
+      tutorialTarget: eventWizardTarget,
+    }),
+    mission({
+      actionsToTry: ['Ouvrir un evenement depuis ton planning', 'Reperer les presences et les participants'],
+      audience: { roleKeys: ['coach'] },
+      completionMode: 'manual_fallback',
+      completionSignal: { routeName: RouteNames.EventDetails, type: 'route' },
+      id: 'coach_tour_follow_event',
+      longDescription: "Une fois l'evenement cree, ouvre son detail depuis ton planning pour suivre les reponses de presence, les participants attendus et les infos logistiques. C'est ici que tu piloteras la preparation de chaque rendez-vous.",
+      module: 'event',
+      navTarget: planningTarget,
+      packId: 'coach_tour',
+      prerequisiteMissionIds: ['coach_tour_create_event'],
+      priority: 320,
+      programId: GuidanceProgramIds.coach,
+      rewardText: "Tu sais suivre les presences et les participants d'un evenement.",
+      shortDescription: 'Suis les presences de ton evenement.',
+      title: 'Suivre ton evenement',
+    }),
+    mission({
+      actionsToTry: ['Deplacer des joueurs fictifs sur le terrain', 'Tester une organisation sans rien publier'],
+      audience: { roleKeys: ['coach'] },
+      completionMode: 'manual_fallback',
+      completionSignal: { routeName: RouteNames.TacticalBoardV2, type: 'route' },
+      id: 'coach_tour_composition',
+      longDescription: "Prepare une composition dans un bac a sable : le terrain est rempli de joueurs fictifs pour t'entrainer sans aucune ecriture serveur. Publier une vraie compo depuis un evenement demande ensuite une offre payante.",
+      module: 'tactical',
+      navTarget: compositionSimulationTarget,
+      packId: 'coach_tour',
+      premiumFeature: true,
+      prerequisiteMissionIds: ['coach_tour_follow_event'],
+      priority: 330,
+      programId: GuidanceProgramIds.coach,
+      rewardText: 'Tu as teste le board de composition en mode apercu.',
+      shortDescription: 'Teste une compo en mode apercu.',
+      title: 'Preparer une composition',
+    }),
+    mission({
+      actionsToTry: ['Ouvrir ton planning', 'Reperer la vue semaine et les creneaux'],
+      audience: { roleKeys: ['coach'] },
+      completionMode: 'auto',
+      completionSignal: { routeName: RouteNames.MyEventList, type: 'route' },
+      id: 'coach_tour_planning',
+      longDescription: "Ton planning regroupe tous tes evenements a venir et te donne une lecture claire de la semaine. La reservation d'installations et de creneaux club fait partie des options qui s'ouvrent avec une offre payante.",
+      module: 'planning',
+      navTarget: planningTarget,
+      packId: 'coach_tour',
+      premiumFeature: true,
+      prerequisiteMissionIds: ['coach_tour_composition'],
+      priority: 340,
+      programId: GuidanceProgramIds.coach,
+      rewardText: 'Tu sais ou lire ton planning au quotidien.',
+      shortDescription: 'Ouvre ton planning.',
+      title: 'Ton planning',
+      tutorialTarget: planningTarget,
+    }),
+    mission({
+      actionsToTry: ['Ouvrir ton espace equipe', "Reperer l'invitation des joueurs"],
+      audience: { roleKeys: ['coach'] },
+      completionMode: 'auto',
+      completionSignal: { routeName: RouteNames.MyTeamList, type: 'route' },
+      id: 'coach_tour_team',
+      longDescription: "Ton espace equipe centralise tes joueurs et l'invitation de nouveaux membres. Tu peux animer une premiere equipe gratuitement ; ajouter une seconde equipe demande une offre payante.",
+      module: 'team',
+      navTarget: teamHubTarget,
+      packId: 'coach_tour',
+      premiumFeature: true,
+      prerequisiteMissionIds: ['coach_tour_planning'],
+      priority: 350,
+      programId: GuidanceProgramIds.coach,
+      rewardText: 'Tu sais ou inviter et gerer tes joueurs.',
+      shortDescription: 'Ouvre ton equipe et invite des joueurs.',
+      title: 'Ton equipe',
+    }),
+    mission({
+      actionsToTry: ['Ouvrir ta messagerie', "Reperer les conversations d'equipe"],
+      audience: { roleKeys: ['coach'] },
+      completionMode: 'auto',
+      completionSignal: { routeName: RouteNames.Chat, type: 'route' },
+      id: 'coach_tour_messaging',
+      longDescription: "La messagerie te permet d'echanger avec tes joueurs et de coordonner chaque rendez-vous. Les groupes de discussion a l'echelle du club s'ouvrent avec une offre payante.",
+      module: 'messaging',
+      navTarget: messagingTarget,
+      packId: 'coach_tour',
+      premiumFeature: true,
+      prerequisiteMissionIds: ['coach_tour_team'],
+      priority: 360,
+      programId: GuidanceProgramIds.coach,
+      rewardText: 'Tu sais ou coordonner ton equipe au quotidien.',
+      shortDescription: 'Ouvre ta messagerie.',
+      title: 'Ta messagerie',
+      tutorialTarget: messagingTarget,
+    }),
+    mission({
+      actionsToTry: ['Comparer les offres Free, Team et Club', 'Reperer ce que chaque offre debloque'],
+      audience: { roleKeys: ['coach'] },
+      completionMode: 'manual_fallback',
+      completionSignal: { routeName: RouteNames.GuideOffersRecap, type: 'route' },
+      id: 'coach_tour_offers_recap',
+      longDescription: 'Pour finir, retrouve le recapitulatif des offres FoundClub : ce qui est inclus en gratuit et ce que Team et Club ajoutent pour ton organisation. Tu pourras y revenir a tout moment depuis ton profil.',
+      module: 'subscription',
+      navTarget: offersRecapTarget,
+      packId: 'coach_tour',
+      prerequisiteMissionIds: ['coach_tour_messaging'],
+      priority: 370,
+      programId: GuidanceProgramIds.coach,
+      rewardText: 'Tu connais les offres FoundClub et ou les retrouver.',
+      shortDescription: 'Vois le recap des offres FoundClub.',
+      title: 'Recap des offres',
     }),
 
     mission({

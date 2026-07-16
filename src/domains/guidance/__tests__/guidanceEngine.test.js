@@ -2,6 +2,7 @@ import {
   buildGuidanceAudienceContext,
   buildGuidanceSnapshot,
   hydrateGuidanceState,
+  isMissionVisible,
   prepareGuidanceState,
 } from '@/domains/guidance/guidanceEngine';
 import {
@@ -273,5 +274,48 @@ describe('guidanceEngine', () => {
     expect(mergedState.dismissedDockUntil).toBe('2026-05-09T12:00:00.000Z');
     expect(mergedState.lastViewedMissionId).toBe('player_open_planning');
     expect(hydratedState.completedMissionIds).toEqual(preparedState.completedMissionIds);
+  });
+});
+
+describe('guidanceEngine subscription audience', () => {
+  const buildContext = (subscriptionAccessLevel, extra = {}) => buildGuidanceAudienceContext({
+    canEditClub: () => false,
+    canManageTeam: false,
+    isGold: false,
+    userData: { role: { name: 'Joueur' } },
+    ...(subscriptionAccessLevel ? { subscriptionAccessLevel } : {}),
+    ...extra,
+  });
+
+  it('defaults to FREE without an active entitlement when no subscription data is provided', () => {
+    const context = buildContext();
+
+    expect(context.subscriptionAccessLevel).toBe('FREE');
+    expect(context.hasActiveEntitlement).toBe(false);
+  });
+
+  it('exposes a paid access level as an active entitlement', () => {
+    const context = buildContext('CLUB');
+
+    expect(context.subscriptionAccessLevel).toBe('CLUB');
+    expect(context.hasActiveEntitlement).toBe(true);
+  });
+
+  it('hides a requiresAccessLevel FREE mission when the subscription access level is CLUB', () => {
+    const premiumMission = {
+      audience: { requiresAccessLevel: 'FREE' },
+      id: 'demo_free_only',
+      premiumFeature: true,
+    };
+
+    expect(isMissionVisible(premiumMission, buildContext('FREE'))).toBe(true);
+    expect(isMissionVisible(premiumMission, buildContext('CLUB'))).toBe(false);
+  });
+
+  it('keeps missions without requiresAccessLevel visible at any subscription level', () => {
+    const plainMission = { audience: {}, id: 'demo_plain' };
+
+    expect(isMissionVisible(plainMission, buildContext('FREE'))).toBe(true);
+    expect(isMissionVisible(plainMission, buildContext('CLUB'))).toBe(true);
   });
 });

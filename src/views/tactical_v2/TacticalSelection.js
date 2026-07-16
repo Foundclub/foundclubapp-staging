@@ -130,32 +130,46 @@ function TacticalSelection() {
       return teamDefaultCompositionPayload?.composition || bootstrapCompositionParam || null;
     }
 
+    // Regle de priorite (mode evenement) :
+    // 1. Une composition explicite recue en params (existingComposition) represente
+    //    l'etat local du board (potentiellement non sauvegarde), par exemple au retour
+    //    de "Modifier les joueurs". Elle prime TOUJOURS sur le brouillon serveur,
+    //    sinon la selection locale du coach serait ecrasee silencieusement par le fetch.
+    // 2. A defaut, le brouillon serveur.
+    // 3. Sinon, la composition de bootstrap (favori d'equipe / dernier match).
+    const explicitComposition = (() => {
+      if (existingCompositionParam && typeof existingCompositionParam === 'object') {
+        if (existingCompositionParam?.schemaVersion === 2 && existingCompositionParam?.byTeam) {
+          const byTeamDraft = existingCompositionParam?.byTeam?.[resolvedTeamId || '']?.draft;
+          return byTeamDraft && typeof byTeamDraft === 'object' ? byTeamDraft : null;
+        }
+        return existingCompositionParam;
+      }
+      if (typeof existingCompositionParam === 'string') {
+        try {
+          const parsed = JSON.parse(existingCompositionParam);
+          if (parsed && typeof parsed === 'object' && parsed?.schemaVersion === 2 && parsed?.byTeam) {
+            const byTeamDraft = parsed?.byTeam?.[resolvedTeamId || '']?.draft;
+            return byTeamDraft && typeof byTeamDraft === 'object' ? byTeamDraft : null;
+          }
+          return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (_error) {
+          return null;
+        }
+      }
+      return null;
+    })();
+
+    if (explicitComposition) {
+      return explicitComposition;
+    }
+
     if (teamCompositionPayload?.draft && typeof teamCompositionPayload.draft === 'object') {
       return teamCompositionPayload.draft;
     }
 
     if (bootstrapCompositionParam && typeof bootstrapCompositionParam === 'object') {
       return bootstrapCompositionParam;
-    }
-
-    if (existingCompositionParam && typeof existingCompositionParam === 'object') {
-      if (existingCompositionParam?.schemaVersion === 2 && existingCompositionParam?.byTeam) {
-        const byTeamDraft = existingCompositionParam?.byTeam?.[resolvedTeamId || '']?.draft;
-        return byTeamDraft && typeof byTeamDraft === 'object' ? byTeamDraft : null;
-      }
-      return existingCompositionParam;
-    }
-    if (typeof existingCompositionParam === 'string') {
-      try {
-        const parsed = JSON.parse(existingCompositionParam);
-        if (parsed && typeof parsed === 'object' && parsed?.schemaVersion === 2 && parsed?.byTeam) {
-          const byTeamDraft = parsed?.byTeam?.[resolvedTeamId || '']?.draft;
-          return byTeamDraft && typeof byTeamDraft === 'object' ? byTeamDraft : null;
-        }
-        return parsed && typeof parsed === 'object' ? parsed : null;
-      } catch (_error) {
-        return null;
-      }
     }
 
     return null;
@@ -230,16 +244,26 @@ function TacticalSelection() {
     if (bootstrappedFromComposition) return;
     if (!existingComposition || typeof existingComposition !== 'object') return;
 
+    // Supporte les deux formats de composition :
+    // - legacy (v1/v2) : placements a plat + selectedPlayerIds
+    // - multi-equipes (v3) : placements par equipe + reservePlayerIds
     const placements = Array.isArray(existingComposition?.placements)
       ? existingComposition.placements
-      : [];
+      : (Array.isArray(existingComposition?.teams)
+        ? existingComposition.teams.flatMap((/** @type {{ placements?: any[] }} */ team) => (Array.isArray(team?.placements) ? team.placements : []))
+        : []);
     const manual = Array.isArray(existingComposition?.manualPlayers)
       ? existingComposition.manualPlayers
       : [];
 
-    const selectedPlayerIds = Array.isArray(existingComposition?.selectedPlayerIds)
-      ? existingComposition.selectedPlayerIds
-      : [];
+    const selectedPlayerIds = [
+      ...(Array.isArray(existingComposition?.selectedPlayerIds)
+        ? existingComposition.selectedPlayerIds
+        : []),
+      ...(Array.isArray(existingComposition?.reservePlayerIds)
+        ? existingComposition.reservePlayerIds
+        : []),
+    ];
     const selectedFromPlacements = placements
       .map((/** @type {{ playerId?: string }} */ placement) => String(placement?.playerId || '').trim())
       .filter(Boolean);

@@ -107,4 +107,24 @@ describe('guidanceCatalog search hub contract', () => {
       });
     });
   });
+
+  it('keeps optional subscription audience metadata well-formed when present', () => {
+    const allowedAccessLevels = ['FREE', 'TEAM', 'CLUB_UNVERIFIED', 'CLUB'];
+
+    guidanceCatalog.missions.forEach((mission) => {
+      if (mission.premiumFeature !== undefined) {
+        expect(typeof mission.premiumFeature).toBe('boolean');
+      }
+
+      const requiresAccessLevel = mission.audience?.requiresAccessLevel;
+      if (requiresAccessLevel !== undefined) {
+        const levels = Array.isArray(requiresAccessLevel)
+          ? requiresAccessLevel
+          : [requiresAccessLevel];
+        levels.forEach((level) => {
+          expect(allowedAccessLevels).toContain(level);
+        });
+      }
+    });
+  });
 });

@@ -12,6 +12,12 @@ import { guidanceCatalog, GuidanceProgramIds } from '@/domains/guidance/guidance
 
 const isNonEmptyObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
 
+const SUBSCRIPTION_ACCESS_LEVELS = ['FREE', 'TEAM', 'CLUB_UNVERIFIED', 'CLUB'];
+
+const normalizeSubscriptionAccessLevel = (value) => (
+  SUBSCRIPTION_ACCESS_LEVELS.includes(value) ? value : 'FREE'
+);
+
 const getMissionSignalTimestamp = (state, signal) => {
   if (!signal || !signal.type) return null;
 
@@ -58,10 +64,17 @@ const statePredicates = {
 export const buildGuidanceAudienceContext = ({
   canEditClub,
   canManageTeam,
+  entitlementsSummary,
+  freeUsageSummary,
   isGold,
+  subscriptionAccessLevel,
   userData,
 }) => {
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  const normalizedEntitlements = Array.isArray(entitlementsSummary) ? entitlementsSummary : [];
+  const normalizedFreeUsage = Array.isArray(freeUsageSummary) ? freeUsageSummary : [];
+  const subscriptionLevel = normalizeSubscriptionAccessLevel(subscriptionAccessLevel);
+  const hasActiveEntitlement = subscriptionLevel !== 'FREE' || normalizedEntitlements.length > 0;
   const clubId = userData?.club?.documentId || '';
   const cmId = userData?.multisportClubs?.[0]?.documentId || '';
   const trainedTeamIds = (userData?.trainedTeams || []).map((team) => team?.documentId).filter(Boolean);
@@ -89,6 +102,9 @@ export const buildGuidanceAudienceContext = ({
     canManageTeam: Boolean(canManageTeam),
     clubId,
     cmId,
+    entitlementsSummary: normalizedEntitlements,
+    freeUsageSummary: normalizedFreeUsage,
+    hasActiveEntitlement,
     hasClub: Boolean(clubId || cmId),
     hasManagedClub,
     hasPlayerTeam,
@@ -97,11 +113,12 @@ export const buildGuidanceAudienceContext = ({
     hasTrainingTeam,
     isGold: Boolean(isGold),
     roleKey,
+    subscriptionAccessLevel: subscriptionLevel,
     userData: userData || null,
   };
 };
 
-const isMissionVisible = (mission, context) => {
+export const isMissionVisible = (mission, context) => {
   const audience = mission?.audience || {};
   if (Array.isArray(audience.roleKeys) && audience.roleKeys.length > 0) {
     if (!audience.roleKeys.includes(context.roleKey)) {
@@ -121,6 +138,14 @@ const isMissionVisible = (mission, context) => {
     return false;
   }
   if (audience.requiresLeagueMode && !context.isGold) return false;
+  if (audience.requiresAccessLevel) {
+    const allowedAccessLevels = Array.isArray(audience.requiresAccessLevel)
+      ? audience.requiresAccessLevel
+      : [audience.requiresAccessLevel];
+    if (!allowedAccessLevels.includes(context.subscriptionAccessLevel || 'FREE')) {
+      return false;
+    }
+  }
   return true;
 };
 
