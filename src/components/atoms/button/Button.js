@@ -108,7 +108,7 @@ function Button({
         style,
       ]}
     >
-      {isLoading ? <Loader color={Colors.primary100} />
+      {isLoading ? <Loader color={ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100} />
         : (
           <View
             style={[

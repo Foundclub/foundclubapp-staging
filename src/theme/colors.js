@@ -1,5 +1,6 @@
 export const colors = {
   error100: '#ffe1e7',
+  error300: '#ff8fa3',
   error500: '#ff284f',
   error700: '#d02544',
 
@@ -51,6 +52,7 @@ export const colors = {
   transparent: 'transparent',
 
   // Verrou des fonctionnalites de l'offre Club (handoff design, decision 7).
+  violet200: '#b7a5ff',
   violet500: '#8567ff',
 };
 

@@ -94,7 +94,9 @@ const getStyle = (colors) => ({
     color: colors.neutral300,
   },
   buttonTextPrimary: {
-    color: colors.neutral00,
+    // Encre foncée sur fond primary500 : neutral00 ≈ 2,4:1 (échec WCAG AA),
+    // primary900 ≈ 8:1 (AA/AAA). Décision Adel 2026-07-14, cf. THEME.md.
+    color: colors.primary900,
   },
 
   buttonTextPrimaryLight: {

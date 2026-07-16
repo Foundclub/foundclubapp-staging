@@ -23,8 +23,9 @@ import { buildMinorParentalDeclarationPayload } from '@/constants/parentalDeclar
  *
  * @param root0
  * @param root0.navigation
+ * @param root0.route
  */
-function UserParentalDeclaration({ navigation }) {
+function UserParentalDeclaration({ navigation, route }) {
   const {
     Alignments, Fonts, Spaces,
   } = useTheme();
@@ -54,7 +55,13 @@ function UserParentalDeclaration({ navigation }) {
           type: 'UPDATE_USER_DATA',
         });
       }
-      navigation.navigate(RouteNames.UserAddress);
+      // Hors onboarding (ex. carte de collection : returnRoute fourni), on
+      // revient a l'ecran appelant au lieu de poursuivre le flux onboarding.
+      if (route?.params?.returnRoute) {
+        navigation.goBack();
+      } else {
+        navigation.navigate(RouteNames.UserAddress);
+      }
     },
   });
 

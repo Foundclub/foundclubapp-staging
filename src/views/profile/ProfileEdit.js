@@ -44,13 +44,19 @@ const defaultValues = {
   firstname: '',
   height: '',
   isLookingForClub: false,
+  jerseyNumber: '',
   lastname: '',
+  nationality: '',
   phoneNumber: '',
   position: '',
   preferredSport: '',
   section: '',
   weight: '',
 };
+
+// Champs specifiques carte de collection : forces en plus du gating par role
+// quand l'edition est ouverte depuis la carte (source: 'player_card').
+const CARD_EXTRA_FIELDS = ['position', 'preferredSport', 'nationality', 'jerseyNumber', 'isLookingForClub'];
 
 const buildProfileFormValues = (userData, formatBirthdateToDisplay) => ({
   ...defaultValues,
@@ -60,6 +66,8 @@ const buildProfileFormValues = (userData, formatBirthdateToDisplay) => ({
   birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
   category: userData?.category || '',
   height: userData?.height ? String(userData.height) : '',
+  jerseyNumber: userData?.jerseyNumber != null ? String(userData.jerseyNumber) : '',
+  nationality: userData?.nationality || '',
   preferredSport: userData?.preferredSport || '',
   section: userData?.section?.documentId || '',
   weight: userData?.weight ? String(userData.weight) : '',
@@ -74,7 +82,9 @@ const profileSchema = Joi.object({
   firstname: Joi.string().required(),
   height: Joi.string().allow(null, '').optional(),
   isLookingForClub: Joi.boolean().optional(),
+  jerseyNumber: Joi.string().pattern(/^([0-9]{1,2})?$/).allow('').optional(),
   lastname: Joi.string().required(),
+  nationality: Joi.string().allow(null, '').optional(),
   phoneNumber: Joi.string(),
   position: Joi.string().allow(null, '').optional(),
   preferredSport: Joi.string().allow(null, '').optional(),
@@ -104,6 +114,13 @@ function ProfileEdit({ navigation, route }) {
     userData,
   } = useAuth();
   const { getGeohashForPointAndRadius } = usePlaces();
+
+  // Edition depuis la carte de collection : on force les champs de la carte
+  // (numero, nationalite, poste, sport, dispo) en plus du gating par role.
+  const isCardEdit = route?.params?.source === 'player_card';
+  const effectiveFields = isCardEdit
+    ? Array.from(new Set([...(profileFields || []), ...CARD_EXTRA_FIELDS]))
+    : profileFields;
 
   // local state
   const [avatar, setAvatar] = useState(
@@ -226,7 +243,9 @@ function ProfileEdit({ navigation, route }) {
         geohash,
         height: data.height,
         isLookingForClub: data.isLookingForClub,
+        jerseyNumber: data.jerseyNumber === '' ? null : Number.parseInt(data.jerseyNumber, 10),
         lastname: data.lastname,
+        nationality: data.nationality,
         ...(requiresParentalDeclaration ? {
           legalAcceptance: buildMinorParentalDeclarationPayload({
             metadata: {
@@ -585,7 +604,7 @@ function ProfileEdit({ navigation, route }) {
                   )}
                 />
 
-                {profileFields?.includes('position') ? (
+                {effectiveFields?.includes('position') ? (
                   <Controller
                     control={control}
                     name="position"
@@ -627,6 +646,55 @@ function ProfileEdit({ navigation, route }) {
                         />
                       );
                     }}
+                  />
+                ) : null}
+
+                {effectiveFields?.includes('nationality') ? (
+                  <Controller
+                    control={control}
+                    name="nationality"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="next"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        label={t('profile.fields.nationality.label', 'Nationalité')}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        placeholder={t('profile.fields.nationality.placeholder', 'Ex. Française, FRA…')}
+                        ref={ref}
+                        value={value}
+                      />
+                    )}
+                  />
+                ) : null}
+
+                {effectiveFields?.includes('jerseyNumber') ? (
+                  <Controller
+                    control={control}
+                    name="jerseyNumber"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="done"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        inputMode="numeric"
+                        keyboardType="number-pad"
+                        label={t('profile.fields.jerseyNumber.label', 'Numéro de maillot')}
+                        maxLength={2}
+                        onBlur={onBlur}
+                        onChangeText={(text) => onChange(text.replace(/[^0-9]/g, ''))}
+                        placeholder={t('profile.fields.jerseyNumber.placeholder', 'Ex. 10 (vide = automatique)')}
+                        ref={ref}
+                        value={value}
+                      />
+                    )}
                   />
                 ) : null}
 

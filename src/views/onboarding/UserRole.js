@@ -29,7 +29,6 @@ import { updateMe } from '@/services/auth/authService';
  */
 function UserRole({ navigation }) {
   const {
-    getNextOnboardingRoute,
     refetchUserData,
     USER_ROLES,
     userData,
@@ -64,8 +63,17 @@ function UserRole({ navigation }) {
     onError: (error) => {
       Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour votre profil.');
     },
-    onSuccess: () => {
-      navigation.navigate(getNextOnboardingRoute(RouteNames.UserRole) || RouteNames.UserName);
+    onSuccess: async () => {
+      // Rafraichir le profil AVANT de naviguer : sinon les etapes suivantes sont
+      // calculees avec l'ancien role ('new') et le flux coach/dirigeant (dont
+      // l'etape « Trouve ton club ») ne s'applique jamais.
+      try {
+        await refetchUserData?.();
+      } catch {
+        // On navigue quand meme : les ecrans suivants refetchent le profil.
+      }
+      // UserName est la premiere etape de TOUS les flux apres le choix du role.
+      navigation.navigate(RouteNames.UserName);
     },
   });
 

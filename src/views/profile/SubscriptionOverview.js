@@ -6,7 +6,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Platform, ScrollView, Text, TouchableOpacity, View,
+  Alert, Image, Platform, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
@@ -89,24 +89,24 @@ import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
 /** @type {Record<string, string>} */
 const SUBSCRIPTION_FEATURE_LABELS = {
   'club.broadcast': 'Canal de diffusion',
-  'club.multi_teams': 'Toutes les equipes du club',
-  'club.profile': 'Fiche club complete',
-  'club.roles': 'Roles du club',
-  composition: 'Composition d equipe',
+  'club.multi_teams': 'Toutes les équipes du club',
+  'club.profile': 'Fiche club complète',
+  'club.roles': 'Rôles du club',
+  composition: 'Composition d\'équipe',
   convocation: 'Convocations',
   'dues.club': 'Cotisations du club',
-  'dues.team': 'Cotisations de l equipe',
-  'events.unlimited': 'Evenements illimites',
+  'dues.team': 'Cotisations de l\'équipe',
+  'events.unlimited': 'Événements illimités',
   facilities: 'Installations',
-  'matches.unlimited': 'Matchs illimites',
-  'recruitment.unlimited': 'Annonces illimitees',
+  'matches.unlimited': 'Matchs illimités',
+  'recruitment.unlimited': 'Annonces illimitées',
   sponsors: 'Sponsors et partenaires',
 };
 
 /** @type {Record<string, string>} */
 const TRIAL_PLAN_LABELS = {
-  fc_trial_club: 'Apercu Club (essai 30 jours)',
-  fc_trial_team: 'Apercu Equipe (essai 30 jours)',
+  fc_trial_club: 'Aperçu Club (essai 30 jours)',
+  fc_trial_team: 'Aperçu Équipe (essai 30 jours)',
 };
 
 /** @type {Record<number, string>} */
@@ -117,9 +117,9 @@ const CLUB_TIER_LETTERS = {
 };
 
 const FREE_PLAN_INCLUDED_LABELS = [
-  '1 equipe gratuite',
-  'Evenements et matchs en quantite limitee',
-  'Annonces de recrutement limitees',
+  '1 équipe gratuite',
+  'Événements et matchs en quantité limitée',
+  'Annonces de recrutement limitées',
 ];
 
 const OFFER_BILLING_PERIOD_OPTIONS = [
@@ -139,32 +139,15 @@ const PAYER_BILLING_PERIOD_OPTIONS = [
  */
 const getVerificationLabel = (clubVerificationSummary) => {
   if (!clubVerificationSummary?.clubDocumentId) {
-    return 'Aucun club rattache';
+    return 'Aucun club rattaché';
   }
   if (clubVerificationSummary?.clubVerified === true) {
-    return 'Club verifie';
+    return 'Club vérifié';
   }
   if (clubVerificationSummary?.requiresClubVerification === true) {
-    return 'Verification dirigeant requise';
+    return 'Vérification dirigeant requise';
   }
-  return 'Club non verifie';
-};
-
-/**
- * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB' | string} subscriptionAccessLevel
- * @returns {{ backgroundColor: string }}
- */
-const getStatusChipStyle = (subscriptionAccessLevel) => {
-  switch (subscriptionAccessLevel) {
-    case 'CLUB':
-      return { backgroundColor: '#0F766E' };
-    case 'CLUB_UNVERIFIED':
-      return { backgroundColor: '#B45309' };
-    case 'TEAM':
-      return { backgroundColor: '#1D4ED8' };
-    default:
-      return { backgroundColor: '#475569' };
-  }
+  return 'Club non vérifié';
 };
 
 /**
@@ -234,7 +217,7 @@ const getTrialRemainingDays = (currentPeriodEnd) => {
  * @returns {string}
  */
 const getTrialScopeLabel = (planCode) => (
-  String(planCode || '').trim().toLowerCase().includes('club') ? 'Club' : 'Equipe'
+  String(planCode || '').trim().toLowerCase().includes('club') ? 'Club' : 'Équipe'
 );
 
 /**
@@ -277,7 +260,7 @@ function SubscriptionTrialBanner({ trialSubscription }) {
     ]}
     >
       <Text style={[Fonts.p1Bold, Fonts.primary700]}>
-        {`Apercu ${getTrialScopeLabel(trialSubscription?.planCode)} · J-${remainingDays}`}
+        {`Aperçu ${getTrialScopeLabel(trialSubscription?.planCode)} · J-${remainingDays}`}
       </Text>
       <Text style={[Fonts.p2, Fonts.primary700]}>
         Aucune carte requise. Retour au plan gratuit ensuite.
@@ -352,7 +335,7 @@ function OfferTeamCountStepper({ onSelectSlotCount, selectedSlotCount, slotCount
 
   return (
     <View style={[Spaces.gap[8]]}>
-      <Text style={[Fonts.p4Bold, Fonts.primary100]}>Nombre d equipes couvertes</Text>
+      <Text style={[Fonts.p4Bold, Fonts.primary100]}>{'Nombre d\'équipes couvertes'}</Text>
       <View style={[Alignments.row, Spaces.gap[8]]}>
         {slotCountOptions.map((slotCount) => {
           const isSelected = slotCount === selectedSlotCount;
@@ -442,15 +425,15 @@ function FreeOfferCard({ isCurrentPlan }) {
             Spaces.paddingHorizontal[12],
             Spaces.paddingVertical[8],
             ApplicationStyle.borderRadius12,
-            { backgroundColor: 'rgba(71, 85, 105, 0.22)' },
+            { backgroundColor: 'rgba(255,255,255,0.08)' },
           ]}
           >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Votre plan actuel</Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral200]}>Ton offre actuelle</Text>
           </View>
         ) : null}
       </View>
       <Text style={[Fonts.p2, Fonts.neutral200]}>
-        Continue en gratuit avec les quotas serveur affiches ci-dessus.
+        Reste en gratuit avec les quotas affichés ci-dessus.
       </Text>
       <View style={[Spaces.gap[4]]}>
         {FREE_PLAN_INCLUDED_LABELS.map((label) => (
@@ -513,6 +496,7 @@ function SubscriptionOverview({ navigation }) {
     ApplicationStyle,
     Colors,
     Fonts,
+    Images,
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
@@ -619,6 +603,39 @@ function SubscriptionOverview({ navigation }) {
     () => getSubscriptionStatusMeta(subscriptionAccessLevel),
     [subscriptionAccessLevel],
   );
+  // Chip de statut DS (design 13c) : neutre / cyan / violet, jamais de couleurs Tailwind.
+  const subscriptionChip = useMemo(() => {
+    switch (subscriptionAccessLevel) {
+      case 'CLUB':
+        return {
+          container: { backgroundColor: 'rgba(133,103,255,0.16)', borderColor: 'rgba(133,103,255,0.55)' },
+          label: t('profile.subscription.states.club'),
+          showClock: false,
+          textColor: Colors.violet200,
+        };
+      case 'CLUB_UNVERIFIED':
+        return {
+          container: { backgroundColor: 'rgba(133,103,255,0.10)', borderColor: 'rgba(133,103,255,0.45)' },
+          label: t('profile.subscription.states.clubUnverified'),
+          showClock: true,
+          textColor: Colors.violet200,
+        };
+      case 'TEAM':
+        return {
+          container: { backgroundColor: 'rgba(1,179,244,0.12)', borderColor: 'rgba(1,179,244,0.45)' },
+          label: t('profile.subscription.states.team'),
+          showClock: false,
+          textColor: Colors.primary200,
+        };
+      default:
+        return {
+          container: { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.22)' },
+          label: t('profile.subscription.states.free'),
+          showClock: false,
+          textColor: Colors.neutral200,
+        };
+    }
+  }, [subscriptionAccessLevel, Colors, t]);
   const planLabels = useMemo(
     () => activePlanCodes.map(/** @param {string} planCode */ (planCode) => formatSubscriptionPlanLabelWithTrial(planCode)),
     [activePlanCodes],
@@ -699,16 +716,32 @@ function SubscriptionOverview({ navigation }) {
     () => getCoveredTeamCount(entitlementsSummary, subscriptionSummary),
     [entitlementsSummary, subscriptionSummary],
   );
-  const clubEntitlementCount = useMemo(
-    () => entitlementsSummary.filter(/** @param {any} entry */ (entry) => entry?.scopeType === 'CLUB').length,
-    [entitlementsSummary],
-  );
   const activeTrialSubscription = useMemo(
     () => getActiveTrialSubscription(subscriptionSummary),
     [subscriptionSummary],
   );
   const verificationLabel = getVerificationLabel(clubVerificationSummary);
   const activePlanLabel = planLabels[0] || 'Aucun plan payant actif';
+  const isFreeLevel = subscriptionAccessLevel === 'FREE';
+  const isClubLevel = subscriptionAccessLevel === 'CLUB' || subscriptionAccessLevel === 'CLUB_UNVERIFIED';
+  // Titre humain de la carte statut : le vrai nom d'offre si payant, sinon l'offre gratuite.
+  const planCardTitle = isFreeLevel ? 'Offre gratuite FoundClub' : (planLabels[0] || statusMeta.label);
+  // Description tutoyée par niveau (remplace la copie technique/vouvoyée du backend).
+  const planCardDescription = {
+    CLUB: 'Les droits Club sont actifs sur ton club vérifié : toutes tes équipes sont couvertes.',
+    CLUB_UNVERIFIED: 'Ton offre Club est active. Les droits club s\'ouvrent dès la vérification du dirigeant.',
+    FREE: 'Tu publies en quantité limitée. Passe à une offre payante pour lever les limites.',
+    TEAM: 'Tes équipes couvertes profitent des droits Équipe, sans limite de publication.',
+  }[subscriptionAccessLevel] || 'Tu utilises l\'offre gratuite FoundClub.';
+  // Résumé de couverture humain (aucune tuile « 0 » : on n'affiche que ce qui a du sens).
+  const coverageSummary = (() => {
+    if (isFreeLevel) return '';
+    if (isClubLevel) return 'Toutes les équipes de ton club sont couvertes.';
+    if (coveredTeamCount > 0) {
+      return `${coveredTeamCount} équipe${coveredTeamCount > 1 ? 's' : ''} couverte${coveredTeamCount > 1 ? 's' : ''} par ton offre.`;
+    }
+    return '';
+  })();
   const coveredTeamNames = useMemo(() => (
     teamSlotSummary.coveredTeamDocumentIds
       .map((teamDocumentId) => teamOptionsById.get(String(teamDocumentId || '').trim())?.name || null)
@@ -1104,7 +1137,7 @@ function SubscriptionOverview({ navigation }) {
           disabled={!isBillingTestModeEnabled}
           isLoading={isLoading}
           onPress={() => openTeamPlanModal(catalogEntry, 'manage-team-slots')}
-          title={isBillingTestModeEnabled ? 'Mettre a jour mes equipes' : 'Plan actif'}
+          title={isBillingTestModeEnabled ? 'Mettre à jour mes équipes' : 'Plan actif'}
           variant="SecondaryLight"
         />
       );
@@ -1116,10 +1149,10 @@ function SubscriptionOverview({ navigation }) {
           Spaces.paddingHorizontal[12],
           Spaces.paddingVertical[8],
           ApplicationStyle.borderRadius12,
-          { backgroundColor: 'rgba(15, 118, 110, 0.14)' },
+          { backgroundColor: 'rgba(39,214,163,0.14)' },
         ]}
         >
-          <Text style={[Fonts.p2Bold, { color: '#6EE7B7' }]}>Plan actif</Text>
+          <Text style={[Fonts.p2Bold, { color: Colors.success200 }]}>Plan actif</Text>
         </View>
       );
     }
@@ -1129,7 +1162,7 @@ function SubscriptionOverview({ navigation }) {
         disabled={isDisabled}
         isLoading={isLoading}
         onPress={() => handleCatalogAction(catalogEntry)}
-        title={primarySubscriptionDocumentId ? 'Changer d offre' : 'Choisir cette offre'}
+        title={primarySubscriptionDocumentId ? 'Changer d\'offre' : 'Choisir cette offre'}
         variant="PrimaryLight"
       />
     );
@@ -1137,6 +1170,7 @@ function SubscriptionOverview({ navigation }) {
     activeActionPlanCode,
     activePlanCodes,
     ApplicationStyle,
+    Colors,
     Fonts,
     handleCatalogAction,
     isBillingTestModeEnabled,
@@ -1184,117 +1218,80 @@ function SubscriptionOverview({ navigation }) {
           <SubscriptionTrialBanner trialSubscription={activeTrialSubscription} />
         ) : null}
 
-        <View style={[Spaces.gap[12]]}>
+        <View style={[Spaces.gap[4]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {t('profile.subscription.title', 'Mon abonnement')}
           </Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t(
-              'profile.subscription.subtitle',
-              'Cet ecran reprend exactement le contexte abonnement renvoye par le backend FoundClub.',
-            )}
+          <Text style={[Fonts.p2, Fonts.neutral300]}>
+            Gère ton offre, tes quotas et les équipes couvertes.
           </Text>
         </View>
 
-        <View style={[
-          Spaces.gap[12],
-          Spaces.padding[16],
-          ApplicationStyle.borderRadius12,
-          ApplicationStyle.borderWidth1,
-          ApplicationStyle.borderColor.primary100,
-          ApplicationStyle.backgroundColor.primary700,
-        ]}
+        {/* Carte statut (design 13c) : chip 4 états DS, titre + description tutoyée, couverture humaine. */}
+        <View style={{
+          backgroundColor: 'rgba(4,31,44,0.82)',
+          borderColor: 'rgba(1,179,244,0.24)',
+          borderRadius: 18,
+          borderWidth: 1,
+          gap: 12,
+          padding: 16,
+        }}
         >
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+            <Text numberOfLines={2} style={[Fonts.h4Black, Fonts.neutral00, { flex: 1 }]}>
+              {planCardTitle}
+            </Text>
             <View style={[
-              Spaces.paddingHorizontal[12],
-              Spaces.paddingVertical[8],
-              ApplicationStyle.borderRadius12,
-              getStatusChipStyle(subscriptionAccessLevel),
+              Alignments.row,
+              Alignments.alignCenter,
+              {
+                borderRadius: 999,
+                borderWidth: 1,
+                gap: 4,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+              },
+              subscriptionChip.container,
             ]}
             >
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {statusMeta.label}
+              {subscriptionChip.showClock ? (
+                <Image
+                  source={Images.clock}
+                  style={{ height: 11, tintColor: subscriptionChip.textColor, width: 11 }}
+                />
+              ) : null}
+              <Text style={{ color: subscriptionChip.textColor, fontFamily: 'Montserrat-Bold', fontSize: 11 }}>
+                {subscriptionChip.label}
               </Text>
             </View>
-            <Text style={[Fonts.p2Bold, Fonts.primary100]}>
-              {verificationLabel}
-            </Text>
           </View>
 
-          <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-              {activePlanLabel}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {statusMeta.description}
-            </Text>
-          </View>
+          <Text style={[Fonts.p2, Fonts.neutral200, { lineHeight: 20 }]}>
+            {planCardDescription}
+          </Text>
 
-          <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
-            <View style={[
-              { minWidth: 132 },
-              Spaces.gap[4],
-              Spaces.padding[12],
-              ApplicationStyle.borderRadius12,
-              ApplicationStyle.backgroundColor.neutral700,
-            ]}
-            >
-              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                {t('profile.subscription.stats.plans', 'Plans actifs')}
-              </Text>
-              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                {planLabels.length}
+          {coverageSummary ? (
+            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+              <Text style={[Fonts.p2Bold, { color: Colors.success500 }]}>✓</Text>
+              <Text style={[Alignments.fill, Fonts.p2Bold, Fonts.primary100]}>
+                {coverageSummary}
               </Text>
             </View>
-            <View style={[
-              { minWidth: 132 },
-              Spaces.gap[4],
-              Spaces.padding[12],
-              ApplicationStyle.borderRadius12,
-              ApplicationStyle.backgroundColor.neutral700,
-            ]}
-            >
-              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                {t('profile.subscription.stats.coveredTeams', 'Equipes couvertes')}
+          ) : null}
+
+          {isClubLevel ? (
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.08)', height: 1 }} />
+          ) : null}
+          {isClubLevel ? (
+            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+              <Text style={[Fonts.p4Bold, Fonts.neutral300, { letterSpacing: 0.6, textTransform: 'uppercase' }]}>
+                Vérification
               </Text>
-              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                {coveredTeamCount}
-              </Text>
-            </View>
-            <View style={[
-              { minWidth: 132 },
-              Spaces.gap[4],
-              Spaces.padding[12],
-              ApplicationStyle.borderRadius12,
-              ApplicationStyle.backgroundColor.neutral700,
-            ]}
-            >
-              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                {t('profile.subscription.stats.clubRights', 'Droits club')}
-              </Text>
-              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                {clubEntitlementCount}
+              <Text style={[Fonts.p2Bold, { color: subscriptionChip.textColor }]}>
+                {verificationLabel}
               </Text>
             </View>
-            {teamSlotSummary.total > 0 ? (
-              <View style={[
-                { minWidth: 132 },
-                Spaces.gap[4],
-                Spaces.padding[12],
-                ApplicationStyle.borderRadius12,
-                ApplicationStyle.backgroundColor.neutral700,
-              ]}
-              >
-                <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                  {t('profile.subscription.stats.teamSlots', 'Slots Team')}
-                </Text>
-                <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                  {`${teamSlotSummary.assigned}/${teamSlotSummary.total}`}
-                </Text>
-              </View>
-            ) : null}
-          </View>
+          ) : null}
         </View>
 
         {subscriptionAccessLevel === 'CLUB_UNVERIFIED' ? (
@@ -1302,16 +1299,16 @@ function SubscriptionOverview({ navigation }) {
             Spaces.gap[12],
             Spaces.padding[16],
             ApplicationStyle.borderRadius12,
-            { backgroundColor: 'rgba(180, 83, 9, 0.18)', borderColor: 'rgba(251, 191, 36, 0.45)', borderWidth: 1 },
+            { backgroundColor: 'rgba(133,103,255,0.10)', borderColor: 'rgba(133,103,255,0.45)', borderWidth: 1 },
           ]}
           >
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {t('profile.subscription.unverified.title', 'Verification du club requise')}
+            <Text style={[Fonts.p1Bold, { color: Colors.violet200 }]}>
+              {t('profile.subscription.unverified.title', 'Vérification du club requise')}
             </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
+            <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 20 }]}>
               {t(
                 'profile.subscription.unverified.description',
-                'Votre abonnement Club existe deja, mais les droits club restent bloques tant que la verification dirigeant n est pas terminee.',
+                'Ton offre Club est déjà active, mais les droits club restent bloqués tant que la vérification du dirigeant n\'est pas terminée.',
               )}
             </Text>
             {currentClubDocumentId ? (
@@ -1327,66 +1324,70 @@ function SubscriptionOverview({ navigation }) {
           </View>
         ) : null}
 
-        <View style={[
-          Spaces.gap[12],
-          Spaces.padding[16],
-          ApplicationStyle.borderRadius12,
-          ApplicationStyle.borderWidth1,
-          ApplicationStyle.borderColor.primary100,
-          ApplicationStyle.backgroundColor.primary700,
-        ]}
-        >
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-            {t('profile.subscription.section.plan', 'Plans et droits actifs')}
-          </Text>
+        {!isFreeLevel ? (
+          <View style={[
+            Spaces.gap[12],
+            Spaces.padding[16],
+            ApplicationStyle.borderRadius12,
+            ApplicationStyle.borderWidth1,
+            ApplicationStyle.borderColor.primary100,
+            ApplicationStyle.backgroundColor.primary700,
+          ]}
+          >
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {t('profile.subscription.section.plan', 'Plans et droits actifs')}
+            </Text>
 
-          <View style={[Spaces.gap[8]]}>
-            <View>
-              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                {t('profile.subscription.section.currentPlan', 'Plan principal')}
-              </Text>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{activePlanLabel}</Text>
-            </View>
-
-            <View>
-              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                {t('profile.subscription.section.planList', 'Tous les plans actifs')}
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                {planLabels.length ? planLabels.join(' | ') : 'Aucun'}
-              </Text>
-            </View>
-
-            <View>
-              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                {t('profile.subscription.section.verification', 'Etat de verification')}
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                {verificationLabel}
-              </Text>
-            </View>
-
-            {teamSlotSummary.total > 0 ? (
+            <View style={[Spaces.gap[12]]}>
               <View style={[Spaces.gap[4]]}>
-                <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                  {t('profile.subscription.section.teamSlots', 'Slots Team')}
+                <Text style={[Fonts.p4Bold, Fonts.neutral300, { letterSpacing: 0.6, textTransform: 'uppercase' }]}>
+                  {t('profile.subscription.section.currentPlan', 'Plan principal')}
                 </Text>
-                <Text style={[Fonts.p2, Fonts.neutral200]}>
-                  {`${teamSlotSummary.assigned} utilise${teamSlotSummary.assigned > 1 ? 's' : ''} / ${teamSlotSummary.total} - ${teamSlotSummary.available} restant${teamSlotSummary.available > 1 ? 's' : ''}`}
-                </Text>
-                {coveredTeamNames.length > 0 ? (
-                  <Text style={[Fonts.p4, Fonts.neutral200]}>
-                    {`Equipes couvertes : ${coveredTeamNames.join(' | ')}`}
-                  </Text>
-                ) : (
-                  <Text style={[Fonts.p4, Fonts.neutral200]}>
-                    Aucun slot Team n est encore attribue.
-                  </Text>
-                )}
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{activePlanLabel}</Text>
               </View>
-            ) : null}
+
+              {planLabels.length > 1 ? (
+                <View style={[Spaces.gap[4]]}>
+                  <Text style={[Fonts.p4Bold, Fonts.neutral300, { letterSpacing: 0.6, textTransform: 'uppercase' }]}>
+                    {t('profile.subscription.section.planList', 'Autres plans actifs')}
+                  </Text>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    {planLabels.slice(1).join(' · ')}
+                  </Text>
+                </View>
+              ) : null}
+
+              {isClubLevel ? (
+                <View style={[Spaces.gap[4]]}>
+                  <Text style={[Fonts.p4Bold, Fonts.neutral300, { letterSpacing: 0.6, textTransform: 'uppercase' }]}>
+                    {t('profile.subscription.section.verification', 'État de vérification')}
+                  </Text>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    {verificationLabel}
+                  </Text>
+                </View>
+              ) : null}
+
+              {teamSlotSummary.total > 0 ? (
+                <View style={[Spaces.gap[4]]}>
+                  <Text style={[Fonts.p4Bold, Fonts.neutral300, { letterSpacing: 0.6, textTransform: 'uppercase' }]}>
+                    {t('profile.subscription.section.teamSlots', 'Équipes couvertes')}
+                  </Text>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    {teamSlotSummary.available > 0
+                      ? `${teamSlotSummary.available} place${teamSlotSummary.available > 1 ? 's' : ''} encore disponible${teamSlotSummary.available > 1 ? 's' : ''} sur ${teamSlotSummary.total}.`
+                      : `Toutes tes places sont attribuées (${teamSlotSummary.total}).`}
+                  </Text>
+                  {coveredTeamNames.length > 0 ? (
+                    <Text style={[Fonts.p4, Fonts.neutral300]}>
+                      {coveredTeamNames.join(' · ')}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
           </View>
-        </View>
+        ) : null}
 
         {activeTeamPlanSlotCount > 0 ? (
           <View
@@ -1532,34 +1533,45 @@ function SubscriptionOverview({ navigation }) {
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
             {t('profile.subscription.section.freeQuotas', 'Quotas gratuits')}
           </Text>
-          {quotaItems.length ? quotaItems.map((item) => (
-            <View
-              key={item.quotaType}
-              style={[
-                Alignments.row,
-                Alignments.alignCenter,
-                Alignments.justifySpaceBetween,
-                Spaces.paddingVertical[8],
-                { borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: 1 },
-              ]}
-            >
-              <View style={[{ flex: 1, minWidth: 0 }, Spaces.gap[4]]}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{item.label}</Text>
-                <Text style={[Fonts.p4, Fonts.neutral200]}>
-                  {`${item.remaining} restant${item.remaining > 1 ? 's' : ''} / ${item.total}`}
-                </Text>
+          {quotaItems.length ? quotaItems.map((item) => {
+            const remaining = Number(item.remaining) || 0;
+            const total = Number(item.total) || 0;
+            const isAvailable = remaining > 0;
+            const ratio = total > 0 ? Math.min(1, Math.max(0, remaining / total)) : 0;
+            const gaugeLabel = t(`profile.subscription.quota.labels.${item.quotaType}`, item.label);
+            const gaugeValue = isAvailable
+              ? t('profile.subscription.quota.remaining', { count: remaining })
+              : t('profile.subscription.quota.used');
+
+            return (
+              <View key={item.quotaType} style={{ gap: 6 }}>
+                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
+                  <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 13.5 }}>
+                    {gaugeLabel}
+                  </Text>
+                  <Text style={{ color: isAvailable ? Colors.primary200 : Colors.neutral400, fontSize: 12 }}>
+                    {gaugeValue}
+                  </Text>
+                </View>
+                <View style={{
+                  backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, height: 5, overflow: 'hidden',
+                }}
+                >
+                  <View style={{
+                    backgroundColor: Colors.primary500,
+                    borderRadius: 3,
+                    height: 5,
+                    width: `${isAvailable ? ratio * 100 : 0}%`,
+                  }}
+                  />
+                </View>
               </View>
-              <Text style={[Fonts.p1Bold, Fonts.primary100]}>
-                {item.used}
-                /
-                {item.total}
-              </Text>
-            </View>
-          )) : (
+            );
+          }) : (
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {t(
                 'profile.subscription.section.freeQuotasEmpty',
-                'Aucun compteur gratuit n est actuellement affiche pour cette offre.',
+                'Aucun compteur gratuit n\'est affiché pour cette offre.',
               )}
             </Text>
           )}
@@ -1575,11 +1587,11 @@ function SubscriptionOverview({ navigation }) {
         ]}
         >
           <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Changer d offre</Text>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{'Changer d\'offre'}</Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {isBillingTestModeEnabled
-                ? 'Mode test actif : les changements d offre utilisent trustedValidation=true pour la recette locale et staging.'
-                : 'Le checkout store reel n est pas encore branche sur ce build. Cette section reste en lecture tant que le flow Apple/Google n est pas disponible.'}
+                ? 'Mode test actif : les changements d\'offre sont simulés pour la recette.'
+                : 'Le paiement in-app n\'est pas encore disponible sur cette version. Cette section reste en lecture pour le moment.'}
             </Text>
           </View>
 
@@ -1636,7 +1648,7 @@ function SubscriptionOverview({ navigation }) {
                 ) : null}
               </View>
               <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Publie et gere sans limite les equipes couvertes par tes slots Team.
+                Publie et gère sans limite les équipes couvertes par ton offre.
               </Text>
 
               <OfferTeamCountStepper
@@ -1665,7 +1677,7 @@ function SubscriptionOverview({ navigation }) {
 
                   {isTeamOfferMissingTeams ? (
                     <Text style={[Fonts.p4, Fonts.neutral200]}>
-                      Ajoute ou rattache d abord une equipe pour activer utilement une offre Team.
+                      {'Ajoute ou rattache d\'abord une équipe pour activer utilement une offre Équipe.'}
                     </Text>
                   ) : null}
 
@@ -1682,7 +1694,7 @@ function SubscriptionOverview({ navigation }) {
                 </View>
               ) : (
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
-                  Aucune offre Equipe disponible pour cette combinaison.
+                  Aucune offre Équipe disponible pour cette combinaison.
                 </Text>
               )}
             </View>
@@ -1717,12 +1729,12 @@ function SubscriptionOverview({ navigation }) {
                 </View>
               ) : (
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
-                  Aucune offre Club disponible pour cette periode.
+                  Aucune offre Club disponible pour cette période.
                 </Text>
               )}
 
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                Toutes vos equipes incluses + gestion complete du club.
+                Toutes tes équipes incluses + gestion complète du club.
               </Text>
 
               {selectedClubOfferEntry ? (
@@ -1737,7 +1749,7 @@ function SubscriptionOverview({ navigation }) {
 
                   {selectedClubOfferEntry?.requiresClubVerification ? (
                     <Text style={[Fonts.p4, Fonts.neutral200]}>
-                      Verification dirigeant obligatoire avant ouverture des droits Club sensibles.
+                      {'Vérification du dirigeant obligatoire avant l\'ouverture des droits Club sensibles.'}
                     </Text>
                   ) : null}
 
@@ -1767,9 +1779,9 @@ function SubscriptionOverview({ navigation }) {
         ]}
         >
           <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Restauration</Text>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Restaurer mes achats</Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              Rejoue la lecture des achats connus cote backend avant l integration finale des stores.
+              Retrouve les abonnements déjà enregistrés sur ton compte.
             </Text>
           </View>
           <Button
@@ -1796,12 +1808,12 @@ function SubscriptionOverview({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {t('profile.subscription.section.clubCta', 'Voir le club concerne')}
+              {t('profile.subscription.section.clubCta', 'Voir le club concerné')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {t(
                 'profile.subscription.section.clubCtaDescription',
-                'Retrouvez ensuite les ecrans de club, les demandes et l etat de verification.',
+                'Retrouve les écrans du club, les demandes et l\'état de vérification.',
               )}
             </Text>
           </TouchableOpacity>
@@ -1818,25 +1830,25 @@ function SubscriptionOverview({ navigation }) {
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.h4Black, Fonts.neutral00]}>
               {teamPlanModalState.actionMode === 'manage-team-slots'
-                ? 'Mettre a jour mes equipes couvertes'
-                : 'Choisir les equipes couvertes'}
+                ? 'Mettre à jour mes équipes couvertes'
+                : 'Choisir les équipes couvertes'}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {selectedTeamPlanEntry
-                ? `Cette offre Team couvre jusqu a ${selectedTeamSlotCount} equipe${selectedTeamSlotCount > 1 ? 's' : ''}.`
+                ? `Cette offre couvre jusqu'à ${selectedTeamSlotCount} équipe${selectedTeamSlotCount > 1 ? 's' : ''}.`
                 : ''}
             </Text>
           </View>
 
           {!isBillingTestModeEnabled ? (
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              Le checkout store reel n est pas encore branche sur ce build. Utilise la recette locale ou staging pour tester cette action.
+              {'Le paiement in-app n\'est pas encore disponible sur cette version.'}
             </Text>
           ) : null}
 
           {teamOptions.length === 0 ? (
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              Aucune equipe exploitable n a ete trouvee sur ce compte pour une offre Team.
+              {'Aucune équipe exploitable n\'a été trouvée sur ce compte pour une offre Équipe.'}
             </Text>
           ) : (
             <View style={[Spaces.gap[12]]}>
@@ -1857,7 +1869,7 @@ function SubscriptionOverview({ navigation }) {
                   >
                     <View style={[Alignments.fill, Spaces.gap[4]]}>
                       <Text style={[Fonts.p2Bold, isSelected ? Fonts.primary700 : Fonts.neutral00]}>
-                        {team?.name || 'Equipe sans nom'}
+                        {team?.name || 'Équipe sans nom'}
                       </Text>
                       {teamClubName ? (
                         <Text style={[Fonts.p4, isSelected ? Fonts.primary700 : Fonts.neutral200]}>
@@ -1872,14 +1884,14 @@ function SubscriptionOverview({ navigation }) {
           )}
 
           {isSelectedTeamCountInvalid ? (
-            <Text style={[Fonts.p4, { color: '#FCA5A5' }]}>
-              Trop d equipes selectionnees pour cette formule.
+            <Text style={[Fonts.p4, { color: Colors.error300 }]}>
+              {'Trop d\'équipes sélectionnées pour cette formule.'}
             </Text>
           ) : null}
 
           {selectedTeamPlanEntry ? (
-            <Text style={[Fonts.p4, Fonts.neutral200]}>
-              {`${selectedTeamIds.length}/${selectedTeamSlotCount} slot${selectedTeamSlotCount > 1 ? 's' : ''} utilise${selectedTeamIds.length > 1 ? 's' : ''}`}
+            <Text style={[Fonts.p4, Fonts.neutral300]}>
+              {`${selectedTeamIds.length} / ${selectedTeamSlotCount} place${selectedTeamSlotCount > 1 ? 's' : ''} utilisée${selectedTeamIds.length > 1 ? 's' : ''}`}
             </Text>
           ) : null}
 
@@ -1888,7 +1900,7 @@ function SubscriptionOverview({ navigation }) {
               disabled={isTeamSelectionConfirmDisabled}
               isLoading={subscriptionMutation.isPending}
               onPress={handleConfirmTeamPlan}
-              title={primarySubscriptionDocumentId ? 'Confirmer le changement' : 'Activer cette offre Team'}
+              title={primarySubscriptionDocumentId ? 'Confirmer le changement' : 'Activer cette offre'}
               variant="PrimaryLight"
             />
             <Button

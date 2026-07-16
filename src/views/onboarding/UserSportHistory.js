@@ -21,7 +21,6 @@ import { RouteNames } from '@/navigation/routeNames';
 function UserSportHistory({ navigation }) {
   const {
     getNextOnboardingRoute,
-    getPostOnboardingHomeRoute,
     refetchUserData,
     userData,
     userDataError,
@@ -60,7 +59,15 @@ function UserSportHistory({ navigation }) {
     const nextRoute = getNextOnboardingRoute(RouteNames.UserSportHistory);
     if (!nextRoute) {
       markOnboardingComplete(userData?.documentId);
-      navigation.navigate(getPostOnboardingHomeRoute());
+      // Reveal fin d'onboarding (chantier C, Option A) : carte de collection en
+      // mode celebration AVANT le home. PlayerCard est enregistre dans le
+      // ProfileStack imbrique -> navigation imbriquee obligatoire depuis ici.
+      // Le bouton "Plus tard, continuer" de PlayerCardScreen route ensuite
+      // vers getPostOnboardingHomeRoute().
+      navigation.navigate(RouteNames.ProfileStack, {
+        params: { celebration: true },
+        screen: RouteNames.PlayerCard,
+      });
     } else {
       navigation.navigate(nextRoute);
     }
@@ -77,7 +84,10 @@ function UserSportHistory({ navigation }) {
     const nextRoute = getNextOnboardingRoute(RouteNames.UserSportHistory);
     if (!nextRoute) {
       markOnboardingComplete(userData?.documentId);
-      navigation.navigate(getPostOnboardingHomeRoute());
+      navigation.navigate(RouteNames.ProfileStack, {
+        params: { celebration: true },
+        screen: RouteNames.PlayerCard,
+      });
     } else {
       navigation.navigate(nextRoute);
     }

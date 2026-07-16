@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { joiResolver } from '@hookform/resolvers/joi';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import Joi from 'joi';
 import { useEffect, useMemo, useState } from 'react';
@@ -251,13 +251,25 @@ function EventEdit({ navigation, route }) {
   ];
   const [selectedOccupancy, setSelectedOccupancy] = useState(null);
 
+  const queryClient = useQueryClient();
+
+  const invalidateEventQueries = async () => {
+    // Meme jeu d'invalidations que EventEdit.web : sans elles le planning et les
+    // listes restent perimes apres creation/edition (refetchOnWindowFocus desactive).
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['events'] }),
+      queryClient.invalidateQueries({ queryKey: ['planning'] }),
+      queryClient.invalidateQueries({ queryKey: ['event'] }),
+    ]);
+  };
+
   const createEventMutation = useMutation({
     mutationFn: createEvent,
     onError: (error) => {
       console.error('Error creating event:', error);
     },
-    onSuccess: () => {
-      console.log('Event created successfully');
+    onSuccess: async () => {
+      await invalidateEventQueries();
     },
   });
 
@@ -266,8 +278,8 @@ function EventEdit({ navigation, route }) {
     onError: (error) => {
       console.error('Error updating event:', error);
     },
-    onSuccess: () => {
-      console.log('Event updated successfully');
+    onSuccess: async () => {
+      await invalidateEventQueries();
     },
   });
 

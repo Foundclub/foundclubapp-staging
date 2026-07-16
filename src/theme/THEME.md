@@ -41,6 +41,15 @@ Core primitives:
 
 Do not use nested access like `ApplicationStyle.button.primary`.
 
+### Contrast rule — filled primary surfaces (decision Adel, 2026-07-14)
+Text and icons on a `primary500` (#01b3f4) background use dark ink `primary900` (#001218),
+never `neutral00`: white on primary500 is ~2.4:1 and fails WCAG AA (4.5:1); primary900 is ~8:1
+(AA and AAA). `buttonTextPrimary` and `buttonTextPrimaryLight` both map to `primary900`.
+Do not override the text color of `Primary`/`PrimaryLight` buttons back to white.
+Web mirrors of this rule consume `var(--fc-color-primary-900, #001218)`:
+`.seo-button-primary`, `.seo-facility-chip-all` (public-seo.css), `.primary-button` (index.css).
+Context: docs/ANALYSE_COHERENCE_DS_QUIZ_2026_07_14.md, constat C6 (option b).
+
 ### Alignments
 Primary helpers:
 - `row`, `column`, `alignCenter`, `justifySpaceBetween`, `fill`, etc.

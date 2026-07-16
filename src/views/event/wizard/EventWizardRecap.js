@@ -566,7 +566,10 @@ function EventWizardRecap({ navigation }) {
       : null;
     const featuredFailures = await requestFeaturedForCreatedEvents(created);
     await queryClient.invalidateQueries({ queryKey: ['events'] });
-    await queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+    // Prefixe large : couvre ['planning','personal'] mais aussi les vues fullscreen,
+    // club et CM qui n'etaient jamais invalidees (planning perime pendant ~60s).
+    await queryClient.invalidateQueries({ queryKey: ['planning'] });
+    await queryClient.invalidateQueries({ queryKey: ['club-planning'] });
     await queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
     await queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
     await queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -603,8 +606,10 @@ function EventWizardRecap({ navigation }) {
     }
 
     if (firstCreatedId) {
+      // Pile [EventDetails, EventPublishedShowcase] : l'utilisateur voit d'abord
+      // l'atelier « fais voir ton événement » ; fermer révèle EventDetails préchargé.
       navigation.reset({
-        index: 0,
+        index: 1,
         routes: [{
           name: RouteNames.EventDetails,
           params: {
@@ -621,6 +626,9 @@ function EventWizardRecap({ navigation }) {
               }
               : null,
           },
+        }, {
+          name: RouteNames.EventPublishedShowcase,
+          params: { creationCelebration, eventId: firstCreatedId },
         }],
       });
       if (firstCreatedItem) {

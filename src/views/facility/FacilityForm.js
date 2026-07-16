@@ -266,6 +266,15 @@ function FacilityForm() {
         ),
         type: 'manual',
       });
+      // Le champ adresse peut etre hors ecran au moment du submit : sans alerte,
+      // le bouton Creer semble ne rien faire.
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t(
+          'facilityForm.errors.addressGeocodeRequired',
+          'Sélectionnez une adresse géolocalisée dans la liste.',
+        ),
+      );
       return;
     }
     clearErrors('address');

@@ -169,10 +169,14 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
 };
 
 /**
+ * Les demandes de type 'claim' (revendication de club) ne peuvent etre traitees
+ * que par un superadmin cote backend : pour tout autre viewer, l'item est mappe
+ * en lecture seule (aucune action accept/reject).
  * @param {Record<string, any>} request
+ * @param {Record<string, any>} [options]
  * @returns {RequestHubItem}
  */
-export const mapClubMembershipRequestToHubItem = (request = {}) => {
+export const mapClubMembershipRequestToHubItem = (request = {}, options = {}) => {
   const requestId = String(request?.documentId || request?.id || '');
   const clubName = normalizeString(request?.club?.name) || 'Club';
   const requester = request?.requester || request?.user || {};
@@ -180,21 +184,29 @@ export const mapClubMembershipRequestToHubItem = (request = {}) => {
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester)
     || resolveRequesterAvatarUrl(request?.user || {});
   const requestType = normalizeString(request?.type) === 'claim' ? 'claim' : 'join';
+  const isSuperAdmin = options?.isSuperAdmin === true;
+  const isReadOnly = requestType === 'claim' && !isSuperAdmin;
   const title = requestType === 'claim'
     ? 'Revendication club'
     : 'Demande affiliation club';
   const subtitle = requestType === 'claim'
     ? `${requesterName} veut revendiquer la gestion du club ${clubName}.`
     : `${requesterName} demande une affiliation au club ${clubName}.`;
+  const readOnlySubtitle = [
+    `${requesterName} veut revendiquer la gestion du club ${clubName}.`,
+    'Revendication en cours de verification FoundClub.',
+  ].join(' ');
 
   return {
-    actions: { primary: 'accept', secondary: 'reject' },
+    actions: isReadOnly ? {} : { primary: 'accept', secondary: 'reject' },
     createdAt: toIsoString(request?.createdAt),
     id: `club:${requestId}`,
     meta: {
       clubId: normalizeString(request?.club?.documentId),
       clubName,
+      infoOnly: isReadOnly,
       raw: request,
+      readOnlyReason: isReadOnly ? 'superadmin_required' : '',
       requesterAvatarUrl,
       requesterId: normalizeString(requester?.documentId || request?.user?.documentId),
       requesterName,
@@ -202,8 +214,8 @@ export const mapClubMembershipRequestToHubItem = (request = {}) => {
       requestType,
     },
     status: 'pending',
-    subtitle,
-    title,
+    subtitle: isReadOnly ? readOnlySubtitle : subtitle,
+    title: isReadOnly ? 'Revendication club en verification' : title,
     type: 'club',
   };
 };

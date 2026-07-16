@@ -250,6 +250,15 @@ function EventWizardTeam({ navigation }) {
   const hasTeams = availableTeams.length > 0;
   const hasFilteredTeams = filteredTeams.length > 0;
 
+  // Sans equipe, l'etape est un cul-de-sac : on propose directement la creation
+  // d'equipe (meme wizard que l'onglet Equipes), avec le club deja resolu.
+  const handleCreateTeam = () => {
+    navigation.navigate(RouteNames.TeamStack, {
+      params: { clubId: resolvedClubId || organizerClub?.documentId || undefined },
+      screen: RouteNames.TeamWizardName,
+    });
+  };
+
   const handleSelectTeam = (team) => {
     let nextRoute = RouteNames.EventWizardInvites;
     if (isStageEventType(state?.type?.name)) {
@@ -461,10 +470,21 @@ function EventWizardTeam({ navigation }) {
               ) : null}
 
               {!isLoading && !error && !hasTeams ? (
-                <View style={[ApplicationStyle.card, Spaces.padding[24], { backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55` }]}>
+                <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[12], { backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55` }]}>
                   <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
                     {t('eventWizard.errors.noTeams')}
                   </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
+                    {t(
+                      'eventWizard.steps.team.createTeamHint',
+                      "Crée d'abord ton équipe, puis reviens créer ton événement.",
+                    )}
+                  </Text>
+                  <Button
+                    onPress={handleCreateTeam}
+                    title={t('eventWizard.steps.team.createTeamCta', 'Créer une équipe')}
+                    variant="Primary"
+                  />
                 </View>
               ) : null}
 
@@ -650,6 +670,7 @@ function EventWizardTeam({ navigation }) {
             style={[
               ApplicationStyle.card,
               Spaces.padding[24],
+              Spaces.gap[12],
               {
                 backgroundColor: Colors.primary700,
                 borderColor: `${Colors.primary500}55`,
@@ -659,6 +680,17 @@ function EventWizardTeam({ navigation }) {
             <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
               {t('eventWizard.errors.noTeams')}
             </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
+              {t(
+                'eventWizard.steps.team.createTeamHint',
+                "Crée d'abord ton équipe, puis reviens créer ton événement.",
+              )}
+            </Text>
+            <Button
+              onPress={handleCreateTeam}
+              title={t('eventWizard.steps.team.createTeamCta', 'Créer une équipe')}
+              variant="Primary"
+            />
           </View>
         ) : null}
 

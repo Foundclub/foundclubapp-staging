@@ -44,7 +44,24 @@ describe('subscriptionBilling', () => {
     })).toEqual({
       description: 'Publie et gere les equipes couvertes par tes slots Team.',
       label: 'Team 2 equipes / mois',
+      priceLabel: '',
       secondaryLabel: '2 equipes couvertes - Mensuel',
+    });
+  });
+
+  test('uses server displayName and reference price when the catalog provides them', () => {
+    expect(getSubscriptionCatalogEntryMeta({
+      billingPeriod: 'yearly',
+      displayName: 'Équipe · 1 équipe',
+      planCode: 'fc_team_1_yearly',
+      referencePriceEurCents: 5999,
+      scopeType: 'TEAM',
+      slotCount: 1,
+    })).toEqual({
+      description: 'Publie et gere les equipes couvertes par tes slots Team.',
+      label: 'Équipe · 1 équipe',
+      priceLabel: '59,99 €/an',
+      secondaryLabel: '1 equipe couverte - Annuel - 59,99 €/an',
     });
   });
 

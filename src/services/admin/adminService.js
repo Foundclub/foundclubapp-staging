@@ -88,6 +88,62 @@ export const migrateLegacySubscriptions = async (payload = {}) => {
   return result.data;
 };
 
+/**
+ * Get paginated subscriptions for subscription ops back-office.
+ * @param {{ q?: string; status?: string; provider?: string; planCode?: string; page?: number; pageSize?: number }} params
+ * @returns {Promise<any>}
+ */
+export const getSubscriptionOpsSubscriptions = async (params = {}) => {
+  const result = await client.get('/admin-dashboard/subscription-ops/subscriptions', {
+    params,
+  });
+  return result.data;
+};
+
+/**
+ * Get paginated billing events for subscription ops back-office.
+ * @param {{ processingStatus?: string; provider?: string; page?: number; pageSize?: number }} params
+ * @returns {Promise<any>}
+ */
+export const getSubscriptionOpsBillingEvents = async (params = {}) => {
+  const result = await client.get('/admin-dashboard/subscription-ops/billing-events', {
+    params,
+  });
+  return result.data;
+};
+
+/**
+ * Update a subscription status (superadmin) with entitlement cascade.
+ * @param {string} documentId
+ * @param {{ status?: string; reason?: string }} payload
+ * @returns {Promise<any>}
+ */
+export const updateSubscriptionOpsStatus = async (documentId, payload = {}) => {
+  const result = await client.post(`/admin-dashboard/subscription-ops/subscriptions/${encodeURIComponent(String(documentId || '').trim())}/status`, payload);
+  return result.data;
+};
+
+/**
+ * Retry a billing event from its stored payload.
+ * @param {string} documentId
+ * @param {{ reason?: string }} payload
+ * @returns {Promise<any>}
+ */
+export const retrySubscriptionOpsBillingEvent = async (documentId, payload = {}) => {
+  const result = await client.post(`/admin-dashboard/subscription-ops/billing-events/${encodeURIComponent(String(documentId || '').trim())}/retry`, payload);
+  return result.data;
+};
+
+/**
+ * Run the subscription reconciliation immediately.
+ * @param {object} payload
+ * @returns {Promise<any>}
+ */
+export const runSubscriptionOpsReconcile = async (payload = {}) => {
+  const result = await client.post('/admin-dashboard/subscription-ops/reconcile', payload);
+  return result.data;
+};
+
 export const getNotificationsHealth = async () => {
   const result = await client.get('/notifications/health', {
     params: {

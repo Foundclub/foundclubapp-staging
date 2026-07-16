@@ -1,6 +1,7 @@
 import {
   getAvailableRequestHubFilters,
   mapClubInterestRequestToHubItem,
+  mapClubMembershipRequestToHubItem,
   mapEventParticipationRequestToHubItem,
   mapTeamMembershipRequestToHubItem,
 } from '@/domains/requests/requestMappers';
@@ -103,6 +104,59 @@ describe('requestMappers', () => {
       requesterId: 'user-1',
       teamId: 'team-1',
     }));
+  });
+
+  test('maps club claim requests as read only for non superadmin viewers', () => {
+    const item = mapClubMembershipRequestToHubItem({
+      club: {
+        documentId: 'club-1',
+        name: 'FC Test',
+      },
+      createdAt: '2026-06-10T09:00:00.000Z',
+      documentId: 'claim-1',
+      type: 'claim',
+      user: {
+        documentId: 'user-1',
+        firstname: 'Leo',
+        lastname: 'Martin',
+      },
+    });
+
+    expect(item).toEqual(expect.objectContaining({
+      actions: {},
+      id: 'club:claim-1',
+      subtitle: 'Leo Martin veut revendiquer la gestion du club FC Test. Revendication en cours de verification FoundClub.',
+      title: 'Revendication club en verification',
+      type: 'club',
+    }));
+    expect(item.meta).toEqual(expect.objectContaining({
+      infoOnly: true,
+      readOnlyReason: 'superadmin_required',
+      requestType: 'claim',
+    }));
+  });
+
+  test('keeps claim actions for superadmin viewers', () => {
+    const item = mapClubMembershipRequestToHubItem(
+      {
+        club: {
+          documentId: 'club-1',
+          name: 'FC Test',
+        },
+        documentId: 'claim-1',
+        type: 'claim',
+        user: {
+          documentId: 'user-1',
+          firstname: 'Leo',
+          lastname: 'Martin',
+        },
+      },
+      { isSuperAdmin: true },
+    );
+
+    expect(item.actions).toEqual({ primary: 'accept', secondary: 'reject' });
+    expect(item.title).toBe('Revendication club');
+    expect(item.meta.infoOnly).toBe(false);
   });
 
   test('maps club interest requests with requester and target team', () => {

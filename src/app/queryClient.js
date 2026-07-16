@@ -35,7 +35,9 @@ const shouldRetryQuery = (failureCount, error) => {
     return true;
   }
 
-  if (status === 408 || status === 425 || status === 429) {
+  // 429 exclu : le retryDelay (max 4 s) retombe dans la fenêtre de blocage du
+  // rate-limiter (60 s) et ne fait qu'amplifier la charge.
+  if (status === 408 || status === 425) {
     return true;
   }
 

@@ -9,6 +9,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import SubscriptionQuotaBanner from '@/components/molecules/subscriptionQuotaBanner/SubscriptionQuotaBanner';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -90,6 +91,8 @@ function AdWizardAudienceType({ navigation, route }) {
       title="Type d'annonce"
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
+        <SubscriptionQuotaBanner label="Annonces" quotaType="RECRUITMENT_AD_PUBLISH" />
+
         <AudienceCard
           description="Publiez une annonce par poste recherche, avec le volume de recrutement et les informations sportives de l&rsquo;equipe."
           isSelected={state.audienceType === 'player'}

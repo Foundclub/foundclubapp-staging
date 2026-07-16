@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -115,8 +117,13 @@ function EventWizardStageProgram({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const { dispatch, state } = useEventWizard();
+  const { userData } = useAuth();
   const clubId = state.team?.club?.documentId || null;
   const cmId = state.team?.club?.parentMultisport?.documentId || null;
+  // Creation d'installation reservee aux dirigeants (403 serveur pour les autres roles).
+  const facilityManagerRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  const canManageFacilities = facilityManagerRoleKey === 'president'
+    || facilityManagerRoleKey === 'superAdmin';
   const isTournament = isTournamentEventType(state.type?.name);
   const copyRoot = isTournament ? 'eventWizard.tournamentProgram' : 'eventWizard.stage';
   const copy = (key, fallback) => t(`${copyRoot}.${key}`, fallback);
@@ -538,7 +545,7 @@ function EventWizardStageProgram({ navigation }) {
                       end: day.endTime.toISOString(),
                       start: day.startTime.toISOString(),
                     }}
-                    onAddFacility={handleAddFacility}
+                    onAddFacility={canManageFacilities ? handleAddFacility : undefined}
                     onChange={({ facilityId, location }) => handleUpdateDay(dateKey, {
                       facilityId: facilityId || null,
                       location: location || null,

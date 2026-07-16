@@ -487,6 +487,8 @@ export const profileFieldToDisplay = (role) => {
         'birthdate',
         'address',
         'avatar',
+        'nationality',
+        'jerseyNumber',
       ];
     case 'player':
       return [
@@ -502,6 +504,8 @@ export const profileFieldToDisplay = (role) => {
         'bestLevel',
         'category',
         'preferredSport',
+        'nationality',
+        'jerseyNumber',
       ];
     case 'president':
       return [

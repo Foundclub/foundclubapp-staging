@@ -12,6 +12,7 @@ import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import SubscriptionQuotaBanner from '@/components/molecules/subscriptionQuotaBanner/SubscriptionQuotaBanner';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
@@ -79,6 +80,8 @@ function EventWizardType({ navigation, route }) {
         subtitle={t('eventWizard.steps.type.subtitle')}
         title={t('eventWizard.steps.type.title')}
       >
+        <SubscriptionQuotaBanner label="Evenements" quotaType="EVENT_PUBLISH" />
+
         {isLoading ? (
           <ActivityIndicator color={Colors.primary500} size="large" />
         ) : null}

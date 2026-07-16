@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -38,7 +40,12 @@ const buildDateTimeIso = (baseDate, timeValue) => {
 function EventWizardLocation({ navigation }) {
   const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
+  const { userData } = useAuth();
   const { dispatch, state } = useEventWizard();
+  // La creation d'installation est refusee cote serveur aux non-dirigeants (403) :
+  // on ne propose donc le bouton qu'aux dirigeants (le coach passe par l'adresse exterieure).
+  const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  const canManageFacilities = roleKey === 'president' || roleKey === 'superAdmin';
 
   const [location, setLocation] = useState(state.location);
   const [facilityId, setFacilityId] = useState(state.facility);
@@ -98,7 +105,7 @@ function EventWizardLocation({ navigation }) {
           facilityId={facilityId}
           location={location}
           occupancyWindow={occupancyWindow}
-          onAddFacility={handleAddFacility}
+          onAddFacility={canManageFacilities ? handleAddFacility : undefined}
           onChange={({ facilityId: nextFacilityId, location: nextLocation }) => {
             setLocation(nextLocation || null);
             setFacilityId(nextFacilityId || null);

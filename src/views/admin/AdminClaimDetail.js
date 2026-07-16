@@ -359,7 +359,7 @@ function AdminClaimDetail() {
             disabled={approveMutation.isPending || processHelpMutation.isPending}
             onPress={handleApprove}
             style={[Spaces.marginBottom[12], isAffiliationHelp ? null : { backgroundColor: Colors.success500 }]}
-            textStyle={[Fonts.button, { color: Colors.neutral00 }]}
+            textStyle={Fonts.button}
             title={isAffiliationHelp
               ? (processHelpMutation.isPending ? 'Traitement...' : 'Traiter la demande')
               : (approveMutation.isPending ? 'Traitement...' : 'Accepter la demande')}

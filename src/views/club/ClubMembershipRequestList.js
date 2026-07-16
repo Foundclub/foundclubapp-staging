@@ -8,6 +8,7 @@ import {
   Alert, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
@@ -95,6 +96,7 @@ function ClubMembershipRequestList({ navigation, route }) {
     clubVerificationSummary,
     userData,
   } = useAuth();
+  const isSuperAdmin = getUserRoleKey(userData?.role?.type || userData?.role?.name) === 'superAdmin';
 
   // hooks
   const {
@@ -272,6 +274,7 @@ function ClubMembershipRequestList({ navigation, route }) {
     (() => {
       const { pendingName, title } = resolveRequesterDisplay(item, t);
       const isClaimRequest = item?.type === 'claim';
+      const isClaimReadOnly = isClaimRequest && !isSuperAdmin;
       return (
         <View
           style={[
@@ -365,29 +368,50 @@ function ClubMembershipRequestList({ navigation, route }) {
               },
             ]}
           />
-          <View style={[Alignments.row, Alignments.fullWidth, Spaces.gap[12]]}>
-            <Button
-              disabled={isMutating}
-              icon="check"
-              isLoading={acceptRequestMutation.isPending}
-              isOption
-              onPress={() => handleAcceptRequest(item.documentId)}
-              style={[Alignments.fill, { minHeight: 42 }]}
-              title={t('clubMembershipRequestList.actions.accept')}
-              variant="Primary"
-            />
-            <Button
-              disabled={isMutating}
-              icon="close"
-              isLoading={rejectRequestMutation.isPending}
-              isOption
-              onPress={() => handleRejectRequest(item.documentId)}
-              style={[Alignments.fill, { borderColor: Colors.error500, minHeight: 42 }]}
-              textStyle={[Fonts.error500]}
-              title={t('clubMembershipRequestList.actions.reject')}
-              variant="Secondary"
-            />
-          </View>
+          {isClaimReadOnly ? (
+            <View
+              style={[
+                Alignments.fullWidth,
+                ApplicationStyle.backgroundColor.primary900,
+                ApplicationStyle.borderRadius12,
+                ApplicationStyle.borderWidth1,
+                { borderColor: `${Colors.primary500}66` },
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[8],
+              ]}
+            >
+              <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
+                {t(
+                  'clubMembershipRequestList.fields.claimPendingVerification',
+                  'Revendication en cours de verification FoundClub',
+                )}
+              </Text>
+            </View>
+          ) : (
+            <View style={[Alignments.row, Alignments.fullWidth, Spaces.gap[12]]}>
+              <Button
+                disabled={isMutating}
+                icon="check"
+                isLoading={acceptRequestMutation.isPending}
+                isOption
+                onPress={() => handleAcceptRequest(item.documentId)}
+                style={[Alignments.fill, { minHeight: 42 }]}
+                title={t('clubMembershipRequestList.actions.accept')}
+                variant="Primary"
+              />
+              <Button
+                disabled={isMutating}
+                icon="close"
+                isLoading={rejectRequestMutation.isPending}
+                isOption
+                onPress={() => handleRejectRequest(item.documentId)}
+                style={[Alignments.fill, { borderColor: Colors.error500, minHeight: 42 }]}
+                textStyle={[Fonts.error500]}
+                title={t('clubMembershipRequestList.actions.reject')}
+                variant="Secondary"
+              />
+            </View>
+          )}
         </View>
       );
     })()

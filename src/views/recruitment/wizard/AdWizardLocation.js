@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 /* eslint-disable perfectionist/sort-imports */
@@ -71,7 +73,12 @@ const buildFacilitySelectionAddress = (facility, fallbackLocation) => {
 function AdWizardLocation({ navigation }) {
   const { Fonts, Spaces } = useTheme();
   const { showBanner } = useAppFeedback();
+  const { userData } = useAuth();
   const { dispatch, state } = useAdWizard();
+  // Creation d'installation reservee aux dirigeants (403 serveur pour les autres roles).
+  const facilityManagerRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  const canManageFacilities = facilityManagerRoleKey === 'president'
+    || facilityManagerRoleKey === 'superAdmin';
 
   const clubId = state.team?.club?.documentId || state.team?.club?.id || null;
   const cmId = state.team?.club?.parentMultisport?.documentId || null;
@@ -147,7 +154,7 @@ function AdWizardLocation({ navigation }) {
           cmId={cmId}
           facilityId={facilityId}
           location={location}
-          onAddFacility={clubId || cmId ? handleAddFacility : undefined}
+          onAddFacility={canManageFacilities && (clubId || cmId) ? handleAddFacility : undefined}
           onChange={({ facilityId: nextFacilityId, location: nextLocation }) => {
             setLocation(nextLocation || null);
             setFacilityId(nextFacilityId || null);
