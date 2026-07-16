@@ -61,6 +61,7 @@ import {
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getImageUrl } from '@/utils/imageUrl';
 import safeJsonParse from '@/utils/safeJsonParse';
+import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 import { resolveClubDetailsActionMatrix } from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
@@ -575,6 +576,9 @@ function ClubDetails({ navigation, route }) {
     [club, USER_ROLES.president],
   );
   const areClubMembersHidden = club?.membersAreHidden === true;
+  // Club sans dirigeant visible : l'affiliation coach est instantanee cote serveur,
+  // le bouton doit donc dire « C'est mon club ! » plutot que « Demander a rejoindre ».
+  const isClubWithoutVisibleOwner = owners.length === 0 && !areClubMembersHidden;
   const clubMembersCount = Number(club?.membersCount || club?.members?.length || 0);
 
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
@@ -631,6 +635,17 @@ function ClubDetails({ navigation, route }) {
     } catch (e) {
       navigation.getParent()?.navigate(RouteNames.ClubEdit, { clubId });
     }
+  }, [clubId, navigation]);
+
+  const handleOpenClubPoster = useCallback(() => {
+    if (!clubId) return;
+    navigation.navigate(RouteNames.VisualShowcase, {
+      chatShareEnabled: false,
+      shareUrl: buildPublicWebUrl({ path: `/clubs/${clubId}` }),
+      subjectId: clubId,
+      subjectType: 'club',
+      template: 'affiche-club',
+    });
   }, [clubId, navigation]);
 
   const handleSelectManagedClub = useCallback(async (selectedClub) => {
@@ -1874,6 +1889,14 @@ function ClubDetails({ navigation, route }) {
             </View>
           </View>
 
+          {canEdit && clubId ? (
+            <Button
+              onPress={handleOpenClubPoster}
+              title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}
+              variant="Secondary"
+            />
+          ) : null}
+
           {shouldShowSectionScopeToggle ? (
             <View style={[Alignments.alignCenter, Spaces.marginTop[12]]}>
               <ClubScopeToggle
@@ -2486,11 +2509,15 @@ function ClubDetails({ navigation, route }) {
                 ? { opacity: 0.7 }
                 : null,
             ]}
-            title={
-              (hasPendingClubRequest || joinRequestPending)
-                ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t('clubDetails.actions.requestJoin', 'Demander à rejoindre ce club')
-            }
+            title={(() => {
+              if (hasPendingClubRequest || joinRequestPending) {
+                return t('clubDetails.actions.requestPending', 'Demande en attente');
+              }
+              if (isClubWithoutVisibleOwner) {
+                return t('clubDetails.actions.joinAsMyClub', "C'est mon club !");
+              }
+              return t('clubDetails.actions.requestJoin', 'Demander à rejoindre ce club');
+            })()}
             variant="Primary"
           />
         ) : null

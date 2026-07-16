@@ -595,6 +595,13 @@ function PrivateNavigator() {
             headerTitle: 'Modifier l\'annonce',
           }}
         />
+        {/* Showcase d'affiches généralisé (event/club/recruitment-ad) : registration UNIQUE
+            à la racine, atteignable depuis ClubDetails (remontée) et RecruitmentAdDetails. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/event/EventPublishedShowcase').default}
+          name={RouteNames.VisualShowcase}
+          options={{ headerShown: false }}
+        />
         <Stack.Screen
           getComponent={() => require('@/views/facility/FacilityForm').default}
           name={RouteNames.FacilityForm}

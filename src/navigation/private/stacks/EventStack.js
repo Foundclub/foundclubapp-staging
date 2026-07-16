@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
+import EventPublishedShowcase from '@/views/event/EventPublishedShowcase';
 import TacticalBoardScreen from '@/views/event/TacticalBoardScreen';
 import TournamentManagement from '@/views/event/TournamentManagement';
 import TournamentMatchDetails from '@/views/event/TournamentMatchDetails';
@@ -70,6 +71,14 @@ function EventStack() {
           options={{
             ...commonOptions,
             headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          component={EventPublishedShowcase}
+          name={RouteNames.EventPublishedShowcase}
+          options={{
+            ...commonOptions,
+            headerShown: false,
           }}
         />
         <Stack.Screen

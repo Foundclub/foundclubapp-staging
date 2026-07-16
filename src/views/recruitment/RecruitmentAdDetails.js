@@ -59,6 +59,7 @@ import {
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
+import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 const BG_MATCH = /** @type {import('react-native').ImageSourcePropType} */ (
   require('@/assets/background-card-event/card-match.png')
@@ -621,6 +622,18 @@ function RecruitmentAdDetails() {
 
   const handleEdit = () => {
     navigation.navigate(RouteNames.RecruitmentAdEdit, { ad, adId: ad.documentId });
+  };
+
+  const handleOpenPosterShowcase = () => {
+    const subjectId = String(ad?.documentId || ad?.id || '').trim();
+    if (!subjectId) return;
+    navigation.navigate(RouteNames.VisualShowcase, {
+      chatShareEnabled: false,
+      shareUrl: buildPublicWebUrl(/** @type {any} */ ({ path: `/recruitment/${subjectId}` })),
+      subjectId,
+      subjectType: 'recruitment-ad',
+      template: 'avis-de-recherche',
+    });
   };
 
   const handleOpenDetection = () => {
@@ -1371,6 +1384,13 @@ function RecruitmentAdDetails() {
                 onPress={handleEdit}
                 title="Modifier"
                 variant="Primary"
+              />
+            </View>
+            <View style={{ marginBottom: 12 }}>
+              <Button
+                onPress={handleOpenPosterShowcase}
+                title={t('recruitmentAdDetails.owner.posterCta', 'Avis de recherche')}
+                variant="Secondary"
               />
             </View>
             <View>
