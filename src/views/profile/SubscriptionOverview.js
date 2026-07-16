@@ -6,22 +6,18 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, Platform, ScrollView, Text, TouchableOpacity, View,
+  Alert, Image, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
-  buildSubscriptionChangePlanPayload,
-  buildSubscriptionPurchasePayload,
   formatSubscriptionMonthlyEquivalentLabel,
   formatSubscriptionPriceLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
   getSubscriptionSelectableTeams,
-  getSubscriptionTestProvider,
-  isSubscriptionBillingTestModeEnabled,
   sortSubscriptionCatalogEntries,
 } from '@/domains/subscription/subscriptionBilling';
 import {
@@ -31,6 +27,14 @@ import {
   getSubscriptionStatusMeta,
   getSubscriptionTeamSlotSummary,
 } from '@/domains/subscription/subscriptionDecision';
+import {
+  getActiveSubscriptionPurchaseRail,
+  isSubscriptionPurchaseAvailable,
+  performSubscriptionPlanChange,
+  performSubscriptionPurchase,
+  restoreAllSubscriptionPurchases,
+  SUBSCRIPTION_PURCHASE_RAILS,
+} from '@/domains/subscription/subscriptionPurchaseRail';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -43,14 +47,7 @@ import SubscriptionCoveredHero from '@/views/profile/SubscriptionCoveredHero';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import {
-  changeSubscriptionPlan,
-  getSubscriptionCatalog,
-  restoreSubscriptionPurchases,
-  validateSubscriptionPurchase,
-} from '@/services/subscription/subscriptionService';
-
-import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
+import { getSubscriptionCatalog } from '@/services/subscription/subscriptionService';
 
 /**
  * @typedef {{
@@ -74,7 +71,7 @@ import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
  * @typedef {{
  *   action: 'change' | 'purchase';
  *   catalogEntry: SubscriptionCatalogEntry;
- *   payload: Record<string, any>;
+ *   input: Record<string, any>;
  *   successMessage?: string;
  * }} SubscriptionMutationInput
  * @typedef {{
@@ -526,7 +523,15 @@ function SubscriptionOverview({ navigation }) {
   const canShowSubscriptionExperience = roleKey === 'coach'
     || roleKey === 'president'
     || roleKey === 'superAdmin';
-  const isBillingTestModeEnabled = isSubscriptionBillingTestModeEnabled(APP_RUNTIME_ENV);
+  const isPurchaseAvailable = isSubscriptionPurchaseAvailable();
+  const isTestPurchaseRail = getActiveSubscriptionPurchaseRail()
+    === SUBSCRIPTION_PURCHASE_RAILS.TRUSTED_TEST;
+  let changeOfferHelperText = 'Le paiement in-app n\'est pas encore disponible sur cette version. Cette section reste en lecture pour le moment.';
+  if (isTestPurchaseRail) {
+    changeOfferHelperText = 'Mode test actif : les changements d\'offre sont simulés pour la recette.';
+  } else if (isPurchaseAvailable) {
+    changeOfferHelperText = 'Paiement sécurisé par le store. Changement immédiat, prorata géré automatiquement.';
+  }
   const currentClubDocumentId = String(
     clubVerificationSummary?.clubDocumentId
       || userData?.club?.documentId
@@ -837,12 +842,12 @@ function SubscriptionOverview({ navigation }) {
     }
   }, [activePlanCodes, catalogEntries]);
 
-  /** @param {{ action: 'change' | 'purchase'; payload: Record<string, any> }} params */
-  const runSubscriptionMutation = async ({ action, payload }) => {
+  /** @param {{ action: 'change' | 'purchase'; input: Record<string, any> }} params */
+  const runSubscriptionMutation = async ({ action, input }) => {
     if (action === 'change') {
-      return changeSubscriptionPlan(payload);
+      return performSubscriptionPlanChange(input);
     }
-    return validateSubscriptionPurchase(payload);
+    return performSubscriptionPurchase(input);
   };
 
   const subscriptionMutation = useMutation({
@@ -850,7 +855,7 @@ function SubscriptionOverview({ navigation }) {
   });
 
   const restoreMutation = useMutation({
-    mutationFn: async () => restoreSubscriptionPurchases({}),
+    mutationFn: async () => restoreAllSubscriptionPurchases(),
   });
 
   const closeTeamPlanModal = useCallback(() => {
@@ -878,20 +883,22 @@ function SubscriptionOverview({ navigation }) {
     const {
       action,
       catalogEntry,
-      payload,
+      input,
       successMessage,
     } = params;
     const actionPlanCode = String(catalogEntry?.planCode || '').trim();
     setActiveActionPlanCode(actionPlanCode);
 
     try {
-      const result = await subscriptionMutation.mutateAsync({ action, payload });
+      const result = await subscriptionMutation.mutateAsync({ action, input });
       await refreshSubscriptionContext();
       closeTeamPlanModal();
 
       Alert.alert(
         action === 'change' ? 'Abonnement mis a jour' : 'Abonnement active',
-        successMessage || 'Ton contexte abonnement vient d etre mis a jour.',
+        result?.pendingWebhook
+          ? 'Paiement confirmé par le store. Tes accès se mettent à jour automatiquement d\'ici quelques instants.'
+          : (successMessage || 'Ton contexte abonnement vient d etre mis a jour.'),
       );
 
       return result;
@@ -946,36 +953,30 @@ function SubscriptionOverview({ navigation }) {
       return;
     }
 
-    if (!isBillingTestModeEnabled) {
+    if (!isPurchaseAvailable) {
       Alert.alert(
         'Checkout indisponible',
-        'Le checkout store reel sera branche dans une prochaine vague. Utilise le mode test local ou staging pour la recette complete.',
+        'Le paiement in-app n\'est pas disponible sur ce build. Mets l\'app à jour puis réessaie.',
       );
       return;
     }
 
-    const provider = getSubscriptionTestProvider(Platform.OS);
-    const payload = hasPaidSubscription
-      ? buildSubscriptionChangePlanPayload({
-        catalogEntry,
-        clubDocumentId: currentClubDocumentId,
-        provider,
-        subscriptionDocumentId: primarySubscriptionDocumentId,
-        teamDocumentIds: [],
-        trustedValidation: true,
-      })
-      : buildSubscriptionPurchasePayload({
-        catalogEntry,
-        clubDocumentId: currentClubDocumentId,
-        provider,
-        teamDocumentIds: [],
-        trustedValidation: true,
-      });
+    /** @type {Record<string, any>} */
+    const input = {
+      catalogEntry,
+      clubDocumentId: currentClubDocumentId,
+      payerUserDocumentId: String(userData?.documentId || '').trim(),
+      teamDocumentIds: [],
+    };
+    if (hasPaidSubscription) {
+      input.currentPlanCode = String(activePlanCodes[0] || '');
+      input.subscriptionDocumentId = primarySubscriptionDocumentId;
+    }
 
     await commitSubscriptionMutation({
       action,
       catalogEntry,
-      payload,
+      input,
       successMessage: getCatalogEntryScopeType(catalogEntry) === 'CLUB'
         ? 'Ton offre Club est bien enregistree. Si ton club n est pas encore verifie, il apparaitra en CLUB_UNVERIFIED.'
         : 'Ton offre a bien ete activee.',
@@ -984,9 +985,10 @@ function SubscriptionOverview({ navigation }) {
     activePlanCodes,
     commitSubscriptionMutation,
     currentClubDocumentId,
-    isBillingTestModeEnabled,
+    isPurchaseAvailable,
     openTeamPlanModal,
     primarySubscriptionDocumentId,
+    userData?.documentId,
   ]);
 
   const selectedTeamPlanEntry = teamPlanModalState.catalogEntry;
@@ -1003,7 +1005,7 @@ function SubscriptionOverview({ navigation }) {
     || selectedTeamSlotCount <= 0
     || !hasAtLeastOneSelectedTeam
     || isSelectedTeamCountInvalid
-    || !isBillingTestModeEnabled
+    || !isPurchaseAvailable
     || subscriptionMutation.isPending;
 
   /**
@@ -1061,45 +1063,42 @@ function SubscriptionOverview({ navigation }) {
       return;
     }
 
-    if (!isBillingTestModeEnabled) {
+    if (!isPurchaseAvailable) {
       Alert.alert(
         'Checkout indisponible',
-        'Le checkout store reel sera branche dans une prochaine vague. Utilise le mode test local ou staging pour la recette complete.',
+        'Le paiement in-app n\'est pas disponible sur ce build. Mets l\'app à jour puis réessaie.',
       );
       return;
     }
 
     const action = primarySubscriptionDocumentId ? 'change' : 'purchase';
-    const provider = getSubscriptionTestProvider(Platform.OS);
-    const payload = primarySubscriptionDocumentId
-      ? buildSubscriptionChangePlanPayload({
-        catalogEntry: selectedTeamPlanEntry,
-        provider,
-        subscriptionDocumentId: primarySubscriptionDocumentId,
-        teamDocumentIds: selectedTeamIds,
-        trustedValidation: true,
-      })
-      : buildSubscriptionPurchasePayload({
-        catalogEntry: selectedTeamPlanEntry,
-        provider,
-        teamDocumentIds: selectedTeamIds,
-        trustedValidation: true,
-      });
+    /** @type {Record<string, any>} */
+    const input = {
+      catalogEntry: selectedTeamPlanEntry,
+      payerUserDocumentId: String(userData?.documentId || '').trim(),
+      teamDocumentIds: selectedTeamIds,
+    };
+    if (primarySubscriptionDocumentId) {
+      input.currentPlanCode = String(activePlanCodes[0] || '');
+      input.subscriptionDocumentId = primarySubscriptionDocumentId;
+    }
 
     await commitSubscriptionMutation({
       action,
       catalogEntry: selectedTeamPlanEntry,
-      payload,
+      input,
       successMessage: `Ton offre Team couvre maintenant ${selectedTeamIds.length} equipe${selectedTeamIds.length > 1 ? 's' : ''}.`,
     });
   }, [
+    activePlanCodes,
     commitSubscriptionMutation,
     hasAtLeastOneSelectedTeam,
-    isBillingTestModeEnabled,
+    isPurchaseAvailable,
     primarySubscriptionDocumentId,
     selectedTeamIds,
     selectedTeamPlanEntry,
     teamOptions.length,
+    userData?.documentId,
   ]);
 
   const handleRestorePurchases = useCallback(async () => {
@@ -1129,15 +1128,15 @@ function SubscriptionOverview({ navigation }) {
     const scopeType = getCatalogEntryScopeType(catalogEntry);
     const isCurrentTeamPlan = isActivePlan && scopeType === 'TEAM';
     const isLoading = subscriptionMutation.isPending && activeActionPlanCode === planCode;
-    const isDisabled = !isBillingTestModeEnabled;
+    const isDisabled = !isPurchaseAvailable;
 
     if (isCurrentTeamPlan) {
       return (
         <Button
-          disabled={!isBillingTestModeEnabled}
+          disabled={!isPurchaseAvailable}
           isLoading={isLoading}
           onPress={() => openTeamPlanModal(catalogEntry, 'manage-team-slots')}
-          title={isBillingTestModeEnabled ? 'Mettre à jour mes équipes' : 'Plan actif'}
+          title={isPurchaseAvailable ? 'Mettre à jour mes équipes' : 'Plan actif'}
           variant="SecondaryLight"
         />
       );
@@ -1173,7 +1172,7 @@ function SubscriptionOverview({ navigation }) {
     Colors,
     Fonts,
     handleCatalogAction,
-    isBillingTestModeEnabled,
+    isPurchaseAvailable,
     openTeamPlanModal,
     primarySubscriptionDocumentId,
     Spaces,
@@ -1510,7 +1509,7 @@ function SubscriptionOverview({ navigation }) {
             </Text>
             {!isPayerSelectionCurrentPlan && payerSelectedEntry ? (
               <Button
-                disabled={!isBillingTestModeEnabled}
+                disabled={!isPurchaseAvailable}
                 isLoading={subscriptionMutation.isPending
                   && activeActionPlanCode === String(payerSelectedEntry?.planCode || '')}
                 onPress={() => handleCatalogAction(payerSelectedEntry)}
@@ -1589,9 +1588,7 @@ function SubscriptionOverview({ navigation }) {
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{'Changer d\'offre'}</Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {isBillingTestModeEnabled
-                ? 'Mode test actif : les changements d\'offre sont simulés pour la recette.'
-                : 'Le paiement in-app n\'est pas encore disponible sur cette version. Cette section reste en lecture pour le moment.'}
+              {changeOfferHelperText}
             </Text>
           </View>
 
@@ -1840,7 +1837,7 @@ function SubscriptionOverview({ navigation }) {
             </Text>
           </View>
 
-          {!isBillingTestModeEnabled ? (
+          {!isPurchaseAvailable ? (
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {'Le paiement in-app n\'est pas encore disponible sur cette version.'}
             </Text>

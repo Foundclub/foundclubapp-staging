@@ -314,6 +314,7 @@ function GuideOffersRecap({ navigation }) {
       await purchaseMutation.mutateAsync({
         catalogEntry: selectedEntry,
         clubDocumentId: isClubPurchase ? currentClubDocumentId : undefined,
+        payerUserDocumentId: String(userData?.documentId || '').trim(),
         teamDocumentIds: isClubPurchase ? [] : getInitialTeamSelection({
           availableTeams,
           coveredTeamDocumentIds: getSubscriptionTeamSlotSummary(subscriptionSummary)

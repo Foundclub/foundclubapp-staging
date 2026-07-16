@@ -319,6 +319,7 @@ function SubscriptionPaywallSheet({
     try {
       await purchaseMutation.mutateAsync({
         catalogEntry: selectedEntry,
+        payerUserDocumentId: String(userData?.documentId || '').trim(),
         teamDocumentIds: getInitialTeamSelection({
           availableTeams,
           coveredTeamDocumentIds: getSubscriptionTeamSlotSummary(subscriptionSummary)

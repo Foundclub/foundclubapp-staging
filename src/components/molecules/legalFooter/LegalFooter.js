@@ -4,9 +4,8 @@ import {
 } from 'react-native';
 
 import { getSubscriptionBillingErrorMessage } from '@/domains/subscription/subscriptionBilling';
+import { restoreAllSubscriptionPurchases } from '@/domains/subscription/subscriptionPurchaseRail';
 import useTheme from '@/theme/themeContext';
-
-import { restoreSubscriptionPurchases } from '@/services/subscription/subscriptionService';
 
 /**
  * Mention legale partagee de toute surface d'achat (handoff design) :
@@ -22,7 +21,7 @@ function LegalFooter({ restore = true, style }) {
   const queryClient = useQueryClient();
 
   const restoreMutation = useMutation({
-    mutationFn: async () => restoreSubscriptionPurchases({}),
+    mutationFn: async () => restoreAllSubscriptionPurchases(),
   });
 
   const handleRestorePurchases = async () => {

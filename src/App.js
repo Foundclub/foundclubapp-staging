@@ -36,6 +36,7 @@ import { POPUP_IDS } from '@/constants/popupRegistry';
 import { APP_RUNTIME_ENV, NOTIFICATIONS_RUNTIME_CONFIG } from '@/constants/runtimeFlags';
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceRouteVisit } from '@/domains/guidance/guidanceRuntime';
+import { syncRevenueCatIdentity } from '@/domains/subscription/subscriptionRevenueCat';
 import {
   useBlockingOverlayLifecycle,
   useBlockingOverlayPrompt,
@@ -328,8 +329,17 @@ function ClubScopeSwitchHost() {
 }
 
 function DeferredStartupHosts() {
-  const { appBootstrapData, isBootstrapResolved } = useAuth();
+  const { appBootstrapData, isBootstrapResolved, userData } = useAuth();
   const [allowBootstrapFallbackFetches, setAllowBootstrapFallbackFetches] = useState(false);
+  const revenueCatUserDocumentId = String(userData?.documentId || '').trim();
+
+  // Identité RevenueCat alignée sur la session (appUserID = documentId payeur,
+  // requis par le webhook serveur). No-op tant que la clé SDK est absente.
+  useEffect(() => {
+    syncRevenueCatIdentity(revenueCatUserDocumentId).catch((error) => {
+      console.warn('[SUBSCRIPTION] RevenueCat identity sync failed', error?.message || error);
+    });
+  }, [revenueCatUserDocumentId]);
   const shouldDeferHostFetchesOnWeb = Platform.OS === 'web';
   const bootstrapFallbackDelayMs = shouldDeferHostFetchesOnWeb
     ? getWebBackgroundHostsDelayMs()
