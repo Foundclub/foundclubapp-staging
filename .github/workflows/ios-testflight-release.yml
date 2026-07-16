@@ -61,6 +61,31 @@ jobs:
           echo "DEVELOPER_DIR=$XCODE_CANDIDATE/Contents/Developer" >> "$GITHUB_ENV"
           echo "Selected $XCODE_CANDIDATE"
 
+      - name: Ensure iOS platform (SDK) is installed
+        shell: bash
+        run: |
+          set -uo pipefail
+          # Depuis Xcode 16+, Apple livre les plateformes en telechargement separe et les images
+          # GitHub ne preinstallent pas toujours le SDK iOS -> xcodebuild echoue avec
+          # "iOS 26.0 is not installed / Unable to find a destination matching generic/platform=iOS".
+          echo "SDKs disponibles avant :"
+          xcodebuild -showsdks 2>/dev/null | grep -i ios || echo "  (aucun SDK iOS)"
+
+          if xcodebuild -showsdks 2>/dev/null | grep -qiE "iphoneos"; then
+            echo "SDK iOS deja present."
+          else
+            echo "SDK iOS absent -> telechargement de la plateforme (peut prendre ~10 min)..."
+            sudo xcodebuild -runFirstLaunch || true
+            xcodebuild -downloadPlatform iOS || sudo xcodebuild -downloadPlatform iOS
+          fi
+
+          echo "SDKs disponibles apres :"
+          xcodebuild -showsdks 2>/dev/null | grep -i ios || true
+          if ! xcodebuild -showsdks 2>/dev/null | grep -qiE "iphoneos"; then
+            echo "::error::Aucun SDK iOS installable sur ce runner apres -downloadPlatform iOS."
+            exit 1
+          fi
+
       - name: Validate Xcode and iOS SDK versions
         shell: bash
         run: |
