@@ -36,7 +36,10 @@ jobs:
           echo "Installed Xcode applications:"
           ls -1d /Applications/Xcode*.app 2>/dev/null || true
 
-          for candidate in /Applications/Xcode_26*.app /Applications/Xcode.app; do
+          # Ordre DECROISSANT de version : on prend le Xcode 26 le PLUS RECENT. Les images GitHub
+          # embarquent plusieurs Xcode 26.x mais ne provisionnent la plateforme iOS que sur les
+          # plus recents ; prendre le 1er du glob (26.0.1) donnait "iOS 26.0 Platform Not Installed".
+          for candidate in $(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -Vr) /Applications/Xcode.app; do
             if [ ! -x "$candidate/Contents/Developer/usr/bin/xcodebuild" ]; then
               continue
             fi
@@ -65,26 +68,23 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          # Depuis Xcode 16+, Apple livre les plateformes en telechargement separe et les images
-          # GitHub ne preinstallent pas toujours le SDK iOS -> xcodebuild echoue avec
-          # "iOS 26.0 is not installed / Unable to find a destination matching generic/platform=iOS".
-          echo "SDKs disponibles avant :"
-          xcodebuild -showsdks 2>/dev/null | grep -i ios || echo "  (aucun SDK iOS)"
+          # ⚠️ NE PAS conditionner sur `xcodebuild -showsdks` : il LISTE le SDK iOS meme quand la
+          # PLATEFORME n'est pas installee. Le SDK suffit a compiler le C/ObjC (les pods passent),
+          # mais ibtool echoue ensuite avec "LaunchScreen.storyboard: error: iOS 26.0 Platform Not
+          # Installed". On lance donc le telechargement INCONDITIONNELLEMENT (idempotent : no-op
+          # rapide si la plateforme est deja la, ~10 min sinon).
+          echo "SDKs avant :"
+          xcodebuild -showsdks 2>/dev/null | grep -i ios || echo "  (aucun)"
 
-          if xcodebuild -showsdks 2>/dev/null | grep -qiE "iphoneos"; then
-            echo "SDK iOS deja present."
-          else
-            echo "SDK iOS absent -> telechargement de la plateforme (peut prendre ~10 min)..."
-            sudo xcodebuild -runFirstLaunch || true
-            xcodebuild -downloadPlatform iOS || sudo xcodebuild -downloadPlatform iOS
-          fi
-
-          echo "SDKs disponibles apres :"
-          xcodebuild -showsdks 2>/dev/null | grep -i ios || true
-          if ! xcodebuild -showsdks 2>/dev/null | grep -qiE "iphoneos"; then
-            echo "::error::Aucun SDK iOS installable sur ce runner apres -downloadPlatform iOS."
+          sudo xcodebuild -runFirstLaunch || true
+          echo "Verification/telechargement de la plateforme iOS..."
+          xcodebuild -downloadPlatform iOS || sudo xcodebuild -downloadPlatform iOS || {
+            echo "::error::Echec de xcodebuild -downloadPlatform iOS sur ce runner."
             exit 1
-          fi
+          }
+
+          echo "SDKs apres :"
+          xcodebuild -showsdks 2>/dev/null | grep -i ios || true
 
       - name: Validate Xcode and iOS SDK versions
         shell: bash
