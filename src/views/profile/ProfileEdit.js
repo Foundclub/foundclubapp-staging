@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, Switch, Text, View,
+  Alert, KeyboardAvoidingView, Platform, Switch, Text, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -109,8 +109,8 @@ function ProfileEdit({ navigation, route }) {
   const {
     formatBirthdateToDisplay,
     formatBirthdateToSend,
+    getAuthTokens,
     profileFields,
-    refetchUserData,
     userData,
   } = useAuth();
   const { getGeohashForPointAndRadius } = usePlaces();
@@ -143,11 +143,26 @@ function ProfileEdit({ navigation, route }) {
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
-    onSuccess: async () => {
+    onError: () => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('profile.updateError', 'Impossible d\'enregistrer ton profil pour le moment. Vérifie ta connexion et réessaie.'),
+      );
+    },
+    onSuccess: async (updatedUser) => {
+      // La réponse du PUT est le profil à jour : on alimente le cache avec au
+      // lieu de refetcher — un GET immédiat peut encore être servi périmé par
+      // un réplica serveur. Fusion avec l'entrée existante : le PUT ne renvoie
+      // pas les teamMembershipRequests/clubMembershipRequests du GET /me.
+      const authToken = getAuthTokens()?.token || 'no-token';
+      queryClient.setQueryData(
+        ['get-me', authToken],
+        (previous) => (previous ? { ...previous, ...updatedUser } : updatedUser),
+      );
+      // Le bootstrap embarque aussi un userSummary : à re-fetcher.
       await queryClient.invalidateQueries({
-        predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'get-me',
+        predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'app-bootstrap',
       });
-      await refetchUserData?.();
       navigation.goBack();
     },
   });
