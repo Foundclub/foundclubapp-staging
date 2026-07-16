@@ -67,7 +67,7 @@ const isFlagEnabled = (rawValue, defaultValue = false) => {
   const normalized = String(rawValue).trim().toLowerCase();
   return normalized === '1' || normalized === 'true' || normalized === 'yes';
 };
-const isGroupChatEnabled = isFlagEnabled(process.env.FC_CHAT_GROUP_V1, false);
+const isGroupChatEnabled = isFlagEnabled(process.env.FC_CHAT_GROUP_V1, true);
 
 const toComparableId = (value) => (
   value === undefined || value === null ? '' : String(value).trim()

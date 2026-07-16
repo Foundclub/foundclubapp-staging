@@ -55,6 +55,8 @@
 	<string></string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>L'application Foundclub a besoin d'accéder à votre gallerie photo pour vous permettre de prendre une photo de profil.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>FoundClub enregistre ta carte de collection dans ta phototheque quand tu le demandes.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Montserrat-Black.ttf</string>

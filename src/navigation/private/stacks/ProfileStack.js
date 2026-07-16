@@ -7,6 +7,7 @@ import { HistoryWizardProvider } from '@/views/historyWizard/HistoryWizardContex
 import HistoryWizardLevel from '@/views/historyWizard/HistoryWizardLevel';
 import HistoryWizardPeriod from '@/views/historyWizard/HistoryWizardPeriod';
 import HistoryWizardRecap from '@/views/historyWizard/HistoryWizardRecap';
+import PlayerCardScreen from '@/views/profile/PlayerCardScreen';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
 import SubscriptionOverview from '@/views/profile/SubscriptionOverview';
@@ -59,6 +60,14 @@ function ProfileStack() {
         <Stack.Screen
           component={UserDetails}
           name={RouteNames.UserDetails}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          component={PlayerCardScreen}
+          name={RouteNames.PlayerCard}
           options={{
             ...commonOptions,
             headerTitle: '',

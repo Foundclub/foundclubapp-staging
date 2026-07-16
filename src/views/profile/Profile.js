@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Image,
   Platform,
   RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -17,18 +18,12 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
-import {
-  getSubscriptionPlanLabels,
-  getSubscriptionQuotaItems,
-  getSubscriptionStatusMeta,
-  getSubscriptionTeamSlotSummary,
-} from '@/domains/subscription/subscriptionDecision';
+import { getSubscriptionQuotaItems } from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import TabButton from '@/components/atoms/tabButton/TabButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -43,21 +38,17 @@ import { deleteAccount } from '@/services/auth/authService';
 
 /** @typedef {import('@/store/types').AuthSession} AuthSession */
 
-/**
- * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [subscriptionAccessLevel]
- * @returns {string}
- */
-const getSubscriptionChipBackgroundColor = (subscriptionAccessLevel) => {
-  switch (subscriptionAccessLevel) {
-    case 'CLUB':
-      return '#0F766E';
-    case 'CLUB_UNVERIFIED':
-      return '#B45309';
-    case 'TEAM':
-      return '#1D4ED8';
-    default:
-      return '#475569';
-  }
+// Design 13c « l'abonnement au centre » : jetons de surface locaux (translucides,
+// hors palette de tokens car spécifiques à cet écran).
+const SURFACE = {
+  cardBg: 'rgba(4,31,44,0.82)',
+  cardBorder: 'rgba(1,179,244,0.24)',
+  divider: 'rgba(255,255,255,0.08)',
+  iconTileClub: 'rgba(255,40,79,0.12)',
+  iconTileDefault: 'rgba(1,179,244,0.12)',
+  quotaTrack: 'rgba(255,255,255,0.08)',
+  sectionBg: 'rgba(255,255,255,0.04)',
+  sectionBorder: 'rgba(255,255,255,0.09)',
 };
 
 /**
@@ -67,7 +58,7 @@ const getSubscriptionChipBackgroundColor = (subscriptionAccessLevel) => {
  */
 function Profile({ navigation, route }) {
   const {
-    Alignments, ApplicationStyle, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const [{ fcmToken }] = useAppContext();
@@ -75,14 +66,11 @@ function Profile({ navigation, route }) {
     addAccount,
     authSessions,
     canEditClub,
-    canJoinClub,
     canManageTeam,
-    clubVerificationSummary,
     freeUsageSummary,
     logoutMutation,
     refetchUserData,
     subscriptionAccessLevel,
-    subscriptionSummary,
     switchAccount,
     userData,
     userDataError,
@@ -97,7 +85,6 @@ function Profile({ navigation, route }) {
   const canShowSubscriptionExperience = currentRoleKey === 'coach'
     || currentRoleKey === 'president'
     || currentRoleKey === 'superAdmin';
-  const isPresident = currentRoleKey === 'president';
   const isSuperAdmin = currentRoleKey === 'superAdmin';
   const multisportClubs = useMemo(
     () => userData?.multisportClubs || [],
@@ -117,61 +104,10 @@ function Profile({ navigation, route }) {
     return canEditClub(userData?.club?.documentId);
   }, [userData, canEditClub]);
 
-  const subscriptionStatusMeta = useMemo(
-    () => getSubscriptionStatusMeta(subscriptionAccessLevel),
-    [subscriptionAccessLevel],
-  );
-  const subscriptionPlanLabels = useMemo(
-    () => getSubscriptionPlanLabels(subscriptionSummary),
-    [subscriptionSummary],
-  );
   const visibleSubscriptionQuotaItems = useMemo(
     () => getSubscriptionQuotaItems(freeUsageSummary, subscriptionAccessLevel).slice(0, 2),
     [freeUsageSummary, subscriptionAccessLevel],
   );
-  const subscriptionTeamSlotSummary = useMemo(
-    () => getSubscriptionTeamSlotSummary(subscriptionSummary),
-    [subscriptionSummary],
-  );
-  const subscriptionVerificationLabel = useMemo(() => {
-    if (!clubVerificationSummary?.clubDocumentId) {
-      return t('profile.subscription.states.noClub', 'Sans club rattache');
-    }
-    if (clubVerificationSummary?.clubVerified === true) {
-      return t('profile.subscription.states.verified', 'Club verifie');
-    }
-    if (clubVerificationSummary?.requiresClubVerification === true) {
-      return t('profile.subscription.states.unverified', 'Verification en attente');
-    }
-    return t('profile.subscription.states.standard', 'Club non verifie');
-  }, [
-    clubVerificationSummary?.clubDocumentId,
-    clubVerificationSummary?.clubVerified,
-    clubVerificationSummary?.requiresClubVerification,
-    t,
-  ]);
-  const subscriptionSecondaryLabel = useMemo(() => {
-    if (visibleSubscriptionQuotaItems.length > 0) {
-      return null;
-    }
-    if (subscriptionTeamSlotSummary.total > 0) {
-      return t(
-        'profile.subscription.card.teamSlots',
-        '{{assigned}}/{{total}} slots Team utilises',
-        {
-          assigned: subscriptionTeamSlotSummary.assigned,
-          total: subscriptionTeamSlotSummary.total,
-        },
-      );
-    }
-    return subscriptionVerificationLabel;
-  }, [
-    subscriptionTeamSlotSummary.assigned,
-    subscriptionTeamSlotSummary.total,
-    subscriptionVerificationLabel,
-    t,
-    visibleSubscriptionQuotaItems.length,
-  ]);
 
   // Check if user is admin of a MultisportClub
   const canManageMultisportClub = useMemo(() => multisportClubs.length > 0, [multisportClubs]);
@@ -187,21 +123,15 @@ function Profile({ navigation, route }) {
     navigation.navigate(RouteNames.UserDetails);
   };
 
+  const handleOpenMyCard = () => {
+    navigation.navigate(RouteNames.PlayerCard);
+  };
+
   const handleOpenSubscriptionOverview = () => {
     if (!canShowSubscriptionExperience) {
       return;
     }
     navigation.navigate(RouteNames.SubscriptionOverview);
-  };
-
-  const handleFindClub = () => {
-    navigation.navigate(RouteNames.ClubStack, {
-      screen: RouteNames.ClubList,
-    });
-  };
-
-  const handleFindTeam = () => {
-    navigation.navigate(RouteNames.SearchClubs);
   };
 
   const handleLogout = () => {
@@ -302,8 +232,8 @@ function Profile({ navigation, route }) {
     const MAX_ACCOUNTS = 7;
     if (safeAuthSessions.length >= MAX_ACCOUNTS) {
       Alert.alert(
-        t('profile.alerts.maxAccounts.title', 'Limite atteinte'),
-        t('profile.alerts.maxAccounts.message', `Vous ne pouvez pas avoir plus de ${MAX_ACCOUNTS} comptes connectes.`),
+        t('profile.alerts.maxAccounts.title'),
+        t('profile.alerts.maxAccounts.message', { count: MAX_ACCOUNTS }),
       );
       return;
     }
@@ -318,148 +248,6 @@ function Profile({ navigation, route }) {
     }
 
     setIsAccountModalVisible(true);
-  };
-
-  const renderUserClub = () => {
-    const clubIdentitySize = 44;
-    const clubIdentityRadius = clubIdentitySize / 2;
-    const clubRowStyle = [
-      Alignments.row,
-      Alignments.alignCenter,
-      Spaces.gap[8],
-      { minWidth: 0, paddingRight: 4, width: '100%' },
-    ];
-
-    // Check if user has a regular club
-    if (userData?.club) {
-      return (
-        <TouchableOpacity
-          onPress={handleOpenClub}
-          style={clubRowStyle}
-        >
-          <ClubLogoMark
-            club={userData.club}
-            logoStyle={[
-              ApplicationStyle.borderWidth1,
-              ApplicationStyle.borderColor.neutral00,
-              { borderRadius: clubIdentityRadius },
-            ]}
-            size={clubIdentitySize}
-          />
-          <View style={[
-            { height: 24, width: 1 },
-            ApplicationStyle.backgroundColor.neutral300,
-          ]}
-          />
-          <Text
-            ellipsizeMode="tail"
-            numberOfLines={2}
-            style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, minWidth: 0 }]}
-          >
-            {userData?.club?.name}
-          </Text>
-        </TouchableOpacity>
-      );
-    }
-
-    // Check if user is admin of a MultisportClub (Dirigeant Omnisport)
-    if (multisportClubs.length > 0) {
-      const cm = multisportClubs[0];
-      return (
-        <TouchableOpacity
-          onPress={() => handleOpenMultisportClub(cm.documentId)}
-          style={clubRowStyle}
-        >
-          <ClubLogoMark
-            club={cm}
-            logoStyle={[
-              ApplicationStyle.borderWidth1,
-              ApplicationStyle.borderColor.primary500,
-              { borderRadius: clubIdentityRadius },
-            ]}
-            name={cm?.name || 'CM'}
-            size={clubIdentitySize}
-          />
-          <View style={[
-            { height: 24, width: 1 },
-            ApplicationStyle.backgroundColor.primary500,
-          ]}
-          />
-          <View style={[Spaces.gap[4], { flex: 1, minWidth: 0 }]}>
-            <Text
-              ellipsizeMode="tail"
-              numberOfLines={2}
-              style={[Fonts.p2Bold, Fonts.neutral00]}
-            >
-              {cm?.name}
-            </Text>
-            <View style={{
-              alignSelf: 'flex-start',
-              backgroundColor: '#01b3f4', // primary500
-              borderRadius: 3,
-              paddingHorizontal: 6,
-              paddingVertical: 1,
-            }}
-            >
-              <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: 'bold' }}>
-                CM
-              </Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      );
-    }
-
-    if (canJoinClub || isPresident) {
-      return (
-        <Button
-          isOption
-          onPress={handleFindClub}
-          title={t('profile.actions.findClub')}
-          variant="SecondaryLight"
-        />
-      );
-    }
-    if ((userData?.myTeams?.length || 0) > 0) {
-      const team = userData?.myTeams?.[0];
-      return team ? (
-        <TouchableOpacity
-          onPress={() => handleOpenTeam(team.documentId || '')}
-          style={clubRowStyle}
-        >
-          <ClubLogoMark
-            club={team?.club}
-            logoStyle={[
-              ApplicationStyle.borderWidth1,
-              ApplicationStyle.borderColor.neutral00,
-              { borderRadius: clubIdentityRadius },
-            ]}
-            name={team?.club?.name || team?.name}
-            size={clubIdentitySize}
-          />
-          <View style={[
-            { height: 24, width: 1 },
-            ApplicationStyle.backgroundColor.neutral300,
-          ]}
-          />
-          <Text
-            ellipsizeMode="tail"
-            numberOfLines={2}
-            style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, minWidth: 0 }]}
-          >
-            {team?.club?.name || team?.name}
-          </Text>
-        </TouchableOpacity>
-      ) : null;
-    }
-    return (
-      <Button
-        isOption
-        onPress={handleFindTeam}
-        title={t('profile.actions.findTeam')}
-        variant="SecondaryLight"
-      />
-    );
   };
 
   useFocusEffect(
@@ -477,94 +265,406 @@ function Profile({ navigation, route }) {
   const isProfileMainTutorial = activeProfileTutorialId === TutorialIds.PROFILE_MAIN;
   const isAccountSwitcherTutorial = activeProfileTutorialId === TutorialIds.ACCOUNT_SWITCHER_MODAL;
   const isLogoutTutorial = activeProfileTutorialId === TutorialIds.LOGOUT_CONFIRMATION;
-  const profileSectionTitleStyle = [Fonts.label, Fonts.neutral300];
 
-  const profileActionsContent = (
-    <View style={[
-      Spaces.gap[18],
-      { marginTop: 4 }]}
-    >
-      <View style={[Spaces.gap[12]]}>
-        {isSuperAdmin ? (
-          <Text style={profileSectionTitleStyle}>
-            {t('profile.sections.classicAccount', 'Compte classique')}
-          </Text>
-        ) : null}
-        <TabButton
-          isActive={false}
-          onPress={handleViewProfile}
-          title={t('profile.actions.view', 'Voir mon profil')}
-        />
-        <TabButton
-          isActive={false}
-          onPress={handleEditUser}
-          title={t('profile.actions.edit')}
-        />
-        {canManageClub ? (
-          <TabButton
-            isActive={false}
-            onPress={handleOpenClub}
-            title={t('profile.actions.manageClub')}
-          />
-        ) : null}
-        {canManageMultisportClub && firstMultisportClub ? (
-          <TabButton
-            isActive={false}
-            onPress={() => handleOpenMultisportClub(firstMultisportClub.documentId)}
-            title={t('profile.actions.manageClub', 'G\u00e9rer mon club')}
-          />
-        ) : null}
-        <TabButton
-          isActive={false}
-          onPress={() => navigation.navigate(RouteNames.SearchAlerts)}
-          title={t('profile.actions.manageAlerts', 'G\u00e9rer mes alertes')}
-        />
-        {canManageTeam ? (
-          <TabButton
-            isActive={false}
-            onPress={handleOpenRequestsHub}
-            title={t('profile.actions.manageRequests', 'Gerer mes demandes')}
-          />
-        ) : null}
-        <TabButton
-          isActive={false}
-          onPress={handleToggleAccountSwitcher}
-          title={t('profile.actions.switchAccount', 'Changer de compte')}
-        />
-      </View>
+  // ----- Identité compacte -----
+  const identityFirstName = userData?.firstname || '';
+  const identityLastName = userData?.lastname || '';
+  const identityFullName = `${identityFirstName} ${identityLastName}`.trim();
+  const identityInitials = `${identityFirstName.charAt(0)}${identityLastName.charAt(0)}`.toUpperCase();
+  const identityRoleLabel = t(`profile.identity.roles.${currentRoleKey}`, t('profile.identity.roles.new'));
+  const identityClubName = userData?.club?.name
+    || firstMultisportClub?.name
+    || userData?.myTeams?.[0]?.club?.name
+    || userData?.myTeams?.[0]?.name
+    || '';
+  const identitySubline = identityClubName
+    ? t('profile.identity.roleWithClub', { club: identityClubName, role: identityRoleLabel })
+    : identityRoleLabel;
+  let identityClub = null;
+  let identityClubOnPress = null;
+  if (userData?.club) {
+    identityClub = userData.club;
+    identityClubOnPress = handleOpenClub;
+  } else if (firstMultisportClub) {
+    identityClub = firstMultisportClub;
+    identityClubOnPress = () => handleOpenMultisportClub(firstMultisportClub.documentId);
+  } else if (userData?.myTeams?.[0]) {
+    identityClub = userData.myTeams[0].club || userData.myTeams[0];
+    identityClubOnPress = () => handleOpenTeam(userData.myTeams[0].documentId || '');
+  }
 
-      {isSuperAdmin ? (
-        <View style={[Spaces.gap[12]]}>
-          <Text style={profileSectionTitleStyle}>
-            {t('profile.sections.superAdmin', 'Administration')}
+  const identityContent = (
+    <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+      {userData?.avatar?.url ? (
+        <ProfileAvatar
+          imageStyle={{ borderRadius: 27 }}
+          imageUrl={userData?.avatar?.url}
+          size={54}
+          style={[
+            ApplicationStyle.borderColor.neutral00,
+            ApplicationStyle.borderWidth1,
+            { borderRadius: 27 },
+          ]}
+        />
+      ) : (
+        <View style={{
+          alignItems: 'center',
+          backgroundColor: 'rgba(1,179,244,0.16)',
+          borderColor: 'rgba(1,179,244,0.35)',
+          borderRadius: 27,
+          borderWidth: 1,
+          height: 54,
+          justifyContent: 'center',
+          width: 54,
+        }}
+        >
+          <Text style={[Fonts.neutral00, { fontFamily: 'Montserrat-Bold', fontSize: 18 }]}>
+            {identityInitials || '?'}
           </Text>
-          <TabButton
-            isActive={false}
-            onPress={() => navigation.navigate(RouteNames.AdminStack, {
-              screen: RouteNames.AdminDashboard,
-            })}
-            title={t('profile.actions.adminDashboardClassic', 'Dashboard admin classique')}
-          />
-          <TabButton
-            isActive={false}
-            onPress={() => navigation.navigate(RouteNames.AdminStack, {
-              screen: RouteNames.SuperAdminHome,
-            })}
-            title={t('profile.actions.superAdminLeagueDashboard', 'Dashboard League')}
-          />
         </View>
+      )}
+      <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+        <Text numberOfLines={1} style={[Fonts.neutral00, { fontFamily: 'Montserrat-Bold', fontSize: 17 }]}>
+          {identityFullName}
+        </Text>
+        <Text numberOfLines={1} style={{ color: Colors.neutral300, fontSize: 12 }}>
+          {identitySubline}
+        </Text>
+      </View>
+      {identityClub ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          disabled={!identityClubOnPress}
+          onPress={identityClubOnPress || undefined}
+        >
+          <ClubLogoMark
+            club={identityClub}
+            logoStyle={[
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.neutral00,
+              { borderRadius: 17 },
+            ]}
+            name={identityClub?.name}
+            size={34}
+          />
+        </TouchableOpacity>
       ) : null}
     </View>
   );
 
+  // ----- Carte abonnement (chip 4 états + jauges humaines) -----
+  const subscriptionChip = useMemo(() => {
+    switch (subscriptionAccessLevel) {
+      case 'CLUB':
+        return {
+          container: { backgroundColor: 'rgba(133,103,255,0.16)', borderColor: 'rgba(133,103,255,0.55)' },
+          label: t('profile.subscription.states.club'),
+          showClock: false,
+          textColor: Colors.violet200,
+        };
+      case 'CLUB_UNVERIFIED':
+        return {
+          container: { backgroundColor: 'rgba(133,103,255,0.10)', borderColor: 'rgba(133,103,255,0.45)' },
+          label: t('profile.subscription.states.clubUnverified'),
+          showClock: true,
+          textColor: Colors.violet200,
+        };
+      case 'TEAM':
+        return {
+          container: { backgroundColor: 'rgba(1,179,244,0.12)', borderColor: 'rgba(1,179,244,0.45)' },
+          label: t('profile.subscription.states.team'),
+          showClock: false,
+          textColor: Colors.primary200,
+        };
+      default:
+        return {
+          container: { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.22)' },
+          label: t('profile.subscription.states.free'),
+          showClock: false,
+          textColor: Colors.neutral200,
+        };
+    }
+  }, [subscriptionAccessLevel, Colors, t]);
+
+  const subscriptionStatusKey = {
+    CLUB: 'club',
+    CLUB_UNVERIFIED: 'clubUnverified',
+    FREE: 'free',
+    TEAM: 'team',
+  }[subscriptionAccessLevel] || 'free';
+
+  const renderQuotaGauge = (item) => {
+    const remaining = Number(item.remaining) || 0;
+    const total = Number(item.total) || 0;
+    const isAvailable = remaining > 0;
+    const ratio = total > 0 ? Math.min(1, Math.max(0, remaining / total)) : 0;
+    const label = t(`profile.subscription.quota.labels.${item.quotaType}`, item.label);
+    const value = isAvailable
+      ? t('profile.subscription.quota.remaining', { count: remaining })
+      : t('profile.subscription.quota.used');
+
+    return (
+      <View key={item.quotaType} style={{ gap: 6 }}>
+        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, { gap: 8 }]}>
+          <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 12.5 }}>
+            {label}
+          </Text>
+          <Text style={{ color: isAvailable ? Colors.primary200 : Colors.neutral400, fontSize: 12 }}>
+            {value}
+          </Text>
+        </View>
+        <View style={{
+          backgroundColor: SURFACE.quotaTrack, borderRadius: 3, height: 5, overflow: 'hidden',
+        }}
+        >
+          <View style={{
+            backgroundColor: Colors.primary500,
+            borderRadius: 3,
+            height: 5,
+            width: `${isAvailable ? ratio * 100 : 0}%`,
+          }}
+          />
+        </View>
+      </View>
+    );
+  };
+
+  const subscriptionCard = canShowSubscriptionExperience ? (
+    <View style={{
+      backgroundColor: SURFACE.cardBg,
+      borderColor: SURFACE.cardBorder,
+      borderRadius: 18,
+      borderWidth: 1,
+      gap: 14,
+      padding: 16,
+    }}
+    >
+      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, { gap: 12 }]}>
+        <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Black', fontSize: 15 }}>
+          {t('profile.subscription.title')}
+        </Text>
+        <View style={[
+          Alignments.row,
+          Alignments.alignCenter,
+          {
+            borderRadius: 999,
+            borderWidth: 1,
+            gap: 4,
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+          },
+          subscriptionChip.container,
+        ]}
+        >
+          {subscriptionChip.showClock ? (
+            <Image
+              source={Images.clock}
+              style={{ height: 11, tintColor: subscriptionChip.textColor, width: 11 }}
+            />
+          ) : null}
+          <Text style={{ color: subscriptionChip.textColor, fontFamily: 'Montserrat-Bold', fontSize: 11 }}>
+            {subscriptionChip.label}
+          </Text>
+        </View>
+      </View>
+
+      {visibleSubscriptionQuotaItems.length ? (
+        <View style={{ gap: 12 }}>
+          {visibleSubscriptionQuotaItems.map(renderQuotaGauge)}
+        </View>
+      ) : (
+        <Text style={{ color: Colors.neutral200, fontSize: 12.5, lineHeight: 18 }}>
+          {t(`profile.subscription.status.${subscriptionStatusKey}`)}
+        </Text>
+      )}
+
+      <View style={{ backgroundColor: SURFACE.divider, height: 1 }} />
+
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={handleOpenSubscriptionOverview}
+        style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}
+      >
+        <Text style={{ color: Colors.primary500, fontFamily: 'Montserrat-Bold', fontSize: 12.5 }}>
+          {t('profile.subscription.cta')}
+        </Text>
+        <Image source={Images.arrowRight} style={[ApplicationStyle.icon16, ApplicationStyle.tintColor.primary500]} />
+      </TouchableOpacity>
+    </View>
+  ) : null;
+
+  // ----- Rangées de section -----
+  const sectionLabelStyle = {
+    color: Colors.neutral300,
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 11.5,
+    letterSpacing: 0.6,
+    textTransform: /** @type {const} */ ('uppercase'),
+  };
+  const sectionCardStyle = {
+    backgroundColor: SURFACE.sectionBg,
+    borderColor: SURFACE.sectionBorder,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+  };
+
+  /**
+   * @param {{ key: string, icon: any, label: string, onPress: () => void,
+   *   destructive?: boolean, isLast?: boolean }} params
+   */
+  const renderAccountRow = ({
+    destructive = false, icon, isLast = false, key, label, onPress,
+  }) => (
+    <TouchableOpacity
+      accessibilityRole="button"
+      key={key}
+      onPress={onPress}
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        {
+          gap: 12,
+          minHeight: 48,
+          paddingVertical: 12,
+        },
+        !isLast && { borderBottomColor: SURFACE.divider, borderBottomWidth: 1 },
+      ]}
+    >
+      <View style={{
+        alignItems: 'center',
+        backgroundColor: destructive ? SURFACE.iconTileClub : SURFACE.iconTileDefault,
+        borderRadius: 9,
+        height: 30,
+        justifyContent: 'center',
+        width: 30,
+      }}
+      >
+        <Image
+          source={icon}
+          style={{ height: 16, tintColor: destructive ? Colors.error300 : Colors.primary200, width: 16 }}
+        />
+      </View>
+      <Text
+        numberOfLines={1}
+        style={{
+          color: destructive ? Colors.error300 : Colors.neutral00,
+          flex: 1,
+          fontFamily: 'Montserrat-Bold',
+          fontSize: 13.5,
+        }}
+      >
+        {label}
+      </Text>
+      {destructive ? null : (
+        <Image source={Images.arrowRight} style={[ApplicationStyle.icon16, ApplicationStyle.tintColor.neutral400]} />
+      )}
+    </TouchableOpacity>
+  );
+
+  const activityRows = [
+    {
+      icon: Images.trophy, key: 'myCard', label: t('profile.actions.myCard', 'Ma carte de collection'), onPress: handleOpenMyCard,
+    },
+    {
+      icon: Images.users, key: 'view', label: t('profile.actions.view'), onPress: handleViewProfile,
+    },
+    {
+      icon: Images.edit, key: 'edit', label: t('profile.actions.edit'), onPress: handleEditUser,
+    },
+    ...(canManageClub ? [{
+      icon: Images.shield, key: 'manageClub', label: t('profile.actions.manageClub'), onPress: handleOpenClub,
+    }] : []),
+    ...(canManageMultisportClub && firstMultisportClub ? [{
+      icon: Images.shield,
+      key: 'manageMultisportClub',
+      label: t('profile.actions.manageClub'),
+      onPress: () => handleOpenMultisportClub(firstMultisportClub.documentId),
+    }] : []),
+    {
+      icon: Images.bell,
+      key: 'alerts',
+      label: t('profile.actions.manageAlerts'),
+      onPress: () => navigation.navigate(RouteNames.SearchAlerts),
+    },
+    ...(canManageTeam ? [{
+      icon: Images.envelope, key: 'requests', label: t('profile.actions.manageRequests'), onPress: handleOpenRequestsHub,
+    }] : []),
+  ];
+
+  const profileActivitySection = (
+    <View style={{ gap: 10 }}>
+      <Text style={sectionLabelStyle}>{t('profile.sections.profileActivity')}</Text>
+      <View style={sectionCardStyle}>
+        {activityRows.map((row, index) => renderAccountRow({
+          ...row,
+          isLast: index === activityRows.length - 1,
+        }))}
+      </View>
+    </View>
+  );
+
+  const accountNonLogoutRows = [
+    {
+      icon: Images.share2,
+      key: 'switchAccount',
+      label: t('profile.actions.switchAccount'),
+      onPress: handleToggleAccountSwitcher,
+    },
+    ...(isSuperAdmin ? [
+      {
+        icon: Images.shield,
+        key: 'adminDashboardClassic',
+        label: t('profile.actions.adminDashboardClassic'),
+        onPress: () => navigation.navigate(RouteNames.AdminStack, { screen: RouteNames.AdminDashboard }),
+      },
+      {
+        icon: Images.flag,
+        key: 'superAdminLeagueDashboard',
+        label: t('profile.actions.superAdminLeagueDashboard'),
+        onPress: () => navigation.navigate(RouteNames.AdminStack, { screen: RouteNames.SuperAdminHome }),
+      },
+    ] : []),
+  ];
+
+  const logoutRow = renderAccountRow({
+    destructive: true,
+    icon: Images.arrowRight,
+    isLast: true,
+    key: 'logout',
+    label: t('profile.actions.logout'),
+    onPress: handleLogout,
+  });
+
+  const accountSection = (
+    <View style={{ gap: 10 }}>
+      <Text style={sectionLabelStyle}>{t('profile.sections.account')}</Text>
+      <View style={sectionCardStyle}>
+        {/* Les rangées non destructives gardent toujours un trait (la déconnexion suit). */}
+        {accountNonLogoutRows.map((row) => renderAccountRow({ ...row, isLast: false }))}
+        {isLogoutTutorial ? (
+          <OnboardingWrapper
+            description="Ce bouton lance la confirmation de déconnexion de ta session."
+            id="profile-logout-action"
+            order={2}
+            spotlight={{
+              borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
+            }}
+            title="Déconnexion"
+          >
+            {logoutRow}
+          </OnboardingWrapper>
+        ) : logoutRow}
+      </View>
+    </View>
+  );
+
+  // ----- Bascule de compte (modal / panneau web) : logique inchangée -----
   const accountSwitcherContent = (
     <View style={[Spaces.gap[12], Spaces.paddingVertical[16]]}>
       {!hasMultipleConnectedAccounts ? (
         <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {t(
-            'profile.accountSwitcher.singleAccountHint',
-            'Ce compte est le seul connecte sur cet appareil. Vous pouvez en ajouter un autre ou vous deconnecter.',
-          )}
+          {t('profile.accountSwitcher.singleAccountHint')}
         </Text>
       ) : null}
       {safeAuthSessions.map((session, index) => {
@@ -609,10 +709,10 @@ function Profile({ navigation, route }) {
               </Text>
             </View>
             {switchingAccountId === (session?.user?.documentId || session?.user?.id) && (
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>Changement...</Text>
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>{t('profile.accountSwitcher.switching')}</Text>
             )}
             {isCurrent && switchingAccountId !== (session?.user?.documentId || session?.user?.id) && (
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>Actif</Text>
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>{t('profile.accountSwitcher.active')}</Text>
             )}
           </TouchableOpacity>
         );
@@ -620,14 +720,14 @@ function Profile({ navigation, route }) {
 
       <Button
         onPress={handleAddAccount}
-        title={t('profile.actions.addAccount', 'Ajouter un compte')}
+        title={t('profile.actions.addAccount')}
         variant="Secondary"
       />
       <Button
         disabled={logoutMutation.isPending}
         isLoading={logoutMutation.isPending}
         onPress={handleLogoutFromAccountSwitcher}
-        title={t('profile.actions.logout', 'Déconnexion')}
+        title={t('profile.actions.logout')}
         variant="Secondary"
       />
     </View>
@@ -646,11 +746,11 @@ function Profile({ navigation, route }) {
     >
       <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-          {t('profile.actions.switchAccount', 'Changer de compte')}
+          {t('profile.accountSwitcher.title')}
         </Text>
         <TouchableOpacity onPress={() => setIsAccountModalVisible(false)}>
           <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-            {t('common.close', 'Fermer')}
+            {t('profile.accountSwitcher.close')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -660,7 +760,7 @@ function Profile({ navigation, route }) {
 
   const accountSwitcherTutorialContent = isAccountSwitcherTutorial ? (
     <OnboardingWrapper
-      description="Choisissez un compte actif ou ajoutez un nouveau compte connecte."
+      description="Choisis un compte actif ou ajoute un nouveau compte connecté."
       id="profile-account-switcher-modal"
       order={1}
       spotlight={{
@@ -689,36 +789,23 @@ function Profile({ navigation, route }) {
       <ScreenContainer
         bgImage="bg2"
         contentContainerStyle={[
-          Spaces.gap[32],
           Spaces.paddingTop[0],
           Spaces.paddingBottom[12],
-          Alignments.justifySpaceBetween,
           Alignments.fill,
         ]}
       >
-        <View style={[
-          Alignments.justifyCenter,
-          Alignments.alignCenter,
-          Spaces.gap[12]]}
-        >
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+        {/* En-tête : titre centré. La flèche retour ronde est fournie par le header natif de la stack. */}
+        <View style={[Alignments.alignCenter, { gap: 8 }]}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}>
             {t('profile.titles.profile').toUpperCase()}
           </Text>
-          <View style={[
-            ApplicationStyle.separator,
-            ApplicationStyle.backgroundColor.neutral00,
-            { width: 98 }]}
-          />
-          <View style={[{ maxWidth: '80%' }, Alignments.alignCenter]}>
-            <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.primary500]}>
-              {userData?.role?.name?.toUpperCase()}
-            </Text>
-          </View>
+          <View style={{ backgroundColor: Colors.neutral00, height: 2, width: 80 }} />
         </View>
+
         <ScrollView
-          contentContainerStyle={[
-            Spaces.gap[32],
-          ]}
+          contentContainerStyle={{
+            flexGrow: 1, gap: 18, paddingBottom: 8, paddingTop: 20,
+          }}
           refreshControl={(
             <RefreshControl
               onRefresh={() => {
@@ -730,130 +817,18 @@ function Profile({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
-
           <WithDataWrapper
             error={userDataError?.message}
             isLoading={userDataLoading}
           >
-            <View
-              style={[
-                Alignments.row,
-                Alignments.alignStart,
-                Spaces.gap[16],
-              ]}
-            >
-              <ProfileAvatar
-                imageStyle={{ borderRadius: 80 }}
-                imageUrl={userData?.avatar?.url}
-                size={80}
-                style={[
-                  ApplicationStyle.borderColor.neutral00,
-                  ApplicationStyle.borderWidth1,
-                  { borderRadius: 80 },
-                ]}
-              />
-              {userData?.firstname && userData?.lastname && (
-              <View style={[
-                { flex: 1, minWidth: 0 },
-                Alignments.justifyStart,
-                Alignments.alignStart,
-                Spaces.gap[12],
-              ]}
-              >
-                <Text
-                  numberOfLines={2}
-                  style={[
-                    Fonts.h4Black,
-                    Fonts.neutral00]}
-                >
-                  {`${userData.firstname} ${userData.lastname?.toUpperCase()}`}
-                </Text>
-                {renderUserClub()}
-              </View>
-              )}
-            </View>
+            {identityContent}
           </WithDataWrapper>
-          {canShowSubscriptionExperience ? (
-            <TouchableOpacity
-              onPress={handleOpenSubscriptionOverview}
-              style={[
-                Spaces.gap[12],
-                Spaces.padding[16],
-                ApplicationStyle.borderRadius12,
-                ApplicationStyle.borderWidth1,
-                ApplicationStyle.borderColor.primary100,
-                ApplicationStyle.backgroundColor.primary700,
-              ]}
-            >
-              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                    {t('profile.subscription.card.title', 'Abonnement FoundClub')}
-                  </Text>
-                  <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral200]}>
-                    {subscriptionPlanLabels[0]
-                      || t('profile.subscription.card.freePlan', 'Offre gratuite FoundClub')}
-                  </Text>
-                </View>
-                <View style={[
-                  Spaces.paddingHorizontal[12],
-                  Spaces.paddingVertical[8],
-                  ApplicationStyle.borderRadius12,
-                  {
-                    backgroundColor: getSubscriptionChipBackgroundColor(subscriptionAccessLevel),
-                  },
-                ]}
-                >
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {subscriptionStatusMeta.label}
-                  </Text>
-                </View>
-              </View>
 
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                {subscriptionAccessLevel === 'CLUB_UNVERIFIED'
-                  ? t(
-                    'profile.subscription.card.unverifiedDescription',
-                    'Paiement Club actif, verification dirigeant encore requise.',
-                  )
-                  : subscriptionStatusMeta.description}
-              </Text>
+          {subscriptionCard}
 
-              {visibleSubscriptionQuotaItems.length ? (
-                <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                  {visibleSubscriptionQuotaItems.map((item) => (
-                    <View
-                      key={item.quotaType}
-                      style={[
-                        Spaces.paddingHorizontal[12],
-                        Spaces.paddingVertical[8],
-                        ApplicationStyle.borderRadius12,
-                        ApplicationStyle.backgroundColor.neutral700,
-                      ]}
-                    >
-                      <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                        {item.label}
-                      </Text>
-                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                        {`${item.remaining}/${item.total}`}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <Text style={[Fonts.p2, Fonts.primary100]}>
-                  {subscriptionSecondaryLabel}
-                </Text>
-              )}
-
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                {t('profile.subscription.card.cta', 'Voir le detail')}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
           {isProfileMainTutorial ? (
             <OnboardingWrapper
-              description="Depuis cette zone, vous pouvez modifier votre profil, gerer vos demandes et changer de compte."
+              description="Depuis cette zone, tu peux consulter ton profil, gérer tes demandes et changer de compte."
               id="profile-main-actions"
               order={1}
               spotlight={{
@@ -861,42 +836,24 @@ function Profile({ navigation, route }) {
               }}
               title="Actions profil"
             >
-              {profileActionsContent}
+              {profileActivitySection}
             </OnboardingWrapper>
-          ) : profileActionsContent}
-          {Platform.OS === 'web' && isAccountModalVisible ? accountSwitcherTutorialContent : null}
+          ) : profileActivitySection}
 
-          {isLogoutTutorial ? (
-            <OnboardingWrapper
-              description="Ce bouton lance la confirmation de deconnexion de votre session."
-              id="profile-logout-action"
-              order={2}
-              spotlight={{
-                borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
-              }}
-              title="Deconnexion"
-            >
-              <Button
-                onPress={handleLogout}
-                title={t('profile.actions.logout')}
-                variant="Secondary"
-              />
-            </OnboardingWrapper>
-          ) : (
-            <Button
-              onPress={handleLogout}
-              title={t('profile.actions.logout')}
-              variant="Secondary"
-            />
-          )}
-          <View style={[Alignments.fullWidth, Alignments.alignCenter]}>
-            <TouchableOpacity onPress={handleDeleteAccount}>
-              <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
-                {t('profile.actions.deleteAccount')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {accountSection}
+
+          {Platform.OS === 'web' && isAccountModalVisible ? accountSwitcherTutorialContent : null}
         </ScrollView>
+
+        {/* Pied fixe : lien discret, toujours visible sous la liste (design 13c). */}
+        <View style={[Alignments.fullWidth, Alignments.alignCenter, { paddingTop: 12 }]}>
+          <TouchableOpacity onPress={handleDeleteAccount}>
+            <Text style={[Fonts.p2, Fonts.neutral300, Fonts.underlineText]}>
+              {t('profile.actions.deleteAccount')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {Platform.OS === 'web' ? null : (
           <BottomModal
             close={() => setIsAccountModalVisible(false)}
@@ -907,7 +864,7 @@ function Profile({ navigation, route }) {
           >
             {isAccountSwitcherTutorial ? (
               <OnboardingWrapper
-                description="Choisissez un compte actif ou ajoutez un nouveau compte connecte."
+                description="Choisis un compte actif ou ajoute un nouveau compte connecté."
                 id="profile-account-switcher-modal"
                 order={1}
                 spotlight={{
