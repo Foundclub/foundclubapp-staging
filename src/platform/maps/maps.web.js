@@ -319,7 +319,7 @@ function SearchMapIframeRuntime({
         </View>
       ) : null}
 
-      {mapStatus === 'ready' && items.length === 0 ? (
+      {mapStatus === 'ready' && items.length === 0 && (!renderItems || renderItems.length === 0) ? (
         <View
           style={{
             alignItems: 'center',
@@ -403,7 +403,9 @@ export const renderMap = ({
         renderItems={renderItems}
         renderStats={renderStats}
         selectedItemId={selectedItemId}
-        tileAttribution={TOMTOM_TILE_PROVIDER.attribution}
+        tileAttribution={tomTomApiKey
+          ? TOMTOM_TILE_PROVIDER.attribution
+          : LEGACY_TILE_PROVIDER.attribution}
         tileProbeUrl={tomTomApiKey ? buildTomTomProbeUrl(tomTomApiKey) : ''}
         tileUrl={tomTomApiKey ? buildTomTomTileUrl(tomTomApiKey) : ''}
         userLocation={userLocation}

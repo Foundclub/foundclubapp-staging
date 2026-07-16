@@ -86,6 +86,7 @@ const resolveMeasuredOverlayInsets = (
  * @returns {import('react').ReactElement}
  */
 function SearchMap({
+  aggregates = null,
   focusedViewport = null,
   height = 360,
   isLoadingResults = false,
@@ -135,10 +136,11 @@ function SearchMap({
   const activeViewport = visibleViewport || focusedViewport || focusedRegion || regionHint || null;
   const renderModel = useMemo(
     () => buildSearchMapRenderableModel({
+      aggregates,
       items,
       viewport: activeViewport,
     }),
-    [activeViewport, items],
+    [activeViewport, aggregates, items],
   );
   const renderItems = renderModel.entries;
   const renderStats = renderModel.stats;
@@ -349,7 +351,7 @@ function SearchMap({
         }}
       >
         <SearchMapHud
-          geolocatableCount={items.length}
+          geolocatableCount={renderStats.aggregated ? totalResults : items.length}
           isLoadingResults={isLoadingResults}
           onControlsWidthChange={setHudControlsWidth}
           onLocateMe={handleLocateMe}

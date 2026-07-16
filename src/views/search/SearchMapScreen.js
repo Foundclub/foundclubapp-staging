@@ -59,7 +59,9 @@ import { navigateToSearchMapDetail } from '@/platform/maps/searchMapDetailNaviga
 const logger = createLogger('search-map-screen');
 const SearchMapView = /** @type {any} */ (SearchMap);
 const DEFAULT_RADIUS = 20;
-const MIN_CLUB_MAP_QUERY_ZOOM = 9;
+// Aligné sur MIN_CLUB_MAP_SAMPLED_ZOOM côté backend : le chemin carte échantillonné
+// supporte les zooms nationaux, la carte n'est plus vide à l'ouverture.
+const MIN_CLUB_MAP_QUERY_ZOOM = 4;
 const MIN_EVENT_MAP_QUERY_ZOOM = 10;
 const MOVE_THRESHOLD = 0.005;
 const DEFAULT_MAP_ASPECT_RATIO = 0.58;
@@ -1344,6 +1346,11 @@ function SearchMapScreen({ navigation, route }) {
     [clubMapQuery.data?.pages],
   );
   const clubMapMeta = clubMapQuery?.data?.pages?.[0]?.meta || null;
+  // Vue large : le backend renvoie des agrégats de densité (compte + centroïde)
+  // au lieu de clubs individuels — rendus comme clusters par la carte.
+  const clubMapAggregates = isClubScope && Array.isArray(clubMapMeta?.aggregates)
+    ? clubMapMeta.aggregates
+    : null;
 
   const reservationItems = useMemo(
     () => getActiveQueryItems(
@@ -2287,6 +2294,7 @@ function SearchMapScreen({ navigation, route }) {
             </View>
           ) : (
             <SearchMapView
+              aggregates={clubMapAggregates}
               focusedViewport={executedViewport || currentViewport || null}
               height={mapHeight}
               isLoadingResults={Boolean(isLoading || isSubmittingRegionSearch)}

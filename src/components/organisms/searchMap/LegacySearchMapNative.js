@@ -144,6 +144,7 @@ const resolveOverlayInsets = (
  * @returns {import('react').ReactElement}
  */
 function LegacySearchMapNative({
+  aggregates = null,
   focusedViewport = null,
   height = 360,
   isLoadingResults = false,
@@ -213,10 +214,11 @@ function LegacySearchMapNative({
   );
   const renderModel = useMemo(
     () => buildSearchMapRenderableModel({
+      aggregates,
       items,
       viewport: activeViewport,
     }),
-    [activeViewport, items],
+    [activeViewport, aggregates, items],
   );
   const renderItems = renderModel.entries;
   const renderStats = renderModel.stats;
@@ -583,7 +585,7 @@ function LegacySearchMapNative({
         <View style={[Alignments.row, Alignments.alignStart, Alignments.justifySpaceBetween]}>
           <SearchMapHud
             disabled={areControlsDisabled}
-            geolocatableCount={items.length}
+            geolocatableCount={renderModel.stats.aggregated ? totalResults : items.length}
             isLoadingResults={isLoadingResults}
             onControlsWidthChange={setHudControlsWidth}
             onLocateMe={requestUserLocation}
@@ -735,7 +737,7 @@ function LegacySearchMapNative({
         </View>
       ) : null}
 
-      {isMapReady && items.length === 0 ? (
+      {isMapReady && items.length === 0 && renderModel.entries.length === 0 ? (
         <View
           pointerEvents="none"
           style={[

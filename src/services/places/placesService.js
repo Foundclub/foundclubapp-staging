@@ -4,7 +4,9 @@ import client from '../client';
 
 /** @typedef {import('./types').Place} Place */
 
-const BAN_BASE_URL = 'https://api-adresse.data.gouv.fr';
+// api-adresse.data.gouv.fr est décommissionnée (sunset 31/01/2026) :
+// la BAN est servie par la Géoplateforme IGN.
+const BAN_BASE_URL = 'https://data.geopf.fr/geocodage';
 const DEFAULT_SEARCH_LIMIT = 20;
 const GEO_SEARCH_PATH = '/geo/search';
 const POI_HINT_KEYWORDS = ['stade', 'complexe', 'gymnase', 'arena', 'club', 'terrain', 'urban', 'soccer', 'padel', 'five'];

@@ -1,11 +1,14 @@
 import LEAFLET_CSS_SOURCE from '@/platform/maps/vendor/leafletCssSource';
 import LEAFLET_JS_SOURCE from '@/platform/maps/vendor/leafletJsSource';
 
-const OSM_TILE_ATTRIBUTION = 'OpenStreetMap';
+// Attribution © + contributeurs exigée par la Tile Usage Policy OSM.
+const OSM_TILE_ATTRIBUTION = '© OpenStreetMap contributors';
+// OSM n'expose que les miroirs a/b/c (pas de d.tile.openstreetmap.org).
+const OSM_TILE_SUBDOMAINS = ['a', 'b', 'c'];
 const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const SEARCH_MAP_BRIDGE_SOURCE = 'foundclub-search-map';
 const SEARCH_MAP_HOST_SOURCE = 'foundclub-search-map-host';
-const TOMTOM_TILE_ATTRIBUTION = 'TomTom';
+const TOMTOM_TILE_ATTRIBUTION = '© TomTom';
 const TOMTOM_TILE_SUBDOMAINS = ['a', 'b', 'c', 'd'];
 const TOMTOM_TILE_STYLE = 'basic/night';
 
@@ -229,13 +232,16 @@ export const buildSearchMapRuntimeHtml = ({
         left: 12px;
         padding: 7px 10px;
         position: absolute;
+        text-decoration: none;
         z-index: 900;
       }
     </style>
   </head>
   <body>
     <div id="map"></div>
-    <div class="fc-provider-badge">${escapeHtml(tileAttribution)}</div>
+    ${/openstreetmap/i.test(String(tileAttribution || ''))
+    ? `<a class="fc-provider-badge" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">${escapeHtml(tileAttribution)}</a>`
+    : `<div class="fc-provider-badge">${escapeHtml(tileAttribution)}</div>`}
     <script>
       ${LEAFLET_JS_SOURCE}
 
@@ -468,8 +474,18 @@ export const buildSearchMapRuntimeHtml = ({
           });
         };
 
+        var formatClusterCount = function (count) {
+          if (count >= 10000) {
+            return Math.round(count / 1000) + 'k';
+          }
+          if (count >= 1000) {
+            return (Math.round(count / 100) / 10).toFixed(1).replace('.', ',').replace(',0', '') + 'k';
+          }
+          return String(count);
+        };
+
         var createClusterIcon = function (count) {
-          var clusterSize = count >= 100 ? 56 : (count >= 10 ? 50 : 46);
+          var clusterSize = count >= 1000 ? 62 : (count >= 100 ? 56 : (count >= 10 ? 50 : 46));
           return window.L.divIcon({
             className: '',
             html: '<span class="fc-marker" style="' +
@@ -484,7 +500,7 @@ export const buildSearchMapRuntimeHtml = ({
               'height:' + clusterSize + 'px;' +
               'width:' + clusterSize + 'px;' +
             '">' +
-              '<span style="align-items:center;display:flex;height:100%;justify-content:center;width:100%;">' + count + '</span>' +
+              '<span style="align-items:center;display:flex;height:100%;justify-content:center;width:100%;">' + formatClusterCount(count) + '</span>' +
             '</span>',
             iconAnchor: [clusterSize / 2, clusterSize / 2],
             iconSize: [clusterSize, clusterSize],
@@ -992,13 +1008,15 @@ export const buildSearchMapRuntimeHtml = ({
               marker.on('click', function () {
                 runSafely('marker_click', function () {
                   if (entry.isCluster) {
+                    // 17 = un cran au-delà du maxZoom de clustering : les groupes
+                    // insécables (adresses identiques) s'éclatent en corolle à ce niveau.
                     map.setView(
                       [entry.lat, entry.lng],
                       Math.min(
                         Number.isFinite(Number(entry.expansionZoom))
                           ? Number(entry.expansionZoom)
                           : (map.getZoom() + 2),
-                        16
+                        17
                       )
                     );
                     return;
@@ -1055,7 +1073,7 @@ export const buildSearchMapRuntimeHtml = ({
 
           var tileLayer = window.L.tileLayer(TILE_URL, {
             maxZoom: 19,
-            subdomains: ${safeJson(TOMTOM_TILE_SUBDOMAINS)},
+            subdomains: ${safeJson(String(tileUrl || '').includes('tile.openstreetmap.org') ? OSM_TILE_SUBDOMAINS : TOMTOM_TILE_SUBDOMAINS)},
             tileSize: 256,
           });
           postDiagnostic('tile_layer_created', {

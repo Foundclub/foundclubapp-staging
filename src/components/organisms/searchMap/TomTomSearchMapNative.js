@@ -254,6 +254,7 @@ const resolveMeasuredOverlayInsets = (
  * @returns {import('react').ReactElement}
  */
 function TomTomSearchMapNative({
+  aggregates = null,
   focusedViewport = null,
   height = 360,
   isLoadingResults = false,
@@ -326,10 +327,11 @@ function TomTomSearchMapNative({
   const activeViewport = visibleViewport || focusedViewport || focusedRegion || regionHint || null;
   const renderModel = useMemo(
     () => buildSearchMapRenderableModel({
+      aggregates,
       items,
       viewport: activeViewport,
     }),
-    [activeViewport, items],
+    [activeViewport, aggregates, items],
   );
   const renderItems = renderModel.entries;
   const renderStats = renderModel.stats;
@@ -396,13 +398,14 @@ function TomTomSearchMapNative({
   const htmlSource = bootstrapHtmlRef.current.html;
   const logContext = useMemo(
     () => ({
-      geolocatableCount: items.length,
+      // En mode agrégats, tout le total est représenté sur la carte.
+      geolocatableCount: renderModel.stats.aggregated ? totalResults : items.length,
       provider: 'tomtom',
       refreshStrategy,
       scope,
       totalResults,
     }),
-    [items.length, refreshStrategy, scope, totalResults],
+    [items.length, refreshStrategy, renderModel.stats.aggregated, scope, totalResults],
   );
   const emptyMessage = totalResults > 0 && items.length === 0
     ? getSearchMapNoCoordinatesMessage(scope, totalResults)
@@ -883,7 +886,10 @@ function TomTomSearchMapNative({
         originWhitelist={['*']}
         ref={webViewRef}
         setSupportMultipleWindows={false}
-        source={{ html: htmlSource }}
+        // baseUrl HTTPS : sans lui, source={{html}} donne une origine opaque (null)
+        // et Android WebView bloque le chargement des tuiles HTTPS (elles marchent
+        // pourtant dans un vrai navigateur). Une origine sécurisée débloque le rendu.
+        source={{ baseUrl: 'https://searchmap.foundclubpro.com/', html: htmlSource }}
         style={[styles.map, !isMapReady && styles.mapHidden]}
       />
 
@@ -893,7 +899,7 @@ function TomTomSearchMapNative({
       >
         <SearchMapHud
           disabled={areControlsDisabled}
-          geolocatableCount={items.length}
+          geolocatableCount={renderModel.stats.aggregated ? totalResults : items.length}
           isLoadingResults={isLoadingResults}
           onControlsWidthChange={setHudControlsWidth}
           onLocateMe={requestUserLocation}
@@ -1009,7 +1015,7 @@ function TomTomSearchMapNative({
         </View>
       ) : null}
 
-      {isMapReady && items.length === 0 ? (
+      {isMapReady && items.length === 0 && renderModel.entries.length === 0 ? (
         <View
           pointerEvents="none"
           style={[

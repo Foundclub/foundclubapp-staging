@@ -4,6 +4,9 @@ const DEFAULT_CLUSTER_RADIUS = 64;
 const DEFAULT_MAX_ZOOM = 16;
 const DEFAULT_MIN_POINTS = 2;
 const FALLBACK_MARKER_LIMIT = 60;
+// ~13 m : écarte visuellement les pins qui partagent exactement les mêmes
+// coordonnées (géocodage au centroïde de commune) une fois le clustering dépassé.
+const COLOCATED_SPREAD_RADIUS_DEG = 0.00012;
 
 const clampZoom = (value) => {
   const parsed = Number(value);
@@ -88,6 +91,41 @@ const buildFeature = (item, index) => ({
   type: 'Feature',
 });
 
+const spreadColocatedEntries = (entries) => {
+  const groups = new Map();
+  entries.forEach((entry) => {
+    if (entry.isCluster) {
+      return;
+    }
+
+    const key = `${entry.lat},${entry.lng}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key).push(entry);
+  });
+
+  groups.forEach((group) => {
+    if (group.length < 2) {
+      return;
+    }
+
+    const sortedGroup = [...group].sort((left, right) => (
+      String(left.itemId).localeCompare(String(right.itemId))
+    ));
+    const latRadians = (Number(sortedGroup[0].lat) * Math.PI) / 180;
+    const lngScale = Math.max(Math.cos(latRadians), 0.2);
+    sortedGroup.forEach((entry, index) => {
+      const angle = (2 * Math.PI * index) / sortedGroup.length;
+      entry.isSpread = true;
+      entry.lat += COLOCATED_SPREAD_RADIUS_DEG * Math.cos(angle);
+      entry.lng += (COLOCATED_SPREAD_RADIUS_DEG * Math.sin(angle)) / lngScale;
+    });
+  });
+
+  return entries;
+};
+
 const buildFallbackEntries = (items) => items.slice(0, FALLBACK_MARKER_LIMIT).map((item, index) => ({
   isCluster: false,
   item,
@@ -99,9 +137,46 @@ const buildFallbackEntries = (items) => items.slice(0, FALLBACK_MARKER_LIMIT).ma
 }));
 
 export const buildSearchMapRenderableModel = ({
+  aggregates = null,
   items = [],
   viewport = null,
 } = {}) => {
+  const zoom = resolveViewportZoom(viewport);
+  const safeAggregates = (Array.isArray(aggregates) ? aggregates : []).filter((cell) => (
+    cell
+    && Number(cell.count) > 0
+    && Number.isFinite(Number(cell.lat))
+    && Number.isFinite(Number(cell.lng))
+  ));
+
+  // Agrégats serveur (vue large) : rendus tels quels comme clusters avec le
+  // compte réel — le clustering local ne s'applique pas.
+  if (safeAggregates.length) {
+    const entries = safeAggregates.map((cell) => ({
+      count: Number(cell.count),
+      // Un clic rapproche vers le niveau de détail suivant (agrégats plus fins,
+      // puis vrais clubs à partir du zoom 9).
+      expansionZoom: Math.min(zoom + 3, 10),
+      isCluster: true,
+      key: `aggregate:${cell.lat}:${cell.lng}`,
+      lat: Number(cell.lat),
+      lng: Number(cell.lng),
+    }));
+
+    return {
+      entries,
+      stats: {
+        aggregated: true,
+        clusterCount: entries.length,
+        dataCount: entries.reduce((total, entry) => total + entry.count, 0),
+        fallbackActive: false,
+        markerCount: 0,
+        renderableCount: entries.length,
+      },
+      zoom,
+    };
+  }
+
   const safeItems = (Array.isArray(items) ? items : []).filter((item) => (
     item
     && Number.isFinite(Number(item?.lat))
@@ -118,11 +193,10 @@ export const buildSearchMapRenderableModel = ({
         markerCount: 0,
         renderableCount: 0,
       },
-      zoom: resolveViewportZoom(viewport),
+      zoom,
     };
   }
 
-  const zoom = resolveViewportZoom(viewport);
   const clusterIndex = new Supercluster({
     maxZoom: DEFAULT_MAX_ZOOM,
     minPoints: DEFAULT_MIN_POINTS,
@@ -132,8 +206,10 @@ export const buildSearchMapRenderableModel = ({
   clusterIndex.load(safeItems.map((item, index) => buildFeature(item, index)));
 
   const bounds = hasFiniteViewportBounds(viewport) ? viewport : buildFallbackBounds(safeItems);
+  // Au-delà du maxZoom de clustering (17+), interroger à maxZoom+1 renvoie les
+  // points bruts : les groupes aux coordonnées identiques deviennent séparables.
   const rawClusters = splitBoundsForQuery(bounds)
-    .flatMap((bbox) => clusterIndex.getClusters(bbox, Math.min(zoom, DEFAULT_MAX_ZOOM)));
+    .flatMap((bbox) => clusterIndex.getClusters(bbox, Math.min(zoom, DEFAULT_MAX_ZOOM + 1)));
 
   const entriesByKey = new Map();
   rawClusters.forEach((feature) => {
@@ -183,6 +259,10 @@ export const buildSearchMapRenderableModel = ({
   if (!entries.length) {
     fallbackActive = true;
     entries = buildFallbackEntries(safeItems);
+  }
+
+  if (zoom > DEFAULT_MAX_ZOOM) {
+    spreadColocatedEntries(entries);
   }
 
   const markerCount = entries.filter((entry) => !entry.isCluster).length;

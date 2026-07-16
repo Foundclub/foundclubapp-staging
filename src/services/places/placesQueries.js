@@ -11,8 +11,12 @@ import { getPlacesFromCoordinates, searchPlaces } from './placesService';
  * @returns {import('@tanstack/react-query').UseQueryResult<Place[]>}
  */
 export const useGetPlaces = ({ options, searchParam, type }) => useQuery({
+  // Les adresses BAN sont stables : éviter de re-taper la Géoplateforme pour un
+  // préfixe déjà résolu dans l'heure.
+  gcTime: 60 * 60 * 1000,
   queryFn: () => searchPlaces(searchParam, type),
   queryKey: ['places', searchParam, type],
+  staleTime: 60 * 60 * 1000,
   ...options,
 });
 
