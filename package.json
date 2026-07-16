@@ -76,6 +76,7 @@
     "react-native-nitro-modules": "0.31.1",
     "react-native-nitro-sound": "^0.2.10",
     "react-native-orientation-locker": "^1.7.0",
+    "react-native-purchases": "^10.4.3",
     "react-native-qrcode-svg": "^6.3.21",
     "react-native-reanimated": "3.17.1",
     "react-native-safe-area-context": "^5.3.0",
