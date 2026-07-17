@@ -7,6 +7,14 @@ on:
         description: "Version iOS a envoyer sur TestFlight"
         required: true
         default: "1.7.13"
+      api_env:
+        description: "Cible API du build (production, ou staging pour la recette sandbox sur api-staging)"
+        required: false
+        default: "production"
+      force_revenuecat_rail:
+        description: "1 pour forcer le rail RevenueCat (recette sandbox), vide sinon"
+        required: false
+        default: ""
 
 jobs:
   build-and-upload-testflight:
@@ -154,10 +162,17 @@ jobs:
           # pas configuré : le rail d'achat store reste alors "Checkout indisponible".
           REVENUECAT_APPLE_API_KEY: ${{ secrets.REVENUECAT_APPLE_API_KEY }}
         run: |
+          if [ "${{ github.event.inputs.api_env }}" = "staging" ]; then
+            API_URL=https://api-staging.foundclubpro.com/api
+            SOCKET_URL=https://api-staging.foundclubpro.com
+          else
+            API_URL=https://api.foundclubpro.com/api
+            SOCKET_URL=https://api.foundclubpro.com
+          fi
           cat > .env.production <<EOF
           APP_ENV=production
-          API_URL=https://api.foundclubpro.com/api
-          SOCKET_URL=https://api.foundclubpro.com
+          API_URL=${API_URL}
+          SOCKET_URL=${SOCKET_URL}
           WEB_APP_URL=https://foundclub.app
           SENTRY_DSN=
           FC_ENABLE_PUSH_NOTIFICATIONS=1
@@ -166,6 +181,7 @@ jobs:
           FC_SEARCH_MAP_PROVIDER=tomtom
           TOMTOM_API_KEY=${TOMTOM_API_KEY_PRODUCTION}
           REVENUECAT_APPLE_API_KEY=${REVENUECAT_APPLE_API_KEY}
+          FC_FORCE_REVENUECAT_RAIL=${{ github.event.inputs.force_revenuecat_rail }}
           DELETE_ACCOUNT_URL=https://api.foundclubpro.com/suppression.html
           CONTACT_URL=https://foundclubpro.com
           EOF
