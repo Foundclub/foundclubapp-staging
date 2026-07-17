@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import {
   Platform, Text, TouchableOpacity, View,
@@ -56,8 +57,15 @@ function SubscriptionSuccess({ navigation, route }) {
   // 'home' = achat depuis le Recap de fin de tour, on repart sur l'accueil.
   const resumeMode = String(route?.params?.resumeMode || 'back');
   const storeLabel = Platform.OS === 'ios' ? 'App Store' : 'Google Play';
+  const queryClient = useQueryClient();
+
+  const refreshSubscriptionState = () => {
+    queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
+    queryClient.invalidateQueries({ queryKey: ['get-me'] });
+  };
 
   const handleGoHome = () => {
+    refreshSubscriptionState();
     navigation.reset({
       index: 0,
       routes: [{ name: RouteNames.HomeTab }],
@@ -70,8 +78,22 @@ function SubscriptionSuccess({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Le cache serveur du profil converge en ~2-3 s apres l'achat (versionnage
+  // multi-replicas) : l'invalidation immediate des parcours d'achat peut relire
+  // l'ANCIEN etat et ne jamais reessayer (constat recette sandbox iOS du
+  // 2026-07-17 : abonnement invisible avant un kill/relaunch de l'app). On
+  // re-invalide donc apres la fenetre de convergence, puis a la reprise.
+  useEffect(() => {
+    const timers = [3000, 8000].map(
+      (delayMs) => setTimeout(refreshSubscriptionState, delayMs),
+    );
+    return () => timers.forEach((timer) => clearTimeout(timer));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleResume = () => {
     trackSubscriptionFunnelEvent('success_resume_clicked', { source: resumeMode });
+    refreshSubscriptionState();
     if (resumeMode === 'home') {
       handleGoHome();
       return;
