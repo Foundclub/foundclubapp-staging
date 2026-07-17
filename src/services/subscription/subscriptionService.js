@@ -59,6 +59,26 @@ export const validateSubscriptionPurchase = async (payload) => {
 };
 
 /**
+ * Rail web (Stripe via RevenueCat) : ouverture de la session Stripe Checkout.
+ * @param {Record<string, any>} payload
+ * @returns {Promise<{ id?: string; url?: string }>}
+ */
+export const createStripeWebCheckoutSession = async (payload) => {
+  const response = await client.post('/subscriptions/stripe/checkout-session', payload);
+  return getResponsePayload(response);
+};
+
+/**
+ * Rail web : au retour de paiement, transmet l'abonnement Stripe a RevenueCat.
+ * @param {{ sessionId: string }} payload
+ * @returns {Promise<any>}
+ */
+export const finalizeStripeWebCheckoutSession = async (payload) => {
+  const response = await client.post('/subscriptions/stripe/checkout-session/finalize', payload);
+  return getResponsePayload(response);
+};
+
+/**
  * @param {Record<string, any>} payload
  * @returns {Promise<any>}
  */

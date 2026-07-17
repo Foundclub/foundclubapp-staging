@@ -546,6 +546,13 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
+          getComponent={() => require('@/views/subscription/SubscriptionWebSuccess').default}
+          name={RouteNames.SubscriptionWebSuccess}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           getComponent={() => require('@/views/license/LicenseCheckoutStatus').default}
           name={RouteNames.LicenseCheckoutStatus}
           options={{

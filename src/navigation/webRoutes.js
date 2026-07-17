@@ -107,6 +107,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.NotificationDetails]: '/notifications/:notificationId',
   [RouteNames.GuideOffersRecap]: '/missions/offers',
   [RouteNames.SubscriptionSuccess]: '/subscription/success',
+  [RouteNames.SubscriptionWebSuccess]: '/subscription/web-success',
   [RouteNames.Conversation]: '/messages/:chatId',
   [RouteNames.Chat]: '/messages',
   [RouteNames.NewConversation]: '/messages/new',

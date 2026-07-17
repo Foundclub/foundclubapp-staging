@@ -113,6 +113,7 @@ export const RouteNames = /** @type {const} */ ({
   SquadEdit: 'SquadEdit',
   SubscriptionOverview: 'SubscriptionOverview',
   SubscriptionSuccess: 'SubscriptionSuccess',
+  SubscriptionWebSuccess: 'SubscriptionWebSuccess',
   SuperAdminContentExplorer: 'SuperAdminContentExplorer',
   SuperAdminDashboard: 'SuperAdminDashboard',
   SuperAdminEntryDetail: 'SuperAdminEntryDetail',

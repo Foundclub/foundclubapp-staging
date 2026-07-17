@@ -15,6 +15,7 @@ import {
 
 import {
   changeSubscriptionPlan,
+  createStripeWebCheckoutSession,
   restoreSubscriptionPurchases,
   validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
@@ -36,6 +37,7 @@ import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
 
 export const SUBSCRIPTION_PURCHASE_RAILS = {
   REVENUECAT: 'revenuecat',
+  STRIPE_WEB: 'stripe-web',
   TRUSTED_TEST: 'trusted-test',
 };
 
@@ -48,6 +50,15 @@ const isRevenueCatRailForced = () => ['1', 'on', 'true', 'yes'].includes(
  * @returns {string}
  */
 export const getActiveSubscriptionPurchaseRail = (runtimeEnv = APP_RUNTIME_ENV) => {
+  // Sur le web, pas de SDK store : le rail Stripe redirige vers Stripe Checkout
+  // (le serveur transmet ensuite l'achat a RevenueCat). Le mode test backend
+  // garde la priorite pour les recettes locales/staging sans Stripe.
+  if (Platform.OS === 'web') {
+    if (!isRevenueCatRailForced() && isSubscriptionBillingTestModeEnabled(runtimeEnv)) {
+      return SUBSCRIPTION_PURCHASE_RAILS.TRUSTED_TEST;
+    }
+    return SUBSCRIPTION_PURCHASE_RAILS.STRIPE_WEB;
+  }
   if (isRevenueCatRailForced()) {
     return SUBSCRIPTION_PURCHASE_RAILS.REVENUECAT;
   }
@@ -62,6 +73,11 @@ export const getActiveSubscriptionPurchaseRail = (runtimeEnv = APP_RUNTIME_ENV) 
 export const isSubscriptionPurchaseAvailable = () => {
   const rail = getActiveSubscriptionPurchaseRail();
   if (rail === SUBSCRIPTION_PURCHASE_RAILS.TRUSTED_TEST) {
+    return true;
+  }
+  if (rail === SUBSCRIPTION_PURCHASE_RAILS.STRIPE_WEB) {
+    // La disponibilite reelle (STRIPE_SECRET_KEY) est cote serveur : l'endpoint
+    // repond avec une erreur claire si le checkout web n'est pas configure.
     return true;
   }
   return isRevenueCatEnabled();
@@ -130,6 +146,23 @@ export const performSubscriptionPurchase = async ({
     return validateSubscriptionPurchase(payload);
   }
 
+  if (rail === SUBSCRIPTION_PURCHASE_RAILS.STRIPE_WEB) {
+    const session = await createStripeWebCheckoutSession({
+      clubDocumentId: String(clubDocumentId || '').trim() || undefined,
+      planCode: String(catalogEntry?.planCode || '').trim(),
+      teamDocumentIds,
+    });
+    if (!session?.url) {
+      throw new Error('Paiement web indisponible pour le moment.');
+    }
+    // Redirection pleine page vers Stripe Checkout : la suite se joue au retour
+    // sur /subscription/web-success (finalisation + webhook RevenueCat).
+    if (typeof window !== 'undefined' && window.location) {
+      window.location.assign(session.url);
+    }
+    return { checkoutRedirect: true, sessionId: session?.id };
+  }
+
   const purchaseResult = await purchaseSubscriptionViaRevenueCat({
     catalogEntry,
     clubDocumentId,
@@ -180,6 +213,12 @@ export const performSubscriptionPlanChange = async ({
   teamDocumentIds = [],
 }) => {
   const rail = getActiveSubscriptionPurchaseRail();
+
+  // V1 web : le changement d'offre d'un abonnement Stripe (proratisation) n'est
+  // pas encore cable — l'abonne gere son offre depuis l'app mobile.
+  if (rail === SUBSCRIPTION_PURCHASE_RAILS.STRIPE_WEB) {
+    throw new Error('Le changement d offre se fait depuis l app mobile pour le moment.');
+  }
 
   if (rail === SUBSCRIPTION_PURCHASE_RAILS.TRUSTED_TEST) {
     const payload = buildSubscriptionChangePlanPayload({
