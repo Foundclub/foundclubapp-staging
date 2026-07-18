@@ -59,9 +59,12 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.CMTeams]: '/multisport/:cmId/teams',
   [RouteNames.CreateSection]: '/multisport/:cmId/sections/create',
   [RouteNames.FeaturedRequests]: '/multisport/:cmId/featured-requests',
+  // TODO(parite-web) : MyClubsScreen (views/multisportClub/MyClubsScreen.js) existe mais
+  // n'est enregistre dans aucun navigateur. CMDashboard.js navigue pourtant vers
+  // RouteNames.MyClubs ("Retour aux clubs") : cette navigation est cassee aujourd'hui.
+  // Motif web conserve pour qu'il fonctionne des l'enregistrement de l'ecran.
   [RouteNames.MyClubs]: '/multisport',
   [RouteNames.RequestsHub]: '/requests',
-  [RouteNames.RequestsTab]: '/requests/tab',
   [RouteNames.TeamList]: '/teams',
   [RouteNames.MyTeamList]: '/teams/mine',
   [RouteNames.TeamDetails]: '/teams/:teamId',
@@ -123,6 +126,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.BookingCalendar]: '/booking',
   [RouteNames.MissingPlayersView]: '/booking/missing-players',
   [RouteNames.ReservationDetails]: '/reservations/:reservationId',
+  // TODO(parite-web) : ReservationEdit.web.js existe (adaptateur web vers EventEdit) mais
+  // n'est enregistre dans aucun navigateur et n'est cible par aucun navigate().
+  // Motif conserve : l'ecran est explicitement prevu pour le web, il reste a le cabler.
   [RouteNames.ReservationEdit]: '/reservations/:reservationId/edit',
   [RouteNames.RecruitmentAdDetails]: '/recruitment/:adId',
   [RouteNames.RecruitmentAdEdit]: '/recruitment/:adId/edit',
@@ -193,7 +199,6 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.LeagueMatchTab]: '/league/matches',
   [RouteNames.LeagueSquadTab]: '/league/squad',
   [RouteNames.LeagueRanking]: '/league/ranking',
-  [RouteNames.LeagueStandingsTab]: '/league/standings',
   [RouteNames.SquadSearch]: '/league/search',
   [RouteNames.SquadDetails]: '/league/squads/:teamId',
   [RouteNames.SquadEdit]: '/league/squads/:teamId/edit',

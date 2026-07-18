@@ -14,9 +14,15 @@
  *
  * Ce que fait le test :
  * il scanne les sources a la recherche de toutes les declarations
- * <X.Screen name={...} />, puis verifie via isWebRouteSupported() que chaque ecran
- * enregistre a bien un motif web. Toute exemption doit etre EXPLICITE et JUSTIFIEE
- * dans MOBILE_ONLY_SCREENS ci-dessous.
+ * <X.Screen name={...} />, puis verifie la parite DANS LES DEUX SENS.
+ *
+ * Sens app -> web : chaque ecran enregistre a bien un motif web (isWebRouteSupported).
+ * Toute exemption doit etre EXPLICITE et JUSTIFIEE dans MOBILE_ONLY_SCREENS.
+ *
+ * Sens web -> app : chaque motif de WEB_ROUTE_PATTERNS vise bien un ecran enregistre.
+ * Un motif orphelin est une URL morte : elle est publiee, partageable, indexable, mais
+ * aucun navigateur ne sait quoi monter dessus. Toute exemption doit etre EXPLICITE et
+ * JUSTIFIEE dans UNREGISTERED_WEB_PATTERNS.
  *
  * Le scan est statique (lecture de fichiers) et non un rendu react-navigation. Il
  * capte donc aussi les ecrans montes conditionnellement (superadmin, etapes
@@ -27,7 +33,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { RouteNames } = require('./routeNames');
-const { isWebRouteSupported } = require('./webRoutes');
+const { isWebRouteSupported, WEB_ROUTE_PATTERNS } = require('./webRoutes');
 
 const SRC_DIR = path.resolve(__dirname, '..');
 
@@ -77,6 +83,29 @@ const MOBILE_ONLY_SCREENS = {
   // comme initialRouteName de la stack. L'accueil est deja expose cote web par HomeTab.
   SearchHome:
     'Alias interne de SearchStack pour son initialRouteName ; l\'accueil web est HomeTab (/)',
+};
+
+/**
+ * LISTE BLANCHE DES MOTIFS WEB SANS ECRAN ENREGISTRE.
+ *
+ * Un motif web dont aucun navigateur ne declare l'ecran est une URL morte : elle est
+ * construite par buildWebPath(), partagee, mise en signet, potentiellement indexee, et
+ * n'aboutit sur rien. Le symetrique exact de la panne du 18/07.
+ *
+ * On n'ajoute une ligne ici QUE pour un ecran REELLEMENT prevu et deja ecrit, dont il ne
+ * reste que l'enregistrement dans un navigateur a faire. Un motif qui ne correspond a
+ * aucun code existant se supprime, il ne s'exempte pas.
+ */
+const UNREGISTERED_WEB_PATTERNS = {
+  // MyClubsScreen existe (views/multisportClub/MyClubsScreen.js) mais n'est monte dans
+  // aucun navigateur, alors que CMDashboard navigue vers RouteNames.MyClubs. Le motif
+  // reste pour que l'URL fonctionne des que l'ecran sera enregistre.
+  [RouteNames.MyClubs]:
+    'MyClubsScreen existe et est cible par CMDashboard, reste a l\'enregistrer (TODO webRoutes.js)',
+  // ReservationEdit.web.js existe et est explicitement une variante web (adaptateur vers
+  // EventEdit). Il n'a jamais ete branche dans une stack.
+  [RouteNames.ReservationEdit]:
+    'ReservationEdit.web.js existe et vise le web, reste a l\'enregistrer (TODO webRoutes.js)',
 };
 
 /**
@@ -275,6 +304,54 @@ describe('parite de routage app <-> web', () => {
     }
 
     expect(missing).toEqual([]);
+  });
+
+  test('chaque motif web vise un ecran enregistre ou une exemption justifiee', () => {
+    const dead = Object.entries(WEB_ROUTE_PATTERNS)
+      .filter(([screenName]) => !registrations.has(screenName))
+      .filter(([screenName]) => !(screenName in UNREGISTERED_WEB_PATTERNS))
+      .map(([screenName, pattern]) => `${screenName} -> ${pattern}`)
+      .sort();
+
+    if (dead.length > 0) {
+      throw new Error(
+        `${dead.length} motif(s) web ne visent aucun ecran enregistre dans un navigateur.\n`
+        + 'Ce sont des URLs mortes : construites, partageables, indexables, mais rien ne\n'
+        + 's\'y monte.\n\n'
+        + `${dead.map((entry) => `  - ${entry}`).join('\n')}\n\n`
+        + 'Corriger en enregistrant l\'ecran (<X.Screen name={RouteNames.X} />), ou en\n'
+        + 'supprimant le motif de WEB_ROUTE_PATTERNS (webRoutes.js) s\'il est obsolete.\n'
+        + 'En dernier recours seulement, si l\'ecran existe deja et attend son cablage,\n'
+        + 'l\'ajouter dans UNREGISTERED_WEB_PATTERNS avec sa raison.',
+      );
+    }
+
+    expect(dead).toEqual([]);
+  });
+
+  test('la liste blanche des motifs web orphelins ne contient pas d\'entree obsolete', () => {
+    // Hygiene : des que l'ecran est enfin enregistre, l'exemption doit disparaitre.
+    const obsolete = Object.keys(UNREGISTERED_WEB_PATTERNS)
+      .map((screenName) => {
+        if (!isWebRouteSupported(screenName)) {
+          return `${screenName} : n'a plus de motif web, retirer l'exemption`;
+        }
+        if (registrations.has(screenName)) {
+          return `${screenName} : est desormais enregistre, retirer l'exemption et son TODO`;
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    expect(obsolete).toEqual([]);
+  });
+
+  test('chaque exemption de motif web orphelin porte une raison lisible', () => {
+    const withoutReason = Object.entries(UNREGISTERED_WEB_PATTERNS)
+      .filter(([, reason]) => typeof reason !== 'string' || reason.trim().length < 15)
+      .map(([screenName]) => screenName);
+
+    expect(withoutReason).toEqual([]);
   });
 
   test.each(REGRESSION_GUARD_SCREENS)('%s (panne du 18/07) reste route cote web', (screenName) => {
