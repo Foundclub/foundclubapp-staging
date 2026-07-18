@@ -49,15 +49,23 @@ const DEFAULT_REASON_LABELS = {
 };
 
 /** @type {Record<string, string>} */
+// Le serveur derive la cle de paywall de l'action refusee, en majuscules et
+// suffixee `_REQUIRED` (ex. `facility.manage` -> `FACILITY_MANAGE_REQUIRED`).
+// Toute cle absente de cette table retombe sur le paywall generique.
 const DEFAULT_PAYWALL_KEYS = {
+  CLUB_ROLES_MANAGE_REQUIRED: 'club-roles-manage-required',
   CLUB_TIER_TEAM_LIMIT: 'club-tier-team-limit',
+  CLUB_UPDATE_REQUIRED: 'club-update-required',
   CLUB_VERIFICATION_REQUIRED: 'club-verification-required',
   COMPOSITION_MANAGE_REQUIRED: 'composition-required',
+  DUES_CAMPAIGN_CREATE_REQUIRED: 'dues-limit',
   DUES_LIMIT: 'dues-limit',
   EVENT_LIMIT: 'event-limit',
+  FACILITY_MANAGE_REQUIRED: 'facility-manage-required',
   MATCH_LIMIT: 'match-limit',
   PROFILE_CONTACT_LIMIT: 'profile-contact-limit',
   RECRUITMENT_AD_LIMIT: 'recruitment-ad-limit',
+  SPONSOR_MANAGE_REQUIRED: 'sponsor-manage-required',
   TEAM_LIMIT: 'team-limit',
   TEAM_OFFER_UNLOCK: 'team-offer-unlock',
 };
@@ -286,13 +294,30 @@ export const getSubscriptionPaywallContent = (decision) => {
   const requiredPlanSuffix = requiredPlanText
     ? ` Offre conseillee: ${requiredPlanText}.`
     : '';
+  const withRequiredPlan = (sentence) => `${sentence}${requiredPlanSuffix}`.trim();
 
   switch (paywall.paywallKey) {
+    case 'club-roles-manage-required':
+      return {
+        ctaLabel: 'Voir mon abonnement',
+        description: withRequiredPlan(
+          'La gestion des roles et des droits du club est reservee a l offre Club.',
+        ),
+        title: 'Roles club reserves',
+      };
     case 'club-tier-team-limit':
       return {
         ctaLabel: 'Voir mon abonnement',
         description: 'Votre offre Club a atteint son nombre maximum d equipes. Passez au palier superieur pour ajouter de nouvelles equipes.',
         title: 'Limite d equipes atteinte',
+      };
+    case 'club-update-required':
+      return {
+        ctaLabel: 'Voir mon abonnement',
+        description: withRequiredPlan(
+          'La modification de la fiche du club est reservee a l offre Club.',
+        ),
+        title: 'Fiche club reservee',
       };
     case 'club-verification-required':
       return {
@@ -318,6 +343,14 @@ export const getSubscriptionPaywallContent = (decision) => {
         description: `Tu as atteint la limite gratuite de publication d evenements.${requiredPlanSuffix}`.trim(),
         title: 'Publication d evenement limitee',
       };
+    case 'facility-manage-required':
+      return {
+        ctaLabel: 'Voir mon abonnement',
+        description: withRequiredPlan(
+          'La gestion des installations du club est reservee a l offre Club.',
+        ),
+        title: 'Installations reservees',
+      };
     case 'match-limit':
       return {
         ctaLabel: 'Voir mon abonnement',
@@ -335,6 +368,14 @@ export const getSubscriptionPaywallContent = (decision) => {
         ctaLabel: 'Voir mon abonnement',
         description: `Cette publication de recrutement demande une offre active.${requiredPlanSuffix}`.trim(),
         title: 'Publication recrutement limitee',
+      };
+    case 'sponsor-manage-required':
+      return {
+        ctaLabel: 'Voir mon abonnement',
+        description: withRequiredPlan(
+          'La gestion des sponsors du club est reservee a l offre Club.',
+        ),
+        title: 'Sponsors reserves',
       };
     case 'team-limit':
       return {

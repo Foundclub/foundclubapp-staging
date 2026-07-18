@@ -79,6 +79,103 @@ describe('subscriptionDecision', () => {
     expect(getSubscriptionPaywallBenefits(decision)).toHaveLength(3);
   });
 
+  test('routes the club action paywall keys emitted by the server to their dedicated copy', () => {
+    // Le serveur derive la cle de l'action refusee :
+    // `facility.manage` -> `FACILITY_MANAGE_REQUIRED`.
+    expect(getSubscriptionPaywallContent({
+      allowed: false,
+      paywall: 'DUES_CAMPAIGN_CREATE_REQUIRED',
+      reason: 'SUBSCRIPTION_REQUIRED',
+      requiredPlan: ['TEAM', 'CLUB'],
+    })).toEqual({
+      ctaLabel: 'Voir mon abonnement',
+      description: 'La creation de campagnes de cotisation demande une offre active.'
+        + ' Offre conseillee: Team ou Club.',
+      title: 'Cotisations reservees',
+    });
+    expect(getSubscriptionPaywallContent({
+      allowed: false,
+      paywall: 'FACILITY_MANAGE_REQUIRED',
+      reason: 'SUBSCRIPTION_REQUIRED',
+      requiredPlan: ['CLUB'],
+    })).toEqual({
+      ctaLabel: 'Voir mon abonnement',
+      description: 'La gestion des installations du club est reservee a l offre Club.'
+        + ' Offre conseillee: Club.',
+      title: 'Installations reservees',
+    });
+    expect(getSubscriptionPaywallContent({
+      allowed: false,
+      paywall: 'CLUB_UPDATE_REQUIRED',
+      reason: 'SUBSCRIPTION_REQUIRED',
+      requiredPlan: ['CLUB'],
+    })).toEqual({
+      ctaLabel: 'Voir mon abonnement',
+      description: 'La modification de la fiche du club est reservee a l offre Club.'
+        + ' Offre conseillee: Club.',
+      title: 'Fiche club reservee',
+    });
+    expect(getSubscriptionPaywallContent({
+      allowed: false,
+      paywall: 'SPONSOR_MANAGE_REQUIRED',
+      reason: 'SUBSCRIPTION_REQUIRED',
+      requiredPlan: ['CLUB'],
+    })).toEqual({
+      ctaLabel: 'Voir mon abonnement',
+      description: 'La gestion des sponsors du club est reservee a l offre Club.'
+        + ' Offre conseillee: Club.',
+      title: 'Sponsors reserves',
+    });
+    expect(getSubscriptionPaywallContent({
+      allowed: false,
+      paywall: 'CLUB_ROLES_MANAGE_REQUIRED',
+      reason: 'SUBSCRIPTION_REQUIRED',
+      requiredPlan: ['CLUB'],
+    })).toEqual({
+      ctaLabel: 'Voir mon abonnement',
+      description: 'La gestion des roles et des droits du club est reservee a l offre Club.'
+        + ' Offre conseillee: Club.',
+      title: 'Roles club reserves',
+    });
+  });
+
+  test('recommends the club plan for the club-only action paywalls', () => {
+    expect(mapSubscriptionDecisionToPaywall({ paywall: 'DUES_CAMPAIGN_CREATE_REQUIRED' })
+      .paywallKey).toBe('dues-limit');
+    expect(mapSubscriptionDecisionToPaywall({ paywall: 'FACILITY_MANAGE_REQUIRED' }).paywallKey)
+      .toBe('facility-manage-required');
+    expect(mapSubscriptionDecisionToPaywall({ paywall: 'CLUB_UPDATE_REQUIRED' }).paywallKey)
+      .toBe('club-update-required');
+    expect(mapSubscriptionDecisionToPaywall({ paywall: 'SPONSOR_MANAGE_REQUIRED' }).paywallKey)
+      .toBe('sponsor-manage-required');
+    expect(mapSubscriptionDecisionToPaywall({ paywall: 'CLUB_ROLES_MANAGE_REQUIRED' }).paywallKey)
+      .toBe('club-roles-manage-required');
+    expect(getSubscriptionRecommendedPlanCode({
+      paywall: 'FACILITY_MANAGE_REQUIRED',
+      requiredPlan: ['CLUB'],
+    })).toBe('fc_club_tier_1_yearly');
+    expect(getSubscriptionPaywallBenefits({ paywall: 'SPONSOR_MANAGE_REQUIRED' })).toEqual([
+      'Toutes les equipes du club couvertes',
+      'Droits club et gestion centralisee',
+      'Cotisations et recrutement illimites',
+    ]);
+  });
+
+  test('falls back to the generic paywall copy for an unknown server key', () => {
+    expect(mapSubscriptionDecisionToPaywall({ paywall: 'SOME_FUTURE_ACTION_REQUIRED' }).paywallKey)
+      .toBe('subscription-required');
+    expect(getSubscriptionPaywallContent({
+      allowed: false,
+      paywall: 'SOME_FUTURE_ACTION_REQUIRED',
+      reason: 'SUBSCRIPTION_REQUIRED',
+      requiredPlan: ['CLUB'],
+    })).toEqual({
+      ctaLabel: 'Voir mon abonnement',
+      description: 'Cette action demande une offre FoundClub active. Offre conseillee: Club.',
+      title: 'Abonnement FoundClub requis',
+    });
+  });
+
   test('extracts subscription decisions from policy-style backend errors', () => {
     expect(extractSubscriptionDecisionFromError({
       details: {
