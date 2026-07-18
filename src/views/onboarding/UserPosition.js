@@ -172,12 +172,16 @@ function UserPosition({ navigation, route }) {
             const isSelected = selectedPositions.includes(position.value);
             return (
               <TouchableOpacity
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isSelected }}
                 key={position.value}
                 onPress={() => togglePosition(position.value)}
                 style={[
                   Spaces.padding[16],
                   Alignments.row,
                   Alignments.alignCenter,
+                  Alignments.justifySpaceBetween,
+                  Spaces.gap[12],
                   {
                     backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
                     borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
@@ -186,9 +190,22 @@ function UserPosition({ navigation, route }) {
                   },
                 ]}
               >
-                <Text style={[Fonts.p1Bold, { color: isSelected ? Colors.primary500 : Colors.neutral00 }]}>
+                <Text
+                  style={[
+                    Fonts.p1Bold,
+                    { color: isSelected ? Colors.primary500 : Colors.neutral00, flex: 1 },
+                  ]}
+                >
                   {position.label}
                 </Text>
+                {isSelected ? (
+                  <Text
+                    importantForAccessibility="no"
+                    style={[Fonts.p1Bold, Fonts.primary500]}
+                  >
+                    ✓
+                  </Text>
+                ) : null}
               </TouchableOpacity>
             );
           })}

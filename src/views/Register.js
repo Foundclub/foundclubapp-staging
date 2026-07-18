@@ -29,6 +29,7 @@ function Register() {
   const {
     canShowCodeButton, confirm, isLoading, loginMutation, otpMutation,
   } = useAuth();
+  const authErrorMessage = loginMutation.error?.message || otpMutation.error?.message || '';
   const renderBrandLogo = () => {
     if (Platform.OS === 'web') {
       return (
@@ -108,6 +109,11 @@ function Register() {
                   onSubmit={handleFormSubmit}
                 />
               )}
+            {authErrorMessage ? (
+              <Text style={[Fonts.p2, Fonts.error300]}>
+                {authErrorMessage}
+              </Text>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

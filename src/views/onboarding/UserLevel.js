@@ -142,29 +142,51 @@ function UserLevel({ navigation }) {
         </View>
 
         <ScrollView
-          contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[20]]}
+          contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[24]]}
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
-          {sortedLevels.map((level) => (
-            <TouchableOpacity
-              key={level.documentId || level.id}
-              onPress={() => setSelectedLevel(level.name)}
-              style={[
-                Spaces.padding[16],
-                {
-                  backgroundColor: selectedLevel === level.name ? `${Colors.primary500}20` : Colors.neutral800,
-                  borderColor: selectedLevel === level.name ? Colors.primary500 : Colors.neutral700,
-                  borderRadius: 12,
-                  borderWidth: 2,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p1Bold, { color: selectedLevel === level.name ? Colors.primary500 : Colors.neutral00 }]}>
-                {level.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {sortedLevels.map((level) => {
+            const isSelected = selectedLevel === level.name;
+            return (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
+                key={level.documentId || level.id}
+                onPress={() => setSelectedLevel(level.name)}
+                style={[
+                  Spaces.padding[16],
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Alignments.justifySpaceBetween,
+                  Spaces.gap[12],
+                  {
+                    backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
+                    borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
+                    borderRadius: 12,
+                    borderWidth: 2,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    Fonts.p1Bold,
+                    { color: isSelected ? Colors.primary500 : Colors.neutral00, flex: 1 },
+                  ]}
+                >
+                  {level.name}
+                </Text>
+                {isSelected ? (
+                  <Text
+                    importantForAccessibility="no"
+                    style={[Fonts.p1Bold, Fonts.primary500]}
+                  >
+                    ✓
+                  </Text>
+                ) : null}
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 

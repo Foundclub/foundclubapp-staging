@@ -262,27 +262,49 @@ function UserSport({ navigation }) {
                 {t('common.noResults', 'Aucun résultat')}
               </Text>
             ) : (
-              filteredActivities.map((activity) => (
-                <TouchableOpacity
-                  key={activity.documentId || activity.id}
-                  onPress={() => setSelectedSport((currentSport) => (
-                    currentSport === activity.name ? null : activity.name
-                  ))}
-                  style={[
-                    Spaces.padding[16],
-                    {
-                      backgroundColor: selectedSport === activity.name ? `${Colors.primary500}20` : Colors.neutral800,
-                      borderColor: selectedSport === activity.name ? Colors.primary500 : Colors.neutral700,
-                      borderRadius: 12,
-                      borderWidth: 2,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p1Bold, { color: selectedSport === activity.name ? Colors.primary500 : Colors.neutral00 }]}>
-                    {formatActivityName(activity.name)}
-                  </Text>
-                </TouchableOpacity>
-              ))
+              filteredActivities.map((activity) => {
+                const isSelected = selectedSport === activity.name;
+                return (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    key={activity.documentId || activity.id}
+                    onPress={() => setSelectedSport((currentSport) => (
+                      currentSport === activity.name ? null : activity.name
+                    ))}
+                    style={[
+                      Spaces.padding[16],
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Alignments.justifySpaceBetween,
+                      Spaces.gap[12],
+                      {
+                        backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
+                        borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
+                        borderRadius: 12,
+                        borderWidth: 2,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        Fonts.p1Bold,
+                        { color: isSelected ? Colors.primary500 : Colors.neutral00, flex: 1 },
+                      ]}
+                    >
+                      {formatActivityName(activity.name)}
+                    </Text>
+                    {isSelected ? (
+                      <Text
+                        importantForAccessibility="no"
+                        style={[Fonts.p1Bold, Fonts.primary500]}
+                      >
+                        ✓
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })
             )}
           </ScrollView>
         )}

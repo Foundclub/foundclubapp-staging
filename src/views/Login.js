@@ -136,7 +136,7 @@ function Login({ navigation }) {
               </Text>
             ) : null}
             {authErrorMessage ? (
-              <Text style={[Fonts.p2, Fonts.error700]}>
+              <Text style={[Fonts.p2, Fonts.error300]}>
                 {authErrorMessage}
               </Text>
             ) : null}
@@ -154,7 +154,7 @@ function Login({ navigation }) {
                     ApplicationStyle.backgroundColor.neutral500,
                   ]}
                   />
-                  <Text style={[Fonts.p1Bold, Fonts.neutral500]}>
+                  <Text style={[Fonts.p1Bold, Fonts.neutral400]}>
                     {t('login.or').toUpperCase()}
                   </Text>
                   <View style={[

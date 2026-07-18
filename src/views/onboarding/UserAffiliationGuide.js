@@ -756,7 +756,7 @@ function UserAffiliationGuideContent({ navigation }) {
               style={[
                 ApplicationStyle.card,
                 Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[10],
+                Spaces.paddingVertical[12],
                 Alignments.rowBetween,
                 Alignments.alignCenter,
                 Spaces.gap[12],
@@ -774,7 +774,7 @@ function UserAffiliationGuideContent({ navigation }) {
                 accessibilityRole="button"
                 onPress={handleResetSelectedClub}
                 style={[
-                  Spaces.paddingHorizontal[10],
+                  Spaces.paddingHorizontal[12],
                   Spaces.paddingVertical[8],
                   ApplicationStyle.borderRadius16,
                   {

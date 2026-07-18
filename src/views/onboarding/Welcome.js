@@ -165,7 +165,7 @@ function Welcome({ navigation }) {
       key={card.key}
       style={[
         Spaces.padding[16],
-        Spaces.gap[10],
+        Spaces.gap[8],
         {
           backgroundColor: card.fillColor,
           borderColor: card.borderColor,

@@ -163,7 +163,7 @@ function UserSection({ navigation }) {
           </Text>
         </View>
         <ScrollView
-          contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[20]]}
+          contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[24]]}
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
@@ -172,10 +172,16 @@ function UserSection({ navigation }) {
 
             return (
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
                 key={sectionItem.documentId || sectionItem.name}
                 onPress={() => handleSelection(sectionItem.documentId)}
                 style={[
                   Spaces.padding[16],
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Alignments.justifySpaceBetween,
+                  Spaces.gap[12],
                   {
                     backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
                     borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
@@ -187,11 +193,19 @@ function UserSection({ navigation }) {
                 <Text
                   style={[
                     Fonts.p1Bold,
-                    { color: isSelected ? Colors.primary500 : Colors.neutral00 },
+                    { color: isSelected ? Colors.primary500 : Colors.neutral00, flex: 1 },
                   ]}
                 >
                   {sectionItem.name}
                 </Text>
+                {isSelected ? (
+                  <Text
+                    importantForAccessibility="no"
+                    style={[Fonts.p1Bold, Fonts.primary500]}
+                  >
+                    ✓
+                  </Text>
+                ) : null}
               </TouchableOpacity>
             );
           })}

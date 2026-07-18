@@ -149,7 +149,7 @@ function UserCategory({ navigation }) {
         </View>
 
         <ScrollView
-          contentContainerStyle={[Spaces.gap[10]]}
+          contentContainerStyle={[Spaces.gap[12]]}
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
@@ -158,10 +158,15 @@ function UserCategory({ navigation }) {
               const isSelected = selectedCategories.includes(category.value);
               return (
                 <TouchableOpacity
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isSelected }}
                   key={category.value}
                   onPress={() => toggleCategory(category.value)}
                   style={[
                     Spaces.padding[12],
+                    Alignments.row,
+                    Alignments.justifyCenter,
+                    Spaces.gap[4],
                     {
                       alignItems: 'center',
                       backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
@@ -172,9 +177,22 @@ function UserCategory({ navigation }) {
                     },
                   ]}
                 >
-                  <Text style={[Fonts.p1Bold, { color: isSelected ? Colors.primary500 : Colors.neutral00 }]}>
+                  <Text
+                    style={[
+                      Fonts.p1Bold,
+                      { color: isSelected ? Colors.primary500 : Colors.neutral00 },
+                    ]}
+                  >
                     {category.label}
                   </Text>
+                  {isSelected ? (
+                    <Text
+                      importantForAccessibility="no"
+                      style={[Fonts.p3Bold, Fonts.primary500]}
+                    >
+                      ✓
+                    </Text>
+                  ) : null}
                 </TouchableOpacity>
               );
             })}

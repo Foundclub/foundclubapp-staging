@@ -126,6 +126,8 @@ function UserClubSearch({ navigation }) {
 
         <View style={[Spaces.gap[16]]}>
           <TouchableOpacity
+            accessibilityRole="radio"
+            accessibilityState={{ checked: isLooking === true }}
             onPress={() => setIsLooking(true)}
             style={[
               Spaces.padding[24],
@@ -138,6 +140,11 @@ function UserClubSearch({ navigation }) {
               },
             ]}
           >
+            {isLooking === true ? (
+              <Text importantForAccessibility="no" style={[Fonts.p1Bold, Fonts.primary500]}>
+                ✓
+              </Text>
+            ) : null}
             <Text style={[Fonts.h3Bold, { color: isLooking === true ? Colors.primary500 : Colors.neutral00 }]}>
               👁️ Oui, rendre mon profil visible
             </Text>
@@ -147,6 +154,8 @@ function UserClubSearch({ navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity
+            accessibilityRole="radio"
+            accessibilityState={{ checked: isLooking === false }}
             onPress={() => setIsLooking(false)}
             style={[
               Spaces.padding[24],
@@ -159,6 +168,11 @@ function UserClubSearch({ navigation }) {
               },
             ]}
           >
+            {isLooking === false ? (
+              <Text importantForAccessibility="no" style={[Fonts.p1Bold, Fonts.primary500]}>
+                ✓
+              </Text>
+            ) : null}
             <Text style={[Fonts.h3Bold, { color: isLooking === false ? Colors.primary500 : Colors.neutral00 }]}>
               🔒 Non, garder mon profil privé
             </Text>
