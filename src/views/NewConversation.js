@@ -387,7 +387,8 @@ function NewConversation({ navigation, route }) {
           width: 24,
         }}
         >
-          {isSelected && <Text style={{ color: 'white', fontSize: 14 }}>✓</Text>}
+          {/* Coche sur fond primary500 : encre primary900 (cf. THEME.md). */}
+          {isSelected && <Text style={{ color: Colors.primary900, fontSize: 14 }}>✓</Text>}
         </View>
       </TouchableOpacity>
     );

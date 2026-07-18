@@ -4556,7 +4556,7 @@ function Conversation({ navigation, route }) {
             containerStyle={{ left: { marginLeft: 0 } }}
             timeTextStyle={{
               left: { ...Fonts.p3, color: Colors.neutral500, marginLeft: 5 },
-              right: { ...Fonts.p3, color: Colors.primary200 },
+              right: { ...Fonts.p3, color: Colors.primary900 },
             }}
           />
         </View>
@@ -4567,7 +4567,7 @@ function Conversation({ navigation, route }) {
         {...props}
         timeTextStyle={{
           left: [Fonts.p3, Fonts.neutral500],
-          right: [Fonts.p3, Fonts.primary200],
+          right: [Fonts.p3, Fonts.primary900],
         }}
       />
     );
@@ -4954,7 +4954,12 @@ function Conversation({ navigation, route }) {
               }
               if (bubbleMessage.pending) return <Text style={{ fontSize: 10, marginRight: 4 }}>...</Text>;
               // Checkmark logic using icons or text
-              const tickColor = 'rgba(255,255,255,0.8)';
+              // GiftedChat appelle un renderTicks personnalise AVANT son propre
+              // garde gauche/droite : ce rendu s'applique donc AUSSI aux bulles
+              // recues (fond sombre #0F1821). L'encre suit le fond : primary900
+              // sur la bulle envoyee primary500 (7,96:1, cf. THEME.md),
+              // neutral00 sur la bulle recue sombre (17,90:1).
+              const tickColor = isLeft ? Colors.neutral00 : Colors.primary900;
               if (bubbleMessage.readBy && bubbleMessage.readBy.length > 0) {
                 return <Text style={{ color: tickColor, fontSize: 10, fontWeight: 'bold' }}>vv</Text>;
               }
@@ -4963,7 +4968,8 @@ function Conversation({ navigation, route }) {
             renderTime={renderTime}
             textStyle={{
               left: [Fonts.p1, { color: Colors.neutral00 }], // White text for dark bubble
-              right: [Fonts.p1, Fonts.neutral00],
+              // Bulle envoyee = fond primary500 : encre primary900 (cf. THEME.md).
+              right: [Fonts.p1, Fonts.primary900],
             }}
             wrapperStyle={{
               left: {
@@ -5148,12 +5154,13 @@ function Conversation({ navigation, route }) {
           width: 32,
         }}
       >
+        {/* Croix sur fond primary500 : encre primary900 (cf. THEME.md). */}
         <View style={{
-          backgroundColor: 'white', height: 2, position: 'absolute', width: 16,
+          backgroundColor: Colors.primary900, height: 2, position: 'absolute', width: 16,
         }}
         />
         <View style={{
-          backgroundColor: 'white', height: 16, position: 'absolute', width: 2,
+          backgroundColor: Colors.primary900, height: 16, position: 'absolute', width: 2,
         }}
         />
       </TouchableOpacity>
@@ -5213,7 +5220,7 @@ function Conversation({ navigation, route }) {
         {hasMediaDraft ? (
           <View style={[
             ApplicationStyle.backgroundColor.neutral100,
-            Spaces.padding[10],
+            Spaces.padding[8],
             Alignments.row,
             Alignments.alignCenter,
             { borderRadius: 14, gap: 10 },
@@ -5229,12 +5236,12 @@ function Conversation({ navigation, route }) {
               }}
             />
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary700 }]}>
                 {t('conversation.attachments.previewTitle', 'Photo prête à envoyer')}
               </Text>
               <Text
                 numberOfLines={2}
-                style={[Fonts.p4, { color: Colors.neutral400 }]}
+                style={[Fonts.p4, { color: Colors.neutral700 }]}
               >
                 {composerText?.trim()
                   ? t('conversation.attachments.previewWithCaption', 'La légende sera envoyée avec la photo.')
@@ -5262,7 +5269,7 @@ function Conversation({ navigation, route }) {
         {hasVoiceSession ? (
           <View style={[
             ApplicationStyle.backgroundColor.neutral100,
-            Spaces.padding[10],
+            Spaces.padding[8],
             Alignments.row,
             Alignments.alignCenter,
             Alignments.justifySpaceBetween,
@@ -5270,14 +5277,14 @@ function Conversation({ navigation, route }) {
           ]}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary700 }]}>
                 {isVoiceRecordingLocked
                   ? t('conversation.voice.locked', 'Note vocale verrouillée')
                   : t('conversation.voice.recording', 'Enregistrement vocal')}
               </Text>
               <Text
                 numberOfLines={2}
-                style={[Fonts.p4, { color: Colors.neutral400 }]}
+                style={[Fonts.p4, { color: Colors.neutral700 }]}
               >
                 {isSendingVoiceNote
                   ? t('conversation.voice.sending', 'Envoi en cours...')
@@ -5334,7 +5341,7 @@ function Conversation({ navigation, route }) {
         {hasVoiceDraft ? (
           <View style={[
             ApplicationStyle.backgroundColor.neutral100,
-            Spaces.padding[10],
+            Spaces.padding[8],
             {
               backgroundColor: 'rgba(10, 29, 40, 0.95)',
               borderColor: Colors.primary700,
@@ -5357,7 +5364,10 @@ function Conversation({ navigation, route }) {
                   width: 22,
                 }}
               >
-                <Text style={[Fonts.p4Bold, { color: isDraftVoicePlaying ? Colors.neutral00 : Colors.primary500 }]}>
+                <Text style={[Fonts.p4Bold, {
+                  color: isDraftVoicePlaying ? Colors.primary900 : Colors.primary500,
+                }]}
+                >
                   {isDraftVoicePlaying ? '||' : '>'}
                 </Text>
               </TouchableOpacity>
@@ -5441,12 +5451,12 @@ function Conversation({ navigation, route }) {
           ]}
           >
             <View>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              <Text style={[Fonts.p3Bold, Fonts.primary700]}>
                 Repondre a
                 {' '}
                 {replyingTo.user?.name}
               </Text>
-              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>{replyingTo.text}</Text>
+              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral700]}>{replyingTo.text}</Text>
             </View>
             <Button
               onPress={() => setReplyingTo(null)}
@@ -5554,14 +5564,18 @@ function Conversation({ navigation, route }) {
       && isVoiceNotesEnabled;
     let voiceButtonBackgroundColor = Colors.neutral700;
     let voiceButtonBorderColor = Colors.neutral600;
+    // Encre du micro : foncee sur fond primary500 (cf. THEME.md), claire sinon.
+    let voiceButtonInkColor = Colors.neutral00;
     let voiceButtonOpacity = canRecordVoiceNote ? 1 : 0.6;
     if (canRecordVoiceNote) {
       voiceButtonBackgroundColor = Colors.primary500;
       voiceButtonBorderColor = Colors.primary200;
+      voiceButtonInkColor = Colors.primary900;
     }
     if (isVoiceRecording) {
       voiceButtonBackgroundColor = Colors.error500;
       voiceButtonBorderColor = Colors.error700;
+      voiceButtonInkColor = Colors.neutral00;
     }
     if (isSendingVoiceNote) {
       voiceButtonOpacity = 0.7;
@@ -5595,9 +5609,9 @@ function Conversation({ navigation, route }) {
             }}
           >
             {isSendingVoiceNote ? (
-              <ActivityIndicator color={Colors.neutral00} size="small" />
+              <ActivityIndicator color={voiceButtonInkColor} size="small" />
             ) : (
-              <MicrophoneGlyph color={Colors.neutral00} />
+              <MicrophoneGlyph color={voiceButtonInkColor} />
             )}
           </View>
         </View>
@@ -5641,14 +5655,15 @@ function Conversation({ navigation, route }) {
             width: 34,
           }}
         >
+          {/* Bouton Envoyer sur fond primary500 : encre primary900 (cf. THEME.md). */}
           {isUploading ? (
-            <ActivityIndicator color={Colors.neutral00} size="small" />
+            <ActivityIndicator color={Colors.primary900} size="small" />
           ) : (
             <Image
               source={Images.send}
               style={{
                 height: 16,
-                tintColor: Colors.neutral00,
+                tintColor: Colors.primary900,
                 width: 16,
               }}
             />
@@ -5711,7 +5726,7 @@ function Conversation({ navigation, route }) {
           </View>
         </View>
 
-        <View style={Spaces.gap[6]}>
+        <View style={Spaces.gap[4]}>
           <Text style={[Fonts.p3Bold, { color: Colors.neutral00, lineHeight: 20 }]}>
             {leagueNegotiationSummary.title}
           </Text>
@@ -6269,7 +6284,7 @@ function Conversation({ navigation, route }) {
                 style={[
                   ApplicationStyle.borderRadius16,
                   Spaces.paddingHorizontal[16],
-                  Spaces.paddingVertical[14],
+                  Spaces.paddingVertical[12],
                   {
                     backgroundColor: 'rgba(10, 28, 38, 0.94)',
                     borderColor: 'rgba(1,179,244,0.28)',
@@ -6379,7 +6394,7 @@ function Conversation({ navigation, route }) {
           close={handleCloseEditMessageModal}
           isVisible={isEditMessageModalVisible}
         >
-          <View style={[Spaces.gap[12], Spaces.marginTop[20], Spaces.marginBottom[8]]}>
+          <View style={[Spaces.gap[12], Spaces.marginTop[16], Spaces.marginBottom[8]]}>
             <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
               {t('conversation.actions.editModal.title', 'Modifier le message')}
             </Text>

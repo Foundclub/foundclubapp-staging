@@ -578,7 +578,7 @@ function Messaging({ navigation, route }) {
         style={[
           ApplicationStyle.borderRadius24,
           Spaces.paddingHorizontal[16],
-          Spaces.paddingVertical[10],
+          Spaces.paddingVertical[8],
           {
             backgroundColor: Colors.primary500,
             opacity: isLoading ? 0.6 : 1,
@@ -869,8 +869,9 @@ function Messaging({ navigation, route }) {
                 resizeMode="contain"
                 source={Images.envelope}
                 style={{
+                  // Icone sur fond primary500 : encre primary900 (cf. THEME.md).
                   height: 24,
-                  tintColor: Colors.neutral00,
+                  tintColor: Colors.primary900,
                   width: 24,
                 }}
               />

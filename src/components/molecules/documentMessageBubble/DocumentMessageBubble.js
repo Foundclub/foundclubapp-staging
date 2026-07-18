@@ -267,7 +267,7 @@ function DocumentMessageBubble({
       </TouchableOpacity>
 
       {caption ? (
-        <View style={[Spaces.marginTop[6], { paddingHorizontal: 4 }]}>
+        <View style={[Spaces.marginTop[4], { paddingHorizontal: 4 }]}>
           <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
             {caption}
           </Text>

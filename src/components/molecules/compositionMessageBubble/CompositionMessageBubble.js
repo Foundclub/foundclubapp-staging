@@ -136,7 +136,8 @@ function CompositionMessageBubble({ composition, isMe = false }) {
           },
         ]}
       >
-        <Text style={[styles.miniTokenText, { color: '#FFF' }]}>
+        {/* Initiales sur pastille primary500 : encre primary900 (cf. THEME.md). */}
+        <Text style={[styles.miniTokenText, { color: Colors.primary900 }]}>
           {initials}
         </Text>
       </View>
@@ -170,7 +171,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       <RenderedTacticalField sport={sport} style={styles.miniField}>
         {renderMiniTokens()}
         <View style={[styles.countBadge, { backgroundColor: Colors.primary500 }]}>
-          <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
+          <Text style={[Fonts.p3Bold, { color: Colors.primary900 }]}>
             {isMultiTeamComposition ? teams.length : previewPlacements.length}
             {' '}
             {isMultiTeamComposition ? 'equipe(s)' : `joueur${previewPlacements.length > 1 ? 's' : ''}`}
