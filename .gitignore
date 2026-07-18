@@ -113,6 +113,8 @@ src/inspect_*
 .tmp/
 .tmp-bundle/
 .tmp-bundle-assets/
+.tmp_*
+.local/
 NUL
 
 # Local bundle/debug workdirs
