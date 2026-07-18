@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import calendarIcon from '@/assets/icons/calendar-days.png';
 import filterIcon from '@/assets/icons/filter.png';
 import searchIcon from '@/assets/icons/search.png';

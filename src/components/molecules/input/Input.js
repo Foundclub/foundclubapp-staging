@@ -85,7 +85,9 @@ const Input = forwardRef(
 
     useEffect(() => {
       if (props.error) {
-        setMainColor('error700');
+        // Sur le fond sombre de l'app, error700 vaut 3,75:1 (echec WCAG AA) ;
+        // error300 vaut 9,04:1. Applique au libelle, a l'icone et au separateur.
+        setMainColor('error300');
       } else {
         setMainColor('neutral00');
       }
@@ -194,7 +196,8 @@ const Input = forwardRef(
           props.error && props.error !== ' ' ? (
             <Text style={[
               Fonts.p2,
-              Fonts.error700,
+              // error700 sur fond sombre = 3,75:1 (echec AA), error300 = 9,04:1.
+              Fonts.error300,
             ]}
             >
               {props.error}

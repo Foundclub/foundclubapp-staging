@@ -1,5 +1,4 @@
-import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -11,10 +10,12 @@ import useTheme from '@/theme/themeContext';
  * @param root0.value
  */
 function Checkbox({ disabled, onValueChange, value }) {
-  const { ApplicationStyle, Colors } = useTheme();
+  const { Colors } = useTheme();
 
   return (
     <TouchableOpacity
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: Boolean(value), disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={() => !disabled && onValueChange(!value)}
       style={{

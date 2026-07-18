@@ -58,14 +58,24 @@ function TabButton({
           : ApplicationStyle.backgroundColor.transparent,
       ]}
     >
-      <Text style={[{ maxWidth: '90%' }, Fonts.p1, Fonts.primary100]}>
+      {/*
+        Fond actif = primary500 : texte et icone en encre foncee primary900 (7,96:1).
+        primary100 sur primary500 vaut 2,18:1 et echoue au WCAG AA.
+        Decision Adel 2026-07-14, cf. THEME.md.
+      */}
+      <Text style={[
+        { maxWidth: '90%' },
+        Fonts.p1,
+        isActive ? Fonts.primary900 : Fonts.primary100,
+      ]}
+      >
         {title}
       </Text>
       <Image
         source={isActive ? Images.close : Images.arrowRight}
         style={[
           ApplicationStyle.icon20,
-          ApplicationStyle.tintColor[isActive ? 'neutral900' : 'primary100']]}
+          ApplicationStyle.tintColor[isActive ? 'primary900' : 'primary100']]}
       />
     </TouchableOpacity>
 

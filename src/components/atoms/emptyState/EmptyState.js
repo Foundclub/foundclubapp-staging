@@ -1,4 +1,3 @@
-import React from 'react';
 import { Image, Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -22,7 +21,7 @@ function EmptyState({
   title,
 }) {
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
 
   return (
@@ -37,8 +36,11 @@ function EmptyState({
     >
       {icon && (
       <View style={[Spaces.marginBottom[8]]}>
-        {/* Placeholder for icon/image */}
-        {/* <Image source={icon} style={{ width: 80, height: 80 }} resizeMode="contain" /> */}
+        <Image
+          resizeMode="contain"
+          source={icon}
+          style={{ height: 80, width: 80 }}
+        />
       </View>
       )}
       <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>

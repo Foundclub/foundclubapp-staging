@@ -69,28 +69,36 @@ function Checkable({
   };
 
   return (
-    <TouchableWithoutFeedback onPress={() => {
-      if (bouncyCheckboxRef.current && canBePressed) {
-        // @ts-expect-error because ref are not typed well
-        bouncyCheckboxRef.current.onCheckboxPress();
-      }
-    }}
+    // Les props d'accessibilite sont portees par le Touchable, PAS par la View
+    // enfant : TouchableWithoutFeedback reconstruit systematiquement
+    // `accessibilityState` a partir de ses propres props et l'injecte par
+    // cloneElement, ce qui ecraserait un accessibilityState pose sur l'enfant.
+    <TouchableWithoutFeedback
+      accessibilityRole={type === 'square' ? 'checkbox' : 'radio'}
+      accessibilityState={{ checked: Boolean(isChecked), disabled: !canBePressed }}
+      onPress={() => {
+        if (bouncyCheckboxRef.current && canBePressed) {
+          // @ts-expect-error because ref are not typed well
+          bouncyCheckboxRef.current.onCheckboxPress();
+        }
+      }}
     >
-      <View style={[
-        Alignments.fill,
-        { opacity: canBePressed ? 1 : 0.5 },
-        Alignments.row,
-        Alignments.alignCenter,
-        Alignments.justifySpaceBetween,
-        ApplicationStyle.borderRadius12,
-        ApplicationStyle.borderWidth2,
-        ApplicationStyle.borderColor.neutral00,
-        Spaces.padding[16],
-        Spaces.gap[16],
-        isChecked ? ApplicationStyle.backgroundColor.primary500
-          : ApplicationStyle.backgroundColor.transparent,
-        wrapperStyle,
-      ]}
+      <View
+        style={[
+          Alignments.fill,
+          { opacity: canBePressed ? 1 : 0.5 },
+          Alignments.row,
+          Alignments.alignCenter,
+          Alignments.justifySpaceBetween,
+          ApplicationStyle.borderRadius12,
+          ApplicationStyle.borderWidth2,
+          ApplicationStyle.borderColor.neutral00,
+          Spaces.padding[16],
+          Spaces.gap[16],
+          isChecked ? ApplicationStyle.backgroundColor.primary500
+            : ApplicationStyle.backgroundColor.transparent,
+          wrapperStyle,
+        ]}
       >
         {children || (
         <Text style={[

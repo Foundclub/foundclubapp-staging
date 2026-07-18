@@ -170,7 +170,9 @@ function SegmentedControl({
     },
     segmentTextSelected: {
       ...Fonts.p3Bold,
-      color: Colors.neutral00,
+      // Encre foncee sur fond primary500 : neutral00 = 2,40:1 (echec WCAG AA),
+      // primary900 = 7,96:1. Decision Adel 2026-07-14, cf. THEME.md.
+      color: Colors.primary900,
       fontSize: segmentTextSize,
       includeFontPadding: !isWeb ? false : undefined,
       lineHeight: segmentTextLineHeight,

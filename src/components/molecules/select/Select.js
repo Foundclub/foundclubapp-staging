@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -68,7 +68,13 @@ function Select({
                 opt.value === value && ApplicationStyle.backgroundColor.primary100,
               ]}
             >
-              <Text style={[Fonts.p1Bold, Fonts.primary500]}>{opt.label}</Text>
+              {/*
+                Options posees sur neutral100 / primary100 (fonds clairs) :
+                primary500 y vaut 1,92:1 et 2,18:1 (echec WCAG AA).
+                primary900 vaut 15,27:1 et 17,37:1. L'etat selectionne reste
+                signale par le fond, comme avant.
+              */}
+              <Text style={[Fonts.p1Bold, Fonts.primary900]}>{opt.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
