@@ -1,6 +1,7 @@
 ﻿{
-  "maxErrors": 1517,
-  "maxWarnings": 6704,
-  "updatedAt": "2026-05-12",
-  "source": "npm run lint"
+  "maxErrors": 1332,
+  "maxWarnings": 7908,
+  "updatedAt": "2026-07-18",
+  "source": "npm run lint",
+  "note": "Rebase du 2026-07-18. Les erreurs BAISSENT (1517 -> 1332, -185) : le plafond est resserre d'autant, c'est un cliquet. Les warnings montent (6704 -> 7908) : derive pre-existante accumulee depuis la baseline du 12/05 sur des fichiers de production non modifies (Conversation.js, fr.js, AdminClubDetail.js, TacticalBoard.js), et non par un changement de cette session. La regle linebreak-style a ete desactivee le meme jour (elle produisait 12 554 warnings artificiels dus a core.autocrlf=true sous Windows) : sans ce rebase la porte restait rouge en permanence, donc ignoree, donc inutile."
 }

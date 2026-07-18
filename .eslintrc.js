@@ -15,7 +15,13 @@ module.exports = {
   rules: {
     'import/no-extraneous-dependencies': 'off',
     'import/prefer-default-export': 'off',
-    'linebreak-style': ['warn', 'unix'],
+    // Desactivee volontairement (decision Adel 2026-07-18) : le poste de dev est
+    // sous Windows avec core.autocrlf=true, qui convertit les LF en CRLF au
+    // checkout. La regle produisait alors 12 554 warnings artificiels sur du code
+    // non modifie, faisant echouer lint:no-regression (baseline prise sous Unix le
+    // 12/05) et masquant les vrais signaux. Les fins de ligne restent normalisees
+    // dans git via .gitattributes ; c'est la le bon endroit pour les gerer.
+    'linebreak-style': 'off',
     'max-len': ['warn', {
       code: 100,
       ignoreComments: false,
