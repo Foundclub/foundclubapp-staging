@@ -16,11 +16,14 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import Input from '@/components/molecules/input/Input';
+import SubscriptionPaywallSheet
+  from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -211,6 +214,7 @@ function FacilityForm() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   const watchedName = watch('name');
   const watchedType = watch('type');
@@ -302,6 +306,12 @@ function FacilityForm() {
       }
       navigation.goBack();
     } catch (error) {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
+
       Alert.alert(
         t('common.error', 'Erreur'),
         error?.message || t('facilityForm.errors.saveFailed', 'Une erreur est survenue lors de l\'enregistrement.'),
@@ -798,6 +808,14 @@ function FacilityForm() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={contextClubId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
     </ScreenContainer>
   );
 }

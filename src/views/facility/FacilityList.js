@@ -1,5 +1,5 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -14,11 +14,14 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
+import SubscriptionPaywallSheet
+  from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -85,6 +88,7 @@ function FacilityList() {
   });
   const facilities = useMemo(() => facilityContext?.allFacilities || [], [facilityContext?.allFacilities]);
   const resolvedCmId = facilityContext?.cmId || contextCmId || null;
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -116,6 +120,12 @@ function FacilityList() {
               await deleteFacility(id);
               refetchFacilities();
             } catch (deleteError) {
+              const subscriptionDecision = extractSubscriptionDecisionFromError(deleteError);
+              if (subscriptionDecision) {
+                setSubscriptionPaywallDecision(subscriptionDecision);
+                return;
+              }
+
               Alert.alert(
                 t('common.error', 'Erreur'),
                 deleteError?.message || t(
@@ -555,6 +565,14 @@ function FacilityList() {
       </View>
 
       {content}
+
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={contextClubId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
     </ScreenContainer>
   );
 }
