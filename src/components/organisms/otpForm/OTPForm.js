@@ -90,8 +90,11 @@ function OTPForm({
         await loginMutation.mutateAsync({ code: data.code, confirm });
       } catch (error) {
         otpLogger.error('Login failed', error);
-        hasAutoSubmittedRef.current = false;
-        // Reset local state on error so user can try again
+        // NE PAS remettre hasAutoSubmittedRef a false : l effet d envoi automatique
+        // se redeclenche des que ce drapeau et isLocalSubmitting sont faux, ce qui
+        // rejouait l envoi en boucle infinie (mesure a 3-5 req/s). L envoi auto ne
+        // doit avoir lieu qu une fois ; apres un echec, c est a l utilisateur de
+        // relancer via le bouton.
         setIsLocalSubmitting(false);
       }
     }
