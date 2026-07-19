@@ -1,14 +1,14 @@
 {
   "maxByRule": {
-    "unknownTokens": 5,
-    "hexOutsideAllowlist": 13,
+    "unknownTokens": 1,
+    "hexOutsideAllowlist": 12,
     "hexInProtectedFiles": 0,
-    "rgbLiterals": 878,
-    "spacesOutOfRamp": 259,
-    "inkOnPrimary500": 46,
+    "rgbLiterals": 870,
+    "spacesOutOfRamp": 195,
+    "inkOnPrimary500": 38,
     "staleAllowlist": 0
   },
-  "note": "Plafond par regle du contrat de theme. Cliquet : les compteurs ne doivent JAMAIS monter. Quand un lot resorbe des constats, relancer avec --update-baseline pour resserrer. Une porte rouge en permanence ne protege rien : c'est exactement pourquoi ces plafonds existent. Baseline posee le 2026-07-19 en meme temps que 3 nouvelles regles (rgbLiterals, spacesOutOfRamp, inkOnPrimary500) : leurs compteurs de depart mesurent une dette PRE-EXISTANTE, pas une regression de cette session. Detail des constats : npm run verify:theme-contract -- --verbose. Tolerance zero : -- --strict. unknownTokens=5 = 3 appelants fautifs (ApplicationStyle.borderRadius1, Fonts.body4 x2, Fonts.p5 x2) qui appartiennent a d'autres lots. staleAllowlist est volontairement laisse a 0 et NON bloquant : il doit toujours afficher ce qu'il reste a retirer, sans jamais faire echouer la porte (une entree devient perimee quand quelqu'un nettoie un fichier - punir ca serait absurde).",
+  "note": "Plafond par regle du contrat de theme. Cliquet : les compteurs ne doivent JAMAIS monter. Quand un lot resorbe des constats, relancer avec --update-baseline pour resserrer. Une porte rouge en permanence ne protege rien : c'est exactement pourquoi ces plafonds existent. Baseline posee le 2026-07-19 en meme temps que 3 nouvelles regles (rgbLiterals, spacesOutOfRamp, inkOnPrimary500) : leurs compteurs de depart mesurent une dette PRE-EXISTANTE, pas une regression de cette session. Detail des constats : npm run verify:theme-contract -- --verbose. Tolerance zero : -- --strict. unknownTokens=1 : il ne reste que ApplicationStyle.borderRadius1 (EventListContent), qui appartient a un autre lot. Fonts.body4 x2 (ParticipantEventList) et Fonts.p5 x2 (MultiTeamCompositionBoard) ont ete corriges par le lot equipes/evenements/plannings le 2026-07-19. staleAllowlist est volontairement laisse a 0 et NON bloquant : il doit toujours afficher ce qu'il reste a retirer, sans jamais faire echouer la porte (une entree devient perimee quand quelqu'un nettoie un fichier - punir ca serait absurde).",
   "source": "npm run verify:theme-contract",
   "updatedAt": "2026-07-19"
 }

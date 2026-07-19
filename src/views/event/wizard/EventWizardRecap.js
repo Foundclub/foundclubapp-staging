@@ -1328,8 +1328,8 @@ function EventWizardRecap({ navigation }) {
             </Text>
           </View>
 
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[14], cardSurfaceStyle]}>
-            <View style={[Spaces.gap[6]]}>
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
+            <View style={[Spaces.gap[4]]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>
                 {t('eventWizard.recap.featured.title', 'Mise a la une')}
               </Text>
@@ -1349,7 +1349,7 @@ function EventWizardRecap({ navigation }) {
               ) : null}
             </View>
 
-            <View style={[Spaces.gap[10]]}>
+            <View style={[Spaces.gap[8]]}>
               {FEATURED_SCOPE_OPTIONS.map((option) => {
                 const isSelected = selectedFeaturedScopes.includes(option.value);
 
@@ -1361,7 +1361,7 @@ function EventWizardRecap({ navigation }) {
                     style={[
                       ApplicationStyle.borderRadius16,
                       ApplicationStyle.borderWidth1,
-                      Spaces.padding[14],
+                      Spaces.padding[12],
                       {
                         backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(1, 179, 244, 0.06)',
                         borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.20)',

@@ -65,7 +65,7 @@ function TeamStatsScreen({ navigation, route }) {
           Alignments.row,
           Alignments.justifySpaceBetween,
           Spaces.paddingHorizontal[24],
-          Spaces.paddingVertical[20],
+          Spaces.paddingVertical[16],
           {
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
             borderColor: 'rgba(255, 255, 255, 0.1)',

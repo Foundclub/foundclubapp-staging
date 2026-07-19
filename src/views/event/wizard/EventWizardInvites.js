@@ -1359,7 +1359,7 @@ function EventWizardInvites({ navigation }) {
 
       {isExternalFiltersModalOpen ? (
         <BottomModal close={closeExternalFiltersModal} isVisible snapPoints={['88%']} webPresentation="dialog">
-          <ScrollView contentContainerStyle={[Spaces.gap[20], Spaces.paddingBottom[24]]} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[24]]} showsVerticalScrollIndicator={false}>
             <View style={Spaces.gap[8]}>
               <Text style={[Fonts.h3, Fonts.neutral00]}>
                 Filtres de recherche club

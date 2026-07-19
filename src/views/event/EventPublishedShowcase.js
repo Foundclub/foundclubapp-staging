@@ -6,7 +6,7 @@
  * d'une détection / séance d'essai (câblé dans EventWizardRecap — voir diffs/app-EventWizardRecap.patch).
  *
  * Réutilise les patterns EXISTANTS de l'app :
- *   - useTheme (Colors.primary500 #01b3f4 / primary700 #173844) — comme ShareEventModal
+ *   - useTheme (Colors.primary500 / Colors.primary700) — comme ShareEventModal
  *   - ShareEventModal (envoi dans une conversation) + SharePlatform (partage natif)
  *   - buildShareMessageWithUrl / buildPublicEventUrl (@/utils/shareLinks)
  *   - celebrate() pour rejouer la célébration de création
@@ -41,7 +41,7 @@ import SharePlatform from '@/platform/share';
  * @param root0.route
  */
 export default function EventPublishedShowcase({ navigation, route }) {
-  const { Colors } = useTheme();
+  const { ApplicationStyle, Colors } = useTheme();
   const { t } = useTranslation();
   const params = route?.params || {};
   const {
@@ -70,6 +70,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [busyAction, setBusyAction] = useState(null); // 'story' | 'poster' | null
   const [editorOpen, setEditorOpen] = useState(false);
+  const [downloadError, setDownloadError] = useState(null);
 
   const {
     downloadPoster, downloadStory, error, event, isLoading, overrides,
@@ -111,10 +112,18 @@ export default function EventPublishedShowcase({ navigation, route }) {
     await SharePlatform.share({ message, url: shareUrl });
   };
 
+  // useEventShowcase.shareFile journalise puis RE-LEVE l'erreur : sans ce catch, un
+  // telechargement echoue en silence (spinner qui s'arrete, aucun retour a l'ecran).
   const runDownload = async (key, fn) => {
     setBusyAction(key);
+    setDownloadError(null);
     try {
       await fn();
+    } catch (e) {
+      setDownloadError(t(
+        'showcase.downloadError',
+        'Le téléchargement a échoué. Vérifie ta connexion et réessaie.',
+      ));
     } finally {
       setBusyAction(null);
     }
@@ -153,7 +162,10 @@ export default function EventPublishedShowcase({ navigation, route }) {
             return (
               <TouchableOpacity
                 accessibilityLabel={t('showcase.variantHint', 'Choisir le style {{label}}', { label })}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
                 activeOpacity={0.85}
+                hitSlop={ApplicationStyle.hitSlop.min44From32}
                 key={key}
                 onPress={() => setVariant(key)}
                 style={[styles.variantChip, active && styles.variantChipActive]}
@@ -187,7 +199,14 @@ export default function EventPublishedShowcase({ navigation, route }) {
               <Text style={styles.previewErrorText}>
                 {t('showcase.error', 'Le visuel n’a pas pu être généré.')}
               </Text>
-              <TouchableOpacity activeOpacity={0.85} onPress={retry} style={styles.retryBtn}>
+              <TouchableOpacity
+                accessibilityLabel={t('showcase.retry', 'Réessayer')}
+                accessibilityRole="button"
+                activeOpacity={0.85}
+                hitSlop={ApplicationStyle.hitSlop.min44From32}
+                onPress={retry}
+                style={styles.retryBtn}
+              >
                 <Text style={styles.retryBtnText}>{t('showcase.retry', 'Réessayer')}</Text>
               </TouchableOpacity>
             </View>
@@ -196,8 +215,11 @@ export default function EventPublishedShowcase({ navigation, route }) {
 
         <View style={styles.editor}>
           <TouchableOpacity
+            accessibilityLabel={t('showcase.customize', 'Personnaliser le texte')}
             accessibilityRole="button"
+            accessibilityState={{ expanded: editorOpen }}
             activeOpacity={0.85}
+            hitSlop={ApplicationStyle.hitSlop.min44From40}
             onPress={() => setEditorOpen((open) => !open)}
             style={styles.editorToggle}
           >
@@ -230,7 +252,10 @@ export default function EventPublishedShowcase({ navigation, route }) {
                 </View>
               ))}
               <TouchableOpacity
+                accessibilityLabel={t('showcase.reset', 'Réinitialiser')}
+                accessibilityRole="button"
                 activeOpacity={0.85}
+                hitSlop={ApplicationStyle.hitSlop.min44From32}
                 onPress={resetOverrides}
                 style={styles.resetBtn}
               >
@@ -241,12 +266,20 @@ export default function EventPublishedShowcase({ navigation, route }) {
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity activeOpacity={0.85} onPress={onNativeShare} style={styles.primaryBtn}>
+          <TouchableOpacity
+            accessibilityLabel={t('showcase.share', 'Partager')}
+            accessibilityRole="button"
+            activeOpacity={0.85}
+            onPress={onNativeShare}
+            style={styles.primaryBtn}
+          >
             <Text style={styles.primaryBtnText}>{t('showcase.share', 'Partager')}</Text>
           </TouchableOpacity>
 
           {chatShareEnabled ? (
             <TouchableOpacity
+              accessibilityLabel={t('showcase.sendInChat', 'Envoyer dans une conversation')}
+              accessibilityRole="button"
               activeOpacity={0.85}
               onPress={() => setShareModalOpen(true)}
               style={styles.secondaryBtn}
@@ -259,6 +292,9 @@ export default function EventPublishedShowcase({ navigation, route }) {
 
           <View style={styles.row}>
             <TouchableOpacity
+              accessibilityLabel={t('showcase.story', 'Story / Post')}
+              accessibilityRole="button"
+              accessibilityState={{ busy: busyAction === 'story', disabled: busyAction != null }}
               disabled={busyAction != null}
               onPress={() => runDownload('story', downloadStory)}
               style={styles.ghostBtn}
@@ -268,6 +304,9 @@ export default function EventPublishedShowcase({ navigation, route }) {
                 : <Text style={styles.ghostBtnText}>{t('showcase.story', 'Story / Post')}</Text>}
             </TouchableOpacity>
             <TouchableOpacity
+              accessibilityLabel={t('showcase.poster', 'Affiche à imprimer')}
+              accessibilityRole="button"
+              accessibilityState={{ busy: busyAction === 'poster', disabled: busyAction != null }}
               disabled={busyAction != null}
               onPress={() => runDownload('poster', downloadPoster)}
               style={styles.ghostBtn}
@@ -278,7 +317,22 @@ export default function EventPublishedShowcase({ navigation, route }) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          {downloadError ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              accessibilityRole="alert"
+              style={styles.downloadErrorText}
+            >
+              {downloadError}
+            </Text>
+          ) : null}
+
+          <TouchableOpacity
+            accessibilityLabel={t('showcase.later', 'Plus tard')}
+            accessibilityRole="button"
+            hitSlop={ApplicationStyle.hitSlop.min44From32}
+            onPress={() => navigation.goBack()}
+          >
             <Text style={styles.later}>{t('showcase.later', 'Plus tard')}</Text>
           </TouchableOpacity>
         </View>
@@ -301,6 +355,10 @@ const makeStyles = (Colors) => StyleSheet.create({
   container: {
     backgroundColor: Colors.neutral00, flexGrow: 1, gap: 16, padding: 20,
   },
+  // error700 sur fond neutral00 : 5,21:1 (AA).
+  downloadErrorText: {
+    color: Colors.error700, fontSize: 13, paddingHorizontal: 4, textAlign: 'center',
+  },
   editor: { gap: 8 },
   editorBody: { gap: 14, marginTop: 4 },
   editorField: {
@@ -320,7 +378,9 @@ const makeStyles = (Colors) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
   },
-  editorToggleChevron: { color: Colors.primary500, fontSize: 22, fontWeight: '700' },
+  // Glyphe +/- porteur de l'etat plie/deplie : primary500 sur blanc = 2,40:1,
+  // primary700 = 12,51:1.
+  editorToggleChevron: { color: Colors.primary700, fontSize: 22, fontWeight: '700' },
   editorToggleText: { color: Colors.primary700, fontSize: 16, fontWeight: '700' },
   flex: { flex: 1 },
   ghostBtn: {
@@ -333,7 +393,8 @@ const makeStyles = (Colors) => StyleSheet.create({
     paddingVertical: 12,
   },
   ghostBtnText: { color: Colors.primary700, fontWeight: '600' },
-  later: { color: Colors.neutral500, paddingVertical: 8, textAlign: 'center' },
+  // Sur fond neutral00 : neutral500 = 4,23:1 (sous AA), neutral600 = 6,06:1.
+  later: { color: Colors.neutral600, paddingVertical: 8, textAlign: 'center' },
   preview: {
     alignItems: 'center',
     aspectRatio: 4 / 5,
@@ -347,7 +408,8 @@ const makeStyles = (Colors) => StyleSheet.create({
   },
   previewImage: { height: '100%', width: '100%' },
   previewLoading: { alignItems: 'center', gap: 8 },
-  previewLoadingText: { color: Colors.neutral500, fontSize: 13 },
+  // Sur fond neutral50 (cadre d'apercu) : neutral500 = 3,77:1 (sous AA), neutral600 = 5,41:1.
+  previewLoadingText: { color: Colors.neutral600, fontSize: 13 },
   previewOverlay: {
     backgroundColor: `${Colors.neutral00}99`,
     bottom: 0,
@@ -360,16 +422,22 @@ const makeStyles = (Colors) => StyleSheet.create({
   primaryBtn: {
     alignItems: 'center', backgroundColor: Colors.primary500, borderRadius: 12, paddingVertical: 14,
   },
-  primaryBtnText: { color: Colors.neutral00, fontSize: 16, fontWeight: '700' },
+  // Encre unique sur fond primary500 (THEME.md) : neutral00 = 2,40:1, primary900 = 7,96:1.
+  primaryBtnText: { color: Colors.primary900, fontSize: 16, fontWeight: '700' },
   resetBtn: { alignItems: 'center', paddingVertical: 8 },
-  resetBtnText: { color: Colors.primary500, fontWeight: '600' },
+  // Sur fond neutral00 : primary500 = 2,40:1 (echec AA), primary700 = 12,51:1.
+  resetBtnText: { color: Colors.primary700, fontWeight: '600' },
   retryBtn: { paddingHorizontal: 16, paddingVertical: 8 },
-  retryBtnText: { color: Colors.primary500, fontWeight: '600' },
+  // Sur fond neutral50 (cadre d'apercu) : primary500 = 2,14:1, primary700 = 11,15:1.
+  retryBtnText: { color: Colors.primary700, fontWeight: '600' },
   row: { flexDirection: 'row', gap: 10 },
   secondaryBtn: {
-    alignItems: 'center', borderColor: Colors.primary500, borderRadius: 12, borderWidth: 1, paddingVertical: 12,
+    // Seul lisere delimitant le bouton : primary500 sur blanc = 2,40:1 (sous le seuil
+    // 3:1 des elements graphiques porteurs d'information), primary600 = 3,34:1.
+    alignItems: 'center', borderColor: Colors.primary600, borderRadius: 12, borderWidth: 1, paddingVertical: 12,
   },
-  secondaryBtnText: { color: Colors.primary500, fontWeight: '700' },
+  // Sur fond neutral00 : primary500 = 2,40:1 (echec AA), primary700 = 12,51:1.
+  secondaryBtnText: { color: Colors.primary700, fontWeight: '700' },
   subtitle: { color: Colors.neutral600, fontSize: 15 },
   title: { color: Colors.primary700, fontSize: 24, fontWeight: '800' },
   variantChip: {
@@ -384,7 +452,9 @@ const makeStyles = (Colors) => StyleSheet.create({
     borderColor: Colors.primary500,
   },
   variantChipText: { color: Colors.neutral600, fontSize: 13, fontWeight: '600' },
-  variantChipTextActive: { color: Colors.primary600, fontWeight: '700' },
+  // Sur le fond teinte primary500 a 8 % pose sur blanc : primary600 = 3,11:1 (echec AA),
+  // primary700 = 11,63:1.
+  variantChipTextActive: { color: Colors.primary700, fontWeight: '700' },
   variantRow: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12,
   },

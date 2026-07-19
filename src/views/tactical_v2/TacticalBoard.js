@@ -176,7 +176,7 @@ const serializeCompositionState = (payload, mode = 'event') => {
  */
 function TacticalBoard() {
   const {
-    Alignments, Colors, Fonts, Images, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -1370,8 +1370,14 @@ function TacticalBoard() {
 
           <View style={styles.panelHeader}>
             <View style={styles.panelTabsRow}>
+              {/* panelTab est rendu a 28px : rendu visuel inchange, zone de clic
+                  completee a 44px via hitSlop (decision Adel, cf. THEME.md). */}
               <TouchableOpacity
+                accessibilityLabel="Banc"
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isPanelOpen && activePanel === 'bench' }}
                 activeOpacity={0.9}
+                hitSlop={ApplicationStyle.hitSlop.min44From28}
                 onPress={() => togglePanel('bench')}
                 style={[
                   styles.panelTab,
@@ -1387,7 +1393,11 @@ function TacticalBoard() {
               </TouchableOpacity>
 
               <TouchableOpacity
+                accessibilityLabel="Actions"
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isPanelOpen && activePanel === 'actions' }}
                 activeOpacity={0.9}
+                hitSlop={ApplicationStyle.hitSlop.min44From28}
                 onPress={() => togglePanel('actions')}
                 style={[
                   styles.panelTab,

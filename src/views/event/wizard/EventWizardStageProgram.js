@@ -335,7 +335,7 @@ function EventWizardStageProgram({ navigation }) {
       title={copy('title', isTournament ? 'Programme du tournoi' : 'Programme du stage')}
     >
       <View style={[Spaces.gap[24]]}>
-        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[20], cardSurfaceStyle]}>
+        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], cardSurfaceStyle]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
             {copy('periodTitle', 'Periode')}
           </Text>
@@ -355,8 +355,8 @@ function EventWizardStageProgram({ navigation }) {
           </View>
         </View>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[20], cardSurfaceStyle]}>
-          <View style={[Spaces.gap[6]]}>
+        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], cardSurfaceStyle]}>
+          <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
               {copy('defaultHoursTitle', 'Horaires par defaut')}
             </Text>
@@ -409,7 +409,7 @@ function EventWizardStageProgram({ navigation }) {
         </View>
 
         <View style={[Spaces.gap[16]]}>
-          <View style={[Spaces.gap[6]]}>
+          <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
               {copy('daysTitle', isTournament ? 'Jours du tournoi' : 'Jours du stage')}
             </Text>
@@ -453,7 +453,7 @@ function EventWizardStageProgram({ navigation }) {
                   />
                 </View>
 
-                <View style={[Spaces.gap[10]]}>
+                <View style={[Spaces.gap[8]]}>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
                     {inheritedHours
                       ? copy(

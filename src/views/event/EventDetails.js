@@ -3641,10 +3641,10 @@ function EventDetails({ navigation, route }) {
           onPress={() => setIsTournamentActionsOpen((previousValue) => !previousValue)}
           style={[
             // @ts-ignore: FIXME: Baseline TS regression
-            Spaces.paddingTop[10],
+            Spaces.paddingTop[8],
             Spaces.paddingBottom[12],
             // @ts-ignore: FIXME: Baseline TS regression
-            Spaces.gap[10],
+            Spaces.gap[8],
           ]}
         >
           <View style={[Alignments.alignCenter]}>
@@ -3780,7 +3780,7 @@ function EventDetails({ navigation, route }) {
                 ApplicationStyle.borderRadius16,
                 ApplicationStyle.borderWidth1,
                 Spaces.padding[12],
-                Spaces.gap[10],
+                Spaces.gap[8],
                 {
                   backgroundColor: Colors.primary700,
                   borderColor: `${Colors.primary500}55`,
@@ -5554,7 +5554,7 @@ function EventDetails({ navigation, route }) {
         snapPoints={['44%']}
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
-          <View style={[Spaces.gap[6]]}>
+          <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
               Bravo, ton evenement est en ligne
             </Text>

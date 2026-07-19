@@ -694,7 +694,7 @@ function EventWizardLogistics({ navigation }) {
               { backgroundColor: cardSurface, borderColor: cardBorder },
             ]}
           >
-            <View style={[Spaces.gap[6], { flex: 1 }]}>
+            <View style={[Spaces.gap[4], { flex: 1 }]}>
               <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
                 {t('eventWizard.tournamentProgram.logisticsToggleTitle', 'Tournoi sur plusieurs jours')}
               </Text>

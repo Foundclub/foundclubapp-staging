@@ -267,7 +267,7 @@ function EventWizardValidationMode({ navigation }) {
       )}
       title={t('eventWizard.steps.validation.title', 'Mode de validation')}
     >
-      <View style={[Spaces.marginTop[8], Spaces.gap[20]]}>
+      <View style={[Spaces.marginTop[8], Spaces.gap[16]]}>
         <ValidationChoiceGroup
           Alignments={Alignments}
           ApplicationStyle={ApplicationStyle}

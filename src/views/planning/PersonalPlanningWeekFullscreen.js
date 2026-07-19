@@ -534,7 +534,7 @@ function PlanningWeekFullscreen() {
               ApplicationStyle.borderWidth1,
               Spaces.padding[12],
               Spaces.marginBottom[8],
-              Spaces.gap[10],
+              Spaces.gap[8],
               {
                 backgroundColor: 'rgba(4, 31, 44, 0.88)',
                 borderColor: `${facilityPlanningSummary.facilityColor}66`,
@@ -561,8 +561,8 @@ function PlanningWeekFullscreen() {
                   style={[
                     ApplicationStyle.borderRadius100,
                     ApplicationStyle.borderWidth1,
-                    Spaces.paddingHorizontal[10],
-                    Spaces.paddingVertical[6],
+                    Spaces.paddingHorizontal[8],
+                    Spaces.paddingVertical[4],
                     {
                       backgroundColor: index === 1
                         ? `${facilityPlanningSummary.facilityColor}22`

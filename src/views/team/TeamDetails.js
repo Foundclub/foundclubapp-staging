@@ -1863,6 +1863,12 @@ function TeamDetails({ navigation, route }) {
     const isActive = activeTab === key;
     return (
       <TouchableOpacity
+        accessibilityLabel={label}
+        accessibilityRole="tab"
+        accessibilityState={{
+          disabled: isExternalCompetitionFlowLocked,
+          selected: isActive,
+        }}
         disabled={isExternalCompetitionFlowLocked}
         onPress={() => {
           if (isExternalCompetitionFlowLocked) {
@@ -1892,7 +1898,9 @@ function TeamDetails({ navigation, route }) {
           numberOfLines={1}
           style={[
             isActive ? Fonts.p3Bold : Fonts.p3,
-            isActive ? Fonts.neutral00 : Fonts.neutral100,
+            // Encre unique sur fond primary500 (cf. THEME.md) : blanc = 2,40:1 (echec AA),
+            // primary900 = 7,96:1. L'onglet actif redevient le plus lisible des quatre.
+            isActive ? Fonts.primary900 : Fonts.neutral100,
             Fonts.textCenter,
           ]}
         >
@@ -1951,7 +1959,7 @@ function TeamDetails({ navigation, route }) {
                 ApplicationStyle.backgroundColor.primary700,
                 ApplicationStyle.borderRadius16,
                 Spaces.padding[12],
-                Spaces.gap[6],
+                Spaces.gap[4],
                 {
                   borderColor: `${accentColor}55`,
                   borderWidth: 1,
@@ -2027,8 +2035,8 @@ function TeamDetails({ navigation, route }) {
           <View
             style={[
               ApplicationStyle.borderRadius24,
-              Spaces.paddingVertical[6],
-              Spaces.paddingHorizontal[10],
+              Spaces.paddingVertical[4],
+              Spaces.paddingHorizontal[8],
               {
                 backgroundColor: externalSyncStatusMeta.badgeBackground,
                 borderColor: externalSyncStatusMeta.badgeBorder,
@@ -3167,7 +3175,7 @@ function TeamDetails({ navigation, route }) {
                       <View
                         style={[
                           Alignments.row,
-                          Spaces.gap[10],
+                          Spaces.gap[8],
                           {
                             borderBottomColor: 'rgba(255,255,255,0.08)',
                             borderBottomWidth: 1,
@@ -3213,7 +3221,7 @@ function TeamDetails({ navigation, route }) {
                               style={[
                                 Alignments.row,
                                 Alignments.alignCenter,
-                                Spaces.gap[10],
+                                Spaces.gap[8],
                                 { minHeight: isMyRow ? 24 : 44 },
                               ]}
                             >
@@ -3871,7 +3879,7 @@ function TeamDetails({ navigation, route }) {
                                   }}
                                   style={[
                                     Spaces.padding[12],
-                                    Spaces.marginBottom[10],
+                                    Spaces.marginBottom[8],
                                     {
                                       backgroundColor: '#FFFFFF08', borderColor: '#FFFFFF14', borderRadius: 12, borderWidth: 1,
                                     },
@@ -3901,7 +3909,7 @@ function TeamDetails({ navigation, route }) {
                                       <View
                                         style={[
                                           Spaces.paddingVertical[4],
-                                          Spaces.paddingHorizontal[10],
+                                          Spaces.paddingHorizontal[8],
                                           ApplicationStyle.borderRadius24,
                                           { backgroundColor: isPlayedMatch ? '#FFFFFF22' : `${Colors.primary500}22` },
                                         ]}
@@ -3981,7 +3989,7 @@ function TeamDetails({ navigation, route }) {
                 style={[
                   Alignments.alignCenter,
                   Alignments.justifyCenter,
-                  Spaces.paddingVertical[10],
+                  Spaces.paddingVertical[8],
                   { borderRadius: 18, flex: 1 },
                   statsMode === 'attendance'
                     ? ApplicationStyle.backgroundColor.primary500
@@ -3997,7 +4005,7 @@ function TeamDetails({ navigation, route }) {
                 style={[
                   Alignments.alignCenter,
                   Alignments.justifyCenter,
-                  Spaces.paddingVertical[10],
+                  Spaces.paddingVertical[8],
                   { borderRadius: 18, flex: 1 },
                   statsMode === 'performance'
                     ? ApplicationStyle.backgroundColor.primary500
@@ -4318,13 +4326,13 @@ function TeamDetails({ navigation, route }) {
                             </Text>
                           </View>
                           <View style={[Spaces.gap[8], { alignItems: 'flex-end' }]}>
-                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[8]]}>
+                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
                               <Text style={[Fonts.p4Bold, Fonts.primary100]}>
                                 {pendingMatch?.reportStatus === 'draft' ? 'Brouillon équipe' : 'En attente du bilan équipe'}
                               </Text>
                             </View>
                             {pendingMatch?.sourceDocumentId ? (
-                              <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[8]]}>
+                              <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
                                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>Ouvrir</Text>
                               </View>
                             ) : null}
@@ -4360,7 +4368,7 @@ function TeamDetails({ navigation, route }) {
                           ApplicationStyle.backgroundColor.primary700,
                           ApplicationStyle.borderRadius20,
                           Spaces.padding[16],
-                          Spaces.gap[10],
+                          Spaces.gap[8],
                           !report?.sourceDocumentId ? { opacity: 0.94 } : null,
                         ]}
                       >
@@ -4374,13 +4382,13 @@ function TeamDetails({ navigation, route }) {
                             </Text>
                           </View>
                           <View style={[Spaces.gap[8], { alignItems: 'flex-end' }]}>
-                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[6]]}>
+                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[4]]}>
                               <Text style={[Fonts.p4Bold, Fonts.primary500]}>
                                 {report?.finalizedAt ? new Date(report.finalizedAt).toLocaleDateString('fr-FR') : 'Publie'}
                               </Text>
                             </View>
                             {report?.hasNewResponsesSincePublication ? (
-                              <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[8]]}>
+                              <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
                                 <Text style={[Fonts.p4Bold, Fonts.primary100]}>
                                   {report?.newResponsesCount > 1
                                     ? `${report.newResponsesCount} nouvelles reponses`
@@ -4392,12 +4400,12 @@ function TeamDetails({ navigation, route }) {
                         </View>
                         <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                           {report?.collectiveRating !== null && report?.collectiveRating !== undefined ? (
-                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[8]]}>
+                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
                               <Text style={[Fonts.p4Bold, Fonts.primary100]}>{`Coach ${report.collectiveRating}/10`}</Text>
                             </View>
                           ) : null}
                           {report?.playerCollectiveRatingAverage !== null && report?.playerCollectiveRatingAverage !== undefined ? (
-                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[8]]}>
+                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
                               <Text style={[Fonts.p4Bold, Fonts.primary100]}>{`Joueurs ${report.playerCollectiveRatingAverage}/10`}</Text>
                             </View>
                           ) : null}
@@ -4433,7 +4441,7 @@ function TeamDetails({ navigation, route }) {
                               <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
                                 {player?.manualPlayerName || `${player?.firstname || ''} ${player?.lastname || ''}`.trim() || 'Joueur'}
                               </Text>
-                              <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[6]]}>
+                              <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[4]]}>
                                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>{`${Number(player?.matches || 0)} matchs`}</Text>
                               </View>
                             </View>
@@ -4483,9 +4491,9 @@ function TeamDetails({ navigation, route }) {
               activeOpacity={0.9}
               onPress={() => setIsTeamActionsPanelOpen((previousValue) => !previousValue)}
               style={[
-                Spaces.paddingTop[10],
+                Spaces.paddingTop[8],
                 Spaces.paddingBottom[12],
-                Spaces.gap[10],
+                Spaces.gap[8],
               ]}
             >
               <View style={[Alignments.alignCenter]}>
@@ -5058,8 +5066,8 @@ function TeamDetails({ navigation, route }) {
                     <View
                       style={[
                         ApplicationStyle.borderRadius24,
-                        Spaces.paddingHorizontal[10],
-                        Spaces.paddingVertical[6],
+                        Spaces.paddingHorizontal[8],
+                        Spaces.paddingVertical[4],
                         {
                           backgroundColor: `${Colors.warning500}18`,
                           borderColor: `${Colors.warning500}44`,

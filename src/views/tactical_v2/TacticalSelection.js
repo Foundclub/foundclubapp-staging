@@ -53,7 +53,7 @@ const normalizeMatchLabel = (value) => {
  */
 function TacticalSelection() {
   const {
-    Colors, Fonts, Spaces,
+    ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -557,7 +557,9 @@ function TacticalSelection() {
           {avatarUri ? (
             <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
           ) : (
-            <Text style={[styles.avatarInitials, { color: isManualPlayer ? Colors.primary500 : Colors.neutral00 }]}>{initials}</Text>
+            // Sur le fond primary500 a 25 % pose sur neutral800 : primary500 = 4,10:1
+            // (sous AA), primary200 = 6,79:1.
+            <Text style={[styles.avatarInitials, { color: isManualPlayer ? Colors.primary200 : Colors.neutral00 }]}>{initials}</Text>
           )}
         </View>
 
@@ -622,15 +624,36 @@ function TacticalSelection() {
 
       {/* Quick Actions */}
       <View style={[styles.actionsRow, Spaces.paddingHorizontal[24]]}>
-        <TouchableOpacity onPress={selectAll} style={[styles.actionBtn, { backgroundColor: Colors.primary700 }]}>
+        {/* actionBtn est rendu a 34px : on garde le visuel, on complete la zone de clic
+            jusqu'a 44px via hitSlop (decision Adel, cf. THEME.md). */}
+        <TouchableOpacity
+          accessibilityLabel="Tout sélectionner"
+          accessibilityRole="button"
+          hitSlop={ApplicationStyle.hitSlop.min44From32}
+          onPress={selectAll}
+          style={[styles.actionBtn, { backgroundColor: Colors.primary700 }]}
+        >
           <Text style={[Fonts.p3, { color: Colors.primary500, fontWeight: '600' }]}>Tout sélectionner</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={clearSelection} style={[styles.actionBtn, { backgroundColor: Colors.primary700 }]}>
+        <TouchableOpacity
+          accessibilityLabel="Effacer la sélection"
+          accessibilityRole="button"
+          hitSlop={ApplicationStyle.hitSlop.min44From32}
+          onPress={clearSelection}
+          style={[styles.actionBtn, { backgroundColor: Colors.primary700 }]}
+        >
           <Text style={[Fonts.p3, { color: Colors.primary100, fontWeight: '600' }]}>Effacer</Text>
         </TouchableOpacity>
         {!isTeamDefaultMode ? (
-          <TouchableOpacity onPress={() => setModalVisible(true)} style={[styles.actionBtn, { backgroundColor: Colors.primary500 }]}>
-            <Text style={[Fonts.p3, { color: '#FFF', fontWeight: '600' }]}>+ Ajouter</Text>
+          <TouchableOpacity
+            accessibilityLabel="Ajouter un joueur"
+            accessibilityRole="button"
+            hitSlop={ApplicationStyle.hitSlop.min44From32}
+            onPress={() => setModalVisible(true)}
+            style={[styles.actionBtn, { backgroundColor: Colors.primary500 }]}
+          >
+            {/* Encre unique sur primary500 : '#FFF' = 2,40:1, primary900 = 7,96:1. */}
+            <Text style={[Fonts.p3, { color: Colors.primary900, fontWeight: '600' }]}>+ Ajouter</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -779,8 +802,14 @@ function TacticalSelection() {
               <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.modalBtn, { backgroundColor: Colors.neutral700 }]}>
                 <Text style={[Fonts.p1, { color: Colors.neutral00, fontWeight: '600' }]}>Annuler</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleAddManualPlayer} style={[styles.modalBtn, { backgroundColor: Colors.primary500 }]}>
-                <Text style={[Fonts.p1, { color: '#FFF', fontWeight: '700' }]}>Ajouter</Text>
+              <TouchableOpacity
+                accessibilityLabel="Ajouter"
+                accessibilityRole="button"
+                onPress={handleAddManualPlayer}
+                style={[styles.modalBtn, { backgroundColor: Colors.primary500 }]}
+              >
+                {/* Encre unique sur primary500 : '#FFF' = 2,40:1, primary900 = 7,96:1. */}
+                <Text style={[Fonts.p1, { color: Colors.primary900, fontWeight: '700' }]}>Ajouter</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -832,8 +861,14 @@ function TacticalSelection() {
               <TouchableOpacity onPress={() => setEditModalVisible(false)} style={[styles.modalBtn, { backgroundColor: Colors.neutral700 }]}>
                 <Text style={[Fonts.p1, { color: Colors.neutral00, fontWeight: '600' }]}>Annuler</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleSaveEdit} style={[styles.modalBtn, { backgroundColor: Colors.primary500 }]}>
-                <Text style={[Fonts.p1, { color: '#FFF', fontWeight: '700' }]}>Enregistrer</Text>
+              <TouchableOpacity
+                accessibilityLabel="Enregistrer"
+                accessibilityRole="button"
+                onPress={handleSaveEdit}
+                style={[styles.modalBtn, { backgroundColor: Colors.primary500 }]}
+              >
+                {/* Encre unique sur primary500 : '#FFF' = 2,40:1, primary900 = 7,96:1. */}
+                <Text style={[Fonts.p1, { color: Colors.primary900, fontWeight: '700' }]}>Enregistrer</Text>
               </TouchableOpacity>
             </View>
 

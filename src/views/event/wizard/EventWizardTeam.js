@@ -530,7 +530,7 @@ function EventWizardTeam({ navigation }) {
                 </Text>
               </View>
 
-              <View style={[Spaces.gap[6]]}>
+              <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>Club organisateur</Text>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                   {organizerClub?.name || 'Aucun club disponible'}

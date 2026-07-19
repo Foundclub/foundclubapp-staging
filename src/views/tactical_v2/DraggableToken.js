@@ -169,7 +169,10 @@ function DraggableToken({
 
       {player?.number && (
         <View style={[styles.benchJerseyBadge, { backgroundColor: Colors.primary500 }]}>
-          <Text style={styles.benchJerseyNumber}>{player.number}</Text>
+          {/* Encre unique sur primary500 : '#FFF' = 2,40:1 (echec AA), primary900 = 7,96:1. */}
+          <Text style={[styles.benchJerseyNumber, { color: Colors.primary900 }]}>
+            {player.number}
+          </Text>
         </View>
       )}
 
@@ -338,7 +341,6 @@ const styles = StyleSheet.create({
     width: 18,
   },
   benchJerseyNumber: {
-    color: '#FFF',
     fontSize: 9,
     fontWeight: '700',
   },

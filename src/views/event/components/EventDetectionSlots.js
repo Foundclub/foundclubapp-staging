@@ -84,8 +84,8 @@ function EventDetectionSlots({
       <View
         key={`${text}-${tone}`}
         style={[
-          Spaces.paddingHorizontal[10],
-          Spaces.paddingVertical[6],
+          Spaces.paddingHorizontal[8],
+          Spaces.paddingVertical[4],
           {
             backgroundColor: toneStyle.backgroundColor,
             borderColor: toneStyle.borderColor,
@@ -167,7 +167,7 @@ function EventDetectionSlots({
                 {
                   padding: 16,
                 },
-                Spaces.gap[14],
+                Spaces.gap[12],
                 {
                   backgroundColor: 'rgba(1, 179, 244, 0.07)',
                   borderColor: slot.isComplete ? `${Colors.gold500}55` : 'rgba(1, 179, 244, 0.20)',
@@ -182,8 +182,8 @@ function EventDetectionSlots({
                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
                   <View
                     style={[
-                      Spaces.paddingHorizontal[10],
-                      Spaces.paddingVertical[6],
+                      Spaces.paddingHorizontal[8],
+                      Spaces.paddingVertical[4],
                       {
                         backgroundColor: slot.isComplete ? `${Colors.gold500}22` : `${Colors.primary500}18`,
                         borderColor: slot.isComplete ? `${Colors.gold500}45` : `${Colors.primary500}35`,

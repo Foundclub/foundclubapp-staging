@@ -156,7 +156,7 @@ const renderFieldSlots = ({
             {hasPlayer ? getCompositionPlayerInitials(player) : slot?.label}
           </Text>
           {hasPlayer ? (
-            <Text numberOfLines={1} style={[Fonts.p5 || Fonts.p4, { color: Colors.neutral00, opacity: 0.92, textAlign: 'center' }]}>
+            <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral00, opacity: 0.92, textAlign: 'center' }]}>
               {player?.number != null && player?.number !== '' ? `#${player.number}` : 'Attribue'}
             </Text>
           ) : null}
@@ -661,7 +661,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   style={[
                     ApplicationStyle.card,
                     ApplicationStyle.borderRadius24,
-                    Spaces.padding[20],
+                    Spaces.padding[16],
                     {
                       backgroundColor: Colors.primary900,
                       borderColor: `${Colors.primary500}44`,
@@ -681,7 +681,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   style={[
                     ApplicationStyle.card,
                     ApplicationStyle.borderRadius24,
-                    Spaces.padding[18],
+                    Spaces.padding[16],
                     {
                       backgroundColor: Colors.primary900,
                       borderColor: `${Colors.primary500}30`,
@@ -713,8 +713,8 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     style={[
                       ApplicationStyle.card,
                       ApplicationStyle.borderRadius24,
-                      Spaces.padding[18],
-                      Spaces.gap[14],
+                      Spaces.padding[16],
+                      Spaces.gap[12],
                       {
                         backgroundColor: Colors.primary900,
                         borderColor: `${Colors.primary500}38`,
@@ -830,7 +830,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                 style={[
                   ApplicationStyle.card,
                   ApplicationStyle.borderRadius24,
-                  Spaces.padding[18],
+                  Spaces.padding[16],
                   Spaces.gap[12],
                   {
                     backgroundColor: Colors.primary900,
@@ -849,7 +849,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   Les postes encore libres peuvent rester vides: ils seront completes automatiquement quand de nouveaux joueurs acceptes arriveront.
                 </Text>
 
-                <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[10]]}>
+                <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
                   <Button
                     isLoading={isSaving}
                     onPress={handleSaveDraft}
@@ -887,8 +887,8 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   style={[
                     ApplicationStyle.card,
                     ApplicationStyle.borderRadius24,
-                    Spaces.padding[18],
-                    Spaces.gap[14],
+                    Spaces.padding[16],
+                    Spaces.gap[12],
                     {
                       backgroundColor: Colors.primary900,
                       borderColor: `${Colors.gold500}38`,
@@ -975,7 +975,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                 style={[
                   ApplicationStyle.card,
                   ApplicationStyle.borderRadius24,
-                  Spaces.padding[18],
+                  Spaces.padding[16],
                   Spaces.gap[12],
                   {
                     backgroundColor: Colors.primary900,
@@ -1031,7 +1031,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                             {getCompositionPlayerLabel(player)}
                           </Text>
                           {player?.participantSource ? (
-                            <Text style={[Fonts.p5 || Fonts.p4, { color: isSelected ? Colors.primary100 : Colors.neutral300 }]}>
+                            <Text style={[Fonts.p4, { color: isSelected ? Colors.primary100 : Colors.neutral300 }]}>
                               {player.participantSource === 'external_participant' ? 'Externe' : 'Equipe'}
                             </Text>
                           ) : null}
@@ -1048,8 +1048,8 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   style={[
                     ApplicationStyle.card,
                     ApplicationStyle.borderRadius24,
-                    Spaces.padding[18],
-                    Spaces.gap[14],
+                    Spaces.padding[16],
+                    Spaces.gap[12],
                     {
                       backgroundColor: Colors.primary900,
                       borderColor: `${Colors.primary500}30`,
@@ -1057,7 +1057,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     },
                   ]}
                 >
-                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[10]]}>
+                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
                     <TextInput
                       onChangeText={(value) => handleRenameTeam(team?.id, value)}
                       placeholder={`Equipe ${teamIndex + 1}`}

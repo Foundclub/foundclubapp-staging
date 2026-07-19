@@ -171,6 +171,7 @@ function TeamList({ navigation, route }) {
           >
             <TouchableOpacity
               accessibilityLabel={t('teamList.actions.add', 'Ajouter une equipe')}
+              accessibilityRole="button"
               activeOpacity={0.85}
               onPress={handleAddTeam}
               style={[
@@ -200,7 +201,9 @@ function TeamList({ navigation, route }) {
                 source={Images.strokeShield}
                 style={{
                   height: 24,
-                  tintColor: Colors.neutral00,
+                  // Icone porteuse d'information sur fond primary500 : blanc = 2,40:1
+                  // (sous le seuil 3:1 des elements graphiques), primary900 = 7,96:1.
+                  tintColor: Colors.primary900,
                   width: 24,
                 }}
               />

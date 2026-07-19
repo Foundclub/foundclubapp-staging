@@ -487,7 +487,7 @@ function EventParticipants({
           style={[
             ApplicationStyle.backgroundColor.primary700,
             ApplicationStyle.borderRadius24,
-            Spaces.padding[20],
+            Spaces.padding[16],
             Spaces.gap[16],
           ]}
         >

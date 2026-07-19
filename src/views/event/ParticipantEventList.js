@@ -15,6 +15,8 @@ import {
 } from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
 
+import EmptyState from '@/components/atoms/emptyState/EmptyState';
+import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import PersonalPlanningContainer from '@/components/organisms/planning/PersonalPlanningContainer';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -117,10 +119,13 @@ function ParticipantEventList({ navigation }) {
   // @ts-ignore
   const {
     data: eventsData,
+    error: eventsError,
     fetchNextPage,
     hasNextPage,
+    isError: isEventsError,
     isFetchingNextPage,
     isLoading: isEventsLoading,
+    refetch: refetchEvents,
   } = useGetEvents(myEventsQueryConfig, {
     enabled: shouldLoadEventFeed,
   });
@@ -566,7 +571,7 @@ function ParticipantEventList({ navigation }) {
               />
             </Suspense>
             {(!shouldLoadEventFeed || isEventsLoading || (shouldLoadFeaturedFeed && isFeaturedLoading)) && (
-              <Text style={[Fonts.body4, Fonts.neutral300, Spaces.marginTop[8]]}>
+              <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[8]]}>
                 Mise a jour des evenements...
               </Text>
             )}
@@ -578,7 +583,7 @@ function ParticipantEventList({ navigation }) {
     Alignments.alignCenter,
     Alignments.justifySpaceBetween,
     Alignments.row,
-    Fonts.body4,
+    Fonts.p4,
     Fonts.h3,
     Fonts.neutral00,
     Fonts.neutral300,
@@ -597,6 +602,56 @@ function ParticipantEventList({ navigation }) {
     shouldLoadSecondaryPlanningData,
   ]);
 
+  // Ecran par defaut du planning : sans ces deux etats, une liste vide et un echec
+  // reseau rendaient exactement la meme page blanche, indistinguable d'un bug.
+  const listEmptyComponent = useMemo(() => {
+    if (!shouldLoadEventFeed || isEventsLoading) return null;
+
+    if (isEventsError) {
+      return (
+        <ErrorWrapper
+          error={eventsError}
+          onRetry={refetchEvents}
+          retryLabel="Réessayer"
+          wrapperStyle={[
+            Spaces.marginHorizontal[16],
+            Spaces.marginTop[24],
+            { minHeight: 200 },
+          ]}
+        >
+          <View style={{ minHeight: 200 }} />
+        </ErrorWrapper>
+      );
+    }
+
+    return (
+      <View style={[Spaces.marginHorizontal[16]]}>
+        <EmptyState
+          actionLabel={canManageEvents ? 'Créer un évènement' : undefined}
+          description={
+            canManageEvents
+              ? 'Créez votre premier évènement pour le voir apparaître ici.'
+              : 'Vos prochains évènements s’afficheront ici dès que votre équipe en publiera.'
+          }
+          icon={Images.calendar}
+          onAction={canManageEvents ? handleCreateEventPress : undefined}
+          title="Aucun évènement à venir"
+        />
+      </View>
+    );
+  }, [
+    Images.calendar,
+    Spaces.marginHorizontal,
+    Spaces.marginTop,
+    canManageEvents,
+    eventsError,
+    handleCreateEventPress,
+    isEventsError,
+    isEventsLoading,
+    refetchEvents,
+    shouldLoadEventFeed,
+  ]);
+
   return (
     <ScreenContainer bgImage="bg2">
       <FlatList
@@ -608,6 +663,7 @@ function ParticipantEventList({ navigation }) {
         extraData={userData}
         initialNumToRender={6}
         keyExtractor={keyExtractor}
+        ListEmptyComponent={listEmptyComponent}
         ListHeaderComponent={listHeaderComponent}
         maxToRenderPerBatch={8}
         onEndReached={handleListEndReached}
@@ -620,6 +676,7 @@ function ParticipantEventList({ navigation }) {
         <WebFloatingOverlay style={getFloatingActionContainerStyle(floatingCtaBottom, { zIndex: 1100 })}>
           <TouchableOpacity
             accessibilityLabel="Ajouter un evenement"
+            accessibilityRole="button"
             activeOpacity={0.85}
             onPress={handleCreateEventPress}
             style={[
@@ -649,7 +706,9 @@ function ParticipantEventList({ navigation }) {
               source={Images.calendar}
               style={{
                 height: 24,
-                tintColor: Colors.neutral00,
+                // Icone porteuse d'information sur fond primary500 : blanc = 2,40:1
+                // (sous le seuil 3:1 des elements graphiques), primary900 = 7,96:1.
+                tintColor: Colors.primary900,
                 width: 24,
               }}
             />
