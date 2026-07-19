@@ -6,7 +6,6 @@ import HomeHub from '@/views/home/HomeHub';
 import { RouteNames } from '@/navigation/routeNames';
 
 const Stack = createStackNavigator();
-const SEARCH_STACK_HOME = 'SearchHome';
 
 /**
  * Search stack embedded in the first tab to keep bottom tab bar visible.
@@ -16,12 +15,12 @@ function SearchStack() {
   return (
     <Stack.Navigator
       id={undefined}
-      initialRouteName={SEARCH_STACK_HOME}
+      initialRouteName={RouteNames.SearchHome}
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen
         component={HomeHub}
-        name={SEARCH_STACK_HOME}
+        name={RouteNames.SearchHome}
       />
       <Stack.Screen
         getComponent={() => require('@/views/search/SearchHubScreen').default}

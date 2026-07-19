@@ -1,3 +1,39 @@
+/**
+ * Registre des noms de routes de l'application.
+ *
+ * NETTOYAGE DU 2026-07-19 — 7 noms morts supprimes (aucun ecran enregistre derriere,
+ * aucun navigate(), aucun motif web) : `HighlightRequestsInbox`, `RequestsTab`, `Team`,
+ * `TeamCard`, `HistoryWizardStack`, `LeagueStack`, `LeagueStandingsTab`.
+ *
+ * TODO(nav-orphelins) ECRANS ORPHELINS — composants d'ecran ecrits mais qu'AUCUNE route
+ * n'expose. Les cabler ou les jeter est un arbitrage produit, pas une correction technique :
+ * ils sont conserves tels quels et listes ici pour ne plus etre invisibles.
+ *   - views/historyWizard/HistoryWizardClubScreen.js  (le tunnel monte HistoryWizardClub
+ *     depuis un autre composant ; ce fichier-ci n'est monte nulle part)
+ *   - views/league/standings/LeagueStandings.js       (orphelin depuis la suppression de
+ *     l'onglet classement — cf. `LeagueStandingsTab` retire ci-dessus)
+ *   - views/profile/PlayerCardGallery.js
+ *   - views/search/SearchClubsScreen.js               (les routes SearchClubs/SearchEvents/
+ *   - views/search/SearchEventsScreen.js               SearchReservations/SearchRecruitment
+ *   - views/search/SearchRecruitmentScreen.js          montent toutes SearchHubRouteAlias,
+ *   - views/search/SearchReservationsScreen.js         jamais ces 4 ecrans dedies)
+ *   - views/tactical_v2/index.js
+ *   - views/TestScreen.js                             (ecran de test, a supprimer ?)
+ *
+ * TODO(nav-sans-porte) ECRANS SANS PORTE D'ENTREE — enregistres dans un navigateur, donc
+ * atteignables par URL/lien profond, mais aucun bouton de l'app n'y mene (aucun navigate()
+ * ne les vise). A confirmer produit avant de cabler ou de retirer :
+ *   `CMPlanning`, `FeaturedRequests`, `LeagueHome`, `MatchCenter`, `MatchDetails`,
+ *   `MissingPlayersView`, `PersonalPlanningWeekFullscreen`, `PublicLicensePayment`,
+ *   `RequestsDashboard`, `SubscriptionWebSuccess`, `TacticalBoard` (seul `TacticalBoardV2`
+ *   est navigue), `TeamMembershipRequests`, `TeamStats`.
+ * Les onglets-leurres `AuthStackAccount` / `AuthStackMessaging` / `AuthStackPlanning` sont
+ * dans le meme cas mais c'est VOULU (cf. MOBILE_ONLY_SCREENS dans webRoutes.parity.test.js).
+ *
+ * TODO(nav-search-ambigu) `Search` designe DEUX ecrans selon l'etat de connexion :
+ * PublicTabNavigator monte la vue visiteur, PrivateTabNavigator monte SearchStack. L'URL
+ * /search est donc ambigue. Renommer touche aux liens profonds : arbitrage produit.
+ */
 export const RouteNames = /** @type {const} */ ({
   AddClubManager: 'AddClubManager',
   AddCoach: 'AddCoach',
@@ -68,7 +104,6 @@ export const RouteNames = /** @type {const} */ ({
   FeaturedRequests: 'FeaturedRequests',
   FeaturedRequestsList: 'FeaturedRequestsList',
   GuideOffersRecap: 'GuideOffersRecap',
-  HighlightRequestsInbox: 'HighlightRequestsInbox',
   HomeTab: 'HomeTab',
   LicenseCheckoutStatus: 'LicenseCheckoutStatus',
   Login: 'Login',
@@ -97,7 +132,6 @@ export const RouteNames = /** @type {const} */ ({
   Register: 'Register',
   RequestsDashboard: 'RequestsDashboard',
   RequestsHub: 'RequestsHub',
-  RequestsTab: 'RequestsTab',
   ReservationDetails: 'ReservationDetails',
   ReservationEdit: 'ReservationEdit',
   ReservationFilters: 'ReservationFilters',
@@ -105,6 +139,10 @@ export const RouteNames = /** @type {const} */ ({
   SearchAlerts: 'SearchAlerts',
   SearchClubs: 'SearchClubs',
   SearchEvents: 'SearchEvents',
+  // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Le nom etait une
+  // chaine en dur hors de ce registre : la valeur est INCHANGEE ('SearchHome'), seul le
+  // point de declaration bouge. Pas d'URL web propre : l'accueil est expose par HomeTab (/).
+  SearchHome: 'SearchHome',
   SearchHub: 'SearchHub',
   SearchMapScreen: 'SearchMapScreen',
   SearchRecruitment: 'SearchRecruitment',
@@ -126,8 +164,6 @@ export const RouteNames = /** @type {const} */ ({
   SuperAdminLeagueSquads: 'SuperAdminLeagueSquads',
   SuperAdminLicenses: 'SuperAdminLicenses',
   SuperAdminSettings: 'SuperAdminSettings',
-  Team: 'Team',
-  TeamCard: 'TeamCard',
   TeamDetails: 'TeamDetails',
   TeamEdit: 'TeamEdit',
   TeamFilters: 'TeamFilters',
@@ -193,7 +229,6 @@ export const RouteNames = /** @type {const} */ ({
   HistoryWizardLevel: 'HistoryWizardLevel',
   HistoryWizardPeriod: 'HistoryWizardPeriod',
   HistoryWizardRecap: 'HistoryWizardRecap',
-  HistoryWizardStack: 'HistoryWizardStack',
 
   // Tactical
   TacticalBoard: 'TacticalBoard',
@@ -223,8 +258,6 @@ export const RouteNames = /** @type {const} */ ({
   LeagueMatchTab: 'LeagueMatchTab',
   LeagueRanking: 'LeagueRanking', // Ranking Screen
   LeagueSquadTab: 'LeagueSquadTab',
-  LeagueStack: 'LeagueStack', // Container for Wizard etc.
-  LeagueStandingsTab: 'LeagueStandingsTab',
   MatchDetails: 'MatchDetails',
   PastMatchDetails: 'PastMatchDetails', // Completed match details with ELO delta
   PersonalPlanningWeekFullscreen: 'PersonalPlanningWeekFullscreen',

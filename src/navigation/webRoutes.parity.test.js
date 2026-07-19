@@ -79,10 +79,11 @@ const MOBILE_ONLY_SCREENS = {
     'Onglet-leurre public : declenche le tunnel de connexion, ne monte aucun ecran',
 
   // --- Alias interne de navigateur ---
-  // Nom d'ecran interne a SearchStack (constante locale SEARCH_STACK_HOME), utilise
-  // comme initialRouteName de la stack. L'accueil est deja expose cote web par HomeTab.
-  SearchHome:
-    'Alias interne de SearchStack pour son initialRouteName ; l\'accueil web est HomeTab (/)',
+  // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le
+  // 2026-07-19 ce nom est declare dans routeNames.js (il etait une chaine en dur) ; sa
+  // valeur n'a pas change. L'accueil est deja expose cote web par HomeTab (/).
+  [RouteNames.SearchHome]:
+    'Accueil interne de SearchStack (initialRouteName) ; l\'accueil web est HomeTab (/)',
 };
 
 /**
