@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   ScrollView,
@@ -5,8 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { createPortal } from 'react-dom';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 /**
@@ -47,6 +49,7 @@ function BottomModal({
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   if (!isVisible) {
     return null;
@@ -118,7 +121,7 @@ function BottomModal({
           Alignments.absolute,
           Alignments.fullSize,
           {
-            backgroundColor: 'rgba(7, 12, 20, 0.72)',
+            backgroundColor: withAlpha(Colors.primary900, 0.72),
           },
         ]}
       />
@@ -131,7 +134,7 @@ function BottomModal({
             borderBottomRightRadius: isDialog ? 32 : 0,
             borderTopLeftRadius: 32,
             borderTopRightRadius: 32,
-            boxShadow: '0 28px 60px rgba(3, 9, 16, 0.45)',
+            boxShadow: `0 28px 60px ${withAlpha(Colors.primary900, 0.45)}`,
             overflow: 'hidden',
             paddingTop: hideCloseButton ? (isDialog ? 24 : 20) : 28,
             width: isDialog ? undefined : '100%',
@@ -151,10 +154,10 @@ function BottomModal({
             style={[
               Spaces.paddingHorizontal[24],
               Spaces.paddingTop[16],
-              Spaces.paddingBottom[20],
+              Spaces.paddingBottom[24],
               {
                 backgroundColor: Colors.primary700,
-                borderTopColor: 'rgba(255,255,255,0.1)',
+                borderTopColor: withAlpha(Colors.neutral00, 0.1),
                 borderTopWidth: 1,
               },
             ]}
@@ -164,6 +167,9 @@ function BottomModal({
         ) : null}
         {!hideCloseButton ? (
           <TouchableOpacity
+            accessibilityLabel={t('common.close')}
+            accessibilityRole="button"
+            hitSlop={ApplicationStyle.hitSlop.min44From28}
             onPress={close}
             style={[
               Alignments.absolute,
@@ -181,7 +187,7 @@ function BottomModal({
                 Alignments.alignCenter,
                 Alignments.justifyCenter,
                 {
-                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  backgroundColor: withAlpha(Colors.neutral00, 0.08),
                   borderRadius: 14,
                 },
               ]}

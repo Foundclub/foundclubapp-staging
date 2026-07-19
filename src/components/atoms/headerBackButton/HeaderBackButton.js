@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Image, Platform, TouchableOpacity } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -29,6 +30,7 @@ function HeaderBackButton({
   withDefaultMargin = true,
 }) {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const { ApplicationStyle, Images, Spaces } = useTheme();
   const resolvedBorderColor = ApplicationStyle.borderColor[borderColor]
     || ApplicationStyle.borderColor.primary500;
@@ -44,8 +46,9 @@ function HeaderBackButton({
   return (
     <TouchableOpacity
       accessibilityHint={accessibilityHint}
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={accessibilityLabel || t('common.back')}
       accessibilityRole={accessibilityRole}
+      hitSlop={ApplicationStyle.hitSlop.min44From32}
       onPress={onPress || navigation.goBack}
       style={[
         ApplicationStyle.borderRadius100,

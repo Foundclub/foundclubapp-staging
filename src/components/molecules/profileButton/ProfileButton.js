@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Platform, TouchableOpacity } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -16,6 +17,7 @@ import { RouteNames } from '@/navigation/routeNames';
  */
 function ProfileButton() {
   const { ApplicationStyle } = useTheme();
+  const { t } = useTranslation();
   const { userData } = useAuth();
   const navigation = useNavigation();
   const [{ isAddingAccount }, dispatch] = useAppContext();
@@ -45,6 +47,9 @@ function ProfileButton() {
 
   return (
     <TouchableOpacity
+      accessibilityLabel={t('profile.title', 'Profil')}
+      accessibilityRole="button"
+      hitSlop={ApplicationStyle.hitSlop.min44From40}
       onPress={handlePress}
       style={[
         ApplicationStyle.borderRadius24,

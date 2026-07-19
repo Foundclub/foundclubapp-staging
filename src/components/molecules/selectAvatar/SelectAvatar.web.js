@@ -125,6 +125,10 @@ function SelectAvatar({
             />
             {onDelete ? (
               <TouchableOpacity
+                accessibilityHint={t('profile.actions.confirmDeleteAvatar')}
+                accessibilityLabel={t('common.actions.delete')}
+                accessibilityRole="button"
+                hitSlop={ApplicationStyle.hitSlop.min44From32}
                 onPress={handleDelete}
                 style={[
                   Alignments.absolute,
@@ -160,6 +164,9 @@ function SelectAvatar({
         )}
 
         <TouchableOpacity
+          accessibilityLabel={t('common.actions.photoFromGallery')}
+          accessibilityRole="button"
+          hitSlop={ApplicationStyle.hitSlop.min44From40}
           onPress={handleOpenPicker}
           style={[
             Alignments.absolute,
@@ -173,13 +180,18 @@ function SelectAvatar({
             source={Images.plus}
             style={[
               ApplicationStyle.icon16,
-              ApplicationStyle.tintColor.neutral900,
+              ApplicationStyle.tintColor.primary900,
             ]}
           />
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={handleOpenPicker}>
+      <TouchableOpacity
+        accessibilityLabel={t('common.actions.photoFromGallery')}
+        accessibilityRole="button"
+        hitSlop={ApplicationStyle.hitSlop.min44From24}
+        onPress={handleOpenPicker}
+      >
         <Text style={[Fonts.p3Bold, Fonts.primary500]}>
           {t('common.actions.photoFromGallery', 'Choisir depuis la galerie')}
         </Text>

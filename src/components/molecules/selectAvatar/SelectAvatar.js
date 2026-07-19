@@ -219,6 +219,12 @@ function SelectAvatar({
               />
               {onDelete && (
                 <TouchableOpacity
+                  accessibilityHint={t(
+                    'profile.actions.confirmDeleteAvatar',
+                  )}
+                  accessibilityLabel={t('common.actions.delete')}
+                  accessibilityRole="button"
+                  hitSlop={ApplicationStyle.hitSlop.min44From32}
                   onPress={handleDelete}
                   style={[
                     Alignments.absolute,
@@ -252,6 +258,9 @@ function SelectAvatar({
             />
           )}
         <TouchableOpacity
+          accessibilityLabel={t('common.actions.photoFromGallery')}
+          accessibilityRole="button"
+          hitSlop={ApplicationStyle.hitSlop.min44From40}
           onPress={() => setIsModalVisible(true)}
           style={[
             Alignments.absolute,
@@ -265,7 +274,7 @@ function SelectAvatar({
             source={Images.plus}
             style={[
               ApplicationStyle.icon16,
-              ApplicationStyle.tintColor.neutral900]}
+              ApplicationStyle.tintColor.primary900]}
           />
         </TouchableOpacity>
       </View>
@@ -279,7 +288,7 @@ function SelectAvatar({
         snapPoints={['34%']}
       >
         <View style={[
-          Spaces.paddingTop[20],
+          Spaces.paddingTop[24],
           Spaces.gap[24],
           Spaces.paddingBottom[8],
         ]}

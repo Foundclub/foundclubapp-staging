@@ -1,8 +1,10 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList, Modal, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 /**
@@ -20,6 +22,7 @@ function SelectPicker({
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [visible, setVisible] = React.useState(false);
 
   const selectedItem = items.find((item) => item.value === value);
@@ -27,6 +30,10 @@ function SelectPicker({
   return (
     <View>
       <TouchableOpacity
+        accessibilityLabel={selectedItem ? selectedItem.label : placeholder || 'Selectionner'}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: visible }}
+        hitSlop={ApplicationStyle.hitSlop.min44}
         onPress={() => setVisible(true)}
         style={[
           ApplicationStyle.backgroundColor.neutral800,
@@ -50,10 +57,12 @@ function SelectPicker({
         visible={visible}
       >
         <TouchableOpacity
+          accessibilityLabel={t('common.close')}
+          accessibilityRole="button"
           onPress={() => setVisible(false)}
           style={[
             Alignments.fill,
-            { backgroundColor: 'rgba(0,0,0,0.5)' },
+            { backgroundColor: withAlpha(Colors.neutral900, 0.5) },
             Alignments.justifyCenter,
             Alignments.alignCenter,
           ]}
@@ -70,15 +79,26 @@ function SelectPicker({
               keyExtractor={(item) => item.value}
               renderItem={({ item }) => (
                 <TouchableOpacity
+                  accessibilityLabel={item.label}
+                  accessibilityRole="menuitem"
+                  accessibilityState={{ selected: item.value === value }}
                   onPress={() => {
-                        onValueChange(item.value);
-                        setVisible(false);
-                      }}
-                  style={[Spaces.paddingVertical[12], { borderBottomColor: Colors.neutral800, borderBottomWidth: 1 }]}
+                    onValueChange(item.value);
+                    setVisible(false);
+                  }}
+                  style={[
+                    Spaces.paddingVertical[12],
+                    { borderBottomColor: Colors.neutral800, borderBottomWidth: 1 },
+                  ]}
                 >
-                  <Text style={[Fonts.p1, Fonts.neutral00, item.value === value && { color: Colors.primary500 }]}>
-                        {item.label}
-                      </Text>
+                  <Text style={[
+                    Fonts.p1,
+                    Fonts.neutral00,
+                    item.value === value && { color: Colors.primary500 },
+                  ]}
+                  >
+                    {item.label}
+                  </Text>
                 </TouchableOpacity>
               )}
             />

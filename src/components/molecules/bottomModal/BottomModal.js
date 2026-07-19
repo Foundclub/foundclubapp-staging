@@ -5,6 +5,7 @@ import { BlurView } from '@sbaiahmed1/react-native-blur';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
   Image,
@@ -15,6 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
@@ -81,6 +83,7 @@ function BottomModal({
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [shouldRender, setShouldRender] = useState(Boolean(isVisible));
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { phase: startupPhase } = useStartupPhase();
   const {
     Alignments, ApplicationStyle, Colors, Images, Spaces,
@@ -212,7 +215,7 @@ function BottomModal({
           <BlurView
             blurAmount={15}
             blurType="dark"
-            reducedTransparencyFallbackColor="rgba(0, 0, 0, 0.5)"
+            reducedTransparencyFallbackColor={withAlpha(Colors.neutral900, 0.5)}
             style={Alignments.fill}
           />
         )}
@@ -272,6 +275,9 @@ function BottomModal({
     >
       {!hideCloseButton && (
         <TouchableOpacity
+          accessibilityLabel={t('common.close')}
+          accessibilityRole="button"
+          hitSlop={ApplicationStyle.hitSlop.min44From28}
           onPress={close}
           style={[
             Alignments.absolute,
@@ -339,7 +345,7 @@ function BottomModal({
             Spaces.paddingTop[16],
             {
               backgroundColor: Colors.primary700,
-              borderTopColor: 'rgba(255,255,255,0.1)',
+              borderTopColor: withAlpha(Colors.neutral00, 0.1),
               borderTopWidth: 1,
               paddingBottom: 12 + footerBottomInset,
             },

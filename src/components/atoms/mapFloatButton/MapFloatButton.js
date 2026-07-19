@@ -31,6 +31,9 @@ function MapFloatButton({ isMapView, onPress, type = 'event' }) {
   return (
     <View pointerEvents="box-none" style={[styles.container, { bottom: bottomOffset }]}>
       <TouchableOpacity
+        accessibilityLabel={label}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isMapView }}
         activeOpacity={0.8}
         onPress={onPress}
         style={[

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import { navigate as navigateFromRoot } from '@/navigation/navigationService';
@@ -26,33 +27,6 @@ import {
 } from '@/utils/notifications/notificationPresentation';
 
 /**
- * @param {string | undefined | null} color
- * @param {number} alpha
- * @returns {string}
- */
-const withAlpha = (color, alpha) => {
-  if (typeof color !== 'string') return `rgba(1, 179, 244, ${alpha})`;
-
-  const normalized = color.trim();
-  const shortMatch = /^#([0-9a-fA-F]{3})$/.exec(normalized);
-  if (shortMatch) {
-    const [r, g, b] = shortMatch[1].split('').map((char) => Number.parseInt(char + char, 16));
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-
-  const longMatch = /^#([0-9a-fA-F]{6})$/.exec(normalized);
-  if (longMatch) {
-    const hex = longMatch[1];
-    const r = Number.parseInt(hex.slice(0, 2), 16);
-    const g = Number.parseInt(hex.slice(2, 4), 16);
-    const b = Number.parseInt(hex.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-
-  return normalized;
-};
-
-/**
  * @param {NotificationPopupProps} props
  * @returns {import('react').ReactElement | null}
  */
@@ -64,7 +38,9 @@ function NotificationPopup({
   onMarkAllAsRead,
   onMarkAsRead,
 }) {
-  const { Colors, Fonts, Spaces } = useTheme();
+  const {
+    ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const insets = useSafeAreaInsets();
 
@@ -79,6 +55,7 @@ function NotificationPopup({
   const textPrimary = Colors?.neutral00 || '#FFFFFF';
   const textSecondary = Colors?.neutral100 || '#D1D5DB';
   const textMuted = Colors?.neutral200 || '#9CA3AF';
+  const inkOnPrimary = Colors?.primary900 || '#001218';
 
   const overlayColor = withAlpha(Colors?.neutral900 || '#000000', 0.6);
   const subtleBorder = withAlpha(textPrimary, 0.08);
@@ -196,6 +173,9 @@ function NotificationPopup({
       const icon = getNotificationIcon(notif.type);
       return (
         <TouchableOpacity
+          accessibilityLabel={`${notif.title || 'Notification'}. ${notif.body || ''}`.trim()}
+          accessibilityRole="button"
+          accessibilityState={{ selected: !notif.read }}
           key={notif.documentId || notif.id || index}
           onPress={() => handlePressNotification(notif)}
           style={[
@@ -264,6 +244,8 @@ function NotificationPopup({
     >
       <View style={[styles.modalOverlay, { paddingTop: insets.top + 50 }]}>
         <TouchableOpacity
+          accessibilityLabel="Fermer les notifications"
+          accessibilityRole="button"
           activeOpacity={1}
           onPress={onClose}
           style={[styles.touchableBackground, { backgroundColor: overlayColor }]}
@@ -305,7 +287,7 @@ function NotificationPopup({
                     paddingVertical: 2,
                   }}
                 >
-                  <Text style={{ color: textPrimary, fontSize: 11, fontWeight: '600' }}>
+                  <Text style={{ color: inkOnPrimary, fontSize: 11, fontWeight: '600' }}>
                     {unreadCount}
                   </Text>
                 </View>
@@ -313,7 +295,12 @@ function NotificationPopup({
             </View>
 
             {unreadCount > 0 ? (
-              <TouchableOpacity onPress={handleMarkAllAsRead}>
+              <TouchableOpacity
+                accessibilityLabel="Tout lire"
+                accessibilityRole="button"
+                hitSlop={ApplicationStyle.hitSlop.min44From24}
+                onPress={handleMarkAllAsRead}
+              >
                 <Text style={[Fonts.p3Bold || { fontWeight: '600' }, { color: popupBorder }]}>
                   Tout lire
                 </Text>
@@ -326,6 +313,8 @@ function NotificationPopup({
           </ScrollView>
 
           <TouchableOpacity
+            accessibilityLabel="Voir toutes les notifications"
+            accessibilityRole="button"
             onPress={handleViewAll}
             style={{
               alignItems: 'center',

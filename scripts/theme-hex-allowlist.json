@@ -7,7 +7,6 @@
     "src/components/molecules/eventCard/EventCardNew.js",
     "src/components/molecules/featuredReservationCard/FeaturedReservationCard.js",
     "src/components/molecules/mercatoCard/MercatoCard.js",
-    "src/components/molecules/notificationBadge/NotificationBadge.js",
     "src/components/molecules/proposalMessageBubble/ProposalMessageBubble.js",
     "src/components/molecules/recruitmentAdCard/RecruitmentAdCard.js",
     "src/components/molecules/reservationCard/ReservationCard.js",

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Animated, Image, InteractionManager, Platform, StyleSheet, Text, TouchableOpacity, Vibration,
 } from 'react-native';
@@ -32,6 +33,7 @@ function NotificationBadge({
   withDefaultMargin = true,
 } = {}) {
   const { Colors, Images } = useTheme();
+  const { t } = useTranslation();
   const { isBootstrapResolved } = useAuth();
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [isUnreadCountReady, setIsUnreadCountReady] = useState(false);
@@ -146,6 +148,10 @@ function NotificationBadge({
   return (
     <>
       <TouchableOpacity
+        accessibilityLabel={t('notifications.title', 'Notifications')}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: isPopupVisible }}
+        accessibilityValue={{ text: String(unreadCount) }}
         activeOpacity={1}
         hitSlop={{
           bottom: 12, left: 12, right: 12, top: 12,
@@ -180,12 +186,13 @@ function NotificationBadge({
             style={[
               styles.badge,
               {
+                backgroundColor: Colors.error700,
                 borderColor: Colors.neutral800,
                 transform: [{ scale: pulseValue }],
               },
             ]}
           >
-            <Text style={styles.badgeText}>
+            <Text style={[styles.badgeText, { color: Colors.neutral00 }]}>
               {unreadCount > 99 ? '99+' : unreadCount}
             </Text>
           </Animated.View>
@@ -210,7 +217,6 @@ function NotificationBadge({
 const styles = StyleSheet.create({
   badge: {
     alignItems: 'center',
-    backgroundColor: '#EF4444',
     borderRadius: 10,
     borderWidth: 2,
     height: 18,
@@ -222,7 +228,6 @@ const styles = StyleSheet.create({
     top: -4,
   },
   badgeText: {
-    color: 'white',
     fontSize: 10,
     fontWeight: 'bold',
   },

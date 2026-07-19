@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -16,8 +17,9 @@ function InputStepper({
   label, max = 100, min = 0, onDecrement, onIncrement, value,
 }) {
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View>
@@ -30,7 +32,11 @@ function InputStepper({
       ]}
       >
         <TouchableOpacity
+          accessibilityLabel={`${t('common.previous')} ${label || ''}`.trim()}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: value <= min }}
           disabled={value <= min}
+          hitSlop={ApplicationStyle.hitSlop.min44From40}
           onPress={onDecrement}
           style={[
             Spaces.padding[12],
@@ -38,13 +44,17 @@ function InputStepper({
             value <= min && { opacity: 0.5 },
           ]}
         >
-          <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
+          <Text style={[Fonts.h3, Fonts.primary700]}>-</Text>
         </TouchableOpacity>
 
         <Text style={[Fonts.h3, Fonts.neutral900]}>{value}</Text>
 
         <TouchableOpacity
+          accessibilityLabel={`${t('common.next')} ${label || ''}`.trim()}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: value >= max }}
           disabled={value >= max}
+          hitSlop={ApplicationStyle.hitSlop.min44From40}
           onPress={onIncrement}
           style={[
             Spaces.padding[12],
@@ -52,7 +62,7 @@ function InputStepper({
             value >= max && { opacity: 0.5 },
           ]}
         >
-          <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
+          <Text style={[Fonts.h3, Fonts.primary700]}>+</Text>
         </TouchableOpacity>
       </View>
     </View>

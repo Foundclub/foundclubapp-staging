@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image, StyleSheet, TouchableOpacity, View,
 } from 'react-native';
@@ -38,6 +39,7 @@ function ProfileAvatar({
   const {
     Alignments, ApplicationStyle, Colors, Images,
   } = useTheme();
+  const { t } = useTranslation();
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
   const processedUrl = getImageUrl(imageUrl);
@@ -98,6 +100,9 @@ function ProfileAvatar({
   return (
     <>
       <TouchableOpacity
+        accessibilityLabel={t('profile.actions.viewAvatar', 'Agrandir la photo')}
+        accessibilityRole={hasImage && enablePreview ? 'imagebutton' : 'image'}
+        accessibilityState={{ disabled: !hasImage || !enablePreview }}
         activeOpacity={hasImage && enablePreview ? 0.8 : 1}
         disabled={!hasImage || !enablePreview}
         onPress={handlePress}
