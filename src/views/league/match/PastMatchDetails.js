@@ -52,7 +52,7 @@ const normalizeComparableText = (value) => String(value || '')
 const resolveVenueLabel = (match) => (
   getProposalLocationLabel(match?.venue)
     || getProposalLocationLabel(match?.proposed_venue)
-    || 'Lieu \u00E0 d\u00E9finir'
+    || 'Lieu à définir'
 );
 
 /**
@@ -118,7 +118,7 @@ function PastMatchDetails() {
 
   const loadMatch = useCallback(async () => {
     if (!matchId) {
-      setLoadError("Aucun match n'est associe a ce lien.");
+      setLoadError("Aucun match n'est associé à ce lien.");
       setMatch(null);
       setLoading(false);
       setRefreshing(false);
@@ -132,7 +132,7 @@ function PastMatchDetails() {
     } catch (error) {
       console.error('Error loading match:', error);
       setMatch(null);
-      setLoadError(error?.message || 'Impossible de charger le match termine.');
+      setLoadError(error?.message || 'Impossible de charger le match terminé.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -241,7 +241,7 @@ function PastMatchDetails() {
   const resultSummaryText = useMemo(() => {
     if (myScoreValue > oppScoreValue) return 'Tu remportes ce duel League.';
     if (myScoreValue < oppScoreValue) return 'Le match a bascule du cote adverse.';
-    return 'Les deux \u00E9quipes repartent dos \u00E0 dos.';
+    return 'Les deux équipes repartent dos à dos.';
   }, [myScoreValue, oppScoreValue]);
 
   const canRematch = useMemo(() => {
@@ -268,7 +268,7 @@ function PastMatchDetails() {
 
     Alert.alert(
       'Demander une revanche',
-      `Voulez-vous demander une revanche contre ${opponent?.name || 'cette \u00E9quipe'} ?`,
+      `Veux-tu demander une revanche contre ${opponent?.name || 'cette équipe'} ?`,
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -277,8 +277,8 @@ function PastMatchDetails() {
             try {
               const result = await requestRematch(myTeamDocId, opponentDocId, matchId);
               Alert.alert(
-                result?.matched ? 'Match cr\u00E9\u00E9' : 'Demande envoy\u00E9e',
-                result?.message || 'Votre demande a bien \u00E9t\u00E9 envoy\u00E9e.',
+                result?.matched ? 'Match créé' : 'Demande envoyée',
+                result?.message || 'Ta demande a bien été envoyée.',
               );
               if (result?.matched) {
                 navigation.goBack();
@@ -325,7 +325,7 @@ function PastMatchDetails() {
     return (
       <LeagueStateView
         actionLabel="Retour au dashboard"
-        description="Ce match termine n'est plus accessible depuis ce lien."
+        description="Ce match terminé n'est plus accessible depuis ce lien."
         onAction={() => navigation.navigate(RouteNames.LeagueDashboard)}
         title="Match introuvable"
       />
@@ -391,7 +391,7 @@ function PastMatchDetails() {
               <View style={styles.teamBlock}>
                 <TeamShield initials={teamA?.name?.substring(0, 2) || 'A'} isGold size={62} />
                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
-                  {teamA?.name || '\u00C9quipe A'}
+                  {teamA?.name || 'Équipe A'}
                 </Text>
               </View>
 
@@ -432,7 +432,7 @@ function PastMatchDetails() {
                   <TeamShield initials={teamB?.name?.substring(0, 2) || 'B'} isGold size={62} />
                 )}
                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
-                  {teamB?.name || '\u00C9quipe B'}
+                  {teamB?.name || 'Équipe B'}
                 </Text>
               </View>
             </View>
@@ -525,7 +525,7 @@ function PastMatchDetails() {
                   },
                 ]}
               >
-                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Apres</Text>
+                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Après</Text>
                 <Text style={[Fonts.h3, { color: Colors.gold500, marginTop: 6 }]}>
                   {eloInfo.available ? eloInfo.after : '-'}
                 </Text>

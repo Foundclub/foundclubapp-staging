@@ -87,24 +87,24 @@ function AdWizardAudienceType({ navigation, route }) {
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={1}
-      subtitle="Choisissez si vous publiez une annonce pour recruter des joueurs ou un entraineur."
+      subtitle="Choisis si tu publies une annonce pour recruter des joueurs ou un entraîneur."
       title="Type d'annonce"
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
         <SubscriptionQuotaBanner label="Annonces" quotaType="RECRUITMENT_AD_PUBLISH" />
 
         <AudienceCard
-          description="Publiez une annonce par poste recherche, avec le volume de recrutement et les informations sportives de l&rsquo;equipe."
+          description="Publie une annonce par poste recherche, avec le volume de recrutement et les informations sportives de l&rsquo;équipe."
           isSelected={state.audienceType === 'player'}
           onPress={() => handleSelect('player')}
           title="Je recrute des joueurs"
         />
 
         <AudienceCard
-          description="Publiez une annonce dediee a un role d'encadrement: entraineur principal, adjoint, preparateur physique ou autre besoin staff."
+          description="Publie une annonce dédiée a un rôle d'encadrement: entraîneur principal, adjoint, préparateur physique ou autre besoin staff."
           isSelected={state.audienceType === 'coach'}
           onPress={() => handleSelect('coach')}
-          title="Je recrute un entraineur"
+          title="Je recrute un entraîneur"
         />
 
         <View style={[Spaces.paddingHorizontal[4], Spaces.marginTop[12]]}>

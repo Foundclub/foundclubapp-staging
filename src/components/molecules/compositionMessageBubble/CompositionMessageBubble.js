@@ -89,7 +89,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
         canEdit: false,
         editorMode: 'event',
         editorSource: type === 'lineup_share' ? 'published' : null,
-        editorSourceLabel: type === 'lineup_share' ? "Composition d'equipes publiee" : null,
+        editorSourceLabel: type === 'lineup_share' ? "Composition d'équipes publiée" : null,
         eventId,
         eventName,
         existingComposition: isMultiTeamComposition
@@ -159,7 +159,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     >
       <View style={[styles.header, { borderBottomColor: Colors.neutral700 }]}>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-          {type === 'lineup_share' ? "Composition d'equipes publiee" : 'Composition du match'}
+          {type === 'lineup_share' ? "Composition d'équipes publiée" : 'Composition du match'}
         </Text>
         {formattedDate ? (
           <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>

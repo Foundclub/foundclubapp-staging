@@ -265,7 +265,7 @@ function Conversation({ navigation, route }) {
       window.alert(getErrorMessage(error, 'Impossible de signaler ce message pour le moment.'))
     },
     onSuccess: () => {
-      window.alert('Signalement envoye. Merci, notre equipe va verifier ce message.')
+      window.alert('Signalement envoyé. Merci, notre équipe va vérifier ce message.')
       setReportedMessageId('')
     },
   })
@@ -305,7 +305,7 @@ function Conversation({ navigation, route }) {
   const leagueLegalMatchLabel = useMemo(() => {
     const match = chatData?.league_match
     if (!match) return 'Match FoundClub League'
-    return `${match?.team_a?.name || 'Equipe A'} VS ${match?.team_b?.name || 'Adversaire'}`
+    return `${match?.team_a?.name || 'Équipe A'} VS ${match?.team_b?.name || 'Adversaire'}`
   }, [chatData?.league_match])
   const isLeagueConversation = chatData?.type === 'league_match'
   const canUseConversationActions = Boolean(chatId && chatData)
@@ -327,7 +327,7 @@ function Conversation({ navigation, route }) {
   // @ts-ignore: FIXME: Baseline TS regression
   const requestWebLeagueLegalAcceptance = useCallback((scope, targetDocumentId, metadata = {}) => {
     const confirmed = window.confirm(
-      'FoundClub League met en relation les equipes mais n organise pas la rencontre. Confirmez-vous accepter les risques sportifs, verifier votre assurance et respecter les regles du lieu ?',
+      "FoundClub League met en relation les équipes mais n'organise pas la rencontre. Confirmes-tu accepter les risques sportifs, vérifier ton assurance et respecter les règles du lieu ?",
     )
     if (!confirmed) return null
     return buildLeagueLegalAcceptancePayload({
@@ -491,14 +491,14 @@ function Conversation({ navigation, route }) {
     try {
       const uploadedFiles = await uploadAttachment(file)
       if (!uploadedFiles.length) {
-        window.alert('Aucune piece jointe n a pu etre televersee.')
+        window.alert('Aucune pièce jointe n a pu être televersee.')
         return
       }
 
       const firstFile = uploadedFiles[0]
       const fallbackMessage = isImageAttachment(firstFile)
         ? composerText
-        : (composerText || `Piece jointe : ${getDocumentDisplayName(firstFile)}`)
+        : (composerText || `Pièce jointe : ${getDocumentDisplayName(firstFile)}`)
 
       await sendChatPayload({
         attachments: uploadedFiles,
@@ -507,7 +507,7 @@ function Conversation({ navigation, route }) {
       })
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible d envoyer cette piece jointe.')
+      window.alert(error?.message || 'Impossible d envoyer cette pièce jointe.')
     } finally {
       setIsUploading(false)
     }
@@ -545,7 +545,7 @@ function Conversation({ navigation, route }) {
     try {
       const uploadedFiles = await uploadAttachment(voiceNote.file)
       if (!uploadedFiles.length) {
-        window.alert('Aucune note vocale n a pu etre televersee.')
+        window.alert('Aucune note vocale n a pu être televersee.')
         return
       }
 
@@ -658,7 +658,7 @@ function Conversation({ navigation, route }) {
       })
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible de partager cet evenement.')
+      window.alert(error?.message || 'Impossible de partager cet événement.')
     }
   }, [replyTarget, sendChatPayload])
 
@@ -696,10 +696,10 @@ function Conversation({ navigation, route }) {
         })
       } catch (error) {
         // @ts-ignore: FIXME: Baseline TS regression
-        window.alert(error?.message || 'Impossible de partager votre position.')
+        window.alert(error?.message || 'Impossible de partager ta position.')
       }
     }, (error) => {
-      window.alert(error?.message || 'Impossible d acceder a votre position.')
+      window.alert(error?.message || 'Impossible d acceder à ta position.')
     })
   }, [replyTarget, sendChatPayload])
 
@@ -707,7 +707,7 @@ function Conversation({ navigation, route }) {
     const question = pollQuestion.trim()
     const options = pollOptions.map((option) => option.trim()).filter(Boolean)
     if (!question || options.length < 2) {
-      window.alert('Ajoutez une question et au moins deux options.')
+      window.alert('Ajoute une question et au moins deux options.')
       return
     }
 
@@ -728,7 +728,7 @@ function Conversation({ navigation, route }) {
       setIsAnonymousPoll(false)
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible de creer ce sondage.')
+      window.alert(error?.message || 'Impossible de créer ce sondage.')
     } finally {
       setIsSubmittingPoll(false)
     }
@@ -785,7 +785,7 @@ function Conversation({ navigation, route }) {
 
   const handleSendProposal = useCallback(async () => {
     if (!proposalDate || !proposalStartTime) {
-      window.alert('Choisissez une date et une heure pour la proposition.')
+      window.alert('Choisis une date et une heure pour la proposition.')
       return
     }
 
@@ -802,7 +802,7 @@ function Conversation({ navigation, route }) {
           : undefined,
         date: startIso,
         endDate: endIso,
-        venue: proposalVenue || 'Lieu a definir',
+        venue: proposalVenue || 'Lieu à définir',
       }, chatData?.league_match?.location)
 
       if (leagueMatchId) {
@@ -811,7 +811,7 @@ function Conversation({ navigation, route }) {
           leagueMatchId,
           {
             matchLabel: leagueLegalMatchLabel,
-            venueLabel: proposalVenue || 'Lieu a definir',
+            venueLabel: proposalVenue || 'Lieu à définir',
           },
         )
         if (!legalAcceptance) return
@@ -866,14 +866,14 @@ function Conversation({ navigation, route }) {
       } else if (matchId) {
         await respondToLeagueProposal(matchId, messageId, 'decline')
       } else if (message?.composition?.type === 'proposal' && chatData?.type === 'league_match') {
-        throw new Error('Proposition League incomplete. Rechargez la conversation avant de repondre.')
+        throw new Error('Proposition League incomplète. Recharge la conversation avant de répondre.')
       } else {
         await respondToProposal(messageId, status)
       }
       await invalidateConversationQueries()
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible de repondre a cette proposition.')
+      window.alert(error?.message || 'Impossible de répondre à cette proposition.')
     }
   }, [
     invalidateConversationQueries,
@@ -960,7 +960,7 @@ function Conversation({ navigation, route }) {
           }}
           type="button"
         >
-          {actionLabel || 'R\u00E9essayer'}
+          {actionLabel || 'Réessayer'}
         </button>
       ) : null}
     </section>
@@ -983,7 +983,7 @@ function Conversation({ navigation, route }) {
   const handleReportMessage = useCallback((message) => {
     const messageId = getMessageId(message)
     if (!messageId || reportMessageMutation.isPending) return
-    if (!window.confirm('Signaler ce message a la moderation FoundClub ?')) return
+    if (!window.confirm('Signaler ce message à la moderation FoundClub ?')) return
     setReportedMessageId(messageId)
     reportMessageMutation.mutate({ message: messageId })
   }, [reportMessageMutation])
@@ -1056,7 +1056,7 @@ function Conversation({ navigation, route }) {
                 {label}
               </span>
               <span style={{ color: mutedTextColor, fontSize: 12 }}>
-                {isDocument ? 'Document' : attachment?.mime || 'Piece jointe'}
+                {isDocument ? 'Document' : attachment?.mime || 'Pièce jointe'}
               </span>
             </span>
             <span style={{ color: primaryColor, fontSize: 12 }}>
@@ -1118,7 +1118,7 @@ function Conversation({ navigation, route }) {
           </div>
           <div style={{ color: mutedTextColor, display: 'grid', fontSize: 13, gap: 4 }}>
             <span>{formatDay(composition?.date)}</span>
-            <span>{composition?.venue || 'Lieu a definir'}</span>
+            <span>{composition?.venue || 'Lieu à définir'}</span>
             <span>{composition?.address || composition?.addressObject?.label || ''}</span>
             <span>
               Statut:
@@ -1194,7 +1194,7 @@ function Conversation({ navigation, route }) {
               }}
               type="button"
             >
-              Voir l evenement
+              Voir l événement
             </button>
           ) : null}
         </div>
@@ -1370,7 +1370,7 @@ function Conversation({ navigation, route }) {
               {' '}
               {formatTime(message?.createdAt)}
               {message?.pending ? ' • envoi...' : ''}
-              {message?.failed ? ' • a renvoyer' : ''}
+              {message?.failed ? ' • à renvoyer' : ''}
             </span>
             <div style={{
               alignItems: 'center',
@@ -1457,7 +1457,7 @@ function Conversation({ navigation, route }) {
       >
         {renderStateCard({
           actionLabel: 'Voir mes messages',
-          description: 'Aucune conversation n a ete selectionnee. Revenez a la liste des messages puis ouvrez une discussion.',
+          description: 'Aucune conversation n a été sélectionnée. Reviens à la liste des messages puis ouvre une discussion.',
           onAction: () => navigation.navigate(RouteNames.Chat),
           title: 'Conversation introuvable',
         })}
@@ -1492,7 +1492,7 @@ function Conversation({ navigation, route }) {
         style={{ paddingBottom: 32 }}
       >
         {renderStateCard({
-          actionLabel: 'R\u00E9essayer',
+          actionLabel: 'Réessayer',
           description: getErrorMessage(chatError, 'Impossible de charger cette conversation.'),
           onAction: retryConversationLoad,
           title: 'Conversation indisponible',
@@ -1511,8 +1511,8 @@ function Conversation({ navigation, route }) {
         style={{ paddingBottom: 32 }}
       >
         {renderStateCard({
-          actionLabel: 'Retour a mes messages',
-          description: 'Cette conversation est introuvable ou vous n y avez plus acces.',
+          actionLabel: 'Retour à mes messages',
+          description: 'Cette conversation est introuvable ou tu n\'y as plus accès.',
           onAction: () => navigation.navigate(RouteNames.Chat),
           title: 'Conversation introuvable',
         })}
@@ -1724,7 +1724,7 @@ function Conversation({ navigation, route }) {
                 >
                   {isStoppingVoice
                     ? 'Preparation...'
-                    : (isRecordingVoice ? 'Arreter la note vocale' : 'Note vocale')}
+                    : (isRecordingVoice ? 'Arrêter la note vocale' : 'Note vocale')}
                 </button>
                 <button onClick={handlePickImage} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Image</button>
                 <button onClick={handlePickDocument} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Document</button>
@@ -1749,7 +1749,7 @@ function Conversation({ navigation, route }) {
             </div>
             <div style={{ color: mutedTextColor, fontSize: 12 }}>
               {isRecordingVoice
-                ? 'Enregistrement en cours. Cliquez a nouveau pour envoyer la note vocale.'
+                ? 'Enregistrement en cours. Clique à nouveau pour envoyer la note vocale.'
                 : (isVoiceRecordingSupported
                   ? 'Les notes vocales utilisent le microphone du navigateur.'
                   : 'Les notes vocales ne sont pas prises en charge par ce navigateur.')}
@@ -1812,9 +1812,9 @@ function Conversation({ navigation, route }) {
             </div>
 
             <div style={{ display: 'grid', gap: 10 }}>
-              <h3 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0 }}>Evenements</h3>
+              <h3 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0 }}>Événements</h3>
               {shareableEvents.length === 0 ? (
-                <div style={{ color: mutedTextColor, fontSize: 13 }}>Aucun evenement recent a partager.</div>
+                <div style={{ color: mutedTextColor, fontSize: 13 }}>Aucun événement récent à partager.</div>
               ) : shareableEvents.slice(0, 6).map((event) => (
                 <button
                   key={getEntityDocumentId(event)}
@@ -1917,7 +1917,7 @@ function Conversation({ navigation, route }) {
           <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, display: 'grid', gap: 8, padding: 22 }}>
             <h2 style={{ color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Parite web</h2>
             <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-              Texte, reponse, pieces jointes, partages, sondages et propositions utilisent deja les hooks, services et sockets partages. Les notes vocales passent par le micro du navigateur quand il est compatible.
+              Texte, réponse, pièces jointes, partages, sondages et propositions utilisent déjà les hooks, services et sockets partages. Les notes vocales passent par le micro du navigateur quand il est compatible.
             </div>
           </section>
         </aside>

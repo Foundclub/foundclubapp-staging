@@ -18,7 +18,7 @@ function PlanningFullscreenButton({ borderColor, onPress }) {
 
   return (
     <TouchableOpacity
-      accessibilityLabel="Ouvrir le planning en plein ecran"
+      accessibilityLabel="Ouvrir le planning en plein écran"
       accessibilityRole="button"
       onPress={onPress}
       style={{

@@ -118,7 +118,7 @@ function AdminClubOnboardingList() {
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-              {item?.clubName || 'Club non precise'}
+              {item?.clubName || 'Club non précisé'}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[4]]}>
               {requestDate}
@@ -147,7 +147,7 @@ function AdminClubOnboardingList() {
             Spaces.gap[10],
           ]}
         >
-          <Text style={[Fonts.p3Bold, Fonts.primary200]}>Dirigeant a contacter</Text>
+          <Text style={[Fonts.p3Bold, Fonts.primary200]}>Dirigeant à contacter</Text>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{managerLabel}</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             Telephone: {item?.holderPhone || '-'}
@@ -205,7 +205,7 @@ function AdminClubOnboardingList() {
   };
 
   return (
-    <ScreenContainer bgImage="bg2" title="Clubs a onboarder">
+    <ScreenContainer bgImage="bg2" title="Clubs à onboarder">
       <FlatList
         contentContainerStyle={[Spaces.padding[16]]}
         data={requests}
@@ -214,7 +214,7 @@ function AdminClubOnboardingList() {
           <View style={[Alignments.center, Spaces.marginTop[40]]}>
             <Text style={[Fonts.h4, Fonts.neutral200]}>Aucune demande en attente</Text>
             <Text style={[Fonts.p2, Fonts.neutral500, Spaces.marginTop[8], { textAlign: 'center' }]}>
-              Les formulaires de clubs a onboarder apparaitront ici.
+              Les formulaires de clubs à onboarder apparaîtront ici.
             </Text>
           </View>
         ) : null}

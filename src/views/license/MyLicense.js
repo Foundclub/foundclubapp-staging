@@ -175,7 +175,7 @@ function MyLicense({ navigation, route }) {
 
   const sharePayerLink = useCallback(() => {
     if (!payerLink) {
-      Alert.alert('Lien indisponible', 'Le lien de paiement externe sera disponible apres generation par le club.');
+      Alert.alert('Lien indisponible', 'Le lien de paiement externe sera disponible après génération par le club.');
       return;
     }
     SharePlatform.share({
@@ -192,7 +192,7 @@ function MyLicense({ navigation, route }) {
         setDeclareModalVisible(false);
         query.refetch();
         if (routeAssignmentId) assignmentQuery.refetch();
-        Alert.alert('Declaration envoyee', 'Le club devra valider ce paiement.');
+        Alert.alert('Déclaration envoyée', 'Le club devra valider ce paiement.');
       },
     });
   }, [assignmentQuery, declareMutation, query, routeAssignmentId]);
@@ -214,19 +214,19 @@ function MyLicense({ navigation, route }) {
       }, {
         onSuccess: () => {
           refreshCurrent();
-          Alert.alert('Document envoye', 'Le club pourra maintenant verifier cette piece.');
+          Alert.alert('Document envoyé', 'Le club pourra maintenant vérifier cette pièce.');
         },
       });
     } catch (error) {
       if (isPickerCancelError(error)) return;
-      Alert.alert('Upload impossible', error?.message || 'Le document n a pas pu etre envoye.');
+      Alert.alert('Upload impossible', error?.message || 'Le document n a pas pu être envoyé.');
     }
   }, [assignmentId, documentMutation, refreshCurrent]);
 
   const openUploadedDocument = useCallback(async (submission) => {
     const url = resolveMediaUrl(submission?.file?.url || submission?.file?.formats?.thumbnail?.url || '');
     if (!url) {
-      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattache a ce depot.');
+      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
       return;
     }
     await LinksPlatform.openUrl(url);
@@ -236,7 +236,7 @@ function MyLicense({ navigation, route }) {
     receiptMutation.mutate(paymentId, {
       onSuccess: () => {
         refreshCurrent();
-        Alert.alert('Recu genere', 'Le recu est maintenant disponible dans ta cotisation.');
+        Alert.alert('Reçu génère', 'Le reçu est maintenant disponible dans ta cotisation.');
       },
     });
   }, [receiptMutation, refreshCurrent]);
@@ -245,7 +245,7 @@ function MyLicense({ navigation, route }) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
         <LicenseEmptyState
-          description="On recupere tes cotisations disponibles."
+          description="On récupère tes cotisations disponibles."
           title="Chargement"
         />
       </ScreenContainer>
@@ -317,12 +317,12 @@ function MyLicense({ navigation, route }) {
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               Date limite:
               {' '}
-              {current?.dueDate || current?.campaign?.dueDate || 'Non definie'}
+              {current?.dueDate || current?.campaign?.dueDate || 'Non définie'}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               Club:
               {' '}
-              {current?.club?.name || current?.campaign?.club?.name || 'Non precise'}
+              {current?.club?.name || current?.campaign?.club?.name || 'Non précisé'}
             </Text>
           </View>
         </LicenseCard>
@@ -333,7 +333,7 @@ function MyLicense({ navigation, route }) {
             <View style={Spaces.gap[licenseSpacing.actionGap]}>
               <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Campagne temporairement suspendue</Text>
               <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Ta cotisation reste visible, mais le club a mis cette campagne en pause. Les paiements et declarations reprendront apres reouverture.
+                Ta cotisation reste visible, mais le club a mis cette campagne en pause. Les paiements et déclarations reprendront après reouverture.
               </Text>
             </View>
           </LicenseCard>
@@ -391,12 +391,12 @@ function MyLicense({ navigation, route }) {
               </>
             ) : (
               <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Votre licence n est pas encore disponible.
+                Ta licence n est pas encore disponible.
               </Text>
             )}
           </View>
         </LicenseCard>
-        <LicenseSectionHeader title="Documents a fournir" />
+        <LicenseSectionHeader title="Documents à fournir" />
         {(current?.campaign?.documentRequests || []).length ? (
           <View style={Spaces.gap[licenseSpacing.listGap]}>
             {(current?.campaign?.documentRequests || []).map((request) => {
@@ -417,7 +417,7 @@ function MyLicense({ navigation, route }) {
                         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{request?.name || 'Document'}</Text>
                         <Text style={[Fonts.p3, Fonts.neutral200]}>
                           {request?.required === false ? 'Facultatif' : 'Obligatoire'}
-                          {request?.dueDate ? ` - Depot avant ${request.dueDate}` : ''}
+                          {request?.dueDate ? ` - Dépôt avant ${request.dueDate}` : ''}
                         </Text>
                       </View>
                       <LicenseStatusChip status={submissionStatus} />
@@ -425,7 +425,7 @@ function MyLicense({ navigation, route }) {
                     {request?.description ? <Text style={[Fonts.p3, Fonts.neutral200]}>{request.description}</Text> : null}
                     {submission?.refusalReason ? <Text style={[Fonts.p3, { color: '#fda4af' }]}>{submission.refusalReason}</Text> : null}
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      {submission ? `Dernier depot ${documentDate(submission) || '-'}` : 'Aucun fichier envoye'}
+                      {submission ? `Dernier dépôt ${documentDate(submission) || '-'}` : 'Aucun fichier envoyé'}
                     </Text>
                     <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
                       <Button
@@ -450,7 +450,7 @@ function MyLicense({ navigation, route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Aucune piece supplementaire n est demandee pour cette campagne."
+            description="Aucune pièce supplémentaire n est demandée pour cette campagne."
             title="Aucun document"
           />
         )}
@@ -468,14 +468,14 @@ function MyLicense({ navigation, route }) {
                     ]}
                   />
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    {paymentModeLabels[payment.method] || payment.method || 'Methode non precisee'}
+                    {paymentModeLabels[payment.method] || payment.method || 'Méthode non précisée'}
                     {payment?.note ? ` - ${payment.note}` : ''}
                   </Text>
                   {!payment?.receipt && ['confirmed', 'partially_refunded'].includes(payment?.status) ? (
                     <Button
                       isLoading={receiptMutation.isPending}
                       onPress={() => generateReceiptForPayment(payment.documentId || payment.id)}
-                      title="Generer mon recu"
+                      title="Générer mon reçu"
                       variant="Secondary"
                     />
                   ) : null}
@@ -485,7 +485,7 @@ function MyLicense({ navigation, route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Aucun paiement n est encore rattache a ta cotisation."
+            description="Aucun paiement n est encore rattache à ta cotisation."
             title="Pas d historique"
           />
         )}
@@ -506,8 +506,8 @@ function MyLicense({ navigation, route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Les recus apparaitront ici apres validation d un paiement."
-            title="Pas encore de recu"
+            description="Les reçus apparaîtront ici après validation d un paiement."
+            title="Pas encore de reçu"
           />
         )}
         <LicenseSectionHeader title="Relances" />

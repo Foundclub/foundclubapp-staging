@@ -81,7 +81,7 @@ export function AppFeedbackProvider({ children }) {
       const previousAt = recentBannerMapRef.current.get(dedupeKey);
       if (previousAt && now - previousAt < dedupeWindowMs) {
         if (__DEV__) {
-          console.info('[celebrations] deduped', {
+          console.info('[célébrations] deduped', {
             dedupeKey,
             title: payload?.title,
           });
@@ -125,7 +125,7 @@ export function AppFeedbackProvider({ children }) {
         return String(left?.id || '').localeCompare(String(right?.id || ''));
       });
       if (__DEV__) {
-        console.info('[celebrations] queued', {
+        console.info('[célébrations] queued', {
           queueLength: nextQueue.length,
           title: nextBanner.title,
           variant: nextBanner.variant,

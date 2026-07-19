@@ -136,12 +136,12 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
   }
   const readOnlySubtitle = isOwnerOnly
     ? [
-      `${requesterName} a demande a rejoindre ${teamName}.`,
-      'Votre equipe doit attendre la validation par votre/vos dirigeant(s).',
+      `${requesterName} a demandé à rejoindre ${teamName}.`,
+      'Ton équipe doit attendre la validation par ton ou tes dirigeant(s).',
     ].join(' ')
     : [
-      `${requesterName} a demande a rejoindre ${teamName}.`,
-      'Un responsable autorise doit traiter cette demande.',
+      `${requesterName} a demandé à rejoindre ${teamName}.`,
+      'Un responsable autorisé doit traiter cette demande.',
     ].join(' ');
 
   return {
@@ -163,7 +163,7 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
     },
     status: 'pending',
     subtitle: isReadOnly ? readOnlySubtitle : `${requesterName} souhaite rejoindre ${teamName}.`,
-    title: isReadOnly ? 'Demande equipe en validation' : 'Demande adhesion equipe',
+    title: isReadOnly ? 'Demande équipe en validation' : 'Demande adhésion équipe',
     type: 'team',
   };
 };
@@ -194,7 +194,7 @@ export const mapClubMembershipRequestToHubItem = (request = {}, options = {}) =>
     : `${requesterName} demande une affiliation au club ${clubName}.`;
   const readOnlySubtitle = [
     `${requesterName} veut revendiquer la gestion du club ${clubName}.`,
-    'Revendication en cours de verification FoundClub.',
+    'Revendication en cours de vérification FoundClub.',
   ].join(' ');
 
   return {
@@ -215,7 +215,7 @@ export const mapClubMembershipRequestToHubItem = (request = {}, options = {}) =>
     },
     status: 'pending',
     subtitle: isReadOnly ? readOnlySubtitle : subtitle,
-    title: isReadOnly ? 'Revendication club en verification' : title,
+    title: isReadOnly ? 'Revendication club en vérification' : title,
     type: 'club',
   };
 };
@@ -248,8 +248,8 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
       teamName,
     },
     status: 'pending',
-    subtitle: `${requesterName} est interesse par ${teamName}.`,
-    title: 'Interet club',
+    subtitle: `${requesterName} est intéressé par ${teamName}.`,
+    title: 'Intérêt club',
     type: 'interest',
   };
 };
@@ -276,7 +276,7 @@ export const mapEventValidationRequestToHubItem = (event = {}) => {
     },
     status: 'pending',
     subtitle: `${eventName} - ${teamName}`,
-    title: 'Validation evenement',
+    title: 'Validation événement',
     type: 'event',
   };
 };
@@ -315,7 +315,7 @@ export const mapEventParticipationRequestToHubItem = (event = {}, request = {}) 
     },
     status: 'pending',
     subtitle: `${eventName} - ${teamName}`,
-    title: 'Validation evenement',
+    title: 'Validation événement',
     type: 'event',
   };
 };
@@ -356,7 +356,7 @@ export const mapFeaturedRequestToHubItem = (/** @type {Record<string, any>} */ e
     },
     status: 'pending',
     subtitle: `${requesterName} demande une mise à la une ${scopeLabel.toLowerCase()}${targetName ? ` pour ${targetName}` : ''}.`,
-    title: `Mise a la une ${scopeLabel} - ${eventName}`,
+    title: `Mise à la une ${scopeLabel} - ${eventName}`,
     type: 'featured',
   };
 };

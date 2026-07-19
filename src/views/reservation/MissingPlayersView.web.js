@@ -106,11 +106,11 @@ function MissingPlayersView({ navigation }) {
       ]);
       setActiveReservationId('');
       refetch();
-      window.alert('Participation confirmee.');
+      window.alert('Participation confirmée.');
     },
     onError: (joinError) => {
       setActiveReservationId('');
-      window.alert(joinError?.message || 'Impossible de rejoindre cette reservation.');
+      window.alert(joinError?.message || 'Impossible de rejoindre cette réservation.');
     },
   });
 
@@ -134,7 +134,7 @@ function MissingPlayersView({ navigation }) {
           <div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', marginBottom: 18 }}>
             <div style={{ display: 'grid', gap: 8 }}>
               <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Reservations partagees
+                Réservations partagees
               </span>
               <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 34 : 28, margin: 0 }}>
                 Joueurs recherches
@@ -149,7 +149,7 @@ function MissingPlayersView({ navigation }) {
                 style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: textColor, cursor: 'pointer', padding: '10px 14px' }}
                 type="button"
               >
-                Voir toutes les reservations
+                Voir toutes les réservations
               </button>
               <button
                 onClick={() => refetch()}
@@ -163,7 +163,7 @@ function MissingPlayersView({ navigation }) {
 
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isDesktop ? 'repeat(3, minmax(0, 1fr))' : '1fr' }}>
             {[
-              { label: 'Reservations ouvertes', value: reservations.length },
+              { label: 'Réservations ouvertes', value: reservations.length },
               { label: 'SOS urgents', value: urgentCount },
               { label: 'A pourvoir', value: reservations.reduce((sum, reservation) => sum + Number(reservation?.missingPlayers || 0), 0) },
             ].map((item) => (
@@ -177,7 +177,7 @@ function MissingPlayersView({ navigation }) {
 
         {error ? (
           <section style={{ background: 'rgba(160, 40, 40, 0.18)', border: '1px solid rgba(255,120,120,0.28)', borderRadius: 20, color: '#ffd6d6', padding: 18 }}>
-            {error?.message || 'Impossible de charger les reservations.'}
+            {error?.message || 'Impossible de charger les réservations.'}
           </section>
         ) : null}
 
@@ -187,9 +187,9 @@ function MissingPlayersView({ navigation }) {
           </section>
         ) : reservations.length === 0 ? (
           <section style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 8, justifyItems: 'start', padding: 24 }}>
-            <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', margin: 0 }}>Aucune reservation ouverte pour l’instant</h2>
+            <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', margin: 0 }}>Aucune réservation ouverte pour l’instant</h2>
             <p style={{ color: mutedTextColor, margin: 0 }}>
-              Reviens plus tard ou passe par la recherche pour voir toutes les reservations disponibles.
+              Reviens plus tard ou passe par la recherche pour voir toutes les réservations disponibles.
             </p>
           </section>
         ) : (
@@ -315,7 +315,7 @@ function MissingPlayersView({ navigation }) {
               }}
               type="button"
             >
-              {isFetchingNextPage ? 'Chargement…' : 'Charger plus de reservations'}
+              {isFetchingNextPage ? 'Chargement…' : 'Charger plus de réservations'}
             </button>
           </div>
         ) : null}

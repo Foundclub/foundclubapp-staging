@@ -159,7 +159,7 @@ function TournamentMatchDetails({ navigation, route }) {
     const endAt = formatDateTimeToSend(scheduledDate, endTime);
 
     if (!scheduledAt || !endAt) {
-      Alert.alert('Creneau incomplet', 'Selectionnez une date, une heure de debut et une heure de fin valides.');
+      Alert.alert('Créneau incomplet', 'Sélectionne une date, une heure de début et une heure de fin valides.');
       return;
     }
 
@@ -172,7 +172,7 @@ function TournamentMatchDetails({ navigation, route }) {
 
   const handleReportScore = (options = {}) => {
     if (!canSubmitScore && options.status !== 'forfeit') {
-      Alert.alert('Score incomplet', 'Renseignez deux scores valides. Pour un match nul en phase finale, indiquez aussi le vainqueur.');
+      Alert.alert('Score incomplet', 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.');
       return;
     }
 
@@ -216,7 +216,7 @@ function TournamentMatchDetails({ navigation, route }) {
           <View style={tournamentDs.styles.screenIntro}>
             <Text style={[Fonts.h2, Fonts.neutral00]}>{match?.roundLabel || 'Match tournoi'}</Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
-              {`${match?.teamA?.name || 'Equipe A'} vs ${match?.teamB?.name || 'Equipe B'}`}
+              {`${match?.teamA?.name || 'Équipe A'} vs ${match?.teamB?.name || 'Équipe B'}`}
             </Text>
           </View>
 
@@ -224,7 +224,7 @@ function TournamentMatchDetails({ navigation, route }) {
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
               <View style={{ flex: 1 }}>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>{match?.group?.label ? `Poule ${match.group.label}` : match?.phase?.label || 'Phase finale'}</Text>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{`${match?.teamA?.name || 'Equipe A'} - ${match?.teamB?.name || 'Equipe B'}`}</Text>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{`${match?.teamA?.name || 'Équipe A'} - ${match?.teamB?.name || 'Équipe B'}`}</Text>
               </View>
               <Tag
                 style={tournamentDs.getToneTagStyle(matchStatusMeta.tone)}
@@ -238,7 +238,7 @@ function TournamentMatchDetails({ navigation, route }) {
               {scoresAreValid ? `${scoreA} - ${scoreB}` : '--'}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral100]}>
-              {scheduledDate && startTime ? `${scheduledDate} - ${startTime}${endTime ? ` / ${endTime}` : ''}` : 'Horaire a definir'}
+              {scheduledDate && startTime ? `${scheduledDate} - ${startTime}${endTime ? ` / ${endTime}` : ''}` : 'Horaire à définir'}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>{`Installation: ${currentFacilityName}`}</Text>
             {match?.winner?.name ? (
@@ -252,7 +252,7 @@ function TournamentMatchDetails({ navigation, route }) {
               <DatePickerInput label="Date" onChange={setScheduledDate} value={scheduledDate} />
               <View style={[Alignments.row, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
-                  <TimePickerInput label="Heure de debut" onChange={setStartTime} value={startTime} />
+                  <TimePickerInput label="Heure de début" onChange={setStartTime} value={startTime} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <TimePickerInput label="Heure de fin" onChange={setEndTime} value={endTime} />
@@ -273,7 +273,7 @@ function TournamentMatchDetails({ navigation, route }) {
               <Button
                 isLoading={scheduleMutation.isPending}
                 onPress={handleSchedule}
-                title="Enregistrer le creneau"
+                title="Enregistrer le créneau"
                 variant="Primary"
               />
             </View>
@@ -284,7 +284,7 @@ function TournamentMatchDetails({ navigation, route }) {
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Saisie du score</Text>
               <View style={[Alignments.row, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{match?.teamA?.name || 'Equipe A'}</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{match?.teamA?.name || 'Équipe A'}</Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setScoreAText}
@@ -295,7 +295,7 @@ function TournamentMatchDetails({ navigation, route }) {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{match?.teamB?.name || 'Equipe B'}</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{match?.teamB?.name || 'Équipe B'}</Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setScoreBText}
@@ -311,21 +311,21 @@ function TournamentMatchDetails({ navigation, route }) {
                 <View style={Spaces.gap[8]}>
                   <Text style={[Fonts.p3Bold, Fonts.warning500]}>Choisir le vainqueur</Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    En phase finale, un match nul doit tout de meme designer une equipe qualifiee.
+                    En phase finale, un match nul doit tout de même designer une équipe qualifiée.
                   </Text>
                   <View style={[Alignments.row, Spaces.gap[12]]}>
                     <Button
                       onPress={() => setWinnerTeamId(match?.teamA?.documentId || '')}
                       size="sm"
                       style={{ flex: 1 }}
-                      title={match?.teamA?.name || 'Equipe A'}
+                      title={match?.teamA?.name || 'Équipe A'}
                       variant={winnerTeamId === match?.teamA?.documentId ? 'Primary' : 'Secondary'}
                     />
                     <Button
                       onPress={() => setWinnerTeamId(match?.teamB?.documentId || '')}
                       size="sm"
                       style={{ flex: 1 }}
-                      title={match?.teamB?.name || 'Equipe B'}
+                      title={match?.teamB?.name || 'Équipe B'}
                       variant={winnerTeamId === match?.teamB?.documentId ? 'Primary' : 'Secondary'}
                     />
                   </View>
@@ -368,7 +368,7 @@ function TournamentMatchDetails({ navigation, route }) {
                   })}
                   size="sm"
                   style={{ flex: 1 }}
-                  title={`Forfait ${match?.teamB?.name || 'Equipe B'}`}
+                  title={`Forfait ${match?.teamB?.name || 'Équipe B'}`}
                   variant="Secondary"
                 />
                 <Button
@@ -380,7 +380,7 @@ function TournamentMatchDetails({ navigation, route }) {
                   })}
                   size="sm"
                   style={{ flex: 1 }}
-                  title={`Forfait ${match?.teamA?.name || 'Equipe A'}`}
+                  title={`Forfait ${match?.teamA?.name || 'Équipe A'}`}
                   variant="Secondary"
                 />
               </View>

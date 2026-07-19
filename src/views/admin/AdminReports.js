@@ -92,7 +92,7 @@ function AdminReports() {
   if (isLoading && !reports.length) {
     return (
       <AdminStateView
-        description="Nous récupérons les signalements evenements et messages."
+        description="Nous récupérons les signalements événements et messages."
         isLoading
         title="Chargement des signalements"
       />
@@ -185,7 +185,7 @@ function AdminReports() {
         <Button
           onPress={() => handleOpenTarget(item)}
           size="small"
-          title={item?.targetKind === 'conversation' ? 'Ouvrir la conversation' : "Ouvrir l'evenement"}
+          title={item?.targetKind === 'conversation' ? 'Ouvrir la conversation' : "Ouvrir l'événement"}
           variant="Primary"
         />
       ) : null}
@@ -208,7 +208,7 @@ function AdminReports() {
               { marginTop: 12 },
             ]}
           >
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Aucun signalement a traiter</Text>
+            <Text style={[Fonts.h4, Fonts.neutral00]}>Aucun signalement à traiter</Text>
             <Text style={[Fonts.p2, Fonts.neutral300, Fonts.textCenter]}>
               Aucun element ne correspond aux filtres actuels.
             </Text>

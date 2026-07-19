@@ -64,8 +64,8 @@ function AdminClubWizardIdentity({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardContact)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={1}
-      subtitle="Donne une identite claire au club. Tu pourras enrichir le reste du dossier ensuite et garder un recap avant creation."
-      title="Identite du club"
+      subtitle="Donne une identité claire au club. Tu pourras enrichir le reste du dossier ensuite et garder un recap avant création."
+      title="Identité du club"
     >
       <View style={[Spaces.gap[20]]}>
         <View
@@ -123,7 +123,7 @@ function AdminClubWizardIdentity({ navigation }) {
 
         <View style={[Spaces.gap[10]]}>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Le nom du club est le seul champ obligatoire du tunnel. Les autres etapes servent a construire une fiche complete, comme pour le wizard equipe.
+            Le nom du club est le seul champ obligatoire du tunnel. Les autres étapes servent à construire une fiche complète, comme pour le wizard équipe.
           </Text>
           <Input
             autoFocus

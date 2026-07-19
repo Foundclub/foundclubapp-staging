@@ -99,8 +99,8 @@ function FeaturedRequestsScreen({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetchRequests();
       Alert.alert(
-        t('featuredRequests.approveSuccess.title', 'Demande acceptee'),
-        t('featuredRequests.approveSuccess.message', "L'evenement est maintenant a la une du club."),
+        t('featuredRequests.approveSuccess.title', 'Demande acceptée'),
+        t('featuredRequests.approveSuccess.message', "L'événement est maintenant à la une du club."),
       );
     },
   });
@@ -113,8 +113,8 @@ function FeaturedRequestsScreen({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetchRequests();
       Alert.alert(
-        t('featuredRequests.rejectSuccess.title', 'Demande refusee'),
-        t('featuredRequests.rejectSuccess.message', 'Le demandeur a ete notifie.'),
+        t('featuredRequests.rejectSuccess.title', 'Demande refusée'),
+        t('featuredRequests.rejectSuccess.message', 'Le demandeur a été notifié.'),
       );
     },
   });
@@ -122,7 +122,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
   const handleApprove = useCallback((requestId) => {
     Alert.alert(
       t('featuredRequests.confirm.approve.title', 'Accepter la demande ?'),
-      t('featuredRequests.confirm.approve.message', 'Cet evenement sera visible dans le planning de tous les adherents du club.'),
+      t('featuredRequests.confirm.approve.message', 'Cet événement sera visible dans le planning de tous les adherents du club.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
@@ -140,7 +140,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
   const handleReject = useCallback((requestId) => {
     Alert.alert(
       t('featuredRequests.confirm.reject.title', 'Refuser la demande ?'),
-      t('featuredRequests.confirm.reject.message', 'Le demandeur sera notifie du refus.'),
+      t('featuredRequests.confirm.reject.message', 'Le demandeur sera notifié du refus.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
@@ -179,7 +179,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
   if (isLoadingUserData && !resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.featured.loadingUser', 'Nous preparons les demandes a la une de votre structure multisport.')}
+        description={t('multisport.featured.loadingUser', 'Nous préparons les demandes à la une de ta structure multisport.')}
         isLoading
         title={t('multisport.featured.loadingUserTitle', 'Chargement du club')}
       />
@@ -189,8 +189,8 @@ function FeaturedRequestsScreen({ navigation, route }) {
   if (userDataError && !resolvedCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.featured.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
+        actionLabel={t('common.retry', 'Réessayer')}
+        description={t('multisport.featured.userError', "Impossible de retrouver ta structure multisport pour le moment.")}
         onAction={() => refetchUserData()}
         title={t('multisport.featured.userErrorTitle', 'Demandes indisponibles')}
       />
@@ -200,7 +200,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
   if (!resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe à ce compte.')}
         title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
       />
     );
@@ -209,7 +209,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
   if (isLoadingCmData && !cmData) {
     return (
       <MultisportStateView
-        description={t('multisport.featured.loading', 'Nous chargeons les informations de votre structure multisport.')}
+        description={t('multisport.featured.loading', 'Nous chargeons les informations de ta structure multisport.')}
         isLoading
         title={t('multisport.featured.loadingTitle', 'Chargement des demandes')}
       />
@@ -219,7 +219,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
   if (cmError && !cmData) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
+        actionLabel={t('common.retry', 'Réessayer')}
         description={t('multisport.featured.error', "Impossible de charger cette structure multisport pour le moment.")}
         onAction={() => refetchCm()}
         title={t('multisport.featured.errorTitle', 'Demandes indisponibles')}
@@ -272,7 +272,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
         >
           <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Spaces.gap[16]]}>
             <OnboardingWrapper
-              description="Analysez les demandes et validez les evenements a la une."
+              description="Analyse les demandes et valide les événements à la une."
               id="featured-requests-list"
               order={1}
               spotlight={{
@@ -282,7 +282,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
                 paddingX: 2,
                 paddingY: 2,
               }}
-              title="Demandes a la une"
+              title="Demandes à la une"
             >
               <TouchableOpacity
                 onPress={() => navigateToRequestsHub(navigation, {
@@ -300,7 +300,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
                 ]}
               >
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                  {t('requestsHub.migratedBannerTitle', 'Ce flux est migre vers Demandes.')}
+                  {t('requestsHub.migratedBannerTitle', 'Ce flux est migré vers Demandes.')}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
                   {t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}

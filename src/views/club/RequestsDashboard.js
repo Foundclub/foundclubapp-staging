@@ -157,7 +157,7 @@ function RequestsDashboard({ navigation, route }) {
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral00, Spaces.marginTop[4]]}>
               Lieu:
-              {item.facility?.name || item.locationDetails || 'Non defini'}
+              {item.facility?.name || item.locationDetails || 'Non défini'}
             </Text>
             <Text style={[Fonts.p2, Fonts.primary500, Spaces.marginTop[4]]}>
               Équipe:
@@ -206,7 +206,7 @@ function RequestsDashboard({ navigation, route }) {
     >
       <ScreenContainer title={t('requests.title', 'Demandes en attente')}>
         <OnboardingWrapper
-          description="Consultez puis validez ou refusez les demandes d événements en attente."
+          description="Consulte puis valide ou refuse les demandes d événements en attente."
           id="requests-dashboard-list"
           order={1}
           spotlight={{
@@ -236,7 +236,7 @@ function RequestsDashboard({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.p3Bold, Fonts.primary300]}>
-              {t('requestsHub.migratedBannerTitle', 'Ce flux est migre vers Demandes.')}
+              {t('requestsHub.migratedBannerTitle', 'Ce flux est migré vers Demandes.')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral100]}>
               {t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
@@ -256,7 +256,7 @@ function RequestsDashboard({ navigation, route }) {
               </Text>
               <Button
                 onPress={() => navigation.navigate(RouteNames.TeamList)}
-                title="Retour aux equipes"
+                title="Retour aux équipes"
                 variant="Secondary"
               />
             </View>
@@ -270,7 +270,7 @@ function RequestsDashboard({ navigation, route }) {
                 Impossible de charger les demandes
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {error?.message || 'Reessayez dans quelques instants.'}
+                {error?.message || 'Réessaie dans quelques instants.'}
               </Text>
               <Button
                 onPress={() => refetch()}
@@ -290,7 +290,7 @@ function RequestsDashboard({ navigation, route }) {
                 <EmptyState
                   description={t(
                     'requests.emptyDescription',
-                    "Les prochaines validations de demandes d'evenements apparaitront ici.",
+                    "Les prochaines validations de demandes d'événements apparaîtront ici.",
                   )}
                   onAction={() => navigateToRequestsHub(navigation, {
                     initialFilter: 'event',

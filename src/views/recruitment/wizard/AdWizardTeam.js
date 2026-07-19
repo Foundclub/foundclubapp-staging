@@ -173,7 +173,7 @@ function AdWizardTeam({ navigation, route }) {
         onBack={() => navigation.goBack()}
         stepCount={getAdWizardStepCount(state)}
         stepIndex={getAdWizardTeamStepIndex(state)}
-        subtitle="Vous n'avez pas d'équipe associée"
+        subtitle="Tu n'as pas d'équipe associée"
         title="Créer une annonce"
       >
         <View
@@ -188,7 +188,7 @@ function AdWizardTeam({ navigation, route }) {
           ]}
         >
           <Text style={[Fonts.p1, { color: Colors.neutral200, textAlign: 'center' }]}>
-            Vous devez être associé à une équipe pour créer une annonce de recrutement.
+            Tu dois être associé à une équipe pour créer une annonce de recrutement.
           </Text>
         </View>
       </WizardStepLayout>
@@ -200,7 +200,7 @@ function AdWizardTeam({ navigation, route }) {
       onBack={() => navigation.goBack()}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardTeamStepIndex(state)}
-      subtitle="Sélectionnez l'équipe qui recrute"
+      subtitle="Sélectionne l'équipe qui recrute"
       title="Pour quelle équipe ?"
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[8]]}>

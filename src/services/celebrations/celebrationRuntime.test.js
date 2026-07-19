@@ -23,7 +23,7 @@ describe('celebrationRuntime', () => {
     expect(payload).toEqual(expect.objectContaining({
       actionKey: 'event_created',
       body: 'Match amical est bien enregistre.',
-      title: 'Evenement cree',
+      title: 'Événement crée',
       variant: 'banner',
     }));
     expect(received).toEqual([payload]);
@@ -37,7 +37,7 @@ describe('celebrationRuntime', () => {
 
     const payload = emitCelebrationFromNotificationPayload({
       eventDocumentId: 'event-doc-2',
-      eventName: 'Detection U20',
+      eventName: 'Détection U20',
       status: 'accepted',
       type: NOTIFICATION_TYPES.PARTICIPATION_REQUEST,
     });
@@ -46,7 +46,7 @@ describe('celebrationRuntime', () => {
 
     expect(payload).toEqual(expect.objectContaining({
       actionKey: 'event_participation_confirmed',
-      title: 'Participation confirmee',
+      title: 'Participation confirmée',
       variant: 'celebration',
     }));
     expect(received).toEqual([payload]);

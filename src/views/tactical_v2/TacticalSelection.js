@@ -462,7 +462,7 @@ function TacticalSelection() {
     }
 
     if (selectedIds.size === 0) {
-      Alert.alert('Attention', 'Sélectionnez au moins un joueur');
+      Alert.alert('Attention', 'Sélectionne au moins un joueur');
       return;
     }
 

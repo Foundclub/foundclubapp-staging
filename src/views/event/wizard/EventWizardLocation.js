@@ -119,7 +119,7 @@ function EventWizardLocation({ navigation }) {
           <Text style={[Fonts.p3, Fonts.warning500]}>
             {t(
               'eventWizard.steps.location.disabledNextHint',
-              'Selectionne une installation du club ou saisis une adresse exterieure pour continuer.',
+              'Sélectionne une installation du club ou saisis une adresse extérieure pour continuer.',
             )}
           </Text>
         ) : null}
@@ -127,7 +127,7 @@ function EventWizardLocation({ navigation }) {
           <Text style={[Fonts.p3, Fonts.warning500]}>
             {t(
               'eventWizard.steps.location.pendingValidationHint',
-              "Cette installation depasse sa capacite sur ce creneau. L'evenement sera cree en demande en attente jusqu'a validation d'un dirigeant.",
+              "Cette installation dépasse sa capacité sur ce créneau. L'événement sera créé en demande en attente jusqu'a validation d'un dirigeant.",
             )}
           </Text>
         ) : null}
@@ -135,7 +135,7 @@ function EventWizardLocation({ navigation }) {
           <Text style={[Fonts.p3, Fonts.primary500]}>
             {t(
               'eventWizard.steps.location.allowAndNotifyHint',
-              "Cette installation depasse sa capacite sur ce creneau, mais elle est configuree en 'Autorise et notifier'. L'evenement restera confirme.",
+              "Cette installation dépasse sa capacité sur ce créneau, mais elle est configuree en 'Autorise et notifier'. L'événement restera confirme.",
             )}
           </Text>
         ) : null}

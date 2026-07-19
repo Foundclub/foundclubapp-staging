@@ -19,14 +19,14 @@ import {
 } from './tournamentUtils';
 
 const formatMatchWindow = (scheduledAt, endAt) => {
-  if (!scheduledAt) return 'Horaire a definir';
+  if (!scheduledAt) return 'Horaire à définir';
   try {
     const startDate = new Date(scheduledAt);
     const startLabel = format(startDate, 'EEE d MMM - HH:mm', { locale: fr });
     if (!endAt) return startLabel;
     return `${startLabel} - ${format(new Date(endAt), 'HH:mm')}`;
   } catch {
-    return 'Horaire a definir';
+    return 'Horaire à définir';
   }
 };
 
@@ -126,10 +126,10 @@ export function TournamentMatchCard({
 
       <View style={Spaces.gap[8]}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {match?.teamA?.name || 'Equipe A'}
+          {match?.teamA?.name || 'Équipe A'}
         </Text>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {match?.teamB?.name || 'Equipe B'}
+          {match?.teamB?.name || 'Équipe B'}
         </Text>
       </View>
 
@@ -264,7 +264,7 @@ export function TournamentBracketBoard({ bracket = [], onMatchPress }) {
   if (!Array.isArray(bracket) || bracket.length === 0) {
     return (
       <View style={tournamentDs.styles.compactPanelCard}>
-        <Text style={[Fonts.p3, Fonts.neutral200]}>Aucun tableau final genere pour le moment.</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>Aucun tableau final génère pour le moment.</Text>
       </View>
     );
   }
@@ -289,10 +289,10 @@ export function TournamentBracketBoard({ bracket = [], onMatchPress }) {
                 style={tournamentDs.styles.insetPanelCard}
               >
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                  {match?.teamA?.name || match?.sourceMatchA ? 'Qualifie A' : 'A definir'}
+                  {match?.teamA?.name || match?.sourceMatchA ? 'Qualifié A' : 'A définir'}
                 </Text>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                  {match?.teamB?.name || match?.sourceMatchB ? 'Qualifie B' : 'A definir'}
+                  {match?.teamB?.name || match?.sourceMatchB ? 'Qualifié B' : 'A définir'}
                 </Text>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{formatTournamentScore(match)}</Text>
                 <Text style={[Fonts.p4, Fonts.neutral200]}>
@@ -341,7 +341,7 @@ export function TournamentGroupCards({ groups = [], onGroupPress = null, standin
   if (!Array.isArray(groups) || groups.length === 0) {
     return (
       <View style={tournamentDs.styles.compactPanelCard}>
-        <Text style={[Fonts.p3, Fonts.neutral200]}>Aucune poule n a encore ete tiree.</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>Aucune poule n à encore été tirée.</Text>
       </View>
     );
   }

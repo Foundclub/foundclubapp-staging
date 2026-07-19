@@ -59,8 +59,8 @@ const schema = Joi.object({
     'string.empty': 'Le nom est requis',
   }),
   planningColor: Joi.string().valid(...FACILITY_PLANNING_PALETTE).required().messages({
-    'any.only': 'Sélectionnez une couleur validé',
-    'string.empty': 'Sélectionnez une couleur',
+    'any.only': 'Sélectionne une couleur validé',
+    'string.empty': 'Sélectionne une couleur',
   }),
   type: Joi.string().required().messages({
     'string.empty': 'Le type est requis',
@@ -70,18 +70,18 @@ const schema = Joi.object({
 const FACILITY_TYPES = [
   { label: 'Terrain', value: 'Terrain' },
   { label: 'Gymnase', value: 'Gymnase' },
-  { label: 'Salle video', value: 'Salle video' },
+  { label: 'Salle vidéo', value: 'Salle vidéo' },
   { label: 'Vestiaire', value: 'Vestiaire' },
   { label: 'Club House', value: 'Club House' },
 ];
 
 const getAddressLabel = (address) => {
-  if (!address) return 'Adresse non renseignee';
+  if (!address) return 'Adresse non renseignée';
   if (typeof address === 'string') return address;
   if (typeof address === 'object') {
-    return address?.label || address?.description || 'Adresse non renseignee';
+    return address?.label || address?.description || 'Adresse non renseignée';
   }
-  return 'Adresse non renseignee';
+  return 'Adresse non renseignée';
 };
 
 const getAddressCoordinates = (address) => {
@@ -144,12 +144,12 @@ const sanitizeRouteParam = (value) => {
 
 const FACILITY_CONFLICT_MODE_OPTIONS = [
   {
-    description: 'Si le creneau depasse la capacite, l evenement ou la reservation passe en demande en attente jusqu\'a validation d\'un dirigeant.',
+    description: 'Si le créneau dépasse la capacité, l événement ou la réservation passe en demande en attente jusqu\'a validation d\'un dirigeant.',
     title: 'Demande en attente',
     value: FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
   },
   {
-    description: 'Si le creneau depasse la capacite, l objet reste confirme tout de suite et les dirigeants sont simplement notifies.',
+    description: 'Si le créneau dépasse la capacité, l objet reste confirme tout de suite et les dirigeants sont simplement notifies.',
     title: 'Autorise et notifier',
     value: FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY,
   },
@@ -246,8 +246,8 @@ function FacilityForm() {
 
   const subtitle = useMemo(() => (
     isEdit
-      ? t('facilityForm.subtitle.edit', 'Mettez à jour les informations de cette installation.')
-      : t('facilityForm.subtitle.create', 'Configurez une nouvelle installation pour votre club.')
+      ? t('facilityForm.subtitle.edit', 'Mets à jour les informations de cette installation.')
+      : t('facilityForm.subtitle.create', 'Configure une nouvelle installation pour ton club.')
   ), [isEdit, t]);
 
   const handleSave = async (data) => {
@@ -266,7 +266,7 @@ function FacilityForm() {
       setError('address', {
         message: t(
           'facilityForm.errors.addressGeocodeRequired',
-          'Sélectionnez une adresse géolocalisée dans la liste.',
+          'Sélectionne une adresse géolocalisée dans la liste.',
         ),
         type: 'manual',
       });
@@ -276,7 +276,7 @@ function FacilityForm() {
         t('common.error', 'Erreur'),
         t(
           'facilityForm.errors.addressGeocodeRequired',
-          'Sélectionnez une adresse géolocalisée dans la liste.',
+          'Sélectionne une adresse géolocalisée dans la liste.',
         ),
       );
       return;
@@ -388,7 +388,7 @@ function FacilityForm() {
             Impossible de charger l installation
           </Text>
           <Text style={[Fonts.p2, Fonts.primary100]}>
-            {facilityError?.message || 'Reessayez dans quelques instants.'}
+            {facilityError?.message || 'Réessaie dans quelques instants.'}
           </Text>
           <Button onPress={() => refetchFacility()} title="Réessayer" variant="Primary" />
           <Button onPress={() => navigation.navigate(RouteNames.FacilityList)} title="Retour aux installations" variant="Secondary" />
@@ -409,8 +409,8 @@ function FacilityForm() {
           </Text>
           <Text style={[Fonts.p2, Fonts.primary100]}>
             {isFacilityNotFound
-              ? 'Le lien est peut-etre obsolete ou cette installation a ete supprimee.'
-              : 'Impossible de determiner pour quel club creer cette installation.'}
+              ? 'Le lien est peut-être obsolète ou cette installation a été supprimée.'
+              : 'Impossible de determiner pour quel club créer cette installation.'}
           </Text>
           <Button onPress={() => navigation.navigate(RouteNames.FacilityList)} title="Retour aux installations" variant="Secondary" />
           {isFacilityNotFound ? (
@@ -478,7 +478,7 @@ function FacilityForm() {
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {t(
                         'facilityForm.hints.name',
-                        'Entrez un nom clair pour que les membres reconnaissent facilement cette installation.',
+                        'Entre un nom clair pour que les membres reconnaissent facilement cette installation.',
                       )}
                     </Text>
                   ) : null}
@@ -611,7 +611,7 @@ function FacilityForm() {
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {t(
                         'facilityForm.hints.addressSelection',
-                        'Sélectionnez une adresse dans la liste pour activer le GPS.',
+                        'Sélectionne une adresse dans la liste pour activer le GPS.',
                       )}
                     </Text>
                   ) : null}

@@ -68,7 +68,7 @@ export const POSITIONS_BY_SPORT = {
 
 export const POSITION_GROUPS_BY_SPORT = {
   basketball: [
-    { label: 'Base arriere', positions: ['Meneur', 'Arrière'] },
+    { label: 'Base arrière', positions: ['Meneur', 'Arrière'] },
     { label: 'Ailes', positions: ['Ailier', 'Ailier fort'] },
     { label: 'Interieur', positions: ['Pivot'] },
   ],
@@ -80,14 +80,14 @@ export const POSITION_GROUPS_BY_SPORT = {
   ],
   handball: [
     { label: 'Gardien', positions: ['Gardien'] },
-    { label: 'Base arriere', positions: ['Arrière gauche', 'Arrière droit', 'Demi-centre'] },
+    { label: 'Base arrière', positions: ['Arrière gauche', 'Arrière droit', 'Demi-centre'] },
     { label: 'Ailes', positions: ['Ailier gauche', 'Ailier droit'] },
     { label: 'Pivot', positions: ['Pivot'] },
   ],
   rugby: [
     { label: 'Avants', positions: ['Pilier', 'Talonneur', 'Deuxième ligne', 'Troisième ligne aile', 'Troisième ligne centre'] },
     { label: 'Charniere', positions: ['Demi de mêlée', "Demi d'ouverture"] },
-    { label: 'Ligne arriere', positions: ['Centre', 'Ailier', 'Arrière'] },
+    { label: 'Ligne arrière', positions: ['Centre', 'Ailier', 'Arrière'] },
   ],
   volleyball: [
     { label: 'Distribution', positions: ['Passeur', 'Libéro'] },

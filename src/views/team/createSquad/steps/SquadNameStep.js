@@ -58,7 +58,7 @@ function SquadNameStep({
       }
 
       setNameCheckState('checking');
-      setNameMessage('Verification du nom...');
+      setNameMessage('Vérification du nom...');
       setNameSuggestions([]);
 
       try {
@@ -114,7 +114,7 @@ function SquadNameStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
-          Quel est le nom de votre squad ?
+          Quel est le nom de ta squad ?
         </Text>
 
         <Input

@@ -106,7 +106,7 @@ function AdminClaimDetail() {
             Alert.alert('Erreur', getErrorMessage(error, 'generic'));
           },
           onSuccess: () => {
-            Alert.alert('Succes', 'Demande traitee.');
+            Alert.alert('Succès', 'Demande traitee.');
             navigation.goBack();
           },
         },
@@ -119,7 +119,7 @@ function AdminClaimDetail() {
         Alert.alert('Erreur', getErrorMessage(error, 'generic'));
       },
       onSuccess: () => {
-        Alert.alert('Succes', 'Demande acceptee.');
+        Alert.alert('Succès', 'Demande acceptée.');
         navigation.goBack();
       },
     });
@@ -136,7 +136,7 @@ function AdminClaimDetail() {
             Alert.alert('Erreur', getErrorMessage(error, 'generic'));
           },
           onSuccess: () => {
-            Alert.alert('Succes', 'Demande refusee.');
+            Alert.alert('Succès', 'Demande refusée.');
             navigation.goBack();
           },
         },
@@ -149,7 +149,7 @@ function AdminClaimDetail() {
         Alert.alert('Erreur', getErrorMessage(error, 'generic'));
       },
       onSuccess: () => {
-        Alert.alert('Succes', 'Demande rejetee.');
+        Alert.alert('Succès', 'Demande rejetée.');
         navigation.goBack();
       },
     });
@@ -160,7 +160,7 @@ function AdminClaimDetail() {
       'Confirmer',
       isAffiliationHelp
         ? 'Traiter cette demande superadmin ?'
-        : "Voulez-vous vraiment accepter cette demande ? L'utilisateur deviendra proprietaire du club.",
+        : "Veux-tu vraiment accepter cette demande ? L'utilisateur deviendra propriétaire du club.",
       [
         { style: 'cancel', text: 'Annuler' },
         { onPress: runPrimaryAction, text: isAffiliationHelp ? 'Traiter' : 'Accepter' },
@@ -171,7 +171,7 @@ function AdminClaimDetail() {
   const handleRefuse = () => {
     Alert.alert(
       'Refuser',
-      'Voulez-vous rejeter cette demande ?',
+      'Veux-tu rejeter cette demande ?',
       [
         { style: 'cancel', text: 'Annuler' },
         { onPress: runSecondaryAction, style: 'destructive', text: 'Refuser' },
@@ -215,7 +215,7 @@ function AdminClaimDetail() {
     return (
       <AdminStateView
         actionLabel="Retour"
-        description="La demande demandee n'existe pas ou n'est plus accessible."
+        description="La demande demandée n'existe pas ou n'est plus accessible."
         onAction={() => navigation.goBack()}
         title="Demande introuvable"
       />
@@ -254,7 +254,7 @@ function AdminClaimDetail() {
             {isClubCreation ? (
               <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
                 <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
-                  Dirigeant a contacter
+                  Dirigeant à contacter
                 </Text>
                 <View style={[Spaces.gap[10]]}>
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
@@ -277,7 +277,7 @@ function AdminClaimDetail() {
 
             <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
               <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
-                {isClubCreation ? 'Club a onboarder' : 'Demande affiliation'}
+                {isClubCreation ? 'Club à onboarder' : 'Demande affiliation'}
               </Text>
               <View style={[Spaces.gap[10]]}>
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
@@ -347,7 +347,7 @@ function AdminClaimDetail() {
               multiline
               numberOfLines={3}
               onChangeText={setAdminNote}
-              placeholder="Ajoutez un contexte visible par le demandeur"
+              placeholder="Ajoute un contexte visible par le demandeur"
               textAlignVertical="top"
               value={adminNote}
             />

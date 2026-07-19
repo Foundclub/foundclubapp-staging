@@ -63,21 +63,21 @@ function SearchMapHud({
     Number(renderStats?.markerCount || 0) + Number(renderStats?.clusterCount || 0),
   );
 
-  let geolocatableLabel = 'Aucun repere';
+  let geolocatableLabel = 'Aucun repère';
   if (visibleMarkerCount > 0) {
-    geolocatableLabel = `${visibleMarkerCount} reperes visibles`;
+    geolocatableLabel = `${visibleMarkerCount} repères visibles`;
   } else if (safeAvailableCount > 0 && truncated) {
-    geolocatableLabel = 'Zoomez pour tout voir';
+    geolocatableLabel = 'Zoome pour tout voir';
   } else if (safeAvailableCount > 0 && isLoadingResults) {
-    geolocatableLabel = 'Mise a jour des reperes...';
+    geolocatableLabel = 'Mise à jour des repères...';
   } else if (geolocatableCount > 0 && isPartialDataset) {
     geolocatableLabel = `${geolocatableCount} geolocalisables`;
   } else if (geolocatableCount > 0) {
     geolocatableLabel = scope === 'clubs'
       ? `${geolocatableCount} geolocalisables`
-      : 'Touchez un repere';
+      : 'Touche un repère';
   } else if (safeAvailableCount > 0) {
-    geolocatableLabel = 'Aucun repere visible';
+    geolocatableLabel = 'Aucun repère visible';
   }
 
   const zoomGroupStyle = [

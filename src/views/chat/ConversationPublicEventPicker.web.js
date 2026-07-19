@@ -136,10 +136,10 @@ function ConversationPublicEventPicker({ navigation, route }) {
                 Messagerie
               </span>
               <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 34 : 28, margin: 0 }}>
-                Partager un evenement public
+                Partager un événement public
               </h1>
               <p style={{ color: mutedTextColor, margin: 0, maxWidth: 720 }}>
-                Recherche un evenement public et partage-le directement dans cette conversation.
+                Recherche un événement public et partage-le directement dans cette conversation.
               </p>
             </div>
             <button
@@ -154,7 +154,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
           <div style={{ display: 'grid', gap: 14, marginBottom: 20 }}>
             <input
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={t('conversation.shareEvent.searchPlaceholder', 'Rechercher un evenement')}
+              placeholder={t('conversation.shareEvent.searchPlaceholder', 'Rechercher un événement')}
               style={{
                 background: 'rgba(255,255,255,0.03)',
                 border: `1px solid ${borderColor}`,
@@ -172,7 +172,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
             <span style={{ color: mutedTextColor, fontSize: 13 }}>
               {searchEnabled
                 ? 'Recherche intelligente activee.'
-                : 'Saisis au moins 2 caracteres pour lancer une recherche precise.'}
+                : 'Saisis au moins 2 caractères pour lancer une recherche précise.'}
             </span>
           </div>
 
@@ -188,7 +188,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
                 Chargement impossible
               </strong>
               <p style={{ color: mutedTextColor, margin: 0 }}>
-                {activeError?.message || 'Impossible de charger les evenements publics.'}
+                {activeError?.message || 'Impossible de charger les événements publics.'}
               </p>
             </div>
           ) : null}
@@ -196,10 +196,10 @@ function ConversationPublicEventPicker({ navigation, route }) {
           {!isLoading && !activeError && events.length === 0 ? (
             <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 20, display: 'grid', gap: 8, padding: 20 }}>
               <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                Aucun evenement disponible
+                Aucun événement disponible
               </strong>
               <p style={{ color: mutedTextColor, margin: 0 }}>
-                Aucun evenement public ne correspond a cette recherche pour le moment.
+                Aucun événement public ne correspond à cette recherche pour le moment.
               </p>
             </div>
           ) : null}
@@ -218,7 +218,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
                         {event?.name || 'Evenement'}
                       </h2>
                       <span style={{ color: mutedTextColor, fontSize: 14 }}>
-                        {event?.team?.name || event?.team?.club?.name || 'Equipe inconnue'}
+                        {event?.team?.name || event?.team?.club?.name || 'Équipe inconnue'}
                       </span>
                     </div>
 

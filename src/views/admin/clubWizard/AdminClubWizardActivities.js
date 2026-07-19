@@ -74,12 +74,12 @@ function AdminClubWizardActivities({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardBusiness)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={4}
-      subtitle="Comme pour le tunnel equipe, on choisit d'abord le profil sportif. Selectionne une ou plusieurs activites pour rendre le club exploitable tout de suite."
-      title="Activites sportives"
+      subtitle="Comme pour le tunnel équipe, on choisit d'abord le profil sportif. Sélectionne une ou plusieurs activités pour rendre le club exploitable tout de suite."
+      title="Activités sportives"
     >
       <View style={[Spaces.gap[18]]}>
         <Input
-          label="Rechercher une activite"
+          label="Rechercher une activité"
           onChangeText={(value) => setField('activitiesSearch', value)}
           placeholder="Football, basket, handball..."
           value={searchValue}
@@ -87,12 +87,12 @@ function AdminClubWizardActivities({ navigation }) {
 
         <Text style={[Fonts.p2, Fonts.neutral200]}>
           {selectedIds.size > 0
-            ? `${selectedIds.size} activite(s) selectionnee(s)`
-            : 'Aucune activite selectionnee pour le moment. Tu peux continuer et completer plus tard.'}
+            ? `${selectedIds.size} activité(s) sélectionnée(s)`
+            : 'Aucune activité sélectionnée pour le moment. Tu peux continuer et compléter plus tard.'}
         </Text>
 
         {activitiesQuery.isLoading ? (
-          <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des activites...</Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des activités...</Text>
         ) : null}
 
         {activitiesQuery.error ? (
@@ -108,7 +108,7 @@ function AdminClubWizardActivities({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.error500 }]}>
-              Impossible de charger les activites.
+              Impossible de charger les activités.
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {getErrorMessage(activitiesQuery.error, 'generic')}

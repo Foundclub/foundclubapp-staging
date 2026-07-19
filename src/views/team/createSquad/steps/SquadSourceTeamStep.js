@@ -52,7 +52,7 @@ function SquadSourceTeamStep({
       }
     } catch (error) {
       console.error('Error importing source team:', error);
-      setLoadError("Impossible d'importer cette equipe pour le moment.");
+      setLoadError("Impossible d'importer cette équipe pour le moment.");
     } finally {
       setIsLoading(false);
     }
@@ -62,17 +62,17 @@ function SquadSourceTeamStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 20, textAlign: 'center' }]}>
-          Quelle equipe importer ?
+          Quelle équipe importer ?
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
-          Choisis ton equipe classique pour recuperer le nom et les membres dans League.
+          Choisis ton équipe classique pour recuperer le nom et les membres dans League.
         </Text>
 
         <AutocompleteSelect
           isLoading={isLoading}
           isSearchable={false}
           options={options}
-          placeholder="Selectionner une equipe"
+          placeholder="Sélectionner une équipe"
           setValue={handleSelectTeam}
           value={selectedValue}
         />

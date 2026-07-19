@@ -66,7 +66,7 @@ describe('multiTeamCompositionUtils', () => {
       mode: 'manual',
       teams: [{
         id: 'team_1',
-        name: 'Equipe 1',
+        name: 'Équipe 1',
         placements: [{ playerId: 'player-1', positionX: 50, positionY: 12, slotId: 'team_1:gk' }],
         presetKey: '4-4-2',
         slots: [

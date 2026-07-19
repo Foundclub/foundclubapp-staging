@@ -43,7 +43,7 @@ function UserClubSearch({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour votre profil.');
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
     },
     onSuccess: async () => {
       const nextRoute = getNextOnboardingRoute(RouteNames.UserClubSearch);
@@ -189,7 +189,7 @@ function UserClubSearch({ navigation }) {
           disabled={isLooking === null}
           isLoading={updateUserMutation.isPending}
           onPress={handleNext}
-          title={t('common.actions.next', 'Suivant')}
+          title={t('common.actions.next', 'Continuer')}
           variant="Primary"
         />
         <Button

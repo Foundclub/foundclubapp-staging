@@ -176,11 +176,11 @@ function AdminClubDetail() {
       tone: club?.clubPartner ? 'primary' : 'neutral',
     },
     {
-      label: club?.isReservationProvider ? 'Reservation active' : 'Pas reservation',
+      label: club?.isReservationProvider ? 'Réservation active' : 'Pas réservation',
       tone: club?.isReservationProvider ? 'primary' : 'neutral',
     },
     {
-      label: club?.clubVerified ? 'Verifie' : 'Non verifie',
+      label: club?.clubVerified ? 'Verifie' : 'Non vérifié',
       tone: club?.clubVerified ? 'success' : 'neutral',
     },
   ]), [club?.clubPartner, club?.clubVerified, club?.isReservationProvider]);
@@ -251,7 +251,7 @@ function AdminClubDetail() {
   const confirmDelete = useCallback(async () => {
     const reason = normalizeText(deleteReason);
     if (reason.length < 3) {
-      Alert.alert('Raison requise', "Ajoutez une raison d'au moins 3 caracteres.");
+      Alert.alert('Raison requise', "Ajoute une raison d'au moins 3 caractères.");
       return;
     }
 
@@ -356,7 +356,7 @@ function AdminClubDetail() {
               +
               {items.length - 6}
               {' '}
-              autres elements
+              autres éléments
             </Text>
           ) : null}
         </View>
@@ -565,7 +565,7 @@ function AdminClubDetail() {
             <View style={[panelStyle, Spaces.padding[18], styles.sectionCard]}>
               {renderInfoRows([
                 { compact: true, label: 'DocumentId', value: getDocumentId(club) },
-                { label: 'Derniere mise a jour', value: formatAuditDate(club.updatedAt) },
+                { label: 'Dernière mise à jour', value: formatAuditDate(club.updatedAt) },
                 { label: 'Creation', value: formatAuditDate(club.createdAt) },
               ])}
             </View>
@@ -579,12 +579,12 @@ function AdminClubDetail() {
               { label: 'Email', value: club.email },
               { label: 'Telephone', value: club.phoneNumber },
               { label: 'Partenariat', value: club.clubPartner ? 'Oui' : 'Non' },
-              { label: 'Club verifie', value: club.clubVerified ? 'Oui' : 'Non' },
+              { label: 'Club vérifie', value: club.clubVerified ? 'Oui' : 'Non' },
               { label: 'Reservation', value: club.isReservationProvider ? 'Oui' : 'Non' },
               { label: 'Multisport parent', value: getClubRelationLabel(parentMultisport) },
             ])}
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[12]]}>
-              Les abonnements, entitlements et capacites Team sont pilotes depuis les operations abonnements, plus depuis la fiche club.
+              Les abonnements, entitlements et capacités Team sont pilotes depuis les opérations abonnements, plus depuis la fiche club.
             </Text>
           </View>
         ) : null}
@@ -662,7 +662,7 @@ function AdminClubDetail() {
                 </Text>
               </View>
             )) : (
-              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucune demande liee.</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucune demande liée.</Text>
             )}
           </View>
         ) : null}
@@ -680,7 +680,7 @@ function AdminClubDetail() {
           <View style={[panelStyle, Spaces.padding[18], styles.sectionCard, { borderColor: Colors.error500 }]}>
             <Text style={[Fonts.h4Bold, { color: Colors.error500 }]}>Danger zone</Text>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-              Suppression definitive du club dans le Content Manager. Cette action doit etre utilisee avec prudence.
+              Suppression definitive du club dans le Content Manager. Cette action doit être utilisée avec prudence.
             </Text>
             <Button
               onPress={() => setIsDeleteVisible(true)}
@@ -728,7 +728,7 @@ function AdminClubDetail() {
         </Text>
         <TextInput
           onChangeText={setRelationQuery}
-          placeholder="Rechercher une entree"
+          placeholder="Rechercher une entrée"
           placeholderTextColor={Colors.neutral300}
           style={[
             panelStyle,
@@ -778,7 +778,7 @@ function AdminClubDetail() {
       <BottomModal close={() => setIsDeleteVisible(false)} isVisible={isDeleteVisible} snapPoints={['46%']}>
         <Text style={[Fonts.h3, { color: Colors.error500 }]}>Supprimer le club</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-          Cette action est irreversible. Ajoutez une raison pour l audit.
+          Cette action est irreversible. Ajoute une raison pour l audit.
         </Text>
         <TextInput
           multiline

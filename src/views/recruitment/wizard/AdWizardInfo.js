@@ -92,7 +92,7 @@ function AdWizardInfo({ navigation }) {
   const handleNext = () => {
     if (!isAdWizardSportProfileComplete(state)) {
       showBanner({
-        body: 'Completez la section, la categorie et le niveau minimum pour qualifier clairement votre annonce.',
+        body: 'Complète la section, la catégorie et le niveau minimum pour qualifier clairement ton annonce.',
         title: 'Profil requis',
         tone: 'error',
       });
@@ -102,13 +102,13 @@ function AdWizardInfo({ navigation }) {
     navigation.navigate(RouteNames.AdWizardLocation);
   };
 
-  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non d\u00E9fini';
+  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non défini';
   const currentSectionValue = state.section?.name || '';
   const currentCategoryValue = state.category?.name || '';
   const currentLevelValue = state.minLevel?.name || '';
   const teamSummaryMeta = [
     { label: 'Section', value: currentSectionValue },
-    { label: 'Cat\u00E9gorie', value: currentCategoryValue },
+    { label: 'Catégorie', value: currentCategoryValue },
     { label: 'Niveau', value: currentLevelValue },
   ].filter((item) => String(item.value || '').trim().length > 0).slice(0, 3);
 
@@ -170,8 +170,8 @@ function AdWizardInfo({ navigation }) {
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardInfoStepIndex(state)}
       subtitle={isCoachAdWizard(state)
-        ? 'Precisez le cadre sportif dans lequel vous recherchez un profil coach.'
-        : 'Precisez la cible sportive recherchee avant de passer au lieu de publication.'}
+        ? 'Précise le cadre sportif dans lequel tu recherches un profil coach.'
+        : 'Précise la cible sportive recherchee avant de passer au lieu de publication.'}
       title="Ciblage sportif"
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[40]]}>
@@ -188,7 +188,7 @@ function AdWizardInfo({ navigation }) {
           >
             <ActivityIndicator color={Colors.primary500} size="small" />
             <Text style={[Fonts.p2, Fonts.neutral100, Alignments.fill, { lineHeight: 24 }]}>
-              {'Chargement des sections, cat\u00E9gories et niveaux disponibles.'}
+              Chargement des sections, catégories et niveaux disponibles.
             </Text>
           </View>
         ) : null}
@@ -206,14 +206,14 @@ function AdWizardInfo({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {'Certaines options n\'ont pas pu \u00EAtre charg\u00E9es'}
+              {'Certaines options n\'ont pas pu être chargées'}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
-              {'Vous pouvez r\u00E9essayer pour r\u00E9cup\u00E9rer toutes les r\u00E9f\u00E9rences, ou continuer avec les informations d\u00E9j\u00E0 pr\u00E9remplies depuis l\'\u00E9quipe.'}
+              {'Tu peux réessayer pour récupérer toutes les références, ou continuer avec les informations déjà préremplies depuis l\'équipe.'}
             </Text>
             <Button
               onPress={handleRetryTaxonomy}
-              title={'R\u00E9essayer'}
+              title="Réessayer"
               variant="Secondary"
             />
           </View>
@@ -231,7 +231,7 @@ function AdWizardInfo({ navigation }) {
             <View style={[Spaces.gap[24]]}>
               <View style={[Spaces.gap[16]]}>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                  {'\u00C9quipe s\u00E9lectionn\u00E9e'}
+                  Équipe sélectionnée
                 </Text>
 
                 <View
@@ -251,7 +251,7 @@ function AdWizardInfo({ navigation }) {
                       numberOfLines={2}
                       style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}
                     >
-                      {state.team?.club?.name || 'Club non renseign\u00E9'}
+                      {state.team?.club?.name || 'Club non renseigné'}
                     </Text>
                   </View>
                 </View>
@@ -278,7 +278,7 @@ function AdWizardInfo({ navigation }) {
                   ]}
                 >
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                    {'Choisir une autre \u00E9quipe'}
+                    Choisir une autre équipe
                   </Text>
                 </TouchableOpacity>
 
@@ -314,12 +314,12 @@ function AdWizardInfo({ navigation }) {
           <View style={[Spaces.gap[24]]}>
             <View style={[Spaces.gap[12]]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>
-                {isCoachAdWizard(state) ? 'Contexte du role recherche' : 'Profil recherche'}
+                {isCoachAdWizard(state) ? 'Contexte du rôle recherche' : 'Profil recherche'}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
                 {isCoachAdWizard(state)
-                  ? 'Precisez le sport, la section, la categorie et le niveau de reference de votre besoin staff.'
-                  : 'Affinez la cible de votre annonce avec les bons reperes sportifs.'}
+                  ? 'Précise le sport, la section, la catégorie et le niveau de référence de ton besoin staff.'
+                  : 'Affine la cible de ton annonce avec les bons repères sportifs.'}
               </Text>
             </View>
 
@@ -345,7 +345,7 @@ function AdWizardInfo({ navigation }) {
               displayVariant="card"
               label="Section *"
               options={sections}
-              placeholder={'S\u00E9lectionner une section'}
+              placeholder="Sélectionner une section"
               setValue={handleSectionChange}
               value={currentSectionValue}
               wrapperStyle={{ width: compactFieldWidth }}
@@ -353,20 +353,20 @@ function AdWizardInfo({ navigation }) {
 
             <AutocompleteSelect
               displayVariant="card"
-              label={'Cat\u00E9gorie *'}
+              label="Catégorie *"
               options={categories}
-              placeholder={'S\u00E9lectionner une cat\u00E9gorie'}
+              placeholder="Sélectionner une catégorie"
               setValue={handleCategoryChange}
               value={currentCategoryValue}
               wrapperStyle={{ width: compactFieldWidth }}
             />
 
             <AutocompleteSelect
-              description={'D\u00E9finissez le niveau minimum attendu pour candidater.'}
+              description="Définis le niveau minimum attendu pour candidater."
               displayVariant="card"
-              label={'Niveau minimum recherch\u00E9 *'}
+              label="Niveau minimum recherché *"
               options={levels}
-              placeholder={'S\u00E9lectionner un niveau'}
+              placeholder="Sélectionner un niveau"
               setValue={handleLevelChange}
               value={currentLevelValue}
               wrapperStyle={{ width: '100%' }}

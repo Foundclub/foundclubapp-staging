@@ -82,10 +82,10 @@ const buildPlayerConsistencyIssues = ({
     const threePointsMade = getNumericValue(quantitative?.threePointsMade);
 
     if (scoreFor !== null && points > scoreFor) {
-      issues.push(`Tes points ne peuvent pas depasser le score officiel de ton equipe (${scoreFor}).`);
+      issues.push(`Tes points ne peuvent pas dépasser le score officiel de ton équipe (${scoreFor}).`);
     }
     if ((threePointsMade * 3) > points) {
-      issues.push('Le total de tirs a 3 points ne peut pas depasser ton total de points.');
+      issues.push('Le total de tirs a 3 points ne peut pas dépasser ton total de points.');
     }
     return issues;
   }
@@ -95,7 +95,7 @@ const buildPlayerConsistencyIssues = ({
   const cleanSheet = Boolean(quantitative?.cleanSheet);
 
   if (scoreFor !== null && goals > scoreFor) {
-    issues.push(`Tes buts ne peuvent pas depasser le score officiel de ton equipe (${scoreFor}).`);
+    issues.push(`Tes buts ne peuvent pas dépasser le score officiel de ton équipe (${scoreFor}).`);
   }
   if (scoreAgainst !== null && goalsConceded > scoreAgainst) {
     issues.push(`Les buts encaissés ne peuvent pas dépasser le score officiel adverse (${scoreAgainst}).`);

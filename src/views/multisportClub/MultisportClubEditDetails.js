@@ -162,7 +162,7 @@ function MultisportClubEditDetails({ navigation, route }) {
   if (isLoadingUserData && !resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.edit.loadingUser', 'Nous preparons les informations de votre club multisport.')}
+        description={t('multisport.edit.loadingUser', 'Nous préparons les informations de ton club multisport.')}
         isLoading
         title={t('multisport.edit.loadingUserTitle', 'Chargement du club')}
       />
@@ -172,10 +172,10 @@ function MultisportClubEditDetails({ navigation, route }) {
   if (userDataError && !resolvedCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.edit.userError', 'Impossible de retrouver votre structure multisport pour le moment.')}
+        actionLabel={t('common.retry', 'Réessayer')}
+        description={t('multisport.edit.userError', 'Impossible de retrouver ta structure multisport pour le moment.')}
         onAction={() => refetchUserData()}
-        title={t('multisport.edit.userErrorTitle', 'Edition indisponible')}
+        title={t('multisport.edit.userErrorTitle', 'Édition indisponible')}
       />
     );
   }
@@ -183,7 +183,7 @@ function MultisportClubEditDetails({ navigation, route }) {
   if (!resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe à ce compte.')}
         title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
       />
     );
@@ -192,7 +192,7 @@ function MultisportClubEditDetails({ navigation, route }) {
   if (isLoadingCmData && !cmData) {
     return (
       <MultisportStateView
-        description={t('multisport.edit.loading', 'Nous chargeons les informations a modifier.')}
+        description={t('multisport.edit.loading', 'Nous chargeons les informations à modifier.')}
         isLoading
         title={t('multisport.edit.loadingTitle', 'Chargement de la fiche')}
       />
@@ -202,10 +202,10 @@ function MultisportClubEditDetails({ navigation, route }) {
   if (cmError && !cmData) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
+        actionLabel={t('common.retry', 'Réessayer')}
         description={t('multisport.edit.error', 'Impossible de charger cette fiche multisport pour le moment.')}
         onAction={() => refetch()}
-        title={t('multisport.edit.errorTitle', 'Edition indisponible')}
+        title={t('multisport.edit.errorTitle', 'Édition indisponible')}
       />
     );
   }

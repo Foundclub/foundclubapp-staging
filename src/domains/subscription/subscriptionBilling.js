@@ -134,9 +134,9 @@ export const getSubscriptionCatalogEntryMeta = (entry) => {
   const priceLabel = formatSubscriptionPriceLabel(entry?.referencePriceEurCents, billingPeriod);
 
   if (scopeType === TEAM_SCOPE) {
-    const slotsLabel = `${slotCount} equipe${slotCount > 1 ? 's' : ''} couverte${slotCount > 1 ? 's' : ''}`;
+    const slotsLabel = `${slotCount} équipe${slotCount > 1 ? 's' : ''} couverte${slotCount > 1 ? 's' : ''}`;
     return {
-      description: 'Publie et gere les equipes couvertes par tes slots Team.',
+      description: 'Publie et gère les équipes couvertes par tes slots Team.',
       label: displayName || formatSubscriptionPlanLabel(entry?.planCode),
       priceLabel,
       secondaryLabel: [slotsLabel, periodLabel, priceLabel].filter(Boolean).join(' - '),
@@ -144,7 +144,7 @@ export const getSubscriptionCatalogEntryMeta = (entry) => {
   }
 
   return {
-    description: 'Debloque les droits club. La verification dirigeant reste obligatoire.',
+    description: 'Debloque les droits club. La vérification dirigeant reste obligatoire.',
     label: displayName || formatSubscriptionPlanLabel(entry?.planCode),
     priceLabel,
     secondaryLabel: ['Droits Club', periodLabel, priceLabel].filter(Boolean).join(' - '),
@@ -315,26 +315,26 @@ export const getSubscriptionBillingErrorMessage = (error) => {
   ).trim();
 
   if (message === 'TEAM_SLOT_DUPLICATE_TEAM') {
-    return 'Une meme equipe ne peut pas etre attribuee deux fois a la meme offre Team.';
+    return 'Une même équipe ne peut pas être attribuée deux fois à la même offre Team.';
   }
 
   if (message === 'TEAM_SLOT_COUNT_EXCEEDED') {
-    return 'Cette offre n a pas assez de slots pour couvrir autant d equipes. Ajuste la selection avant de continuer.';
+    return 'Cette offre n a pas assez de slots pour couvrir autant d équipes. Ajuste la sélection avant de continuer.';
   }
 
   if (message === 'CLUB_ALREADY_COVERED') {
-    return 'Ce club est deja couvert par une offre Club active (souscrite par un autre membre). Inutile de payer deux fois : les droits sont partages.';
+    return 'Ce club est déjà couvert par une offre Club active (souscrite par un autre membre). Inutile de payer deux fois : les droits sont partages.';
   }
 
   if (message === 'TEAM_ALREADY_COVERED') {
-    return 'Cette equipe est deja couverte par une autre offre active. Choisis une equipe non couverte ou libere son slot actuel.';
+    return 'Cette équipe est déjà couverte par une autre offre active. Choisis une équipe non couverte ou libere son slot actuel.';
   }
 
   if (message === 'clubDocumentId obligatoire pour une offre CLUB.' || message === 'Club introuvable pour entitlement CLUB.') {
     return 'Rattache d abord le bon club avant de prendre une offre Club.';
   }
 
-  if (message === 'Le checkout web public n est pas disponible en production tant qu un provider web n a pas ete choisi.') {
+  if (message === 'Le checkout web public n est pas disponible en production tant qu un provider web n a pas été choisi.') {
     return 'Le changement d offre web public n est pas encore ouvert sur cet environnement.';
   }
 
@@ -342,5 +342,5 @@ export const getSubscriptionBillingErrorMessage = (error) => {
     return message;
   }
 
-  return 'Impossible de mettre a jour ton abonnement pour le moment.';
+  return 'Impossible de mettre à jour ton abonnement pour le moment.';
 };

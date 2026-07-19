@@ -141,17 +141,17 @@ export const getTournamentFormatLabel = (formatMode) => {
 
 export const getTournamentCompetitionStateLabel = (competitionState) => {
   const normalized = normalizeTournamentText(competitionState);
-  if (normalized === 'published') return 'Competition publiee';
-  return 'Competition en brouillon';
+  if (normalized === 'published') return 'Compétition publiée';
+  return 'Compétition en brouillon';
 };
 
 export const getTournamentMatchStatusMeta = (status, colors) => {
   const normalized = normalizeTournamentText(status);
   if (normalized === 'validated') return { label: 'Valide', tone: colors.success500 };
   if (normalized === 'forfeit') return { label: 'Forfait', tone: colors.warning500 };
-  if (normalized === 'played_pending_validation') return { label: 'Score a valider', tone: colors.warning500 };
+  if (normalized === 'played_pending_validation') return { label: 'Score à valider', tone: colors.warning500 };
   if (normalized === 'scheduled') return { label: 'Programme', tone: colors.primary500 };
-  if (normalized === 'ready') return { label: 'Pret a jouer', tone: colors.primary500 };
+  if (normalized === 'ready') return { label: 'Prêt à jouer', tone: colors.primary500 };
   if (normalized === 'cancelled') return { label: 'Annule', tone: colors.error500 };
   return { label: 'Brouillon', tone: colors.neutral300 };
 };

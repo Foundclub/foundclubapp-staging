@@ -83,9 +83,9 @@ describe('shareLinks utils', () => {
 
   test('buildShareMessageWithUrl keeps intro and readable link section', () => {
     expect(buildShareMessageWithUrl({
-      intro: 'Rejoins mon equipe sur FoundClub.',
+      intro: 'Rejoins mon équipe sur FoundClub.',
       linkLabel: 'Ouvrir dans FoundClub',
       url: 'https://example.com/install.html?type=team&id=abc',
-    })).toBe('Rejoins mon equipe sur FoundClub.\n\nOuvrir dans FoundClub :\nhttps://example.com/install.html?type=team&id=abc');
+    })).toBe('Rejoins mon équipe sur FoundClub.\n\nOuvrir dans FoundClub :\nhttps://example.com/install.html?type=team&id=abc');
   });
 });

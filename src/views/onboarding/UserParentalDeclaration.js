@@ -44,7 +44,7 @@ function UserParentalDeclaration({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible d enregistrer la declaration parentale.');
+      Alert.alert('Erreur', error?.message || 'Impossible d enregistrer la déclaration parentale.');
     },
     onSuccess: (updatedUser) => {
       queryClient.setQueriesData({ queryKey: ['get-me'] }, updatedUser);
@@ -68,7 +68,7 @@ function UserParentalDeclaration({ navigation, route }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous recuperons le profil avant la declaration parentale."
+        description="Nous recuperons le profil avant la déclaration parentale."
         isLoading
         title="Chargement du profil"
       />
@@ -118,16 +118,16 @@ function UserParentalDeclaration({ navigation, route }) {
       <View style={[Spaces.gap[32]]}>
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-            {t('profile.titles.birthdate', 'Declaration parentale obligatoire')}
+            {t('profile.titles.birthdate', 'Déclaration parentale obligatoire')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            Ce profil concerne un enfant de moins de 13 ans. Pour continuer, vous devez confirmer que vous etes son parent ou representant legal.
+            Ce profil concerne un enfant de moins de 13 ans. Pour continuer, tu dois confirmer que tu es son parent ou représentant legal.
           </Text>
         </View>
 
         <ParentalDeclarationCard
           checked={accepted}
-          description="La personne qui utilise FoundClub pour ce profil doit etre le parent ou le representant legal de l enfant."
+          description="La personne qui utilise FoundClub pour ce profil doit être le parent ou le représentant legal de l enfant."
           onChange={setAccepted}
         />
       </View>

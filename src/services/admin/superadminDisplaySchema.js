@@ -215,10 +215,10 @@ const summarizeComplex = (/** @type {any} */ value) => {
     if (first && typeof first === 'object') {
       const firstLabel = normalizeString(first?.name || first?.title || first?.label || first?.documentId);
       if (firstLabel) {
-        return `${value.length} elements (ex: ${truncate(firstLabel, 24)})`;
+        return `${value.length} éléments (ex: ${truncate(firstLabel, 24)})`;
       }
     }
-    return `${value.length} elements`;
+    return `${value.length} éléments`;
   }
 
   if (value && typeof value === 'object') {

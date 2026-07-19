@@ -40,11 +40,11 @@ export const getSubscriptionAccessLevel = ({
 /** @type {Record<string, string>} */
 const DEFAULT_REASON_LABELS = {
   AUTH_REQUIRED: 'Connexion requise',
-  CLUB_TIER_LIMIT_REACHED: 'Limite d equipes de votre offre Club atteinte',
-  CLUB_VERIFICATION_REQUIRED: 'Verification du club requise',
+  CLUB_TIER_LIMIT_REACHED: 'Limite d équipes de ton offre Club atteinte',
+  CLUB_VERIFICATION_REQUIRED: 'Vérification du club requise',
   FREE_INCLUDED: 'Inclus dans le plan gratuit',
   FREE_QUOTA_AVAILABLE: 'Quota gratuit disponible',
-  FREE_QUOTA_EXHAUSTED: 'Quota gratuit epuise',
+  FREE_QUOTA_EXHAUSTED: 'Quota gratuit épuisé',
   SUBSCRIPTION_REQUIRED: 'Abonnement requis',
 };
 
@@ -72,9 +72,9 @@ const DEFAULT_PAYWALL_KEYS = {
 
 /** @type {string[]} */
 const CLUB_PAYWALL_BENEFITS = [
-  'Toutes les equipes du club couvertes',
-  'Droits club et gestion centralisee',
-  'Cotisations et recrutement illimites',
+  'Toutes les équipes du club couvertes',
+  'Droits club et gestion centralisée',
+  'Cotisations et recrutement illimités',
 ];
 
 /** @type {Record<string, string[]>} */
@@ -83,33 +83,33 @@ const PAYWALL_BENEFITS_BY_KEY = {
   'club-verification-required': CLUB_PAYWALL_BENEFITS,
   'composition-required': [
     'Composition et convocations en 2 taps',
-    'Evenements et matchs illimites',
-    'Toute l equipe en profite',
+    'Événements et matchs illimités',
+    'Toute l équipe en profite',
   ],
   'dues-limit': [
-    'Campagnes de cotisation illimitees',
+    'Campagnes de cotisation illimitées',
     'Suivi des paiements simplifie',
     'Relances des membres en un clic',
   ],
   'event-limit': [
-    'Evenements et matchs illimites',
+    'Événements et matchs illimités',
     'Composition et convocations',
-    'Toute l equipe en profite',
+    'Toute l équipe en profite',
   ],
   'match-limit': [
-    'Matchs et evenements illimites',
+    'Matchs et événements illimités',
     'Composition et convocations',
-    'Suivi des presences simplifie',
+    'Suivi des présences simplifie',
   ],
   'recruitment-ad-limit': [
-    'Annonces de recrutement illimitees',
-    'Visibilite aupres des joueurs',
+    'Annonces de recrutement illimitées',
+    'Visibilité aupres des joueurs',
     'Contacts sans limite',
   ],
   'team-limit': [
-    'Ajoute autant d equipes que besoin',
-    'Evenements et matchs illimites',
-    'Gestion complete de chaque equipe',
+    'Ajoute autant d équipes que besoin',
+    'Événements et matchs illimités',
+    'Gestion complète de chaque équipe',
   ],
 };
 
@@ -153,19 +153,19 @@ const RETIRED_QUOTA_TYPES = new Set(['PROFILE_CONTACT']);
 /** @type {Record<string, { description: string; label: string }>} */
 const SUBSCRIPTION_STATUS_META = {
   CLUB: {
-    description: 'Les droits Club sont actifs pour votre club verifie.',
+    description: 'Les droits Club sont actifs pour ton club vérifie.',
     label: 'Club',
   },
   CLUB_UNVERIFIED: {
-    description: 'Votre offre Club est active, mais les droits club restent bloques tant que la verification n est pas terminee.',
-    label: 'Club a verifier',
+    description: 'Ton offre Club est activé, mais les droits club restent bloques tant que la vérification n est pas terminée.',
+    label: 'Club à vérifier',
   },
   FREE: {
-    description: 'Vous utilisez actuellement les quotas gratuits FoundClub.',
+    description: 'Tu utilises actuellement les quotas gratuits FoundClub.',
     label: 'Gratuit',
   },
   TEAM: {
-    description: 'Les droits Team sont ouverts sur les equipes couvertes.',
+    description: 'Les droits Team sont ouverts sur les équipes couvertes.',
     label: 'Team',
   },
 };
@@ -189,7 +189,7 @@ export const mapSubscriptionDecisionToPaywall = (decision) => {
 
   return {
     allowed: safeDecision?.allowed === true,
-    message: DEFAULT_REASON_LABELS[reason] || 'Acces refuse',
+    message: DEFAULT_REASON_LABELS[reason] || 'Accès refuse',
     paywall,
     paywallKey: DEFAULT_PAYWALL_KEYS[paywall] || 'subscription-required',
     reason,
@@ -292,7 +292,7 @@ export const getSubscriptionPaywallContent = (decision) => {
   const paywall = mapSubscriptionDecisionToPaywall(decision);
   const requiredPlanText = formatSubscriptionRequiredPlanText(paywall.requiredPlan);
   const requiredPlanSuffix = requiredPlanText
-    ? ` Offre conseillee: ${requiredPlanText}.`
+    ? ` Offre conseillée: ${requiredPlanText}.`
     : '';
   const withRequiredPlan = (sentence) => `${sentence}${requiredPlanSuffix}`.trim();
 
@@ -301,61 +301,61 @@ export const getSubscriptionPaywallContent = (decision) => {
       return {
         ctaLabel: 'Voir mon abonnement',
         description: withRequiredPlan(
-          'La gestion des roles et des droits du club est reservee a l offre Club.',
+          'La gestion des rôles et des droits du club est réservée a l offre Club.',
         ),
-        title: 'Roles club reserves',
+        title: 'Rôles club reserves',
       };
     case 'club-tier-team-limit':
       return {
         ctaLabel: 'Voir mon abonnement',
-        description: 'Votre offre Club a atteint son nombre maximum d equipes. Passez au palier superieur pour ajouter de nouvelles equipes.',
-        title: 'Limite d equipes atteinte',
+        description: 'Ton offre Club a atteint son nombre maximum d équipes. Passe au palier supérieur pour ajouter de nouvelles équipes.',
+        title: 'Limite d équipes atteinte',
       };
     case 'club-update-required':
       return {
         ctaLabel: 'Voir mon abonnement',
         description: withRequiredPlan(
-          'La modification de la fiche du club est reservee a l offre Club.',
+          'La modification de la fiche du club est réservée a l offre Club.',
         ),
-        title: 'Fiche club reservee',
+        title: 'Fiche club réservée',
       };
     case 'club-verification-required':
       return {
         ctaLabel: 'Voir mon club',
-        description: 'Votre offre Club est active, mais les droits club restent bloques tant que la verification du dirigeant n est pas terminee.',
-        title: 'Verification du club requise',
+        description: 'Ton offre Club est activé, mais les droits club restent bloques tant que la vérification du dirigeant n est pas terminée.',
+        title: 'Vérification du club requise',
       };
     case 'composition-required':
       return {
         ctaLabel: 'Voir mon abonnement',
-        description: `La composition d equipe est reservee a l offre Equipe.${requiredPlanSuffix}`.trim(),
-        title: 'Composition reservee',
+        description: `La composition d équipe est réservée a l offre Équipe.${requiredPlanSuffix}`.trim(),
+        title: 'Composition réservée',
       };
     case 'dues-limit':
       return {
         ctaLabel: 'Voir mon abonnement',
-        description: `La creation de campagnes de cotisation demande une offre active.${requiredPlanSuffix}`.trim(),
-        title: 'Cotisations reservees',
+        description: `La création de campagnes de cotisation demande une offre active.${requiredPlanSuffix}`.trim(),
+        title: 'Cotisations réservées',
       };
     case 'event-limit':
       return {
         ctaLabel: 'Voir mon abonnement',
-        description: `Tu as atteint la limite gratuite de publication d evenements.${requiredPlanSuffix}`.trim(),
-        title: 'Publication d evenement limitee',
+        description: `Tu as atteint la limite gratuite de publication d événements.${requiredPlanSuffix}`.trim(),
+        title: 'Publication d événement limitée',
       };
     case 'facility-manage-required':
       return {
         ctaLabel: 'Voir mon abonnement',
         description: withRequiredPlan(
-          'La gestion des installations du club est reservee a l offre Club.',
+          'La gestion des installations du club est réservée a l offre Club.',
         ),
-        title: 'Installations reservees',
+        title: 'Installations réservées',
       };
     case 'match-limit':
       return {
         ctaLabel: 'Voir mon abonnement',
         description: `Tu as atteint la limite gratuite de publication de match.${requiredPlanSuffix}`.trim(),
-        title: 'Publication de match limitee',
+        title: 'Publication de match limitée',
       };
     case 'profile-contact-limit':
       return {
@@ -367,21 +367,21 @@ export const getSubscriptionPaywallContent = (decision) => {
       return {
         ctaLabel: 'Voir mon abonnement',
         description: `Cette publication de recrutement demande une offre active.${requiredPlanSuffix}`.trim(),
-        title: 'Publication recrutement limitee',
+        title: 'Publication recrutement limitée',
       };
     case 'sponsor-manage-required':
       return {
         ctaLabel: 'Voir mon abonnement',
         description: withRequiredPlan(
-          'La gestion des sponsors du club est reservee a l offre Club.',
+          'La gestion des sponsors du club est réservée a l offre Club.',
         ),
         title: 'Sponsors reserves',
       };
     case 'team-limit':
       return {
         ctaLabel: 'Voir mon abonnement',
-        description: `La creation d equipe demande une offre active.${requiredPlanSuffix}`.trim(),
-        title: 'Creation d equipe limitee',
+        description: `La création d équipe demande une offre active.${requiredPlanSuffix}`.trim(),
+        title: 'Création d équipe limitée',
       };
     default:
       return {

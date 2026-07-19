@@ -21,12 +21,12 @@ const toInt = (value) => {
 };
 
 const COACH_ROLE_LABELS = {
-  analyste_video: 'Analyste video',
-  entraineur_adjoint: 'Entraineur adjoint',
-  entraineur_gardiens: 'Entraineur des gardiens',
-  entraineur_principal: 'Entraineur principal',
+  analyste_video: 'Analyste vidéo',
+  entraineur_adjoint: 'Entraîneur adjoint',
+  entraineur_gardiens: 'Entraîneur des gardiens',
+  entraineur_principal: 'Entraîneur principal',
   other: 'Encadrement',
-  preparateur_physique: 'Preparateur physique',
+  preparateur_physique: 'Préparateur physique',
   team_manager: 'Team manager',
 };
 
@@ -150,7 +150,7 @@ export const buildTeamCardModel = ({
     qrUrl,
     rarity: rarityInfo.rarity,
     rarityScore: rarityInfo.score,
-    recruitingNeeds: needs, // bloc "RECRUTE . SEANCES D'ESSAI"
+    recruitingNeeds: needs, // bloc "RECRUTE . Séances D'ESSAI"
     rosterCount,
     sport: String(sport || '').trim(),
     teamName: String(team?.name || '').trim().toUpperCase(),

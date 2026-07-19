@@ -416,7 +416,7 @@ function EventWizardTeam({ navigation }) {
         onBack={() => navigation.goBack()}
         stepCount={getEventWizardStepCount(state)}
         stepIndex={2}
-        subtitle="Choisissez si le tournoi part d'une équipe existante ou s'il est autonome."
+        subtitle="Choisis si le tournoi part d'une équipe existante ou s'il est autonome."
         title="Cadre du tournoi"
       >
         <View style={[Spaces.gap[24]]}>
@@ -447,7 +447,7 @@ function EventWizardTeam({ navigation }) {
                   density="compact"
                   icon="search"
                   onChangeText={setSearchQuery}
-                  placeholder={t('teamList.searchPlaceholder', 'Rechercher une equipe')}
+                  placeholder={t('teamList.searchPlaceholder', 'Rechercher une équipe')}
                   value={searchQuery}
                 />
               ) : null}
@@ -491,7 +491,7 @@ function EventWizardTeam({ navigation }) {
               {!isLoading && !error && hasTeams && !hasFilteredTeams ? (
                 <View style={[ApplicationStyle.card, Spaces.padding[24], { backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}55` }]}>
                   <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
-                    {t('teamList.noSearchResult', 'Aucune equipe trouvee pour cette recherche')}
+                    {t('teamList.noSearchResult', 'Aucune équipe trouvée pour cette recherche')}
                   </Text>
                 </View>
               ) : null}
@@ -542,7 +542,7 @@ function EventWizardTeam({ navigation }) {
               ) : null}
               {hasReferenceError ? (
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  Impossible de charger tous les référentiels. Réessayez ou repassez par un tournoi d’équipe.
+                  Impossible de charger tous les référentiels. Réessaie ou repassez par un tournoi d’équipe.
                 </Text>
               ) : null}
 
@@ -660,7 +660,7 @@ function EventWizardTeam({ navigation }) {
             density="compact"
             icon="search"
             onChangeText={setSearchQuery}
-            placeholder={t('teamList.searchPlaceholder', 'Rechercher une equipe')}
+            placeholder={t('teamList.searchPlaceholder', 'Rechercher une équipe')}
             value={searchQuery}
           />
         ) : null}
@@ -706,7 +706,7 @@ function EventWizardTeam({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
-              {t('teamList.noSearchResult', 'Aucune equipe trouvee pour cette recherche')}
+              {t('teamList.noSearchResult', 'Aucune équipe trouvée pour cette recherche')}
             </Text>
           </View>
         ) : null}

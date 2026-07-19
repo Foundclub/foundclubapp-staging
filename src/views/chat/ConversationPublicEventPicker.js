@@ -50,7 +50,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
     isLoading: isLoadingPublicEvents,
   } = useGetEvents({
     compact: true,
-    excludeType: 'R\u00E9servation',
+    excludeType: 'Réservation',
     pageSize: 20,
     sessionStatus: 'open',
     sort: 'date:asc',
@@ -62,7 +62,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
     data: searchEventsPages,
     isLoading: isLoadingSearchEvents,
   } = useSearchEvents({
-    excludeType: 'R\u00E9servation',
+    excludeType: 'Réservation',
     pageSize: 20,
     q: normalizedQuery,
     sessionStatus: 'open',

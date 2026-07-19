@@ -91,7 +91,7 @@ const getErrorMessage = (error, fallbackMessage) => {
     || error?.message;
 
   if (status === 403) {
-    return "Vous n'etes pas autorise a gerer cette composition.";
+    return "Tu n'es pas autorise à gérer cette composition.";
   }
 
   if (typeof apiMessage === 'string' && apiMessage.trim()) {
@@ -439,7 +439,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     updateDraftPack((currentPack) => {
       const currentTeams = Array.isArray(currentPack?.teams) ? currentPack.teams : [];
       if (currentTeams.length >= MAX_COMPOSITION_TEAMS) {
-        showAlert('Limite atteinte', `Tu peux creer jusqu'a ${MAX_COMPOSITION_TEAMS} equipes dans une meme composition.`);
+        showAlert('Limite atteinte', `Tu peux créer jusqu'a ${MAX_COMPOSITION_TEAMS} équipes dans une même composition.`);
         return currentPack;
       }
 
@@ -450,7 +450,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
         mode: 'manual',
         teams: [
           ...currentTeams,
-          buildTeamEntryFromPreset(basePreset, nextIndex - 1, currentPack?.sportContext || sport, `Equipe ${nextIndex}`, `team_${nextIndex}`),
+          buildTeamEntryFromPreset(basePreset, nextIndex - 1, currentPack?.sportContext || sport, `Équipe ${nextIndex}`, `team_${nextIndex}`),
         ],
       };
     });
@@ -461,13 +461,13 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
 
     const currentTeamCount = Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0;
     if (currentTeamCount <= 1) {
-      showAlert('Equipe requise', 'Il doit rester au moins une equipe dans cette composition.');
+      showAlert('Équipe requise', 'Il doit rester au moins une équipe dans cette composition.');
       return;
     }
 
     showAlert(
-      'Supprimer cette equipe ?',
-      'Les joueurs deja places dans cette equipe repasseront automatiquement dans les remplacants.',
+      'Supprimer cette équipe ?',
+      'Les joueurs déjà places dans cette équipe repasseront automatiquement dans les remplaçants.',
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -511,7 +511,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
         }));
       }
       await invalidateQueries();
-      showAlert('Succes', 'Brouillon de composition enregistre.');
+      showAlert('Succès', 'Brouillon de composition enregistre.');
     } catch (error) {
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);
       if (subscriptionDecision) {
@@ -541,7 +541,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
         }));
       }
       await invalidateQueries();
-      showAlert('Succes', 'Composition d\'equipes publiee.', [
+      showAlert('Succès', 'Composition d\'équipes publiée.', [
         {
           onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId }),
           text: 'OK',
@@ -581,20 +581,20 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       setSelectedPlayerId('');
       setShowAutoSetup(false);
       await invalidateQueries();
-      showAlert('Succes', 'Brouillon genere automatiquement. Tu peux maintenant ajuster les equipes a la main.');
+      showAlert('Succès', 'Brouillon génère automatiquement. Tu peux maintenant ajuster les équipes à la main.');
     } catch (error) {
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);
       if (subscriptionDecision) {
         setSubscriptionPaywallDecision(subscriptionDecision);
         return;
       }
-      showAlert('Erreur', getErrorMessage(error, 'Impossible de generer cette composition automatiquement.'));
+      showAlert('Erreur', getErrorMessage(error, 'Impossible de générer cette composition automatiquement.'));
     } finally {
       setIsSaving(false);
     }
   }, [autoPresetKeys, autoTeamCount, availablePresets, eventId, invalidateQueries, sport, teamId]);
 
-  const headerTitle = readOnly ? 'Composition d\'equipes' : 'Edition composition d\'equipes';
+  const headerTitle = readOnly ? 'Composition d\'équipes' : 'Édition composition d\'équipes';
   const contextLabel = teamName || eventName || 'Evenement';
   const viewerBranchCount = resolvedReadOnlyBranches.length;
 
@@ -669,9 +669,9 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     },
                   ]}
                 >
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Aucune composition publiee</Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Aucune composition publiée</Text>
                   <Text style={[Fonts.p2, Fonts.neutral300, { marginTop: 8 }]}>
-                    Le coach n a pas encore publie de composition pour cet evenement.
+                    Le coach n a pas encore publie de composition pour cet événement.
                   </Text>
                 </View>
               ) : null}
@@ -690,7 +690,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   ]}
                 >
                   <Text style={[Fonts.p3, Fonts.neutral300]}>
-                    Les places encore libres restent visibles et seront completees automatiquement quand de nouveaux joueurs acceptes arriveront.
+                    Les places encore libres restent visibles et seront complétées automatiquement quand de nouveaux joueurs acceptes arriveront.
                   </Text>
                 </View>
               ) : null}
@@ -729,7 +729,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                       <Text style={[Fonts.p3, Fonts.neutral300]}>
                         {branch?.published?.publishedAt
                           ? `Publie le ${new Date(branch.published.publishedAt).toLocaleString('fr-FR')}`
-                          : "Composition d'equipes publiee"}
+                          : "Composition d'équipes publiée"}
                       </Text>
                       {branch?.viewer?.inReserve ? (
                         <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
@@ -756,14 +756,14 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                         >
                           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
                             <View style={{ flex: 1, paddingRight: 12 }}>
-                              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{team?.name || `Equipe ${teamIndex + 1}`}</Text>
+                              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{team?.name || `Équipe ${teamIndex + 1}`}</Text>
                               <Text style={[Fonts.p4, Fonts.neutral300]}>
                                 {team?.presetLabel || 'Composition libre'}
                               </Text>
                             </View>
                             {isViewerTeam ? (
                               <View style={[styles.badge, { backgroundColor: `${Colors.primary500}24`, borderColor: `${Colors.primary500}55` }]}>
-                                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Mon equipe</Text>
+                                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Mon équipe</Text>
                               </View>
                             ) : null}
                           </View>
@@ -802,7 +802,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     })}
 
                     <View style={Spaces.gap[8]}>
-                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Remplacants / en attente</Text>
+                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Remplaçants / en attente</Text>
                       {branchReservePlayers.length === 0 ? (
                         <Text style={[Fonts.p3, Fonts.neutral300]}>Aucun joueur non affecte.</Text>
                       ) : (
@@ -839,11 +839,11 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   },
                 ]}
               >
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Composition d'equipes</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Composition d'équipes</Text>
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
                   {showAutoSetup
-                    ? "Choisis le nombre d'equipes et le preset de chacune, puis genere un brouillon."
-                    : "Selectionne un joueur depuis les remplacants, puis touche un poste pour l'attribuer. Touche un joueur deja place pour le deplacer."}
+                    ? "Choisis le nombre d'équipes et le preset de chacune, puis génère un brouillon."
+                    : "Sélectionne un joueur depuis les remplaçants, puis touche un poste pour l'attribuer. Touche un joueur déjà place pour le déplacer."}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
                   Les postes encore libres peuvent rester vides: ils seront completes automatiquement quand de nouveaux joueurs acceptes arriveront.
@@ -867,7 +867,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     <Button
                       disabled={isPublishing || isSaving}
                       onPress={() => setShowAutoSetup((current) => !current)}
-                      title={showAutoSetup ? 'Fermer auto' : 'Generation auto'}
+                      title={showAutoSetup ? 'Fermer auto' : 'Génération auto'}
                       variant="Secondary"
                     />
                   ) : null}
@@ -875,7 +875,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     <Button
                       disabled={isPublishing || isSaving}
                       onPress={handleAddTeam}
-                      title="Ajouter une equipe"
+                      title="Ajouter une équipe"
                       variant="Secondary"
                     />
                   ) : null}
@@ -896,7 +896,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     },
                   ]}
                 >
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Generation automatique</Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Génération automatique</Text>
 
                   <View style={[styles.stepperRow, { borderColor: `${Colors.neutral00}12`, backgroundColor: Colors.neutral800 }]}>
                     <TouchableOpacity
@@ -908,7 +908,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     </TouchableOpacity>
                     <View style={styles.stepperValue}>
                       <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{autoTeamCount}</Text>
-                      <Text style={[Fonts.p4, Fonts.neutral300]}>equipes</Text>
+                      <Text style={[Fonts.p4, Fonts.neutral300]}>équipes</Text>
                     </View>
                     <TouchableOpacity
                       activeOpacity={0.82}
@@ -929,7 +929,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                         style={[styles.listRow, { backgroundColor: Colors.neutral800, borderColor: `${Colors.neutral00}12`, paddingVertical: 14 }]}
                       >
                         <View style={{ flex: 1 }}>
-                          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{`Equipe ${index + 1}`}</Text>
+                          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{`Équipe ${index + 1}`}</Text>
                           <Text style={[Fonts.p4, Fonts.neutral300]}>{preset?.label || 'Aucun preset'}</Text>
                         </View>
                         <View style={[Alignments.row, Spaces.gap[8]]}>
@@ -965,7 +965,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   <Button
                     isLoading={isSaving}
                     onPress={handleGenerateAuto}
-                    title="Generer le brouillon"
+                    title="Générer le brouillon"
                     variant="Primary"
                   />
                 </View>
@@ -986,11 +986,11 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
               >
                 <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
                   <View style={{ flex: 1, paddingRight: 12 }}>
-                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Remplacants / en attente</Text>
+                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Remplaçants / en attente</Text>
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {selectedPlayer
-                        ? `${getCompositionPlayerLabel(selectedPlayer)} est selectionne. Touche maintenant un poste pour l'affecter.`
-                        : 'Touche un joueur pour le selectionner, puis touche un poste sur une equipe.'}
+                        ? `${getCompositionPlayerLabel(selectedPlayer)} est sélectionné. Touche maintenant un poste pour l'affecter.`
+                        : 'Touche un joueur pour le sélectionner, puis touche un poste sur une équipe.'}
                     </Text>
                   </View>
                   {selectedPlayer ? (
@@ -1006,8 +1006,8 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                 {reservePlayers.length === 0 ? (
                   <Text style={[Fonts.p3, Fonts.neutral300]}>
                     {hasKnownPlayers
-                      ? 'Tous les joueurs sont deja affectes a une equipe.'
-                      : 'Aucun joueur disponible pour le moment. Tu peux quand meme creer les equipes et laisser les postes libres.'}
+                      ? 'Tous les joueurs sont déjà affectes a une équipe.'
+                      : 'Aucun joueur disponible pour le moment. Tu peux quand même créer les équipes et laisser les postes libres.'}
                   </Text>
                 ) : (
                   <View style={styles.chipRow}>
@@ -1060,7 +1060,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
                     <TextInput
                       onChangeText={(value) => handleRenameTeam(team?.id, value)}
-                      placeholder={`Equipe ${teamIndex + 1}`}
+                      placeholder={`Équipe ${teamIndex + 1}`}
                       placeholderTextColor={Colors.neutral300}
                       style={[
                         Fonts.h4Bold,

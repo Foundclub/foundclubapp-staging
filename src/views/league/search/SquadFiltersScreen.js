@@ -223,7 +223,7 @@ function SquadFiltersScreen({ navigation }) {
             <AutocompleteAddressInput
               address={value}
               error={getFieldError({ errors: formErrors, fieldName: 'city' })}
-              label={t('squad.filters.city', 'Ville de reference')}
+              label={t('squad.filters.city', 'Ville de référence')}
               placeholder={t('squad.filters.cityPlaceholder', 'Ex: Marseille')}
               setAddress={onChange}
             />

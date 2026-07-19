@@ -44,7 +44,7 @@ export const getSearchMapActiveFiltersSummary = (filterCount, geolocatableCount)
 };
 
 export const getSearchMapLoadingCopy = () => ({
-  body: 'Nous préparons l’affichage cartographique de vos résultats géolocalisés.',
+  body: 'Nous préparons l’affichage cartographique de tes résultats géolocalisés.',
   title: 'Chargement de la carte',
 });
 
@@ -57,29 +57,29 @@ export const getSearchMapSearchAreaLabel = (isLoading = false) => (
 export const getSearchMapProviderErrorMessage = (errorReason) => {
   switch (errorReason) {
     case SEARCH_MAP_ERROR_REASONS.invalidApiKey:
-      return 'La clé TomTom utilisée par ce build n’est pas valide ou n’a pas accès à Map Display API.';
+      return 'La clé TomTom utilisée par ce build n’est pas validé ou n’a pas accès à Map Display API.';
     case SEARCH_MAP_ERROR_REASONS.invalidTileRequest:
-      return 'La requête envoyée au provider cartographique est invalide. Vérifiez la configuration TomTom.';
+      return 'La requête envoyée au provider cartographique est invalide. Vérifie la configuration TomTom.';
     case SEARCH_MAP_ERROR_REASONS.leafletUnavailable:
       return 'Le moteur cartographique n’a pas pu démarrer correctement dans ce build.';
     case SEARCH_MAP_ERROR_REASONS.missingApiKey:
-      return 'La clé TomTom est manquante pour ce build. Ajoutez TOMTOM_API_KEY avant de tester la carte.';
+      return 'La clé TomTom est manquante pour ce build. Ajoute TOMTOM_API_KEY avant de tester la carte.';
     case SEARCH_MAP_ERROR_REASONS.networkError:
-      return 'Le réseau de la carte est indisponible pour le moment. Vérifiez la connexion puis réessayez.';
+      return 'Le réseau de la carte est indisponible pour le moment. Vérifie la connexion puis réessaie.';
     case SEARCH_MAP_ERROR_REASONS.providerUnavailable:
-      return 'Le service cartographique TomTom est momentanément indisponible. Réessayez plus tard.';
+      return 'Le service cartographique TomTom est momentanément indisponible. Réessaie plus tard.';
     case SEARCH_MAP_ERROR_REASONS.rateLimited:
-      return 'Le quota TomTom a été atteint pour le moment. Réessayez un peu plus tard.';
+      return 'Le quota TomTom a été atteint pour le moment. Réessaie un peu plus tard.';
     case SEARCH_MAP_ERROR_REASONS.tilesUnavailable:
-      return 'La carte a démarré, mais aucune tuile exploitable n’a pu être chargée. Réessayez ou revenez à la liste.';
+      return 'La carte a démarré, mais aucune tuile exploitable n’a pu être chargée. Réessaie ou reviens à la liste.';
     case SEARCH_MAP_ERROR_REASONS.webViewError:
-      return 'Le moteur web de la carte a échoué au chargement. Fermez puis rouvrez la carte.';
+      return 'Le moteur web de la carte a échoué au chargement. Ferme puis rouvre la carte.';
     case SEARCH_MAP_ERROR_REASONS.webViewProcessGone:
-      return 'Le moteur web de la carte a ete interrompu. Rechargez la carte ou revenez a la liste.';
+      return 'Le moteur web de la carte a été interrompu. Recharge la carte ou reviens à la liste.';
     case SEARCH_MAP_ERROR_REASONS.runtimeError:
     case SEARCH_MAP_ERROR_REASONS.tileError:
     default:
-      return 'Les tuiles TomTom ne répondent pas pour le moment. Réessayez ou revenez à la liste.';
+      return 'Les tuiles TomTom ne répondent pas pour le moment. Réessaie ou reviens à la liste.';
   }
 };
 

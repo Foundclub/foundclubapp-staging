@@ -233,7 +233,7 @@ const uploadFile = async (file) => {
   } catch (e) {
     console.error('File upload error:', e);
     if (e instanceof TypeError && String(e.message || '').includes('Network request failed')) {
-      throw new Error(`Impossible de joindre l'upload Strapi (${uploadEndpoint}). Verifiez que l'API locale est lancee et accessible depuis l'emulateur.`);
+      throw new Error(`Impossible de joindre l'upload Strapi (${uploadEndpoint}). Vérifie que l'API locale est lancée et accessible depuis l'emulateur.`);
     }
     throw e;
   }

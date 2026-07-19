@@ -659,7 +659,7 @@ function LegacySearchMapNative({
           ]}
         >
           <Text style={[Fonts.p4Bold, Fonts.neutral00, Fonts.textCenter]}>
-            Touchez un repere pour voir la fiche
+            Touche un repère pour voir la fiche
           </Text>
         </View>
       ) : null}
@@ -681,7 +681,7 @@ function LegacySearchMapNative({
               Chargement de la carte
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
-              Nous préparons l&apos;affichage géolocalisé de vos résultats.
+              Nous préparons l&apos;affichage géolocalisé de tes résultats.
             </Text>
           </View>
         </View>
@@ -703,7 +703,7 @@ function LegacySearchMapNative({
               Impossible de charger la carte
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
-              Les tuiles Google Maps ne répondent pas pour le moment. Réessayez ou revenez à la liste.
+              Les tuiles Google Maps ne répondent pas pour le moment. Réessaie ou reviens à la liste.
             </Text>
             <View style={[Alignments.row, Alignments.justifyCenter, { gap: 12, width: '100%' }]}>
               <TouchableOpacity

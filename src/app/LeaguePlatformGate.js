@@ -114,7 +114,7 @@ function LeaguePlatformGate({ children }) {
     return (
       <AdminStateView
         actionLabel="Retour à l'accueil"
-        description="Votre compte n'a pas les droits pour accéder à l'espace Super Admin League."
+        description="Ton compte n'a pas les droits pour accéder à l'espace Super Admin League."
         onAction={handleGoHome}
         title="Accès refusé"
       />

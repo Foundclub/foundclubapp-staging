@@ -86,7 +86,7 @@ describe('requestsHubService', () => {
     expect(result.items).toHaveLength(1);
     expect(result.items[0]).toEqual(expect.objectContaining({
       id: 'event:event-1:participation:request-1',
-      title: 'Validation evenement',
+      title: 'Validation événement',
       type: 'event',
     }));
   });
@@ -183,7 +183,7 @@ describe('requestsHubService', () => {
     expect(result.items[0]).toEqual(expect.objectContaining({
       actions: {},
       id: 'team:team-request-1',
-      subtitle: 'Leo Martin a demande a rejoindre U18. Votre equipe doit attendre la validation par votre/vos dirigeant(s).',
+      subtitle: 'Leo Martin a demandé à rejoindre U18. Ton équipe doit attendre la validation par ton ou tes dirigeant(s).',
       type: 'team',
     }));
   });

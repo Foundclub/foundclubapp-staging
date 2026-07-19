@@ -262,7 +262,7 @@ function CMPlanningContent({
           <Text style={[Fonts.p3, Fonts.primary100]}>
             {t(
               'planning.cm.description',
-              'Retrouvez le planning des sections et la liste des événements de votre club.',
+              'Retrouve le planning des sections et la liste des événements de ton club.',
             )}
           </Text>
         </View>
@@ -292,7 +292,7 @@ function CMPlanningContent({
                 refetchSections();
                 refetchFacilities();
               }}
-              title={t('common.retry', 'R\u00E9essayer')}
+              title={t('common.retry', 'Réessayer')}
               variant="Secondary"
             />
           </View>
@@ -373,7 +373,7 @@ function CMPlanningContent({
           >
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.h3, Fonts.neutral00]}>
-                {t('planning.eventsFrom', 'Évènements à partir de')}
+                {t('planning.eventsFrom', 'Événements à partir de')}
               </Text>
               <DateSlider
                 onDateSelected={setListStartDate}
@@ -411,7 +411,7 @@ function CMPlanningContent({
                 <Text style={[Fonts.p3, Fonts.primary100]}>
                   {t(
                     'planning.cm.emptyListDescription',
-                    'Changez la date ou les filtres pour afficher d’autres événements.',
+                    'Change la date ou les filtres pour afficher d’autres événements.',
                   )}
                 </Text>
               </View>

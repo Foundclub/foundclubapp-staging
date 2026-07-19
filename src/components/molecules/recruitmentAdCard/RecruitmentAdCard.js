@@ -87,7 +87,7 @@ function RecruitmentAdCard({
   const clubLogo = getImageUrl(club?.logo?.url);
   const isCoachAd = String(ad?.audienceType || '').trim().toLowerCase() === 'coach';
   const positionLabel = isCoachAd
-    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, 'Role entraineur')
+    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, 'Rôle entraîneur')
     : (ad.position || 'Poste non spécifié');
   const levelName = ad.level?.name || ad.minLevel || 'Niveau ?';
   const categoryName = ad.category?.name || ad.category || 'Catégorie ?';
@@ -96,7 +96,7 @@ function RecruitmentAdCard({
   const address = getShortAddress(ad.city || club?.city || '');
   const locationLabel = (
     typeof ad.address === 'object' ? ad.address?.label : ad.address
-  ) || address || 'Lieu non precise';
+  ) || address || 'Lieu non précisé';
   const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
   const detectionDateLabel = ad?.event?.date
     ? formatDateWithDayPrefix(new Date(ad.event.date))
@@ -120,7 +120,7 @@ function RecruitmentAdCard({
     playerCtaTextColor = Colors.neutral300;
     playerCtaBorderWidth = 1;
   } else if (applicationState.status === 'accepted') {
-    playerCtaLabel = isCoachAd ? 'Candidature acceptee' : 'Je participe';
+    playerCtaLabel = isCoachAd ? 'Candidature acceptée' : 'Je participe';
     playerCtaBackgroundColor = `${Colors.primary500}18`;
     playerCtaBorderColor = `${Colors.primary500}45`;
     playerCtaTextColor = Colors.primary500;
@@ -175,7 +175,7 @@ function RecruitmentAdCard({
   );
   const playerCtaNode = shouldRenderInteractiveCta ? (
     <TouchableOpacity
-      accessibilityHint="Postuler a cette annonce"
+      accessibilityHint="Postuler à cette annonce"
       accessibilityLabel={playerCtaLabel}
       accessibilityRole="button"
       activeOpacity={0.9}
@@ -280,7 +280,7 @@ function RecruitmentAdCard({
               <View style={[styles.detailItem, styles.detailItemRight]}>
                 <Image source={Images.users} style={[styles.icon, { tintColor: Colors.neutral300 }]} />
                 <Text numberOfLines={1} style={[styles.detailText, styles.detailTextRight]}>
-                  {rightMetaLabel || (isCoachAd ? 'Cadre a preciser' : 'Categorie libre')}
+                  {rightMetaLabel || (isCoachAd ? 'Cadre à preciser' : 'Catégorie libre')}
                 </Text>
               </View>
             </View>

@@ -158,9 +158,9 @@ function EventWizardDetectionSlots({ navigation }) {
       stepIndex={8}
       subtitle={t(
         'eventWizard.steps.detectionSlots.subtitle',
-        'Ajoutez en option des postes recherch\u00e9s et un nombre de places par poste.',
+        'Ajoute en option des postes recherchés et un nombre de places par poste.',
       )}
-      title={t('eventWizard.steps.detectionSlots.title', 'Postes recherch\u00e9s')}
+      title={t('eventWizard.steps.detectionSlots.title', 'Postes recherchés')}
     >
       <View style={stackStyle}>
         <TouchableOpacity
@@ -187,7 +187,7 @@ function EventWizardDetectionSlots({ navigation }) {
               <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8], bodyCopyStyle]}>
                 {t(
                   'eventWizard.steps.detectionSlots.toggleHint',
-                  'Optionnel : les joueurs candidateront ensuite sur un poste pr\u00e9cis.',
+                  'Optionnel : les joueurs candidateront ensuite sur un poste précis.',
                 )}
               </Text>
             </View>
@@ -224,13 +224,13 @@ function EventWizardDetectionSlots({ navigation }) {
                 <View style={{ flex: 1, minWidth: 180, rowGap: 12 }}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                     {selectedPositionsCount > 0
-                      ? t('eventWizard.steps.detectionSlots.summaryFilledTitle', '{{count}} poste(s) configur\u00e9(s)', { count: selectedPositionsCount })
-                      : t('eventWizard.steps.detectionSlots.summaryEmptyTitle', 'Aucun poste s\u00e9lectionn\u00e9')}
+                      ? t('eventWizard.steps.detectionSlots.summaryFilledTitle', '{{count}} poste(s) configuré(s)', { count: selectedPositionsCount })
+                      : t('eventWizard.steps.detectionSlots.summaryEmptyTitle', 'Aucun poste sélectionné')}
                   </Text>
                   <Text style={[Fonts.p4, Fonts.neutral200, helperCopyStyle]}>
                     {selectedPositionsCount > 0
-                      ? t('eventWizard.steps.detectionSlots.summaryFilledHint', '{{count}} place(s) demand\u00e9e(s) sur cette d\u00e9tection.', { count: totalSlots })
-                      : t('eventWizard.steps.detectionSlots.summaryEmptyHint', 'Active des postes ci-dessous ou applique un volume \u00e0 tous les postes.')}
+                      ? t('eventWizard.steps.detectionSlots.summaryFilledHint', '{{count}} place(s) demandée(s) sur cette détection.', { count: totalSlots })
+                      : t('eventWizard.steps.detectionSlots.summaryEmptyHint', 'Active des postes ci-dessous ou applique un volume à tous les postes.')}
                   </Text>
                 </View>
 
@@ -287,7 +287,7 @@ function EventWizardDetectionSlots({ navigation }) {
                     ]}
                   >
                     <Text style={[Fonts.p4, Fonts.neutral200]}>
-                      {t('eventWizard.steps.detectionSlots.summaryCapacity', 'Capacite {{count}}', { count: capacityLimit })}
+                      {t('eventWizard.steps.detectionSlots.summaryCapacity', 'Capacité {{count}}', { count: capacityLimit })}
                     </Text>
                   </View>
                 ) : null}
@@ -309,13 +309,13 @@ function EventWizardDetectionSlots({ navigation }) {
                 <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
                   {t(
                     'eventWizard.steps.detectionSlots.capacityWarning',
-                    'Le total des places par poste depasse la capacite de l evenement.',
+                    'Le total des places par poste dépasse la capacité de l événement.',
                   )}
                 </Text>
                 <Text style={[Fonts.p4, Fonts.neutral200, { lineHeight: 18, marginTop: 8 }]}>
                   {t(
                     'eventWizard.steps.detectionSlots.capacityWarningHint',
-                    'Augmente la capacite ou reduis les quantites pour garder une detection coherente.',
+                    'Augmente la capacité ou reduis les quantités pour garder une détection coherente.',
                   )}
                 </Text>
               </View>
@@ -331,12 +331,12 @@ function EventWizardDetectionSlots({ navigation }) {
               >
                 <View style={{ rowGap: 8 }}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {t('eventWizard.steps.detectionSlots.quickActionsTitle', 'Appliquer a tous les postes')}
+                    {t('eventWizard.steps.detectionSlots.quickActionsTitle', 'Appliquer à tous les postes')}
                   </Text>
                   <Text style={[Fonts.p4, Fonts.neutral200, helperCopyStyle]}>
                     {t(
                       'eventWizard.steps.detectionSlots.quickActionsHint',
-                      'Le compteur met a jour toute la liste instantanement. 0 reinitialise la selection globale.',
+                      'Le compteur met à jour toute la liste instantanement. 0 réinitialise la sélection globale.',
                     )}
                   </Text>
                 </View>
@@ -439,7 +439,7 @@ function EventWizardDetectionSlots({ navigation }) {
             ) : (
               <View style={[ApplicationStyle.card, surfaceStyle, compactCardInsetStyle]}>
                 <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
-                  {t('eventWizard.steps.detectionSlots.emptyPositions', 'Aucun poste n est actuellement defini pour ce sport.')}
+                  {t('eventWizard.steps.detectionSlots.emptyPositions', 'Aucun poste n est actuellement défini pour ce sport.')}
                 </Text>
               </View>
             )}

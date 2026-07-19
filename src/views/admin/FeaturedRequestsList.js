@@ -71,8 +71,8 @@ function FeaturedRequestsList() {
       queryClient.invalidateQueries({ queryKey: ['admin-featured-requests-count'] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
       Alert.alert(
-        isApproved ? 'Demande validee' : 'Demande refusee',
-        isApproved ? "L'evenement est maintenant mis en avant." : 'La demande a ete rejetee.',
+        isApproved ? 'Demande validée' : 'Demande refusée',
+        isApproved ? "L'événement est maintenant mis en avant." : 'La demande a été rejetée.',
         [{ onPress: () => refetch(), text: 'OK' }],
       );
     },

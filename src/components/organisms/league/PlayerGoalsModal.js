@@ -52,7 +52,7 @@ function PlayerGoalsModal({
 
     if (currentTotal !== totalGoals) {
       showBanner({
-        body: `Le total des buts (${currentTotal}) ne correspond pas au score (${totalGoals}). Veuillez corriger.`,
+        body: `Le total des buts (${currentTotal}) ne correspond pas au score (${totalGoals}). Merci de corriger.`,
         title: 'Erreur',
         tone: 'error',
       });

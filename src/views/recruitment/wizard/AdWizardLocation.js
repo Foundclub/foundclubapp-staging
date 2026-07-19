@@ -24,13 +24,13 @@ import {
 /* eslint-enable perfectionist/sort-imports */
 
 const getFacilityAddressLabel = (address) => {
-  if (!address) return 'Adresse non renseignee';
+  if (!address) return 'Adresse non renseignée';
   if (typeof address === 'string') return address;
   return (
     address?.label
     || address?.description
     || address?.address
-    || 'Adresse non renseignee'
+    || 'Adresse non renseignée'
   );
 };
 
@@ -103,7 +103,7 @@ function AdWizardLocation({ navigation }) {
   const handleNext = () => {
     if (!canGoNext) {
       showBanner({
-        body: 'Selectionnez une installation du club ou saisissez une adresse pour continuer.',
+        body: 'Sélectionne une installation du club ou saisis une adresse pour continuer.',
         title: 'Lieu requis',
         tone: 'error',
       });
@@ -145,7 +145,7 @@ function AdWizardLocation({ navigation }) {
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardLocationStepIndex(state)}
-      subtitle="Selectionnez une installation du club ou renseignez une adresse claire pour situer votre annonce."
+      subtitle="Sélectionne une installation du club ou renseigne une adresse claire pour situer ton annonce."
       title="Lieu de publication"
     >
       <View style={[Spaces.gap[12], Spaces.paddingBottom[32]]}>
@@ -163,7 +163,7 @@ function AdWizardLocation({ navigation }) {
 
         {!canGoNext ? (
           <Text style={[Fonts.p3, Fonts.warning500]}>
-            Selectionnez une installation du club ou saisissez une adresse exterieure pour continuer.
+            Sélectionne une installation du club ou saisis une adresse extérieure pour continuer.
           </Text>
         ) : null}
       </View>

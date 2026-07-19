@@ -145,7 +145,7 @@ function TeamList({ navigation, route }) {
         </View>
 
         <OnboardingWrapper
-          description="Consultez vos équipes, les demandes et ouvrez chaque fiche équipe."
+          description="Consulte tes équipes, les demandes et ouvre chaque fiche équipe."
           id="team-list-main-content"
           order={1}
           spotlight={{
@@ -170,7 +170,7 @@ function TeamList({ navigation, route }) {
             style={getFloatingActionContainerStyle(floatingButtonBottom, { zIndex: 1100 })}
           >
             <TouchableOpacity
-              accessibilityLabel={t('teamList.actions.add', 'Ajouter une equipe')}
+              accessibilityLabel={t('teamList.actions.add', 'Ajouter une équipe')}
               accessibilityRole="button"
               activeOpacity={0.85}
               onPress={handleAddTeam}
@@ -237,7 +237,7 @@ function TeamList({ navigation, route }) {
         ) : null}
 
         <GlobalPromptModal
-          body={`${assignmentTrainerName || 'Cet entraîneur'} est maintenant dans votre club.\n\n1. Ouvrez une équipe.\n2. Appuyez sur "Modifier".\n3. Dans la section "Entraîneurs", ajoutez-le puis validez.`}
+          body={`${assignmentTrainerName || 'Cet entraîneur'} est maintenant dans ton club.\n\n1. Ouvre une équipe.\n2. Appuie sur "Modifier".\n3. Dans la section "Entraîneurs", ajoute-le puis valide.`}
           inlineOnAndroid
           onRequestClose={dismissTrainerGuide}
           primaryAction={{

@@ -77,7 +77,7 @@ function UserPosition({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour votre profil.');
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -219,8 +219,8 @@ function UserPosition({ navigation, route }) {
           isLoading={updateUserMutation.isPending}
           onPress={handleNext}
           title={selectedPositions.length > 1
-            ? t('common.actions.nextCount', `Suivant (${selectedPositions.length} postes)`)
-            : t('common.actions.next', 'Suivant')}
+            ? t('common.actions.nextCount', `Continuer (${selectedPositions.length} postes)`)
+            : t('common.actions.next', 'Continuer')}
           variant="Primary"
         />
         <Button

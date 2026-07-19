@@ -65,7 +65,7 @@ const getParticipationLabel = (effectiveStatus) => {
   if (effectiveStatus === 'accepted') return 'Tu participes';
   if (effectiveStatus === 'pending') return 'En attente de validation';
   if (effectiveStatus === 'missing') return 'Tu es signale absent';
-  return 'Aucune reponse';
+  return 'Aucune réponse';
 };
 
 const getTournamentTeamStatusLabel = (status) => {
@@ -375,7 +375,7 @@ function EventDetails({ navigation, route }) {
     if (!eventId || !compositionTeamId) return;
 
     if (isStaffCompositionFetching) {
-      window.alert('La composition d\'equipes est encore en cours de chargement.');
+      window.alert('La composition d\'équipes est encore en cours de chargement.');
       return;
     }
 
@@ -416,7 +416,7 @@ function EventDetails({ navigation, route }) {
         canEdit: true,
         compositionIntent: staffCompositionPayload?.published?.mode || 'manual',
         editorSource: 'published',
-        editorSourceLabel: "Composition d'equipes publiee",
+        editorSourceLabel: "Composition d'équipes publiée",
         players: Array.isArray(staffCompositionPayload?.published?.snapshotPlayers) ? staffCompositionPayload.published.snapshotPlayers : [],
         readOnly: false,
       });
@@ -435,7 +435,7 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
-    const wantsAuto = window.confirm('OK pour creer les equipes automatiquement ? Clique sur Annuler pour passer en mode manuel.');
+    const wantsAuto = window.confirm('OK pour créer les équipes automatiquement ? Clique sur Annuler pour passer en mode manuel.');
     openBoard(staffCompositionPayload?.bootstrap?.composition || null, {
       canEdit: true,
       compositionIntent: wantsAuto ? 'auto' : 'manual',
@@ -571,7 +571,7 @@ function EventDetails({ navigation, route }) {
     try {
       await createParticipationMutation.mutateAsync();
     } catch (joinError) {
-      setActionError(joinError?.message || 'Impossible de rejoindre cet evenement.');
+      setActionError(joinError?.message || 'Impossible de rejoindre cet événement.');
     }
   }, [createParticipationMutation]);
 
@@ -590,7 +590,7 @@ function EventDetails({ navigation, route }) {
 
     const externalParticipantLimit = Number.parseInt(String(trainingOpenLimitDraft || '').trim(), 10);
     if (!Number.isFinite(externalParticipantLimit) || externalParticipantLimit < 1) {
-      setActionError('Indique combien de places externes tu veux ouvrir pour cet entrainement.');
+      setActionError('Indique combien de places externes tu veux ouvrir pour cet entraînement.');
       return;
     }
 
@@ -601,7 +601,7 @@ function EventDetails({ navigation, route }) {
         sessionStatus: 'open',
       });
     } catch (mutationError) {
-      setActionError(mutationError?.message || 'Impossible d\'ouvrir cet entrainement.');
+      setActionError(mutationError?.message || 'Impossible d\'ouvrir cet entraînement.');
     }
   }, [
     eventId,
@@ -618,7 +618,7 @@ function EventDetails({ navigation, route }) {
         sessionStatus: 'closed',
       });
     } catch (mutationError) {
-      setActionError(mutationError?.message || 'Impossible de fermer cet entrainement.');
+      setActionError(mutationError?.message || 'Impossible de fermer cet entraînement.');
     }
   }, [eventId, updateTrainingMutation]);
 
@@ -632,7 +632,7 @@ function EventDetails({ navigation, route }) {
       });
       await SharePlatform.share({
         message: shareMessage,
-        title: event?.name || 'Evenement FoundClub',
+        title: event?.name || 'Événement FoundClub',
         url: eventLink,
       });
     } catch (_error) {
@@ -653,14 +653,14 @@ function EventDetails({ navigation, route }) {
   }, [eventId, navigation]);
 
   const handleCreateTournamentTeam = useCallback(async () => {
-    const proposedName = window.prompt('Nom de l equipe tournoi');
+    const proposedName = window.prompt('Nom de l équipe tournoi');
     const trimmedName = String(proposedName || '').trim();
     if (!trimmedName) return;
     setActionError('');
     try {
       await createTournamentTeamMutation.mutateAsync({ name: trimmedName });
     } catch (mutationError) {
-      setActionError(mutationError?.message || 'Impossible de creer cette equipe tournoi.');
+      setActionError(mutationError?.message || 'Impossible de créer cette équipe tournoi.');
     }
   }, [createTournamentTeamMutation]);
 
@@ -669,7 +669,7 @@ function EventDetails({ navigation, route }) {
     const optionsText = availableTournamentSourceTeams
       .map((team, index) => `${index + 1}. ${team?.name || 'Equipe'}`)
       .join('\n');
-    const rawChoice = window.prompt(`Choisis une equipe a inscrire :\n${optionsText}`);
+    const rawChoice = window.prompt(`Choisis une équipe à inscrire :\n${optionsText}`);
     const choiceIndex = Number.parseInt(String(rawChoice || '').trim(), 10) - 1;
     const sourceTeam = availableTournamentSourceTeams[choiceIndex];
     if (!sourceTeam?.documentId) return;
@@ -677,7 +677,7 @@ function EventDetails({ navigation, route }) {
     try {
       await registerTournamentTeamMutation.mutateAsync(sourceTeam.documentId);
     } catch (mutationError) {
-      setActionError(mutationError?.message || 'Impossible d inscrire cette equipe.');
+      setActionError(mutationError?.message || 'Impossible d inscrire cette équipe.');
     }
   }, [availableTournamentSourceTeams, registerTournamentTeamMutation]);
 
@@ -686,7 +686,7 @@ function EventDetails({ navigation, route }) {
     try {
       await reviewTournamentTeamMutation.mutateAsync({ status, teamDocumentId });
     } catch (mutationError) {
-      setActionError(mutationError?.message || 'Impossible de mettre a jour cette equipe.');
+      setActionError(mutationError?.message || 'Impossible de mettre à jour cette équipe.');
     }
   }, [reviewTournamentTeamMutation]);
 
@@ -740,7 +740,7 @@ function EventDetails({ navigation, route }) {
             ))}
           </div>
           <div style={{ color: mutedTextColor, fontSize: 13, lineHeight: 1.5 }}>
-            Les identites des participants sont masquees par l organisateur.
+            Les identités des participants sont masquees par l organisateur.
           </div>
         </div>
       );
@@ -812,7 +812,7 @@ function EventDetails({ navigation, route }) {
               padding: 16,
             }}
           >
-            <span>Evenement cree. Verifie les derniers details avant de le partager.</span>
+            <span>Événement crée. Vérifie les derniers détails avant de le partager.</span>
             <button
               onClick={() => navigation.navigate(RouteNames.MyEventList)}
               style={{ ...outlineButtonStyle, padding: '8px 14px' }}
@@ -1063,7 +1063,7 @@ function EventDetails({ navigation, route }) {
             background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, padding: 22,
           }}
           >
-            Chargement de l evenement...
+            Chargement de l événement...
           </section>
         ) : null}
 
@@ -1073,10 +1073,10 @@ function EventDetails({ navigation, route }) {
           }}
           >
             <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 22 }}>
-              Evenement introuvable
+              Événement introuvable
             </div>
             <div>
-              Cet evenement n est plus disponible ou n a pas pu etre charge.
+              Cet événement n est plus disponible ou n a pas pu être charge.
             </div>
           </section>
         ) : null}
@@ -1110,12 +1110,12 @@ function EventDetails({ navigation, route }) {
                 >
                   <div style={{ display: 'grid', gap: 4 }}>
                     <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                      {trainingOpenConfig.isOpenTraining ? 'Entrainement ouvert' : 'Entrainement prive'}
+                      {trainingOpenConfig.isOpenTraining ? 'Entraînement ouvert' : 'Entraînement prive'}
                     </strong>
                     <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
                       {trainingOpenConfig.isOpenTraining
                         ? 'Les joueurs externes peuvent rejoindre selon le quota et le mode de validation choisis.'
-                        : 'Ouvre l entrainement pour accueillir des joueurs externes sans compter les membres de tes equipes.'}
+                        : 'Ouvre l entraînement pour accueillir des joueurs externes sans compter les membres de tes équipes.'}
                     </span>
                   </div>
 
@@ -1123,7 +1123,7 @@ function EventDetails({ navigation, route }) {
                     <span style={{ color: softTextColor, fontSize: 14 }}>
                       {trainingOpenConfig.isOpenTraining
                         ? `${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`
-                        : `Dernier reglage memorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`}
+                        : `Dernier reglage mémorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`}
                     </span>
                   ) : null}
 
@@ -1138,7 +1138,7 @@ function EventDetails({ navigation, route }) {
                     >
                       {updateTrainingMutation.isPending
                         ? 'Enregistrement...'
-                        : (trainingOpenConfig.isOpenTraining ? 'Fermer l entrainement' : 'Ouvrir l entrainement')}
+                        : (trainingOpenConfig.isOpenTraining ? 'Fermer l entraînement' : 'Ouvrir l entraînement')}
                     </button>
                   </div>
 
@@ -1225,10 +1225,10 @@ function EventDetails({ navigation, route }) {
                     </strong>
                     <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
                       {staffCompositionPayload?.draft
-                        ? 'Un brouillon existe deja. Reprends-le, ajuste les equipes puis publie la version finale.'
+                        ? 'Un brouillon existe déjà. Reprends-le, ajuste les équipes puis publie la version finale.'
                         : compositionEligiblePlayerCount === 0
-                          ? 'Tu peux deja creer les equipes meme sans participant: les postes resteront libres et se completeront ensuite.'
-                          : 'Cree plusieurs equipes a la main ou genere-les automatiquement, puis publie la version finale.'}
+                          ? 'Tu peux déjà créer les équipes même sans participant: les postes resteront libres et se completeront ensuite.'
+                          : 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.'}
                     </span>
                   </div>
 
@@ -1263,7 +1263,7 @@ function EventDetails({ navigation, route }) {
                         style={primaryButtonStyle}
                         type="button"
                       >
-                        {isStaffCompositionFetching ? 'Chargement...' : "Gerer la composition d'equipes"}
+                        {isStaffCompositionFetching ? 'Chargement...' : "Gérer la composition d'équipes"}
                       </button>
                     ) : null}
 
@@ -1275,7 +1275,7 @@ function EventDetails({ navigation, route }) {
                           compositionIntent: null,
                           editorMode: 'event',
                           editorSource: 'published',
-                          editorSourceLabel: "Composition d'equipes publiee",
+                          editorSourceLabel: "Composition d'équipes publiée",
                           eventId,
                           eventName: compositionEventLabel,
                           existingComposition: convocationBranches[0]?.published || null,
@@ -1288,7 +1288,7 @@ function EventDetails({ navigation, route }) {
                         style={outlineButtonStyle}
                         type="button"
                       >
-                        Voir la composition publiee
+                        Voir la composition publiée
                       </button>
                     ) : null}
                   </div>
@@ -1358,14 +1358,14 @@ function EventDetails({ navigation, route }) {
                 <h2 style={sectionTitleStyle}>Infos rapides</h2>
                 <div style={{ display: 'grid', gap: 12 }}>
                   {[
-                    { label: 'Type', value: event?.type?.name || 'Non defini' },
-                    { label: 'Equipe', value: event?.team?.name || 'Non definie' },
-                    { label: 'Section', value: event?.team?.section?.name || 'Non definie' },
+                    { label: 'Type', value: event?.type?.name || 'Non défini' },
+                    { label: 'Equipe', value: event?.team?.name || 'Non définie' },
+                    { label: 'Section', value: event?.team?.section?.name || 'Non définie' },
                     { label: 'Capacite', value: event?.capacity ?? 'Libre' },
                     ...(!trainingOpenConfig.isOpenTraining
-                      ? [{ label: 'Joueurs attendus', value: event?.totalPlayers ?? 'Non defini' }]
+                      ? [{ label: 'Joueurs attendus', value: event?.totalPlayers ?? 'Non défini' }]
                       : []),
-                    { label: 'Prix / personne', value: event?.pricePerPerson != null ? `${event.pricePerPerson} EUR` : 'Gratuit ou non defini' },
+                    { label: 'Prix / personne', value: event?.pricePerPerson != null ? `${event.pricePerPerson} EUR` : 'Gratuit ou non défini' },
                   ].map((item, index, rows) => (
                     <div
                       key={item.label}
@@ -1475,7 +1475,7 @@ function EventDetails({ navigation, route }) {
                       }}
                       type="button"
                     >
-                      {canEdit ? 'Piloter la competition' : 'Voir la competition'}
+                      {canEdit ? 'Piloter la compétition' : 'Voir la compétition'}
                     </button>
                     {canEdit ? (
                       <button
@@ -1483,7 +1483,7 @@ function EventDetails({ navigation, route }) {
                         style={primaryButtonStyle}
                         type="button"
                       >
-                        Modifier les parametres
+                        Modifier les paramètres
                       </button>
                     ) : null}
                     {managedTournamentTeam?.documentId ? (
@@ -1499,7 +1499,7 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        Gerer mon equipe
+                        Gérer mon équipe
                       </button>
                     ) : null}
                     {!managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
@@ -1515,7 +1515,7 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        Voir mon equipe
+                        Voir mon équipe
                       </button>
                     ) : null}
                     {!managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
@@ -1535,7 +1535,7 @@ function EventDetails({ navigation, route }) {
                           currentUserPendingTournamentTeam?.members?.find(
                             (member) => member?.user?.documentId === userData?.documentId,
                           )?.responseStatus,
-                        ) === 'invited' ? 'Repondre a mon invitation' : 'Suivre ma demande'}
+                        ) === 'invited' ? 'Répondre à mon invitation' : 'Suivre ma demande'}
                       </button>
                     ) : null}
                     {canRegisterTournamentSourceTeam ? (
@@ -1553,7 +1553,7 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        Inscrire mon equipe
+                        Inscrire mon équipe
                       </button>
                     ) : null}
                     {canCreateCustomTournamentTeam ? (
@@ -1571,13 +1571,13 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        Creer une equipe
+                        Créer une équipe
                       </button>
                     ) : null}
                   </div>
                   {tournamentTeams.length === 0 ? (
                     <div style={{ color: mutedTextColor, fontSize: 14 }}>
-                      Aucune equipe n est encore inscrite.
+                      Aucune équipe n est encore inscrite.
                     </div>
                   ) : (
                     <div style={{ display: 'grid', gap: 10 }}>
@@ -1605,12 +1605,12 @@ function EventDetails({ navigation, route }) {
                             >
                               <div style={{ display: 'grid', gap: 4 }}>
                                 <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
-                                  {team?.name || 'Equipe tournoi'}
+                                  {team?.name || 'Équipe tournoi'}
                                 </span>
                                 <span style={{ color: mutedTextColor, fontSize: 13 }}>
                                   {team?.sourceType === 'club_team'
-                                    ? `Depuis ${team?.sourceTeam?.name || 'une equipe club'}`
-                                    : 'Equipe ephemere'}
+                                    ? `Depuis ${team?.sourceTeam?.name || 'une équipe club'}`
+                                    : 'Équipe éphémère'}
                                 </span>
                               </div>
                               <span style={{ color: accentColor, fontSize: 13 }}>
@@ -1665,7 +1665,7 @@ function EventDetails({ navigation, route }) {
                                 }}
                                 type="button"
                               >
-                                Ouvrir l equipe
+                                Ouvrir l équipe
                               </button>
                               {canEdit && status === 'pending' ? (
                                 <>
@@ -1708,9 +1708,9 @@ function EventDetails({ navigation, route }) {
                 background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
               }}
               >
-                <h2 style={sectionTitleStyle}>Equipes invitees</h2>
+                <h2 style={sectionTitleStyle}>Équipes invitées</h2>
                 {invitedTeams.length === 0 ? (
-                  <div style={{ color: mutedTextColor }}>Aucune equipe invitee.</div>
+                  <div style={{ color: mutedTextColor }}>Aucune équipe invitée.</div>
                 ) : (
                   <div style={{ display: 'grid', gap: 10 }}>
                     {invitedTeams.map((team) => (

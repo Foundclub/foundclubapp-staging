@@ -301,7 +301,7 @@ function Messaging({ navigation, route }) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingChatAction, setPendingChatAction] = useState({ chatId: '', type: '' });
-  const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Veuillez reessayer plus tard.');
+  const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Merci de réessayer plus tard.');
 
   const resolveMessagingErrorMessage = (sourceError, fallbackMessage = '') => {
     const resolvedMessage = getErrorMessage(sourceError, 'generic');
@@ -350,7 +350,7 @@ function Messaging({ navigation, route }) {
 
   const getEmptyListMessage = () => {
     if (searchQuery.trim()) {
-      return t('messaging.noSearchResults', 'Aucune conversation trouvee.');
+      return t('messaging.noSearchResults', 'Aucune conversation trouvée.');
     }
 
     if (chatScopeFilter === 'league') {
@@ -586,7 +586,7 @@ function Messaging({ navigation, route }) {
         ]}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
-          {t('common.retry', 'R\u00E9essayer')}
+          {t('common.retry', 'Réessayer')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -768,7 +768,7 @@ function Messaging({ navigation, route }) {
           {t('messaging.title')}
         </Text>
         <OnboardingWrapper
-          description="Recherchez une conversation, ouvrez un chat et utilisez les actions rapides."
+          description="Recherche une conversation, ouvre un chat et utilise les actions rapides."
           id="messaging-main-content"
           order={1}
           spotlight={{

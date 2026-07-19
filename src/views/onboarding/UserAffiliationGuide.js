@@ -217,7 +217,7 @@ function UserAffiliationGuideContent({ navigation }) {
         t('common.error', 'Erreur'),
         error?.message || t(
           'onboardingAffiliation.feedback.requestError',
-          'Impossible d\'envoyer votre demande.',
+          'Impossible d\'envoyer ta demande.',
         ),
       );
     },
@@ -226,10 +226,10 @@ function UserAffiliationGuideContent({ navigation }) {
       setRequestedName('');
       setComment('');
       Alert.alert(
-        t('onboardingAffiliation.feedback.requestSentTitle', 'Demande envoy\u00E9e'),
+        t('onboardingAffiliation.feedback.requestSentTitle', 'Demande envoyée'),
         t(
           'onboardingAffiliation.feedback.requestSentDescription',
-          'Votre demande a \u00E9t\u00E9 envoy\u00E9e aux superadmins. Vous recevrez une notification.',
+          'Ta demande a été envoyée aux superadmins. Tu recevras une notification.',
         ),
         [{
           onPress: handleContinueLater,
@@ -374,11 +374,11 @@ function UserAffiliationGuideContent({ navigation }) {
         description={isClubFlow
           ? t(
             'onboardingAffiliation.tutorial.stepNotFoundDescriptionClub',
-            'Si tu ne trouves pas ton club, envoie une demande guidÃ©e aux superadmins.',
+            'Si tu ne trouves pas ton club, envoie une demande guidée aux superadmins.',
           )
           : t(
             'onboardingAffiliation.tutorial.stepNotFoundDescriptionTeam',
-            'Si tu ne trouves pas ton Ã©quipe, envoie une demande guidÃ©e aux superadmins.',
+            'Si tu ne trouves pas ton équipe, envoie une demande guidée aux superadmins.',
           )}
         id="affiliation-not-found-action"
         order={3}
@@ -390,7 +390,7 @@ function UserAffiliationGuideContent({ navigation }) {
         }}
         title={isClubFlow
           ? t('onboardingAffiliation.tutorial.stepNotFoundTitleClub', 'Je ne trouve pas mon club')
-          : t('onboardingAffiliation.tutorial.stepNotFoundTitleTeam', 'Je ne trouve pas mon Ã©quipe')}
+          : t('onboardingAffiliation.tutorial.stepNotFoundTitleTeam', 'Je ne trouve pas mon équipe')}
       >
         <Button
           accessibilityHint={isClubFlow
@@ -400,15 +400,15 @@ function UserAffiliationGuideContent({ navigation }) {
             )
             : t(
               'onboardingAffiliation.a11y.notFoundHintTeam',
-              'Envoie une demande d\'aide si ton Ã©quipe est introuvable.',
+              'Envoie une demande d\'aide si ton équipe est introuvable.',
             )}
           accessibilityLabel={isClubFlow
             ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
-            : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon Ã©quipe')}
+            : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
           onPress={handleOpenNotFoundModal}
           title={isClubFlow
             ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
-            : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon Ã©quipe')}
+            : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
           variant="Secondary"
         />
       </AffiliationTutorialStep>
@@ -417,7 +417,7 @@ function UserAffiliationGuideContent({ navigation }) {
       <Button
         accessibilityHint={t(
           'onboardingAffiliation.a11y.continueLaterHint',
-          'Passe cette Ã©tape et continue l\'onboarding.',
+          'Passe cette étape et continue l\'onboarding.',
         )}
         accessibilityLabel={t('common.actions.continueLater', 'Continuer plus tard')}
         onPress={handleContinueLater}
@@ -433,7 +433,7 @@ function UserAffiliationGuideContent({ navigation }) {
         <Button
           accessibilityHint={t(
             'onboardingAffiliation.a11y.modalCancelHint',
-            'Ferme la fenetre de demande.',
+            'Ferme la fenêtre de demande.',
           )}
           accessibilityLabel={t('common.actions.cancel', 'Annuler')}
           onPress={() => setIsNotFoundModalVisible(false)}
@@ -1037,7 +1037,7 @@ function UserAffiliationGuideContent({ navigation }) {
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t(
               'onboardingAffiliation.modal.description',
-              'Donnez un maximum de contexte pour aider les superadmins.',
+              'Donne un maximum de contexte pour aider les superadmins.',
             )}
           </Text>
           <Input

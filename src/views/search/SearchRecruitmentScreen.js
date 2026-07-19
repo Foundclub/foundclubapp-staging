@@ -42,14 +42,14 @@ function SearchRecruitmentScreen({ navigation, route }) {
         tutorialSteps={{
           header: {
             description: canSearchProfiles
-              ? 'Retrouve ici les profils, les opportunites de recrutement et les annonces de tes equipes.'
+              ? 'Retrouve ici les profils, les opportunités de recrutement et les annonces de tes équipes.'
               : 'Retrouve ici les annonces de recrutement et le suivi de tes candidatures.',
             id: 'search-recruitment-header',
             order: 1,
             title: 'Recherche recrutement',
           },
           switcher: {
-            description: 'Changez de type de recherche en un geste.',
+            description: 'Change de type de recherche en un geste.',
             id: 'search-recruitment-switcher',
             order: 2,
             title: 'Types de recherche',
@@ -58,8 +58,8 @@ function SearchRecruitmentScreen({ navigation, route }) {
       >
         <OnboardingWrapper
           description={canSearchProfiles
-            ? 'Utilisez les onglets Profils, Opportunites, Mes annonces et Mes candidatures pour piloter votre recrutement.'
-            : 'Utilisez les onglets Annonces et Mes candidatures pour suivre vos opportunites.'}
+            ? 'Utilise les onglets Profils, Opportunités, Mes annonces et Mes candidatures pour piloter ton recrutement.'
+            : 'Utilise les onglets Annonces et Mes candidatures pour suivre tes opportunités.'}
           id="search-recruitment-content"
           order={3}
           spotlight={{

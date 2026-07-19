@@ -104,17 +104,17 @@ const licenseRoleFilterKeys = ['player', 'coach', 'president'];
 const licenseCampaignWizardStepCatalog = {
   amount: {
     key: 'amount',
-    subtitle: 'Definis le prix par defaut applique aux membres concernes.',
+    subtitle: 'Définis le prix par défaut applique aux membres concernés.',
     title: 'Prix',
   },
   description: {
     key: 'description',
-    subtitle: 'Redige le texte visible par les membres dans leur espace cotisation.',
+    subtitle: 'Rédigé le texte visible par les membres dans leur espace cotisation.',
     title: 'Description',
   },
   documents: {
     key: 'documents',
-    subtitle: 'Ajoute les pieces a fournir pour completer le dossier.',
+    subtitle: 'Ajoute les pièces à fournir pour compléter le dossier.',
     title: 'Documents',
   },
   endDate: {
@@ -124,22 +124,22 @@ const licenseCampaignWizardStepCatalog = {
   },
   installmentsOptions: {
     key: 'installmentsOptions',
-    subtitle: 'Ajuste les options avancees du paiement fractionne.',
-    title: 'Options d echeancier',
+    subtitle: 'Ajuste les options avancées du paiement fractionne.',
+    title: 'Options d échéancier',
   },
   installmentsSchedule: {
     key: 'installmentsSchedule',
-    subtitle: 'Renseigne chaque echeance avec son libelle, son montant et sa date limite.',
+    subtitle: 'Renseigne chaque échéance avec son libellé, son montant et sa date limite.',
     title: 'Echeances',
   },
   installmentsSetup: {
     key: 'installmentsSetup',
-    subtitle: 'Choisis le nombre d echeances et leur frequence.',
-    title: 'Nombre d echeances',
+    subtitle: 'Choisis le nombre d échéances et leur fréquence.',
+    title: 'Nombre d échéances',
   },
   installmentsToggle: {
     key: 'installmentsToggle',
-    subtitle: 'Decide si la campagne autorise le paiement en plusieurs fois.',
+    subtitle: 'Décide si la campagne autorise le paiement en plusieurs fois.',
     title: 'Paiement fractionne',
   },
   internalNote: {
@@ -149,17 +149,17 @@ const licenseCampaignWizardStepCatalog = {
   },
   name: {
     key: 'name',
-    subtitle: 'Donne un nom clair a la campagne de cotisation.',
+    subtitle: 'Donne un nom clair à la campagne de cotisation.',
     title: 'Nom',
   },
   overdueDate: {
     key: 'overdueDate',
-    subtitle: 'Choisis a partir de quand un dossier passe officiellement en retard.',
+    subtitle: 'Choisis à partir de quand un dossier passe officiellement en retard.',
     title: 'Retard',
   },
   paymentInstructions: {
     key: 'paymentInstructions',
-    subtitle: 'Precise les consignes liees aux moyens de paiement actives.',
+    subtitle: 'Précise les consignes liées aux moyens de paiement actives.',
     title: 'Consignes',
   },
   paymentMethods: {
@@ -179,27 +179,27 @@ const licenseCampaignWizardStepCatalog = {
   },
   period: {
     key: 'period',
-    subtitle: 'Definis la periode de la campagne puis confirme la saison detectee pour ton club.',
+    subtitle: 'Définis la période de la campagne puis confirme la saison détectée pour ton club.',
     title: 'Periode',
   },
   pricingRules: {
     key: 'pricingRules',
-    subtitle: 'Ajoute les exceptions de tarif par role, equipe, categorie, section ou niveau.',
+    subtitle: 'Ajoute les exceptions de tarif par rôle, équipe, catégorie, section ou niveau.',
     title: 'Tarifs speciaux',
   },
   reminderMessage: {
     key: 'reminderMessage',
-    subtitle: 'Redige le message utilise dans les relances automatiques.',
+    subtitle: 'Rédigé le message utilise dans les relances automatiques.',
     title: 'Message',
   },
   reminderStatuses: {
     key: 'reminderStatuses',
     subtitle: 'Choisis quels dossiers doivent recevoir des relances.',
-    title: 'Statuts a relancer',
+    title: 'Statuts à relancer',
   },
   reminderTiming: {
     key: 'reminderTiming',
-    subtitle: 'Regle la cadence des relances avant et apres l echeance.',
+    subtitle: 'Règle la cadence des relances avant et après l échéance.',
     title: 'Cadence de relance',
   },
   reminderToggle: {
@@ -209,37 +209,37 @@ const licenseCampaignWizardStepCatalog = {
   },
   review: {
     key: 'review',
-    subtitle: 'Verifie l ensemble avant d enregistrer, programmer ou ouvrir la campagne.',
+    subtitle: 'Vérifie l ensemble avant d enregistrer, programmer ou ouvrir la campagne.',
     title: 'Recap',
   },
   season: {
     key: 'season',
-    subtitle: 'On detecte une saison a partir des dates, puis tu peux la confirmer ou l ajuster selon le fonctionnement du club.',
+    subtitle: 'On détecte une saison à partir des dates, puis tu peux la confirmer ou l ajuster selon le fonctionnement du club.',
     title: 'Saison',
   },
   startDate: {
     key: 'startDate',
-    subtitle: 'Choisis la date de debut de la campagne.',
-    title: 'Date de debut',
+    subtitle: 'Choisis la date de début de la campagne.',
+    title: 'Date de début',
   },
   targetCategories: {
     key: 'targetCategories',
-    subtitle: 'Filtre la campagne par categorie si besoin.',
+    subtitle: 'Filtre la campagne par catégorie si besoin.',
     title: 'Categories',
   },
   targetLevels: {
     key: 'targetLevels',
-    subtitle: 'Ajoute un filtre par niveau si necessaire.',
+    subtitle: 'Ajoute un filtre par niveau si nécessaire.',
     title: 'Niveaux',
   },
   targetMode: {
     key: 'targetMode',
-    subtitle: 'Decide si la campagne concerne tout le club ou selectionne directement les profils vises.',
+    subtitle: 'Décide si la campagne concerne tout le club ou sélectionne directement les profils vises.',
     title: 'Public concerne',
   },
   targetRoles: {
     key: 'targetRoles',
-    subtitle: 'Filtre les membres par role.',
+    subtitle: 'Filtre les membres par rôle.',
     title: 'Roles',
   },
   targetSections: {
@@ -249,12 +249,12 @@ const licenseCampaignWizardStepCatalog = {
   },
   targetTeams: {
     key: 'targetTeams',
-    subtitle: 'Filtre les membres par equipe.',
+    subtitle: 'Filtre les membres par équipe.',
     title: 'Equipes',
   },
   type: {
     key: 'type',
-    subtitle: 'Choisis le type de campagne: licence, adhesion, equipement ou autre.',
+    subtitle: 'Choisis le type de campagne: licence, adhésion, équipement ou autre.',
     title: 'Type',
   },
 };
@@ -300,30 +300,30 @@ const describeHelloAssoReadiness = (snapshot) => {
     return 'La connexion HelloAsso n est pas encore configuree pour cette campagne.';
   }
   if (readiness === 'ready') {
-    return 'Connexion HelloAsso validee. La campagne peut utiliser le paiement in-app.';
+    return 'Connexion HelloAsso validée. La campagne peut utiliser le paiement in-app.';
   }
   if (readiness === 'webhook_pending') {
-    return 'Connexion validee. Le premier paiement doit encore confirmer le webhook.';
+    return 'Connexion validée. Le premier paiement doit encore confirmer le webhook.';
   }
   if (readiness === 'webhook_stale') {
-    return 'Connexion validee, mais aucun webhook recent n a ete vu. Un test de paiement est recommande.';
+    return 'Connexion validée, mais aucun webhook récent n a été vu. Un test de paiement est recommandé.';
   }
   if (readiness === 'oauth_failed') {
-    return 'OAuth HelloAsso en erreur. Verifie le client id et le client secret.';
+    return 'OAuth HelloAsso en erreur. Vérifie le client id et le client secret.';
   }
   if (readiness === 'checkout_failed') {
-    return 'Le test de checkout HelloAsso a echoue. Verifie le slug organisation et les droits API.';
+    return 'Le test de checkout HelloAsso a échoué. Vérifie le slug organisation et les droits API.';
   }
   if (readiness === 'credentials_missing') {
     return 'Renseigne le slug, le client id et le client secret avant publication.';
   }
   if (readiness === 'disabled') {
-    return 'HelloAsso est desactive pour ce scope.';
+    return 'HelloAsso est désactivé pour ce scope.';
   }
   if (readiness === 'pending') {
-    return 'La configuration HelloAsso existe, mais elle n a pas encore ete verifiee.';
+    return 'La configuration HelloAsso existe, mais elle n a pas encore été vérifiée.';
   }
-  return 'La configuration HelloAsso demande une verification supplementaire.';
+  return 'La configuration HelloAsso demande une vérification supplémentaire.';
 };
 const createDocumentRequestDraft = (documentRequest = {}) => ({
   acceptedMimeTypesText: Array.isArray(documentRequest.acceptedMimeTypes)
@@ -498,9 +498,9 @@ const buildCampaignNameSuggestions = ({ seasonLabel, type }) => {
   const season = formatSeasonLabelForSuggestion(seasonLabel);
   const suggestionsByType = {
     equipment: [
-      `Cotisation equipements ${season}`,
-      `Campagne equipements ${season}`,
-      `Equipements ${season}`,
+      `Cotisation équipements ${season}`,
+      `Campagne équipements ${season}`,
+      `Équipements ${season}`,
     ],
     internship: [
       `Participation stage ${season}`,
@@ -513,9 +513,9 @@ const buildCampaignNameSuggestions = ({ seasonLabel, type }) => {
       `Licences ${season}`,
     ],
     membership: [
-      `Cotisation adhesions ${season}`,
-      `Campagne adhesion ${season}`,
-      `Adhesions ${season}`,
+      `Cotisation adhésions ${season}`,
+      `Campagne adhésion ${season}`,
+      `Adhésions ${season}`,
     ],
     other: [
       `Cotisation ${season}`,
@@ -536,33 +536,33 @@ const buildCampaignDescriptionSuggestions = ({ seasonLabel, type }) => {
   const season = formatSeasonLabelForSuggestion(seasonLabel);
   const suggestionsByType = {
     equipment: [
-      `Cette campagne concerne les equipements pour la saison ${season}. Merci de finaliser votre reglement dans les delais indiques par le club.`,
-      `Retrouvez ici les informations de paiement liees aux equipements de la saison ${season}.`,
-      `Cette cotisation couvre les equipements prevus pour la saison ${season}.`,
+      `Cette campagne concerne les équipements pour la saison ${season}. Merci de finaliser ton règlement dans les délais indiques par le club.`,
+      `Retrouve ici les informations de paiement liées aux équipements de la saison ${season}.`,
+      `Cette cotisation couvre les équipements prévus pour la saison ${season}.`,
     ],
     internship: [
-      `Cette campagne concerne la participation au stage ${season}. Merci de suivre les modalites de paiement indiquees par le club.`,
-      `Retrouvez ici les informations de reglement pour le stage de la saison ${season}.`,
+      `Cette campagne concerne la participation au stage ${season}. Merci de suivre les modalités de paiement indiquées par le club.`,
+      `Retrouve ici les informations de règlement pour le stage de la saison ${season}.`,
       `Cette cotisation permet de confirmer l inscription au stage ${season}.`,
     ],
     license: [
-      `Cette campagne concerne les licences pour la saison ${season}. Merci de completer votre dossier et votre paiement dans les delais.`,
-      `Retrouvez ici les informations de paiement et les documents a fournir pour la licence ${season}.`,
+      `Cette campagne concerne les licences pour la saison ${season}. Merci de compléter ton dossier et ton paiement dans les délais.`,
+      `Retrouve ici les informations de paiement et les documents à fournir pour la licence ${season}.`,
       `Cette cotisation permet de finaliser la licence pour la saison ${season}.`,
     ],
     membership: [
-      `Cette campagne concerne les adhesions pour la saison ${season}. Merci de completer votre dossier et votre reglement.`,
-      `Retrouvez ici les informations necessaires pour regler votre adhesion ${season}.`,
-      `Cette cotisation permet de valider l'adhesion a la saison ${season}.`,
+      `Cette campagne concerne les adhésions pour la saison ${season}. Merci de compléter ton dossier et ton règlement.`,
+      `Retrouve ici les informations nécessaires pour régler ton adhésion ${season}.`,
+      `Cette cotisation permet de valider l'adhésion à la saison ${season}.`,
     ],
     other: [
       `Merci de retrouver ici toutes les informations utiles pour cette campagne ${season}.`,
-      'Cette campagne regroupe les modalites de paiement et les informations visibles par les membres.',
-      'Merci de completer votre reglement selon les consignes indiquees par le club.',
+      'Cette campagne regroupe les modalités de paiement et les informations visibles par les membres.',
+      'Merci de compléter ton règlement selon les consignes indiquées par le club.',
     ],
     tournament: [
-      `Cette campagne concerne la participation au tournoi ${season}. Merci de suivre les modalites indiquees pour valider votre inscription.`,
-      `Retrouvez ici les informations de reglement pour le tournoi ${season}.`,
+      `Cette campagne concerne la participation au tournoi ${season}. Merci de suivre les modalités indiquées pour valider ton inscription.`,
+      `Retrouve ici les informations de règlement pour le tournoi ${season}.`,
       `Cette cotisation permet de confirmer la participation au tournoi ${season}.`,
     ],
   };
@@ -574,33 +574,33 @@ const buildInternalNoteSuggestions = ({ seasonLabel, type }) => {
   const season = formatSeasonLabelForSuggestion(seasonLabel);
   const suggestionsByType = {
     equipment: [
-      `Suivi interne ${season} : verifier les tailles, les stocks et les reglements avant de lancer la commande equipement.`,
-      `Campagne equipement ${season} : valider les paiements recus avant remise des articles.`,
-      'Note staff : centraliser ici les cas particuliers, remises et commandes a confirmer.',
+      `Suivi interne ${season} : vérifier les tailles, les stocks et les règlements avant de lancer la commande équipement.`,
+      `Campagne équipement ${season} : valider les paiements reçus avant remise des articles.`,
+      'Note staff : centraliser ici les cas particuliers, remises et commandes à confirmer.',
     ],
     internship: [
-      `Suivi stage ${season} : verifier les dossiers complets, les paiements recus et les places restantes.`,
+      `Suivi stage ${season} : vérifier les dossiers complets, les paiements reçus et les places restantes.`,
       `Campagne stage ${season} : relancer les familles en attente avant validation finale.`,
-      'Note equipe : suivre ici les exemptions, paiements manuels et confirmations de participation.',
+      'Note équipe : suivre ici les exemptions, paiements manuels et confirmations de participation.',
     ],
     license: [
-      `Suivi licences ${season} : verifier les documents manquants et relancer avant validation finale.`,
+      `Suivi licences ${season} : vérifier les documents manquants et relancer avant validation finale.`,
       `Campagne licences ${season} : rapprocher les paiements manuels chaque semaine et signaler les dossiers incomplets.`,
       'Note dirigeants : utiliser cet espace pour les cas particuliers, exemptions et relances prioritaires.',
     ],
     membership: [
-      `Suivi adhesions ${season} : verifier les paiements recus et les demandes en attente de validation.`,
-      `Campagne adhesions ${season} : noter ici les cas particuliers, remises et suivis a faire avec les familles.`,
-      'Note gestion : confirmer chaque adhesion apres reception du reglement complet.',
+      `Suivi adhésions ${season} : vérifier les paiements reçus et les demandes en attente de validation.`,
+      `Campagne adhésions ${season} : noter ici les cas particuliers, remises et suivis à faire avec les familles.`,
+      'Note gestion : confirmer chaque adhésion après reception du règlement complet.',
     ],
     other: [
-      `Suivi interne ${season} : centraliser ici les points de vigilance et les relances a effectuer.`,
+      `Suivi interne ${season} : centraliser ici les points de vigilance et les relances à effectuer.`,
       'Note staff : utiliser cet espace pour les exceptions, paiements manuels et commentaires de suivi.',
-      'Rappel gestion : verifier les dossiers incomplets avant cloture de la campagne.',
+      'Rappel gestion : vérifier les dossiers incomplets avant clôture de la campagne.',
     ],
     tournament: [
-      `Suivi tournoi ${season} : verifier les inscriptions, paiements recus et confirmations avant cloture.`,
-      `Campagne tournoi ${season} : noter ici les equipes a relancer et les cas particuliers a traiter.`,
+      `Suivi tournoi ${season} : vérifier les inscriptions, paiements reçus et confirmations avant clôture.`,
+      `Campagne tournoi ${season} : noter ici les équipes à relancer et les cas particuliers à traiter.`,
       'Note organisation : centraliser les suivis de paiement et de validation dans cet espace.',
     ],
   };
@@ -688,7 +688,7 @@ const renderReminderPreview = ({
   totalLabel,
 }) => {
   const template = String(message || '').trim()
-    || 'Bonjour {{firstname}}, il vous reste {{amountRemaining}} a regler pour {{campaignName}} avant le {{dueDate}}.';
+    || 'Bonjour {{firstname}}, il te reste {{amountRemaining}} à régler pour {{campaignName}} avant le {{dueDate}}.';
   return template
     .replace(/\{\{\s*firstname\s*\}\}/g, 'Lucas')
     .replace(/\{\{\s*lastname\s*\}\}/g, 'Martin')
@@ -805,7 +805,7 @@ function AmountField({
       </View>
 
       <View style={Spaces.gap[8]}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{`Prix par defaut (${currency})`}</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{`Prix par défaut (${currency})`}</Text>
         <TextInput
           inputMode="decimal"
           keyboardType="decimal-pad"
@@ -914,7 +914,7 @@ function SuggestionCard({
       <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
         {selected ? (
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>Selectionnee</Text>
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>Sélectionnée</Text>
         ) : null}
       </View>
       <Text style={[Fonts.p2, selected ? Fonts.neutral00 : Fonts.neutral200, { lineHeight: 28 }]}>
@@ -1001,9 +1001,9 @@ function DocumentRequestEditor({
         value={item.description}
       />
       <DateField
-        label="Date limite de depot"
+        label="Date limite de dépôt"
         onChange={(value) => onChange({ dueDate: value })}
-        placeholder="Selectionner une date"
+        placeholder="Sélectionner une date"
         value={item.dueDate}
       />
       <Field
@@ -1024,7 +1024,7 @@ function DocumentRequestEditor({
       />
       <PaymentModeToggle
         enabled={item.requiresSignature}
-        label="Signature demandee"
+        label="Signature demandée"
         onChange={(value) => onChange({ requiresSignature: value })}
       />
       {canRemove ? <Button onPress={onRemove} title="Retirer ce document" variant="Secondary" /> : null}
@@ -1074,13 +1074,13 @@ function PricingRuleEditor({
     }]}
     >
       <Field
-        label="Libelle interne"
+        label="Libellé interne"
         onChangeText={(value) => onChange({ label: value })}
         placeholder="Tarif joueurs seniors"
         value={item.label}
       />
       <View style={Spaces.gap[8]}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Type de regle</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Type de règle</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {Object.entries(pricingRuleLabels).map(([ruleType, label]) => (
             <SelectionChip
@@ -1095,7 +1095,7 @@ function PricingRuleEditor({
       {showRole ? (
         <SelectionGroup
           items={roleOptions.map((option) => ({ key: option.key, label: option.label }))}
-          label="Roles concernes"
+          label="Rôles concernés"
           onToggle={(value) => onChange({ roleName: item.roleName === value ? '' : value })}
           selectedKeys={item.roleName ? [item.roleName] : []}
         />
@@ -1103,7 +1103,7 @@ function PricingRuleEditor({
       {showTeam ? (
         <SelectionGroup
           items={teamOptions}
-          label="Equipe concernee"
+          label="Équipe concernee"
           onToggle={(value) => onChange({ teamKey: item.teamKey === value ? '' : value })}
           selectedKeys={item.teamKey ? [item.teamKey] : []}
         />
@@ -1111,7 +1111,7 @@ function PricingRuleEditor({
       {showCategory ? (
         <SelectionGroup
           items={categoryOptions}
-          label="Categorie concernee"
+          label="Catégorie concernee"
           onToggle={(value) => onChange({ categoryKey: item.categoryKey === value ? '' : value })}
           selectedKeys={item.categoryKey ? [item.categoryKey] : []}
         />
@@ -1149,7 +1149,7 @@ function PricingRuleEditor({
         label="Exoneration automatique"
         onChange={(value) => onChange({ isWaiver: value })}
       />
-      <Button onPress={onRemove} title="Retirer cette regle" variant="Secondary" />
+      <Button onPress={onRemove} title="Retirer cette règle" variant="Secondary" />
     </View>
   );
 }
@@ -1700,7 +1700,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const providerMutation = useLicenseMutation(async () => true, campaignId);
   const helloAssoMutation = useLicenseMutation(async () => {
     if (!helloAssoScopePayload) {
-      throw new Error('Le scope HelloAsso est incomplet. Verifie le club ou le multisport choisi.');
+      throw new Error('Le scope HelloAsso est incomplet. Vérifie le club ou le multisport choisi.');
     }
     return connectLicenseHelloAsso({
       ...helloAssoScopePayload,
@@ -1718,12 +1718,12 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   }, []);
   const verifyHelloAssoConnection = useCallback(() => {
     if (paymentOwner === 'multisport' && !club?.parentMultisport) {
-      Alert.alert('Multisport requis', 'Ce club n est rattache a aucun multisport. Garde un encaissement section ou configure le multisport d abord.');
+      Alert.alert('Multisport requis', 'Ce club n est rattaché a aucun multisport. Garde un encaissement section ou configure le multisport d abord.');
       return;
     }
     helloAssoMutation.mutate(undefined, {
       onError: (error) => {
-        Alert.alert('Verification HelloAsso impossible', error?.message || 'La verification HelloAsso a echoue.');
+        Alert.alert('Vérification HelloAsso impossible', error?.message || 'La vérification HelloAsso a échoué.');
       },
       onSuccess: (result) => {
         setHelloAssoSnapshot(result?.snapshot || null);
@@ -1736,8 +1736,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         }));
         Alert.alert(
           result?.readiness === 'ready' || result?.readiness === 'webhook_pending' || result?.readiness === 'webhook_stale'
-            ? 'HelloAsso pret'
-            : 'HelloAsso a verifier',
+            ? 'HelloAsso prêt'
+            : 'HelloAsso à vérifier',
           describeHelloAssoReadiness(result?.snapshot),
         );
       },
@@ -1766,7 +1766,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       return;
     }
     if (requestedStatus !== 'draft' && paymentModes.helloasso && !helloAssoIsPublishReady) {
-      Alert.alert('HelloAsso non pret', helloAssoStatusMessage);
+      Alert.alert('HelloAsso non prêt', helloAssoStatusMessage);
       return;
     }
     const persistedDocumentWithEmptyName = documentRequests.find((item) => item.documentId && !item.name.trim());
@@ -1783,7 +1783,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       || (item.ruleType === 'level' && !item.levelKey)
     ));
     if (invalidPricingRule) {
-      Alert.alert('Regle tarifaire incomplete', 'Complete chaque regle de prix avant de sauvegarder la campagne.');
+      Alert.alert('Règle tarifaire incomplète', 'Complète chaque règle de prix avant de sauvegarder la campagne.');
       return;
     }
     saveMutation.mutate({ status: requestedStatus }, {
@@ -1849,8 +1849,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         } catch (error) {
           goToCampaignOperations(savedCampaignId);
           Alert.alert(
-            'Campagne enregistree partiellement',
-            error?.message || 'La campagne est sauvee, mais certains documents ou providers demandent une verification.',
+            'Campagne enregistrée partiellement',
+            error?.message || 'La campagne est sauvee, mais certains documents ou providers demandent une vérification.',
           );
           return;
         }
@@ -1862,13 +1862,13 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         const isDraftSave = requestedStatus === 'draft';
         const isScheduledSave = requestedStatus === 'scheduled';
         let successTitle = 'Campagne ouverte';
-        let successMessage = 'La campagne est ouverte et les membres concernes sont synchronises automatiquement.';
+        let successMessage = 'La campagne est ouverte et les membres concernés sont synchronises automatiquement.';
         if (isDraftSave) {
           successTitle = 'Brouillon enregistre';
           successMessage = 'Le brouillon est sauvegarde. Tu pourras le reprendre avant publication.';
         } else if (isScheduledSave) {
           successTitle = 'Campagne programmee';
-          successMessage = 'La campagne est publiee et s ouvrira automatiquement a sa date de debut.';
+          successMessage = 'La campagne est publiée et s ouvrira automatiquement à sa date de début.';
         }
         Alert.alert(successTitle, successMessage, [
           {
@@ -1937,20 +1937,20 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
   const getWizardStepError = useCallback((stepKey) => {
     if (stepKey === 'name' && !String(name || '').trim()) {
-      return { message: 'Donne un nom a la campagne avant de continuer.', title: 'Nom manquant' };
+      return { message: 'Donne un nom à la campagne avant de continuer.', title: 'Nom manquant' };
     }
 
     if (stepKey === 'period') {
       if (!startDate) {
-        return { message: 'Selectionne une date de debut.', title: 'Date manquante' };
+        return { message: 'Sélectionne une date de début.', title: 'Date manquante' };
       }
       if (!endDate) {
-        return { message: 'Selectionne une date de fin.', title: 'Date manquante' };
+        return { message: 'Sélectionne une date de fin.', title: 'Date manquante' };
       }
       const parsedStartDate = parseIsoDateValue(startDate);
       const parsedEndDate = parseIsoDateValue(endDate);
       if (parsedStartDate && parsedEndDate && parsedStartDate.getTime() > parsedEndDate.getTime()) {
-        return { message: 'La date de fin doit etre egale ou posterieure a la date de debut.', title: 'Periode invalide' };
+        return { message: 'La date de fin doit être egale ou postérieure à la date de début.', title: 'Période invalide' };
       }
       if (!String(seasonLabel || '').trim()) {
         return { message: 'Renseigne la saison de la campagne.', title: 'Saison manquante' };
@@ -1958,7 +1958,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     }
 
     if (stepKey === 'amount' && euroToCents(amount) <= 0) {
-      return { message: 'Le prix par defaut doit etre superieur a 0 EUR.', title: 'Montant invalide' };
+      return { message: 'Le prix par défaut doit être supérieur a 0 EUR.', title: 'Montant invalide' };
     }
 
     if (stepKey === 'targetMode' && !targetConfig.includeAllMembers && !isEventParticipantTarget) {
@@ -1972,7 +1972,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       if (!hasAtLeastOneFilter) {
         return {
           message: 'Choisis au moins un filtre ou repasse la campagne sur tout le club.',
-          title: 'Cible incomplete',
+          title: 'Cible incomplète',
         };
       }
     }
@@ -1988,8 +1988,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       ));
       if (invalidPricingRule) {
         return {
-          message: 'Complete ou retire chaque regle tarifaire avant de continuer.',
-          title: 'Regle tarifaire incomplete',
+          message: 'Complète ou retire chaque règle tarifaire avant de continuer.',
+          title: 'Règle tarifaire incomplète',
         };
       }
     }
@@ -2014,7 +2014,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       }
       if ((stepKey === 'reminderStatuses' || stepKey === 'review') && autoReminderEnabled && reminderTargetStatuses.length === 0) {
         return {
-          message: 'Choisis au moins un statut a relancer automatiquement.',
+          message: 'Choisis au moins un statut à relancer automatiquement.',
           title: 'Relances incomplètes',
         };
       }
@@ -2022,16 +2022,16 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
     if ((stepKey === 'reminderStatuses' || stepKey === 'review') && autoReminderEnabled && reminderTargetStatuses.length === 0) {
       return {
-        message: 'Choisis au moins un statut a relancer automatiquement.',
-        title: 'Relances incompletes',
+        message: 'Choisis au moins un statut à relancer automatiquement.',
+        title: 'Relances incomplètes',
       };
     }
 
     if ((stepKey === 'installmentsSetup' || stepKey === 'review') && allowInstallments) {
       if ((Number(installmentCount) || 0) < 1) {
         return {
-          message: 'Le nombre d echeances doit etre superieur ou egal a 1.',
-          title: 'Echeancier invalide',
+          message: 'Le nombre d échéances doit être supérieur ou egal a 1.',
+          title: 'Échéancier invalide',
         };
       }
     }
@@ -2053,7 +2053,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     if ((stepKey === 'paymentOnline' || stepKey === 'review') && paymentModes.helloasso && !helloAssoIsPublishReady) {
       return {
         message: helloAssoStatusMessage,
-        title: 'HelloAsso non pret',
+        title: 'HelloAsso non prêt',
       };
     }
 
@@ -2130,8 +2130,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     return (
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
         <LicenseEmptyState
-          description="On recupere la campagne avant d afficher le formulaire."
-          title="Chargement des parametres"
+          description="On récupère la campagne avant d afficher le formulaire."
+          title="Chargement des paramètres"
         />
       </ScreenContainer>
     );
@@ -2142,8 +2142,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
         <LicenseEmptyState
           action={<Button onPress={retryCampaign} title="Reessayer" variant="Secondary" />}
-          description="Impossible de charger la campagne. Le formulaire n est pas ouvert pour eviter d ecraser ses parametres."
-          title="Parametres indisponibles"
+          description="Impossible de charger la campagne. Le formulaire n est pas ouvert pour éviter d ecraser ses paramètres."
+          title="Paramètres indisponibles"
         />
       </ScreenContainer>
     );
@@ -2164,9 +2164,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     paddingVertical: licenseSpacing.cardPadding,
   }];
   const targetFilterParts = [
-    `${targetConfig.roles.length} role(s)`,
-    `${targetConfig.teamIds.length} equipe(s)`,
-    `${targetConfig.categoryIds.length} categorie(s)`,
+    `${targetConfig.roles.length} rôle(s)`,
+    `${targetConfig.teamIds.length} équipe(s)`,
+    `${targetConfig.categoryIds.length} catégorie(s)`,
     `${targetConfig.sectionIds.length} section(s)`,
     `${targetConfig.levelIds.length} niveau(x)`,
   ];
@@ -2175,8 +2175,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   let targetModeSummaryText = filteredTargetSummary;
   if (isEventParticipantTarget) {
     targetModeSummaryText = [
-      'Cible verrouillee sur les participants acceptes',
-      'de l evenement.',
+      'Cible verrouillée sur les participants acceptes',
+      'de l événement.',
     ].join(' ');
   } else if (targetConfig.includeAllMembers) {
     targetModeSummaryText = 'La campagne concernera tout le club.';
@@ -2184,7 +2184,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   let reviewTargetSummaryText = reviewFilteredTargetSummary;
   if (isEventParticipantTarget) {
     reviewTargetSummaryText = [
-      'Les participants acceptes de l evenement recevront',
+      'Les participants acceptes de l événement recevront',
       'cette cotisation.',
     ].join(' ');
   } else if (targetConfig.includeAllMembers) {
@@ -2238,9 +2238,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       <View style={primaryStepCardStyle}>
         <Field label="Description visible" multiline onChangeText={setDescription} placeholder="Informations visibles par les membres" value={description} />
         <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Modeles proposes</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Modèles proposes</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Choisis un modele pour pre-remplir le texte, puis ajuste-le si besoin. Appuie une deuxieme fois pour le retirer.
+            Choisis un modèle pour pre-remplir le texte, puis ajuste-le si besoin. Appuie une deuxième fois pour le retirer.
           </Text>
           <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
             {campaignDescriptionSuggestions.map((suggestion, index) => (
@@ -2249,7 +2249,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
                 key={suggestion}
                 onPress={() => handleDescriptionSuggestionPress(suggestion)}
                 selected={String(description || '').trim() === suggestion}
-                title={`Modele ${index + 1}`}
+                title={`Modèle ${index + 1}`}
               />
             ))}
           </View>
@@ -2261,7 +2261,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       <View style={Spaces.gap[licenseSpacing.sectionGap]}>
         <View style={primaryStepCardStyle}>
           <DateField
-            label="Date de debut"
+            label="Date de début"
             maximumDate={maximumCampaignStartDate}
             onChange={setStartDate}
             value={startDate}
@@ -2274,14 +2274,14 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           />
         </View>
         <View style={secondaryStepCardStyle}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Saison detectee</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Saison détectée</Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {detectedSeasonLabel
-              ? `A partir des dates, on detecte plutot la saison ${detectedSeasonLabel}.`
-              : 'Choisis d abord les dates, puis confirme la saison detectee.'}
+              ? `A partir des dates, on détecte plutot la saison ${detectedSeasonLabel}.`
+              : 'Choisis d abord les dates, puis confirme la saison détectée.'}
           </Text>
           <Field
-            label="Saison a conserver"
+            label="Saison à conserver"
             onChangeText={(value) => {
               setSeasonLabelManuallyEdited(true);
               setSeasonLabel(value);
@@ -2290,7 +2290,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             value={seasonLabel}
           />
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            Tu peux garder la saison detectee ou la modifier si ton club bascule plutot en aout, septembre ou selon une logique interne.
+            Tu peux garder la saison détectée ou la modifier si ton club bascule plutot en aout, septembre ou selon une logique interne.
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {seasonLabelSuggestions.map((suggestion) => (
@@ -2336,7 +2336,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         <View style={Spaces.gap[8]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Notes internes proposees</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Choisis une base utile pour le suivi staff. Appuie une deuxieme fois pour la retirer.
+            Choisis une base utile pour le suivi staff. Appuie une deuxième fois pour la retirer.
           </Text>
           <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
             {internalNoteSuggestions.map((suggestion, index) => (
@@ -2357,9 +2357,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       <View style={primaryStepCardStyle}>
         {isEventParticipantTarget ? (
           <View style={[Spaces.gap[8]]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Participants acceptes de l evenement</Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Participants acceptes de l événement</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Cette campagne est rattachee a un evenement. Les affectations seront generees pour les participants acceptes, y compris les participants externes.
+              Cette campagne est rattachee a un événement. Les affectations seront générées pour les participants acceptes, y compris les participants externes.
             </Text>
           </View>
         ) : (
@@ -2367,7 +2367,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Tous les membres du club</Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Active ce choix si la campagne concerne tout le club. Sinon, selectionne directement les profils vises.
+                Active ce choix si la campagne concerne tout le club. Sinon, sélectionne directement les profils vises.
               </Text>
             </View>
             <Switch
@@ -2387,7 +2387,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         {!targetConfig.includeAllMembers && !isEventParticipantTarget ? (
           <>
             <SelectionGroup
-              description="Laisse vide si tu ne veux pas filtrer par role."
+              description="Laisse vide si tu ne veux pas filtrer par rôle."
               items={roleOptions}
               label="Roles"
               onToggle={(value) => toggleTargetValue('roles', value, true)}
@@ -2427,9 +2427,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   } else if (activeWizardStep.key === 'pricingRules') {
     stepContent = (
       <View style={primaryStepCardStyle}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Regles de prix</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Règles de prix</Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          Le prix par defaut reste la base. Ajoute ici les exceptions par role, equipe, categorie, section ou niveau.
+          Le prix par défaut reste la base. Ajoute ici les exceptions par rôle, équipe, catégorie, section ou niveau.
         </Text>
         {pricingRules.length ? pricingRules.map((item) => (
           <PricingRuleEditor
@@ -2443,8 +2443,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             sectionOptions={sectionOptions}
             teamOptions={teamOptions}
           />
-        )) : <Text style={[Fonts.p3, Fonts.neutral300]}>Aucune regle supplementaire. Le prix par defaut sera applique a tous.</Text>}
-        <Button onPress={addPricingRule} title="Ajouter une regle tarifaire" variant="Secondary" />
+        )) : <Text style={[Fonts.p3, Fonts.neutral300]}>Aucune règle supplémentaire. Le prix par défaut sera applique à tous.</Text>}
+        <Button onPress={addPricingRule} title="Ajouter une règle tarifaire" variant="Secondary" />
       </View>
     );
   } else if (activeWizardStep.key === 'reminderToggle') {
@@ -2453,7 +2453,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
           <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Activer les relances automatiques</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>Relance les membres tant que leur cotisation reste a payer.</Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>Relance les membres tant que leur cotisation reste à payer.</Text>
           </View>
           <Switch onValueChange={setAutoReminderEnabled} value={autoReminderEnabled} />
         </View>
@@ -2462,17 +2462,17 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   } else if (activeWizardStep.key === 'reminderTiming') {
     stepContent = (
       <View style={primaryStepCardStyle}>
-        <Field label="Frequence de relance (jours)" onChangeText={setReminderFrequencyDays} placeholder="14" value={reminderFrequencyDays} />
+        <Field label="Fréquence de relance (jours)" onChangeText={setReminderFrequencyDays} placeholder="14" value={reminderFrequencyDays} />
         <Field label="Nombre maximum de relances" onChangeText={setReminderMaxCount} placeholder="5" value={reminderMaxCount} />
         <DateField
-          label="Premiere relance a partir du (optionnel)"
+          label="Première relance à partir du (optionnel)"
           minimumDate={campaignStartDateValue}
           onChange={setReminderStartDate}
           value={reminderStartDate}
         />
-        <Field label="Commencer X jours avant l echeance" onChangeText={setReminderBeforeDueDays} placeholder="5" value={reminderBeforeDueDays} />
-        <Field label="Reprendre X jours apres l echeance" onChangeText={setReminderAfterDueDays} placeholder="7" value={reminderAfterDueDays} />
-        <PaymentModeToggle enabled={reminderOnDueDate} label="Relance le jour de l echeance" onChange={setReminderOnDueDate} />
+        <Field label="Commencer X jours avant l échéance" onChangeText={setReminderBeforeDueDays} placeholder="5" value={reminderBeforeDueDays} />
+        <Field label="Reprendre X jours après l échéance" onChangeText={setReminderAfterDueDays} placeholder="7" value={reminderAfterDueDays} />
+        <PaymentModeToggle enabled={reminderOnDueDate} label="Relance le jour de l échéance" onChange={setReminderOnDueDate} />
       </View>
     );
   } else if (activeWizardStep.key === 'reminderStatuses') {
@@ -2481,7 +2481,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         <View style={Spaces.gap[12]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Statuts cibles</Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            Choisis les dossiers a relancer automatiquement. Appuie sur un statut ajoute pour le retirer.
+            Choisis les dossiers à relancer automatiquement. Appuie sur un statut ajouté pour le retirer.
           </Text>
         </View>
         <View style={Spaces.gap[8]}>
@@ -2497,7 +2497,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             ))}
           </View>
           {!selectedReminderStatusOptions.length ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>Aucun statut ajoute pour le moment.</Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>Aucun statut ajouté pour le moment.</Text>
           ) : null}
         </View>
         <View style={Spaces.gap[8]}>
@@ -2513,7 +2513,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             ))}
           </View>
           {!availableReminderStatusOptions.length ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>Tous les statuts disponibles sont deja ajoutes.</Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>Tous les statuts disponibles sont déjà ajoutes.</Text>
           ) : null}
         </View>
       </View>
@@ -2522,10 +2522,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     stepContent = (
       <View style={Spaces.gap[licenseSpacing.sectionGap]}>
         <View style={primaryStepCardStyle}>
-          <Field label="Message de relance" onChangeText={setReminderMessage} placeholder="Rappel: votre cotisation reste a regler." value={reminderMessage} />
+          <Field label="Message de relance" onChangeText={setReminderMessage} placeholder="Rappel: ta cotisation reste à régler." value={reminderMessage} />
         </View>
         <View style={secondaryStepCardStyle}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Apercu du message</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aperçu du message</Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>{reminderPreviewMessage}</Text>
         </View>
       </View>
@@ -2534,22 +2534,22 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     stepContent = (
       <View style={primaryStepCardStyle}>
         <DateField
-          label="Marquer en retard apres le (optionnel)"
+          label="Marquer en retard après le (optionnel)"
           minimumDate={campaignStartDateValue}
           onChange={setOverdueAfterDate}
           value={overdueAfterDate}
         />
         <Text style={[Fonts.p3, Fonts.neutral300]}>
-          Sans date, les membres restent en attente et peuvent quand meme etre relances.
+          Sans date, les membres restent en attente et peuvent quand même être relances.
         </Text>
       </View>
     );
   } else if (activeWizardStep.key === 'documents') {
     stepContent = (
       <View style={primaryStepCardStyle}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Documents a fournir</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Documents à fournir</Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          Ajoute chaque piece demandee aux membres avec ses propres regles.
+          Ajoute chaque pièce demandée aux membres avec ses propres règles.
         </Text>
         {documentRequests.map((item) => (
           <DocumentRequestEditor
@@ -2569,7 +2569,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
           <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Autoriser le paiement en plusieurs fois</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>Genere automatiquement des echeances pour la campagne.</Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>Génère automatiquement des échéances pour la campagne.</Text>
           </View>
           <Switch onValueChange={setAllowInstallments} value={allowInstallments} />
         </View>
@@ -2578,7 +2578,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   } else if (activeWizardStep.key === 'installmentsSetup') {
     stepContent = (
       <View style={primaryStepCardStyle}>
-        <Field label="Nombre d'echeances" onChangeText={setInstallmentCount} placeholder="3" value={installmentCount} />
+        <Field label="Nombre d'échéances" onChangeText={setInstallmentCount} placeholder="3" value={installmentCount} />
         <SelectionGroup
           items={installmentFrequencyOptions}
           label="Frequence"
@@ -2592,7 +2592,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       <View style={primaryStepCardStyle}>
         <PaymentModeToggle
           enabled={memberInstallmentChoiceAllowed}
-          label="Le membre choisit son nombre d echeances"
+          label="Le membre choisit son nombre d échéances"
           onChange={setMemberInstallmentChoiceAllowed}
         />
         <PaymentModeToggle
@@ -2616,7 +2616,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             style={secondaryStepCardStyle}
           >
             <Field
-              label={`Libelle echeance ${index + 1}`}
+              label={`Libellé échéance ${index + 1}`}
               onChangeText={(value) => updateInstallment(installmentSchedule[index]?.localId, { label: value })}
               placeholder={`Paiement ${index + 1}`}
               value={installmentSchedule[index]?.label || ''}
@@ -2654,7 +2654,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         </View>
         {paymentOwner === 'multisport' && !club?.parentMultisport ? (
           <Text style={[Fonts.p3, { color: Colors.warning500 }]}>
-            Aucun multisport parent n est rattache a ce club. Le paiement central ne pourra pas etre valide.
+            Aucun multisport parent n est rattaché à ce club. Le paiement central ne pourra pas être valide.
           </Text>
         ) : null}
       </View>
@@ -2673,9 +2673,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   } else if (activeWizardStep.key === 'paymentInstructions') {
     stepContent = (
       <View style={primaryStepCardStyle}>
-        {paymentModes.bank_transfer ? <Field label="Instructions virement" multiline onChangeText={setBankTransferInstructions} placeholder="IBAN, reference a indiquer..." value={bankTransferInstructions} /> : null}
-        {paymentModes.cash ? <Field label="Instructions especes" multiline onChangeText={setCashInstructions} placeholder="Lieu, horaires, personne a contacter..." value={cashInstructions} /> : null}
-        {paymentModes.check ? <Field label="Instructions cheque" multiline onChangeText={setCheckInstructions} placeholder="Ordre, depot, reference..." value={checkInstructions} /> : null}
+        {paymentModes.bank_transfer ? <Field label="Instructions virement" multiline onChangeText={setBankTransferInstructions} placeholder="IBAN, référence à indiquer..." value={bankTransferInstructions} /> : null}
+        {paymentModes.cash ? <Field label="Instructions especes" multiline onChangeText={setCashInstructions} placeholder="Lieu, horaires, personne à contacter..." value={cashInstructions} /> : null}
+        {paymentModes.check ? <Field label="Instructions chèque" multiline onChangeText={setCheckInstructions} placeholder="Ordre, dépôt, référence..." value={checkInstructions} /> : null}
         {paymentModes.card_physical ? <Field label="Instructions carte au club" multiline onChangeText={setCardPhysicalInstructions} placeholder="Terminal, permanences..." value={cardPhysicalInstructions} /> : null}
       </View>
     );
@@ -2691,7 +2691,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           <LicenseCard>
             <View style={Spaces.gap[12]}>
               <View style={Spaces.gap[4]}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>HelloAsso integre</Text>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>HelloAsso intègre</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
                   Le club configure directement son organisation HelloAsso. Aucun lien manuel n est demande pour ce mode.
                 </Text>
@@ -2740,7 +2740,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
               <Button
                 isLoading={helloAssoMutation.isPending}
                 onPress={verifyHelloAssoConnection}
-                title="Verifier la connexion"
+                title="Vérifier la connexion"
                 variant="Secondary"
               />
             </View>
@@ -2752,7 +2752,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     stepContent = (
       <View style={Spaces.gap[licenseSpacing.sectionGap]}>
         <View style={primaryStepCardStyle}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Verification avant lancement</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Vérification avant lancement</Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {reviewTargetSummaryText}
           </Text>
@@ -2770,14 +2770,14 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           ) : null}
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {allowInstallments
-              ? `${normalizedInstallmentSchedule.length} echeance(s) configuree(s) en mode ${installmentFrequency}.`
+              ? `${normalizedInstallmentSchedule.length} échéance(s) configuree(s) en mode ${installmentFrequency}.`
               : 'Paiement en une seule fois.'}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {(documentRequests.filter((item) => item.name.trim()).length)}
             {' document(s) demandes et '}
             {pricingRules.length}
-            {' regle(s) tarifaire(s) supplementaire(s).'}
+            {' règle(s) tarifaire(s) supplémentaire(s).'}
           </Text>
           {autoReminderEnabled ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -2794,7 +2794,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
               .
             </Text>
           ) : (
-            <Text style={[Fonts.p3, Fonts.neutral200]}>Relances automatiques desactivees.</Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>Relances automatiques désactivées.</Text>
           )}
         </View>
 

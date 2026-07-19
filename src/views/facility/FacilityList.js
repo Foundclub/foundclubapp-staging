@@ -34,7 +34,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 import { FACILITY_CONFLICT_MODES, getFacilityConflictMode } from '@/utils/facilityConflictMode';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
-const getAddressLabel = (address, fallback = 'Adresse non renseignee') => {
+const getAddressLabel = (address, fallback = 'Adresse non renseignée') => {
   if (!address) return fallback;
   if (typeof address === 'string') return address;
   if (typeof address === 'object') {
@@ -107,7 +107,7 @@ function FacilityList() {
       t('facilityList.alerts.delete.title', 'Supprimer l\'installation'),
       t(
         'facilityList.alerts.delete.description',
-        `Voulez-vous supprimer "${name || 'cette installation'}" ? Cette action est irréversible.`,
+        `Veux-tu supprimer "${name || 'cette installation'}" ? Cette action est irréversible.`,
       ),
       [
         {
@@ -262,7 +262,7 @@ function FacilityList() {
       : t('facilityList.capacity.teamSingular', 'équipe simultanée')}`;
     const addressLabel = getAddressLabel(
       item?.address,
-      t('facilityList.defaults.addressMissing', 'Adresse non renseignee'),
+      t('facilityList.defaults.addressMissing', 'Adresse non renseignée'),
     );
     const hasAddress = Boolean(getAddressLabel(item?.address, '').trim());
     const planningColor = resolveFacilityPlanningColor(item);
@@ -470,7 +470,7 @@ function FacilityList() {
           actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
           description={t(
             'facilityList.empty.description',
-            'Ajoutez les terrains, gymnases ou salles de votre club.',
+            'Ajoute les terrains, gymnases ou salles de ton club.',
           )}
           onAction={handleCreate}
           title={t('facilityList.empty.title', 'Aucune installation')}
@@ -503,7 +503,7 @@ function FacilityList() {
         </Text>
         <Button
           onPress={() => navigation.navigate(RouteNames.TeamList)}
-          title="Retour aux equipes"
+          title="Retour aux équipes"
           variant="Secondary"
         />
       </View>
@@ -548,7 +548,7 @@ function FacilityList() {
       >
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-            {t('facilityList.title', 'Vos installations')}
+            {t('facilityList.title', 'Tes installations')}
           </Text>
           <Text style={[Fonts.p2, Fonts.primary100]}>
             {getListSubtitle(facilities.length)}

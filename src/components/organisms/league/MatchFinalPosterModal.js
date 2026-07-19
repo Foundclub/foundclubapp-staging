@@ -92,7 +92,7 @@ const formatDelta = (value) => {
 const getStatusUi = (status, colors) => {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'valid') {
-    return { chip: 'Resultat valide', color: colors.success500 };
+    return { chip: 'Résultat valide', color: colors.success500 };
   }
   if (normalized === 'forfeit') {
     return { chip: 'Forfait', color: colors.warning500 };
@@ -512,12 +512,12 @@ function MatchFinalPosterModal({
 
           <View style={styles.breakdownRow}>
             <View style={styles.breakdownItem}>
-              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>Resultat</Text>
+              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>Résultat</Text>
               <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>{formatDelta(basePointsDelta)}</Text>
             </View>
             <View style={styles.breakdownItem}>
               <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-                Bonus serie
+                Bonus série
                 {streakAfter && streakAfter > 1 ? ` x${streakAfter}` : ''}
               </Text>
               <Text style={[Fonts.p2Bold, { color: streakBonus > 0 ? Colors.success500 : Colors.neutral300 }]}>
@@ -548,7 +548,7 @@ function MatchFinalPosterModal({
                 <Text style={[Fonts.h4Bold, { color: isNegativeDelta ? Colors.error500 : Colors.success500 }]}>{delta}</Text>
               </View>
               <View style={styles.alignEnd}>
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points apres</Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points après</Text>
                 <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{formatElo(eloAfter)}</Text>
               </View>
             </View>

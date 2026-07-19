@@ -2278,6 +2278,9 @@ function SearchMapScreen({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      // L'ecran gere lui-meme son retrait bas (carte plein cadre) : pas de
+      // plancher supplementaire, sinon la marge est appliquee deux fois.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Alignments.fill,
         styles.screenContent,
@@ -2403,7 +2406,7 @@ function SearchMapScreen({ navigation, route }) {
                       lightMode
                       onBlur={() => setIsAddressSearchActive(false)}
                       onFocus={() => setIsAddressSearchActive(true)}
-                      placeholder={t('search.map.addressPlaceholder', 'Tapez une adresse ou une ville')}
+                      placeholder={t('search.map.addressPlaceholder', 'Tape une adresse ou une ville')}
                       setAddress={handleAddressSelect}
                       wrapperStyle={styles.searchInputWrapper}
                     />
@@ -2497,7 +2500,7 @@ function SearchMapScreen({ navigation, route }) {
               style={[styles.statusPill, ApplicationStyle.shadow200]}
             >
               <Text style={[Fonts.p4, Fonts.neutral00]}>
-                Zoomez ou recherchez une ville pour afficher les clubs.
+                Zoome ou recherchez une ville pour afficher les clubs.
               </Text>
             </View>
           ) : null}
@@ -2508,7 +2511,7 @@ function SearchMapScreen({ navigation, route }) {
               style={[styles.statusPill, ApplicationStyle.shadow200]}
             >
               <Text style={[Fonts.p4, Fonts.neutral00]}>
-                Zoomez pour afficher tous les clubs de cette zone.
+                Zoome pour afficher tous les clubs de cette zone.
               </Text>
             </View>
           ) : null}
@@ -2519,7 +2522,7 @@ function SearchMapScreen({ navigation, route }) {
               style={[styles.statusPill, ApplicationStyle.shadow200]}
             >
               <Text style={[Fonts.p4, Fonts.neutral00]}>
-                Zoomez ou recherchez une zone plus précise pour afficher les événements.
+                Zoome ou recherchez une zone plus précise pour afficher les événements.
               </Text>
             </View>
           ) : null}
@@ -2530,7 +2533,7 @@ function SearchMapScreen({ navigation, route }) {
               style={[styles.statusPill, ApplicationStyle.shadow200]}
             >
               <Text style={[Fonts.p4, Fonts.neutral00]}>
-                Zoomez pour afficher tous les événements de cette zone.
+                Zoome pour afficher tous les événements de cette zone.
               </Text>
             </View>
           ) : null}

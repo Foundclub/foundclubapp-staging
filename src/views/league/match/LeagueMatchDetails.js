@@ -100,7 +100,7 @@ const normalizeComparableText = (/** @type {unknown} */ value) => String(value |
 const resolveVenueLabel = (/** @type {LeagueMatch | null} */ match) => (
   getProposalLocationLabel(match?.venue)
     || getProposalLocationLabel(match?.proposed_venue)
-    || 'Lieu \u00E0 d\u00E9finir'
+    || 'Lieu à définir'
 );
 const resolveAddressLabel = (/** @type {LeagueMatch | null} */ match) => (
   getProposalLocationLabel(match?.location?.address)
@@ -175,7 +175,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
   const loadMatch = useCallback(async (options = {}) => {
     if (!matchId) {
-      setLoadError("Aucun match n'est associe a ce lien.");
+      setLoadError("Aucun match n'est associé à ce lien.");
       setMatch(null);
       setLoading(false);
       setRefreshing(false);
@@ -277,7 +277,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const isCaptain = isCaptainA || isCaptainB;
 
   const participations = teamSide === 'a' ? (match?.participations_a || []) : (match?.participations_b || []);
-  const hasConfirm\u00E9d = participations.some((/** @type {User} */ p) => areSameEntityId(getEntityDocumentId(p), userId));
+  const hasConfirmed = participations.some((/** @type {User} */ p) => areSameEntityId(getEntityDocumentId(p), userId));
   const participationCount = participations.length;
   const requiredPlayers = useMemo(() => getRequiredPlayersForSport(myTeam?.sport), [myTeam?.sport]);
   const venueRequired = useMemo(() => doesMatchRequireVenue(match), [match]);
@@ -287,8 +287,8 @@ function LeagueMatchDetails({ navigation, route }) {
   const isVenueBooked = useMemo(() => isVenueBookedForMatch(match), [match]);
   const isAnonymous = useMemo(() => shouldMaskOpponentIdentity(match), [match]);
   const matchLegalLabel = useMemo(() => {
-    const left = match?.team_a?.name || 'Equipe A';
-    const right = isAnonymous ? 'Adversaire' : (match?.team_b?.name || 'Equipe B');
+    const left = match?.team_a?.name || 'Équipe A';
+    const right = isAnonymous ? 'Adversaire' : (match?.team_b?.name || 'Équipe B');
     return `${left} VS ${right}`;
   }, [isAnonymous, match?.team_a?.name, match?.team_b?.name]);
   const scoreFlow = useMemo(
@@ -386,7 +386,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const negotiationProposalVenue = getProposalLocationLabel(pendingLeagueAction?.venue)
     || getProposalLocationLabel(match?.proposed_venue)
     || getProposalLocationLabel(match?.venue)
-    || 'Lieu \u00E0 d\u00E9finir';
+    || 'Lieu à définir';
   const negotiationProposalMessageId = String(pendingLeagueAction?.proposalMessageId || '').trim();
   const hasNegotiationConversation = Boolean(getEntityDocumentId(match?.chat));
   const canReplyFromNegotiationCard = negotiationState === 'proposal_received' && Boolean(negotiationProposalMessageId);
@@ -399,32 +399,32 @@ function LeagueMatchDetails({ navigation, route }) {
     [match],
   );
   const negotiationMeta = useMemo(() => {
-    let title = 'Negociation du match';
+    let title = 'Négociation du match';
     let helper = "Retrouve la conversation avec l'adversaire pour conclure rapidement.";
     let origin = 'Discussion League active';
 
     if (negotiationState === 'proposal_received') {
       title = 'Proposition reçue';
-      helper = 'Une proposition adverse attend votre r\u00E9ponse. Vous pouvez accepter, refuser ou contre-proposer.';
-      origin = "Envoy\u00E9e par l'adversaire";
+      helper = 'Une proposition adverse attend ta réponse. Tu peux accepter, refuser ou contre-proposer.';
+      origin = "Envoyée par l'adversaire";
     } else if (negotiationState === 'proposal_sent_waiting') {
-      title = 'Proposition envoy\u00E9e';
-      helper = 'Votre squad attend maintenant la r\u00E9ponse adverse. La conversation reste le centre de la negociation.';
-      origin = 'Envoy\u00E9e par votre squad';
+      title = 'Proposition envoyée';
+      helper = 'Ta squad attend maintenant la réponse adverse. La conversation reste le centre de la négociation.';
+      origin = 'Envoyée par ta squad';
     } else if (negotiationState === 'opponent_found') {
       title = 'Adversaire trouve';
       helper = venueRequired
-        ? 'Le match est cree. Envoyez une proposition de date et de terrain pour lancer la negociation.'
-        : 'Le match est cree. Envoyez une proposition de date, avec un lieu si vous voulez le fixer tout de suite.';
-      origin = 'Aucune proposition d\u00E9finitive pour le moment';
+        ? 'Le match est créé. Envoie une proposition de date et de terrain pour lancer la négociation.'
+        : 'Le match est créé. Envoie une proposition de date, avec un lieu si tu veux le fixer tout de suite.';
+      origin = 'Aucune proposition définitive pour le moment';
     }
 
-    let formattedDate = 'Date \u00E0 d\u00E9finir';
+    let formattedDate = 'Date à définir';
     if (negotiationProposalDate) {
       try {
         formattedDate = format(new Date(negotiationProposalDate), "EEEE d MMMM 'a' HH'h'mm", { locale: fr });
       } catch (_error) {
-        formattedDate = 'Date \u00E0 d\u00E9finir';
+        formattedDate = 'Date à définir';
       }
     }
 
@@ -638,22 +638,22 @@ function LeagueMatchDetails({ navigation, route }) {
   );
   const isRosterFull = participationCount >= requiredPlayers;
   const hasOfficialScore = match?.score_a !== null && match?.score_b !== null;
-  const pr\u00E9senceCompactHelperText = useMemo(() => {
-    if (hasConfirm\u00E9d) {
-      if (remainingPlayers <= 0) return 'Le quorum est atteint pour ton \u00E9quipe.';
+  const presenceCompactHelperText = useMemo(() => {
+    if (hasConfirmed) {
+      if (remainingPlayers <= 0) return 'Le quorum est atteint pour ton équipe.';
       return `Encore ${remainingPlayers} joueur${remainingPlayers > 1 ? 's' : ''} pour atteindre le quorum.`;
     }
 
     if (isRosterFull) return 'Effectif complet pour le moment.';
     return `Il manque ${remainingPlayers} joueur${remainingPlayers > 1 ? 's' : ''} pour atteindre le quorum.`;
-  }, [hasConfirm\u00E9d, isRosterFull, remainingPlayers]);
-  const pr\u00E9sencePrimaryTitle = useMemo(() => {
+  }, [hasConfirmed, isRosterFull, remainingPlayers]);
+  const presencePrimaryTitle = useMemo(() => {
     if (isRosterFull) return 'Complet';
     return 'Je participe';
   }, [isRosterFull]);
 
   const formattedDate = useMemo(() => {
-    if (!match?.date) return 'Date \u00E0 d\u00E9finir';
+    if (!match?.date) return 'Date à définir';
     try {
       return format(new Date(match.date), "EEEE d MMMM 'a' HH'h'mm", { locale: fr });
     } catch (_error) {
@@ -745,7 +745,7 @@ function LeagueMatchDetails({ navigation, route }) {
             borderColor: Colors.primary500,
           }}
           textStyle={{ color: Colors.neutral00 }}
-          title="Marquer terrain reserve"
+          title="Marquer terrain réservé"
           variant="Primary"
         />
       ) : null}
@@ -790,7 +790,7 @@ function LeagueMatchDetails({ navigation, route }) {
     const countdown = formatScoreFlowCountdown(scoreFlow.remainingSeconds);
     if (scoreFlow.state === 'opponent_score_pending') {
       return {
-        helper: `La squad adverse a saisi un score. Confirmez ou contestez avant auto-validation dans ${countdown}.`,
+        helper: `La squad adverse a saisi un score. Confirme ou conteste avant auto-validation dans ${countdown}.`,
         label: 'Score adverse',
         title: 'Valider le score adverse',
       };
@@ -798,7 +798,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
     if (scoreFlow.state === 'submitted_waiting_opponent' || scoreFlow.state === 'auto_validation_pending') {
       return {
-        helper: `Votre score est enregistre. Sans reponse adverse, il sera valide automatiquement dans ${countdown}.`,
+        helper: `Ton score est enregistré. Sans réponse adverse, il sera validé automatiquement dans ${countdown}.`,
         label: 'Score saisi',
         title: 'Score saisi',
       };
@@ -806,15 +806,15 @@ function LeagueMatchDetails({ navigation, route }) {
 
     if (matchPhase === 'pending_validation') {
       return {
-        helper: `Un score attend une validation. Sans action, le score soumis sera traite a la deadline dans ${countdown}.`,
-        label: 'Score a valider',
+        helper: `Un score attend une validation. Sans action, le score soumis sera traite à la deadline dans ${countdown}.`,
+        label: 'Score à valider',
         title: 'Valider le score',
       };
     }
 
     if (matchPhase === 'disputed') {
       return {
-        helper: 'Un litige score est ouvert. Ajoutez les elements utiles ou attendez la resolution SuperAdmin.',
+        helper: 'Un litige score est ouvert. Ajoute les éléments utiles ou attends la résolution SuperAdmin.',
         label: 'Litige score',
         title: 'Traiter le litige',
       };
@@ -831,7 +831,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         accentColor: Colors.gold500,
         icon: Images.edit,
-        label: isCaptain ? 'Action capitaine' : 'Action equipe',
+        label: isCaptain ? 'Action capitaine' : 'Action équipe',
         text: scoreQuickActionMeta.helper,
       };
     }
@@ -840,7 +840,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         accentColor: Colors.gold500,
         icon: Images.stadium,
-        label: 'Organisation \u00E9quipe',
+        label: 'Organisation équipe',
         text: "Le terrain doit encore être confirmé avant le coup d'envoi.",
       };
     }
@@ -850,7 +850,7 @@ function LeagueMatchDetails({ navigation, route }) {
         accentColor: Colors.primary500,
         icon: Images.clock,
         label: 'Avant match',
-        text: 'Les confirmations de pr\u00E9sence restent ouvertes avant le d\u00E9but.',
+        text: 'Les confirmations de présence restent ouvertes avant le début.',
       };
     }
 
@@ -859,7 +859,7 @@ function LeagueMatchDetails({ navigation, route }) {
         accentColor: Colors.success500,
         icon: Images.check,
         label: 'Résultat validé',
-        text: 'Le match est verrouill\u00E9 avec son score officiel.',
+        text: 'Le match est verrouillé avec son score officiel.',
       };
     }
 
@@ -897,7 +897,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return "Le terrain doit encore être confirmé avant le coup d'envoi.";
     }
     if (normalizedStatus === 'scheduled') {
-      return 'Les confirmations de pr\u00E9sence restent ouvertes avant le d\u00E9but.';
+      return 'Les confirmations de présence restent ouvertes avant le début.';
     }
     return heroStatusMeta.text;
   }, [
@@ -914,8 +914,8 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isPostSlotResolutionCurrentMatch) {
       return {
         accentColor: Colors.gold500,
-        helper: 'Le creneau est depasse. Confirmez si le match a eu lieu.',
-        label: 'Resolution a faire',
+        helper: 'Le créneau est dépassé. Confirme si le match a eu lieu.',
+        label: 'Résolution à faire',
         title: 'Confirmation du match',
       };
     }
@@ -941,9 +941,9 @@ function LeagueMatchDetails({ navigation, route }) {
     return {
       accentColor: Colors.primary500,
       helper: venueRequired
-        ? "Le terrain doit etre confirme avant le coup d'envoi pour garder le workflow League propre."
-        : "Le match reste a confirmer par les equipes avant le coup d'envoi.",
-      label: venueRequired ? 'Terrain a confirmer' : 'Match a confirmer',
+        ? "Le terrain doit être confirme avant le coup d'envoi pour garder le workflow League propre."
+        : "Le match reste à confirmer par les équipes avant le coup d'envoi.",
+      label: venueRequired ? 'Terrain à confirmer' : 'Match à confirmer',
       title: 'Organisation du match',
     };
   }, [
@@ -958,13 +958,13 @@ function LeagueMatchDetails({ navigation, route }) {
   ]);
   const captainPrimarySummaryText = useMemo(() => {
     if (isPostSlotResolutionCurrentMatch) {
-      return 'Confirmez si le match a eu lieu.';
+      return 'Confirme si le match a eu lieu.';
     }
     if (canManageVenue) {
-      return 'Confirmez le terrain du match.';
+      return 'Confirme le terrain du match.';
     }
     if (canSubmitScore) {
-      return 'Saisissez le score officiel.';
+      return 'Saisis le score officiel.';
     }
     if (isScoreLockedByTime) {
       return 'Le score sera disponible au coup d envoi.';
@@ -980,10 +980,10 @@ function LeagueMatchDetails({ navigation, route }) {
   const actionDockMeta = useMemo(() => {
     if (hasBottomPresenceBar) {
       return {
-        accentColor: hasConfirm\u00E9d ? Colors.success500 : Colors.primary500,
-        helper: pr\u00E9senceCompactHelperText,
+        accentColor: hasConfirmed ? Colors.success500 : Colors.primary500,
+        helper: presenceCompactHelperText,
         label: `${participationCount}/${requiredPlayers}`,
-        title: hasConfirm\u00E9d ? 'Présence confirmée' : 'Disponibilité',
+        title: hasConfirmed ? 'Présence confirmée' : 'Disponibilité',
       };
     }
 
@@ -1011,9 +1011,9 @@ function LeagueMatchDetails({ navigation, route }) {
     captainQuickActionMeta.title,
     hasBottomPresenceBar,
     hasCaptainQuickActions,
-    hasConfirm\u00E9d,
+    hasConfirmed,
     participationCount,
-    pr\u00E9senceCompactHelperText,
+    presenceCompactHelperText,
     requiredPlayers,
   ]);
   const captainSectionHelperText = useMemo(() => {
@@ -1021,9 +1021,9 @@ function LeagueMatchDetails({ navigation, route }) {
       return null;
     }
     if (venueRequired) {
-      return 'Les actions rapides terrain, score et resolution restent visibles dans la barre du bas pour agir sans quitter la fiche.';
+      return 'Les actions rapides terrain, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.';
     }
-    return 'Les actions rapides presence, score et resolution restent visibles dans la barre du bas pour agir sans quitter la fiche.';
+    return 'Les actions rapides présence, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.';
   }, [shouldShowInlineCaptainActions, venueRequired]);
   const captainSectionTitle = useMemo(() => {
     if (canShowCaptainPrimary) return 'Action prioritaire';
@@ -1031,36 +1031,36 @@ function LeagueMatchDetails({ navigation, route }) {
   }, [canShowCaptainPrimary, isCaptain]);
   const captainSectionLabel = useMemo(() => {
     if (canShowCaptainPrimary) return 'ACTION PRIORITAIRE';
-    return isCaptain ? 'PRIORITE MATCH' : 'ACTION EQUIPE';
+    return isCaptain ? 'Priorité MATCH' : 'ACTION Équipe';
   }, [canShowCaptainPrimary, isCaptain]);
   const shouldRenderCaptainSectionHelper = Boolean(canShowCaptainPrimary && captainSectionHelperText);
   const shouldRenderInlineCaptainActions = Boolean(canShowCaptainPrimary && shouldShowInlineCaptainActions);
   const postSlotResolutionModalMeta = useMemo(() => {
     if (effectivePostSlotResolutionStep === 'confirm_reschedule') {
       return {
-        helper: 'L adversaire indique que le match n a pas eu lieu et propose de replanifier ce meme match.',
+        helper: 'L adversaire indique que le match n a pas eu lieu et propose de replanifier ce même match.',
         title: 'Confirmer la replanification ?',
       };
     }
 
     if (effectivePostSlotResolutionStep === 'confirm_cancel') {
       return {
-        helper: 'L adversaire indique que le match n a pas eu lieu et propose d annuler ce match sans penalite.',
+        helper: 'L adversaire indique que le match n a pas eu lieu et propose d annuler ce match sans pénalité.',
         title: 'Confirmer l annulation ?',
       };
     }
 
     if (effectivePostSlotResolutionStep === 'choose_not_played_action') {
       return {
-        helper: 'Choisissez la suite a donner a ce match : replanifier avec le meme adversaire ou annuler sans penalite.',
+        helper: 'Choisis la suite à donner à ce match : replanifier avec le même adversaire ou annuler sans pénalité.',
         title: 'Le match n a pas eu lieu',
       };
     }
 
     return {
       helper: venueRequired
-        ? 'Le creneau est depasse sans terrain confirme. Les capitaines doivent confirmer si le match a eu lieu.'
-        : 'Le creneau est depasse. Les capitaines doivent confirmer si le match a eu lieu.',
+        ? 'Le créneau est dépassé sans terrain confirmé. Les capitaines doivent confirmer si le match a eu lieu.'
+        : 'Le créneau est dépassé. Les capitaines doivent confirmer si le match a eu lieu.',
       title: 'Le match a-t-il eu lieu ?',
     };
   }, [effectivePostSlotResolutionStep, venueRequired]);
@@ -1156,16 +1156,16 @@ function LeagueMatchDetails({ navigation, route }) {
     if (normalizedStatus !== 'valid') {
       return {
         disabled: true,
-        subtitle: 'Les stats seront disponibles une fois le score valid\u00E9.',
-        title: 'Stats bient\u00F4t disponibles',
+        subtitle: 'Les stats seront disponibles une fois le score validé.',
+        title: 'Stats bientôt disponibles',
       };
     }
 
     if (isLeagueStatsReviewRequired) {
       return {
         disabled: false,
-        subtitle: 'Le score officiel a change. Verifie puis republie cette version.',
-        title: 'Mettre a jour apres score officiel',
+        subtitle: 'Le score officiel a changé. Vérifie puis republie cette version.',
+        title: 'Mettre à jour après score officiel',
       };
     }
 
@@ -1173,8 +1173,8 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         disabled: false,
         subtitle: leagueStatsReport?.finalizedAt
-          ? `Rapport finalis\u00E9 le ${new Date(leagueStatsReport.finalizedAt).toLocaleString('fr-FR')}`
-          : 'Rapport finalis\u00E9',
+          ? `Rapport finalisé le ${new Date(leagueStatsReport.finalizedAt).toLocaleString('fr-FR')}`
+          : 'Rapport finalisé',
         title: 'Voir les stats du match',
       };
     }
@@ -1182,14 +1182,14 @@ function LeagueMatchDetails({ navigation, route }) {
     if (canManageLeagueStats) {
       return {
         disabled: false,
-        subtitle: 'Note collective, retours capitaine et stats manquantes \u00E0 compl\u00E9ter pour ton \u00E9quipe.',
-        title: 'Finaliser le bilan \u00E9quipe',
+        subtitle: 'Note collective, retours capitaine et stats manquantes à compléter pour ton équipe.',
+        title: 'Finaliser le bilan équipe',
       };
     }
 
     return {
       disabled: true,
-      subtitle: 'Le bilan \u00E9quipe est encore en cours de finalisation.',
+      subtitle: 'Le bilan équipe est encore en cours de finalisation.',
       title: 'En attente du bilan',
     };
   }, [
@@ -1201,29 +1201,29 @@ function LeagueMatchDetails({ navigation, route }) {
   ]);
   const leagueStatsSummaryText = useMemo(() => {
     if (isLeagueStatsReviewRequired) {
-      return 'Le score officiel a change. Verification requise avant nouvelle publication.';
+      return 'Le score officiel a changé. Vérification requise avant nouvelle publication.';
     }
 
     if (isLeagueStatsFinal) {
-      return 'Le rapport stats de ton \u00E9quipe est finalis\u00E9.';
+      return 'Le rapport stats de ton équipe est finalisé.';
     }
 
     if (normalizedStatus !== 'valid') {
-      return 'Les stats seront disponibles une fois le score valid\u00E9.';
+      return 'Les stats seront disponibles une fois le score validé.';
     }
 
     if (canManageLeagueStats) {
-      return 'Complete le bilan collectif, les retours individuels et les stats manquantes maintenant que le score est valid\u00E9.';
+      return 'Complète le bilan collectif, les retours individuels et les stats manquantes maintenant que le score est validé.';
     }
 
-    return 'Le bilan \u00E9quipe est encore en cours de finalisation.';
+    return 'Le bilan équipe est encore en cours de finalisation.';
   }, [canManageLeagueStats, isLeagueStatsFinal, isLeagueStatsReviewRequired, normalizedStatus]);
   const leagueStatsStatusMeta = useMemo(() => {
     if (isLeagueStatsReviewRequired) {
       return {
         backgroundColor: `${Colors.warning500}20`,
         borderColor: `${Colors.warning500}45`,
-        label: 'Verification requise',
+        label: 'Vérification requise',
         textColor: Colors.warning500,
       };
     }
@@ -1232,7 +1232,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         backgroundColor: `${Colors.success500}20`,
         borderColor: `${Colors.success500}45`,
-        label: 'Stats publiees',
+        label: 'Stats publiées',
         textColor: Colors.success500,
       };
     }
@@ -1241,7 +1241,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         backgroundColor: `${Colors.gold500}20`,
         borderColor: `${Colors.gold500}45`,
-        label: 'Score valid\u00E9 en attente',
+        label: 'Score validé en attente',
         textColor: Colors.gold500,
       };
     }
@@ -1249,12 +1249,12 @@ function LeagueMatchDetails({ navigation, route }) {
     return {
       backgroundColor: `${Colors.primary500}20`,
       borderColor: `${Colors.primary500}45`,
-      label: '\u00C0 finaliser',
+      label: 'À finaliser',
       textColor: Colors.primary500,
     };
   }, [Colors.gold500, Colors.primary500, Colors.success500, Colors.warning500, isLeagueStatsFinal, isLeagueStatsReviewRequired, normalizedStatus]);
   const leagueStatsCardButtonTitle = useMemo(() => {
-    if (isLeagueStatsReviewRequired) return 'Mettre a jour';
+    if (isLeagueStatsReviewRequired) return 'Mettre à jour';
     if (isLeagueStatsCompleted) return 'Voir';
     return 'Ouvrir';
   }, [isLeagueStatsCompleted, isLeagueStatsReviewRequired]);
@@ -1310,7 +1310,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const myLeagueMatchResponseSummary = useMemo(() => {
     if (leagueMyMatchResponse?.status === 'submitted') {
       if (leagueMyMatchResponse?.participation === 'not_involved') {
-        return 'Tu as indique ne pas etre concerne par ce match.';
+        return 'Tu as indique ne pas être concerne par ce match.';
       }
 
       if (leagueMyMatchResponse?.participation === 'present_no_play') {
@@ -1318,10 +1318,10 @@ function LeagueMatchDetails({ navigation, route }) {
       }
 
       if (leagueMyMatchResponse?.quantitativeState === 'unknown') {
-        return 'Ton ressenti est enregistre, sans stats quantitatives.';
+        return 'Ton ressenti est enregistré, sans stats quantitatives.';
       }
 
-      return 'Tes stats personnelles et ta note sont enregistrees.';
+      return 'Tes stats personnelles et ta note sont enregistrées.';
     }
 
     if (leagueMyMatchResponse?.status === 'draft') {
@@ -1358,7 +1358,7 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isScoreLockedByTime) {
       Alert.alert(
         'Score indisponible',
-        "Vous pourrez saisir le score une fois l'heure de d\u00E9but du match d\u00E9pass\u00E9e de 1 minute.",
+        "Tu pourras saisir le score une fois l'heure de début du match dépassée de 1 minute.",
       );
       return;
     }
@@ -1385,15 +1385,15 @@ function LeagueMatchDetails({ navigation, route }) {
     try {
       const result = await confirmParticipation(matchId, teamSide, { legalAcceptance });
       showBanner({
-        body: result.message || 'Presence confirmee',
-        title: 'Presence confirmee',
+        body: result.message || 'Présence confirmée',
+        title: 'Présence confirmée',
         tone: 'league',
       });
       await loadMatch({ forceFresh: true });
     } catch (error) {
       console.error(error);
       showBanner({
-        body: 'Echec confirmation',
+        body: 'Échec confirmation',
         title: 'Erreur',
         tone: 'error',
       });
@@ -1408,15 +1408,15 @@ function LeagueMatchDetails({ navigation, route }) {
     try {
       await declineParticipation(matchId, teamSide);
       showBanner({
-        body: 'Votre participation a ete annulee',
-        title: 'Participation annulee',
+        body: 'Ta participation a été annulée',
+        title: 'Participation annulée',
         tone: 'league',
       });
       await loadMatch({ forceFresh: true });
     } catch (error) {
       console.error(error);
       showBanner({
-        body: 'Echec annulation',
+        body: 'Échec annulation',
         title: 'Erreur',
         tone: 'error',
       });
@@ -1431,11 +1431,11 @@ function LeagueMatchDetails({ navigation, route }) {
       await markVenueBooked(matchId);
       await invalidateLeagueQueries();
       await refetchPendingLeagueAction();
-      Alert.alert('Succes', 'Terrain marque comme reserve.');
+      Alert.alert('Succès', 'Terrain marque comme réservé.');
       await loadMatch({ forceFresh: true });
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Impossible de mettre a jour le statut');
+      Alert.alert('Erreur', 'Impossible de mettre à jour le statut');
     } finally {
       setActionLoading(false);
     }
@@ -1485,8 +1485,8 @@ function LeagueMatchDetails({ navigation, route }) {
       }
 
       showBanner({
-        body: 'Votre reponse a ete enregistree.',
-        title: 'Resolution mise a jour',
+        body: 'Ta réponse a été enregistrée.',
+        title: 'Résolution mise à jour',
         tone: 'league',
       });
     } catch (error) {
@@ -1517,7 +1517,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const handleCancelMatch = () => {
     Alert.alert(
       'Annuler le match ?',
-      'Action irreversible. \u00CAtes-vous s\u00FBr ?',
+      'Action irreversible. Es-tu sûr ?',
       [
         { style: 'cancel', text: 'Non' },
         {
@@ -1526,14 +1526,14 @@ function LeagueMatchDetails({ navigation, route }) {
             try {
               const targetTeamId = getEntityDocumentId(myTeam);
               if (!targetTeamId) {
-                Alert.alert('Erreur', '\u00C9quipe introuvable.');
+                Alert.alert('Erreur', 'Équipe introuvable.');
                 return;
               }
               await cancelMatch(matchId, targetTeamId, 'Annule par le capitaine');
-              Alert.alert('Match annule', 'Le match a ete annule.');
+              Alert.alert('Match annule', 'Le match a été annulé.');
               navigation.goBack();
             } catch (_error) {
-              Alert.alert('Erreur', 'Echec annulation');
+              Alert.alert('Erreur', 'Échec annulation');
             } finally {
               setActionLoading(false);
             }
@@ -1550,8 +1550,8 @@ function LeagueMatchDetails({ navigation, route }) {
     const chatId = getEntityDocumentId(match?.chat);
     if (!chatId) {
       Alert.alert(
-        'Conversation en preparation',
-        'La conversation avec l\'adversaire n est pas encore disponible. Reessayez dans quelques secondes.',
+        'Conversation en préparation',
+        'La conversation avec l\'adversaire n est pas encore disponible. Réessaie dans quelques secondes.',
       );
       return;
     }
@@ -1561,9 +1561,9 @@ function LeagueMatchDetails({ navigation, route }) {
       focusProposalMessageId: negotiationProposalMessageId || undefined,
       focusSection: undefined,
       leagueNegotiationFocusToken: String(Date.now()),
-      subTitle: 'Negociation du match en cours',
+      subTitle: 'Négociation du match en cours',
       title: isAnonymous
-        ? `${myTeam?.name || 'Votre squad'} vs Adversaire`
+        ? `${myTeam?.name || 'Ta squad'} vs Adversaire`
         : `${match.team_a?.name} vs ${match.team_b?.name}`,
     });
   }, [isAnonymous, match, myTeam?.name, navigation, negotiationProposalMessageId]);
@@ -1708,9 +1708,9 @@ function LeagueMatchDetails({ navigation, route }) {
           chatId: nextChatId,
           focusLatestProposal: true,
           leagueNegotiationFocusToken: String(Date.now()),
-          subTitle: 'Negociation du match en cours',
+          subTitle: 'Négociation du match en cours',
           title: isAnonymous
-            ? `${myTeam?.name || 'Votre squad'} vs Adversaire`
+            ? `${myTeam?.name || 'Ta squad'} vs Adversaire`
             : `${match?.team_a?.name} vs ${match?.team_b?.name}`,
         });
       }
@@ -1748,12 +1748,12 @@ function LeagueMatchDetails({ navigation, route }) {
 
     navigation.navigate(RouteNames.MatchStatsEditor, {
       matchId,
-      matchLabel: `${match?.team_a?.name || '\u00C9quipe A'} VS ${match?.team_b?.name || '\u00C9quipe B'}`,
+      matchLabel: `${match?.team_a?.name || 'Équipe A'} VS ${match?.team_b?.name || 'Équipe B'}`,
       sourceType: 'league',
       sport: myTeam?.sport || match?.team_a?.sport || match?.team_b?.sport || 'football',
       teamId: myTeamId,
       teamName: myTeam?.name || null,
-      title: 'Bilan \u00E9quipe',
+      title: 'Bilan équipe',
     });
   }, [match?.team_a?.name, match?.team_a?.sport, match?.team_b?.name, match?.team_b?.sport, matchId, myTeam?.name, myTeam?.sport, myTeamId, navigation]);
   const handleOpenMyMatchResponse = useCallback(() => {
@@ -1761,7 +1761,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
     navigation.navigate(RouteNames.PlayerMatchResponse, {
       matchId,
-      matchLabel: `${match?.team_a?.name || '\u00C9quipe A'} VS ${match?.team_b?.name || '\u00C9quipe B'}`,
+      matchLabel: `${match?.team_a?.name || 'Équipe A'} VS ${match?.team_b?.name || 'Équipe B'}`,
       sourceType: 'league',
       sport: leagueMyMatchResponsePayload?.sport || myTeam?.sport || match?.team_a?.sport || match?.team_b?.sport || 'football',
       teamId: myTeamId,
@@ -1925,7 +1925,7 @@ function LeagueMatchDetails({ navigation, route }) {
               <View style={styles.heroTeamBlock}>
                 <TeamShield initials={String(match.team_a?.initials || match.team_a?.name || '?')} isGold size={68} />
                 <Text numberOfLines={2} style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral00 }]}>
-                  {match.team_a?.name || '\u00C9quipe A'}
+                  {match.team_a?.name || 'Équipe A'}
                 </Text>
               </View>
 
@@ -1971,7 +1971,7 @@ function LeagueMatchDetails({ navigation, route }) {
                   <>
                     <TeamShield initials={String(match.team_b?.initials || match.team_b?.name || '?')} isGold size={68} />
                     <Text numberOfLines={2} style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral00 }]}>
-                      {match.team_b?.name || '\u00C9quipe B'}
+                      {match.team_b?.name || 'Équipe B'}
                     </Text>
                   </>
                 )}
@@ -2132,7 +2132,7 @@ function LeagueMatchDetails({ navigation, route }) {
                     </View>
                     <View style={styles.infoTextWrap}>
                       <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginBottom: 4 }]}>
-                        Proposition recue
+                        Proposition reçue
                       </Text>
                       <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>{negotiationMeta.formattedDate}</Text>
                       <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 8 }]}>
@@ -2157,10 +2157,10 @@ function LeagueMatchDetails({ navigation, route }) {
                     ]}
                   >
                     <Text style={[Fonts.p4Bold, { color: Colors.warning500, marginBottom: 4 }]}>
-                      Conversation en preparation
+                      Conversation en préparation
                     </Text>
                     <Text style={[Fonts.p4, { color: leagueCardTextColor, textAlign: 'center' }]}>
-                      La conversation avec l adversaire arrive bientot. Reessayez dans quelques secondes ou poursuivez depuis cette fiche match.
+                      La conversation avec l adversaire arrive bientôt. Réessaie dans quelques secondes ou poursuis depuis cette fiche match.
                     </Text>
                     <View style={{ gap: 10, marginTop: 14, width: '100%' }}>
                       <Button
@@ -2302,7 +2302,7 @@ function LeagueMatchDetails({ navigation, route }) {
                     <View style={{ flex: 1 }}>
                       <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 6 }]}>RETOUR INDIVIDUEL</Text>
                       <Text style={[Fonts.h1, styles.responseLargeScore, { color: Colors.gold500 }]}>
-                        {leagueMyMatchResponse?.selfRating ? `${leagueMyMatchResponse.selfRating}/10` : '\u00C0 compl\u00E9ter'}
+                        {leagueMyMatchResponse?.selfRating ? `${leagueMyMatchResponse.selfRating}/10` : 'À compléter'}
                       </Text>
                       <Text style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 4 }]}>
                         {leagueMyMatchResponse?.selfRating ? 'Note personnelle' : 'Renseigne ton ressenti de match'}
@@ -2338,7 +2338,7 @@ function LeagueMatchDetails({ navigation, route }) {
                       }}
                     >
                       <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                        {`Le match de l \u00E9quipe : ${leagueMyMatchResponse.teamRating}/10`}
+                        {`Le match de l équipe : ${leagueMyMatchResponse.teamRating}/10`}
                       </Text>
                     </View>
                   ) : null}
@@ -2394,7 +2394,7 @@ function LeagueMatchDetails({ navigation, route }) {
                         {leagueMyCoachReview?.rating != null ? `${leagueMyCoachReview.rating}/10` : 'En attente'}
                       </Text>
                       <Text style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 4 }]}>
-                        {hasLeagueCoachReview ? 'Evaluation publiee' : 'Retour pas encore disponible'}
+                        {hasLeagueCoachReview ? 'Évaluation publiée' : 'Retour pas encore disponible'}
                       </Text>
                     </View>
                     <View
@@ -2416,7 +2416,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
                   <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
                     {hasLeagueCoachReview
-                      ? 'Le capitaine a publie un retour individuel pour ton match.'
+                      ? 'Le capitaine a publié un retour individuel pour ton match.'
                       : "Le capitaine n'a pas encore laisse d'avis individuel pour ce match."}
                   </Text>
 
@@ -2588,7 +2588,7 @@ function LeagueMatchDetails({ navigation, route }) {
                       }}
                     >
                       <Text style={[Fonts.p3, { color: Colors.warning400 }]}>
-                        Le score officiel a change apres la premiere publication. Une mise a jour est requise.
+                        Le score officiel a changé après la première publication. Une mise à jour est requise.
                       </Text>
                     </View>
                   ) : null}
@@ -2704,7 +2704,7 @@ function LeagueMatchDetails({ navigation, route }) {
                         }}
                       />
                       <View style={{ flex: 1 }}>
-                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{entry?.title || 'Mise a jour League'}</Text>
+                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{entry?.title || 'Mise à jour League'}</Text>
                         <Text style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 2 }]}>
                           {entry?.at ? new Date(entry.at).toLocaleString('fr-FR') : 'Horodatage indisponible'}
                         </Text>
@@ -2720,8 +2720,8 @@ function LeagueMatchDetails({ navigation, route }) {
               {renderSectionHeader('Historique League')}
               <LeagueCard style={styles.leagueCardSurface}>
                 <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
-                  Les prochaines mises a jour League apparaitront ici des qu une action
-                  sera enregistree sur ce match.
+                  Les prochaines mises à jour League apparaîtront ici des qu une action
+                  sera enregistrée sur ce match.
                 </Text>
               </LeagueCard>
             </>
@@ -2770,8 +2770,8 @@ function LeagueMatchDetails({ navigation, route }) {
                 </View>
               </TouchableOpacity>
 
-              {!isActionDockExpanded && hasBottomPresenceBar && !hasConfirm\u00E9d ? (
-                <View pointerEvents="box-none" style={styles.pr\u00E9senceActionsRow}>
+              {!isActionDockExpanded && hasBottomPresenceBar && !hasConfirmed ? (
+                <View pointerEvents="box-none" style={styles.présenceActionsRow}>
                   <Button
                     disabled={actionLoading}
                     icon="close"
@@ -2801,13 +2801,13 @@ function LeagueMatchDetails({ navigation, route }) {
                       flex: 1.08,
                     }}
                     textStyle={{ color: isRosterFull ? Colors.neutral300 : Colors.neutral00 }}
-                    title={pr\u00E9sencePrimaryTitle}
+                    title={presencePrimaryTitle}
                     variant="Primary"
                   />
                 </View>
               ) : null}
 
-              {isActionDockExpanded && hasBottomPresenceBar && hasConfirm\u00E9d ? (
+              {isActionDockExpanded && hasBottomPresenceBar && hasConfirmed ? (
                 <View pointerEvents="box-none" style={styles.confirmedActionsRow}>
                   <Button
                     disabled={actionLoading}
@@ -2828,8 +2828,8 @@ function LeagueMatchDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {isActionDockExpanded && hasBottomPresenceBar && !hasConfirm\u00E9d ? (
-                <View pointerEvents="box-none" style={styles.pr\u00E9senceActionsRow}>
+              {isActionDockExpanded && hasBottomPresenceBar && !hasConfirmed ? (
+                <View pointerEvents="box-none" style={styles.présenceActionsRow}>
                   <Button
                     disabled={actionLoading}
                     icon="close"
@@ -2859,7 +2859,7 @@ function LeagueMatchDetails({ navigation, route }) {
                       flex: 1.08,
                     }}
                     textStyle={{ color: isRosterFull ? Colors.neutral300 : Colors.neutral00 }}
-                    title={pr\u00E9sencePrimaryTitle}
+                    title={presencePrimaryTitle}
                     variant="Primary"
                   />
                 </View>
@@ -2884,7 +2884,7 @@ function LeagueMatchDetails({ navigation, route }) {
                         ]}
                       />
                       <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-                        {isCaptain ? 'Actions capitaine' : 'Actions equipe'}
+                        {isCaptain ? 'Actions capitaine' : 'Actions équipe'}
                       </Text>
                     </View>
                     <View
@@ -2920,20 +2920,20 @@ function LeagueMatchDetails({ navigation, route }) {
               <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Stats de fin de match</Text>
               <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
                 {isLeagueStatsReviewRequired
-                  ? 'Le score officiel a change. Verifie les lignes puis republie ce rapport.'
-                  : 'Le score est valid\u00E9. Tu peux maintenant compl\u00E9ter le temps de jeu et les stats cl\u00E9s de ton \u00E9quipe.'}
+                  ? 'Le score officiel a changé. Vérifie les lignes puis republie ce rapport.'
+                  : 'Le score est validé. Tu peux maintenant compléter le temps de jeu et les stats clés de ton équipe.'}
               </Text>
             </View>
 
             <LeagueCard style={styles.leagueCardSurface}>
               <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>Équipe concernée</Text>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 6 }]}>
-                {myTeam?.name || 'Mon \u00E9quipe'}
+                {myTeam?.name || 'Mon équipe'}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 6 }]}>
-                {match?.team_a?.name || '\u00C9quipe A'}
+                {match?.team_a?.name || 'Équipe A'}
                 {' VS '}
-                {match?.team_b?.name || '\u00C9quipe B'}
+                {match?.team_b?.name || 'Équipe B'}
               </Text>
             </LeagueCard>
 
@@ -2959,9 +2959,9 @@ function LeagueMatchDetails({ navigation, route }) {
         >
           <View style={{ gap: 16, paddingBottom: 12 }}>
             <View style={{ gap: 4 }}>
-              <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Repondre a la proposition</Text>
+              <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Répondre à la proposition</Text>
               <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
-                Choisissez une seule action pour repondre a cette proposition de match.
+                Choisis une seule action pour répondre à cette proposition de match.
               </Text>
             </View>
 
@@ -3034,9 +3034,9 @@ function LeagueMatchDetails({ navigation, route }) {
             <LeagueCard style={styles.leagueCardSurface}>
               <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 8 }]}>Match concerne</Text>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-                {match?.team_a?.name || 'Equipe A'}
+                {match?.team_a?.name || 'Équipe A'}
                 {' VS '}
-                {isAnonymous ? 'Adversaire' : match?.team_b?.name || 'Equipe B'}
+                {isAnonymous ? 'Adversaire' : match?.team_b?.name || 'Équipe B'}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 8 }]}>{formattedDate}</Text>
               <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 4 }]}>{venueLabel}</Text>
@@ -3380,13 +3380,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 8,
   },
-  pr\u00E9senceActionsRow: {
+  présenceActionsRow: {
     alignItems: 'stretch',
     flexDirection: 'row',
     gap: 12,
     width: '100%',
   },
-  pr\u00E9senceCountPill: {
+  présenceCountPill: {
     borderRadius: 999,
     borderWidth: 1,
     minWidth: 56,

@@ -120,7 +120,7 @@ function AddCoach({ navigation, route }) {
         t('common.error', 'Erreur'),
         isManagerMode
           ? "Impossible d'ajouter ce dirigeant à la section pour le moment."
-          : "Impossible d'ajouter cet entraineur au club pour le moment.",
+          : "Impossible d'ajouter cet entraîneur au club pour le moment.",
       );
     },
     onSuccess: () => {
@@ -167,7 +167,7 @@ function AddCoach({ navigation, route }) {
             isManagerMode
               ? t(
                 'addClubManager.alerts.alreadyExist.description',
-                "Le détenteur de ce numéro de téléphone utilise déjà l'application sous le nom de {{firstname}} {{lastname}}. Voulez-vous l'ajouter comme dirigeant à cette section ?",
+                "Le détenteur de ce numéro de téléphone utilise déjà l'application sous le nom de {{firstname}} {{lastname}}. Veux-tu l'ajouter comme dirigeant à cette section ?",
                 {
                   firstname: user.firstname,
                   lastname: user.lastname,
@@ -241,7 +241,7 @@ function AddCoach({ navigation, route }) {
   if (!routeClubId) {
     return (
       <ClubStateView
-        description="Impossible d'ouvrir ce formulaire sans club valide. Revenez a la fiche club puis relancez l'ajout."
+        description="Impossible d'ouvrir ce formulaire sans club valide. Reviens à la fiche club puis relance l'ajout."
         title="Club introuvable"
       />
     );
@@ -252,7 +252,7 @@ function AddCoach({ navigation, route }) {
       <ClubStateView
         description={isManagerMode
           ? "Nous récupérons les informations de la section pour préparer l'ajout du dirigeant."
-          : "Nous récupérons les informations du club pour preparer l'ajout du coach."}
+          : "Nous récupérons les informations du club pour préparer l'ajout du coach."}
         isLoading
         title={isManagerMode ? 'Chargement de la section' : 'Chargement du club'}
       />

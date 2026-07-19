@@ -69,7 +69,7 @@ function MyTeamList({ navigation, route }) {
           </View>
         </View>
         <OnboardingWrapper
-          description="Retrouvez vos équipes, les demandes en attente et l'accès aux détails."
+          description="Retrouve tes équipes, les demandes en attente et l'accès aux détails."
           id="my-teams-main-content"
           order={1}
           spotlight={{

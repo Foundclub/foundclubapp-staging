@@ -129,7 +129,7 @@ function SelectAvatar({
             buttonNegative: t('common.actions.cancel', 'Annuler'),
             buttonNeutral: t('common.actions.askLater', 'Plus tard'),
             buttonPositive: t('common.actions.ok', 'OK'),
-            message: t('permissions.camera.message', 'L\'application a besoin d\'accéder à votre caméra pour prendre une photo.'),
+            message: t('permissions.camera.message', 'L\'application a besoin d\'accéder à ta caméra pour prendre une photo.'),
             title: t('permissions.camera.title', 'Permission Caméra'),
           },
         );

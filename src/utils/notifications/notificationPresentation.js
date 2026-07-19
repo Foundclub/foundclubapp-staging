@@ -148,4 +148,4 @@ export const formatNotificationRelativeTime = (dateInput) => {
 };
 
 export const NOTIFICATION_EMPTY_STATE_TITLE = 'Aucune notification';
-export const NOTIFICATION_EMPTY_STATE_BODY = 'Les nouvelles notifications apparaitront ici.';
+export const NOTIFICATION_EMPTY_STATE_BODY = 'Les nouvelles notifications apparaîtront ici.';

@@ -973,7 +973,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   return {
     calendarPrompt: {
       body: pendingCalendarPrompt
-        ? 'Ajouter ce match League à votre agenda pour ne pas le manquer ?'
+        ? 'Ajouter ce match League à ton agenda pour ne pas le manquer ?'
         : '',
       canShow: calendarPrompt.canShow,
       descriptor: calendarPrompt.descriptor,
@@ -999,7 +999,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     },
     handleNavigateOnOpen,
     pushPermissionPrompt: {
-      body: 'Activez les notifications FoundClub pour recevoir les validations League, les rappels de composition et les actions importantes sans attendre.',
+      body: 'Active les notifications FoundClub pour recevoir les validations League, les rappels de composition et les actions importantes sans attendre.',
       canShow: pushPermissionPrompt.canShow,
       descriptor: pushPermissionPrompt.descriptor,
       onAccept: async () => {
@@ -1016,7 +1016,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       onVisible: () => {
         pushPermissionPrompt.markShown({ reason: pendingPushPermissionReason || 'manual' });
       },
-      title: 'Activez les notifications FoundClub',
+      title: 'Active les notifications FoundClub',
     },
     saveToken,
   };

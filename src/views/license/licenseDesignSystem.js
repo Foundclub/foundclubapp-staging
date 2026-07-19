@@ -28,7 +28,7 @@ export const licenseStatusLabels = {
   checkout_failed: 'Test checkout en erreur',
   closed: 'Cloturee',
   confirmed: 'Valide',
-  credentials_missing: 'Configuration incomplete',
+  credentials_missing: 'Configuration incomplète',
   disabled: 'Desactive',
   disputed: 'Litige',
   draft: 'Brouillon',
@@ -54,8 +54,8 @@ export const licenseStatusLabels = {
   to_replace: 'A remplacer',
   validated: 'Valide',
   waived: 'Exemptee',
-  webhook_pending: 'Webhook a confirmer',
-  webhook_stale: 'Webhook a verifier',
+  webhook_pending: 'Webhook à confirmer',
+  webhook_stale: 'Webhook à vérifier',
 };
 
 export const paymentModeLabels = {
@@ -65,7 +65,7 @@ export const paymentModeLabels = {
   check: 'Cheque',
   custom: 'Autre moyen',
   external_link: 'Lien externe club',
-  helloasso: 'HelloAsso integre',
+  helloasso: 'HelloAsso intègre',
   stripe: 'Carte en ligne',
 };
 
@@ -263,8 +263,8 @@ export function LicenseInstallmentList({ currency = 'EUR', installments = [] }) 
   if (!installments.length) {
     return (
       <LicenseEmptyState
-        description="Aucune echeance detaillee n est encore disponible."
-        title="Echeancier indisponible"
+        description="Aucune échéance détaillée n est encore disponible."
+        title="Échéancier indisponible"
       />
     );
   }
@@ -293,7 +293,7 @@ export function LicenseInstallmentList({ currency = 'EUR', installments = [] }) 
                 </Text>
               </View>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {installment.dueDate || 'Date non definie'}
+                {installment.dueDate || 'Date non définie'}
                 {' '}
                 -
                 {' '}

@@ -324,8 +324,8 @@ function RecruitmentAdDetails() {
         queryClient.invalidateQueries({ queryKey: ['eventParticipations', ad.event.documentId] });
       }
       Alert.alert(
-        'Candidature envoyee',
-        result?.message || 'Ta candidature a bien ete envoyee.',
+        'Candidature envoyée',
+        result?.message || 'Ta candidature a bien été envoyée.',
       );
     },
   }));
@@ -382,7 +382,7 @@ function RecruitmentAdDetails() {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
-        || 'Impossible de mettre a jour cette candidature pour le moment.';
+        || 'Impossible de mettre à jour cette candidature pour le moment.';
       Alert.alert('Candidatures', message);
     },
     onSuccess: () => {
@@ -411,7 +411,7 @@ function RecruitmentAdDetails() {
         queryClient.invalidateQueries({ queryKey: ['event', ad.event.documentId] });
         queryClient.invalidateQueries({ queryKey: ['eventParticipations', ad.event.documentId] });
       }
-      Alert.alert('Candidature', 'Ta candidature a bien ete retiree.');
+      Alert.alert('Candidature', 'Ta candidature a bien été retirée.');
     },
   }));
 
@@ -434,10 +434,10 @@ function RecruitmentAdDetails() {
   const clubCertificationPalette = getClubCertificationPalette(club, Colors);
   const clubCertificationLabel = getClubCertificationLabel(club);
   const positionLabel = isCoachAd
-    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, 'Role entraineur')
+    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, 'Rôle entraîneur')
     : (ad?.position || 'Poste non specifie');
   const levelName = ad?.level?.name || ad?.minLevel || 'Niveau ?';
-  const categoryName = ad?.category?.name || ad?.category || 'Categorie ?';
+  const categoryName = ad?.category?.name || ad?.category || 'Catégorie ?';
   const address = getShortAddress(ad?.city || club?.city || '');
   const sectionName = ad?.section?.name || ad?.section;
   const coachExperienceLabel = humanizeEnumLabel(ad?.coachExperienceLevel, '');
@@ -480,7 +480,7 @@ function RecruitmentAdDetails() {
     }
 
     if (detectionDateTimeLabel) {
-      summaryParts.push(`Date de la detection : ${detectionDateTimeLabel}`);
+      summaryParts.push(`Date de la détection : ${detectionDateTimeLabel}`);
     }
 
     if (clubName) {
@@ -519,7 +519,7 @@ function RecruitmentAdDetails() {
             {adStatusTitle}
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
-            {adError?.message || 'Cette annonce n est plus disponible ou n a pas pu etre chargee.'}
+            {adError?.message || 'Cette annonce n est plus disponible ou n a pas pu être chargée.'}
           </Text>
           {adError ? (
             <Button
@@ -544,8 +544,8 @@ function RecruitmentAdDetails() {
         Alert.alert(
           'Candidature',
           isDetectionLinked
-            ? 'Tu participes deja a cette detection.'
-            : 'Ta candidature est deja validee pour cette annonce.',
+            ? 'Tu participes déjà à cette détection.'
+            : 'Ta candidature est déjà validée pour cette annonce.',
         );
         return;
       }
@@ -553,8 +553,8 @@ function RecruitmentAdDetails() {
       Alert.alert(
         'Candidature',
         isDetectionLinked
-          ? 'Tu as deja une candidature en attente sur cette detection.'
-          : 'Tu as deja postule a cette annonce.',
+          ? 'Tu as déjà une candidature en attente sur cette détection.'
+          : 'Tu as déjà postule à cette annonce.',
       );
       return;
     }
@@ -606,7 +606,7 @@ function RecruitmentAdDetails() {
     }
 
     if (!coachApplicationPhone && !coachApplicationEmail) {
-      Alert.alert('Candidature', 'Ajoutez au moins un numero ou un email pour etre recontacte.');
+      Alert.alert('Candidature', 'Ajoute au moins un numéro ou un email pour être recontacte.');
       return;
     }
 
@@ -684,7 +684,7 @@ function RecruitmentAdDetails() {
 
     Alert.alert(
       'Refuser la candidature',
-      'Voulez-vous vraiment refuser cette candidature ?',
+      'Veux-tu vraiment refuser cette candidature ?',
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -696,9 +696,9 @@ function RecruitmentAdDetails() {
     );
   };
 
-  let applyButtonTitle = isCoachAd ? 'Candidater comme entraineur' : 'Postuler';
+  let applyButtonTitle = isCoachAd ? 'Candidater comme entraîneur' : 'Postuler';
   if (effectiveApplicationStatus === 'accepted') {
-    applyButtonTitle = isCoachAd ? 'Candidature acceptee' : 'Je participe';
+    applyButtonTitle = isCoachAd ? 'Candidature acceptée' : 'Je participe';
   } else if (effectiveApplicationStatus === 'pending') {
     applyButtonTitle = 'Demande en attente';
   } else if (!ad.isActive) {
@@ -752,7 +752,7 @@ function RecruitmentAdDetails() {
         }}
       >
         <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 14 }]}>
-          Profil entraineur recherche
+          Profil entraîneur recherche
         </Text>
 
         <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8, marginBottom: 14 }]}>
@@ -795,7 +795,7 @@ function RecruitmentAdDetails() {
           {certificationsWanted.length > 0 ? (
             <View>
               <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginBottom: 6 }]}>
-                Certifications souhaitees
+                Certifications souhaitées
               </Text>
               <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
                 {certificationsWanted.map((/** @type {any} */ item) => (
@@ -1130,7 +1130,7 @@ function RecruitmentAdDetails() {
 
                         {coachApplicationAvailability ? (
                           <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                            {`Disponibilites : ${coachApplicationAvailability}`}
+                            {`Disponibilités : ${coachApplicationAvailability}`}
                           </Text>
                         ) : null}
 
@@ -1288,7 +1288,7 @@ function RecruitmentAdDetails() {
           </View>
           <View style={styles.separator} />
           <View style={styles.infoItem}>
-            <Text style={[Fonts.caption, { color: Colors.neutral300, marginBottom: 4 }]}>Categorie</Text>
+            <Text style={[Fonts.caption, { color: Colors.neutral300, marginBottom: 4 }]}>Catégorie</Text>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral100, textAlign: 'center' }]}>{categoryName}</Text>
           </View>
         </View>
@@ -1298,7 +1298,7 @@ function RecruitmentAdDetails() {
             {isDetectionLinked ? (
               <TagView
                 style={{ backgroundColor: 'rgba(1,179,244,0.14)', borderColor: Colors.primary500 }}
-                text={detectionDate ? `Detection · ${detectionDate}` : 'Detection'}
+                text={detectionDate ? `Détection · ${detectionDate}` : 'Detection'}
                 textColor="primary500"
                 textStyle={{ fontWeight: '700' }}
               />
@@ -1347,12 +1347,12 @@ function RecruitmentAdDetails() {
               }}
             >
               <Text style={[Fonts.p2Bold, { color: applicationState.status === 'accepted' ? Colors.success500 : Colors.warning500 }]}>
-                {applicationState.status === 'accepted' ? 'Participation deja validee sur cette detection' : 'Candidature deja envoyee sur cette detection'}
+                {applicationState.status === 'accepted' ? 'Participation déjà validée sur cette détection' : 'Candidature déjà envoyée sur cette détection'}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20, marginTop: 6 }]}>
                 {applicationState.status === 'accepted'
-                  ? 'Tu participes deja a un autre poste de cette detection. Les autres annonces gardent donc le meme statut.'
-                  : 'Tu as deja une demande en attente sur un autre poste de cette detection. Les autres annonces gardent donc le meme statut.'}
+                  ? 'Tu participes déjà a un autre poste de cette détection. Les autres annonces gardent donc le même statut.'
+                  : 'Tu as déjà une demande en attente sur un autre poste de cette détection. Les autres annonces gardent donc le même statut.'}
               </Text>
             </View>
           ) : null}
@@ -1361,7 +1361,7 @@ function RecruitmentAdDetails() {
             <View style={{ marginTop: 24 }}>
               <Button
                 onPress={handleOpenDetection}
-                title="Ouvrir la detection"
+                title="Ouvrir la détection"
                 variant="Secondary"
               />
             </View>
@@ -1418,7 +1418,7 @@ function RecruitmentAdDetails() {
             Supprimer cette annonce
           </Text>
           <Text style={[Fonts.p1, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
-            Voulez-vous vraiment supprimer cette annonce ? Cette action est irreversible.
+            Veux-tu vraiment supprimer cette annonce ? Cette action est irreversible.
           </Text>
 
           <View style={{ gap: 12 }}>
@@ -1476,10 +1476,10 @@ function RecruitmentAdDetails() {
             }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 8 }]}>
-              Tu participes a une detection
+              Tu participes a une détection
             </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral100, lineHeight: 22 }]}>
-              {detectionApplySummary || 'Verification de la detection en cours.'}
+              {detectionApplySummary || 'Vérification de la détection en cours.'}
             </Text>
           </View>
 
@@ -1530,7 +1530,7 @@ function RecruitmentAdDetails() {
         )}
         headerComponent={(
           <Text style={[Fonts.p1Black, { color: Colors.neutral100, textAlign: 'center' }]}>
-            Candidater comme entraineur
+            Candidater comme entraîneur
           </Text>
         )}
         hideCloseButton
@@ -1561,7 +1561,7 @@ function RecruitmentAdDetails() {
             multiline
             numberOfLines={4}
             onChangeText={setCoachApplicationMessage}
-            placeholder="Explique ton experience, tes disponibilites ou ce que tu peux apporter a l'equipe."
+            placeholder="Explique ton expérience, tes disponibilités ou ce que tu peux apporter a l'équipe."
             textAlignVertical="top"
             value={coachApplicationMessage}
           />
@@ -1570,7 +1570,7 @@ function RecruitmentAdDetails() {
             keyboardType="phone-pad"
             label="Telephone"
             onChangeText={setCoachApplicationPhone}
-            placeholder="Ton numero de telephone"
+            placeholder="Ton numéro de téléphone"
             value={coachApplicationPhone}
           />
 
@@ -1584,7 +1584,7 @@ function RecruitmentAdDetails() {
           />
 
           <Text style={[Fonts.p4, { color: Colors.neutral300, lineHeight: 20 }]}>
-            Le club recevra ta candidature avec ton message, ton telephone et ton email.
+            Le club recevra ta candidature avec ton message, ton téléphone et ton email.
           </Text>
         </View>
       </BottomModalView>

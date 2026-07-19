@@ -15,18 +15,18 @@ import {
 const VALIDATION_MODES = [
   {
     eyebrow: 'Fluide',
-    helper: 'Id\u00E9al si vos crit\u00E8res sont d\u00E9j\u00E0 tr\u00E8s pr\u00E9cis.',
-    highlights: ['R\u00E9ponse imm\u00E9diate', 'Parcours plus rapide'],
+    helper: 'Idéal si tes critères sont déjà très précis.',
+    highlights: ['Réponse immédiate', 'Parcours plus rapide'],
     label: 'Automatique',
-    summary: 'Les joueurs compatibles sont accept\u00E9s sans attendre une validation manuelle.',
+    summary: 'Les joueurs compatibles sont acceptés sans attendre une validation manuelle.',
     value: 'auto',
   },
   {
-    eyebrow: 'Contr\u00F4le',
-    helper: 'Recommand\u00E9 si vous souhaitez valider chaque profil.',
+    eyebrow: 'Contrôle',
+    helper: 'Recommandé si tu souhaites valider chaque profil.',
     highlights: ['Validation capitaine', 'Tri avant confirmation'],
     label: 'Manuelle',
-    summary: "Vous confirmez chaque candidature avant qu'elle ne rejoigne l'\u00E9v\u00E9nement.",
+    summary: "Tu confirmes chaque candidature avant qu'elle ne rejoigne l'événement.",
     value: 'manual',
   },
 ];
@@ -66,20 +66,20 @@ function AdWizardValidation({ navigation }) {
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardValidationStepIndex(state)}
-      subtitle={'Choisissez comment les candidatures li\u00E9es \u00E0 cette d\u00E9tection seront trait\u00E9es.'}
+      subtitle="Choisis comment les candidatures liées à cette détection seront traitées."
       title="Mode de validation"
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
         {state.event ? (
           <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], cardSurfaceStyle]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              {'Annonce li\u00E9e \u00E0 une d\u00E9tection'}
+              Annonce liée à une détection
             </Text>
             <Text style={[Fonts.h4, Fonts.neutral00]}>
-              {state.event.name || state.event.type?.name || '\u00C9v\u00E9nement'}
+              {state.event.name || state.event.type?.name || 'Événement'}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
-              {'Ce r\u00E9glage d\u00E9termine la mani\u00E8re dont les candidatures seront accept\u00E9es sur cette annonce.'}
+              Ce réglage détermine la manière dont les candidatures seront acceptées sur cette annonce.
             </Text>
           </View>
         ) : null}
@@ -178,9 +178,9 @@ function AdWizardValidation({ navigation }) {
             },
           ]}
         >
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>{'\u00C0 retenir'}</Text>
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>À retenir</Text>
           <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
-            {"Vous pourrez toujours consulter les profils re\u00E7us ensuite dans le d\u00E9tail de l'annonce."}
+            Tu pourras toujours consulter les profils reçus ensuite dans le détail de l&apos;annonce.
           </Text>
         </View>
       </View>

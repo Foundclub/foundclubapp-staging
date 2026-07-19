@@ -58,25 +58,25 @@ function AdWizardDescription({ navigation }) {
     borderColor: 'rgba(1, 179, 244, 0.24)',
   };
   const contextualHighlights = [
-    state.team?.name ? `\u00C9quipe : ${state.team.name}` : null,
+    state.team?.name ? `Équipe : ${state.team.name}` : null,
     state.positions.length > 0
-      ? `${state.positions.length} poste${state.positions.length > 1 ? 's' : ''} s\u00E9lectionn\u00E9${state.positions.length > 1 ? 's' : ''}`
+      ? `${state.positions.length} poste${state.positions.length > 1 ? 's' : ''} sélectionné${state.positions.length > 1 ? 's' : ''}`
       : null,
-    isCoachAd && state.coachRole ? `Role : ${state.coachRoleOther || state.coachRole}` : null,
+    isCoachAd && state.coachRole ? `Rôle : ${state.coachRoleOther || state.coachRole}` : null,
     state.address?.label ? `Lieu : ${state.address.label}` : null,
   ].filter(Boolean);
   const descriptionTips = isCoachAd
     ? [
-      'Precisez le projet sportif et la place du role dans le staff.',
-      'Indiquez le rythme attendu des entrainements et des matchs.',
-      'Expliquez le cadre de mission et les responsabilites principales.',
-      'Mentionnez les qualites humaines ou diplomes qui feront la difference.',
+      'Précise le projet sportif et la place du rôle dans le staff.',
+      'Indique le rythme attendu des entraînements et des matchs.',
+      'Explique le cadre de mission et les responsabilités principales.',
+      'Mentionne les qualites humaines ou diplomes qui feront la difference.',
     ]
     : [
-      "Pr\u00E9cisez l'intensit\u00E9 ou le niveau de jeu attendu.",
-      'Indiquez les horaires et le rythme des entra\u00EEnements.',
-      "Mentionnez si une s\u00E9ance d'essai ou une d\u00E9tection est pr\u00E9vue.",
-      "D\u00E9crivez l'ambiance et le projet sportif de l'\u00E9quipe.",
+      "Précise l'intensité ou le niveau de jeu attendu.",
+      'Indique les horaires et le rythme des entraînements.',
+      "Mentionne si une séance d'essai ou une détection est prévue.",
+      "Décris l'ambiance et le projet sportif de l'équipe.",
     ];
 
   return (
@@ -89,8 +89,8 @@ function AdWizardDescription({ navigation }) {
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardDescriptionStepIndex(state)}
       subtitle={isCoachAd
-        ? 'Ajoutez une presentation du besoin et les missions pour attirer les bons profils coach.'
-        : 'Ajoutez quelques d\u00E9tails pour rendre votre annonce plus claire et plus attractive.'}
+        ? 'Ajoute une presentation du besoin et les missions pour attirer les bons profils coach.'
+        : 'Ajoute quelques détails pour rendre ton annonce plus claire et plus attractive.'}
       title={isCoachAd ? 'Description et missions' : 'Description'}
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
@@ -119,7 +119,7 @@ function AdWizardDescription({ navigation }) {
             ]}
           >
             <View style={[Spaces.gap[12], { flex: 1 }]}>
-              <Text style={[Fonts.h4, Fonts.neutral00]}>{'Pr\u00E9sentez votre besoin'}</Text>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>Présente ton besoin</Text>
               <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
                 {isCoachAd
                   ? 'Quelques lignes suffisent pour expliquer le contexte et donner envie aux bons profils coach de candidater.'
@@ -148,8 +148,8 @@ function AdWizardDescription({ navigation }) {
             numberOfLines={7}
             onChangeText={handleChange}
             placeholder={isCoachAd
-              ? 'Ex. Nous recherchons un entraineur adjoint pour accompagner notre groupe senior regional. Projet formateur, equipe staff engagee, rythme de deux seances par semaine.'
-              : 'Ex. Nous recherchons un gardien experimente pour notre equipe U20 qui evolue en regional. Entrainements les mardis et jeudis soir, ambiance serieuse et bienveillante.'}
+              ? 'Ex. Nous recherchons un entraîneur adjoint pour accompagner notre groupe senior régional. Projet formateur, équipe staff engagee, rythme de deux séances par semaine.'
+              : 'Ex. Nous recherchons un gardien expérimenté pour notre équipe U20 qui evolue en régional. Entraînements les mardis et jeudis soir, ambiance serieuse et bienveillante.'}
             placeholderTextColor={Colors.neutral500}
             style={[
               Fonts.p1,
@@ -167,8 +167,8 @@ function AdWizardDescription({ navigation }) {
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
             <Text style={[Fonts.p3, Fonts.neutral300]}>
               {state.description.length > 0
-                ? 'Votre description est pr\u00EAte \u00E0 \u00EAtre publi\u00E9e.'
-                : 'Vous pouvez aussi continuer sans description.'}
+                ? 'Ta description est prête à être publiée.'
+                : 'Tu peux aussi continuer sans description.'}
             </Text>
             <Text
               style={[
@@ -188,7 +188,7 @@ function AdWizardDescription({ navigation }) {
             <View style={[Spaces.gap[12]]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>Missions principales</Text>
               <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
-                Decrivez ce que vous attendez concretement du futur entraineur.
+                Décris ce que tu attends concretement du futur entraîneur.
               </Text>
             </View>
 
@@ -196,7 +196,7 @@ function AdWizardDescription({ navigation }) {
               multiline
               numberOfLines={6}
               onChangeText={handleMissionsChange}
-              placeholder="Ex. Preparation des seances, accompagnement le week-end, lien avec les joueurs et coordination avec le reste du staff."
+              placeholder="Ex. Préparation des séances, accompagnement le week-end, lien avec les joueurs et coordination avec le reste du staff."
               placeholderTextColor={Colors.neutral500}
               style={[
                 Fonts.p1,
@@ -214,7 +214,7 @@ function AdWizardDescription({ navigation }) {
         ) : null}
 
         <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[16], cardSurfaceStyle]}>
-          <Text style={[Fonts.h4, Fonts.neutral00]}>{'Id\u00E9es \u00E0 inclure'}</Text>
+          <Text style={[Fonts.h4, Fonts.neutral00]}>Idées à inclure</Text>
           <View style={[Spaces.gap[16]]}>
             {descriptionTips.map((tip) => (
               <View key={tip} style={[Alignments.row, Spaces.gap[16]]}>

@@ -50,7 +50,7 @@ const getErrorStatus = (error) => Number(
 /** @param {any} error */
 const isForbiddenError = (error) => (
   getErrorStatus(error) === 403
-  || normalizeErrorMessage(error).includes('acces refuse')
+  || normalizeErrorMessage(error).includes('accès refuse')
   || normalizeErrorMessage(error).includes('accès refusé')
   || normalizeErrorMessage(error).includes('forbidden')
 );
@@ -230,7 +230,7 @@ function MultisportClubDetails({ navigation, route }) {
         icon: 'bell',
         key: 'requests',
         onPress: handleOpenRequests,
-        subtitle: t('multisport.actions.requests.subtitle', 'Traiter les demandes en attente de votre organisation.'),
+        subtitle: t('multisport.actions.requests.subtitle', 'Traiter les demandes en attente de ton organisation.'),
         title: t('multisport.actions.requests.title', 'Demandes'),
       },
       {
@@ -260,7 +260,7 @@ function MultisportClubDetails({ navigation, route }) {
   if (!resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe à ce compte.')}
         title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
       />
     );
@@ -269,7 +269,7 @@ function MultisportClubDetails({ navigation, route }) {
   if (isLoading && !cm) {
     return (
       <MultisportStateView
-        description={t('multisport.details.loading', 'Nous preparons les informations de votre structure multisport.')}
+        description={t('multisport.details.loading', 'Nous préparons les informations de ta structure multisport.')}
         isLoading
         title={t('multisport.details.loadingTitle', 'Chargement du club')}
       />
@@ -279,7 +279,7 @@ function MultisportClubDetails({ navigation, route }) {
   if (effectiveError && !cm) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
+        actionLabel={t('common.retry', 'Réessayer')}
         description={t('multisport.details.error', 'Impossible de charger cette structure multisport pour le moment.')}
         onAction={() => refetch()}
         title={t('multisport.details.errorTitle', 'Club indisponible')}

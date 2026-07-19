@@ -278,7 +278,7 @@ function TeamSlotCreationForm({
       {requireLocationMode ? (
         <View style={{ marginBottom: 12 }}>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 10 }]}>
-            Sur ce creneau
+            Sur ce créneau
           </Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {LOCATION_MODES.map((option) => {

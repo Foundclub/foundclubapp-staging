@@ -319,7 +319,7 @@ export const DIAL_CODES = [
   { label: '🇶🇦  Qatar', value: '+974' },
   { label: '🇷🇪  Réunion', value: '+262' },
   { label: '🇷🇴  Romania', value: '+40' },
-  { label: '🇷🇺  Russian Federation', value: '+7' },
+  { label: '🇷🇺  Russian Fédération', value: '+7' },
   { label: '🇷🇼  Rwanda', value: '+250' },
   { label: '🇧🇱  Saint Barthélemy', value: '+590' },
   { label: '🇸🇭  Saint Helena, Ascension and Tristan da Cunha', value: '+290' },

@@ -343,8 +343,8 @@ function AdminDashboard() {
     if (generateTestTournamentMutation.isPending) return;
 
     Alert.alert(
-      'Generer un tournoi fictif ?',
-      'Cela cree un tournoi autonome [TEST] avec 8 equipes, des joueurs fictifs, des poules et des matchs brouillons. En production, cette action est bloquee sauf flag explicite.',
+      'Générer un tournoi fictif ?',
+      'Cela crée un tournoi autonome [TEST] avec 8 équipes, des joueurs fictifs, des poules et des matchs brouillons. En production, cette action est bloquée sauf flag explicite.',
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -358,8 +358,8 @@ function AdminDashboard() {
               {
                 onError: (error) => {
                   Alert.alert(
-                    'Generation impossible',
-                    getErrorMessage(error, 'generic') || 'Impossible de generer le tournoi fictif.',
+                    'Génération impossible',
+                    getErrorMessage(error, 'generic') || 'Impossible de générer le tournoi fictif.',
                   );
                 },
                 onSuccess: (response) => {
@@ -371,8 +371,8 @@ function AdminDashboard() {
                     : '';
 
                   Alert.alert(
-                    'Tournoi fictif cree',
-                    `${event?.name || 'Le tournoi de test'} est pret avec ${result?.generated?.teams || 0} equipes.${warnings}`,
+                    'Tournoi fictif crée',
+                    `${event?.name || 'Le tournoi de test'} est prêt avec ${result?.generated?.teams || 0} équipes.${warnings}`,
                     [
                       { text: 'OK' },
                       eventDocumentId
@@ -406,7 +406,7 @@ function AdminDashboard() {
   const handleCallOrganizer = useCallback(async (phoneNumber) => {
     const sanitizedPhone = sanitizePhoneNumber(phoneNumber);
     if (!sanitizedPhone) {
-      Alert.alert('Numero manquant', 'Aucun numero de telephone exploitable sur cette detection.');
+      Alert.alert('Numéro manquant', 'Aucun numéro de téléphone exploitable sur cette détection.');
       return;
     }
 
@@ -435,8 +435,8 @@ function AdminDashboard() {
       {
         onError: (error) => {
           Alert.alert(
-            'Verification impossible',
-            getErrorMessage(error, 'generic') || 'Impossible de mettre a jour cette verification.',
+            'Vérification impossible',
+            getErrorMessage(error, 'generic') || 'Impossible de mettre à jour cette vérification.',
           );
         },
         onSuccess: () => {
@@ -462,8 +462,8 @@ function AdminDashboard() {
       {
         onError: (error) => {
           Alert.alert(
-            'Mise a jour impossible',
-            getErrorMessage(error, 'generic') || 'Impossible de mettre a jour la publication des coachs non certifies.',
+            'Mise à jour impossible',
+            getErrorMessage(error, 'generic') || 'Impossible de mettre à jour la publication des coachs non certifies.',
           );
         },
       },
@@ -486,7 +486,7 @@ function AdminDashboard() {
         onError: (error) => {
           Alert.alert(
             'Autorisation impossible',
-            getErrorMessage(error, 'generic') || 'Impossible de mettre a jour cette autorisation coach.',
+            getErrorMessage(error, 'generic') || 'Impossible de mettre à jour cette autorisation coach.',
           );
         },
       },
@@ -557,7 +557,7 @@ function AdminDashboard() {
         },
         onSuccess: (response) => {
           const migratedCount = Number(response?.meta?.migratedCount || 0);
-          const label = apply ? 'Migration executee' : 'Preview terminee';
+          const label = apply ? 'Migration executee' : 'Preview terminée';
           const scopeLabel = legacyMigrationClubDocumentId
             ? `Club cible: ${legacyMigrationClubDocumentId}\n`
             : '';
@@ -588,12 +588,12 @@ function AdminDashboard() {
       {
         onError: (error) => {
           Alert.alert(
-            'Creation impossible',
-            getErrorMessage(error, 'generic') || 'Impossible de creer cette subscription manuelle.',
+            'Création impossible',
+            getErrorMessage(error, 'generic') || 'Impossible de créer cette subscription manuelle.',
           );
         },
         onSuccess: () => {
-          Alert.alert('Subscription creee', 'La subscription manuelle a ete enregistree et auditee.');
+          Alert.alert('Subscription créée', 'La subscription manuelle a été enregistrée et auditée.');
           closeManualSubscriptionModal();
         },
       },
@@ -629,8 +629,8 @@ function AdminDashboard() {
         },
         onSuccess: () => {
           Alert.alert(
-            manualEntitlementForm?.documentId ? 'Entitlement corrige' : 'Entitlement cree',
-            'La mutation manuelle a bien ete auditee.',
+            manualEntitlementForm?.documentId ? 'Entitlement corrige' : 'Entitlement crée',
+            'La mutation manuelle a bien été auditée.',
           );
           closeManualEntitlementModal();
         },
@@ -664,7 +664,7 @@ function AdminDashboard() {
                 onSuccess: (response) => {
                   const syncedCount = Number(response?.meta?.syncedSlotCount || 0);
                   Alert.alert(
-                    'Resync terminee',
+                    'Resync terminée',
                     `${syncedCount} slot${syncedCount > 1 ? 's' : ''} resynchronise${syncedCount > 1 ? 's' : ''}.`,
                   );
                 },
@@ -788,7 +788,7 @@ function AdminDashboard() {
 
     return (
       <View
-        key={`detection-${item?.documentId || item?.name || item?.createdAt || 'row'}`}
+        key={`détection-${item?.documentId || item?.name || item?.createdAt || 'row'}`}
         style={[
           styles.detailCard,
           {
@@ -803,7 +803,7 @@ function AdminDashboard() {
               {item?.name || 'Detection'}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.team?.name || 'Equipe inconnue'}
+              {item?.team?.name || 'Équipe inconnue'}
               {item?.club?.name ? ` - ${item.club.name}` : ''}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
@@ -871,7 +871,7 @@ function AdminDashboard() {
             {organizerName}
           </Text>
           <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-            {phoneLabel || 'Telephone non renseigne'}
+            {phoneLabel || 'Téléphone non renseigne'}
           </Text>
         </View>
 
@@ -935,7 +935,7 @@ function AdminDashboard() {
               {item?.name || 'Evenement'}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.team?.name || 'Equipe inconnue'}
+              {item?.team?.name || 'Équipe inconnue'}
               {item?.club?.name ? ` - ${item.club.name}` : ''}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
@@ -987,7 +987,7 @@ function AdminDashboard() {
       : {
         backgroundColor: `${Colors.warning500}18`,
         borderColor: `${Colors.warning500}44`,
-        label: 'Publication bloquee',
+        label: 'Publication bloquée',
         textColor: Colors.warning500,
       };
 
@@ -1011,7 +1011,7 @@ function AdminDashboard() {
               {item?.club?.name || 'Club non renseigne'}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {phoneLabel || 'Telephone non renseigne'}
+              {phoneLabel || 'Téléphone non renseigne'}
             </Text>
           </View>
           <View
@@ -1315,7 +1315,7 @@ function AdminDashboard() {
               {item?.user ? formatPersonName(item.user) : 'Utilisateur inconnu'}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.proofType || 'Preuve non renseignee'}
+              {item?.proofType || 'Preuve non renseignée'}
             </Text>
           </View>
           <View style={[styles.statusPill, {
@@ -1412,7 +1412,7 @@ function AdminDashboard() {
         </Text>
         <Text style={[Fonts.h1, Fonts.neutral00]}>Dashboard Admin</Text>
         <Text style={[Fonts.p2, Fonts.neutral300, styles.headerDescription]}>
-          Pilote les demandes, les alertes, les detections et les evenements sensibles depuis un seul espace.
+          Pilote les demandes, les alertes, les détections et les événements sensibles depuis un seul espace.
         </Text>
         {partialDashboardDescription ? (
           <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[8]]}>
@@ -1444,7 +1444,7 @@ function AdminDashboard() {
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
               {publishingGovernance.globalEnabled
-                ? 'Les coachs rattaches a un club non certifie peuvent publier leurs evenements et annonces.'
+                ? 'Les coachs rattaches a un club non certifié peuvent publier leurs événements et annonces.'
                 : 'Les coachs de clubs non certifies restent bloques tant qu aucune exception superadmin n est accordee.'}
             </Text>
           </View>
@@ -1485,7 +1485,7 @@ function AdminDashboard() {
               Tournoi fictif complet
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, styles.testToolsDescription]}>
-              Cree un tournoi sandbox avec equipes, effectifs fictifs, poules et matchs pour valider le flux de bout en bout.
+              Crée un tournoi sandbox avec équipes, effectifs fictifs, poules et matchs pour valider le flux de bout en bout.
             </Text>
           </View>
           <TouchableOpacity
@@ -1516,14 +1516,14 @@ function AdminDashboard() {
             color={Colors.success500}
             meta="Finance"
             onPress={() => navigation.navigate(RouteNames.AdminRevenue)}
-            title="CA genere"
+            title="CA génère"
             value={`${generatedRevenue} EUR`}
           />
           <DashboardCard
             color={Colors.primary500}
             meta="Live"
             onPress={() => navigation.navigate(RouteNames.AdminEvents)}
-            title="Evenements du jour"
+            title="Événements du jour"
             value={eventsTodayCount}
           />
           <DashboardCard
@@ -1537,7 +1537,7 @@ function AdminDashboard() {
             color={Colors.primary200}
             meta="A traiter"
             onPress={() => navigation.navigate(RouteNames.FeaturedRequestsList)}
-            title="Demandes a la une"
+            title="Demandes à la une"
             value={featuredCount}
           />
           <DashboardCard
@@ -1551,7 +1551,7 @@ function AdminDashboard() {
             color={Colors.primary500}
             meta="Onboarding"
             onPress={() => navigation.navigate(RouteNames.AdminClubOnboardingList)}
-            title="Clubs a onboarder"
+            title="Clubs à onboarder"
             value={clubOnboardingCount}
           />
           <DashboardCard
@@ -1599,7 +1599,7 @@ function AdminDashboard() {
         </View>
 
         <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginBottom[12], Spaces.marginTop[8]]}>
-          KPIs detection et acquisition
+          KPIs détection et acquisition
         </Text>
         <View style={styles.dashboardGrid}>
           <DashboardCard
@@ -1617,7 +1617,7 @@ function AdminDashboard() {
           <DashboardCard
             color={Colors.primary200}
             meta="Business"
-            title="Equipes creees"
+            title="Équipes créées"
             value={business?.teamsCreated || 0}
           />
           <DashboardCard
@@ -1629,19 +1629,19 @@ function AdminDashboard() {
           <DashboardCard
             color={Colors.primary500}
             meta="Detections"
-            title="Publiees sur 30 jours"
+            title="Publiées sur 30 jours"
             value={ops?.detectionsPublishedLast30Days || 0}
           />
           <DashboardCard
             color={Colors.warning500}
             meta="Detections"
-            title="A verifier"
+            title="A vérifier"
             value={ops?.detectionsPendingVerification || 0}
           />
           <DashboardCard
             color={Colors.primary200}
             meta="Signals"
-            title="Equipes avec 1er event"
+            title="Équipes avec 1er event"
             value={ops?.teamsWithFirstEventCount || 0}
           />
           <DashboardCard
@@ -1683,7 +1683,7 @@ function AdminDashboard() {
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Subscription Ops</Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
-                Pilote la migration legacy, les subscriptions manuelles, les entitlements et les signaux billing depuis le meme back-office.
+                Pilote la migration legacy, les subscriptions manuelles, les entitlements et les signaux billing depuis le même back-office.
               </Text>
             </View>
             <TouchableOpacity
@@ -1691,7 +1691,7 @@ function AdminDashboard() {
               onPress={refetchSubscriptionOps}
               style={[styles.refreshButton, { borderColor: `${Colors.primary500}44` }]}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Rafraichir</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Rafraîchir</Text>
             </TouchableOpacity>
           </View>
 
@@ -1756,18 +1756,18 @@ function AdminDashboard() {
             subscriptionPreviewItems.map(renderSubscriptionPreviewItem)
           ) : (
             <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucune subscription a afficher</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucune subscription à afficher</Text>
             </View>
           )}
 
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
-            Entitlements recents
+            Entitlements récents
           </Text>
           {entitlementPreviewItems.length > 0 ? (
             entitlementPreviewItems.map(renderEntitlementPreviewItem)
           ) : (
             <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun entitlement a afficher</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun entitlement à afficher</Text>
             </View>
           )}
 
@@ -1783,7 +1783,7 @@ function AdminDashboard() {
           )}
 
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
-            Claims a revoir
+            Claims à revoir
           </Text>
           {claimRequestPreviewItems.length > 0 ? (
             claimRequestPreviewItems.map(renderClaimRequestPreviewItem)
@@ -1842,7 +1842,7 @@ function AdminDashboard() {
               onPress={refetchGovernanceAffiliations}
               style={[styles.refreshButton, { borderColor: `${Colors.neutral00}18` }]}
             >
-              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Rafraichir</Text>
+              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Rafraîchir</Text>
             </TouchableOpacity>
           </View>
 
@@ -1851,9 +1851,9 @@ function AdminDashboard() {
               governanceAffiliations.map(renderGovernanceAffiliationItem)
             ) : (
               <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun coach non certifie</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun coach non certifié</Text>
                 <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[6]]}>
-                  Les nouvelles affiliations auto-assignees apparaitront ici.
+                  Les nouvelles affiliations auto-assignees apparaîtront ici.
                 </Text>
               </View>
             )}
@@ -1871,14 +1871,14 @@ function AdminDashboard() {
         >
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>File de verification detection</Text>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>File de vérification détection</Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
                 {detectionQueueTotal}
                 {' '}
                 detection
                 {detectionQueueTotal > 1 ? 's' : ''}
                 {' '}
-                dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la verification.
+                dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la vérification.
               </Text>
             </View>
             <TouchableOpacity
@@ -1886,7 +1886,7 @@ function AdminDashboard() {
               onPress={refetchDetectionQueue}
               style={[styles.refreshButton, { borderColor: `${Colors.primary500}44` }]}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Rafraichir</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Rafraîchir</Text>
             </TouchableOpacity>
           </View>
 
@@ -1895,7 +1895,7 @@ function AdminDashboard() {
               detectionVerificationQueue.map(renderDetectionQueueItem)
             ) : (
               <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucune detection en attente</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucune détection en attente</Text>
                 <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[6]]}>
                   La file est vide pour le moment.
                 </Text>
@@ -1915,9 +1915,9 @@ function AdminDashboard() {
         >
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Premiers evenements d equipe</Text>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Premiers événements d équipe</Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
-                Surveille les equipes qui viennent de creer leur premier evenement pour detecter les structures a relancer.
+                Surveille les équipes qui viennent de créer leur premier événement pour detecter les structures à relancer.
               </Text>
             </View>
             <View style={[styles.statusPill, { backgroundColor: `${Colors.primary200}18`, borderColor: `${Colors.primary200}44` }]}>
@@ -1932,9 +1932,9 @@ function AdminDashboard() {
               recentFirstTeamEvents.map(renderFirstTeamEventItem)
             ) : (
               <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun premier evenement recent</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun premier événement récent</Text>
                 <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[6]]}>
-                  Les nouveaux signaux d activation d equipe apparaitront ici.
+                  Les nouveaux signaux d activation d équipe apparaîtront ici.
                 </Text>
               </View>
             )}
@@ -1950,12 +1950,12 @@ function AdminDashboard() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary500}44` }]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Traiter la verification</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Traiter la vérification</Text>
             <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
               {reviewItem?.name || 'Detection'}
             </Text>
             <Text style={[Fonts.p4, Fonts.primary100, Spaces.marginTop[4]]}>
-              {reviewItem?.team?.name || 'Equipe inconnue'}
+              {reviewItem?.team?.name || 'Équipe inconnue'}
               {reviewItem?.club?.name ? ` - ${reviewItem.club.name}` : ''}
             </Text>
 
@@ -1989,7 +1989,7 @@ function AdminDashboard() {
             <TextInput
               multiline
               onChangeText={setReviewNotes}
-              placeholder="Appel effectue, identite verifiee, contact club, etc."
+              placeholder="Appel effectue, identité vérifiée, contact club, etc."
               placeholderTextColor={Colors.neutral400}
               style={[
                 styles.notesInput,
@@ -2043,7 +2043,7 @@ function AdminDashboard() {
           <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.warning500}44` }]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Migration legacy</Text>
             <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
-              Lance un dry-run global ou cible un club precis avant l apply reel.
+              Lance un dry-run global ou cible un club precis avant l apply réel.
             </Text>
             <Text style={[Fonts.p4Bold, { color: Colors.warning500 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
               Club documentId optionnel
@@ -2106,7 +2106,7 @@ function AdminDashboard() {
             <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary500}44` }]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Subscription manuelle</Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
-                Cree une subscription auditee pour support, migration ciblee ou intervention superadmin.
+                Crée une subscription auditée pour support, migration ciblee ou intervention superadmin.
               </Text>
 
               <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
@@ -2334,7 +2334,7 @@ function AdminDashboard() {
               <TextInput
                 autoCapitalize="none"
                 onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, capability: value }))}
-                placeholder="* ou capability precise"
+                placeholder="* ou capability précise"
                 placeholderTextColor={Colors.neutral400}
                 style={[styles.formInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
                 value={manualEntitlementForm.capability}

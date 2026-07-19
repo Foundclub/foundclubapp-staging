@@ -38,7 +38,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.primary500}20`,
       borderColor: `${Colors.primary500}45`,
-      label: prompt?.state === 'draft' ? 'Brouillon perso' : 'A repondre',
+      label: prompt?.state === 'draft' ? 'Brouillon perso' : 'A répondre',
       textColor: Colors.primary500,
     };
   }
@@ -47,7 +47,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.warning500}20`,
       borderColor: `${Colors.warning500}45`,
-      label: 'Verification requise',
+      label: 'Vérification requise',
       textColor: Colors.warning500,
     };
   }
@@ -82,21 +82,21 @@ const getPromptStatusMeta = (prompt, Colors) => {
   return {
     backgroundColor: `${Colors.neutral00}14`,
     borderColor: `${Colors.neutral00}24`,
-    label: 'Score a completer',
+    label: 'Score à compléter',
     textColor: Colors.neutral00,
   };
 };
 
 const getPromptPrimaryAction = (prompt) => {
   if (prompt?.actionType === 'player_self_report') return prompt?.state === 'draft' ? 'Reprendre' : 'Renseigner';
-  if (prompt?.reviewRequired) return 'Mettre a jour';
+  if (prompt?.reviewRequired) return 'Mettre à jour';
   if (prompt?.reportStatus === 'draft') return 'Reprendre';
   if (prompt?.score?.available) return 'Ouvrir';
   return 'Enregistrer le score';
 };
 
 const buildPromptScore = (prompt) => {
-  if (!prompt?.score?.available) return 'Score a completer';
+  if (!prompt?.score?.available) return 'Score à compléter';
   return `${prompt?.score?.scoreFor ?? '-'} - ${prompt?.score?.scoreAgainst ?? '-'}`;
 };
 
@@ -108,13 +108,13 @@ const getPromptActionSummary = (prompt) => {
     return 'Donner ton retour individuel post-match, avec stats perso et note sur 10.';
   }
   if (prompt?.reviewRequired) {
-    return 'Verifier puis republier les stats de cette equipe.';
+    return 'Vérifier puis republier les stats de cette équipe.';
   }
   if (prompt?.reportStatus === 'draft') {
     return 'Reprendre le brouillon et finaliser le rapport.';
   }
   if (prompt?.score?.available) {
-    return 'Completer les stats joueurs puis publier le rapport.';
+    return 'Compléter les stats joueurs puis publier le rapport.';
   }
   return 'Enregistrer le score avant de remplir les stats.';
 };
@@ -167,7 +167,7 @@ function PendingMatchStatsScreen({ navigation }) {
       sport: prompt?.sport || 'football',
       teamId: prompt?.team?.documentId || undefined,
       teamName: prompt?.team?.name || null,
-      title: prompt?.actionType === 'player_self_report' ? 'Mon retour post-match' : 'Bilan equipe',
+      title: prompt?.actionType === 'player_self_report' ? 'Mon retour post-match' : 'Bilan équipe',
     });
   }, [navigation]);
 
@@ -278,7 +278,7 @@ function PendingMatchStatsScreen({ navigation }) {
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[12], Spaces.gap[4]]}>
           <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-            {item?.actionType === 'player_self_report' ? 'Mon action' : "Action d'equipe"}
+            {item?.actionType === 'player_self_report' ? 'Mon action' : "Action d'équipe"}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral100]}>
             {getPromptActionSummary(item)}
@@ -322,10 +322,10 @@ function PendingMatchStatsScreen({ navigation }) {
       >
         <Text style={[Fonts.p4Bold, Fonts.primary500]}>Suivi post-match</Text>
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {`${promptItems.length} action${promptItems.length > 1 ? 's' : ''} a traiter`}
+          {`${promptItems.length} action${promptItems.length > 1 ? 's' : ''} à traiter`}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral100]}>
-          Retrouve ici tes retours perso et les bilans equipe encore en attente apres les matchs.
+          Retrouve ici tes retours perso et les bilans équipe encore en attente après les matchs.
         </Text>
       </View>
 
@@ -334,7 +334,7 @@ function PendingMatchStatsScreen({ navigation }) {
         data={[
           ...(personalPromptItems.length ? [{ key: 'header-personal', title: 'Pour moi', type: 'header' }] : []),
           ...personalPromptItems.map((item) => ({ ...item, type: 'item' })),
-          ...(teamPromptItems.length ? [{ key: 'header-team', title: 'Pour mon equipe', type: 'header' }] : []),
+          ...(teamPromptItems.length ? [{ key: 'header-team', title: 'Pour mon équipe', type: 'header' }] : []),
           ...teamPromptItems.map((item) => ({ ...item, type: 'item' })),
         ]}
         keyExtractor={(item, index) => String(item?.key || index)}
@@ -354,7 +354,7 @@ function PendingMatchStatsScreen({ navigation }) {
           >
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>Aucune action en attente</Text>
             <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
-              Quand un match termine demandera encore une action, elle apparaitra ici automatiquement.
+              Quand un match terminé demandera encore une action, elle apparaîtra ici automatiquement.
             </Text>
           </View>
         )}

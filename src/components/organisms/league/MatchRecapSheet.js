@@ -90,7 +90,7 @@ function MatchRecapSheet({
               <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{pointsDeltaLabel}</Text>
             </View>
             <View style={styles.statBlock}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points apres</Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points après</Text>
               <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{recap.divisionPointsAfter ?? '-'}</Text>
             </View>
           </View>
@@ -100,7 +100,7 @@ function MatchRecapSheet({
             {' '}
             {baseDelta >= 0 ? '+' : ''}
             {baseDelta}
-            {' | Bonus serie '}
+            {' | Bonus série '}
             {streakBonus >= 0 ? '+' : ''}
             {streakBonus}
             {' | Total points League '}

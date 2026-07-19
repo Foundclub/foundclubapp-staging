@@ -492,7 +492,7 @@ function Conversation({ navigation, route }) {
 
     showBanner({
       actionLabel: 'Agenda',
-      body: 'Match confirme. Vous pouvez l ajouter a votre agenda.',
+      body: 'Match confirme. Tu peux l ajouter à ton agenda.',
       durationMs: 7000,
       onAction: async () => {
         const text = encodeURIComponent('Match FoundClub League');
@@ -503,7 +503,7 @@ function Conversation({ navigation, route }) {
           await Linking.openURL(url);
         } catch (error) {
           conversationLogger.warn('Failed to open calendar URL', error);
-          showErrorBanner("Impossible d'ouvrir votre agenda.", 'Agenda');
+          showErrorBanner("Impossible d'ouvrir ton agenda.", 'Agenda');
         }
       },
       title: 'Match confirme',
@@ -593,16 +593,16 @@ function Conversation({ navigation, route }) {
       || '',
     ).toLowerCase();
     if (rawErrorMessage.includes('voice_socket_unavailable')) {
-      return 'Socket chat indisponible avant la creation du message.';
+      return 'Socket chat indisponible avant la création du message.';
     }
     if (rawErrorMessage.includes('voice_upload_failed')) {
-      return 'Upload audio incomplet. Aucun fichier exploitable recu.';
+      return 'Upload audio incomplet. Aucun fichier exploitable reçu.';
     }
     if (rawErrorMessage.includes('voice_file_empty')) {
       return 'Le fichier audio local est vide.';
     }
     if (rawErrorMessage.includes('voice note requires an audio attachment')) {
-      return 'La note vocale a bien ete enregistree, mais le serveur n a pas reconnu le fichier audio. Reessayez.';
+      return 'La note vocale a bien été enregistrée, mais le serveur n a pas reconnu le fichier audio. Réessaie.';
     }
     if (rawErrorMessage.includes('voice_module_unavailable')) {
       return 'Le module vocal n est pas disponible sur cette build.';
@@ -611,10 +611,10 @@ function Conversation({ navigation, route }) {
       return 'La pièce jointe est trop volumineuse pour être envoyée.';
     }
     if (responseStatus === 401 || responseStatus === 403) {
-      return 'Session invalide. Reconnectez-vous puis réessayez.';
+      return 'Session invalide. Reconnecte-te puis réessaie.';
     }
     if (isTransientNetworkUploadError(error)) {
-      return 'Connexion instable. Vérifiez votre réseau puis réessayez.';
+      return 'Connexion instable. Vérifie ton réseau puis réessaie.';
     }
     if (rawErrorMessage.includes('invalid attachment')) {
       return 'Format de pièce jointe invalide.';
@@ -726,7 +726,7 @@ function Conversation({ navigation, route }) {
   const leagueLegalMatchLabel = useMemo(() => {
     const match = chatData?.league_match;
     if (!match) return 'Match FoundClub League';
-    return `${match?.team_a?.name || 'Equipe A'} VS ${match?.team_b?.name || 'Adversaire'}`;
+    return `${match?.team_a?.name || 'Équipe A'} VS ${match?.team_b?.name || 'Adversaire'}`;
   }, [chatData?.league_match]);
   const pendingLeagueActionTeamId = useMemo(() => {
     const currentUserId = String(userData?.documentId || '').trim();
@@ -770,7 +770,7 @@ function Conversation({ navigation, route }) {
   } = useGetEvents(
     {
       compact: true,
-      excludeType: 'R\u00E9servation',
+      excludeType: 'Réservation',
       myTeams: true,
       pageSize: 20,
       sort: 'date:asc',
@@ -1126,7 +1126,7 @@ function Conversation({ navigation, route }) {
       });
       setIsJoinModalVisible(false);
       setJoinModalError('');
-      showSuccessBanner('Reservation rejointe.', t('common.success'));
+      showSuccessBanner('Réservation rejointe.', t('common.success'));
     },
   });
 
@@ -1649,7 +1649,7 @@ function Conversation({ navigation, route }) {
       });
       const uploadedFiles = await uploadAttachmentAsset(asset);
       if (uploadedFiles.length === 0) {
-        logAttachmentDebug('uploadAndSendAttachment failed: zero uploaded files', {
+        logAttachmentDebug('uploadAndSendAttachment failed: zéro uploaded files', {
           asset: describeAsset(asset),
           chatId,
         });
@@ -1679,7 +1679,7 @@ function Conversation({ navigation, route }) {
           socketConnected: Boolean(isSocketConnected),
           uploadedFiles: describeUploadItems(uploadedFiles),
         });
-        showErrorBanner('Connexion messagerie indisponible. Réessayez dans quelques secondes.');
+        showErrorBanner('Connexion messagerie indisponible. Réessaie dans quelques secondes.');
         return false;
       }
 
@@ -1788,7 +1788,7 @@ function Conversation({ navigation, route }) {
         if (safeOptimisticMessageId) {
           removeLocalPendingMessage(safeOptimisticMessageId);
         }
-        showErrorBanner('Connexion messagerie indisponible. Réessayez dans quelques secondes.');
+        showErrorBanner('Connexion messagerie indisponible. Réessaie dans quelques secondes.');
         return false;
       }
 
@@ -1902,7 +1902,7 @@ function Conversation({ navigation, route }) {
           errorCode: response.errorCode,
           errorMessage: response.errorMessage,
         });
-        showErrorBanner(response.errorMessage || 'Erreur lors de la selection');
+        showErrorBanner(response.errorMessage || 'Erreur lors de la sélection');
         return;
       }
 
@@ -2020,7 +2020,7 @@ function Conversation({ navigation, route }) {
 
   const handlePickFile = async () => {
     if (isDocumentPickerDisabled) {
-      showInfoBanner('Le sélecteur de fichier est temporairement desactive sur cette build.', 'Fichier indisponible');
+      showInfoBanner('Le sélecteur de fichier est temporairement désactive sur cette build.', 'Fichier indisponible');
       return;
     }
 
@@ -2129,7 +2129,7 @@ function Conversation({ navigation, route }) {
 
       if (response.didCancel) return;
       if (response.errorCode) {
-        showErrorBanner(response.errorMessage || 'Erreur lors de la selection');
+        showErrorBanner(response.errorMessage || 'Erreur lors de la sélection');
         return;
       }
 
@@ -2172,7 +2172,7 @@ function Conversation({ navigation, route }) {
 
   const handleEditPickFile = useCallback(async () => {
     if (isDocumentPickerDisabled) {
-      showInfoBanner('Le sélecteur de fichier est temporairement desactive sur cette build.', 'Fichier indisponible');
+      showInfoBanner('Le sélecteur de fichier est temporairement désactive sur cette build.', 'Fichier indisponible');
       return;
     }
 
@@ -2292,7 +2292,7 @@ function Conversation({ navigation, route }) {
     if (!optimisticMessageId) {
       throw new Error(t(
         'conversation.poll.errors.sendUnavailable',
-        'Connexion messagerie indisponible. Reessayez dans quelques secondes.',
+        'Connexion messagerie indisponible. Réessaie dans quelques secondes.',
       ));
     }
 
@@ -2584,7 +2584,7 @@ function Conversation({ navigation, route }) {
   const handleSaveGroupName = async () => {
     const nextGroupName = String(groupNameDraft || '').trim();
     if (!chatId || !nextGroupName) {
-      showErrorBanner('Entrez un nom de groupe valide.', 'Nom requis');
+      showErrorBanner('Entre un nom de groupe valide.', 'Nom requis');
       return;
     }
 
@@ -2720,7 +2720,7 @@ function Conversation({ navigation, route }) {
         );
       } else {
         showErrorBanner(
-          t('conversation.voice.permissionDescription', 'Autorisez le micro pour envoyer des notes vocales.'),
+          t('conversation.voice.permissionDescription', 'Autorise le micro pour envoyer des notes vocales.'),
           t('conversation.voice.permissionTitle', 'Micro requis'),
         );
       }
@@ -2794,7 +2794,7 @@ function Conversation({ navigation, route }) {
         waveform: normalizedWaveform,
       });
 
-      setVoiceRecordingHint(t('conversation.voice.draftReadyHint', 'Note vocale prête. Ajoutez un message puis envoyez.'));
+      setVoiceRecordingHint(t('conversation.voice.draftReadyHint', 'Note vocale prête. Ajoute un message puis envoie.'));
       logVoiceDiagnostic('draft-created', {
         chatId,
         diagnostics: draft?.diagnostics || null,
@@ -2816,17 +2816,17 @@ function Conversation({ navigation, route }) {
       const code = String(safeError?.message || '');
       let errorMessage = t(
         'conversation.voice.sendErrorDescription',
-        'Impossible d\'envoyer la note vocale. Réessayez.',
+        'Impossible d\'envoyer la note vocale. Réessaie.',
       );
       if (code === 'VOICE_STOP_FAILED') {
         errorMessage = t(
           'conversation.voice.stopErrorDescription',
-          'Impossible de finaliser l\'enregistrement vocal. Réessayez.',
+          'Impossible de finaliser l\'enregistrement vocal. Réessaie.',
         );
       } else if (code === 'VOICE_FILE_EMPTY') {
         errorMessage = t(
           'conversation.voice.emptyErrorDescription',
-          'Aucun son exploitable n\'a été capturé. Réessayez.',
+          'Aucun son exploitable n\'a été capturé. Réessaie.',
         );
       }
       showErrorBanner(
@@ -2864,7 +2864,7 @@ function Conversation({ navigation, route }) {
 
       if (gestureState.dy <= VOICE_GESTURE_LOCK_THRESHOLD) {
         setVoiceRecordingState(VOICE_RECORDING_STATES.locked);
-        setVoiceRecordingHint(t('conversation.voice.lockedHint', 'Enregistrement verrouillé. Touchez envoyer ou annuler.'));
+        setVoiceRecordingHint(t('conversation.voice.lockedHint', 'Enregistrement verrouillé. Touche envoyer ou annuler.'));
       }
     },
     onPanResponderRelease: () => {
@@ -2932,7 +2932,7 @@ function Conversation({ navigation, route }) {
   const attachmentSheetActions = useMemo(() => {
     let contactReason = '';
     if (!isContactShareEnabled) {
-      contactReason = t('conversation.attachments.unavailable', 'Bientot disponible');
+      contactReason = t('conversation.attachments.unavailable', 'Bientôt disponible');
     } else if (shareableContacts.length === 0) {
       contactReason = t('conversation.attachments.noContact', 'Aucun contact partageable');
     }
@@ -2941,10 +2941,10 @@ function Conversation({ navigation, route }) {
       ? t('conversation.attachments.documentDisabled', 'Indisponible sur cette build')
       : '';
     const eventReason = !isEventShareEnabled
-      ? t('conversation.attachments.unavailable', 'Bientot disponible')
+      ? t('conversation.attachments.unavailable', 'Bientôt disponible')
       : '';
     const locationReason = !isLocationShareEnabled
-      ? t('conversation.attachments.unavailable', 'Bientot disponible')
+      ? t('conversation.attachments.unavailable', 'Bientôt disponible')
       : '';
 
     return [
@@ -3064,7 +3064,7 @@ function Conversation({ navigation, route }) {
 
       setIsProposalModalVisible(false);
       setCounterProposalContext(null);
-      showSuccessBanner('Votre proposition a ete envoyee !', 'Envoye', 'league');
+      showSuccessBanner('Ta proposition a été envoyée !', 'Envoye', 'league');
     } catch (error) {
       conversationLogger.error('Send proposal failed', error);
       showErrorBanner("Impossible d'envoyer la proposition.");
@@ -3146,12 +3146,12 @@ function Conversation({ navigation, route }) {
         }
 
         await respondToLeagueProposal(matchId, proposalMessageId, 'accept', { legalAcceptance });
-        showSuccessBanner('Le match est valide !', 'Match confirme', 'league');
+        showSuccessBanner('Le match est validé !', 'Match confirme', 'league');
         promptAddMatchToCalendar(message);
       } else {
         await respondToLeagueProposal(matchId, proposalMessageId, 'decline');
         conversationLogger.debug('Proposal declined');
-        showSuccessBanner('Votre refus a ete envoye.', 'Proposition refusee', 'league');
+        showSuccessBanner('Ton refus a été envoyé.', 'Proposition refusée', 'league');
       }
 
       queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
@@ -3161,7 +3161,7 @@ function Conversation({ navigation, route }) {
       await invalidatePendingLeagueActionQueries();
     } catch (error) {
       conversationLogger.error('Proposal action failed', error);
-      showErrorBanner('Une erreur est survenue lors de la reponse.');
+      showErrorBanner('Une erreur est survenue lors de la réponse.');
     } finally {
       setIsProposalResponseSubmitting(false);
     }
@@ -3187,7 +3187,7 @@ function Conversation({ navigation, route }) {
     }
 
     if (!teamId) {
-      showErrorBanner("Impossible d'identifier votre équipe pour l'annulation.");
+      showErrorBanner("Impossible d'identifier ton équipe pour l'annulation.");
       return;
     }
 
@@ -3572,36 +3572,36 @@ function Conversation({ navigation, route }) {
     const proposalVenue = getProposalLocationLabel(proposal?.venue)
       || getProposalLocationLabel(leagueConversationMatch?.proposed_venue)
       || getProposalLocationLabel(leagueConversationMatch?.venue)
-      || 'Lieu a definir';
+      || 'Lieu à définir';
     const proposalStatus = String(proposal?.status || '').trim().toLowerCase();
 
-    let statusLabel = 'Negociation active';
+    let statusLabel = 'Négociation active';
     let summaryTitle = 'Organisation du match en cours';
     if (proposalStatus === 'accepted') {
-      statusLabel = 'Proposition acceptee';
+      statusLabel = 'Proposition acceptée';
       summaryTitle = 'Le match est en bonne voie';
     } else if (proposalStatus === 'declined') {
-      statusLabel = 'Proposition refusee';
+      statusLabel = 'Proposition refusée';
       summaryTitle = 'Une nouvelle proposition est attendue';
     } else if (proposalStatus === 'pending') {
-      statusLabel = isLatestProposalFromMySquad ? 'Proposition envoyee' : 'Proposition recue';
+      statusLabel = isLatestProposalFromMySquad ? 'Proposition envoyée' : 'Proposition reçue';
       summaryTitle = isLatestProposalFromMySquad
-        ? 'Votre proposition attend une reponse'
-        : 'Une proposition attend votre reponse';
+        ? 'Ta proposition attend une réponse'
+        : 'Une proposition attend ta réponse';
     }
 
     let helper = 'La conversation avec l adversaire reste l espace principal pour conclure ce match.';
     if (proposalStatus === 'pending') {
       helper = isLatestProposalFromMySquad
-        ? 'Suivez la reponse adverse depuis le chat ou la fiche match.'
-        : 'Consultez la proposition puis acceptez, refusez ou contre-proposez.';
+        ? 'Suis la réponse adverse depuis le chat ou la fiche match.'
+        : 'Consulte la proposition puis acceptes, refuse ou contre-propose.';
     } else if (proposalStatus === 'accepted') {
-      helper = 'Retrouvez les details confirms sur la fiche match.';
+      helper = 'Retrouve les détails confirms sur la fiche match.';
     } else if (proposalStatus === 'declined') {
-      helper = 'Poursuivez la negociation pour trouver un nouveau creneau.';
+      helper = 'Poursuis la négociation pour trouver un nouveau créneau.';
     }
 
-    let formattedDate = 'Date a definir';
+    let formattedDate = 'Date à définir';
     if (proposalDate) {
       try {
         formattedDate = new Date(proposalDate).toLocaleString('fr-FR', {
@@ -3611,7 +3611,7 @@ function Conversation({ navigation, route }) {
           month: 'long',
         });
       } catch (_error) {
-        formattedDate = 'Date a definir';
+        formattedDate = 'Date à définir';
       }
     }
 
@@ -3644,12 +3644,12 @@ function Conversation({ navigation, route }) {
     let compactHelper = 'La discussion dans le chat reste l espace principal pour organiser ce match.';
     if (proposalStatus === 'pending') {
       compactHelper = isLatestProposalFromMySquad
-        ? 'Suivez la reponse adverse directement dans le fil.'
-        : 'Repondez directement depuis la proposition dans le fil.';
+        ? 'Suis la réponse adverse directement dans le fil.'
+        : 'Réponds directement depuis la proposition dans le fil.';
     } else if (proposalStatus === 'accepted') {
-      compactHelper = 'Retrouvez les details confirms dans la fiche match.';
+      compactHelper = 'Retrouve les détails confirms dans la fiche match.';
     } else if (proposalStatus === 'declined') {
-      compactHelper = 'La negociation continue dans le fil de discussion.';
+      compactHelper = 'La négociation continue dans le fil de discussion.';
     }
 
     return {
@@ -3741,7 +3741,7 @@ function Conversation({ navigation, route }) {
   const openAttachmentActionUrl = useCallback(async (resolvedUrl, attachmentLabel = '') => {
     if (!resolvedUrl) {
       showInfoBanner(
-        t('conversation.attachments.unavailableDescription', 'Ce document ne peut pas etre ouvert pour le moment.'),
+        t('conversation.attachments.unavailableDescription', 'Ce document ne peut pas être ouvert pour le moment.'),
         t('conversation.attachments.unavailableTitle', 'Fichier indisponible'),
       );
       return false;
@@ -3758,7 +3758,7 @@ function Conversation({ navigation, route }) {
       });
       conversationLogger.warn('Failed to open attachment action URL', error);
       showErrorBanner(
-        t('conversation.attachments.openErrorDescription', 'Le document n a pas pu etre ouvert.'),
+        t('conversation.attachments.openErrorDescription', 'Le document n a pas pu être ouvert.'),
         t('conversation.attachments.openErrorTitle', 'Ouverture impossible'),
       );
       return false;
@@ -3809,7 +3809,7 @@ function Conversation({ navigation, route }) {
     const attachmentLabel = getDocumentDisplayName(primaryDocumentAttachment);
     if (!resolvedUrl) {
       showInfoBanner(
-        t('conversation.attachments.shareUnavailableDescription', 'Ce document ne peut pas etre partage pour le moment.'),
+        t('conversation.attachments.shareUnavailableDescription', 'Ce document ne peut pas être partage pour le moment.'),
         t('conversation.attachments.unavailableTitle', 'Fichier indisponible'),
       );
       return false;
@@ -3830,7 +3830,7 @@ function Conversation({ navigation, route }) {
       });
       conversationLogger.warn('Failed to share attachment URL', error);
       showErrorBanner(
-        t('conversation.attachments.shareErrorDescription', 'Le document n a pas pu etre partage.'),
+        t('conversation.attachments.shareErrorDescription', 'Le document n a pas pu être partage.'),
         t('conversation.attachments.shareErrorTitle', 'Partage impossible'),
       );
       return false;
@@ -3953,7 +3953,7 @@ function Conversation({ navigation, route }) {
         socketConnected: Boolean(isSocketConnected && socket),
       });
       showErrorBanner(
-        'Connexion messagerie indisponible. Réessayez quand la conversation est reconnectée.',
+        'Connexion messagerie indisponible. Réessaie quand la conversation est reconnectée.',
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
       );
       return;
@@ -4075,7 +4075,7 @@ function Conversation({ navigation, route }) {
       });
       const detailedMessage = buildAttachmentUploadErrorMessage(error);
       showErrorBanner(
-        detailedMessage || t('conversation.voice.sendErrorDescription', "Impossible d'envoyer la note vocale. Réessayez."),
+        detailedMessage || t('conversation.voice.sendErrorDescription', "Impossible d'envoyer la note vocale. Réessaie."),
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
       );
     } finally {
@@ -4108,7 +4108,7 @@ function Conversation({ navigation, route }) {
         socketConnected: Boolean(isSocketConnected && socket),
       });
       showErrorBanner(
-        'Connexion messagerie indisponible. Réessayez quand la conversation est reconnectée.',
+        'Connexion messagerie indisponible. Réessaie quand la conversation est reconnectée.',
         'Envoi impossible',
       );
       return;
@@ -4506,7 +4506,7 @@ function Conversation({ navigation, route }) {
     if (!selectedMessageDocumentId || !isSelectedMessageOwn) return;
 
     openConversationPrompt({
-      body: t('conversation.actions.deleteConfirm.description', 'Ce message sera supprim\u00e9 pour tous les participants.'),
+      body: t('conversation.actions.deleteConfirm.description', 'Ce message sera supprimé pour tous les participants.'),
       primaryAction: {
         label: t('common.actions.delete', 'Supprimer'),
         onPress: async () => {
@@ -5261,7 +5261,7 @@ function Conversation({ navigation, route }) {
               >
                 {composerText?.trim()
                   ? t('conversation.attachments.previewWithCaption', 'La légende sera envoyée avec la photo.')
-                  : t('conversation.attachments.previewWithoutCaption', "Ajoutez une légende puis confirmez l'envoi.")}
+                  : t('conversation.attachments.previewWithoutCaption', "Ajoute une légende puis confirme l'envoi.")}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -5304,7 +5304,7 @@ function Conversation({ navigation, route }) {
               >
                 {isSendingVoiceNote
                   ? t('conversation.voice.sending', 'Envoi en cours...')
-                  : `${formatDurationLabel(voiceRecordingDurationMs)} - ${voiceRecordingHint || t('conversation.voice.hintShort', 'Maintenez appuyé pour enregistrer')}`}
+                  : `${formatDurationLabel(voiceRecordingDurationMs)} - ${voiceRecordingHint || t('conversation.voice.hintShort', 'Maintiens appuyé pour enregistrer')}`}
               </Text>
               <View
                 style={{
@@ -5431,7 +5431,7 @@ function Conversation({ navigation, route }) {
             <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 6 }]}>
               {composerText?.trim()
                 ? t('conversation.voice.draftWithText', 'Le texte sera envoyé avec la note vocale.')
-                : t('conversation.voice.draftWithoutText', 'Ajoutez un message optionnel puis appuyez sur Envoyer.')}
+                : t('conversation.voice.draftWithoutText', 'Ajoute un message optionnel puis appuie sur Envoyer.')}
             </Text>
             {draftPlaybackError ? (
               <Text style={[Fonts.p4, { color: Colors.error500, marginTop: 4 }]}>
@@ -5468,7 +5468,7 @@ function Conversation({ navigation, route }) {
           >
             <View>
               <Text style={[Fonts.p3Bold, Fonts.primary700]}>
-                Repondre a
+                Répondre a
                 {' '}
                 {replyingTo.user?.name}
               </Text>
@@ -5526,7 +5526,7 @@ function Conversation({ navigation, route }) {
         { color: Colors.neutral300, textAlign: 'center' },
       ]}
       >
-        Envoyez le premier message pour lancer la conversation.
+        Envoie le premier message pour lancer la conversation.
       </Text>
     </View>
   );
@@ -5786,8 +5786,8 @@ function Conversation({ navigation, route }) {
             style={[Fonts.p4, { color: Colors.neutral300, flex: 1 }]}
           >
             {latestProposalMessageId
-              ? 'La proposition detaillee reste visible dans le fil ci-dessous.'
-              : 'Retrouvez l historique de l organisation dans le fil ci-dessous.'}
+              ? 'La proposition détaillée reste visible dans le fil ci-dessous.'
+              : 'Retrouve l historique de l organisation dans le fil ci-dessous.'}
           </Text>
           <TouchableOpacity
             onPress={handleOpenLeagueMatchDetails}
@@ -6045,7 +6045,7 @@ function Conversation({ navigation, route }) {
                 setIsMenuVisible(false);
                 setSafeTimeout(() => {
                   showInfoBanner(
-                    'Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramètres.',
+                    'Pour signaler ce match ou cet utilisateur, merci de contacter le support via les paramètres.',
                     'Signaler',
                   );
                 }, 300);
@@ -6178,7 +6178,7 @@ function Conversation({ navigation, route }) {
             <ChatAttachmentSheet
               actions={attachmentSheetActions}
               onActionPress={handleAttachmentSheetAction}
-              subtitle={t('conversation.attachments.subtitle', 'Partagez du contenu dans cette conversation')}
+              subtitle={t('conversation.attachments.subtitle', 'Partage du contenu dans cette conversation')}
               title={t('conversation.attachments.title', 'Ajouter')}
             />
           ) : (
@@ -6493,7 +6493,7 @@ function Conversation({ navigation, route }) {
 
             <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter]}>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t('conversation.actions.editModal.attachments', 'Pieces jointes')}
+                {t('conversation.actions.editModal.attachments', 'Pièces jointes')}
               </Text>
               {isEditMessageUploadingAttachment ? (
                 <ActivityIndicator color={Colors.primary500} size="small" />

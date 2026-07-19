@@ -36,7 +36,7 @@ function AdminClubWizardContact({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardAddress)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={2}
-      subtitle="Ajoute un email et un numero de telephone pour que la fiche club soit exploitable des la creation. Ces champs restent optionnels."
+      subtitle="Ajoute un email et un numéro de téléphone pour que la fiche club soit exploitable des la création. Ces champs restent optionnels."
       title="Contact principal"
     >
       <View style={[Spaces.gap[18]]}>
@@ -60,7 +60,7 @@ function AdminClubWizardContact({ navigation }) {
           value={state.phoneNumber}
         />
         <Text style={[Fonts.p2, Fonts.neutral200]}>
-          Tu pourras toujours revenir dans la fiche club pour completer ou corriger ces informations.
+          Tu pourras toujours revenir dans la fiche club pour compléter ou corriger ces informations.
         </Text>
       </View>
     </WizardStepLayout>

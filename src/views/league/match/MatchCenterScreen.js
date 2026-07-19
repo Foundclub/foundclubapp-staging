@@ -336,7 +336,7 @@ function MatchCenterScreen() {
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
   const [suggestionActionLoading, setSuggestionActionLoading] = useState(false);
   const currentMatchLegalLabel = React.useMemo(() => {
-    const left = currentMatch?.team_a?.name || mySquad?.name || 'Votre squad';
+    const left = currentMatch?.team_a?.name || mySquad?.name || 'Ta squad';
     const right = currentMatch?.team_b?.name || opponentDetails?.name || 'Adversaire';
     return `${left} VS ${right}`;
   }, [currentMatch?.team_a?.name, currentMatch?.team_b?.name, mySquad?.name, opponentDetails?.name]);
@@ -412,8 +412,8 @@ function MatchCenterScreen() {
     if (!currentMatch || !matchHasPendingProposal) {
       return {
         helper: venueRequired
-          ? 'Le match correspond \u00E0 vos crit\u00E8res. Envoyez une proposition de terrain et d\u2019horaire pour lancer la n\u00E9gociation.'
-          : 'Le match correspond \u00E0 vos crit\u00E8res. Envoyez une proposition d horaire, avec un lieu si vous voulez le fixer tout de suite.',
+          ? 'Le match correspond à tes critères. Envoie une proposition de terrain et d\u2019horaire pour lancer la négociation.'
+          : 'Le match correspond à tes critères. Envoie une proposition d horaire, avec un lieu si tu veux le fixer tout de suite.',
         kind: 'create',
         title: 'ENVOYER UNE PROPOSITION',
       };
@@ -421,24 +421,24 @@ function MatchCenterScreen() {
 
     if (actionState === 'proposal_received' || (matchLastProposalSide && matchTeamSide && matchLastProposalSide !== matchTeamSide)) {
       return {
-        helper: 'Une proposition adverse attend votre r\u00E9ponse. Ouvrez le chat pour accepter, refuser ou contre-proposer.',
+        helper: 'Une proposition adverse attend ta réponse. Ouvre le chat pour accepter, refuser ou contre-proposer.',
         kind: 'reply',
-        title: 'R\u00C9PONDRE',
+        title: 'RÉPONDRE',
       };
     }
 
     if (actionState === 'proposal_sent_waiting' || (matchLastProposalSide && matchTeamSide && matchLastProposalSide === matchTeamSide)) {
       return {
-        helper: 'Votre proposition a \u00E9t\u00E9 envoy\u00E9e. Ouvrez la discussion pour suivre la r\u00E9ponse adverse.',
+        helper: 'Ta proposition a été envoyée. Ouvre la discussion pour suivre la réponse adverse.',
         kind: 'sent',
         title: 'VOIR LA PROPOSITION',
       };
     }
 
     return {
-      helper: 'Une proposition est d\u00E9j\u00E0 ouverte. Ouvrez la n\u00E9gociation pour continuer.',
+      helper: 'Une proposition est déjà ouverte. Ouvre la négociation pour continuer.',
       kind: 'open',
-      title: 'OUVRIR LA N\u00C9GOCIATION',
+      title: 'OUVRIR LA NÉGOCIATION',
     };
   }, [currentMatch, matchHasPendingProposal, matchLastProposalSide, matchTeamSide, venueRequired]);
 
@@ -482,8 +482,8 @@ function MatchCenterScreen() {
 
   const promptSquadSearchRequirements = useCallback(() => {
     Alert.alert(
-      'Recherche reservee a la squad',
-      'Vous devez etre membre de cette squad pour lancer une recherche manuelle. La recherche demarre aussi automatiquement quand le quorum est pret sur un creneau.',
+      'Recherche réservée à la squad',
+      'Tu dois être membre de cette squad pour lancer une recherche manuelle. La recherche démarre aussi automatiquement quand le quorum est prêt sur un créneau.',
       [
         {
           style: 'cancel',
@@ -620,7 +620,7 @@ function MatchCenterScreen() {
           // Only show cancellation if previous status was in cancellable pre-result phases.
           const previousStatus = String(lastMatchRef.current.status || '').toLowerCase();
           if (cancellationLikeStatuses.has(previousStatus)) {
-            Alert.alert('Match annulé', "Votre match a été annulé par l'adversaire ou le système.");
+            Alert.alert('Match annulé', "Ton match a été annulé par l'adversaire ou le système.");
           }
           lastMatchRef.current = null;
           setCurrentMatch(null);
@@ -704,7 +704,7 @@ function MatchCenterScreen() {
         if (!wasSearching) {
           Alert.alert(
             'Matchmaking lancé !',
-            'Votre squad est complète. La recherche de match a démarré automatiquement.',
+            'Ta squad est complète. La recherche de match a démarré automatiquement.',
             [{ text: 'OK', onPress: () => setViewState('radar') }]
           );
         }
@@ -791,7 +791,7 @@ function MatchCenterScreen() {
     if (!Array.isArray(selectedSlotIds) || selectedSlotIds.length === 0) {
       Alert.alert(
         'Créneau requis',
-        'Sélectionnez au moins un créneau avant de lancer la recherche.',
+        'Sélectionne au moins un créneau avant de lancer la recherche.',
       );
       return;
     }
@@ -819,7 +819,7 @@ function MatchCenterScreen() {
         if (!normalizedLocation) {
           Alert.alert(
             'Localisation requise',
-            'Ajoutez une adresse de squad validée (coordonnées GPS) avant de lancer la recherche.',
+            'Ajoute une adresse de squad validée (coordonnées GPS) avant de lancer la recherche.',
           );
           setViewState('lobby');
           return;
@@ -829,7 +829,7 @@ function MatchCenterScreen() {
         if (!coordinates) {
           Alert.alert(
             'Localisation invalide',
-            'Impossible de lire les coordonnées de votre localisation.',
+            'Impossible de lire les coordonnées de ton localisation.',
           );
           setViewState('lobby');
           return;
@@ -874,13 +874,13 @@ function MatchCenterScreen() {
         const backendCode = apiError?.code;
         const backendMessage = apiError?.message;
         if (backendCode === 'SEARCH_ALREADY_ACTIVE') {
-          Alert.alert('Recherche déjà active', 'Une recherche est déjà en cours pour cette squad.');
+          Alert.alert('Recherche déjà activé', 'Une recherche est déjà en cours pour cette squad.');
         } else if (backendCode === 'UNAUTHORIZED_TEAM_ACTION') {
           promptSquadSearchRequirements();
         } else if (isLeaguePlatformRestrictedError(apiError)) {
           showLeagueRestrictionAlert(apiError);
         } else {
-          Alert.alert('Erreur', backendMessage || 'Recherche echouee');
+          Alert.alert('Erreur', backendMessage || 'Recherche échouée');
         }
         setViewState('lobby'); // Go back to config on error
       }
@@ -944,12 +944,12 @@ function MatchCenterScreen() {
 
       if (decision === 'decline') {
         setSoftSuggestion(null);
-        Alert.alert('Piste ignoree', 'La recherche continue dans votre rayon.');
+        Alert.alert('Piste ignorée', 'La recherche continue dans ton rayon.');
         return;
       }
 
       setSoftSuggestion(result?.suggestion || softSuggestion);
-      Alert.alert('Piste acceptee', 'On attend l accord de la squad adverse. La recherche continue en parallele.');
+      Alert.alert('Piste acceptée', 'On attend l accord de la squad adverse. La recherche continue en parallele.');
     } catch (error) {
       console.error('Suggestion response error:', error);
       const apiError = /** @type {any} */ (error);
@@ -1076,8 +1076,8 @@ function MatchCenterScreen() {
     if (!matchRequest) return;
     if (!isCurrentUserCaptain) {
       Alert.alert(
-        'Action reservee',
-        'Seul un capitaine ou co-capitaine peut arreter la recherche League.',
+        'Action réservée',
+        'Seul un capitaine ou co-capitaine peut arrêter la recherche League.',
       );
       return;
     }
@@ -1100,9 +1100,9 @@ function MatchCenterScreen() {
       const isUnauthorized = cancelError?.code === 'UNAUTHORIZED_TEAM_ACTION'
         || cancelError?.status === 403;
       Alert.alert(
-        isUnauthorized ? 'Action reservee' : 'Erreur',
+        isUnauthorized ? 'Action réservée' : 'Erreur',
         isUnauthorized
-          ? 'Seul un capitaine ou co-capitaine peut arreter la recherche League.'
+          ? 'Seul un capitaine ou co-capitaine peut arrêter la recherche League.'
           : "Impossible d'annuler la recherche pour le moment.",
       );
     } finally {
@@ -1188,7 +1188,7 @@ function MatchCenterScreen() {
 
   const openLeagueNegotiation = useCallback((/** @type {LeagueMatch | null | undefined} */ match, options = {}) => {
     if (!match) {
-      Alert.alert('Erreur', "Le match n'est pas encore pr\u00EAt. R\u00E9essayez dans quelques secondes.");
+      Alert.alert('Erreur', "Le match n'est pas encore prêt. Réessaie dans quelques secondes.");
       return;
     }
 
@@ -1202,7 +1202,7 @@ function MatchCenterScreen() {
         focusLatestProposal: Boolean(proposalMessageId),
         focusProposalMessageId: proposalMessageId || undefined,
         leagueNegotiationFocusToken: String(Date.now()),
-        subTitle: 'N\u00E9gociation du match en cours',
+        subTitle: 'Négociation du match en cours',
         title: opponentChatTitle,
       });
       return;
@@ -1218,7 +1218,7 @@ function MatchCenterScreen() {
   const handleMatchFoundPrimaryAction = useCallback((/** @type {LeagueMatch | null | undefined} */ targetMatch = currentMatch) => {
     const match = targetMatch || currentMatch;
     if (!match) {
-      Alert.alert('Erreur', "Le match n'est pas encore pr\u00EAt. R\u00E9essayez dans quelques secondes.");
+      Alert.alert('Erreur', "Le match n'est pas encore prêt. Réessaie dans quelques secondes.");
       return;
     }
 
@@ -1276,7 +1276,7 @@ function MatchCenterScreen() {
     }}
     >
       <LeagueCard style={{ alignItems: 'center', paddingVertical: 40, width: '100%' }}>
-        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>Prêt À l&apos;ACTION ?</Text>
+        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>Prêt à l&apos;action ?</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
           Crée ton équipe pour rejoindre la compétition officielle.
         </Text>
@@ -1295,7 +1295,7 @@ function MatchCenterScreen() {
             width: '100%',
           }}
           textStyle={{ color: Colors.neutral900 }}
-          title="Créer UNE SQUAD"
+          title="Créer une squad"
           variant="Primary"
         />
       </LeagueCard>
@@ -1432,7 +1432,7 @@ function MatchCenterScreen() {
       const acceptedByOpponent = Boolean(softSuggestion.acceptedByOpponent);
       let statusLabel = 'Piste optionnelle disponible.';
       if (acceptedByMe && !acceptedByOpponent) {
-        statusLabel = 'Vous avez accepte. En attente de l autre squad.';
+        statusLabel = 'Tu as accepté. En attente de l autre squad.';
       } else if (!acceptedByMe && acceptedByOpponent) {
         statusLabel = 'La squad adverse est partante.';
       }
@@ -1454,9 +1454,9 @@ function MatchCenterScreen() {
             {opponent?.name || 'Squad compatible'}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300, lineHeight: 20 }]}>
-            {Number.isFinite(distanceKm) ? `A ${Math.round(distanceKm)} km de vous` : 'Distance en verification'}
-            {extraDistanceKm > 0 ? `, +${Math.round(extraDistanceKm)} km hors rayon` : ', dans votre zone'}
-            {Number.isFinite(eloDiff) ? ` - ${eloDiff} pts ELO matchmaking d'ecart` : ''}
+            {Number.isFinite(distanceKm) ? `A ${Math.round(distanceKm)} km de toi` : 'Distance en vérification'}
+            {extraDistanceKm > 0 ? `, +${Math.round(extraDistanceKm)} km hors rayon` : ', dans ta zone'}
+            {Number.isFinite(eloDiff) ? ` - ${eloDiff} pts ELO matchmaking d'écart` : ''}
             {` - ${division}`}
           </Text>
           <Text style={[Fonts.p3Bold, { color: Colors.primary500, marginTop: 8 }]}>
@@ -1496,9 +1496,9 @@ function MatchCenterScreen() {
       return renderMissionState({
         accentColor: Colors.primary500,
         eyebrow: 'SCAN MATCHMAKING',
-        helper: 'Nous analysons votre zone, vos cr\u00E9neaux et les disponibilit\u00E9s compatibles.',
+        helper: 'Nous analysons ta zone, tes créneaux et les disponibilités compatibles.',
         renderIcon: () => <ActivityIndicator color={Colors.primary500} size="large" />,
-        subtitle: 'Analyse reseau',
+        subtitle: 'Analyse réseau',
         title: 'Lancement du scan',
       });
     }
@@ -1526,8 +1526,8 @@ function MatchCenterScreen() {
             />
           </View>
         ),
-        eyebrow: 'ALERTE RESEAU',
-        helper: 'La connexion au serveur League a ete interrompue. Vous pouvez relancer le scan ou revenir au vestiaire.',
+        eyebrow: 'ALERTE Réseau',
+        helper: 'La connexion au serveur League a été interrompue. Tu peux relancer le scan ou revenir au vestiaire.',
         renderIcon: () => <Text style={{ color: Colors.error500, fontSize: 34, fontWeight: '700' }}>!</Text>,
         subtitle: 'Signal interrompu',
         title: 'Connexion perdue',
@@ -1564,7 +1564,7 @@ function MatchCenterScreen() {
                 textAlign: 'center',
               }]}
               >
-                La recherche est geree par le capitaine de votre squad. Seul lui
+                La recherche est geree par le capitaine de ta squad. Seul lui
                 ou un co-capitaine peut l annuler.
               </Text>
             ) : null}
@@ -1577,7 +1577,7 @@ function MatchCenterScreen() {
           </>
         ),
         eyebrow: 'RADAR ACTIF',
-        helper: 'Nous cherchons une \u00E9quipe compatible dans votre zone et sur vos plages partag\u00E9es.',
+        helper: 'Nous cherchons une équipe compatible dans ta zone et sur tes plages partagées.',
         renderIcon: () => <Text style={{ color: leagueGold, fontSize: 28 }}>{radarIcon}</Text>,
         subtitle: 'Balayage en cours',
         title: 'Recherche active',
@@ -1601,7 +1601,7 @@ function MatchCenterScreen() {
             {searchStatus}
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 16, textAlign: 'center' }]}>
-            Nous cherchons une équipe compatible dans votre zone.
+            Nous cherchons une équipe compatible dans ta zone.
           </Text>
 
           {/* Timer Countdown */}
@@ -1806,7 +1806,7 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  {isOpponentAnonymous ? 'Equipe adverse' : (opponentDetails?.name || currentMatch?.team_b?.name || 'Equipe adverse')}
+                  {isOpponentAnonymous ? 'Équipe adverse' : (opponentDetails?.name || currentMatch?.team_b?.name || 'Équipe adverse')}
                 </Text>
                 <Text style={[Fonts.p2, { color: Colors.primary500, marginBottom: 8 }]}>
                   {sportLabel}
@@ -1816,7 +1816,7 @@ function MatchCenterScreen() {
                 <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20 }]}>
                   {isOpponentAnonymous
                     ? 'Le profil reste masque tant que le premier contact n est pas engage dans le chat.'
-                    : 'Pour le Football a 11, l identite adverse et les creneaux communs sont visibles des le match trouve.'}
+                    : 'Pour le Football a 11, l identité adverse et les créneaux communs sont visibles des le match trouve.'}
                 </Text>
               </View>
             </View>
@@ -1944,7 +1944,7 @@ function MatchCenterScreen() {
                 textTransform: 'uppercase',
               }]}
               >
-                Prochaine etape
+                Prochaine étape
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral00, lineHeight: 22 }]}>
                 {matchProposalAction.helper}
@@ -1972,7 +1972,7 @@ function MatchCenterScreen() {
               onPress={() => {
                 Alert.alert(
                   'Annuler le match ?',
-                  '\u00CAtes-vous s\u00FBr de vouloir annuler ce match ? Votre \u00E9quipe reviendra en mode recherche.',
+                  'Es-tu sûr de vouloir annuler ce match ? Ton équipe reviendra en mode recherche.',
                   [
                     { style: 'cancel', text: 'Non' },
                     {
@@ -1991,7 +1991,7 @@ function MatchCenterScreen() {
                                   ? selectedSlotIds
                                   : toDocumentIdList(squadSlots);
                                 if (fallbackSlotIds.length === 0) {
-                                  throw new Error('Ajoutez puis s\u00E9lectionnez au moins un cr\u00E9neau pour relancer la recherche.');
+                                  throw new Error('Ajoute puis sélectionne au moins un créneau pour relancer la recherche.');
                                 }
                                 if (!ensureMatchmakingIsOpen()) {
                                   loadMatchCenter();
@@ -2028,7 +2028,7 @@ function MatchCenterScreen() {
                           if (currentMatchId) {
                             const { cancelMatch } = await import('../../../services/league/leagueMatchService');
                             await cancelMatch(currentMatchId, getEntityDocumentId(mySquad), 'captain_request');
-                            Alert.alert('Match annule', 'Vous pouvez relancer une recherche.');
+                            Alert.alert('Match annule', 'Tu peux relancer une recherche.');
                             loadMatchCenter();
                           }
                         } catch (error) {
@@ -2251,7 +2251,7 @@ function MatchCenterScreen() {
                 {swordsIcon}
               </Text>
               <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>
-                {isOpponentAnonymous ? 'Equipe adverse' : (opponentDetails?.name || currentMatch?.team_b?.name || 'Equipe adverse')}
+                {isOpponentAnonymous ? 'Équipe adverse' : (opponentDetails?.name || currentMatch?.team_b?.name || 'Équipe adverse')}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 16 }]}>
                 {sportLabel}
@@ -2362,7 +2362,7 @@ function MatchCenterScreen() {
             onPress={() => {
               Alert.alert(
                 'Annuler le match ?',
-                'Êtes-vous sûr de vouloir annuler ce match ? Votre équipe reviendra en mode recherche.',
+                'Es-tu sûr de vouloir annuler ce match ? Ton équipe reviendra en mode recherche.',
                 [
                   { style: 'cancel', text: 'Non' },
                   {
@@ -2385,7 +2385,7 @@ function MatchCenterScreen() {
                                 ? selectedSlotIds
                                 : toDocumentIdList(squadSlots);
                               if (fallbackSlotIds.length === 0) {
-                                throw new Error('Ajoutez puis sélectionnez au moins un créneau pour relancer la recherche.');
+                                throw new Error('Ajoute puis sélectionne au moins un créneau pour relancer la recherche.');
                               }
                               if (!ensureMatchmakingIsOpen()) {
                                 loadMatchCenter();
@@ -2422,7 +2422,7 @@ function MatchCenterScreen() {
                         if (currentMatchId) {
                           const { cancelMatch } = await import('../../../services/league/leagueMatchService');
                           await cancelMatch(currentMatchId, getEntityDocumentId(mySquad), 'captain_request');
-                          Alert.alert('Match annulé', 'Vous pouvez relancer une recherche.');
+                          Alert.alert('Match annulé', 'Tu peux relancer une recherche.');
                           loadMatchCenter();
                         }
                       } catch (err) {
@@ -2638,7 +2638,7 @@ function MatchCenterScreen() {
             {(activeSlot.rsvp_count || 0) >= squadRequiredPlayers ? (
               <View>
                 <Text style={[Fonts.p2, { color: Colors.success500 || '#27d6a3', marginBottom: 12, textAlign: 'center' }]}>
-                  Équipe complete
+                  Équipe complète
                 </Text>
                 <Button
                   onPress={handleLaunchLobby}
@@ -2706,7 +2706,7 @@ function MatchCenterScreen() {
     if (rawStreak > 0) {
       streakHelper = `Prochain bonus: +${nextStreakBonus}`;
     } else if (rawStreak < 0) {
-      streakHelper = 'Dernier resultat: defaite';
+      streakHelper = 'Dernier résultat: défaite';
     }
     const promotionHelper = divisionProgress.maxDivisionReached
       ? 'Division 1 prestige'
@@ -2854,7 +2854,7 @@ function MatchCenterScreen() {
               >
                 {streakValue}
               </Text>
-              <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>SERIE</Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>Série</Text>
             </View>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', height: 40, width: 1 }} />
             <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
@@ -2908,7 +2908,7 @@ function MatchCenterScreen() {
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
               {streakHelper}
-              {' | Meilleure serie: x'}
+              {' | Meilleure série: x'}
               {highestStreak}
             </Text>
           </View>
@@ -2936,10 +2936,10 @@ function MatchCenterScreen() {
                 <Text style={{ fontSize: 16 }}>[]</Text>
               </View>
               <Text style={[Fonts.p2, { color: Colors.neutral100, textAlign: 'center' }]}>
-                Aucun match termine pour le moment.
+                Aucun match terminé pour le moment.
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
-                Terminez un premier match pour alimenter votre historique.
+                Termine un premier match pour alimenter ton historique.
               </Text>
               {showEmptyHistoryCta && (
               <TouchableOpacity
@@ -3042,7 +3042,7 @@ function MatchCenterScreen() {
     };
 
     // Display Label
-    let displayLabel = 'Zone ind\u00E9finie';
+    let displayLabel = 'Zone indéfinie';
     const tempAddr = getSafeLabel(tempSearchLocation?.address);
     const tempCity = getSafeLabel(tempSearchLocation?.city);
     const homeAddr = getSafeLabel(homeBase?.address);
@@ -3081,7 +3081,7 @@ function MatchCenterScreen() {
                   }
                   setIsEditingLocation(false);
                 }}
-                placeholder="Entrez une nouvelle adresse..."
+                placeholder="Entre une nouvelle adresse..."
                 styles={{
                   textInput: { backgroundColor: Colors.neutral800, color: Colors.neutral00 },
                 }}
@@ -3147,7 +3147,7 @@ function MatchCenterScreen() {
           }}
           >
             <Text style={[Fonts.p2, { color: Colors.neutral300, flex: 1 }]}>
-              Vos disponibilités (
+              Tes disponibilités (
               <Text style={{ color: Colors.gold500 }}>{selectedSlotIds.length}</Text>
               /
               <Text style={{ color: Colors.gold500 }}>{squadSlots.length || 0}</Text>
@@ -3291,7 +3291,7 @@ function MatchCenterScreen() {
           })}
           {!isAddingSearchSlot && (!squadSlots || squadSlots.length === 0) && (
           <Text style={[Fonts.p2, { color: Colors.neutral500, padding: 16, textAlign: 'center' }]}>
-            Aucun créneau défini. Ajoutez-en directement ici.
+            Aucun créneau défini. Ajoute-en directement ici.
           </Text>
           )}
         </View>
@@ -3300,7 +3300,7 @@ function MatchCenterScreen() {
           alignItems: 'center', borderBottomColor: Colors.neutral800, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16,
         }}
         >
-          <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>Duree Match</Text>
+          <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>Durée Match</Text>
           <View style={{
             backgroundColor: Colors.neutral800, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4,
           }}
@@ -3482,7 +3482,7 @@ function MatchCenterScreen() {
   if (viewState === 'loading' && !mySquad) {
     return (
       <LeagueStateView
-        description="Synchronisation de votre squad et des opportunites de match en cours."
+        description="Synchronisation de ta squad et des opportunités de match en cours."
         isLoading
         title="Chargement du Match Center"
       />

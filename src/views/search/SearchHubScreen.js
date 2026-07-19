@@ -35,7 +35,7 @@ const SEARCH_TAB_TYPES = /** @type {const} */ ([
 ]);
 const SEARCH_STALE_WINDOW_MS = 30_000;
 const DEFAULT_EVENT_FILTERS = Object.freeze({
-  excludeType: 'R\u00E9servation',
+  excludeType: 'Réservation',
   sessionStatus: 'open',
 });
 

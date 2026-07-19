@@ -265,7 +265,7 @@ function PollMessageBubble({
                   {showSelectedBadge && isSelected ? (
                     <View style={[styles.badgePill, { borderColor: Colors.primary500 }]}>
                       <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                        {t('conversation.poll.bubble.selectedBadge', 'Votre vote')}
+                        {t('conversation.poll.bubble.selectedBadge', 'Ton vote')}
                       </Text>
                     </View>
                   ) : null}
@@ -360,7 +360,7 @@ function PollMessageBubble({
             {t(
               'conversation.poll.bubble.detailsHint',
               'Appuie sur une option pour voter ou modifier ton vote. '
-                + 'Appuie a nouveau pour le retirer, ou ouvre la carte pour les details.',
+                + 'Appuie à nouveau pour le retirer, ou ouvre la carte pour les détails.',
             )}
           </Text>
         ) : null}

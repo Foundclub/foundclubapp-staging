@@ -236,7 +236,7 @@ function PlayerCardScreen({ navigation, route }) {
   const visibleCardWidth = Math.min(windowWidth - 48, 560);
 
   return (
-    <ScreenContainer bgImage="bg2">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
       <ScrollView contentContainerStyle={[Spaces.gap[16], Spaces.paddingVertical[16]]} showsVerticalScrollIndicator={false}>
         {/* En-tete */}
         <View style={[Spaces.gap[8], Alignments.alignCenter]}>

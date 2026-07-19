@@ -125,7 +125,7 @@ export function ClubWizardProvider({ children }) {
 export function useClubWizard() {
   const context = useContext(ClubWizardContext);
   if (!context) {
-    throw new Error('useClubWizard must be used within a ClubWizardProvider');
+    throw new Error('useClubWizard must be used within à ClubWizardProvider');
   }
   return context;
 }

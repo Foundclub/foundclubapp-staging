@@ -92,7 +92,7 @@ function MatchRecapBanner({
         <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
           {pointsLabel}
           {' - '}
-          {movementLabel || recap.progressLabel || 'Touchez pour voir le detail complet.'}
+          {movementLabel || recap.progressLabel || 'Touche pour voir le detail complet.'}
         </Text>
         <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
           <Animated.View style={[styles.progressFill, progressStyle, { backgroundColor: Colors.primary500 }]} />

@@ -224,7 +224,7 @@ function AdminPopupCampaignForm() {
     return (
       <AdminStateView
         actionLabel="Ouvrir le détail"
-        description="Cette campagne a déjà été publiée. Dupliquez-la depuis le détail pour la modifier."
+        description="Cette campagne a déjà été publiée. Duplique-la depuis le détail pour la modifier."
         onAction={() => navigation.replace(RouteNames.AdminPopupCampaignDetail, { campaignId })}
         title="Brouillon non éditable"
       />
@@ -509,7 +509,7 @@ function AdminPopupCampaignForm() {
 
         {renderInput('Allowed routes (csv)', 'allowedRoutesText', { placeholder: 'Ex: HomeTab, NotificationList' })}
         {renderInput('Blocked routes (csv)', 'blockedRoutesText', { placeholder: 'Ex: Conversation, EventEdit' })}
-        {renderInput('Rôles ciblés (csv)', 'targetRolesText', { placeholder: 'new, player, coach, president, superadmin' })}
+        {renderInput('Rôles ciblés (csv)', 'targetRolesText', { placeholder: 'new, player, coach, président, superadmin' })}
         {renderInput('Plateformes ciblées (csv)', 'targetPlatformsText', { placeholder: 'ios, android, web' })}
         {renderInput('Clubs ciblés (documentIds csv)', 'targetClubsText', { placeholder: 'club-doc-id-1, club-doc-id-2' })}
         {renderInput('Multisports ciblés (documentIds csv)', 'targetMultisportClubsText', { placeholder: 'cm-doc-id-1, cm-doc-id-2' })}

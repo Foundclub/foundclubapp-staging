@@ -64,7 +64,7 @@ function SelectAvatar({
       setLocalError(
         t(
           'profile.actions.avatarPickerUnavailable',
-          'Le selecteur d image est indisponible sur ce navigateur.',
+          'Le sélecteur d image est indisponible sur ce navigateur.',
         ),
       );
     }

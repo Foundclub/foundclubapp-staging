@@ -42,7 +42,7 @@ function BootGate({ children }) {
       <ErrorScreen
         actionTitle="Recharger"
         details={__DEV__ ? errors.join('\n') : ''}
-        subtitle="La configuration reseau de ce build est invalide. L'app est bloquee proprement pour eviter un crash au demarrage."
+        subtitle="La configuration réseau de ce build est invalide. L'app est bloquée proprement pour éviter un crash au démarrage."
         title="Configuration invalide"
       />
     );

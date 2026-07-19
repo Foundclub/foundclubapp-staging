@@ -57,7 +57,7 @@ const getHeaderTitle = (typeName, eventItem) => {
       typeName,
     });
     if (trainingConfig?.isOpenTraining && Number(trainingConfig?.externalParticipantLimit || 0) > 0) {
-      return 'ENTRAINEMENT OUVERT';
+      return 'Entraînement OUVERT';
     }
     return 'ENTRAINEMENT';
   }
@@ -263,7 +263,7 @@ function EventCardNew({
       || externalMatchLocation
       || getShortAddress(item?.locationDetails)
       || getShortAddress(item?.location)
-      || t('eventDetails.locationUnknown', 'Lieu a confirmer')
+      || t('eventDetails.locationUnknown', 'Lieu à confirmer')
     )
     : (
       item?.facility?.name

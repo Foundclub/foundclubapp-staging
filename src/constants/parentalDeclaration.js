@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 export const MINOR_PARENTAL_DECLARATION_SCOPE = 'minor_parental_declaration';
 export const MINOR_PARENTAL_DECLARATION_VERSION = 'minor-parental-declaration-v1-2026-05-14';
-export const MINOR_PARENTAL_DECLARATION_TEXT = 'Je declare etre le parent ou le representant legal de cet enfant et utiliser l application en son nom.';
+export const MINOR_PARENTAL_DECLARATION_TEXT = 'Je déclare être le parent ou le représentant legal de cet enfant et utiliser l application en son nom.';
 export const MINOR_PARENTAL_DECLARATION_TEXT_HASH = '42f52a118fe373ac50160c7676da639696723111fbf9e1c4c412d3f3f6c7adf2';
 export const MINOR_PARENTAL_DECLARATION_MIN_AGE = 13;
 

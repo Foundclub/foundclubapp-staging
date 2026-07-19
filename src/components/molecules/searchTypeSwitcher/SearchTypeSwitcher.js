@@ -36,7 +36,7 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
     () => [
       {
         key: 'events',
-        label: t('homeHub.cards.search.events.title', '\u00c9v\u00e9nement'),
+        label: t('homeHub.cards.search.events.title', 'Événement'),
       },
       {
         key: 'clubs',
@@ -44,7 +44,7 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
       },
       {
         key: 'reservations',
-        label: t('homeHub.cards.search.reservations.title', 'R\u00e9servations'),
+        label: t('homeHub.cards.search.reservations.title', 'Réservations'),
       },
       {
         key: 'recruitment',

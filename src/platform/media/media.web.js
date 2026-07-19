@@ -1,6 +1,6 @@
 const selectFile = (accept, options = {}) => new Promise((resolve, reject) => {
   if (typeof document === 'undefined') {
-    reject(new Error('Le navigateur ne supporte pas le selecteur de fichiers.'));
+    reject(new Error('Le navigateur ne supporte pas le sélecteur de fichiers.'));
     return;
   }
 
@@ -84,7 +84,7 @@ export const recordVoiceNote = async () => {
 
   recorder.addEventListener('error', (event) => {
     stopMediaTracks(stream);
-    rejectResult(event?.error || new Error('L enregistrement vocal a echoue.'));
+    rejectResult(event?.error || new Error('L enregistrement vocal a échoué.'));
   });
 
   recorder.addEventListener('stop', () => {

@@ -155,7 +155,7 @@ function ShareEventModal({
       });
       const message = buildShareMessageWithUrl({
         intro: [
-          `${t('event.shareMessage', 'Découvrez cet événement :')} ${event.title}`,
+          `${t('event.shareMessage', 'Découvre cet événement :')} ${event.title}`,
           event.description || '',
         ].filter(Boolean).join('\n'),
         linkLabel: t('event.shareLinkLabel', 'Voir la fiche FoundClub'),
@@ -262,7 +262,7 @@ function ShareEventModal({
       <Text style={[Fonts.p3, Fonts.neutral300, { textAlign: 'center' }]}>
         {t(
           'event.shareNoChatAvailableHint',
-          'Rejoins ou cree une conversation pour partager cet evenement ici.',
+          'Rejoins ou crée une conversation pour partager cet événement ici.',
         )}
       </Text>
     </View>

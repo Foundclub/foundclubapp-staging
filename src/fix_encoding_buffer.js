@@ -68,7 +68,7 @@ try {
   }
 
   fs.writeFileSync(filePath, newBuffer);
-  console.log('Successfully formatted binary encoding issues.');
+  console.log('Succèssfully formatted binary encoding issues.');
 } catch (err) {
   console.error('Error:', err);
 }

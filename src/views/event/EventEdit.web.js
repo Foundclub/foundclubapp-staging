@@ -303,7 +303,7 @@ function EventEdit({ navigation, route }) {
   } else if (isSetupPending) {
     submitButtonLabel = 'Preparation...';
   } else if (eventId) {
-    submitButtonLabel = 'Mettre a jour';
+    submitButtonLabel = 'Mettre à jour';
   }
 
   const updateField = (field, value) => {
@@ -346,19 +346,19 @@ function EventEdit({ navigation, route }) {
     setSubmitError('');
 
     if (!formState.type || !formState.team || !formState.date || !formState.startTime) {
-      setSubmitError('Type, equipe, date et heure de debut sont obligatoires.');
+      setSubmitError('Type, équipe, date et heure de début sont obligatoires.');
       return;
     }
 
     if (eventId && !editSupport?.isSupported) {
-      setSubmitError(editSupport?.reason || "Cette fiche ne permet pas encore d'editer ce type d'evenement.");
+      setSubmitError(editSupport?.reason || "Cette fiche ne permet pas encore d'éditer ce type d'événement.");
       return;
     }
 
     if (isTrainingType && formState.sessionStatus !== 'closed') {
       const externalParticipantLimit = Number(formState.externalParticipantLimit || 0);
       if (!Number.isFinite(externalParticipantLimit) || externalParticipantLimit < 1) {
-        setSubmitError('Indique combien de places externes tu ouvres pour cet entrainement.');
+        setSubmitError('Indique combien de places externes tu ouvres pour cet entraînement.');
         return;
       }
 
@@ -414,7 +414,7 @@ function EventEdit({ navigation, route }) {
         await createEventMutation.mutateAsync(payload);
       }
     } catch (error) {
-      setSubmitError(error?.message || 'Impossible d enregistrer cet evenement.');
+      setSubmitError(error?.message || 'Impossible d enregistrer cet événement.');
     }
   };
 
@@ -454,7 +454,7 @@ function EventEdit({ navigation, route }) {
                 Planning
               </span>
               <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 34 : 28, margin: 0 }}>
-                {eventId ? 'Modifier un evenement' : 'Creer un evenement'}
+                {eventId ? 'Modifier un événement' : 'Créer un événement'}
               </h1>
             </div>
             <button
@@ -481,10 +481,10 @@ function EventEdit({ navigation, route }) {
             }}
             >
               <strong style={{ color: '#f59e0b', fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                Modification limitee
+                Modification limitée
               </strong>
               <span style={{ color: mutedTextColor }}>
-                {editSupport?.reason || "Cette fiche ne permet pas encore d'editer ce type d'evenement."}
+                {editSupport?.reason || "Cette fiche ne permet pas encore d'éditer ce type d'événement."}
               </span>
             </div>
           ) : null}
@@ -502,54 +502,54 @@ function EventEdit({ navigation, route }) {
             }}
             >
               <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                Serie recurrente
+                Série recurrente
               </strong>
               <span>
-                La portee ci-dessous determine si la mise a jour s applique a cet evenement seulement, aux suivants, ou a toute la serie.
+                La portee ci-dessous determine si la mise à jour s applique à cet événement seulement, aux suivants, ou à toute la série.
               </span>
               {hasRecurringDateShift ? (
                 <span style={{ color: '#f59e0b' }}>
-                  Si tu modifies la date du calendrier, elle reste specifique a cet evenement. Les mises a jour pour les suivants ou toute la serie propagent surtout les parametres communs comme l horaire, le lieu et les invitations.
+                  Si tu modifies la date du calendrier, elle reste spécifique à cet événement. Les mises à jour pour les suivants ou toute la série propagent surtout les paramètres communs comme l horaire, le lieu et les invitations.
                 </span>
               ) : null}
             </div>
           ) : null}
 
           {isBootstrapping ? (
-            <div style={{ color: mutedTextColor }}>Chargement de l evenement...</div>
+            <div style={{ color: mutedTextColor }}>Chargement de l événement...</div>
           ) : null}
 
           {!isBootstrapping && setupLoading ? (
-            <div style={{ color: mutedTextColor }}>Preparation du formulaire...</div>
+            <div style={{ color: mutedTextColor }}>Préparation du formulaire...</div>
           ) : null}
 
           {!isBootstrapping && !setupLoading && setupError ? (
             <div style={{ display: 'grid', gap: 10 }}>
               <div style={{ color: '#ff6b81', fontFamily: 'Montserrat-Bold, sans-serif' }}>Configuration indisponible</div>
               <div style={{ color: mutedTextColor }}>
-                {setupError?.message || 'Impossible de charger les donnees du formulaire.'}
+                {setupError?.message || 'Impossible de charger les données du formulaire.'}
               </div>
             </div>
           ) : null}
 
           {!isBootstrapping && !setupLoading && !setupError && missingEvent ? (
             <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>Evenement introuvable</div>
+              <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>Événement introuvable</div>
               <div style={{ color: mutedTextColor }}>
-                Cet evenement n existe plus ou ne peut pas etre modifie depuis ce lien.
+                Cet événement n existe plus ou ne peut pas être modifie depuis ce lien.
               </div>
             </div>
           ) : null}
 
           {!isBootstrapping && !setupLoading && !setupError && !missingEvent && !hasTeams ? (
             <div style={{ color: mutedTextColor }}>
-              Aucune equipe disponible pour creer ou modifier cet evenement.
+              Aucune équipe disponible pour créer ou modifier cet événement.
             </div>
           ) : null}
 
           {!isBootstrapping && !setupLoading && !setupError && !missingEvent && hasTeams && !hasTypes ? (
             <div style={{ color: mutedTextColor }}>
-              Aucun type d evenement n est disponible pour le moment.
+              Aucun type d événement n est disponible pour le moment.
             </div>
           ) : null}
 
@@ -569,9 +569,9 @@ function EventEdit({ navigation, route }) {
                 </label>
 
                 <label style={{ display: 'grid', gap: 8 }}>
-                  <span style={{ color: mutedTextColor, fontSize: 13 }}>Equipe</span>
+                  <span style={{ color: mutedTextColor, fontSize: 13 }}>Équipe</span>
                   <select onChange={(eventObject) => handleTeamChange(eventObject.target.value)} style={fieldStyle} value={formState.team}>
-                    <option value="">Choisir une equipe</option>
+                    <option value="">Choisir une équipe</option>
                     {manageableTeams.map((team) => (
                       <option key={getEntityDocumentId(team)} value={getEntityDocumentId(team)}>
                         {team?.name || 'Equipe'}
@@ -587,7 +587,7 @@ function EventEdit({ navigation, route }) {
 
                 <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
                   <label style={{ display: 'grid', gap: 8 }}>
-                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Debut</span>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Début</span>
                     <input onChange={(eventObject) => updateField('startTime', eventObject.target.value)} style={fieldStyle} type="time" value={formState.startTime} />
                   </label>
                   <label style={{ display: 'grid', gap: 8 }}>
@@ -598,11 +598,11 @@ function EventEdit({ navigation, route }) {
 
                 {event?.recurrenceGroupId ? (
                   <label style={{ display: 'grid', gap: 8 }}>
-                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Portee de la mise a jour</span>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Portee de la mise à jour</span>
                     <select onChange={(eventObject) => setRecurrenceScope(eventObject.target.value)} style={fieldStyle} value={recurrenceScope}>
-                      <option value="this">Cet evenement</option>
-                      <option value="future">Cet evenement et les suivants</option>
-                      <option value="all">Toute la serie</option>
+                      <option value="this">Cet événement</option>
+                      <option value="future">Cet événement et les suivants</option>
+                      <option value="all">Toute la série</option>
                     </select>
                   </label>
                 ) : null}
@@ -626,7 +626,7 @@ function EventEdit({ navigation, route }) {
 
                 {!isTrainingType ? (
                   <label style={{ display: 'grid', gap: 8 }}>
-                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Capacite</span>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Capacité</span>
                     <input min="0" onChange={(eventObject) => updateField('capacity', eventObject.target.value)} style={fieldStyle} type="number" value={formState.capacity} />
                   </label>
                 ) : null}
@@ -695,10 +695,10 @@ function EventEdit({ navigation, route }) {
                 </label>
 
                 <label style={{ display: 'grid', gap: 8 }}>
-                  <span style={{ color: mutedTextColor, fontSize: 13 }}>Equipes invitees</span>
+                  <span style={{ color: mutedTextColor, fontSize: 13 }}>Équipes invitées</span>
                   <div style={{ display: 'grid', gap: 10 }}>
                     <div style={{ color: mutedTextColor, fontSize: 12, lineHeight: 1.5 }}>
-                      Clique sur une equipe pour l ajouter ou la retirer, sans combinaison clavier.
+                      Clique sur une équipe pour l ajouter ou la retirer, sans combinaison clavier.
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                       {availableInvitedTeams.length ? availableInvitedTeams.map((team) => {
@@ -725,7 +725,7 @@ function EventEdit({ navigation, route }) {
                         );
                       }) : (
                         <div style={{ color: mutedTextColor }}>
-                          Aucune autre equipe du club n est disponible pour le moment.
+                          Aucune autre équipe du club n est disponible pour le moment.
                         </div>
                       )}
                     </div>
@@ -749,7 +749,7 @@ function EventEdit({ navigation, route }) {
                 <span style={{ color: mutedTextColor, fontSize: 13 }}>Description</span>
                 <textarea
                   onChange={(eventObject) => updateField('description', eventObject.target.value)}
-                  placeholder="Decris l evenement, le rendez-vous, les consignes..."
+                  placeholder="Décris l'événement, le rendez-vous, les consignes..."
                   style={{ ...fieldStyle, minHeight: 140, resize: 'vertical' }}
                   value={formState.description}
                 />
@@ -757,7 +757,7 @@ function EventEdit({ navigation, route }) {
 
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ color: mutedTextColor, fontSize: 13 }}>
-                  Invitations d equipes avancees
+                  Invitations d équipes avancées
                 </div>
                 <EventTeamAudiencesEditor
                   availableTeams={clubTeams}
@@ -771,7 +771,7 @@ function EventEdit({ navigation, route }) {
 
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ color: mutedTextColor, fontSize: 13 }}>
-                  Taches annexes
+                  Tâches annexes
                 </div>
                 <EventTasksEditor
                   editable
@@ -792,10 +792,10 @@ function EventEdit({ navigation, route }) {
                 }}
               >
                 <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                  Mise a la une
+                  Mise à la une
                 </strong>
                 <span>
-                  La demande de mise a la une se fait depuis la fiche de l evenement apres creation.
+                  La demande de mise à la une se fait depuis la fiche de l événement après création.
                 </span>
               </div>
 
@@ -813,7 +813,7 @@ function EventEdit({ navigation, route }) {
                   color: mutedTextColor, fontSize: 13, lineHeight: 1.5, maxWidth: 680,
                 }}
                 >
-                  La version web couvre maintenant aussi les invitations d equipes et les taches annexes, au plus proche du flow mobile.
+                  La version web couvre maintenant aussi les invitations d équipes et les tâches annexes, au plus proche du flow mobile.
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button

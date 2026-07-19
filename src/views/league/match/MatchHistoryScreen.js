@@ -64,7 +64,7 @@ function MatchHistoryScreen() {
     } catch (error) {
       console.log(error);
       setTeamId(null);
-      setLoadError(error?.message || 'Impossible de charger votre squad League.');
+      setLoadError(error?.message || 'Impossible de charger ta squad League.');
       setLoading(false);
     }
   }, [queryClient, userData]);
@@ -175,7 +175,7 @@ function MatchHistoryScreen() {
   if (loading) {
     return (
       <LeagueStateView
-        description="Nous chargeons l'historique de vos matchs League."
+        description="Nous chargeons l'historique de tes matchs League."
         isLoading
         title="Chargement de l'historique"
       />
@@ -203,7 +203,7 @@ function MatchHistoryScreen() {
   if (!teamId) {
     return (
       <LeagueStateView
-        description="Aucune squad League n'est reliee a ce compte pour afficher un historique."
+        description="Aucune squad League n'est reliee à ce compte pour afficher un historique."
         title="Historique indisponible"
       />
     );

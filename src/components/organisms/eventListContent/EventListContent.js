@@ -806,7 +806,7 @@ function EventListContent({
       eventListLogger.warn('Navigation blocked: missing event documentId');
       return;
     }
-    eventListLogger.debug('Navigating to event details', { eventDocumentId: event.documentId });
+    eventListLogger.debug('Navigating to event détails', { eventDocumentId: event.documentId });
     navigation.navigate(RouteNames.EventStack, {
       params: { eventId: event.documentId },
       screen: RouteNames.EventDetails,
@@ -1229,14 +1229,14 @@ function EventListContent({
   const emptyListContent = (
     showLoadingPlaceholder ? (
       <SearchResultsLoadingState
-        description={t('eventList.loadingDesc', 'Nous chargeons les \u00E9v\u00E9nements correspondant \u00E0 votre recherche.')}
-        title={t('eventList.loadingTitle', 'Chargement des \u00E9v\u00E9nements')}
+        description={t('eventList.loadingDesc', 'Nous chargeons les événements correspondant à ta recherche.')}
+        title={t('eventList.loadingTitle', 'Chargement des événements')}
       />
     ) : (
       customEmptyComponent || (
         <EmptyState
           actionLabel={!showFilters ? t('eventList.actions.findEvent') : undefined}
-          description={!showFilters ? t('eventList.emptyDesc', 'Essayez de modifier vos filtres ou lancez une nouvelle recherche.') : undefined}
+          description={!showFilters ? t('eventList.emptyDesc', 'Essaie de modifier tes filtres ou lance une nouvelle recherche.') : undefined}
           icon={Images.search}
           onAction={!showFilters ? handleFindEvent : undefined}
           title={t('eventList.noData')}
@@ -1283,12 +1283,12 @@ function EventListContent({
           ]}
         >
           <Text style={[Fonts.p1, { color: Colors.neutral00, flex: 1 }]}>
-            {'\u00C9v\u00E9nements \u00E0 partir de'}
+            Événements à partir de
           </Text>
 
           {shouldShowMapToggle ? (
             <TouchableOpacity
-              accessibilityHint={'Ouvre la vue carte des \u00E9v\u00E9nements.'}
+              accessibilityHint="Ouvre la vue carte des événements."
               accessibilityLabel="Passer en mode carte"
               activeOpacity={0.85}
               onPress={() => navigation.navigate(RouteNames.SearchMapScreen, { scope: 'events' })}
@@ -1321,11 +1321,11 @@ function EventListContent({
         <DateSlider
           isRefreshing={Boolean(isDateRefreshPending || (isFetching && displayEvents.length > 0))}
           onDateSelected={handleDateSelected}
-          refreshLabel={t('eventList.loadingUpdating', 'Actualisation des \u00E9v\u00E9nements...')}
+          refreshLabel={t('eventList.loadingUpdating', 'Actualisation des événements...')}
           selectedDate={selectedDate}
         />
         {showDateRefreshBanner ? renderLoadingHint(
-          t('eventList.loadingUpdating', 'Actualisation des \u00E9v\u00E9nements...'),
+          t('eventList.loadingUpdating', 'Actualisation des événements...'),
           true,
         ) : null}
       </View>
@@ -1349,11 +1349,11 @@ function EventListContent({
       {isViewportListMode ? (
         <View style={[Spaces.gap[4]]}>
           <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-            {`${viewportDisplayCount} \u00E9v\u00E9nement${viewportDisplayCount > 1 ? 's' : ''} dans cette zone`}
+            {`${viewportDisplayCount} événement${viewportDisplayCount > 1 ? 's' : ''} dans cette zone`}
           </Text>
           {isViewportTruncated ? (
             <Text style={[Fonts.p4, Fonts.neutral200]}>
-              {'Zoomez sur la carte pour afficher tous les \u00E9v\u00E9nements de cette zone.'}
+              Zoome sur la carte pour afficher tous les événements de cette zone.
             </Text>
           ) : null}
         </View>
@@ -1364,7 +1364,7 @@ function EventListContent({
         </Text>
       ) : null}
       {showInlineLoadingHint ? renderLoadingHint(
-        t('eventList.loadingUpdating', 'Actualisation des \u00E9v\u00E9nements...'),
+        t('eventList.loadingUpdating', 'Actualisation des événements...'),
         false,
       ) : null}
     </View>

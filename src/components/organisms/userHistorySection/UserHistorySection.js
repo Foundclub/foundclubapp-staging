@@ -99,7 +99,7 @@ function UserHistorySection({
 
     Alert.alert(
       t('common.actions.delete', 'Supprimer'),
-      t('profile.history.deleteConfirmation', 'Voulez-vous vraiment supprimer cette expérience ?'),
+      t('profile.history.deleteConfirmation', 'Veux-tu vraiment supprimer cette expérience ?'),
       [
         {
           style: 'cancel',
@@ -126,7 +126,7 @@ function UserHistorySection({
     }
     if (start) return start;
     if (end) return end;
-    return t('profile.history.periodNotSet', 'Periode non renseignee');
+    return t('profile.history.periodNotSet', 'Période non renseignée');
   };
 
   const getClubName = (/** @type {UserHistoryItem} */ item) => {
@@ -373,7 +373,7 @@ function UserHistorySection({
                   ]}
                 >
                   <Text style={[Fonts.p3, Fonts.neutral300]}>
-                    {t('profile.history.tapToEdit', 'Touchez la carte pour modifier')}
+                    {t('profile.history.tapToEdit', 'Touche la carte pour modifier')}
                   </Text>
                   <TouchableOpacity
                     onPress={() => handleDelete(item.documentId || item.id)}

@@ -183,7 +183,7 @@ function AdminStack() {
           name={RouteNames.AdminClubOnboardingList}
           options={{
             ...commonOptions,
-            headerTitle: 'Clubs a onboarder',
+            headerTitle: 'Clubs à onboarder',
           }}
         />
         <Stack.Screen
@@ -223,7 +223,7 @@ function AdminStack() {
           name={RouteNames.AdminClubForm}
           options={{
             ...commonOptions,
-            headerTitle: 'Edition Club',
+            headerTitle: 'Édition Club',
           }}
         />
         <Stack.Screen

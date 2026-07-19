@@ -17,13 +17,19 @@ const Stack = createStackNavigator();
 function AuthStackNavigator() {
   return (
     <Stack.Navigator id={undefined} screenOptions={commonOptions}>
+      {/* Login et Register affichent deja le logo FoundClub dans le corps de
+          page : on retire celui du header natif pour ne pas l'empiler deux fois
+          (audit visuel 2026-07-19). Le header transparent reste monte pour la
+          fleche retour et la marge haute. */}
       <Stack.Screen
         component={Login}
         name={RouteNames.Login}
+        options={{ headerTitle: '' }}
       />
       <Stack.Screen
         component={Register}
         name={RouteNames.Register}
+        options={{ headerTitle: '' }}
       />
       <Stack.Screen
         component={ClubStack}

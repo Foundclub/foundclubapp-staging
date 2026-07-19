@@ -128,7 +128,7 @@ export function TeamWizardProvider({ children }) {
 export function useTeamWizard() {
   const context = useContext(TeamWizardContext);
   if (!context) {
-    throw new Error('useTeamWizard must be used within a TeamWizardProvider');
+    throw new Error('useTeamWizard must be used within à TeamWizardProvider');
   }
   return context;
 }

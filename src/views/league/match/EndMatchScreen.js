@@ -319,7 +319,7 @@ function EndMatchScreen() {
     if (scoreFlow.state === 'locked_before_start') {
       return "Le score sera disponible à l'heure de début du match + 1 minute.";
     }
-    return "Le score ne peut pas être saisi à ce stade. Vérifiez que l'heure de début du match est dépassée.";
+    return "Le score ne peut pas être saisi à ce stade. Vérifie que l'heure de début du match est dépassée.";
   })();
   let ownSubmission = null;
   let opponentSubmission = null;
@@ -363,7 +363,7 @@ function EndMatchScreen() {
       return {
         accentColor: Colors.gold500,
         helper:
-          'Le capitaine adverse a déjà proposé un score. Confirmez-le ou ouvrez un litige.',
+          'Le capitaine adverse a déjà proposé un score. Confirme-le ou ouvre un litige.',
         label: 'Score adverse reçu',
       };
     }
@@ -372,7 +372,7 @@ function EndMatchScreen() {
       return {
         accentColor: Colors.success500,
         helper:
-          'Votre dernière saisie est enregistrée. Vous pouvez encore la relire.',
+          'Ton dernière saisie est enregistrée. Tu peux encore la relire.',
         label: 'Saisie en cours',
       };
     }
@@ -380,7 +380,7 @@ function EndMatchScreen() {
     return {
       accentColor: Colors.primary500,
       helper:
-        'Renseignez le score final puis validez ou ouvrez un litige si nécessaire.',
+        'Renseigne le score final puis valide ou ouvre un litige si nécessaire.',
       label: 'Score à saisir',
     };
   }, [
@@ -435,7 +435,7 @@ function EndMatchScreen() {
 
     const myTeam = getMyTeamFromMatch();
     if (!myTeam) {
-      throw new Error("Impossible d'identifier votre squad.");
+      throw new Error("Impossible d'identifier ta squad.");
     }
 
     const teamId = getEntityDocumentId(myTeam);
@@ -446,7 +446,7 @@ function EndMatchScreen() {
     const location = homeBaseLocation || userLocation;
     if (!location) {
       throw new Error(
-        'Aucune localisation validée trouvée. Configurez la base de votre squad.',
+        'Aucune localisation validée trouvée. Configure la base de ta squad.',
       );
     }
     const homeBase = myTeam?.home_base && typeof myTeam.home_base === 'object'
@@ -586,7 +586,7 @@ function EndMatchScreen() {
           } else if (recoveredStatus === 'pending_validation') {
             Alert.alert(
               'Score enregistré',
-              'Votre score est en attente de validation par le capitaine adverse.',
+              'Ton score est en attente de validation par le capitaine adverse.',
               [{ onPress: () => refetchMatch(), text: 'OK' }],
             );
           } else if (recoveredStatus === 'disputed') {
@@ -624,7 +624,7 @@ function EndMatchScreen() {
       if (finalStatus === 'pending_validation') {
         Alert.alert(
           'Score enregistré',
-          'Votre score est en attente de validation par le capitaine adverse.',
+          'Ton score est en attente de validation par le capitaine adverse.',
           [{ onPress: () => refetchMatch(), text: 'OK' }],
         );
         return;
@@ -633,7 +633,7 @@ function EndMatchScreen() {
       if (finalStatus === 'disputed') {
         Alert.alert(
           'Litige ouvert',
-          'Le score est maintenant en litige. Vous pourrez confirmer ou fournir des détails si besoin.',
+          'Le score est maintenant en litige. Tu pourras confirmer ou fournir des détails si besoin.',
           [{ onPress: () => refetchMatch(), text: 'OK' }],
         );
         return;
@@ -729,7 +729,7 @@ function EndMatchScreen() {
       return;
     }
     if (!isPadelMatch && (!scoreA || !scoreB)) {
-      Alert.alert('Erreur', 'Veuillez saisir les scores.');
+      Alert.alert('Erreur', 'Merci de saisir les scores.');
       return;
     }
     if (isNoShowDispute && proof?.source !== 'camera') {
@@ -945,7 +945,7 @@ function EndMatchScreen() {
                     { color: Colors.neutral100 },
                   ]}
                 >
-                  {teamA?.name || 'Equipe A'}
+                  {teamA?.name || 'Équipe A'}
                 </Text>
               </View>
 
@@ -985,7 +985,7 @@ function EndMatchScreen() {
                     { color: Colors.neutral100 },
                   ]}
                 >
-                  {teamB?.name || 'Equipe B'}
+                  {teamB?.name || 'Équipe B'}
                 </Text>
               </View>
             </View>
@@ -1051,7 +1051,7 @@ function EndMatchScreen() {
                 .
               </Text>
               <Text style={[Fonts.p4, { color: Colors.neutral400, marginTop: 8 }]}>
-                Vous pouvez encore corriger votre saisie tant que le match n&apos;est pas validé.
+                Tu peux encore corriger ta saisie tant que le match n&apos;est pas validé.
               </Text>
             </LeagueCard>
           ) : null}
@@ -1086,7 +1086,7 @@ function EndMatchScreen() {
               <Text
                 style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
               >
-                Confirmez ce score si vous êtes d&apos;accord, sinon ouvrez un litige.
+                Confirme ce score si tu es d&apos;accord, sinon ouvre un litige.
               </Text>
               <View style={styles.opponentScoreActions}>
                 <Button
@@ -1124,12 +1124,12 @@ function EndMatchScreen() {
               ]}
             >
               <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                En attente de votre décision
+                En attente de ta décision
               </Text>
               <Text
                 style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
               >
-                Utilisez les boutons ci-dessus pour confirmer ou contester le
+                Utilise les boutons ci-dessus pour confirmer ou contester le
                 score adverse.
               </Text>
             </LeagueCard>
@@ -1192,7 +1192,7 @@ function EndMatchScreen() {
                       <View style={styles.padelSetScoreRow}>
                         <View style={styles.padelSetTeamInput}>
                           <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral300 }]}>
-                            {teamA?.name || 'Equipe A'}
+                            {teamA?.name || 'Équipe A'}
                           </Text>
                           <TextInput
                             keyboardType="number-pad"
@@ -1213,7 +1213,7 @@ function EndMatchScreen() {
                         <Text style={[Fonts.h3, { color: Colors.gold500 }]}>-</Text>
                         <View style={styles.padelSetTeamInput}>
                           <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral300 }]}>
-                            {teamB?.name || 'Equipe B'}
+                            {teamB?.name || 'Équipe B'}
                           </Text>
                           <TextInput
                             keyboardType="number-pad"
@@ -1423,7 +1423,7 @@ function EndMatchScreen() {
               <Text
                 style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
               >
-                Activez en cas de désaccord. Preuve optionnelle sauf no-show
+                Active en cas de désaccord. Preuve optionnelle sauf no-show
                 (caméra obligatoire).
               </Text>
 
@@ -1488,7 +1488,7 @@ function EndMatchScreen() {
                       maxLength={500}
                       multiline
                       onChangeText={setDisputeComment}
-                      placeholder="Expliquez brièvement le problème"
+                      placeholder="Explique brièvement le problème"
                       placeholderTextColor={Colors.neutral500}
                       style={[
                         styles.commentInput,

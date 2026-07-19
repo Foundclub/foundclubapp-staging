@@ -47,7 +47,7 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['TEAM', 'CLUB'],
     })).toEqual({
       allowed: false,
-      message: 'Quota gratuit epuise',
+      message: 'Quota gratuit épuisé',
       paywall: 'EVENT_LIMIT',
       paywallKey: 'event-limit',
       reason: 'FREE_QUOTA_EXHAUSTED',
@@ -68,8 +68,8 @@ describe('subscriptionDecision', () => {
     expect(mapSubscriptionDecisionToPaywall(decision).paywallKey).toBe('composition-required');
     expect(getSubscriptionPaywallContent(decision)).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La composition d equipe est reservee a l offre Equipe. Offre conseillee: Team ou Club.',
-      title: 'Composition reservee',
+      description: 'La composition d équipe est réservée a l offre Équipe. Offre conseillée: Team ou Club.',
+      title: 'Composition réservée',
     });
     expect(getSubscriptionQuotaSheetContent(decision)).toMatchObject({
       kicker: 'Offre Équipe',
@@ -89,9 +89,9 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['TEAM', 'CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La creation de campagnes de cotisation demande une offre active.'
-        + ' Offre conseillee: Team ou Club.',
-      title: 'Cotisations reservees',
+      description: 'La création de campagnes de cotisation demande une offre active.'
+        + ' Offre conseillée: Team ou Club.',
+      title: 'Cotisations réservées',
     });
     expect(getSubscriptionPaywallContent({
       allowed: false,
@@ -100,9 +100,9 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La gestion des installations du club est reservee a l offre Club.'
-        + ' Offre conseillee: Club.',
-      title: 'Installations reservees',
+      description: 'La gestion des installations du club est réservée a l offre Club.'
+        + ' Offre conseillée: Club.',
+      title: 'Installations réservées',
     });
     expect(getSubscriptionPaywallContent({
       allowed: false,
@@ -111,9 +111,9 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La modification de la fiche du club est reservee a l offre Club.'
-        + ' Offre conseillee: Club.',
-      title: 'Fiche club reservee',
+      description: 'La modification de la fiche du club est réservée a l offre Club.'
+        + ' Offre conseillée: Club.',
+      title: 'Fiche club réservée',
     });
     expect(getSubscriptionPaywallContent({
       allowed: false,
@@ -122,8 +122,8 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La gestion des sponsors du club est reservee a l offre Club.'
-        + ' Offre conseillee: Club.',
+      description: 'La gestion des sponsors du club est réservée a l offre Club.'
+        + ' Offre conseillée: Club.',
       title: 'Sponsors reserves',
     });
     expect(getSubscriptionPaywallContent({
@@ -133,9 +133,9 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La gestion des roles et des droits du club est reservee a l offre Club.'
-        + ' Offre conseillee: Club.',
-      title: 'Roles club reserves',
+      description: 'La gestion des rôles et des droits du club est réservée a l offre Club.'
+        + ' Offre conseillée: Club.',
+      title: 'Rôles club reserves',
     });
   });
 
@@ -155,9 +155,9 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toBe('fc_club_tier_1_yearly');
     expect(getSubscriptionPaywallBenefits({ paywall: 'SPONSOR_MANAGE_REQUIRED' })).toEqual([
-      'Toutes les equipes du club couvertes',
-      'Droits club et gestion centralisee',
-      'Cotisations et recrutement illimites',
+      'Toutes les équipes du club couvertes',
+      'Droits club et gestion centralisée',
+      'Cotisations et recrutement illimités',
     ]);
   });
 
@@ -171,7 +171,7 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'Cette action demande une offre FoundClub active. Offre conseillee: Club.',
+      description: 'Cette action demande une offre FoundClub active. Offre conseillée: Club.',
       title: 'Abonnement FoundClub requis',
     });
   });
@@ -210,8 +210,8 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['TEAM', 'CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'Tu as atteint la limite gratuite de publication d evenements. Offre conseillee: Team ou Club.',
-      title: 'Publication d evenement limitee',
+      description: 'Tu as atteint la limite gratuite de publication d événements. Offre conseillée: Team ou Club.',
+      title: 'Publication d événement limitée',
     });
   });
 
@@ -311,22 +311,22 @@ describe('subscriptionDecision', () => {
       paywall: 'EVENT_LIMIT',
       reason: 'FREE_QUOTA_EXHAUSTED',
     })).toEqual([
-      'Evenements et matchs illimites',
+      'Événements et matchs illimités',
       'Composition et convocations',
-      'Toute l equipe en profite',
+      'Toute l équipe en profite',
     ]);
     expect(getSubscriptionPaywallBenefits({ paywall: 'TEAM_LIMIT' })).toEqual([
-      'Ajoute autant d equipes que besoin',
-      'Evenements et matchs illimites',
-      'Gestion complete de chaque equipe',
+      'Ajoute autant d équipes que besoin',
+      'Événements et matchs illimités',
+      'Gestion complète de chaque équipe',
     ]);
     expect(getSubscriptionPaywallBenefits({ paywall: 'MATCH_LIMIT' })).toHaveLength(3);
     expect(getSubscriptionPaywallBenefits({ paywall: 'RECRUITMENT_AD_LIMIT' })).toHaveLength(3);
     expect(getSubscriptionPaywallBenefits({ paywall: 'DUES_LIMIT' })).toHaveLength(3);
     expect(getSubscriptionPaywallBenefits({ paywall: 'CLUB_TIER_TEAM_LIMIT' })).toEqual([
-      'Toutes les equipes du club couvertes',
-      'Droits club et gestion centralisee',
-      'Cotisations et recrutement illimites',
+      'Toutes les équipes du club couvertes',
+      'Droits club et gestion centralisée',
+      'Cotisations et recrutement illimités',
     ]);
     expect(getSubscriptionPaywallBenefits({ paywall: 'CLUB_VERIFICATION_REQUIRED' }))
       .toEqual(getSubscriptionPaywallBenefits({ paywall: 'CLUB_TIER_TEAM_LIMIT' }));
@@ -345,12 +345,12 @@ describe('subscriptionDecision', () => {
 
   test('exposes stable subscription status copy for UI surfaces', () => {
     expect(getSubscriptionStatusMeta('FREE')).toEqual({
-      description: 'Vous utilisez actuellement les quotas gratuits FoundClub.',
+      description: 'Tu utilises actuellement les quotas gratuits FoundClub.',
       label: 'Gratuit',
     });
     expect(getSubscriptionStatusMeta('CLUB_UNVERIFIED')).toEqual({
-      description: 'Votre offre Club est active, mais les droits club restent bloques tant que la verification n est pas terminee.',
-      label: 'Club a verifier',
+      description: 'Ton offre Club est activé, mais les droits club restent bloques tant que la vérification n est pas terminée.',
+      label: 'Club à vérifier',
     });
   });
 

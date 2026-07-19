@@ -33,7 +33,7 @@ const TOOLTIP_BOTTOM_GUARD = 72;
 
 const EVENT_TUTORIAL_STEPS = [
   {
-    description: 'Cet écran vous permet de trouver les événements selon vos critères.',
+    description: 'Cet écran te permet de trouver les événements selon tes critères.',
     id: 'intro',
     target: 'header',
     title: 'Recherche événement',
@@ -45,13 +45,13 @@ const EVENT_TUTORIAL_STEPS = [
     title: 'Types de recherche',
   },
   {
-    description: 'Utilisez la recherche texte et les filtres avancés pour affiner.',
+    description: 'Utilise la recherche texte et les filtres avancés pour affiner.',
     id: 'filters',
     target: 'filters',
     title: 'Filtres événement',
   },
   {
-    description: 'Chaque carte affiche les détails. Appuyez sur "À propos" pour ouvrir la fiche.',
+    description: 'Chaque carte affiche les détails. Appuie sur "À propos" pour ouvrir la fiche.',
     id: 'cards',
     target: 'card',
     title: 'Résultats',
@@ -150,7 +150,7 @@ function SearchEventsScreen({ navigation, route }) {
 
   const eventFiltersProps = useMemo(
     () => ({
-      excludeType: 'R\u00E9servation',
+      excludeType: 'Réservation',
       sessionStatus: 'open',
     }),
     [],
@@ -387,11 +387,11 @@ function SearchEventsScreen({ navigation, route }) {
                 </Pressable>
                 {stepIndex > 0 ? (
                   <Pressable
-                    accessibilityLabel="Etape precedente"
+                    accessibilityLabel="Étape précédente"
                     accessibilityRole="button"
                     onPress={handlePreviousStep}
                   >
-                    <Text style={[Fonts.p2Bold, Fonts.neutral600]}>Precedent</Text>
+                    <Text style={[Fonts.p2Bold, Fonts.neutral600]}>Précédent</Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -403,7 +403,7 @@ function SearchEventsScreen({ navigation, route }) {
                   {EVENT_TUTORIAL_STEPS.length}
                 </Text>
                 <Pressable
-                  accessibilityLabel={isLastStep ? 'Terminer le tutoriel' : 'Etape suivante'}
+                  accessibilityLabel={isLastStep ? 'Terminer le tutoriel' : 'Étape suivante'}
                   accessibilityRole="button"
                   onPress={handleNextStep}
                   style={[

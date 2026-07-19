@@ -32,13 +32,13 @@ function SearchClubsScreen({ navigation, route }) {
         navigation={navigation}
         tutorialSteps={{
           header: {
-            description: 'Retrouvez ici la recherche complete de clubs.',
+            description: 'Retrouve ici la recherche complète de clubs.',
             id: 'search-clubs-header',
             order: 1,
             title: 'Recherche club',
           },
           switcher: {
-            description: 'Basculez rapidement entre les differentes recherches.',
+            description: 'Bascule rapidement entre les differentes recherches.',
             id: 'search-clubs-switcher',
             order: 2,
             title: 'Types de recherche',
@@ -46,7 +46,7 @@ function SearchClubsScreen({ navigation, route }) {
         }}
       >
         <OnboardingWrapper
-          description="Utilisez la barre de recherche, les filtres et ouvrez une fiche club."
+          description="Utilise la barre de recherche, les filtres et ouvre une fiche club."
           id="search-clubs-content"
           order={3}
           spotlight={{

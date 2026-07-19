@@ -342,7 +342,7 @@ function HistoryWizardClub({ navigation, route }) {
     >
       <WizardStepLayout
         isNextDisabled={!canProceed}
-        nextLabel={t('common.actions.next', 'Suivant')}
+        nextLabel={t('common.actions.next', 'Continuer')}
         onBack={() => navigation.goBack()}
         onNext={handleNext}
         subtitle="Recherche ton club ou saisis-le manuellement"
@@ -359,7 +359,7 @@ function HistoryWizardClub({ navigation, route }) {
             paddingX: 2,
             paddingY: 2,
           }}
-          title="Selection du club"
+          title="Sélection du club"
         >
           {!showCustomInput ? (
             <View style={[Spaces.gap[16]]}>

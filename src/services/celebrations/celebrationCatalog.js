@@ -27,7 +27,7 @@ export const celebrationCatalog = {
     buildCopy: (context) => ({
       body: buildStreakBody(context, 'entrainement', 'entrainements'),
       eyebrow: 'ASSIDUITE',
-      title: 'Serie sans retard',
+      title: 'Série sans retard',
     }),
     category: 'attendance',
     channels: 'both',
@@ -41,7 +41,7 @@ export const celebrationCatalog = {
     buildCopy: (context) => ({
       body: buildStreakBody(context, 'presence', 'presences'),
       eyebrow: 'ASSIDUITE',
-      title: 'Serie de presences',
+      title: 'Série de présences',
     }),
     category: 'attendance',
     channels: 'both',
@@ -54,7 +54,7 @@ export const celebrationCatalog = {
   celebration_generic: {
     buildCopy: (context) => ({
       actionLabel: context?.actionLabel,
-      body: toLabel(context?.body, 'Une nouvelle etape est franchie.'),
+      body: toLabel(context?.body, 'Une nouvelle étape est franchie.'),
       eyebrow: toLabel(context?.eyebrow, 'FELICITATIONS'),
       title: toLabel(context?.title, 'Bravo'),
     }),
@@ -68,7 +68,7 @@ export const celebrationCatalog = {
   },
   club_member_milestone: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.clubName, 'Votre club')} atteint ${Number(context?.milestone || 0) || 0} membres.`,
+      body: `${toLabel(context?.clubName, 'Ton club')} atteint ${Number(context?.milestone || 0) || 0} membres.`,
       eyebrow: 'CLUB',
       title: 'Nouveau cap franchi',
     }),
@@ -84,7 +84,7 @@ export const celebrationCatalog = {
     buildCopy: (context) => ({
       body: `Bienvenue dans ${toLabel(context?.clubName, 'ton club')}.`,
       eyebrow: 'CLUB',
-      title: 'Adhesion confirmee',
+      title: 'Adhésion confirmée',
     }),
     category: 'club',
     channels: 'both',
@@ -96,9 +96,9 @@ export const celebrationCatalog = {
   },
   club_membership_request_sent: {
     buildCopy: (context) => ({
-      body: `Ta demande pour rejoindre ${toLabel(context?.clubName, 'ce club')} a bien ete prise en compte.`,
+      body: `Ta demande pour rejoindre ${toLabel(context?.clubName, 'ce club')} a bien été prise en compte.`,
       eyebrow: 'CLUB',
-      title: 'Demande envoyee',
+      title: 'Demande envoyée',
     }),
     category: 'club',
     channels: 'local_banner',
@@ -110,9 +110,9 @@ export const celebrationCatalog = {
   },
   event_batch_created: {
     buildCopy: (context) => ({
-      body: `${Number(context?.eventCount || 0) || 1} evenements sont maintenant enregistres.`,
+      body: `${Number(context?.eventCount || 0) || 1} événements sont maintenant enregistres.`,
       eyebrow: 'EVENEMENTS',
-      title: 'Evenements crees',
+      title: 'Événements créés',
     }),
     category: 'event',
     channels: 'local_banner',
@@ -124,9 +124,9 @@ export const celebrationCatalog = {
   },
   event_convocation_published: {
     buildCopy: (context) => ({
-      body: `La composition d'equipes pour ${toLabel(context?.teamName, 'ton equipe')} est prete.`,
+      body: `La composition d'équipes pour ${toLabel(context?.teamName, 'ton équipe')} est prête.`,
       eyebrow: 'COMPOSITION',
-      title: "Composition d'equipes publiee",
+      title: "Composition d'équipes publiée",
     }),
     category: 'event',
     channels: 'both',
@@ -138,9 +138,9 @@ export const celebrationCatalog = {
   },
   event_created: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.eventName, 'Votre evenement')} est bien enregistre.`,
+      body: `${toLabel(context?.eventName, 'Ton événement')} est bien enregistre.`,
       eyebrow: 'EVENEMENT',
-      title: 'Evenement cree',
+      title: 'Événement crée',
     }),
     category: 'event',
     channels: 'local_banner',
@@ -152,9 +152,9 @@ export const celebrationCatalog = {
   },
   event_external_team_accepted: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Une equipe externe')} rejoint ${toLabel(context?.eventName, "l'evenement")}.`,
+      body: `${toLabel(context?.teamName, 'Une équipe externe')} rejoint ${toLabel(context?.eventName, "l'evenement")}.`,
       eyebrow: 'INVITATION',
-      title: 'Equipe externe confirmee',
+      title: 'Équipe externe confirmée',
     }),
     category: 'event',
     channels: 'both',
@@ -166,9 +166,9 @@ export const celebrationCatalog = {
   },
   event_participation_confirmed: {
     buildCopy: (context) => ({
-      body: `Tu es bien confirme pour ${toLabel(context?.eventName, "l'evenement")}.`,
+      body: `Tu es bien confirmé pour ${toLabel(context?.eventName, "l'evenement")}.`,
       eyebrow: 'PARTICIPATION',
-      title: 'Participation confirmee',
+      title: 'Participation confirmée',
     }),
     category: 'event',
     channels: 'both',
@@ -180,9 +180,9 @@ export const celebrationCatalog = {
   },
   event_participation_request_sent: {
     buildCopy: (context) => ({
-      body: `Ta demande pour ${toLabel(context?.eventName, 'cet evenement')} a bien ete envoyee.`,
+      body: `Ta demande pour ${toLabel(context?.eventName, 'cet événement')} a bien été envoyée.`,
       eyebrow: 'PARTICIPATION',
-      title: 'Participation envoyee',
+      title: 'Participation envoyée',
     }),
     category: 'event',
     channels: 'local_banner',
@@ -194,9 +194,9 @@ export const celebrationCatalog = {
   },
   event_published: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.eventName, 'Votre evenement')} est maintenant visible pour les joueurs concernes.`,
+      body: `${toLabel(context?.eventName, 'Ton événement')} est maintenant visible pour les joueurs concernés.`,
       eyebrow: 'EVENEMENT',
-      title: 'Evenement publie',
+      title: 'Événement publie',
     }),
     category: 'event',
     channels: 'both',
@@ -208,9 +208,9 @@ export const celebrationCatalog = {
   },
   event_responses_complete: {
     buildCopy: (context) => ({
-      body: `Tous les joueurs de ${toLabel(context?.teamName, 'cette equipe')} ont repondu pour ${toLabel(context?.eventName, "l'evenement")}.`,
+      body: `Tous les joueurs de ${toLabel(context?.teamName, 'cette équipe')} ont répondu pour ${toLabel(context?.eventName, "l'evenement")}.`,
       eyebrow: 'CONVOCATION',
-      title: 'Reponses completes',
+      title: 'Réponses completes',
     }),
     category: 'event',
     channels: 'both',
@@ -222,9 +222,9 @@ export const celebrationCatalog = {
   },
   event_rsvp_present: {
     buildCopy: (context) => ({
-      body: `Ta reponse pour ${toLabel(context?.eventName, "l'evenement")} a bien ete enregistree.`,
+      body: `Ta réponse pour ${toLabel(context?.eventName, "l'evenement")} a bien été enregistrée.`,
       eyebrow: 'PRESENCE',
-      title: 'Presence confirmee',
+      title: 'Présence confirmée',
     }),
     category: 'event',
     channels: 'local_banner',
@@ -236,9 +236,9 @@ export const celebrationCatalog = {
   },
   event_task_assignment_validated: {
     buildCopy: (context) => ({
-      body: `Tu es confirme sur ${toLabel(context?.taskTitle, 'ta mission du jour')}.`,
+      body: `Tu es confirmé sur ${toLabel(context?.taskTitle, 'ta mission du jour')}.`,
       eyebrow: 'ORGANISATION',
-      title: 'Tache validee',
+      title: 'Tâche validée',
     }),
     category: 'event_task',
     channels: 'both',
@@ -250,9 +250,9 @@ export const celebrationCatalog = {
   },
   event_task_members_assigned: {
     buildCopy: (context) => ({
-      body: `${pluralize(Number(context?.count || 0), 'membre')} assigne(s) a ${toLabel(context?.taskTitle, 'cette tache')}.`,
+      body: `${pluralize(Number(context?.count || 0), 'membre')} assigne(s) a ${toLabel(context?.taskTitle, 'cette tâche')}.`,
       eyebrow: 'ORGANISATION',
-      title: 'Affectation terminee',
+      title: 'Affectation terminée',
     }),
     category: 'event_task',
     channels: 'local_banner',
@@ -264,7 +264,7 @@ export const celebrationCatalog = {
   },
   event_task_volunteer_sent: {
     buildCopy: (context) => ({
-      body: `Ta proposition pour ${toLabel(context?.taskTitle, 'cette tache')} a bien ete prise en compte.`,
+      body: `Ta proposition pour ${toLabel(context?.taskTitle, 'cette tâche')} a bien été prise en compte.`,
       eyebrow: 'ORGANISATION',
       title: 'Volontariat enregistre',
     }),
@@ -278,9 +278,9 @@ export const celebrationCatalog = {
   },
   event_tasks_covered: {
     buildCopy: (context) => ({
-      body: `Toutes les taches de ${toLabel(context?.eventName, "l'evenement")} sont maintenant couvertes.`,
+      body: `Toutes les tâches de ${toLabel(context?.eventName, "l'evenement")} sont maintenant couvertes.`,
       eyebrow: 'ORGANISATION',
-      title: 'Organisation complete',
+      title: 'Organisation complète',
     }),
     category: 'event_task',
     channels: 'both',
@@ -292,9 +292,9 @@ export const celebrationCatalog = {
   },
   event_updated: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.eventName, "L'evenement")} a ete mis a jour.`,
+      body: `${toLabel(context?.eventName, "L'evenement")} a été mis à jour.`,
       eyebrow: 'EVENEMENT',
-      title: 'Mise a jour enregistree',
+      title: 'Mise à jour enregistrée',
     }),
     category: 'event',
     channels: 'local_banner',
@@ -306,9 +306,9 @@ export const celebrationCatalog = {
   },
   league_first_victory: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Votre equipe')} signe sa premiere victoire League.`,
+      body: `${toLabel(context?.teamName, 'Ton équipe')} signe sa première victoire League.`,
       eyebrow: 'LEAGUE',
-      title: 'Premiere victoire',
+      title: 'Première victoire',
     }),
     category: 'league',
     channels: 'both',
@@ -320,7 +320,7 @@ export const celebrationCatalog = {
   },
   league_match_found: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Votre squad')} a maintenant un adversaire.`,
+      body: `${toLabel(context?.teamName, 'Ta squad')} a maintenant un adversaire.`,
       eyebrow: 'LEAGUE',
       title: 'Match trouve',
     }),
@@ -334,7 +334,7 @@ export const celebrationCatalog = {
   },
   league_match_validated: {
     buildCopy: (context) => ({
-      body: `Le resultat de ${toLabel(context?.matchLabel || context?.eventName, 'votre match')} est maintenant valide.`,
+      body: `Le résultat de ${toLabel(context?.matchLabel || context?.eventName, 'ton match')} est maintenant valide.`,
       eyebrow: 'LEAGUE',
       title: 'Score valide',
     }),
@@ -348,9 +348,9 @@ export const celebrationCatalog = {
   },
   league_proposal_accepted: {
     buildCopy: (context) => ({
-      body: `Le match contre ${toLabel(context?.opponentName, "l'adversaire")} est confirme.`,
+      body: `Le match contre ${toLabel(context?.opponentName, "l'adversaire")} est confirmé.`,
       eyebrow: 'LEAGUE',
-      title: 'Proposition acceptee',
+      title: 'Proposition acceptée',
     }),
     category: 'league',
     channels: 'both',
@@ -362,7 +362,7 @@ export const celebrationCatalog = {
   },
   league_quorum_reached: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Votre squad')} a son effectif pour jouer.`,
+      body: `${toLabel(context?.teamName, 'Ta squad')} à son effectif pour jouer.`,
       eyebrow: 'LEAGUE',
       title: 'Quorum atteint',
     }),
@@ -378,7 +378,7 @@ export const celebrationCatalog = {
     buildCopy: (context) => ({
       body: buildStreakBody(context, 'victoire', 'victoires'),
       eyebrow: 'LEAGUE',
-      title: 'Serie de victoires',
+      title: 'Série de victoires',
     }),
     category: 'league',
     channels: 'both',
@@ -390,7 +390,7 @@ export const celebrationCatalog = {
   },
   league_weekend_win: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Votre equipe')} a gagne ce week-end contre ${toLabel(context?.opponentName, "l'adversaire")}.`,
+      body: `${toLabel(context?.teamName, 'Ton équipe')} a gagne ce week-end contre ${toLabel(context?.opponentName, "l'adversaire")}.`,
       eyebrow: 'LEAGUE',
       title: 'Victoire du week-end',
     }),
@@ -418,7 +418,7 @@ export const celebrationCatalog = {
   },
   license_payment_confirmed: {
     buildCopy: (context) => ({
-      body: `Le paiement de ${toLabel(context?.teamName, 'ta licence')} a bien ete confirme.`,
+      body: `Le paiement de ${toLabel(context?.teamName, 'ta licence')} a bien été confirmé.`,
       eyebrow: 'LICENCE',
       title: 'Paiement confirme',
     }),
@@ -434,7 +434,7 @@ export const celebrationCatalog = {
     buildCopy: () => ({
       body: 'La copie officielle est disponible pour le membre concerne.',
       eyebrow: 'LICENCE',
-      title: 'Licence officielle ajoutee',
+      title: 'Licence officielle ajoutée',
     }),
     category: 'license',
     channels: 'local_banner',
@@ -446,9 +446,9 @@ export const celebrationCatalog = {
   },
   team_created: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Votre equipe')} est prete a accueillir ses membres.`,
+      body: `${toLabel(context?.teamName, 'Ton équipe')} est prête à accueillir ses membres.`,
       eyebrow: 'EQUIPE',
-      title: 'Equipe creee',
+      title: 'Équipe créée',
     }),
     category: 'team',
     channels: 'local_banner',
@@ -460,9 +460,9 @@ export const celebrationCatalog = {
   },
   team_membership_confirmed: {
     buildCopy: (context) => ({
-      body: `Tu fais maintenant partie de ${toLabel(context?.teamName, 'ton equipe')}.`,
+      body: `Tu fais maintenant partie de ${toLabel(context?.teamName, 'ton équipe')}.`,
       eyebrow: 'EQUIPE',
-      title: 'Adhesion confirmee',
+      title: 'Adhésion confirmée',
     }),
     category: 'team',
     channels: 'both',
@@ -474,9 +474,9 @@ export const celebrationCatalog = {
   },
   team_membership_request_sent: {
     buildCopy: (context) => ({
-      body: `Ta demande pour rejoindre ${toLabel(context?.teamName, 'cette equipe')} a bien ete envoyee.`,
+      body: `Ta demande pour rejoindre ${toLabel(context?.teamName, 'cette équipe')} a bien été envoyée.`,
       eyebrow: 'EQUIPE',
-      title: 'Demande envoyee',
+      title: 'Demande envoyée',
     }),
     category: 'team',
     channels: 'local_banner',

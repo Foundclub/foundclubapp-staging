@@ -213,6 +213,9 @@ function TeamFilters({ navigation }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      // Retrait bas systeme deja applique au contenu ci-dessous : pas de plancher
+      // conteneur, sinon insets.bottom serait compte deux fois.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Alignments.fill,
         Alignments.justifySpaceBetween,
@@ -240,14 +243,14 @@ function TeamFilters({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {t('teamFilters.status.referenceErrorTitle', 'Certaines listes n ont pas pu etre chargees.')}
+              {t('teamFilters.status.referenceErrorTitle', 'Certaines listes n ont pas pu être chargées.')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral100]}>
-              {t('teamFilters.status.referenceErrorBody', 'Vous pouvez quand meme filtrer par nom, ou recharger les listes de reference.')}
+              {t('teamFilters.status.referenceErrorBody', 'Tu peux quand même filtrer par nom, ou recharger les listes de référence.')}
             </Text>
             <Button
               onPress={handleRetryReferences}
-              title={t('common.retry', 'R\u00E9essayer')}
+              title={t('common.retry', 'Réessayer')}
               variant="Secondary"
             />
           </View>

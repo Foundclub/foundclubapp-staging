@@ -279,7 +279,7 @@ const toPlaybackErrorMessage = (/** @type {any} */ error) => {
   if (errorCode === 'AUDIO_HTTP_403') return 'Audio refuse (403)';
   if (errorCode === 'AUDIO_HTTP_404') return 'Audio introuvable (404)';
   if (errorCode.startsWith('AUDIO_HTTP_')) return `Erreur HTTP audio (${errorCode.replace('AUDIO_HTTP_', '')})`;
-  if (errorCode === 'AUDIO_DOWNLOAD_INVALID_CONTENT') return 'Reponse audio invalide';
+  if (errorCode === 'AUDIO_DOWNLOAD_INVALID_CONTENT') return 'Réponse audio invalide';
   if (errorCode === 'AUDIO_DOWNLOAD_EMPTY_FILE') return 'Fichier audio vide';
   if (errorCode === 'AUDIO_DOWNLOAD_EMPTY_PATH') return 'Cache audio introuvable';
   if (errorCode === 'PLAYER_SOURCE_EMPTY') return 'Source audio vide';

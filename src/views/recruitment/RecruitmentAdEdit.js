@@ -54,12 +54,12 @@ const buildDefaultValues = (ad) => ({
 
 const COACH_ROLE_OPTIONS = [
   { label: 'Entraîneur·e principal·e', value: 'entraineur_principal' },
-  { label: 'Entraineur adjoint', value: 'entraineur_adjoint' },
-  { label: 'Preparateur physique', value: 'preparateur_physique' },
-  { label: 'Entraineur gardiens', value: 'entraineur_gardiens' },
-  { label: 'Analyste video', value: 'analyste_video' },
+  { label: 'Entraîneur adjoint', value: 'entraineur_adjoint' },
+  { label: 'Préparateur physique', value: 'preparateur_physique' },
+  { label: 'Entraîneur gardiens', value: 'entraineur_gardiens' },
+  { label: 'Analyste vidéo', value: 'analyste_video' },
   { label: 'Team manager', value: 'team_manager' },
-  { label: 'Autre role', value: 'other' },
+  { label: 'Autre rôle', value: 'other' },
 ];
 
 const COACH_EXPERIENCE_OPTIONS = [
@@ -73,7 +73,7 @@ const ENGAGEMENT_OPTIONS = [
   { label: 'Benevole', value: 'benevole' },
   { label: 'Indemnise', value: 'indemnise' },
   { label: 'Salarie', value: 'salarie' },
-  { label: 'A definir', value: 'a_definir' },
+  { label: 'A définir', value: 'a_definir' },
 ];
 
 /**
@@ -145,7 +145,7 @@ function RecruitmentAdEdit({ navigation, route }) {
   const updateMutation = useMutation({
     mutationFn: (data) => updateRecruitmentAd(resolvedAdId, data),
     onError: () => {
-      Alert.alert('Erreur', "Impossible de mettre a jour l'annonce.");
+      Alert.alert('Erreur', "Impossible de mettre à jour l'annonce.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
@@ -153,8 +153,8 @@ function RecruitmentAdEdit({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAd', resolvedAdId] });
 
       Alert.alert(
-        'Succes',
-        "L'annonce a ete mise a jour avec succes.",
+        'Succès',
+        "L'annonce a été mise à jour avec succès.",
         [{ onPress: () => navigation.goBack(), text: 'OK' }],
       );
     },
@@ -163,12 +163,12 @@ function RecruitmentAdEdit({ navigation, route }) {
   const onSubmit = (data) => {
     if (isCoachAd) {
       if (!String(data.coachRole || '').trim()) {
-        Alert.alert('Erreur', 'Le role entraineur est requis.');
+        Alert.alert('Erreur', 'Le rôle entraîneur est requis.');
         return;
       }
 
       if (data.coachRole === 'other' && !String(data.coachRoleOther || '').trim()) {
-        Alert.alert('Erreur', 'Precisez le role entraineur recherche.');
+        Alert.alert('Erreur', 'Précise le rôle entraîneur recherche.');
         return;
       }
     } else if (!String(data.position || '').trim()) {
@@ -209,7 +209,7 @@ function RecruitmentAdEdit({ navigation, route }) {
       >
         <View style={[Spaces.padding[16], { gap: 12 }]}>
           <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Chargement de l&rsquo;annonce...</Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Preparation du formulaire d&rsquo;edition.</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Préparation du formulaire d&rsquo;édition.</Text>
         </View>
       </ScreenContainer>
     );
@@ -262,9 +262,9 @@ function RecruitmentAdEdit({ navigation, route }) {
     >
       <ScrollView contentContainerStyle={Spaces.padding[16]} showsVerticalScrollIndicator={false}>
         <View style={[Spaces.marginBottom[24], { opacity: 0.7 }]}>
-          <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 4 }]}>Equipe</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 4 }]}>Équipe</Text>
           <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-            {resolvedAd.team?.name || 'Equipe inconnue'}
+            {resolvedAd.team?.name || 'Équipe inconnue'}
           </Text>
         </View>
 
@@ -288,9 +288,9 @@ function RecruitmentAdEdit({ navigation, route }) {
           <>
             <View style={Spaces.marginBottom[24]}>
               <AutocompleteSelect
-                label="Role entraineur"
+                label="Rôle entraîneur"
                 options={COACH_ROLE_OPTIONS}
-                placeholder="Selectionner un role"
+                placeholder="Sélectionner un rôle"
                 setValue={(option) => setValue('coachRole', option.value)}
                 value={COACH_ROLE_OPTIONS.find((option) => option.value === watchedCoachRole)?.label || ''}
               />
@@ -303,9 +303,9 @@ function RecruitmentAdEdit({ navigation, route }) {
                   name="coachRoleOther"
                   render={({ field: { onChange, value } }) => (
                     <Input
-                      label="Autre role"
+                      label="Autre rôle"
                       onChangeText={onChange}
-                      placeholder="Precisez le role recherche"
+                      placeholder="Précise le rôle recherche"
                       value={value}
                     />
                   )}
@@ -315,9 +315,9 @@ function RecruitmentAdEdit({ navigation, route }) {
 
             <View style={Spaces.marginBottom[24]}>
               <AutocompleteSelect
-                label="Experience attendue"
+                label="Expérience attendue"
                 options={COACH_EXPERIENCE_OPTIONS}
-                placeholder="Selectionner un niveau"
+                placeholder="Sélectionner un niveau"
                 setValue={(option) => setValue('coachExperienceLevel', option.value)}
                 value={COACH_EXPERIENCE_OPTIONS.find((option) => option.value === watchedCoachExperienceLevel)?.label || ''}
               />
@@ -327,7 +327,7 @@ function RecruitmentAdEdit({ navigation, route }) {
               <AutocompleteSelect
                 label="Type d'engagement"
                 options={ENGAGEMENT_OPTIONS}
-                placeholder="Selectionner un cadre"
+                placeholder="Sélectionner un cadre"
                 setValue={(option) => setValue('engagementType', option.value)}
                 value={ENGAGEMENT_OPTIONS.find((option) => option.value === watchedEngagementType)?.label || ''}
               />
@@ -350,7 +350,7 @@ function RecruitmentAdEdit({ navigation, route }) {
           <AutocompleteSelect
             label={isCoachAd ? 'Niveau souhaite' : 'Niveau minimum'}
             options={levelOptions}
-            placeholder="Selectionner un niveau"
+            placeholder="Sélectionner un niveau"
             setValue={(option) => {
               const levelObj = allLevels?.find((level) => level.documentId === option.value);
               setValue('level', levelObj || option);
@@ -363,7 +363,7 @@ function RecruitmentAdEdit({ navigation, route }) {
           <AutocompleteSelect
             label="Categorie"
             options={categoryOptions}
-            placeholder="Selectionner une categorie"
+            placeholder="Sélectionner une catégorie"
             setValue={(option) => {
               const categoryObj = allCategories?.find((category) => category.documentId === option.value);
               setValue('category', categoryObj || option);
@@ -376,7 +376,7 @@ function RecruitmentAdEdit({ navigation, route }) {
           <AutocompleteSelect
             label="Section"
             options={sectionOptions}
-            placeholder="Selectionner une section"
+            placeholder="Sélectionner une section"
             setValue={(option) => {
               const sectionObj = allSections?.find((section) => section.documentId === option.value);
               setValue('section', sectionObj || option);
@@ -408,7 +408,7 @@ function RecruitmentAdEdit({ navigation, route }) {
                 name="certificationsWanted"
                 render={({ field: { onChange, value } }) => (
                   <Input
-                    label="Certifications souhaitees"
+                    label="Certifications souhaitées"
                     onChangeText={onChange}
                     placeholder="Ex: BMF, BPJEPS, formation jeunes"
                     value={value}
@@ -428,7 +428,7 @@ function RecruitmentAdEdit({ navigation, route }) {
                     multiline
                     numberOfLines={4}
                     onChangeText={onChange}
-                    placeholder="Cadre, responsabilites, projet d'equipe..."
+                    placeholder="Cadre, responsabilités, projet d'équipe..."
                     textAlignVertical="top"
                     value={value}
                   />
@@ -449,7 +449,7 @@ function RecruitmentAdEdit({ navigation, route }) {
                 multiline
                 numberOfLines={4}
                 onChangeText={onChange}
-                placeholder={isCoachAd ? 'Contexte du club, projet, environnement...' : 'Details supplementaires...'}
+                placeholder={isCoachAd ? 'Contexte du club, projet, environnement...' : 'Détails supplémentaires...'}
                 textAlignVertical="top"
                 value={value}
               />

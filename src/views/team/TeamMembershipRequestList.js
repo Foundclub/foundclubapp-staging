@@ -176,7 +176,7 @@ function TeamMembershipRequestList({ navigation, route }) {
   const initialErrorMessage = extractApiErrorMessage(error)
     || t(
       'teamMembershipRequestList.errors.load',
-      "Impossible de charger les demandes d'equipe pour le moment.",
+      "Impossible de charger les demandes d'équipe pour le moment.",
     );
 
   /**
@@ -189,7 +189,7 @@ function TeamMembershipRequestList({ navigation, route }) {
     const canManageRequest = item?.permissions?.canManage !== false;
     let governanceText = t(
       'teamMembershipRequestList.governance.readOnly',
-      'Vous voyez cette demande, mais seul un entraîneur autorisé ou le dirigeant peut la traiter.',
+      'Tu vois cette demande, mais seul un entraîneur autorisé ou le dirigeant peut la traiter.',
     );
     if (item?.team?.membershipRequestManagementMode === 'CLUB_OWNER_ONLY') {
       const requesterName = [item?.user?.firstname, item?.user?.lastname].filter(Boolean).join(' ')
@@ -197,14 +197,14 @@ function TeamMembershipRequestList({ navigation, route }) {
       const teamName = item?.team?.name || t('requestsHub.types.team', 'equipe');
       governanceText = t(
         'teamMembershipRequestList.governance.ownerOnly',
-        '{{name}} a demande a rejoindre {{team}}. Votre equipe doit attendre la validation par votre/vos dirigeant(s).',
+        '{{name}} a demandé à rejoindre {{team}}. Ton équipe doit attendre la validation par ton ou tes dirigeant(s).',
       )
         .replace('{{name}}', requesterName)
         .replace('{{team}}', teamName);
     } else if (canManageRequest) {
       governanceText = t(
         'teamMembershipRequestList.governance.manageAllowed',
-        'Vous pouvez traiter cette demande pour cette équipe.',
+        'Tu peux traiter cette demande pour cette équipe.',
       );
     }
 
@@ -345,18 +345,18 @@ function TeamMembershipRequestList({ navigation, route }) {
         ]}
       >
         <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
-          {t('teamMembershipRequestList.errors.missingTeamTitle', 'Equipe introuvable')}
+          {t('teamMembershipRequestList.errors.missingTeamTitle', 'Équipe introuvable')}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
           {t(
             'teamMembershipRequestList.errors.missingTeamBody',
-            "Impossible d'ouvrir ces demandes sans identifiant d'equipe.",
+            "Impossible d'ouvrir ces demandes sans identifiant d'équipe.",
           )}
         </Text>
         <View style={[Alignments.fullWidth, Spaces.gap[12], { maxWidth: 320 }]}>
           <Button
             onPress={() => navigation.navigate(RouteNames.TeamList)}
-            title={t('teamMembershipRequestList.actions.backToTeams', 'Retour aux equipes')}
+            title={t('teamMembershipRequestList.actions.backToTeams', 'Retour aux équipes')}
             variant="Primary"
           />
           <Button
@@ -394,7 +394,7 @@ function TeamMembershipRequestList({ navigation, route }) {
         <View style={[Alignments.fullWidth, Spaces.gap[12], { maxWidth: 320 }]}>
           <Button
             onPress={() => refetch()}
-            title={t('common.actions.retry', 'R\u00E9essayer')}
+            title={t('common.actions.retry', 'Réessayer')}
             variant="Primary"
           />
           <Button
@@ -457,14 +457,14 @@ function TeamMembershipRequestList({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              {t('requestsHub.migratedBannerTitle', 'Ce flux est migre vers Demandes.')}
+              {t('requestsHub.migratedBannerTitle', 'Ce flux est migré vers Demandes.')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral100]}>
               {t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
             </Text>
           </TouchableOpacity>
           <OnboardingWrapper
-            description="Ici vous pouvez accepter ou refuser les demandes d'adhésion à vos équipes."
+            description="Ici tu peux accepter ou refuser les demandes d'adhésion à tes équipes."
             id="team-membership-requests-list"
             order={1}
             spotlight={{

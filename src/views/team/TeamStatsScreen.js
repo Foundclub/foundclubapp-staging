@@ -162,14 +162,14 @@ function TeamStatsScreen({ navigation, route }) {
       <ScreenContainer bgImage="bg2">
         <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            Equipe introuvable
+            Équipe introuvable
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Aucun identifiant d equipe n a ete fourni.
+            Aucun identifiant d équipe n a été fourni.
           </Text>
           <Button
             onPress={() => navigation.navigate(RouteNames.TeamList)}
-            title="Retour aux equipes"
+            title="Retour aux équipes"
             variant="Secondary"
           />
         </View>
@@ -206,6 +206,9 @@ function TeamStatsScreen({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      // Retrait bas systeme deja applique au contenu ci-dessous : pas de plancher
+      // conteneur, sinon insets.bottom serait compte deux fois.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Spaces.paddingVertical[16],
         { paddingBottom: insets.bottom + 16 },

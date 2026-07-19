@@ -149,8 +149,8 @@ function AddSponsor({ navigation, route }) {
     return (
       <ClubStateView
         description={isMultisportFlow
-          ? 'Nous r\u00E9cup\u00E9rons les informations de votre structure multisport.'
-          : 'Nous r\u00E9cup\u00E9rons les informations du club.'}
+          ? 'Nous récupérons les informations de ta structure multisport.'
+          : 'Nous récupérons les informations du club.'}
         isLoading
         title="Chargement du contexte"
       />

@@ -89,15 +89,15 @@ const buildReservationFlow = (entity, context) => {
 
   let blockedReason = '';
   if (!isPlayer) {
-    blockedReason = 'Seuls les joueurs peuvent rejoindre cette reservation.';
+    blockedReason = 'Seuls les joueurs peuvent rejoindre cette réservation.';
   } else if (alreadyHandled) {
-    blockedReason = 'Vous participez deja a cette reservation.';
+    blockedReason = 'Tu participes déjà à cette réservation.';
   } else if (!isFutureDatedEntity(entity)) {
-    blockedReason = 'Cette reservation est deja passee.';
+    blockedReason = 'Cette réservation est déjà passee.';
   } else if (!isRecruiting || !isShared) {
-    blockedReason = 'Cette reservation n accepte pas de nouveaux joueurs.';
+    blockedReason = 'Cette réservation n accepte pas de nouveaux joueurs.';
   } else if (missingPlayers <= 0) {
-    blockedReason = 'Cette reservation est deja complete.';
+    blockedReason = 'Cette réservation est déjà complété.';
   }
 
   return {
@@ -144,7 +144,7 @@ const buildEventFlow = (entity, context) => {
   if (detectionSlotsCount > 0) {
     return {
       actionLabel: 'Participer',
-      blockedReason: isPlayer ? '' : 'Seuls les joueurs peuvent candidater a cette detection.',
+      blockedReason: isPlayer ? '' : 'Seuls les joueurs peuvent candidater à cette détection.',
       canAct: isPlayer && !alreadyHandled,
       confirmLabel: 'Participer',
       kind: ParticipationFlowKind.detectionSlot,
@@ -175,36 +175,36 @@ const buildEventFlow = (entity, context) => {
 
   let blockedReason = '';
   if (!isPlayer) {
-    blockedReason = 'Seuls les joueurs peuvent participer a cet evenement.';
+    blockedReason = 'Seuls les joueurs peuvent participer à cet événement.';
   } else if (alreadyHandled) {
-    blockedReason = 'Vous avez deja repondu a cet evenement.';
+    blockedReason = 'Tu as déjà répondu à cet événement.';
   } else if (!isFutureDatedEntity(entity) && !entity?.league_match) {
-    blockedReason = 'Cet evenement est deja passe.';
+    blockedReason = 'Cet événement est déjà passe.';
   } else if (isClosed && !sourceTeam) {
-    blockedReason = 'Cet evenement ferme est reserve aux equipes concernees.';
+    blockedReason = 'Cet événement fermé est réservé aux équipes concernées.';
   } else if (
     isExternalTrainingParticipant
     && Number(trainingOpenConfig?.externalParticipantLimit || 0) < 1
   ) {
-    blockedReason = 'Cet entrainement n accepte pas de joueurs externes pour le moment.';
+    blockedReason = 'Cet entraînement n accepte pas de joueurs externes pour le moment.';
   } else if (
     isExternalTrainingParticipant
     && Number(trainingOpenConfig?.externalParticipantLimit || 0) > 0
     && externalActiveRequestsCount >= Number(trainingOpenConfig?.externalParticipantLimit || 0)
   ) {
-    blockedReason = 'Le quota de joueurs externes pour cet entrainement est deja atteint.';
+    blockedReason = 'Le quota de joueurs externes pour cet entraînement est déjà atteint.';
   } else if (!isTrainingEvent && capacity > 0 && participationsCount >= capacity) {
-    blockedReason = 'Cet evenement est complet.';
+    blockedReason = 'Cet événement est complet.';
   } else if (
     userDocumentId
     && Array.isArray(entity?.participations)
     && entity.participations.some((participant) => String(participant?.documentId || '').trim() === userDocumentId)
   ) {
-    blockedReason = 'Vous participez deja a cet evenement.';
+    blockedReason = 'Tu participes déjà à cet événement.';
   }
 
   let actionLabel = isClosed ? 'Present' : 'Participer';
-  let confirmLabel = isClosed ? 'Confirmer ma presence' : 'Participer';
+  let confirmLabel = isClosed ? 'Confirmer ma présence' : 'Participer';
   if (isDetection) {
     actionLabel = 'Participer';
     confirmLabel = 'Confirmer ma participation';
@@ -235,17 +235,17 @@ const buildRecruitmentFlow = (entity, context) => {
 
   let blockedReason = '';
   if (isOwner) {
-    blockedReason = 'Vous ne pouvez pas candidater a votre propre annonce.';
+    blockedReason = 'Tu ne peux pas candidater à ta propre annonce.';
   } else if (!entity?.isActive) {
     blockedReason = 'Cette annonce n est plus active.';
   } else if (normalizedStatus === 'accepted') {
     blockedReason = isDetectionLinked
-      ? 'Vous participez deja a cette detection.'
-      : 'Votre candidature est deja validee.';
+      ? 'Tu participes déjà à cette détection.'
+      : 'Ta candidature est déjà validée.';
   } else if (normalizedStatus === 'pending') {
     blockedReason = isDetectionLinked
-      ? 'Vous avez deja une candidature en attente sur cette detection.'
-      : 'Votre candidature est deja en attente.';
+      ? 'Tu as déjà une candidature en attente sur cette détection.'
+      : 'Ta candidature est déjà en attente.';
   }
 
   let kind = ParticipationFlowKind.recruitmentPlayer;
@@ -256,7 +256,7 @@ const buildRecruitmentFlow = (entity, context) => {
   }
 
   return {
-    actionLabel: audienceType === 'coach' ? 'Candidater comme entraineur' : 'Postuler',
+    actionLabel: audienceType === 'coach' ? 'Candidater comme entraîneur' : 'Postuler',
     blockedReason,
     canAct: !blockedReason,
     canWithdraw,

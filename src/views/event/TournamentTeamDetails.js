@@ -218,7 +218,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const respondMutation = useMutation({
     mutationFn: (responseStatus) => respondToTournamentTeam(teamId, responseStatus),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre à jour votre réponse.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre à jour ta réponse.');
     },
     onSuccess: invalidate,
   });
@@ -340,7 +340,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const handleLeaveTeam = () => {
     Alert.alert(
       'Quitter cette équipe ?',
-      'Vous serez retiré uniquement de cette équipe de tournoi. Votre équipe club restera intacte.',
+      'Tu seras retiré uniquement de cette équipe de tournoi. Ton équipe club restera intacte.',
       [
         { style: 'cancel', text: 'Annuler' },
         { onPress: () => leaveTeamMutation.mutate(), style: 'destructive', text: 'Quitter' },
@@ -352,7 +352,7 @@ function TournamentTeamDetails({ navigation, route }) {
     const actionLabel = status === 'accepted' ? 'accepter' : 'refuser';
     Alert.alert(
       'Demande de rejoindre',
-      `Voulez-vous ${actionLabel} cette demande ?`,
+      `Veux-tu ${actionLabel} cette demande ?`,
       [
         { style: 'cancel', text: 'Annuler' },
         { onPress: () => reviewJoinRequestMutation.mutate({ memberId, status }), text: 'Confirmer' },
@@ -562,7 +562,7 @@ function TournamentTeamDetails({ navigation, route }) {
               <View style={Spaces.gap[12]}>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>Invitation reçue</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {'Cette invitation vous ajoute au roster tournoi uniquement si vous l\'acceptez.'}
+                  Cette invitation t&apos;ajoute au roster tournoi uniquement si tu l&apos;acceptes.
                 </Text>
                 <View style={[Alignments.row, Spaces.gap[12]]}>
                   <Button disabled={respondInvitationMutation.isPending || teamIsLocked} onPress={() => respondInvitationMutation.mutate('accepted')} size="sm" title="Accepter" variant="Primary" />
@@ -583,7 +583,7 @@ function TournamentTeamDetails({ navigation, route }) {
               <View style={Spaces.gap[8]}>
                 <Text style={[Fonts.p4Bold, Fonts.warning500]}>Demande envoyée</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Votre demande est en attente de validation par le capitaine ou un admin de cette équipe tournoi.
+                  Ta demande est en attente de validation par le capitaine ou un admin de cette équipe tournoi.
                 </Text>
               </View>
             ) : null}
@@ -592,7 +592,7 @@ function TournamentTeamDetails({ navigation, route }) {
               <View style={Spaces.gap[12]}>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>Rejoindre cette équipe</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {'Envoyez une demande de rejoindre. Le capitaine ou un admin pourra ensuite l\'accepter ou la refuser.'}
+                  {'Envoie une demande de rejoindre. Le capitaine ou un admin pourra ensuite l\'accepter ou la refuser.'}
                 </Text>
                 <Button
                   disabled={requestJoinMutation.isPending}
@@ -639,8 +639,8 @@ function TournamentTeamDetails({ navigation, route }) {
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Inviter un joueur</Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
                     {allowCrossClubPlayers
-                      ? 'Recherchez un profil FoundClub ou reprenez un joueur du club pour lui envoyer une invitation.'
-                      : 'Invitez un joueur du club sans toucher à l\'équipe club de base.'}
+                      ? 'Recherche un profil FoundClub ou reprends un joueur du club pour lui envoyer une invitation.'
+                      : 'Invite un joueur du club sans toucher à l\'équipe club de base.'}
                   </Text>
                 </View>
                 <Button onPress={() => setIsInviteOpen((current) => !current)} size="sm" title={isInviteOpen ? 'Fermer' : 'Inviter'} variant="Secondary" />
@@ -652,7 +652,7 @@ function TournamentTeamDetails({ navigation, route }) {
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
                     {team?.isOpenToJoinRequests === true
                       ? 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe custom.'
-                      : 'Les demandes entrantes sont désactivées. Seules vos invitations manuelles sont possibles.'}
+                      : 'Les demandes entrantes sont désactivées. Seules tes invitations manuelles sont possibles.'}
                   </Text>
                   <Button
                     isLoading={toggleOpenRequestsMutation.isPending}

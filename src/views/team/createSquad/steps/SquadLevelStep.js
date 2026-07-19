@@ -32,10 +32,10 @@ function SquadLevelStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 16, textAlign: 'center' }]}>
-          Quel est votre niveau ?
+          Quel est ton niveau ?
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 40, textAlign: 'center' }]}>
-          Cela nous aidera à vous placer dans la bonne division intiale.
+          Cela nous aidera à te placer dans la bonne division intiale.
         </Text>
 
         <AutocompleteSelect

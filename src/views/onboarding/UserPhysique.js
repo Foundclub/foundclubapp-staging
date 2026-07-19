@@ -50,7 +50,7 @@ function UserPhysique({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour votre profil.');
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -192,7 +192,7 @@ function UserPhysique({ navigation }) {
               disabled={!isValid}
               isLoading={updateUserMutation.isPending}
               onPress={handleNext}
-              title={t('common.actions.next', 'Suivant')}
+              title={t('common.actions.next', 'Continuer')}
               variant="Primary"
             />
             <Button

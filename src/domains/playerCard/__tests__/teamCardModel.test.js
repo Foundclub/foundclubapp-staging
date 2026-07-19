@@ -40,7 +40,7 @@ describe('teamCardModel - carte equipe', () => {
     ];
     const needs = buildRecruitingNeeds(ads, NOW);
     expect(needs.find((n) => n.label === 'Gardien').quantity).toBe(3);
-    expect(needs.find((n) => n.audienceType === 'coach' && n.label === 'Entraineur adjoint')).toBeTruthy();
+    expect(needs.find((n) => n.audienceType === 'coach' && n.label === 'Entraîneur adjoint')).toBeTruthy();
     expect(needs.find((n) => n.label === 'Kine')).toBeTruthy();
     expect(needs.find((n) => n.label === 'Ailier')).toBeFalsy();
     expect(needs.find((n) => n.label === 'Avant')).toBeFalsy();

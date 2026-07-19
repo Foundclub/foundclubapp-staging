@@ -79,7 +79,7 @@ function AdminClubWizardBusiness({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardMultisport)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={5}
-      subtitle="On fixe ici le partenariat, la verification et la reservation. Les abonnements et la capacite Team se pilotent ensuite depuis les operations abonnements."
+      subtitle="On fixe ici le partenariat, la vérification et la réservation. Les abonnements et la capacité Team se pilotent ensuite depuis les opérations abonnements."
       title="Statut et gouvernance"
     >
       <View style={[Spaces.gap[18]]}>
@@ -89,14 +89,14 @@ function AdminClubWizardBusiness({ navigation }) {
           'Signal commercial et interne uniquement. Ce statut n ouvre aucun droit produit a lui seul.',
         )}
         {renderToggle(
-          'Club verifie',
+          'Club vérifie',
           'clubVerified',
-          'Badge public et legitimite dirigeant. A activer seulement apres review claim, migration approuvee ou action superadmin auditee.',
+          'Badge public et legitimite dirigeant. A activer seulement après review claim, migration approuvee ou action superadmin auditée.',
         )}
         {renderToggle(
-          'Fournisseur de reservation',
+          'Fournisseur de réservation',
           'isReservationProvider',
-          'Active si le club peut proposer des installations et des reservations.',
+          'Active si le club peut proposer des installations et des réservations.',
         )}
       </View>
     </WizardStepLayout>

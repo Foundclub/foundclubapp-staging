@@ -177,18 +177,18 @@ function AdWizardRecap({ navigation }) {
     : getShortAddress(state.team?.club?.address || state.team?.club?.addressDetails);
   const selectedFacilityName = state.address?.facilityName || state.facility?.name || '';
   const shortAddress = state.address ? getShortAddress(state.address) : '';
-  const overviewLocationLabel = selectedFacilityName || shortAddress || displayAddress || '\u00C0 compl\u00E9ter';
+  const overviewLocationLabel = selectedFacilityName || shortAddress || displayAddress || 'À compléter';
 
   const missingRequiredItems = useMemo(() => {
     const items = [];
 
-    if (!state.team) items.push('une \u00E9quipe');
+    if (!state.team) items.push('une équipe');
     if (!displayAddress) items.push('un lieu');
     if (!state.section) items.push('une section');
-    if (!state.category) items.push('une cat\u00E9gorie');
+    if (!state.category) items.push('une catégorie');
     if (!state.minLevel) items.push('un niveau minimum');
     if (isCoachAd) {
-      if (!isAdWizardCoachProfileComplete(state)) items.push('un profil entraineur complet');
+      if (!isAdWizardCoachProfileComplete(state)) items.push('un profil entraîneur complet');
     } else if (!state.positions?.length) {
       items.push('au moins un poste');
     }
@@ -197,28 +197,28 @@ function AdWizardRecap({ navigation }) {
   }, [displayAddress, isCoachAd, state]);
 
   const isReadyToSubmit = missingRequiredItems.length === 0;
-  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non d\u00E9fini';
+  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non défini';
   const profileLabel = [
     state.section?.name,
     state.category?.name,
     state.minLevel?.name,
-  ].filter(Boolean).join(' \u00B7 ');
+  ].filter(Boolean).join(' · ');
   const coachRoleLabel = state.coachRole === 'other'
-    ? (state.coachRoleOther || '\u00C0 preciser')
-    : (state.coachRole || '\u00C0 completer');
+    ? (state.coachRoleOther || 'À preciser')
+    : (state.coachRole || 'À completer');
   const playerPositionsLabel = state.positions.length > 0
-    ? `${state.positions.length} poste${state.positions.length > 1 ? 's' : ''} \u00B7 ${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''}`
-    : '\u00C0 compl\u00E9ter';
-  const coachPositionsLabel = `${totalCoachOpenings} role${totalCoachOpenings > 1 ? 's' : ''} \u00B7 ${coachRoleLabel}`;
+    ? `${state.positions.length} poste${state.positions.length > 1 ? 's' : ''} · ${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''}`
+    : 'À compléter';
+  const coachPositionsLabel = `${totalCoachOpenings} role${totalCoachOpenings > 1 ? 's' : ''} · ${coachRoleLabel}`;
   const positionsLabel = isCoachAd ? coachPositionsLabel : playerPositionsLabel;
-  const playerAdTypeLabel = state.event ? 'Annonce li\u00E9e \u00E0 une d\u00E9tection' : 'Annonce saisonni\u00E8re';
-  const resolvedAdTypeLabel = isCoachAd ? 'Annonce entraineur' : playerAdTypeLabel;
-  const needsSectionTitle = isCoachAd ? 'Role recherche' : 'Postes recherch\u00E9s';
+  const playerAdTypeLabel = state.event ? 'Annonce liée à une détection' : 'Annonce saisonnière';
+  const resolvedAdTypeLabel = isCoachAd ? 'Annonce entraîneur' : playerAdTypeLabel;
+  const needsSectionTitle = isCoachAd ? 'Rôle recherche' : 'Postes recherchés';
   const needsEditRoute = isCoachAd ? RouteNames.AdWizardCoachProfile : RouteNames.AdWizardPositions;
-  const coachNeedsSummary = `${totalCoachOpenings} profil${totalCoachOpenings > 1 ? 's' : ''} coach recherche${totalCoachOpenings > 1 ? 's' : ''} pour le role ${coachRoleLabel}.`;
+  const coachNeedsSummary = `${totalCoachOpenings} profil${totalCoachOpenings > 1 ? 's' : ''} coach recherche${totalCoachOpenings > 1 ? 's' : ''} pour le rôle ${coachRoleLabel}.`;
   const playerNeedsSummary = state.positions.length > 0
-    ? `${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''} recherch\u00E9${totalPlayers > 1 ? 's' : ''} sur ${state.positions.length} poste${state.positions.length > 1 ? 's' : ''}.`
-    : "Aucun poste n'a encore \u00E9t\u00E9 ajout\u00E9.";
+    ? `${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''} recherché${totalPlayers > 1 ? 's' : ''} sur ${state.positions.length} poste${state.positions.length > 1 ? 's' : ''}.`
+    : "Aucun poste n'à encore été ajouté.";
   const needsSummary = isCoachAd ? coachNeedsSummary : playerNeedsSummary;
   let validationLabel = 'Publication directe';
 
@@ -231,13 +231,13 @@ function AdWizardRecap({ navigation }) {
   const quickOverviewItems = [
     {
       complete: Boolean(state.team),
-      label: '\u00C9quipe',
-      value: state.team?.name || '\u00C0 compl\u00E9ter',
+      label: 'Équipe',
+      value: state.team?.name || 'À compléter',
     },
     {
       complete: isAdWizardSportProfileComplete(state),
       label: 'Profil',
-      value: profileLabel || '\u00C0 pr\u00E9ciser',
+      value: profileLabel || 'À préciser',
     },
     {
       complete: Boolean(displayAddress),
@@ -319,7 +319,7 @@ function AdWizardRecap({ navigation }) {
     </View>
   )) : (
     <Text style={[Fonts.p2, Fonts.primary100]}>
-      {'Ajoutez au moins un poste pour publier l\'annonce.'}
+      {'Ajoute au moins un poste pour publier l\'annonce.'}
     </Text>
   );
 
@@ -341,7 +341,7 @@ function AdWizardRecap({ navigation }) {
     if (!isReadyToSubmit) {
       showBanner({
         body: `Il manque encore ${missingRequiredItems.join(', ')} avant de publier cette annonce.`,
-        title: 'R\u00E9capitulatif incomplet',
+        title: 'Récapitulatif incomplet',
         tone: 'error',
       });
       return;
@@ -399,7 +399,7 @@ function AdWizardRecap({ navigation }) {
         setSubscriptionPaywallDecision(subscriptionDecision);
         return;
       }
-      const nextMessage = error?.message || "Impossible de cr\u00E9er l'annonce. V\u00E9rifiez les informations puis r\u00E9essayez.";
+      const nextMessage = error?.message || "Impossible de créer l'annonce. Vérifie les informations puis réessaie.";
       setSubmitErrorMessage(nextMessage);
       showBanner({
         body: nextMessage,
@@ -421,8 +421,8 @@ function AdWizardRecap({ navigation }) {
         onNext={handleSubmit}
         stepCount={getAdWizardStepCount(state)}
         stepIndex={getAdWizardRecapStepIndex(state)}
-        subtitle={"V\u00E9rifiez l'ensemble du brief avant de publier votre annonce."}
-        title={'R\u00E9capitulatif'}
+        subtitle="Vérifie l'ensemble du brief avant de publier ton annonce."
+        title="Récapitulatif"
       >
         <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
           {!isReadyToSubmit ? (
@@ -437,7 +437,7 @@ function AdWizardRecap({ navigation }) {
                 },
               ]}
             >
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{'R\u00E9capitulatif incomplet'}</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Récapitulatif incomplet</Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
                 Il manque encore
                 {' '}
@@ -510,7 +510,7 @@ function AdWizardRecap({ navigation }) {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, isReadyToSubmit ? Fonts.primary500 : Fonts.primary100]}>
-                  {isReadyToSubmit ? 'Pr\u00EAt \u00E0 publier' : '\u00C0 compl\u00E9ter'}
+                  {isReadyToSubmit ? 'Prêt à publier' : 'À compléter'}
                 </Text>
               </View>
             </View>
@@ -531,7 +531,7 @@ function AdWizardRecap({ navigation }) {
           </View>
 
           <RecapSection
-            eyebrow={'\u00C9quipe qui recrute'}
+            eyebrow="Équipe qui recrute"
             onEdit={() => navigation.navigate(RouteNames.AdWizardTeam)}
             title="Structure"
           >
@@ -541,13 +541,13 @@ function AdWizardRecap({ navigation }) {
                 team={state.team}
               />
             ) : (
-              <Text style={[Fonts.p2, Fonts.primary100]}>{'Aucune \u00E9quipe s\u00E9lectionn\u00E9e'}</Text>
+              <Text style={[Fonts.p2, Fonts.primary100]}>Aucune équipe sélectionnée</Text>
             )}
 
             <View style={[Spaces.gap[12]]}>
               <OverviewMetric
                 ApplicationStyle={ApplicationStyle}
-                complete={Boolean(sportName && sportName !== 'Non d\u00E9fini')}
+                complete={Boolean(sportName && sportName !== 'Non défini')}
                 Fonts={Fonts}
                 label="Sport"
                 Spaces={Spaces}
@@ -559,7 +559,7 @@ function AdWizardRecap({ navigation }) {
                 Fonts={Fonts}
                 label="Profil"
                 Spaces={Spaces}
-                value={profileLabel || '\u00C0 pr\u00E9ciser'}
+                value={profileLabel || 'À préciser'}
               />
             </View>
           </RecapSection>
@@ -590,7 +590,7 @@ function AdWizardRecap({ navigation }) {
               <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>Profil</Text>
                 <Text style={[Fonts.p2, profileLabel ? Fonts.neutral00 : Fonts.primary100]}>
-                  {profileLabel || '\u00C0 pr\u00E9ciser'}
+                  {profileLabel || 'À préciser'}
                 </Text>
               </View>
 
@@ -608,9 +608,9 @@ function AdWizardRecap({ navigation }) {
 
               {state.event ? (
                 <View style={[Spaces.gap[8]]}>
-                  <Text style={[Fonts.p3, Fonts.neutral300]}>{'D\u00E9tection li\u00E9e'}</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>Détection liée</Text>
                   <Text style={[Fonts.p2, Fonts.neutral00]}>
-                    {state.event.name || state.event.type?.name || '\u00C9v\u00E9nement'}
+                    {state.event.name || state.event.type?.name || 'Événement'}
                   </Text>
                 </View>
               ) : null}
@@ -624,7 +624,7 @@ function AdWizardRecap({ navigation }) {
           >
             {selectedFacilityName ? (
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral300]}>Installation selectionnee</Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>Installation sélectionnée</Text>
                 <Text style={[Fonts.p2, Fonts.neutral00]}>{selectedFacilityName}</Text>
               </View>
             ) : null}
@@ -632,7 +632,7 @@ function AdWizardRecap({ navigation }) {
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p3, Fonts.neutral300]}>{selectedFacilityName ? 'Adresse' : 'Lieu'}</Text>
               <Text style={[Fonts.p2, displayAddress ? Fonts.neutral00 : Fonts.primary100]}>
-                {displayAddress || '\u00C0 compl\u00E9ter'}
+                {displayAddress || 'À compléter'}
               </Text>
             </View>
           </RecapSection>
@@ -643,11 +643,11 @@ function AdWizardRecap({ navigation }) {
             title={isCoachAd ? 'Description et missions' : 'Description'}
           >
             <Text style={[Fonts.p2, state.description ? Fonts.neutral100 : Fonts.neutral300]}>
-              {state.description || "Aucune description personnalis\u00E9e n'a \u00E9t\u00E9 ajout\u00E9e."}
+              {state.description || "Aucune description personnalisée n'a été ajoutée."}
             </Text>
             {isCoachAd ? (
               <Text style={[Fonts.p2, state.missions ? Fonts.neutral100 : Fonts.neutral300]}>
-                {state.missions || 'Aucune mission detaillee n a encore ete ajoutee.'}
+                {state.missions || 'Aucune mission détaillée n à encore été ajoutée.'}
               </Text>
             ) : null}
           </RecapSection>
@@ -666,8 +666,8 @@ function AdWizardRecap({ navigation }) {
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>Avant publication</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {isCoachAd
-                ? "L'annonce sera visible dans le flux recrutement avec un badge entraineur. Plus le role, les missions et le cadre sont precis, plus les candidatures seront pertinentes."
-                : "L'annonce sera visible par les joueurs correspondant au profil recherche. Plus vos informations sont precises, plus la mise en relation sera pertinente."}
+                ? "L'annonce sera visible dans le flux recrutement avec un badge entraîneur. Plus le rôle, les missions et le cadre sont precis, plus les candidatures seront pertinentes."
+                : "L'annonce sera visible par les joueurs correspondant au profil recherche. Plus tes informations sont precises, plus la mise en relation sera pertinente."}
             </Text>
           </View>
         </View>

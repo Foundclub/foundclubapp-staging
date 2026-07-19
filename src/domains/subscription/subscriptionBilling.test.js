@@ -42,10 +42,10 @@ describe('subscriptionBilling', () => {
       scopeType: 'TEAM',
       slotCount: 2,
     })).toEqual({
-      description: 'Publie et gere les equipes couvertes par tes slots Team.',
+      description: 'Publie et gère les équipes couvertes par tes slots Team.',
       label: 'Team 2 equipes / mois',
       priceLabel: '',
-      secondaryLabel: '2 equipes couvertes - Mensuel',
+      secondaryLabel: '2 équipes couvertes - Mensuel',
     });
   });
 
@@ -58,10 +58,10 @@ describe('subscriptionBilling', () => {
       scopeType: 'TEAM',
       slotCount: 1,
     })).toEqual({
-      description: 'Publie et gere les equipes couvertes par tes slots Team.',
+      description: 'Publie et gère les équipes couvertes par tes slots Team.',
       label: 'Équipe · 1 équipe',
       priceLabel: '59,99 €/an',
-      secondaryLabel: '1 equipe couverte - Annuel - 59,99 €/an',
+      secondaryLabel: '1 équipe couverte - Annuel - 59,99 €/an',
     });
   });
 
@@ -133,6 +133,6 @@ describe('subscriptionBilling', () => {
 
   test('maps Team slot errors to actionable copy', () => {
     expect(getSubscriptionBillingErrorMessage({ message: 'TEAM_SLOT_COUNT_EXCEEDED' }))
-      .toBe('Cette offre n a pas assez de slots pour couvrir autant d equipes. Ajuste la selection avant de continuer.');
+      .toBe('Cette offre n a pas assez de slots pour couvrir autant d équipes. Ajuste la sélection avant de continuer.');
   });
 });

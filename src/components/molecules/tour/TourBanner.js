@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -6,10 +6,20 @@ import useTheme from '@/theme/themeContext';
 
 import { useTour } from '@/context/TourContext';
 
+// Hauteur laissée sous le bandeau : dock flottant + marge de respiration. Le
+// bandeau replié (pastille) utilise le même socle pour que l'espace réservé au
+// contenu soit identique dans les deux états.
+const TOUR_BANNER_DOCK_CLEARANCE = 92;
+const TOUR_BANNER_CONTENT_GAP = 12;
+
 /**
  * Bandeau flottant du tour guidé v2 : instruction de l'étape courante,
  * progression x/y, validation manuelle et message de succès. Monté une seule
  * fois au-dessus du navigateur (voir AppProviders).
+ *
+ * Il est en surimpression, mais publie la hauteur qu'il occupe via
+ * `setTourBannerReservedSpace` : ScreenContainer transforme cette valeur en
+ * marge basse, de sorte que le bandeau ne recouvre jamais de contenu réel.
  */
 function TourBanner() {
   const {
@@ -21,6 +31,7 @@ function TourBanner() {
     currentStep,
     isTourActive,
     resumeTour,
+    setTourBannerReservedSpace,
     stepIndex,
     totalSteps,
     tourStatus,
@@ -28,6 +39,22 @@ function TourBanner() {
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isSignalStep = currentStep?.success?.type !== 'manual';
+  const bannerBottomOffset = Math.max(insets.bottom, 12) + TOUR_BANNER_DOCK_CLEARANCE;
+  const isBannerVisible = Boolean(isTourActive && currentStep);
+
+  const handleBannerLayout = useCallback((event) => {
+    const height = event?.nativeEvent?.layout?.height || 0;
+    setTourBannerReservedSpace?.(
+      height > 0 ? bannerBottomOffset + height + TOUR_BANNER_CONTENT_GAP : 0,
+    );
+  }, [bannerBottomOffset, setTourBannerReservedSpace]);
+
+  // Tour terminé / bandeau démonté : on rend l'espace réservé aux écrans.
+  useEffect(() => {
+    if (!isBannerVisible) setTourBannerReservedSpace?.(0);
+  }, [isBannerVisible, setTourBannerReservedSpace]);
+
+  useEffect(() => () => setTourBannerReservedSpace?.(0), [setTourBannerReservedSpace]);
 
   // Etape a validation automatique (ex. tunnel equipe/evenement) : la page a ses
   // propres CTA — le bandeau se replie en pastille pour ne jamais les masquer.
@@ -52,6 +79,7 @@ function TourBanner() {
       <TouchableOpacity
         accessibilityLabel="Afficher le tour guidé"
         accessibilityRole="button"
+        onLayout={handleBannerLayout}
         onPress={() => setIsCollapsed(false)}
         style={{
           alignItems: 'center',
@@ -59,7 +87,7 @@ function TourBanner() {
           borderColor: `${Colors.primary500}59`,
           borderRadius: 999,
           borderWidth: 1,
-          bottom: Math.max(insets.bottom, 12) + 158,
+          bottom: bannerBottomOffset,
           columnGap: 6,
           elevation: 12,
           flexDirection: 'row',
@@ -85,7 +113,7 @@ function TourBanner() {
     borderColor: `${Colors.primary500}59`,
     borderRadius: 20,
     borderWidth: 1,
-    bottom: Math.max(insets.bottom, 12) + 92,
+    bottom: bannerBottomOffset,
     elevation: 12,
     left: 12,
     position: /** @type {'absolute'} */ ('absolute'),
@@ -98,7 +126,7 @@ function TourBanner() {
 
   if (tourStatus === 'paused') {
     return (
-      <View style={[containerStyle, Spaces.padding[16], Spaces.gap[12]]}>
+      <View onLayout={handleBannerLayout} style={[containerStyle, Spaces.padding[16], Spaces.gap[12]]}>
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
             {`Ton tour guidé t'attend (étape ${stepIndex + 1}/${totalSteps})`}
@@ -133,6 +161,7 @@ function TourBanner() {
   if (tourStatus === 'success') {
     return (
       <View
+        onLayout={handleBannerLayout}
         style={[
           containerStyle,
           Spaces.padding[16],
@@ -162,7 +191,7 @@ function TourBanner() {
   }
 
   return (
-    <View style={[containerStyle, Spaces.padding[16], Spaces.gap[8]]}>
+    <View onLayout={handleBannerLayout} style={[containerStyle, Spaces.padding[16], Spaces.gap[8]]}>
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
         <Text style={[Fonts.p4Bold, Fonts.primary500, { letterSpacing: 1, textTransform: 'uppercase' }]}>
           {`Tour guidé · étape ${stepIndex + 1} sur ${totalSteps}`}

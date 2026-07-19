@@ -518,7 +518,7 @@ export const createRecruitmentAd = async (adData) => {
     const backendMessage = responseError?.message
       || responseData?.message
       || requestError?.message
-      || "Impossible de creer l'annonce";
+      || "Impossible de créer l'annonce";
     const nextError = /** @type {any} */ (new Error(backendMessage));
     nextError.code = responseError?.code || responseData?.code || requestError?.code || null;
     nextError.details = responseError?.details || responseData?.details || requestError?.details || null;

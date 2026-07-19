@@ -163,7 +163,7 @@ function NewConversation({ navigation, route }) {
   const [selectedTeamId, setSelectedTeamId] = useState(/** @type {string | null} */ (null));
   const [isCreating, setIsCreating] = useState(false);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
-  const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Veuillez reessayer plus tard.');
+  const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Merci de réessayer plus tard.');
 
   const resolveConversationErrorMessage = (sourceError, fallbackMessage = '') => {
     const resolvedMessage = getErrorMessage(sourceError, 'generic');
@@ -332,7 +332,7 @@ function NewConversation({ navigation, route }) {
       }
       const safeMessage = resolveConversationErrorMessage(
         error,
-        t('messaging.createConversationError', 'Impossible de demarrer cette conversation.'),
+        t('messaging.createConversationError', 'Impossible de démarrer cette conversation.'),
       );
       if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
         window.alert(safeMessage);
@@ -394,11 +394,11 @@ function NewConversation({ navigation, route }) {
     );
   };
 
-  let createButtonTitle = t('common.start', 'Demarrer la discussion');
+  let createButtonTitle = t('common.start', 'Démarrer la discussion');
   if (isAddMembersMode) {
     createButtonTitle = t('messaging.addMembersCta', `Ajouter (${selectedUserIds.size})`);
   } else if (selectedUserIds.size > 1) {
-    createButtonTitle = t('messaging.createGroup', `Creer un groupe (${selectedUserIds.size})`);
+    createButtonTitle = t('messaging.createGroup', `Créer un groupe (${selectedUserIds.size})`);
   }
   const headerTitle = isAddMembersMode
     ? t('messaging.addGroupMembers', 'Ajouter des membres')

@@ -105,7 +105,7 @@ function NextMatchCard({
   const normalizedStatus = normalizeMatchStatus(match?.status);
   const derivedPhase = getMatchDerivedPhase(match, event, now);
   const isAnonymous = shouldMaskOpponentIdentity(match, event);
-  const matchLegalLabel = `${myTeam?.name || 'Votre squad'} VS ${isAnonymous ? 'Adversaire' : opponent?.name || 'Adversaire'}`;
+  const matchLegalLabel = `${myTeam?.name || 'Ta squad'} VS ${isAnonymous ? 'Adversaire' : opponent?.name || 'Adversaire'}`;
   const isTerminalStatus = ['cancelled', 'forfeit', 'no_show', 'valid'].includes(normalizedStatus);
   const isVenueBooked = event?.venueBooked === true || match?.venueBooked === true || match?.venue_booked === true;
   const venueRequired = doesMatchRequireVenue(match);

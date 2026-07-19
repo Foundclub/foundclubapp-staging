@@ -101,7 +101,7 @@ const getInternalInvitedTeamIdsFromAudiences = (audiences = []) => (
 );
 
 const buildInternalAudienceSummary = (audience) => {
-  if (!audience) return 'Appuie pour choisir les membres ou inviter toute l equipe.';
+  if (!audience) return 'Appuie pour choisir les membres ou inviter toute l équipe.';
   if (audience.selectionMode === 'SELECTED_MEMBERS') {
     return `${Array.isArray(audience.selectedMembers) ? audience.selectedMembers.length : 0} membre(s) invites`;
   }
@@ -109,8 +109,8 @@ const buildInternalAudienceSummary = (audience) => {
 };
 
 const buildExternalAudienceSummary = (audience) => {
-  if (!audience) return 'Appuie pour ajouter cette equipe externe.';
-  return 'Invitation en attente de reponse';
+  if (!audience) return 'Appuie pour ajouter cette équipe externe.';
+  return 'Invitation en attente de réponse';
 };
 
 const buildInviteModeCountLabel = (count, singular, plural) => {
@@ -219,12 +219,12 @@ const clubMatchesExternalFilters = (club, filters = {}) => {
 
 const MODE_CARD_CONTENT = {
   external: {
-    description: 'Recherche un club externe, ouvre ses equipes et ajoute celles que tu veux inviter.',
-    title: 'Inviter une equipe externe',
+    description: 'Recherche un club externe, ouvre ses équipes et ajoute celles que tu veux inviter.',
+    title: 'Inviter une équipe externe',
   },
   internal: {
-    description: 'Choisis une equipe de ton club, puis invite tous ses membres ou seulement certains joueurs.',
-    title: 'Inviter des membres d\'une equipe de mon club',
+    description: 'Choisis une équipe de ton club, puis invite tous ses membres ou seulement certains joueurs.',
+    title: 'Inviter des membres d\'une équipe de mon club',
   },
 };
 
@@ -551,7 +551,7 @@ function EventWizardInvites({ navigation }) {
   );
   let externalClubResultsTitle = 'Clubs proposes';
   if (hasExternalClubSearchQuery) {
-    externalClubResultsTitle = 'Resultats de recherche';
+    externalClubResultsTitle = 'Résultats de recherche';
   } else if (hasActiveExternalClubFilters) {
     externalClubResultsTitle = 'Clubs correspondant aux filtres';
   }
@@ -560,10 +560,10 @@ function EventWizardInvites({ navigation }) {
   if (hasExternalClubSearchQuery) {
     externalClubEmptyMessage = 'Aucun club externe trouve pour cette recherche.';
   } else if (hasActiveExternalClubFilters) {
-    externalClubEmptyMessage = 'Aucun club externe ne correspond a ces filtres pour le moment.';
+    externalClubEmptyMessage = 'Aucun club externe ne correspond à ces filtres pour le moment.';
   }
   if (!hasExternalClubSearchQuery && !hasActiveExternalClubFilters) {
-    externalClubEmptyMessage = 'Aucun club externe avec equipe disponible pour le moment.';
+    externalClubEmptyMessage = 'Aucun club externe avec équipe disponible pour le moment.';
   }
 
   const syncAudiences = useCallback((nextInternalAudiences, nextExternalAudiences) => {
@@ -750,8 +750,8 @@ function EventWizardInvites({ navigation }) {
     const content = MODE_CARD_CONTENT[mode];
     const count = mode === 'internal' ? internalAudiences.length : externalAudiences.length;
     const countLabel = mode === 'internal'
-      ? buildInviteModeCountLabel(count, 'equipe interne configuree', 'equipes internes configurees')
-      : buildInviteModeCountLabel(count, 'equipe externe ajoutee', 'equipes externes ajoutees');
+      ? buildInviteModeCountLabel(count, 'équipe interne configuree', 'équipes internes configurees')
+      : buildInviteModeCountLabel(count, 'équipe externe ajoutée', 'équipes externes ajoutées');
 
     return (
       <View
@@ -894,7 +894,7 @@ function EventWizardInvites({ navigation }) {
       stepIndex={3}
       subtitle={t(
         'eventWizard.steps.invites.subtitle',
-        'Tu peux inviter des membres de ton club, une ou plusieurs equipes externes, ou les deux.',
+        'Tu peux inviter des membres de ton club, une ou plusieurs équipes externes, ou les deux.',
       )}
       title={t('eventWizard.steps.invites.title')}
     >
@@ -916,10 +916,10 @@ function EventWizardInvites({ navigation }) {
             >
               <View style={Spaces.gap[8]}>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  Equipes de mon club
+                  Équipes de mon club
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Clique sur une equipe pour inviter tout le groupe ou choisir seulement les membres concernes.
+                  Clique sur une équipe pour inviter tout le groupe ou choisir seulement les membres concernés.
                 </Text>
               </View>
 
@@ -999,7 +999,7 @@ function EventWizardInvites({ navigation }) {
                       Recherche club
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      Reprends la logique de recherche club, ouvre le club externe puis ajoute une ou plusieurs equipes.
+                      Reprends la logique de recherche club, ouvre le club externe puis ajoute une ou plusieurs équipes.
                     </Text>
                   </View>
                   <View
@@ -1063,7 +1063,7 @@ function EventWizardInvites({ navigation }) {
                     <View style={[ApplicationStyle.card, Spaces.padding[16], cardSurfaceStyle]}>
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
                         {hasActiveExternalClubFilters
-                          ? 'Parcours les clubs correspondant a tes filtres, ou tape un nom pour affiner encore.'
+                          ? 'Parcours les clubs correspondant à tes filtres, ou tape un nom pour affiner encore.'
                           : 'Parcours les clubs proposes, ou tape un nom pour affiner la recherche.'}
                       </Text>
                     </View>
@@ -1093,7 +1093,7 @@ function EventWizardInvites({ navigation }) {
                         <ClubSearchResultCard
                           footer={(
                             <Text style={[Fonts.p3, Fonts.primary200]}>
-                              Appuie pour voir les equipes du club
+                              Appuie pour voir les équipes du club
                             </Text>
                           )}
                           item={club}
@@ -1115,7 +1115,7 @@ function EventWizardInvites({ navigation }) {
                   {externalAudiences.length > 0 ? (
                     <View style={Spaces.gap[12]}>
                       <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-                        Equipes externes deja ajoutees
+                        Équipes externes déjà ajoutées
                       </Text>
                       <View style={Spaces.gap[12]}>
                         {externalAudiences.map((audience) => (
@@ -1144,7 +1144,7 @@ function EventWizardInvites({ navigation }) {
                     <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                       <View style={{ flex: 1 }}>
                         <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-                          Club selectionne
+                          Club sélectionne
                         </Text>
                       </View>
                       <Button
@@ -1156,7 +1156,7 @@ function EventWizardInvites({ navigation }) {
                     <ClubSearchResultCard
                       footer={(
                         <Text style={[Fonts.p3, Fonts.primary200]}>
-                          Choisis une ou plusieurs equipes ci-dessous
+                          Choisis une ou plusieurs équipes ci-dessous
                         </Text>
                       )}
                       isSelected
@@ -1166,16 +1166,16 @@ function EventWizardInvites({ navigation }) {
 
                   <View style={Spaces.gap[8]}>
                     <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                      Equipes du club
+                      Équipes du club
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      Appuie sur une equipe pour ajouter cette equipe a l evenement. Tu peux en selectionner plusieurs.
+                      Appuie sur une équipe pour ajouter cette équipe a l événement. Tu peux en sélectionner plusieurs.
                     </Text>
                   </View>
 
                   <SearchBar
                     onChangeText={setExternalTeamSearch}
-                    placeholder="Rechercher une equipe"
+                    placeholder="Rechercher une équipe"
                     value={externalTeamSearch}
                     withCalendar={false}
                   />
@@ -1187,7 +1187,7 @@ function EventWizardInvites({ navigation }) {
                   {!isLoadingExternalTeams && hasExternalTeamsError ? (
                     <View style={[ApplicationStyle.card, Spaces.padding[24], cardSurfaceStyle]}>
                       <Text style={[Fonts.p1, Fonts.neutral100, Spaces.marginBottom[12]]}>
-                        Impossible de charger les equipes de ce club.
+                        Impossible de charger les équipes de ce club.
                       </Text>
                       <Button
                         onPress={() => loadExternalClubTeams(selectedExternalClub)}
@@ -1200,7 +1200,7 @@ function EventWizardInvites({ navigation }) {
                   {!isLoadingExternalTeams && !hasExternalTeamsError && externalTeamsForSelectedClub.length === 0 ? (
                     <View style={[ApplicationStyle.card, Spaces.padding[24], cardSurfaceStyle]}>
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        Aucune equipe disponible pour ce club.
+                        Aucune équipe disponible pour ce club.
                       </Text>
                     </View>
                   ) : null}
@@ -1211,7 +1211,7 @@ function EventWizardInvites({ navigation }) {
                     && filteredExternalTeamsForSelectedClub.length === 0 ? (
                       <View style={[ApplicationStyle.card, Spaces.padding[24], cardSurfaceStyle]}>
                         <Text style={[Fonts.p3, Fonts.neutral200]}>
-                          Aucune equipe ne correspond a cette recherche.
+                          Aucune équipe ne correspond à cette recherche.
                         </Text>
                       </View>
                     ) : null}
@@ -1228,7 +1228,7 @@ function EventWizardInvites({ navigation }) {
                         Invitations externes configurees
                       </Text>
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        Les equipes cochees recevront une demande et devront accepter cette invitation.
+                        Les équipes cochees recevront une demande et devront accepter cette invitation.
                       </Text>
                     </View>
                   ) : null}
@@ -1247,7 +1247,7 @@ function EventWizardInvites({ navigation }) {
                 {activeTeam?.name || 'Equipe'}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Choisis si tu invites tout le groupe ou seulement certains membres a cet evenement.
+                Choisis si tu invites tout le groupe ou seulement certains membres à cet événement.
               </Text>
             </View>
 
@@ -1271,8 +1271,8 @@ function EventWizardInvites({ navigation }) {
               <View style={Spaces.gap[12]}>
                 <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
                   {selectedMemberIds.length > 0
-                    ? `${selectedMemberIds.length} membre(s) selectionne(s)`
-                    : 'Selectionne les membres a inviter'}
+                    ? `${selectedMemberIds.length} membre(s) sélectionne(s)`
+                    : 'Sélectionne les membres à inviter'}
                 </Text>
 
                 {activeTeamRoster.length > 0 ? (
@@ -1313,7 +1313,7 @@ function EventWizardInvites({ navigation }) {
                   </View>
                 ) : (
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    Aucun membre disponible pour cette equipe.
+                    Aucun membre disponible pour cette équipe.
                   </Text>
                 )}
               </View>
@@ -1330,7 +1330,7 @@ function EventWizardInvites({ navigation }) {
                 ]}
               >
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  Tous les membres de cette equipe recevront cette invitation et verront ensuite l evenement dans leur planning.
+                  Tous les membres de cette équipe recevront cette invitation et verront ensuite l événement dans leur planning.
                 </Text>
               </View>
             )}
@@ -1365,14 +1365,14 @@ function EventWizardInvites({ navigation }) {
                 Filtres de recherche club
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Reprends les filtres utiles de la recherche de clubs pour trouver plus vite la bonne equipe externe.
+                Reprends les filtres utiles de la recherche de clubs pour trouver plus vite la bonne équipe externe.
               </Text>
             </View>
 
             <AutocompleteAddressInput
               address={externalClubFiltersDraft.city}
               label={t('clubFilters.fields.city.label', 'Ville')}
-              placeholder={t('clubFilters.fields.city.placeholder', 'Entrez une ville')}
+              placeholder={t('clubFilters.fields.city.placeholder', 'Entre une ville')}
               setAddress={(city) => setExternalClubFiltersDraft((current) => ({
                 ...current,
                 city: city || { label: '', value: '' },
@@ -1408,7 +1408,7 @@ function EventWizardInvites({ navigation }) {
                 isSearchable
                 label={t('clubFilters.fields.activity.label', 'Sport')}
                 options={filteredActivityOptions}
-                placeholder={t('clubFilters.fields.activity.placeholder', 'Selectionner une activite')}
+                placeholder={t('clubFilters.fields.activity.placeholder', 'Sélectionner une activité')}
                 searchValue={activitySearchValue}
                 setSearchValue={setActivitySearchValue}
                 setValue={(option) => setExternalClubFiltersDraft((current) => ({
@@ -1461,7 +1461,7 @@ function EventWizardInvites({ navigation }) {
         style={[Alignments.selfCenter, Spaces.paddingVertical[8], Spaces.marginTop[8]]}
       >
         <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-          Passer cette etape
+          Passer cette étape
         </Text>
       </TouchableOpacity>
 

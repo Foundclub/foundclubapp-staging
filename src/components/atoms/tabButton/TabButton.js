@@ -61,7 +61,7 @@ function TabButton({
       {/*
         Fond actif = primary500 : texte et icone en encre foncee primary900 (7,96:1).
         primary100 sur primary500 vaut 2,18:1 et echoue au WCAG AA.
-        Decision Adel 2026-07-14, cf. THEME.md.
+        Décision Adel 2026-07-14, cf. THEME.md.
       */}
       <Text style={[
         { maxWidth: '90%' },

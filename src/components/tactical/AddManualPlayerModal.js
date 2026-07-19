@@ -178,7 +178,7 @@ function AddManualPlayerModal({ onAdd, onClose, visible }) {
           </View>
 
           <Text style={styles.description}>
-            Ajoutez un joueur qui n&apos;est pas encore inscrit sur l&apos;application.
+            Ajoute un joueur qui n&apos;est pas encore inscrit sur l&apos;application.
           </Text>
 
           <View style={styles.form}>

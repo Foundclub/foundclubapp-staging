@@ -176,7 +176,7 @@ function AdminUserList() {
                       <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
                         <Text style={[Fonts.h4, { color: Colors.neutral200 }]}>Aucun utilisateur trouvé</Text>
                         <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8], { textAlign: 'center' }]}>
-                          {searchQuery ? 'Essayez une autre recherche' : 'Les utilisateurs apparaîtront ici'}
+                          {searchQuery ? 'Essaie une autre recherche' : 'Les utilisateurs apparaîtront ici'}
                         </Text>
                       </View>
                     ) : null

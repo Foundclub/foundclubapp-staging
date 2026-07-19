@@ -209,7 +209,7 @@ function CMMembersScreen({ navigation, route }) {
         <Text style={[Fonts.p2, Fonts.primary500]}>
           {item.sections?.length
             ? item.sections.join(', ')
-            : t('multisport.members.noSection', 'Section non renseignee')}
+            : t('multisport.members.noSection', 'Section non renseignée')}
         </Text>
       </View>
       <Image
@@ -225,7 +225,7 @@ function CMMembersScreen({ navigation, route }) {
   if (isLoadingUserData && !resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.members.loadingUser', 'Nous preparons les membres de votre structure multisport.')}
+        description={t('multisport.members.loadingUser', 'Nous préparons les membres de ta structure multisport.')}
         isLoading
         title={t('multisport.members.loadingUserTitle', 'Chargement du club')}
       />
@@ -235,8 +235,8 @@ function CMMembersScreen({ navigation, route }) {
   if (userDataError && !resolvedCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.members.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
+        actionLabel={t('common.retry', 'Réessayer')}
+        description={t('multisport.members.userError', "Impossible de retrouver ta structure multisport pour le moment.")}
         onAction={() => refetchUserData()}
         title={t('multisport.members.userErrorTitle', 'Club indisponible')}
       />
@@ -246,7 +246,7 @@ function CMMembersScreen({ navigation, route }) {
   if (!resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe à ce compte.')}
         title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
       />
     );
@@ -255,7 +255,7 @@ function CMMembersScreen({ navigation, route }) {
   if (isLoadingCmData && !cmData) {
     return (
       <MultisportStateView
-        description={t('multisport.members.loading', 'Nous chargeons les informations de votre structure multisport.')}
+        description={t('multisport.members.loading', 'Nous chargeons les informations de ta structure multisport.')}
         isLoading
         title={t('multisport.members.loadingTitle', 'Chargement des membres')}
       />
@@ -265,7 +265,7 @@ function CMMembersScreen({ navigation, route }) {
   if (cmError && !cmData) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
+        actionLabel={t('common.retry', 'Réessayer')}
         description={t('multisport.members.error', "Impossible de charger cette structure multisport pour le moment.")}
         onAction={() => refetchCm()}
         title={t('multisport.members.errorTitle', 'Membres indisponibles')}
@@ -362,7 +362,7 @@ function CMMembersScreen({ navigation, route }) {
             <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
               <Text style={[Fonts.p1, Fonts.neutral100]}>
                 {selectedSection || selectedTab !== 'all'
-                  ? t('multisport.members.emptyFiltered', 'Aucun membre ne correspond a ces filtres.')
+                  ? t('multisport.members.emptyFiltered', 'Aucun membre ne correspond à ces filtres.')
                   : t('multisport.members.empty', 'Aucun membre trouve pour le moment.')}
               </Text>
             </View>

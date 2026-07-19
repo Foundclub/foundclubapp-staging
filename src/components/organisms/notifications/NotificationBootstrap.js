@@ -105,7 +105,7 @@ function NotificationBootstrapEnabled() {
           label: 'Plus tard',
           onPress: pushPermissionPrompt.onDismiss,
         }}
-        supportingText="Vous pourrez toujours modifier ce choix plus tard dans les réglages."
+        supportingText="Tu pourras toujours modifier ce choix plus tard dans les réglages."
         title={pushPermissionPrompt.title}
         visible={isPushPromptVisible}
       />

@@ -29,7 +29,7 @@ function MyClubsScreen({ navigation, route }) {
   if (isLoadingUserData && !fallbackCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.fallback.loading', 'Nous preparons votre espace multisport.')}
+        description={t('multisport.fallback.loading', 'Nous préparons ton espace multisport.')}
         isLoading
         title={t('multisport.fallback.loadingTitle', 'Chargement du club')}
       />
@@ -39,8 +39,8 @@ function MyClubsScreen({ navigation, route }) {
   if (userDataError && !fallbackCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.fallback.error', 'Impossible de charger vos informations multisport pour le moment.')}
+        actionLabel={t('common.retry', 'Réessayer')}
+        description={t('multisport.fallback.error', 'Impossible de charger tes informations multisport pour le moment.')}
         onAction={() => refetchUserData()}
         title={t('multisport.fallback.errorTitle', 'Club indisponible')}
       />
@@ -50,7 +50,7 @@ function MyClubsScreen({ navigation, route }) {
   if (!fallbackCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe à ce compte.')}
         title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
       />
     );

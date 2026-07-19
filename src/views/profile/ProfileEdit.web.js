@@ -166,7 +166,7 @@ function ProfileEditWeb({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      setSubmitErrorMessage(error?.message || 'Impossible de mettre a jour votre profil.');
+      setSubmitErrorMessage(error?.message || 'Impossible de mettre à jour ton profil.');
     },
     onSuccess: async () => {
       setSubmitErrorMessage('');
@@ -347,7 +347,7 @@ function ProfileEditWeb({ navigation, route }) {
             style={[Alignments.fill]}
           >
             <OnboardingWrapper
-              description="Mettez a jour vos informations personnelles, sportives et votre visibilite."
+              description="Mets à jour tes informations personnelles, sportives et ta visibilité."
               id="profile-edit-form"
               order={1}
               spotlight={{
@@ -357,7 +357,7 @@ function ProfileEditWeb({ navigation, route }) {
                 paddingX: 2,
                 paddingY: 2,
               }}
-              title="Edition du profil"
+              title="Édition du profil"
             >
               <View style={[Alignments.fill, Spaces.gap[24]]}>
                 <View style={[Alignments.row, Spaces.marginVertical[24]]}>
@@ -452,7 +452,7 @@ function ProfileEditWeb({ navigation, route }) {
                     error={formErrors.bestLevel}
                     label={t('profile.fields.bestLevel.label', 'Meilleur niveau')}
                     options={levelOptions}
-                    placeholder={t('profile.fields.bestLevel.placeholder', 'Selectionner un niveau')}
+                    placeholder={t('profile.fields.bestLevel.placeholder', 'Sélectionner un niveau')}
                     setValue={(option) => setFieldValue('bestLevel', option?.value || '')}
                     value={formValues.bestLevel}
                   />
@@ -463,7 +463,7 @@ function ProfileEditWeb({ navigation, route }) {
                   isMulti
                   label={t('profile.fields.category.label', 'Categorie')}
                   options={categoryOptions}
-                  placeholder={t('profile.fields.category.placeholder', 'Selectionner une categorie')}
+                  placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
                   setValue={(options) => {
                     setFieldValue('category', options?.map((option) => option.value).join(', ') || '');
                   }}
@@ -487,9 +487,9 @@ function ProfileEditWeb({ navigation, route }) {
 
                 <AutocompleteSelect
                   error={formErrors.preferredSport}
-                  label={t('profile.fields.preferredSport.label', 'Sport de preference')}
+                  label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
                   options={getSportOptions}
-                  placeholder={t('profile.fields.preferredSport.placeholder', 'Selectionner un sport')}
+                  placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
                   setValue={(option) => {
                     setFieldValue('preferredSport', option?.value || '');
                     setFieldValue('position', '');
@@ -561,7 +561,7 @@ function ProfileEditWeb({ navigation, route }) {
           </ScrollView>
 
           <OnboardingWrapper
-            description="Enregistrez vos modifications pour mettre a jour votre profil."
+            description="Enregistre tes modifications pour mettre à jour ton profil."
             id="profile-edit-save"
             order={2}
             spotlight={{

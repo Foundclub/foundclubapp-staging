@@ -33,8 +33,8 @@ function useAdminClubWizardExit(navigation) {
     }
 
     Alert.alert(
-      'Quitter la creation ?',
-      'Le tunnel de creation du club sera ferme et les informations non sauvegardees seront perdues.',
+      'Quitter la création ?',
+      'Le tunnel de création du club sera ferme et les informations non sauvegardees seront perdues.',
       [
         { style: 'cancel', text: 'Continuer' },
         {

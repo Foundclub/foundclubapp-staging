@@ -49,23 +49,23 @@ const getProposalMeta = ({ isMe, status }) => {
   if (status === 'accepted') {
     return {
       badgeLabel: 'Acceptee',
-      title: isMe ? 'Votre proposition' : 'Proposition adverse',
+      title: isMe ? 'Ta proposition' : 'Proposition adverse',
     };
   }
   if (status === 'declined') {
     return {
       badgeLabel: 'Refusee',
-      title: isMe ? 'Votre proposition' : 'Proposition adverse',
+      title: isMe ? 'Ta proposition' : 'Proposition adverse',
     };
   }
   if (isMe) {
     return {
-      badgeLabel: 'En attente de reponse',
-      title: 'Votre proposition',
+      badgeLabel: 'En attente de réponse',
+      title: 'Ta proposition',
     };
   }
   return {
-    badgeLabel: 'En attente de votre reponse',
+    badgeLabel: 'En attente de ta réponse',
     title: 'Proposition adverse',
   };
 };
@@ -194,18 +194,18 @@ function ProposalMessageBubble({
     date,
     endDate,
     status = 'pending',
-    venue = 'Lieu a definir',
+    venue = 'Lieu à définir',
   } = proposal;
 
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
   const statusColor = Colors[statusConfig.colorToken] || Colors.gold500;
   const proposalMeta = getProposalMeta({ isMe, status });
-  const venueLabel = getProposalLocationLabel(venue) || 'Lieu a definir';
+  const venueLabel = getProposalLocationLabel(venue) || 'Lieu à définir';
   const addressLabel = resolveAddressLabel(address) || getProposalLocationLabel(proposal?.addressObject);
 
   const formattedDate = date
     ? dayjs(date).locale('fr').format('dddd D MMMM')
-    : 'Date a definir';
+    : 'Date à définir';
   const formattedStartTime = date ? dayjs(date).format('HH:mm') : '--:--';
   const formattedEndTime = endDate ? dayjs(endDate).format('HH:mm') : '--:--';
   const timeRange = `${formattedStartTime} -> ${formattedEndTime}`;
@@ -411,7 +411,7 @@ function ProposalMessageBubble({
           <View style={styles.footer}>
             <View style={{ gap: 10 }}>
               <Text style={[Fonts.p4, { color: Colors.neutral300, fontStyle: 'italic' }]}>
-                En attente de la reponse adverse
+                En attente de la réponse adverse
               </Text>
               {onCounter ? (
                 <TouchableOpacity

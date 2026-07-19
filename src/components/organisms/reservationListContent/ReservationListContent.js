@@ -103,7 +103,7 @@ function ReservationListContent({
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        getParticipationErrorMessage(error, 'Impossible de rejoindre cette reservation pour le moment.'),
+        getParticipationErrorMessage(error, 'Impossible de rejoindre cette réservation pour le moment.'),
       );
     },
     onSuccess: () => {
@@ -119,8 +119,8 @@ function ReservationListContent({
       setIsJoinModalVisible(false);
       setSelectedEvent(undefined);
       Alert.alert(
-        t('reservation.joinSuccess.title', 'Participation confirmee'),
-        t('reservation.joinSuccess.message', 'Vous participez maintenant a cette reservation.'),
+        t('reservation.joinSuccess.title', 'Participation confirmée'),
+        t('reservation.joinSuccess.message', 'Tu participes maintenant à cette réservation.'),
       );
     },
   });
@@ -224,7 +224,7 @@ function ReservationListContent({
           return !isBefore(new Date(event.date), startOfDay(new Date()));
         });
     } catch (parseError) {
-      console.error('Error parsing featured reservations:', parseError);
+      console.error('Error parsing featured réservations:', parseError);
       return [];
     }
   }, [featuredData, featuredError]);

@@ -202,7 +202,7 @@ function ClubStack() {
           name={RouteNames.ClubLicenseCampaignSettings}
           options={{
             ...commonOptions,
-            headerTitle: 'Parametres cotisations',
+            headerTitle: 'Paramètres cotisations',
           }}
         />
         <Stack.Screen

@@ -33,7 +33,7 @@ function ReservationModeModal({
 
   const handleConfirm = () => {
     if (!selectedMode) {
-      setError('Veuillez sélectionner un mode');
+      setError('Merci de sélectionner un mode');
       return;
     }
 
@@ -86,7 +86,7 @@ function ReservationModeModal({
             color: '#fff', fontSize: 18, fontWeight: 'bold', textAlign: 'center',
           }}
           >
-            Comment souhaitez-vous participer ?
+            Comment souhaites-te participer ?
           </Text>
 
           {/* Option FULL_GROUP */}

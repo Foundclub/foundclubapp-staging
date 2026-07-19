@@ -438,7 +438,7 @@ function PrivateNavigator() {
           name={RouteNames.HistoryWizardCategory}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une experience',
+            headerTitle: 'Ajouter une expérience',
           }}
         />
         <Stack.Screen
@@ -446,7 +446,7 @@ function PrivateNavigator() {
           name={RouteNames.HistoryWizardClub}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une experience',
+            headerTitle: 'Ajouter une expérience',
           }}
         />
         <Stack.Screen
@@ -454,7 +454,7 @@ function PrivateNavigator() {
           name={RouteNames.HistoryWizardPeriod}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une experience',
+            headerTitle: 'Ajouter une expérience',
           }}
         />
         <Stack.Screen
@@ -462,7 +462,7 @@ function PrivateNavigator() {
           name={RouteNames.HistoryWizardLevel}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une experience',
+            headerTitle: 'Ajouter une expérience',
           }}
         />
         <Stack.Screen
@@ -470,7 +470,7 @@ function PrivateNavigator() {
           name={RouteNames.HistoryWizardRecap}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une experience',
+            headerTitle: 'Ajouter une expérience',
           }}
         />
         <Stack.Screen

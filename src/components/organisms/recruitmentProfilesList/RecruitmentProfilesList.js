@@ -117,7 +117,7 @@ function RecruitmentProfilesList({
   if (hasSearchTerm) {
     headerDescription = `Recherche en cours pour "${trimmedSearch}". Les profils les plus pertinents remontent en premier.`;
   } else if (hasActiveFilters) {
-    headerDescription = 'Les filtres ci-dessous ciblent uniquement les profils ouverts a votre recrutement.';
+    headerDescription = 'Les filtres ci-dessous ciblent uniquement les profils ouverts à ton recrutement.';
   }
   const summaryPills = [
     profilesCountLabel,
@@ -257,7 +257,7 @@ function RecruitmentProfilesList({
       <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
         {hasSearchTerm || hasActiveFilters
           ? 'Essaie d\'elargir les filtres ou de simplifier la recherche.'
-          : 'Les profils ouverts a un club apparaitront ici des qu\'ils seront disponibles.'}
+          : 'Les profils ouverts a un club apparaîtront ici des qu\'ils seront disponibles.'}
       </Text>
       {hasSearchTerm || hasActiveFilters ? (
         <TouchableOpacity

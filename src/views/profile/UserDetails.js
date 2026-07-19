@@ -810,7 +810,7 @@ function UserDetails({ navigation, route }) {
 
               {availableStatTeams.length > 1 ? (
                 <View style={[Spaces.gap[8]]}>
-                  <Text style={[Fonts.p4Bold, Fonts.primary100]}>Equipe</Text>
+                  <Text style={[Fonts.p4Bold, Fonts.primary100]}>Équipe</Text>
                   <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                     <TabButton
                       isFocused={selectedStatsTeamKey === 'all'}
@@ -895,7 +895,7 @@ function UserDetails({ navigation, route }) {
                             {feedback?.matchLabel || feedback?.teamName || 'Match'}
                           </Text>
                           <Text style={[Fonts.p4, Fonts.neutral200]}>
-                            {feedbackDate ? format(feedbackDate, 'dd/MM/yyyy') : 'Date a confirmer'}
+                            {feedbackDate ? format(feedbackDate, 'dd/MM/yyyy') : 'Date à confirmer'}
                           </Text>
                         </View>
                         <View

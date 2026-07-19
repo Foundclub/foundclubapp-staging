@@ -490,7 +490,7 @@ function EventWizardLogistics({ navigation }) {
           t('common.error'),
           t(
             'eventWizard.tournamentProgram.errors.noActiveDays',
-            'Active au moins une journee de tournoi pour continuer.',
+            'Active au moins une journée de tournoi pour continuer.',
           ),
         );
         return;
@@ -701,7 +701,7 @@ function EventWizardLogistics({ navigation }) {
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {t(
                   'eventWizard.tournamentProgram.logisticsToggleHelper',
-                  'Active cette option pour definir une periode, les jours actifs et les horaires par jour.',
+                  'Active cette option pour définir une période, les jours actifs et les horaires par jour.',
                 )}
               </Text>
             </View>
@@ -752,14 +752,14 @@ function EventWizardLogistics({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
                   {t(
                     'eventWizard.tournamentProgram.inlinePeriodHelper',
-                    'Definis directement les dates du tournoi avant de choisir le lieu.',
+                    'Définis directement les dates du tournoi avant de choisir le lieu.',
                   )}
                 </Text>
               </View>
               <View style={[Spaces.gap[16]]}>
                 <DateTimeSelector
                   display="inline"
-                  label={t('eventWizard.tournamentProgram.startDate', 'Date de debut')}
+                  label={t('eventWizard.tournamentProgram.startDate', 'Date de début')}
                   mode="date"
                   onChange={setTournamentStartDate}
                   value={tournamentStartDate}
@@ -784,12 +784,12 @@ function EventWizardLogistics({ navigation }) {
             >
               <View style={{ rowGap: 6 }}>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  {t('eventWizard.tournamentProgram.defaultHoursTitle', 'Horaires par defaut')}
+                  {t('eventWizard.tournamentProgram.defaultHoursTitle', 'Horaires par défaut')}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
                   {t(
                     'eventWizard.tournamentProgram.defaultHoursHelper',
-                    'Ces horaires servent de base pour toutes les journees actives du tournoi.',
+                    'Ces horaires servent de base pour toutes les journées actives du tournoi.',
                   )}
                 </Text>
               </View>
@@ -798,7 +798,7 @@ function EventWizardLogistics({ navigation }) {
                 <View style={{ flex: 1 }}>
                   <DateTimeSelector
                     display="inline"
-                    label={t('eventWizard.tournamentProgram.defaultStartTime', 'Heure de debut')}
+                    label={t('eventWizard.tournamentProgram.defaultStartTime', 'Heure de début')}
                     mode="time"
                     onChange={handleTournamentDefaultStartTimeChange}
                     value={tournamentDefaultStartTime}
@@ -820,13 +820,13 @@ function EventWizardLogistics({ navigation }) {
                   onPress={applyTournamentDefaultsToAllDays}
                   size="sm"
                   style={{ alignSelf: 'flex-start' }}
-                  title={t('eventWizard.tournamentProgram.applyToAll', 'Appliquer a tous')}
+                  title={t('eventWizard.tournamentProgram.applyToAll', 'Appliquer à tous')}
                   variant="Secondary"
                 />
                 <Text style={[Fonts.p4, Fonts.neutral300, { lineHeight: 18 }]}>
                   {t(
                     'eventWizard.tournamentProgram.applyToAllHelper',
-                    'Reinitialise les horaires personnalises et reapplique la base du tournoi.',
+                    'Réinitialise les horaires personnalises et reapplique la base du tournoi.',
                   )}
                 </Text>
               </View>
@@ -840,7 +840,7 @@ function EventWizardLogistics({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
                   {t(
                     'eventWizard.tournamentProgram.daysHelper',
-                    'Active ou personnalise uniquement les journees qui sortent du cadre par defaut.',
+                    'Active ou personnalise uniquement les journées qui sortent du cadre par défaut.',
                   )}
                 </Text>
               </View>
@@ -882,7 +882,7 @@ function EventWizardLogistics({ navigation }) {
                     <View style={{ rowGap: 10 }}>
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
                         {inheritedHours
-                          ? t('eventWizard.tournamentProgram.inheritedHours', 'Horaires herites du tournoi')
+                          ? t('eventWizard.tournamentProgram.inheritedHours', 'Horaires hérités du tournoi')
                           : t('eventWizard.tournamentProgram.customHours', 'Horaires personnalises')}
                       </Text>
                       <TouchableOpacity
@@ -902,7 +902,7 @@ function EventWizardLogistics({ navigation }) {
                       >
                         <Text style={[Fonts.p3Bold, day.hasCustomTime ? Fonts.primary500 : Fonts.neutral200]}>
                           {day.hasCustomTime
-                            ? t('eventWizard.tournamentProgram.useDefaultHours', 'Revenir aux horaires par defaut')
+                            ? t('eventWizard.tournamentProgram.useDefaultHours', 'Revenir aux horaires par défaut')
                             : t('eventWizard.tournamentProgram.customizeHours', 'Personnaliser les horaires')}
                         </Text>
                       </TouchableOpacity>
@@ -912,7 +912,7 @@ function EventWizardLogistics({ navigation }) {
                       <View style={[Spaces.gap[16]]}>
                         <DateTimeSelector
                           display="inline"
-                          label={t('eventWizard.tournamentProgram.dayStartTime', 'Heure de debut du jour')}
+                          label={t('eventWizard.tournamentProgram.dayStartTime', 'Heure de début du jour')}
                           mode="time"
                           onChange={(nextStartTime) => {
                             const adjustedStart = buildDayStartTime(day.date, nextStartTime);
@@ -999,7 +999,7 @@ function EventWizardLogistics({ navigation }) {
                 <TouchableOpacity
                   accessibilityLabel={t(
                     'eventWizard.steps.logistics.recurrenceIntervalDecrement',
-                    "Reduire l'intervalle de recurrence",
+                    "Reduire l'intervalle de récurrence",
                   )}
                   disabled={!canDecreaseRecurrenceInterval}
                   onPress={handleDecreaseRecurrenceInterval}
@@ -1020,7 +1020,7 @@ function EventWizardLogistics({ navigation }) {
                 <TouchableOpacity
                   accessibilityLabel={t(
                     'eventWizard.steps.logistics.recurrenceIntervalIncrement',
-                    "Augmenter l'intervalle de recurrence",
+                    "Augmenter l'intervalle de récurrence",
                   )}
                   onPress={handleIncreaseRecurrenceInterval}
                   style={intervalAdjustButtonStyle(true)}

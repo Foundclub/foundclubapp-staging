@@ -27,7 +27,7 @@ function OnboardingOptionalHint() {
       >
         {t(
           'onboarding.optionalStepHint',
-          "Cette etape n'est pas obligatoire, mais elle reste utile pour ton experience FoundClub.",
+          "Cette étape n'est pas obligatoire, mais elle reste utile pour ton expérience FoundClub.",
         )}
       </Text>
     </View>

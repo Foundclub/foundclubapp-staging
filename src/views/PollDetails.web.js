@@ -197,7 +197,7 @@ function PollDetails({ navigation, route }) {
                 Detail du sondage
               </h1>
               <p style={{ color: mutedTextColor, margin: 0, maxWidth: 720 }}>
-                Consulte les resultats, vote ou modifie ton choix directement depuis le web.
+                Consulte les résultats, vote ou modifie ton choix directement depuis le web.
               </p>
             </div>
             <button
@@ -221,7 +221,7 @@ function PollDetails({ navigation, route }) {
                 Sondage introuvable
               </strong>
               <p style={{ color: mutedTextColor, margin: 0 }}>
-                Ce sondage est introuvable ou a ete supprime.
+                Ce sondage est introuvable ou a été supprimé.
               </p>
             </div>
           ) : (

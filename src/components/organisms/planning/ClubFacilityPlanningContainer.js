@@ -256,13 +256,13 @@ function ClubFacilityPlanningContainer({
       if (facilityPlanningSummary.allowsImmediateConfirmation) {
         return t(
           'facilityList.planning.capacityReachedOverflow',
-          'La capacite a deja ete atteinte sur cette periode. Les nouveaux depassements restent autorises et notifieront les dirigeants.',
+          'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements restent autorises et notifieront les dirigeants.',
         );
       }
 
       return t(
         'facilityList.planning.capacityReachedStrict',
-        'La capacite a deja ete atteinte sur cette periode. Les nouveaux depassements passeront en demande en attente.',
+        'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements passeront en demande en attente.',
       );
     }
 
@@ -385,10 +385,10 @@ function ClubFacilityPlanningContainer({
           >
             <View style={[Spaces.gap[4]]}>
               <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                {t('facilityList.planning.capacityTitle', 'Capacite installation')}
+                {t('facilityList.planning.capacityTitle', 'Capacité installation')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {selectedFacility?.name || t('facilityList.planning.selectedFacility', 'Installation selectionnee')}
+                {selectedFacility?.name || t('facilityList.planning.selectedFacility', 'Installation sélectionnée')}
               </Text>
             </View>
 
@@ -396,7 +396,7 @@ function ClubFacilityPlanningContainer({
               {[
                 `${facilityPlanningSummary.maxSlots} slot${facilityPlanningSummary.maxSlots > 1 ? 's' : ''}`,
                 `Pic ${facilityPlanningSummary.peakConcurrent}/${facilityPlanningSummary.maxSlots}`,
-                `${facilityPlanningSummary.eventCount} evenement${facilityPlanningSummary.eventCount > 1 ? 's' : ''}`,
+                `${facilityPlanningSummary.eventCount} événement${facilityPlanningSummary.eventCount > 1 ? 's' : ''}`,
                 facilityPlanningSummary.allowsImmediateConfirmation
                   ? t('facilityList.planning.overflowAllowed', 'Autorise et notifier')
                   : t('facilityList.planning.overflowBlocked', 'Demande en attente'),

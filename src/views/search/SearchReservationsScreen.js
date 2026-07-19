@@ -32,7 +32,7 @@ function SearchReservationsScreen({ navigation, route }) {
         navigation={navigation}
         tutorialSteps={{
           header: {
-            description: 'Accédez ici aux réservations de terrains et installations.',
+            description: 'Accèdes ici aux réservations de terrains et installations.',
             id: 'search-reservations-header',
             order: 1,
             title: 'Recherche réservations',
@@ -46,7 +46,7 @@ function SearchReservationsScreen({ navigation, route }) {
         }}
       >
         <OnboardingWrapper
-          description="Filtrez par activité et critères avancés pour trouver une réservation."
+          description="Filtre par activité et critères avancés pour trouver une réservation."
           id="search-reservations-content"
           order={3}
           spotlight={{

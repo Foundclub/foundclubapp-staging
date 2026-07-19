@@ -185,10 +185,10 @@ function AdminRevenue() {
   const statCards = [
     { accent: Colors.primary500, label: 'Subscriptions', value: Number(counts?.subscriptions || 0) },
     { accent: Colors.success500, label: 'Entitlements', value: Number(counts?.entitlements || 0) },
-    { accent: Colors.warning500, label: 'Claims a revoir', value: Number(counts?.pendingClaimReviews || 0) },
+    { accent: Colors.warning500, label: 'Claims à revoir', value: Number(counts?.pendingClaimReviews || 0) },
     { accent: Colors.error500, label: 'Billing KO', value: Number(counts?.failedBillingEvents || 0) },
     { accent: Colors.primary200, label: 'Quotas', value: Number(counts?.quotas || 0) },
-    { accent: Colors.neutral100, label: 'Legacy a migrer', value: Number(counts?.legacyCandidateClubs || 0) },
+    { accent: Colors.neutral100, label: 'Legacy à migrer', value: Number(counts?.legacyCandidateClubs || 0) },
   ];
 
   const subscriptionRows = Array.isArray(subscriptionsListData?.data) ? subscriptionsListData.data : [];
@@ -264,7 +264,7 @@ function AdminRevenue() {
           );
         },
         onSuccess: () => {
-          Alert.alert('Statut mis a jour', 'Le statut et les droits associes ont ete recalcules.');
+          Alert.alert('Statut mis à jour', 'Le statut et les droits associes ont été recalculés.');
           closeStatusModal();
         },
       },
@@ -289,7 +289,7 @@ function AdminRevenue() {
           );
         },
         onSuccess: () => {
-          Alert.alert('Billing event rejoue', 'L evenement a ete rejoue depuis son payload.');
+          Alert.alert('Billing event rejoue', 'L événement a été rejoue depuis son payload.');
           closeRetryModal();
         },
       },
@@ -300,8 +300,8 @@ function AdminRevenue() {
     if (reconcileMutation.isPending) return;
 
     Alert.alert(
-      'Reconcilier maintenant ?',
-      'Cela relance immediatement la reconciliation des abonnements (expirations, grace periods, droits).',
+      'Réconcilier maintenant ?',
+      'Cela relance immédiatement la réconciliation des abonnements (expirations, grace periods, droits).',
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -311,12 +311,12 @@ function AdminRevenue() {
               {
                 onError: (mutationError) => {
                   Alert.alert(
-                    'Reconciliation impossible',
-                    getErrorMessage(mutationError, 'generic') || 'Impossible de lancer la reconciliation.',
+                    'Réconciliation impossible',
+                    getErrorMessage(mutationError, 'generic') || 'Impossible de lancer la réconciliation.',
                   );
                 },
                 onSuccess: () => {
-                  Alert.alert('Reconciliation terminee', 'Les abonnements et les droits ont ete recalcules.');
+                  Alert.alert('Réconciliation terminée', 'Les abonnements et les droits ont été recalculés.');
                 },
               },
             );
@@ -359,7 +359,7 @@ function AdminRevenue() {
     return (
       <AdminStateView
         actionLabel="Rafraichir"
-        description="Impossible de charger les operations abonnements."
+        description="Impossible de charger les opérations abonnements."
         onAction={refetch}
         title="Chargement impossible"
       />
@@ -425,7 +425,7 @@ function AdminRevenue() {
           onPress={() => onChangePage(currentPage - 1)}
           style={[styles.paginationButton, { borderColor: `${Colors.primary500}44`, opacity: canGoPrevious ? 1 : 0.4 }]}
         >
-          <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Precedent</Text>
+          <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Précédent</Text>
         </TouchableOpacity>
         <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
           {`Page ${currentPage} / ${pageCount} • ${total} au total`}
@@ -463,7 +463,7 @@ function AdminRevenue() {
               {formatDateTime(item?.currentPeriodEnd)}
             </Text>
             <Text style={[Fonts.p4, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-              {item?.billingPeriod || 'periode inconnue'}
+              {item?.billingPeriod || 'période inconnue'}
               {item?.provider ? ` • ${item.provider}` : ''}
             </Text>
           </View>
@@ -500,7 +500,7 @@ function AdminRevenue() {
               {item?.providerEventId ? ` • ${item.providerEventId}` : ''}
             </Text>
             <Text style={[Fonts.p4, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-              {`Recu le ${formatDateTime(item?.receivedAt || item?.createdAt)}`}
+              {`Reçu le ${formatDateTime(item?.receivedAt || item?.createdAt)}`}
             </Text>
           </View>
           {renderStatusPill(status, statusColor)}
@@ -550,7 +550,7 @@ function AdminRevenue() {
             onPress={onRetry}
             style={[styles.inlineActionButton, Spaces.marginTop[8], { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}44` }]}
           >
-            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Reessayer</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Réessayer</Text>
           </TouchableOpacity>
         </View>
       );
@@ -608,7 +608,7 @@ function AdminRevenue() {
         <View>
           <Text style={[Fonts.h1, Fonts.neutral00]}>Pilotage abonnements</Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-            Cette vue suit maintenant les subscriptions, entitlements, claims et incidents billing cote serveur. Les anciens champs club ne servent plus de reference metier ici.
+            Cette vue suit maintenant les subscriptions, entitlements, claims et incidents billing cote serveur. Les anciens champs club ne servent plus de référence métier ici.
           </Text>
         </View>
 
@@ -660,7 +660,7 @@ function AdminRevenue() {
           ]}
         >
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Abonnes</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Abonnés</Text>
             <TouchableOpacity
               activeOpacity={0.86}
               disabled={reconcileMutation.isPending}
@@ -675,7 +675,7 @@ function AdminRevenue() {
               ]}
             >
               <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>
-                {reconcileMutation.isPending ? 'Reconciliation...' : 'Reconcilier maintenant'}
+                {reconcileMutation.isPending ? 'Reconciliation...' : 'Réconcilier maintenant'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -699,10 +699,10 @@ function AdminRevenue() {
           <View style={[Spaces.gap[12], Spaces.marginTop[12]]}>
             {renderListContent({
               emptyLabel: 'Aucun abonne trouve.',
-              errorLabel: 'Impossible de charger les abonnes.',
+              errorLabel: 'Impossible de charger les abonnés.',
               isFetching: isSubscriptionsListFetching,
               listError: subscriptionsListError,
-              loadingLabel: 'Chargement des abonnes...',
+              loadingLabel: 'Chargement des abonnés...',
               onRetry: refetchSubscriptionsList,
               renderRow: renderSubscriptionRow,
               rows: subscriptionRows,
@@ -742,7 +742,7 @@ function AdminRevenue() {
         </View>
 
         {renderSection(
-          'Claims a revoir',
+          'Claims à revoir',
           claims.slice(0, 5),
           (item) => (
             <View key={String(item?.documentId || item?.createdAt || item?.proofUrl)} style={[styles.rowCard, { borderBottomColor: `${Colors.warning500}22` }]}>
@@ -762,7 +762,7 @@ function AdminRevenue() {
         )}
 
         {renderSection(
-          'Legacy a migrer',
+          'Legacy à migrer',
           legacyCandidates.slice(0, 5),
           (item) => (
             <View key={String(item?.documentId || item?.name)} style={[styles.rowCard, { borderBottomColor: `${Colors.primary200}22` }]}>
@@ -770,7 +770,7 @@ function AdminRevenue() {
                 {item?.name || 'Club legacy'}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-                {item?.clubPartner ? 'Deja partenaire' : 'Migration requise'}
+                {item?.clubPartner ? 'Déjà partenaire' : 'Migration requise'}
               </Text>
               <Text style={[Fonts.p4, { color: Colors.primary200 }, Spaces.marginTop[4]]}>
                 Legacy abonnement:
@@ -786,7 +786,7 @@ function AdminRevenue() {
               </Text>
             </View>
           ),
-          'Aucun club legacy dans l apercu.',
+          'Aucun club legacy dans l aperçu.',
         )}
       </ScrollView>
 
@@ -893,7 +893,7 @@ function AdminRevenue() {
             <TextInput
               multiline
               onChangeText={setRetryModalReason}
-              placeholder="Motif du rejeu (correction webhook, incident resolu...)"
+              placeholder="Motif du rejeu (correction webhook, incident résolu...)"
               placeholderTextColor={Colors.neutral400}
               style={[styles.reasonInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
               textAlignVertical="top"

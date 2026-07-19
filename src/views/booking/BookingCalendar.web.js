@@ -303,7 +303,7 @@ function BookingCalendar({ navigation, route }) {
                     ? (facilitiesError?.message || 'Impossible de charger les installations.')
                     : facilities.length === 0
                       ? 'Aucune installation reservable n est disponible pour le moment.'
-                      : 'Choisis une installation pour voir ses creneaux disponibles.'}
+                      : 'Choisis une installation pour voir ses créneaux disponibles.'}
                 </div>
               )}
 
@@ -356,7 +356,7 @@ function BookingCalendar({ navigation, route }) {
 
                 {availabilityError ? (
                   <div style={{ background: 'rgba(220, 64, 64, 0.12)', border: '1px solid rgba(220, 64, 64, 0.28)', borderRadius: 22, color: '#ffd6d6', padding: 20 }}>
-                    {availabilityError?.message || 'Impossible de charger les disponibilites.'}
+                    {availabilityError?.message || 'Impossible de charger les disponibilités.'}
                   </div>
                 ) : availability?.slots?.length > 0 ? (
                   <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isTablet ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))' }}>

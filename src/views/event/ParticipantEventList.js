@@ -530,7 +530,7 @@ function ParticipantEventList({ navigation }) {
             planningContent
           ) : (
             <PlanningOnboardingWrapper
-              description="Retrouvez vos événements, votre calendrier et les actions de planning."
+              description="Retrouve tes événements, ton calendrier et les actions de planning."
               id="planning-main-content"
               order={1}
               spotlight={{
@@ -562,7 +562,7 @@ function ParticipantEventList({ navigation }) {
         {shouldLoadSecondaryPlanningData ? (
           <View style={[Spaces.marginTop[16]]}>
             <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
-              Évènements à partir de
+              Événements à partir de
             </Text>
             <Suspense fallback={<DeferredFallback height={76} />}>
               <DateSlider
@@ -572,7 +572,7 @@ function ParticipantEventList({ navigation }) {
             </Suspense>
             {(!shouldLoadEventFeed || isEventsLoading || (shouldLoadFeaturedFeed && isFeaturedLoading)) && (
               <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[8]]}>
-                Mise a jour des evenements...
+                Mise à jour des événements...
               </Text>
             )}
           </View>
@@ -627,15 +627,15 @@ function ParticipantEventList({ navigation }) {
     return (
       <View style={[Spaces.marginHorizontal[16]]}>
         <EmptyState
-          actionLabel={canManageEvents ? 'Créer un évènement' : undefined}
+          actionLabel={canManageEvents ? 'Créer un événement' : undefined}
           description={
             canManageEvents
-              ? 'Créez votre premier évènement pour le voir apparaître ici.'
-              : 'Vos prochains évènements s’afficheront ici dès que votre équipe en publiera.'
+              ? 'Crée ton premier événement pour le voir apparaître ici.'
+              : 'Tes prochains événements s’afficheront ici dès que ton équipe en publiera.'
           }
           icon={Images.calendar}
           onAction={canManageEvents ? handleCreateEventPress : undefined}
-          title="Aucun évènement à venir"
+          title="Aucun événement à venir"
         />
       </View>
     );
@@ -675,7 +675,7 @@ function ParticipantEventList({ navigation }) {
       {canManageEvents && (
         <WebFloatingOverlay style={getFloatingActionContainerStyle(floatingCtaBottom, { zIndex: 1100 })}>
           <TouchableOpacity
-            accessibilityLabel="Ajouter un evenement"
+            accessibilityLabel="Ajouter un événement"
             accessibilityRole="button"
             activeOpacity={0.85}
             onPress={handleCreateEventPress}

@@ -219,7 +219,7 @@ function ClubLicenseMemberDetail({ route }) {
     'document-review': modal?.reviewStatus === 'to_replace' ? 'Demander un nouveau document' : 'Revoir le document',
     payment: 'Valider un paiement',
     refund: 'Rembourser le paiement',
-    reject: 'Rejeter la declaration',
+    reject: 'Rejeter la déclaration',
     waive: 'Exempter la cotisation',
   }[modalType];
   const pendingReviewPayments = (assignment?.payments || []).filter((payment) => payment.status === 'manual_review');
@@ -270,12 +270,12 @@ function ClubLicenseMemberDetail({ route }) {
   }, [amountMutation, canUseSensitiveActions, manualPaymentMutation, modal, modalType, query, rejectPaymentMutation, refundMutation, reviewDocumentMutation, waiveMutation]);
 
   const remind = useCallback(() => {
-    reminderMutation.mutate({}, { onSuccess: () => Alert.alert('Relance envoyee') });
+    reminderMutation.mutate({}, { onSuccess: () => Alert.alert('Relance envoyée') });
   }, [reminderMutation]);
 
   const approvePayment = useCallback((paymentId) => {
     if (!canUseSensitiveActions) return;
-    Alert.alert('Valider le paiement declare', 'Confirmer que le club a bien recu ce paiement ?', [
+    Alert.alert('Valider le paiement déclare', 'Confirmer que le club a bien reçu ce paiement ?', [
       { style: 'cancel', text: 'Annuler' },
       {
         onPress: () => approvePaymentMutation.mutate({ paymentId }, {
@@ -303,7 +303,7 @@ function ClubLicenseMemberDetail({ route }) {
     receiptMutation.mutate(paymentId, {
       onSuccess: () => {
         query.refetch();
-        Alert.alert('Recu genere', 'Le recu est maintenant rattache a ce paiement.');
+        Alert.alert('Reçu génère', 'Le reçu est maintenant rattache à ce paiement.');
       },
     });
   }, [query, receiptMutation]);
@@ -311,7 +311,7 @@ function ClubLicenseMemberDetail({ route }) {
   const openUploadedDocument = useCallback(async (submission) => {
     const url = resolveMediaUrl(submission?.file?.url || submission?.file?.formats?.thumbnail?.url || '');
     if (!url) {
-      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattache a ce depot.');
+      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
       return;
     }
     await LinksPlatform.openUrl(url);
@@ -324,7 +324,7 @@ function ClubLicenseMemberDetail({ route }) {
     officialLicenseMutation.mutate({ file }, {
       onSuccess: () => {
         query.refetch();
-        Alert.alert('Licence ajoutee', 'La licence officielle est maintenant disponible pour les personnes autorisees.');
+        Alert.alert('Licence ajoutée', 'La licence officielle est maintenant disponible pour les personnes autorisées.');
       },
     });
   }, [assignmentId, canUseSensitiveActions, officialLicenseMutation, query]);
@@ -341,7 +341,7 @@ function ClubLicenseMemberDetail({ route }) {
               await submitOfficialLicenseFile(await MediaPlatform.capturePhoto({}));
             } catch (error) {
               if (!isPickerCancelError(error)) {
-                Alert.alert('Upload impossible', error?.message || 'La photo n a pas pu etre prise.');
+                Alert.alert('Upload impossible', error?.message || 'La photo n a pas pu être prise.');
               }
             }
           },
@@ -353,7 +353,7 @@ function ClubLicenseMemberDetail({ route }) {
               await submitOfficialLicenseFile(await MediaPlatform.pickImage({}));
             } catch (error) {
               if (!isPickerCancelError(error)) {
-                Alert.alert('Upload impossible', error?.message || 'La photo n a pas pu etre choisie.');
+                Alert.alert('Upload impossible', error?.message || 'La photo n a pas pu être choisie.');
               }
             }
           },
@@ -365,7 +365,7 @@ function ClubLicenseMemberDetail({ route }) {
               await submitOfficialLicenseFile(await MediaPlatform.pickDocument({ accept: '*/*', mode: 'open', type: ['*/*'] }));
             } catch (error) {
               if (!isPickerCancelError(error)) {
-                Alert.alert('Upload impossible', error?.message || 'Le fichier n a pas pu etre choisi.');
+                Alert.alert('Upload impossible', error?.message || 'Le fichier n a pas pu être choisi.');
               }
             }
           },
@@ -385,7 +385,7 @@ function ClubLicenseMemberDetail({ route }) {
     return (
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
         <LicenseEmptyState
-          description="On recupere la cotisation et les droits associes."
+          description="On récupère la cotisation et les droits associes."
           title="Chargement de la fiche"
         />
       </ScreenContainer>
@@ -421,7 +421,7 @@ function ClubLicenseMemberDetail({ route }) {
         <View>
           <Text style={[Fonts.h2, Fonts.neutral00]}>{memberName}</Text>
           <View style={[Spaces.marginTop[8], Spaces.gap[licenseSpacing.titleGap]]}>
-            <Text style={[Fonts.p2, Fonts.neutral200]}>{assignment?.team?.name || 'Sans equipe'}</Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>{assignment?.team?.name || 'Sans équipe'}</Text>
             <LicenseStatusChip status={assignment?.status} />
           </View>
         </View>
@@ -436,28 +436,28 @@ function ClubLicenseMemberDetail({ route }) {
         </LicenseCard>
         {!canUseSensitiveActions ? (
           <LicenseEmptyState
-            description="Les validations de paiement, exemptions et modifications de montant sont reservees aux dirigeants."
-            title="Vue entraineur"
+            description="Les validations de paiement, exemptions et modifications de montant sont réservées aux dirigeants."
+            title="Vue entraîneur"
           />
         ) : null}
         {pendingReviewPayments.length ? (
           <>
             <LicenseSectionHeader
               description={canUseSensitiveActions
-                ? 'Ces declarations viennent du joueur ou d un payeur externe et doivent etre controlees.'
-                : 'Declarations en attente de validation par un dirigeant.'}
-              title={canUseSensitiveActions ? 'Paiements a valider' : 'Paiements declares'}
+                ? 'Ces déclarations viennent du joueur ou d un payeur externe et doivent être controlees.'
+                : 'Déclarations en attente de validation par un dirigeant.'}
+              title={canUseSensitiveActions ? 'Paiements à valider' : 'Paiements declares'}
             />
             {pendingReviewPayments.map((payment) => (
               <LicenseCard key={payment.documentId || payment.id}>
                 <View style={Spaces.gap[licenseSpacing.actionGap]}>
-                  <InfoRow label="Montant declare" value={formatLicenseMoney(payment.amountCents, payment.currency || currency)} />
+                  <InfoRow label="Montant déclare" value={formatLicenseMoney(payment.amountCents, payment.currency || currency)} />
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    {paymentModeLabels[payment.method] || payment.method || 'Methode non precisee'}
+                    {paymentModeLabels[payment.method] || payment.method || 'Méthode non précisée'}
                     {' '}
                     -
                     {' '}
-                    {payment.note || payment.externalPaymentId || 'Aucune reference fournie.'}
+                    {payment.note || payment.externalPaymentId || 'Aucune référence fournie.'}
                   </Text>
                   {canUseSensitiveActions ? (
                     <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
@@ -485,7 +485,7 @@ function ClubLicenseMemberDetail({ route }) {
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {officialLicenseDocument?.uploadedAt
-                ? `Derniere mise a jour ${documentDate(officialLicenseDocument.submission || {}) || '-'}`
+                ? `Dernière mise à jour ${documentDate(officialLicenseDocument.submission || {}) || '-'}`
                 : 'Aucune licence officielle n est encore disponible.'}
             </Text>
             {officialLicenseDocument?.submission?.status ? (
@@ -505,8 +505,8 @@ function ClubLicenseMemberDetail({ route }) {
         </LicenseCard>
         <LicenseSectionHeader
           description={canUseSensitiveActions
-            ? 'Valide ou redemande les pieces fournies par le membre.'
-            : 'Statut des pieces rattachees a cette cotisation.'}
+            ? 'Valide ou redemande les pièces fournies par le membre.'
+            : 'Statut des pièces rattachées à cette cotisation.'}
           title="Documents"
         />
         {documentRequests.length ? (
@@ -528,7 +528,7 @@ function ClubLicenseMemberDetail({ route }) {
                       <View style={[Spaces.gap[4], { flex: 1 }]}>
                         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{request?.name || 'Document'}</Text>
                         <Text style={[Fonts.p3, Fonts.neutral200]}>
-                          {request?.dueDate ? `A remettre avant ${request.dueDate}` : 'Pas de date limite definie'}
+                          {request?.dueDate ? `A remettre avant ${request.dueDate}` : 'Pas de date limite définie'}
                           {request?.required === false ? ' - Facultatif' : ' - Obligatoire'}
                         </Text>
                       </View>
@@ -539,7 +539,7 @@ function ClubLicenseMemberDetail({ route }) {
                       <Text style={[Fonts.p3, { color: '#fda4af' }]}>{submission.refusalReason}</Text>
                     ) : null}
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      {submission ? `Derniere mise a jour ${documentDate(submission) || '-'}` : 'Aucun document depose'}
+                      {submission ? `Dernière mise à jour ${documentDate(submission) || '-'}` : 'Aucun document déposé'}
                     </Text>
                     {submission?.file?.url ? (
                       <Button onPress={() => openUploadedDocument(submission)} title="Ouvrir le document" variant="Secondary" />
@@ -566,7 +566,7 @@ function ClubLicenseMemberDetail({ route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Aucune piece n est demandee pour cette campagne."
+            description="Aucune pièce n est demandée pour cette campagne."
             title="Pas de documents"
           />
         )}
@@ -608,7 +608,7 @@ function ClubLicenseMemberDetail({ route }) {
                           isLoading={receiptMutation.isPending}
                           onPress={() => generateReceiptForPayment(payment.documentId || payment.id)}
                           style={{ flex: 1 }}
-                          title="Generer un recu"
+                          title="Générer un reçu"
                           variant="Secondary"
                         />
                       ) : null}
@@ -628,7 +628,7 @@ function ClubLicenseMemberDetail({ route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Aucun paiement n est encore rattache a cette cotisation."
+            description="Aucun paiement n est encore rattache à cette cotisation."
             title="Aucun historique"
           />
         )}
@@ -649,8 +649,8 @@ function ClubLicenseMemberDetail({ route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Les recus apparaitront ici apres validation des paiements."
-            title="Aucun recu"
+            description="Les reçus apparaîtront ici après validation des paiements."
+            title="Aucun reçu"
           />
         )}
         {canSendReminder || canUseSensitiveActions ? (

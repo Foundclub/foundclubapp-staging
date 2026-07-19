@@ -58,7 +58,7 @@ function DeclarePaymentModal({
     >
       <View style={Spaces.gap[licenseSpacing.fieldGap]}>
         <Text style={[Fonts.h3, Fonts.neutral00]}>Paiement hors app</Text>
-        <Text style={[Fonts.p2, Fonts.neutral200]}>Choisissez le moyen utilise pour prevenir le club.</Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>Choisis le moyen utilise pour prevenir le club.</Text>
         {methods.map((method) => (
           <Button
             isLoading={isLoading}
@@ -139,7 +139,7 @@ function PublicLicensePayment({ route }) {
       onSuccess: () => {
         setDeclareModalVisible(false);
         query.refetch();
-        Alert.alert('Declaration envoyee', 'Le club devra valider ce paiement.');
+        Alert.alert('Déclaration envoyée', 'Le club devra valider ce paiement.');
       },
     });
   }, [declareMutation, query]);
@@ -159,7 +159,7 @@ function PublicLicensePayment({ route }) {
     return (
       <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
         <LicenseEmptyState
-          description="On recupere les informations de paiement."
+          description="On récupère les informations de paiement."
           title="Chargement"
         />
       </ScreenContainer>
@@ -229,7 +229,7 @@ function PublicLicensePayment({ route }) {
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               Date limite:
               {' '}
-              {payment?.dueDate || 'Non definie'}
+              {payment?.dueDate || 'Non définie'}
             </Text>
             {payment?.teamName ? (
               <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -247,13 +247,13 @@ function PublicLicensePayment({ route }) {
             <View style={Spaces.gap[licenseSpacing.actionGap]}>
               <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Campagne temporairement suspendue</Text>
               <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Le dossier reste consultable, mais les paiements et declarations sont bloques tant que le club n a pas repris cette campagne.
+                Le dossier reste consultable, mais les paiements et déclarations sont bloques tant que le club n a pas repris cette campagne.
               </Text>
             </View>
           </LicenseCard>
         ) : null}
         <LicenseSectionHeader
-          description="Choisissez le moyen propose par le club."
+          description="Choisis le moyen propose par le club."
           title="Regler"
         />
         {!isCampaignPaused && paymentModes.helloasso ? (
@@ -274,7 +274,7 @@ function PublicLicensePayment({ route }) {
         {!isCampaignPaused && canDeclareOfflinePayment ? (
           <Button
             onPress={() => setDeclareModalVisible(true)}
-            title="Declarer un paiement hors app"
+            title="Déclarer un paiement hors app"
             variant="Secondary"
           />
         ) : null}
@@ -306,7 +306,7 @@ function PublicLicensePayment({ route }) {
                       <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{request.name || 'Document'}</Text>
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
                         {request.required === false ? 'Facultatif' : 'Obligatoire'}
-                        {request.dueDate ? ` - Depot avant ${request.dueDate}` : ''}
+                        {request.dueDate ? ` - Dépôt avant ${request.dueDate}` : ''}
                       </Text>
                     </View>
                     <LicenseStatusChip status={request.status || 'missing'} />
@@ -318,11 +318,11 @@ function PublicLicensePayment({ route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Aucune piece supplementaire n est associee a ce lien."
+            description="Aucune pièce supplémentaire n est associée à ce lien."
             title="Aucun document"
           />
         )}
-        <LicenseSectionHeader title="Recus deja emis" />
+        <LicenseSectionHeader title="Reçus déjà emis" />
         {(payment?.receipts || []).length ? (
           <View style={Spaces.gap[licenseSpacing.listGap]}>
             {(payment?.receipts || []).map((receipt) => (
@@ -339,8 +339,8 @@ function PublicLicensePayment({ route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Le recu apparaitra apres confirmation du paiement par le club ou le prestataire."
-            title="Pas encore de recu"
+            description="Le reçu apparaîtra après confirmation du paiement par le club ou le prestataire."
+            title="Pas encore de reçu"
           />
         )}
       </ScrollView>

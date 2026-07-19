@@ -87,7 +87,7 @@ const getStatusConfig = (status, Colors) => {
       actionLabel: 'Voir ma squad',
       badgeLabel: 'MEMBRE',
       badgeTextColor: successColor,
-      helperLabel: 'Vous faites d\u00E9j\u00E0 partie de cette squad.',
+      helperLabel: 'Tu fais déjà partie de cette squad.',
       surfaceColor: `${successColor}14`,
     };
   }
@@ -95,10 +95,10 @@ const getStatusConfig = (status, Colors) => {
   if (status === 'invited') {
     return {
       accentColor: Colors.gold500,
-      actionLabel: 'Repondre a l invitation',
+      actionLabel: 'Répondre a l invitation',
       badgeLabel: 'INVITATION',
       badgeTextColor: Colors.gold500,
-      helperLabel: 'Une invitation vous attend sur cette squad.',
+      helperLabel: "Une invitation t'attend sur cette squad.",
       surfaceColor: `${Colors.gold500}16`,
     };
   }
@@ -109,14 +109,14 @@ const getStatusConfig = (status, Colors) => {
       actionLabel: 'Voir la demande',
       badgeLabel: 'EN ATTENTE',
       badgeTextColor: warningColor,
-      helperLabel: 'Votre demande est en attente de validation.',
+      helperLabel: 'Ta demande est en attente de validation.',
       surfaceColor: `${warningColor}14`,
     };
   }
 
   return {
     accentColor: Colors.primary500,
-    actionLabel: 'Demander a rejoindre',
+    actionLabel: 'Demander à rejoindre',
     badgeLabel: 'DISPONIBLE',
     badgeTextColor: Colors.primary500,
     helperLabel: 'Squad ouverte aux demandes de nouveaux joueurs.',
@@ -140,10 +140,10 @@ const getStatusPriority = (status) => {
  * @returns {string}
  */
 const getStatusFooterLabel = (status) => {
-  if (status === 'joined') return 'Acces rapide a votre squad League';
-  if (status === 'invited') return 'Invitation a traiter en priorite';
-  if (status === 'pending') return 'Le capitaine doit encore vous repondre';
-  return 'Ouvrez la fiche pour envoyer votre demande';
+  if (status === 'joined') return 'Accès rapide à ta squad League';
+  if (status === 'invited') return 'Invitation à traiter en priorité';
+  if (status === 'pending') return 'Le capitaine doit encore te répondre';
+  return 'Ouvre la fiche pour envoyer ta demande';
 };
 
 /**
@@ -241,7 +241,7 @@ function SquadSearchScreen() {
     }));
 
     const parts = [];
-    if (counts.joined > 0) parts.push(`${counts.joined} d\u00E9j\u00E0 membre${counts.joined > 1 ? 's' : ''}`);
+    if (counts.joined > 0) parts.push(`${counts.joined} déjà membre${counts.joined > 1 ? 's' : ''}`);
     if (counts.invited > 0) parts.push(`${counts.invited} invitation${counts.invited > 1 ? 's' : ''}`);
     if (counts.pending > 0) parts.push(`${counts.pending} demande${counts.pending > 1 ? 's' : ''} en attente`);
 
@@ -276,7 +276,7 @@ function SquadSearchScreen() {
       setSquads(Array.isArray(results) ? results : []);
     } catch (error) {
       console.error('[SquadSearch] search failed:', error);
-      setErrorMessage('Erreur de recherche. Reessayez.');
+      setErrorMessage('Erreur de recherche. Réessaie.');
       setSquads([]);
     } finally {
       setIsLoading(false);
@@ -579,7 +579,7 @@ function SquadSearchScreen() {
           }}
           >
             <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-              Impossible de charger vos statuts personnels League. La recherche reste disponible.
+              Impossible de charger tes statuts personnels League. La recherche reste disponible.
             </Text>
             <TouchableOpacity
               onPress={handleRefresh}
@@ -643,7 +643,7 @@ function SquadSearchScreen() {
               }}
               >
                 <Text style={[Fonts.p1Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-                  Aucune squad trouvee
+                  Aucune squad trouvée
                 </Text>
                 <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
                   Essaie avec d&apos;autres filtres ou un autre nom de squad.

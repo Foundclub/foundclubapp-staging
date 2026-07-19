@@ -175,7 +175,16 @@ function DateSlider({
         >
           {format(currentMonth, 'MMMM yyyy', { locale: fr })}
         </Text>
-        <Text style={{ color: Colors.primary500, fontSize: 12 }}>{'\u25BE'}</Text>
+        {/* Chevron du selecteur de mois. Ancien rendu : le glyphe brut U+25BE
+            dans un Text sans police definie, absent de la fonte resolue sur
+            Android, il tombait sur le glyphe de substitution (rond clair) et
+            apparaissait comme un artefact a cote du mois. Remplace par l'icone
+            du theme, teintee et dimensionnee. */}
+        <Image
+          resizeMode="contain"
+          source={Images.chevronDown}
+          style={{ height: 10, tintColor: Colors.primary500, width: 10 }}
+        />
       </TouchableOpacity>
 
       {isRefreshing && refreshLabel ? (

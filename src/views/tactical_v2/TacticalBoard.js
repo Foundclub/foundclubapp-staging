@@ -388,7 +388,7 @@ function TacticalBoard() {
 
   const playersPlacedCount = fieldPlayers.length;
   const totalPlayersCount = fieldPlayers.length + benchPlayers.length;
-  let primaryActionTitle = "Publier la composition d'equipe";
+  let primaryActionTitle = "Publier la composition d'équipe";
   if (isTeamDefaultMode) {
     primaryActionTitle = isSaving ? 'Enregistrement...' : 'Enregistrer le favori';
   } else if (isPublishing) {
@@ -398,9 +398,9 @@ function TacticalBoard() {
   const resolvedHeaderTitle = (() => {
     if (isTeamDefaultMode) return headerTitle;
     if (readOnly) {
-      return isDetectionEvent ? "Composition d'equipe detection publiee" : headerTitle;
+      return isDetectionEvent ? "Composition d'équipe détection publiée" : headerTitle;
     }
-    return isDetectionEvent ? "Composition d'equipe detection" : headerTitle;
+    return isDetectionEvent ? "Composition d'équipe détection" : headerTitle;
   })();
 
   const resolvedHeaderModeLabel = isTeamDefaultMode
@@ -422,7 +422,7 @@ function TacticalBoard() {
 
   const resolvedPrimaryActionTitle = (
     !isTeamDefaultMode && !isPublishing && isDetectionEvent
-      ? "Publier la composition d'equipe detection"
+      ? "Publier la composition d'équipe détection"
       : primaryActionTitle
   );
 
@@ -456,7 +456,7 @@ function TacticalBoard() {
         accent: Colors.primary300,
         eyebrow: 'Favori',
         lines: [
-          'Place les joueurs sur le terrain puis enregistre ce favori pour repartir plus vite ensuite.',
+          'Place les joueurs sur le terrain puis enregistre ce favori pour répartir plus vite ensuite.',
         ],
         title: "Prépare un favori pour l'équipe",
       };
@@ -508,7 +508,7 @@ function TacticalBoard() {
         eyebrow: `Publiée v${Number(compositionMeta?.published?.version || 1)}`,
         lines: [
           `Publication le ${formatDateTime(compositionMeta.published.publishedAt)}`,
-          'Tu peux repartir de cette version pour préparer la suite.',
+          'Tu peux répartir de cette version pour préparer la suite.',
         ],
         title: 'Une version est déjà publiée',
       };
@@ -746,7 +746,7 @@ function TacticalBoard() {
       || error?.message;
 
     if (status === 403) {
-      return "Vous n'êtes pas autorisé à gérer la composition pour cette équipe.";
+      return "Tu n'es pas autorisé à gérer la composition pour cette équipe.";
     }
 
     if (typeof apiMessage === 'string' && apiMessage.trim()) {
@@ -930,8 +930,8 @@ function TacticalBoard() {
   // En mode apercu (simulation guidee), aucune ecriture serveur: on informe simplement l'utilisateur.
   const notifySimulationAction = useCallback(() => {
     Alert.alert(
-      'Mode apercu',
-      'Ceci est un apercu — publie tes vraies compos depuis un evenement.',
+      'Mode aperçu',
+      'Ceci est un aperçu — publie tes vraies compos depuis un événement.',
     );
   }, []);
 
@@ -1069,7 +1069,7 @@ function TacticalBoard() {
         ...(published || {}),
       });
       invalidateCompositionQueries();
-      Alert.alert('Succès', "Composition d'equipe publiee.", [
+      Alert.alert('Succès', "Composition d'équipe publiée.", [
         { onPress: () => /** @type {any} */ (navigation).navigate(RouteNames.EventDetails, { eventId }), text: 'OK' },
       ]);
     } catch (error) {
@@ -1079,7 +1079,7 @@ function TacticalBoard() {
         return;
       }
       console.error('Publish convocation error:', error);
-      Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible de publier la composition d'equipe."));
+      Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible de publier la composition d'équipe."));
     } finally {
       setIsPublishing(false);
     }
@@ -1579,7 +1579,7 @@ function TacticalBoard() {
                     <View style={[styles.actionsHintCard, { backgroundColor: `${Colors.primary700}30`, borderColor: `${Colors.primary500}22` }]}>
                       <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>A quoi servent ces deux sauvegardes ?</Text>
                       <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
-                        Brouillon : garde tes changements prives pour {isDetectionEvent ? 'cette detection' : 'ce match'}, sans les publier.
+                        Brouillon : garde tes changements prives pour {isDetectionEvent ? 'cette détection' : 'ce match'}, sans les publier.
                       </Text>
                       <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
                         Favori d'equipe : reutilise cette composition comme base de depart sur les prochains evenements.

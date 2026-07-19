@@ -63,7 +63,7 @@ function FacilitySelector({
         value: 'club',
       },
       {
-        description: t('eventEdit.locationMode.externalHint', 'Adresse exterieure'),
+        description: t('eventEdit.locationMode.externalHint', 'Adresse extérieure'),
         title: t('eventEdit.locationMode.external', 'Exterieur'),
         value: 'external',
       },
@@ -137,17 +137,17 @@ function FacilitySelector({
   });
 
   const getFacilityAddressLabel = (address) => {
-    if (!address) return t('eventWizard.steps.location.addressMissing', 'Adresse non renseignee');
+    if (!address) return t('eventWizard.steps.location.addressMissing', 'Adresse non renseignée');
     if (typeof address === 'string') return address;
     if (typeof address === 'object') {
       return (
         address?.label
         || address?.description
         || address?.address
-        || t('eventWizard.steps.location.addressMissing', 'Adresse non renseignee')
+        || t('eventWizard.steps.location.addressMissing', 'Adresse non renseignée')
       );
     }
-    return t('eventWizard.steps.location.addressMissing', 'Adresse non renseignee');
+    return t('eventWizard.steps.location.addressMissing', 'Adresse non renseignée');
   };
 
   useEffect(() => {
@@ -202,7 +202,7 @@ function FacilitySelector({
   let occupancyTone = Fonts.primary200;
   let occupancyMessage = t(
     'eventWizard.steps.location.capacityAvailable',
-    'Cette installation a encore de la capacite pour ce creneau.',
+    'Cette installation à encore de la capacité pour ce créneau.',
   );
 
   if (isSaturated && requiresApproval) {
@@ -211,7 +211,7 @@ function FacilitySelector({
     occupancyTone = Fonts.warning500;
     occupancyMessage = t(
       'eventWizard.steps.location.pendingValidationConflict',
-      "Ce creneau depasse la capacite. La creation passera en demande en attente jusqu'a validation d'un dirigeant.",
+      "Ce créneau dépasse la capacité. La création passera en demande en attente jusqu'a validation d'un dirigeant.",
     );
   } else if (isSaturated && allowsImmediateConfirmation) {
     occupancyCardBackground = 'rgba(1, 179, 244, 0.12)';
@@ -219,7 +219,7 @@ function FacilitySelector({
     occupancyTone = Fonts.primary500;
     occupancyMessage = t(
       'eventWizard.steps.location.allowAndNotifyConflict',
-      'Ce creneau depasse la capacite, mais il restera autorise et notifiera les dirigeants.',
+      'Ce créneau dépasse la capacité, mais il restera autorise et notifiera les dirigeants.',
     );
   }
 
@@ -241,7 +241,7 @@ function FacilitySelector({
 
       <View style={[Spaces.gap[12]]}>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          {t('eventWizard.steps.location.modeHint', 'Choisis si le lieu est dans ton club ou en exterieur.')}
+          {t('eventWizard.steps.location.modeHint', 'Choisis si le lieu est dans ton club ou en extérieur.')}
         </Text>
         <View style={[Alignments.row, Spaces.gap[12]]}>
           {locationModes.map((modeOption) => {
@@ -338,7 +338,7 @@ function FacilitySelector({
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
                   {t(
                     'eventWizard.steps.location.noInstallations',
-                    'Ajoute une installation ou passe en mode Exterieur pour saisir une adresse.',
+                    'Ajoute une installation ou passe en mode Extérieur pour saisir une adresse.',
                   )}
                 </Text>
               </View>

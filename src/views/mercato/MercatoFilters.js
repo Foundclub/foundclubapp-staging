@@ -346,7 +346,7 @@ function MercatoFilters({ navigation }) {
 
   const handleCreateAlert = async () => {
     if (!alertLabel.trim()) {
-      Alert.alert('Erreur', 'Veuillez saisir un nom pour l\'alerte');
+      Alert.alert('Erreur', 'Merci de saisir un nom pour l\'alerte');
       return;
     }
 
@@ -409,6 +409,9 @@ function MercatoFilters({ navigation }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      // Retrait bas systeme deja applique au contenu ci-dessous : pas de plancher
+      // conteneur, sinon insets.bottom serait compte deux fois.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
         Spaces.gap[24],
@@ -438,7 +441,7 @@ function MercatoFilters({ navigation }) {
             {editAlertMode ? "Modifier l'alerte" : t('searchAlerts.create.title', 'Créer une alerte')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {t('searchAlerts.create.desc', 'Donnez un nom à votre recherche pour recevoir des notifications.')}
+            {t('searchAlerts.create.desc', 'Donne un nom à ta recherche pour recevoir des notifications.')}
           </Text>
           <Input
             onChangeText={setAlertLabel}

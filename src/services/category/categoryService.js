@@ -92,6 +92,6 @@ export const getCategories = async () => {
       ? error.message
       : error;
 
-    throw new Error(`Failed to fetch categories: ${errorToDisplay}`);
+    throw new Error(`Failed to fetch catégories: ${errorToDisplay}`);
   }
 };

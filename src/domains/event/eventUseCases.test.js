@@ -362,7 +362,7 @@ describe('Event Use Cases', () => {
     });
 
     test('should flag tournament events as unsupported', () => {
-      expect(getEventEditSupport({}, 'Tournoi regional')).toEqual(expect.objectContaining({
+      expect(getEventEditSupport({}, 'Tournoi régional')).toEqual(expect.objectContaining({
         isSupported: false,
         reasonKey: 'tournament',
       }));

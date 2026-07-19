@@ -298,10 +298,10 @@ function ClubListContent({
   }
   let viewportHelperText = 'La liste suit la zone actuellement choisie sur la carte.';
   if (isViewportTruncated) {
-    viewportHelperText = 'Zoomez sur la carte pour charger tout le catalogue local.';
+    viewportHelperText = 'Zoome sur la carte pour charger tout le catalogue local.';
   }
   if (requiresViewportZoom) {
-    viewportHelperText = 'Zoomez pour affiner la recherche.';
+    viewportHelperText = 'Zoome pour affiner la recherche.';
   }
 
   useEffect(() => {
@@ -572,7 +572,7 @@ function ClubListContent({
     if (showLoadingPlaceholder) {
       return (
         <SearchResultsLoadingState
-          description="Nous chargeons les clubs correspondant à votre recherche."
+          description="Nous chargeons les clubs correspondant à ta recherche."
           title="Chargement des clubs"
         />
       );
@@ -581,8 +581,8 @@ function ClubListContent({
     if (requiresViewportZoom) {
       return (
         <EmptyState
-          description="La zone visible est trop large pour charger une liste fiable. Zoomez puis relancez la vue liste."
-          title="Zoomez pour affiner la recherche"
+          description="La zone visible est trop large pour charger une liste fiable. Zoome puis relance la vue liste."
+          title="Zoome pour affiner la recherche"
         />
       );
     }

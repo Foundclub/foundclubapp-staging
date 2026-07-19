@@ -124,7 +124,7 @@ function ShareCompositionModal({
       const starters = placements.map((pl) => findName(pl.playerId)).join('\n- ');
       const playerCount = placements.length;
 
-      const message = `📋 Composition d'équipe\n\n⚽ Titulaires (${playerCount}):\n- ${starters}\n\nRetrouvez le détail sur FoundClub !`;
+      const message = `📋 Composition d'équipe\n\n⚽ Titulaires (${playerCount}):\n- ${starters}\n\nRetrouve le détail sur FoundClub !`;
 
       await share({
         message,

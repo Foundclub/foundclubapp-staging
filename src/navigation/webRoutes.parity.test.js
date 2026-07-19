@@ -72,11 +72,11 @@ const MOBILE_ONLY_SCREENS = {
   // dessiner l'icone dans la barre d'onglets d'un visiteur non connecte. Cote web
   // l'equivalent est la redirection vers /login : pas d'URL propre a leur donner.
   [RouteNames.AuthStackAccount]:
-    'Onglet-leurre public : declenche le tunnel de connexion, ne monte aucun ecran',
+    'Onglet-leurre public : déclenche le tunnel de connexion, ne monte aucun écran',
   [RouteNames.AuthStackMessaging]:
-    'Onglet-leurre public : declenche le tunnel de connexion, ne monte aucun ecran',
+    'Onglet-leurre public : déclenche le tunnel de connexion, ne monte aucun écran',
   [RouteNames.AuthStackPlanning]:
-    'Onglet-leurre public : declenche le tunnel de connexion, ne monte aucun ecran',
+    'Onglet-leurre public : déclenche le tunnel de connexion, ne monte aucun écran',
 
   // --- Alias interne de navigateur ---
   // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le
@@ -198,7 +198,7 @@ const readOpeningTag = (source, startIndex) => {
  */
 const resolveScreenName = (openingTag, localConstants) => {
   const nameMatch = openingTag.match(NAME_PROP_PATTERN);
-  if (!nameMatch) return { error: 'aucune prop name= trouvee' };
+  if (!nameMatch) return { error: 'aucune prop name= trouvée' };
 
   const [, routeNamesKey, identifier, doubleQuoted, singleQuoted] = nameMatch;
 
@@ -291,11 +291,11 @@ describe('parite de routage app <-> web', () => {
 
     if (missing.length > 0) {
       throw new Error(
-        `${missing.length} ecran(s) enregistre(s) cote app n'ont aucun motif web.\n`
+        `${missing.length} écran(s) enregistre(s) cote app n'ont aucun motif web.\n`
         + 'Sur le web ils retomberont silencieusement sur "/" (accueil ou page blanche).\n\n'
         + `${missing.map((entry) => `  - ${entry}`).join('\n')}\n\n`
         + 'Corriger en ajoutant le motif dans WEB_ROUTE_PATTERNS (webRoutes.js), ou en\n'
-        + 'ajoutant l\'ecran dans MOBILE_ONLY_SCREENS avec sa raison si le web n\'a pas de sens.',
+        + 'ajoutant l\'écran dans MOBILE_ONLY_SCREENS avec sa raison si le web n\'a pas de sens.',
       );
     }
 
@@ -311,13 +311,13 @@ describe('parite de routage app <-> web', () => {
 
     if (dead.length > 0) {
       throw new Error(
-        `${dead.length} motif(s) web ne visent aucun ecran enregistre dans un navigateur.\n`
+        `${dead.length} motif(s) web ne visent aucun écran enregistre dans un navigateur.\n`
         + 'Ce sont des URLs mortes : construites, partageables, indexables, mais rien ne\n'
         + 's\'y monte.\n\n'
         + `${dead.map((entry) => `  - ${entry}`).join('\n')}\n\n`
         + 'Corriger en enregistrant l\'ecran (<X.Screen name={RouteNames.X} />), ou en\n'
-        + 'supprimant le motif de WEB_ROUTE_PATTERNS (webRoutes.js) s\'il est obsolete.\n'
-        + 'En dernier recours seulement, si l\'ecran existe deja et attend son cablage,\n'
+        + 'supprimant le motif de WEB_ROUTE_PATTERNS (webRoutes.js) s\'il est obsolète.\n'
+        + 'En dernier recours seulement, si l\'écran existe déjà et attend son cablage,\n'
         + 'l\'ajouter dans UNREGISTERED_WEB_PATTERNS avec sa raison.',
       );
     }
@@ -330,10 +330,10 @@ describe('parite de routage app <-> web', () => {
     const obsolete = Object.keys(UNREGISTERED_WEB_PATTERNS)
       .map((screenName) => {
         if (!isWebRouteSupported(screenName)) {
-          return `${screenName} : n'a plus de motif web, retirer l'exemption`;
+          return `${screenName} : n'à plus de motif web, retirer l'exemption`;
         }
         if (registrations.has(screenName)) {
-          return `${screenName} : est desormais enregistre, retirer l'exemption et son TODO`;
+          return `${screenName} : est désormais enregistre, retirer l'exemption et son TODO`;
         }
         return null;
       })
@@ -361,7 +361,7 @@ describe('parite de routage app <-> web', () => {
     const obsolete = Object.keys(MOBILE_ONLY_SCREENS)
       .map((screenName) => {
         if (isWebRouteSupported(screenName)) {
-          return `${screenName} : a desormais un motif web, retirer l'exemption`;
+          return `${screenName} : a désormais un motif web, retirer l'exemption`;
         }
         if (!registrations.has(screenName)) {
           return `${screenName} : n'est plus enregistre nulle part, retirer l'exemption`;

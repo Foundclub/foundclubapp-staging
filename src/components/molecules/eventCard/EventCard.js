@@ -75,7 +75,7 @@ function EventCard({
       externalMatchLocation
       || getShortAddress(item?.locationDetails)
       || getShortAddress(item?.location)
-      || t('eventDetails.locationUnknown', 'Lieu a confirmer')
+      || t('eventDetails.locationUnknown', 'Lieu à confirmer')
     )
     : (
       getShortAddress(item?.locationDetails)

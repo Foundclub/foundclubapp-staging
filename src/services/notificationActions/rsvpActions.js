@@ -106,29 +106,29 @@ const resolveAnswerFromAction = (pressActionId) => {
  */
 const getRsvpFeedbackCopy = (answer) => (answer === 'present'
   ? {
-    body: 'Votre presence est enregistree.',
-    title: 'Presence confirmee',
+    body: 'Ta présence est enregistrée.',
+    title: 'Présence confirmée',
   }
   : {
-    body: 'Votre absence est enregistree.',
-    title: 'Absence confirmee',
+    body: 'Ton absence est enregistrée.',
+    title: 'Absence confirmée',
   });
 
 const getChatReplyFeedbackCopy = () => ({
-  body: 'Votre reponse a ete envoyee.',
-  title: 'Reponse envoyee',
+  body: 'Ta réponse a été envoyée.',
+  title: 'Réponse envoyée',
 });
 
 const getChatReplyFailureCopy = () => ({
-  body: "Ouvrez l'application pour finaliser votre reponse.",
-  title: 'Action non finalisee',
+  body: "Ouvre l'application pour finaliser ta réponse.",
+  title: 'Action non finalisée',
 });
 
 const getChatReplyAndroidActions = () => ([
   {
     input: {
       allowFreeFormInput: true,
-      placeholder: 'Votre reponse',
+      placeholder: 'Ta réponse',
     },
     pressAction: { id: CHAT_REPLY_ACTION_REPLY },
     title: 'Repondre',
@@ -279,7 +279,7 @@ export const ensureNotificationActionSetup = async () => {
           id: CHAT_REPLY_ACTION_REPLY,
           input: {
             buttonText: 'Envoyer',
-            placeholderText: 'Votre reponse',
+            placeholderText: 'Ta réponse',
           },
           title: 'Repondre',
         },
@@ -384,10 +384,10 @@ export const handleEventRsvpActionPress = async ({
       `[NOTIF_ACTION_FAILED] type=${normalizedData?.type || 'unknown'} action=${pressActionId || 'unknown'} eventId=${normalizedData?.eventId || 'unknown'}`,
     );
     await displayLocalNotification({
-      body: "Ouvrez l'application pour finaliser votre reponse.",
+      body: "Ouvre l'application pour finaliser ta réponse.",
       channelId: NOTIFICATION_SILENT_CHANNEL_ID,
       data: normalizedData,
-      title: 'Action non finalisee',
+      title: 'Action non finalisée',
     });
     return { handled: true, success: false };
   }

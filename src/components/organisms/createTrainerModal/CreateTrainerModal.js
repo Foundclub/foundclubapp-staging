@@ -82,8 +82,8 @@ function CreateTrainerModal({
       reset(defaultValues);
       onClose();
       Alert.alert(
-        t('common.success', 'Succes'),
-        t('addCoach.alerts.success.title', 'Entraineur ajoute avec succes'),
+        t('common.success', 'Succès'),
+        t('addCoach.alerts.success.title', 'Entraîneur ajoute avec succès'),
       );
     },
   });
@@ -130,7 +130,7 @@ function CreateTrainerModal({
     >
       <View style={[Spaces.gap[16]]}>
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {t('addCoach.titles.main', 'Ajouter un entraineur')}
+          {t('addCoach.titles.main', 'Ajouter un entraîneur')}
         </Text>
 
         <Controller

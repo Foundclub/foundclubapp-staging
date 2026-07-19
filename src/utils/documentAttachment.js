@@ -1,5 +1,5 @@
 const DOCUMENT_FALLBACK_PREFIXES = [
-  'piece jointe',
+  'pièce jointe',
 ];
 
 const IMAGE_EXTENSION_REGEX = /\.(png|jpe?g|gif|webp|bmp|heic|heif|svg)$/i;

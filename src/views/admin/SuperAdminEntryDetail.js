@@ -141,7 +141,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
     },
     {
       key: 'createdAt',
-      label: t('superAdminContentManager.detail.createdAt', 'Cree le'),
+      label: t('superAdminContentManager.detail.createdAt', 'Crée le'),
       value: viewModel.createdAt || '-',
     },
     {
@@ -165,9 +165,9 @@ function SuperAdminEntryDetail({ navigation, route }) {
     return (
       <AdminStateView
         actionLabel="Retour"
-        description="Les informations de l'entree superadmin sont incompletes dans l'URL."
+        description="Les informations de l'entrée superadmin sont incomplètes dans l'URL."
         onAction={() => navigation.goBack()}
-        title="Entree introuvable"
+        title="Entrée introuvable"
       />
     );
   }
@@ -175,7 +175,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
   if ((isLoading || metadataQuery.isLoading) && !entry) {
     return (
       <AdminStateView
-        description="Nous chargeons le detail de l'entree."
+        description="Nous chargeons le detail de l'entrée."
         isLoading
         title="Chargement du detail"
       />
@@ -186,7 +186,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
     return (
       <AdminStateView
         actionLabel="Réessayer"
-        description={getErrorMessage(error || metadataQuery.error, 'generic') || 'Impossible de charger cette entree.'}
+        description={getErrorMessage(error || metadataQuery.error, 'generic') || 'Impossible de charger cette entrée.'}
         onAction={() => {
           metadataQuery.refetch();
           refetch();
@@ -200,9 +200,9 @@ function SuperAdminEntryDetail({ navigation, route }) {
     return (
       <AdminStateView
         actionLabel="Retour"
-        description="Cette entree superadmin n'existe pas ou n'est plus accessible."
+        description="Cette entrée superadmin n'existe pas ou n'est plus accessible."
         onAction={() => navigation.goBack()}
-        title="Entree introuvable"
+        title="Entrée introuvable"
       />
     );
   }
@@ -218,7 +218,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
     if (normalizedReason.length < 3) {
       Alert.alert(
         t('superAdminContentManager.alerts.reasonRequiredTitle', 'Raison requise'),
-        t('superAdminContentManager.alerts.reasonRequiredMessage', 'Minimum 3 caracteres.'),
+        t('superAdminContentManager.alerts.reasonRequiredMessage', 'Minimum 3 caractères.'),
       );
       return;
     }
@@ -264,7 +264,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
     } catch (contactError) {
       Alert.alert(
         t('common.errors.error', 'Erreur'),
-        getErrorMessage(contactError, 'generic') || t('messaging.errors.failedToCreateConversation', 'Impossible de creer la conversation.'),
+        getErrorMessage(contactError, 'generic') || t('messaging.errors.failedToCreateConversation', 'Impossible de créer la conversation.'),
       );
     } finally {
       setIsContacting(false);
@@ -284,7 +284,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
     if (normalizedReason.length < 3) {
       Alert.alert(
         t('superAdminContentManager.alerts.reasonRequiredTitle', 'Raison requise'),
-        t('superAdminContentManager.alerts.reasonRequiredMessage', 'Minimum 3 caracteres.'),
+        t('superAdminContentManager.alerts.reasonRequiredMessage', 'Minimum 3 caractères.'),
       );
       return;
     }
@@ -478,7 +478,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
                 </View>
               )) : (
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  {t('superAdminContentManager.detail.noKeyFields', 'Aucun champ cle détecté.')}
+                  {t('superAdminContentManager.detail.noKeyFields', 'Aucun champ clé détecté.')}
                 </Text>
               )}
             </View>
@@ -524,7 +524,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
           style={sectionCardStyle}
         >
           <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[8]]}>
-            {t('superAdminContentManager.detail.sections.audit', 'Audit recent')}
+            {t('superAdminContentManager.detail.sections.audit', 'Audit récent')}
           </Text>
           {auditLogs.length === 0 ? (
             <Text style={[Fonts.p2, Fonts.neutral300]}>
@@ -665,7 +665,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
           onChangeText={setReason}
           placeholder={t(
             'superAdminContentManager.deleteModal.reasonPlaceholder',
-            'Raison obligatoire (minimum 3 caracteres)',
+            'Raison obligatoire (minimum 3 caractères)',
           )}
           placeholderTextColor={Colors.neutral400}
           style={[
@@ -730,7 +730,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
         <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
           {t(
             'superAdminContentManager.suspensionModal.description',
-            "Une raison support est obligatoire et sera ajoutee a l'audit.",
+            "Une raison support est obligatoire et sera ajoutée a l'audit.",
           )}
         </Text>
 
@@ -748,7 +748,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
           onChangeText={setSuspensionReason}
           placeholder={t(
             'superAdminContentManager.suspensionModal.reasonPlaceholder',
-            'Raison obligatoire (minimum 3 caracteres)',
+            'Raison obligatoire (minimum 3 caractères)',
           )}
           placeholderTextColor={Colors.neutral400}
           style={[

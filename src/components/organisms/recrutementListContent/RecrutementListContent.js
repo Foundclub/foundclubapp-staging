@@ -124,7 +124,7 @@ const getProfileMatchInfo = (/** @type {any} */ ad, /** @type {any} */ userData)
     if (userCategory === adCategory) {
       hardMatches += 1;
       score += 3;
-      reasons.push('Cat\u00e9gorie compatible');
+      reasons.push('Catégorie compatible');
     } else {
       hardMismatch = true;
     }
@@ -137,7 +137,7 @@ const getProfileMatchInfo = (/** @type {any} */ ad, /** @type {any} */ userData)
 
   if (userCity && adCity && userCity === adCity) {
     score += 1;
-    reasons.push('M\u00eame ville');
+    reasons.push('Même ville');
   }
 
   return {
@@ -175,7 +175,7 @@ const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
     items.push({
       count: matchingAds.length,
       key: 'section-matching',
-      title: 'Correspondent \u00e0 ton profil',
+      title: 'Correspondent à ton profil',
       type: 'section',
     });
     matchingAds.forEach((/** @type {any} */ ad) => {
@@ -596,14 +596,14 @@ function RecrutementListContent({
     const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
 
     if (applicationState.hasApplied) {
-      let alreadyAppliedMessage = 'Tu as deja postule a cette annonce.';
+      let alreadyAppliedMessage = 'Tu as déjà postule à cette annonce.';
 
       if (applicationState.status === 'accepted') {
         alreadyAppliedMessage = isDetectionLinked
-          ? 'Tu participes deja a cette detection.'
-          : 'Ta candidature est deja validee pour cette annonce.';
+          ? 'Tu participes déjà à cette détection.'
+          : 'Ta candidature est déjà validée pour cette annonce.';
       } else if (isDetectionLinked) {
-        alreadyAppliedMessage = 'Tu as deja une candidature en attente sur cette detection.';
+        alreadyAppliedMessage = 'Tu as déjà une candidature en attente sur cette détection.';
       }
 
       Alert.alert(
@@ -632,8 +632,8 @@ function RecrutementListContent({
         fetchMyApplicationsSilently(),
       ]);
       Alert.alert(
-        'Candidature envoyee',
-        result?.message || 'Ta candidature a bien ete envoyee.',
+        'Candidature envoyée',
+        result?.message || 'Ta candidature a bien été envoyée.',
       );
     } catch (error) {
       const requestError = /** @type {any} */ (error);
@@ -778,7 +778,7 @@ function RecrutementListContent({
             Mes annonces
           </Text>
           <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 4 }]}>
-            Consultez et gérez les annonces publiées pour vos équipes.
+            Consulte et gère les annonces publiées pour tes équipes.
           </Text>
         </View>
         {renderAudienceTypeTabs()}
@@ -827,8 +827,8 @@ function RecrutementListContent({
         ListEmptyComponent={(
           <Text style={[Fonts.p1, Fonts.neutral500, { textAlign: 'center' }, Spaces.marginTop[24]]}>
             {managedTeamIds.length > 0
-              ? 'Aucune annonce publi\u00E9e pour vos \u00E9quipes sur ce filtre'
-              : 'Aucune annonce cr\u00E9\u00E9e sur ce filtre'}
+              ? 'Aucune annonce publiée pour tes équipes sur ce filtre'
+              : 'Aucune annonce créée sur ce filtre'}
           </Text>
         )}
         ListHeaderComponent={annoncesHeader}
@@ -933,12 +933,12 @@ function RecrutementListContent({
 
   const playerFilterHelperText = React.useMemo(() => {
     if (!hasProfileSignals) {
-      return 'Compl\u00E8te ton profil pour activer un tri personnalis\u00E9.';
+      return 'Complète ton profil pour activer un tri personnalisé.';
     }
     if (showProfileMatchesOnly) {
       return 'Le flux affiche uniquement les annonces compatibles.';
     }
-    return 'Les annonces compatibles restent affich\u00E9es en t\u00EAte.';
+    return 'Les annonces compatibles restent affichées en tête.';
   }, [hasProfileSignals, showProfileMatchesOnly]);
 
   const renderPlayerEmptyState = () => {
@@ -955,13 +955,13 @@ function RecrutementListContent({
         >
           <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
             {hasProfileSignals
-              ? 'Aucune annonce ne correspond exactement \u00E0 ton profil pour le moment.'
-              : 'Compl\u00E8te ton profil pour activer le tri personnalis\u00E9 des annonces.'}
+              ? 'Aucune annonce ne correspond exactement à ton profil pour le moment.'
+              : 'Complète ton profil pour activer le tri personnalisé des annonces.'}
           </Text>
           <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
             {hasProfileSignals
-              ? 'D\u00E9sactive le filtre pour afficher toutes les annonces disponibles.'
-              : 'Tu peux d\u00E9j\u00E0 consulter toutes les annonces publi\u00E9es sur l\'application.'}
+              ? 'Désactive le filtre pour afficher toutes les annonces disponibles.'
+              : 'Tu peux déjà consulter toutes les annonces publiées sur l\'application.'}
           </Text>
         </View>
       );
@@ -1245,7 +1245,7 @@ function RecrutementListContent({
           }]}
           >
             <Text style={[Fonts.p1, { color: recruitmentMutedText, textAlign: 'center' }]}>
-              {'Tu n\u2019as pas encore postul\u00e9 \u00e0 une annonce.'}
+              {'Tu n\u2019as pas encore postulé à une annonce.'}
             </Text>
           </View>
         )}

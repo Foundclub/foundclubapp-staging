@@ -77,7 +77,7 @@ const parseMaybeJson = (value) => {
  */
 const formatZoneLine = (cityLabel, radiusKm) => {
   const safeRadius = Number.isFinite(Number(radiusKm)) ? Number(radiusKm) : null;
-  const city = cityLabel || 'votre zone';
+  const city = cityLabel || 'ta zone';
   if (!safeRadius) return `Zone: ${city}.`;
   return `Zone: ${city} - rayon ${safeRadius} km.`;
 };
@@ -129,13 +129,13 @@ const buildSearchStatusLabel = ({
     : Number(searchInsights?.nextAutoExpansionInSec || searchInsights?.nextExpansionInSec || 0);
 
   const zoneLineV3 = formatZoneLine(cityLabel || null, radiusKm);
-  const criteriaLineV3 = `Critere prioritaire: ELO matchmaking similaire, ecart max actuel ${autoEloCap} pts.`;
+  const criteriaLineV3 = `Critere prioritaire: ELO matchmaking similaire, écart max actuel ${autoEloCap} pts.`;
 
   if (searchInsights?.candidateFound && hasTierBlocking(searchInsights)) {
     if (nextExpansion > 0) {
-      return `Statut: adversaire potentiel repere.\n${criteriaLineV3}\n${zoneLineV3}\nSuite: elargissement ELO matchmaking dans ${formatSecondsCompact(nextExpansion)}.`;
+      return `Statut: adversaire potentiel repère.\n${criteriaLineV3}\n${zoneLineV3}\nSuite: elargissement ELO matchmaking dans ${formatSecondsCompact(nextExpansion)}.`;
     }
-    return `Statut: adversaire potentiel repere.\n${criteriaLineV3}\n${zoneLineV3}\nSuite: recherche ELO matchmaking elargie en cours.`;
+    return `Statut: adversaire potentiel repère.\n${criteriaLineV3}\n${zoneLineV3}\nSuite: recherche ELO matchmaking elargie en cours.`;
   }
 
   if (softSuggestionCaps?.extraDistanceKm) {
@@ -143,10 +143,10 @@ const buildSearchStatusLabel = ({
   }
 
   if (nextExpansion > 0) {
-    return `Statut: recherche precise en cours.\n${criteriaLineV3}\nProchain elargissement ELO matchmaking dans ${formatSecondsCompact(nextExpansion)}.\n${zoneLineV3}`;
+    return `Statut: recherche précise en cours.\n${criteriaLineV3}\nProchain elargissement ELO matchmaking dans ${formatSecondsCompact(nextExpansion)}.\n${zoneLineV3}`;
   }
 
-  return `Statut: recherche large en cours.\n${criteriaLineV3}\nRayon auto conserve; les grands ecarts passent en opt-in.\n${zoneLineV3}`;
+  return `Statut: recherche large en cours.\n${criteriaLineV3}\nRayon auto conserve; les grands écarts passent en opt-in.\n${zoneLineV3}`;
 };
 /*
   const zoneLine = formatZoneLine(cityLabel || null, radiusKm);

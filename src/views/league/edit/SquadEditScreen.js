@@ -132,7 +132,7 @@ function SquadEditScreen({ navigation, route }) {
 
       const homeBasePayload = buildHomeBasePayload(data.address, data.radius);
       if (!homeBasePayload) {
-        Alert.alert('Adresse invalide', 'Sélectionnez une adresse avec des coordonnées valides.');
+        Alert.alert('Adresse invalide', 'Sélectionne une adresse avec des coordonnées valides.');
         return;
       }
 
@@ -158,7 +158,7 @@ function SquadEditScreen({ navigation, route }) {
     return (
       <LeagueStateView
         actionLabel="Retour aux squads"
-        description="Aucune squad n'est associee a ce lien d'edition."
+        description="Aucune squad n'est associée à ce lien d'édition."
         onAction={() => navigation.navigate(RouteNames.LeagueSquadTab)}
         title="Squad introuvable"
       />
@@ -168,7 +168,7 @@ function SquadEditScreen({ navigation, route }) {
   if (isBootstrapping) {
     return (
       <LeagueStateView
-        description="Preparation du formulaire d'edition de la squad."
+        description="Préparation du formulaire d'édition de la squad."
         isLoading
         title="Chargement de la squad"
       />
@@ -318,7 +318,7 @@ function SquadEditScreen({ navigation, route }) {
               )}
             />
             <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>
-              {'Distance max pour vos matchs à l\'extérieur'}
+              {'Distance max pour tes matchs à l\'extérieur'}
             </Text>
           </View>
 

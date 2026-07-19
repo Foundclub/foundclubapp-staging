@@ -175,7 +175,7 @@ const isLineCompleted = (/** @type {MatchStatsLine} */ line, /** @type {any} */ 
 
 const buildScoreSummary = (/** @type {any} */ score) => {
   if (score?.scoreFor === null || score?.scoreAgainst === null || score?.scoreFor === undefined || score?.scoreAgainst === undefined) {
-    return 'Score a completer';
+    return 'Score à compléter';
   }
   return `${score.scoreFor} - ${score.scoreAgainst}`;
 };
@@ -229,7 +229,7 @@ const getReportStatusMeta = ({ isFinalized, isReviewRequired, isWaitingOfficial 
     return {
       backgroundColor: `${Colors.warning500}20`,
       borderColor: `${Colors.warning500}45`,
-      label: 'Verification requise',
+      label: 'Vérification requise',
       textColor: Colors.warning500,
     };
   }
@@ -238,7 +238,7 @@ const getReportStatusMeta = ({ isFinalized, isReviewRequired, isWaitingOfficial 
     return {
       backgroundColor: `${Colors.success500}20`,
       borderColor: `${Colors.success500}45`,
-      label: 'Stats publiees',
+      label: 'Stats publiées',
       textColor: Colors.success500,
     };
   }
@@ -293,18 +293,18 @@ const buildMatchStatsConsistencyIssues = ({
     );
 
     if (resolvedScoreFor !== null && totalPoints > resolvedScoreFor) {
-      issues.push(`Les points saisis (${totalPoints}) depassent le score final (${resolvedScoreFor}).`);
+      issues.push(`Les points saisis (${totalPoints}) dépassent le score final (${resolvedScoreFor}).`);
     }
 
     if (totalThreePointPoints > totalPoints) {
-      issues.push('Les tirs a 3 points saisis depassent le total des points marques.');
+      issues.push('Les tirs a 3 points saisis dépassent le total des points marques.');
     }
 
     const invalidThreePointLine = lines.find((/** @type {MatchStatsLine} */ line) => (
       (getNumericStatValue(line?.threePointsMade) * 3) > getNumericStatValue(line?.points)
     ));
     if (invalidThreePointLine) {
-      issues.push(`Les 3 points de ${invalidThreePointLine?.label || 'ce joueur'} depassent ses points marques.`);
+      issues.push(`Les 3 points de ${invalidThreePointLine?.label || 'ce joueur'} dépassent ses points marques.`);
     }
 
     return issues;
@@ -320,11 +320,11 @@ const buildMatchStatsConsistencyIssues = ({
   );
 
   if (resolvedScoreFor !== null && totalGoals > resolvedScoreFor) {
-    issues.push(`Les buts saisis (${totalGoals}) depassent le score final (${resolvedScoreFor}).`);
+    issues.push(`Les buts saisis (${totalGoals}) dépassent le score final (${resolvedScoreFor}).`);
   }
 
   if (totalAssists > totalGoals) {
-    issues.push(`Les passes decisives (${totalAssists}) depassent les buts marques (${totalGoals}).`);
+    issues.push(`Les passes decisives (${totalAssists}) dépassent les buts marques (${totalGoals}).`);
   }
 
   if (resolvedScoreAgainst !== null) {
@@ -528,25 +528,25 @@ function MatchStatsEditor({ navigation, route }) {
 
   const submitConfirmationMessage = useMemo(() => {
     if (isReviewRequired) {
-      return 'Le score officiel a change. Cette publication confirme la nouvelle version des stats pour ton equipe.';
+      return 'Le score officiel a changé. Cette publication confirme la nouvelle version des stats pour ton équipe.';
     }
 
-    return 'Apres publication, ce rapport devient la version officielle des statistiques pour cette equipe.';
+    return 'Après publication, ce rapport devient la version officielle des statistiques pour cette équipe.';
   }, [isReviewRequired]);
 
   const submitButtonTitle = useMemo(() => {
     if (isReadOnly) return 'Rapport finalise';
-    if (isReviewRequired) return 'Mettre a jour apres score officiel';
+    if (isReviewRequired) return 'Mettre à jour après score officiel';
     return 'Publier les stats';
   }, [isReadOnly, isReviewRequired]);
 
   const submitHelperText = useMemo(() => {
     if (isReadOnly) {
-      return 'Ce rapport est deja finalise. Les agregations joueur et equipe sont a jour.';
+      return 'Ce rapport est déjà finalise. Les agregations joueur et équipe sont à jour.';
     }
 
     if (isReviewRequired) {
-      return 'Le score officiel a change. Verifie les lignes puis republie directement cette version.';
+      return 'Le score officiel a changé. Vérifie les lignes puis republie directement cette version.';
     }
 
     if (hasConsistencyIssues) {
@@ -624,7 +624,7 @@ function MatchStatsEditor({ navigation, route }) {
     onSuccess: async () => {
       await invalidateRelatedQueries();
       await statsQuery.refetch();
-      Alert.alert('Brouillon enregistre', 'Le brouillon des stats du match a bien ete enregistre.');
+      Alert.alert('Brouillon enregistre', 'Le brouillon des stats du match a bien été enregistre.');
     },
   });
 
@@ -642,10 +642,10 @@ function MatchStatsEditor({ navigation, route }) {
     onSuccess: async () => {
       await invalidateRelatedQueries();
       Alert.alert(
-        'Stats publiees',
+        'Stats publiées',
         isReviewRequired
-          ? 'Le rapport a ete mis a jour apres la synchronisation du score officiel.'
-          : 'Les statistiques du match sont maintenant finalisees.',
+          ? 'Le rapport a été mis à jour après la synchronisation du score officiel.'
+          : 'Les statistiques du match sont maintenant finalisées.',
         [{ onPress: redirectToReviewScreen, text: 'OK' }],
       );
     },
@@ -878,7 +878,7 @@ function MatchStatsEditor({ navigation, route }) {
     if (isReviewRequired) {
       Alert.alert(
         'Revision requise',
-        'Le score officiel a change. Verifie les lignes puis republie directement cette version.',
+        'Le score officiel a changé. Vérifie les lignes puis republie directement cette version.',
       );
       return;
     }
@@ -898,7 +898,7 @@ function MatchStatsEditor({ navigation, route }) {
 
   const handleSubmit = useCallback(() => {
     if (sourceType === 'event' && !hasScore) {
-      Alert.alert('Score requis', 'Le score final doit etre enregistre avant de publier les stats.');
+      Alert.alert('Score requis', 'Le score final doit être enregistre avant de publier les stats.');
       return;
     }
 
@@ -908,13 +908,13 @@ function MatchStatsEditor({ navigation, route }) {
     }
 
     Alert.alert(
-      isReviewRequired ? 'Mettre a jour apres score officiel ?' : 'Publier les stats du match ?',
+      isReviewRequired ? 'Mettre à jour après score officiel ?' : 'Publier les stats du match ?',
       submitConfirmationMessage,
       [
         { style: 'cancel', text: 'Annuler' },
         {
           onPress: () => submitMutation.mutate(),
-          text: isReviewRequired ? 'Mettre a jour' : 'Publier',
+          text: isReviewRequired ? 'Mettre à jour' : 'Publier',
         },
       ],
     );
@@ -972,10 +972,10 @@ function MatchStatsEditor({ navigation, route }) {
           ]}
         >
           <View style={[SpacesAny.gap[4]]}>
-            <Text style={[Fonts.p4Bold, Fonts.primary500]}>Bilan equipe</Text>
+            <Text style={[Fonts.p4Bold, Fonts.primary500]}>Bilan équipe</Text>
             <Text style={[Fonts.h2Bold, Fonts.neutral00]}>{matchLabel}</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {sourceType === 'event' ? "Bilan collectif de l'evenement" : 'Bilan collectif du match ligue'}
+              {sourceType === 'event' ? "Bilan collectif de l'événement" : 'Bilan collectif du match ligue'}
             </Text>
           </View>
 
@@ -1059,9 +1059,9 @@ function MatchStatsEditor({ navigation, route }) {
                   },
                 ]}
               >
-                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>Score officiel mis a jour</Text>
+                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>Score officiel mis à jour</Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  Le score synchronise depuis la competition officielle a change apres une saisie precedente. Verifie les statistiques joueur puis republie ce rapport.
+                  Le score synchronise depuis la compétition officielle a changé après une saisie précédente. Vérifie les statistiques joueur puis republie ce rapport.
                 </Text>
               </View>
             ) : null}
@@ -1153,7 +1153,7 @@ function MatchStatsEditor({ navigation, route }) {
               <View style={[SpacesAny.gap[4]]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Bilan collectif</Text>
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  Donne une note d equipe sur 10 et un commentaire collectif visible par ton groupe.
+                  Donne une note d équipe sur 10 et un commentaire collectif visible par ton groupe.
                 </Text>
               </View>
               <View style={[Alignments.row, Alignments.wrap, SpacesAny.gap[8]]}>
@@ -1186,7 +1186,7 @@ function MatchStatsEditor({ navigation, route }) {
                 multiline
                 numberOfLines={4}
                 onChangeText={setCollectiveComment}
-                placeholder="Ressenti collectif, dynamique du groupe, points forts, points a travailler..."
+                placeholder="Ressenti collectif, dynamique du groupe, points forts, points à travailler..."
                 placeholderTextColor={Colors.neutral400}
                 style={[
                   Fonts.p2,
@@ -1224,7 +1224,7 @@ function MatchStatsEditor({ navigation, route }) {
               <View style={[SpacesAny.gap[4]]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Retours individuels optionnels</Text>
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  Tu peux ajouter une note et un commentaire prive a chaque joueur si tu le souhaites.
+                  Tu peux ajouter une note et un commentaire prive à chaque joueur si tu le souhaites.
                 </Text>
               </View>
               {coachReviews.length ? coachReviews.map((review) => (
@@ -1301,7 +1301,7 @@ function MatchStatsEditor({ navigation, route }) {
                 <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, SpacesAny.padding[20], SpacesAny.gap[8]]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible.</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
-                    Les retours individuels apparaitront ici des que la liste joueur sera disponible.
+                    Les retours individuels apparaîtront ici des que la liste joueur sera disponible.
                   </Text>
                 </View>
               )}
@@ -1456,7 +1456,7 @@ function MatchStatsEditor({ navigation, route }) {
                 <View style={[SpacesAny.gap[4], { flex: 1 }]}>
                   <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Stats joueurs</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>
-                    Temps de jeu et statistiques cles adaptees au sport du match.
+                    Temps de jeu et statistiques clés adaptees au sport du match.
                   </Text>
                 </View>
                 <View
@@ -1539,7 +1539,7 @@ function MatchStatsEditor({ navigation, route }) {
                           },
                         ]}
                       >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Quantites verrouillees</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Quantités verrouillees</Text>
                         <Text style={[Fonts.p4, Fonts.neutral100]}>
                           Ce joueur a déjà validé ses stats personnelles. Les chiffres restent proteges, mais tu peux toujours ajouter un retour qualitatif plus haut.
                         </Text>
@@ -1581,7 +1581,7 @@ function MatchStatsEditor({ navigation, route }) {
                 <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, SpacesAny.padding[20], SpacesAny.gap[8]]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible pour ce rapport.</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
-                    Publie d abord la composition d equipe ou verifie le roster de l equipe pour alimenter cette liste.
+                    Publie d abord la composition d équipe ou vérifie le roster de l équipe pour alimenter cette liste.
                   </Text>
                 </View>
               )}

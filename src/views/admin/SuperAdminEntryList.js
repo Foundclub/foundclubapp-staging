@@ -210,7 +210,7 @@ function SuperAdminEntryList({ navigation, route }) {
     if (selectedCount === 0) {
       Alert.alert(
         t('superAdminContentManager.alerts.emptySelectionTitle', 'Sélection vide'),
-        t('superAdminContentManager.alerts.emptySelectionMessage', 'Sélectionnez au moins une entrée.'),
+        t('superAdminContentManager.alerts.emptySelectionMessage', 'Sélectionne au moins une entrée.'),
       );
       return;
     }
@@ -242,7 +242,7 @@ function SuperAdminEntryList({ navigation, route }) {
     if (normalizedReason.length < 3) {
       Alert.alert(
         t('superAdminContentManager.alerts.reasonRequiredTitle', 'Raison requise'),
-        t('superAdminContentManager.alerts.reasonRequiredMessage', 'Minimum 3 caracteres.'),
+        t('superAdminContentManager.alerts.reasonRequiredMessage', 'Minimum 3 caractères.'),
       );
       return;
     }
@@ -268,7 +268,7 @@ function SuperAdminEntryList({ navigation, route }) {
     if (normalizedReason.length < 3) {
       Alert.alert(
         t('superAdminContentManager.alerts.reasonRequiredTitle', 'Raison requise'),
-        t('superAdminContentManager.alerts.reasonRequiredMessage', 'Minimum 3 caracteres.'),
+        t('superAdminContentManager.alerts.reasonRequiredMessage', 'Minimum 3 caractères.'),
       );
       return;
     }
@@ -328,7 +328,7 @@ function SuperAdminEntryList({ navigation, route }) {
   if ((metadataQuery.isLoading || isLoading) && !entries.length) {
     return (
       <AdminStateView
-        description="Nous chargeons les entrees du content manager."
+        description="Nous chargeons les entrées du content manager."
         isLoading
         title="Chargement du contenu superadmin"
       />
@@ -396,8 +396,8 @@ function SuperAdminEntryList({ navigation, route }) {
           searchPlaceholder: t('superAdminContentManager.list.searchPlaceholder', 'Rechercher une entrée'),
           selectAll: t('superAdminContentManager.actions.selectAll', 'Tout sélectionner'),
           selected: t('superAdminContentManager.list.selectedEntries', 'entrée(s) sélectionnée(s)'),
-          selectionModeOff: t('superAdminContentManager.actions.multiSelect', 'Selection multiple'),
-          selectionModeOn: t('superAdminContentManager.actions.exitSelection', 'Quitter selection'),
+          selectionModeOff: t('superAdminContentManager.actions.multiSelect', 'Sélection multiple'),
+          selectionModeOn: t('superAdminContentManager.actions.exitSelection', 'Quitter sélection'),
           total: t('superAdminContentManager.list.total', 'Total'),
           unselectAll: t('superAdminContentManager.actions.unselectAll', 'Tout desélectionner'),
         }}
@@ -646,7 +646,7 @@ function SuperAdminEntryList({ navigation, route }) {
         <TextInput
           multiline
           onChangeText={setDeleteReason}
-          placeholder={t('superAdminContentManager.deleteModal.reasonPlaceholder', 'Raison obligatoire (minimum 3 caracteres)')}
+          placeholder={t('superAdminContentManager.deleteModal.reasonPlaceholder', 'Raison obligatoire (minimum 3 caractères)')}
           placeholderTextColor={Colors.neutral400}
           style={[
             ApplicationStyle.borderRadius12,
@@ -709,7 +709,7 @@ function SuperAdminEntryList({ navigation, route }) {
         <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>
           {getBulkActionLabel(bulkAction, t)}
           {' '}
-          {t('superAdminContentManager.bulkModal.titleSuffix', 'les entrees')}
+          {t('superAdminContentManager.bulkModal.titleSuffix', 'les entrées')}
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[8]]}>
           {selectedCount}
@@ -720,7 +720,7 @@ function SuperAdminEntryList({ navigation, route }) {
         <TextInput
           multiline
           onChangeText={setBulkReason}
-          placeholder={t('superAdminContentManager.bulkModal.reasonPlaceholder', 'Raison obligatoire (minimum 3 caracteres)')}
+          placeholder={t('superAdminContentManager.bulkModal.reasonPlaceholder', 'Raison obligatoire (minimum 3 caractères)')}
           placeholderTextColor={Colors.neutral400}
           style={[
             ApplicationStyle.borderRadius12,

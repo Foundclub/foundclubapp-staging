@@ -318,7 +318,7 @@ const mapEventReportItem = (item = {}) => {
     authorLabel: buildPersonLabel(report.user, report.author, report.createdBy, report.reporter),
     createdAt: report.createdAt || report.updatedAt || null,
     documentId: pickDocumentId(report),
-    message: pickFirstText(report.reason, report.comment, report.description, 'Signalement d\'evenement'),
+    message: pickFirstText(report.reason, report.comment, report.description, 'Signalement d\'événement'),
     raw: report,
     source: 'event',
     status: normalizeReportStatus(report.status || report.state),

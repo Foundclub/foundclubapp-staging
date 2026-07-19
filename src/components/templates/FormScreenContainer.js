@@ -7,7 +7,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  * @param {import('react').ReactNode} props.children
  * @param {'form' | 'readable' | 'content' | 'wide' | 'full' | number} [props.contentWidth]
  * @param {'top' | 'center'} [props.desktopAlignment]
- * @param {'none' | 'tab-scene'} [props.bottomInsetMode]
+ * @param {'none' | 'screen' | 'tab-scene' | 'edge-to-edge'} [props.bottomInsetMode]
  * @param {'none' | 'card'} [props.surface]
  * @returns {import('react').ReactElement}
  */

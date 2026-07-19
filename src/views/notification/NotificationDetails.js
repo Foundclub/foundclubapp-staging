@@ -130,11 +130,11 @@ function NotificationDetails() {
   const isParticipationDeclined = details.status === 'declined';
   const reasonText = details.reason || t(
     'notifications.details.participationDeclined.reasonFallback',
-    'Aucun motif precise.',
+    'Aucun motif précise.',
   );
   const eventLabel = details.eventDetails || t(
     'notifications.details.participationDeclined.eventFallback',
-    'Evenement non renseigne',
+    'Événement non renseigne',
   );
   const statusText = details.status === 'declined'
     ? t('notifications.details.participationDeclined.statusDeclined', 'Refusee')
@@ -143,12 +143,12 @@ function NotificationDetails() {
     ? t('notifications.details.participationDeclined.screenTitle', 'Notification')
     : details.title || t('notifications.details.screenTitle', 'Notification');
   const cardTitle = isParticipationDeclined
-    ? t('notifications.details.participationDeclined.title', 'Demande refusee')
+    ? t('notifications.details.participationDeclined.title', 'Demande refusée')
     : details.title || t('notifications.details.title', 'Notification');
   const cardSubtitle = isParticipationDeclined
     ? t(
       'notifications.details.participationDeclined.subtitle',
-      'Votre demande de participation a ete refusee.',
+      'Ta demande de participation a été refusée.',
     )
     : details.body || t('notifications.details.bodyFallback', 'Aucun detail disponible.');
   let subtitleText = cardSubtitle;
@@ -267,7 +267,7 @@ function NotificationDetails() {
         <View style={[Spaces.marginTop[20]]}>
           <Button
             onPress={handleOpenEvent}
-            title={t('notifications.details.participationDeclined.actions.viewEvent', 'Voir evenement')}
+            title={t('notifications.details.participationDeclined.actions.viewEvent', 'Voir événement')}
             variant="Secondary"
           />
         </View>

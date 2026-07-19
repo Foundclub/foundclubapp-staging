@@ -131,7 +131,7 @@ export const buildTeamEntryFromPreset = (preset, index, sportContext, teamName =
   const teamEntryId = normalizeText(teamId || `team_${index + 1}`) || `team_${index + 1}`;
   return {
     id: teamEntryId,
-    name: normalizeText(teamName || `Equipe ${index + 1}`) || `Equipe ${index + 1}`,
+    name: normalizeText(teamName || `Équipe ${index + 1}`) || `Équipe ${index + 1}`,
     placements: [],
     presetKey: normalizeText(preset?.key) || null,
     presetLabel: normalizeText(preset?.label) || null,
@@ -173,7 +173,7 @@ const normalizeTeamEntry = (team, index, presets, sportContext) => {
 
   return {
     id: teamEntryId,
-    name: normalizeText(team?.name || `Equipe ${index + 1}`) || `Equipe ${index + 1}`,
+    name: normalizeText(team?.name || `Équipe ${index + 1}`) || `Équipe ${index + 1}`,
     placements,
     presetKey: normalizeText(team?.presetKey || preset?.key) || null,
     presetLabel: normalizeText(team?.presetLabel || preset?.label) || null,
@@ -223,7 +223,7 @@ export const normalizeMultiTeamPack = (source, options = {}) => {
       mode: 'manual',
       teams: [{
         id: 'team_1',
-        name: 'Equipe 1',
+        name: 'Équipe 1',
         placements: source.placements,
         presetKey: presets[0]?.key || null,
         presetLabel: presets[0]?.label || null,
@@ -315,7 +315,7 @@ export const buildDraftPayloadFromPack = (pack, players = []) => {
     sportContext: normalizeText(pack?.sportContext) || null,
     teams: (Array.isArray(pack?.teams) ? pack.teams : []).map((team, index) => ({
       id: normalizeText(team?.id) || `team_${index + 1}`,
-      name: normalizeText(team?.name || `Equipe ${index + 1}`) || `Equipe ${index + 1}`,
+      name: normalizeText(team?.name || `Équipe ${index + 1}`) || `Équipe ${index + 1}`,
       placements: (Array.isArray(team?.placements) ? team.placements : [])
         .map((placement) => {
           const playerId = normalizeText(placement?.playerId);

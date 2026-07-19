@@ -159,9 +159,9 @@ const resolveUpcomingSlot = (slots = []) => {
 };
 
 const formatLeagueMatchDate = (value) => {
-  if (!value) return 'Date \u00E0 d\u00E9finir';
+  if (!value) return 'Date à définir';
   const parsed = new Date(String(value));
-  if (Number.isNaN(parsed.getTime())) return 'Date \u00E0 d\u00E9finir';
+  if (Number.isNaN(parsed.getTime())) return 'Date à définir';
   return parsed.toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'short',
@@ -363,14 +363,14 @@ function SquadDetailsScreen({ navigation, route }) {
   const fixedJoinButtonTitle = (() => {
     if (isShareInviteLink) return 'Rejoindre la squad';
     if (hasPendingRequest) return 'Demande en attente';
-    return 'Demander a rejoindre';
+    return 'Demander à rejoindre';
   })();
   const fixedJoinButtonHelperText = (() => {
     if (isShareInviteLink) {
-      return 'Ce lien vous permet de rejoindre directement la squad';
+      return 'Ce lien te permet de rejoindre directement la squad';
     }
     if (hasPendingRequest) {
-      return 'Votre demande attend la validation du capitaine';
+      return 'Ta demande attend la validation du capitaine';
     }
     return 'Envoyer une demande au capitaine de la squad';
   })();
@@ -409,7 +409,7 @@ function SquadDetailsScreen({ navigation, route }) {
     () => normalizedHomeBase?.city
       || normalizedHomeBase?.label
       || normalizedHomeBase?.address
-      || t('squadDetails.labels.locationUnknown', 'Localisation non renseignee'),
+      || t('squadDetails.labels.locationUnknown', 'Localisation non renseignée'),
     [normalizedHomeBase, t],
   );
 
@@ -420,16 +420,16 @@ function SquadDetailsScreen({ navigation, route }) {
   const nextSlot = useMemo(() => resolveUpcomingSlot(team?.slots || []), [team?.slots]);
   const pendingRequestsCount = Number(team?.join_requests?.length || 0);
   const nextSlotShortLabel = useMemo(() => {
-    if (!nextSlot) return '\u00C0 d\u00E9finir';
+    if (!nextSlot) return 'À définir';
     return `${slotDayShortLabels[nextSlot.recurrenceDay] || 'A venir'} · ${formatSlotHour(nextSlot?.start_hour)}`;
   }, [nextSlot]);
   const nextSlotLongLabel = useMemo(() => {
-    if (!nextSlot) return 'Ajoutez un cr\u00E9neau pour lancer votre rythme.';
+    if (!nextSlot) return 'Ajoute un créneau pour lancer ton rythme.';
     return `${slotDayLabels[nextSlot.recurrenceDay] || 'Jour'} · ${formatSlotHour(nextSlot?.start_hour)} - ${formatSlotHour(nextSlot?.end_hour)}`;
   }, [nextSlot]);
   const squadStatusChip = useMemo(() => {
     if (isCaptain) return { label: 'Capitaine', tone: 'gold' };
-    if (hasInvitation) return { label: 'Invitation recue', tone: 'blue' };
+    if (hasInvitation) return { label: 'Invitation reçue', tone: 'blue' };
     if (hasPendingRequest) return { label: 'Demande en attente', tone: 'blue' };
     if (isMember) return { label: 'Membre', tone: 'blue' };
     return { label: 'Squad ouverte', tone: 'blue' };
@@ -439,25 +439,25 @@ function SquadDetailsScreen({ navigation, route }) {
   const nextSlotStatus = useMemo(() => {
     if (!nextSlot) {
       return {
-        badge: 'Aucun cr\u00E9neau',
-        helper: 'Ajoutez un cr\u00E9neau pour donner un premier point de rendez-vous \u00E0 la squad.',
+        badge: 'Aucun créneau',
+        helper: 'Ajoute un créneau pour donner un premier point de rendez-vous à la squad.',
       };
     }
     if (nextSlotParticipantsCount >= requiredPlayers) {
       return {
-        badge: 'Pret a jouer',
-        helper: 'Le prochain cr\u00E9neau est complet. La squad a d\u00E9j\u00E0 assez de monde pour se lancer.',
+        badge: 'Prêt à jouer',
+        helper: 'Le prochain créneau est complet. La squad a déjà assez de monde pour se lancer.',
       };
     }
     if (nextSlotParticipantsCount >= Math.max(requiredPlayers - 2, 1)) {
       return {
-        badge: 'Presque pret',
-        helper: `Encore ${nextSlotRemainingCount} pr\u00E9sence${nextSlotRemainingCount > 1 ? 's' : ''} pour atteindre le format ideal.`,
+        badge: 'Presque prêt',
+        helper: `Encore ${nextSlotRemainingCount} présence${nextSlotRemainingCount > 1 ? 's' : ''} pour atteindre le format ideal.`,
       };
     }
     return {
       badge: 'A renforcer',
-      helper: `Seulement ${nextSlotParticipantsCount} pr\u00E9sence${nextSlotParticipantsCount > 1 ? 's' : ''} pour le moment. Il faut encore mobiliser la squad.`,
+      helper: `Seulement ${nextSlotParticipantsCount} présence${nextSlotParticipantsCount > 1 ? 's' : ''} pour le moment. Il faut encore mobiliser la squad.`,
     };
   }, [nextSlot, nextSlotParticipantsCount, nextSlotRemainingCount, requiredPlayers]);
   const rosterSignals = useMemo(() => {
@@ -489,7 +489,7 @@ function SquadDetailsScreen({ navigation, route }) {
             .map((captain) => `${captain?.firstname || ''} ${captain?.lastname || ''}`.trim() || captain?.username || 'Capitaine')
             .filter(Boolean)
             .join(', ')
-          : '\u00C0 d\u00E9finir',
+          : 'À définir',
       });
       signals.push({
         key: 'status',
@@ -502,7 +502,7 @@ function SquadDetailsScreen({ navigation, route }) {
   }, [captainCount, captainMembers, isCaptain, pendingRequestsCount, rosterCount, squadStatusChip.label, team?.invitations?.length]);
   const nextSlotActionLabel = useMemo(() => {
     if (isCaptain) return 'Animer la squad';
-    if (isMember) return 'Confirmer ma pr\u00E9sence';
+    if (isMember) return 'Confirmer ma présence';
     return 'Rejoindre la squad';
   }, [isCaptain, isMember]);
   const leagueCardBg = 'rgba(10, 28, 43, 0.84)';
@@ -610,7 +610,7 @@ function SquadDetailsScreen({ navigation, route }) {
       {
         key: 'division',
         label: 'Division',
-        value: team?.division ? `DIV ${team.division}` : '\u00C0 d\u00E9finir',
+        value: team?.division ? `DIV ${team.division}` : 'À définir',
       },
       {
         key: 'divisionPoints',
@@ -639,7 +639,7 @@ function SquadDetailsScreen({ navigation, route }) {
       },
       {
         key: 'highestStreak',
-        label: 'Meilleure serie',
+        label: 'Meilleure série',
         value: `x${highestStreak}`,
       },
       {
@@ -665,7 +665,7 @@ function SquadDetailsScreen({ navigation, route }) {
     const inviterName = [currentUser?.firstname, currentUser?.lastname].filter(Boolean).join(' ').trim();
     const squadName = String(team?.name || '').trim();
     const intro = inviterName
-      ? `${inviterName} vous invite a rejoindre sa squad${squadName ? ` ${squadName}` : ''} sur FoundClub League.`
+      ? `${inviterName} t'invite à rejoindre sa squad${squadName ? ` ${squadName}` : ''} sur FoundClub League.`
       : `Rejoins${squadName ? ` la squad ${squadName}` : ' une squad'} sur FoundClub League.`;
     const shareUrl = buildInstallLandingUrl({
       id: squadId,
@@ -681,7 +681,7 @@ function SquadDetailsScreen({ navigation, route }) {
 
     SharePlatform.share({
       message,
-      title: inviterName ? `${inviterName} vous invite` : `Rejoins ${squadName || 'une squad'}`,
+      title: inviterName ? `${inviterName} t'invite` : `Rejoins ${squadName || 'une squad'}`,
       url: shareUrl,
     }).catch(() => undefined);
   }, [currentUser?.firstname, currentUser?.lastname, safeTeamId, team?.documentId, team?.name]);
@@ -692,7 +692,7 @@ function SquadDetailsScreen({ navigation, route }) {
     savePendingSquadInviteLink(safeTeamId);
     Alert.alert(
       t('squad.inviteLink.loginTitle', 'Connexion requise'),
-      t('squad.inviteLink.loginMessage', 'Connecte-toi ou cree ton compte pour rejoindre cette squad avec le lien d invitation.'),
+      t('squad.inviteLink.loginMessage', 'Connecte-toi ou crée ton compte pour rejoindre cette squad avec le lien d invitation.'),
       [
         {
           style: 'cancel',
@@ -754,7 +754,7 @@ function SquadDetailsScreen({ navigation, route }) {
       navigation.setParams?.({ invite: undefined });
       Alert.alert(
         t('squad.inviteLink.acceptTitle', 'Squad rejointe'),
-        t('squad.inviteLink.acceptMessage', 'Vous avez rejoint la squad.'),
+        t('squad.inviteLink.acceptMessage', 'Tu as rejoint la squad.'),
       );
     } catch (error) {
       console.error(error);
@@ -832,7 +832,7 @@ function SquadDetailsScreen({ navigation, route }) {
       setIsUpdating(true);
       await requestToJoinSquad(safeTeamId, currentUserId || '', { legalAcceptance });
       await refetch();
-      Alert.alert(t('squad.join.successTitle', 'Demande envoyée'), t('squad.join.successMessage', 'Le capitaine a recu votre demande.'));
+      Alert.alert(t('squad.join.successTitle', 'Demande envoyée'), t('squad.join.successMessage', 'Le capitaine a reçu ta demande.'));
     } catch (error) {
       console.error(error);
       Alert.alert(t('common.error'), t('squad.join.error', 'Impossible d\'envoyer la demande.'));
@@ -852,7 +852,7 @@ function SquadDetailsScreen({ navigation, route }) {
       await refetch();
       Alert.alert(
         t('squad.join.cancelSuccessTitle', 'Demande annulée'),
-        t('squad.join.cancelSuccessMessage', 'Votre demande à rejoindre la squad a bien été annulée.'),
+        t('squad.join.cancelSuccessMessage', 'Ta demande à rejoindre la squad a bien été annulée.'),
       );
     } catch (error) {
       console.error(error);
@@ -865,7 +865,7 @@ function SquadDetailsScreen({ navigation, route }) {
   const handleRespondToInvitation = useCallback(async (accept) => {
     try {
       if (!safeTeamId || !currentUserId) {
-        Alert.alert(t('common.error'), t('squad.invitation.error', 'Impossible de repondre a l invitation.'));
+        Alert.alert(t('common.error'), t('squad.invitation.error', 'Impossible de répondre a l invitation.'));
         return;
       }
 
@@ -889,15 +889,15 @@ function SquadDetailsScreen({ navigation, route }) {
       await refetch();
       Alert.alert(
         accept
-          ? t('squad.invitation.acceptTitle', 'Invitation acceptee')
-          : t('squad.invitation.declineTitle', 'Invitation refusee'),
+          ? t('squad.invitation.acceptTitle', 'Invitation acceptée')
+          : t('squad.invitation.declineTitle', 'Invitation refusée'),
         accept
-          ? t('squad.invitation.acceptMessage', 'Vous avez rejoint la squad.')
-          : t('squad.invitation.declineMessage', 'Vous avez decline cette invitation.'),
+          ? t('squad.invitation.acceptMessage', 'Tu as rejoint la squad.')
+          : t('squad.invitation.declineMessage', 'Tu as decline cette invitation.'),
       );
     } catch (error) {
       console.error(error);
-      Alert.alert(t('common.error'), t('squad.invitation.error', 'Impossible de repondre a l invitation.'));
+      Alert.alert(t('common.error'), t('squad.invitation.error', 'Impossible de répondre a l invitation.'));
     } finally {
       setIsUpdating(false);
     }
@@ -916,7 +916,7 @@ function SquadDetailsScreen({ navigation, route }) {
   const handleAssignCaptain = useCallback(async (mode) => {
     const targetId = getEntityDocumentId(captainAssignmentTarget);
     if (!safeTeamId || !targetId) {
-      Alert.alert(t('common.error', 'Erreur'), t('squadDetails.captains.assignError', 'Impossible de mettre a jour les capitaines.'));
+      Alert.alert(t('common.error', 'Erreur'), t('squadDetails.captains.assignError', 'Impossible de mettre à jour les capitaines.'));
       return;
     }
 
@@ -936,14 +936,14 @@ function SquadDetailsScreen({ navigation, route }) {
       ]);
       setCaptainAssignmentTarget(null);
       Alert.alert(
-        t('squadDetails.captains.assignSuccessTitle', 'Capitaines mis a jour'),
+        t('squadDetails.captains.assignSuccessTitle', 'Capitaines mis à jour'),
         mode === 'transfer'
           ? t('squadDetails.captains.transferSuccess', '{{name}} devient le seul capitaine de la squad.', { name: captainAssignmentTargetName })
-          : t('squadDetails.captains.addSuccess', '{{name}} est maintenant capitaine avec vous.', { name: captainAssignmentTargetName }),
+          : t('squadDetails.captains.addSuccess', '{{name}} est maintenant capitaine avec toi.', { name: captainAssignmentTargetName }),
       );
     } catch (error) {
       console.error(error);
-      Alert.alert(t('common.error', 'Erreur'), t('squadDetails.captains.assignError', 'Impossible de mettre a jour les capitaines.'));
+      Alert.alert(t('common.error', 'Erreur'), t('squadDetails.captains.assignError', 'Impossible de mettre à jour les capitaines.'));
     } finally {
       setCaptainAssignmentMode('');
     }
@@ -964,7 +964,7 @@ function SquadDetailsScreen({ navigation, route }) {
   const handleImageUpload = (type) => { // type: 'logo' (mapped to crest) | 'cover'
     Alert.alert(
       'Modifier la photo',
-      'Choisissez une option',
+      'Choisis une option',
       [
         {
           onPress: () => openImagePicker(type, 'camera'),
@@ -1179,7 +1179,7 @@ function SquadDetailsScreen({ navigation, route }) {
       if (!isMember) {
         Alert.alert(
           t('squadDetails.actions.unavailableTitle', 'Action non disponible'),
-          t('squadDetails.slots.joinHint', 'Rejoignez la squad pour participer aux créneaux.'),
+          t('squadDetails.slots.joinHint', 'Rejoins la squad pour participer aux créneaux.'),
         );
         return;
       }
@@ -1211,13 +1211,13 @@ function SquadDetailsScreen({ navigation, route }) {
       if (backendCode === 'SQUAD_MEMBERSHIP_REQUIRED') {
         Alert.alert(
           t('squadDetails.actions.unavailableTitle', 'Action non disponible'),
-          t('squadDetails.slots.joinHint', 'Rejoignez la squad pour participer aux créneaux.'),
+          t('squadDetails.slots.joinHint', 'Rejoins la squad pour participer aux créneaux.'),
         );
         return;
       }
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('squadDetails.slots.statusError', 'Impossible de modifier votre statut.'),
+        t('squadDetails.slots.statusError', 'Impossible de modifier ton statut.'),
       );
     }
   };
@@ -1322,7 +1322,7 @@ function SquadDetailsScreen({ navigation, route }) {
     Alert.alert(
       t('squadDetails.delete.title', 'Supprimer la squad'),
       t('squadDetails.delete.confirmationWithName', {
-        defaultValue: `Êtes-vous sûr de vouloir supprimer la squad "${teamDisplayName}" ? Cette action est irréversible.`,
+        defaultValue: `Es-tu sûr de vouloir supprimer la squad "${teamDisplayName}" ? Cette action est irréversible.`,
         teamName: teamDisplayName,
       }),
       [
@@ -1356,7 +1356,7 @@ function SquadDetailsScreen({ navigation, route }) {
     Alert.alert(
       t('squadDetails.leave.title', 'Quitter la squad'),
       t('squadDetails.leave.confirmationWithName', {
-        defaultValue: `Voulez-vous quitter la squad "${teamDisplayName}" ? Si vous etes le dernier membre, elle sera archivee apres 7 jours.`,
+        defaultValue: `Veux-tu quitter la squad "${teamDisplayName}" ? Si tu es le dernier membre, elle sera archivée après 7 jours.`,
         teamName: teamDisplayName,
       }),
       [
@@ -1451,10 +1451,10 @@ function SquadDetailsScreen({ navigation, route }) {
       await resyncLeagueSourceTeam(safeTeamId);
       await refetch();
       queryClient.invalidateQueries({ queryKey: ['leagueTeam', safeTeamId] });
-      Alert.alert('Synchronisation terminee', "L'equipe source a ete resynchronisee dans League.");
+      Alert.alert('Synchronisation terminée', "L'équipe source a été resynchronisee dans League.");
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', "Impossible de resynchroniser l'equipe source pour le moment.");
+      Alert.alert('Erreur', "Impossible de resynchroniser l'équipe source pour le moment.");
     } finally {
       setIsUpdating(false);
     }
@@ -1463,7 +1463,7 @@ function SquadDetailsScreen({ navigation, route }) {
   const openCaptainActionsMenu = useCallback(() => {
     Alert.alert(
       t('squadDetails.actions.menuTitle', 'Actions équipe'),
-      t('squadDetails.actions.menuDescription', 'Choisissez une action.'),
+      t('squadDetails.actions.menuDescription', 'Choisis une action.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
@@ -1477,7 +1477,7 @@ function SquadDetailsScreen({ navigation, route }) {
         ...(isFootball11
           ? [{
             onPress: handleResyncSourceTeam,
-            text: 'Resynchroniser l equipe source',
+            text: 'Resynchroniser l équipe source',
           }]
           : []),
         {
@@ -1518,7 +1518,7 @@ function SquadDetailsScreen({ navigation, route }) {
     },
     {
       key: 'slots',
-      label: 'Cr\u00E9neaux',
+      label: 'Créneaux',
       value: `${slotCount}`,
     },
     {
@@ -1535,7 +1535,7 @@ function SquadDetailsScreen({ navigation, route }) {
 
   const actionCard = useMemo(() => {
     if (isCaptain) {
-      let description = 'Ajoutez un premier cr\u00E9neau pour rendre la squad active.';
+      let description = 'Ajoute un premier créneau pour rendre la squad active.';
       if (pendingRequestsCount > 0) {
         description = (
           <>
@@ -1547,13 +1547,13 @@ function SquadDetailsScreen({ navigation, route }) {
             attend
             {pendingRequestsCount > 1 ? 'ent' : ''}
             {' '}
-            votre validation.
+            ta validation.
           </>
         );
       } else if (slotCount > 0) {
-        description = `Prochain cr\u00E9neau: ${nextSlotLongLabel}`;
+        description = `Prochain créneau: ${nextSlotLongLabel}`;
       }
-      const primaryLabel = slotCount > 0 ? 'Gerer les cr\u00E9neaux' : 'Ajouter un cr\u00E9neau';
+      const primaryLabel = slotCount > 0 ? 'Gérer les créneaux' : 'Ajouter un créneau';
       const primaryPress = slotCount > 0
         ? () => handleScrollToSection('slots')
         : () => setIsSlotModalVisible(true);
@@ -1570,40 +1570,40 @@ function SquadDetailsScreen({ navigation, route }) {
         secondaryIsShareAction,
         secondaryLabel,
         secondaryPress,
-        title: pendingRequestsCount > 0 ? 'Votre squad attend votre validation' : 'Pilotez votre squad',
+        title: pendingRequestsCount > 0 ? 'Ta squad attend ta validation' : 'Pilote ta squad',
       };
     }
 
     if (isMember) {
       return {
         description: slotCount > 0
-          ? `Confirmez votre pr\u00E9sence sur ${nextSlotLongLabel}.`
-          : 'Aucun cr\u00E9neau d\u00E9fini pour le moment. Revenez bient\u00F4t ou contactez le capitaine.',
-        primaryLabel: slotCount > 0 ? 'Voir les cr\u00E9neaux' : "Voir l'effectif",
+          ? `Confirme ta présence sur ${nextSlotLongLabel}.`
+          : 'Aucun créneau défini pour le moment. Reviens bientôt ou contacte le capitaine.',
+        primaryLabel: slotCount > 0 ? 'Voir les créneaux' : "Voir l'effectif",
         primaryPress: () => handleScrollToSection(slotCount > 0 ? 'slots' : 'effectif'),
         secondaryLabel: canViewStatistics ? 'Voir les stats' : "Voir l'effectif",
         secondaryPress: canViewStatistics ? handleOpenStatisticsScreen : () => handleScrollToSection('effectif'),
-        title: 'Votre prochaine action',
+        title: 'Ton prochaine action',
       };
     }
 
     if (hasInvitation) {
       return {
-        description: 'Une invitation vous attend. Acceptez-la pour rejoindre la squad et participer aux prochains cr\u00E9neaux.',
+        description: 'Une invitation t\'attend. Accepte-la pour rejoindre la squad et participer aux prochains créneaux.',
         primaryLabel: 'Accepter',
         primaryPress: () => handleRespondToInvitation(true),
         secondaryLabel: 'Refuser',
         secondaryPress: () => handleRespondToInvitation(false),
-        title: 'Invitation recue',
+        title: 'Invitation reçue',
       };
     }
 
     if (isShareInviteLink) {
       return {
-        description: 'Ce lien vous invite a rejoindre directement la squad. Confirmez pour etre ajoute a l effectif.',
+        description: 'Ce lien t\'invite à rejoindre directement la squad. Confirme pour être ajoute a l effectif.',
         primaryLabel: 'Rejoindre la squad',
         primaryPress: handleAcceptShareInviteLink,
-        secondaryLabel: slotCount > 0 ? 'Voir les cr\u00E9neaux' : "Voir l'effectif",
+        secondaryLabel: slotCount > 0 ? 'Voir les créneaux' : "Voir l'effectif",
         secondaryPress: () => handleScrollToSection(slotCount > 0 ? 'slots' : 'effectif'),
         title: 'Invitation squad',
       };
@@ -1611,24 +1611,24 @@ function SquadDetailsScreen({ navigation, route }) {
 
     if (hasPendingRequest) {
       return {
-        description: "Votre demande est bien envoy\u00E9e. Vous pouvez d\u00E9j\u00E0 consulter les cr\u00E9neaux et l'effectif.",
+        description: "Ta demande est bien envoyée. Tu peux déjà consulter les créneaux et l'effectif.",
         primaryLabel: 'Annuler la demande',
         primaryPress: handleCancelJoinRequest,
-        secondaryLabel: 'Voir les cr\u00E9neaux',
+        secondaryLabel: 'Voir les créneaux',
         secondaryPress: () => handleScrollToSection('slots'),
-        title: 'Votre demande est en attente',
+        title: 'Ta demande est en attente',
       };
     }
 
     return {
       description: slotCount > 0
-        ? `La squad vit d\u00E9j\u00E0 autour de ${nextSlotLongLabel}. Rejoignez-la pour participer.`
-        : "Rejoignez cette squad pour acc\u00E9der aux cr\u00E9neaux et \u00E0 l'effectif complet.",
-      primaryLabel: 'Demander a rejoindre',
+        ? `La squad vit déjà autour de ${nextSlotLongLabel}. Rejoins-la pour participer.`
+        : "Rejoins cette squad pour accéder aux créneaux et à l'effectif complet.",
+      primaryLabel: 'Demander à rejoindre',
       primaryPress: handleRequestJoin,
-      secondaryLabel: slotCount > 0 ? 'Voir les cr\u00E9neaux' : "Voir l'effectif",
+      secondaryLabel: slotCount > 0 ? 'Voir les créneaux' : "Voir l'effectif",
       secondaryPress: () => handleScrollToSection(slotCount > 0 ? 'slots' : 'effectif'),
-      title: 'Rejoignez cette squad',
+      title: 'Rejoins cette squad',
     };
   }, [
     handleAcceptShareInviteLink,
@@ -1665,7 +1665,7 @@ function SquadDetailsScreen({ navigation, route }) {
     shortcuts.push(
       {
         key: 'slots',
-        label: 'Cr\u00E9neaux',
+        label: 'Créneaux',
         onPress: () => handleScrollToSection('slots'),
       },
       {
@@ -1714,7 +1714,7 @@ function SquadDetailsScreen({ navigation, route }) {
     return (
       <LeagueStateView
         actionLabel="Retour"
-        description="L'identifiant de la squad est manquant. Ouvrez la fiche depuis la recherche League ou le dashboard."
+        description="L'identifiant de la squad est manquant. Ouvre la fiche depuis la recherche League ou le dashboard."
         onAction={() => navigation.goBack()}
         title="Squad introuvable"
       />
@@ -1734,8 +1734,8 @@ function SquadDetailsScreen({ navigation, route }) {
   if (teamError) {
     return (
       <LeagueStateView
-        actionLabel="R\u00E9essayer"
-        description="Impossible de charger cette squad League pour le moment. Relancez le chargement ou revenez a la recherche."
+        actionLabel="Réessayer"
+        description="Impossible de charger cette squad League pour le moment. Relance le chargement ou reviens à la recherche."
         onAction={() => refetch()}
         title="Chargement impossible"
       />
@@ -1888,7 +1888,7 @@ function SquadDetailsScreen({ navigation, route }) {
                   demande
                   {pendingRequestsCount > 1 ? 's' : ''}
                   {' '}
-                  attendent votre réponse. Ouvrez la file pour accepter ou refuser rapidement.
+                  attendent ta réponse. Ouvre la file pour accepter ou refuser rapidement.
                 </Text>
               </View>
               <View
@@ -2175,8 +2175,8 @@ function SquadDetailsScreen({ navigation, route }) {
             >
               <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 12 }]}>
                 {isPadelStatisticsMode
-                  ? 'Suivez votre bilan League, votre position dans la division et l historique recent de la squad.'
-                  : 'Retrouvez vos indicateurs League et les statistiques post-match de la squad au m\u00EAme endroit.'}
+                  ? 'Suis ton bilan League, ta position dans la division et l historique récent de la squad.'
+                  : 'Retrouve tes indicateurs League et les statistiques post-match de la squad au même endroit.'}
               </Text>
 
               <View style={{
@@ -2206,12 +2206,12 @@ function SquadDetailsScreen({ navigation, route }) {
                 </View>
                 <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
                   {isPadelStatisticsMode
-                    ? 'La squad voit d\u00E9j\u00E0 ses r\u00E9sultats, son historique et ses indicateurs League. Les statistiques post-match d\u00E9taill\u00E9es padel arriveront dans un lot d\u00E9di\u00E9.'
-                    : 'La squad suit ici sa comp\u00E9tition League, ses derniers matchs et les retours post-match publi\u00E9s.'}
+                    ? 'La squad voit déjà ses résultats, son historique et ses indicateurs League. Les statistiques post-match détaillées padel arriveront dans un lot dédié.'
+                    : 'La squad suit ici sa compétition League, ses derniers matchs et les retours post-match publiés.'}
                 </Text>
               </View>
 
-              <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 12 }]}>Competition League</Text>
+              <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 12 }]}>Compétition League</Text>
               <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12], { marginBottom: 14 }]}>
                 {competitionCards.map((item) => (
                   <View
@@ -2327,7 +2327,7 @@ function SquadDetailsScreen({ navigation, route }) {
                 >
                   <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Bilan compétition</Text>
                   <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 10 }]}>
-                    Cet espace suit déjà les resultats League, votre classement et votre historique. Les statistiques post-match détaillées pour le padel ne sont pas encore actives dans cette V1.
+                    Cet espace suit déjà les résultats League, ton classement et ton historique. Les statistiques post-match détaillées pour le padel ne sont pas encore actives dans cette V1.
                   </Text>
                   <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
                     <View style={{
@@ -2488,13 +2488,13 @@ function SquadDetailsScreen({ navigation, route }) {
                             }}
                             >
                               <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
-                                {pendingMatch?.reportStatus === 'draft' ? 'Brouillon \u00E9quipe' : 'En attente'}
+                                {pendingMatch?.reportStatus === 'draft' ? 'Brouillon équipe' : 'En attente'}
                               </Text>
                             </View>
                           </View>
                           {pendingMatch?.lastSubmittedAt ? (
                             <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
-                              {`Derni\u00E8re r\u00E9ponse le ${new Date(pendingMatch.lastSubmittedAt).toLocaleString('fr-FR')}`}
+                              {`Dernière réponse le ${new Date(pendingMatch.lastSubmittedAt).toLocaleString('fr-FR')}`}
                             </Text>
                           ) : null}
                         </TouchableOpacity>
@@ -2552,7 +2552,7 @@ function SquadDetailsScreen({ navigation, route }) {
                                 }}
                                 >
                                   <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
-                                    {report?.newResponsesCount > 1 ? `${report.newResponsesCount} nouvelles r\u00E9ponses` : 'Nouvelle r\u00E9ponse'}
+                                    {report?.newResponsesCount > 1 ? `${report.newResponsesCount} nouvelles réponses` : 'Nouvelle réponse'}
                                   </Text>
                                 </View>
                               ) : null}
@@ -2649,8 +2649,8 @@ function SquadDetailsScreen({ navigation, route }) {
           >
             <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 12 }]}>
               {isCaptain
-                ? 'Ajoutez et animez vos cr\u00E9neaux pour rendre la squad visible et active.'
-                : 'Consultez les prochains cr\u00E9neaux et confirmez votre pr\u00E9sence en un geste.'}
+                ? 'Ajoute et anime tes créneaux pour rendre la squad visible et active.'
+                : 'Consulte les prochains créneaux et confirme ta présence en un geste.'}
             </Text>
             <View style={{
               backgroundColor: uiTone.insightCardBg,
@@ -2676,7 +2676,7 @@ function SquadDetailsScreen({ navigation, route }) {
                 </View>
               </View>
               <Text style={[Fonts.h3Bold, { color: Colors.gold500, marginBottom: 4 }]}>
-                {nextSlot ? nextSlotLongLabel : 'Aucun cr\u00E9neau programm\u00E9'}
+                {nextSlot ? nextSlotLongLabel : 'Aucun créneau programmé'}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.gold500, marginBottom: 14 }]}>
                 {nextSlotStatus.helper}
@@ -2755,8 +2755,8 @@ function SquadDetailsScreen({ navigation, route }) {
             </View>
             <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 14 }]}>
               {isCaptain
-                ? 'Retrouvez les capitaines, les membres actifs et ajustez la responsabilite de la squad.'
-                : 'Voyez qui compose d\u00E9j\u00E0 la squad et identifiez rapidement les capitaines.'}
+                ? 'Retrouve les capitaines, les membres actifs et ajuste la responsabilité de la squad.'
+                : 'Vois qui compose déjà la squad et identifie rapidement les capitaines.'}
             </Text>
             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12], { marginBottom: 14 }]}>
               {rosterSignals.map((item) => {
@@ -2782,8 +2782,8 @@ function SquadDetailsScreen({ navigation, route }) {
             {isCaptain ? (
               <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 14 }]}>
                 {pendingRequestsCount > 0
-                  ? 'Le groupe est actif: pensez a traiter les demandes et inviter les bons profils.'
-                  : 'Le groupe est stable. Vous pouvez encore inviter des joueurs pour enrichir la squad.'}
+                  ? 'Le groupe est actif: pense à traiter les demandes et inviter les bons profils.'
+                  : 'Le groupe est stable. Tu peux encore inviter des joueurs pour enrichir la squad.'}
               </Text>
             ) : null}
 
@@ -2928,7 +2928,7 @@ function SquadDetailsScreen({ navigation, route }) {
               },
             ]}
           >
-            {t('squadDetails.captains.modalDescription', 'Choisissez comment donner le role de capitaine a {{name}}.', {
+            {t('squadDetails.captains.modalDescription', 'Choisis comment donner le rôle de capitaine a {{name}}.', {
               name: captainAssignmentTargetName,
             })}
           </Text>
@@ -2947,7 +2947,7 @@ function SquadDetailsScreen({ navigation, route }) {
               {t('squadDetails.captains.addTitle', 'Ajouter un capitaine')}
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20, marginBottom: 12 }]}>
-              {t('squadDetails.captains.addHint', 'Vous gardez votre role et la squad peut avoir plusieurs capitaines.')}
+              {t('squadDetails.captains.addHint', 'Tu gardes ton rôle et la squad peut avoir plusieurs capitaines.')}
             </Text>
             <Button
               disabled={Boolean(captainAssignmentMode)}
@@ -3011,7 +3011,7 @@ function SquadDetailsScreen({ navigation, route }) {
             setTimeout(() => {
               Alert.alert(
                 t('common.confirmation', 'Confirmation'),
-                t('squadDetails.slots.deleteConfirm', 'Voulez-vous vraiment supprimer ce créneau ?'),
+                t('squadDetails.slots.deleteConfirm', 'Veux-tu vraiment supprimer ce créneau ?'),
                 [
                   { style: 'cancel', text: t('common.cancel', 'Annuler') },
                   {

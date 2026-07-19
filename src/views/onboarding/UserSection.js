@@ -71,7 +71,7 @@ function UserSection({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour votre profil.');
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });

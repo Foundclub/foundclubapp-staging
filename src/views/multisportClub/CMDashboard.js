@@ -60,7 +60,7 @@ const getErrorStatus = (error) => Number(
 /** @param {any} error */
 const isForbiddenError = (error) => (
   getErrorStatus(error) === 403
-  || normalizeErrorMessage(error).includes('acces refuse')
+  || normalizeErrorMessage(error).includes('accès refuse')
   || normalizeErrorMessage(error).includes('accès refusé')
   || normalizeErrorMessage(error).includes('forbidden')
 );
@@ -333,7 +333,7 @@ function CMDashboard({ navigation, route }) {
       icon: 'bell',
       key: 'manage-requests',
       onPress: handleOpenRequestsHub,
-      subtitle: t('multisport.actions.requests.subtitle', 'Traiter les demandes en attente de votre organisation.'),
+      subtitle: t('multisport.actions.requests.subtitle', 'Traiter les demandes en attente de ton organisation.'),
       title: t('multisport.actions.requests.title', 'Demandes'),
     },
     {
@@ -401,8 +401,8 @@ function CMDashboard({ navigation, route }) {
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {isMissingCmId
-              ? 'Aucun identifiant multisport n a ete fourni.'
-              : 'Le lien est peut-etre obsolete ou cet espace a ete supprime.'}
+              ? 'Aucun identifiant multisport n a été fourni.'
+              : 'Le lien est peut-être obsolète ou cet espace a été supprimé.'}
           </Text>
           <Button onPress={() => navigation.navigate(RouteNames.MyClubs)} title="Retour aux clubs" variant="Secondary" />
           {!isMissingCmId ? (
@@ -436,7 +436,7 @@ function CMDashboard({ navigation, route }) {
         ]}
       >
         <OnboardingWrapper
-          description={t('multisport.tutorial.mainDescription', 'Gérez vos sections, vos membres et vos actions rapides depuis un seul écran.')}
+          description={t('multisport.tutorial.mainDescription', 'Gère tes sections, tes membres et tes actions rapides depuis un seul écran.')}
           id="cm-dashboard-main-content"
           order={1}
           spotlight={{

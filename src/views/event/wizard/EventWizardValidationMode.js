@@ -31,7 +31,7 @@ const buildValidationOptions = (t) => ([
     key: 'auto',
     subtitle: t(
       'eventWizard.steps.validation.autoDesc',
-      'Les participants peuvent confirmer automatiquement leur presence.',
+      'Les participants peuvent confirmer automatiquement leur présence.',
     ),
     title: t('eventEdit.fields.validationMode.options.auto'),
   },
@@ -262,8 +262,8 @@ function EventWizardValidationMode({ navigation }) {
           ? 'eventWizard.steps.validation.trainingSubtitle'
           : 'eventWizard.steps.validation.subtitle',
         isOpenTraining
-          ? 'Definis la validation des membres internes puis celle des joueurs externes.'
-          : "Definis comment valider les presences a l'evenement.",
+          ? 'Définis la validation des membres internes puis celle des joueurs externes.'
+          : "Définis comment valider les présences a l'événement.",
       )}
       title={t('eventWizard.steps.validation.title', 'Mode de validation')}
     >

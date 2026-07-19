@@ -76,7 +76,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.primary500}20`,
       borderColor: `${Colors.primary500}45`,
-      label: prompt?.state === 'draft' ? 'Brouillon perso' : 'A repondre',
+      label: prompt?.state === 'draft' ? 'Brouillon perso' : 'A répondre',
       textColor: Colors.primary500,
     };
   }
@@ -85,7 +85,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.warning500}20`,
       borderColor: `${Colors.warning500}45`,
-      label: 'Verification requise',
+      label: 'Vérification requise',
       textColor: Colors.warning500,
     };
   }
@@ -120,7 +120,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
   return {
     backgroundColor: `${Colors.neutral00}14`,
     borderColor: `${Colors.neutral00}24`,
-    label: 'Score a completer',
+    label: 'Score à compléter',
     textColor: Colors.neutral00,
   };
 };
@@ -149,7 +149,7 @@ const navigateToPendingMatchStats = (prompt, overrides = {}) => {
     ...overrides,
     actionType: prompt?.actionType || 'coach_team_review',
     actorRole: prompt?.actorRole || 'player',
-    title: prompt?.actionType === 'player_self_report' ? 'Mon retour post-match' : 'Bilan equipe',
+    title: prompt?.actionType === 'player_self_report' ? 'Mon retour post-match' : 'Bilan équipe',
   };
 
   if (prompt?.sourceType === 'league') {
@@ -262,9 +262,9 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   const primaryActionTitle = useMemo(() => {
     if (!nextPrompt) return 'Ouvrir';
     if (nextPrompt?.actionType === 'player_self_report') {
-      return nextPrompt?.state === 'draft' ? 'Reprendre ma reponse' : 'Renseigner mes stats';
+      return nextPrompt?.state === 'draft' ? 'Reprendre ma réponse' : 'Renseigner mes stats';
     }
-    if (nextPrompt?.reviewRequired) return 'Mettre a jour apres score officiel';
+    if (nextPrompt?.reviewRequired) return 'Mettre à jour après score officiel';
     if (nextPrompt?.reportStatus === 'draft') return 'Reprendre le brouillon';
     if (nextPrompt?.score?.available) return 'Saisir les stats du match';
     return 'Enregistrer le score';
@@ -274,24 +274,24 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     if (!nextPrompt) return '';
     if (nextPrompt?.actionType === 'player_self_report') {
       if (nextPrompt?.state === 'draft') {
-        return 'Ton retour perso post-match est deja commence. Reprends-le quand tu veux pour finaliser tes stats et ta note.';
+        return 'Ton retour perso post-match est déjà commence. Reprends-le quand tu veux pour finaliser tes stats et ta note.';
       }
-      return 'Ton match est termine. Renseigne tes stats individuelles si tu les connais, puis laisse une note sur 10 et ton ressenti.';
+      return 'Ton match est terminé. Renseigne tes stats individuelles si tu les connais, puis laisse une note sur 10 et ton ressenti.';
     }
     if (nextPrompt?.reviewRequired) {
-      return 'Le score officiel a change apres une premiere saisie. Verifie les lignes puis republie la bonne version.';
+      return 'Le score officiel a changé après une première saisie. Vérifie les lignes puis republie la bonne version.';
     }
     if (nextPrompt?.reportStatus === 'draft') {
-      return 'Un brouillon post-match existe deja pour cette equipe. Il attend encore d etre finalise.';
+      return 'Un brouillon post-match existe déjà pour cette équipe. Il attend encore d être finalise.';
     }
     if (nextPrompt?.score?.available) {
-      return 'Le score est pret. Il reste a completer le temps de jeu et les statistiques cles de ton equipe.';
+      return 'Le score est prêt. Il reste à compléter le temps de jeu et les statistiques clés de ton équipe.';
     }
-    return 'Le match est termine. Commence par enregistrer le score, puis complete les statistiques de ton equipe.';
+    return 'Le match est terminé. Commence par enregistrer le score, puis complète les statistiques de ton équipe.';
   }, [nextPrompt]);
 
   const scoreLabel = useMemo(() => {
-    if (!nextPrompt?.score?.available) return nextPrompt?.actionType === 'player_self_report' ? 'Score en attente' : 'Score a completer';
+    if (!nextPrompt?.score?.available) return nextPrompt?.actionType === 'player_self_report' ? 'Score en attente' : 'Score à compléter';
     return `${nextPrompt?.score?.scoreFor ?? '-'} - ${nextPrompt?.score?.scoreAgainst ?? '-'}`;
   }, [nextPrompt]);
   const promptSourceLabel = useMemo(() => {
@@ -405,7 +405,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
         <View style={[Spaces.gap[titleGap]]}>
           <Text style={[Fonts.p4Bold, Fonts.primary500]}>Rappel post-match</Text>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {nextPrompt?.actionType === 'player_self_report' ? 'Ton match est termine' : 'Bilan de fin de match'}
+            {nextPrompt?.actionType === 'player_self_report' ? 'Ton match est terminé' : 'Bilan de fin de match'}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200, { lineHeight: helperLineHeight, maxWidth: '96%' }]}>
             {helperText}
@@ -450,7 +450,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
 
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[16]]}>
               <View style={[{ flex: 1 }, Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>Equipe</Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>Équipe</Text>
                 <Text style={[Fonts.p3Bold, Fonts.primary100]}>
                   {nextPrompt?.team?.name || 'Equipe'}
                 </Text>
@@ -495,7 +495,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
               ]}
             >
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                {`Il reste ${totalPending} actions post-match a completer.`}
+                {`Il reste ${totalPending} actions post-match à compléter.`}
               </Text>
             </View>
           </View>

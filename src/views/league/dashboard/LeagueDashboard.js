@@ -112,7 +112,7 @@ const formatPositiveStreak = (streak) => {
  * @returns {string}
  */
 const formatLeagueDashboardDate = (value) => {
-  if (!value) return 'Date \u00E0 d\u00E9finir';
+  if (!value) return 'Date à définir';
   try {
     return new Date(value).toLocaleString('fr-FR', {
       day: '2-digit',
@@ -121,7 +121,7 @@ const formatLeagueDashboardDate = (value) => {
       month: 'short',
     });
   } catch (_error) {
-    return 'Date \u00E0 d\u00E9finir';
+    return 'Date à définir';
   }
 };
 
@@ -173,78 +173,78 @@ const LEAGUE_ACTION_META = {
   confirmed_upcoming: {
     accent: 'success',
     actionLabel: 'Voir le match',
-    helper: 'Le match est confirm\u00E9. Retrouvez les informations de preparation dans votre espace Match.',
-    title: 'Match confirm\u00E9',
+    helper: 'Le match est confirmé. Retrouve les informations de préparation dans ton espace Match.',
+    title: 'Match confirmé',
   },
   disputed: {
     accent: 'warning',
     actionLabel: 'Traiter le litige',
-    helper: 'Un litige est ouvert sur le score. Ouvrez le match pour le traiter.',
+    helper: 'Un litige est ouvert sur le score. Ouvre le match pour le traiter.',
     title: 'Litige score',
   },
   idle: {
     accent: 'neutral',
     actionLabel: 'Trouver un match',
-    helper: 'Lancez une recherche pour trouver un adversaire compatible avec les cr\u00E9neaux de votre squad.',
+    helper: 'Lance une recherche pour trouver un adversaire compatible avec les créneaux de ta squad.',
     title: 'Aucun match actif',
   },
   opponent_found: {
     accent: 'primary',
     actionLabel: 'Envoyer une proposition',
-    helper: 'Un adversaire a ete trouve. Il reste a vous accorder sur la proposition de match.',
+    helper: "Un adversaire a été trouvé. Il reste à t'accorder sur la proposition de match.",
     title: 'Adversaire trouve',
   },
   pending_validation: {
     accent: 'warning',
     actionLabel: 'Valider le score',
-    helper: 'Un score attend une validation. Confirmez ou contestez le resultat.',
-    title: 'Score a valider',
+    helper: 'Un score attend une validation. Confirme ou conteste le résultat.',
+    title: 'Score à valider',
   },
   post_slot_resolution: {
     accent: 'warning',
     actionLabel: 'Le match a-t-il eu lieu ?',
-    helper: 'Le creneau est depasse sans terrain confirme. Le capitaine doit dire si le match a eu lieu.',
+    helper: 'Le créneau est dépassé sans terrain confirmé. Le capitaine doit dire si le match a eu lieu.',
     title: 'Confirmation match',
   },
   proposal_received: {
     accent: 'warning',
-    actionLabel: 'R\u00E9pondre',
-    helper: 'Une proposition adverse attend votre r\u00E9ponse. Ouvrez la conversation pour accepter, refuser ou contre-proposer.',
-    title: 'Nouvelle proposition re\u00E7ue',
+    actionLabel: 'Répondre',
+    helper: 'Une proposition adverse attend ta réponse. Ouvre la conversation pour accepter, refuser ou contre-proposer.',
+    title: 'Nouvelle proposition reçue',
   },
   proposal_sent_waiting: {
     accent: 'gold',
     actionLabel: 'Voir la proposition',
-    helper: "Votre proposition a \u00E9t\u00E9 envoy\u00E9e. Continuez l'echange dans la conversation avec l'adversaire.",
-    title: 'Proposition envoy\u00E9e',
+    helper: "Ta proposition a été envoyée. Continue l'échange dans la conversation avec l'adversaire.",
+    title: 'Proposition envoyée',
   },
   searching: {
     accent: 'gold',
     actionLabel: 'Ouvrir le centre de match',
-    helper: 'La recherche est en cours. Les meilleures correspondances continuent a etre analysees.',
+    helper: 'La recherche est en cours. Les meilleures correspondances continuent à être analysees.',
     title: 'Recherche en cours',
   },
   valid: {
     accent: 'success',
     actionLabel: 'Voir le résultat',
-    helper: 'Le score est valide. Consultez le recapitulatif du match.',
+    helper: 'Le score est validé. Consulte le récapitulatif du match.',
     title: 'Résultat validé',
   },
   waiting_score: {
     accent: 'gold',
     actionLabel: 'Saisir le score',
-    helper: 'Le match est joue. Saisissez le score final pour lancer la validation League.',
-    title: 'Score a saisir',
+    helper: 'Le match est joue. Saisis le score final pour lancer la validation League.',
+    title: 'Score à saisir',
   },
   waiting_venue: {
     accent: 'warning',
-    actionLabel: 'Marquer terrain reserve',
-    helper: "Le match est confirm\u00E9, mais le terrain n'est pas encore r\u00E9serv\u00E9. Finalisez l'organisation d\u00E8s que possible.",
-    title: 'Terrain \u00E0 r\u00E9server',
+    actionLabel: 'Marquer terrain réservé',
+    helper: "Le match est confirmé, mais le terrain n'est pas encore réservé. Finalise l'organisation dès que possible.",
+    title: 'Terrain à réserver',
   },
 };
 
-LEAGUE_ACTION_META.confirm\u00E9d_upcoming = LEAGUE_ACTION_META.confirmed_upcoming;
+LEAGUE_ACTION_META.confirméd_upcoming = LEAGUE_ACTION_META.confirmed_upcoming;
 
 const SCORE_ACTION_STATES = new Set(['disputed', 'pending_validation', 'waiting_score']);
 
@@ -480,8 +480,8 @@ function LeagueDashboard() {
       focusLatestProposal: true,
       focusProposalMessageId: options?.proposalMessageId || leagueActionState?.proposalMessageId || undefined,
       leagueNegotiationFocusToken: String(Date.now()),
-      subTitle: 'Negociation du match en cours',
-      title: `${userTeam?.name || 'Votre squad'} vs ${opponentName}`,
+      subTitle: 'Négociation du match en cours',
+      title: `${userTeam?.name || 'Ta squad'} vs ${opponentName}`,
     });
   }, [leagueActionState, navigation, userTeam?.name]);
 
@@ -550,7 +550,7 @@ function LeagueDashboard() {
       return;
     }
 
-    if (['confirmed_upcoming', 'confirm\u00E9d_upcoming'].includes(state)) {
+    if (['confirmed_upcoming', 'confirméd_upcoming'].includes(state)) {
       openLeagueMatchDetails(matchId);
       return;
     }
@@ -664,7 +664,7 @@ function LeagueDashboard() {
               Vue squad active
             </Text>
             <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-              {userTeam?.name || 'Votre squad'}
+              {userTeam?.name || 'Ta squad'}
             </Text>
             <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 3 }]}>
               {userTeam?.sport || 'Sport'}
@@ -719,7 +719,7 @@ function LeagueDashboard() {
             Changer de squad
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
-            Selectionnez la squad active pour votre dashboard League.
+            Sélectionne la squad active pour ton dashboard League.
           </Text>
         </View>
       )}
@@ -850,8 +850,8 @@ function LeagueDashboard() {
     const accentColor = isInvitation ? Colors.gold500 : (Colors.warning500 || Colors.gold500);
     const statusLabel = isInvitation ? 'INVITATION' : 'EN ATTENTE';
     const helperLabel = isInvitation
-      ? 'Une squad vous attend d\u00E9j\u00E0. R\u00E9pondez pour rejoindre la comp\u00E9tition.'
-      : 'Votre demande a bien \u00E9t\u00E9 envoy\u00E9e. Le capitaine doit encore r\u00E9pondre.';
+      ? 'Une squad t\'attend déjà. Réponds pour rejoindre la compétition.'
+      : 'Ta demande a bien été envoyée. Le capitaine doit encore répondre.';
     const ctaLabel = isInvitation ? 'Voir l invitation' : 'Voir la demande';
     const squadName = squad?.name || 'Squad League';
     const divisionValue = clampLeagueDivision(squad?.division);
@@ -981,14 +981,14 @@ function LeagueDashboard() {
       }}
       >
         {/* eslint-disable-next-line react/no-unescaped-entities */}
-        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>PRÊT À L'ACTION ?</Text>
+        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>Prêt à l'action ?</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
           Crée ton équipe pour rejoindre la compétition officielle.
         </Text>
         <Button
           onPress={() => navigation.navigate(RouteNames.SquadSearch)}
           style={{ marginBottom: 12, width: '100%' }}
-          title="RECHERCHER UNE SQUAD"
+          title="Rechercher une squad"
           variant="Secondary"
         />
         <Button
@@ -1003,7 +1003,7 @@ function LeagueDashboard() {
             width: '100%',
           }}
           textStyle={{ color: Colors.neutral900 }}
-          title="CRÉER UNE SQUAD"
+          title="Créer une squad"
           variant="Primary"
         />
       </LeagueCard>
@@ -1048,10 +1048,10 @@ function LeagueDashboard() {
           demande
           {dashboardPendingRequestsCount > 1 ? 's' : ''}
           {' '}
-          attendent votre réponse
+          attendent ta réponse
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 16 }]}>
-          Ouvrez les demandes de votre squad pour accepter ou refuser les joueurs en attente.
+          Ouvre les demandes de ta squad pour accepter ou refuser les joueurs en attente.
         </Text>
         <Button
           onPress={() => navigation.navigate(RouteNames.SquadRequests, { teamId: getEntityDocumentId(userTeam) })}
@@ -1161,8 +1161,8 @@ function LeagueDashboard() {
 
         <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginTop: 14 }]}>
           {state === 'searching' || state === 'idle'
-            ? (userTeam?.name || 'Votre squad')
-            : `${userTeam?.name || 'Votre squad'} VS ${opponentName}`}
+            ? (userTeam?.name || 'Ta squad')
+            : `${userTeam?.name || 'Ta squad'} VS ${opponentName}`}
         </Text>
 
         <Text style={[Fonts.p2, { color: Colors.neutral200, marginTop: 10 }]}>
@@ -1233,7 +1233,7 @@ function LeagueDashboard() {
     if (rawStreak > 0) {
       streakHelper = `Prochain bonus: +${nextStreakBonus}`;
     } else if (rawStreak < 0) {
-      streakHelper = 'Dernier resultat: defaite';
+      streakHelper = 'Dernier résultat: défaite';
     }
     const promotionHelper = divisionProgress.maxDivisionReached
       ? 'Division 1 prestige'
@@ -1275,7 +1275,7 @@ function LeagueDashboard() {
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 12, textAlign: 'center' }]}>
             {streakHelper}
-            {' | Meilleure serie: x'}
+            {' | Meilleure série: x'}
             {getTeamHighestStreak(userTeam)}
           </Text>
           <Button
@@ -1406,7 +1406,7 @@ function LeagueDashboard() {
   if (loading && !userTeam && !loadError) {
     return (
       <LeagueStateView
-        description="Chargement du dashboard League et de votre squad."
+        description="Chargement du dashboard League et de ta squad."
         isLoading
         title="Chargement League"
       />
@@ -1493,14 +1493,14 @@ function LeagueDashboard() {
         <View style={{ gap: 16, paddingBottom: 12 }}>
           <View style={{ gap: 6 }}>
             <Text style={[Fonts.h3Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-              Conversation en preparation
+              Conversation en préparation
             </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
-              La conversation avec l&apos;adversaire n&apos;est pas encore prete. Reessayez dans quelques secondes ou ouvrez la fiche match pour suivre l&apos;organisation.
+              La conversation avec l&apos;adversaire n&apos;est pas encore prête. Réessaie dans quelques secondes ou ouvre la fiche match pour suivre l&apos;organisation.
             </Text>
           </View>
           <LeagueCard style={{ ...leagueSurface, marginBottom: 0 }}>
-            <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Etat League</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>État League</Text>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 6 }]}>
               {conversationFallbackState?.opponentName || 'Adversaire'}
             </Text>

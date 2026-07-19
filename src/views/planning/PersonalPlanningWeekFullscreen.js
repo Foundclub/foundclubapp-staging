@@ -250,13 +250,13 @@ function PlanningWeekFullscreen() {
       if (facilityPlanningSummary.allowsImmediateConfirmation) {
         return t(
           'facilityList.planning.capacityReachedOverflow',
-          'La capacite a deja ete atteinte sur cette periode. Les nouveaux depassements restent autorises et notifieront les dirigeants.',
+          'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements restent autorises et notifieront les dirigeants.',
         );
       }
 
       return t(
         'facilityList.planning.capacityReachedStrict',
-        'La capacite a deja ete atteinte sur cette periode. Les nouveaux depassements passeront en demande en attente.',
+        'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements passeront en demande en attente.',
       );
     }
 
@@ -316,7 +316,7 @@ function PlanningWeekFullscreen() {
             Impossible de charger le planning
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
-            Le planning de cette semaine n’a pas pu etre recupere. Reessayez ou changez de semaine.
+            Le planning de cette semaine n’a pas pu être récupère. Réessaie ou change de semaine.
           </Text>
           <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
         </View>
@@ -340,10 +340,10 @@ function PlanningWeekFullscreen() {
           }}
         >
           <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[8]]}>
-            Aucun creneau cette semaine
+            Aucun créneau cette semaine
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
-            Changez de semaine pour explorer le planning ou revenez a la semaine actuelle.
+            Change de semaine pour explorer le planning ou reviens à la semaine actuelle.
           </Text>
           <View style={[Alignments.row, Spaces.gap[12]]}>
             {!isCurrentWeek ? (
@@ -419,7 +419,7 @@ function PlanningWeekFullscreen() {
           ]}
         >
           <TouchableOpacity
-            accessibilityLabel="Semaine precedente"
+            accessibilityLabel="Semaine précédente"
             accessibilityRole="button"
             hitSlop={8}
             onPress={handlePrevWeek}
@@ -482,7 +482,7 @@ function PlanningWeekFullscreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            accessibilityLabel="Fermer le planning plein ecran"
+            accessibilityLabel="Fermer le planning plein écran"
             accessibilityRole="button"
             hitSlop={8}
             onPress={handleClose}
@@ -505,7 +505,7 @@ function PlanningWeekFullscreen() {
           </TouchableOpacity>
           {!isCurrentWeek ? (
             <TouchableOpacity
-              accessibilityLabel="Revenir a la semaine actuelle"
+              accessibilityLabel="Revenir à la semaine actuelle"
               accessibilityRole="button"
               hitSlop={8}
               onPress={handleBackToCurrentWeek}
@@ -543,10 +543,10 @@ function PlanningWeekFullscreen() {
           >
             <View>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t('facilityList.planning.capacityTitle', 'Capacite installation')}
+                {t('facilityList.planning.capacityTitle', 'Capacité installation')}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral200]}>
-                {facilityMeta?.name || t('facilityList.planning.selectedFacility', 'Installation selectionnee')}
+                {facilityMeta?.name || t('facilityList.planning.selectedFacility', 'Installation sélectionnée')}
               </Text>
             </View>
 
@@ -554,7 +554,7 @@ function PlanningWeekFullscreen() {
               {[
                 `${facilityPlanningSummary.maxSlots} slot${facilityPlanningSummary.maxSlots > 1 ? 's' : ''}`,
                 `Pic ${facilityPlanningSummary.peakConcurrent}/${facilityPlanningSummary.maxSlots}`,
-                `${facilityPlanningSummary.eventCount} evenement${facilityPlanningSummary.eventCount > 1 ? 's' : ''}`,
+                `${facilityPlanningSummary.eventCount} événement${facilityPlanningSummary.eventCount > 1 ? 's' : ''}`,
               ].map((label, index) => (
                 <View
                   key={`${label}-${index + 1}`}

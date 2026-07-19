@@ -110,7 +110,7 @@ function AdminNotificationsHealth() {
   if (isLoading) {
     return (
       <AdminStateView
-        description="Nous lisons l'etat runtime push, la queue et les installations."
+        description="Nous lisons l'état runtime push, la queue et les installations."
         isLoading
         title="Diagnostic notifications"
       />
@@ -262,7 +262,7 @@ function AdminNotificationsHealth() {
                   </Text>
                 ) : (
                   <Text style={[Fonts.p3, { color: Colors.success500 }]}>
-                    Tous les comptes locaux detectes sur cet appareil sont abonnes.
+                    Tous les comptes locaux detectes sur cet appareil sont abonnés.
                   </Text>
                 )}
               </View>
@@ -346,7 +346,7 @@ function AdminNotificationsHealth() {
               {renderAction('Test chat', () => runAction('Test chat', () => testMutation.mutateAsync({ kind: 'chat-reply' })), testMutation.isPending)}
               {renderAction('Test groupe', () => runAction('Test groupe', () => testMutation.mutateAsync({ kind: 'chat-group' })), testMutation.isPending)}
               {renderAction(
-                'Relancer dernier echec',
+                'Relancer dernier échec',
                 () => runAction('Relance delivery', () => retryMutation.mutateAsync(firstFailureDocumentId)),
                 !firstFailureDocumentId || retryMutation.isPending,
               )}
@@ -375,13 +375,13 @@ function AdminNotificationsHealth() {
                     </Text>
                   </View>
                   <Text numberOfLines={3} style={[Fonts.p3, Fonts.neutral300, styles.failureError]}>
-                    {failure.lastError || 'Sans erreur detaillee'}
+                    {failure.lastError || 'Sans erreur détaillée'}
                   </Text>
                 </View>
               ))}
               {!data?.recentFailures?.length ? (
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  Aucun echec recent.
+                  Aucun échec récent.
                 </Text>
               ) : null}
             </View>

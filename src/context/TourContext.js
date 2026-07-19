@@ -52,6 +52,10 @@ export function TourProvider({ children }) {
   const userId = userData?.documentId || null;
 
   const [tourState, setTourState] = useState(/** @type {any} */ (null));
+  // Hauteur reservee en bas d'ecran par le bandeau flottant du tour : publiee par
+  // TourBanner (onLayout), consommee par ScreenContainer pour que le bandeau ne
+  // recouvre jamais le contenu reel.
+  const [tourBannerReservedSpace, setTourBannerReservedSpace] = useState(0);
   const tourStateRef = useRef(/** @type {any} */ (null));
   tourStateRef.current = tourState;
   const successTimerRef = useRef(/** @type {any} */ (null));
@@ -215,9 +219,11 @@ export function TourProvider({ children }) {
     exitTour,
     isTourActive: Boolean(tourState),
     resumeTour,
+    setTourBannerReservedSpace,
     startTour,
     stepIndex: Number(tourState?.stepIndex || 0),
     totalSteps: profile?.steps?.length || 0,
+    tourBannerReservedSpace,
     tourStatus: tourState?.status || null,
   }), [
     completeCurrentStep,
@@ -226,6 +232,7 @@ export function TourProvider({ children }) {
     profile?.steps?.length,
     resumeTour,
     startTour,
+    tourBannerReservedSpace,
     tourState,
   ]);
 
@@ -242,8 +249,10 @@ export const useTour = () => useContext(TourContext) || {
   exitTour: () => {},
   isTourActive: false,
   resumeTour: () => {},
+  setTourBannerReservedSpace: () => {},
   startTour: () => false,
   stepIndex: 0,
   totalSteps: 0,
+  tourBannerReservedSpace: 0,
   tourStatus: null,
 };

@@ -121,7 +121,7 @@ function SectionLicenseCard({
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 HelloAsso:
                 {' '}
-                {campaign?.paymentProviderSnapshot?.helloasso?.readiness || 'a verifier'}
+                {campaign?.paymentProviderSnapshot?.helloasso?.readiness || 'à vérifier'}
               </Text>
             ) : null}
           </View>
@@ -168,12 +168,12 @@ function ReviewCard({
         <Text style={[Fonts.p3, Fonts.neutral200]}>
           {assignment?.club?.name || assignment?.campaign?.club?.name || 'Section'}
           {' - '}
-          {assignment?.team?.name || 'Sans equipe'}
+          {assignment?.team?.name || 'Sans équipe'}
         </Text>
         <Text style={[Fonts.p2Bold, { color: Colors.warning500 }]}>
           {money(payment?.amountCents || assignment?.amountRemainingCents)}
           {' '}
-          a valider
+          à valider
         </Text>
       </View>
       <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
@@ -227,16 +227,16 @@ function CMLicensesDashboard({ navigation, route }) {
 
   const handleBulkCreate = useCallback(() => {
     if (!missingSectionIds.length) {
-      Alert.alert('Campagnes deja pretes', 'Toutes les sections visibles ont deja une campagne pour cette saison.');
+      Alert.alert('Campagnes déjà pretes', 'Toutes les sections visibles ont déjà une campagne pour cette saison.');
       return;
     }
     const amountCents = euroToCents(defaultAmount);
     if (amountCents <= 0) {
-      Alert.alert('Montant requis', 'Indique un montant par defaut avant de creer les campagnes manquantes.');
+      Alert.alert('Montant requis', 'Indique un montant par défaut avant de créer les campagnes manquantes.');
       return;
     }
     Alert.alert(
-      'Creer les campagnes manquantes',
+      'Créer les campagnes manquantes',
       `${missingSectionIds.length} section(s) recevront une campagne ${seasonLabel}.`,
       [
         { style: 'cancel', text: 'Annuler' },
@@ -251,8 +251,8 @@ function CMLicensesDashboard({ navigation, route }) {
             status: 'active',
           }, {
             onSuccess: (result) => Alert.alert(
-              'Campagnes creees',
-              `${result?.summary?.created || 0} creee(s), ${result?.summary?.skipped || 0} ignoree(s), ${result?.summary?.errors || 0} erreur(s).`,
+              'Campagnes créées',
+              `${result?.summary?.created || 0} créée(s), ${result?.summary?.skipped || 0} ignoree(s), ${result?.summary?.errors || 0} erreur(s).`,
             ),
           }),
           text: 'Creer',
@@ -263,19 +263,19 @@ function CMLicensesDashboard({ navigation, route }) {
 
   const handleBulkGenerate = useCallback(() => {
     if (!campaignIds.length) {
-      Alert.alert('Aucune campagne', 'Cree au moins une campagne avant de relancer une synchronisation de secours.');
+      Alert.alert('Aucune campagne', 'Crée au moins une campagne avant de relancer une synchronisation de secours.');
       return;
     }
     Alert.alert(
       'Resynchroniser les campagnes',
-      'Operation de maintenance: les cotisations manquantes seront rattachees sans dupliquer les dossiers deja existants.',
+      'Opération de maintenance: les cotisations manquantes seront rattachées sans dupliquer les dossiers déjà existants.',
       [
         { style: 'cancel', text: 'Annuler' },
         {
           onPress: () => bulkGenerateMutation.mutate({ campaignIds, mode: 'missing_only' }, {
             onSuccess: (result) => Alert.alert(
-              'Synchronisation terminee',
-              `${result?.summary?.created || 0} creee(s), ${result?.summary?.skipped || 0} deja existante(s).`,
+              'Synchronisation terminée',
+              `${result?.summary?.created || 0} créée(s), ${result?.summary?.skipped || 0} déjà existante(s).`,
             ),
           }),
           text: 'Resynchroniser',
@@ -330,7 +330,7 @@ function CMLicensesDashboard({ navigation, route }) {
         <View style={Spaces.gap[licenseSpacing.titleGap]}>
           <Text style={[Fonts.h2, Fonts.neutral00]}>Cotisations multisport</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Pilote les campagnes de toutes les sections, les restes a payer et les validations en attente.
+            Pilote les campagnes de toutes les sections, les restes à payer et les validations en attente.
           </Text>
         </View>
 
@@ -342,7 +342,7 @@ function CMLicensesDashboard({ navigation, route }) {
         </View>
 
         <View style={Spaces.gap[12]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Filtres et creation globale</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Filtres et création globale</Text>
           <TextInput
             onChangeText={setSeasonLabel}
             placeholder="Saison"
@@ -370,7 +370,7 @@ function CMLicensesDashboard({ navigation, route }) {
           <TextInput
             keyboardType="decimal-pad"
             onChangeText={setDefaultAmount}
-            placeholder="Montant par defaut pour les campagnes manquantes"
+            placeholder="Montant par défaut pour les campagnes manquantes"
             placeholderTextColor={Colors.neutral400}
             style={{ borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12 }}
             value={defaultAmount}
@@ -383,7 +383,7 @@ function CMLicensesDashboard({ navigation, route }) {
             value={dueDate}
           />
           <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-            <Button isLoading={bulkCreateMutation.isPending} onPress={handleBulkCreate} style={{ flex: 1 }} title="Creer manquantes" variant="Secondary" />
+            <Button isLoading={bulkCreateMutation.isPending} onPress={handleBulkCreate} style={{ flex: 1 }} title="Créer manquantes" variant="Secondary" />
             <Button isLoading={bulkGenerateMutation.isPending} onPress={handleBulkGenerate} style={{ flex: 1 }} title="Resynchroniser" />
           </View>
         </View>
@@ -411,10 +411,10 @@ function CMLicensesDashboard({ navigation, route }) {
         </View>
 
         <View style={Spaces.gap[licenseSpacing.listGap]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Paiements a valider</Text>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Paiements à valider</Text>
           {reviews.length === 0 ? (
             <LicenseEmptyState
-              description="Les declarations manuelles ou externes en attente apparaitront ici."
+              description="Les déclarations manuelles ou externes en attente apparaîtront ici."
               title="Aucun paiement en attente"
             />
           ) : null}

@@ -130,7 +130,7 @@ function ClubEdit({ navigation, route }) {
       }
       Alert.alert(
         t('common.error', 'Erreur'),
-        mutationError?.message || 'Impossible de mettre a jour ce club pour le moment.',
+        mutationError?.message || 'Impossible de mettre à jour ce club pour le moment.',
       );
     },
     onSuccess: () => {
@@ -187,8 +187,8 @@ function ClubEdit({ navigation, route }) {
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral200]}>
             {isMissingClubId
-              ? 'Aucun identifiant de club n a ete fourni.'
-              : 'Le lien est peut-etre obsolete ou le club a ete supprime.'}
+              ? 'Aucun identifiant de club n a été fourni.'
+              : 'Le lien est peut-être obsolète ou le club a été supprimé.'}
           </Text>
           <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
           {!isMissingClubId ? (
@@ -220,7 +220,7 @@ function ClubEdit({ navigation, route }) {
             Impossible de charger le club
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral200]}>
-            {error?.message || 'Reessayez dans quelques instants.'}
+            {error?.message || 'Réessaie dans quelques instants.'}
           </Text>
           <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
           <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
@@ -414,7 +414,7 @@ function ClubEdit({ navigation, route }) {
                     <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
                       {t(
                         'clubEdit.publicMembers.description',
-                        'Choisissez si les membres du club peuvent apparaître publiquement sur la page du club.',
+                        'Choisis si les membres du club peuvent apparaître publiquement sur la page du club.',
                       )}
                     </Text>
                   </View>
@@ -454,7 +454,7 @@ function ClubEdit({ navigation, route }) {
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
                   {t(
                     'clubEdit.membership.description',
-                    'Choisissez si toutes les demandes doivent être traitées par le dirigeant, ou si les entraîneurs peuvent être autorisés à gérer celles de leur équipe.',
+                    'Choisis si toutes les demandes doivent être traitées par le dirigeant, ou si les entraîneurs peuvent être autorisés à gérer celles de leur équipe.',
                   )}
                 </Text>
                 <Controller

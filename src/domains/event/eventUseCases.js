@@ -501,7 +501,7 @@ export const getEventEditSupport = (event, eventTypeName = '') => {
   if (eventFormat === 'stage_parent' || eventFormat === 'stage_day' || isStageEventType(resolvedTypeName)) {
     return {
       isSupported: false,
-      reason: "La modification complete des stages passe encore par un flow dedie. Cette fiche ne permet pas d'editer ce type d'evenement pour l'instant.",
+      reason: "La modification complète des stages passe encore par un flow dédié. Cette fiche ne permet pas d'éditer ce type d'événement pour l'instant.",
       reasonKey: 'stage',
     };
   }
@@ -509,7 +509,7 @@ export const getEventEditSupport = (event, eventTypeName = '') => {
   if (isTournamentEventType(resolvedTypeName)) {
     return {
       isSupported: false,
-      reason: 'La modification complete des tournois reste limitee a leurs ecrans dedies. Cette fiche ne prend pas encore en charge ce format.',
+      reason: 'La modification complète des tournois reste limitée à leurs écrans dedies. Cette fiche ne prend pas encore en charge ce format.',
       reasonKey: 'tournament',
     };
   }
@@ -517,7 +517,7 @@ export const getEventEditSupport = (event, eventTypeName = '') => {
   if (hasDetectionSlots || (isDetectionEventType(resolvedTypeName) && hasDetectionSlots)) {
     return {
       isSupported: false,
-      reason: 'Les detections avec postes recherches ne peuvent pas encore etre reeditees depuis cette fiche sans risque de perdre la configuration des postes.',
+      reason: 'Les détections avec postes recherches ne peuvent pas encore être reeditees depuis cette fiche sans risque de perdre la configuration des postes.',
       reasonKey: 'detection_slots',
     };
   }

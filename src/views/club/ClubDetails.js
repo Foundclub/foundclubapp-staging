@@ -286,7 +286,7 @@ function ClubDetails({ navigation, route }) {
       const errorMessage = mutationError?.response?.data?.error?.message
         || mutationError?.response?.data?.error
         || mutationError?.message
-        || t('clubDetails.alerts.deleteTrainer.error', 'Impossible de retirer cet entraineur pour le moment.');
+        || t('clubDetails.alerts.deleteTrainer.error', 'Impossible de retirer cet entraîneur pour le moment.');
 
       Alert.alert(t('common.error', 'Erreur'), errorMessage);
     },
@@ -344,7 +344,7 @@ function ClubDetails({ navigation, route }) {
       const errorMessage = mutationError?.response?.data?.error?.message
         || mutationError?.response?.data?.error
         || mutationError?.message
-        || t('clubDetails.alerts.update.error', 'Impossible de mettre a jour ce club pour le moment.');
+        || t('clubDetails.alerts.update.error', 'Impossible de mettre à jour ce club pour le moment.');
 
       Alert.alert(t('common.error', 'Erreur'), errorMessage);
     },
@@ -407,7 +407,7 @@ function ClubDetails({ navigation, route }) {
         joinedImmediately
           ? t(
             'clubDetails.alerts.joinClub.autoAffiliatedDescription',
-            'Vous avez été ajouté directement à ce club. Vous pouvez maintenant créer des équipes et compléter votre organisation.',
+            'Tu as été ajouté directement à ce club. Tu peux maintenant créer des équipes et compléter ton organisation.',
           )
           : t('clubDetails.alerts.joinClub.description'),
         [
@@ -434,7 +434,7 @@ function ClubDetails({ navigation, route }) {
         mutationError?.message
           || t(
             'clubDetails.alerts.playerTeamJoin.error',
-            "Impossible d'envoyer votre demande pour le moment.",
+            "Impossible d'envoyer ta demande pour le moment.",
           ),
       );
     },
@@ -451,7 +451,7 @@ function ClubDetails({ navigation, route }) {
         t('teamDetails.alerts.joinRequest.title', 'Demande envoyée'),
         t(
           'clubDetails.alerts.playerTeamJoin.description',
-          'Votre demande pour rejoindre {{teamName}} a été envoyée.',
+          'Ta demande pour rejoindre {{teamName}} a été envoyée.',
           { teamName: selectedTeamName },
         ),
         [{
@@ -488,7 +488,7 @@ function ClubDetails({ navigation, route }) {
         t('clubDetails.alerts.clubPartnerRequest.title', 'Demande envoyée'),
         t(
           'clubDetails.alerts.clubPartnerRequest.description',
-          "Nous allons contacter le dirigeant de ce club pour l'aider a rejoindre FoundClub.",
+          "Nous allons contacter le dirigeant de ce club pour l'aider à rejoindre FoundClub.",
         ),
         [{
           onPress: () => {
@@ -521,7 +521,7 @@ function ClubDetails({ navigation, route }) {
 
       Alert.alert(
         t('clubDetails.alerts.claimClub.title', 'Demande envoyée'),
-        t('clubDetails.alerts.claimClub.description', 'Votre demande pour revendiquer ce club a été envoyée aux administrateurs.'),
+        t('clubDetails.alerts.claimClub.description', 'Ta demande pour revendiquer ce club a été envoyée aux administrateurs.'),
         [
           {
             onPress: () => {
@@ -543,8 +543,8 @@ function ClubDetails({ navigation, route }) {
     }
 
     Alert.alert(
-      t('clubDetails.alerts.claimClub.confirmTitle', 'Vous dirigez ce club ?'),
-      t('clubDetails.alerts.claimClub.confirmDescription', 'Voulez-vous demander la gestion de ce club ? Une verification sera effectuee.'),
+      t('clubDetails.alerts.claimClub.confirmTitle', 'Tu diriges ce club ?'),
+      t('clubDetails.alerts.claimClub.confirmDescription', 'Veux-tu demander la gestion de ce club ? Une vérification sera effectuée.'),
       [
         {
           style: 'cancel',
@@ -758,7 +758,7 @@ function ClubDetails({ navigation, route }) {
 
     Alert.alert(
       `Supprimer le sport ${activityName} ?`,
-      'Êtes-vous sûr de vouloir continuer ?',
+      'Es-tu sûr de vouloir continuer ?',
       [
         {
           style: 'cancel',
@@ -817,7 +817,7 @@ function ClubDetails({ navigation, route }) {
         t('clubDetails.alerts.deleteManager.title', 'Retirer ce dirigeant ?'),
         t(
           'clubDetails.alerts.deleteManager.description',
-          'Ce dirigeant ne sera plus rattaché à cette section. Vous pourrez le réajouter plus tard si besoin.',
+          'Ce dirigeant ne sera plus rattaché à cette section. Tu pourras le réajouter plus tard si besoin.',
         ),
         [
           {
@@ -844,7 +844,7 @@ function ClubDetails({ navigation, route }) {
       t('clubDetails.alerts.leave.title', 'Quitter le club ?'),
       t(
         'clubDetails.alerts.leave.description',
-        "Vous ne serez plus lié à ce club ni à ses équipes en tant qu'encadrant. Êtes-vous sûr de vouloir continuer ?",
+        "Tu ne seras plus lié à ce club ni à ses équipes en tant qu'encadrant. Es-tu sûr de vouloir continuer ?",
       ),
       [
         {
@@ -1366,7 +1366,7 @@ function ClubDetails({ navigation, route }) {
         t('common.error', 'Erreur'),
         t(
           'clubDetails.alerts.clubPartnerRequest.missingName',
-          'Ajoutez le prenom et le nom du dirigeant.',
+          'Ajoute le prénom et le nom du dirigeant.',
         ),
       );
       return;
@@ -1377,7 +1377,7 @@ function ClubDetails({ navigation, route }) {
         t('common.error', 'Erreur'),
         t(
           'clubDetails.alerts.clubPartnerRequest.missingContact',
-          'Ajoutez au moins un numero de telephone ou un email.',
+          'Ajoute au moins un numéro de téléphone ou un email.',
         ),
       );
       return;
@@ -1707,7 +1707,7 @@ function ClubDetails({ navigation, route }) {
             Impossible de charger le club
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {error?.message || 'Reessayez dans quelques instants.'}
+            {error?.message || 'Réessaie dans quelques instants.'}
           </Text>
           <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
           <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
@@ -1733,8 +1733,8 @@ function ClubDetails({ navigation, route }) {
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {isMissingClubId
-              ? 'Aucun identifiant de club n a ete fourni.'
-              : 'Le lien est peut-etre obsolete ou le club a ete supprime.'}
+              ? 'Aucun identifiant de club n a été fourni.'
+              : 'Le lien est peut-être obsolète ou le club a été supprimé.'}
           </Text>
           <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
           {!isMissingClubId ? (
@@ -2151,7 +2151,7 @@ function ClubDetails({ navigation, route }) {
                             </View>
                           ) : (
                             <Text style={[Fonts.p2, Fonts.neutral300]}>
-                              {t('facilityList.defaults.addressMissing', 'Adresse non renseignee')}
+                              {t('facilityList.defaults.addressMissing', 'Adresse non renseignée')}
                             </Text>
                           )}
                           {(addressLabel || canOpenPlanning || canOpenFacilityEdit) ? (
@@ -2667,7 +2667,7 @@ function ClubDetails({ navigation, route }) {
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t(
               'clubDetails.clubPartnerRequest.description',
-              "Votre club n'est pas encore partenaire FoundClub. Ajoutez les coordonnées du dirigeant pour que nous puissions le contacter et lui donner accès au classement, au calendrier et aux statistiques directement dans l'application.",
+              "Ton club n'est pas encore partenaire FoundClub. Ajoute les coordonnées du dirigeant pour que nous puissions le contacter et lui donner accès au classement, au calendrier et aux statistiques directement dans l'application.",
             )}
           </Text>
 
@@ -2688,9 +2688,9 @@ function ClubDetails({ navigation, route }) {
           </View>
 
           <Input
-            label={t('clubDetails.clubPartnerRequest.fields.holderFirstname', 'Prenom du dirigeant')}
+            label={t('clubDetails.clubPartnerRequest.fields.holderFirstname', 'Prénom du dirigeant')}
             onChangeText={(value) => handleChangeClubPartnerField('holderFirstname', value)}
-            placeholder={t('clubDetails.clubPartnerRequest.fields.holderFirstname', 'Prenom du dirigeant')}
+            placeholder={t('clubDetails.clubPartnerRequest.fields.holderFirstname', 'Prénom du dirigeant')}
             value={clubPartnerForm.holderFirstname}
           />
           <Input
@@ -2702,9 +2702,9 @@ function ClubDetails({ navigation, route }) {
           <Input
             inputMode="tel"
             keyboardType="phone-pad"
-            label={t('clubDetails.clubPartnerRequest.fields.holderPhone', 'Telephone du dirigeant')}
+            label={t('clubDetails.clubPartnerRequest.fields.holderPhone', 'Téléphone du dirigeant')}
             onChangeText={(value) => handleChangeClubPartnerField('holderPhone', value)}
-            placeholder={t('clubDetails.clubPartnerRequest.fields.holderPhone', 'Telephone du dirigeant')}
+            placeholder={t('clubDetails.clubPartnerRequest.fields.holderPhone', 'Téléphone du dirigeant')}
             value={clubPartnerForm.holderPhone}
           />
           <Input

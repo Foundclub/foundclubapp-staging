@@ -179,6 +179,10 @@ function WizardStepLayout({
   return (
     <ScreenContainer
       bgImage="bg2"
+      // Ce gabarit applique deja lui-meme le retrait bas systeme sur son contenu
+      // (paddingBottom ci-dessous) : on renonce au plancher du conteneur pour ne
+      // pas cumuler deux fois insets.bottom sous les boutons du wizard.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Alignments.fill,
         Alignments.justifySpaceBetween,

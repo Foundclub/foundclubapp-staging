@@ -73,7 +73,7 @@ function AdminClubWizardMultisport({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardSponsors)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={6}
-      subtitle="Si le club appartient a une structure multisport, rattache-le ici. Sinon laisse simplement cette etape vide."
+      subtitle="Si le club appartient a une structure multisport, rattache-le ici. Sinon laisse simplement cette étape vide."
       title="Rattachement multisport"
     >
       <View style={[Spaces.gap[18]]}>
@@ -102,7 +102,7 @@ function AdminClubWizardMultisport({ navigation }) {
               },
             ]}
           >
-            <Text style={[Fonts.p2Bold, Fonts.primary500]}>Parent selectionne</Text>
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>Parent sélectionne</Text>
             <Text style={[Fonts.p2, Fonts.neutral00]}>
               {getClubRelationLabel(state.parentMultisport)}
             </Text>
@@ -115,7 +115,7 @@ function AdminClubWizardMultisport({ navigation }) {
           </View>
         ) : (
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Aucun parent multisport selectionne.
+            Aucun parent multisport sélectionne.
           </Text>
         )}
 

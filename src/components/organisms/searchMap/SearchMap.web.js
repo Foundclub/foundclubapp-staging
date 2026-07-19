@@ -388,7 +388,7 @@ function SearchMap({
           }}
         >
           <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center' }]}>
-            Touchez un repere pour voir la fiche
+            Touche un repère pour voir la fiche
           </Text>
         </View>
       ) : null}

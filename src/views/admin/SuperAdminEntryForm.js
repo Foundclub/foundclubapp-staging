@@ -509,7 +509,7 @@ function SuperAdminEntryForm({ navigation, route }) {
   if (metadataQuery.isLoading || (isEditMode && entryQuery.isLoading)) {
     return (
       <AdminStateView
-        description="Nous preparons le formulaire superadmin."
+        description="Nous préparons le formulaire superadmin."
         isLoading
         title="Chargement du formulaire"
       />
@@ -535,9 +535,9 @@ function SuperAdminEntryForm({ navigation, route }) {
     return (
       <AdminStateView
         actionLabel="Retour"
-        description="L'entree demandee n'existe pas ou n'est plus accessible."
+        description="L'entrée demandée n'existe pas ou n'est plus accessible."
         onAction={() => navigation.goBack()}
-        title="Entree introuvable"
+        title="Entrée introuvable"
       />
     );
   }
@@ -563,7 +563,7 @@ function SuperAdminEntryForm({ navigation, route }) {
     if (!q) {
       Alert.alert(
         t('superAdminContentManager.alerts.relationSearchTitle', 'Recherche relation'),
-        t('superAdminContentManager.alerts.relationSearchMinChars', 'Merci de saisir au moins 1 caractere.'),
+        t('superAdminContentManager.alerts.relationSearchMinChars', 'Merci de saisir au moins 1 caractère.'),
       );
       return;
     }
@@ -701,7 +701,7 @@ function SuperAdminEntryForm({ navigation, route }) {
       if (!uploadedFiles.length) {
         Alert.alert(
           t('superAdminContentManager.alerts.uploadFailedTitle', 'Upload impossible'),
-          t('superAdminContentManager.alerts.uploadNoFile', 'Aucun fichier n\'a été recu par le serveur.'),
+          t('superAdminContentManager.alerts.uploadNoFile', 'Aucun fichier n\'a été reçu par le serveur.'),
         );
         return;
       }
@@ -855,7 +855,7 @@ function SuperAdminEntryForm({ navigation, route }) {
       Alert.alert(
         t('superAdminContentManager.media.file', 'Fichier'),
         // @ts-ignore: FIXME: Baseline TS regression
-        getErrorMessage(error, 'generic') || t('superAdminContentManager.alerts.fileSelectFailed', 'Impossible de selectionner ce fichier.'),
+        getErrorMessage(error, 'generic') || t('superAdminContentManager.alerts.fileSelectFailed', 'Impossible de sélectionner ce fichier.'),
       );
     }
   };
@@ -1455,13 +1455,13 @@ function SuperAdminEntryForm({ navigation, route }) {
         {renderSection(
           'relations',
           t('superAdminContentManager.form.sections.relations', 'Relations'),
-          t('superAdminContentManager.form.sections.relationsHint', 'Associez des entrees liees.'),
+          t('superAdminContentManager.form.sections.relationsHint', 'Associe des entrées liées.'),
         )}
 
         {renderSection(
           'media',
           t('superAdminContentManager.form.sections.media', 'Médias'),
-          t('superAdminContentManager.form.sections.mediaHint', 'Ajoutez images ou fichiers.'),
+          t('superAdminContentManager.form.sections.mediaHint', 'Ajoute images ou fichiers.'),
         )}
 
         {renderSection(
@@ -1509,7 +1509,7 @@ function SuperAdminEntryForm({ navigation, route }) {
         ]}
         >
           <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>
-            {t('superAdminContentManager.form.reasonLabel', 'Raison (optionnelle sauf regles sensibles)')}
+            {t('superAdminContentManager.form.reasonLabel', 'Raison (optionnelle sauf règles sensibles)')}
           </Text>
           <TextInput
             onChangeText={setReason}

@@ -90,15 +90,15 @@ function AdminClubWizardRecap({ navigation }) {
       action: RouteNames.AdminClubWizardContact,
       lines: [
         normalizeText(state.email) || 'Email non renseigne',
-        normalizeText(state.phoneNumber) || 'Telephone non renseigne',
+        normalizeText(state.phoneNumber) || 'Téléphone non renseigne',
       ],
       title: 'Contact',
     },
     {
       action: RouteNames.AdminClubWizardAddress,
       lines: [
-        normalizeText(state.addressLabel) || 'Adresse non renseignee',
-        [normalizeText(state.city), normalizeText(state.postcode)].filter(Boolean).join(' - ') || 'Ville non renseignee',
+        normalizeText(state.addressLabel) || 'Adresse non renseignée',
+        [normalizeText(state.city), normalizeText(state.postcode)].filter(Boolean).join(' - ') || 'Ville non renseignée',
       ],
       title: 'Adresse',
     },
@@ -106,16 +106,16 @@ function AdminClubWizardRecap({ navigation }) {
       action: RouteNames.AdminClubWizardActivities,
       lines: selectedActivities.length > 0
         ? selectedActivities
-        : ['Aucune activite selectionnee'],
+        : ['Aucune activité sélectionnée'],
       title: 'Activites',
     },
     {
       action: RouteNames.AdminClubWizardBusiness,
       lines: [
         state.clubPartner ? 'Club partenaire' : 'Club standard',
-        state.clubVerified ? 'Club verifie' : 'Club non verifie',
-        state.isReservationProvider ? 'Reservation active' : 'Pas reservation',
-        'Abonnements et capacite Team geres depuis les operations abonnements',
+        state.clubVerified ? 'Club vérifie' : 'Club non vérifié',
+        state.isReservationProvider ? 'Réservation active' : 'Pas réservation',
+        'Abonnements et capacité Team geres depuis les opérations abonnements',
       ],
       title: 'Statut',
     },
@@ -146,7 +146,7 @@ function AdminClubWizardRecap({ navigation }) {
           ...state,
           sponsor: sanitizedSponsors,
         }),
-        reason: normalizeText(state.saveReason) || 'Creation Club SuperAdmin via wizard',
+        reason: normalizeText(state.saveReason) || 'Création Club SuperAdmin via wizard',
       });
       const nextDocumentId = result?.data?.documentId || result?.documentId || null;
       reset();
@@ -156,7 +156,7 @@ function AdminClubWizardRecap({ navigation }) {
       }
       navigation.navigate(RouteNames.AdminClubList);
     } catch (error) {
-      Alert.alert('Creation impossible', getErrorMessage(error, 'generic'));
+      Alert.alert('Création impossible', getErrorMessage(error, 'generic'));
     }
   };
 
@@ -164,13 +164,13 @@ function AdminClubWizardRecap({ navigation }) {
     <WizardStepLayout
       isNextDisabled={!isReady}
       isNextLoading={createMutation.isPending}
-      nextLabel="Creer le club"
+      nextLabel="Créer le club"
       onBack={() => navigation.goBack()}
       onClose={handleExitWizard}
       onNext={handleSubmit}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={8}
-      subtitle="Tu retrouves ici tout le tunnel avant enregistrement. Le club pourra toujours etre edite apres creation, mais la base sera propre des le depart."
+      subtitle="Tu retrouves ici tout le tunnel avant enregistrement. Le club pourra toujours être edite après création, mais la base sera propre des le depart."
       title="Recapitulatif"
     >
       <View style={[Spaces.gap[18]]}>
@@ -218,7 +218,7 @@ function AdminClubWizardRecap({ navigation }) {
                 {normalizeText(state.name) || 'Club sans nom'}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
-                {isReady ? 'Pret a creer' : 'Des informations restent a completer'}
+                {isReady ? 'Prêt à créer' : 'Des informations restent à compléter'}
               </Text>
             </View>
           </View>
@@ -256,7 +256,7 @@ function AdminClubWizardRecap({ navigation }) {
           multiline
           numberOfLines={4}
           onChangeText={(value) => setField('saveReason', value)}
-          placeholder="Ex: Creation initiale dans le dashboard admin"
+          placeholder="Ex: Création initiale dans le dashboard admin"
           style={{ minHeight: 100, textAlignVertical: 'top' }}
           value={state.saveReason}
         />

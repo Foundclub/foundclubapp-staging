@@ -17,8 +17,8 @@ const getUserKey = (user) => {
 
 const getAudienceLabel = (audience) => {
   const kind = String(audience?.audienceKind || '').toUpperCase();
-  if (kind === 'EXTERNAL_INVITED') return 'Equipe externe';
-  if (kind === 'INTERNAL_INVITED') return 'Equipe interne';
+  if (kind === 'EXTERNAL_INVITED') return 'Équipe externe';
+  if (kind === 'INTERNAL_INVITED') return 'Équipe interne';
   return 'Organisateur';
 };
 
@@ -50,7 +50,7 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
 
   const respondMutation = useMutation({
     mutationFn: ({ action, audienceId }) => respondEventTeamAudience(audienceId, action),
-    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour cette invitation.'),
+    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour cette invitation.'),
     onSuccess: refreshEvent,
   });
 
@@ -63,7 +63,7 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
         borderColor: `${Colors.primary500}44`,
       }]}
     >
-      <Text style={[Fonts.h4, Fonts.neutral00]}>Invitations d&apos;equipe</Text>
+      <Text style={[Fonts.h4, Fonts.neutral00]}>Invitations d&apos;équipe</Text>
       <View style={Spaces.gap[12]}>
         {audiences.map((audience) => {
           const team = audience?.team || null;

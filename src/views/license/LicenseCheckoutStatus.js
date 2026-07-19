@@ -45,24 +45,24 @@ function LicenseCheckoutStatus({ navigation, route }) {
   const currency = payment?.currency || 'EUR';
   const message = useMemo(() => {
     if (!paymentId) {
-      return `Le paiement ${provider} s est ouvert dans une page securisee. Si tu viens de payer, le statut sera mis a jour automatiquement ou apres validation du club.`;
+      return `Le paiement ${provider} s est ouvert dans une page securisee. Si tu viens de payer, le statut sera mis à jour automatiquement ou après validation du club.`;
     }
     if (paymentQuery.isLoading) {
-      return 'On verifie le retour du paiement et la confirmation transmise au club.';
+      return 'On vérifie le retour du paiement et la confirmation transmise au club.';
     }
     if (payment?.status === 'confirmed') {
-      return 'Le paiement est confirme. Ton recu apparaitra des qu il sera genere par le club ou automatiquement.';
+      return 'Le paiement est confirmé. Ton reçu apparaîtra des qu il sera généré par le club ou automatiquement.';
     }
     if (payment?.status === 'manual_review') {
-      return 'Le paiement est en attente de verification par le club.';
+      return 'Le paiement est en attente de vérification par le club.';
     }
     if (payment?.status === 'pending') {
       return provider === 'helloasso'
-        ? 'HelloAsso a bien ete ouvert. Nous attendons maintenant la confirmation du paiement.'
-        : `Le paiement ${provider} est encore en cours de verification.`;
+        ? 'HelloAsso a bien été ouvert. Nous attendons maintenant la confirmation du paiement.'
+        : `Le paiement ${provider} est encore en cours de vérification.`;
     }
     if (payment?.status === 'rejected' || payment?.status === 'failed') {
-      return 'Le paiement n a pas abouti. Tu peux revenir a ta cotisation pour relancer un reglement.';
+      return 'Le paiement n a pas abouti. Tu peux revenir à ta cotisation pour relancer un règlement.';
     }
     return `Le paiement ${provider} est encore en cours de synchronisation.`;
   }, [payment?.status, paymentId, paymentQuery.isLoading, provider]);
@@ -85,13 +85,13 @@ function LicenseCheckoutStatus({ navigation, route }) {
         {paymentQuery.isError ? (
           <LicenseEmptyState
             action={<Button onPress={paymentQuery.refetch} title="Reessayer" variant="Secondary" />}
-            description="Impossible de verifier le statut du paiement pour le moment."
+            description="Impossible de vérifier le statut du paiement pour le moment."
             title="Statut indisponible"
           />
         ) : null}
         {payment ? (
           <>
-            <LicenseSectionHeader title="Etat actuel" />
+            <LicenseSectionHeader title="État actuel" />
             <LicenseCard variant="muted">
               <LicenseMetricRow
                 items={[
@@ -103,7 +103,7 @@ function LicenseCheckoutStatus({ navigation, route }) {
             </LicenseCard>
           </>
         ) : null}
-        <Button onPress={() => navigation.navigate(RouteNames.MyLicense)} title="Retour a ma cotisation" />
+        <Button onPress={() => navigation.navigate(RouteNames.MyLicense)} title="Retour à ma cotisation" />
       </View>
     </ScreenContainer>
   );

@@ -257,7 +257,7 @@ function SuperAdminLeagueSettings() {
     const nextMatchmakingOpeningDate = parseInputDate(payload.matchmakingOpeningDate);
 
     if (nextPlatformOpeningDate === 'invalid' || nextMatchmakingOpeningDate === 'invalid') {
-      Alert.alert('Date invalide', 'Utilisez un format valide du type 2026-05-12T18:00.');
+      Alert.alert('Date invalide', 'Utilise un format valide du type 2026-05-12T18:00.');
       return;
     }
 

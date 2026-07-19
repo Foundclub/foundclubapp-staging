@@ -102,7 +102,7 @@ export const getChatMessagePreview = (message) => {
     case 'contact_share':
       return 'Contact partage';
     case 'event_share':
-      return 'Evenement partage';
+      return 'Événement partage';
     case 'location_share':
       return 'Localisation';
     case 'poll':
@@ -123,7 +123,7 @@ export const getChatMessagePreview = (message) => {
     if (firstMime.startsWith('image/')) return 'Photo';
     if (firstMime.startsWith('audio/')) return 'Note vocale';
     if (attachments.some((attachment) => isDocumentAttachment(attachment))) return 'Fichier';
-    return 'Piece jointe';
+    return 'Pièce jointe';
   }
 
   return '';

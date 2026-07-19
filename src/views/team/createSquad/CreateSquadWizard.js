@@ -222,7 +222,7 @@ function CreateSquadWizard({ navigation }) {
     setSubmitError('');
     try {
       if (!user?.documentId) {
-        throw new Error('Session introuvable. Rechargez la page avant de creer une squad.');
+        throw new Error('Session introuvable. Recharge la page avant de créer une squad.');
       }
       console.log('DEBUG: User object:', user);
       console.log('DEBUG: User DocumentId:', user?.documentId);
@@ -247,7 +247,7 @@ function CreateSquadWizard({ navigation }) {
       const selectedSourceTeamId = squadData?.sourceTeam?.value || null;
 
       if (isFootball11 && !selectedSourceTeamId) {
-        throw new Error("Selectionnez l'equipe source pour creer une squad Football a 11.");
+        throw new Error("Sélectionne l'équipe source pour créer une squad Football a 11.");
       }
 
       // Level to ELO/Division Mapping
@@ -265,7 +265,7 @@ function CreateSquadWizard({ navigation }) {
 
       const homeBasePayload = buildHomeBasePayload(squadData.address, squadData.radius);
       if (!homeBasePayload && !isFootball11) {
-        throw new Error('Adresse invalide: sélectionnez une adresse avec des coordonnées.');
+        throw new Error('Adresse invalide: sélectionne une adresse avec des coordonnées.');
       }
 
       const normalizedAddress = normalizeLocationInput(squadData.address);
@@ -371,8 +371,8 @@ function CreateSquadWizard({ navigation }) {
       console.error('Full Error:', JSON.stringify(errorData, null, 2));
 
       if (errorMessage?.includes('unique') || errorMessage?.includes('already taken')) {
-        setSubmitError("Ce nom d'equipe est deja pris. Veuillez en choisir un autre.");
-        alert("Ce nom d'équipe est déjà pris. Veuillez en choisir un autre.");
+        setSubmitError("Ce nom d'équipe est déjà pris. Merci de en choisir un autre.");
+        alert("Ce nom d'équipe est déjà pris. Merci de en choisir un autre.");
       } else {
         setSubmitError(`Erreur: ${errorMessage}`);
         alert(`Erreur: ${errorMessage}\n${errorDetails}`);
@@ -385,9 +385,9 @@ function CreateSquadWizard({ navigation }) {
   if (!user) {
     return (
       <LeagueStateView
-        description="Rechargez la page pour recuperer votre session avant de creer une squad."
+        description="Recharge la page pour recuperer ta session avant de créer une squad."
         isLoading
-        title="Preparation du wizard"
+        title="Préparation du wizard"
       />
     );
   }

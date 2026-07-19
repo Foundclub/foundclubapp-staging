@@ -53,8 +53,8 @@ const SIM_POSITIONS_BY_SPORT = {
   rugby: [
     'Pilier', 'Pilier', 'Pilier',
     'Talonneur', 'Talonneur',
-    'Deuxieme ligne', 'Deuxieme ligne',
-    'Troisieme ligne', 'Troisieme ligne', 'Troisieme ligne',
+    'Deuxième ligne', 'Deuxième ligne',
+    'Troisième ligne', 'Troisième ligne', 'Troisième ligne',
     'Demi de melee',
     "Demi d'ouverture",
     'Centre', 'Centre',

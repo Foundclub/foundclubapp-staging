@@ -99,7 +99,7 @@ function CreateClubRequest({ navigation }) {
         t('common.error', 'Erreur'),
         t(
           'createClubRequest.alerts.contactRequired',
-          'Ajoutez au moins un numero de telephone ou un email pour le dirigeant.',
+          'Ajoute au moins un numéro de téléphone ou un email pour le dirigeant.',
         ),
       );
       return;

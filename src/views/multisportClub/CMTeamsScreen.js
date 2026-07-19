@@ -87,7 +87,7 @@ function CMTeamsScreen({ navigation, route }) {
   }), [allTeams, searchQuery, selectedSection]);
 
   useEffect(() => {
-    navigation.setOptions({ headerTitle: `Equipes (${displayedTeams.length})` });
+    navigation.setOptions({ headerTitle: `Équipes (${displayedTeams.length})` });
   }, [displayedTeams.length, navigation]);
 
   const handleRefresh = useCallback(() => {
@@ -129,7 +129,7 @@ function CMTeamsScreen({ navigation, route }) {
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{item.name}</Text>
           <Text style={[Fonts.p2, Fonts.primary100]}>
-            {item.sectionName || t('multisport.teams.noSection', 'Section non renseignee')}
+            {item.sectionName || t('multisport.teams.noSection', 'Section non renseignée')}
           </Text>
         </View>
         {item.sport ? <Tag text={item.sport} /> : null}
@@ -150,7 +150,7 @@ function CMTeamsScreen({ navigation, route }) {
   if (isLoadingUserData && !resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.teams.loadingUser', 'Nous preparons les equipes de votre structure multisport.')}
+        description={t('multisport.teams.loadingUser', 'Nous préparons les équipes de ta structure multisport.')}
         isLoading
         title={t('multisport.teams.loadingUserTitle', 'Chargement du club')}
       />
@@ -160,8 +160,8 @@ function CMTeamsScreen({ navigation, route }) {
   if (userDataError && !resolvedCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.teams.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
+        actionLabel={t('common.retry', 'Réessayer')}
+        description={t('multisport.teams.userError', "Impossible de retrouver ta structure multisport pour le moment.")}
         onAction={() => refetchUserData()}
         title={t('multisport.teams.userErrorTitle', 'Club indisponible')}
       />
@@ -171,7 +171,7 @@ function CMTeamsScreen({ navigation, route }) {
   if (!resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe à ce compte.')}
         title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
       />
     );
@@ -180,9 +180,9 @@ function CMTeamsScreen({ navigation, route }) {
   if (isLoadingCmData && !cmData) {
     return (
       <MultisportStateView
-        description={t('multisport.teams.loading', 'Nous chargeons les informations de votre structure multisport.')}
+        description={t('multisport.teams.loading', 'Nous chargeons les informations de ta structure multisport.')}
         isLoading
-        title={t('multisport.teams.loadingTitle', 'Chargement des equipes')}
+        title={t('multisport.teams.loadingTitle', 'Chargement des équipes')}
       />
     );
   }
@@ -190,10 +190,10 @@ function CMTeamsScreen({ navigation, route }) {
   if (cmError && !cmData) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
+        actionLabel={t('common.retry', 'Réessayer')}
         description={t('multisport.teams.error', "Impossible de charger cette structure multisport pour le moment.")}
         onAction={() => refetchCm()}
-        title={t('multisport.teams.errorTitle', 'Equipes indisponibles')}
+        title={t('multisport.teams.errorTitle', 'Équipes indisponibles')}
       />
     );
   }
@@ -221,7 +221,7 @@ function CMTeamsScreen({ navigation, route }) {
       <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16]]}>
         <SearchBar
           onChangeText={setSearchQuery}
-          placeholder="Rechercher une equipe..."
+          placeholder="Rechercher une équipe..."
           value={searchQuery}
           withCalendar={false}
           withFilter={false}
@@ -289,8 +289,8 @@ function CMTeamsScreen({ navigation, route }) {
             <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
               <Text style={[Fonts.p1, Fonts.neutral100]}>
                 {selectedSection || searchQuery.trim().length > 0
-                  ? t('multisport.teams.emptyFiltered', 'Aucune equipe ne correspond a ces filtres.')
-                  : t('multisport.teams.empty', 'Aucune equipe trouvee pour le moment.')}
+                  ? t('multisport.teams.emptyFiltered', 'Aucune équipe ne correspond à ces filtres.')
+                  : t('multisport.teams.empty', 'Aucune équipe trouvée pour le moment.')}
               </Text>
             </View>
           )}

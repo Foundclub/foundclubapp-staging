@@ -65,8 +65,8 @@ const buildRosterFromTeam = (team) => uniqueUsers([
 
 const getAudienceLabel = (audience) => {
   const kind = String(audience?.audienceKind || '').toUpperCase();
-  if (kind === 'EXTERNAL_INVITED') return 'Equipe externe';
-  if (kind === 'INTERNAL_INVITED') return 'Equipe interne';
+  if (kind === 'EXTERNAL_INVITED') return 'Équipe externe';
+  if (kind === 'INTERNAL_INVITED') return 'Équipe interne';
   return 'Organisateur';
 };
 
@@ -84,9 +84,9 @@ function EventTeamAudiencesEditor({
   clubId = '',
   currentTeamId = '',
   editable = true,
-  emptyStateText = 'Aucune invitation avancee pour le moment.',
+  emptyStateText = 'Aucune invitation avancée pour le moment.',
   onChange,
-  title = "Invitations d'equipe",
+  title = "Invitations d'équipe",
   value = [],
 }) {
   const {
@@ -163,9 +163,9 @@ function EventTeamAudiencesEditor({
     && (draft.selectionMode !== 'SELECTED_MEMBERS' || draft.selectedMembers.length > 0);
   const teamAvailabilityMessage = useMemo(() => {
     if (draft.audienceKind === 'external_invited' && isLoadingExternalTeams) {
-      return 'Chargement des equipes...';
+      return 'Chargement des équipes...';
     }
-    return 'Aucune equipe disponible.';
+    return 'Aucune équipe disponible.';
   }, [draft.audienceKind, isLoadingExternalTeams]);
 
   useEffect(() => {
@@ -379,7 +379,7 @@ function EventTeamAudiencesEditor({
                 {isEditMode ? 'Modifier linvitation' : 'Nouvelle invitation'}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Choisis une equipe, puis decide si tu invites tout le monde ou seulement certains membres.
+                Choisis une équipe, puis décide si tu invites tout le monde ou seulement certains membres.
               </Text>
             </View>
 
@@ -441,7 +441,7 @@ function EventTeamAudiencesEditor({
             ) : null}
 
             <Input
-              label="Rechercher une equipe"
+              label="Rechercher une équipe"
               onChangeText={draft.audienceKind === 'external_invited' ? setExternalSearch : setInternalSearch}
               placeholder="Nom de lequipe"
               value={draft.audienceKind === 'external_invited' ? externalSearch : internalSearch}
@@ -490,7 +490,7 @@ function EventTeamAudiencesEditor({
 
             {draft.selectionMode === 'SELECTED_MEMBERS' ? (
               <View style={Spaces.gap[12]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Membres selectionnes</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Membres sélectionnés</Text>
                 {roster.length ? (
                   <View style={Spaces.gap[8]}>
                     {roster.map((member) => {
@@ -523,7 +523,7 @@ function EventTeamAudiencesEditor({
                     })}
                   </View>
                 ) : (
-                  <Text style={[Fonts.p3, Fonts.neutral200]}>Aucun membre disponible pour cette equipe.</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>Aucun membre disponible pour cette équipe.</Text>
                 )}
               </View>
             ) : null}

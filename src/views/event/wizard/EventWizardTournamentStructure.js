@@ -51,7 +51,7 @@ const SEEDING_OPTIONS = [
 
 const GENERATION_OPTIONS = [
   {
-    description: 'Le calendrier est genere automatiquement des que les poules sont creees.',
+    description: 'Le calendrier est généré automatiquement des que les poules sont créées.',
     label: 'Automatique',
     value: 'auto',
   },
@@ -176,13 +176,13 @@ function EventWizardTournamentStructure({ navigation }) {
       onNext={handleNext}
       stepCount={getEventWizardStepCount(state)}
       stepIndex={getEventWizardTournamentStructureStepIndex(state)}
-      subtitle="Definis la structure sportive du tournoi: poules, tableau final, generation des matchs et regles de classement."
+      subtitle="Définis la structure sportive du tournoi: poules, tableau final, génération des matchs et règles de classement."
       title="Structure du tournoi"
     >
       <View style={tournamentDs.styles.sectionStack}>
         <View style={tournamentDs.styles.wizardSectionCard}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Format de competition</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Format de compétition</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               Choisis le fonctionnement sportif principal du tournoi. Le cockpit organisateur pilotera ensuite le tirage, les matchs et les scores.
             </Text>
@@ -197,7 +197,7 @@ function EventWizardTournamentStructure({ navigation }) {
             <View style={tournamentDs.styles.headerBlock}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Poules et qualification</Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Configure le nombre de poules et la facon dont les equipes passent au tableau final ou au classement.
+                Configure le nombre de poules et la facon dont les équipes passent au tableau final ou au classement.
               </Text>
             </View>
             {formatMode !== 'round_robin' ? (
@@ -215,7 +215,7 @@ function EventWizardTournamentStructure({ navigation }) {
             ) : null}
             <View style={[Alignments.row, Spaces.gap[12]]}>
               <View style={[Spaces.gap[8], { flex: 1 }]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Qualifies par poule</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Qualifiés par poule</Text>
                 <TextInput
                   keyboardType="number-pad"
                   onChangeText={setQualifiedPerGroupText}
@@ -247,7 +247,7 @@ function EventWizardTournamentStructure({ navigation }) {
             <View style={tournamentDs.styles.headerBlock}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Tableau final</Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Le tableau final sera genere automatiquement depuis les equipes qualifiees ou directement depuis les equipes acceptees.
+                Le tableau final sera généré automatiquement depuis les équipes qualifiees ou directement depuis les équipes acceptées.
               </Text>
             </View>
             <View style={[Alignments.row, Spaces.gap[12]]}>
@@ -267,11 +267,11 @@ function EventWizardTournamentStructure({ navigation }) {
               <Text style={[Fonts.p3Bold, Fonts.primary500]}>Mode de tirage</Text>
               <View style={Spaces.gap[12]}>
                 {SEEDING_OPTIONS.map((option) => {
-                  let description = 'Melange automatique des equipes acceptees.';
+                  let description = 'Melange automatique des équipes acceptées.';
                   if (option.value === 'manual') {
                     description = 'L organisateur garde l ordre de seed pour le tirage.';
                   } else if (option.value === 'snake') {
-                    description = 'Repartition serpent entre les poules puis le tableau.';
+                    description = 'Répartition serpent entre les poules puis le tableau.';
                   }
 
                   return renderChoiceCard({
@@ -305,9 +305,9 @@ function EventWizardTournamentStructure({ navigation }) {
 
         <View style={tournamentDs.styles.wizardSectionCard}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Generation et points</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Génération et points</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Definis si le calendrier se genere automatiquement et comment le classement attribue les points.
+              Définis si le calendrier se génère automatiquement et comment le classement attribue les points.
             </Text>
           </View>
           <View style={Spaces.gap[12]}>
@@ -323,7 +323,7 @@ function EventWizardTournamentStructure({ navigation }) {
               <TextInput keyboardType="number-pad" onChangeText={setPointsDrawText} placeholder="1" placeholderTextColor={Colors.neutral500} style={tournamentDs.styles.input} value={pointsDrawText} />
             </View>
             <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Defaite</Text>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Défaite</Text>
               <TextInput keyboardType="number-pad" onChangeText={setPointsLossText} placeholder="0" placeholderTextColor={Colors.neutral500} style={tournamentDs.styles.input} value={pointsLossText} />
             </View>
             <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>

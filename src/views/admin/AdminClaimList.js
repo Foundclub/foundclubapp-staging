@@ -124,9 +124,9 @@ function AdminClaimList() {
     let subtitle = `Revendique: ${item?.club?.name || 'club inconnu'}`;
     if (item?.__isAffiliationHelp) {
       if (item?.requestKind === 'club_creation') {
-        subtitle = `Club a onboarder: ${item?.clubName || 'non precise'}`;
+        subtitle = `Club à onboarder: ${item?.clubName || 'non précisé'}`;
       } else {
-        subtitle = `Recherche: ${item?.clubName || 'non precise'}`;
+        subtitle = `Recherche: ${item?.clubName || 'non précisé'}`;
       }
     }
 
@@ -219,7 +219,7 @@ function AdminClaimList() {
           <View style={[Alignments.center, Spaces.marginTop[40]]}>
             <Text style={[Fonts.h4, Fonts.neutral200]}>Aucune demande en attente</Text>
             <Text style={[Fonts.p2, Fonts.neutral500, Spaces.marginTop[8], { textAlign: 'center' }]}>
-              Les revendications et demandes superadmin apparaitront ici.
+              Les revendications et demandes superadmin apparaîtront ici.
             </Text>
           </View>
         ) : null}

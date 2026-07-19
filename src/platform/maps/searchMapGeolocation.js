@@ -38,7 +38,7 @@ const requestNativeLocationPermission = async () => {
       buttonNegative: 'Annuler',
       buttonNeutral: 'Plus tard',
       buttonPositive: 'Autoriser',
-      message: 'Nous avons besoin de votre position pour afficher les résultats autour de vous.',
+      message: 'Nous avons besoin de ta position pour afficher les résultats autour de toi.',
       title: 'Permission de localisation',
     },
   );

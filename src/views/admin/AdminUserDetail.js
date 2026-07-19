@@ -60,7 +60,7 @@ function AdminUserDetail() {
   const handleSave = () => {
     Alert.alert(
       'Confirmer',
-      'Voulez-vous sauvegarder les modifications ?',
+      'Veux-tu sauvegarder les modifications ?',
       [
         { style: 'cancel', text: 'Annuler' },
         {

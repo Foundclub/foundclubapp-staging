@@ -43,7 +43,7 @@ describe('requestMappers', () => {
       }),
       status: 'pending',
       subtitle: 'Detection / Seance d essai - Senior 2',
-      title: 'Validation evenement',
+      title: 'Validation événement',
       type: 'event',
     });
   });
@@ -91,8 +91,8 @@ describe('requestMappers', () => {
       actions: {},
       id: 'team:request-1',
       status: 'pending',
-      subtitle: 'Leo Martin a demande a rejoindre U18. Votre equipe doit attendre la validation par votre/vos dirigeant(s).',
-      title: 'Demande equipe en validation',
+      subtitle: 'Leo Martin a demandé à rejoindre U18. Ton équipe doit attendre la validation par ton ou tes dirigeant(s).',
+      title: 'Demande équipe en validation',
       type: 'team',
     }));
     expect(item.meta).toEqual(expect.objectContaining({
@@ -125,8 +125,8 @@ describe('requestMappers', () => {
     expect(item).toEqual(expect.objectContaining({
       actions: {},
       id: 'club:claim-1',
-      subtitle: 'Leo Martin veut revendiquer la gestion du club FC Test. Revendication en cours de verification FoundClub.',
-      title: 'Revendication club en verification',
+      subtitle: 'Leo Martin veut revendiquer la gestion du club FC Test. Revendication en cours de vérification FoundClub.',
+      title: 'Revendication club en vérification',
       type: 'club',
     }));
     expect(item.meta).toEqual(expect.objectContaining({
@@ -184,8 +184,8 @@ describe('requestMappers', () => {
       actions: { primary: 'respond', secondary: 'chat' },
       id: 'interest:interest-1',
       status: 'pending',
-      subtitle: 'Mina Diallo est interesse par Senior 1.',
-      title: 'Interet club',
+      subtitle: 'Mina Diallo est intéressé par Senior 1.',
+      title: 'Intérêt club',
       type: 'interest',
     }));
     expect(item.meta).toEqual(expect.objectContaining({

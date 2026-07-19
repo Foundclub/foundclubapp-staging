@@ -63,7 +63,7 @@ function AdminClubWizardAddress({ navigation }) {
         <Input
           label="Precision / complement"
           onChangeText={(value) => setField('addressDetails', value)}
-          placeholder="Ex: entree stade, batiment, gymnase..."
+          placeholder="Ex: entrée stade, batiment, gymnase..."
           value={state.addressDetails}
         />
 
@@ -79,7 +79,7 @@ function AdminClubWizardAddress({ navigation }) {
               },
             ]}
           >
-            <Text style={[Fonts.p2Bold, Fonts.primary500]}>Adresse selectionnee</Text>
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>Adresse sélectionnée</Text>
             <Text style={[Fonts.p2, Fonts.neutral00]}>{state.addressLabel}</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {[state.city, state.postcode].filter(Boolean).join(' - ') || 'Ville non remontee'}
@@ -98,7 +98,7 @@ function AdminClubWizardAddress({ navigation }) {
           </View>
         ) : (
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Cette etape reste facultative, mais une adresse nette aide beaucoup pour les recherches, la cartographie et les futures equipes du club.
+            Cette étape reste facultative, mais une adresse nette aide beaucoup pour les recherches, la cartographie et les futures équipes du club.
           </Text>
         )}
       </View>

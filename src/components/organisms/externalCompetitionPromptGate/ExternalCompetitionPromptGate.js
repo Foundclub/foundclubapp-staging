@@ -193,7 +193,7 @@ function ExternalCompetitionPromptGate({
       <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
         {t(
           'teamDetails.external.prompt.title',
-          'Ajoutez le classement de votre ligue',
+          'Ajoute le classement de ta ligue',
         )}
       </Text>
       <Text
@@ -209,9 +209,9 @@ function ExternalCompetitionPromptGate({
       >
         {t(
           'teamDetails.external.prompt.description',
-          'Vous pouvez ajouter le lien du classement de votre ligue pour '
-            + "retrouver directement dans l'application votre classement, "
-            + 'votre calendrier et vos statistiques.',
+          'Tu peux ajouter le lien du classement de ta ligue pour '
+            + "retrouver directement dans l'application ton classement, "
+            + 'ton calendrier et tes statistiques.',
         )}
       </Text>
     </>

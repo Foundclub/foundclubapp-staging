@@ -136,7 +136,7 @@ function CreateSectionScreen({ navigation, route }) {
   const createMutation = useMutation({
     mutationFn: (data) => createCMSection(resolvedCmId || '', /** @type {SectionPayload} */ (data)),
     onError: (error) => {
-      const fallbackMessage = t('multisport.formErrors.generic', 'Une erreur est survenue lors de la creation de la section.');
+      const fallbackMessage = t('multisport.formErrors.generic', 'Une erreur est survenue lors de la création de la section.');
       const message = error && typeof error === 'object' && 'message' in error
         ? error.message
         : fallbackMessage;
@@ -155,10 +155,10 @@ function CreateSectionScreen({ navigation, route }) {
         refetchUserData(),
       ]);
       Alert.alert(
-        t('multisport.sectionCreatedTitle', 'Section creee'),
+        t('multisport.sectionCreatedTitle', 'Section créée'),
         t(
           'multisport.sectionCreatedMessage',
-          'La section "{{name}}" a ete creee avec succes.',
+          'La section "{{name}}" a été créée avec succès.',
           { name: result?.data?.name || name },
         ),
         [{ onPress: () => navigation.goBack(), text: 'OK' }],
@@ -198,7 +198,7 @@ function CreateSectionScreen({ navigation, route }) {
   if (isLoadingUserData && !resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.createSection.loadingUser', 'Nous preparons votre structure multisport avant la creation de la section.')}
+        description={t('multisport.createSection.loadingUser', 'Nous préparons ta structure multisport avant la création de la section.')}
         isLoading
         title={t('multisport.createSection.loadingUserTitle', 'Chargement du club')}
       />
@@ -208,10 +208,10 @@ function CreateSectionScreen({ navigation, route }) {
   if (userDataError && !resolvedCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
-        description={t('multisport.createSection.userError', 'Impossible de retrouver votre structure multisport pour le moment.')}
+        actionLabel={t('common.retry', 'Réessayer')}
+        description={t('multisport.createSection.userError', 'Impossible de retrouver ta structure multisport pour le moment.')}
         onAction={() => refetchUserData()}
-        title={t('multisport.createSection.userErrorTitle', 'Creation indisponible')}
+        title={t('multisport.createSection.userErrorTitle', 'Création indisponible')}
       />
     );
   }
@@ -219,7 +219,7 @@ function CreateSectionScreen({ navigation, route }) {
   if (!resolvedCmId) {
     return (
       <MultisportStateView
-        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe à ce compte.')}
         title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
       />
     );
@@ -228,7 +228,7 @@ function CreateSectionScreen({ navigation, route }) {
   if (isLoadingCmData && !cmData) {
     return (
       <MultisportStateView
-        description={t('multisport.createSection.loading', 'Nous chargeons les informations de votre structure multisport.')}
+        description={t('multisport.createSection.loading', 'Nous chargeons les informations de ta structure multisport.')}
         isLoading
         title={t('multisport.createSection.loadingTitle', 'Chargement de la fiche')}
       />
@@ -238,10 +238,10 @@ function CreateSectionScreen({ navigation, route }) {
   if (cmError && !cmData) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'R\u00E9essayer')}
+        actionLabel={t('common.retry', 'Réessayer')}
         description={t('multisport.createSection.error', 'Impossible de charger cette structure multisport pour le moment.')}
         onAction={() => refetchCm()}
-        title={t('multisport.createSection.errorTitle', 'Creation indisponible')}
+        title={t('multisport.createSection.errorTitle', 'Création indisponible')}
       />
     );
   }
@@ -280,7 +280,7 @@ function CreateSectionScreen({ navigation, route }) {
               {t('multisport.createSection.title', 'Nouvelle section')}
             </Text>
             <Text style={[Fonts.p1, Fonts.neutral200]}>
-              {t('multisport.createSection.subtitle', 'Creez une section sportive pour votre club multisport.')}
+              {t('multisport.createSection.subtitle', 'Crée une section sportive pour ton club multisport.')}
             </Text>
           </View>
 
@@ -303,7 +303,7 @@ function CreateSectionScreen({ navigation, route }) {
               </Text>
               <Button
                 onPress={() => refetchActivities()}
-                title={t('common.retry', 'R\u00E9essayer')}
+                title={t('common.retry', 'Réessayer')}
                 variant="Secondary"
               />
             </View>
@@ -348,7 +348,7 @@ function CreateSectionScreen({ navigation, route }) {
               />
               {activitySearchValue.trim().length > 0 && filteredActivities.length === 0 ? (
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t('multisport.createSection.fields.sport.noResults', 'Aucun sport ne correspond a votre recherche.')}
+                  {t('multisport.createSection.fields.sport.noResults', 'Aucun sport ne correspond à ta recherche.')}
                 </Text>
               ) : null}
             </View>
@@ -366,7 +366,7 @@ function CreateSectionScreen({ navigation, route }) {
 
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t('multisport.createSection.fields.managerPhone.label', 'Numero du dirigeant (optionnel)')}
+                {t('multisport.createSection.fields.managerPhone.label', 'Numéro du dirigeant (optionnel)')}
               </Text>
               <Input
                 keyboardType="phone-pad"
@@ -375,7 +375,7 @@ function CreateSectionScreen({ navigation, route }) {
                 value={managerPhone}
               />
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                {t('multisport.createSection.fields.managerPhone.help', 'Ce numero sera utilise pour rattacher le dirigeant a la section.')}
+                {t('multisport.createSection.fields.managerPhone.help', 'Ce numéro sera utilise pour rattacher le dirigeant à la section.')}
               </Text>
             </View>
           </View>
@@ -390,7 +390,7 @@ function CreateSectionScreen({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {t('multisport.createSection.info', 'Une fois creee, la section pourra accueillir equipes, evenements et membres.')}
+              {t('multisport.createSection.info', 'Une fois créée, la section pourra accueillir équipes, événements et membres.')}
             </Text>
           </View>
         </ScrollView>
@@ -401,7 +401,7 @@ function CreateSectionScreen({ navigation, route }) {
             onPress={handleCreate}
             title={createMutation.isPending
               ? t('multisport.createSection.actions.creating', 'Creation...')
-              : t('multisport.createSection.actions.create', 'Creer la section')}
+              : t('multisport.createSection.actions.create', 'Créer la section')}
             variant="Primary"
           />
         </View>

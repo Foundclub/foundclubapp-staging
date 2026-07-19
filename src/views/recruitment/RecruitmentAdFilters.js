@@ -205,6 +205,9 @@ function RecruitmentAdFilters({ navigation }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      // Retrait bas systeme deja applique au contenu ci-dessous : pas de plancher
+      // conteneur, sinon insets.bottom serait compte deux fois.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Alignments.fill,
         Alignments.justifySpaceBetween,
@@ -237,7 +240,7 @@ function RecruitmentAdFilters({ navigation }) {
               label={t('recruitmentAdFilters.fields.sport.label', 'Sport')}
               onBlur={onBlur}
               options={sportOptions}
-              placeholder={t('recruitmentAdFilters.fields.sport.placeholder', 'Selectionner un sport')}
+              placeholder={t('recruitmentAdFilters.fields.sport.placeholder', 'Sélectionner un sport')}
               ref={ref}
               searchValue={sportSearch}
               setSearchValue={setSportSearch}
@@ -266,7 +269,7 @@ function RecruitmentAdFilters({ navigation }) {
                 label={t('recruitmentAdFilters.fields.position.label', 'Poste')}
                 onBlur={onBlur}
                 options={positionOptions}
-                placeholder={t('recruitmentAdFilters.fields.position.placeholder', 'Selectionner un poste')}
+                placeholder={t('recruitmentAdFilters.fields.position.placeholder', 'Sélectionner un poste')}
                 ref={ref}
                 searchValue={positionSearch}
                 setSearchValue={setPositionSearch}
@@ -329,7 +332,7 @@ function RecruitmentAdFilters({ navigation }) {
               label={t('recruitmentAdFilters.fields.section.label', 'Section')}
               onBlur={onBlur}
               options={sectionOptions}
-              placeholder={t('recruitmentAdFilters.fields.section.placeholder', 'Selectionner une section')}
+              placeholder={t('recruitmentAdFilters.fields.section.placeholder', 'Sélectionner une section')}
               ref={ref}
               searchValue={sectionSearch}
               setSearchValue={setSectionSearch}
@@ -357,7 +360,7 @@ function RecruitmentAdFilters({ navigation }) {
               label={t('recruitmentAdFilters.fields.category.label', 'Categorie')}
               onBlur={onBlur}
               options={categoryOptions}
-              placeholder={t('recruitmentAdFilters.fields.category.placeholder', 'Selectionner une categorie')}
+              placeholder={t('recruitmentAdFilters.fields.category.placeholder', 'Sélectionner une catégorie')}
               ref={ref}
               searchValue={categorySearch}
               setSearchValue={setCategorySearch}
@@ -385,7 +388,7 @@ function RecruitmentAdFilters({ navigation }) {
               label={t('recruitmentAdFilters.fields.level.label', 'Niveau')}
               onBlur={onBlur}
               options={levelOptions}
-              placeholder={t('recruitmentAdFilters.fields.level.placeholder', 'Selectionner un niveau')}
+              placeholder={t('recruitmentAdFilters.fields.level.placeholder', 'Sélectionner un niveau')}
               ref={ref}
               searchValue={levelSearch}
               setSearchValue={setLevelSearch}

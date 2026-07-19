@@ -31,7 +31,7 @@ function SquadLocationStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
-          Où jouez-vous ?
+          Où joues-tu ?
         </Text>
 
         <View style={{ marginBottom: 30 }}>
@@ -52,7 +52,7 @@ function SquadLocationStep({
             Rayon de recherche
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral00, marginBottom: 24 }]}>
-            C'est la distance max que vous êtes prêt à parcourir pour un match.
+            C'est la distance max que tu es prêt à parcourir pour un match.
           </Text>
 
           <View

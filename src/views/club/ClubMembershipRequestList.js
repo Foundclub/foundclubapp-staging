@@ -153,7 +153,7 @@ function ClubMembershipRequestList({ navigation, route }) {
         isMissingRelation
           ? t(
             'clubMembershipRequestList.errors.missingRequester',
-            'Impossible de traiter cette demande. Demandez au joueur de renvoyer sa demande.',
+            'Impossible de traiter cette demande. Demande au joueur de renvoyer sa demande.',
           )
           : t(
             'clubMembershipRequestList.errors.accept',
@@ -186,7 +186,7 @@ function ClubMembershipRequestList({ navigation, route }) {
 
       Alert.alert(
         'Entraîneur ajouté',
-        `${trainerLabel} a bien été ajouté ? votre club.\n\nVoulez-vous l'assigner ? une équipe maintenant ?`,
+        `${trainerLabel} a bien été ajouté à ton club.\n\nVeux-tu l'assigner à une équipe maintenant ?`,
         [
           {
             style: 'cancel',
@@ -383,7 +383,7 @@ function ClubMembershipRequestList({ navigation, route }) {
               <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
                 {t(
                   'clubMembershipRequestList.fields.claimPendingVerification',
-                  'Revendication en cours de verification FoundClub',
+                  'Revendication en cours de vérification FoundClub',
                 )}
               </Text>
             </View>
@@ -489,7 +489,7 @@ function ClubMembershipRequestList({ navigation, route }) {
         <View style={[Alignments.fullWidth, Spaces.gap[12], { maxWidth: 320 }]}>
           <Button
             onPress={() => refetch()}
-            title={t('common.actions.retry', 'R\u00E9essayer')}
+            title={t('common.actions.retry', 'Réessayer')}
             variant="Primary"
           />
           <Button
@@ -550,14 +550,14 @@ function ClubMembershipRequestList({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.p3Bold, Fonts.primary300]}>
-              {t('requestsHub.migratedBannerTitle', 'Ce flux est migre vers Demandes.')}
+              {t('requestsHub.migratedBannerTitle', 'Ce flux est migré vers Demandes.')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral100]}>
               {t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
             </Text>
           </TouchableOpacity>
           <OnboardingWrapper
-            description="Traitez ici les demandes d'adhésion au club et assignez les profils valides."
+            description="Traite ici les demandes d'adhésion au club et assigne les profils valides."
             id="club-membership-requests-list"
             order={1}
             spotlight={{

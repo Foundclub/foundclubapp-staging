@@ -142,7 +142,7 @@ function EventTasksEditor({
   return (
     <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], { backgroundColor: `${Colors.primary700}66` }]}>
       <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Taches annexes</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Tâches annexes</Text>
         {editable ? (
           <Button onPress={openModal} title="Ajouter" variant="Secondary" />
         ) : null}
@@ -183,7 +183,7 @@ function EventTasksEditor({
           ))}
         </View>
       ) : (
-        <Text style={[Fonts.p3, Fonts.neutral200]}>Aucune tache pour le moment.</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>Aucune tâche pour le moment.</Text>
       )}
 
       {isOpen ? (
@@ -197,10 +197,10 @@ function EventTasksEditor({
           webPresentation="dialog"
         >
           <View style={[Spaces.gap[16], Spaces.paddingBottom[24]]}>
-            <Text style={[Fonts.h3, Fonts.neutral00]}>Nouvelle tache</Text>
+            <Text style={[Fonts.h3, Fonts.neutral00]}>Nouvelle tâche</Text>
 
             <View style={Spaces.gap[8]}>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>Type de tache</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>Type de tâche</Text>
               <SegmentedControl
                 onChange={handleTaskTypeChange}
                 options={TASK_TYPE_OPTIONS}
@@ -240,7 +240,7 @@ function EventTasksEditor({
               <Text style={[Fonts.p4, Fonts.neutral300]}>
                 {titleEditedManually
                   ? 'Titre personnalise.'
-                  : 'Le titre se remplit a partir du type choisi, puis tu peux le modifier.'}
+                  : 'Le titre se remplit à partir du type choisi, puis tu peux le modifier.'}
               </Text>
             </View>
 

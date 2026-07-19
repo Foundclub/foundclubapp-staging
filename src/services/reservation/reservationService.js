@@ -154,7 +154,7 @@ export const getReservations = async (filters = {}) => {
     const response = await client.get('/events', { params });
     return response.data;
   } catch (error) {
-    console.error('Error fetching reservations:', error);
+    console.error('Error fetching réservations:', error);
     // Return empty data structure instead of throwing
     return {
       data: [],
@@ -186,7 +186,7 @@ export const getFeaturedReservations = async (limit = 10) => {
     return response.data;
   } catch (error) {
     if (__DEV__) {
-      console.warn('⚠️ Featured reservations unavailable, using fallback');
+      console.warn('⚠️ Featured réservations unavailable, using fallback');
     }
     // Return empty data structure instead of throwing
     return {

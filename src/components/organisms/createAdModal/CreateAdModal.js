@@ -83,12 +83,12 @@ function CreateAdModal({
   // Handle form submission
   const handleSubmit = async () => {
     if (!team) {
-      setError('Vous devez être associé à une équipe pour créer une annonce.');
+      setError('Tu dois être associé à une équipe pour créer une annonce.');
       return;
     }
 
     if (!selectedPosition) {
-      setError('Veuillez sélectionner un poste.');
+      setError('Merci de sélectionner un poste.');
       return;
     }
 
@@ -163,7 +163,7 @@ function CreateAdModal({
                   ⚠️ Aucune équipe
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-                  Vous devez être associé à une équipe pour créer une annonce de recrutement.
+                  Tu dois être associé à une équipe pour créer une annonce de recrutement.
                 </Text>
               </View>
             )}

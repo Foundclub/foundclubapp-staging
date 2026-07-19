@@ -73,10 +73,10 @@ export const buildEventCampaignDefaults = ({ event, eventId, todayIsoDateValue }
   }
   const amountValue = Number(event?.pricePerPerson || 0);
   const description = eventName
-    ? `Campagne liee a l evenement ${eventName}. `
-      + 'Les cotisations seront generees pour les participants acceptes.'
-    : 'Campagne liee a un evenement. '
-      + 'Les cotisations seront generees pour les participants acceptes.';
+    ? `Campagne liée a l événement ${eventName}. `
+      + 'Les cotisations seront générées pour les participants acceptes.'
+    : 'Campagne liée a un événement. '
+      + 'Les cotisations seront générées pour les participants acceptes.';
   const name = eventName
     ? `Participation ${typeLabel} - ${eventName}`
     : `Participation ${typeLabel}`;

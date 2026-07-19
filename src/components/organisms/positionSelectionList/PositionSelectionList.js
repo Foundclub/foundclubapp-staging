@@ -30,7 +30,7 @@ function PositionSelectionList({
   onToggle,
   positions = [],
   selectedQuantityLabel,
-  selectedSectionTitle = 'Selection actuelle',
+  selectedSectionTitle = 'Sélection actuelle',
   sportName = '',
   unselectedActionLabel = 'Selectionner',
 }) {

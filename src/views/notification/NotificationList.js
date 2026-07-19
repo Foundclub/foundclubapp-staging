@@ -172,7 +172,7 @@ function NotificationList() {
     const payload = /** @type {any} */ (getNotificationPayload(notification));
     const eventId = String(payload?.eventId || '').trim();
     if (!eventId) {
-      showActionError("Impossible de retrouver l'evenement associe a cette notification.");
+      showActionError("Impossible de retrouver l'événement associe à cette notification.");
       return;
     }
 
@@ -186,12 +186,12 @@ function NotificationList() {
       refreshNotifications();
 
       const successMessage = answer === 'present'
-        ? 'Presence enregistree.'
-        : 'Absence enregistree.';
+        ? 'Présence enregistrée.'
+        : 'Absence enregistrée.';
 
       showActionMessage(successMessage);
     } catch (error) {
-      showActionError("Impossible d'enregistrer votre reponse.", error);
+      showActionError("Impossible d'enregistrer ta réponse.", error);
     }
   }, [markAsRead, refreshNotifications, showActionError, showActionMessage]);
 

@@ -89,7 +89,7 @@ function EventWizardType({ navigation, route }) {
         {!isLoading && error ? (
           <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[12], cardSurfaceStyle]}>
             <Text style={[Fonts.p1, Fonts.neutral100]}>
-              {error?.message || t('eventWizard.errors.genericLoad', 'Impossible de charger cette etape.')}
+              {error?.message || t('eventWizard.errors.genericLoad', 'Impossible de charger cette étape.')}
             </Text>
             <TouchableOpacity
               onPress={() => refetch()}
@@ -119,7 +119,7 @@ function EventWizardType({ navigation, route }) {
 
         {!isLoading && !error && hasTypes ? (
           <OnboardingWrapper
-            description="Choisissez le type d evenement avant de continuer le wizard."
+            description="Choisis le type d événement avant de continuer le wizard."
             id="event-wizard-type-list"
             order={1}
             spotlight={{
@@ -129,7 +129,7 @@ function EventWizardType({ navigation, route }) {
               paddingX: 2,
               paddingY: 2,
             }}
-            title="Selection du type"
+            title="Sélection du type"
           >
             <View style={[Spaces.gap[16]]}>
               {eventTypes.map((type) => (

@@ -734,7 +734,7 @@ function SubscriptionOverview({ navigation }) {
   // Description tutoyée par niveau (remplace la copie technique/vouvoyée du backend).
   const planCardDescription = {
     CLUB: 'Les droits Club sont actifs sur ton club vérifié : toutes tes équipes sont couvertes.',
-    CLUB_UNVERIFIED: 'Ton offre Club est active. Les droits club s\'ouvrent dès la vérification du dirigeant.',
+    CLUB_UNVERIFIED: 'Ton offre Club est activé. Les droits club s\'ouvrent dès la vérification du dirigeant.',
     FREE: 'Tu publies en quantité limitée. Passe à une offre payante pour lever les limites.',
     TEAM: 'Tes équipes couvertes profitent des droits Équipe, sans limite de publication.',
   }[subscriptionAccessLevel] || 'Tu utilises l\'offre gratuite FoundClub.';
@@ -785,7 +785,7 @@ function SubscriptionOverview({ navigation }) {
 
         return /** @type {ClubTierOption} */ ({
           entry,
-          maxTeamsLabel: maxTeams > 0 ? `Jusqu a ${maxTeams} equipes` : 'Equipes illimitees',
+          maxTeamsLabel: maxTeams > 0 ? `Jusqu a ${maxTeams} équipes` : 'Équipes illimitées',
           priceLabel: getSubscriptionCatalogEntryMeta(entry).priceLabel,
           tier,
           tierLetter: CLUB_TIER_LETTERS[tier] || String(tier || '?'),
@@ -895,10 +895,10 @@ function SubscriptionOverview({ navigation }) {
       closeTeamPlanModal();
 
       Alert.alert(
-        action === 'change' ? 'Abonnement mis a jour' : 'Abonnement active',
+        action === 'change' ? 'Abonnement mis à jour' : 'Abonnement active',
         result?.pendingWebhook
           ? 'Paiement confirmé par le store. Tes accès se mettent à jour automatiquement d\'ici quelques instants.'
-          : (successMessage || 'Ton contexte abonnement vient d etre mis a jour.'),
+          : (successMessage || 'Ton contexte abonnement vient d être mis à jour.'),
       );
 
       return result;
@@ -978,8 +978,8 @@ function SubscriptionOverview({ navigation }) {
       catalogEntry,
       input,
       successMessage: getCatalogEntryScopeType(catalogEntry) === 'CLUB'
-        ? 'Ton offre Club est bien enregistree. Si ton club n est pas encore verifie, il apparaitra en CLUB_UNVERIFIED.'
-        : 'Ton offre a bien ete activee.',
+        ? 'Ton offre Club est bien enregistrée. Si ton club n est pas encore vérifie, il apparaîtra en CLUB_UNVERIFIED.'
+        : 'Ton offre a bien été activee.',
     });
   }, [
     activePlanCodes,
@@ -1030,7 +1030,7 @@ function SubscriptionOverview({ navigation }) {
       if (currentSelection.length >= slotCount) {
         Alert.alert(
           'Slots Team atteints',
-          `Cette offre couvre ${slotCount} equipe${slotCount > 1 ? 's' : ''} maximum.`,
+          `Cette offre couvre ${slotCount} équipe${slotCount > 1 ? 's' : ''} maximum.`,
         );
         return currentState;
       }
@@ -1049,16 +1049,16 @@ function SubscriptionOverview({ navigation }) {
 
     if (teamOptions.length === 0) {
       Alert.alert(
-        'Equipe requise',
-        'Ajoute ou rattache d abord une equipe avant de prendre une offre Team.',
+        'Équipe requise',
+        'Ajoute ou rattache d abord une équipe avant de prendre une offre Team.',
       );
       return;
     }
 
     if (!hasAtLeastOneSelectedTeam) {
       Alert.alert(
-        'Equipe requise',
-        'Selectionne au moins une equipe a couvrir avec cette offre Team.',
+        'Équipe requise',
+        'Sélectionne au moins une équipe à couvrir avec cette offre Team.',
       );
       return;
     }
@@ -1087,7 +1087,7 @@ function SubscriptionOverview({ navigation }) {
       action,
       catalogEntry: selectedTeamPlanEntry,
       input,
-      successMessage: `Ton offre Team couvre maintenant ${selectedTeamIds.length} equipe${selectedTeamIds.length > 1 ? 's' : ''}.`,
+      successMessage: `Ton offre Team couvre maintenant ${selectedTeamIds.length} équipe${selectedTeamIds.length > 1 ? 's' : ''}.`,
     });
   }, [
     activePlanCodes,
@@ -1107,10 +1107,10 @@ function SubscriptionOverview({ navigation }) {
       await refreshSubscriptionContext();
       const restoredCount = Number(restoredPayload?.meta?.restoredCount || restoredPayload?.data?.length || 0);
       Alert.alert(
-        'Restauration terminee',
+        'Restauration terminée',
         restoredCount > 0
-          ? `${restoredCount} abonnement${restoredCount > 1 ? 's ont ete retrouves' : ' a ete retrouve'}.`
-          : 'Aucun achat n a ete retrouve sur ce compte.',
+          ? `${restoredCount} abonnement${restoredCount > 1 ? 's ont été retrouves' : ' a été retrouve'}.`
+          : 'Aucun achat n a été retrouve sur ce compte.',
       );
     } catch (error) {
       Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
@@ -1307,7 +1307,7 @@ function SubscriptionOverview({ navigation }) {
             <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 20 }]}>
               {t(
                 'profile.subscription.unverified.description',
-                'Ton offre Club est déjà active, mais les droits club restent bloqués tant que la vérification du dirigeant n\'est pas terminée.',
+                'Ton offre Club est déjà activé, mais les droits club restent bloqués tant que la vérification du dirigeant n\'est pas terminée.',
               )}
             </Text>
             {currentClubDocumentId ? (

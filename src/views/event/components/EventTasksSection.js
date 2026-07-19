@@ -137,7 +137,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
 
   const assignMutation = useMutation({
     mutationFn: ({ taskId }) => assignEventTask(taskId, { userId: userData?.documentId }),
-    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible de rejoindre cette tache.'),
+    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible de rejoindre cette tâche.'),
     onSuccess: (result, variables) => {
       const task = tasks.find((item) => String(item?.documentId || item?.id || '') === String(variables?.taskId || ''));
       const status = String(result?.data?.status || result?.status || '').toUpperCase();
@@ -145,7 +145,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
         assignmentId: result?.data?.documentId || result?.documentId || null,
         eventId: event?.documentId,
         taskId: variables?.taskId,
-        taskTitle: task?.title || 'cette tache',
+        taskTitle: task?.title || 'cette tâche',
       });
       refreshEvent();
     },
@@ -154,13 +154,13 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
     mutationFn: ({ taskId, userIds }) => Promise.all(
       userIds.map((userId) => assignEventTask(taskId, { userId })),
     ),
-    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible d assigner ces membres a la tache.'),
+    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible d assigner ces membres à la tâche.'),
     onSuccess: () => {
       celebrate('event_task_members_assigned', {
         count: selectedManagerMemberIds.length,
         eventId: event?.documentId,
         taskId: activeManagerTask?.documentId || activeManagerTask?.id || null,
-        taskTitle: activeManagerTask?.title || 'cette tache',
+        taskTitle: activeManagerTask?.title || 'cette tâche',
       });
       setIsAssignMembersModalOpen(false);
       setActiveManagerTaskId('');
@@ -176,7 +176,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
         assignmentId: result?.data?.documentId || result?.documentId || null,
         eventId: event?.documentId,
         taskId: result?.data?.task?.documentId || result?.task?.documentId || null,
-        taskTitle: result?.data?.task?.title || result?.task?.title || 'cette tache',
+        taskTitle: result?.data?.task?.title || result?.task?.title || 'cette tâche',
       });
       refreshEvent();
     },
@@ -241,7 +241,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
         return current.filter((value) => value !== memberId);
       }
       if (current.length >= activeRemainingSlots) {
-        Alert.alert('Tache complete', 'Retire un membre ou choisis une autre tache avant de continuer.');
+        Alert.alert('Tâche complète', 'Retire un membre ou choisis une autre tâche avant de continuer.');
         return current;
       }
       return [...current, memberId];
@@ -269,7 +269,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
         }]}
       >
         <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.h4, Fonts.neutral00]}>Taches annexes</Text>
+          <Text style={[Fonts.h4, Fonts.neutral00]}>Tâches annexes</Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             Les membres peuvent se proposer, et les encadrants peuvent assigner directement les bonnes personnes.
           </Text>
@@ -323,7 +323,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
 
                 {approvedAssignments.length > 0 ? (
                   <View style={Spaces.gap[8]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral100]}>Affectations confirmees</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral100]}>Affectations confirmées</Text>
                     <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                       {approvedAssignments.map((assignment) => (
                         <View
@@ -344,13 +344,13 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                   </View>
                 ) : (
                   <Text style={[Fonts.p3, Fonts.neutral300]}>
-                    Personne n est encore confirme sur cette tache.
+                    Personne n est encore confirme sur cette tâche.
                   </Text>
                 )}
 
                 {userAssignment ? (
                   <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
-                    {'Votre statut : '}
+                    {'Ton statut : '}
                     {getAssignmentStatusLabel(userAssignment.status)}
                   </Text>
                 ) : null}
@@ -428,7 +428,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                 {activeManagerTask?.title || 'Assigner des membres'}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Selectionne un ou plusieurs membres pour les affecter directement a cette tache.
+                Sélectionne un ou plusieurs membres pour les affecter directement à cette tâche.
               </Text>
             </View>
 
@@ -441,12 +441,12 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
               <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
                 {activeRemainingSlots > 0
                   ? `${activeRemainingSlots} place(s) restante(s)`
-                  : 'Cette tache est deja complete'}
+                  : 'Cette tâche est déjà complété'}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral300]}>
                 {selectedManagerMemberIds.length > 0
-                  ? `${selectedManagerMemberIds.length} membre(s) pret(s) a etre assignes`
-                  : 'Choisis les personnes a ajouter.'}
+                  ? `${selectedManagerMemberIds.length} membre(s) prêt(s) à être assignes`
+                  : 'Choisis les personnes à ajouter.'}
               </Text>
             </View>
 
@@ -494,7 +494,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
               }]}
               >
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Aucun membre supplementaire n est disponible pour cette tache pour le moment.
+                  Aucun membre supplémentaire n est disponible pour cette tâche pour le moment.
                 </Text>
               </View>
             )}

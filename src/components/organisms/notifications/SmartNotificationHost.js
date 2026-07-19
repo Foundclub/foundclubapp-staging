@@ -121,7 +121,7 @@ function SmartNotificationHost() {
       {activeSnackbar && !isLineupReminder ? (
         <View style={styles.snackbarWrap}>
           <GlobalBanner
-            body={activeSnackbar.body || 'Nouvelle mise a jour.'}
+            body={activeSnackbar.body || 'Nouvelle mise à jour.'}
             onPress={() => {
               handleOpenFromPayload(activeSnackbar);
               dismissSnackbar();
@@ -153,7 +153,7 @@ function SmartNotificationHost() {
             />
             <View style={[styles.lineupCard, { borderColor: Colors.primary500 }]}>
               <LeagueModalHeader
-                description={activeSnackbar.body || 'Votre match est dans 2 jours. Souhaitez-vous publier la composition maintenant ?'}
+                description={activeSnackbar.body || 'Ton match est dans 2 jours. Souhaites-te publier la composition maintenant ?'}
                 title={activeSnackbar.title || 'Publier la compo'}
               />
 
@@ -207,7 +207,7 @@ function SmartNotificationHost() {
             />
             <View style={[styles.lineupCard, { borderColor: Colors.primary500 }]}>
               <LeagueModalHeader
-                description={activeSnackbar.body || 'Votre match est dans 2 jours. Souhaitez-vous publier la composition maintenant ?'}
+                description={activeSnackbar.body || 'Ton match est dans 2 jours. Souhaites-te publier la composition maintenant ?'}
                 title={activeSnackbar.title || 'Publier la compo'}
               />
 

@@ -101,13 +101,13 @@ const getSourceErrorDescription = (sourceError, t) => {
   if (status >= 500) {
     return t(
       'requestsHub.partialErrorServer',
-      'Le chargement est temporairement indisponible. Reessaie dans un instant.',
+      'Le chargement est temporairement indisponible. Réessaie dans un instant.',
     );
   }
 
   return t(
     'requestsHub.partialErrorDescription',
-    'Certaines demandes n ont pas pu etre chargees. Le reste reste disponible.',
+    'Certaines demandes n ont pas pu être chargées. Le reste reste disponible.',
   );
 };
 
@@ -261,7 +261,7 @@ function RequestsHub({ navigation, route }) {
       t('requestsHub.clubAssignedTitle', 'Entraîneur ajouté'),
       t(
         'requestsHub.clubAssignedMessage',
-        "{{name}} a été ajouté au club. Voulez-vous l'assigner à une équipe maintenant ?",
+        "{{name}} a été ajouté au club. Veux-tu l'assigner à une équipe maintenant ?",
       ).replace('{{name}}', trainerName),
       [
         { style: 'cancel', text: t('common.actions.askLater', 'Plus tard') },
@@ -315,7 +315,7 @@ function RequestsHub({ navigation, route }) {
     if (action === 'reject' && item?.type === 'featured' && actionPosition === 'secondary') {
       Alert.alert(
         t('requestsHub.rejectFeaturedTitle', 'Refuser la demande ?'),
-        t('requestsHub.rejectFeaturedMessage', 'Le demandeur sera notifie du refus.'),
+        t('requestsHub.rejectFeaturedMessage', 'Le demandeur sera notifié du refus.'),
         [
           { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
           {
@@ -417,7 +417,7 @@ function RequestsHub({ navigation, route }) {
             overrideReason
             || t(
               'requestsHub.installation.defaultRefusalReason',
-              'Creneau complet, depassement refuse par le dirigeant.',
+              'Créneau complet, dépassement refuse par le dirigeant.',
             ),
           );
         }
@@ -482,7 +482,7 @@ function RequestsHub({ navigation, route }) {
     if (!requestId || !selectedPreset) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('requestsHub.interest.responseMissing', 'Choisis une reponse pour traiter cet interet.'),
+        t('requestsHub.interest.responseMissing', 'Choisis une réponse pour traiter cet intérêt.'),
       );
       return;
     }
@@ -572,7 +572,7 @@ function RequestsHub({ navigation, route }) {
       <ScreenContainer bgImage="bg2">
         <View style={[Alignments.fill, Alignments.justifyCenter, Alignments.alignCenter, Spaces.padding[24]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
-            {t('requestsHub.forbidden', 'Cet onglet est reserve aux coachs et dirigeants.')}
+            {t('requestsHub.forbidden', 'Cet onglet est réservé aux coachs et dirigeants.')}
           </Text>
         </View>
       </ScreenContainer>
@@ -617,7 +617,7 @@ function RequestsHub({ navigation, route }) {
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {t(
                   'requestsHub.installation.refusalModalDescription',
-                  'Explique pourquoi cette exception installation est refusee.',
+                  'Explique pourquoi cette exception installation est refusée.',
                 )}
               </Text>
             </View>
@@ -627,7 +627,7 @@ function RequestsHub({ navigation, route }) {
               onChangeText={setInstallationRefusalReason}
               placeholder={t(
                 'requestsHub.installation.refusalModalPlaceholder',
-                'Exemple: capacite deja atteinte pour ce creneau.',
+                'Exemple: capacité déjà atteinte pour ce créneau.',
               )}
               placeholderTextColor={Colors.neutral400}
               style={[
@@ -696,12 +696,12 @@ function RequestsHub({ navigation, route }) {
           >
             <View style={[{ gap: 6 }]}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                {t('requestsHub.interest.responseTitle', 'Repondre a cet interet')}
+                {t('requestsHub.interest.responseTitle', 'Répondre à cet intérêt')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {t(
                   'requestsHub.interest.responseDescription',
-                  'Choisis une reponse rapide a envoyer au joueur interesse.',
+                  'Choisis une réponse rapide à envoyer au joueur intéresse.',
                 )}
               </Text>
             </View>
@@ -739,7 +739,7 @@ function RequestsHub({ navigation, route }) {
 
             {selectedInterestPreset ? (
               <Text style={[Fonts.p4, Fonts.neutral300]}>
-                {t('requestsHub.interest.responsePreview', 'Message envoye')}
+                {t('requestsHub.interest.responsePreview', 'Message envoyé')}
                 :
                 {' '}
                 {selectedInterestPreset.message}

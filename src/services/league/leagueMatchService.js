@@ -223,19 +223,19 @@ export const getCancellationPenalty = (hoursUntilMatch) => {
   if (hoursUntilMatch < 24) {
     return {
       isSevere: true,
-      message: 'ATTENTION: Forfait. Penalite de -200 ELO matchmaking et defaite attribuee.',
+      message: 'ATTENTION: Forfait. Pénalité de -200 ELO matchmaking et défaite attribuée.',
       penalty: 200,
     };
   } if (hoursUntilMatch < 48) {
     return {
       isSevere: false,
-      message: 'Penalite de -50 ELO matchmaking applicable.',
+      message: 'Pénalité de -50 ELO matchmaking applicable.',
       penalty: 50,
     };
   }
   return {
     isSevere: false,
-    message: 'Aucune penalite (annulation > 48h avant le match).',
+    message: 'Aucune pénalité (annulation > 48h avant le match).',
     penalty: 0,
   };
 };

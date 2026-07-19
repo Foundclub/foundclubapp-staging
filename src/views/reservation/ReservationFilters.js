@@ -184,6 +184,9 @@ function ReservationFilters({ navigation }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      // Retrait bas systeme deja applique au contenu ci-dessous : pas de plancher
+      // conteneur, sinon insets.bottom serait compte deux fois.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
         Spaces.gap[24],
@@ -221,7 +224,7 @@ function ReservationFilters({ navigation }) {
               <AutocompleteAddressInput
                 address={value}
                 error={getFieldError({ errors: formErrors, fieldName: 'city' })}
-                placeholder={t('clubFilters.fields.city.placeholder', 'Entrez une ville')}
+                placeholder={t('clubFilters.fields.city.placeholder', 'Entre une ville')}
                 setAddress={onChange}
               />
             )}
@@ -263,7 +266,7 @@ function ReservationFilters({ navigation }) {
               error={getFieldError({ errors: formErrors, fieldName: 'activity' })}
               label={t('eventFilters.fields.activity.label', 'Sport')}
               options={activities}
-              placeholder={t('eventFilters.fields.activity.placeholder', 'Sélectionnez un sport')}
+              placeholder={t('eventFilters.fields.activity.placeholder', 'Sélectionne un sport')}
               searchValue={activitySearchValue}
               setSearchValue={setActivitySearchValue}
               setValue={(option) => onChange(option?.value || '')}

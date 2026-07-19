@@ -92,7 +92,7 @@ describe('participationFlow', () => {
 
     expect(flow.kind).toBe(ParticipationFlowKind.eventClosed);
     expect(flow.canAct).toBe(false);
-    expect(flow.blockedReason).toContain('reserve');
+    expect(flow.blockedReason).toContain('réservé');
   });
 
   test('allows re-apply semantics for withdrawn non-detection applications', () => {

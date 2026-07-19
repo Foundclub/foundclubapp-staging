@@ -135,7 +135,7 @@ function UserSportHistory({ navigation }) {
         <OnboardingOptionalHint />
         <Button
           onPress={handleNext}
-          title={t('common.actions.next', 'Suivant')}
+          title={t('common.actions.next', 'Continuer')}
           variant="Primary"
         />
         <Button

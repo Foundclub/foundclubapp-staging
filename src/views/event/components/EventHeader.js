@@ -353,7 +353,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
         {invitedTeamNames.length > 0 && (
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              Equipes invitees
+              Équipes invitées
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
               {invitedTeamNames.join(' \u2022 ')}

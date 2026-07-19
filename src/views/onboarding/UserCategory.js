@@ -40,7 +40,7 @@ const CATEGORIES = [
   { label: 'U21', value: 'U21' },
   { label: 'U23', value: 'U23' },
   { label: 'Senior', value: 'Senior' },
-  { label: 'V\u00E9t\u00E9ran', value: 'V\u00E9t\u00E9ran' },
+  { label: 'Vétéran', value: 'Vétéran' },
 ];
 
 /**
@@ -68,7 +68,7 @@ function UserCategory({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre \u00E0 jour votre profil.');
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -141,10 +141,10 @@ function UserCategory({ navigation }) {
       <View style={[Alignments.fill, Spaces.gap[24]]}>
         <View style={[Spaces.gap[8]]}>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-            {t('onboarding.category.title', 'Ta cat\u00E9gorie ?')}
+            {t('onboarding.category.title', 'Ta catégorie ?')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {t('onboarding.category.subtitle', "Dans quelle cat\u00E9gorie d'\u00E2ge joues-tu ?")}
+            {t('onboarding.category.subtitle', "Dans quelle catégorie d'âge joues-tu ?")}
           </Text>
         </View>
 
@@ -206,7 +206,7 @@ function UserCategory({ navigation }) {
           disabled={selectedCategories.length === 0}
           isLoading={updateUserMutation.isPending}
           onPress={handleNext}
-          title={t('common.actions.next', 'Suivant')}
+          title={t('common.actions.next', 'Continuer')}
           variant="Primary"
         />
         <Button

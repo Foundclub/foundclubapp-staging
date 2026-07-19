@@ -89,7 +89,7 @@ function AdminPopupCampaignList() {
       <View style={[Spaces.paddingHorizontal[24], Spaces.marginBottom[24], Spaces.gap[16]]}>
         <Text style={[Fonts.h1, Fonts.neutral00]}>Campagnes pop-up</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-          Créez, planifiez et pilotez les pop-ups in-app diffusés à l’ouverture.
+          Crée, planifie et pilote les pop-ups in-app diffusés à l’ouverture.
         </Text>
         <Button
           onPress={() => navigation.navigate(RouteNames.AdminPopupCampaignForm)}
@@ -204,7 +204,7 @@ function AdminPopupCampaignList() {
           >
             <Text style={[Fonts.h4, Fonts.neutral00]}>Aucune campagne</Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-              Ajustez les filtres ou créez une première campagne pop-up.
+              Ajuste les filtres ou crée une première campagne pop-up.
             </Text>
           </View>
         ) : null}

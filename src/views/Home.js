@@ -23,7 +23,7 @@ import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 
 const publicSearchOptions = [
   {
-    label: '\u00C9v\u00E9nements',
+    label: 'Événements',
     value: 'events',
   },
   {
@@ -31,7 +31,7 @@ const publicSearchOptions = [
     value: 'clubs',
   },
   {
-    label: 'Annonces',
+    label: 'Recrutement',
     value: 'recrutement',
   },
 ];
@@ -40,7 +40,7 @@ const authenticatedSearchOptions = [
   publicSearchOptions[0],
   publicSearchOptions[1],
   {
-    label: 'R\u00E9servations',
+    label: 'Réservations',
     value: 'reservations',
   },
   publicSearchOptions[2],
@@ -166,7 +166,7 @@ function HomeContent({ route }) {
       {/* SegmentedControl - Figma exact design */}
       <View style={[Alignments.alignCenter, Alignments.fullWidth, Spaces.marginBottom[24]]}>
         <OnboardingWrapper
-          description="Choisissez ici ce que vous cherchez : Événements, Clubs ou Annonces."
+          description="Choisis ici ce que tu cherches : Événements, Clubs ou Recrutement."
           id="search-tabs"
           order={1}
           style={Alignments.fullWidth}

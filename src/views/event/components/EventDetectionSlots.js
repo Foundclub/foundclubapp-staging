@@ -118,7 +118,7 @@ function EventDetectionSlots({
       >
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Les joueurs choisissent un poste precis. Les places se remplissent quand vous validez les candidatures.
+            Les joueurs choisissent un poste precis. Les places se remplissent quand tu valides les candidatures.
           </Text>
           <View style={[Alignments.row, { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
             {renderMetricChip(`${summary.totalPositions} poste(s)`, 'primary')}
@@ -142,11 +142,11 @@ function EventDetectionSlots({
             primaryDisabled = true;
             primaryVariant = 'SecondaryLight';
           } else if (isCurrentUserSlot) {
-            primaryTitle = currentUserSlotStatus === 'accepted' ? 'Participation validee' : 'Demande envoyee';
+            primaryTitle = currentUserSlotStatus === 'accepted' ? 'Participation validée' : 'Demande envoyée';
             primaryDisabled = true;
             primaryVariant = 'SecondaryLight';
           } else if (isDisabledByOtherSlot) {
-            primaryTitle = 'Deja inscrit';
+            primaryTitle = 'Déjà inscrit';
             primaryDisabled = true;
             primaryVariant = 'SecondaryLight';
           } else if (isDisabledByGenericParticipation) {

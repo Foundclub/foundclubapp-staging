@@ -54,7 +54,7 @@ function ClubWizardActivities({ navigation, route }) {
         'clubWizard.activities.subtitle',
         'Sélectionne les sports pratiqués dans ton club (tu pourras en ajouter plus tard).',
       )}
-      title={t('clubWizard.activities.title', 'Quels sports pratiquez-vous ?')}
+      title={t('clubWizard.activities.title', 'Quels sports pratiques-tu ?')}
     >
       <Input
         label={t('clubWizard.activities.searchLabel', 'Rechercher un sport')}

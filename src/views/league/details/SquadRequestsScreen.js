@@ -145,7 +145,7 @@ function SquadRequestsScreen({ navigation, route }) {
               {requesterName}
             </Text>
             <Text numberOfLines={2} style={[Fonts.p2, { color: Colors.neutral200 }]}>
-              Souhaite rejoindre votre squad.
+              Souhaite rejoindre ta squad.
             </Text>
           </View>
         </View>
@@ -242,7 +242,7 @@ function SquadRequestsScreen({ navigation, route }) {
     return (
       <LeagueStateView
         actionLabel="Retour"
-        description="L'identifiant de la squad est manquant. Ouvrez les demandes depuis la fiche squad ou le dashboard League."
+        description="L'identifiant de la squad est manquant. Ouvre les demandes depuis la fiche squad ou le dashboard League."
         onAction={() => navigation.goBack()}
         title="Squad introuvable"
       />
@@ -252,7 +252,7 @@ function SquadRequestsScreen({ navigation, route }) {
   if (isLoading && !team) {
     return (
       <LeagueStateView
-        description="Chargement des demandes d'adhesion de la squad League."
+        description="Chargement des demandes d'adhésion de la squad League."
         isLoading
         title="Chargement des demandes"
       />
@@ -263,7 +263,7 @@ function SquadRequestsScreen({ navigation, route }) {
     return (
       <LeagueStateView
         actionLabel="Réessayer"
-        description="Impossible de charger les demandes d'adhesion pour cette squad. Verifiez la connexion puis relancez."
+        description="Impossible de charger les demandes d'adhésion pour cette squad. Vérifie la connexion puis relance."
         onAction={() => refetch()}
         title="Chargement impossible"
       />

@@ -47,7 +47,7 @@ function AdminClubWizardSponsors({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardRecap)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={7}
-      subtitle="Ajoute des sponsors si tu veux preparer la fiche club tout de suite. Cette etape reste optionnelle."
+      subtitle="Ajoute des sponsors si tu veux préparer la fiche club tout de suite. Cette étape reste optionnelle."
       title="Sponsors"
     >
       <View style={[Spaces.gap[18]]}>

@@ -118,7 +118,7 @@ function SearchAlerts({ navigation }) {
       if (!canUseProfileAlerts) {
         Alert.alert(
           'Alerte profils indisponible',
-          'Cette alerte profils est visible uniquement sur un compte dirigeant ou entraineur.',
+          'Cette alerte profils est visible uniquement sur un compte dirigeant ou entraîneur.',
         );
         return;
       }
@@ -183,7 +183,7 @@ function SearchAlerts({ navigation }) {
     }
   };
 
-  const getAlertTypeLabel = (type) => (type === 'mercato' ? 'Alerte profils' : 'Alerte evenements');
+  const getAlertTypeLabel = (type) => (type === 'mercato' ? 'Alerte profils' : 'Alerte événements');
 
   // Format filters into readable string with calendar icon
   const formatFilters = (/** @type {Record<string, any> | undefined} */ filters, /** @type {string} */ type) => {
@@ -237,7 +237,7 @@ function SearchAlerts({ navigation }) {
                     }}
               />
               <Text style={[Fonts.p1, Fonts.neutral300, { textAlign: 'center' }]}>
-                {t('searchAlerts.empty', 'Aucune alerte enregistrée.\nCréez une alerte depuis les filtres de recherche.')}
+                {t('searchAlerts.empty', 'Aucune alerte enregistrée.\nCrée une alerte depuis les filtres de recherche.')}
               </Text>
             </View>
                     )}
@@ -280,7 +280,7 @@ function SearchAlerts({ navigation }) {
                       </View>
                       {isProfileAlertUnavailable ? (
                         <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 8 }]}>
-                          Disponible uniquement sur un compte dirigeant ou entraineur.
+                          Disponible uniquement sur un compte dirigeant ou entraîneur.
                         </Text>
                       ) : null}
                     </View>
@@ -342,10 +342,10 @@ function SearchAlerts({ navigation }) {
       >
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginTop[16]]}>
-            {t('searchAlerts.typeSelection.title', 'Que recherchez-vous ?')}
+            {t('searchAlerts.typeSelection.title', 'Que recherches-tu ?')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {t('searchAlerts.typeSelection.desc', 'Choisissez le type d\'alerte que vous souhaitez créer.')}
+            {t('searchAlerts.typeSelection.desc', 'Choisis le type d\'alerte que tu souhaites créer.')}
           </Text>
 
           <Button
@@ -373,7 +373,7 @@ function SearchAlerts({ navigation }) {
             Supprimer l'alerte ?
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            Cette action est irréversible. Vous ne recevrez plus de notifications pour cette recherche.
+            Cette action est irréversible. Tu ne recevras plus de notifications pour cette recherche.
           </Text>
 
           <Button

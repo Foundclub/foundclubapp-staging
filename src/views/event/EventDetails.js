@@ -194,9 +194,9 @@ function TrainingOpenBottomSheet({
     >
       <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
         <View style={[Spaces.gap[4]]}>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Ouvrir l entrainement</Text>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Ouvrir l entraînement</Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
-            Definis combien de joueurs externes peuvent rejoindre cet entrainement, puis choisis leur mode de validation.
+            Définis combien de joueurs externes peuvent rejoindre cet entraînement, puis choisis leur mode de validation.
           </Text>
         </View>
 
@@ -332,7 +332,7 @@ const getStageDayStatusSummary = (stageDay) => {
 const getFeaturedScopeStatusLabel = (status) => {
   if (status === 'pending') return 'Demande en attente';
   if (status === 'approved') return 'Déjà à la une';
-  if (status === 'rejected') return 'Refusée, vous pouvez redemander';
+  if (status === 'rejected') return 'Refusée, tu peux redemander';
   return 'Disponible';
 };
 
@@ -1062,7 +1062,7 @@ function EventDetails({ navigation, route }) {
     if (!Number.isFinite(externalParticipantLimit) || externalParticipantLimit < 1) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        'Indique combien de places externes tu veux ouvrir pour cet entrainement.',
+        'Indique combien de places externes tu veux ouvrir pour cet entraînement.',
       );
       return;
     }
@@ -1080,7 +1080,7 @@ function EventDetails({ navigation, route }) {
     } catch (trainingOpenError) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        trainingOpenError?.message || 'Impossible d\'ouvrir cet entrainement pour le moment.',
+        trainingOpenError?.message || 'Impossible d\'ouvrir cet entraînement pour le moment.',
       );
     }
   }, [
@@ -1101,7 +1101,7 @@ function EventDetails({ navigation, route }) {
     } catch (trainingCloseError) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        trainingCloseError?.message || 'Impossible de fermer cet entrainement pour le moment.',
+        trainingCloseError?.message || 'Impossible de fermer cet entraînement pour le moment.',
       );
     }
   }, [eventId, mutations.updateEventNoNavMutation, t]);
@@ -1137,7 +1137,7 @@ function EventDetails({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ sourceTeamId }) => registerClubTeamToTournament(eventId, sourceTeamId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible d inscrire cette equipe au tournoi.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible d inscrire cette équipe au tournoi.');
     },
     onSuccess: () => {
       setIsTournamentRegisterModalVisible(false);
@@ -1149,7 +1149,7 @@ function EventDetails({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ acceptRiskDeclaration, name }) => createCustomTournamentTeam(eventId, { acceptRiskDeclaration, name }),
     onError: (mutationError) => {
-      setJoinModalError(mutationError?.message || 'Impossible de creer cette equipe de tournoi.');
+      setJoinModalError(mutationError?.message || 'Impossible de créer cette équipe de tournoi.');
     },
     onSuccess: (createdTeam) => {
       setIsJoinModalVisible(false);
@@ -1195,7 +1195,7 @@ function EventDetails({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ status, teamDocumentId }) => reviewTournamentTeamRegistration(teamDocumentId, status),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre a jour cette inscription.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre à jour cette inscription.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -1206,7 +1206,7 @@ function EventDetails({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ status, teamDocumentId }) => respondToTournamentTeam(teamDocumentId, status),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible d enregistrer votre réponse tournoi.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible d enregistrer ta réponse tournoi.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -1291,10 +1291,10 @@ function EventDetails({ navigation, route }) {
         accentColor: Colors.error500 || 'rgb(248, 113, 113)',
         badgeBackgroundColor: `${Colors.error500 || 'rgb(248, 113, 113)'}22`,
         badgeBorderColor: `${Colors.error500 || 'rgb(248, 113, 113)'}38`,
-        badgeLabel: 'Absence enregistree',
+        badgeLabel: 'Absence enregistrée',
         badgeTextColor: Colors.error500 || 'rgb(248, 113, 113)',
         badgeValue: null,
-        description: "L'evenement est termine et aucune arrivee n'a ete confirmee. Un coach doit corriger le pointage si besoin.",
+        description: "L'événement est terminé et aucune arrivée n'a été confirmée. Un coach doit corriger le pointage si besoin.",
         hasArrived: false,
         primaryAction: null,
         secondaryAction: null,
@@ -1314,7 +1314,7 @@ function EventDetails({ navigation, route }) {
           badgeLabel: 'Arrive',
           badgeTextColor: Colors.success500 || 'rgb(34, 197, 94)',
           badgeValue: null,
-          description: `${earlyMinutes} min avant le debut de l'evenement.`,
+          description: `${earlyMinutes} min avant le début de l'événement.`,
           hasArrived: true,
           primaryAction: null,
           secondaryAction: null,
@@ -1335,7 +1335,7 @@ function EventDetails({ navigation, route }) {
           badgeLabel: 'Arrive',
           badgeTextColor: Colors.warning500 || 'rgb(245, 158, 11)',
           badgeValue: `+${lateMinutes} min`,
-          description: 'Votre arrivee reelle a bien ete enregistree.',
+          description: 'Ton arrivée réelle a bien été enregistrée.',
           hasArrived: true,
           primaryAction: null,
           secondaryAction: null,
@@ -1349,7 +1349,7 @@ function EventDetails({ navigation, route }) {
         badgeLabel: 'Arrive',
         badgeTextColor: Colors.success500 || 'rgb(34, 197, 94)',
         badgeValue: null,
-        description: 'Vous etes signale present a l\'heure.',
+        description: 'Tu es signale present a l\'heure.',
         hasArrived: true,
         primaryAction: null,
         secondaryAction: null,
@@ -1365,10 +1365,10 @@ function EventDetails({ navigation, route }) {
         badgeLabel: 'Retard annonce',
         badgeTextColor: Colors.warning500 || 'rgb(245, 158, 11)',
         badgeValue: `+${declaredLateMinutes} min`,
-        description: `Retard signale : +${declaredLateMinutes} min. Confirmez votre arrivee une fois sur place.`,
+        description: `Retard signale : +${declaredLateMinutes} min. Confirme ton arrivée une fois sur place.`,
         hasArrived: false,
         primaryAction: {
-          title: 'Mettre a jour',
+          title: 'Mettre à jour',
           type: 'declare-late',
         },
         secondaryAction: {
@@ -1388,7 +1388,7 @@ function EventDetails({ navigation, route }) {
         badgeLabel: 'Aucun signalement',
         badgeTextColor: Colors.primary500,
         badgeValue: null,
-        description: `Il vous reste ${minutesLeft} min pour signaler votre arrivee ou votre retard.`,
+        description: `Il te reste ${minutesLeft} min pour signaler ton arrivée ou ton retard.`,
         hasArrived: false,
         primaryAction: {
           title: 'Je suis arrive',
@@ -1409,7 +1409,7 @@ function EventDetails({ navigation, route }) {
       badgeLabel: 'En attente',
       badgeTextColor: Colors.error500 || 'rgb(248, 113, 113)',
       badgeValue: liveLateMinutes > 0 ? `+${liveLateMinutes} min` : null,
-      description: 'Le debut est passe. Signalez votre retard ou confirmez votre arrivee.',
+      description: 'Le début est passé. Signale ton retard ou confirme ton arrivée.',
       hasArrived: false,
       primaryAction: {
         title: 'Je suis arrive',
@@ -1558,16 +1558,16 @@ function EventDetails({ navigation, route }) {
     if (managedTournamentTeam?.documentId) {
       return {
         ...currentParticipationFlow,
-        actionLabel: 'Gerer mon equipe tournoi',
-        confirmLabel: 'Gerer mon equipe tournoi',
+        actionLabel: 'Gérer mon équipe tournoi',
+        confirmLabel: 'Gérer mon équipe tournoi',
       };
     }
 
     if (currentUserTournamentTeam?.documentId) {
       return {
         ...currentParticipationFlow,
-        actionLabel: 'Voir mon equipe tournoi',
-        confirmLabel: 'Voir mon equipe tournoi',
+        actionLabel: 'Voir mon équipe tournoi',
+        confirmLabel: 'Voir mon équipe tournoi',
       };
     }
 
@@ -1627,13 +1627,13 @@ function EventDetails({ navigation, route }) {
         isHome: true,
         key: event.team.documentId || 'home-team',
         players: getEligibleTeamPlayers(event.team),
-        teamName: event.team.name || 'Equipe organisatrice',
+        teamName: event.team.name || 'Équipe organisatrice',
       } : null,
       ...((event?.invitedTeams || []).map((/** @type {any} */ team) => ({
         isHome: false,
         key: team?.documentId || `invited-${team?.name || 'team'}`,
         players: getEligibleTeamPlayers(team),
-        teamName: team?.name || 'Equipe invitee',
+        teamName: team?.name || 'Équipe invitée',
       }))),
     ].filter(Boolean);
 
@@ -1705,7 +1705,7 @@ function EventDetails({ navigation, route }) {
         }
 
         const teamKey = resolvedTeamKey;
-        const teamName = resolvedTeamName || 'Equipe retiree';
+        const teamName = resolvedTeamName || 'Équipe retirée';
         const current = historicalByTeam.get(teamKey) || {
           key: teamKey,
           missing: [],
@@ -1873,7 +1873,7 @@ function EventDetails({ navigation, route }) {
       Alert.alert(
         'Detection',
         // @ts-ignore: FIXME: Baseline TS regression
-        result?.message || 'Votre participation a bien ete envoyee sur ce poste.',
+        result?.message || 'Ta participation a bien été envoyée sur ce poste.',
       );
     },
   });
@@ -2037,7 +2037,7 @@ function EventDetails({ navigation, route }) {
     if (!canCreateCustomTournamentTeam && joinableTournamentTeams.length === 0) {
       Alert.alert(
         'Tournoi',
-        'Aucune equipe tournoi ouverte ne peut etre rejointe pour le moment.',
+        'Aucune équipe tournoi ouverte ne peut être rejointe pour le moment.',
       );
       return;
     }
@@ -2061,7 +2061,7 @@ function EventDetails({ navigation, route }) {
       // @ts-ignore: FIXME: Baseline TS regression
       mode: 'join_existing',
       teamDocumentId: team.documentId,
-      teamName: team?.name || 'Equipe tournoi',
+      teamName: team?.name || 'Équipe tournoi',
     });
     setIsTournamentJoinSelectorVisible(false);
     setJoinModalError('');
@@ -2071,7 +2071,7 @@ function EventDetails({ navigation, route }) {
   const handleCreateTournamentTeam = useCallback(() => {
     const trimmedName = String(tournamentTeamNameDraft || '').trim();
     if (!trimmedName) {
-      Alert.alert('Equipe tournoi', 'Ajoutez un nom d equipe avant de continuer.');
+      Alert.alert('Équipe tournoi', 'Ajoute un nom d équipe avant de continuer.');
       return;
     }
 
@@ -2244,7 +2244,7 @@ function EventDetails({ navigation, route }) {
       setPendingDetectionSlot(null);
     } catch (mutationError) {
       setJoinModalError(
-        getParticipationErrorMessage(mutationError, 'Impossible de confirmer votre participation pour le moment.'),
+        getParticipationErrorMessage(mutationError, 'Impossible de confirmer ta participation pour le moment.'),
       );
     }
   }, [
@@ -2397,7 +2397,7 @@ function EventDetails({ navigation, route }) {
 
     Alert.alert(
       t('common.error'),
-      'Impossible de retrouver votre reponse pour cet evenement. Rechargez la page et reessayez.',
+      'Impossible de retrouver ta réponse pour cet événement. Recharge la page et réessaie.',
     );
   }, [
     activeEventParticipations,
@@ -2432,7 +2432,7 @@ function EventDetails({ navigation, route }) {
     if (!sentMessageId) {
       Alert.alert(
         t('common.error'),
-        t('event.shareInChatError', 'Impossible de partager l\'evenement pour le moment.'),
+        t('event.shareInChatError', 'Impossible de partager l\'événement pour le moment.'),
       );
       return;
     }
@@ -2440,10 +2440,10 @@ function EventDetails({ navigation, route }) {
     setIsShareModalVisible(false);
     setTimeout(() => {
       Alert.alert(
-        t('event.shareInChatSuccessTitle', 'Evenement partage'),
+        t('event.shareInChatSuccessTitle', 'Événement partage'),
         t(
           'event.shareInChatSuccessDescription',
-          'Votre evenement a bien ete partage. Appuyez sur OK pour ouvrir la conversation.',
+          'Ton événement a bien été partage. Appuie sur OK pour ouvrir la conversation.',
         ),
         [
           {
@@ -2506,7 +2506,7 @@ function EventDetails({ navigation, route }) {
   const handleOpenEventActionsMenu = useCallback(() => {
     Alert.alert(
       t('eventDetails.actions.menuTitle', 'Actions événement'),
-      t('eventDetails.actions.menuDescription', 'Choisissez une action.'),
+      t('eventDetails.actions.menuDescription', 'Choisis une action.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
@@ -2550,7 +2550,7 @@ function EventDetails({ navigation, route }) {
 
     Alert.alert(
       'Actions tournoi',
-      'Choisissez ce que vous voulez gérer.',
+      'Choisis ce que tu veux gérer.',
       // @ts-ignore: FIXME: Baseline TS regression
       actions,
     );
@@ -2577,13 +2577,13 @@ function EventDetails({ navigation, route }) {
 
     if (eventLicenseCampaigns.length > 0) {
       Alert.alert(
-        'Campagne deja liee',
-        'Cet evenement a deja une campagne de cotisation. Creez-en une autre seulement si vous voulez un paiement distinct.',
+        'Campagne déjà liée',
+        'Cet événement a déjà une campagne de cotisation. Crée-en une autre seulement si tu veux un paiement distinct.',
         [
           { style: 'cancel', text: t('common.cancel', 'Annuler') },
           {
             onPress: navigateToCampaignSettings,
-            text: 'Creer quand meme',
+            text: 'Créer quand même',
           },
         ],
       );
@@ -2632,20 +2632,20 @@ function EventDetails({ navigation, route }) {
   }, [event?.type?.name]);
   const supportsEventComposition = Boolean(event?.team?.documentId || (event?.invitedTeams || []).length > 0);
   const eventActionsToggleLabel = isEventActionsOpen
-    ? 'Fermer les actions evenement'
-    : 'Ouvrir les actions evenement';
+    ? 'Fermer les actions événement'
+    : 'Ouvrir les actions événement';
 
   // @ts-ignore: FIXME: Baseline TS regression
   const getCompositionSourceLabel = useCallback((source) => {
     switch (source) {
       case 'default_composition':
-        return "Favori d'equipe";
+        return "Favori d'équipe";
       case 'draft':
         return 'Brouillon';
       case 'last_match':
         return 'Dernier match';
       case 'published':
-        return "Composition d'equipes publiee";
+        return "Composition d'équipes publiée";
       default:
         return 'Nouvelle composition';
     }
@@ -2828,7 +2828,7 @@ function EventDetails({ navigation, route }) {
   const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage);
   const matchStatsScoreLabel = useMemo(() => {
     if (!matchStatsPayload?.score?.available) {
-      return 'Score a completer';
+      return 'Score à compléter';
     }
 
     return `${matchStatsPayload?.score?.scoreFor ?? '-'} - ${matchStatsPayload?.score?.scoreAgainst ?? '-'}`;
@@ -2910,22 +2910,22 @@ function EventDetails({ navigation, route }) {
   ]);
   const matchStatsSummaryText = useMemo(() => {
     if (isMatchStatsReviewRequired) {
-      return 'Le score officiel a change. Verification requise avant nouvelle publication.';
+      return 'Le score officiel a changé. Vérification requise avant nouvelle publication.';
     }
     if (isMatchStatsFinal) {
-      return 'Rapport finalise pour cette equipe.';
+      return 'Rapport finalise pour cette équipe.';
     }
     if (matchStatsPayload?.score?.waitingOfficial) {
       return 'En attente du score officiel.';
     }
-    return 'Temps de jeu et statistiques cles a completer.';
+    return 'Temps de jeu et statistiques clés à compléter.';
   }, [isMatchStatsFinal, isMatchStatsReviewRequired, matchStatsPayload?.score?.waitingOfficial]);
   const matchStatsStatusMeta = useMemo(() => {
     if (isMatchStatsReviewRequired) {
       return {
         backgroundColor: `${Colors.warning500}20`,
         borderColor: `${Colors.warning500}45`,
-        label: 'Verification requise',
+        label: 'Vérification requise',
         textColor: Colors.warning500,
       };
     }
@@ -2933,7 +2933,7 @@ function EventDetails({ navigation, route }) {
       return {
         backgroundColor: `${Colors.success500}20`,
         borderColor: `${Colors.success500}45`,
-        label: 'Stats publiees',
+        label: 'Stats publiées',
         textColor: Colors.success500,
       };
     }
@@ -2956,7 +2956,7 @@ function EventDetails({ navigation, route }) {
     return {
       backgroundColor: `${Colors.neutral00}14`,
       borderColor: `${Colors.neutral00}24`,
-      label: 'Score a completer',
+      label: 'Score à compléter',
       textColor: Colors.neutral00,
     };
   }, [
@@ -3011,7 +3011,7 @@ function EventDetails({ navigation, route }) {
   );
 
   const compositionPrimaryAction = useMemo(() => {
-    const compositionTitle = "Composition d'equipes";
+    const compositionTitle = "Composition d'équipes";
 
     if (staffCompositionPayload?.draft) {
       return {
@@ -3042,13 +3042,13 @@ function EventDetails({ navigation, route }) {
 
     if (compositionEligiblePlayerCount === 0) {
       return {
-        subtitle: 'Tu peux deja creer les equipes meme sans participant: les postes resteront libres et se completeront ensuite.',
+        subtitle: 'Tu peux déjà créer les équipes même sans participant: les postes resteront libres et se completeront ensuite.',
         title: compositionTitle,
       };
     }
 
     return {
-      subtitle: 'Cree plusieurs equipes a la main ou genere-les automatiquement, puis publie la version finale.',
+      subtitle: 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.',
       title: compositionTitle,
     };
   }, [compositionEligiblePlayerCount, getCompositionSourceLabel, staffCompositionPayload]);
@@ -3057,7 +3057,7 @@ function EventDetails({ navigation, route }) {
     if (!isMatchFinished) {
       return {
         disabled: true,
-        subtitle: 'Les stats seront disponibles a la fin du match.',
+        subtitle: 'Les stats seront disponibles à la fin du match.',
         title: 'Stats du match',
       };
     }
@@ -3071,8 +3071,8 @@ function EventDetails({ navigation, route }) {
     if (isMatchStatsReviewRequired) {
       return {
         disabled: false,
-        subtitle: 'Le score officiel a change. Verifie puis republie cette version.',
-        title: 'Mettre a jour apres score officiel',
+        subtitle: 'Le score officiel a changé. Vérifie puis republie cette version.',
+        title: 'Mettre à jour après score officiel',
       };
     }
     if (isMatchStatsFinal) {
@@ -3087,14 +3087,14 @@ function EventDetails({ navigation, route }) {
     if (!canManageMatchStats) {
       return {
         disabled: true,
-        subtitle: 'Les membres de ton equipe peuvent encore finaliser ce rapport.',
-        title: "En attente de l'equipe",
+        subtitle: 'Les membres de ton équipe peuvent encore finaliser ce rapport.',
+        title: "En attente de l'équipe",
       };
     }
     if (matchStatsPayload?.score?.available) {
       return {
         disabled: false,
-        subtitle: 'Complete le temps de jeu et les stats cles de ton equipe.',
+        subtitle: 'Complète le temps de jeu et les stats clés de ton équipe.',
         title: 'Saisir les stats du match',
       };
     }
@@ -3113,7 +3113,7 @@ function EventDetails({ navigation, route }) {
     matchStatsReport?.finalizedAt,
   ]);
   const matchStatsCardButtonTitle = useMemo(() => {
-    if (isMatchStatsReviewRequired) return 'Mettre a jour';
+    if (isMatchStatsReviewRequired) return 'Mettre à jour';
     if (isMatchStatsCompleted) return 'Voir';
     return 'Ouvrir';
   }, [isMatchStatsCompleted, isMatchStatsReviewRequired]);
@@ -3160,15 +3160,15 @@ function EventDetails({ navigation, route }) {
   const myMatchResponseSummary = useMemo(() => {
     if (myMatchResponse?.status === 'submitted') {
       if (myMatchResponse?.participation === 'not_involved') {
-        return 'Tu as indique ne pas etre concerne par ce match.';
+        return 'Tu as indique ne pas être concerne par ce match.';
       }
       if (myMatchResponse?.participation === 'present_no_play') {
         return 'Tu as indique que tu etais la sans jouer.';
       }
       if (myMatchResponse?.quantitativeState === 'unknown') {
-        return 'Ton ressenti est enregistre, sans stats quantitatives.';
+        return 'Ton ressenti est enregistré, sans stats quantitatives.';
       }
-      return 'Tes stats personnelles et ta note sont enregistrees.';
+      return 'Tes stats personnelles et ta note sont enregistrées.';
     }
     if (myMatchResponse?.status === 'draft') {
       return 'Ton brouillon perso post-match attend encore une validation.';
@@ -3183,13 +3183,13 @@ function EventDetails({ navigation, route }) {
   const matchStatsPromptMessage = useMemo(() => {
     if (matchStatsPayload?.score?.available) {
       if (isMatchStatsReviewRequired) {
-        return 'Le score officiel a change. Verifie les lignes puis republie ce rapport.';
+        return 'Le score officiel a changé. Vérifie les lignes puis republie ce rapport.';
       }
 
-      return 'Le score est pret. Tu peux maintenant completer le temps de jeu et les stats cles de ton equipe.';
+      return 'Le score est prêt. Tu peux maintenant compléter le temps de jeu et les stats clés de ton équipe.';
     }
 
-    return 'Le match est termine. Enregistre d abord le score puis complete les statistiques de ton equipe.';
+    return 'Le match est terminé. Enregistre d abord le score puis complète les statistiques de ton équipe.';
   }, [isMatchStatsReviewRequired, matchStatsPayload?.score?.available]);
   const matchStatsPromptSessionKey = useMemo(() => {
     if (!eventId || !compositionTeamId) return '';
@@ -3288,7 +3288,7 @@ function EventDetails({ navigation, route }) {
     if (!eventId || !compositionTeamId) return;
 
     if (isStaffCompositionFetching) {
-      Alert.alert('Patiente', "On recupere l'etat actuel de la composition.");
+      Alert.alert('Patiente', "On récupère l'état actuel de la composition.");
       return;
     }
 
@@ -3336,12 +3336,12 @@ function EventDetails({ navigation, route }) {
     }
 
     Alert.alert(
-      "Composition d'equipes",
-      'Choisis si tu veux creer les equipes automatiquement ou les faire a la main.',
+      "Composition d'équipes",
+      'Choisis si tu veux créer les équipes automatiquement ou les faire à la main.',
       [
         { style: 'cancel', text: 'Annuler' },
-        { onPress: () => openNewComposition('auto'), text: 'Creation auto' },
-        { onPress: () => openNewComposition('manual'), text: 'Faire a la main' },
+        { onPress: () => openNewComposition('auto'), text: 'Création auto' },
+        { onPress: () => openNewComposition('manual'), text: 'Faire à la main' },
       ],
     );
   }, [
@@ -3363,7 +3363,7 @@ function EventDetails({ navigation, route }) {
       sport: matchStatsPayload?.sport || compositionSport,
       teamId: compositionTeamId,
       teamName: compositionEditorTeam?.name || matchStatsPayload?.team?.name || null,
-      title: 'Bilan equipe',
+      title: 'Bilan équipe',
     });
   }, [
     compositionEditorTeam?.name,
@@ -3504,7 +3504,7 @@ function EventDetails({ navigation, route }) {
 
     const parsedMinutes = Number(lateModalMinutes);
     if (!Number.isFinite(parsedMinutes) || parsedMinutes < 0) {
-      Alert.alert(t('common.error'), t('eventDetails.late.minutesInvalid', 'Le retard doit etre un nombre positif.'));
+      Alert.alert(t('common.error'), t('eventDetails.late.minutesInvalid', 'Le retard doit être un nombre positif.'));
       return;
     }
 
@@ -3563,11 +3563,11 @@ function EventDetails({ navigation, route }) {
 
   const handleSelfArrival = useCallback(() => {
     if (!eventId) {
-      Alert.alert(t('common.error'), "Impossible d'enregistrer votre arrivee (evenement introuvable).");
+      Alert.alert(t('common.error'), "Impossible d'enregistrer ton arrivée (événement introuvable).");
       return;
     }
     if (hasSelfArrived) {
-      Alert.alert(t('common.success'), 'Arrivee deja enregistree.');
+      Alert.alert(t('common.success'), 'Arrivée déjà enregistrée.');
       return;
     }
     setSelfArrivalMarkedLocal(true);
@@ -3591,18 +3591,18 @@ function EventDetails({ navigation, route }) {
             && !Number.isNaN(arrivedAtMs),
           );
 
-          let message = t('eventDetails.late.selfOnTime', 'Arrivee enregistree a l\'heure.');
+          let message = t('eventDetails.late.selfOnTime', 'Arrivée enregistrée a l\'heure.');
 
           if (hasValidTimestamps && eventStartMs && arrivedAtMs < eventStartMs) {
             const earlyMinutes = Math.max(1, Math.floor((eventStartMs - arrivedAtMs) / 60000));
-            message = t('eventDetails.late.selfEarly', `Bravo ! Vous etes en avance de ${earlyMinutes} min.`);
+            message = t('eventDetails.late.selfEarly', `Bravo ! Tu es en avance de ${earlyMinutes} min.`);
           } else {
             const lateMinutesFromDiff = hasValidTimestamps && eventStartMs && arrivedAtMs > eventStartMs
               ? Math.max(0, Math.floor((arrivedAtMs - eventStartMs) / 60000))
               : 0;
             const lateMinutes = Math.max(lateMinutesFromResponse, lateMinutesFromDiff);
             if (lateMinutes > 0) {
-              message = t('eventDetails.late.selfLate', `Arrivee enregistree : ${lateMinutes} min de retard.`);
+              message = t('eventDetails.late.selfLate', `Arrivée enregistrée : ${lateMinutes} min de retard.`);
             }
           }
 
@@ -3661,7 +3661,7 @@ function EventDetails({ navigation, route }) {
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Actions événement</Text>
               <Text style={[Fonts.p4, Fonts.neutral300, { marginTop: 2 }]}>
-                Gérez le tournoi, les équipes inscrites et les options de l’événement.
+                Gère le tournoi, les équipes inscrites et les options de l’événement.
               </Text>
             </View>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
@@ -3737,8 +3737,8 @@ function EventDetails({ navigation, route }) {
 
     const hasLinkedCampaigns = eventLicenseCampaigns.length > 0;
     const createCampaignTitle = eventCampaignCreationSuggested
-      ? 'Preparer la campagne de cotisation'
-      : 'Creer une campagne de cotisation';
+      ? 'Préparer la campagne de cotisation'
+      : 'Créer une campagne de cotisation';
 
     if (eventLicenseCampaignsQuery.isLoading) {
       return (
@@ -3764,9 +3764,9 @@ function EventDetails({ navigation, route }) {
     return (
       <View style={[Spaces.gap[12], Spaces.paddingTop[4]]}>
         <View style={[Spaces.gap[4]]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Cotisations liees</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Cotisations liées</Text>
           <Text style={[Fonts.p3, Fonts.neutral300]}>
-            Campagnes de paiement rattachees a cet evenement.
+            Campagnes de paiement rattachées à cet événement.
           </Text>
         </View>
 
@@ -3797,7 +3797,7 @@ function EventDetails({ navigation, route }) {
               >
                 <View style={[Spaces.gap[4], { flex: 1 }]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {campaign?.name || 'Campagne evenement'}
+                    {campaign?.name || 'Campagne événement'}
                   </Text>
                   <Text style={[Fonts.p3, Fonts.neutral300]}>
                     {formatCampaignAmount(
@@ -3835,7 +3835,7 @@ function EventDetails({ navigation, route }) {
         })}
         <Button
           onPress={openEventLicenseCampaignSettings}
-          title="Creer une autre campagne"
+          title="Créer une autre campagne"
           variant="Secondary"
         />
       </View>
@@ -3856,11 +3856,11 @@ function EventDetails({ navigation, route }) {
     const competitionStateLabel = isCompetitionPublished
       ? 'Compétition publiée'
       : 'Compétition en brouillon';
-    let primaryActionHelper = 'Consultez le déroulé, les équipes et les résultats du tournoi.';
+    let primaryActionHelper = 'Consulte le déroulé, les équipes et les résultats du tournoi.';
     if (canEdit && isCompetitionPublished) {
       primaryActionHelper = 'Calendrier, résultats et classement sont prêts à être pilotés.';
     } else if (canEdit) {
-      primaryActionHelper = 'Finalisez les équipes et les paramètres avant de lancer le tournoi.';
+      primaryActionHelper = 'Finalise les équipes et les paramètres avant de lancer le tournoi.';
     }
     const teamsSummary = `${tournamentTeamCounters.accepted} validée(s) · ${tournamentTeamCounters.pending} en attente`;
     const tournamentScopeLabel = event?.tournamentScopeMode === 'autonomous'
@@ -3959,7 +3959,7 @@ function EventDetails({ navigation, route }) {
               <View style={{ flex: 1 }}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Ma réponse au tournoi</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4], { lineHeight: 20 }]}>
-                  Votre réponse concerne votre équipe tournoi, pas le RSVP classique de l’événement.
+                  Ta réponse concerne ton équipe tournoi, pas le RSVP classique de l’événement.
                 </Text>
               </View>
               <Tag
@@ -4014,7 +4014,7 @@ function EventDetails({ navigation, route }) {
         {tournamentTeams.length === 0 ? (
           <View style={tournamentDs.styles.panelCard}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Aucune equipe n est encore inscrite sur ce tournoi.
+              Aucune équipe n est encore inscrite sur ce tournoi.
             </Text>
           </View>
         ) : null}
@@ -4022,13 +4022,13 @@ function EventDetails({ navigation, route }) {
         {tournamentTeams.map((tournamentTeam) => {
           const rosterSummary = getTournamentRosterSummary(tournamentTeam, tournamentConfig);
           const hasRosterWarning = isTournamentTeamNonCompliant(tournamentTeam, tournamentConfig);
-          let tournamentTeamStatusLabel = 'Equipe inscrite';
+          let tournamentTeamStatusLabel = 'Équipe inscrite';
           if (tournamentTeam?.status === 'pending') {
             tournamentTeamStatusLabel = 'Validation en attente';
           } else if (tournamentTeam?.status === 'declined') {
-            tournamentTeamStatusLabel = 'Equipe refusee';
+            tournamentTeamStatusLabel = 'Équipe refusée';
           } else if (tournamentTeam?.status === 'archived') {
-            tournamentTeamStatusLabel = 'Equipe archivee';
+            tournamentTeamStatusLabel = 'Équipe archivée';
           }
 
           return (
@@ -4040,12 +4040,12 @@ function EventDetails({ navigation, route }) {
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {tournamentTeam?.name || 'Equipe tournoi'}
+                    {tournamentTeam?.name || 'Équipe tournoi'}
                   </Text>
                   <Text style={[Fonts.p4, Fonts.primary100]}>
                     {tournamentTeam?.sourceType === 'club_team'
-                      ? `Depuis ${tournamentTeam?.sourceTeam?.name || 'une equipe club'}`
-                      : 'Equipe ephemere'}
+                      ? `Depuis ${tournamentTeam?.sourceTeam?.name || 'une équipe club'}`
+                      : 'Équipe éphémère'}
                   </Text>
                 </View>
                 <Tag
@@ -4139,7 +4139,7 @@ function EventDetails({ navigation, route }) {
 
     const featuredActionNode = canManageFeatured && canRequestFeatured ? (
       <View style={{ marginTop: 12 }}>
-        <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title={'Mettre \u00e0 la une'} variant="Secondary" />
+        <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title="Mettre à la une" variant="Secondary" />
       </View>
     ) : null;
     const pendingFeaturedActionNode = (() => {
@@ -4310,8 +4310,8 @@ function EventDetails({ navigation, route }) {
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions événement</Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
                   {canEdit
-                    ? 'Modifie cet evenement ou gere son annulation.'
-                    : 'Gere les cotisations rattachees a cet evenement.'}
+                    ? 'Modifie cet événement ou gère son annulation.'
+                    : 'Gère les cotisations rattachées à cet événement.'}
                 </Text>
               </View>
               <TouchableOpacity
@@ -4482,17 +4482,17 @@ function EventDetails({ navigation, route }) {
     || mutations.selfLateMutation.isPending
     || mutations.resetAttendanceMutation.isPending;
   let lateModalTitle = 'Corriger le retard';
-  let lateModalDescription = 'Mettez a jour le retard reel ou reinitialisez le pointage.';
+  let lateModalDescription = 'Mets à jour le retard réel ou réinitialise le pointage.';
   let lateModalPrimaryActionTitle = 'Enregistrer';
 
   if (isPlayerLateModal) {
-    lateModalTitle = lateModalMode === 'player_update' ? 'Mettre a jour mon retard' : 'Je serai en retard';
-    lateModalDescription = 'Signalez votre retard avant d\'arriver. Vous confirmerez ensuite votre arrivee reelle.';
+    lateModalTitle = lateModalMode === 'player_update' ? 'Mettre à jour mon retard' : 'Je serai en retard';
+    lateModalDescription = 'Signale ton retard avant d\'arriver. Tu confirmeras ensuite ton arrivée réelle.';
     lateModalPrimaryActionTitle = 'Enregistrer mon retard';
   } else if (lateModalMode === 'coach_mark') {
-    lateModalTitle = 'Pointer l\'arrivee';
-    lateModalDescription = 'Pointez l\'arrivee et ajustez le retard si necessaire.';
-    lateModalPrimaryActionTitle = 'Pointer l\'arrivee';
+    lateModalTitle = 'Pointer l\'arrivée';
+    lateModalDescription = 'Pointe l\'arrivée et ajuste le retard si nécessaire.';
+    lateModalPrimaryActionTitle = 'Pointer l\'arrivée';
   }
 
   // @ts-ignore: FIXME: Baseline TS regression
@@ -4564,7 +4564,7 @@ function EventDetails({ navigation, route }) {
                 >
                   <View style={[Alignments.row, Spaces.gap[8]]}>
                     {[
-                      { key: 'overview', label: 'Vue generale' },
+                      { key: 'overview', label: 'Vue générale' },
                       { key: 'days', label: 'Jours' },
                     ].map((tab) => {
                       const selected = stageDetailsTab === tab.key;
@@ -4594,8 +4594,8 @@ function EventDetails({ navigation, route }) {
                   {stageDetailsTab === 'overview' ? (
                     <View style={[Spaces.gap[12]]}>
                       <View style={[Spaces.gap[4]]}>
-                        <Text style={[Fonts.p3, Fonts.neutral200]}>Periode</Text>
-                        <Text style={[Fonts.p2, Fonts.neutral00]}>{stagePeriodSummary || 'Non renseignee'}</Text>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>Période</Text>
+                        <Text style={[Fonts.p2, Fonts.neutral00]}>{stagePeriodSummary || 'Non renseignée'}</Text>
                       </View>
                       <View style={[Spaces.gap[4]]}>
                         <Text style={[Fonts.p3, Fonts.neutral200]}>Horaires</Text>
@@ -4604,7 +4604,7 @@ function EventDetails({ navigation, route }) {
                       <View style={[Spaces.gap[4]]}>
                         <Text style={[Fonts.p3, Fonts.neutral200]}>Lieu principal</Text>
                         <Text style={[Fonts.p2, Fonts.neutral100]}>
-                          {event?.facility?.name || event?.locationDetails || 'A definir'}
+                          {event?.facility?.name || event?.locationDetails || 'A définir'}
                         </Text>
                       </View>
                       <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
@@ -4674,7 +4674,7 @@ function EventDetails({ navigation, route }) {
                             <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                               <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.present} presents`}</Text>
                               <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.absent} absents`}</Text>
-                              <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.pending} sans reponse`}</Text>
+                              <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.pending} sans réponse`}</Text>
                             </View>
                           </TouchableOpacity>
                         );
@@ -4706,9 +4706,9 @@ function EventDetails({ navigation, route }) {
                   },
                 ]}
               >
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Journee de stage</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Journée de stage</Text>
                 <Text style={[Fonts.p2, Fonts.neutral00]}>
-                  Cette journee depend du stage principal.
+                  Cette journée depend du stage principal.
                 </Text>
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>Voir le stage</Text>
               </TouchableOpacity>
@@ -4733,7 +4733,7 @@ function EventDetails({ navigation, route }) {
 
             {canSelfMarkArrival && selfAttendanceStatus ? (
               <View style={[Spaces.gap[12]]}>
-                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Statut d&apos;arrivee</Text>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Statut d&apos;arrivée</Text>
                 <View
                   style={[
                     ApplicationStyle.backgroundColor.primary900,
@@ -4748,7 +4748,7 @@ function EventDetails({ navigation, route }) {
                 >
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>Presence evenement</Text>
+                      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>Présence événement</Text>
                       <Text style={[Fonts.p2, Fonts.neutral100, Spaces.marginTop[4]]}>
                         {selfAttendanceStatus.description}
                       </Text>
@@ -4836,12 +4836,12 @@ function EventDetails({ navigation, route }) {
               >
                 <View style={[Spaces.gap[4]]}>
                   <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                    {trainingOpenConfig.isOpenTraining ? 'Entrainement ouvert' : 'Entrainement prive'}
+                    {trainingOpenConfig.isOpenTraining ? 'Entraînement ouvert' : 'Entraînement prive'}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
                     {trainingOpenConfig.isOpenTraining
                       ? 'Les joueurs externes peuvent rejoindre selon ton quota et ton mode de validation.'
-                      : 'Ouvre l\'entrainement pour autoriser un quota de joueurs externes sans toucher a tes joueurs internes.'}
+                      : 'Ouvre l\'entraînement pour autoriser un quota de joueurs externes sans toucher à tes joueurs internes.'}
                   </Text>
                 </View>
 
@@ -4849,7 +4849,7 @@ function EventDetails({ navigation, route }) {
                   <Text style={[Fonts.p3, Fonts.primary100]}>
                     {trainingOpenConfig.isOpenTraining
                       ? `${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`
-                      : `Dernier reglage memorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`}
+                      : `Dernier reglage mémorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`}
                   </Text>
                 ) : null}
 
@@ -4859,7 +4859,7 @@ function EventDetails({ navigation, route }) {
                   onPress={trainingOpenConfig.isOpenTraining
                     ? handleCloseTraining
                     : () => setIsTrainingOpenModalVisible(true)}
-                  title={trainingOpenConfig.isOpenTraining ? 'Fermer l\'entrainement' : 'Ouvrir l\'entrainement'}
+                  title={trainingOpenConfig.isOpenTraining ? 'Fermer l\'entraînement' : 'Ouvrir l\'entraînement'}
                   variant={trainingOpenConfig.isOpenTraining ? 'SecondaryLight' : 'Primary'}
                 />
               </View>
@@ -4909,10 +4909,10 @@ function EventDetails({ navigation, route }) {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: Colors.error500 || 'rgb(248, 113, 113)' }]}>
-                  Pointage a corriger
+                  Pointage à corriger
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  Votre arrivee n&apos;a pas ete confirmee avant la fin du match. Un coach doit corriger votre attendance avant de debloquer votre retour post-match.
+                  Ton arrivée n&apos;a pas été confirmée avant la fin du match. Un coach doit corriger ta présence avant de débloquer ton retour post-match.
                 </Text>
               </View>
             </View>
@@ -4935,7 +4935,7 @@ function EventDetails({ navigation, route }) {
                     <View style={{ flex: 1 }}>
                       <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel</Text>
                       <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                        {myMatchResponse?.selfRating ? `${myMatchResponse.selfRating}/10` : 'A completer'}
+                        {myMatchResponse?.selfRating ? `${myMatchResponse.selfRating}/10` : 'A compléter'}
                       </Text>
                     </View>
                     <View
@@ -5045,7 +5045,7 @@ function EventDetails({ navigation, route }) {
 
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
                     {hasMyCoachReview
-                      ? 'Le coach a publie un retour individuel pour ton match.'
+                      ? 'Le coach a publié un retour individuel pour ton match.'
                       : "Le coach n'a pas encore laisse d'avis individuel pour ce match."}
                   </Text>
 
@@ -5219,7 +5219,7 @@ function EventDetails({ navigation, route }) {
                       ]}
                     >
                       <Text style={[Fonts.p4, Fonts.warning500]}>
-                        Le score officiel a change apres la premiere publication. Une mise a jour est requise.
+                        Le score officiel a changé après la première publication. Une mise à jour est requise.
                       </Text>
                     </View>
                   ) : null}
@@ -5244,8 +5244,8 @@ function EventDetails({ navigation, route }) {
                   <View style={[Spaces.gap[8]]}>
                     <Text style={[Fonts.p2, Fonts.neutral300]}>
                       {publishedCompositionTeamCount > 0
-                        ? `${publishedCompositionTeamCount} equipe(s) publiee(s)`
-                        : 'Composition publiee'}
+                        ? `${publishedCompositionTeamCount} équipe(s) publiée(s)`
+                        : 'Composition publiée'}
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {convocationBranches.length}
@@ -5269,14 +5269,14 @@ function EventDetails({ navigation, route }) {
                           editorSourceLabel: getCompositionSourceLabel('published'),
                           readOnly: true,
                         })}
-                        title="Voir la composition d'equipes"
+                        title="Voir la composition d'équipes"
                         variant="Secondary"
                       />
                     ) : null}
                   </View>
                 ) : (
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    Aucune composition publiee pour le moment.
+                    Aucune composition publiée pour le moment.
                   </Text>
                 )}
               </View>
@@ -5327,15 +5327,15 @@ function EventDetails({ navigation, route }) {
             && Boolean(pendingDetectionSlot?.documentId);
         // @ts-ignore: FIXME: Baseline TS regression
         } else if (pendingTournamentAction?.mode === 'create_custom') {
-          joinModalConfirmLabel = 'Creer mon equipe';
+          joinModalConfirmLabel = 'Créer mon équipe';
           // @ts-ignore: FIXME: Baseline TS regression
-          joinModalContextNote = `Equipe a creer : ${pendingTournamentAction?.teamName || 'Mon equipe'}.`;
+          joinModalContextNote = `Équipe à créer : ${pendingTournamentAction?.teamName || 'Mon équipe'}.`;
           joinModalIsSubmitting = createTournamentTeamMutation.isPending;
         // @ts-ignore: FIXME: Baseline TS regression
         } else if (pendingTournamentAction?.mode === 'join_existing') {
           joinModalConfirmLabel = 'Envoyer ma demande';
           // @ts-ignore: FIXME: Baseline TS regression
-          joinModalContextNote = `Equipe choisie : ${pendingTournamentAction?.teamName || 'Equipe tournoi'}.`;
+          joinModalContextNote = `Équipe choisie : ${pendingTournamentAction?.teamName || 'Équipe tournoi'}.`;
           joinModalIsSubmitting = requestJoinTournamentTeamMutation.isPending;
         } else if (currentParticipationFlow?.submitMode === 'joinReservation') {
           joinModalIsSubmitting = mutations.joinReservationMutation.isPending;
@@ -5361,7 +5361,7 @@ function EventDetails({ navigation, route }) {
               setPendingDetectionSlot(null);
             } catch (mutationError) {
               setJoinModalError(
-                getParticipationErrorMessage(mutationError, 'Impossible de confirmer votre participation pour le moment.'),
+                getParticipationErrorMessage(mutationError, 'Impossible de confirmer ta participation pour le moment.'),
               );
             }
           };
@@ -5374,11 +5374,11 @@ function EventDetails({ navigation, route }) {
               await createTournamentTeamMutation.mutateAsync({
                 acceptRiskDeclaration: acceptance?.acceptRiskDeclaration === true,
                 // @ts-ignore: FIXME: Baseline TS regression
-                name: pendingTournamentAction?.teamName || 'Mon equipe',
+                name: pendingTournamentAction?.teamName || 'Mon équipe',
               });
             } catch (mutationError) {
               setJoinModalError(
-                getParticipationErrorMessage(mutationError, 'Impossible de creer cette equipe de tournoi pour le moment.'),
+                getParticipationErrorMessage(mutationError, 'Impossible de créer cette équipe de tournoi pour le moment.'),
               );
             }
           };
@@ -5429,7 +5429,7 @@ function EventDetails({ navigation, route }) {
               Choisir un poste
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100, { textAlign: 'center' }]}>
-              Selectionne le poste auquel tu veux participer.
+              Sélectionne le poste auquel tu veux participer.
             </Text>
             <Text style={[Fonts.p3, Fonts.primary200, { textAlign: 'center' }]}>
               {`${detectionSlots.length} poste(s) - ${detectionSlotsSummary.totalRequested} place(s) - ${detectionSlotsSummary.totalOpen} ouvert(s)`}
@@ -5452,7 +5452,7 @@ function EventDetails({ navigation, route }) {
             const isDisabled = isComplete || applyToDetectionSlotMutation.isPending || isCurrentUserSlot;
             let buttonTitle = 'Participer';
             if (isCurrentUserSlot) {
-              buttonTitle = 'Demande envoyee';
+              buttonTitle = 'Demande envoyée';
             } else if (isComplete) {
               buttonTitle = 'Poste complet';
             }
@@ -5527,7 +5527,7 @@ function EventDetails({ navigation, route }) {
       <ShareEventModal
         event={event ? {
           ...event,
-          title: event?.title || event?.name || event?.type?.name || 'Evenement FoundClub',
+          title: event?.title || event?.name || event?.type?.name || 'Événement FoundClub',
         } : null}
         isVisible={isShareModalVisible}
         onClose={() => setIsShareModalVisible(false)}
@@ -5556,12 +5556,12 @@ function EventDetails({ navigation, route }) {
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              Bravo, ton evenement est en ligne
+              Bravo, ton événement est en ligne
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {remainingEventPublishQuota > 0
-                ? `Ton credit gratuit evenement a bien ete utilise. Il t en reste ${remainingEventPublishQuota}${totalEventPublishQuota > 0 ? `/${totalEventPublishQuota}` : ''}.`
-                : 'Ton credit gratuit evenement a bien ete utilise. Les prochaines publications passeront par une offre Team ou Club.'}
+                ? `Ton credit gratuit événement a bien été utilise. Il t en reste ${remainingEventPublishQuota}${totalEventPublishQuota > 0 ? `/${totalEventPublishQuota}` : ''}.`
+                : 'Ton credit gratuit événement a bien été utilise. Les prochaines publications passeront par une offre Team ou Club.'}
             </Text>
           </View>
 
@@ -5607,7 +5607,7 @@ function EventDetails({ navigation, route }) {
           <View style={tournamentDs.styles.headerBlock}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Participer au tournoi</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Choisissez si vous creez votre equipe ephemere ou si vous rejoignez une equipe deja inscrite.
+              Choisis si tu créés ton équipe éphémère ou si tu rejoins une équipe déjà inscrite.
             </Text>
           </View>
 
@@ -5617,7 +5617,7 @@ function EventDetails({ navigation, route }) {
                 setIsTournamentParticipationModalVisible(false);
                 setIsTournamentCreateModalVisible(true);
               }}
-              title="Creer une equipe pour le tournoi"
+              title="Créer une équipe pour le tournoi"
               variant="Primary"
             />
           ) : null}
@@ -5628,13 +5628,13 @@ function EventDetails({ navigation, route }) {
               setIsTournamentParticipationModalVisible(false);
               setIsTournamentJoinSelectorVisible(true);
             }}
-            title="Rejoindre une equipe existante"
+            title="Rejoindre une équipe existante"
             variant="Secondary"
           />
 
           {joinableTournamentTeams.length === 0 ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Aucune equipe ouverte aux demandes n est disponible pour le moment.
+              Aucune équipe ouverte aux demandes n est disponible pour le moment.
             </Text>
           ) : null}
         </View>
@@ -5650,15 +5650,15 @@ function EventDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Equipes ouvertes</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Équipes ouvertes</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Selectionnez une equipe tournoi qui accepte actuellement de nouvelles demandes.
+              Sélectionne une équipe tournoi qui accepte actuellement de nouvelles demandes.
             </Text>
           </View>
 
           {joinableTournamentTeams.length === 0 ? (
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Aucune equipe tournoi n accepte de nouvelles demandes pour le moment.
+              Aucune équipe tournoi n accepte de nouvelles demandes pour le moment.
             </Text>
           ) : (
             joinableTournamentTeams.map((team) => {
@@ -5671,7 +5671,7 @@ function EventDetails({ navigation, route }) {
                 >
                   <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{team?.name || 'Equipe tournoi'}</Text>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{team?.name || 'Équipe tournoi'}</Text>
                       <Text style={[Fonts.p4, Fonts.primary100]}>
                         {`${rosterSummary.totalCount || 0} membre(s) - demandes ouvertes`}
                       </Text>
@@ -5696,15 +5696,15 @@ function EventDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Inscrire mon equipe</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Inscrire mon équipe</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Selectionnez une equipe club. L application creera une equipe ephemere de tournoi sans toucher a votre effectif permanent.
+              Sélectionne une équipe club. L application creera une équipe éphémère de tournoi sans toucher à ton effectif permanent.
             </Text>
           </View>
 
           {availableTournamentSourceTeams.length === 0 ? (
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Aucune equipe club disponible a inscrire.
+              Aucune équipe club disponible à inscrire.
             </Text>
           ) : (
             // @ts-ignore: FIXME: Baseline TS regression
@@ -5741,15 +5741,15 @@ function EventDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Creer une equipe</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Créer une équipe</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Cette equipe n existera que pour ce tournoi. Vous en deviendrez automatiquement le capitaine.
+              Cette équipe n existera que pour ce tournoi. Tu en deviendras automatiquement le capitaine.
             </Text>
           </View>
 
           <TextInput
             onChangeText={setTournamentTeamNameDraft}
-            placeholder="Nom de l equipe"
+            placeholder="Nom de l équipe"
             placeholderTextColor={Colors.neutral300}
             style={[
               ...tournamentDs.styles.input,
@@ -5762,7 +5762,7 @@ function EventDetails({ navigation, route }) {
             <Button
               disabled={createTournamentTeamMutation.isPending}
               onPress={handleCreateTournamentTeam}
-              title="Creer mon equipe"
+              title="Créer mon équipe"
               variant="Primary"
             />
             <Button
@@ -5830,10 +5830,10 @@ function EventDetails({ navigation, route }) {
           <TouchableOpacity activeOpacity={1} style={[ApplicationStyle.backgroundColor.primary700, { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }]}>
             <View style={[Spaces.gap[16]]}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                Mettre a la une
+                Mettre à la une
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Choisissez ou vous souhaitez mettre cet evenement en avant.
+                Choisis ou tu souhaites mettre cet événement en avant.
               </Text>
               {featuredScopeOptions.map((option) => {
                 const isDisabled = option.status === 'pending' || option.status === 'approved';
@@ -5987,8 +5987,8 @@ function EventDetails({ navigation, route }) {
                     />
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {isPlayerLateModal
-                        ? 'Annoncez le retard estime. Vous confirmerez ensuite votre arrivee reelle.'
-                        : t('eventDetails.late.helper', '0 = a l\'heure. Ajustez la valeur si necessaire avant validation.')}
+                        ? 'Annonce le retard estime. Tu confirmeras ensuite ton arrivée réelle.'
+                        : t('eventDetails.late.helper', '0 = a l\'heure. Ajuste la valeur si nécessaire avant validation.')}
                     </Text>
                   </View>
 
@@ -6020,7 +6020,7 @@ function EventDetails({ navigation, route }) {
                     <Button
                       disabled={isLateModalLoading}
                       onPress={handleResetLateModal}
-                      title="Reinitialiser le pointage"
+                      title="Réinitialiser le pointage"
                       variant="Secondary"
                     />
                   ) : null}

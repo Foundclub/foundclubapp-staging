@@ -55,7 +55,7 @@ import {
 const CREATE_EVENT_BATCH_CONCURRENCY = 3;
 const FEATURED_SCOPE_OPTIONS = [
   {
-    description: 'Visible dans les espaces publics FoundClub apres validation.',
+    description: 'Visible dans les espaces publics FoundClub après validation.',
     label: 'A la une publique',
     value: 'PUBLIC',
   },
@@ -359,7 +359,7 @@ function EventWizardRecap({ navigation }) {
     const { facility, location } = state;
     if (!location) {
       if (facility) {
-        return t('eventWizard.recap.facilitySelected', 'Installation selectionnee');
+        return t('eventWizard.recap.facilitySelected', 'Installation sélectionnée');
       }
       if (hasCompletePerDayLocations(state)) {
         return t('eventWizard.recap.perDayLocations', 'Lieux personnalises par jour');
@@ -406,8 +406,8 @@ function EventWizardRecap({ navigation }) {
     ? t('eventWizard.steps.visibility.team')
     : t('eventWizard.steps.visibility.public');
   const participantPrivacyValue = state.participantIdentityVisibility === 'ANONYMIZED'
-    ? t('eventWizard.steps.visibility.participantPrivacyAnonymized', 'Participants anonymises')
-    : t('eventWizard.steps.visibility.participantPrivacyVisible', 'Identites visibles');
+    ? t('eventWizard.steps.visibility.participantPrivacyAnonymized', 'Participants anonymisés')
+    : t('eventWizard.steps.visibility.participantPrivacyVisible', 'Identités visibles');
   const effectiveValidationMode = isTournament
     ? (state.tournamentRegistrationMode || 'manual')
     : (state.validationMode || 'auto');
@@ -597,10 +597,10 @@ function EventWizardRecap({ navigation }) {
 
     if (featuredFailures.length > 0) {
       Alert.alert(
-        t('eventWizard.recap.featured.warningTitle', 'Evenement cree'),
+        t('eventWizard.recap.featured.warningTitle', 'Événement crée'),
         t(
           'eventWizard.recap.featured.warningMessage',
-          "L'evenement est cree, mais la demande de mise a la une n'a pas pu etre envoyee. Vous pourrez la refaire depuis le detail.",
+          "L'événement est créé, mais la demande de mise à la une n'a pas pu être envoyée. Tu pourras la refaire depuis le detail.",
         ),
       );
     }
@@ -815,7 +815,7 @@ function EventWizardRecap({ navigation }) {
           />
 
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Invitations avancees</Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Invitations avancées</Text>
             {teamAudiences.length ? (
               <View style={Spaces.gap[8]}>
                 {teamAudiences.map((audience) => (
@@ -874,8 +874,8 @@ function EventWizardRecap({ navigation }) {
               >
                 <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
                   {isRecapReady
-                    ? t('eventWizard.recap.ready', 'Pret a creer')
-                    : t('eventWizard.recap.incomplete', 'A completer')}
+                    ? t('eventWizard.recap.ready', 'Prêt à créer')
+                    : t('eventWizard.recap.incomplete', 'A compléter')}
                 </Text>
               </View>
             </View>
@@ -918,7 +918,7 @@ function EventWizardRecap({ navigation }) {
           {eventPublishQuotaItem ? (
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
               <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                {t('eventWizard.recap.freeQuota.title', 'Quota evenement gratuit')}
+                {t('eventWizard.recap.freeQuota.title', 'Quota événement gratuit')}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
                 {t(
@@ -933,7 +933,7 @@ function EventWizardRecap({ navigation }) {
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {t(
                   'eventWizard.recap.freeQuota.hint',
-                  'Une fois cet avantage utilise, les prochaines publications seront bloquees cote serveur et renverront vers ton abonnement.',
+                  'Une fois cet avantage utilise, les prochaines publications seront bloquées cote serveur et renverront vers ton abonnement.',
                 )}
               </Text>
             </View>
@@ -942,7 +942,7 @@ function EventWizardRecap({ navigation }) {
           {isSubmitting && submitProgress?.total > 1 ? (
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
               <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                {t('eventWizard.recap.creationProgress.title', 'Creation en cours')}
+                {t('eventWizard.recap.creationProgress.title', 'Création en cours')}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
                 {t('eventWizard.recap.creationProgress.description', {
@@ -955,7 +955,7 @@ function EventWizardRecap({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.gold500]}>
                   {t('eventWizard.recap.creationProgress.partialFailures', {
                     count: submitProgress.failed,
-                    defaultValue: '{{count}} creation(s) a verifier',
+                    defaultValue: '{{count}} création(s) à vérifier',
                   })}
                 </Text>
               ) : null}
@@ -996,7 +996,7 @@ function EventWizardRecap({ navigation }) {
               {!isStage && !isTournament ? (
                 <View style={[Spaces.gap[4]]}>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    {t('eventWizard.recap.invitedTeamsTitle', 'Equipes invitees')}
+                    {t('eventWizard.recap.invitedTeamsTitle', 'Équipes invitées')}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
                     {t('eventWizard.recap.invitesCount', { count: invitedCount })}
@@ -1046,7 +1046,7 @@ function EventWizardRecap({ navigation }) {
                   {isMultiDayProgram
                     ? t(
                       isTournament ? 'eventWizard.tournamentProgram.defaultHoursTitle' : 'eventWizard.stage.defaultHoursTitle',
-                      'Horaires par defaut',
+                      'Horaires par défaut',
                     )
                     : t('eventWizard.recap.timeLabel', 'Horaire')}
                 </Text>
@@ -1113,7 +1113,7 @@ function EventWizardRecap({ navigation }) {
           {isTournament ? (
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-                <Text style={[Fonts.h4, Fonts.neutral00]}>Parametres tournoi</Text>
+                <Text style={[Fonts.h4, Fonts.neutral00]}>Paramètres tournoi</Text>
                 <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardTournamentSettings)}>
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
                 </TouchableOpacity>
@@ -1121,22 +1121,22 @@ function EventWizardRecap({ navigation }) {
 
               <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Max equipes: ${state.tournamentMaxTeams ?? recapNotSet}`}
+                  {`Max équipes: ${state.tournamentMaxTeams ?? recapNotSet}`}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
                   {`Effectif: ${state.tournamentMinRosterSize ?? recapNotSet} - ${state.tournamentMaxRosterSize ?? recapNotSet}`}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Equipes ephemeres: ${state.tournamentAllowCustomTeams !== false ? 'Autorisees' : 'Desactivees'}`}
+                  {`Équipes éphémères: ${state.tournamentAllowCustomTeams !== false ? 'Autorisees' : 'Desactivees'}`}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
                   {`Mix clubs: ${state.tournamentAllowCrossClubPlayers === true ? 'Autorise' : 'Non autorise'}`}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Validation des equipes: ${validationValue}`}
+                  {`Validation des équipes: ${validationValue}`}
                 </Text>
                 <Text style={[Fonts.p2, state.tournamentRulesText ? Fonts.neutral100 : Fonts.neutral300]}>
-                  {state.tournamentRulesText || 'Aucune regle specifique renseignee.'}
+                  {state.tournamentRulesText || 'Aucune règle spécifique renseignée.'}
                 </Text>
               </View>
             </View>
@@ -1157,7 +1157,7 @@ function EventWizardRecap({ navigation }) {
                   {`Poules: ${tournamentGroupsSummary}`}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Qualifies: ${tournamentQualificationSummary}`}
+                  {`Qualifiés: ${tournamentQualificationSummary}`}
                 </Text>
                 {(state.tournamentFormatMode === 'groups_to_knockout' || state.tournamentFormatMode === 'knockout_only') ? (
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
@@ -1168,7 +1168,7 @@ function EventWizardRecap({ navigation }) {
                   {`Tirage: ${tournamentSeedingSummary}`}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Generation matchs: ${tournamentGenerationSummary}`}
+                  {`Génération matchs: ${tournamentGenerationSummary}`}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
                   {`Points: V ${state.tournamentPointsWin ?? 3} | N ${state.tournamentPointsDraw ?? 1} | D ${state.tournamentPointsLoss ?? 0} | F ${state.tournamentPointsForfeit ?? 0}`}
@@ -1206,8 +1206,8 @@ function EventWizardRecap({ navigation }) {
                         ? 'eventWizard.recap.trainingCapacityOpen'
                         : 'eventWizard.recap.trainingCapacityPrivate',
                       trainingOpenConfig.isOpenTraining
-                        ? 'Illimite en interne + quota externe'
-                        : 'Capacite illimitee (entrainement prive)',
+                        ? 'Illimité en interne + quota externe'
+                        : 'Capacité illimitée (entraînement prive)',
                     )
                     : t('eventWizard.recap.capacity', { value: state.capacity ?? recapNotSet })}
                 </Text>
@@ -1265,7 +1265,7 @@ function EventWizardRecap({ navigation }) {
               </View>
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t('eventWizard.recap.sections.participantPrivacy', 'Confidentialite participants')}
+                  {t('eventWizard.recap.sections.participantPrivacy', 'Confidentialité participants')}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>{participantPrivacyValue}</Text>
               </View>
@@ -1331,19 +1331,19 @@ function EventWizardRecap({ navigation }) {
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
             <View style={[Spaces.gap[4]]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>
-                {t('eventWizard.recap.featured.title', 'Mise a la une')}
+                {t('eventWizard.recap.featured.title', 'Mise à la une')}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral200, { lineHeight: 20 }]}>
                 {t(
                   'eventWizard.recap.featured.description',
-                  "Optionnel : choisissez les espaces ou demander la mise en avant. Rien n'est envoye si aucune option n'est cochee.",
+                  "Optionnel : choisis les espaces ou demander la mise en avant. Rien n'est envoyé si aucune option n'est cochee.",
                 )}
               </Text>
               {recurrencePreviewCount > 1 ? (
                 <Text style={[Fonts.p3, Fonts.gold500, { lineHeight: 18 }]}>
                   {t(
                     'eventWizard.recap.featured.recurrentNote',
-                    'Pour une recurrence, la demande sera envoyee pour chaque occurrence creee.',
+                    'Pour une récurrence, la demande sera envoyée pour chaque occurrence créée.',
                   )}
                 </Text>
               ) : null}

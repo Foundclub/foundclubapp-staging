@@ -1037,7 +1037,7 @@ function TomTomSearchMapNative({
           style={[styles.selectionHint, { bottom: Math.max(24, previewBottomOffset + previewCardHeight + 10) }]}
         >
           <Text style={[Fonts.p4Bold, Fonts.neutral00, Fonts.textCenter]}>
-            Touchez un repere pour voir la fiche
+            Touche un repère pour voir la fiche
           </Text>
         </View>
       ) : null}

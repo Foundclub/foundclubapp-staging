@@ -165,14 +165,14 @@ function AssignCoachTeams({ navigation, route }) {
     if (!trainerId) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        'Impossible de retrouver cet entraîneur. Merci de reessayer.',
+        'Impossible de retrouver cet entraîneur. Merci de réessayer.',
       );
       return;
     }
     if (!selectedTeamIds.length) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        'Sélectionnez au moins une équipe.',
+        'Sélectionne au moins une équipe.',
       );
       return;
     }
@@ -314,7 +314,7 @@ function AssignCoachTeams({ navigation, route }) {
   if (!clubId) {
     return (
       <ClubStateView
-        description="Impossible d'ouvrir cette assignation sans club valide. Revenez a la demande d'adhesion puis relancez l'action."
+        description="Impossible d'ouvrir cette assignation sans club valide. Reviens à la demande d'adhésion puis relance l'action."
         title="Club introuvable"
       />
     );
@@ -323,7 +323,7 @@ function AssignCoachTeams({ navigation, route }) {
   if (!trainerId) {
     return (
       <ClubStateView
-        description="Impossible de retrouver le coach a assigner. Revenez a la demande puis relancez l'assignation."
+        description="Impossible de retrouver le coach à assigner. Reviens à la demande puis relance l'assignation."
         title="Coach introuvable"
       />
     );
@@ -360,7 +360,7 @@ function AssignCoachTeams({ navigation, route }) {
               {trainerName || 'Utilisateur'}
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100, Spaces.marginTop[8]]}>
-              Cochez une ou plusieurs équipes, puis validez.
+              Cochez une ou plusieurs équipes, puis valide.
             </Text>
           </View>
 

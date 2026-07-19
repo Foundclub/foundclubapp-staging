@@ -114,7 +114,7 @@ function SuperAdminLeagueDisputes() {
       const scoreA = Number.parseInt(form.scoreA, 10);
       const scoreB = Number.parseInt(form.scoreB, 10);
       if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB)) {
-        Alert.alert('Scores invalides', 'Renseignez deux scores entiers avant de traiter ce litige.');
+        Alert.alert('Scores invalides', 'Renseigne deux scores entiers avant de traiter ce litige.');
         return;
       }
     }

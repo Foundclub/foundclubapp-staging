@@ -202,7 +202,7 @@ function TournamentSettingsEdit({ navigation, route }) {
       },
     }),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre a jour les parametres du tournoi.');
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre à jour les paramètres du tournoi.');
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -276,17 +276,17 @@ function TournamentSettingsEdit({ navigation, route }) {
       <WithDataWrapper data={event} error={error} isLoading={isLoading} onRetry={refetch}>
         <ScrollView contentContainerStyle={tournamentDs.styles.screenContent}>
           <View style={tournamentDs.styles.screenIntro}>
-            <Text style={[Fonts.h2, Fonts.neutral00]}>Parametres du tournoi</Text>
+            <Text style={[Fonts.h2, Fonts.neutral00]}>Paramètres du tournoi</Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
-              Ajuste les regles globales du tournoi sans toucher aux equipes permanentes du club.
+              Ajuste les règles globales du tournoi sans toucher aux équipes permanentes du club.
             </Text>
           </View>
 
           {!canManageTournament ? (
             <View style={sectionCardStyle}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Acces reserve a l organisateur</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Accès réserve a l organisateur</Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Seul le createur du tournoi peut modifier ces parametres globaux.
+                Seul le createur du tournoi peut modifier ces paramètres globaux.
               </Text>
             </View>
           ) : null}
@@ -296,12 +296,12 @@ function TournamentSettingsEdit({ navigation, route }) {
               <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Cadre du tournoi</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Le nombre d equipes et la fourchette d effectif s appliquent a toutes les equipes ephemeres de ce tournoi.
+                  Le nombre d équipes et la fourchette d effectif s appliquent à toutes les équipes éphémères de ce tournoi.
                 </Text>
               </View>
 
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Nombre max d equipes</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Nombre max d équipes</Text>
                 <TextInput
                   keyboardType="number-pad"
                   onChangeText={setMaxTeamsText}
@@ -339,7 +339,7 @@ function TournamentSettingsEdit({ navigation, route }) {
 
               {isRosterRangeInvalid ? (
                 <Text style={[Fonts.p3, Fonts.error500]}>
-                  L effectif minimum ne peut pas depasser l effectif maximum.
+                  L effectif minimum ne peut pas dépasser l effectif maximum.
                 </Text>
               ) : null}
               {nonCompliantAcceptedTeams.length > 0 ? (
@@ -349,9 +349,9 @@ function TournamentSettingsEdit({ navigation, route }) {
                     borderColor: `${Colors.warning500}38`,
                   }]}
                 >
-                  <Text style={[Fonts.p3Bold, Fonts.warning500]}>Impact roster detecte</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.warning500]}>Impact roster détecte</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>
-                    {`${nonCompliantAcceptedTeams.length} equipe(s) deja acceptee(s) deviendront non conformes avec ces regles. Leur statut restera accepte, avec warning visible seulement.`}
+                    {`${nonCompliantAcceptedTeams.length} équipe(s) déjà acceptée(s) deviendront non conformes avec ces règles. Leur statut restera accepte, avec warning visible seulement.`}
                   </Text>
                 </View>
               ) : null}
@@ -363,7 +363,7 @@ function TournamentSettingsEdit({ navigation, route }) {
               <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Structure sportive</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Ces reglages pilotent les poules, la phase finale et le calcul du classement. Apres modification, resynchronisez la competition depuis le cockpit organisateur.
+                  Ces réglages pilotent les poules, la phase finale et le calcul du classement. Après modification, resynchronise la compétition depuis le cockpit organisateur.
                 </Text>
               </View>
 
@@ -389,7 +389,7 @@ function TournamentSettingsEdit({ navigation, route }) {
 
                   <View style={[Alignments.row, Spaces.gap[12]]}>
                     <View style={[Spaces.gap[8], { flex: 1 }]}>
-                      <Text style={[Fonts.p3Bold, Fonts.primary500]}>Qualifies par poule</Text>
+                      <Text style={[Fonts.p3Bold, Fonts.primary500]}>Qualifiés par poule</Text>
                       <TextInput
                         keyboardType="number-pad"
                         onChangeText={setQualifiedPerGroupText}
@@ -431,7 +431,7 @@ function TournamentSettingsEdit({ navigation, route }) {
                   </View>
                   {isKnockoutSizeInvalid ? (
                     <Text style={[Fonts.p3, Fonts.error500]}>
-                      Utilisez une taille de bracket standard: 2, 4, 8, 16 ou 32.
+                      Utilise une taille de bracket standard: 2, 4, 8, 16 ou 32.
                     </Text>
                   ) : null}
 
@@ -446,7 +446,7 @@ function TournamentSettingsEdit({ navigation, route }) {
                     <View style={{ flex: 1 }}>
                       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Match pour la 3e place</Text>
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        Ajoute une petite finale quand la competition atteint les demi-finales.
+                        Ajoute une petite finale quand la compétition atteint les demi-finales.
                       </Text>
                     </View>
                     <Switch
@@ -460,16 +460,16 @@ function TournamentSettingsEdit({ navigation, route }) {
               ) : null}
 
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Generation des matchs</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Génération des matchs</Text>
                 <View style={[Spaces.gap[12]]}>
                   {[
                     {
-                      description: 'Le calendrier est genere automatiquement une fois les poules creees.',
+                      description: 'Le calendrier est généré automatiquement une fois les poules créées.',
                       label: 'Automatique',
                       value: 'auto',
                     },
                     {
-                      description: 'L organisateur declenche lui-meme la generation du calendrier.',
+                      description: 'L organisateur déclenche lui-même la génération du calendrier.',
                       label: 'Manuelle',
                       value: 'manual',
                     },
@@ -501,7 +501,7 @@ function TournamentSettingsEdit({ navigation, route }) {
                   />
                 </View>
                 <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Defaite</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Défaite</Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setPointsLossText}
@@ -529,17 +529,17 @@ function TournamentSettingsEdit({ navigation, route }) {
           {canManageTournament ? (
             <View style={sectionCardStyle}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Equipes et eligibility</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Équipes et eligibility</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Definis qui peut creer une equipe et si le melange de clubs est autorise.
+                  Définis qui peut créer une équipe et si le melange de clubs est autorise.
                 </Text>
               </View>
 
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Autoriser les equipes ephemeres</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Autoriser les équipes éphémères</Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    Les joueurs peuvent creer leur propre equipe pour ce tournoi.
+                    Les joueurs peuvent créer leur propre équipe pour ce tournoi.
                   </Text>
                 </View>
                 <Switch
@@ -570,9 +570,9 @@ function TournamentSettingsEdit({ navigation, route }) {
           {canManageTournament ? (
             <View style={sectionCardStyle}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Validation des equipes</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Validation des équipes</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  En mode manuel, seul l organisateur valide les equipes inscrites.
+                  En mode manuel, seul l organisateur valide les équipes inscrites.
                 </Text>
               </View>
 
@@ -580,12 +580,12 @@ function TournamentSettingsEdit({ navigation, route }) {
                 {renderRegistrationModeCard(
                   'manual',
                   'Validation manuelle',
-                  'Chaque equipe reste en attente tant que le dirigeant ne l a pas acceptee.',
+                  'Chaque équipe reste en attente tant que le dirigeant ne l a pas acceptée.',
                 )}
                 {renderRegistrationModeCard(
                   'auto',
                   'Validation automatique',
-                  'Les equipes compatibles sont acceptees directement a l inscription.',
+                  'Les équipes compatibles sont acceptées directement a l inscription.',
                 )}
               </View>
             </View>
@@ -594,9 +594,9 @@ function TournamentSettingsEdit({ navigation, route }) {
           {canManageTournament ? (
             <View style={sectionCardStyle}>
               <View style={tournamentDs.styles.headerBlock}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Regles du tournoi</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Règles du tournoi</Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Ce texte est affiche sur la fiche tournoi et sert de reference commune pour les equipes.
+                  Ce texte est affiche sur la fiche tournoi et sert de référence commune pour les équipes.
                 </Text>
               </View>
 

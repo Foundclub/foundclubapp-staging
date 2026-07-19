@@ -61,7 +61,7 @@ const BOOLEAN_FILTERS = [
 
 const getStatusBadges = (club = {}) => [
   club?.clubPartner ? { label: 'Partenaire', tone: 'primary' } : { label: 'Standard', tone: 'neutral' },
-  club?.clubVerified ? { label: 'Verifie', tone: 'success' } : { label: 'Non verifie', tone: 'neutral' },
+  club?.clubVerified ? { label: 'Verifie', tone: 'success' } : { label: 'Non vérifié', tone: 'neutral' },
   club?.isReservationProvider ? { label: 'Réservation', tone: 'primary' } : null,
 ].filter(Boolean);
 
@@ -171,7 +171,7 @@ function AdminClubList() {
 
   const openDangerAction = useCallback((action) => {
     if (selectedCount === 0) {
-      Alert.alert('Sélection vide', 'Sélectionnez au moins un club.');
+      Alert.alert('Sélection vide', 'Sélectionne au moins un club.');
       return;
     }
     setDangerAction(action);
@@ -187,7 +187,7 @@ function AdminClubList() {
   const executeDangerAction = useCallback(async () => {
     const reason = normalizeText(dangerReason);
     if (reason.length < 3) {
-      Alert.alert('Raison requise', 'Ajoutez une raison d’au moins 3 caractères.');
+      Alert.alert('Raison requise', 'Ajoute une raison d’au moins 3 caractères.');
       return;
     }
 
@@ -578,7 +578,7 @@ function AdminClubList() {
             <View style={[Alignments.alignCenter, Spaces.marginTop[40], Spaces.paddingHorizontal[24]]}>
               <Text style={[Fonts.h4Bold, { color: Colors.neutral100 }]}>Aucun club trouvé</Text>
               <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8], styles.emptyText]}>
-                Ajustez la recherche ou les filtres.
+                Ajuste la recherche ou les filtres.
               </Text>
             </View>
           ) : null

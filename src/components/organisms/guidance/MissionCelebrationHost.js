@@ -170,13 +170,13 @@ function MissionCelebrationHost() {
   const ProgressFillComponent = IS_WEB ? View : Animated.View;
 
   const isSuccessPhase = phase === 'success';
-  const eyebrow = isSuccessPhase ? 'MISSION REUSSIE' : 'MISSION SUIVANTE';
+  const eyebrow = isSuccessPhase ? 'MISSION Réussie' : 'MISSION SUIVANTE';
   const title = isSuccessPhase
-    ? 'Bravo, mission validee'
-    : (nextMission?.title || 'Parcours principal a jour');
+    ? 'Bravo, mission validée'
+    : (nextMission?.title || 'Parcours principal à jour');
   const body = isSuccessPhase
     ? activeCelebration.completedMissionTitle
-    : (nextMission?.shortDescription || 'Le prochain objectif est pret. Touchez pour le lancer.');
+    : (nextMission?.shortDescription || 'Le prochain objectif est prêt. Touche pour le lancer.');
 
   const handlePress = () => {
     if (nextMission) {

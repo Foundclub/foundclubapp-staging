@@ -38,7 +38,7 @@ function HistoryWizardRecap({ navigation }) {
     if (state.club?.name) return state.club.name;
     if (state.multisportClub?.name) return state.multisportClub.name;
     if (state.customClubName) return state.customClubName;
-    return 'Club non defini';
+    return 'Club non défini';
   };
 
   const getPeriodText = () => {

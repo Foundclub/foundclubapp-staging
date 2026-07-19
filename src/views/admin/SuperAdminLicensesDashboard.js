@@ -151,15 +151,15 @@ const getProviderReadiness = (account) => {
 
 const getProviderReadinessLabel = (status) => ({
   checkout_failed: 'Test checkout en erreur',
-  credentials_missing: 'Configuration incomplete',
+  credentials_missing: 'Configuration incomplète',
   disabled: 'Desactive',
   error: 'Erreur provider',
   not_configured: 'A configurer',
   oauth_failed: 'OAuth en erreur',
   pending: 'En attente',
   ready: 'Pret',
-  webhook_pending: 'Webhook a confirmer',
-  webhook_stale: 'Webhook a verifier',
+  webhook_pending: 'Webhook à confirmer',
+  webhook_stale: 'Webhook à vérifier',
 }[status] || status || 'Inconnu');
 
 const isAttentionReadiness = (status) => !['ready'].includes(status);
@@ -320,7 +320,7 @@ function CampaignListCard({
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {scope.label}
               {' - '}
-              {readString(campaign.seasonLabel) || 'Saison non definie'}
+              {readString(campaign.seasonLabel) || 'Saison non définie'}
             </Text>
           </View>
           <View style={[Spaces.gap[6], styles.cardStatusColumn]}>
@@ -427,7 +427,7 @@ function EventRow({ event }) {
         <View style={styles.cardHeader}>
           <View style={[Spaces.gap[4], { flex: 1 }]}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {readString(event.eventType) || 'Evenement provider'}
+              {readString(event.eventType) || 'Événement provider'}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral300]}>
               {readString(event.provider) || 'helloasso'}
@@ -753,8 +753,8 @@ function SuperAdminLicensesDashboard({ navigation }) {
       Alert.alert(
         'HelloAsso',
         status === 'disabled'
-          ? 'Le mode HelloAsso a ete desactive pour ce scope.'
-          : 'La configuration HelloAsso a ete verifiee avec succes.',
+          ? 'Le mode HelloAsso a été désactivé pour ce scope.'
+          : 'La configuration HelloAsso a été vérifiée avec succès.',
       );
       setProviderDraft((currentDraft) => ({
         ...currentDraft,
@@ -762,14 +762,14 @@ function SuperAdminLicensesDashboard({ navigation }) {
         secretConfigured: currentDraft.secretConfigured || Boolean(providerDraft.clientSecret),
       }));
     } catch (error) {
-      Alert.alert('HelloAsso', getErrorMessage(error, 'generic') || 'Impossible de verifier cette configuration HelloAsso.');
+      Alert.alert('HelloAsso', getErrorMessage(error, 'generic') || 'Impossible de vérifier cette configuration HelloAsso.');
     }
   };
 
   const handleReverifyPayment = async (paymentId) => {
     try {
       await paymentRefreshMutation.mutateAsync(paymentId);
-      Alert.alert('Paiement', 'La reverification du paiement est terminee.');
+      Alert.alert('Paiement', 'La reverification du paiement est terminée.');
     } catch (error) {
       Alert.alert('Paiement', getErrorMessage(error, 'generic') || 'Impossible de reverifier ce paiement.');
     }
@@ -810,7 +810,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
       <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
         <MetricCard color={Colors.primary500} label="Campagnes" value={globalMetrics.campaigns} />
         <MetricCard color={Colors.success500} label="Campagnes HelloAsso" value={globalMetrics.helloassoCampaigns} />
-        <MetricCard color={Colors.warning500} label="Connexions a surveiller" value={globalMetrics.providerErrors} />
+        <MetricCard color={Colors.warning500} label="Connexions à surveiller" value={globalMetrics.providerErrors} />
         <MetricCard color={Colors.primary300} label="Paiements en attente" value={globalMetrics.pendingPayments} />
         <MetricCard color={Colors.success500} label="Paiements confirmes" value={globalMetrics.confirmedPayments} />
         <MetricCard color={Colors.error500} label="Webhooks ignores" value={globalMetrics.ignoredEvents} />
@@ -819,7 +819,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
       {partialDataWarnings.length ? (
         <LicenseCard tone={Colors.warning500}>
           <Text style={[Fonts.p2, Fonts.neutral00]}>
-            Certaines listes depassent 100 elements. Le cockpit montre pour l instant les 100 plus recentes donnees par famille.
+            Certaines listes dépassent 100 éléments. Le cockpit montre pour l instant les 100 plus recentes données par famille.
           </Text>
         </LicenseCard>
       ) : null}
@@ -931,7 +931,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
         {filteredCampaigns.length === 0 ? (
           <LicenseCard variant="muted">
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              Aucun resultat avec les filtres actuels.
+              Aucun résultat avec les filtres actuels.
             </Text>
           </LicenseCard>
         ) : (
@@ -958,7 +958,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
                     {selectedScope?.label || 'Scope manquant'}
                     {' - '}
-                    {readString(selectedCampaign.seasonLabel) || 'Saison non definie'}
+                    {readString(selectedCampaign.seasonLabel) || 'Saison non définie'}
                   </Text>
                 </View>
                 <View style={[Spaces.gap[6], styles.cardStatusColumn]}>
@@ -970,7 +970,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
               <View style={[styles.detailGrid, Spaces.gap[12]]}>
                 <DetailRow label="Owner" value={selectedScope?.mode || '-'} />
                 <DetailRow label="Paiement" value={paymentModeLabels[selectedCampaignEntry?.mode] || selectedCampaignEntry?.mode || '-'} />
-                <DetailRow label="Derniere mise a jour campagne" value={formatTimestamp(selectedCampaign.updatedAt)} />
+                <DetailRow label="Dernière mise à jour campagne" value={formatTimestamp(selectedCampaign.updatedAt)} />
                 <DetailRow label="Readiness HelloAsso" value={getProviderReadinessLabel(selectedReadiness)} />
               </View>
             </View>
@@ -1004,7 +1004,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
                     value={formatTimestamp(readHelloAssoHealth(selectedProviderAccount).lastWebhookAt)}
                   />
                   <DetailRow
-                    label="Derniere erreur"
+                    label="Dernière erreur"
                     value={readString(readHelloAssoHealth(selectedProviderAccount).lastError) || '-'}
                   />
                 </View>
@@ -1054,7 +1054,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
                   />
                   <Button
                     onPress={() => handleVerifyProvider('disabled')}
-                    title="Desactiver HelloAsso"
+                    title="Désactiver HelloAsso"
                     variant="Secondary"
                   />
                 </View>
@@ -1068,7 +1068,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
           <SuperAdminLeagueCard style={{ marginBottom: 0 }}>
             <View style={[Spaces.gap[12]]}>
               <View style={styles.cardHeader}>
-                <Text style={[Fonts.h4, Fonts.neutral00]}>Paiements recents</Text>
+                <Text style={[Fonts.h4, Fonts.neutral00]}>Paiements récents</Text>
                 <Button
                   onPress={() => navigation.navigate(RouteNames.SuperAdminEntryList, {
                     uid: PAYMENT_UID,
@@ -1083,7 +1083,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
               {selectedCampaignPayments.length === 0 ? (
                 <LicenseCard variant="muted">
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    Aucun paiement rattache a cette campagne dans les 100 derniers paiements charges.
+                    Aucun paiement rattache à cette campagne dans les 100 derniers paiements charges.
                   </Text>
                 </LicenseCard>
               ) : (
@@ -1102,14 +1102,14 @@ function SuperAdminLicensesDashboard({ navigation }) {
           <SuperAdminLeagueCard style={{ marginBottom: 0 }}>
             <View style={[Spaces.gap[12]]}>
               <View style={styles.cardHeader}>
-                <Text style={[Fonts.h4, Fonts.neutral00]}>Evenements provider</Text>
+                <Text style={[Fonts.h4, Fonts.neutral00]}>Événements provider</Text>
                 <Button
                   onPress={() => navigation.navigate(RouteNames.SuperAdminEntryList, {
                     uid: PROVIDER_EVENT_UID,
-                    uidDisplayName: 'Evenements provider cotisations',
+                    uidDisplayName: 'Événements provider cotisations',
                   })}
                   size="sm"
-                  title="Ouvrir les evenements"
+                  title="Ouvrir les événements"
                   variant="Secondary"
                 />
               </View>
@@ -1117,7 +1117,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
               {selectedCampaignProviderEvents.length === 0 ? (
                 <LicenseCard variant="muted">
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    Aucun evenement provider rattache a cette campagne dans les 100 derniers evenements charges.
+                    Aucun événement provider rattache à cette campagne dans les 100 derniers événements charges.
                   </Text>
                 </LicenseCard>
               ) : (

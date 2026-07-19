@@ -24,38 +24,38 @@ import {
 const SCOPE_CONTENT = {
   [LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE]: {
     action: 'Confirmer le match',
-    description: 'Avant de confirmer ce match League, confirmez le cadre de responsabilite de votre equipe et du lieu choisi.',
+    description: 'Avant de confirmer ce match League, confirme le cadre de responsabilité de ton équipe et du lieu choisi.',
     title: 'Confirmation League',
   },
   [LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL]: {
     action: 'Envoyer la proposition',
-    description: 'Vous proposez une rencontre au nom de votre equipe. FoundClub facilite la mise en relation mais n organise pas le match.',
+    description: 'Tu proposes une rencontre au nom de ton équipe. FoundClub facilite la mise en relation mais n organise pas le match.',
     title: 'Proposition League',
   },
   [LEAGUE_LEGAL_SCOPES.MATCH_PLAYER_PARTICIPATION]: {
-    action: 'Confirmer ma presence',
-    description: 'Avant de participer a ce match League, confirmez que vous acceptez les risques lies a la pratique sportive.',
+    action: 'Confirmer ma présence',
+    description: 'Avant de participer à ce match League, confirme que tu acceptes les risques liés à la pratique sportive.',
     title: 'Participation League',
   },
   [LEAGUE_LEGAL_SCOPES.MATCH_VENUE_BOOKING]: {
-    action: 'Marquer le terrain reserve',
-    description: 'Avant de marquer le terrain comme reserve, confirmez que la reservation et les conditions du lieu ont bien ete gerees hors FoundClub.',
+    action: 'Marquer le terrain réservé',
+    description: 'Avant de marquer le terrain comme réservé, confirme que la réservation et les conditions du lieu ont bien été gérées hors FoundClub.',
     title: 'Terrain League',
   },
   [LEAGUE_LEGAL_SCOPES.TEAM_CREATE]: {
-    action: 'Creer mon equipe League',
-    description: 'Avant de creer une equipe FoundClub League, confirmez que FoundClub est une plateforme de mise en relation et ne devient pas organisateur des rencontres.',
+    action: 'Créer mon équipe League',
+    description: 'Avant de créer une équipe FoundClub League, confirme que FoundClub est une plateforme de mise en relation et ne devient pas organisateur des rencontres.',
     title: 'Cadre FoundClub League',
   },
   [LEAGUE_LEGAL_SCOPES.TEAM_INVITATION_ACCEPT]: {
     action: 'Accepter l invitation',
-    description: 'Avant d accepter cette invitation League, confirmez le cadre de pratique et de responsabilite applicable aux rencontres.',
+    description: 'Avant d accepter cette invitation League, confirme le cadre de pratique et de responsabilité applicable aux rencontres.',
     title: 'Invitation FoundClub League',
   },
   [LEAGUE_LEGAL_SCOPES.TEAM_JOIN_REQUEST]: {
-    action: 'Demander a rejoindre',
-    description: 'Avant de rejoindre une equipe FoundClub League, confirmez le cadre de pratique et de responsabilite applicable aux rencontres.',
-    title: 'Rejoindre une equipe League',
+    action: 'Demander à rejoindre',
+    description: 'Avant de rejoindre une équipe FoundClub League, confirme le cadre de pratique et de responsabilité applicable aux rencontres.',
+    title: 'Rejoindre une équipe League',
   },
 };
 
@@ -64,7 +64,7 @@ const SCOPE_CONTENT = {
  */
 const getScopeContent = (scope) => SCOPE_CONTENT[String(scope || '')] || {
   action: 'Continuer',
-  description: 'Confirmez le cadre FoundClub League avant de continuer.',
+  description: 'Confirme le cadre FoundClub League avant de continuer.',
   title: 'FoundClub League',
 };
 
@@ -217,7 +217,7 @@ function LeagueLegalAcceptanceModal({
               fontStyle={[Fonts.p2, Fonts.neutral00]}
               isChecked={acceptedContext}
               setIsChecked={() => setAcceptedContext((previous) => !previous)}
-              text="Je comprends que FoundClub ne fait que mettre en relation les equipes et participants, sans organiser ni superviser la rencontre."
+              text="Je comprends que FoundClub ne fait que mettre en relation les équipes et participants, sans organiser ni superviser la rencontre."
               type="square"
               wrapperStyle={checkableWrapperStyle}
             />
@@ -225,7 +225,7 @@ function LeagueLegalAcceptanceModal({
               fontStyle={[Fonts.p2, Fonts.neutral00]}
               isChecked={acceptedRisk}
               setIsChecked={() => setAcceptedRisk((previous) => !previous)}
-              text="J accepte les risques normaux lies a la pratique sportive et je verifie que mon etat de sante me permet de participer."
+              text="J accepte les risques normaux liés à la pratique sportive et je vérifie que mon état de santé me permet de participer."
               type="square"
               wrapperStyle={checkableWrapperStyle}
             />
@@ -233,7 +233,7 @@ function LeagueLegalAcceptanceModal({
               fontStyle={[Fonts.p2, Fonts.neutral00]}
               isChecked={acceptedRules}
               setIsChecked={() => setAcceptedRules((previous) => !previous)}
-              text="Je respecte les regles du lieu, les consignes de securite et je verifie la couverture d assurance applicable."
+              text="Je respecte les règles du lieu, les consignes de sécurité et je vérifie la couverture d assurance applicable."
               type="square"
               wrapperStyle={checkableWrapperStyle}
             />
@@ -242,7 +242,7 @@ function LeagueLegalAcceptanceModal({
                 fontStyle={[Fonts.p2, Fonts.neutral00]}
                 isChecked={acceptedAdult}
                 setIsChecked={() => setAcceptedAdult((previous) => !previous)}
-                text="Je certifie avoir 18 ans ou plus pour creer ou rejoindre une squad FoundClub League."
+                text="Je certifie avoir 18 ans ou plus pour créer ou rejoindre une squad FoundClub League."
                 type="square"
                 wrapperStyle={checkableWrapperStyle}
               />
@@ -253,8 +253,8 @@ function LeagueLegalAcceptanceModal({
                 isChecked={acceptedExtra}
                 setIsChecked={() => setAcceptedExtra((previous) => !previous)}
                 text={needsVenueResponsibility
-                  ? 'Je confirme que le terrain, les horaires et les conditions du lieu ont ete verifies par les participants concernes.'
-                  : 'Je confirme agir comme membre referent de mon equipe pour cette proposition ou confirmation de match.'}
+                  ? 'Je confirme que le terrain, les horaires et les conditions du lieu ont été verifies par les participants concernés.'
+                  : 'Je confirme agir comme membre référent de mon équipe pour cette proposition ou confirmation de match.'}
                 type="square"
                 wrapperStyle={checkableWrapperStyle}
               />
@@ -262,7 +262,7 @@ function LeagueLegalAcceptanceModal({
           </View>
         </View>
 
-        <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Cette confirmation est enregistree avec la version legale active pour garder une preuve d acceptation.</Text>
+        <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Cette confirmation est enregistrée avec la version legale active pour garder une preuve d acceptation.</Text>
       </View>
     </BottomModal>
   );

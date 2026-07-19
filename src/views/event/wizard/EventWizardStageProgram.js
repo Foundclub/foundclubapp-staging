@@ -255,8 +255,8 @@ function EventWizardStageProgram({ navigation }) {
       Alert.alert(
         t('common.error', 'Erreur'),
         copy('errors.noActiveDays', isTournament
-          ? 'Active au moins une journee de tournoi pour continuer.'
-          : 'Active au moins une journee pour continuer.'),
+          ? 'Active au moins une journée de tournoi pour continuer.'
+          : 'Active au moins une journée pour continuer.'),
       );
       return;
     }
@@ -265,7 +265,7 @@ function EventWizardStageProgram({ navigation }) {
     if (invalidDay) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('eventWizard.errors.invalidTimeRange', 'L heure de fin doit etre apres l heure de debut.'),
+        t('eventWizard.errors.invalidTimeRange', 'L heure de fin doit être après l heure de début.'),
       );
       return;
     }
@@ -276,7 +276,7 @@ function EventWizardStageProgram({ navigation }) {
         t('common.error', 'Erreur'),
         copy(
           'errors.locationOverrideRequired',
-          'Complete le lieu personnalise pour chaque jour concerne.',
+          'Complète le lieu personnalise pour chaque jour concerne.',
         ),
       );
       return;
@@ -329,8 +329,8 @@ function EventWizardStageProgram({ navigation }) {
       subtitle={t(
         `${copyRoot}.subtitle`,
         isTournament
-          ? 'Definis la periode du tournoi, les horaires par defaut et les exceptions sur certains jours.'
-          : 'Definis la periode du stage, les horaires par defaut et les exceptions sur certains jours.',
+          ? 'Définis la période du tournoi, les horaires par défaut et les exceptions sur certains jours.'
+          : 'Définis la période du stage, les horaires par défaut et les exceptions sur certains jours.',
       )}
       title={copy('title', isTournament ? 'Programme du tournoi' : 'Programme du stage')}
     >
@@ -341,7 +341,7 @@ function EventWizardStageProgram({ navigation }) {
           </Text>
           <View style={[Spaces.gap[16]]}>
             <DateTimeSelector
-              label={copy('startDate', 'Date de debut')}
+              label={copy('startDate', 'Date de début')}
               mode="date"
               onChange={setStageStartDate}
               value={stageStartDate}
@@ -358,14 +358,14 @@ function EventWizardStageProgram({ navigation }) {
         <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], cardSurfaceStyle]}>
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {copy('defaultHoursTitle', 'Horaires par defaut')}
+              {copy('defaultHoursTitle', 'Horaires par défaut')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {copy(
                 'defaultHoursHelper',
                 isTournament
-                  ? 'Ces horaires servent de base pour toutes les journees actives du tournoi.'
-                  : 'Ces horaires servent de base pour toutes les journees actives du stage.',
+                  ? 'Ces horaires servent de base pour toutes les journées actives du tournoi.'
+                  : 'Ces horaires servent de base pour toutes les journées actives du stage.',
               )}
             </Text>
           </View>
@@ -373,7 +373,7 @@ function EventWizardStageProgram({ navigation }) {
           <View style={[Spaces.gap[16]]}>
             <View style={[Spaces.gap[12]]}>
               <DateTimeSelector
-                label={copy('defaultStartTime', 'Heure de debut')}
+                label={copy('defaultStartTime', 'Heure de début')}
                 mode="time"
                 onChange={setDefaultStartTime}
                 value={defaultStartTime}
@@ -393,15 +393,15 @@ function EventWizardStageProgram({ navigation }) {
                 onPress={applyDefaultsToAllDays}
                 size="sm"
                 style={{ alignSelf: 'flex-start' }}
-                title={copy('applyToAll', 'Appliquer a tous')}
+                title={copy('applyToAll', 'Appliquer à tous')}
                 variant="Secondary"
               />
               <Text style={[Fonts.p4, Fonts.neutral300]}>
                 {copy(
                   'applyToAllHelper',
                   isTournament
-                    ? 'Reinitialise les horaires personnalises et reapplique la base du tournoi.'
-                    : 'Reinitialise les horaires personnalises et reapplique la base du stage.',
+                    ? 'Réinitialise les horaires personnalises et reapplique la base du tournoi.'
+                    : 'Réinitialise les horaires personnalises et reapplique la base du stage.',
                 )}
               </Text>
             </View>
@@ -416,7 +416,7 @@ function EventWizardStageProgram({ navigation }) {
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {copy(
                 'daysHelper',
-                'Active ou personnalise uniquement les journees qui sortent du cadre par defaut.',
+                'Active ou personnalise uniquement les journées qui sortent du cadre par défaut.',
               )}
             </Text>
           </View>
@@ -458,7 +458,7 @@ function EventWizardStageProgram({ navigation }) {
                     {inheritedHours
                       ? copy(
                         'inheritedHours',
-                        isTournament ? 'Horaires herites du tournoi' : 'Horaires herites du stage',
+                        isTournament ? 'Horaires hérités du tournoi' : 'Horaires hérités du stage',
                       )
                       : copy('customHours', 'Horaires personnalises')}
                   </Text>
@@ -479,7 +479,7 @@ function EventWizardStageProgram({ navigation }) {
                     >
                       <Text style={[Fonts.p3Bold, day.hasCustomTime ? Fonts.primary500 : Fonts.neutral200]}>
                         {day.hasCustomTime
-                          ? copy('useDefaultHours', 'Revenir aux horaires par defaut')
+                          ? copy('useDefaultHours', 'Revenir aux horaires par défaut')
                           : copy('customizeHours', 'Personnaliser les horaires')}
                       </Text>
                     </TouchableOpacity>
@@ -509,7 +509,7 @@ function EventWizardStageProgram({ navigation }) {
                 {day.hasCustomTime ? (
                   <View style={[Spaces.gap[16]]}>
                     <DateTimeSelector
-                      label={copy('dayStartTime', 'Heure de debut du jour')}
+                      label={copy('dayStartTime', 'Heure de début du jour')}
                       mode="time"
                       onChange={(nextStartTime) => {
                         const adjustedStart = buildDayStartTime(day.date, nextStartTime);

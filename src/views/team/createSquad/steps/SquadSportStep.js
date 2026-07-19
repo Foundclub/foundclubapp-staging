@@ -70,7 +70,7 @@ function SquadSportStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
-          Quel est votre sport ?
+          Quel est ton sport ?
         </Text>
 
         <AutocompleteSelect

@@ -228,6 +228,9 @@ function ClubFiltersContent({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      // Retrait bas systeme deja applique au contenu ci-dessous : pas de plancher
+      // conteneur, sinon insets.bottom serait compte deux fois.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
         Spaces.gap[24],
@@ -385,7 +388,7 @@ function ClubFiltersContent({ navigation, route }) {
                     </Text>
                     <Button
                       onPress={() => refetchActivities()}
-                      title={t('common.actions.retry', 'R\u00E9essayer')}
+                      title={t('common.actions.retry', 'Réessayer')}
                       variant="Secondary"
                     />
                   </View>

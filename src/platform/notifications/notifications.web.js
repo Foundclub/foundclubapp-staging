@@ -213,7 +213,7 @@ const ensureMessagingRuntime = async () => {
     if (!isFirebaseConfigured()) {
       if (!hasLoggedMissingConfig) {
         hasLoggedMissingConfig = true;
-        logWarn('Notifications web desactivees: configuration Firebase Web incomplete.');
+        logWarn('Notifications web désactivées: configuration Firebase Web incomplète.');
       }
       return null;
     }
@@ -268,7 +268,7 @@ export const bootstrap = async () => {
     }
 
     if (notificationsBootstrapDisabled) {
-      logInfo('Bootstrap notifications web explicitement desactive.');
+      logInfo('Bootstrap notifications web explicitement désactive.');
       return { status: 'disabled' };
     }
 
@@ -315,7 +315,7 @@ export const openFromPayload = async (payload) => {
   const destination = resolveNotificationDestination(normalizedPayload);
 
   if (!destination?.route) {
-    logWarn('Aucune destination resolue pour cette notification.', normalizedPayload?.type || normalizedPayload);
+    logWarn('Aucune destination résolue pour cette notification.', normalizedPayload?.type || normalizedPayload);
     navigateToPath('/');
     return '/';
   }
@@ -324,7 +324,7 @@ export const openFromPayload = async (payload) => {
     const path = buildWebPath(destination.route, destination.params || {});
 
     if (!path || hasUnresolvedRouteParams(path)) {
-      logWarn('Destination de notification incomplete, fallback sur l accueil.', {
+      logWarn('Destination de notification incomplète, fallback sur l accueil.', {
         destination,
         normalizedPayload,
         path,
@@ -336,7 +336,7 @@ export const openFromPayload = async (payload) => {
     navigateToPath(path);
     return path;
   } catch (error) {
-    logWarn('Erreur lors de la resolution de destination de notification, fallback sur l accueil.', error?.message || error);
+    logWarn('Erreur lors de la résolution de destination de notification, fallback sur l accueil.', error?.message || error);
     navigateToPath('/');
     return '/';
   }

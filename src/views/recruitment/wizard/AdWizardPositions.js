@@ -114,8 +114,8 @@ function AdWizardPositions({ navigation }) {
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardNeedsStepIndex(state)}
-      subtitle={'D\u00E9finissez les postes \u00E0 ouvrir et le volume de recrutement associ\u00E9.'}
-      title={'Postes recherch\u00E9s'}
+      subtitle="Définis les postes à ouvrir et le volume de recrutement associé."
+      title="Postes recherchés"
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[48]]}>
         <View
@@ -133,13 +133,13 @@ function AdWizardPositions({ navigation }) {
             <View style={[Spaces.gap[12], { flex: 1, minWidth: 180 }]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 {selectedCount > 0
-                  ? `${selectedCount} poste${selectedCount > 1 ? 's' : ''} configur\u00E9${selectedCount > 1 ? 's' : ''}`
-                  : 'Aucun poste s\u00E9lectionn\u00E9'}
+                  ? `${selectedCount} poste${selectedCount > 1 ? 's' : ''} configuré${selectedCount > 1 ? 's' : ''}`
+                  : 'Aucun poste sélectionné'}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral100, { lineHeight: 22 }]}>
                 {selectedCount > 0
-                  ? `${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''} recherch\u00E9${totalPlayers > 1 ? 's' : ''} sur cette annonce.`
-                  : 'Active des postes ci-dessous ou applique un volume \u00E0 tous les postes.'}
+                  ? `${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''} recherché${totalPlayers > 1 ? 's' : ''} sur cette annonce.`
+                  : 'Active des postes ci-dessous ou applique un volume à tous les postes.'}
               </Text>
             </View>
 
@@ -207,10 +207,10 @@ function AdWizardPositions({ navigation }) {
           >
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {'Appliquer \u00E0 tous les postes'}
+                Appliquer à tous les postes
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral100, { lineHeight: 22 }]}>
-                {'Le compteur met \u00E0 jour toute la liste instantan\u00E9ment. 0 r\u00E9initialise la s\u00E9lection globale.'}
+                Le compteur met à jour toute la liste instantanément. 0 réinitialise la sélection globale.
               </Text>
             </View>
 
@@ -301,7 +301,7 @@ function AdWizardPositions({ navigation }) {
           onQuantityChange={handleQuantityChange}
           onToggle={handleTogglePosition}
           positions={positions}
-          selectedQuantityLabel={(quantity) => `${quantity} joueur${quantity > 1 ? 's' : ''} recherch\u00E9${quantity > 1 ? 's' : ''}`}
+          selectedQuantityLabel={(quantity) => `${quantity} joueur${quantity > 1 ? 's' : ''} recherché${quantity > 1 ? 's' : ''}`}
           selectedSectionTitle="Postes actifs"
           sportName={sportName}
           unselectedActionLabel="Activer"
@@ -310,7 +310,7 @@ function AdWizardPositions({ navigation }) {
         {positions.length === 0 ? (
           <View style={[ApplicationStyle.card, Spaces.padding[24], cardSurfaceStyle]}>
             <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
-              {"Aucun poste n'est actuellement d\u00E9fini pour ce sport."}
+              Aucun poste n&apos;est actuellement défini pour ce sport.
             </Text>
           </View>
         ) : null}

@@ -16,13 +16,13 @@ import Checkbox from '@/components/atoms/checkbox/Checkbox';
  * @param root0.title
  */
 function ParentalDeclarationCard({
-  checkboxLabel = 'Je declare etre le parent ou le representant legal de cet enfant et utiliser l application en son nom.',
+  checkboxLabel = 'Je déclare être le parent ou le représentant legal de cet enfant et utiliser l application en son nom.',
   checked,
-  description = 'Ce profil concerne un enfant de moins de 13 ans. Pour continuer, vous devez confirmer que vous etes son parent ou representant legal.',
+  description = 'Ce profil concerne un enfant de moins de 13 ans. Pour continuer, tu dois confirmer que tu es son parent ou représentant legal.',
   disabled = false,
   helperText = '',
   onChange,
-  title = 'Declaration parentale obligatoire',
+  title = 'Déclaration parentale obligatoire',
 }) {
   const {
     Alignments, Colors, Fonts, Spaces,

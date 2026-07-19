@@ -804,7 +804,7 @@ export const createSelfOnboardClub = async (payload) => {
     }
     const message = error?.response?.data?.error?.message
       || (error && typeof error === 'object' && 'message' in error ? error.message : null)
-      || 'Impossible de creer le club.';
+      || 'Impossible de créer le club.';
     throw new Error(String(message));
   }
 };

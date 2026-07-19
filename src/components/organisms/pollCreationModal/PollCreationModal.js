@@ -323,7 +323,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
 
     if (duplicateIds.size > 0) {
       setDuplicateOptionIdSet(duplicateIds);
-      setError(t('conversation.poll.errors.duplicateOptions', 'Chaque option doit etre differente.'));
+      setError(t('conversation.poll.errors.duplicateOptions', 'Chaque option doit être differente.'));
       return;
     }
 
@@ -338,7 +338,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
     } catch (submitError) {
       setError(
         submitError?.message
-        || t('conversation.poll.errors.createFailed', 'Impossible de creer ce sondage.'),
+        || t('conversation.poll.errors.createFailed', 'Impossible de créer ce sondage.'),
       );
     } finally {
       setIsSubmitting(false);
@@ -379,7 +379,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
         onValueChange={handleQuestionChange}
         placeholder={t(
           'conversation.poll.form.questionPlaceholder',
-          'Ex: Quel créneau vous convient ?',
+          'Ex: Quel créneau te convient ?',
         )}
         placeholderTextColor={Colors.neutral400}
         selectionColor={Colors.primary500}
@@ -512,7 +512,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
         <Text style={[Fonts.p4, Fonts.neutral300]}>
           {t(
             'conversation.poll.form.allowMultipleVotesHint',
-            'Active cette option pour permettre a chacun de voter pour plusieurs reponses.',
+            'Active cette option pour permettre a chacun de voter pour plusieurs réponses.',
           )}
         </Text>
       </View>

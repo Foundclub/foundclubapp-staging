@@ -70,7 +70,7 @@ function MissingPlayersView({ navigation }) {
     onError: (mutationError) => {
       Alert.alert(
         t('common.error'),
-        getParticipationErrorMessage(mutationError, t('reservation.joinError', 'Impossible de rejoindre cette reservation.')),
+        getParticipationErrorMessage(mutationError, t('reservation.joinError', 'Impossible de rejoindre cette réservation.')),
       );
     },
     onSuccess: () => {
@@ -81,8 +81,8 @@ function MissingPlayersView({ navigation }) {
       setIsJoinModalVisible(false);
       setSelectedEvent(undefined);
       Alert.alert(
-        t('reservation.joinSuccess.title', 'Participation confirmee'),
-        t('reservation.joinSuccess.message', 'Vous participez maintenant a cette reservation.'),
+        t('reservation.joinSuccess.title', 'Participation confirmée'),
+        t('reservation.joinSuccess.message', 'Tu participes maintenant à cette réservation.'),
       );
     },
   });
@@ -170,7 +170,7 @@ function MissingPlayersView({ navigation }) {
         {t('reservation.noMissingPlayers', 'Aucune réservation ne cherche de joueurs pour le moment')}
       </Text>
       <Text style={[Fonts.p2, Fonts.neutral300, Fonts.textCenter]}>
-        {t('reservation.noMissingPlayersHint', 'Revenez plus tard ou créez votre propre réservation !')}
+        {t('reservation.noMissingPlayersHint', 'Reviens plus tard ou crée ta propre réservation !')}
       </Text>
     </View>
   );
@@ -181,7 +181,7 @@ function MissingPlayersView({ navigation }) {
         {t('reservation.missingPlayers.title', 'Joueurs recherchés')}
       </Text>
       <Text style={[Fonts.p2, Fonts.neutral300]}>
-        {t('reservation.missingPlayers.subtitle', 'Rejoignez une réservation qui manque de joueurs')}
+        {t('reservation.missingPlayers.subtitle', 'Rejoins une réservation qui manque de joueurs')}
       </Text>
 
       {/* Stats */}

@@ -788,6 +788,7 @@ function Profile({ navigation, route }) {
     >
       <ScreenContainer
         bgImage="bg2"
+        bottomInsetMode="screen"
         contentContainerStyle={[
           Spaces.paddingTop[0],
           Spaces.paddingBottom[12],

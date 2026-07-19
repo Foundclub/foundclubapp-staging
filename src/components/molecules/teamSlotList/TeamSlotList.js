@@ -365,7 +365,7 @@ export default function TeamSlotList({
                 ) : null}
                 {isMember && actionsEnabled && showMemberHelperText ? (
                   <Text style={[Fonts.p3, { color: Colors.neutral200, paddingTop: 8, textAlign: 'center' }]}>
-                    {t('teamSlotList.memberHelp', 'Touchez pour confirmer votre présence.')}
+                    {t('teamSlotList.memberHelp', 'Touche pour confirmer ta présence.')}
                   </Text>
                 ) : null}
                 {isMember && !actionsEnabled ? (

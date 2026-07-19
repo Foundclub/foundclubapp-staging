@@ -176,7 +176,7 @@ function TeamWizardRecap({ navigation }) {
       return;
     }
     if (selectedOverview.trainers.length === 0) {
-      Alert.alert(t('common.error', 'Erreur'), t('teamWizard.errors.trainerRequired', 'Sélectionnez au moins un entraîneur.'));
+      Alert.alert(t('common.error', 'Erreur'), t('teamWizard.errors.trainerRequired', 'Sélectionne au moins un entraîneur.'));
       return;
     }
 

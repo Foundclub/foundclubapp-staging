@@ -174,8 +174,8 @@ const DETECTION_FIELDS = [
     labelKey: 'showcase.fieldQrLabel',
     maxLength: 60,
     placeholder: (variant) => (variant === 'decouverte'
-      ? { default: 'Scannez pour essayer', key: 'showcase.placeholderQrLabelDecouverte' }
-      : { default: 'Scannez pour participer', key: 'showcase.placeholderQrLabel' }),
+      ? { default: 'Scanne pour essayer', key: 'showcase.placeholderQrLabelDecouverte' }
+      : { default: 'Scanne pour participer', key: 'showcase.placeholderQrLabel' }),
   },
   {
     key: 'equipe', labelDefault: 'Équipe', labelKey: 'showcase.fieldEquipe', maxLength: 80,
@@ -216,7 +216,7 @@ const CLUB_FIELDS = [
     labelDefault: 'Texte sous le QR code',
     labelKey: 'showcase.club.fieldQrLabel',
     maxLength: 60,
-    placeholder: { default: 'Scannez pour nous rejoindre', key: 'showcase.club.placeholderQrLabel' },
+    placeholder: { default: 'Scanne pour nous rejoindre', key: 'showcase.club.placeholderQrLabel' },
   },
 ];
 
@@ -260,7 +260,7 @@ const RECHERCHE_FIELDS = [
     labelKey: 'showcase.ad.fieldRecompense',
     maxLength: 120,
     placeholder: (variant) => (variant === 'club-recherche' || variant === 'club-recherche-western'
-      ? { default: 'Votre club, enfin géré en un seul endroit.', key: 'showcase.ad.placeholderRecompenseClub' }
+      ? { default: 'Ton club, enfin géré en un seul endroit.', key: 'showcase.ad.placeholderRecompenseClub' }
       : { default: 'Une équipe qui compte sur toi, chaque week-end.', key: 'showcase.ad.placeholderRecompense' }),
   },
   {
@@ -269,8 +269,8 @@ const RECHERCHE_FIELDS = [
     labelKey: 'showcase.ad.fieldQrLabel',
     maxLength: 60,
     placeholder: (variant) => (variant === 'club-recherche' || variant === 'club-recherche-western'
-      ? { default: "Scannez si c'est votre club", key: 'showcase.ad.placeholderQrLabelClub' }
-      : { default: "Scannez si c'est vous", key: 'showcase.ad.placeholderQrLabel' }),
+      ? { default: "Scanne si c'est ton club", key: 'showcase.ad.placeholderQrLabelClub' }
+      : { default: "Scanne si c'est toi", key: 'showcase.ad.placeholderQrLabel' }),
   },
 ];
 

@@ -61,7 +61,7 @@ function UserRole({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour votre profil.');
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
     },
     onSuccess: async () => {
       // Rafraichir le profil AVANT de naviguer : sinon les etapes suivantes sont
@@ -129,7 +129,7 @@ function UserRole({ navigation }) {
     return (
       <OnboardingStateView
         actionLabel="Réessayer"
-        description={rolesError?.message || 'Impossible de charger les r\u00F4les.'}
+        description={rolesError?.message || 'Impossible de charger les rôles.'}
         onAction={refetchRoles}
         title="Chargement impossible"
       />

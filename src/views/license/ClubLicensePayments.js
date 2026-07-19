@@ -61,7 +61,7 @@ function RejectPaymentModal({
       webPresentation="dialog"
     >
       <View style={Spaces.gap[licenseSpacing.fieldGap]}>
-        <Text style={[Fonts.h3, Fonts.neutral00]}>Rejeter la declaration</Text>
+        <Text style={[Fonts.h3, Fonts.neutral00]}>Rejeter la déclaration</Text>
         <TextInput
           onChangeText={setReason}
           placeholder="Motif obligatoire"
@@ -127,7 +127,7 @@ function ClubLicensePayments({ navigation, route }) {
 
   const approvePayment = useCallback((paymentId) => {
     if (!canManageLicenses) return;
-    Alert.alert('Valider le paiement declare', 'Confirmer que le club a bien recu ce paiement ?', [
+    Alert.alert('Valider le paiement déclare', 'Confirmer que le club a bien reçu ce paiement ?', [
       { style: 'cancel', text: 'Annuler' },
       {
         onPress: () => approveMutation.mutate({ paymentId }, {
@@ -172,7 +172,7 @@ function ClubLicensePayments({ navigation, route }) {
           >
             <View style={[Spaces.gap[4], { flex: 1 }]}>
               <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{memberName(item.user)}</Text>
-              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>{item.team?.name || 'Sans equipe'}</Text>
+              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>{item.team?.name || 'Sans équipe'}</Text>
             </View>
             <LicenseStatusChip status={item.status} />
           </View>
@@ -212,27 +212,27 @@ function ClubLicensePayments({ navigation, route }) {
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
       <View style={[Spaces.gap[licenseSpacing.sectionGap], { flex: 1 }]}>
         <View style={Spaces.gap[licenseSpacing.titleGap]}>
-          <Text style={[Fonts.h2, Fonts.neutral00]}>Paiements a valider</Text>
+          <Text style={[Fonts.h2, Fonts.neutral00]}>Paiements à valider</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Controle les declarations externes avant de les passer en encaisse.
+            Controle les déclarations externes avant de les passer en encaisse.
           </Text>
         </View>
         {isLoading ? (
           <LicenseEmptyState
-            description="On charge les declarations en attente."
+            description="On charge les déclarations en attente."
             title="Chargement"
           />
         ) : null}
         {!isLoading && !hasError && !canManageLicenses ? (
           <LicenseEmptyState
-            description="La validation des paiements est reservee aux dirigeants."
-            title="Action reservee"
+            description="La validation des paiements est réservée aux dirigeants."
+            title="Action réservée"
           />
         ) : null}
         {!isLoading && hasError ? (
           <LicenseEmptyState
             action={<Button onPress={retryData} title="Reessayer" variant="Secondary" />}
-            description="Impossible de charger les paiements a valider."
+            description="Impossible de charger les paiements à valider."
             title="Paiements indisponibles"
           />
         ) : null}
@@ -254,7 +254,7 @@ function ClubLicensePayments({ navigation, route }) {
               keyExtractor={(item) => String(item.documentId || item.id)}
               ListEmptyComponent={(
                 <LicenseEmptyState
-                  description="Aucune declaration de paiement n attend de validation."
+                  description="Aucune déclaration de paiement n attend de validation."
                   title="Tout est propre"
                 />
               )}

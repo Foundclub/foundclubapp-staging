@@ -355,7 +355,7 @@ function PollDetails({ navigation, route }) {
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              {t('conversation.poll.details.createdBy', 'Cree par')}
+              {t('conversation.poll.details.createdBy', 'Crée par')}
             </Text>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{createdByName}</Text>
           </View>
@@ -378,8 +378,8 @@ function PollDetails({ navigation, route }) {
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
             {t(
               'conversation.poll.details.voteHint',
-              'Selectionnez une option pour voter ou modifier votre vote. '
-                + 'Appuyez a nouveau dessus pour retirer votre vote. '
+              'Sélectionne une option pour voter ou modifier ton vote. '
+                + 'Appuie à nouveau dessus pour retirer ton vote. '
                 + 'Le detail des votants s\'affiche quand le sondage n\'est pas anonyme.',
             )}
           </Text>

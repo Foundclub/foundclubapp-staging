@@ -21,7 +21,7 @@ try {
     const after = newBuffer.slice(index + search.length);
     newBuffer = Buffer.concat([before, replace, after]);
     fs.writeFileSync(filePath, newBuffer);
-    console.log('Successfully fixed Pin encoding.');
+    console.log('Succèssfully fixed Pin encoding.');
   } else {
     console.log('Pin mojibake not found.');
   }

@@ -114,7 +114,7 @@ describe('tournamentUtils', () => {
     };
 
     expect(getTournamentFormatLabel('groups_to_knockout')).toBe('Poules + finale');
-    expect(getTournamentCompetitionStateLabel('draft')).toBe('Competition en brouillon');
+    expect(getTournamentCompetitionStateLabel('draft')).toBe('Compétition en brouillon');
     expect(getTournamentCompetitionActions(dashboard)).toEqual({
       canDrawGroups: true,
       canGenerateKnockout: true,

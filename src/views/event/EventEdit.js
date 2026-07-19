@@ -241,11 +241,11 @@ function EventEdit({ navigation, route }) {
   })) || [];
   const participantIdentityVisibilityOptions = [
     {
-      label: t('eventEdit.fields.participantIdentityVisibility.options.visible', 'Identites visibles'),
+      label: t('eventEdit.fields.participantIdentityVisibility.options.visible', 'Identités visibles'),
       value: 'VISIBLE',
     },
     {
-      label: t('eventEdit.fields.participantIdentityVisibility.options.anonymized', 'Participants anonymises'),
+      label: t('eventEdit.fields.participantIdentityVisibility.options.anonymized', 'Participants anonymisés'),
       value: 'ANONYMIZED',
     },
   ];
@@ -468,7 +468,7 @@ function EventEdit({ navigation, route }) {
   useEffect(() => {
     if (event) {
       console.log('Event data loaded:', event);
-      console.log('Recurrence Group ID:', event.recurrenceGroupId);
+      console.log('Récurrence Group ID:', event.recurrenceGroupId);
       reset({
         ...defaultValues,
         capacity: event?.capacity,
@@ -523,8 +523,8 @@ function EventEdit({ navigation, route }) {
     try {
       if (eventId && !editSupport?.isSupported) {
         Alert.alert(
-          t('eventEdit.modals.unsupportedEdit.title', 'Modification limitee'),
-          editSupport?.reason || "Cette fiche ne permet pas encore d'editer ce type d'evenement.",
+          t('eventEdit.modals.unsupportedEdit.title', 'Modification limitée'),
+          editSupport?.reason || "Cette fiche ne permet pas encore d'éditer ce type d'événement.",
         );
         return;
       }
@@ -536,7 +536,7 @@ function EventEdit({ navigation, route }) {
             t('common.error', 'Erreur'),
             t(
               'eventEdit.trainingOpen.externalLimitRequired',
-              'Indique combien de places externes tu ouvres pour cet entrainement.',
+              'Indique combien de places externes tu ouvres pour cet entraînement.',
             ),
           );
           return;
@@ -579,11 +579,11 @@ function EventEdit({ navigation, route }) {
         if (event?.recurrenceGroupId) {
           const originalDate = event?.date ? format(new Date(event.date), 'dd/MM/yyyy') : '';
           const recurrenceScopeHint = originalDate && data?.date && data.date !== originalDate
-            ? "\n\nSi vous choisissez les futurs ou toute la serie, la nouvelle date reste specifique a cet evenement. Les autres occurrences recuperent surtout les parametres communs comme l'horaire, le lieu et les invitations."
+            ? "\n\nSi tu choisis les futurs ou toute la série, la nouvelle date reste spécifique à cet événement. Les autres occurrences recuperent surtout les paramètres communs comme l'horaire, le lieu et les invitations."
             : '';
           Alert.alert(
             t('eventEdit.modals.recurrenceUpdate.title', 'Modification récurrente'),
-            `${t('eventEdit.modals.recurrenceUpdate.description', 'Cet événement fait partie d\'une série. Que voulez-vous modifier ?')}${recurrenceScopeHint}`,
+            `${t('eventEdit.modals.recurrenceUpdate.description', 'Cet événement fait partie d\'une série. Que veux-tu modifier ?')}${recurrenceScopeHint}`,
             [
               {
                 style: 'cancel',
@@ -761,7 +761,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.warning900]}>
-                  {editSupport?.reason || "Cette fiche ne permet pas encore d'editer ce type d'evenement."}
+                  {editSupport?.reason || "Cette fiche ne permet pas encore d'éditer ce type d'événement."}
                 </Text>
               </View>
             ) : null}
@@ -774,7 +774,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.warning900]}>
-                  Ce creneau depasse la capacite de l installation. L evenement restera en demande en attente jusqu au traitement d un dirigeant.
+                  Ce créneau dépasse la capacité de l installation. L événement restera en demande en attente jusqu au traitement d un dirigeant.
                 </Text>
               </View>
             ) : null}
@@ -787,7 +787,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.primary200]}>
-                  Ce creneau depasse la capacite de l installation, mais ce club est configure en Autorise et notifier. L evenement restera confirme et les dirigeants seront prevenus.
+                  Ce créneau dépasse la capacité de l installation, mais ce club est configure en Autorise et notifier. L événement restera confirme et les dirigeants seront prevenus.
                 </Text>
               </View>
             ) : null}
@@ -801,7 +801,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.warning900]}>
-                  ⚠️ Un conflit a été détecté sur ce créneau. Votre demande sera soumise à validation.
+                  ⚠️ Un conflit a été détecté sur ce créneau. Ta demande sera soumise à validation.
                 </Text>
               </View>
             )}
@@ -859,7 +859,7 @@ function EventEdit({ navigation, route }) {
               }) => (
                 <AutocompleteSelect
                   error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('eventEdit.fields.participantIdentityVisibility.label', 'Confidentialite des participants')}
+                  label={t('eventEdit.fields.participantIdentityVisibility.label', 'Confidentialité des participants')}
                   onBlur={onBlur}
                   options={participantIdentityVisibilityOptions}
                   setValue={(option) => {
@@ -1087,7 +1087,7 @@ function EventEdit({ navigation, route }) {
                         label={t('eventEdit.fields.trainingTotalPlayers.label', 'Joueurs attendus (interne)')}
                         onBlur={onBlur}
                         onChangeText={onChange}
-                        placeholder={t('eventEdit.fields.trainingTotalPlayers.placeholder', 'Nombre de joueurs de vos equipes attendus')}
+                        placeholder={t('eventEdit.fields.trainingTotalPlayers.placeholder', 'Nombre de joueurs de tes équipes attendus')}
                         ref={ref}
                         value={value?.toString() || ''}
                       />
@@ -1376,7 +1376,7 @@ function EventEdit({ navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Mise a la une
+                Mise à la une
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 La demande de mise a la une se fait depuis la fiche de l&apos;evenement une fois enregistre.

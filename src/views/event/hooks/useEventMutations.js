@@ -55,7 +55,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer votre participation pour le moment.",
+        error?.message || "Impossible d'enregistrer ta participation pour le moment.",
       );
     },
     onSuccess: () => {
@@ -115,7 +115,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer votre absence pour le moment.",
+        error?.message || "Impossible d'enregistrer ton absence pour le moment.",
       );
     },
     onSuccess: () => {
@@ -130,7 +130,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer votre réponse pour le moment.",
+        error?.message || "Impossible d'enregistrer ta réponse pour le moment.",
       );
     },
     onSuccess: () => {
@@ -217,8 +217,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       invalidatePersonalPlanning();
       refetch();
       Alert.alert(
-        t('reservation.joinSuccess.title', 'Participation confirmee'),
-        t('reservation.joinSuccess.message', 'Vous participez maintenant a cette reservation.'),
+        t('reservation.joinSuccess.title', 'Participation confirmée'),
+        t('reservation.joinSuccess.message', 'Tu participes maintenant à cette réservation.'),
       );
     },
   });
@@ -234,8 +234,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       invalidatePersonalPlanning();
       refetch();
       Alert.alert(
-        t('reservation.bookFull.success.title', 'Reservation privatisee'),
-        t('reservation.bookFull.success.message', 'Votre reservation est maintenant complete.'),
+        t('reservation.bookFull.success.title', 'Réservation privatisee'),
+        t('reservation.bookFull.success.message', 'Ta réservation est maintenant complète.'),
       );
     },
   });
@@ -251,8 +251,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       invalidatePersonalPlanning();
       refetch();
       Alert.alert(
-        t('reservation.openForPlayers.success.title', 'Reservation ouverte'),
-        t('reservation.openForPlayers.success.message', 'Les joueurs peuvent maintenant vous rejoindre !'),
+        t('reservation.openForPlayers.success.title', 'Réservation ouverte'),
+        t('reservation.openForPlayers.success.message', 'Les joueurs peuvent maintenant te rejoindre !'),
       );
     },
   });
@@ -267,7 +267,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
-        t('reservation.sosAlert.success.title', 'Alerte SOS lancee'),
+        t('reservation.sosAlert.success.title', 'Alerte SOS lancée'),
         t('reservation.sosAlert.success.message', 'Les joueurs proches seront notifies.'),
       );
     },
@@ -278,7 +278,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer votre arrivée.",
+        error?.message || "Impossible d'enregistrer ton arrivée.",
       );
     },
     onSuccess: () => {
@@ -297,7 +297,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer votre retard.",
+        error?.message || "Impossible d'enregistrer ton retard.",
       );
     },
     onSuccess: () => {
@@ -330,7 +330,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const resetAttendanceMutation = useMutation({
     mutationFn: ({ eventId: targetEventId, userId }) => resetCoachAttendance(targetEventId, userId),
     onError: () => {
-      Alert.alert(t('common.error'), 'Impossible de reinitialiser le pointage.');
+      Alert.alert(t('common.error'), 'Impossible de réinitialiser le pointage.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -374,8 +374,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       invalidatePersonalPlanning();
       refetch();
       Alert.alert(
-        t('eventDetails.featuredRequest.success.title', 'Demande envoyee'),
-        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise a la une a ete envoyee pour validation.'),
+        t('eventDetails.featuredRequest.success.title', 'Demande envoyée'),
+        t('eventDetails.featuredRequest.success.message', 'Ta demande de mise à la une a été envoyée pour validation.'),
       );
     },
   });

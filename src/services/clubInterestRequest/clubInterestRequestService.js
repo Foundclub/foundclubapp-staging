@@ -7,22 +7,22 @@ export const CLUB_INTEREST_RESPONSE_PRESETS = [
   {
     key: 'thanks',
     label: 'Merci, on revient vers toi',
-    message: 'Merci pour ton interet, on revient vers toi rapidement.',
+    message: 'Merci pour ton intérêt, on revient vers toi rapidement.',
   },
   {
     key: 'trial',
     label: 'Proposer un essai',
-    message: 'On peut te proposer un essai, envoie-nous tes disponibilites.',
+    message: 'On peut te proposer un essai, envoie-nous tes disponibilités.',
   },
   {
     key: 'profile',
-    label: 'Completer le profil',
-    message: 'Peux-tu completer ton profil et preciser ton poste/niveau ?',
+    label: 'Compléter le profil',
+    message: 'Peux-tu compléter ton profil et preciser ton poste/niveau ?',
   },
   {
     key: 'full',
-    label: 'Equipe complete',
-    message: "L'equipe est complete pour le moment, on garde ton profil pour la suite.",
+    label: 'Équipe complète',
+    message: "L'équipe est complété pour le moment, on garde ton profil pour la suite.",
   },
 ];
 

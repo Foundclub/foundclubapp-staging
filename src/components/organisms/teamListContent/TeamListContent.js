@@ -793,7 +793,7 @@ function TeamListContent({
           <Button
             onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.SquadSearch)}
             style={{ flex: 1 }}
-            title="RECHERCHER UNE SQUAD"
+            title="Rechercher une squad"
             variant="Secondary"
           />
         </View>
@@ -812,7 +812,7 @@ function TeamListContent({
       {invitedTeams.length > 0 ? (
         <View>
           <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16]]}>
-            Invitations recues
+            Invitations reçues
           </Text>
           {invitedTeams.map((team) => (
             <View key={`invited-${team.documentId}`}>
@@ -899,7 +899,7 @@ function TeamListContent({
           <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter, { lineHeight: 22 }]}>
             {t(
               'teamList.noClubEmptyDescription',
-              'Recherche un club, ouvre sa fiche, puis demande a rejoindre une equipe.',
+              'Recherche un club, ouvre sa fiche, puis demande à rejoindre une équipe.',
             )}
           </Text>
           <Button
@@ -916,7 +916,7 @@ function TeamListContent({
         <Button
           onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.SquadSearch)}
           style={{ minWidth: 220 }}
-          title="RECHERCHER UNE SQUAD"
+          title="Rechercher une squad"
           variant="Secondary"
         />
       ) : null}
@@ -957,7 +957,7 @@ function TeamListContent({
             style={getFloatingActionContainerStyle(floatingActionBottom, { zIndex: 1100 })}
           >
             <TouchableOpacity
-              accessibilityLabel="Creer une squad"
+              accessibilityLabel="Créer une squad"
               activeOpacity={0.85}
               onPress={() => /** @type {any} */ (navigation).navigate(
                 RouteNames.TeamStack,

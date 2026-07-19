@@ -82,10 +82,10 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
     }
 
     if (viewMode === 'week') {
-      return t('planning.mode.weekDescription', 'Vue detaillee de la semaine');
+      return t('planning.mode.weekDescription', 'Vue détaillée de la semaine');
     }
 
-    return t('planning.mode.threeDaysDescription', 'Vue condensee sur 3 jours');
+    return t('planning.mode.threeDaysDescription', 'Vue condensée sur 3 jours');
   }, [t, viewMode]);
 
   if (isLoading && !eventsData) {

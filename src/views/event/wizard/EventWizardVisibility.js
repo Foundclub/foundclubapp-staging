@@ -18,38 +18,38 @@ import {
 const VISIBILITY_OPTIONS = [
   {
     description:
-      "L'evenement peut etre decouvert publiquement selon les regles du club et de l'application.",
+      "L'événement peut être decouvert publiquement selon les règles du club et de l'application.",
     helper:
-      'Utile pour les portes ouvertes, initiations et evenements visibles a plus grande echelle.',
+      'Utile pour les portes ouvertes, initiations et événements visibles à plus grande échelle.',
     key: 'open',
-    title: 'Evenement public',
+    title: 'Événement public',
   },
   {
     description:
-      "L'evenement reste reserve au groupe concerne, aux membres invites et aux encadrants autorises.",
+      "L'événement reste réserve au groupe concerne, aux membres invites et aux encadrants autorises.",
     helper:
-      'Ideal pour les entrainements, convocations internes et evenements reserves a une equipe.',
+      'Ideal pour les entraînements, convocations internes et événements reserves a une équipe.',
     key: 'closed',
-    title: 'Evenement prive',
+    title: 'Événement prive',
   },
 ];
 
 const PARTICIPANT_IDENTITY_OPTIONS = [
   {
     description:
-      'Les participants apparaissent avec leur nom, leur prenom et leur photo selon les regles habituelles.',
+      'Les participants apparaissent avec leur nom, leur prénom et leur photo selon les règles habituelles.',
     helper:
       "Pratique quand les participants doivent pouvoir s'identifier facilement entre eux.",
     key: 'VISIBLE',
-    title: 'Identites visibles',
+    title: 'Identités visibles',
   },
   {
     description:
-      'Les autres utilisateurs verront uniquement le nombre de participants et des profils anonymises.',
+      'Les autres utilisateurs verront uniquement le nombre de participants et des profils anonymisés.',
     helper:
-      'Recommande si tu veux proteger les mineurs ou limiter la diffusion des identites.',
+      'Recommande si tu veux proteger les mineurs ou limiter la diffusion des identités.',
     key: 'ANONYMIZED',
-    title: 'Participants anonymises',
+    title: 'Participants anonymisés',
   },
 ];
 
@@ -179,19 +179,19 @@ function EventWizardVisibility({ navigation }) {
       stepIndex={getEventWizardVisibilityStepIndex(projectedState)}
       subtitle={t(
         'eventWizard.steps.visibility.subtitle',
-        "Choisis d'abord si l'evenement est public ou prive, puis regle la visibilite des participants.",
+        "Choisis d'abord si l'événement est public ou prive, puis règle la visibilité des participants.",
       )}
       title={t('eventWizard.steps.visibility.title')}
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[24]]}>
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h4, Fonts.neutral00]}>
-            {t('eventWizard.steps.visibility.eventAccessTitle', "Visibilite de l'evenement")}
+            {t('eventWizard.steps.visibility.eventAccessTitle', "Visibilité de l'événement")}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t(
               'eventWizard.steps.visibility.eventAccessSubtitle',
-              "Definis si l'evenement peut etre vu publiquement ou s'il reste reserve au groupe.",
+              "Définis si l'événement peut être vu publiquement ou s'il reste réserve au groupe.",
             )}
           </Text>
           {VISIBILITY_OPTIONS.map((option) => {
@@ -200,19 +200,19 @@ function EventWizardVisibility({ navigation }) {
               option,
               selected,
               () => setSessionStatus(option.key),
-              option.key === 'open' ? 'Selection actuelle : public' : 'Selection actuelle : prive',
+              option.key === 'open' ? 'Sélection actuelle : public' : 'Sélection actuelle : prive',
             );
           })}
         </View>
 
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h4, Fonts.neutral00]}>
-            {t('eventWizard.steps.visibility.participantPrivacyTitle', 'Visibilite des participants')}
+            {t('eventWizard.steps.visibility.participantPrivacyTitle', 'Visibilité des participants')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t(
               'eventWizard.steps.visibility.participantPrivacySubtitle',
-              'Choisissez si les noms, prenoms et photos des participants restent visibles.',
+              'Choisis si les noms, prénoms et photos des participants restent visibles.',
             )}
           </Text>
           {PARTICIPANT_IDENTITY_OPTIONS.map((option) => {
@@ -222,8 +222,8 @@ function EventWizardVisibility({ navigation }) {
               selected,
               () => setParticipantIdentityVisibility(option.key),
               option.key === 'VISIBLE'
-                ? 'Selection actuelle : identites visibles'
-                : 'Selection actuelle : participants anonymises',
+                ? 'Sélection actuelle : identités visibles'
+                : 'Sélection actuelle : participants anonymisés',
             );
           })}
         </View>

@@ -25,7 +25,7 @@ const DIALCODE_WIDTH = Platform.OS === 'web' ? 96 : 72;
 const repairCountryLabel = (label) => {
   const normalizedLabel = String(label || '');
 
-  if (!/[\u00C3\u00C2\u00E2\u00F0]/.test(normalizedLabel)) {
+  if (!/[ÃÂâð]/.test(normalizedLabel)) {
     return normalizedLabel;
   }
 

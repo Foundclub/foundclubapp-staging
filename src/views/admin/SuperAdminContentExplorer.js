@@ -126,7 +126,7 @@ function SuperAdminContentExplorer({ navigation }) {
           {t('superAdminContentManager.explorer.title', 'Explorer Content Manager')}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
-          {t('superAdminContentManager.explorer.subtitle', 'Parcourez tous les content-types API Strapi.')}
+          {t('superAdminContentManager.explorer.subtitle', 'Parcours tous les content-types API Strapi.')}
         </Text>
       </View>
 
@@ -225,7 +225,7 @@ function SuperAdminContentExplorer({ navigation }) {
           !isLoading ? (
             <View style={{ width: '100%' }}>
               <SuperAdminEmptyState
-                description={t('superAdminContentManager.empty.explorerDescription', 'Ajustez la recherche ou vérifiez les permissions Super Admin.')}
+                description={t('superAdminContentManager.empty.explorerDescription', 'Ajuste la recherche ou vérifie les permissions Super Admin.')}
                 title={t('superAdminContentManager.empty.explorerTitle', 'Aucun content-type trouvé')}
               />
             </View>

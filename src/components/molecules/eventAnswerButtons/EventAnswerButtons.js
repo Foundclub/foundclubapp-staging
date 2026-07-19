@@ -158,7 +158,7 @@ function EventAnswerButtons({
         return (
           <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
             <Tag
-              text={t('eventList.info.restrictedEvent', 'Acces reserve')}
+              text={t('eventList.info.restrictedEvent', 'Accès réserve')}
               textStyle={Fonts.p1Bold}
             />
             {onAbout ? (

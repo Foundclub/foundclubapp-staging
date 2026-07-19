@@ -129,19 +129,19 @@ const isSameCalendarDay = (left, right) => (
 const buildStepDefinitions = (durationMinutes, venueRequired) => ([
   {
     description: venueRequired
-      ? 'Proposez quand et ou jouer a votre adversaire. Vous choisirez la date, l heure et le lieu.'
-      : 'Proposez quand jouer a votre adversaire. Vous pourrez aussi ajouter un lieu si besoin.',
+      ? 'Propose quand et ou jouer à ton adversaire. Tu choisiras la date, l heure et le lieu.'
+      : 'Propose quand jouer à ton adversaire. Tu pourras aussi ajouter un lieu si besoin.',
     key: 'intro',
     title: 'Envoyer une proposition de match',
   },
   {
-    description: 'Une seule decision ici : choisis le jour a proposer.',
+    description: 'Une seule décision ici : choisis le jour à proposer.',
     key: 'date',
     title: 'Choisis la date',
   },
   {
     description: [
-      'Choisis l heure de debut.',
+      'Choisis l heure de début.',
       `La fin reste calculee automatiquement (${durationMinutes} min).`,
     ].join(' '),
     key: 'time',
@@ -150,14 +150,14 @@ const buildStepDefinitions = (durationMinutes, venueRequired) => ([
   {
     description: venueRequired
       ? 'Renseigne un seul lieu ou une seule adresse pour cette proposition.'
-      : 'Tu peux deja proposer un lieu, mais ce n est pas obligatoire pour ce format.',
+      : 'Tu peux déjà proposer un lieu, mais ce n est pas obligatoire pour ce format.',
     key: 'venue',
     title: venueRequired ? 'Choisis le lieu' : 'Ajoute un lieu si besoin',
   },
   {
-    description: 'Verifie les informations avant de les envoyer a ton adversaire.',
+    description: 'Vérifie les informations avant de les envoyer à ton adversaire.',
     key: 'recap',
-    title: 'Verifie la proposition',
+    title: 'Vérifie la proposition',
   },
 ]);
 
@@ -308,7 +308,7 @@ function VenueProposalModal({
     return () => clearTimeout(timer);
   }, [isVisible, scrollModalTo, stepIndex]);
 
-  const venueSummary = useMemo(() => venueInput?.trim() || 'A definir', [venueInput]);
+  const venueSummary = useMemo(() => venueInput?.trim() || 'A définir', [venueInput]);
   const dateSummary = useMemo(
     () => date.toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -383,7 +383,7 @@ function VenueProposalModal({
     if (isSubmitting) return;
     if (!isLegalConfirmationValid) {
       showBanner({
-        body: 'Confirmez le cadre League avant d envoyer la proposition.',
+        body: 'Confirme le cadre League avant d envoyer la proposition.',
         title: 'Confirmation requise',
         tone: 'error',
       });
@@ -399,7 +399,7 @@ function VenueProposalModal({
     const startIso = toParisIsoFromLocalSelection(finalStartDate);
     if (!startUtcDate || !startIso) {
       showBanner({
-        body: 'Impossible de convertir le creneau selectionne.',
+        body: 'Impossible de convertir le créneau sélectionne.',
         title: 'Erreur',
         tone: 'error',
       });
@@ -408,8 +408,8 @@ function VenueProposalModal({
 
     if (startUtcDate <= new Date()) {
       showBanner({
-        body: 'Ce creneau est deja passe. Choisis une date ou une heure future.',
-        title: 'Creneau passe',
+        body: 'Ce créneau est déjà passé. Choisis une date ou une heure future.',
+        title: 'Créneau passe',
         tone: 'error',
       });
       return;
@@ -508,7 +508,7 @@ function VenueProposalModal({
   const venueFieldLabel = venueRequired ? 'Lieu' : 'Lieu (optionnel)';
   const venueFieldHint = venueRequired
     ? 'Renseigne le nom du lieu ou son adresse en un seul champ.'
-    : 'Tu peux deja proposer un lieu, mais ce n est pas obligatoire pour ce format.';
+    : 'Tu peux déjà proposer un lieu, mais ce n est pas obligatoire pour ce format.';
   let isPrimaryDisabled = false;
   if (currentStep?.key === 'recap') {
     isPrimaryDisabled = isSendDisabled || !isLegalConfirmationValid || isSubmitting;
@@ -542,7 +542,7 @@ function VenueProposalModal({
               En bref
             </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral100, lineHeight: 24 }]}>
-              Proposez quand et ou jouer a votre adversaire en quelques etapes simples.
+              Propose quand et ou jouer à ton adversaire en quelques étapes simples.
             </Text>
 
             <View style={{
@@ -583,10 +583,10 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.gold500, marginBottom: 6 }]}>
-              Reponse adverse
+              Réponse adverse
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 22 }]}>
-              Votre adversaire pourra accepter, refuser ou contre-proposer.
+              Ton adversaire pourra accepter, refuser ou contre-proposer.
             </Text>
           </View>
         </View>
@@ -607,10 +607,10 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary500, marginBottom: 4 }]}>
-              Creneau commun deja trouve
+              Créneau commun déjà trouve
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-              On commence juste par choisir le jour a proposer.
+              On commence juste par choisir le jour à proposer.
             </Text>
           </View>
 
@@ -722,7 +722,7 @@ function VenueProposalModal({
                 </Text>
               </View>
               <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
-                {`Duree fixe : ${durationMinutes} min`}
+                {`Durée fixe : ${durationMinutes} min`}
               </Text>
             </View>
           </View>
@@ -744,7 +744,7 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 4 }]}>
-              Creneau retenu
+              Créneau retenu
             </Text>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
               {dateSummary}
@@ -824,7 +824,7 @@ function VenueProposalModal({
                 Confirmation avant envoi
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 22 }]}>
-                Confirmez ces 4 points pour envoyer la proposition a votre adversaire.
+                Confirme ces 4 points pour envoyer la proposition à ton adversaire.
               </Text>
             </View>
 
@@ -838,13 +838,13 @@ function VenueProposalModal({
               {
                 checked: acceptedRisk,
                 key: 'risk',
-                label: 'J accepte les risques normaux lies a la pratique sportive et je verifie mon aptitude a jouer.',
+                label: 'J accepte les risques normaux liés à la pratique sportive et je vérifie mon aptitude à jouer.',
                 toggle: () => setAcceptedRisk((previous) => !previous),
               },
               {
                 checked: acceptedRules,
                 key: 'rules',
-                label: 'Je respecte les regles du lieu, les consignes de securite et la couverture d assurance applicable.',
+                label: 'Je respecte les règles du lieu, les consignes de sécurité et la couverture d assurance applicable.',
                 toggle: () => setAcceptedRules((previous) => !previous),
               },
               ...(needsAdultConfirmation ? [{
@@ -857,8 +857,8 @@ function VenueProposalModal({
                 checked: acceptedExtra,
                 key: 'extra',
                 label: needsVenueResponsibility
-                  ? 'Je confirme que le lieu, les horaires et les conditions du terrain ont ete verifies.'
-                  : 'Je confirme agir comme membre referent de mon equipe pour cette proposition de match.',
+                  ? 'Je confirme que le lieu, les horaires et les conditions du terrain ont été verifies.'
+                  : 'Je confirme agir comme membre référent de mon équipe pour cette proposition de match.',
                 toggle: () => setAcceptedExtra((previous) => !previous),
               }] : []),
             ].map((item) => (
@@ -915,10 +915,10 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.error700, marginBottom: 4 }]}>
-              Creneau a corriger
+              Créneau à corriger
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-              Cette proposition tombe dans le passe. Reviens en arriere pour
+              Cette proposition tombe dans le passé. Reviens en arrière pour
               choisir une date ou une heure future.
             </Text>
           </View>

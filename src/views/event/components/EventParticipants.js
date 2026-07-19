@@ -169,7 +169,7 @@ const resolveAttendanceBadge = ({
       backgroundColor: `${colors.neutral300}12`,
       borderColor: `${colors.neutral300}24`,
       textColor: colors.neutral200,
-      title: 'Sans reponse',
+      title: 'Sans réponse',
       value: null,
     };
   }
@@ -340,7 +340,7 @@ function EventParticipants({
   const getSectionBadgeMeta = (section) => {
     if (section.isExternal) {
       return {
-        text: t('eventDetails.invitedTeams.externalBadge', 'Ouvert a tous'),
+        text: t('eventDetails.invitedTeams.externalBadge', 'Ouvert à tous'),
         textStyle: [Fonts.p4, Fonts.primary100],
       };
     }
@@ -351,7 +351,7 @@ function EventParticipants({
       };
     }
     return {
-      text: t('eventDetails.invitedTeams.invitedTeamBadge', 'Équipe invitee'),
+      text: t('eventDetails.invitedTeams.invitedTeamBadge', 'Équipe invitée'),
       textStyle: [Fonts.p4, Fonts.primary100],
     };
   };
@@ -524,7 +524,7 @@ function EventParticipants({
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {t(
               'eventDetails.participantsHiddenMessage',
-              'Les identites des participants sont masquees par l organisateur.',
+              'Les identités des participants sont masquees par l organisateur.',
             )}
           </Text>
         </View>
@@ -668,7 +668,7 @@ function ParticipantItem({
     statusKind,
   });
   const hasStaffMeta = canEdit && (attendance?.note || attendance?.manualOverride || attendance?.updatedBy);
-  const primaryCoachActionTitle = attendance?.arrivedAt ? 'Corriger' : 'Pointer l\'arrivee';
+  const primaryCoachActionTitle = attendance?.arrivedAt ? 'Corriger' : 'Pointer l\'arrivée';
 
   return (
     <View

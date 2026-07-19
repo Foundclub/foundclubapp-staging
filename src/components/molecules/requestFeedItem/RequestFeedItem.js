@@ -180,7 +180,7 @@ function RequestFeedItem({
           </Text>
           {isInterestRequest && interestTeamName ? (
             <Text numberOfLines={1} style={[Fonts.p3, Fonts.primary200, { marginTop: 4 }]}>
-              {t('requestsHub.interest.targetTeam', 'Equipe visee')}
+              {t('requestsHub.interest.targetTeam', 'Équipe visee')}
               :
               {' '}
               {interestTeamName}
@@ -261,7 +261,7 @@ function RequestFeedItem({
           <Text style={[Fonts.p3, Fonts.neutral100]}>
             {t(
               'requestsHub.installation.summary',
-              "Une equipe supplementaire demande ce creneau sur l'installation.",
+              "Une équipe supplémentaire demande ce créneau sur l'installation.",
             )}
           </Text>
         </View>
@@ -380,7 +380,7 @@ function RequestFeedItem({
             disabled={isBusy}
             onPress={() => onEventPress && onEventPress(item)}
             size="small"
-            title={t('requestsHub.actions.viewEvent', "Voir l'evenement")}
+            title={t('requestsHub.actions.viewEvent', "Voir l'événement")}
             variant="Secondary"
           />
         </View>

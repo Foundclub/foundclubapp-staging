@@ -409,16 +409,12 @@ function PlanningWeekTimelineView({
     return `${start} - ${end}`;
   }, [weekDays]);
 
+  // Periode vide : le resume n'est pas rendu (voir summarySection), l'etat vide
+  // porte seul le message. Ce libelle ne concerne donc que les periodes remplies.
   const summaryText = useMemo(() => {
-    if (weekEvents.length === 0) {
-      return mode === 'week'
-        ? 'Aucun événement sur cette semaine'
-        : 'Aucun événement sur ces 3 jours';
-    }
-
     const label = weekEvents.length > 1 ? 'événements' : 'événement';
     return `${weekEvents.length} ${label} sur ${weekDays.length} jours`;
-  }, [mode, weekDays.length, weekEvents.length]);
+  }, [weekDays.length, weekEvents.length]);
 
   const nowLine = useMemo(() => {
     if (!timedEvents.length) return null;
@@ -641,11 +637,15 @@ function PlanningWeekTimelineView({
     ? 'Aucun événement sur cette période'
     : 'Aucun événement avec horaire';
   const emptyDescription = weekEvents.length === 0
-    ? "Changez de période pour voir d'autres créneaux."
+    ? "Change de période pour voir d'autres créneaux."
     : 'Les événements de cette période sont uniquement dans la section « Sans horaire ».';
 
   const summarySection = (() => {
     if (compactFullscreen) return null;
+
+    // Periode vide : l'etat vide plus bas dit deja « Aucun evenement sur cette
+    // periode » et donne la marche a suivre. On ne double pas le message.
+    if (weekEvents.length === 0) return null;
 
     if (onSummaryPress) {
       return (

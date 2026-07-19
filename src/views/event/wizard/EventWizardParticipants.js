@@ -133,30 +133,30 @@ function EventWizardParticipants({ navigation }) {
     capacityLabel = isOpenTraining
       ? t(
         'eventWizard.steps.participants.trainingOpenCapacity',
-        'Illimite en interne + quota externe',
+        'Illimité en interne + quota externe',
       )
       : t(
         'eventWizard.steps.participants.trainingPrivateCapacity',
-        'Illimite (entrainement prive)',
+        'Illimité (entraînement prive)',
       );
   }
 
   let previewModeLabel = capacityMode === 'fixed'
-    ? t('eventWizard.steps.participants.fixed', 'Capacite fixe')
+    ? t('eventWizard.steps.participants.fixed', 'Capacité fixe')
     : t('eventWizard.steps.participants.unlimited', 'Illimite');
   if (isTraining) {
     previewModeLabel = isOpenTraining
-      ? t('eventWizard.steps.participants.trainingModeOpen', 'Entrainement ouvert')
-      : t('eventWizard.steps.participants.trainingModePrivate', 'Entrainement prive');
+      ? t('eventWizard.steps.participants.trainingModeOpen', 'Entraînement ouvert')
+      : t('eventWizard.steps.participants.trainingModePrivate', 'Entraînement prive');
   }
   let participantsSubtitleKey = 'eventWizard.steps.participants.subtitle';
-  let participantsSubtitleFallback = 'Choisis une capacite max, ou laisse l evenement en acces illimite.';
+  let participantsSubtitleFallback = 'Choisis une capacité max, ou laisse l événement en accès illimité.';
   if (isTraining && isOpenTraining) {
     participantsSubtitleKey = 'eventWizard.steps.participants.trainingOpenSubtitle';
-    participantsSubtitleFallback = 'Definis uniquement combien de joueurs externes a l equipe tu veux accepter.';
+    participantsSubtitleFallback = 'Définis uniquement combien de joueurs externes a l équipe tu veux accepter.';
   } else if (isTraining) {
     participantsSubtitleKey = 'eventWizard.steps.participants.trainingSubtitle';
-    participantsSubtitleFallback = 'Definis tes joueurs attendus pour cet entrainement.';
+    participantsSubtitleFallback = 'Définis tes joueurs attendus pour cet entraînement.';
   }
 
   const surfaceStyle = {
@@ -195,7 +195,7 @@ function EventWizardParticipants({ navigation }) {
         t('common.error', 'Erreur'),
         t(
           'eventWizard.steps.participants.totalPlayersExceedsCapacity',
-          'Le nombre de joueurs attendus ne peut pas depasser la capacite max.',
+          'Le nombre de joueurs attendus ne peut pas dépasser la capacité max.',
         ),
       );
       return;
@@ -250,7 +250,7 @@ function EventWizardParticipants({ navigation }) {
           <>
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t('eventWizard.steps.participants.modeLabel', 'Mode de capacite')}
+                {t('eventWizard.steps.participants.modeLabel', 'Mode de capacité')}
               </Text>
               <View style={capacityModeControlWrapperStyle}>
                 <SegmentedControl
@@ -262,7 +262,7 @@ function EventWizardParticipants({ navigation }) {
                       value: 'unlimited',
                     },
                     {
-                      label: t('eventWizard.steps.participants.fixed', 'Capacite fixe'),
+                      label: t('eventWizard.steps.participants.fixed', 'Capacité fixe'),
                       value: 'fixed',
                     },
                   ]}
@@ -273,11 +273,11 @@ function EventWizardParticipants({ navigation }) {
                 {capacityMode === 'unlimited'
                   ? t(
                     'eventWizard.steps.participants.modeHintUnlimited',
-                    'Mode illimite: aucun plafond de participants.',
+                    'Mode illimité: aucun plafond de participants.',
                   )
                   : t(
                     'eventWizard.steps.participants.modeHintFixed',
-                    'Mode capacite fixe: nombre de places limite.',
+                    'Mode capacité fixe: nombre de places limite.',
                   )}
               </Text>
             </View>
@@ -427,7 +427,7 @@ function EventWizardParticipants({ navigation }) {
             {t('eventWizard.steps.participants.summaryTitle', 'Resume')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {t('eventWizard.steps.participants.previewCapacity', 'Capacite: {{value}}', { value: capacityLabel })}
+            {t('eventWizard.steps.participants.previewCapacity', 'Capacité: {{value}}', { value: capacityLabel })}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t(
@@ -458,7 +458,7 @@ function EventWizardParticipants({ navigation }) {
             <Text style={[Fonts.p3, Fonts.error700, Spaces.marginTop[8]]}>
               {t(
                 'eventWizard.steps.participants.totalPlayersExceedsCapacity',
-                'Le nombre de joueurs attendus ne peut pas depasser la capacite max.',
+                'Le nombre de joueurs attendus ne peut pas dépasser la capacité max.',
               )}
             </Text>
           ) : null}
@@ -467,7 +467,7 @@ function EventWizardParticipants({ navigation }) {
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {t(
             'eventWizard.steps.participants.hint',
-            'Tu pourras encore modifier ces valeurs avant la creation finale.',
+            'Tu pourras encore modifier ces valeurs avant la création finale.',
           )}
         </Text>
 
@@ -476,13 +476,13 @@ function EventWizardParticipants({ navigation }) {
             <Text style={[Fonts.p3Bold, Fonts.gold500]}>
               {t(
                 'eventWizard.steps.detectionSlots.recurrenceHintTitle',
-                'Postes par detection indisponibles',
+                'Postes par détection indisponibles',
               )}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
               {t(
                 'eventWizard.steps.detectionSlots.recurrenceHintBody',
-                'Les postes recherches sont disponibles uniquement sur une detection simple, non recurrente.',
+                'Les postes recherches sont disponibles uniquement sur une détection simple, non recurrente.',
               )}
             </Text>
           </View>

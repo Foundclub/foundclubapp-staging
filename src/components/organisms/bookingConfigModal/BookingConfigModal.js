@@ -139,18 +139,18 @@ function BookingConfigModal({
       const bookingData = bookingResponse?.data || bookingResponse;
       if (bookingData?.pendingReason === 'facility_overbooking') {
         Alert.alert(
-          t('bookingModal.overflowRequestCreatedTitle', 'Demande d\'exception envoyee'),
+          t('bookingModal.overflowRequestCreatedTitle', 'Demande d\'exception envoyée'),
           t(
             'bookingModal.overflowRequestCreatedMessage',
-            'Le creneau est deja complet. Votre reservation a ete envoyee aux dirigeants pour arbitrage.',
+            'Le créneau est déjà complet. Ta réservation a été envoyée aux dirigeants pour arbitrage.',
           ),
         );
       } else if (selectedSlot?.allowsImmediateConfirmation && Number(selectedSlot?.remaining || 0) <= 0) {
         Alert.alert(
-          t('bookingModal.overflowAutoApprovedTitle', 'Reservation confirmee'),
+          t('bookingModal.overflowAutoApprovedTitle', 'Réservation confirmée'),
           t(
             'bookingModal.overflowAutoApprovedMessage',
-            'Le creneau depasse la capacite habituelle, mais cette installation est configuree en "Autorise et notifier". Les dirigeants ont ete prevenus.',
+            'Le créneau dépasse la capacité habituelle, mais cette installation est configuree en "Autorise et notifier". Les dirigeants ont été prevenus.',
           ),
         );
       }
@@ -342,7 +342,7 @@ function BookingConfigModal({
                   </View>
 
                   <View style={styles.stepperRow}>
-                    <Text style={[Fonts.p2, Fonts.neutral00]}>Vous êtes combien ?</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral00]}>Tu es combien ?</Text>
                     <View style={styles.stepper}>
                       <Pressable onPress={decrementPlayers} style={styles.stepperBtn}>
                         <Text style={styles.stepperBtnText}>-</Text>

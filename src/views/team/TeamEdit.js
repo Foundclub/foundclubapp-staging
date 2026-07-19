@@ -177,7 +177,7 @@ function TeamEdit({ navigation, route }) {
       const errorMessage = mutationError?.response?.data?.error?.message
         || mutationError?.response?.data?.error
         || mutationError?.message
-        || t('teamEdit.actions.saveError', 'Impossible d enregistrer l equipe.');
+        || t('teamEdit.actions.saveError', 'Impossible d enregistrer l équipe.');
 
       Alert.alert(t('common.error', 'Erreur'), errorMessage);
     },
@@ -318,7 +318,7 @@ function TeamEdit({ navigation, route }) {
       const userAlreadyInList = members.some((m) => m.value === userData.documentId);
       if (!userAlreadyInList) {
         members.unshift({
-          label: `${userData.firstname} ${userData.lastname} (Vous)`,
+          label: `${userData.firstname} ${userData.lastname} (Toi)`,
           value: userData.documentId || '',
         });
       }
@@ -466,7 +466,7 @@ function TeamEdit({ navigation, route }) {
       t(
         'teamEdit.actions.deleteConfirmWithName',
         {
-          defaultValue: `Voulez-vous vraiment supprimer l'équipe "${teamDisplayName}" ? Cette action est irréversible.`,
+          defaultValue: `Veux-tu vraiment supprimer l'équipe "${teamDisplayName}" ? Cette action est irréversible.`,
           teamName: teamDisplayName,
         },
       ),
@@ -534,34 +534,34 @@ function TeamEdit({ navigation, route }) {
           {isBootstrapLoading ? (
             <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
               <Loader color={Colors.primary500} size="large" />
-              <Text>Chargement des informations de cette equipe...</Text>
+              <Text>Chargement des informations de cette équipe...</Text>
             </View>
           ) : null}
 
           {isMissingTeamId ? (
             <View style={Spaces.gap[12]}>
-              <Text>Identifiant d equipe manquant. Ouvre la fiche equipe pour continuer.</Text>
-              <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux equipes" variant="Secondary" />
+              <Text>Identifiant d équipe manquant. Ouvre la fiche équipe pour continuer.</Text>
+              <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux équipes" variant="Secondary" />
             </View>
           ) : null}
 
           {isTeamNotFound ? (
             <View style={Spaces.gap[12]}>
-              <Text>Equipe introuvable. Verifie le lien ou retourne a la liste des equipes.</Text>
-              <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux equipes" variant="Secondary" />
+              <Text>Équipe introuvable. Vérifie le lien ou retourne à la liste des équipes.</Text>
+              <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux équipes" variant="Secondary" />
             </View>
           ) : null}
 
           {isClubNotFound ? (
             <View style={Spaces.gap[12]}>
-              <Text>Club introuvable pour cette equipe. Reessaye ou reviens a la fiche equipe.</Text>
+              <Text>Club introuvable pour cette équipe. Reessaye ou reviens à la fiche équipe.</Text>
               <Button onPress={handleRetryBootstrap} title="Réessayer" variant="Secondary" />
             </View>
           ) : null}
 
           {bootstrapError && !isBootstrapLoading ? (
             <View style={Spaces.gap[12]}>
-              <Text>{bootstrapError?.message || 'Impossible de charger les informations de l equipe.'}</Text>
+              <Text>{bootstrapError?.message || 'Impossible de charger les informations de l équipe.'}</Text>
               <Button onPress={handleRetryBootstrap} title="Réessayer" variant="Secondary" />
             </View>
           ) : null}
@@ -805,7 +805,7 @@ function TeamEdit({ navigation, route }) {
                   )
                   : t(
                     'teamEdit.membershipRequests.description',
-                    'Choisissez si les entraîneurs de cette équipe peuvent gérer les demandes, ou si le dirigeant garde la main.',
+                    'Choisis si les entraîneurs de cette équipe peuvent gérer les demandes, ou si le dirigeant garde la main.',
                   )}
               </Text>
 
