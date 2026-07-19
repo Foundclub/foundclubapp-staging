@@ -94,11 +94,13 @@ function SearchMapPreviewCard({
         ]}
       >
         <TouchableOpacity
+          accessibilityLabel={[item?.title, item?.subtitle].filter(Boolean).join(', ')}
+          accessibilityRole="button"
           activeOpacity={0.9}
           onPress={() => onOpen(item)}
-          style={[Spaces.paddingHorizontal[12], Spaces.paddingBottom[10], Spaces.paddingTop[12], Spaces.gap[10]]}
+          style={[Spaces.paddingHorizontal[12], Spaces.paddingBottom[8], Spaces.paddingTop[12], Spaces.gap[8]]}
         >
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[10]]}>
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
             {item.imageUrl ? (
               <Image
                 source={{ uri: item.imageUrl }}
@@ -188,13 +190,15 @@ function SearchMapPreviewCard({
         <View
           style={[
             Alignments.row,
-            Spaces.gap[10],
+            Spaces.gap[8],
             Spaces.paddingHorizontal[12],
             Spaces.paddingBottom[12],
             { paddingTop: 0 },
           ]}
         >
           <TouchableOpacity
+            accessibilityLabel={secondaryActionLabel}
+            accessibilityRole="button"
             activeOpacity={0.85}
             onPress={handleSecondaryAction}
             style={[
@@ -216,6 +220,8 @@ function SearchMapPreviewCard({
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityLabel={`Ouvrir ${item?.title || 'la fiche'}`}
+            accessibilityRole="button"
             activeOpacity={0.85}
             onPress={() => onOpen(item)}
             style={[

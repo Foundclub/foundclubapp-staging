@@ -172,7 +172,7 @@ function RequestsDashboard({ navigation, route }) {
               isLoading={cancelMutation.isPending}
               onPress={() => handleReject(item)}
               style={{ borderColor: Colors.error500 }}
-              textStyle={{ color: Colors.error500 }}
+              textStyle={{ color: Colors.error300 }}
               title={t('common.reject', 'Refuser')}
               variant="Secondary"
             />
@@ -235,7 +235,7 @@ function RequestsDashboard({ navigation, route }) {
               },
             ]}
           >
-            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+            <Text style={[Fonts.p3Bold, Fonts.primary300]}>
               {t('requestsHub.migratedBannerTitle', 'Ce flux est migre vers Demandes.')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral100]}>

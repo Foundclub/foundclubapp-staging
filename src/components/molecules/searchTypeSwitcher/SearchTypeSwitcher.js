@@ -72,7 +72,9 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
           const isActive = option.key === activeType;
           return (
             <TouchableOpacity
+              accessibilityLabel={option.label}
               accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
               key={option.key}
               onPress={() => onTypeChange(/** @type {SearchType} */ (option.key))}
               style={{
@@ -91,7 +93,7 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
                 numberOfLines={1}
                 style={[
                   Fonts.p4Bold,
-                  isActive ? Fonts.neutral900 : Fonts.neutral100,
+                  isActive ? Fonts.primary900 : Fonts.neutral100,
                   {
                     includeFontPadding: !isWeb ? false : undefined,
                     lineHeight: isWeb ? 17 : 16,

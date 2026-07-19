@@ -155,7 +155,7 @@ function SearchMapHud({
         onLayout={(event) => {
           onControlsWidthChange?.(event?.nativeEvent?.layout?.width || 0);
         }}
-        style={[Alignments.column, Spaces.gap[10], { opacity: overlayOpacity }]}
+        style={[Alignments.column, Spaces.gap[8], { opacity: overlayOpacity }]}
       >
         <View style={zoomGroupStyle}>
           <TouchableOpacity

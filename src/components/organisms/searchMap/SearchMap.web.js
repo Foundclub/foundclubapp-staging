@@ -110,6 +110,7 @@ function SearchMap({
   const { renderMap } = mapsPlatform;
   const {
     Alignments,
+    Fonts,
     Spaces,
   } = useTheme();
   const [internalSelectedItemId, setInternalSelectedItemId] = useState('');
@@ -386,7 +387,7 @@ function SearchMap({
             right: 18,
           }}
         >
-          <Text style={{ color: '#ffffff', fontWeight: '700', textAlign: 'center' }}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center' }]}>
             Touchez un repere pour voir la fiche
           </Text>
         </View>

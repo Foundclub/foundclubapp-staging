@@ -313,7 +313,7 @@ function ClubMembershipRequestList({ navigation, route }) {
               Alignments.fill,
               Alignments.justifyStart,
               Alignments.alignStart,
-              Spaces.gap[6],
+              Spaces.gap[4],
             ]}
             >
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
@@ -406,7 +406,7 @@ function ClubMembershipRequestList({ navigation, route }) {
                 isOption
                 onPress={() => handleRejectRequest(item.documentId)}
                 style={[Alignments.fill, { borderColor: Colors.error500, minHeight: 42 }]}
-                textStyle={[Fonts.error500]}
+                textStyle={[Fonts.error300]}
                 title={t('clubMembershipRequestList.actions.reject')}
                 variant="Secondary"
               />
@@ -549,7 +549,7 @@ function ClubMembershipRequestList({ navigation, route }) {
               },
             ]}
           >
-            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+            <Text style={[Fonts.p3Bold, Fonts.primary300]}>
               {t('requestsHub.migratedBannerTitle', 'Ce flux est migre vers Demandes.')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral100]}>

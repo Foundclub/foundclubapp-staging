@@ -247,7 +247,7 @@ function AssignCoachTeams({ navigation, route }) {
                 ApplicationStyle.backgroundColor.gold900,
                 ApplicationStyle.borderRadius12,
                 ApplicationStyle.borderWidth1,
-                Spaces.paddingHorizontal[10],
+                Spaces.paddingHorizontal[8],
                 Spaces.paddingVertical[4],
                 { borderColor: `${Colors.gold500}66` },
               ]}

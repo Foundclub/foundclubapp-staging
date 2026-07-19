@@ -1,3 +1,5 @@
+import { colors as themeColors } from '@/theme/colors';
+
 /**
  * @param {any} club
  * @returns {boolean}
@@ -26,7 +28,7 @@ export const getClubCertificationLabel = (club) => (
 
 /**
  * @param {any} club
- * @param {Record<string, string>} [Colors={}]
+ * @param {Record<string, string>} [Colors] - Theme colors, defaults to the static token map.
  * @returns {{
  *   backgroundColor: string;
  *   borderColor: string;
@@ -35,16 +37,18 @@ export const getClubCertificationLabel = (club) => (
  */
 export const getClubCertificationPalette = (club, Colors = {}) => {
   if (isVerifiedClub(club)) {
+    const verifiedInk = Colors.success500 || themeColors.success500;
     return {
-      backgroundColor: `${Colors.success500 || '#22c55e'}18`,
-      borderColor: `${Colors.success500 || '#22c55e'}44`,
-      textColor: Colors.success500 || '#22c55e',
+      backgroundColor: `${verifiedInk}18`,
+      borderColor: `${verifiedInk}44`,
+      textColor: verifiedInk,
     };
   }
 
+  const neutralSurface = Colors.neutral300 || themeColors.neutral300;
   return {
-    backgroundColor: `${Colors.neutral300 || '#a3a3a3'}18`,
-    borderColor: `${Colors.neutral300 || '#a3a3a3'}44`,
-    textColor: Colors.neutral100 || Colors.neutral300 || '#d4d4d4',
+    backgroundColor: `${neutralSurface}18`,
+    borderColor: `${neutralSurface}44`,
+    textColor: Colors.neutral100 || themeColors.neutral100,
   };
 };

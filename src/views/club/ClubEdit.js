@@ -182,10 +182,10 @@ function ClubEdit({ navigation, route }) {
     return (
       <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}>
         <View style={[Spaces.gap[12]]}>
-          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {isMissingClubId ? 'Club introuvable' : 'Ce club est introuvable'}
           </Text>
-          <Text style={{ color: '#c9d3dd', fontSize: 15 }}>
+          <Text style={[Fonts.p1, Fonts.neutral200]}>
             {isMissingClubId
               ? 'Aucun identifiant de club n a ete fourni.'
               : 'Le lien est peut-etre obsolete ou le club a ete supprime.'}
@@ -204,7 +204,7 @@ function ClubEdit({ navigation, route }) {
       <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}>
         <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
           <Loader />
-          <Text style={{ color: '#c9d3dd', fontSize: 15 }}>
+          <Text style={[Fonts.p1, Fonts.neutral200]}>
             Chargement du club...
           </Text>
         </View>
@@ -216,10 +216,10 @@ function ClubEdit({ navigation, route }) {
     return (
       <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}>
         <View style={[Spaces.gap[12]]}>
-          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             Impossible de charger le club
           </Text>
-          <Text style={{ color: '#c9d3dd', fontSize: 15 }}>
+          <Text style={[Fonts.p1, Fonts.neutral200]}>
             {error?.message || 'Reessayez dans quelques instants.'}
           </Text>
           <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
@@ -472,7 +472,7 @@ function ClubEdit({ navigation, route }) {
                             onPress={() => onChange(option.value)}
                             style={[
                               Spaces.padding[16],
-                              Spaces.gap[10],
+                              Spaces.gap[8],
                               {
                                 backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255, 255, 255, 0.03)',
                                 borderColor: isSelected ? Colors.primary500 : 'rgba(255, 255, 255, 0.12)',

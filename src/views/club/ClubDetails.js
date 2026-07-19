@@ -1864,7 +1864,14 @@ function ClubDetails({ navigation, route }) {
               {club?.phoneNumber ? (
                 <View style={[Alignments.row, Spaces.gap[4]]}>
                   <Image source={Images.phone} style={[ApplicationStyle.icon20]} />
-                  <TouchableOpacity onPress={() => { Linking.openURL(`tel:${club?.phoneNumber}`); }}>
+                  <TouchableOpacity
+                    accessibilityLabel={t('clubDetails.a11y.callClub', {
+                      defaultValue: 'Appeler le club au {{phoneNumber}}',
+                      phoneNumber: club?.phoneNumber,
+                    })}
+                    accessibilityRole="link"
+                    onPress={() => { Linking.openURL(`tel:${club?.phoneNumber}`); }}
+                  >
                     <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
                       {club?.phoneNumber}
                     </Text>
@@ -1876,7 +1883,14 @@ function ClubDetails({ navigation, route }) {
                   Alignments.row, Spaces.gap[4]]}
                 >
                   <Image source={Images.envelope} style={[ApplicationStyle.icon20]} />
-                  <TouchableOpacity onPress={() => { Linking.openURL(`mailto:${club?.email}`); }}>
+                  <TouchableOpacity
+                    accessibilityLabel={t('clubDetails.a11y.emailClub', {
+                      defaultValue: 'Envoyer un e-mail a {{email}}',
+                      email: club?.email,
+                    })}
+                    accessibilityRole="link"
+                    onPress={() => { Linking.openURL(`mailto:${club?.email}`); }}
+                  >
                     <Text
                       numberOfLines={1}
                       style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}
@@ -2075,7 +2089,7 @@ function ClubDetails({ navigation, route }) {
                                     },
                                   ]}
                                 >
-                                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                                  <Text style={[Fonts.p3Bold, Fonts.primary300]}>
                                     {t('facilityList.badges.shared', 'Partagee')}
                                   </Text>
                                 </View>
@@ -2215,6 +2229,17 @@ function ClubDetails({ navigation, route }) {
                         {
                           canEdit ? (
                             <TouchableOpacity
+                              accessibilityLabel={t(
+                                'clubDetails.a11y.deleteSponsor',
+                                {
+                                  defaultValue: 'Supprimer le sponsor {{sponsorName}}',
+                                  sponsorName: sponsor.title,
+                                },
+                              )}
+                              accessibilityRole="button"
+                              hitSlop={{
+                                bottom: 8, left: 8, right: 8, top: 8,
+                              }}
                               onPress={() => handleDeleteSponsor(sponsor)}
                               style={[
                                 Alignments.absolute,
@@ -2293,9 +2318,9 @@ function ClubDetails({ navigation, route }) {
                               <View
                                 style={[
                                   ApplicationStyle.borderRadius24,
-                                  Spaces.paddingVertical[2],
-                                  Spaces.paddingHorizontal[10],
-                                  Spaces.marginTop[6],
+                                  Spaces.paddingVertical[4],
+                                  Spaces.paddingHorizontal[8],
+                                  Spaces.marginTop[4],
                                   {
                                     alignSelf: 'flex-start',
                                     backgroundColor: getClubCertificationPalette(team?.club || club, Colors).backgroundColor,
@@ -2557,7 +2582,7 @@ function ClubDetails({ navigation, route }) {
               Spaces.marginBottom[24],
               { backgroundColor: `${Colors.error500}12`, borderColor: Colors.error500 },
             ]}
-            textStyle={{ color: Colors.error500 }}
+            textStyle={{ color: Colors.error300 }}
             title={t('clubDetails.actions.leave', 'Quitter le club')}
             variant="Secondary"
           />
@@ -2593,7 +2618,7 @@ function ClubDetails({ navigation, route }) {
 
           <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
             {activitiesLoading ? (
-              <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
+              <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral300]}>
                 {t('common.messages.loading', 'Chargement...')}
               </Text>
             ) : null}
@@ -2617,7 +2642,7 @@ function ClubDetails({ navigation, route }) {
             })}
 
             {!activitiesLoading && addableActivities.length === 0 ? (
-              <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
+              <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral300]}>
                 {t('common.messages.noData', 'Aucune donnée disponible')}
               </Text>
             ) : null}
@@ -2771,9 +2796,9 @@ function ClubDetails({ navigation, route }) {
                       <View
                         style={[
                           ApplicationStyle.borderRadius24,
-                          Spaces.paddingVertical[2],
-                          Spaces.paddingHorizontal[10],
-                          Spaces.marginTop[6],
+                          Spaces.paddingVertical[4],
+                          Spaces.paddingHorizontal[8],
+                          Spaces.marginTop[4],
                           {
                             alignSelf: 'flex-start',
                             backgroundColor: getClubCertificationPalette(teamItem?.club || club, Colors).backgroundColor,
@@ -2862,7 +2887,7 @@ function ClubDetails({ navigation, route }) {
                       <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
                         {getTeamMetaSummary(teamItem) || teamItem?.club?.name || t('common.messages.noData', 'Aucune donnée disponible')}
                       </Text>
-                      <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary200, Spaces.marginTop[6]]}>
+                      <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary200, Spaces.marginTop[4]]}>
                         {t(
                           'clubDetails.clubInterest.cardHint',
                           'Le staff pourra répondre avec un message ou ouvrir une conversation.',

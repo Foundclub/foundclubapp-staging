@@ -535,7 +535,7 @@ function LegacySearchMapNative({
                     },
                   ]}
                 >
-                  <Text style={styles.clusterLabel}>
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary900 }]}>
                     {entry.count}
                   </Text>
                 </View>
@@ -561,7 +561,7 @@ function LegacySearchMapNative({
                   styles.markerOuter,
                   {
                     backgroundColor: isSelected ? markerColor : `${markerColor}CC`,
-                    borderColor: isSelected ? '#FFFFFF' : 'rgba(255,255,255,0.72)',
+                    borderColor: isSelected ? Colors.neutral00 : 'rgba(255,255,255,0.72)',
                     transform: [{ scale: isSelected ? 1.08 : 1 }],
                   },
                 ]}
@@ -569,7 +569,11 @@ function LegacySearchMapNative({
                 <View
                   style={[
                     styles.markerInner,
-                    { backgroundColor: isSelected ? '#FFFFFF' : `${Colors.primary900}F4` },
+                    {
+                      backgroundColor: isSelected
+                        ? Colors.neutral00
+                        : `${Colors.primary900}F4`,
+                    },
                   ]}
                 />
               </View>
@@ -703,6 +707,8 @@ function LegacySearchMapNative({
             </Text>
             <View style={[Alignments.row, Alignments.justifyCenter, { gap: 12, width: '100%' }]}>
               <TouchableOpacity
+                accessibilityLabel="Réessayer le chargement de la carte"
+                accessibilityRole="button"
                 activeOpacity={0.85}
                 onPress={handleRetryMap}
                 style={[
@@ -713,7 +719,7 @@ function LegacySearchMapNative({
                   },
                 ]}
               >
-                <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+                <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>
                   Réessayer
                 </Text>
               </TouchableOpacity>
@@ -769,11 +775,6 @@ function LegacySearchMapNative({
 }
 
 const styles = StyleSheet.create({
-  clusterLabel: {
-    color: '#061822',
-    fontSize: 12,
-    fontWeight: '700',
-  },
   clusterOuter: {
     alignItems: 'center',
     borderColor: 'rgba(255,255,255,0.84)',

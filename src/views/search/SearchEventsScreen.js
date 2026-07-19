@@ -372,29 +372,39 @@ function SearchEventsScreen({ navigation, route }) {
             <Text style={[Fonts.h3Bold, Fonts.neutral900, Spaces.marginBottom[8]]}>
               {currentStep?.title}
             </Text>
-            <Text style={[Fonts.p1, Fonts.neutral500, Spaces.marginBottom[16]]}>
+            <Text style={[Fonts.p1, Fonts.neutral600, Spaces.marginBottom[16]]}>
               {currentStep?.description}
             </Text>
 
             <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-                <Pressable onPress={handleSkipTutorial}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral500]}>Passer</Text>
+                <Pressable
+                  accessibilityLabel="Passer le tutoriel"
+                  accessibilityRole="button"
+                  onPress={handleSkipTutorial}
+                >
+                  <Text style={[Fonts.p2Bold, Fonts.neutral600]}>Passer</Text>
                 </Pressable>
                 {stepIndex > 0 ? (
-                  <Pressable onPress={handlePreviousStep}>
-                    <Text style={[Fonts.p2Bold, Fonts.neutral500]}>Precedent</Text>
+                  <Pressable
+                    accessibilityLabel="Etape precedente"
+                    accessibilityRole="button"
+                    onPress={handlePreviousStep}
+                  >
+                    <Text style={[Fonts.p2Bold, Fonts.neutral600]}>Precedent</Text>
                   </Pressable>
                 ) : null}
               </View>
 
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral400]}>
+                <Text style={[Fonts.p3, Fonts.neutral600]}>
                   {stepIndex + 1}
                   /
                   {EVENT_TUTORIAL_STEPS.length}
                 </Text>
                 <Pressable
+                  accessibilityLabel={isLastStep ? 'Terminer le tutoriel' : 'Etape suivante'}
+                  accessibilityRole="button"
                   onPress={handleNextStep}
                   style={[
                     Spaces.paddingHorizontal[16],
@@ -402,7 +412,7 @@ function SearchEventsScreen({ navigation, route }) {
                     { backgroundColor: Colors.primary500, borderRadius: 20 },
                   ]}
                 >
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  <Text style={[Fonts.p2Bold, Fonts.primary900]}>
                     {isLastStep ? 'Terminer' : 'Suivant'}
                   </Text>
                 </Pressable>

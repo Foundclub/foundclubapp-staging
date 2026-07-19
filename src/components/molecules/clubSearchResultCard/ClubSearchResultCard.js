@@ -48,6 +48,10 @@ function ClubSearchResultCard({
 
   return (
     <TouchableOpacity
+      accessibilityLabel={[item?.name || 'Club', certificationLabel, shortAddress]
+        .filter(Boolean)
+        .join(', ')}
+      accessibilityRole="button"
       activeOpacity={0.85}
       disabled={!onPress}
       onPress={onPress}
@@ -98,7 +102,7 @@ function ClubSearchResultCard({
                 paddingVertical: 3,
               }}
             >
-              <Text style={[Fonts.p3, { color: '#FFFFFF' }]}>OMNISPORT</Text>
+              <Text style={[Fonts.p3, { color: Colors.primary900 }]}>OMNISPORT</Text>
             </View>
           ) : (
             <View

@@ -789,6 +789,9 @@ function RequestsHub({ navigation, route }) {
             const isActive = chip.key === activeFilter;
             return (
               <TouchableOpacity
+                accessibilityLabel={chip.label}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
                 key={chip.key}
                 onPress={() => setActiveFilter(chip.key)}
                 style={[
@@ -802,7 +805,7 @@ function RequestsHub({ navigation, route }) {
                   },
                 ]}
               >
-                <Text style={[Fonts.p3Bold, isActive ? Fonts.neutral00 : Fonts.primary100]}>
+                <Text style={[Fonts.p3Bold, isActive ? Fonts.primary900 : Fonts.primary100]}>
                   {chip.label}
                 </Text>
               </TouchableOpacity>
@@ -849,7 +852,7 @@ function RequestsHub({ navigation, route }) {
                 ApplicationStyle.backgroundColor.primary700,
                 ApplicationStyle.borderRadius16,
                 ApplicationStyle.borderWidth1,
-                Spaces.padding[20],
+                Spaces.padding[16],
                 Alignments.alignCenter,
                 {
                   borderColor: `${Colors.primary500}33`,

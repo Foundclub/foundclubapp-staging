@@ -236,7 +236,7 @@ function SearchAlerts({ navigation }) {
                       height: 60, opacity: 0.5, tintColor: Colors.neutral500, width: 60,
                     }}
               />
-              <Text style={[Fonts.p1, Fonts.neutral500, { textAlign: 'center' }]}>
+              <Text style={[Fonts.p1, Fonts.neutral300, { textAlign: 'center' }]}>
                 {t('searchAlerts.empty', 'Aucune alerte enregistrée.\nCréez une alerte depuis les filtres de recherche.')}
               </Text>
             </View>
