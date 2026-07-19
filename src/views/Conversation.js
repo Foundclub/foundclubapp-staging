@@ -58,6 +58,7 @@ import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
@@ -711,10 +712,13 @@ function Conversation({ navigation, route }) {
   );
   const {
     data: rawMessagesPages,
+    error: messagesError,
     fetchNextPage,
     hasNextPage,
+    isError: isMessagesError,
     isFetching: isMessagesFetching,
     isLoading: isMessagesLoading,
+    refetch: refetchMessages,
   } = useGetChatMessages({ chatId });
   const messagesPages = /** @type {any} */ (rawMessagesPages);
   const { data: rawChatData } = useGetChatById(chatId);
@@ -3403,6 +3407,18 @@ function Conversation({ navigation, route }) {
     return [...acc, ...formattedMessages];
   }, /** @type {any[]} */ ([])) : []), [messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
 
+  // Impasse corrigee : sans ces etats, un chargement en echec laissait une
+  // conversation vide et muette, sans aucune issue autre que tuer l'app.
+  const hasNoMessageToShow = messages.length === 0;
+  const hasMessagesLoadingError = Boolean(isMessagesError) && hasNoMessageToShow;
+  const isMessagesFirstLoad = Boolean(isMessagesLoading)
+    && !hasMessagesLoadingError
+    && hasNoMessageToShow;
+
+  const handleRetryMessages = useCallback(() => {
+    refetchMessages();
+  }, [refetchMessages]);
+
   useEffect(() => {
     const safeChatId = String(chatId || '').trim();
     if (!safeChatId || conversationOpenLoggedChatIdRef.current === safeChatId) return;
@@ -5487,6 +5503,35 @@ function Conversation({ navigation, route }) {
   };
 
   /**
+   * Render the empty conversation placeholder.
+   * La liste est inversee (`inverted`), donc gifted-chat rend ce contenu tel quel
+   * dans une FlatList retournee : on retourne le bloc a notre tour.
+   * @returns {React.ReactElement} Rendered empty state
+   */
+  const renderChatEmpty = () => (
+    <View style={[
+      Alignments.fill,
+      Alignments.justifyCenter,
+      Alignments.alignCenter,
+      Spaces.padding[24],
+      { transform: [{ scaleY: -1 }] },
+    ]}
+    >
+      <Text style={[Fonts.h4Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+        Aucun message pour le moment
+      </Text>
+      <Text style={[
+        Fonts.p2,
+        Spaces.marginTop[8],
+        { color: Colors.neutral300, textAlign: 'center' },
+      ]}
+      >
+        Envoyez le premier message pour lancer la conversation.
+      </Text>
+    </View>
+  );
+
+  /**
    * Render a custom input toolbar component
    * @param {import('react-native-gifted-chat').InputToolbarProps<any>} props - Component props
    * @returns {React.ReactNode} Rendered input toolbar component
@@ -5838,40 +5883,66 @@ function Conversation({ navigation, route }) {
 
       <View style={[Alignments.fill]}>
         {renderLeagueNegotiationBanner()}
-        <GiftedChat
-          bottomOffset={giftedChatBottomOffset}
-          dateFormat="DD MMMM"
-          dateFormatCalendar={{
-            lastDay: '[Hier]',
-            lastWeek: '[La semaine dernière] dddd',
-            nextDay: '[Demain]',
-            nextWeek: 'dddd',
-            sameDay: '[Aujourd\'hui]',
-            sameElse: 'DD/MM/YYYY',
-          }}
-          focusOnInputWhenOpeningKeyboard={!isPollModalVisible}
-          infiniteScroll
-          inverted
-          listViewProps={{ onScrollToIndexFailed: handleScrollToIndexFailed }}
-          loadEarlier={hasNextPage}
-          locale="fr"
-          messageContainerRef={messageContainerRef}
-          messages={messages}
-          onInputTextChanged={handleInputTextChanged}
-          onLoadEarlier={() => fetchNextPage()}
-          onLongPress={handleMessageLongPress}
-          onSend={onSend}
-          renderBubble={renderBubble}
-          renderFooter={renderFooter}
-          renderInputToolbar={isPollModalVisible ? () => null : renderInputToolbar}
-          renderSend={renderSend}
-          text={composerText}
-          user={{
-            _id: userData?.documentId || '',
-            avatar: userData?.avatar?.url,
-            name: `${userData?.firstname || ''} ${userData?.lastname || ''}`,
-          }}
-        />
+        {hasMessagesLoadingError ? (
+          <ErrorWrapper
+            error={messagesError}
+            onRetry={handleRetryMessages}
+            retryLabel="Recharger la conversation"
+            wrapperStyle={[Alignments.fill]}
+          >
+            <View style={[Alignments.fill]} />
+          </ErrorWrapper>
+        ) : null}
+        {!hasMessagesLoadingError && isMessagesFirstLoad ? (
+          <View style={[
+            Alignments.fill,
+            Alignments.justifyCenter,
+            Alignments.alignCenter,
+          ]}
+          >
+            <ActivityIndicator color={Colors.primary500} size="large" />
+            <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 12 }]}>
+              Chargement des messages...
+            </Text>
+          </View>
+        ) : null}
+        {!hasMessagesLoadingError && !isMessagesFirstLoad ? (
+          <GiftedChat
+            bottomOffset={giftedChatBottomOffset}
+            dateFormat="DD MMMM"
+            dateFormatCalendar={{
+              lastDay: '[Hier]',
+              lastWeek: '[La semaine dernière] dddd',
+              nextDay: '[Demain]',
+              nextWeek: 'dddd',
+              sameDay: '[Aujourd\'hui]',
+              sameElse: 'DD/MM/YYYY',
+            }}
+            focusOnInputWhenOpeningKeyboard={!isPollModalVisible}
+            infiniteScroll
+            inverted
+            listViewProps={{ onScrollToIndexFailed: handleScrollToIndexFailed }}
+            loadEarlier={hasNextPage}
+            locale="fr"
+            messageContainerRef={messageContainerRef}
+            messages={messages}
+            onInputTextChanged={handleInputTextChanged}
+            onLoadEarlier={() => fetchNextPage()}
+            onLongPress={handleMessageLongPress}
+            onSend={onSend}
+            renderBubble={renderBubble}
+            renderChatEmpty={renderChatEmpty}
+            renderFooter={renderFooter}
+            renderInputToolbar={isPollModalVisible ? () => null : renderInputToolbar}
+            renderSend={renderSend}
+            text={composerText}
+            user={{
+              _id: userData?.documentId || '',
+              avatar: userData?.avatar?.url,
+              name: `${userData?.firstname || ''} ${userData?.lastname || ''}`,
+            }}
+          />
+        ) : null}
 
         <Modal
           animationType="fade"

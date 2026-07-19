@@ -365,6 +365,14 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
+          getComponent={() => require('@/views/multisportClub/MyClubsScreen').default}
+          name={RouteNames.MyClubs}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Mes clubs',
+          }}
+        />
+        <Stack.Screen
           getComponent={() => require('@/views/multisportClub/CMPlanningScreen').default}
           name={RouteNames.CMPlanning}
           options={{

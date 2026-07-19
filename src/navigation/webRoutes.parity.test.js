@@ -97,11 +97,6 @@ const MOBILE_ONLY_SCREENS = {
  * aucun code existant se supprime, il ne s'exempte pas.
  */
 const UNREGISTERED_WEB_PATTERNS = {
-  // MyClubsScreen existe (views/multisportClub/MyClubsScreen.js) mais n'est monte dans
-  // aucun navigateur, alors que CMDashboard navigue vers RouteNames.MyClubs. Le motif
-  // reste pour que l'URL fonctionne des que l'ecran sera enregistre.
-  [RouteNames.MyClubs]:
-    'MyClubsScreen existe et est cible par CMDashboard, reste a l\'enregistrer (TODO webRoutes.js)',
   // ReservationEdit.web.js existe et est explicitement une variante web (adaptateur vers
   // EventEdit). Il n'a jamais ete branche dans une stack.
   [RouteNames.ReservationEdit]:

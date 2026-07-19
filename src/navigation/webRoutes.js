@@ -59,10 +59,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.CMTeams]: '/multisport/:cmId/teams',
   [RouteNames.CreateSection]: '/multisport/:cmId/sections/create',
   [RouteNames.FeaturedRequests]: '/multisport/:cmId/featured-requests',
-  // TODO(parite-web) : MyClubsScreen (views/multisportClub/MyClubsScreen.js) existe mais
-  // n'est enregistre dans aucun navigateur. CMDashboard.js navigue pourtant vers
-  // RouteNames.MyClubs ("Retour aux clubs") : cette navigation est cassee aujourd'hui.
-  // Motif web conserve pour qu'il fonctionne des l'enregistrement de l'ecran.
+  // MyClubsScreen (views/multisportClub/MyClubsScreen.js) est desormais enregistre dans
+  // PrivateNavigator : la navigation "Retour aux clubs" de CMDashboard aboutit, et cette
+  // URL monte bien un ecran cote web.
   [RouteNames.MyClubs]: '/multisport',
   [RouteNames.RequestsHub]: '/requests',
   [RouteNames.TeamList]: '/teams',
