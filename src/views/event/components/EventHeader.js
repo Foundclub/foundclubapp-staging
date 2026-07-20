@@ -19,12 +19,12 @@ import {
 } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
 
-// Assets
-const BG_OTHER = require('@/assets/background-card-event/card-autre.png');
-const BG_DETECTION = require('@/assets/background-card-event/card-detection.png');
-const BG_TRAINING = require('@/assets/background-card-event/card-entrainement.png');
-const BG_MATCH = require('@/assets/background-card-event/card-match.png');
-const BG_RESERVATION = require('@/assets/background-card-event/card-reservation.png');
+// Assets — imports statiques (pas require) : require n'existe pas sur le rendu web ESM.
+import BG_OTHER from '@/assets/background-card-event/card-autre.png';
+import BG_DETECTION from '@/assets/background-card-event/card-detection.png';
+import BG_TRAINING from '@/assets/background-card-event/card-entrainement.png';
+import BG_MATCH from '@/assets/background-card-event/card-match.png';
+import BG_RESERVATION from '@/assets/background-card-event/card-reservation.png';
 
 const getBackgroundImage = (/** @type {any} */ typeName) => {
   const normalizedType = (typeName?.toLowerCase() || '')

@@ -100,7 +100,8 @@ import {
   normalizeTournamentText,
 } from './tournamentUtils';
 
-const SharePlatform = require('@/platform/share').default;
+// import statique (pas require) : require n'existe pas sur le rendu web ESM.
+import SharePlatform from '@/platform/share';
 
 const EVENT_DETAILS_STALE_MS = 30_000;
 const MIN_PARTICIPANTS = 1;

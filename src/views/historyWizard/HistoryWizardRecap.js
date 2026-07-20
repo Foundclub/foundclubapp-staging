@@ -16,8 +16,9 @@ import { useCreateHistory, useUpdateHistory } from '@/services/userHistory/userH
 
 import { getImageUrl } from '@/utils/imageUrl';
 
-const calendarIcon = require('@/assets/icons/calendar.png');
-const defaultClubIcon = require('@/assets/icons/shield.png');
+// imports statiques (pas require) : require n'existe pas sur le rendu web ESM.
+import calendarIcon from '@/assets/icons/calendar.png';
+import defaultClubIcon from '@/assets/icons/shield.png';
 
 /**
  * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props

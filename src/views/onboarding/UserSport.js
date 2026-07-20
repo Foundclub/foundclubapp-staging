@@ -21,7 +21,9 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { updateMe } from '@/services/auth/authService';
 
-const searchIcon = require('@/assets/icons/search.png');
+// import statique (pas require) : sur le rendu web (Vite/ESM), require n'existe
+// pas et l'ecran entier mourait (revue design 20/07, P0).
+import searchIcon from '@/assets/icons/search.png';
 
 const resolveAvailableRoute = (
   navigation,

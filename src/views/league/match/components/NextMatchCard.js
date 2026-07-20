@@ -45,7 +45,9 @@ import {
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 
-const BG_MATCH = require('@/assets/background-card-event/card-match.png');
+// import statique (pas require) : sur le rendu web (Vite/ESM), require n'existe
+// pas et l'onglet Matchs entier mourait (revue design 20/07, P0).
+import BG_MATCH from '@/assets/background-card-event/card-match.png';
 
 /**
  * @param {LeagueMatch | null} match

@@ -209,7 +209,7 @@ function UserHistorySection({
             <Image
               resizeMode="contain"
               source={Images.plus}
-              style={{ height: 14, tintColor: '#FFF', width: 14 }}
+              style={{ height: 14, tintColor: Colors.primary900, width: 14 }}
             />
           </TouchableOpacity>
         ) : null}

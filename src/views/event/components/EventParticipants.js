@@ -9,7 +9,8 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
-const SHARE_ICON = require('@/assets/icons/share2.png');
+// import statique (pas require) : require n'existe pas sur le rendu web ESM.
+import SHARE_ICON from '@/assets/icons/share2.png';
 
 /**
  * @typedef {{
