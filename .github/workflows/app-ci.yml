@@ -29,5 +29,8 @@ jobs:
       - name: Type-check ratchet (no regression)
         run: npm run type-check:no-regression
 
+      - name: Theme contract (cliquet design)
+        run: npm run verify:theme-contract
+
       - name: Unit tests
         run: npm test -- --ci --runInBand
