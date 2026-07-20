@@ -3,6 +3,12 @@ import { format } from 'date-fns';
 import Joi from 'joi';
 import { Platform } from 'react-native';
 
+import { getAuthTokens } from '@/domains/auth/authUseCases';
+
+import client from '@/services/client';
+
+import { formatBootMeta } from '@/utils/performance/bootPerformance';
+
 import { getApiBaseUrl } from '@/config/runtimeUrls';
 import {
   confirmOtp,
@@ -11,10 +17,7 @@ import {
   onAuthStateChanged as subscribeToPlatformAuthState,
   sendOtp,
 } from '@/platform/auth';
-import client from '@/services/client';
-import { formatBootMeta } from '@/utils/performance/bootPerformance';
 import { getAppVersion, getDeviceId } from '@/platform/device';
-
 import {
   getResolvedAuthAppEnv,
   isFirebaseBypassEnabled,
@@ -503,7 +506,6 @@ export const updateMe = async (userData) => {
     const endpoint = `${resolvedApiBaseUrl.replace(/\/$/, '')}/firebase-auth/update`;
 
     logAuthDebug('[updateMe] Sending request to /firebase-auth/update via fetch');
-    const { getAuthTokens } = require('../../domains/auth/authUseCases');
     const auth = getAuthTokens();
 
     // Use native fetch to avoid Axios/FormData issues on Android

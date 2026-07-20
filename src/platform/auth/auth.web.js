@@ -24,6 +24,16 @@ const isFirebaseConfigured = () => {
   return Boolean(config.apiKey && config.appId && config.authDomain && config.projectId);
 };
 
+// Recette web uniquement : autorise les numeros de test Firebase (console
+// Authentication > Telephone) sans verification reCAPTCHA reelle. Double
+// verrou : flag build explicite + jamais en environnement production.
+const isWebOtpTestModeEnabled = () => (
+  ['1', 'on', 'true', 'yes'].includes(
+    String(process.env.FC_WEB_AUTH_TEST_OTP || '').trim().toLowerCase(),
+  )
+  && String(process.env.APP_ENV || process.env.ENV || '').trim().toLowerCase() !== 'production'
+);
+
 const ensureRecaptchaContainer = (containerId = DEFAULT_RECAPTCHA_CONTAINER_ID) => {
   if (typeof document === 'undefined') {
     return containerId;
@@ -57,7 +67,13 @@ const getFirebaseApp = () => {
   return initializeApp(getFirebaseConfig());
 };
 
-export const getAuthInstance = () => getAuth(getFirebaseApp());
+export const getAuthInstance = () => {
+  const auth = getAuth(getFirebaseApp());
+  if (isWebOtpTestModeEnabled()) {
+    auth.settings.appVerificationDisabledForTesting = true;
+  }
+  return auth;
+};
 
 export const resetRecaptcha = () => {
   recaptchaVerifier?.clear();
