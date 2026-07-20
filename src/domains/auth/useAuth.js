@@ -19,6 +19,10 @@ import {
   deleteDeviceToken,
   getMe, login, logout, signInWithPhoneNumber,
 } from '@/services/auth/authService';
+import {
+  getRetryAfterSeconds,
+  resetBootRequestGuard,
+} from '@/services/bootRequestGuard';
 import { getAppBootstrap } from '@/services/bootstrap/bootstrapService';
 
 import { displayErrorAlert } from '@/utils/errors/displayError';
@@ -88,6 +92,32 @@ const getBootstrapSessionKey = (/** @type {any} */ auth) => String(
   || auth?.token
   || 'no-session',
 );
+
+// Politique de retentative des requêtes de démarrage (bootstrap + get-me) :
+// nombre borné, délai exponentiel plafonné, retryAfterSeconds serveur respecté.
+// Le débit reste de toute façon plafonné par le garde anti-rafale du client
+// HTTP (bootRequestGuard) quel que soit le déclencheur des refetchs.
+const BOOT_QUERY_MAX_RETRIES = 2;
+
+const isRetryableBootStatus = (/** @type {number | null} */ status) => (
+  status === null
+  || status === 0
+  || status === 408
+  || status === 425
+  || status === 429
+  || status >= 500
+);
+
+const shouldRetryBootQuery = (/** @type {number} */ failureCount, /** @type {any} */ error) => (
+  failureCount < BOOT_QUERY_MAX_RETRIES
+  && isRetryableBootStatus(getBootstrapErrorStatus(error))
+);
+
+const getBootRetryDelayMs = (/** @type {number} */ attemptIndex, /** @type {any} */ error) => {
+  const backoffMs = Math.min(1000 * 2 ** attemptIndex, 30000);
+  const serverMs = Math.min(getRetryAfterSeconds(error) * 1000, 300000);
+  return Math.max(backoffMs, serverMs);
+};
 
 /**
  * Custom hook to manage authentication
@@ -211,7 +241,11 @@ const useAuth = () => {
     queryKey: ['app-bootstrap', auth?.token || 'no-token'],
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    retry: false,
+    retry: shouldRetryBootQuery,
+    retryDelay: getBootRetryDelayMs,
+    // Un remontage d'observateur sur une query en erreur ne doit PAS relancer
+    // la requête (c'est le vecteur de la rafale mesurée le 20/07 au boot).
+    retryOnMount: false,
     staleTime: 1000 * 30,
   });
 
@@ -303,6 +337,9 @@ const useAuth = () => {
     queryKey: ['get-me', auth?.token || 'no-token'],
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+    retry: shouldRetryBootQuery,
+    retryDelay: getBootRetryDelayMs,
+    retryOnMount: false,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -701,6 +738,15 @@ const useAuth = () => {
     appDispatch({ type: 'CANCEL_ADD_ACCOUNT' });
   }, [appDispatch, queryClient]);
 
+  // Relance volontaire du démarrage (bouton « Réessayer » de l'écran d'échec) :
+  // réarme le garde anti-rafale puis remet les deux queries de boot à zéro.
+  const retryBoot = useCallback(() => {
+    authLogger.debug('Manual boot retry requested');
+    resetBootRequestGuard();
+    queryClient.resetQueries({ queryKey: ['app-bootstrap'] });
+    queryClient.resetQueries({ queryKey: ['get-me'] });
+  }, [queryClient]);
+
   return {
     activeClubId,
     addAccount,
@@ -750,6 +796,7 @@ const useAuth = () => {
     otpMutation,
     profileFields,
     refetchUserData,
+    retryBoot,
     setConfirm,
     subscriptionAccessLevel,
     subscriptionSummary,

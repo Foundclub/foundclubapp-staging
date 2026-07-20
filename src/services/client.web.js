@@ -7,6 +7,12 @@ import {
   getAuthRuntimeSnapshot,
 } from '@/store/authRuntime';
 
+import {
+  assertBootRequestAllowed,
+  recordBootRequestFailure,
+  recordBootRequestSuccess,
+} from '@/services/bootRequestGuard';
+
 import { trackBootNetworkRequest } from '@/utils/performance/bootPerformance';
 
 import { getApiBaseUrl } from '@/config/runtimeUrls';
@@ -23,6 +29,10 @@ const instance = axios.create({
  * @returns {import('axios').InternalAxiosRequestConfig} The axios config with the token.
  */
 const onRequest = (axiosConfig) => {
+  // Rejette sans réseau quand le circuit anti-rafale du boot est ouvert
+  // (et avant trackBootNetworkRequest : un appel bloqué n'est pas une requête).
+  assertBootRequestAllowed(axiosConfig);
+
   const token = getAuthTokens()?.token;
   const newConfig = { ...axiosConfig };
 
@@ -83,9 +93,17 @@ const resetAuth = async (axiosError) => {
  * & { config: { _retry?: boolean; }; }} error - The axios error.
  * @returns {Promise<any>} The axios response.
  */
-const onRejected = (error) => resetAuth(error);
+const onRejected = (error) => {
+  recordBootRequestFailure(error);
+  return resetAuth(error);
+};
+
+const onFulfilled = (/** @type {import('axios').AxiosResponse} */ res) => {
+  recordBootRequestSuccess(res?.config);
+  return res;
+};
 
 instance.interceptors.request.use(onRequest);
-instance.interceptors.response.use((res) => res, onRejected);
+instance.interceptors.response.use(onFulfilled, onRejected);
 
 export default instance;

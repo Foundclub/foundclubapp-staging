@@ -11,6 +11,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
+import ErrorScreen from '@/views/Error';
 import { HistoryWizardProvider } from '@/views/historyWizard/HistoryWizardContext';
 import UserAddress from '@/views/onboarding/UserAddress';
 import UserAffiliationGuide from '@/views/onboarding/UserAffiliationGuide';
@@ -46,7 +47,7 @@ const Stack = createStackNavigator();
 function PrivateNavigator() {
   const { Colors, Fonts, Spaces } = useTheme();
   const {
-    onboardingViews, userData, userDataError, userDataLoading,
+    onboardingViews, retryBoot, userData, userDataError, userDataLoading,
   } = useAuth();
   const { isGold } = useAppMode();
   const { t } = useTranslation();
@@ -187,12 +188,13 @@ function PrivateNavigator() {
 
   if (userDataError) {
     return (
-      <View style={{
-        alignItems: 'center', backgroundColor: '#ffffff', flex: 1, justifyContent: 'center', padding: 20,
-      }}
-      >
-        <Text style={{ color: 'red' }}>Erreur de connexion</Text>
-      </View>
+      <ErrorScreen
+        actionTitle="Réessayer"
+        onReload={retryBoot}
+        subtitle={'Impossible de joindre le serveur FoundClub pour le moment. '
+          + 'Vérifie ta connexion puis réessaie : tes données reviendront dès que le réseau répond.'}
+        title="Connexion impossible"
+      />
     );
   }
 
