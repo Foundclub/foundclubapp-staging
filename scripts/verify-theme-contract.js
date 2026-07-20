@@ -341,12 +341,17 @@ const loadHexAllowlist = () => {
 
 /**
  * Entrees d'allowlist qui ne correspondent plus a un fichier existant,
- * ou dont le fichier n'a plus aucun hex : elles doivent sortir (cf. THEME.md).
+ * ou dont le fichier n'a plus NI hex NI rgb()/rgba() : elles doivent sortir.
+ *
+ * L'allowlist protege les deux familles de litteraux (hex ET rgb) : un fichier
+ * qui n'a plus de hex mais garde des rgba() n'est PAS perime — le retirer
+ * ferait regresser le compteur rgbLiterals (constat du 2026-07-20).
  * @param {Set<string>} allowlist - Entrees courantes de l'allowlist.
  * @returns {{file: string, message: string}[]} - Entrees perimees.
  */
 const findStaleAllowlistEntries = (allowlist) => {
   const hexRegex = /#[0-9A-Fa-f]{3,8}/;
+  const rgbRegex = /rgba?\(/;
   const stale = [];
   allowlist.forEach((relPath) => {
     const absPath = path.join(projectRoot, relPath);
@@ -354,8 +359,9 @@ const findStaleAllowlistEntries = (allowlist) => {
       stale.push({ file: relPath, message: 'fichier absent' });
       return;
     }
-    if (!hexRegex.test(read(absPath))) {
-      stale.push({ file: relPath, message: 'plus aucun hex : entree a retirer' });
+    const contenu = read(absPath);
+    if (!hexRegex.test(contenu) && !rgbRegex.test(contenu)) {
+      stale.push({ file: relPath, message: 'plus aucun hex ni rgb : entree a retirer' });
     }
   });
   return stale;

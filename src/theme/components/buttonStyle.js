@@ -11,7 +11,8 @@ const buttonCommonStyle = {
 const buttonOptionStyle = {
   alignItems: positions.center,
   borderRadius: 12,
-  height: 39,
+  // Cible tactile minimale 44pt — décision Adel 2026-07-20 (arbitrage n°2, option A).
+  height: 44,
   justifyContent: positions.center,
   paddingHorizontal: 16,
 };
@@ -41,9 +42,9 @@ const getStyle = (colors) => ({
   },
   buttonIconOption: {
     borderRadius: 12,
-    height: 39,
+    height: 44,
     padding: 0,
-    width: 39,
+    width: 44,
   },
   buttonPrimary: {
     ...buttonCommonStyle,

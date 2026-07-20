@@ -1997,7 +1997,7 @@ export default {
         president: 'Dirigeant',
         superAdmin: 'Administrateur',
       },
-      roleWithClub: '{{rôle}} · {{club}}',
+      roleWithClub: '{{role}} · {{club}}',
     },
     sections: {
       account: 'Compte',

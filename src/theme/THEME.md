@@ -62,20 +62,21 @@ Do not use nested access like `ApplicationStyle.button.primary`.
 (`backgroundColor.*`, `borderColor.*`, `tintColor.*` et `hitSlop.*` sont des cartes de jetons
 volontaires, pas des exceptions à cette règle.)
 
-#### Zones tactiles — `ApplicationStyle.hitSlop` (décision Adel, 2026-07-17)
-**On garde le rendu visuel, on agrandit la zone de clic.** `buttonOptionStyle` reste à 39 px
-de haut : le passer à 44 px déplacerait toute la mise en page. À la place, on complète la
-cible tactile jusqu'à 44 px (Apple HIG) via la prop `hitSlop`, qui n'a aucun effet visuel :
+#### Zones tactiles — `ApplicationStyle.hitSlop` (décisions Adel 2026-07-17, révisée 2026-07-20)
+**Depuis le 2026-07-20 (arbitrage n°2, option A) : `buttonOptionStyle` et `buttonIconOption`
+sont rendus à 44 px** — la cible tactile minimale (Apple HIG) est atteinte par le rendu
+lui-même. Le `hitSlop` ne sert plus qu'aux petites cibles qui doivent rester petites
+visuellement (icônes nues, puces) :
 
 ```js
-<TouchableOpacity hitSlop={ApplicationStyle.hitSlop.min44} ... />
+<TouchableOpacity hitSlop={ApplicationStyle.hitSlop.min44From32} ... />
 ```
 
 Constantes exposées, une par taille rendue :
 
 | Jeton | Taille rendue | Marge ajoutée |
 | --- | --- | --- |
-| `hitSlop.min44` | 39 px (`buttonOptionStyle`, `buttonIconOption`) | +3 px |
+| `hitSlop.min44` | 44 px (boutons option) | +0 px — conservé pour compatibilité |
 | `hitSlop.min44From40` | 40 px (`roundIcon40`) | +2 px |
 | `hitSlop.min44From32` | 32 px (puces, chips compactes) | +6 px |
 | `hitSlop.min44From28` | 28 px (`icon28`) | +8 px |

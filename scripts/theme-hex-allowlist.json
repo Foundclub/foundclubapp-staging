@@ -53,7 +53,6 @@
     "src/views/tactical_v2/TacticalSelection.js",
     "src/views/team/TeamDetails.js",
     "src/components/atoms/sponsorLogoTile/SponsorLogoTile.js",
-    "src/components/molecules/clubSearchResultCard/ClubSearchResultCard.js",
     "src/components/molecules/floatingAnimatedTabBar/FloatingAnimatedTabBar.js",
     "src/components/molecules/profileAvatar/ProfileAvatar.js",
     "src/components/organisms/joinEventModal/JoinEventModal.js",

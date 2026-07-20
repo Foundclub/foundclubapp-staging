@@ -110,8 +110,9 @@ export const MIN_TOUCH_TARGET = 44;
 /**
  * Calcule le hitSlop qui complete une taille rendue jusqu'a MIN_TOUCH_TARGET.
  *
- * Decision Adel : on ne change PAS le rendu visuel des controles trop petits
- * (buttonOptionStyle reste a 39px), on agrandit seulement la zone de clic.
+ * Decision Adel 2026-07-20 (arbitrage n°2, option A) : buttonOptionStyle et
+ * buttonIconOption sont rendus a 44px. Le hitSlop ne sert plus qu'aux petites
+ * cibles qui doivent rester petites visuellement (icones nues, puces).
  * @param {number} renderedSize - Hauteur/largeur reellement rendue, en px.
  * @returns {{bottom: number, left: number, right: number, top: number}} - hitSlop React Native.
  */
@@ -143,9 +144,6 @@ export const staticStyle = {
   },
   borderRadius2: {
     borderRadius: 2,
-  },
-  borderRadius20: {
-    borderRadius: 20,
   },
   borderRadius24: {
     borderRadius: 24,
@@ -229,8 +227,9 @@ export const staticStyle = {
   // Zones tactiles : a passer en prop `hitSlop` sur Touchable/Pressable.
   // On garde le rendu visuel, on elargit la zone de clic jusqu'a 44px (cf. THEME.md).
   hitSlop: {
-    // Boutons "option" (buttonOptionStyle / buttonIconOption) rendus a 39px -> +3px.
-    min44: hitSlopToMinTarget(39),
+    // Boutons "option" rendus a 44px depuis le 2026-07-20 -> slop nul, conserve
+    // pour compatibilite des appelants.
+    min44: hitSlopToMinTarget(44),
     // Icones nues de 24px -> +10px.
     min44From24: hitSlopToMinTarget(24),
     // Icones nues de 28px -> +8px.

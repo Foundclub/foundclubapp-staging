@@ -6,6 +6,7 @@ import {
 } from 'react';
 import { Text, View } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import SearchMapPreviewCard from '@/components/molecules/searchMapPreviewCard/SearchMapPreviewCard';
@@ -110,6 +111,7 @@ function SearchMap({
   const { renderMap } = mapsPlatform;
   const {
     Alignments,
+    Colors,
     Fonts,
     Spaces,
   } = useTheme();
@@ -376,7 +378,7 @@ function SearchMap({
           pointerEvents="none"
           style={{
             backgroundColor: 'rgba(6, 24, 34, 0.84)',
-            borderColor: 'rgba(255,255,255,0.08)',
+            borderColor: withAlpha(Colors.neutral00, 0.08),
             borderRadius: 18,
             borderWidth: 1,
             bottom: Math.max(24, previewBottomOffset + previewCardHeight + 10),

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -401,7 +402,7 @@ function ClubEdit({ navigation, route }) {
                   Spaces.gap[12],
                   {
                     backgroundColor: 'rgba(4, 31, 44, 0.82)',
-                    borderColor: 'rgba(1, 179, 244, 0.24)',
+                    borderColor: withAlpha(Colors.primary500, 0.24),
                     borderWidth: 1,
                   },
                 ]}
@@ -443,7 +444,7 @@ function ClubEdit({ navigation, route }) {
                   Spaces.gap[12],
                   {
                     backgroundColor: 'rgba(4, 31, 44, 0.82)',
-                    borderColor: 'rgba(1, 179, 244, 0.24)',
+                    borderColor: withAlpha(Colors.primary500, 0.24),
                     borderWidth: 1,
                   },
                 ]}
@@ -474,8 +475,10 @@ function ClubEdit({ navigation, route }) {
                               Spaces.padding[16],
                               Spaces.gap[8],
                               {
-                                backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255, 255, 255, 0.03)',
-                                borderColor: isSelected ? Colors.primary500 : 'rgba(255, 255, 255, 0.12)',
+                                backgroundColor: isSelected
+                                  ? withAlpha(Colors.primary500, 0.14)
+                                  : withAlpha(Colors.neutral00, 0.03),
+                                borderColor: isSelected ? Colors.primary500 : withAlpha(Colors.neutral00, 0.12),
                                 borderRadius: 18,
                                 borderWidth: 1,
                               },

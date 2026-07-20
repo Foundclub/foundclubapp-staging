@@ -4227,7 +4227,7 @@ function TeamDetails({ navigation, route }) {
                       key={stat.label}
                       style={[
                         ApplicationStyle.backgroundColor.primary700,
-                        ApplicationStyle.borderRadius20,
+                        ApplicationStyle.borderRadius24,
                         Spaces.padding[16],
                         Spaces.gap[4],
                         { flexGrow: 1, minWidth: '47%' },
@@ -4263,7 +4263,7 @@ function TeamDetails({ navigation, route }) {
                       <View
                         style={[
                           ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius20,
+                          ApplicationStyle.borderRadius24,
                           Spaces.padding[16],
                           Spaces.gap[4],
                           { flexGrow: 1, minWidth: '47%' },
@@ -4277,7 +4277,7 @@ function TeamDetails({ navigation, route }) {
                       <View
                         style={[
                           ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius20,
+                          ApplicationStyle.borderRadius24,
                           Spaces.padding[16],
                           Spaces.gap[4],
                           { flexGrow: 1, minWidth: '47%' },
@@ -4310,7 +4310,7 @@ function TeamDetails({ navigation, route }) {
                         onPress={() => handleOpenPerformanceMatch(pendingMatch?.sourceType, pendingMatch?.sourceDocumentId)}
                         style={[
                           ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius20,
+                          ApplicationStyle.borderRadius24,
                           Spaces.padding[16],
                           Spaces.gap[8],
                           !pendingMatch?.sourceDocumentId ? { opacity: 0.92 } : null,
@@ -4366,7 +4366,7 @@ function TeamDetails({ navigation, route }) {
                         onPress={() => handleOpenPerformanceMatch(report?.sourceType, report?.sourceDocumentId)}
                         style={[
                           ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius20,
+                          ApplicationStyle.borderRadius24,
                           Spaces.padding[16],
                           Spaces.gap[8],
                           !report?.sourceDocumentId ? { opacity: 0.94 } : null,
@@ -4432,7 +4432,7 @@ function TeamDetails({ navigation, route }) {
                             key={player?.documentId || player?.manualPlayerName || `performance-${index}`}
                             style={[
                               ApplicationStyle.backgroundColor.primary700,
-                              ApplicationStyle.borderRadius20,
+                              ApplicationStyle.borderRadius24,
                               Spaces.padding[16],
                               Spaces.gap[8],
                             ]}
