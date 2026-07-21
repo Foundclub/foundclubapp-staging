@@ -25,8 +25,6 @@ import {
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
-const normalizeComparableValue = (value) => String(value || '').trim().toLowerCase();
-
 /**
  *
  */
@@ -78,22 +76,11 @@ function AdminClaimDetail() {
     phoneNumber: request?.holderPhone || '',
   }), [request]);
 
-  const shouldShowRequesterCard = useMemo(() => {
-    if (!isAffiliationHelp) return true;
-    if (!isClubCreation) return true;
-    if (!request?.user) return false;
-
-    const sameName = normalizeComparableValue(requester.firstname) === normalizeComparableValue(managerContact.firstname)
-      && normalizeComparableValue(requester.lastname) === normalizeComparableValue(managerContact.lastname);
-    const samePhone = normalizeComparableValue(requester.phoneNumber) === normalizeComparableValue(managerContact.phoneNumber);
-    const sameEmail = normalizeComparableValue(requester.email) === normalizeComparableValue(managerContact.email);
-
-    return !(sameName && samePhone && sameEmail);
-  }, [isAffiliationHelp, isClubCreation, managerContact, request?.user, requester.email, requester.firstname, requester.lastname, requester.phoneNumber]);
-
   const requestDate = request?.createdAt
     ? new Date(request.createdAt).toLocaleDateString()
     : '-';
+
+  const clubLabel = request?.club?.name || request?.clubName || '-';
 
   const runPrimaryAction = () => {
     if (!requestId) return;
@@ -229,25 +216,29 @@ function AdminClaimDetail() {
       title="Detail demande"
     >
       <ScrollView showsVerticalScrollIndicator={false}>
-        {!isAffiliationHelp || shouldShowRequesterCard ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
-            <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
-              Demandeur
-            </Text>
-            <View style={[Alignments.row, Alignments.alignCenter]}>
-              <ProfileAvatar imageUrl={requester?.avatar} size={60} />
-              <View style={Spaces.marginLeft[16]}>
-                <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
-                  {[requester.firstname, requester.lastname].filter(Boolean).join(' ').trim() || 'Utilisateur'}
-                </Text>
-                {requester?.email ? (
-                  <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>{requester.email}</Text>
-                ) : null}
-                <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>{requester.phoneNumber || '-'}</Text>
-              </View>
+        <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
+          <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
+            Demandeur
+          </Text>
+          <View style={[Alignments.row, Alignments.alignCenter]}>
+            <ProfileAvatar imageUrl={requester?.avatar} size={60} />
+            <View style={[Spaces.marginLeft[16], { flex: 1 }]}>
+              <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
+                {[requester.firstname, requester.lastname].filter(Boolean).join(' ').trim() || 'Utilisateur'}
+              </Text>
+              {requester?.email ? (
+                <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>{requester.email}</Text>
+              ) : null}
+              <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>{requester.phoneNumber || '-'}</Text>
             </View>
           </View>
-        ) : null}
+          <View style={[Spaces.marginTop[12]]}>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              Pour le club :{' '}
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{clubLabel}</Text>
+            </Text>
+          </View>
+        </View>
 
         {isAffiliationHelp ? (
           <>

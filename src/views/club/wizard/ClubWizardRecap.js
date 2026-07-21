@@ -154,9 +154,14 @@ function ClubWizardRecap({ navigation, route }) {
   };
 
   const hasDuplicates = duplicates.length > 0;
+  const recapAddressOption = state.addressOption || {};
+  const canSubmit = Boolean(String(state.name || '').trim())
+    && Number.isFinite(recapAddressOption?.lat)
+    && Number.isFinite(recapAddressOption?.lng);
 
   return (
     <WizardStepLayout
+      isNextDisabled={!hasDuplicates && !canSubmit}
       isNextLoading={isSubmitting}
       nextLabel={hasDuplicates
         ? t('clubWizard.recap.createAnyway', 'Créer quand même')
