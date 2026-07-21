@@ -1,4 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -22,9 +23,11 @@ function MyTeamList({ navigation, route }) {
   const { isLeagueMode } = route?.params ?? {};
   const { refetchUserData, userData } = useAuth();
   // Effects
-  useFocusEffect(() => {
-    refetchUserData();
-  });
+  useFocusEffect(
+    useCallback(() => {
+      refetchUserData();
+    }, [refetchUserData]),
+  );
 
   // hooks
   const {

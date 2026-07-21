@@ -584,11 +584,11 @@ function TeamDetails({ navigation, route }) {
           onPress: () => {
             refetchUserData();
             refetch();
+            // C21 : rester sur la fiche pour que le bouton passe « Demande en
+            // attente » (avant : goBack cachait le changement d'état).
             if (fromOnboardingAffiliation) {
               handleGoToNextOnboardingStep();
-              return;
             }
-            navigation.goBack();
           },
           text: t('teamDetails.alerts.joinRequest.actions.ok'),
         }],
@@ -601,6 +601,9 @@ function TeamDetails({ navigation, route }) {
     onSuccess: () => {
       refetchUserData();
       refetch();
+      // C20 : « Mes équipes » (TeamListContent) refiltre sur userData.myTeams ;
+      // invalider aussi la liste des équipes évite qu'une équipe quittée y traîne.
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
     },
   }));
 
