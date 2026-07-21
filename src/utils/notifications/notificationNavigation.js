@@ -525,6 +525,16 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST:
       return adaptDestinationForCurrentPlatform(payload, teamDetailsDestination(payload.teamId));
 
+    // Notif superadmin « Nouveau club a verifier » (self-onboard) : type serveur 'newSelfServiceClub'.
+    case 'newSelfServiceClub':
+      return adaptDestinationForCurrentPlatform(payload, {
+        params: {
+          params: {},
+          screen: RouteNames.AdminClubOnboardingList,
+        },
+        route: RouteNames.AdminStack,
+      });
+
     case NOTIFICATION_TYPES.AFFILIATION_HELP_REQUEST:
       return adaptDestinationForCurrentPlatform(payload, {
         params: {

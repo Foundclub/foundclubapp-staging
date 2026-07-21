@@ -38,6 +38,17 @@ function TeamWizardCategory({ navigation }) {
     navigation.navigate(RouteNames.TeamWizardLevel);
   };
 
+  // Un seul référentiel : on retire les doublons (même documentId ou même nom).
+  const dedupedCategories = (() => {
+    const seen = new Set();
+    return (Array.isArray(categories) ? categories : []).filter((category) => {
+      const key = String(category?.documentId || category?.name || '').trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  })();
+
   return (
     <WizardStepLayout
       isNextDisabled={!state.category || isLoading || hasError}
@@ -77,7 +88,7 @@ function TeamWizardCategory({ navigation }) {
             rowGap: 10,
           }}
         >
-          {(categories || []).map((category) => {
+          {dedupedCategories.map((category) => {
             const categoryDocumentId = category.documentId || '';
             const isSelected = state.category === categoryDocumentId;
             return (
@@ -92,14 +103,13 @@ function TeamWizardCategory({ navigation }) {
                   borderColor: isSelected ? Colors.primary500 : 'rgba(255,255,255,0.10)',
                   borderRadius: 14,
                   borderWidth: 1.5,
-                  height: 54,
                   justifyContent: 'center',
-                  paddingHorizontal: 6,
-                  width: '22.7%',
+                  minHeight: 48,
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
                 }}
               >
                 <Text
-                  numberOfLines={1}
                   style={[Fonts.p2Bold, isSelected ? Fonts.primary500 : Fonts.neutral00]}
                 >
                   {category.name}
