@@ -78,6 +78,9 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardCategory}
           options={{
             ...commonOptions,
+            // C07 — un seul retour dans le tunnel « historique » : WizardStepLayout
+            // porte déjà sa flèche ronde ; on masque l'entête (2ᵉ flèche).
+            headerShown: false,
             headerTitle: 'Ajouter une expérience',
           }}
         />
@@ -86,6 +89,9 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardClub}
           options={{
             ...commonOptions,
+            // C07 — un seul retour dans le tunnel « historique » : WizardStepLayout
+            // porte déjà sa flèche ronde ; on masque l'entête (2ᵉ flèche).
+            headerShown: false,
             headerTitle: 'Ajouter une expérience',
           }}
         />
@@ -94,6 +100,9 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardPeriod}
           options={{
             ...commonOptions,
+            // C07 — un seul retour dans le tunnel « historique » : WizardStepLayout
+            // porte déjà sa flèche ronde ; on masque l'entête (2ᵉ flèche).
+            headerShown: false,
             headerTitle: 'Ajouter une expérience',
           }}
         />
@@ -102,6 +111,9 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardLevel}
           options={{
             ...commonOptions,
+            // C07 — un seul retour dans le tunnel « historique » : WizardStepLayout
+            // porte déjà sa flèche ronde ; on masque l'entête (2ᵉ flèche).
+            headerShown: false,
             headerTitle: 'Ajouter une expérience',
           }}
         />
@@ -110,6 +122,9 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardRecap}
           options={{
             ...commonOptions,
+            // C07 — un seul retour dans le tunnel « historique » : WizardStepLayout
+            // porte déjà sa flèche ronde ; on masque l'entête (2ᵉ flèche).
+            headerShown: false,
             headerTitle: 'Ajouter une expérience',
           }}
         />

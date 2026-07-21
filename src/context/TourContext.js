@@ -75,9 +75,15 @@ export function TourProvider({ children }) {
   }, [userId]);
 
   // Reprise : un tour inachevé revient en mode « paused » au prochain lancement.
+  // C09 — Changement de compte / déconnexion : on purge d'abord l'état du tour
+  // gardé en mémoire, sinon le bandeau (avec le numéro d'étape de l'ancien
+  // compte) reste affiché après un switch de compte (le « tour fantôme »).
   useEffect(() => {
-    if (!userId || hydratedUserRef.current === userId) return;
+    if (hydratedUserRef.current === userId) return;
     hydratedUserRef.current = userId;
+    clearSuccessTimer();
+    setTourState(null);
+    if (!userId) return;
     try {
       const raw = storage.getString(getStorageKey(userId));
       if (!raw) return;
