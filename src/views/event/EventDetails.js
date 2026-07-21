@@ -2505,23 +2505,35 @@ function EventDetails({ navigation, route }) {
   }, [event?.recurrenceGroupId, eventId, mutations.cancelEventMutation, t]);
 
   const handleOpenEventActionsMenu = useCallback(() => {
+    const actions = [
+      { style: 'cancel', text: t('common.cancel', 'Annuler') },
+      {
+        onPress: handleEditEvent,
+        text: t('eventDetails.actions.edit', "Modifier l'événement"),
+      },
+    ];
+
+    if (canManageFeatured && canRequestFeatured) {
+      actions.push({
+        // @ts-ignore: FIXME: Baseline TS regression
+        onPress: () => setIsFeaturedModalVisible(true),
+        text: 'Mettre à la une',
+      });
+    }
+
+    actions.push({
+      onPress: handleCancelEvent,
+      style: 'destructive',
+      text: t('eventDetails.actions.cancelEvent', "Annuler l'événement"),
+    });
+
     Alert.alert(
       t('eventDetails.actions.menuTitle', 'Actions événement'),
       t('eventDetails.actions.menuDescription', 'Choisis une action.'),
-      [
-        { style: 'cancel', text: t('common.cancel', 'Annuler') },
-        {
-          onPress: handleEditEvent,
-          text: t('eventDetails.actions.edit', "Modifier l'événement"),
-        },
-        {
-          onPress: handleCancelEvent,
-          style: 'destructive',
-          text: t('eventDetails.actions.cancelEvent', "Annuler l'événement"),
-        },
-      ],
+      // @ts-ignore: FIXME: Baseline TS regression
+      actions,
     );
-  }, [handleCancelEvent, handleEditEvent, t]);
+  }, [canManageFeatured, canRequestFeatured, handleCancelEvent, handleEditEvent, t]);
 
   const handleOpenTournamentActionsMenu = useCallback(() => {
     const actions = [
@@ -2541,14 +2553,6 @@ function EventDetails({ navigation, route }) {
       });
     }
 
-    if (canManageFeatured && canRequestFeatured) {
-      actions.push({
-        // @ts-ignore: FIXME: Baseline TS regression
-        onPress: () => setIsFeaturedModalVisible(true),
-        text: 'Mettre à la une',
-      });
-    }
-
     Alert.alert(
       'Actions tournoi',
       'Choisis ce que tu veux gérer.',
@@ -2557,8 +2561,6 @@ function EventDetails({ navigation, route }) {
     );
   }, [
     canEdit,
-    canManageFeatured,
-    canRequestFeatured,
     handleOpenEventActionsMenu,
     handleOpenTournamentSettings,
     t,
