@@ -331,6 +331,38 @@ describe('authUseCases', () => {
       expect(result.views.map((view) => view.route)).not.toContain(RouteNames.UserParentalDeclaration);
     });
 
+    it('inserts parental declaration step for a 14 year old (D1 threshold 15)', () => {
+      const now = new Date();
+      const birthdate = new Date(Date.UTC(
+        now.getUTCFullYear() - 14,
+        now.getUTCMonth(),
+        now.getUTCDate(),
+      )).toISOString().slice(0, 10);
+
+      const result = getOnboardingViews({
+        birthdate,
+        role: { name: USER_ROLES.player },
+      });
+
+      expect(result.views.map((view) => view.route)).toContain(RouteNames.UserParentalDeclaration);
+    });
+
+    it('does not insert parental declaration step for a 15 year old (D1 threshold 15)', () => {
+      const now = new Date();
+      const birthdate = new Date(Date.UTC(
+        now.getUTCFullYear() - 15,
+        now.getUTCMonth(),
+        now.getUTCDate() - 1,
+      )).toISOString().slice(0, 10);
+
+      const result = getOnboardingViews({
+        birthdate,
+        role: { name: USER_ROLES.player },
+      });
+
+      expect(result.views.map((view) => view.route)).not.toContain(RouteNames.UserParentalDeclaration);
+    });
+
     it('keeps parental declaration visible for a partially completed minor player profile loaded from persisted auth', () => {
       const result = getOnboardingViews({
         birthdate: '2016-05-16T00:00:00.000Z',

@@ -1341,6 +1341,7 @@ function EventListContent({
               filterNumber={filterCount}
               handleSearchField={handleSearchField}
               openFilters={handleOpenFilters}
+              placeholder={t('eventList.searchPlaceholder', 'Rechercher un événement')}
               searchDefaultValue={eventFilters?.q}
             />
           </View>

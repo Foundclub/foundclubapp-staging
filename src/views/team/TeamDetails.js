@@ -1513,6 +1513,7 @@ function TeamDetails({ navigation, route }) {
           },
           {
             onPress: () => {
+              if (createTeamMembershipRequestMutation.isPending) return;
               createTeamMembershipRequestMutation.mutate({
                 team: teamId,
                 user: userId,

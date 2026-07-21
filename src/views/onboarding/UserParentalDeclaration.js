@@ -121,7 +121,7 @@ function UserParentalDeclaration({ navigation, route }) {
             {t('profile.titles.birthdate', 'Déclaration parentale obligatoire')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            Ce profil concerne un enfant de moins de 13 ans. Pour continuer, tu dois confirmer que tu es son parent ou représentant legal.
+            Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois confirmer que tu es son parent ou représentant légal.
           </Text>
         </View>
 
