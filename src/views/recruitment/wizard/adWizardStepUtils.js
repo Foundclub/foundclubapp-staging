@@ -1,4 +1,11 @@
+import { sportHasPositions } from '@/constants/positions';
+
 export const isCoachAdWizard = (state = {}) => state?.audienceType === 'coach';
+
+// C28 — sport de l'annonce (même dérivation que AdWizardPositions).
+export const getAdWizardSportName = (state = {}) => (
+  state?.team?.sport?.name || state?.team?.activities?.[0]?.name || ''
+);
 
 export const hasAdWizardAudienceStep = (state = {}) => !state?.event;
 
@@ -60,11 +67,14 @@ export const isAdWizardCoachProfileComplete = (state = {}) => {
   return hasRole && hasOtherRole && hasExperience && hasEngagement && hasQuantity;
 };
 
-export const isAdWizardNeedsComplete = (state = {}) => (
-  isCoachAdWizard(state)
-    ? isAdWizardCoachProfileComplete(state)
-    : Array.isArray(state?.positions) && state.positions.length > 0
-);
+export const isAdWizardNeedsComplete = (state = {}) => {
+  if (isCoachAdWizard(state)) return isAdWizardCoachProfileComplete(state);
+  // C28 — un sport sans postes (hors foot/basket/hand/volley/rugby) ne peut pas
+  // exiger de postes, sinon le bouton Suivant ne s'active jamais.
+  const sportName = getAdWizardSportName(state);
+  if (sportName && !sportHasPositions(sportName)) return true;
+  return Array.isArray(state?.positions) && state.positions.length > 0;
+};
 
 export const isAdWizardSportProfileComplete = (state = {}) => Boolean(
   state?.section

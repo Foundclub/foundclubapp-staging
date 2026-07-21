@@ -106,6 +106,32 @@ function AdWizardPositions({ navigation }) {
     navigation.navigate(RouteNames.AdWizardInfo);
   };
 
+  // C28 — sport sans postes : au lieu d'une liste vide bloquante, un écran clair
+  // qui laisse continuer directement vers la suite de l'annonce.
+  if (!positions.length) {
+    return (
+      <WizardStepLayout
+        isNextDisabled={false}
+        nextLabel="Suivant"
+        onBack={() => navigation.goBack()}
+        onNext={() => navigation.navigate(RouteNames.AdWizardInfo)}
+        stepCount={getAdWizardStepCount(state)}
+        stepIndex={getAdWizardNeedsStepIndex(state)}
+        subtitle="Ce sport ne se joue pas par postes."
+        title="Postes recherchés"
+      >
+        <View style={[Spaces.padding[24], Alignments.alignCenter, Spaces.gap[12]]}>
+          <Text style={[Fonts.p1, Fonts.neutral00, { textAlign: 'center' }]}>
+            {sportName} ne nécessite pas de préciser des postes.
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 22, textAlign: 'center' }]}>
+            Tu peux passer directement à la suite de ton annonce.
+          </Text>
+        </View>
+      </WizardStepLayout>
+    );
+  }
+
   return (
     <WizardStepLayout
       isNextDisabled={!isAdWizardNeedsComplete(state)}
