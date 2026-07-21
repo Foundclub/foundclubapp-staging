@@ -7,8 +7,11 @@ import {
 } from 'react';
 import {
   AppState,
+  Text,
   View,
 } from 'react-native';
+
+import useTheme from '@/theme/themeContext';
 
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
@@ -20,7 +23,6 @@ import {
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import RecrutementListContent from '@/components/organisms/recrutementListContent/RecrutementListContent';
-import ReservationListContent from '@/components/organisms/reservationListContent/ReservationListContent';
 
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
@@ -46,6 +48,7 @@ const DEFAULT_EVENT_FILTERS = Object.freeze({
  */
 function SearchHubScreen({ navigation, route }) {
   const { userData } = useAuth();
+  const { Colors } = useTheme();
   const requestedType = coerceSearchHubType(route?.params?.activeType);
   const [activeType, setActiveType] = useState(requestedType);
   const [visitedTypes, setVisitedTypes] = useState(() => new Set([requestedType]));
@@ -170,13 +173,27 @@ function SearchHubScreen({ navigation, route }) {
     }
 
     if (type === 'reservations') {
+      // C30 (décision D5) : l'onglet reste, mais la réservation n'est pas encore
+      // ouverte -> écran « Bientôt disponible » au lieu de la liste.
       return (
-        <ReservationListContent
-          enableMapMode
-          refreshSignal={refreshSignals.reservations}
-          screenActive={activeType === 'reservations'}
-          showFilters
-        />
+        <View style={{
+          alignItems: 'center', flex: 1, justifyContent: 'center', paddingHorizontal: 24,
+        }}
+        >
+          <Text style={{
+            color: Colors.neutral00, fontSize: 20, fontWeight: '700', textAlign: 'center',
+          }}
+          >
+            Bientôt disponible
+          </Text>
+          <Text style={{
+            color: Colors.neutral300, fontSize: 14, lineHeight: 22, marginTop: 12, textAlign: 'center',
+          }}
+          >
+            La réservation de terrains et d&apos;installations arrive très vite.
+            Reste connecté, on te préviendra dès son ouverture.
+          </Text>
+        </View>
       );
     }
 
@@ -188,7 +205,7 @@ function SearchHubScreen({ navigation, route }) {
         timestamp={route?.params?.timestamp}
       />
     );
-  }, [activeType, initialRecruitmentTab, refreshSignals, route?.params?.timestamp]);
+  }, [Colors, activeType, initialRecruitmentTab, refreshSignals, route?.params?.timestamp]);
 
   return (
     <SearchScreenShell
