@@ -184,7 +184,7 @@ function TeamWizardActivity({ navigation }) {
                     { letterSpacing: 1, textTransform: 'uppercase' },
                   ]}
                 >
-                  {t('teamWizard.steps.activity.allSports', 'Tous les sports')}
+                  {t('teamWizard.steps.activity.allSports', 'Autres sports')}
                 </Text>
                 <View style={[Alignments.row, { columnGap: 9, flexWrap: 'wrap', rowGap: 9 }]}>
                   {otherActivities.map((activity) => {

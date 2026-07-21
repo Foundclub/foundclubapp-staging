@@ -5552,7 +5552,7 @@ function EventDetails({ navigation, route }) {
       <BottomModal
         close={() => setIsSubscriptionFollowUpVisible(false)}
         isVisible={isSubscriptionFollowUpVisible}
-        snapPoints={['44%']}
+        snapPoints={['70%']}
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={[Spaces.gap[4]]}>
