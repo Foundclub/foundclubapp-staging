@@ -500,7 +500,7 @@ function FacilitySelector({
         <AutocompleteAddressInput
           address={location}
           error={error}
-          label={null}
+          label={t('eventEdit.fields.address.label', 'Adresse')}
           placeholder={t('eventEdit.fields.location.placeholder')}
           setAddress={handleAddressChange}
           wrapperStyle={fieldSurfaceStyle}
