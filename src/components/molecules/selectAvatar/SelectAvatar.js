@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert, Image, PermissionsAndroid, Platform, TouchableOpacity, View,
 } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 
 import useTheme from '@/theme/themeContext';
 
@@ -38,6 +39,14 @@ function SelectAvatar({
 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const browserInputRef = useRef(null);
+  // C01 (Path A) : dé-miroir d'un selfie caméra avant via react-native-view-shot.
+  // On monte une vue cachée contenant l'image retournée (scaleX:-1) puis on la
+  // recapture. flipSource porte l'uri + les dimensions ; flipResolveRef relaie le
+  // résultat de onLoad->captureRef vers la promesse. Garde-fou : toute erreur/timeout
+  // retombe sur la photo d'origine (le miroir reste, mais la capture ne casse jamais).
+  const flipViewRef = useRef(null);
+  const flipResolveRef = useRef(null);
+  const [flipSource, setFlipSource] = useState(null);
   const {
     Alignments, ApplicationStyle, Images, Spaces,
   } = useTheme();
@@ -113,6 +122,52 @@ function SelectAvatar({
     }
   };
 
+  /**
+   * Retourne horizontalement une capture caméra avant (selfie) pour supprimer
+   * l'effet miroir natif. En cas d'échec (capture impossible/vide, timeout), on
+   * renvoie l'asset d'origine : la capture d'avatar ne doit jamais casser.
+   * @param {any} asset asset renvoyé par react-native-image-picker
+   * @returns {Promise<any>} asset dé-miroité, ou l'asset d'origine en repli
+   */
+  const flipAssetHorizontally = (asset) => new Promise((resolve) => {
+    if (Platform.OS === 'web' || !asset?.uri) {
+      resolve(asset);
+      return;
+    }
+    const width = asset.width || cropWidth || 1000;
+    const height = asset.height || cropHeight || 1000;
+    let settled = false;
+    const finish = (uri) => {
+      if (settled) return;
+      settled = true;
+      flipResolveRef.current = null;
+      setFlipSource(null);
+      // uri renseignée = capture réussie ; sinon repli sur l'original (miroir conservé).
+      resolve(uri ? { ...asset, path: uri, uri } : asset);
+    };
+    flipResolveRef.current = finish;
+    // Garde-fou : si onLoad/capture ne répond pas, on retombe sur l'original.
+    setTimeout(() => finish(null), 4000);
+    setFlipSource({ height, uri: asset.uri, width });
+  });
+
+  const handleFlipImageReady = async () => {
+    if (!flipSource) return;
+    try {
+      const uri = await captureRef(flipViewRef, {
+        format: 'png',
+        height: flipSource.height,
+        quality: 1,
+        result: 'tmpfile',
+        width: flipSource.width,
+      });
+      flipResolveRef.current?.(uri);
+    } catch (error) {
+      console.warn('Avatar flip failed, using original:', error?.message);
+      flipResolveRef.current?.(null);
+    }
+  };
+
   const takePicture = async () => {
     try {
       if (Platform.OS === 'web') {
@@ -140,7 +195,8 @@ function SelectAvatar({
       }
 
       const result = await launchCamera({
-        cameraType: 'back',
+        // C01 : un avatar est un selfie -> caméra avant par défaut.
+        cameraType: 'front',
         includeBase64: false,
         includeExtra: true,
         maxHeight: cropHeight || 1000,
@@ -149,7 +205,14 @@ function SelectAvatar({
         quality: 0.8,
         saveToPhotos: false,
       });
-      handleResponse(result);
+      // C01 : la caméra avant renvoie une image en miroir -> on la dé-miroite
+      // (repli sur l'original si le flip échoue).
+      if (result?.assets?.length > 0) {
+        const flipped = await flipAssetHorizontally(result.assets[0]);
+        handleResponse({ ...result, assets: [flipped] });
+      } else {
+        handleResponse(result);
+      }
     } catch (error) {
       console.warn('Camera Error:', error);
       Alert.alert('Erreur', `Impossible d'ouvrir la caméra : ${error.message}`);
@@ -182,6 +245,33 @@ function SelectAvatar({
 
   return (
     <>
+      {/* C01 : vue cachée (hors écran) qui rend le selfie retourné puis le recapture.
+          collapsable=false pour rester dans la hiérarchie native (sinon capture vide). */}
+      {flipSource ? (
+        <View
+          collapsable={false}
+          pointerEvents="none"
+          ref={flipViewRef}
+          style={{
+            height: flipSource.height,
+            left: 0,
+            opacity: 0,
+            position: 'absolute',
+            top: 0,
+            width: flipSource.width,
+          }}
+        >
+          <Image
+            onLoad={handleFlipImageReady}
+            source={{ uri: flipSource.uri }}
+            style={{
+              height: flipSource.height,
+              transform: [{ scaleX: -1 }],
+              width: flipSource.width,
+            }}
+          />
+        </View>
+      ) : null}
       {Platform.OS === 'web' ? (
         <input
           accept="image/*"
