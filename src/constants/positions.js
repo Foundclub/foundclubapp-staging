@@ -165,3 +165,33 @@ export function getPositionGroupsForSport(sportName, availablePositions = []) {
 
   return resolvedGroups;
 }
+
+/**
+ * Noms d'usage du sportif recherché par sport (décision D7).
+ * Source unique pour les libellés « profil recherché » des annonces de recrutement.
+ * Clés normalisées (minuscule, accents retirés). Valeurs au singulier, minuscule.
+ */
+const RECRUIT_ATHLETE_NOUN_BY_SPORT = {
+  athletisme: 'athlète',
+  boxe: 'boxeur',
+  cyclisme: 'cycliste',
+  escrime: 'escrimeur',
+  gymnastique: 'gymnaste',
+  judo: 'judoka',
+  natation: 'nageur',
+};
+
+/**
+ * Retourne le nom d'usage du sportif recherché pour un sport donné.
+ * Sports collectifs, tennis et sports non listés retombent sur « joueur ».
+ * @param {string} sportName - Nom du sport (casse et accents indifférents).
+ * @returns {string} Le nom au singulier, minuscule (ex. « boxeur »). Fallback « joueur ».
+ */
+export function getRecruitAthleteNoun(sportName) {
+  const normalized = String(sportName || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim();
+  return RECRUIT_ATHLETE_NOUN_BY_SPORT[normalized] || 'joueur';
+}

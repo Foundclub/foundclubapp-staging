@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { getRecruitAthleteNoun } from '@/constants/positions';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
@@ -140,7 +141,7 @@ function RecruitmentAdCard({
     ? { color: Colors.primary500, text: 'En ligne' }
     : { color: Colors.neutral500, text: 'Inactive' };
   const rightMetaLabel = [categoryName, sectionName].filter(Boolean).join(' - ');
-  const audienceTypeLabel = isCoachAd ? 'ENTRAINEUR' : 'JOUEUR';
+  const audienceTypeLabel = isCoachAd ? 'ENTRAINEUR' : getRecruitAthleteNoun(sportName).toUpperCase();
 
   const handlePress = () => {
     if (onPress) {
