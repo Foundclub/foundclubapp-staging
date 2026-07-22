@@ -27,6 +27,13 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+// Mode de placement du pack : 'free' = positions libres conservées telles quelles ;
+// 'slots' = les joueurs sont accrochés aux postes de la formation. Défaut 'slots'
+// (compatible avec les anciens packs). Aligné sur le backend event-composition.
+const normalizePlacementMode = (value) => (
+  String(value || '').trim().toLowerCase() === 'free' ? 'free' : 'slots'
+);
+
 export const sanitizeCompositionText = (value) => repairCommonMojibake(value).trim();
 
 const normalizeText = (value) => sanitizeCompositionText(value);
@@ -114,16 +121,19 @@ const clonePresetSlots = (preset, teamEntryId) => (
     : []
 );
 
-const normalizePlacement = (placement, slotMap, slotFallbacks) => {
+const normalizePlacement = (placement, slotMap) => {
   const playerId = normalizeText(placement?.playerId);
   if (!playerId) return null;
   const slotId = normalizeText(placement?.slotId);
-  const matchedSlot = (slotId && slotMap.get(slotId)) || slotFallbacks.shift() || null;
+  const matchedSlot = slotId ? (slotMap.get(slotId) || null) : null;
+  // Modèle hybride : la position envoyée fait foi (placement libre) ; à défaut,
+  // celle du poste si connu, sinon le centre. On ne colle plus au premier slot libre
+  // (fini le forçage des placements libres sur la formation).
   return {
     playerId,
-    positionX: matchedSlot ? toNumber(matchedSlot.positionX, 50) : toNumber(placement?.positionX, 50),
-    positionY: matchedSlot ? toNumber(matchedSlot.positionY, 50) : toNumber(placement?.positionY, 50),
-    slotId: matchedSlot?.slotId || slotId || null,
+    positionX: toNumber(placement?.positionX, matchedSlot ? toNumber(matchedSlot.positionX, 50) : 50),
+    positionY: toNumber(placement?.positionY, matchedSlot ? toNumber(matchedSlot.positionY, 50) : 50),
+    slotId: matchedSlot ? (matchedSlot.slotId || slotId) : null,
   };
 };
 
@@ -166,9 +176,8 @@ const normalizeTeamEntry = (team, index, presets, sportContext) => {
     ? incomingSlots
     : (presetSlots.length > 0 ? presetSlots : buildLegacySlots(legacyPlacements, teamEntryId));
   const slotMap = new Map(slots.map((slot) => [slot.slotId, slot]));
-  const slotFallbacks = [...slots];
   const placements = legacyPlacements
-    .map((placement) => normalizePlacement(placement, slotMap, slotFallbacks))
+    .map((placement) => normalizePlacement(placement, slotMap))
     .filter(Boolean);
 
   return {
@@ -185,6 +194,7 @@ const normalizeTeamEntry = (team, index, presets, sportContext) => {
 export const buildEmptyMultiTeamPack = ({
   availablePresets = [],
   mode = 'manual',
+  placementMode = 'slots',
   sportContext = null,
   teamCount = 1,
 }) => {
@@ -193,6 +203,7 @@ export const buildEmptyMultiTeamPack = ({
   return {
     manualPlayers: [],
     mode: mode === 'auto' ? 'auto' : 'manual',
+    placementMode: normalizePlacementMode(placementMode),
     reservePlayerIds: [],
     reserveSnapshotPlayers: [],
     schemaVersion: 3,
@@ -247,6 +258,7 @@ export const normalizeMultiTeamPack = (source, options = {}) => {
       })).filter((player) => Boolean(player.id))
       : [],
     mode: legacySource?.mode === 'auto' ? 'auto' : 'manual',
+    placementMode: normalizePlacementMode(legacySource?.placementMode),
     reservePlayerIds: uniqueIds(legacySource?.reservePlayerIds || []),
     reserveSnapshotPlayers: Array.isArray(legacySource?.reserveSnapshotPlayers)
       ? legacySource.reserveSnapshotPlayers
@@ -310,6 +322,7 @@ export const buildDraftPayloadFromPack = (pack, players = []) => {
   return {
     manualPlayers: Array.from(playerMap.values()).filter((player) => Boolean(player?.isManual)),
     mode: pack?.mode === 'auto' ? 'auto' : 'manual',
+    placementMode: normalizePlacementMode(pack?.placementMode),
     reservePlayerIds,
     schemaVersion: 3,
     sportContext: normalizeText(pack?.sportContext) || null,

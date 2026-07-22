@@ -67,7 +67,9 @@ describe('multiTeamCompositionUtils', () => {
       teams: [{
         id: 'team_1',
         name: 'Équipe 1',
-        placements: [{ playerId: 'player-1', positionX: 50, positionY: 12, slotId: 'team_1:gk' }],
+        placements: [{
+          playerId: 'player-1', positionX: 50, positionY: 12, slotId: 'team_1:gk',
+        }],
         presetKey: '4-4-2',
         slots: [
           {
@@ -99,6 +101,56 @@ describe('multiTeamCompositionUtils', () => {
     expect(reservePlayers).toHaveLength(1);
     expect(reservePlayers[0].documentId).toBe('player-2');
     expect(payload.reservePlayerIds).toEqual(['player-2']);
+  });
+
+  test('buildEmptyMultiTeamPack defaults placementMode to slots and accepts free', () => {
+    expect(buildEmptyMultiTeamPack({
+      availablePresets: presets, sportContext: 'football',
+    }).placementMode).toBe('slots');
+    expect(buildEmptyMultiTeamPack({
+      availablePresets: presets, placementMode: 'free', sportContext: 'football',
+    }).placementMode).toBe('free');
+  });
+
+  test('preserves a free placement (no slot) at its own x/y and carries placementMode', () => {
+    const pack = normalizeMultiTeamPack({
+      placementMode: 'free',
+      teams: [{
+        id: 'team_1',
+        placements: [{
+          playerId: 'p1', positionX: 33, positionY: 44, slotId: null,
+        }],
+        presetKey: '4-4-2',
+      }],
+    }, { availablePresets: presets, sportContext: 'football' });
+
+    expect(pack.placementMode).toBe('free');
+    const placement = pack.teams[0].placements[0];
+    expect(placement.playerId).toBe('p1');
+    expect(placement.positionX).toBe(33);
+    expect(placement.positionY).toBe(44);
+    expect(placement.slotId).toBeNull();
+  });
+
+  test('buildDraftPayloadFromPack keeps free placement x/y and placementMode', () => {
+    const players = [{ documentId: 'p1', firstname: 'A', lastname: 'B' }];
+    const pack = normalizeMultiTeamPack({
+      placementMode: 'free',
+      teams: [{
+        id: 'team_1',
+        placements: [{
+          playerId: 'p1', positionX: 20, positionY: 70, slotId: null,
+        }],
+        presetKey: '4-4-2',
+      }],
+    }, { availablePresets: presets, sportContext: 'football' });
+
+    const payload = buildDraftPayloadFromPack(pack, players);
+    expect(payload.placementMode).toBe('free');
+    const pl = payload.teams[0].placements[0];
+    expect(pl.positionX).toBe(20);
+    expect(pl.positionY).toBe(70);
+    expect(pl.slotId).toBeNull();
   });
 
   test('detects v3 multi-team payloads', () => {
