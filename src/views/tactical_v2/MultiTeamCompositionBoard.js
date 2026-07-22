@@ -59,6 +59,8 @@ const FIELD_HEIGHT = 280;
 const FIELD_SLOT_WIDTH = 78;
 const FIELD_SLOT_HEIGHT = 52;
 
+const clampPercent = (value) => Math.max(0, Math.min(100, Number(value) || 0));
+
 const byLabel = (left, right) => getCompositionPlayerLabel(left).localeCompare(getCompositionPlayerLabel(right), 'fr');
 
 const getWindowObject = () => (typeof window !== 'undefined' ? window : null);
@@ -119,52 +121,76 @@ const renderFieldSlots = ({
   Colors,
   Fonts,
   isReadOnly,
+  onPressPlacement,
   onPressSlot,
   playerMap,
   selectedPlayerId,
   team,
-}) => (
-  <RenderedTacticalField sport={team?.sportContext || 'football'} style={styles.fieldSurface}>
-    {(Array.isArray(team?.slots) ? team.slots : []).map((slot) => {
-      const placement = (Array.isArray(team?.placements) ? team.placements : []).find((entry) => entry?.slotId === slot?.slotId) || null;
-      const player = placement ? playerMap.get(String(placement.playerId || '')) : null;
-      const hasPlayer = Boolean(player);
-      const isSelectedPlayer = selectedPlayerId && String(selectedPlayerId) === String(placement?.playerId || '');
-      const left = `${Math.max(0, Math.min(100, Number(slot?.positionX || 0)))}%`;
-      const top = `${Math.max(0, Math.min(100, Number(slot?.positionY || 0)))}%`;
+}) => {
+  const slots = Array.isArray(team?.slots) ? team.slots : [];
+  const placements = Array.isArray(team?.placements) ? team.placements : [];
+  const occupiedSlotIds = new Set(placements.map((entry) => entry?.slotId).filter(Boolean));
 
-      return (
+  return (
+    <RenderedTacticalField sport={team?.sportContext || 'football'} style={styles.fieldSurface}>
+      {/* Postes vides = repères de la formation (cibles du mode « sur postes »). */}
+      {slots.filter((slot) => !occupiedSlotIds.has(slot?.slotId)).map((slot) => (
         <TouchableOpacity
           accessibilityLabel={slot?.label || 'Poste'}
           activeOpacity={isReadOnly ? 1 : 0.82}
           disabled={isReadOnly}
-          key={slot?.slotId || slot?.slotKey}
+          key={`slot-${slot?.slotId || slot?.slotKey}`}
           onPress={() => onPressSlot(team?.id, slot?.slotId)}
           style={[
-            styles.slotBubble,
+            styles.slotGhost,
             {
-              backgroundColor: hasPlayer ? `${Colors.primary500}D9` : `${Colors.primary900}D0`,
-              borderColor: hasPlayer
-                ? (isSelectedPlayer ? Colors.gold500 : Colors.primary100)
-                : `${Colors.neutral00}30`,
-              left,
-              top,
+              borderColor: `${Colors.neutral00}45`,
+              left: `${clampPercent(slot?.positionX)}%`,
+              top: `${clampPercent(slot?.positionY)}%`,
             },
           ]}
         >
-          <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-            {hasPlayer ? getCompositionPlayerInitials(player) : slot?.label}
+          <Text numberOfLines={1} style={[Fonts.p4, { color: `${Colors.neutral00}CC`, textAlign: 'center' }]}>
+            {slot?.label}
           </Text>
-          {hasPlayer ? (
+        </TouchableOpacity>
+      ))}
+
+      {/* Joueurs placés = rendus à LEUR position réelle (x/y), sur poste OU libre. */}
+      {placements.map((placement) => {
+        const player = playerMap.get(String(placement?.playerId || ''));
+        if (!player) return null;
+        const isSelectedPlayer = selectedPlayerId && String(selectedPlayerId) === String(placement?.playerId || '');
+
+        return (
+          <TouchableOpacity
+            accessibilityLabel={getCompositionPlayerLabel(player)}
+            activeOpacity={isReadOnly ? 1 : 0.82}
+            disabled={isReadOnly}
+            key={`placed-${placement?.playerId}`}
+            onPress={() => onPressPlacement(team?.id, placement?.playerId)}
+            style={[
+              styles.slotBubble,
+              {
+                backgroundColor: `${Colors.primary500}D9`,
+                borderColor: isSelectedPlayer ? Colors.gold500 : Colors.primary100,
+                left: `${clampPercent(placement?.positionX)}%`,
+                top: `${clampPercent(placement?.positionY)}%`,
+              },
+            ]}
+          >
+            <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+              {getCompositionPlayerInitials(player)}
+            </Text>
             <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral00, opacity: 0.92, textAlign: 'center' }]}>
               {player?.number != null && player?.number !== '' ? `#${player.number}` : 'Attribue'}
             </Text>
-          ) : null}
-        </TouchableOpacity>
-      );
-    })}
-  </RenderedTacticalField>
-);
+          </TouchableOpacity>
+        );
+      })}
+    </RenderedTacticalField>
+  );
+};
 
 function MultiTeamCompositionBoard({ routeParams = null }) {
   const {
@@ -418,6 +444,17 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       };
     });
   }, [detachPlayerEverywhere, readOnly, selectedPlayerId, updateDraftPack]);
+
+  // Taper un joueur déjà placé : on le « prend en main » (retiré du terrain, remis en
+  // réserve) et on le sélectionne, prêt à être reposé sur un poste ou (bientôt) glissé.
+  const handlePlacementPress = useCallback((targetTeamId, playerId) => {
+    if (readOnly || !playerId) return;
+    updateDraftPack((currentPack) => ({
+      ...currentPack,
+      teams: detachPlayerEverywhere(Array.isArray(currentPack?.teams) ? currentPack.teams : [], playerId),
+    }));
+    setSelectedPlayerId(String(playerId));
+  }, [detachPlayerEverywhere, readOnly, updateDraftPack]);
 
   const handleRenameTeam = useCallback((teamIdToRename, nextName) => {
     if (readOnly) return;
@@ -772,6 +809,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                             Colors,
                             Fonts,
                             isReadOnly: true,
+                            onPressPlacement: () => {},
                             onPressSlot: () => {},
                             playerMap: branchPlayerMap,
                             selectedPlayerId: '',
@@ -1103,6 +1141,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     Colors,
                     Fonts,
                     isReadOnly: false,
+                    onPressPlacement: handlePlacementPress,
                     onPressSlot: handleSlotPress,
                     playerMap,
                     selectedPlayerId,
@@ -1233,6 +1272,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     position: 'absolute',
     width: FIELD_SLOT_WIDTH,
+  },
+  slotGhost: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    borderWidth: 1.2,
+    height: FIELD_SLOT_HEIGHT - 8,
+    justifyContent: 'center',
+    marginLeft: -((FIELD_SLOT_WIDTH - 10) / 2),
+    marginTop: -((FIELD_SLOT_HEIGHT - 8) / 2),
+    paddingHorizontal: 6,
+    position: 'absolute',
+    width: FIELD_SLOT_WIDTH - 10,
   },
   stepperButton: {
     alignItems: 'center',
