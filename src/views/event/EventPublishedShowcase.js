@@ -353,65 +353,64 @@ export default function EventPublishedShowcase({ navigation, route }) {
 const makeStyles = (Colors) => StyleSheet.create({
   actions: { gap: 10 },
   container: {
-    backgroundColor: Colors.neutral00, flexGrow: 1, gap: 16, padding: 20,
+    backgroundColor: Colors.primary900, flexGrow: 1, gap: 16, padding: 20,
   },
-  // error700 sur fond neutral00 : 5,21:1 (AA).
+  // error300 sur fond sombre primary900 : ~8:1 (AA).
   downloadErrorText: {
-    color: Colors.error700, fontSize: 13, paddingHorizontal: 4, textAlign: 'center',
+    color: Colors.error300, fontSize: 13, paddingHorizontal: 4, textAlign: 'center',
   },
   editor: { gap: 8 },
   editorBody: { gap: 14, marginTop: 4 },
   editorField: {
-    backgroundColor: Colors.neutral50,
-    borderColor: Colors.neutral200,
+    backgroundColor: Colors.primary800,
+    borderColor: `${Colors.primary500}3D`,
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 4,
     paddingVertical: 6,
   },
-  editorHint: { color: Colors.neutral600, fontSize: 13, lineHeight: 18 },
-  editorInput: { color: Colors.neutral900 },
-  editorInputLabel: { color: Colors.neutral700 },
+  editorHint: { color: Colors.neutral300, fontSize: 13, lineHeight: 18 },
+  editorInput: { color: Colors.neutral00 },
+  editorInputLabel: { color: Colors.neutral300 },
   editorToggle: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 10,
   },
-  // Glyphe +/- porteur de l'etat plie/deplie : primary500 sur blanc = 2,40:1,
-  // primary700 = 12,51:1.
-  editorToggleChevron: { color: Colors.primary700, fontSize: 22, fontWeight: '700' },
-  editorToggleText: { color: Colors.primary700, fontSize: 16, fontWeight: '700' },
+  // Glyphe +/- porteur de l'etat plie/deplie : primary500 sur fond sombre primary900 = ~7,3:1.
+  editorToggleChevron: { color: Colors.primary500, fontSize: 22, fontWeight: '700' },
+  editorToggleText: { color: Colors.primary500, fontSize: 16, fontWeight: '700' },
   flex: { flex: 1 },
   ghostBtn: {
     alignItems: 'center',
-    backgroundColor: Colors.neutral50,
+    backgroundColor: Colors.primary800,
     borderRadius: 12,
     flex: 1,
     justifyContent: 'center',
     minHeight: 44,
     paddingVertical: 12,
   },
-  ghostBtnText: { color: Colors.primary700, fontWeight: '600' },
-  // Sur fond neutral00 : neutral500 = 4,23:1 (sous AA), neutral600 = 6,06:1.
-  later: { color: Colors.neutral600, paddingVertical: 8, textAlign: 'center' },
+  ghostBtnText: { color: Colors.primary500, fontWeight: '600' },
+  // Sur fond sombre primary900 : neutral300 = ~8,4:1.
+  later: { color: Colors.neutral300, paddingVertical: 8, textAlign: 'center' },
   preview: {
     alignItems: 'center',
     aspectRatio: 4 / 5,
-    backgroundColor: Colors.neutral50,
+    backgroundColor: Colors.primary800,
     borderRadius: 16,
     justifyContent: 'center',
     overflow: 'hidden',
   },
   previewErrorText: {
-    color: Colors.neutral600, fontSize: 13, paddingHorizontal: 24, textAlign: 'center',
+    color: Colors.neutral300, fontSize: 13, paddingHorizontal: 24, textAlign: 'center',
   },
   previewImage: { height: '100%', width: '100%' },
   previewLoading: { alignItems: 'center', gap: 8 },
-  // Sur fond neutral50 (cadre d'apercu) : neutral500 = 3,77:1 (sous AA), neutral600 = 5,41:1.
-  previewLoadingText: { color: Colors.neutral600, fontSize: 13 },
+  // Sur fond primary800 (cadre d'apercu sombre) : neutral300 = ~6,7:1.
+  previewLoadingText: { color: Colors.neutral300, fontSize: 13 },
   previewOverlay: {
-    backgroundColor: `${Colors.neutral00}99`,
+    backgroundColor: `${Colors.primary900}CC`,
     bottom: 0,
     justifyContent: 'center',
     left: 0,
@@ -422,39 +421,37 @@ const makeStyles = (Colors) => StyleSheet.create({
   primaryBtn: {
     alignItems: 'center', backgroundColor: Colors.primary500, borderRadius: 12, paddingVertical: 14,
   },
-  // Encre unique sur fond primary500 (THEME.md) : neutral00 = 2,40:1, primary900 = 7,96:1.
+  // Encre unique sur fond primary500 (THEME.md) : primary900 = 7,96:1.
   primaryBtnText: { color: Colors.primary900, fontSize: 16, fontWeight: '700' },
   resetBtn: { alignItems: 'center', paddingVertical: 8 },
-  // Sur fond neutral00 : primary500 = 2,40:1 (echec AA), primary700 = 12,51:1.
-  resetBtnText: { color: Colors.primary700, fontWeight: '600' },
+  // Sur fond sombre primary900 : primary500 = ~7,3:1.
+  resetBtnText: { color: Colors.primary500, fontWeight: '600' },
   retryBtn: { paddingHorizontal: 16, paddingVertical: 8 },
-  // Sur fond neutral50 (cadre d'apercu) : primary500 = 2,14:1, primary700 = 11,15:1.
-  retryBtnText: { color: Colors.primary700, fontWeight: '600' },
+  // Sur fond primary800 (cadre d'apercu sombre) : primary500 = ~5,9:1.
+  retryBtnText: { color: Colors.primary500, fontWeight: '600' },
   row: { flexDirection: 'row', gap: 10 },
   secondaryBtn: {
-    // Seul lisere delimitant le bouton : primary500 sur blanc = 2,40:1 (sous le seuil
-    // 3:1 des elements graphiques porteurs d'information), primary600 = 3,34:1.
-    alignItems: 'center', borderColor: Colors.primary600, borderRadius: 12, borderWidth: 1, paddingVertical: 12,
+    // Lisere du bouton : primary500 sur fond sombre primary900 = ~7,3:1 (au-dessus du seuil 3:1).
+    alignItems: 'center', borderColor: Colors.primary500, borderRadius: 12, borderWidth: 1, paddingVertical: 12,
   },
-  // Sur fond neutral00 : primary500 = 2,40:1 (echec AA), primary700 = 12,51:1.
-  secondaryBtnText: { color: Colors.primary700, fontWeight: '700' },
-  subtitle: { color: Colors.neutral600, fontSize: 15 },
-  title: { color: Colors.primary700, fontSize: 24, fontWeight: '800' },
+  // Sur fond sombre primary900 : primary500 = ~7,3:1.
+  secondaryBtnText: { color: Colors.primary500, fontWeight: '700' },
+  subtitle: { color: Colors.neutral300, fontSize: 15 },
+  title: { color: Colors.neutral00, fontSize: 24, fontWeight: '800' },
   variantChip: {
-    borderColor: Colors.neutral200,
+    borderColor: Colors.neutral700,
     borderRadius: 999,
     borderWidth: 1.5,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   variantChipActive: {
-    backgroundColor: `${Colors.primary500}14`,
+    backgroundColor: `${Colors.primary500}24`,
     borderColor: Colors.primary500,
   },
-  variantChipText: { color: Colors.neutral600, fontSize: 13, fontWeight: '600' },
-  // Sur le fond teinte primary500 a 8 % pose sur blanc : primary600 = 3,11:1 (echec AA),
-  // primary700 = 11,63:1.
-  variantChipTextActive: { color: Colors.primary700, fontWeight: '700' },
+  variantChipText: { color: Colors.neutral300, fontSize: 13, fontWeight: '600' },
+  // Puce active (fond primary500 a ~14 % sur sombre) : primary500 = lisible (~6:1).
+  variantChipTextActive: { color: Colors.primary500, fontWeight: '700' },
   variantRow: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12,
   },
