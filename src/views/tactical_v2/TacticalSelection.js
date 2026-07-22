@@ -48,6 +48,17 @@ const normalizeMatchLabel = (value) => {
 };
 
 /**
+ * Clé canonique d'un joueur pour la sélection/convocation.
+ * On préfère le documentId (c'est ce que stocke la composition côté serveur, et
+ * ce avec quoi on pré-coche depuis un brouillon), repli sur l'id. Toujours une
+ * chaîne — c'est la SEULE clé utilisée pour cocher/décocher/valider, ce qui évite
+ * le bug id-numérique vs documentId-chaîne.
+ * @param {TacticalPlayer} [player]
+ * @returns {string}
+ */
+const getPlayerKey = (player) => String(player?.documentId || player?.id || '');
+
+/**
  * TacticalSelection - Step 1: Select players for the composition
  * Displays team players with checkboxes for multi-selection
  */
@@ -297,7 +308,7 @@ function TacticalSelection() {
 
     // Add team players first
     teamPlayers.forEach((p) => {
-      const id = p.id || p.documentId || '';
+      const id = getPlayerKey(p);
       if (!seenIds.has(id)) {
         seenIds.add(id);
         result.push(p);
@@ -306,7 +317,7 @@ function TacticalSelection() {
 
     // Add manual players if not already in team players
     manualPlayers.forEach((p) => {
-      const id = p.id || p.documentId || '';
+      const id = getPlayerKey(p);
       if (!seenIds.has(id)) {
         seenIds.add(id);
         result.push(p);
@@ -340,7 +351,7 @@ function TacticalSelection() {
 
   // Select all
   const selectAll = useCallback(() => {
-    setSelectedIds(new Set(allPlayers.map((p) => p.id || p.documentId || '')));
+    setSelectedIds(new Set(allPlayers.map(getPlayerKey)));
   }, [allPlayers]);
 
   // Clear selection
@@ -360,18 +371,21 @@ function TacticalSelection() {
       return;
     }
 
+    // Un seul identifiant partagé (id === documentId) pour éviter toute
+    // désynchronisation entre la clé de sélection et le rendu.
+    const manualId = `manual_${Date.now()}`;
     const newPlayer = {
       avatar: null,
-      documentId: `manual_${Date.now()}`,
+      documentId: manualId,
       firstname: manualFirstname.trim(),
-      id: `manual_${Date.now()}`,
+      id: manualId,
       isManual: true,
       lastname: manualLastname.trim(),
       number: manualNumber.trim() || undefined,
     };
 
     setManualPlayers((prev) => [...prev, newPlayer]);
-    setSelectedIds((prev) => new Set([newPlayer.id, ...prev])); // Auto-select
+    setSelectedIds((prev) => new Set([getPlayerKey(newPlayer), ...prev])); // Auto-select
     setManualFirstname('');
     setManualLastname('');
     setManualNumber('');
@@ -381,7 +395,7 @@ function TacticalSelection() {
   // Open edit modal
   const handleEditPlayer = useCallback((/** @type {TacticalPlayer} */ player) => {
     setEditingPlayer(player);
-    const playerId = player.id || player.documentId || '';
+    const playerId = getPlayerKey(player);
     setEditFirstname(player.firstname || '');
     setEditLastname(player.lastname || '');
     // Use override if exists, otherwise use player's number
@@ -393,11 +407,11 @@ function TacticalSelection() {
   // Save edits
   const handleSaveEdit = useCallback(() => {
     if (!editingPlayer) return;
-    const playerId = editingPlayer.id || editingPlayer.documentId || '';
+    const playerId = getPlayerKey(editingPlayer);
 
     if (editingPlayer.isManual || String(playerId).startsWith('manual_')) {
       // Update manual player in list
-      setManualPlayers((prev) => prev.map((p) => ((p.id || p.documentId) === playerId
+      setManualPlayers((prev) => prev.map((p) => (getPlayerKey(p) === playerId
         ? {
           ...p, firstname: editFirstname.trim(), lastname: editLastname.trim(), number: editNumber.trim() || undefined,
         }
@@ -422,7 +436,7 @@ function TacticalSelection() {
   // Delete manual player
   const handleDeletePlayer = useCallback(() => {
     if (!editingPlayer) return;
-    const playerId = editingPlayer.id || editingPlayer.documentId || '';
+    const playerId = getPlayerKey(editingPlayer);
 
     if (editingPlayer.isManual || String(playerId).startsWith('manual_')) {
       Alert.alert(
@@ -432,7 +446,7 @@ function TacticalSelection() {
           { style: 'cancel', text: 'Annuler' },
           {
             onPress: () => {
-              setManualPlayers((prev) => prev.filter((p) => (p.id || p.documentId) !== playerId));
+              setManualPlayers((prev) => prev.filter((p) => getPlayerKey(p) !== playerId));
               setSelectedIds((prev) => {
                 const next = new Set(prev);
                 next.delete(playerId);
@@ -466,7 +480,16 @@ function TacticalSelection() {
       return;
     }
 
-    const selectedPlayers = allPlayers.filter((p) => selectedIds.has(p.id || '') || selectedIds.has(p.documentId || ''));
+    // Clé canonique unique + on applique le numéro de maillot édité (numberOverrides)
+    // pour qu'il suive jusqu'au board et à la convocation publiée.
+    const selectedPlayers = allPlayers
+      .filter((p) => selectedIds.has(getPlayerKey(p)))
+      .map((p) => {
+        const override = numberOverrides[getPlayerKey(p)];
+        return (override !== undefined && override !== '' && !p.isManual)
+          ? { ...p, number: override }
+          : p;
+      });
 
     // @ts-ignore
     navigation.navigate(RouteNames.TacticalBoardV2, {
@@ -492,6 +515,7 @@ function TacticalSelection() {
     editorSource,
     selectedIds,
     allPlayers,
+    numberOverrides,
     eventId,
     eventName,
     sport,
@@ -508,12 +532,9 @@ function TacticalSelection() {
 
   // Render player item
   const renderPlayer = useCallback((/** @type {{ item: TacticalPlayer }} */ { item }) => {
-    // Use documentId preferably (that's what composition stores), fallback to id
-    const playerId = String(item.documentId || item.id || '');
-    // Check if selected - handles both id formats
-    const isSelected = selectedIds.has(playerId)
-      || selectedIds.has(String(item.id || ''))
-      || selectedIds.has(String(item.documentId || ''));
+    // Clé canonique unique (documentId d'abord) — même clé que la sélection.
+    const playerId = getPlayerKey(item);
+    const isSelected = selectedIds.has(playerId);
     const initials = `${item.firstname?.charAt(0) || ''}${item.lastname?.charAt(0) || ''}`.toUpperCase();
     const isManualPlayer = item.isManual || String(playerId).startsWith('manual_');
 
