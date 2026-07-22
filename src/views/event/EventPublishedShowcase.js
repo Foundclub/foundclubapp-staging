@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator, Image, KeyboardAvoidingView, Platform,
-  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 
 import useVisualShowcase, { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEventShowcase';
@@ -71,6 +71,13 @@ export default function EventPublishedShowcase({ navigation, route }) {
   const [busyAction, setBusyAction] = useState(null); // 'story' | 'poster' | null
   const [editorOpen, setEditorOpen] = useState(false);
   const [downloadError, setDownloadError] = useState(null);
+
+  // L'aperçu est un visuel PORTRAIT (4:5) rendu à sa taille réelle : sur un grand écran
+  // (web/desktop) il déborde et masque les boutons d'action. On plafonne sa largeur par la
+  // hauteur visible (≈ 50 %) pour que l'affiche ENTIÈRE et les boutons tiennent ensemble,
+  // sans dépasser la largeur dispo sur mobile.
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const previewWidth = Math.max(200, Math.min(windowWidth - 40, Math.round(windowHeight * 0.5)));
 
   const {
     downloadPoster, downloadStory, error, event, isLoading, overrides,
@@ -178,7 +185,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
           })}
         </View>
 
-        <View style={styles.preview}>
+        <View style={[styles.preview, { width: previewWidth }]}>
           {previewUri ? (
             <Image resizeMode="contain" source={{ uri: previewUri }} style={styles.previewImage} />
           ) : null}
@@ -396,10 +403,12 @@ const makeStyles = (Colors) => StyleSheet.create({
   later: { color: Colors.neutral300, paddingVertical: 8, textAlign: 'center' },
   preview: {
     alignItems: 'center',
+    alignSelf: 'center',
     aspectRatio: 4 / 5,
     backgroundColor: Colors.primary800,
     borderRadius: 16,
     justifyContent: 'center',
+    maxWidth: '100%',
     overflow: 'hidden',
   },
   previewErrorText: {
