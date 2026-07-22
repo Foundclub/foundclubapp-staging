@@ -12,7 +12,9 @@
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { getApiBaseUrl } from '@/config/runtimeUrls';
 
-const RENDER_PATH = '/api/visual-assets/render';
+// getApiBaseUrl() inclut déjà « /api » : le chemin ne doit PAS le répéter
+// (sinon POST .../api/api/visual-assets/render -> 405). Cf. axios client (chemins /xxx).
+const RENDER_PATH = '/visual-assets/render';
 
 const buildRenderBody = ({
   format, overrides, subjectId, subjectType, template, variant,

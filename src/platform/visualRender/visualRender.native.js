@@ -17,7 +17,9 @@ import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { getApiBaseUrl } from '@/config/runtimeUrls';
 import SharePlatform from '@/platform/share';
 
-const RENDER_PATH = '/api/visual-assets/render';
+// getApiBaseUrl() inclut déjà « /api » : le chemin ne doit PAS le répéter
+// (sinon POST .../api/api/visual-assets/render -> 405). Même bug corrigé côté web.
+const RENDER_PATH = '/visual-assets/render';
 
 const buildRenderBody = ({
   format, overrides, subjectId, subjectType, template, variant,
