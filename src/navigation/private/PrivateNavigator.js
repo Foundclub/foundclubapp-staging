@@ -436,10 +436,12 @@ function PrivateNavigator() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          getComponent={() => require('@/views/historyWizard/HistoryWizardCategory').default}
+          getComponent={() => require('@/views/historyWizard/HistoryWizardSingle').default}
           name={RouteNames.HistoryWizardCategory}
           options={{
             ...commonOptions,
+            // C08 (D4) — écran unifié ; WizardStepLayout porte déjà sa flèche de retour.
+            headerShown: false,
             headerTitle: 'Ajouter une expérience',
           }}
         />

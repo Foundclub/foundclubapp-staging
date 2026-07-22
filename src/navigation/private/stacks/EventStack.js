@@ -5,7 +5,6 @@ import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
 import EventPublishedShowcase from '@/views/event/EventPublishedShowcase';
-import TacticalBoardScreen from '@/views/event/TacticalBoardScreen';
 import TournamentManagement from '@/views/event/TournamentManagement';
 import TournamentMatchDetails from '@/views/event/TournamentMatchDetails';
 import TournamentSettingsEdit from '@/views/event/TournamentSettingsEdit';
@@ -113,14 +112,6 @@ function EventStack() {
             headerTitle: '',
           }}
         />
-        <Stack.Screen
-          component={TacticalBoardScreen}
-          name={RouteNames.TacticalBoard}
-          options={{
-            headerShown: false,
-          }}
-        />
-
         {/* Tactical V2 Screens */}
         <Stack.Screen
           component={TacticalSelectionV2}

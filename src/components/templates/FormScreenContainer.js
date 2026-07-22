@@ -8,6 +8,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  * @param {'form' | 'readable' | 'content' | 'wide' | 'full' | number} [props.contentWidth]
  * @param {'top' | 'center'} [props.desktopAlignment]
  * @param {'none' | 'screen' | 'tab-scene' | 'edge-to-edge'} [props.bottomInsetMode]
+ * @param {boolean} [props.keyboardAvoiding]
  * @param {'none' | 'card'} [props.surface]
  * @returns {import('react').ReactElement}
  */
@@ -20,6 +21,7 @@ function FormScreenContainer({
   desktopAlignment = 'center',
   desktopMinHeight = 640,
   gradient = null,
+  keyboardAvoiding = true,
   responsiveHorizontalPadding = true,
   responsivePadding = true,
   style = [],
@@ -35,6 +37,7 @@ function FormScreenContainer({
       desktopAlignment={desktopAlignment}
       desktopMinHeight={desktopMinHeight}
       gradient={gradient}
+      keyboardAvoiding={keyboardAvoiding}
       responsiveHorizontalPadding={responsiveHorizontalPadding}
       responsivePadding={responsivePadding}
       style={style}

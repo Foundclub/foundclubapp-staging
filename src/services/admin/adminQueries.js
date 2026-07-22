@@ -6,6 +6,7 @@ import {
   approveClubClaim,
   createManualEntitlement,
   createManualSubscription,
+  deleteAdminUser,
   generateTestTournament,
   getAdminClub,
   getAdminClubs,
@@ -347,6 +348,19 @@ export const useUpdateAdminUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (/** @type {{ documentId: string; data: Record<string, any> }} */ payload) => updateAdminUser(payload.documentId, payload.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+};
+
+/**
+ * Hook to delete (anonymize) a user as superadmin.
+ */
+export const useDeleteAdminUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (/** @type {{ documentId: string; reason?: string }} */ payload) => deleteAdminUser(payload.documentId, { reason: payload.reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     },

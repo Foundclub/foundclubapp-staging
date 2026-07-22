@@ -52,7 +52,6 @@ const REGRESSION_GUARD_SCREENS = [
   RouteNames.Conversation,
   RouteNames.NewConversation,
   // Panne « tunnel de creation de club non route »
-  RouteNames.CreateClub,
   RouteNames.ClubWizardName,
   RouteNames.ClubWizardAddress,
   RouteNames.ClubWizardActivities,

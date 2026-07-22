@@ -9,7 +9,6 @@ import ClubEdit from '@/views/club/ClubEdit';
 import ClubFilters from '@/views/club/ClubFilters';
 import ClubList from '@/views/club/ClubList';
 import ClubMembershipRequestList from '@/views/club/ClubMembershipRequestList';
-import CreateClubRequest from '@/views/club/CreateClubRequest';
 import RequestsDashboard from '@/views/club/RequestsDashboard';
 import ClubWizardActivities from '@/views/club/wizard/ClubWizardActivities';
 import ClubWizardAddress from '@/views/club/wizard/ClubWizardAddress';
@@ -113,14 +112,6 @@ function ClubStack() {
           options={{
             ...commonOptions,
             headerTitle: t('addSponsor.title'),
-          }}
-        />
-        <Stack.Screen
-          component={CreateClubRequest}
-          name={RouteNames.CreateClub}
-          options={{
-            ...commonOptions,
-            headerTitle: t('createClubRequest.title'),
           }}
         />
         <Stack.Screen

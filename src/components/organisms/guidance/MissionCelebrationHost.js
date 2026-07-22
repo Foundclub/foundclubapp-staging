@@ -22,6 +22,11 @@ const SUCCESS_PHASE_MS = Platform.OS === 'web' ? 3600 : 2600;
 const NEXT_PHASE_MS = Platform.OS === 'web' ? 2600 : 2200;
 const EXIT_DURATION_MS = 220;
 const IS_WEB = Platform.OS === 'web';
+// R04 — la celebration est un bandeau flottant monte a la racine (hors
+// navigateur), sans acces a la hauteur d'en-tete de l'ecran courant. On la
+// descend sous la barre d'en-tete standard pour qu'elle ne recouvre plus les
+// controles de l'en-tete (retour, titre) pendant les ~2,6 s d'affichage.
+const HEADER_CLEARANCE = IS_WEB ? 8 : Platform.select({ default: 60, ios: 52 });
 
 /**
  *
@@ -199,7 +204,7 @@ function MissionCelebrationHost() {
           left: 16,
           position: IS_WEB ? 'fixed' : 'absolute',
           right: 16,
-          top: insets.top + 8,
+          top: insets.top + HEADER_CLEARANCE,
         },
       ]}
     >

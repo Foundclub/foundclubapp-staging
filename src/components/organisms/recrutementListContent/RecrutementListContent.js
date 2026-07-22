@@ -671,15 +671,15 @@ function RecrutementListContent({
             borderRadius: 12,
             borderWidth: 1,
             flex: 1,
-            minHeight: isWeb ? 46 : 42,
-            paddingHorizontal: 12,
+            minHeight: isWeb ? 46 : 44,
+            paddingHorizontal: 8,
             paddingVertical: isWeb ? 10 : 8,
           },
         ]}
       >
         <Text
           adjustsFontSizeToFit
-          minimumFontScale={0.85}
+          minimumFontScale={0.7}
           numberOfLines={1}
           style={[
             Fonts.p3Bold,
@@ -755,9 +755,9 @@ function RecrutementListContent({
     ]}
     >
       {renderSegmentedTab('profils', 'Profils')}
-      {renderSegmentedTab('opportunites', 'Opportunites')}
+      {renderSegmentedTab('opportunites', 'Opportunités')}
       {renderSegmentedTab('annonces', 'Mes annonces')}
-      {renderSegmentedTab('candidatures', 'Mes candidatures')}
+      {renderSegmentedTab('candidatures', 'Candidatures')}
     </View>
   );
 

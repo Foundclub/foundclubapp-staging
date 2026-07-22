@@ -1,6 +1,8 @@
 import { HeaderHeightContext } from '@react-navigation/elements';
 import { useContext, useMemo } from 'react';
-import { ImageBackground, useWindowDimensions, View } from 'react-native';
+import {
+  ImageBackground, KeyboardAvoidingView, Platform, useWindowDimensions, View,
+} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -32,6 +34,7 @@ import { useTour } from '@/context/TourContext';
  *   eux-memes `insets.bottom` a leur contenu (sinon il serait compte deux fois).
  * @param {'none' | 'screen' | 'tab-scene' | 'edge-to-edge'} [props.bottomInsetMode]
  * @param {number} [props.bottomInsetExtra]
+ * @param {boolean} [props.keyboardAvoiding]
  * @param {boolean} [props.responsiveHorizontalPadding]
  * @param {string[] | null} [props.gradient]
  * @param {boolean} [props.withHeaderPadding]
@@ -44,6 +47,7 @@ function ScreenContainer({
   children,
   contentContainerStyle = [],
   gradient = null, // Default to no gradient
+  keyboardAvoiding = false,
   responsiveHorizontalPadding = false,
   responsivePadding,
   style = [],
@@ -102,6 +106,26 @@ function ScreenContainer({
     withHeaderPadding,
   ]);
 
+  // C06 — quand le clavier s'ouvre, le champ actif doit rester visible : les
+  // conteneurs de formulaire (FormScreenContainer) activent `keyboardAvoiding`
+  // pour remonter le contenu au-dessus du clavier. `keyboardVerticalOffset`
+  // compense la hauteur de l'en-tete natif deja mesuree plus haut.
+  const body = keyboardAvoiding ? (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeightNative : 0}
+      style={Alignments.fill}
+    >
+      <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
+        {children}
+      </View>
+    </KeyboardAvoidingView>
+  ) : (
+    <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
+      {children}
+    </View>
+  );
+
   if (gradient) {
     return (
       <View style={[Alignments.fill, ...safeStyle]}>
@@ -116,9 +140,7 @@ function ScreenContainer({
             containerSpaces,
           ]}
         >
-          <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
-            {children}
-          </View>
+          {body}
         </LinearGradient>
       </View>
     );
@@ -135,9 +157,7 @@ function ScreenContainer({
         ...safeStyle,
       ]}
     >
-      <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
-        {children}
-      </View>
+      {body}
     </ImageBackground>
   );
 }

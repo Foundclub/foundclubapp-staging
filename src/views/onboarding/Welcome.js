@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Platform, ScrollView, Text, View,
@@ -49,6 +50,54 @@ function Welcome({ navigation }) {
     || roleKey === 'superAdmin';
   // Seuls coach et dirigeant demarrent le tour guide v2 (joueur = tour leger a venir).
   const shouldOfferGuidedTour = roleKey === 'coach' || roleKey === 'president';
+
+  // C10 / décision D2 : le tour guidé se lance AUTOMATIQUEMENT à la création de
+  // compte, sans clic (depuis Welcome). Le « passer l'étape » reste géré par
+  // étape dans le bandeau du tour ; on ne propose jamais de saut global. Un
+  // drapeau MMKV garantit un seul auto-lancement (à la création), pas à chaque
+  // visite ; les boutons ci-dessous restent comme repli si l'auto-lancement a
+  // déjà eu lieu ou si aucun script de tour n'existe pour le rôle.
+  const hasAutoStartedTourRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoStartedTourRef.current) return;
+    if (userDataLoading || userDataError) return;
+
+    const tourProfileKey = (() => {
+      if (roleKey === 'president') return 'president';
+      if (roleKey === 'coach') return 'coach';
+      if (roleKey === 'player') return 'player';
+      return null;
+    })();
+    if (!tourProfileKey) return;
+
+    const userId = auth?.user?.documentId;
+    const autoStartKey = userId ? `hasAutoStartedTour_${userId}` : null;
+    if (autoStartKey && storage.getBoolean(autoStartKey)) return;
+
+    hasAutoStartedTourRef.current = true;
+
+    if (userId) {
+      storage.set(`hasSeenWelcome_${userId}`, true);
+      markOnboardingComplete(userId);
+      if (autoStartKey) storage.set(autoStartKey, true);
+    }
+
+    const started = startTour(tourProfileKey);
+    if (!started) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: getPostOnboardingHomeRoute() }],
+      });
+    }
+  }, [
+    auth?.user?.documentId,
+    getPostOnboardingHomeRoute,
+    navigation,
+    roleKey,
+    startTour,
+    userDataError,
+    userDataLoading,
+  ]);
 
   // Les quotas gratuits sont des constantes produit : des puces statiques evitent l'etat
   // "resume pas encore charge" qui affichait un texte vague au moment le plus vendeur.

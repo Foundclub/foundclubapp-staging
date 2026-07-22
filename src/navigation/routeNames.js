@@ -25,8 +25,7 @@
  * ne les vise). A confirmer produit avant de cabler ou de retirer :
  *   `CMPlanning`, `FeaturedRequests`, `LeagueHome`, `MatchCenter`, `MatchDetails`,
  *   `MissingPlayersView`, `PersonalPlanningWeekFullscreen`, `PublicLicensePayment`,
- *   `RequestsDashboard`, `SubscriptionWebSuccess`, `TacticalBoard` (seul `TacticalBoardV2`
- *   est navigue), `TeamMembershipRequests`, `TeamStats`.
+ *   `RequestsDashboard`, `SubscriptionWebSuccess`, `TeamMembershipRequests`, `TeamStats`.
  * Les onglets-leurres `AuthStackAccount` / `AuthStackMessaging` / `AuthStackPlanning` sont
  * dans le meme cas mais c'est VOULU (cf. MOBILE_ONLY_SCREENS dans webRoutes.parity.test.js).
  *
@@ -91,7 +90,6 @@ export const RouteNames = /** @type {const} */ ({
   CMTeams: 'CMTeams',
   Conversation: 'Conversation',
   ConversationPublicEventPicker: 'ConversationPublicEventPicker',
-  CreateClub: 'CreateClub',
   CreateSection: 'CreateSection',
   CreateSquad: 'CreateSquad',
   EndMatchScreen: 'EndMatchScreen',
@@ -231,7 +229,6 @@ export const RouteNames = /** @type {const} */ ({
   HistoryWizardRecap: 'HistoryWizardRecap',
 
   // Tactical
-  TacticalBoard: 'TacticalBoard',
   TacticalBoardV2: 'TacticalBoardV2',
   TacticalSelectionV2: 'TacticalSelectionV2',
 

@@ -8,15 +8,14 @@ import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
-import AdminStateView from '@/views/admin/components/AdminStateView';
-
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetAdminUser, useUpdateAdminUser } from '@/services/admin/adminQueries';
+import { useDeleteAdminUser, useGetAdminUser, useUpdateAdminUser } from '@/services/admin/adminQueries';
 import { useGetRoles } from '@/services/auth/authQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
@@ -45,6 +44,10 @@ function AdminUserDetail() {
 
   const user = userData; // users-permissions returns user directly, not wrapped in data
   const roles = rolesData?.roles || rolesData || [];
+  const deleteMutation = useDeleteAdminUser();
+  const selfDocumentId = String(currentUser?.documentId || currentUser?.id || '').trim();
+  const viewedUserDocumentId = String(user?.documentId || userId || '').trim();
+  const isSelfAccount = Boolean(selfDocumentId) && selfDocumentId === viewedUserDocumentId;
 
   const [selectedRole, setSelectedRole] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
@@ -85,6 +88,34 @@ function AdminUserDetail() {
             );
           },
           text: 'Sauvegarder',
+        },
+      ],
+    );
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Supprimer ce compte ?',
+      'Le compte sera anonymisé et bloqué définitivement. Cette action est irréversible.',
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: () => {
+            deleteMutation.mutate(
+              { documentId: userId, reason: 'Suppression par un superadmin' },
+              {
+                onError: (err) => {
+                  Alert.alert('Erreur', getErrorMessage(err, 'generic'));
+                },
+                onSuccess: () => {
+                  Alert.alert('Compte supprimé', "L'utilisateur a été anonymisé et bloqué.");
+                  navigation.goBack();
+                },
+              },
+            );
+          },
+          style: 'destructive',
+          text: 'Supprimer',
         },
       ],
     );
@@ -308,6 +339,29 @@ function AdminUserDetail() {
             variant="Primary"
           />
         </View>
+
+        {!isSelfAccount && (
+          <TouchableOpacity
+            disabled={deleteMutation.isPending}
+            onPress={handleDelete}
+            style={[
+              Spaces.marginTop[12],
+              Spaces.paddingVertical[12],
+              {
+                alignItems: 'center',
+                backgroundColor: Colors.error500,
+                borderRadius: 8,
+                justifyContent: 'center',
+                minHeight: 44,
+                opacity: deleteMutation.isPending ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Text style={{ color: Colors.neutral00, fontWeight: 'bold' }}>
+              {deleteMutation.isPending ? 'Suppression…' : 'Supprimer le compte'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </ScreenContainer>
   );

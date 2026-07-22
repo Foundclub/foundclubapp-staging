@@ -674,6 +674,21 @@ export const updateAdminUser = async (documentId, data) => {
   return response.data;
 };
 
+/**
+ * Delete (anonymize) a user as superadmin.
+ * @param {string} documentId
+ * @param {{ reason?: string }} [payload]
+ * @returns {Promise<any>}
+ */
+export const deleteAdminUser = async (documentId, payload = {}) => {
+  const reason = String(payload?.reason || '').trim() || 'Suppression par un superadmin';
+  const response = await client.delete(
+    `/superadmin/users/${encodeURIComponent(String(documentId || '').trim())}`,
+    { data: { reason } },
+  );
+  return response.data;
+};
+
 // ================== ADMIN CLUBS ==================
 
 /**

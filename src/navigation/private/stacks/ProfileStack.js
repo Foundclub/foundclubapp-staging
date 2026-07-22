@@ -1,12 +1,8 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
-import HistoryWizardCategory from '@/views/historyWizard/HistoryWizardCategory';
-import HistoryWizardClub from '@/views/historyWizard/HistoryWizardClub';
 import { HistoryWizardProvider } from '@/views/historyWizard/HistoryWizardContext';
-import HistoryWizardLevel from '@/views/historyWizard/HistoryWizardLevel';
-import HistoryWizardPeriod from '@/views/historyWizard/HistoryWizardPeriod';
-import HistoryWizardRecap from '@/views/historyWizard/HistoryWizardRecap';
+import HistoryWizardSingle from '@/views/historyWizard/HistoryWizardSingle';
 import PlayerCardScreen from '@/views/profile/PlayerCardScreen';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
@@ -74,56 +70,12 @@ function ProfileStack() {
           }}
         />
         <Stack.Screen
-          component={HistoryWizardCategory}
+          component={HistoryWizardSingle}
           name={RouteNames.HistoryWizardCategory}
           options={{
             ...commonOptions,
-            // C07 — un seul retour dans le tunnel « historique » : WizardStepLayout
-            // porte déjà sa flèche ronde ; on masque l'entête (2ᵉ flèche).
-            headerShown: false,
-            headerTitle: 'Ajouter une expérience',
-          }}
-        />
-        <Stack.Screen
-          component={HistoryWizardClub}
-          name={RouteNames.HistoryWizardClub}
-          options={{
-            ...commonOptions,
-            // C07 — un seul retour dans le tunnel « historique » : WizardStepLayout
-            // porte déjà sa flèche ronde ; on masque l'entête (2ᵉ flèche).
-            headerShown: false,
-            headerTitle: 'Ajouter une expérience',
-          }}
-        />
-        <Stack.Screen
-          component={HistoryWizardPeriod}
-          name={RouteNames.HistoryWizardPeriod}
-          options={{
-            ...commonOptions,
-            // C07 — un seul retour dans le tunnel « historique » : WizardStepLayout
-            // porte déjà sa flèche ronde ; on masque l'entête (2ᵉ flèche).
-            headerShown: false,
-            headerTitle: 'Ajouter une expérience',
-          }}
-        />
-        <Stack.Screen
-          component={HistoryWizardLevel}
-          name={RouteNames.HistoryWizardLevel}
-          options={{
-            ...commonOptions,
-            // C07 — un seul retour dans le tunnel « historique » : WizardStepLayout
-            // porte déjà sa flèche ronde ; on masque l'entête (2ᵉ flèche).
-            headerShown: false,
-            headerTitle: 'Ajouter une expérience',
-          }}
-        />
-        <Stack.Screen
-          component={HistoryWizardRecap}
-          name={RouteNames.HistoryWizardRecap}
-          options={{
-            ...commonOptions,
-            // C07 — un seul retour dans le tunnel « historique » : WizardStepLayout
-            // porte déjà sa flèche ronde ; on masque l'entête (2ᵉ flèche).
+            // C08 (D4) — historique sportif en UN SEUL écran. WizardStepLayout porte
+            // déjà sa flèche ronde de retour ; on masque l'entête natif (2ᵉ flèche).
             headerShown: false,
             headerTitle: 'Ajouter une expérience',
           }}
