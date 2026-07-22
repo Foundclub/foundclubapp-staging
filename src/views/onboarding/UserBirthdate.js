@@ -23,7 +23,7 @@ import { updateMe } from '@/services/auth/authService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
-import { isBirthdateUnder13 } from '@/constants/parentalDeclaration';
+import { isBirthdateUnderParentalAge } from '@/constants/parentalDeclaration';
 
 const defaultValues = {
   day: '',
@@ -98,7 +98,7 @@ function UserBirthdate({ navigation }) {
     },
     onSuccess: () => {
       const submittedBirthdate = `${watch('year')}-${watch('month')}-${watch('day')}`;
-      if (isBirthdateUnder13(submittedBirthdate) && userData?.parentalDeclarationAccepted !== true) {
+      if (isBirthdateUnderParentalAge(submittedBirthdate) && userData?.parentalDeclarationAccepted !== true) {
         navigation.navigate(RouteNames.UserParentalDeclaration);
         return;
       }

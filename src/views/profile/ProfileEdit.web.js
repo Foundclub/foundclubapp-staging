@@ -33,7 +33,7 @@ import { useGetSections } from '@/services/section/sectionQueries';
 
 import {
   buildMinorParentalDeclarationPayload,
-  isBirthdateUnder13,
+  isBirthdateUnderParentalAge,
 } from '@/constants/parentalDeclaration';
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
@@ -263,7 +263,7 @@ function ProfileEditWeb({ navigation, route }) {
   }, [preferredSport]);
   const requiresParentalDeclaration = Boolean(
     formValues.birthdate
-    && isBirthdateUnder13(formatBirthdateToSend(formValues.birthdate || ''))
+    && isBirthdateUnderParentalAge(formatBirthdateToSend(formValues.birthdate || ''))
     && userData?.parentalDeclarationAccepted !== true,
   );
 

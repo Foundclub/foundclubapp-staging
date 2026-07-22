@@ -32,7 +32,7 @@ import { getFieldError } from '@/utils/form/formUtils';
 
 import {
   buildMinorParentalDeclarationPayload,
-  isBirthdateUnder13,
+  isBirthdateUnderParentalAge,
 } from '@/constants/parentalDeclaration';
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
@@ -210,7 +210,7 @@ function ProfileEdit({ navigation, route }) {
   const watchedBirthdate = watch('birthdate');
   const requiresParentalDeclaration = Boolean(
     watchedBirthdate
-    && isBirthdateUnder13(formatBirthdateToSend(watchedBirthdate || ''))
+    && isBirthdateUnderParentalAge(formatBirthdateToSend(watchedBirthdate || ''))
     && userData?.parentalDeclarationAccepted !== true,
   );
 

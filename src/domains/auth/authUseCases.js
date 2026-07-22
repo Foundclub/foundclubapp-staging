@@ -7,7 +7,7 @@ import {
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { isBirthdateUnder13 } from '@/constants/parentalDeclaration';
+import { isBirthdateUnderParentalAge } from '@/constants/parentalDeclaration';
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
 const SPORTS_WITH_POSITIONS = Object.keys(SPORTS_POSITIONS).map((s) => s.toLowerCase());
@@ -315,7 +315,7 @@ export const getOnboardingViews = ({
   })();
   const needsParentalDeclaration = Boolean(
     birthdate
-    && isBirthdateUnder13(birthdate)
+    && isBirthdateUnderParentalAge(birthdate)
     && parentalDeclarationAccepted !== true,
   );
 

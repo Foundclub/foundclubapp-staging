@@ -50,7 +50,7 @@ export const isBirthdateUnderAge = (value, minimumAge) => {
   return age < minimumAge;
 };
 
-export const isBirthdateUnder13 = (value) => (
+export const isBirthdateUnderParentalAge = (value) => (
   isBirthdateUnderAge(value, MINOR_PARENTAL_DECLARATION_MIN_AGE)
 );
 
