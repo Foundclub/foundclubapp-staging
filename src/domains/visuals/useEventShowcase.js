@@ -20,21 +20,13 @@
 import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
-import { Platform } from 'react-native';
-import ReactNativeBlobUtil from 'react-native-blob-util';
-
-import { getAuthTokens } from '@/domains/auth/authUseCases';
-
 import client from '@/services/client';
 
 import { createLogger } from '@/utils/logger/logger';
 
-import { getApiBaseUrl } from '@/config/runtimeUrls';
-import SharePlatform from '@/platform/share';
+import { downloadAndShareRender, fetchRenderBase64 } from '@/platform/visualRender';
 
 const logger = createLogger('visual-showcase');
-
-const RENDER_PATH = '/api/visual-assets/render';
 
 // Référence vide partagée pour l'état initial des surcharges : `overrides` et son miroir
 // temporisé démarrent sur le MÊME objet, si bien que le premier tick du debounce appelle
@@ -54,67 +46,11 @@ const cleanOverrides = (overrides) => Object.keys(overrides || {}).reduce((acc, 
   return acc;
 }, {});
 
-/**
- * Récupère le rendu en base64 (léger, pour l'aperçu <Image> en data URI).
- * @param root0
- * @param root0.template
- * @param root0.format
- * @param root0.subjectType
- * @param root0.subjectId
- * @param root0.variant
- * @param root0.overrides Surcharges texte { champ: texte } (atelier éditeur).
- */
-const fetchRenderBase64 = async ({
-  format, overrides, subjectId, subjectType, template, variant,
-}) => {
-  const baseURL = getApiBaseUrl();
-  const token = getAuthTokens()?.token;
-  const res = await ReactNativeBlobUtil.fetch(
-    'POST',
-    `${baseURL}${RENDER_PATH}`,
-    {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    JSON.stringify({
-      format,
-      subjectId: String(subjectId),
-      subjectType,
-      template,
-      ...(variant ? { variant } : {}),
-      ...(overrides && Object.keys(overrides).length ? { overrides } : {}),
-    }),
-  );
-  const { status } = res.info();
-  if (status >= 400) {
-    throw new Error(`render ${template}/${format} -> HTTP ${status}`);
-  }
-  const contentType = res.info().headers['Content-Type'] || res.info().headers['content-type'] || 'image/png';
-  return { base64: res.base64(), contentType };
-};
-
-/**
- * Écrit le rendu dans un fichier temporaire et renvoie le chemin file://.
- * @param root0
- * @param root0.template
- * @param root0.format
- * @param root0.subjectType
- * @param root0.subjectId
- * @param root0.variant
- * @param root0.overrides Surcharges texte { champ: texte } (atelier éditeur).
- */
-const downloadRenderToFile = async ({
-  format, overrides, subjectId, subjectType, template, variant,
-}) => {
-  const { base64, contentType } = await fetchRenderBase64({
-    format, overrides, subjectId, subjectType, template, variant,
-  });
-  const ext = contentType.includes('pdf') ? 'pdf' : 'png';
-  const dir = ReactNativeBlobUtil.fs.dirs.CacheDir;
-  const path = `${dir}/foundclub-${template}-${variant || 'defaut'}-${format}-${subjectId}.${ext}`;
-  await ReactNativeBlobUtil.fs.writeFile(path, base64, 'base64');
-  return { contentType, path: `file://${path}` };
-};
+// Les appels de rendu (aperçu base64) et le téléchargement/partage du visuel
+// sont délégués à la couche plateforme `@/platform/visualRender` :
+//   - natif : react-native-blob-util (fetch + écriture cache) + partage système ;
+//   - web   : fetch() du navigateur (Blob) + <a download>.
+// Voir visualRender.native.js / visualRender.web.js.
 
 /** Formats de rendu (identiques pour les 3 gabarits) : aperçu post 4:5, story 9:16, affiche A4. */
 const DEFAULT_FORMATS = { poster: 'a4', preview: 'post', story: 'story' };
@@ -425,13 +361,11 @@ export default function useVisualShowcase({
     try {
       // Téléchargements : on utilise les surcharges VIVES (le fichier reflète le texte
       // courant même si l'aperçu temporisé n'a pas encore rattrapé la dernière frappe).
-      const { path } = await downloadRenderToFile({
+      // Le téléchargement/partage réel est délégué à la couche plateforme :
+      // natif = fichier cache + partage système ; web = fetch Blob + <a download>.
+      return await downloadAndShareRender({
         format, overrides: cleanOverrides(overrides), template: tpl, variant: v, ...subject,
       });
-      await SharePlatform.share(
-        Platform.OS === 'ios' ? { url: path } : { message: '', url: path },
-      );
-      return path;
     } catch (e) {
       logger.warn(`partage fichier ${tpl}/${format} échoué: ${e?.message}`);
       throw e;
