@@ -1,11 +1,12 @@
 // @ts-nocheck
-/* eslint-disable jsdoc/require-returns, max-len, perfectionist/sort-imports, react/jsx-one-expression-per-line, perfectionist/sort-named-imports, no-nested-ternary, react/no-array-index-key, perfectionist/sort-objects, react/no-unescaped-entities, react-hooks/exhaustive-deps */
+/* eslint-disable max-len, perfectionist/sort-imports, perfectionist/sort-named-imports, no-nested-ternary, react/no-array-index-key, perfectionist/sort-objects, react/no-unescaped-entities, react-hooks/exhaustive-deps */
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -17,8 +18,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Vibration,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -37,6 +47,7 @@ import {
   publishEventConvocation,
   saveEventCompositionDraft,
 } from '@/services/event/eventService';
+import DraggableToken from './DraggableToken';
 
 import {
   MAX_COMPOSITION_TEAMS,
@@ -60,6 +71,13 @@ const FIELD_SLOT_WIDTH = 78;
 const FIELD_SLOT_HEIGHT = 52;
 
 const clampPercent = (value) => Math.max(0, Math.min(100, Number(value) || 0));
+
+// Ghost (jeton fantôme qui suit le doigt pendant le drag).
+const GHOST_W = 64;
+const GHOST_H = 64;
+const DRAG_SPRING = { damping: 18, stiffness: 220 };
+// Rayon d'accroche (en % de terrain) au poste libre le plus proche en mode « sur postes ».
+const SNAP_RADIUS = 14;
 
 const byLabel = (left, right) => getCompositionPlayerLabel(left).localeCompare(getCompositionPlayerLabel(right), 'fr');
 
@@ -120,7 +138,10 @@ const getNextTeamIndex = (teams = []) => {
 const renderFieldSlots = ({
   Colors,
   Fonts,
+  fieldNodeRef = undefined,
   isReadOnly,
+  makeDragGesture = null,
+  onFieldLayout = undefined,
   onPressPlacement,
   onPressSlot,
   playerMap,
@@ -132,66 +153,83 @@ const renderFieldSlots = ({
   const occupiedSlotIds = new Set(placements.map((entry) => entry?.slotId).filter(Boolean));
 
   return (
-    <RenderedTacticalField sport={team?.sportContext || 'football'} style={styles.fieldSurface}>
-      {/* Postes vides = repères de la formation (cibles du mode « sur postes »). */}
-      {slots.filter((slot) => !occupiedSlotIds.has(slot?.slotId)).map((slot) => (
-        <TouchableOpacity
-          accessibilityLabel={slot?.label || 'Poste'}
-          activeOpacity={isReadOnly ? 1 : 0.82}
-          disabled={isReadOnly}
-          key={`slot-${slot?.slotId || slot?.slotKey}`}
-          onPress={() => onPressSlot(team?.id, slot?.slotId)}
-          style={[
-            styles.slotGhost,
-            {
-              borderColor: `${Colors.neutral00}45`,
-              left: `${clampPercent(slot?.positionX)}%`,
-              top: `${clampPercent(slot?.positionY)}%`,
-            },
-          ]}
-        >
-          <Text numberOfLines={1} style={[Fonts.p4, { color: `${Colors.neutral00}CC`, textAlign: 'center' }]}>
-            {slot?.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-
-      {/* Joueurs placés = rendus à LEUR position réelle (x/y), sur poste OU libre. */}
-      {placements.map((placement) => {
-        const player = playerMap.get(String(placement?.playerId || ''));
-        if (!player) return null;
-        const isSelectedPlayer = selectedPlayerId && String(selectedPlayerId) === String(placement?.playerId || '');
-
-        return (
+    // Wrapper mesurable (measureInWindow) : c'est ce rectangle qui sert à calculer
+    // où le doigt lâche le joueur pendant un drag.
+    <View collapsable={false} onLayout={onFieldLayout} ref={fieldNodeRef} style={styles.fieldSurface}>
+      <RenderedTacticalField sport={team?.sportContext || 'football'} style={styles.fieldFill}>
+        {/* Postes vides = repères de la formation (cibles du mode « sur postes »). */}
+        {slots.filter((slot) => !occupiedSlotIds.has(slot?.slotId)).map((slot) => (
           <TouchableOpacity
-            accessibilityLabel={getCompositionPlayerLabel(player)}
+            accessibilityLabel={slot?.label || 'Poste'}
             activeOpacity={isReadOnly ? 1 : 0.82}
             disabled={isReadOnly}
-            key={`placed-${placement?.playerId}`}
-            onPress={() => onPressPlacement(team?.id, placement?.playerId)}
+            key={`slot-${slot?.slotId || slot?.slotKey}`}
+            onPress={() => onPressSlot(team?.id, slot?.slotId)}
             style={[
-              styles.slotBubble,
+              styles.slotGhost,
               {
-                backgroundColor: `${Colors.primary500}D9`,
-                borderColor: isSelectedPlayer ? Colors.gold500 : Colors.primary100,
-                left: `${clampPercent(placement?.positionX)}%`,
-                top: `${clampPercent(placement?.positionY)}%`,
+                borderColor: `${Colors.neutral00}45`,
+                left: `${clampPercent(slot?.positionX)}%`,
+                top: `${clampPercent(slot?.positionY)}%`,
               },
             ]}
           >
-            <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-              {getCompositionPlayerInitials(player)}
-            </Text>
-            <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral00, opacity: 0.92, textAlign: 'center' }]}>
-              {player?.number != null && player?.number !== '' ? `#${player.number}` : 'Attribue'}
+            <Text numberOfLines={1} style={[Fonts.p4, { color: `${Colors.neutral00}CC`, textAlign: 'center' }]}>
+              {slot?.label}
             </Text>
           </TouchableOpacity>
-        );
-      })}
-    </RenderedTacticalField>
+        ))}
+
+        {/* Joueurs placés = rendus à LEUR position réelle (x/y), sur poste OU libre. */}
+        {placements.map((placement) => {
+          const player = playerMap.get(String(placement?.playerId || ''));
+          if (!player) return null;
+          const isSelectedPlayer = selectedPlayerId && String(selectedPlayerId) === String(placement?.playerId || '');
+
+          const token = (
+            <TouchableOpacity
+              accessibilityLabel={getCompositionPlayerLabel(player)}
+              activeOpacity={isReadOnly ? 1 : 0.82}
+              disabled={isReadOnly}
+              onPress={() => onPressPlacement(team?.id, placement?.playerId)}
+              style={[
+                styles.slotBubble,
+                {
+                  backgroundColor: `${Colors.primary500}D9`,
+                  borderColor: isSelectedPlayer ? Colors.gold500 : Colors.primary100,
+                  left: `${clampPercent(placement?.positionX)}%`,
+                  top: `${clampPercent(placement?.positionY)}%`,
+                },
+              ]}
+            >
+              <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+                {getCompositionPlayerInitials(player)}
+              </Text>
+              <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral00, opacity: 0.92, textAlign: 'center' }]}>
+                {player?.number != null && player?.number !== '' ? `#${player.number}` : 'Attribue'}
+              </Text>
+            </TouchableOpacity>
+          );
+
+          if (isReadOnly || !makeDragGesture) {
+            return <View key={`placed-${placement?.playerId}`}>{token}</View>;
+          }
+          return (
+            <GestureDetector gesture={makeDragGesture(player, team?.id)} key={`placed-${placement?.playerId}`}>
+              {token}
+            </GestureDetector>
+          );
+        })}
+      </RenderedTacticalField>
+    </View>
   );
 };
 
+/**
+ *
+ * @param root0
+ * @param root0.routeParams
+ */
 function MultiTeamCompositionBoard({ routeParams = null }) {
   const {
     Alignments,
@@ -456,6 +494,179 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     setSelectedPlayerId(String(playerId));
   }, [detachPlayerEverywhere, readOnly, updateDraftPack]);
 
+  // === DRAG & DROP (glisser un joueur du banc ou du terrain vers un terrain) ===
+  const ghostX = useSharedValue(0);
+  const ghostY = useSharedValue(0);
+  const ghostScale = useSharedValue(0);
+  const ghostOpacity = useSharedValue(0);
+  const [activeDragPlayer, setActiveDragPlayer] = useState(null);
+  // Références natives des terrains (par équipe) + leurs rectangles mesurés en fenêtre.
+  const fieldNodeRefs = useRef({});
+  const fieldMeasuresRef = useRef({});
+
+  const registerFieldNode = useCallback((teamEntryId) => (node) => {
+    if (node) fieldNodeRefs.current[teamEntryId] = node;
+    else delete fieldNodeRefs.current[teamEntryId];
+  }, []);
+
+  const measureField = useCallback((teamEntryId) => {
+    const node = fieldNodeRefs.current[teamEntryId];
+    if (!node?.measureInWindow) return;
+    node.measureInWindow((x, y, width, height) => {
+      if (width > 0 && height > 0) {
+        fieldMeasuresRef.current[teamEntryId] = {
+          height, width, x, y,
+        };
+      }
+    });
+  }, []);
+
+  const measureAllFields = useCallback(() => {
+    setTimeout(() => {
+      Object.keys(fieldNodeRefs.current).forEach((teamEntryId) => measureField(teamEntryId));
+    }, 60);
+  }, [measureField]);
+
+  const resetGhost = useCallback(() => {
+    ghostScale.value = withSpring(0, DRAG_SPRING);
+    ghostOpacity.value = withTiming(0, { duration: 140 });
+    setActiveDragPlayer(null);
+  }, [ghostOpacity, ghostScale]);
+
+  const startDrag = useCallback((player, pageX, pageY) => {
+    if (readOnly || !player || typeof pageX !== 'number' || typeof pageY !== 'number') return;
+    measureAllFields();
+    Vibration.vibrate(8);
+    setActiveDragPlayer(player);
+    ghostX.value = pageX - (GHOST_W / 2);
+    ghostY.value = pageY - (GHOST_H / 2);
+    ghostScale.value = withSpring(1, DRAG_SPRING);
+    ghostOpacity.value = withTiming(1, { duration: 90 });
+  }, [ghostOpacity, ghostScale, ghostX, ghostY, measureAllFields, readOnly]);
+
+  const updateDrag = useCallback((pageX, pageY) => {
+    if (typeof pageX !== 'number' || typeof pageY !== 'number') return;
+    ghostX.value = pageX - (GHOST_W / 2);
+    ghostY.value = pageY - (GHOST_H / 2);
+  }, [ghostX, ghostY]);
+
+  const dropPlayerOnTeam = useCallback((playerId, targetTeamEntryId, xPct, yPct) => {
+    updateDraftPack((currentPack) => {
+      const teams = Array.isArray(currentPack?.teams) ? currentPack.teams : [];
+      const detached = detachPlayerEverywhere(teams, playerId);
+      const useSlots = currentPack?.placementMode !== 'free';
+      const nextTeams = detached.map((team) => {
+        if (team?.id !== targetTeamEntryId) return team;
+        const slots = Array.isArray(team?.slots) ? team.slots : [];
+        const placements = Array.isArray(team?.placements) ? team.placements : [];
+        const occupied = new Set(placements.map((entry) => entry?.slotId).filter(Boolean));
+
+        // Mode « sur postes » : on accroche au poste libre le plus proche (dans le rayon).
+        let snappedSlot = null;
+        if (useSlots) {
+          let bestDist = Infinity;
+          slots.forEach((slot) => {
+            if (occupied.has(slot?.slotId)) return;
+            const dx = clampPercent(slot?.positionX) - xPct;
+            const dy = clampPercent(slot?.positionY) - yPct;
+            const dist = Math.sqrt((dx * dx) + (dy * dy));
+            if (dist < bestDist) {
+              bestDist = dist;
+              snappedSlot = slot;
+            }
+          });
+          if (!snappedSlot || bestDist > SNAP_RADIUS) snappedSlot = null;
+        }
+
+        const placement = snappedSlot
+          ? {
+            playerId: String(playerId),
+            positionX: clampPercent(snappedSlot.positionX),
+            positionY: clampPercent(snappedSlot.positionY),
+            slotId: snappedSlot.slotId,
+          }
+          : {
+            playerId: String(playerId),
+            positionX: xPct,
+            positionY: yPct,
+            slotId: null,
+          };
+        return { ...team, placements: [...placements, placement] };
+      });
+      return { ...currentPack, teams: nextTeams };
+    });
+  }, [detachPlayerEverywhere, updateDraftPack]);
+
+  const returnPlayerToReserve = useCallback((playerId) => {
+    updateDraftPack((currentPack) => ({
+      ...currentPack,
+      teams: detachPlayerEverywhere(Array.isArray(currentPack?.teams) ? currentPack.teams : [], playerId),
+    }));
+  }, [detachPlayerEverywhere, updateDraftPack]);
+
+  const endDrag = useCallback((player, source, pageX, pageY) => {
+    if (readOnly || !player || typeof pageX !== 'number' || typeof pageY !== 'number') return;
+    const playerId = getCompositionPlayerId(player);
+    if (!playerId) return;
+
+    // Sur quel terrain a-t-on lâché le joueur ?
+    let targetTeamId = null;
+    let targetRect = null;
+    Object.entries(fieldMeasuresRef.current).forEach(([teamEntryId, rect]) => {
+      if (!rect) return;
+      const inside = pageX >= rect.x && pageX <= rect.x + rect.width
+        && pageY >= rect.y && pageY <= rect.y + rect.height;
+      if (inside) {
+        targetTeamId = teamEntryId;
+        targetRect = rect;
+      }
+    });
+
+    if (targetTeamId && targetRect) {
+      const xPct = Math.max(4, Math.min(96, ((pageX - targetRect.x) / targetRect.width) * 100));
+      const yPct = Math.max(5, Math.min(95, ((pageY - targetRect.y) / targetRect.height) * 100));
+      dropPlayerOnTeam(playerId, targetTeamId, xPct, yPct);
+      return;
+    }
+
+    // Lâché hors de tout terrain : si le joueur venait d'un terrain, il retourne au banc.
+    if (source !== 'reserve') returnPlayerToReserve(playerId);
+  }, [dropPlayerOnTeam, readOnly, returnPlayerToReserve]);
+
+  // Fabrique un geste de drag pour un joueur (source = id d'équipe ou 'reserve').
+  const createDragGesture = useCallback((player, source) => Gesture.Pan()
+    .activateAfterLongPress(120)
+    .minDistance(6)
+    .onStart((event) => {
+      'worklet';
+
+      runOnJS(startDrag)(player, event.absoluteX, event.absoluteY);
+    })
+    .onUpdate((event) => {
+      'worklet';
+
+      runOnJS(updateDrag)(event.absoluteX, event.absoluteY);
+    })
+    .onEnd((event) => {
+      'worklet';
+
+      runOnJS(endDrag)(player, source, event.absoluteX, event.absoluteY);
+    })
+    .onFinalize(() => {
+      'worklet';
+
+      runOnJS(resetGhost)();
+    }), [endDrag, resetGhost, startDrag, updateDrag]);
+
+  const ghostAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: ghostOpacity.value,
+    transform: [
+      { translateX: ghostX.value },
+      { translateY: ghostY.value },
+      { scale: ghostScale.value },
+    ],
+  }));
+
   const handleRenameTeam = useCallback((teamIdToRename, nextName) => {
     if (readOnly) return;
     updateDraftPack((currentPack) => ({
@@ -636,117 +847,293 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
   const viewerBranchCount = resolvedReadOnlyBranches.length;
 
   return (
-    <ImageBackground
-      resizeMode="cover"
-      source={Images.bg1}
-      style={[Alignments.fill, { paddingTop: insets.top + 8 }]}
-    >
-      <View style={[styles.header, Spaces.paddingHorizontal[16]]}>
-        <View style={styles.headerBackButtonContainer}>
-          <HeaderBackButton onPress={() => navigation.goBack()} />
-        </View>
-        <View style={styles.headerCenter}>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00, styles.headerTitle]}>
-            {headerTitle}
-          </Text>
-          <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, styles.headerSubtitle]}>
-            {contextLabel}
-          </Text>
-          <View style={styles.headerMetaRow}>
-            <View style={[styles.headerPill, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}55` }]}>
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                {readOnly ? 'Publication' : (draftPack?.mode === 'auto' ? 'Auto + manuel' : 'Manuel')}
-              </Text>
+    <GestureHandlerRootView style={styles.rootFlex}>
+      <ImageBackground
+        resizeMode="cover"
+        source={Images.bg1}
+        style={[Alignments.fill, { paddingTop: insets.top + 8 }]}
+      >
+        <View style={[styles.header, Spaces.paddingHorizontal[16]]}>
+          <View style={styles.headerBackButtonContainer}>
+            <HeaderBackButton onPress={() => navigation.goBack()} />
+          </View>
+          <View style={styles.headerCenter}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00, styles.headerTitle]}>
+              {headerTitle}
+            </Text>
+            <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, styles.headerSubtitle]}>
+              {contextLabel}
+            </Text>
+            <View style={styles.headerMetaRow}>
+              <View style={[styles.headerPill, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}55` }]}>
+                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                  {readOnly ? 'Publication' : (draftPack?.mode === 'auto' ? 'Auto + manuel' : 'Manuel')}
+                </Text>
+              </View>
+              {!readOnly ? (
+                <View style={[styles.headerPill, { backgroundColor: `${Colors.neutral00}10`, borderColor: `${Colors.neutral00}22` }]}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                    {(Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0)}
+                    {' '}
+                    equipe(s)
+                  </Text>
+                </View>
+              ) : (
+                <View style={[styles.headerPill, { backgroundColor: `${Colors.neutral00}10`, borderColor: `${Colors.neutral00}22` }]}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                    {viewerBranchCount}
+                    {' '}
+                    branche(s)
+                  </Text>
+                </View>
+              )}
+              {editorSourceLabel ? (
+                <View style={[styles.headerPill, { backgroundColor: `${Colors.primary300}16`, borderColor: `${Colors.primary300}40` }]}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
+                    {editorSourceLabel}
+                  </Text>
+                </View>
+              ) : null}
             </View>
-            {!readOnly ? (
-              <View style={[styles.headerPill, { backgroundColor: `${Colors.neutral00}10`, borderColor: `${Colors.neutral00}22` }]}>
-                <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-                  {(Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0)}
-                  {' '}
-                  equipe(s)
-                </Text>
-              </View>
-            ) : (
-              <View style={[styles.headerPill, { backgroundColor: `${Colors.neutral00}10`, borderColor: `${Colors.neutral00}22` }]}>
-                <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-                  {viewerBranchCount}
-                  {' '}
-                  branche(s)
-                </Text>
-              </View>
-            )}
-            {editorSourceLabel ? (
-              <View style={[styles.headerPill, { backgroundColor: `${Colors.primary300}16`, borderColor: `${Colors.primary300}40` }]}>
-                <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
-                  {editorSourceLabel}
-                </Text>
-              </View>
-            ) : null}
           </View>
         </View>
-      </View>
 
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 24, 32) }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={[Spaces.paddingHorizontal[16], Spaces.gap[16]]}>
-          {readOnly ? (
-            <>
-              {resolvedReadOnlyBranches.length === 0 ? (
-                <View
-                  style={[
-                    ApplicationStyle.card,
-                    ApplicationStyle.borderRadius24,
-                    Spaces.padding[16],
-                    {
-                      backgroundColor: Colors.primary900,
-                      borderColor: `${Colors.primary500}44`,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Aucune composition publiée</Text>
-                  <Text style={[Fonts.p2, Fonts.neutral300, { marginTop: 8 }]}>
-                    Le coach n a pas encore publie de composition pour cet événement.
-                  </Text>
-                </View>
-              ) : null}
-
-              {resolvedReadOnlyBranches.length > 0 ? (
-                <View
-                  style={[
-                    ApplicationStyle.card,
-                    ApplicationStyle.borderRadius24,
-                    Spaces.padding[16],
-                    {
-                      backgroundColor: Colors.primary900,
-                      borderColor: `${Colors.primary500}30`,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p3, Fonts.neutral300]}>
-                    Les places encore libres restent visibles et seront complétées automatiquement quand de nouveaux joueurs acceptes arriveront.
-                  </Text>
-                </View>
-              ) : null}
-
-              {resolvedReadOnlyBranches.map((branch, branchIndex) => {
-                const published = normalizeMultiTeamPack(branch?.published, {
-                  availablePresets,
-                  sportContext: branch?.published?.sportContext || sport,
-                });
-                const branchPlayerMap = buildCompositionPlayerMap([
-                  ...(Array.isArray(branch?.published?.snapshotPlayers) ? branch.published.snapshotPlayers : []),
-                  ...(Array.isArray(branch?.published?.reserveSnapshotPlayers) ? branch.published.reserveSnapshotPlayers : []),
-                ]);
-                const branchReservePlayers = getReservePlayersForPack(published, Array.from(branchPlayerMap.values())).sort(byLabel);
-                const highlightedTeamEntryIds = Array.isArray(branch?.viewer?.teamEntryIds) ? branch.viewer.teamEntryIds : [];
-
-                return (
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 24, 32) }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[Spaces.paddingHorizontal[16], Spaces.gap[16]]}>
+            {readOnly ? (
+              <>
+                {resolvedReadOnlyBranches.length === 0 ? (
                   <View
-                    key={`${branch?.team?.documentId || 'branch'}_${branchIndex}`}
+                    style={[
+                      ApplicationStyle.card,
+                      ApplicationStyle.borderRadius24,
+                      Spaces.padding[16],
+                      {
+                        backgroundColor: Colors.primary900,
+                        borderColor: `${Colors.primary500}44`,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Aucune composition publiée</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral300, { marginTop: 8 }]}>
+                      Le coach n a pas encore publie de composition pour cet événement.
+                    </Text>
+                  </View>
+                ) : null}
+
+                {resolvedReadOnlyBranches.length > 0 ? (
+                  <View
+                    style={[
+                      ApplicationStyle.card,
+                      ApplicationStyle.borderRadius24,
+                      Spaces.padding[16],
+                      {
+                        backgroundColor: Colors.primary900,
+                        borderColor: `${Colors.primary500}30`,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                      Les places encore libres restent visibles et seront complétées automatiquement quand de nouveaux joueurs acceptes arriveront.
+                    </Text>
+                  </View>
+                ) : null}
+
+                {resolvedReadOnlyBranches.map((branch, branchIndex) => {
+                  const published = normalizeMultiTeamPack(branch?.published, {
+                    availablePresets,
+                    sportContext: branch?.published?.sportContext || sport,
+                  });
+                  const branchPlayerMap = buildCompositionPlayerMap([
+                    ...(Array.isArray(branch?.published?.snapshotPlayers) ? branch.published.snapshotPlayers : []),
+                    ...(Array.isArray(branch?.published?.reserveSnapshotPlayers) ? branch.published.reserveSnapshotPlayers : []),
+                  ]);
+                  const branchReservePlayers = getReservePlayersForPack(published, Array.from(branchPlayerMap.values())).sort(byLabel);
+                  const highlightedTeamEntryIds = Array.isArray(branch?.viewer?.teamEntryIds) ? branch.viewer.teamEntryIds : [];
+
+                  return (
+                    <View
+                      key={`${branch?.team?.documentId || 'branch'}_${branchIndex}`}
+                      style={[
+                        ApplicationStyle.card,
+                        ApplicationStyle.borderRadius24,
+                        Spaces.padding[16],
+                        Spaces.gap[12],
+                        {
+                          backgroundColor: Colors.primary900,
+                          borderColor: `${Colors.primary500}38`,
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <View style={[Spaces.gap[4]]}>
+                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                          {branch?.team?.name || `Branche ${branchIndex + 1}`}
+                        </Text>
+                        <Text style={[Fonts.p3, Fonts.neutral300]}>
+                          {branch?.published?.publishedAt
+                            ? `Publie le ${new Date(branch.published.publishedAt).toLocaleString('fr-FR')}`
+                            : "Composition d'équipes publiée"}
+                        </Text>
+                        {branch?.viewer?.inReserve ? (
+                          <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
+                            Tu figures actuellement dans les remplacants / en attente.
+                          </Text>
+                        ) : null}
+                      </View>
+
+                      {(Array.isArray(published?.teams) ? published.teams : []).map((team, teamIndex) => {
+                        const isViewerTeam = highlightedTeamEntryIds.includes(team?.id);
+                        return (
+                          <View
+                            key={team?.id || `team_${teamIndex + 1}`}
+                            style={[
+                              ApplicationStyle.borderRadius24,
+                              Spaces.padding[16],
+                              Spaces.gap[12],
+                              {
+                                backgroundColor: isViewerTeam ? `${Colors.primary500}14` : Colors.neutral800,
+                                borderColor: isViewerTeam ? `${Colors.primary500}55` : `${Colors.neutral00}10`,
+                                borderWidth: 1,
+                              },
+                            ]}
+                          >
+                            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+                              <View style={{ flex: 1, paddingRight: 12 }}>
+                                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{team?.name || `Équipe ${teamIndex + 1}`}</Text>
+                                <Text style={[Fonts.p4, Fonts.neutral300]}>
+                                  {team?.presetLabel || 'Composition libre'}
+                                </Text>
+                              </View>
+                              {isViewerTeam ? (
+                                <View style={[styles.badge, { backgroundColor: `${Colors.primary500}24`, borderColor: `${Colors.primary500}55` }]}>
+                                  <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Mon équipe</Text>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            {renderFieldSlots({
+                              Colors,
+                              Fonts,
+                              isReadOnly: true,
+                              onPressPlacement: () => {},
+                              onPressSlot: () => {},
+                              playerMap: branchPlayerMap,
+                              selectedPlayerId: '',
+                              team,
+                            })}
+
+                            <View style={Spaces.gap[8]}>
+                              {(Array.isArray(team?.slots) ? team.slots : []).map((slot) => {
+                                const placement = (Array.isArray(team?.placements) ? team.placements : []).find((entry) => entry?.slotId === slot?.slotId) || null;
+                                const player = placement ? branchPlayerMap.get(String(placement.playerId || '')) : null;
+                                return (
+                                  <View
+                                    key={slot?.slotId || slot?.slotKey}
+                                    style={[styles.listRow, { borderColor: `${Colors.neutral00}12`, backgroundColor: `${Colors.neutral00}04` }]}
+                                  >
+                                    <Text style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1 }]}>
+                                      {slot?.label}
+                                    </Text>
+                                    <Text style={[Fonts.p3, { color: player ? Colors.primary100 : Colors.neutral300, flex: 1.2, textAlign: 'right' }]}>
+                                      {player ? getCompositionPlayerLabel(player) : 'Libre'}
+                                    </Text>
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        );
+                      })}
+
+                      <View style={Spaces.gap[8]}>
+                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Remplaçants / en attente</Text>
+                        {branchReservePlayers.length === 0 ? (
+                          <Text style={[Fonts.p3, Fonts.neutral300]}>Aucun joueur non affecte.</Text>
+                        ) : (
+                          <View style={styles.chipRow}>
+                            {branchReservePlayers.map((player) => (
+                              <View
+                                key={getCompositionPlayerId(player)}
+                                style={[styles.playerChip, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}16` }]}
+                              >
+                                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                                  {getCompositionPlayerLabel(player)}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </>
+            ) : (
+              <>
+                <View
+                  style={[
+                    ApplicationStyle.card,
+                    ApplicationStyle.borderRadius24,
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                    {
+                      backgroundColor: Colors.primary900,
+                      borderColor: `${Colors.primary500}38`,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Composition d'équipes</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral300]}>
+                    {showAutoSetup
+                      ? "Choisis le nombre d'équipes et le preset de chacune, puis génère un brouillon."
+                      : "Sélectionne un joueur depuis les remplaçants, puis touche un poste pour l'attribuer. Touche un joueur déjà place pour le déplacer."}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    Les postes encore libres peuvent rester vides: ils seront completes automatiquement quand de nouveaux joueurs acceptes arriveront.
+                  </Text>
+
+                  <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
+                    <Button
+                      isLoading={isSaving}
+                      onPress={handleSaveDraft}
+                      title="Sauvegarder"
+                      variant="Secondary"
+                    />
+                    <Button
+                      disabled={isSaving}
+                      isLoading={isPublishing}
+                      onPress={handlePublish}
+                      title="Publier"
+                      variant="Primary"
+                    />
+                    {availablePresets.length > 0 ? (
+                      <Button
+                        disabled={isPublishing || isSaving}
+                        onPress={() => setShowAutoSetup((current) => !current)}
+                        title={showAutoSetup ? 'Fermer auto' : 'Génération auto'}
+                        variant="Secondary"
+                      />
+                    ) : null}
+                    {!showAutoSetup ? (
+                      <Button
+                        disabled={isPublishing || isSaving}
+                        onPress={handleAddTeam}
+                        title="Ajouter une équipe"
+                        variant="Secondary"
+                      />
+                    ) : null}
+                  </View>
+                </View>
+
+                {showAutoSetup ? (
+                  <View
                     style={[
                       ApplicationStyle.card,
                       ApplicationStyle.borderRadius24,
@@ -754,439 +1141,279 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                       Spaces.gap[12],
                       {
                         backgroundColor: Colors.primary900,
-                        borderColor: `${Colors.primary500}38`,
+                        borderColor: `${Colors.gold500}38`,
                         borderWidth: 1,
                       },
                     ]}
                   >
-                    <View style={[Spaces.gap[4]]}>
-                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                        {branch?.team?.name || `Branche ${branchIndex + 1}`}
-                      </Text>
-                      <Text style={[Fonts.p3, Fonts.neutral300]}>
-                        {branch?.published?.publishedAt
-                          ? `Publie le ${new Date(branch.published.publishedAt).toLocaleString('fr-FR')}`
-                          : "Composition d'équipes publiée"}
-                      </Text>
-                      {branch?.viewer?.inReserve ? (
-                        <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-                          Tu figures actuellement dans les remplacants / en attente.
-                        </Text>
-                      ) : null}
+                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Génération automatique</Text>
+
+                    <View style={[styles.stepperRow, { borderColor: `${Colors.neutral00}12`, backgroundColor: Colors.neutral800 }]}>
+                      <TouchableOpacity
+                        activeOpacity={0.82}
+                        onPress={() => setAutoTeamCount((current) => Math.max(1, current - 1))}
+                        style={[styles.stepperButton, { borderColor: `${Colors.neutral00}14` }]}
+                      >
+                        <Text style={[Fonts.h4Bold, { color: Colors.primary100 }]}>-</Text>
+                      </TouchableOpacity>
+                      <View style={styles.stepperValue}>
+                        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{autoTeamCount}</Text>
+                        <Text style={[Fonts.p4, Fonts.neutral300]}>équipes</Text>
+                      </View>
+                      <TouchableOpacity
+                        activeOpacity={0.82}
+                        onPress={() => setAutoTeamCount((current) => Math.min(MAX_COMPOSITION_TEAMS, current + 1))}
+                        style={[styles.stepperButton, { borderColor: `${Colors.neutral00}14` }]}
+                      >
+                        <Text style={[Fonts.h4Bold, { color: Colors.primary100 }]}>+</Text>
+                      </TouchableOpacity>
                     </View>
 
-                    {(Array.isArray(published?.teams) ? published.teams : []).map((team, teamIndex) => {
-                      const isViewerTeam = highlightedTeamEntryIds.includes(team?.id);
+                    {Array.from({ length: autoTeamCount }, (_, index) => {
+                      const selectedKey = autoPresetKeys[index] || availablePresets[0]?.key || null;
+                      const presetIndex = Math.max(0, availablePresets.findIndex((preset) => preset.key === selectedKey));
+                      const preset = availablePresets[presetIndex] || availablePresets[0] || null;
                       return (
                         <View
-                          key={team?.id || `team_${teamIndex + 1}`}
-                          style={[
-                            ApplicationStyle.borderRadius24,
-                            Spaces.padding[16],
-                            Spaces.gap[12],
-                            {
-                              backgroundColor: isViewerTeam ? `${Colors.primary500}14` : Colors.neutral800,
-                              borderColor: isViewerTeam ? `${Colors.primary500}55` : `${Colors.neutral00}10`,
-                              borderWidth: 1,
-                            },
-                          ]}
+                          key={`auto_team_${index + 1}`}
+                          style={[styles.listRow, { backgroundColor: Colors.neutral800, borderColor: `${Colors.neutral00}12`, paddingVertical: 14 }]}
                         >
-                          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-                            <View style={{ flex: 1, paddingRight: 12 }}>
-                              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{team?.name || `Équipe ${teamIndex + 1}`}</Text>
-                              <Text style={[Fonts.p4, Fonts.neutral300]}>
-                                {team?.presetLabel || 'Composition libre'}
-                              </Text>
-                            </View>
-                            {isViewerTeam ? (
-                              <View style={[styles.badge, { backgroundColor: `${Colors.primary500}24`, borderColor: `${Colors.primary500}55` }]}>
-                                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Mon équipe</Text>
-                              </View>
-                            ) : null}
+                          <View style={{ flex: 1 }}>
+                            <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{`Équipe ${index + 1}`}</Text>
+                            <Text style={[Fonts.p4, Fonts.neutral300]}>{preset?.label || 'Aucun preset'}</Text>
                           </View>
-
-                          {renderFieldSlots({
-                            Colors,
-                            Fonts,
-                            isReadOnly: true,
-                            onPressPlacement: () => {},
-                            onPressSlot: () => {},
-                            playerMap: branchPlayerMap,
-                            selectedPlayerId: '',
-                            team,
-                          })}
-
-                          <View style={Spaces.gap[8]}>
-                            {(Array.isArray(team?.slots) ? team.slots : []).map((slot) => {
-                              const placement = (Array.isArray(team?.placements) ? team.placements : []).find((entry) => entry?.slotId === slot?.slotId) || null;
-                              const player = placement ? branchPlayerMap.get(String(placement.playerId || '')) : null;
-                              return (
-                                <View
-                                  key={slot?.slotId || slot?.slotKey}
-                                  style={[styles.listRow, { borderColor: `${Colors.neutral00}12`, backgroundColor: `${Colors.neutral00}04` }]}
-                                >
-                                  <Text style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1 }]}>
-                                    {slot?.label}
-                                  </Text>
-                                  <Text style={[Fonts.p3, { color: player ? Colors.primary100 : Colors.neutral300, flex: 1.2, textAlign: 'right' }]}>
-                                    {player ? getCompositionPlayerLabel(player) : 'Libre'}
-                                  </Text>
-                                </View>
-                              );
-                            })}
+                          <View style={[Alignments.row, Spaces.gap[8]]}>
+                            <Button
+                              onPress={() => setAutoPresetKeys((current) => {
+                                const next = syncPresetKeys(autoTeamCount, availablePresets, current);
+                                if (availablePresets.length <= 1) return next;
+                                const nextIndex = (presetIndex - 1 + availablePresets.length) % availablePresets.length;
+                                next[index] = availablePresets[nextIndex]?.key || next[index];
+                                return [...next];
+                              })}
+                              size="sm"
+                              title="<"
+                              variant="Secondary"
+                            />
+                            <Button
+                              onPress={() => setAutoPresetKeys((current) => {
+                                const next = syncPresetKeys(autoTeamCount, availablePresets, current);
+                                if (availablePresets.length <= 1) return next;
+                                const nextIndex = (presetIndex + 1) % availablePresets.length;
+                                next[index] = availablePresets[nextIndex]?.key || next[index];
+                                return [...next];
+                              })}
+                              size="sm"
+                              title=">"
+                              variant="Secondary"
+                            />
                           </View>
                         </View>
                       );
+                    })}
+
+                    <Button
+                      isLoading={isSaving}
+                      onPress={handleGenerateAuto}
+                      title="Générer le brouillon"
+                      variant="Primary"
+                    />
+                  </View>
+                ) : null}
+
+                <View
+                  style={[
+                    ApplicationStyle.card,
+                    ApplicationStyle.borderRadius24,
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                    {
+                      backgroundColor: Colors.primary900,
+                      borderColor: selectedPlayer ? `${Colors.primary500}44` : `${Colors.neutral00}12`,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+                    <View style={{ flex: 1, paddingRight: 12 }}>
+                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Remplaçants / en attente</Text>
+                      <Text style={[Fonts.p3, Fonts.neutral300]}>
+                        {selectedPlayer
+                          ? `${getCompositionPlayerLabel(selectedPlayer)} est sélectionné. Touche maintenant un poste pour l'affecter.`
+                          : 'Touche un joueur pour le sélectionner, puis touche un poste sur une équipe.'}
+                      </Text>
+                    </View>
+                    {selectedPlayer ? (
+                      <Button
+                        onPress={() => setSelectedPlayerId('')}
+                        size="sm"
+                        title="Annuler"
+                        variant="Secondary"
+                      />
+                    ) : null}
+                  </View>
+
+                  {reservePlayers.length === 0 ? (
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                      {hasKnownPlayers
+                        ? 'Tous les joueurs sont déjà affectes a une équipe.'
+                        : 'Aucun joueur disponible pour le moment. Tu peux quand même créer les équipes et laisser les postes libres.'}
+                    </Text>
+                  ) : (
+                    <View style={styles.chipRow}>
+                      {reservePlayers.map((player) => {
+                        const playerId = getCompositionPlayerId(player);
+                        const isSelected = String(selectedPlayerId || '') === String(playerId);
+                        const chip = (
+                          <TouchableOpacity
+                            activeOpacity={0.82}
+                            onPress={() => handleReservePress(playerId)}
+                            style={[
+                              styles.playerChip,
+                              {
+                                backgroundColor: isSelected ? `${Colors.primary500}22` : `${Colors.neutral00}08`,
+                                borderColor: isSelected ? `${Colors.primary500}66` : `${Colors.neutral00}16`,
+                              },
+                            ]}
+                          >
+                            <Text style={[Fonts.p3Bold, { color: isSelected ? Colors.primary100 : Colors.neutral00 }]}>
+                              {getCompositionPlayerLabel(player)}
+                            </Text>
+                            {player?.participantSource ? (
+                              <Text style={[Fonts.p4, { color: isSelected ? Colors.primary100 : Colors.neutral300 }]}>
+                                {player.participantSource === 'external_participant' ? 'Externe' : 'Equipe'}
+                              </Text>
+                            ) : null}
+                          </TouchableOpacity>
+                        );
+                        return (
+                          <GestureDetector gesture={createDragGesture(player, 'reserve')} key={playerId}>
+                            {chip}
+                          </GestureDetector>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+
+                {(Array.isArray(draftPack?.teams) ? draftPack.teams : []).map((team, teamIndex) => (
+                  <View
+                    key={team?.id || `team_${teamIndex + 1}`}
+                    style={[
+                      ApplicationStyle.card,
+                      ApplicationStyle.borderRadius24,
+                      Spaces.padding[16],
+                      Spaces.gap[12],
+                      {
+                        backgroundColor: Colors.primary900,
+                        borderColor: `${Colors.primary500}30`,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                      <TextInput
+                        onChangeText={(value) => handleRenameTeam(team?.id, value)}
+                        placeholder={`Équipe ${teamIndex + 1}`}
+                        placeholderTextColor={Colors.neutral300}
+                        style={[
+                          Fonts.h4Bold,
+                          {
+                            backgroundColor: Colors.neutral800,
+                            borderColor: `${Colors.neutral00}12`,
+                            borderRadius: 14,
+                            borderWidth: 1,
+                            color: Colors.neutral00,
+                            flex: 1,
+                            paddingHorizontal: 14,
+                            paddingVertical: 12,
+                          },
+                        ]}
+                        value={team?.name || ''}
+                      />
+                      <Button
+                        disabled={(Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0) <= 1}
+                        onPress={() => handleRemoveTeam(team?.id)}
+                        size="sm"
+                        title="Suppr."
+                        variant="Secondary"
+                      />
+                    </View>
+
+                    {availablePresets.length > 0 ? (
+                      <View style={[styles.listRow, { backgroundColor: Colors.neutral800, borderColor: `${Colors.neutral00}12` }]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Preset</Text>
+                          <Text style={[Fonts.p4, Fonts.neutral300]}>{team?.presetLabel || 'Composition libre'}</Text>
+                        </View>
+                        <View style={[Alignments.row, Spaces.gap[8]]}>
+                          <Button onPress={() => cyclePreset(team?.id, -1)} size="sm" title="<" variant="Secondary" />
+                          <Button onPress={() => cyclePreset(team?.id, 1)} size="sm" title=">" variant="Secondary" />
+                        </View>
+                      </View>
+                    ) : null}
+
+                    {renderFieldSlots({
+                      Colors,
+                      Fonts,
+                      fieldNodeRef: registerFieldNode(team?.id),
+                      isReadOnly: false,
+                      makeDragGesture: createDragGesture,
+                      onFieldLayout: () => measureField(team?.id),
+                      onPressPlacement: handlePlacementPress,
+                      onPressSlot: handleSlotPress,
+                      playerMap,
+                      selectedPlayerId,
+                      team,
                     })}
 
                     <View style={Spaces.gap[8]}>
-                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Remplaçants / en attente</Text>
-                      {branchReservePlayers.length === 0 ? (
-                        <Text style={[Fonts.p3, Fonts.neutral300]}>Aucun joueur non affecte.</Text>
-                      ) : (
-                        <View style={styles.chipRow}>
-                          {branchReservePlayers.map((player) => (
-                            <View
-                              key={getCompositionPlayerId(player)}
-                              style={[styles.playerChip, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}16` }]}
-                            >
-                              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                                {getCompositionPlayerLabel(player)}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                );
-              })}
-            </>
-          ) : (
-            <>
-              <View
-                style={[
-                  ApplicationStyle.card,
-                  ApplicationStyle.borderRadius24,
-                  Spaces.padding[16],
-                  Spaces.gap[12],
-                  {
-                    backgroundColor: Colors.primary900,
-                    borderColor: `${Colors.primary500}38`,
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Composition d'équipes</Text>
-                <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  {showAutoSetup
-                    ? "Choisis le nombre d'équipes et le preset de chacune, puis génère un brouillon."
-                    : "Sélectionne un joueur depuis les remplaçants, puis touche un poste pour l'attribuer. Touche un joueur déjà place pour le déplacer."}
-                </Text>
-                <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  Les postes encore libres peuvent rester vides: ils seront completes automatiquement quand de nouveaux joueurs acceptes arriveront.
-                </Text>
-
-                <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
-                  <Button
-                    isLoading={isSaving}
-                    onPress={handleSaveDraft}
-                    title="Sauvegarder"
-                    variant="Secondary"
-                  />
-                  <Button
-                    disabled={isSaving}
-                    isLoading={isPublishing}
-                    onPress={handlePublish}
-                    title="Publier"
-                    variant="Primary"
-                  />
-                  {availablePresets.length > 0 ? (
-                    <Button
-                      disabled={isPublishing || isSaving}
-                      onPress={() => setShowAutoSetup((current) => !current)}
-                      title={showAutoSetup ? 'Fermer auto' : 'Génération auto'}
-                      variant="Secondary"
-                    />
-                  ) : null}
-                  {!showAutoSetup ? (
-                    <Button
-                      disabled={isPublishing || isSaving}
-                      onPress={handleAddTeam}
-                      title="Ajouter une équipe"
-                      variant="Secondary"
-                    />
-                  ) : null}
-                </View>
-              </View>
-
-              {showAutoSetup ? (
-                <View
-                  style={[
-                    ApplicationStyle.card,
-                    ApplicationStyle.borderRadius24,
-                    Spaces.padding[16],
-                    Spaces.gap[12],
-                    {
-                      backgroundColor: Colors.primary900,
-                      borderColor: `${Colors.gold500}38`,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Génération automatique</Text>
-
-                  <View style={[styles.stepperRow, { borderColor: `${Colors.neutral00}12`, backgroundColor: Colors.neutral800 }]}>
-                    <TouchableOpacity
-                      activeOpacity={0.82}
-                      onPress={() => setAutoTeamCount((current) => Math.max(1, current - 1))}
-                      style={[styles.stepperButton, { borderColor: `${Colors.neutral00}14` }]}
-                    >
-                      <Text style={[Fonts.h4Bold, { color: Colors.primary100 }]}>-</Text>
-                    </TouchableOpacity>
-                    <View style={styles.stepperValue}>
-                      <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{autoTeamCount}</Text>
-                      <Text style={[Fonts.p4, Fonts.neutral300]}>équipes</Text>
-                    </View>
-                    <TouchableOpacity
-                      activeOpacity={0.82}
-                      onPress={() => setAutoTeamCount((current) => Math.min(MAX_COMPOSITION_TEAMS, current + 1))}
-                      style={[styles.stepperButton, { borderColor: `${Colors.neutral00}14` }]}
-                    >
-                      <Text style={[Fonts.h4Bold, { color: Colors.primary100 }]}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {Array.from({ length: autoTeamCount }, (_, index) => {
-                    const selectedKey = autoPresetKeys[index] || availablePresets[0]?.key || null;
-                    const presetIndex = Math.max(0, availablePresets.findIndex((preset) => preset.key === selectedKey));
-                    const preset = availablePresets[presetIndex] || availablePresets[0] || null;
-                    return (
-                      <View
-                        key={`auto_team_${index + 1}`}
-                        style={[styles.listRow, { backgroundColor: Colors.neutral800, borderColor: `${Colors.neutral00}12`, paddingVertical: 14 }]}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{`Équipe ${index + 1}`}</Text>
-                          <Text style={[Fonts.p4, Fonts.neutral300]}>{preset?.label || 'Aucun preset'}</Text>
-                        </View>
-                        <View style={[Alignments.row, Spaces.gap[8]]}>
-                          <Button
-                            onPress={() => setAutoPresetKeys((current) => {
-                              const next = syncPresetKeys(autoTeamCount, availablePresets, current);
-                              if (availablePresets.length <= 1) return next;
-                              const nextIndex = (presetIndex - 1 + availablePresets.length) % availablePresets.length;
-                              next[index] = availablePresets[nextIndex]?.key || next[index];
-                              return [...next];
-                            })}
-                            size="sm"
-                            title="<"
-                            variant="Secondary"
-                          />
-                          <Button
-                            onPress={() => setAutoPresetKeys((current) => {
-                              const next = syncPresetKeys(autoTeamCount, availablePresets, current);
-                              if (availablePresets.length <= 1) return next;
-                              const nextIndex = (presetIndex + 1) % availablePresets.length;
-                              next[index] = availablePresets[nextIndex]?.key || next[index];
-                              return [...next];
-                            })}
-                            size="sm"
-                            title=">"
-                            variant="Secondary"
-                          />
-                        </View>
-                      </View>
-                    );
-                  })}
-
-                  <Button
-                    isLoading={isSaving}
-                    onPress={handleGenerateAuto}
-                    title="Générer le brouillon"
-                    variant="Primary"
-                  />
-                </View>
-              ) : null}
-
-              <View
-                style={[
-                  ApplicationStyle.card,
-                  ApplicationStyle.borderRadius24,
-                  Spaces.padding[16],
-                  Spaces.gap[12],
-                  {
-                    backgroundColor: Colors.primary900,
-                    borderColor: selectedPlayer ? `${Colors.primary500}44` : `${Colors.neutral00}12`,
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-                  <View style={{ flex: 1, paddingRight: 12 }}>
-                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Remplaçants / en attente</Text>
-                    <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      {selectedPlayer
-                        ? `${getCompositionPlayerLabel(selectedPlayer)} est sélectionné. Touche maintenant un poste pour l'affecter.`
-                        : 'Touche un joueur pour le sélectionner, puis touche un poste sur une équipe.'}
-                    </Text>
-                  </View>
-                  {selectedPlayer ? (
-                    <Button
-                      onPress={() => setSelectedPlayerId('')}
-                      size="sm"
-                      title="Annuler"
-                      variant="Secondary"
-                    />
-                  ) : null}
-                </View>
-
-                {reservePlayers.length === 0 ? (
-                  <Text style={[Fonts.p3, Fonts.neutral300]}>
-                    {hasKnownPlayers
-                      ? 'Tous les joueurs sont déjà affectes a une équipe.'
-                      : 'Aucun joueur disponible pour le moment. Tu peux quand même créer les équipes et laisser les postes libres.'}
-                  </Text>
-                ) : (
-                  <View style={styles.chipRow}>
-                    {reservePlayers.map((player) => {
-                      const playerId = getCompositionPlayerId(player);
-                      const isSelected = String(selectedPlayerId || '') === String(playerId);
-                      return (
-                        <TouchableOpacity
-                          activeOpacity={0.82}
-                          key={playerId}
-                          onPress={() => handleReservePress(playerId)}
-                          style={[
-                            styles.playerChip,
-                            {
-                              backgroundColor: isSelected ? `${Colors.primary500}22` : `${Colors.neutral00}08`,
-                              borderColor: isSelected ? `${Colors.primary500}66` : `${Colors.neutral00}16`,
-                            },
-                          ]}
-                        >
-                          <Text style={[Fonts.p3Bold, { color: isSelected ? Colors.primary100 : Colors.neutral00 }]}>
-                            {getCompositionPlayerLabel(player)}
-                          </Text>
-                          {player?.participantSource ? (
-                            <Text style={[Fonts.p4, { color: isSelected ? Colors.primary100 : Colors.neutral300 }]}>
-                              {player.participantSource === 'external_participant' ? 'Externe' : 'Equipe'}
+                      {(Array.isArray(team?.slots) ? team.slots : []).map((slot) => {
+                        const placement = (Array.isArray(team?.placements) ? team.placements : []).find((entry) => entry?.slotId === slot?.slotId) || null;
+                        const player = placement ? playerMap.get(String(placement.playerId || '')) : null;
+                        return (
+                          <TouchableOpacity
+                            activeOpacity={0.82}
+                            key={slot?.slotId || slot?.slotKey}
+                            onPress={() => handleSlotPress(team?.id, slot?.slotId)}
+                            style={[styles.listRow, { backgroundColor: Colors.neutral800, borderColor: `${Colors.neutral00}12` }]}
+                          >
+                            <Text style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1 }]}>
+                              {slot?.label}
                             </Text>
-                          ) : null}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-
-              {(Array.isArray(draftPack?.teams) ? draftPack.teams : []).map((team, teamIndex) => (
-                <View
-                  key={team?.id || `team_${teamIndex + 1}`}
-                  style={[
-                    ApplicationStyle.card,
-                    ApplicationStyle.borderRadius24,
-                    Spaces.padding[16],
-                    Spaces.gap[12],
-                    {
-                      backgroundColor: Colors.primary900,
-                      borderColor: `${Colors.primary500}30`,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                    <TextInput
-                      onChangeText={(value) => handleRenameTeam(team?.id, value)}
-                      placeholder={`Équipe ${teamIndex + 1}`}
-                      placeholderTextColor={Colors.neutral300}
-                      style={[
-                        Fonts.h4Bold,
-                        {
-                          backgroundColor: Colors.neutral800,
-                          borderColor: `${Colors.neutral00}12`,
-                          borderRadius: 14,
-                          borderWidth: 1,
-                          color: Colors.neutral00,
-                          flex: 1,
-                          paddingHorizontal: 14,
-                          paddingVertical: 12,
-                        },
-                      ]}
-                      value={team?.name || ''}
-                    />
-                    <Button
-                      disabled={(Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0) <= 1}
-                      onPress={() => handleRemoveTeam(team?.id)}
-                      size="sm"
-                      title="Suppr."
-                      variant="Secondary"
-                    />
-                  </View>
-
-                  {availablePresets.length > 0 ? (
-                    <View style={[styles.listRow, { backgroundColor: Colors.neutral800, borderColor: `${Colors.neutral00}12` }]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Preset</Text>
-                        <Text style={[Fonts.p4, Fonts.neutral300]}>{team?.presetLabel || 'Composition libre'}</Text>
-                      </View>
-                      <View style={[Alignments.row, Spaces.gap[8]]}>
-                        <Button onPress={() => cyclePreset(team?.id, -1)} size="sm" title="<" variant="Secondary" />
-                        <Button onPress={() => cyclePreset(team?.id, 1)} size="sm" title=">" variant="Secondary" />
-                      </View>
+                            <Text style={[Fonts.p3, { color: player ? Colors.primary100 : Colors.neutral300, flex: 1.2, textAlign: 'right' }]}>
+                              {player ? getCompositionPlayerLabel(player) : 'Libre'}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
-                  ) : null}
-
-                  {renderFieldSlots({
-                    Colors,
-                    Fonts,
-                    isReadOnly: false,
-                    onPressPlacement: handlePlacementPress,
-                    onPressSlot: handleSlotPress,
-                    playerMap,
-                    selectedPlayerId,
-                    team,
-                  })}
-
-                  <View style={Spaces.gap[8]}>
-                    {(Array.isArray(team?.slots) ? team.slots : []).map((slot) => {
-                      const placement = (Array.isArray(team?.placements) ? team.placements : []).find((entry) => entry?.slotId === slot?.slotId) || null;
-                      const player = placement ? playerMap.get(String(placement.playerId || '')) : null;
-                      return (
-                        <TouchableOpacity
-                          activeOpacity={0.82}
-                          key={slot?.slotId || slot?.slotKey}
-                          onPress={() => handleSlotPress(team?.id, slot?.slotId)}
-                          style={[styles.listRow, { backgroundColor: Colors.neutral800, borderColor: `${Colors.neutral00}12` }]}
-                        >
-                          <Text style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1 }]}>
-                            {slot?.label}
-                          </Text>
-                          <Text style={[Fonts.p3, { color: player ? Colors.primary100 : Colors.neutral300, flex: 1.2, textAlign: 'right' }]}>
-                            {player ? getCompositionPlayerLabel(player) : 'Libre'}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
                   </View>
-                </View>
-              ))}
-            </>
-          )}
-        </View>
-      </ScrollView>
-      <SubscriptionPaywallSheet
-        close={() => setSubscriptionPaywallDecision(null)}
-        clubDocumentId={
+                ))}
+              </>
+            )}
+          </View>
+        </ScrollView>
+        <SubscriptionPaywallSheet
+          close={() => setSubscriptionPaywallDecision(null)}
+          clubDocumentId={
           clubVerificationSummary?.clubDocumentId
           || userData?.club?.documentId
           || null
         }
-        decision={subscriptionPaywallDecision}
-        isVisible={Boolean(subscriptionPaywallDecision)}
-        navigation={navigation}
-      />
-    </ImageBackground>
+          decision={subscriptionPaywallDecision}
+          isVisible={Boolean(subscriptionPaywallDecision)}
+          navigation={navigation}
+        />
+      </ImageBackground>
+
+      {/* Jeton fantôme qui suit le doigt pendant le drag (au-dessus de tout). */}
+      {activeDragPlayer ? (
+        <Animated.View pointerEvents="none" style={[styles.dragGhost, ghostAnimatedStyle]}>
+          <DraggableToken isGhost player={activeDragPlayer} />
+        </Animated.View>
+      ) : null}
+    </GestureHandlerRootView>
   );
 }
 
@@ -1208,6 +1435,18 @@ const styles = StyleSheet.create({
     height: FIELD_HEIGHT,
     overflow: 'hidden',
     width: '100%',
+  },
+  fieldFill: {
+    flex: 1,
+  },
+  rootFlex: {
+    flex: 1,
+  },
+  dragGhost: {
+    left: 0,
+    position: 'absolute',
+    top: 0,
+    zIndex: 9999,
   },
   header: {
     alignItems: 'flex-start',
