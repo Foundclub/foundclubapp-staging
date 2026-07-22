@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, isValid, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,8 +14,9 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
+import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import DayPicker from '@/components/molecules/dayPicker/DayPicker';
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -26,6 +27,29 @@ import {
   getEventWizardStepCount,
   isTournamentEventType,
 } from './eventWizardDetectionUtils';
+
+const DATE_INPUT_FORMAT = 'dd/MM/yyyy';
+const TIME_INPUT_FORMAT = 'HH:mm';
+
+const toDateInputText = (dateValue) => format(dateValue, DATE_INPUT_FORMAT);
+const toTimeInputText = (dateValue) => format(dateValue, TIME_INPUT_FORMAT);
+
+const mergeDateInput = (text, fallbackDate) => {
+  const parsed = parse(text, DATE_INPUT_FORMAT, fallbackDate);
+  return isValid(parsed) ? parsed : fallbackDate;
+};
+
+const mergeTimeInput = (text, referenceDate) => {
+  const [hours, minutes] = String(text || '').split(':').map(Number);
+  const merged = new Date(referenceDate);
+  merged.setHours(
+    Number.isFinite(hours) ? hours : 0,
+    Number.isFinite(minutes) ? minutes : 0,
+    0,
+    0,
+  );
+  return merged;
+};
 
 const parseInteger = (rawValue) => {
   if (!rawValue || String(rawValue).trim() === '') return null;
@@ -651,31 +675,26 @@ function EventWizardLogistics({ navigation }) {
       <View style={[Spaces.gap[24]]}>
         {showSingleDateTimeFields ? (
           <>
-            <DateTimeSelector
-              display="inline"
+            <DatePickerInput
               label={t('eventEdit.fields.date.label')}
-              mode="date"
-              onChange={setDate}
-              value={date}
+              minimumDate={new Date()}
+              onChange={(text) => setDate(mergeDateInput(text, date))}
+              value={toDateInputText(date)}
             />
 
             <View style={[Alignments.row, Spaces.gap[16]]}>
               <View style={{ flex: 1 }}>
-                <DateTimeSelector
-                  display="inline"
+                <TimePickerInput
                   label={t('eventEdit.fields.startTime.label')}
-                  mode="time"
-                  onChange={handleStartTimeChange}
-                  value={startTime}
+                  onChange={(text) => handleStartTimeChange(mergeTimeInput(text, startTime))}
+                  value={toTimeInputText(startTime)}
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <DateTimeSelector
-                  display="inline"
+                <TimePickerInput
                   label={t('eventEdit.fields.endTime.label')}
-                  mode="time"
-                  onChange={handleEndTimeChange}
-                  value={endTime}
+                  onChange={(text) => handleEndTimeChange(mergeTimeInput(text, endTime))}
+                  value={toTimeInputText(endTime)}
                 />
               </View>
             </View>
@@ -757,19 +776,17 @@ function EventWizardLogistics({ navigation }) {
                 </Text>
               </View>
               <View style={[Spaces.gap[16]]}>
-                <DateTimeSelector
-                  display="inline"
+                <DatePickerInput
                   label={t('eventWizard.tournamentProgram.startDate', 'Date de début')}
-                  mode="date"
-                  onChange={setTournamentStartDate}
-                  value={tournamentStartDate}
+                  minimumDate={new Date()}
+                  onChange={(text) => setTournamentStartDate(mergeDateInput(text, tournamentStartDate))}
+                  value={toDateInputText(tournamentStartDate)}
                 />
-                <DateTimeSelector
-                  display="inline"
+                <DatePickerInput
                   label={t('eventWizard.tournamentProgram.endDate', 'Date de fin')}
-                  mode="date"
-                  onChange={setTournamentEndDate}
-                  value={tournamentEndDate}
+                  minimumDate={tournamentStartDate}
+                  onChange={(text) => setTournamentEndDate(mergeDateInput(text, tournamentEndDate))}
+                  value={toDateInputText(tournamentEndDate)}
                 />
               </View>
             </View>
@@ -796,21 +813,21 @@ function EventWizardLogistics({ navigation }) {
 
               <View style={[Alignments.row, Spaces.gap[16]]}>
                 <View style={{ flex: 1 }}>
-                  <DateTimeSelector
-                    display="inline"
+                  <TimePickerInput
                     label={t('eventWizard.tournamentProgram.defaultStartTime', 'Heure de début')}
-                    mode="time"
-                    onChange={handleTournamentDefaultStartTimeChange}
-                    value={tournamentDefaultStartTime}
+                    onChange={(text) => handleTournamentDefaultStartTimeChange(
+                      mergeTimeInput(text, tournamentDefaultStartTime),
+                    )}
+                    value={toTimeInputText(tournamentDefaultStartTime)}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <DateTimeSelector
-                    display="inline"
+                  <TimePickerInput
                     label={t('eventWizard.tournamentProgram.defaultEndTime', 'Heure de fin')}
-                    mode="time"
-                    onChange={handleTournamentDefaultEndTimeChange}
-                    value={tournamentDefaultEndTime}
+                    onChange={(text) => handleTournamentDefaultEndTimeChange(
+                      mergeTimeInput(text, tournamentDefaultEndTime),
+                    )}
+                    value={toTimeInputText(tournamentDefaultEndTime)}
                   />
                 </View>
               </View>
@@ -910,30 +927,29 @@ function EventWizardLogistics({ navigation }) {
 
                     {day.hasCustomTime ? (
                       <View style={[Spaces.gap[16]]}>
-                        <DateTimeSelector
-                          display="inline"
+                        <TimePickerInput
                           label={t('eventWizard.tournamentProgram.dayStartTime', 'Heure de début du jour')}
-                          mode="time"
-                          onChange={(nextStartTime) => {
-                            const adjustedStart = buildDayStartTime(day.date, nextStartTime);
+                          onChange={(text) => {
+                            const adjustedStart = buildDayStartTime(
+                              day.date,
+                              mergeTimeInput(text, day.startTime),
+                            );
                             handleUpdateTournamentDay(dateKey, {
                               endTime: ensureEndAfterStart(adjustedStart, day.endTime),
                               startTime: adjustedStart,
                             });
                           }}
-                          value={day.startTime}
+                          value={toTimeInputText(day.startTime)}
                         />
-                        <DateTimeSelector
-                          display="inline"
+                        <TimePickerInput
                           label={t('eventWizard.tournamentProgram.dayEndTime', 'Heure de fin du jour')}
-                          mode="time"
-                          onChange={(nextEndTime) => handleUpdateTournamentDay(dateKey, {
+                          onChange={(text) => handleUpdateTournamentDay(dateKey, {
                             endTime: ensureEndAfterStart(
                               day.startTime,
-                              buildDayStartTime(day.date, nextEndTime),
+                              buildDayStartTime(day.date, mergeTimeInput(text, day.endTime)),
                             ),
                           })}
-                          value={day.endTime}
+                          value={toTimeInputText(day.endTime)}
                         />
                       </View>
                     ) : null}
@@ -1048,17 +1064,19 @@ function EventWizardLogistics({ navigation }) {
               </View>
             ) : null}
 
-            <DateTimeSelector
+            <DatePickerInput
               label={t('eventEdit.fields.recurrenceStartDate.label')}
-              mode="date"
-              onChange={setRecurrenceStartDate}
-              value={recurrenceStartDate || new Date()}
+              onChange={(text) => setRecurrenceStartDate(
+                mergeDateInput(text, recurrenceStartDate || new Date()),
+              )}
+              value={toDateInputText(recurrenceStartDate || new Date())}
             />
-            <DateTimeSelector
+            <DatePickerInput
               label={t('eventEdit.fields.recurrenceEndDate.label')}
-              mode="date"
-              onChange={setRecurrenceEndDate}
-              value={recurrenceEndDate || new Date()}
+              onChange={(text) => setRecurrenceEndDate(
+                mergeDateInput(text, recurrenceEndDate || new Date()),
+              )}
+              value={toDateInputText(recurrenceEndDate || new Date())}
             />
           </View>
         ) : null}

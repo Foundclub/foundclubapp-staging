@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { format, isValid, parse } from 'date-fns';
 import Joi from 'joi';
 import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -23,9 +23,10 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
-import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
+import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import DayPicker from '@/components/molecules/dayPicker/DayPicker';
 import Input from '@/components/molecules/input/Input';
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import FacilitySelector from '@/components/organisms/facilitySelector/FacilitySelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -111,21 +112,13 @@ const getEventLocationLabel = (locationDetails) => {
   return String(address || '').trim();
 };
 
-const getDatePickerValue = (value, getDateFromDateInput) => {
-  const parsedDate = typeof getDateFromDateInput === 'function' ? getDateFromDateInput(value) : null;
-  if (parsedDate instanceof Date && !Number.isNaN(parsedDate.getTime())) {
-    return parsedDate;
-  }
-  return new Date();
-};
+const DATE_INPUT_FORMAT = 'dd/MM/yyyy';
 
-const getTimePickerValue = (value) => {
-  const baseDate = new Date();
-  baseDate.setSeconds(0, 0);
-  const [hours, minutes] = String(value || '').split(':').map((part) => Number(part));
-  baseDate.setHours(Number.isFinite(hours) ? hours : 0);
-  baseDate.setMinutes(Number.isFinite(minutes) ? minutes : 0);
-  return baseDate;
+const toDateInputText = (dateValue) => format(dateValue, DATE_INPUT_FORMAT);
+
+const mergeDateInput = (text, fallbackDate) => {
+  const parsed = parse(text, DATE_INPUT_FORMAT, fallbackDate);
+  return isValid(parsed) ? parsed : fallbackDate;
 };
 
 const clampDateToToday = (value) => {
@@ -1131,21 +1124,12 @@ function EventEdit({ navigation, route }) {
                 },
               }) => (
                 <View style={Spaces.gap[4]}>
-                  <DateTimeSelector
-                    buttonStyle={{
-                      alignItems: 'flex-start',
-                      justifyContent: 'center',
-                    }}
-                    buttonTextStyle={{
-                      textTransform: 'none',
-                    }}
-                    display="modal"
+                  <DatePickerInput
                     label={t('eventEdit.fields.date.label')}
-                    mode="date"
-                    onChange={(nextDate) => {
-                      onChange(format(clampDateToToday(nextDate), 'dd/MM/yyyy'));
+                    onChange={(text) => {
+                      onChange(toDateInputText(clampDateToToday(mergeDateInput(text, new Date()))));
                     }}
-                    value={getDatePickerValue(value, getDateFromDateInput)}
+                    value={value}
                   />
                   {getFieldError({ errors: formErrors, fieldName: name }) ? (
                     <Text style={[Fonts.p3, { color: Colors.error500 }]}>
@@ -1165,21 +1149,10 @@ function EventEdit({ navigation, route }) {
                 },
               }) => (
                 <View style={Spaces.gap[4]}>
-                  <DateTimeSelector
-                    buttonStyle={{
-                      alignItems: 'flex-start',
-                      justifyContent: 'center',
-                    }}
-                    buttonTextStyle={{
-                      textTransform: 'none',
-                    }}
-                    display="modal"
+                  <TimePickerInput
                     label={t('eventEdit.fields.startTime.label')}
-                    mode="time"
-                    onChange={(nextDate) => {
-                      onChange(format(nextDate, 'HH:mm'));
-                    }}
-                    value={getTimePickerValue(value)}
+                    onChange={onChange}
+                    value={value}
                   />
                   {getFieldError({ errors: formErrors, fieldName: name }) ? (
                     <Text style={[Fonts.p3, { color: Colors.error500 }]}>
@@ -1199,21 +1172,10 @@ function EventEdit({ navigation, route }) {
                 },
               }) => (
                 <View style={Spaces.gap[4]}>
-                  <DateTimeSelector
-                    buttonStyle={{
-                      alignItems: 'flex-start',
-                      justifyContent: 'center',
-                    }}
-                    buttonTextStyle={{
-                      textTransform: 'none',
-                    }}
-                    display="modal"
+                  <TimePickerInput
                     label={t('eventEdit.fields.endTime.label')}
-                    mode="time"
-                    onChange={(nextDate) => {
-                      onChange(format(nextDate, 'HH:mm'));
-                    }}
-                    value={getTimePickerValue(value)}
+                    onChange={onChange}
+                    value={value}
                   />
                   {getFieldError({ errors: formErrors, fieldName: name }) ? (
                     <Text style={[Fonts.p3, { color: Colors.error500 }]}>
