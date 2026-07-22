@@ -602,6 +602,12 @@ function TacticalSelection() {
               Ajouté manuellement
             </Text>
           )}
+          {item.appliedPosition ? (
+            // Détection : le poste auquel ce candidat a postulé (primary200 = 6,79:1, AA OK).
+            <Text style={[Fonts.p3, { color: Colors.primary200, fontWeight: '600' }]}>
+              {`A postulé : ${item.appliedPosition}`}
+            </Text>
+          ) : null}
         </View>
 
         {/* Edit button */}

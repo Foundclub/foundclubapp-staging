@@ -11,6 +11,8 @@
  * @property {string|{url?: string; formats?: { thumbnail?: { url?: string } }}|null} [avatar] - Avatar data
  * @property {number|string} [number] - Jersey number
  * @property {boolean} [isManual] - Whether manually added
+ * @property {string|null} [appliedPosition] - Poste postulé (détection)
+ * @property {string} [position] - Poste de profil du joueur
  */
 
 /**

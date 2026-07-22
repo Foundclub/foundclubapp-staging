@@ -387,12 +387,18 @@ const getDetectionCandidatePlayers = (event, team) => {
     ...getEligibleTeamPlayers(team).map((player) => getUserKey(player)).filter(Boolean),
   ]);
 
+  // On garde le POSTE POSTULÉ (appliedPosition) sur chaque candidat : le poste de
+  // l'annonce pour un candidat d'annonce, la position de la participation sinon.
+  // Sert à l'affichage « a postulé X » et au pré-placement au bon poste.
   const adCandidates = Array.isArray(event?.recruitmentAds)
-    ? event.recruitmentAds.flatMap((recruitmentAd) => recruitmentAd?.candidates || [])
+    ? event.recruitmentAds.flatMap((recruitmentAd) => (recruitmentAd?.candidates || [])
+      .map((candidate) => ({ ...candidate, appliedPosition: recruitmentAd?.position || null })))
     : [];
   const acceptedRequests = getActiveParticipationRequests(event)
     .filter((participation) => ['accepted', 'missing'].includes(String(participation?.participationStatus || '').toLowerCase()))
-    .map((participation) => participation?.user)
+    .map((participation) => (participation?.user
+      ? { ...participation.user, appliedPosition: participation?.position || null }
+      : null))
     .filter(Boolean);
   const acceptedParticipations = Array.isArray(event?.participations) ? event.participations : [];
 
