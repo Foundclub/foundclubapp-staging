@@ -738,6 +738,18 @@ export const updateAdminClub = async (documentId, data) => {
   return response.data;
 };
 
+/**
+ * Vérifie / dé-vérifie un club (superadmin) via l'endpoint dédié minimal
+ * (met à jour uniquement clubVerified, sans passer par le formulaire de contenu générique).
+ * @param {string} documentId
+ * @param {boolean} verified
+ * @returns {Promise<any>}
+ */
+export const verifyAdminClub = async (documentId, verified) => {
+  const response = await client.put(`/superadmin/clubs/${documentId}/verify`, { verified });
+  return response.data;
+};
+
 // ================== LEAGUE DISPUTES ==================
 
 /**

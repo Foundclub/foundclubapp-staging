@@ -39,6 +39,7 @@ import {
   updateManualEntitlement,
   updateNonPartnerCoachAffiliation,
   updateNonPartnerCoachGovernance,
+  verifyAdminClub,
 } from './adminService';
 
 /**
@@ -397,6 +398,17 @@ export const useUpdateAdminClub = () => {
     mutationFn: (/** @type {{ documentId: string; data: Record<string, any> }} */ payload) => updateAdminClub(payload.documentId, payload.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'clubs'] });
+    },
+  });
+};
+
+export const useVerifyAdminClub = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (/** @type {{ documentId: string; verified: boolean }} */ payload) => verifyAdminClub(payload.documentId, payload.verified),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'clubs'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'club'] });
     },
   });
 };
