@@ -44,6 +44,7 @@ import {
   useSearchAdminClubRelations,
   useUpdateAdminClubRelation,
 } from '@/services/admin/adminClubContentQueries';
+import { useVerifyAdminClub } from '@/services/admin/adminQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
@@ -145,8 +146,28 @@ function AdminClubDetail() {
   const relationSearchMutation = useSearchAdminClubRelations();
   const updateRelationMutation = useUpdateAdminClubRelation();
   const deleteMutation = useDeleteAdminClubContent();
+  const verifyClubMutation = useVerifyAdminClub();
 
   const club = clubData?.data || clubData;
+
+  // Vérifier / dé-vérifier le club en un clic (endpoint dédié minimal, pas le formulaire).
+  const handleToggleVerification = useCallback(() => {
+    if (!clubId || verifyClubMutation.isPending) return;
+    const nextVerified = !(club?.clubVerified === true);
+    verifyClubMutation.mutate(
+      { documentId: clubId, verified: nextVerified },
+      {
+        onError: (err) => Alert.alert('Erreur', getErrorMessage(err, 'generic')),
+        onSuccess: () => {
+          refetch?.();
+          Alert.alert(
+            nextVerified ? 'Club vérifié' : 'Vérification retirée',
+            nextVerified ? 'Le club est maintenant certifié.' : 'Le club n’est plus certifié.',
+          );
+        },
+      },
+    );
+  }, [clubId, club?.clubVerified, verifyClubMutation, refetch]);
   const isCompactScreen = screenWidth <= 360;
   const contentHorizontalPadding = isCompactScreen ? 8 : 10;
   const members = useMemo(() => normalizeRelationArray(club?.members), [club?.members]);
@@ -509,6 +530,14 @@ function AdminClubDetail() {
               size="sm"
               style={isCompactScreen ? styles.fullWidthButton : styles.flexButton}
               title="Modifier"
+            />
+            <Button
+              isLoading={verifyClubMutation.isPending}
+              onPress={handleToggleVerification}
+              size="sm"
+              style={isCompactScreen ? styles.fullWidthButton : styles.flexButton}
+              title={club?.clubVerified ? 'Retirer la vérif.' : 'Vérifier le club'}
+              variant={club?.clubVerified ? 'Secondary' : 'Primary'}
             />
             <Button
               onPress={() => setIsActionsVisible(true)}
