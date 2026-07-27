@@ -1,35 +1,34 @@
 import { isFirebaseBypassEnabled } from './bypassPolicy';
 
+// L'environnement est injecté explicitement, jamais muté via `process.env` :
+// babel-plugin-inline-dotenv réécrit chaque lecture littérale `process.env.X`
+// en `process.env.X || "<valeur du fichier .env>"`, et neutralise
+// `delete process.env.X` (le `delete` porte alors sur une expression, plus sur
+// une référence : il ne supprime rien). Un test qui muterait `process.env`
+// dépendrait donc de la présence de `.env.local` — vert sur un poste de dev,
+// rouge en CI où le fichier est absent.
 describe('authService bypass gating', () => {
-  const previousAppEnv = process.env.APP_ENV;
-  const previousBypass = process.env.BYPASS_FIREBASE_AUTH;
-
-  afterEach(() => {
-    process.env.APP_ENV = previousAppEnv;
-    process.env.BYPASS_FIREBASE_AUTH = previousBypass;
-  });
-
   test('returns true only when APP_ENV=local and BYPASS_FIREBASE_AUTH=true', () => {
-    process.env.APP_ENV = 'local';
-    process.env.BYPASS_FIREBASE_AUTH = 'true';
-    expect(isFirebaseBypassEnabled()).toBe(true);
+    const env = { APP_ENV: 'local', BYPASS_FIREBASE_AUTH: 'true' };
+
+    expect(isFirebaseBypassEnabled(env)).toBe(true);
   });
 
   test('returns false in non-local environment even if bypass flag is true', () => {
-    process.env.APP_ENV = 'staging';
-    process.env.BYPASS_FIREBASE_AUTH = 'true';
-    expect(isFirebaseBypassEnabled()).toBe(false);
+    const stagingEnv = { APP_ENV: 'staging', BYPASS_FIREBASE_AUTH: 'true' };
+    const productionEnv = { APP_ENV: 'production', BYPASS_FIREBASE_AUTH: 'true' };
+
+    expect(isFirebaseBypassEnabled(stagingEnv)).toBe(false);
+    expect(isFirebaseBypassEnabled(productionEnv)).toBe(false);
   });
 
   test('returns false in local when bypass flag is false', () => {
-    process.env.APP_ENV = 'local';
-    process.env.BYPASS_FIREBASE_AUTH = 'false';
-    expect(isFirebaseBypassEnabled()).toBe(false);
+    const env = { APP_ENV: 'local', BYPASS_FIREBASE_AUTH: 'false' };
+
+    expect(isFirebaseBypassEnabled(env)).toBe(false);
   });
 
   test('defaults to bypass enabled in local when the flag is missing', () => {
-    process.env.APP_ENV = 'local';
-    delete process.env.BYPASS_FIREBASE_AUTH;
-    expect(isFirebaseBypassEnabled()).toBe(true);
+    expect(isFirebaseBypassEnabled({ APP_ENV: 'local' })).toBe(true);
   });
 });
