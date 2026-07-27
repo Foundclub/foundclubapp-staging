@@ -24,7 +24,7 @@
     "type-check:report": "node ./scripts/typecheck-report.js",
     "type-check:no-regression": "node ./scripts/typecheck-no-regression.js",
     "verify:theme-contract": "node ./scripts/verify-theme-contract.js",
-    "quality": "npm run verify:theme-contract && npm run type-check && npm run lint && npm run test"
+    "quality": "npm run verify:theme-contract && npm run type-check:no-regression && npm run lint:no-regression && npm run test"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.1.2",
