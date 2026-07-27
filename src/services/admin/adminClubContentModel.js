@@ -15,19 +15,18 @@ export const CLUB_LIST_FIELDS = [
   'updatedAt',
 ];
 
-export const CLUB_DETAIL_POPULATE = [
-  'logo',
-  'activites',
-  'parentMultisport',
-  'members',
-  'members.avatar',
-  'teams',
-  'clubMembershipRequests',
-  'evenements',
-  'facilities',
-  'sponsor',
-  'sponsor.logo',
-];
+// La fiche club du superadmin passe par /superadmin/content/:uid/:documentId, qui
+// transmet `populate` DIRECTEMENT au Document Service de Strapi 5. Contrairement a
+// l'API REST classique (/clubs/:id), celui-ci n'accepte PAS la notation pointee
+// ('members.avatar', 'sponsor.logo') dans un tableau : il rejetait le tableau ENTIER,
+// donc plus AUCUNE relation n'etait peuplee et le cadre du logo restait vide dans
+// « Modifier le club » (constate le 2026-07-28).
+// '*' peuple toutes les relations de PREMIER NIVEAU, logo compris.
+// ponytail: les medias imbriques dans un composant (sponsor.logo) restent hors de
+// portee de '*'. Voie de sortie : normaliser le populate cote serveur dans
+// superadmin-console.findOne (accepter la notation pointee), puis repasser a un
+// objet imbrique ici.
+export const CLUB_DETAIL_POPULATE = '*';
 
 export const CLUB_TABS = [
   { key: 'overview', label: 'Vue d\'ensemble' },
