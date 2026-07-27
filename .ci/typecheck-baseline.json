@@ -1,5 +1,6 @@
 ﻿{
-  "maxErrors": 5479,
-  "updatedAt": "2026-05-12",
-  "source": "npm run type-check"
+  "maxErrors": 5474,
+  "updatedAt": "2026-07-27",
+  "source": "npm run type-check",
+  "note": "Resserrage du 2026-07-27 (GO Adel, date). 5479 -> 5474 : la base s'etait amelioree de 5 erreurs sans que le plafond suive, donc le cliquet certifiait 5 erreurs de marge qui n'existaient plus. Le cliquet ne tourne que dans un sens : toute REMONTEE de ce plafond exige un GO d'Adel, date et inscrit dans DEROGATIONS.md (voir D4)."
 }
