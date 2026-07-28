@@ -36,6 +36,45 @@ jobs:
           test -n "${{ secrets.FIREBASE_GROUPS }}" || (echo "Missing secret: FIREBASE_GROUPS" && exit 1)
           echo "All Android staging distribution secrets are present."
 
+      # Sans cette etape, l'APK sort SANS adresse de serveur : `.env.*` est ignore
+      # par git (.gitignore:82), donc `.env.staging` est absent du runner, et
+      # babel-plugin-inline-dotenv remplace alors chaque `process.env.X` par
+      # `undefined`. Au demarrage, client.native.js appelle
+      # assertRuntimeEndpointsReady() qui leve « API_URL is required for
+      # staging/production builds » : l'application ne demarre pas.
+      # Meme motif que « Create production env file » dans ios-testflight-release.yml.
+      - name: Create staging env file
+        shell: bash
+        env:
+          TOMTOM_API_KEY_PRODUCTION: ${{ secrets.TOMTOM_API_KEY_PRODUCTION }}
+          # Cle publique SDK RevenueCat Android (goog_...). Vide tant que le secret
+          # n'est pas configure : le rail d'achat store reste "Checkout indisponible".
+          REVENUECAT_GOOGLE_API_KEY: ${{ secrets.REVENUECAT_GOOGLE_API_KEY }}
+        run: |
+          cat > .env.staging <<EOF
+          APP_ENV=staging
+          API_URL=https://api-staging.foundclubpro.com/api
+          SOCKET_URL=https://api-staging.foundclubpro.com
+          WEB_APP_URL=https://staging.foundclub.app
+          BYPASS_FIREBASE_AUTH=false
+          SENTRY_DSN=
+          LEAGUE_SMART_NOTIF_V1=false
+          FC_ENABLE_PUSH_NOTIFICATIONS=1
+          FC_ENABLE_SMART_NOTIFICATIONS=1
+          FC_ENABLE_NOTIFICATION_TEST_TRIGGER=0
+          FC_SEARCH_MAP_PROVIDER=tomtom
+          TOMTOM_API_KEY=${TOMTOM_API_KEY_PRODUCTION}
+          REVENUECAT_GOOGLE_API_KEY=${REVENUECAT_GOOGLE_API_KEY}
+          DELETE_ACCOUNT_URL=https://api-staging.foundclubpro.com/suppression.html
+          CONTACT_URL=https://foundclubpro.com
+          EOF
+          # Controle executable : une build sans adresse de serveur doit echouer ICI,
+          # pas silencieusement sur le telephone d'un testeur.
+          test -s .env.staging
+          grep -q '^API_URL=https://api-staging\.foundclubpro\.com/api$' .env.staging
+          grep -q '^SOCKET_URL=https://api-staging\.foundclubpro\.com$' .env.staging
+          echo "Staging env file created and verified."
+
       - name: Restore staging google-services.json
         shell: bash
         run: |
