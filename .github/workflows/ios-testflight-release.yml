@@ -206,15 +206,24 @@ jobs:
           # la connexion SMS impossible (400 a chaque tentative), et rien dans l'app
           # ne le signale. C'est ce qui a produit la 2.5.6 : l'entree api_env=staging
           # existait, mais le plist pose etait toujours celui de la production.
+          #
+          # ETAT DES SERVEURS, a re-verifier par
+          #   docker exec <conteneur> printenv FIREBASE_PROJECT_ID
           #   api.foundclubpro.com          -> found-club
-          #   api-staging.foundclubpro.com  -> foundclub-staging   (constate le 2026-07-29)
-          # Si FIREBASE_PROJECT_ID change sur le serveur staging, changer EXPECTED_PROJECT ici.
-          if [ "${API_ENV:-production}" = "staging" ]; then
-            EXPECTED_PROJECT=foundclub-staging
-            PLIST_B64="${GOOGLE_SERVICE_INFO_PLIST_STAGING_BASE64:-}"
+          #   api-staging.foundclubpro.com  -> found-club  DEPUIS LE 2026-07-30 (voie A-prime,
+          #     GO Adel) : faute de plist iOS dedie, staging verifie les jetons du projet de
+          #     PRODUCTION. Ses push sont eteints en echange (ENABLE_PUSH_NOTIFICATIONS=false)
+          #     et il garde son propre compte de service, pour qu'un envoi accidentel soit
+          #     refuse par Google au lieu d'atteindre de vrais telephones.
+          #     Si staging retrouve un jour son projet propre, changer EXPECTED_PROJECT ici
+          #     ET FIREBASE_PROJECT_ID sur le serveur : les deux ensemble, jamais l'un seul.
+          EXPECTED_PROJECT=found-club
+
+          # Un plist staging dedie, s'il existe un jour (voie B), prend le dessus.
+          if [ "${API_ENV:-production}" = "staging" ] && [ -n "${GOOGLE_SERVICE_INFO_PLIST_STAGING_BASE64:-}" ]; then
+            PLIST_B64="${GOOGLE_SERVICE_INFO_PLIST_STAGING_BASE64}"
             SECRET_NAME=GOOGLE_SERVICE_INFO_PLIST_STAGING_BASE64
           else
-            EXPECTED_PROJECT=found-club
             PLIST_B64="${GOOGLE_SERVICE_INFO_PLIST_PRODUCTION_BASE64:-}"
             SECRET_NAME=GOOGLE_SERVICE_INFO_PLIST_PRODUCTION_BASE64
           fi
