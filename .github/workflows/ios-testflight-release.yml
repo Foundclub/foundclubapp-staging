@@ -186,18 +186,61 @@ jobs:
           CONTACT_URL=https://foundclubpro.com
           EOF
 
-      - name: Restore production GoogleService-Info.plist
+          # Le heredoc n'affiche que le SCRIPT : sans ces deux lignes, aucun journal
+          # de build ne dit quel serveur a ete embarque. Constate le 2026-07-29 sur
+          # la 2.5.6, impossible a relire apres coup.
+          echo "CIBLE API DU BUILD : ${API_URL}"
+          grep -E '^(API_URL|SOCKET_URL)=' .env.production
+
+      - name: Restore GoogleService-Info.plist (apparie a la cible API)
         shell: bash
         env:
           GOOGLE_SERVICE_INFO_PLIST_PRODUCTION_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PRODUCTION_BASE64 }}
+          GOOGLE_SERVICE_INFO_PLIST_STAGING_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_STAGING_BASE64 }}
+          API_ENV: ${{ github.event.inputs.api_env }}
         run: |
-          python3 - <<'PY'
+          set -euo pipefail
+
+          # APPARIEMENT OBLIGATOIRE client <-> serveur. Le serveur verifie le claim
+          # "aud" du jeton Firebase contre son FIREBASE_PROJECT_ID ; un decalage rend
+          # la connexion SMS impossible (400 a chaque tentative), et rien dans l'app
+          # ne le signale. C'est ce qui a produit la 2.5.6 : l'entree api_env=staging
+          # existait, mais le plist pose etait toujours celui de la production.
+          #   api.foundclubpro.com          -> found-club
+          #   api-staging.foundclubpro.com  -> foundclub-staging   (constate le 2026-07-29)
+          # Si FIREBASE_PROJECT_ID change sur le serveur staging, changer EXPECTED_PROJECT ici.
+          if [ "${API_ENV:-production}" = "staging" ]; then
+            EXPECTED_PROJECT=foundclub-staging
+            PLIST_B64="${GOOGLE_SERVICE_INFO_PLIST_STAGING_BASE64:-}"
+            SECRET_NAME=GOOGLE_SERVICE_INFO_PLIST_STAGING_BASE64
+          else
+            EXPECTED_PROJECT=found-club
+            PLIST_B64="${GOOGLE_SERVICE_INFO_PLIST_PRODUCTION_BASE64:-}"
+            SECRET_NAME=GOOGLE_SERVICE_INFO_PLIST_PRODUCTION_BASE64
+          fi
+
+          if [ -z "${PLIST_B64}" ]; then
+            echo "::error::api_env=${API_ENV:-production} exige le secret ${SECRET_NAME}, qui est absent ou vide. Un build produit sans lui ne peut PAS se connecter au serveur vise : arret avant de fabriquer une build fantome."
+            exit 1
+          fi
+
+          PLIST_B64="${PLIST_B64}" EXPECTED_PROJECT="${EXPECTED_PROJECT}" python3 - <<'PY'
           import base64
           import os
+          import plistlib
           from pathlib import Path
 
-          data = base64.b64decode(os.environ["GOOGLE_SERVICE_INFO_PLIST_PRODUCTION_BASE64"])
+          data = base64.b64decode(os.environ["PLIST_B64"])
           Path("ios/GoogleService-Info.plist").write_bytes(data)
+
+          expected = os.environ["EXPECTED_PROJECT"]
+          actual = str(plistlib.loads(data).get("PROJECT_ID", "")).strip()
+          print(f"PROJET FIREBASE DU BUILD : {actual}")
+          if actual != expected:
+              raise SystemExit(
+                  f"::error::Le plist Firebase porte le projet '{actual}' alors que le serveur vise attend '{expected}'. "
+                  "La connexion SMS echouerait avec 'incorrect aud claim' : arret."
+              )
           PY
 
       - name: Sync Firebase iOS URL scheme
