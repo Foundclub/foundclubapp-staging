@@ -39,6 +39,7 @@ import {
 } from '@/services/leagueTeam/leagueTeamQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
 
+import { getTeamMemberCount } from '@/utils/teamMemberCount';
 import { sortTeamsForDisplay } from '@/utils/teamSort';
 
 /** @typedef {any} Team */
@@ -505,24 +506,7 @@ function TeamListContent({
       } else if (isSelfPlayer) {
         roleTagLabel = 'Joueur·se';
       }
-      const getUniqueMemberCount = () => {
-        const ids = new Set();
-        const collect = (list = []) => {
-          list.forEach((member) => {
-            if (!member) return;
-            const memberId = member.documentId || member.id || member.phoneNumber;
-            if (memberId) ids.add(String(memberId));
-          });
-        };
-
-        collect(item?.players);
-        collect(item?.trainers);
-        collect(item?.members);
-
-        if (ids.size > 0) return ids.size;
-        return Number(item?.players?.length || 0) + Number(item?.trainers?.length || 0);
-      };
-      const memberCount = getUniqueMemberCount();
+      const memberCount = getTeamMemberCount(item);
       const metaLine = [
         sportLabel,
         item?.section?.name,
