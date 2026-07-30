@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
@@ -135,7 +136,17 @@ const getOpponentResponseLabel = (opponentResponse, opponentNextAction) => {
 function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const queryClient = useQueryClient();
   const [{ auth }] = useAppContext();
-  const { isBootstrapResolved } = useAuth();
+  const { isBootstrapResolved, userData } = useAuth();
+  // AUDIT LEAGUE 2026-07-30, defaut G4 — cet hote est monte dans DeferredStartupHosts
+  // (App.js), donc HORS du navigateur : l appel partait pour TOUS les comptes, y compris
+  // ceux qui n ont jamais choisi de profil. Mesure sur la base de production : 40 comptes
+  // sur 118 sont restes au role `Authenticated` (SMS valide, profil jamais choisi — 34 %
+  // des inscriptions sur 4 mois). Ils n ont ni escouade, ni equipe, ni club : la reponse
+  // serait vide, et c est un 403 qu ils recevaient a chaque ouverture d application.
+  // getUserRoleKey rend 'new' pour `Authenticated` comme pour un role inconnu, donc aussi
+  // tant que userData n est pas arrive : la porte est fermee par defaut, ce qui est le
+  // bon sens (voir G5 — les deux autres verrous LEAGUE s ouvraient quand ils ne savaient pas).
+  const hasChosenProfile = getUserRoleKey(userData?.role?.type || userData?.role?.name) !== 'new';
   const [consumedForcedPromptKey, setConsumedForcedPromptKey] = useState(/** @type {string | null} */ (null));
   const [dismissedActionKey, setDismissedActionKey] = useState(/** @type {string | null} */ (null));
   const [currentRouteName, setCurrentRouteName] = useState(/** @type {string | null} */ (null));
@@ -167,6 +178,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   } = usePendingLeagueAction(undefined, {
     enabled: ENABLE_LEAGUE_ACTION_PROMPTS
       && Boolean(auth?.token)
+      && hasChosenProfile
       && !skipInitialFetch
       && (isBootstrapResolved || allowPromptFallbackFetch),
     refetchInterval: pendingActionPollInterval,
