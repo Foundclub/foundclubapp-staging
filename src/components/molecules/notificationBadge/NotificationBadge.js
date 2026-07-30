@@ -34,12 +34,19 @@ function NotificationBadge({
 } = {}) {
   const { Colors, Images } = useTheme();
   const { t } = useTranslation();
-  const { isBootstrapResolved } = useAuth();
+  const { isBootstrapResolved, userData } = useAuth();
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [isUnreadCountReady, setIsUnreadCountReady] = useState(false);
   const [allowUnreadFallbackFetch, setAllowUnreadFallbackFetch] = useState(false);
   const [prevUnreadCount, setPrevUnreadCount] = useState(0);
-  const shouldLoadNotifications = !onPress && isPopupVisible;
+  // Ce badge est monté sur l'écran de recherche PUBLIC (views/Home.js:161), donc
+  // aussi quand personne n'est connecté. Sans cette condition, le compteur part
+  // en 403 toutes les 2 minutes indéfiniment : mesuré le 2026-07-29 de 23:54 à
+  // 00:05 dans les journaux de staging, par salves de 3 (l'appel + 2 reprises).
+  // `isBootstrapResolved` ne protège de rien ici : il vaut VRAI justement
+  // quand il n'y a pas de jeton (useAuth.js:785).
+  const hasSession = Boolean(userData);
+  const shouldLoadNotifications = hasSession && !onPress && isPopupVisible;
   const unreadBadgeDelayMs = Platform.OS === 'web' ? getWebUnreadBadgeDelayMs() : 0;
   const unreadPollMs = Platform.OS === 'web' ? getWebUnreadPollMs() : undefined;
 
@@ -78,7 +85,8 @@ function NotificationBadge({
     return () => clearTimeout(timeoutId);
   }, [isBootstrapResolved]);
 
-  const shouldEnableUnreadCount = isUnreadCountReady
+  const shouldEnableUnreadCount = hasSession
+    && isUnreadCountReady
     && (isBootstrapResolved || allowUnreadFallbackFetch);
 
   const {

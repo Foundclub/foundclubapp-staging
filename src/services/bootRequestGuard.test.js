@@ -1,6 +1,8 @@
 import {
   assertBootRequestAllowed,
+  assertSessionRequestAllowed,
   BOOT_REQUEST_BLOCKED_CODE,
+  BOOT_REQUEST_NO_SESSION_CODE,
   getBootRequestGuardSnapshot,
   getRetryAfterSeconds,
   recordBootRequestFailure,
@@ -24,9 +26,12 @@ const failNTimes = (url, count) => {
 };
 
 describe('bootRequestGuard', () => {
+  /** @type {jest.SpyInstance} */
+  let warnSpy;
+
   beforeEach(() => {
     jest.useFakeTimers({ now: new Date('2026-07-20T10:00:00Z') });
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     resetBootRequestGuard();
   });
 
@@ -149,6 +154,84 @@ describe('bootRequestGuard', () => {
     // puisque le client app envoie des URLs relatives ('/app/bootstrap').
     expect(getBootRequestGuardSnapshot()['/api/app/bootstrap']).toBeUndefined();
     expect(() => assertBootRequestAllowed({ method: 'get', url: BOOT_PATH })).not.toThrow();
+  });
+
+  // Les 5 routes ci-dessous sont celles mesurées en boucle dans les journaux de
+  // foundclub-staging-admin le 2026-07-29 entre 23:51 et 00:05, app déconnectée.
+  describe('garde de session (aucun jeton)', () => {
+    const SANS_JETON = { hasToken: false };
+    const AVEC_JETON = { hasToken: true };
+    const UNREAD_PATH = '/notifications/count-unread';
+    const refuserUnread = () => {
+      try {
+        assertSessionRequestAllowed({ method: 'get', url: UNREAD_PATH }, SANS_JETON);
+      } catch (error) { /* refus attendu */ }
+    };
+
+    test.each([
+      ['/app/bootstrap?platform=ios'],
+      ['/firebase-auth/me'],
+      ['/firebase-auth/me/pending-match-stats'],
+      ['/notifications/count-unread'],
+      ['/league-actions/pending'],
+      ['/in-app-popup-campaigns/active?platform=ios&trigger=app_open'],
+      ['/user-fcm-token/me/device'],
+    ])('refuse %s sans jeton, sans toucher le réseau', (url) => {
+      let thrown;
+      try {
+        assertSessionRequestAllowed({ method: 'get', url }, SANS_JETON);
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown?.code).toBe(BOOT_REQUEST_NO_SESSION_CODE);
+      expect(thrown?.response?.data?.error?.code).toBe(BOOT_REQUEST_NO_SESSION_CODE);
+    });
+
+    test('laisse tout passer dès qu\'un jeton existe', () => {
+      expect(() => assertSessionRequestAllowed(
+        { method: 'get', url: '/notifications/count-unread' },
+        AVEC_JETON,
+      )).not.toThrow();
+    });
+
+    test('laisse passer un en-tête Authorization explicite (multi-session FCM)', () => {
+      // addDeviceTokenForSession parle au nom d'une AUTRE session enregistrée :
+      // la session active peut être absente, la requête reste légitime.
+      expect(() => assertSessionRequestAllowed(
+        {
+          headers: { Authorization: 'Bearer jeton-d-une-autre-session' },
+          method: 'post',
+          url: '/user-fcm-token/me/device',
+        },
+        SANS_JETON,
+      )).not.toThrow();
+    });
+
+    test('ne touche pas aux routes publiques, même sans jeton', () => {
+      // /events est volontairement hors liste : consultation publique côté app.
+      ['/events?filters%5BisActive%5D=true', '/clubs', '/firebase-auth/login', '/search/clubs']
+        .forEach((url) => {
+          const appel = () => assertSessionRequestAllowed({ method: 'get', url }, SANS_JETON);
+          expect(appel).not.toThrow();
+        });
+    });
+
+    test('n\'avertit qu\'une fois par route tant que la session manque', () => {
+      refuserUnread();
+      refuserUnread();
+      refuserUnread();
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('un succès réarme l\'avertissement', () => {
+      refuserUnread();
+      recordBootRequestSuccess({ method: 'get', url: ME_PATH });
+      refuserUnread();
+
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+    });
   });
 
   test('getRetryAfterSeconds lit les deux formes d\'erreur', () => {

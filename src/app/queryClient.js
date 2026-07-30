@@ -4,10 +4,33 @@ import {
   QueryClient,
 } from '@tanstack/react-query';
 
-const isAxiosError = (error) => Boolean(
-  error
-  && typeof error === 'object'
-  && /** @type {{ isAxiosError?: unknown }} */ (error).isAxiosError === true,
+import {
+  BOOT_REQUEST_BLOCKED_CODE,
+  BOOT_REQUEST_NO_SESSION_CODE,
+} from '@/services/bootRequestGuard';
+
+// Les intercepteurs de réponse (client.native.js / client.web.js) rejettent la
+// charge DÉBALLÉE `error.response.data.error`, jamais l'erreur axios : une
+// erreur applicative Strapi arrive donc ici sans `isAxiosError` et sans
+// `response`, avec son code dans `error.status`. Lire les deux formes est
+// indispensable, sinon tout 4xx retombe dans « inconnu => on retente ».
+// Mesuré sur staging le 2026-07-29 : chaque 403 partait 3 fois (1 + 2 reprises
+// à 1,13 s et 2,07 s d'écart) pour cette seule raison.
+const getErrorStatus = (/** @type {any} */ error) => {
+  const rawStatus = error?.status
+    ?? error?.response?.status
+    ?? error?.error?.status;
+  const parsed = Number(rawStatus);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getErrorMethod = (/** @type {any} */ error) => String(
+  error?.config?.method || error?.response?.config?.method || 'get',
+).trim().toUpperCase();
+
+const isLocallyBlocked = (/** @type {any} */ error) => (
+  error?.code === BOOT_REQUEST_BLOCKED_CODE
+  || error?.code === BOOT_REQUEST_NO_SESSION_CODE
 );
 
 /**
@@ -15,23 +38,26 @@ const isAxiosError = (error) => Boolean(
  * @param {unknown} error
  * @returns {boolean}
  */
-const shouldRetryQuery = (failureCount, error) => {
+export const shouldRetryQuery = (failureCount, error) => {
   if (failureCount >= 2) {
     return false;
   }
 
   const typedError = /** @type {any} */ (error);
-  if (!isAxiosError(typedError)) {
-    return true;
-  }
 
-  const method = String(typedError?.config?.method || 'get').trim().toUpperCase();
-  if (method && method !== 'GET') {
+  // Refus posé par le client lui-même (circuit anti-rafale, absence de session) :
+  // retenter ne fait que rejouer le même refus, sans jamais toucher le réseau.
+  if (isLocallyBlocked(typedError)) {
     return false;
   }
 
-  const status = typedError?.response?.status;
-  if (!status) {
+  if (getErrorMethod(typedError) !== 'GET') {
+    return false;
+  }
+
+  const status = getErrorStatus(typedError);
+  if (status === null || status === 0) {
+    // Panne réseau ou timeout : aucun status, ça vaut le coup de retenter.
     return true;
   }
 
@@ -41,6 +67,8 @@ const shouldRetryQuery = (failureCount, error) => {
     return true;
   }
 
+  // Tout autre 4xx est un refus définitif (permission, jeton, validation) :
+  // le retenter triple le trafic sans jamais changer la réponse.
   return status >= 500;
 };
 

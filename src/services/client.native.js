@@ -9,6 +9,7 @@ import {
 
 import {
   assertBootRequestAllowed,
+  assertSessionRequestAllowed,
   recordBootRequestFailure,
   recordBootRequestSuccess,
 } from '@/services/bootRequestGuard';
@@ -36,6 +37,11 @@ const onRequest = (axiosConfig) => {
   assertBootRequestAllowed(axiosConfig);
 
   const token = getAuthTokens()?.token;
+
+  // Rejette sans réseau les routes qui exigent une session quand il n'y a pas
+  // de jeton : sans ça le serveur répond 403 et l'app recommence en boucle.
+  assertSessionRequestAllowed(axiosConfig, { hasToken: Boolean(token) });
+
   const newConfig = { ...axiosConfig };
 
   if (token && !newConfig.headers?.Authorization) {

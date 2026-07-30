@@ -121,6 +121,7 @@ function Login({ navigation }) {
                   confirm={confirm}
                   isLoading={isLoading}
                   loginMutation={loginMutation}
+                  onResend={() => otpMutation.mutate(phone)}
                   phoneNumber={phone}
                 />
               )

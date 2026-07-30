@@ -12,8 +12,12 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 
+import { getOtpCooldownRemainingSeconds } from '@/services/auth/otpSendThrottle';
+
 import { getFieldError } from '@/utils/form/formUtils';
 import { createLogger } from '@/utils/logger/logger';
+
+import useSafeTimers from '@/hooks/useSafeTimers';
 
 const otpLogger = createLogger('otp-form');
 
@@ -35,15 +39,24 @@ const otpSchema = Joi.object({
  * | undefined} props.confirm
  * @param {any} props.loginMutation
  * @param {boolean} props.isLoading - The loading state
+ * @param {() => void} [props.onResend] - Redemande un SMS pour le même numéro.
  * @param {string} props.phoneNumber - The phone number
  * @returns {import('react').ReactElement}
  */
 function OTPForm({
-  confirm, isLoading, loginMutation, phoneNumber,
+  confirm, isLoading, loginMutation, onResend = undefined, phoneNumber,
 }) {
   const { Alignments, Spaces } = useTheme();
   const { t } = useTranslation();
+  const { clearSafeTimer, setSafeInterval } = useSafeTimers();
   const [isLocalSubmitting, setIsLocalSubmitting] = useState(false);
+  // Avant, la seule façon de redemander un code était de quitter l'écran puis de
+  // revenir : le hook se remontait, `confirm` repartait à vide, et un nouveau
+  // SMS partait sans aucun délai. C'est ce chemin détourné qui a brûlé le quota
+  // Firebase le 2026-07-29. On rend le renvoi explicite ET compté.
+  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(
+    () => getOtpCooldownRemainingSeconds(phoneNumber),
+  );
   const hasAutoSubmittedRef = useRef(false);
   const bypassConfirmation = /** @type {any} */ (confirm);
   const bypassPrefilledCode = (
@@ -67,6 +80,15 @@ function OTPForm({
     resolver: joiResolver(otpSchema),
     shouldFocusError: false,
   });
+
+  useEffect(() => {
+    setResendCooldownSeconds(getOtpCooldownRemainingSeconds(phoneNumber));
+    const intervalId = setSafeInterval(() => {
+      setResendCooldownSeconds(getOtpCooldownRemainingSeconds(phoneNumber));
+    }, 1000);
+
+    return () => clearSafeTimer(intervalId);
+  }, [clearSafeTimer, phoneNumber, setSafeInterval]);
 
   useEffect(() => {
     if (!bypassPrefilledCode) return;
@@ -142,6 +164,17 @@ function OTPForm({
         title={t('otp.actions.confirm')}
         variant="Primary"
       />
+      {onResend ? (
+        <Button
+          disabled={isLoading || isLocalSubmitting || resendCooldownSeconds > 0}
+          onPress={onResend}
+          style={Alignments.fullWidth}
+          title={resendCooldownSeconds > 0
+            ? `${t('otp.actions.resend', 'Renvoyer le code')} (${resendCooldownSeconds} s)`
+            : t('otp.actions.resend', 'Renvoyer le code')}
+          variant="Secondary"
+        />
+      ) : null}
     </View>
   );
 }

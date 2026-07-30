@@ -23,6 +23,10 @@ import {
   isFirebaseBypassEnabled,
   isWebQaPhoneBypassEnabled,
 } from './bypassPolicy';
+import {
+  assertOtpSendAllowed,
+  markOtpSendAttempt,
+} from './otpSendThrottle';
 
 const isLocalAppEnvironment = () => getResolvedAuthAppEnv() === 'local';
 const isNetworkError = (error) => {
@@ -243,6 +247,13 @@ export const signInWithPhoneNumber = async (phoneNumber) => {
       }),
     });
   }
+
+  // Un seul SMS par action utilisateur : le délai minimum est armé AVANT
+  // l'appel, parce que Firebase compte les tentatives, pas les réussites.
+  // Sans ça, 4 demandes en 45 s suffisent à bloquer le numéro pour des heures
+  // (constaté le 2026-07-29, recette OTP impossible).
+  assertOtpSendAllowed(phoneNumber);
+  markOtpSendAttempt(phoneNumber);
 
   try {
     const result = await sendOtp(phoneNumber);

@@ -13,9 +13,41 @@
  * le retryAfterSeconds renvoyé par le serveur dans error.details.
  */
 
+import { createLogger } from '@/utils/logger/logger';
+
+const bootGuardLogger = createLogger('boot-guard');
+
 export const BOOT_REQUEST_BLOCKED_CODE = 'BOOT_REQUEST_BLOCKED';
+export const BOOT_REQUEST_NO_SESSION_CODE = 'BOOT_REQUEST_NO_SESSION';
 
 const GUARDED_PATHS = ['/app/bootstrap', '/firebase-auth/me'];
+
+/**
+ * Chemins qui n'ont AUCUN sens sans session : le serveur y répond 403 quand
+ * aucun en-tête Authorization n'est envoyé (mesuré le 2026-07-30 sur
+ * api-staging : sans jeton => 403, jeton invalide => 401).
+ *
+ * Motif : le 2026-07-29 à partir de 23:51, l'app déconnectée a tiré ces routes
+ * en boucle pendant 15 minutes (403 toutes les 2 minutes, par salves de 3).
+ * Les `enabled` des appelants sont la cause racine et sont corrigés là-bas ;
+ * cette liste est le filet qui empêche un futur appelant de rouvrir la vanne.
+ * Un refus est prononcé ICI, sans réseau.
+ *
+ * ⚠️ N'y mettre qu'un chemin dont on a VÉRIFIÉ qu'il exige une session.
+ * `/events` en est volontairement absent : c'est une route de consultation
+ * publique côté app (écran de recherche anonyme), et son 403 actuel vient de
+ * la carte de permissions du serveur, pas du client.
+ */
+const SESSION_REQUIRED_PATHS = [
+  '/app/bootstrap',
+  '/firebase-auth/me',
+  '/firebase-auth/me/pending-match-stats',
+  '/in-app-popup-campaigns/active',
+  '/league-actions/pending',
+  '/notifications',
+  '/notifications/count-unread',
+  '/user-fcm-token/me/device',
+];
 
 const FAILURE_WINDOW_MS = 10000;
 const MAX_FAILURES_IN_WINDOW = 5;
@@ -37,9 +69,13 @@ const getGuardState = (/** @type {string} */ path) => {
   return created;
 };
 
-const toGuardedPath = (/** @type {unknown} */ rawUrl) => {
+const toRequestPath = (/** @type {unknown} */ rawUrl) => {
   const withoutOrigin = String(rawUrl || '').replace(/^https?:\/\/[^/]+/i, '');
-  const path = withoutOrigin.split('?')[0].split('#')[0].replace(/\/+$/, '');
+  return withoutOrigin.split('?')[0].split('#')[0].replace(/\/+$/, '');
+};
+
+const toGuardedPath = (/** @type {unknown} */ rawUrl) => {
+  const path = toRequestPath(rawUrl);
   return GUARDED_PATHS.includes(path) ? path : null;
 };
 
@@ -109,6 +145,55 @@ export const assertBootRequestAllowed = (config) => {
   }
 };
 
+/** @type {Set<string>} */
+const loggedSessionRefusals = new Set();
+
+const buildNoSessionError = (/** @type {string} */ path) => {
+  const message = `Appel ignoré : ${path} exige une session et aucun jeton n'est disponible.`;
+  const errorPayload = {
+    code: BOOT_REQUEST_NO_SESSION_CODE,
+    message,
+    name: 'BootRequestNoSessionError',
+    status: 0,
+  };
+
+  return {
+    code: BOOT_REQUEST_NO_SESSION_CODE,
+    isBootRequestBlocked: true,
+    isSessionRequired: true,
+    message,
+    // Même forme qu'une erreur API : l'intercepteur de réponse déballera
+    // response.data.error et les couches du dessus verront le code.
+    response: { data: { error: errorPayload } },
+  };
+};
+
+/**
+ * À appeler dans l'intercepteur de requête, APRÈS avoir résolu le jeton :
+ * rejette sans réseau tout appel vers une route qui exige une session alors
+ * qu'aucun jeton n'est disponible.
+ * Un en-tête Authorization déjà posé sur la requête passe toujours : c'est le
+ * cas d'`addDeviceTokenForSession`, qui parle au nom d'une autre session
+ * enregistrée que la session active.
+ * @param {any} config
+ * @param {{ hasToken: boolean }} options
+ * @returns {void}
+ * @throws l'erreur structurée BOOT_REQUEST_NO_SESSION quand la session manque.
+ */
+export const assertSessionRequestAllowed = (config, { hasToken }) => {
+  if (hasToken || config?.headers?.Authorization) return;
+
+  const path = toRequestPath(config?.url);
+  if (!SESSION_REQUIRED_PATHS.includes(path)) return;
+
+  if (!loggedSessionRefusals.has(path)) {
+    loggedSessionRefusals.add(path);
+    bootGuardLogger.warn(`[SESSION_GUARD] appel sans jeton refusé localement path=${path}`);
+  }
+
+  throw buildNoSessionError(path);
+};
+
 /**
  * À appeler dans l'intercepteur d'erreur de réponse, AVANT le déballage.
  * @param {any} error - Erreur axios brute (error.config présent).
@@ -137,7 +222,7 @@ export const recordBootRequestFailure = (error) => {
   state.failureTimestamps = [];
   state.openCount += 1;
   state.openUntil = now + cooldownMs;
-  console.warn('[BOOT][NETWORK_GUARD] circuit ouvert '
+  bootGuardLogger.warn('[NETWORK_GUARD] circuit ouvert '
     + `path=${path} cooldownMs=${cooldownMs} ouvertures=${state.openCount}`);
 };
 
@@ -147,6 +232,10 @@ export const recordBootRequestFailure = (error) => {
  * @returns {void}
  */
 export const recordBootRequestSuccess = (config) => {
+  // Une requête qui aboutit prouve qu'une session est de nouveau utilisable :
+  // on réautorise l'avertissement pour la prochaine coupure.
+  loggedSessionRefusals.clear();
+
   const path = getGuardedBootPath(config);
   if (!path) return;
   guardStateByPath.delete(path);
@@ -158,6 +247,7 @@ export const recordBootRequestSuccess = (config) => {
  */
 export const resetBootRequestGuard = () => {
   guardStateByPath.clear();
+  loggedSessionRefusals.clear();
 };
 
 /**
