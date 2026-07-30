@@ -45,13 +45,15 @@ export function AppModeProvider({ children }) {
   // Persisted mode between app restarts
   const [mode, setModeState] = useState(getInitialMode);
 
-  // Sync theme with mode
+  // Le thème ne dépend PAS du mode : les deux branches d'un `if (mode === 'gold')`
+  // appelaient toutes les deux `changeTheme('dark')`. La condition était décorative
+  // et se relisait comme un choix qui n'existait pas — aplatie le 2026-07-30
+  // (audit LEAGUE, défaut G13).
+  // `mode` reste dans les dépendances à dessein : on ré-affirme le thème sombre à
+  // chaque bascule de mode, exactement comme avant. Le jour où le mode « gold »
+  // méritera son propre thème, c'est ici qu'il se branche.
   useEffect(() => {
-    if (mode === 'gold') {
-      changeTheme('dark');
-    } else {
-      changeTheme('dark');
-    }
+    changeTheme('dark');
   }, [mode, changeTheme]);
 
   const setMode = useCallback((nextMode) => {
