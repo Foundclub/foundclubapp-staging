@@ -143,6 +143,13 @@ const buildClubListParams = (params = {}) => {
       pageSize: pageSize || 7,
     },
     populate: {
+      // Chips « sections sportives » de ClubCard / de la fiche d'onboarding.
+      // `fields: ['name']` est volontaire : c'est le seul champ lu, et le
+      // populate complet coûte 30 % de payload contre 11,5 % ici (mesuré le
+      // 2026-07-31 sur api-staging, 20 clubs : 18 654 o -> 20 803 o).
+      activites: {
+        fields: ['name'],
+      },
       logo: true,
       sponsor: {
         populate: ['logo'],
