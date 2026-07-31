@@ -51,6 +51,15 @@ const SKELETON_RESULT_COUNT = 3;
 const SKELETON_PLACEHOLDER_KEYS = ['one', 'two', 'three'];
 const AFFILIATION_TUTORIAL_FLOW_PREFIX = 'onboarding-affiliation-v2';
 
+// Repères de test (E6). Ce sont des poignées stables : le libellé visible change
+// avec le design, pas ces identifiants — le test caractérisant vise la CIBLE
+// (sauter l'étape, chercher, signaler un club absent), jamais le mot affiché.
+export const AFFILIATION_TEST_IDS = Object.freeze({
+  notFound: 'onboarding-affiliation-not-found',
+  search: 'onboarding-affiliation-search',
+  skip: 'onboarding-affiliation-skip',
+});
+
 /**
  *
  * @param root0
@@ -976,26 +985,28 @@ function UserAffiliationGuideContent({ navigation }) {
                 }}
                 title={t('onboardingAffiliation.tutorial.stepSearchTitle', 'Recherche')}
               >
-                <Input
-                  accessibilityHint={isClubFlow
-                    ? t(
-                      'onboardingAffiliation.a11y.searchInputHintClub',
-                      'Saisis le nom du club pour filtrer la liste.',
-                    )
-                    : t(
-                      'onboardingAffiliation.a11y.searchInputHintTeam',
-                      "Saisis le nom de l'équipe pour filtrer la liste.",
-                    )}
-                  accessibilityLabel={isClubFlow
-                    ? t('onboardingAffiliation.a11y.searchInputLabelClub', 'Champ nom du club')
-                    : t('onboardingAffiliation.a11y.searchInputLabelTeam', "Champ nom de l'équipe")}
-                  icon="search"
-                  onChangeText={setSearchValue}
-                  placeholder={isClubFlow
-                    ? t('onboardingAffiliation.search.placeholderClub', 'Nom du club')
-                    : t('onboardingAffiliation.search.placeholderTeam', "Nom de l'équipe")}
-                  value={searchValue}
-                />
+                <View testID={AFFILIATION_TEST_IDS.search}>
+                  <Input
+                    accessibilityHint={isClubFlow
+                      ? t(
+                        'onboardingAffiliation.a11y.searchInputHintClub',
+                        'Saisis le nom du club pour filtrer la liste.',
+                      )
+                      : t(
+                        'onboardingAffiliation.a11y.searchInputHintTeam',
+                        "Saisis le nom de l'équipe pour filtrer la liste.",
+                      )}
+                    accessibilityLabel={isClubFlow
+                      ? t('onboardingAffiliation.a11y.searchInputLabelClub', 'Champ nom du club')
+                      : t('onboardingAffiliation.a11y.searchInputLabelTeam', "Champ nom de l'équipe")}
+                    icon="search"
+                    onChangeText={setSearchValue}
+                    placeholder={isClubFlow
+                      ? t('onboardingAffiliation.search.placeholderClub', 'Nom du club')
+                      : t('onboardingAffiliation.search.placeholderTeam', "Nom de l'équipe")}
+                    value={searchValue}
+                  />
+                </View>
               </AffiliationTutorialStep>
             </View>
 
@@ -1144,25 +1155,27 @@ function UserAffiliationGuideContent({ navigation }) {
                 ? t('onboardingAffiliation.tutorial.stepNotFoundTitleClub', 'Je ne trouve pas mon club')
                 : t('onboardingAffiliation.tutorial.stepNotFoundTitleTeam', 'Je ne trouve pas mon équipe')}
             >
-              <Button
-                accessibilityHint={isClubFlow
-                  ? t(
-                    'onboardingAffiliation.a11y.notFoundHintClub',
-                    'Envoie une demande d\'aide si ton club est introuvable.',
-                  )
-                  : t(
-                    'onboardingAffiliation.a11y.notFoundHintTeam',
-                    'Envoie une demande d\'aide si ton équipe est introuvable.',
-                  )}
-                accessibilityLabel={isClubFlow
-                  ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
-                  : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
-                onPress={isStaffAffiliationFlow ? handleOpenClubWizard : handleOpenNotFoundModal}
-                title={isClubFlow
-                  ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
-                  : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
-                variant="Secondary"
-              />
+              <View testID={AFFILIATION_TEST_IDS.notFound}>
+                <Button
+                  accessibilityHint={isClubFlow
+                    ? t(
+                      'onboardingAffiliation.a11y.notFoundHintClub',
+                      'Envoie une demande d\'aide si ton club est introuvable.',
+                    )
+                    : t(
+                      'onboardingAffiliation.a11y.notFoundHintTeam',
+                      'Envoie une demande d\'aide si ton équipe est introuvable.',
+                    )}
+                  accessibilityLabel={isClubFlow
+                    ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
+                    : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
+                  onPress={isStaffAffiliationFlow ? handleOpenClubWizard : handleOpenNotFoundModal}
+                  title={isClubFlow
+                    ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
+                    : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
+                  variant="Secondary"
+                />
+              </View>
             </AffiliationTutorialStep>
             {isStaffAffiliationFlow ? (
               <TouchableOpacity
@@ -1177,16 +1190,18 @@ function UserAffiliationGuideContent({ navigation }) {
             ) : null}
 
             <OnboardingOptionalHint />
-            <Button
-              accessibilityHint={t(
-                'onboardingAffiliation.a11y.continueLaterHint',
-                'Passe cette étape et continue l\'onboarding.',
-              )}
-              accessibilityLabel={t('common.actions.continueLater', 'Continuer plus tard')}
-              onPress={handleContinueLater}
-              title={t('common.actions.continueLater', 'Continuer plus tard')}
-              variant="Secondary"
-            />
+            <View testID={AFFILIATION_TEST_IDS.skip}>
+              <Button
+                accessibilityHint={t(
+                  'onboardingAffiliation.a11y.continueLaterHint',
+                  'Passe cette étape et continue l\'onboarding.',
+                )}
+                accessibilityLabel={t('common.actions.continueLater', 'Continuer plus tard')}
+                onPress={handleContinueLater}
+                title={t('common.actions.continueLater', 'Continuer plus tard')}
+                variant="Secondary"
+              />
+            </View>
           </View>
         )}
       </View>
