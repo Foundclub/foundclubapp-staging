@@ -140,6 +140,18 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AdWizardValidation]: '/recruitment/wizard/validation',
   [RouteNames.AdWizardDescription]: '/recruitment/wizard/description',
   [RouteNames.AdWizardRecap]: '/recruitment/wizard/recap',
+  // Matchs amicaux — lot L7. Meme decoupage que /recruitment : une URL par
+  // etape, parce que sur le web chaque etape est montee independamment (il n y
+  // a pas de pile de navigation). Le brouillon voyage par sessionStorage,
+  // pose par FriendlyMatchWizardContext.
+  [RouteNames.FriendlyMatchAdDetails]: '/friendly-matches/:adId',
+  [RouteNames.FriendlyMatchWizardTeam]: '/friendly-matches/wizard/team',
+  [RouteNames.FriendlyMatchWizardHosting]: '/friendly-matches/wizard/hosting',
+  [RouteNames.FriendlyMatchWizardDates]: '/friendly-matches/wizard/dates',
+  [RouteNames.FriendlyMatchWizardLocation]: '/friendly-matches/wizard/location',
+  [RouteNames.FriendlyMatchWizardOpponent]: '/friendly-matches/wizard/opponent',
+  [RouteNames.FriendlyMatchWizardDescription]: '/friendly-matches/wizard/description',
+  [RouteNames.FriendlyMatchWizardRecap]: '/friendly-matches/wizard/recap',
   [RouteNames.PollDetails]: '/polls/:pollId',
   [RouteNames.FacilityList]: '/facilities',
   [RouteNames.FacilityForm]: '/facilities/:facilityId?',
