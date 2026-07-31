@@ -682,6 +682,14 @@ export const NOTIFICATION_TYPES = {
   RECRUITMENT_APPLICATION: 'recruitment_application',
   RECRUITMENT_APPLICATION_AUTO: 'recruitment_application_auto',
   RECRUITMENT_APPLICATION_STATUS: 'recruitment_application_status',
+  // Matchs amicaux (lot L6). Les chaines doivent etre IDENTIQUES a celles du
+  // serveur (admin/src/api/user-fcm-token/types/index.ts) : c'est ce champ qui
+  // decide de l'ecran a ouvrir, une faute de frappe renvoie a l'accueil sans
+  // la moindre erreur.
+  FRIENDLY_MATCH_AD_EXPIRED: 'friendly_match_ad_expired',
+  FRIENDLY_MATCH_APPLICATION: 'friendly_match_application',
+  FRIENDLY_MATCH_APPLICATION_STATUS: 'friendly_match_application_status',
+  FRIENDLY_MATCH_TERMS_UPDATED: 'friendly_match_terms_updated',
   REMATCH_REQUEST: 'REMATCH_REQUEST',
   RSVP_ALERT: 'RSVP_ALERT',
   // Legacy alias kept for backward compatibility

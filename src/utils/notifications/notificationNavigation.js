@@ -518,13 +518,29 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       : null);
   }
 
-  switch (type) {
-    case NOTIFICATION_TYPES.ADD_TO_TEAM:
-    case NOTIFICATION_TYPES.NEW_TEAM:
-    case NOTIFICATION_TYPES.TEAM_EXTERNAL_SOURCE_UPDATED:
-    case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST:
-      return adaptDestinationForCurrentPlatform(payload, teamDetailsDestination(payload.teamId));
+  // Matchs amicaux (lot L6) : les 4 notifications menent au DETAIL de l'annonce,
+  // parce que c'est le seul ecran qui montre les deux cotes — les propositions
+  // recues pour l'annonceur, sa propre proposition et le fil pour le candidat.
+  const friendlyMatchTypes = new Set([
+    NOTIFICATION_TYPES.FRIENDLY_MATCH_AD_EXPIRED,
+    NOTIFICATION_TYPES.FRIENDLY_MATCH_APPLICATION,
+    NOTIFICATION_TYPES.FRIENDLY_MATCH_APPLICATION_STATUS,
+    NOTIFICATION_TYPES.FRIENDLY_MATCH_TERMS_UPDATED,
+  ]);
 
+  if (friendlyMatchTypes.has(type)) {
+    // Sans `adId` on ne navigue PAS : `getWebRoutePattern` retomberait sur
+    // l'accueil cote web, et l'ecran leverait cote natif. Mieux vaut ne rien
+    // faire que d'emmener au mauvais endroit.
+    return adaptDestinationForCurrentPlatform(payload, payload.adId
+      ? {
+        params: { adId: String(payload.adId) },
+        route: RouteNames.FriendlyMatchAdDetails,
+      }
+      : null);
+  }
+
+  switch (type) {
     // Notif superadmin « Nouveau club a verifier » (self-onboard) : type serveur 'newSelfServiceClub'.
     case 'newSelfServiceClub':
       return adaptDestinationForCurrentPlatform(payload, {
@@ -534,6 +550,12 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         },
         route: RouteNames.AdminStack,
       });
+    case NOTIFICATION_TYPES.ADD_TO_TEAM:
+    case NOTIFICATION_TYPES.NEW_TEAM:
+    case NOTIFICATION_TYPES.TEAM_EXTERNAL_SOURCE_UPDATED:
+
+    case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST:
+      return adaptDestinationForCurrentPlatform(payload, teamDetailsDestination(payload.teamId));
 
     case NOTIFICATION_TYPES.AFFILIATION_HELP_REQUEST:
       return adaptDestinationForCurrentPlatform(payload, {
