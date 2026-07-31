@@ -60,6 +60,11 @@ export const getConversationName = ({
   switch (chatType) {
     case 'club':
       return chatClub?.name || '';
+    case 'friendly_match':
+      // Le serveur pose deja « Match amical : A vs B » dans groupName
+      // (friendly-match-workflow.ts:279). Sans ce cas, le `default` rendait ''
+      // et le fil s affichait sans titre dans la liste de messagerie.
+      return chatGroupName || 'Match amical';
     case 'group':
       return chatGroupName || 'Groupe';
     case 'league_match':

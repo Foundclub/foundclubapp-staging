@@ -247,6 +247,17 @@ export const RouteNames = /** @type {const} */ ({
   RecruitmentAdEdit: 'RecruitmentAdEdit',
   RecruitmentAdFilters: 'RecruitmentAdFilters',
 
+  // Matchs amicaux — lot L5 (docs/SPEC_ONGLET_MATCHS_AMICAUX_2026_07_31.md §4.1, §4.3)
+  FriendlyMatchAdDetails: 'FriendlyMatchAdDetails',
+  FriendlyMatchWizardDates: 'FriendlyMatchWizardDates',
+  FriendlyMatchWizardDescription: 'FriendlyMatchWizardDescription',
+  FriendlyMatchWizardHosting: 'FriendlyMatchWizardHosting',
+  FriendlyMatchWizardLocation: 'FriendlyMatchWizardLocation',
+  FriendlyMatchWizardOpponent: 'FriendlyMatchWizardOpponent',
+  FriendlyMatchWizardRecap: 'FriendlyMatchWizardRecap',
+  FriendlyMatchWizardStack: 'FriendlyMatchWizardStack',
+  FriendlyMatchWizardTeam: 'FriendlyMatchWizardTeam',
+
   // League Tabs (Gold Mode)
   LeagueDashboard: 'LeagueDashboard', // Dedicated screen name
   LeagueHome: 'LeagueHome',

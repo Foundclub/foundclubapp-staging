@@ -23,7 +23,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 /**
- * @typedef {'events' | 'clubs' | 'reservations' | 'recruitment'} SearchType
+ * @typedef {'events' | 'clubs' | 'reservations' | 'recruitment' | 'amicaux'} SearchType
  */
 
 /**
@@ -110,6 +110,14 @@ function SearchScreenShell({
 
       if (type === 'reservations') {
         navigateTo(RouteNames.SearchReservations);
+        return;
+      }
+
+      // Les matchs amicaux n'ont pas d'ecran alias dedie : ils vivent dans le hub
+      // canonique. Enregistrer un ecran de plus exigerait son motif web
+      // (webRoutes.parity.test.js), et le routage web est le lot L7.
+      if (type === 'amicaux') {
+        navigateTo(RouteNames.SearchHub, { activeType: 'amicaux' });
         return;
       }
 

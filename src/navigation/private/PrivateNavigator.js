@@ -302,6 +302,22 @@ function PrivateNavigator() {
           name={RouteNames.AdWizardStack}
           options={{ headerShown: false }}
         />
+        {/* Matchs amicaux — lot L5. L assistant est une pile (un fournisseur d etat
+            enveloppe ses 7 etapes) ; le detail est un ecran a part, atteignable
+            depuis la liste ET depuis la fin du tunnel. */}
+        <Stack.Screen
+          getComponent={() => require('./stacks/FriendlyMatchWizardStack').default}
+          name={RouteNames.FriendlyMatchWizardStack}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/friendlyMatch/FriendlyMatchAdDetails').default}
+          name={RouteNames.FriendlyMatchAdDetails}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
         <Stack.Screen
           getComponent={() => require('@/views/reservation/ReservationDetails').default}
           name={RouteNames.ReservationDetails}

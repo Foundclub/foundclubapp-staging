@@ -2,10 +2,16 @@ import { sanitizeRecruitmentTabForRole, VALID_RECRUITMENT_TABS } from '@/domains
 
 import { RouteNames } from '@/navigation/routeNames';
 
-const CANONICAL_SEARCH_TYPES = new Set(['clubs', 'events', 'recruitment', 'reservations']);
+const CANONICAL_SEARCH_TYPES = new Set([
+  'amicaux',
+  'clubs',
+  'events',
+  'recruitment',
+  'reservations',
+]);
 
 /**
- * @typedef {'events' | 'clubs' | 'reservations' | 'recruitment'} SearchHubType
+ * @typedef {'events' | 'clubs' | 'reservations' | 'recruitment' | 'amicaux'} SearchHubType
  */
 
 /**
@@ -33,6 +39,14 @@ export function normalizeSearchType(searchType) {
   if (normalized === 'event' || normalized === 'events') return 'events';
   if (normalized === 'club' || normalized === 'clubs') return 'clubs';
   if (normalized === 'reservation' || normalized === 'reservations') return 'reservations';
+  if (
+    normalized === 'amicaux'
+    || normalized === 'amical'
+    || normalized === 'friendly'
+    || normalized === 'friendly-matches'
+  ) {
+    return 'amicaux';
+  }
   if (
     normalized === 'mercato'
     || normalized === 'recrutement'

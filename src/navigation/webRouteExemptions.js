@@ -35,6 +35,8 @@ const MOBILE_ONLY_SCREENS = {
     'Conteneur de stack : les ecrans /clubs/* sont routes individuellement',
   [RouteNames.EventStack]:
     'Conteneur de stack : les ecrans /events/* sont routes individuellement',
+  [RouteNames.FriendlyMatchWizardStack]:
+    'Conteneur de stack : les etapes de l assistant amicaux sont routees individuellement',
   [RouteNames.ProfileStack]:
     'Conteneur de stack : les ecrans /profile/* sont routes individuellement',
   [RouteNames.PublicAuthStack]:
