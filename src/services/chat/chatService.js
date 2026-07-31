@@ -32,7 +32,13 @@ const chatSchema = Joi.object({
   ).optional(),
   participants: Joi.array().items(Joi.object()).optional(),
   pinnedBy: Joi.array().items(Joi.object()).optional(),
-  type: Joi.string().valid('whisper', 'club', 'team', 'multisport', 'league_match', 'group').required(),
+  // `friendly_match` fait partie de l enumeration serveur depuis le socle des
+  // matchs amicaux (chat/schema.json). Sans lui, TOUTE liste de discussions
+  // contenant un fil d amical tombait dans le repli non valide de getChats() —
+  // silencieux, mais la liste entiere perdait sa validation au passage.
+  type: Joi.string()
+    .valid('whisper', 'club', 'team', 'multisport', 'league_match', 'friendly_match', 'group')
+    .required(),
   updatedAt: Joi.date().required(),
 }).required();
 

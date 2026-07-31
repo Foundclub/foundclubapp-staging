@@ -13,8 +13,9 @@ jest.mock('@/domains/auth/useAuth', () => ({
   default: () => mockUseAuth(),
 }));
 
+const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: jest.fn() }),
+  useNavigation: () => ({ navigate: mockNavigate }),
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -207,5 +208,56 @@ describe('FriendlyMatchListContent — qui voit quoi (Q12)', () => {
     const tree = await renderFor(undefined);
 
     expect(allText(tree)).toContain('Aucune annonce de match amical pour le moment.');
+  });
+});
+
+// Filet du lot L5 : les deux portes d'entree de l'onglet MENENT quelque part.
+// Avant L5 elles ouvraient un message d'attente ; un bouton qui ne navigue pas
+// est indiscernable d'un bouton qui navigue, sur une capture d'ecran.
+describe('FriendlyMatchListContent — les boutons mènent quelque part (L5)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetFriendlyMatchAds.mockResolvedValue({ data: [AD], meta: {} });
+    mockGetMyFriendlyMatchAds.mockResolvedValue([]);
+    mockGetMyFriendlyMatchApplications.mockResolvedValue([]);
+  });
+
+  /**
+   * Le premier noeud dont le libelle d'accessibilite correspond.
+   * @param {any} tree
+   * @param {string} label
+   * @returns {any}
+   */
+  const findByLabel = (tree, label) => tree.root.findAll(
+    (/** @type {any} */ node) => node.props?.accessibilityLabel === label,
+    { deep: true },
+  )[0];
+
+  it('« + Publier une annonce » ouvre le tunnel de création', async () => {
+    const tree = await renderFor({ documentId: 'u-1', role: { name: 'Entraineur' } });
+
+    const publishButton = findByLabel(tree, 'Publier une annonce de match amical');
+    expect(publishButton).toBeDefined();
+
+    await act(async () => { publishButton.props.onPress(); });
+
+    expect(mockNavigate).toHaveBeenCalledWith('FriendlyMatchWizardStack', undefined);
+  });
+
+  it('appuyer sur une annonce ouvre son détail, avec le bon identifiant', async () => {
+    const tree = await renderFor({ documentId: 'u-1', role: { name: 'Entraineur' } });
+
+    const card = findByLabel(tree, 'Publier une annonce de match amical');
+    expect(card).toBeDefined();
+
+    // La carte transmet l'annonce a onPress : on rejoue ce contrat.
+    const list = tree.root.findAll(
+      (/** @type {any} */ node) => typeof node.props?.renderItem === 'function',
+      { deep: true },
+    )[0];
+    const renderedCard = list.props.renderItem({ item: AD });
+    await act(async () => { renderedCard.props.onPress(AD); });
+
+    expect(mockNavigate).toHaveBeenCalledWith('FriendlyMatchAdDetails', { adId: 'ad-1' });
   });
 });

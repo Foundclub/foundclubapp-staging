@@ -66,6 +66,28 @@ describe('messagingUseCases', () => {
     });
   });
 
+  describe('getConversationName — fil de match amical (lot L5)', () => {
+    // Le serveur cree le fil avec groupName = « Match amical : A vs B »
+    // (friendly-match-workflow.ts:279). Sans cas dedie, le `default` du switch
+    // rendait '' : le fil s'affichait SANS TITRE dans la liste de messagerie
+    // (Messaging.js:654 rend la valeur brute) et restait introuvable a la
+    // recherche (Messaging.js:337).
+    test('reprend le nom pose par le serveur', () => {
+      expect(getConversationName({
+        chatGroupName: 'Match amical : FC Annonceur U15 vs US Candidat U15',
+        chatType: 'friendly_match',
+      })).toBe('Match amical : FC Annonceur U15 vs US Candidat U15');
+    });
+
+    test('sans nom serveur, dit quand meme de quoi il s agit', () => {
+      expect(getConversationName({ chatType: 'friendly_match' })).toBe('Match amical');
+    });
+
+    test('n est jamais vide : un fil sans titre est un fil qu on ne retrouve pas', () => {
+      expect(getConversationName({ chatType: 'friendly_match' })).not.toBe('');
+    });
+  });
+
   describe('getConversationName', () => {
     test('should return club name for club chat', () => {
       const params = {
