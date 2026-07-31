@@ -977,12 +977,12 @@ function UserAffiliationGuideContent({ navigation }) {
     }
     if (isStaffAffiliationFlow) {
       return t(
-        'onboardingAffiliation.subtitleClubBenefitStaff',
+        'onboardingAffiliation.subtitleClubStaff',
         'Retrouve ton club pour le gérer sur FoundClub.',
       );
     }
     return t(
-      'onboardingAffiliation.subtitleClubBenefit',
+      'onboardingAffiliation.subtitleClub',
       'On personnalise ton accueil, ton planning et tes annonces autour de ton club.',
     );
   })();
@@ -1035,7 +1035,7 @@ function UserAffiliationGuideContent({ navigation }) {
             lightMode
             onChangeText={setSearchValue}
             placeholder={isClubFlow
-              ? t('onboardingAffiliation.search.placeholderClubCity', 'Nom du club ou ville')
+              ? t('onboardingAffiliation.search.placeholderClub', 'Nom du club ou ville')
               : t('onboardingAffiliation.search.placeholderTeam', "Nom de l'équipe")}
             value={searchValue}
           />

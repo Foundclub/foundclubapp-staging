@@ -1663,6 +1663,7 @@ export default {
   },
   onboardingAffiliation: {
     a11y: {
+      askForHelpHint: 'Envoie une demande aux superadmins FoundClub.',
       backHint: 'Revient à l\'étape précédente de l\'onboarding.',
       cardHintClub: 'Ouvre la fiche du club pour confirmer l\'affiliation.',
       cardHintClubSelect: 'Sélectionne ce club pour voir ses équipes.',
@@ -1678,6 +1679,7 @@ export default {
       modalNameHintClub: 'Renseigne le nom du club que tu recherches.',
       modalNameHintTeam: "Renseigne le nom de l'équipe que tu recherches.",
       modalSendHint: 'Envoie ta demande aux superadmins.',
+      nearbyHint: 'Autorise la localisation pour classer les clubs par distance.',
       notFoundHintClub: 'Envoie une demande d\'aide si ton club est introuvable.',
       notFoundHintTeam: 'Envoie une demande d\'aide si ton équipe est introuvable.',
       retryHint: 'Relance la recherche de résultats.',
@@ -1685,6 +1687,7 @@ export default {
       searchInputHintTeam: "Saisis le nom de l'équipe pour filtrer la liste.",
       searchInputLabelClub: 'Champ nom du club',
       searchInputLabelTeam: "Champ nom de l'équipe",
+      sportChipHint: 'Filtre la liste sur ton sport.',
       tooltipNextHint: 'Passe à l étape suivante du tutoriel.',
       tooltipPreviousHint: 'Revient à l\'étape précédente du tutoriel.',
       tooltipSkipHint: 'Quitte le tutoriel guide.',
@@ -1695,6 +1698,19 @@ export default {
       continueLater: 'Continuer plus tard',
       notFoundClub: 'Je ne trouve pas mon club',
       notFoundTeam: 'Je ne trouve pas mon équipe',
+      skip: 'Passer',
+    },
+    addClub: {
+      action: 'Ajouter',
+      subtitle: 'Ajoute-le en 2 minutes, on s\'occupe du reste.',
+      title: 'Ton club n\'est pas là ?',
+    },
+    addTeam: {
+      subtitle: 'Signale-la, on s\'occupe du reste.',
+      title: 'Ton équipe n\'est pas là ?',
+    },
+    chips: {
+      nearby: 'Autour de moi',
     },
     common: {
       roleTargetClub: 'club',
@@ -1737,8 +1753,14 @@ export default {
     search: {
       filtersActive_one: '{{count}} filtre actif',
       filtersActive_other: '{{count}} filtres actifs',
-      placeholderClub: 'Nom du club',
+      placeholderClub: 'Nom du club ou ville',
       placeholderTeam: "Nom de l'équipe",
+    },
+    sections: {
+      nearby: 'PRÈS DE CHEZ TOI',
+      results: 'RÉSULTATS',
+      suggestions: 'SUGGESTIONS',
+      teams: 'ÉQUIPES',
     },
     selectedClubLabel: 'Club sélectionné',
     states: {
@@ -1751,8 +1773,9 @@ export default {
       loading: 'Recherche en cours...',
       retry: 'Réessayer',
     },
-    subtitleClub: 'Recherche ton club puis ouvre sa fiche pour le rejoindre ou le revendiquer.',
+    subtitleClub: 'On personnalise ton accueil, ton planning et tes annonces autour de ton club.',
     subtitleClubSelection: 'Recherche puis sélectionne ton club pour voir ses équipes.',
+    subtitleClubStaff: 'Retrouve ton club pour le gérer sur FoundClub.',
     subtitleTeam: 'Recherche ton équipe puis ouvre sa fiche pour envoyer ta demande.',
     subtitleTeamFromClub: 'Recherche ton équipe dans le club sélectionné puis ouvre sa fiche pour envoyer ta demande.',
     titleClub: 'Trouve ton club',
