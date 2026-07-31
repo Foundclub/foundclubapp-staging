@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { InteractionManager, Platform } from 'react-native';
 
 import SessionManager from '@/components/atoms/sessionManager/SessionManager';
-import MissionCelebrationHost from '@/components/organisms/guidance/MissionCelebrationHost';
 import LeagueActionPromptHost from '@/components/organisms/league/LeagueActionPromptHost';
 import MatchStatsPromptHost from '@/components/organisms/matchStats/MatchStatsPromptHost';
 import NotificationBootstrap from '@/components/organisms/notifications/NotificationBootstrap';
@@ -287,7 +286,6 @@ function AppShell() {
         <BootGate>
           <BootErrorAlertHost />
           <SessionManager />
-          <MissionCelebrationHost />
           <AppBannerHost />
           <LeaguePlatformGate>
             <AppNavigator

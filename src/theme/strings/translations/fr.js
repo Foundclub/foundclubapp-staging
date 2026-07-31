@@ -1201,10 +1201,6 @@ export default {
           subtitle: 'Ferme ta session sur cet appareil.',
           title: 'Déconnexion',
         },
-        missions: {
-          subtitle: 'Consulte ta progression FoundClub.',
-          title: 'Missions',
-        },
         switch: {
           subtitle: 'Bascule vers un autre compte connecté.',
           title: 'Changer de compte',

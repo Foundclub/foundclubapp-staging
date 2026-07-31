@@ -20,8 +20,6 @@ import OnboardingStateView from '@/views/onboarding/components/OnboardingStateVi
 
 import { useTour } from '@/context/TourContext';
 
-// Pack du tour guide coach dans guidanceCatalog (missions coach_tour_*).
-
 /**
  * Welcome screen component shown after completing onboarding.
  * Displays app features and information for new users.
