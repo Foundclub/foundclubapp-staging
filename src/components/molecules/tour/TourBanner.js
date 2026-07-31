@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -6,20 +6,24 @@ import useTheme from '@/theme/themeContext';
 
 import { useTour } from '@/context/TourContext';
 
-// Hauteur laissée sous le bandeau : dock flottant + marge de respiration. Le
-// bandeau replié (pastille) utilise le même socle pour que l'espace réservé au
-// contenu soit identique dans les deux états.
+// Hauteur laissée sous le bandeau : dock flottant + marge de respiration.
 const TOUR_BANNER_DOCK_CLEARANCE = 92;
-const TOUR_BANNER_CONTENT_GAP = 12;
 
 /**
  * Bandeau flottant du tour guidé v2 : instruction de l'étape courante,
  * progression x/y, validation manuelle et message de succès. Monté une seule
  * fois au-dessus du navigateur (voir AppProviders).
  *
- * Il est en surimpression, mais publie la hauteur qu'il occupe via
- * `setTourBannerReservedSpace` : ScreenContainer transforme cette valeur en
- * marge basse, de sorte que le bandeau ne recouvre jamais de contenu réel.
+ * Il est en surimpression et ne réserve AUCUN espace dans les écrans : publier
+ * sa hauteur mesurée décalait les 149 écrans à chaque changement de forme
+ * (R03, audit 2026-07-31 §2.2). Il se replie en pastille pour ne pas masquer
+ * les CTA des tunnels.
+ *
+ * Portes de sortie (décision Q2 du 2026-07-31) : « Quitter le tour » est
+ * disponible dans tous les états interactifs (plein, pause, pastille), et les
+ * étapes à signal automatique offrent toujours « Passer » — hors ligne, leur
+ * signal n'arrive jamais (cas C3 de l'audit).
+ * @returns {import('react').ReactElement | null}
  */
 function TourBanner() {
   const {
@@ -29,9 +33,9 @@ function TourBanner() {
   const {
     completeCurrentStep,
     currentStep,
+    exitTour,
     isTourActive,
     resumeTour,
-    setTourBannerReservedSpace,
     stepIndex,
     totalSteps,
     tourStatus,
@@ -40,21 +44,6 @@ function TourBanner() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isSignalStep = currentStep?.success?.type !== 'manual';
   const bannerBottomOffset = Math.max(insets.bottom, 12) + TOUR_BANNER_DOCK_CLEARANCE;
-  const isBannerVisible = Boolean(isTourActive && currentStep);
-
-  const handleBannerLayout = useCallback((event) => {
-    const height = event?.nativeEvent?.layout?.height || 0;
-    setTourBannerReservedSpace?.(
-      height > 0 ? bannerBottomOffset + height + TOUR_BANNER_CONTENT_GAP : 0,
-    );
-  }, [bannerBottomOffset, setTourBannerReservedSpace]);
-
-  // Tour terminé / bandeau démonté : on rend l'espace réservé aux écrans.
-  useEffect(() => {
-    if (!isBannerVisible) setTourBannerReservedSpace?.(0);
-  }, [isBannerVisible, setTourBannerReservedSpace]);
-
-  useEffect(() => () => setTourBannerReservedSpace?.(0), [setTourBannerReservedSpace]);
 
   // Etape a validation automatique (ex. tunnel equipe/evenement) : la page a ses
   // propres CTA — le bandeau se replie en pastille pour ne jamais les masquer.
@@ -72,24 +61,31 @@ function TourBanner() {
 
   if (!isTourActive || !currentStep) return null;
 
+  const quitButton = (
+    <TouchableOpacity
+      accessibilityLabel="Quitter le tour"
+      accessibilityRole="button"
+      hitSlop={8}
+      onPress={exitTour}
+    >
+      <Text style={[Fonts.p3Bold, Fonts.neutral400]}>Quitter le tour</Text>
+    </TouchableOpacity>
+  );
+
   // Pastille repliee (toucher pour rouvrir) — disponible depuis tous les etats,
   // y compris « en pause », pour liberer l'espace en bas de l'ecran.
   if (isCollapsed) {
     return (
-      <TouchableOpacity
-        accessibilityLabel="Afficher le tour guidé"
-        accessibilityRole="button"
-        onLayout={handleBannerLayout}
-        onPress={() => setIsCollapsed(false)}
+      <View
         style={{
           alignItems: 'center',
           backgroundColor: 'rgba(4,31,44,0.97)',
-          borderColor: `${Colors.primary500}59`,
+          borderColor: `${Colors.primary500}33`,
           borderRadius: 999,
           borderWidth: 1,
           bottom: bannerBottomOffset,
-          columnGap: 6,
-          elevation: 12,
+          columnGap: 10,
+          elevation: 6,
           flexDirection: 'row',
           left: 12,
           paddingHorizontal: 12,
@@ -97,36 +93,54 @@ function TourBanner() {
           position: 'absolute',
         }}
       >
-        <View style={{
-          backgroundColor: Colors.primary500, borderRadius: 999, height: 7, width: 7,
-        }}
-        />
-        <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
-          {`Tour ${stepIndex + 1}/${totalSteps}`}
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityLabel="Afficher le tour guidé"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={() => setIsCollapsed(false)}
+          style={{ alignItems: 'center', columnGap: 6, flexDirection: 'row' }}
+        >
+          <View style={{
+            backgroundColor: Colors.primary500, borderRadius: 999, height: 7, width: 7,
+          }}
+          />
+          <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
+            {`Tour ${stepIndex + 1}/${totalSteps}`}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityLabel="Quitter le tour"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={exitTour}
+        >
+          <Text style={[Fonts.p4Bold, Fonts.neutral400]}>✕</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
+  // R02 : encadré allégé — moins de matière (padding, rayon, bordure, ombre)
+  // pour la même lisibilité (texte inchangé sur fond sombre à 4,5:1).
   const containerStyle = {
     backgroundColor: 'rgba(4,31,44,0.97)',
-    borderColor: `${Colors.primary500}59`,
-    borderRadius: 20,
+    borderColor: `${Colors.primary500}33`,
+    borderRadius: 16,
     borderWidth: 1,
     bottom: bannerBottomOffset,
-    elevation: 12,
+    elevation: 6,
     left: 12,
     position: /** @type {'absolute'} */ ('absolute'),
     right: 12,
     shadowColor: '#000',
-    shadowOffset: { height: 6, width: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
+    shadowOffset: { height: 4, width: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
   };
 
   if (tourStatus === 'paused') {
     return (
-      <View onLayout={handleBannerLayout} style={[containerStyle, Spaces.padding[16], Spaces.gap[12]]}>
+      <View style={[containerStyle, Spaces.padding[12], Spaces.gap[8]]}>
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
             {`Ton tour guidé t'attend (étape ${stepIndex + 1}/${totalSteps})`}
@@ -140,7 +154,7 @@ function TourBanner() {
             <Text style={[Fonts.p2Bold, Fonts.neutral400]}>—</Text>
           </TouchableOpacity>
         </View>
-        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
           <TouchableOpacity
             accessibilityRole="button"
             onPress={resumeTour}
@@ -153,6 +167,8 @@ function TourBanner() {
           >
             <Text style={[Fonts.p3Bold, Fonts.primary900]}>Reprendre le tour</Text>
           </TouchableOpacity>
+          <View style={Alignments.fill} />
+          {quitButton}
         </View>
       </View>
     );
@@ -161,10 +177,9 @@ function TourBanner() {
   if (tourStatus === 'success') {
     return (
       <View
-        onLayout={handleBannerLayout}
         style={[
           containerStyle,
-          Spaces.padding[16],
+          Spaces.padding[12],
           Alignments.row,
           Alignments.alignCenter,
           Spaces.gap[12],
@@ -191,9 +206,11 @@ function TourBanner() {
   }
 
   return (
-    <View onLayout={handleBannerLayout} style={[containerStyle, Spaces.padding[16], Spaces.gap[8]]}>
+    <View style={[containerStyle, Spaces.padding[12], Spaces.gap[8]]}>
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-        <Text style={[Fonts.p4Bold, Fonts.primary500, { letterSpacing: 1, textTransform: 'uppercase' }]}>
+        <Text
+          style={[Fonts.p4Bold, Fonts.primary500, { letterSpacing: 1, textTransform: 'uppercase' }]}
+        >
           {`Tour guidé · étape ${stepIndex + 1} sur ${totalSteps}`}
         </Text>
         <View style={Alignments.fill} />
@@ -210,7 +227,7 @@ function TourBanner() {
       </View>
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{currentStep.title}</Text>
       <Text style={[Fonts.p3, Fonts.neutral200]}>{currentStep.instruction}</Text>
-      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16], Spaces.marginTop[4]]}>
+      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], Spaces.marginTop[4]]}>
         {currentStep.success?.type === 'manual' || currentStep.manualLabel ? (
           <TouchableOpacity
             accessibilityRole="button"
@@ -227,14 +244,19 @@ function TourBanner() {
             </Text>
           </TouchableOpacity>
         ) : null}
-        {currentStep.skipLabel ? (
+        {isSignalStep || currentStep.skipLabel ? (
           <TouchableOpacity
             accessibilityRole="button"
+            hitSlop={8}
             onPress={() => completeCurrentStep({ skipped: true })}
           >
-            <Text style={[Fonts.p3Bold, Fonts.neutral400]}>{currentStep.skipLabel}</Text>
+            <Text style={[Fonts.p3Bold, Fonts.neutral400]}>
+              {currentStep.skipLabel || 'Passer'}
+            </Text>
           </TouchableOpacity>
         ) : null}
+        <View style={Alignments.fill} />
+        {quitButton}
       </View>
     </View>
   );

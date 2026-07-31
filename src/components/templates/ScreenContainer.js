@@ -10,8 +10,6 @@ import useTheme from '@/theme/themeContext';
 
 import { getFloatingTabBarScenePaddingBottom } from '@/navigation/commonOptions';
 
-import { useTour } from '@/context/TourContext';
-
 /**
  * The ScreenContainer component is a template for all screens in the application.
  *
@@ -38,6 +36,7 @@ import { useTour } from '@/context/TourContext';
  * @param {boolean} [props.responsiveHorizontalPadding]
  * @param {string[] | null} [props.gradient]
  * @param {boolean} [props.withHeaderPadding]
+ * @param {boolean} [props.responsivePadding] Alias prioritaire de `responsiveHorizontalPadding`.
  * @returns {import('react').ReactElement}
  */
 function ScreenContainer({
@@ -58,8 +57,6 @@ function ScreenContainer({
     Alignments, Images,
   } = useTheme();
   const insets = useSafeAreaInsets();
-  const { tourBannerReservedSpace } = useTour();
-  const tourReservedBottom = Number(tourBannerReservedSpace) || 0;
   const headerHeightNative = useContext(HeaderHeightContext) || 0;
   const { width } = useWindowDimensions();
   const isResponsivePaddingEnabled = responsivePadding ?? responsiveHorizontalPadding;
@@ -91,9 +88,11 @@ function ScreenContainer({
       paddingBottom = 0;
     }
 
-    // Le bandeau du tour guide est en surimpression : le conteneur reserve sa
-    // hauteur pour qu'il ne recouvre jamais le contenu reel de l'ecran.
-    nextSpaces.paddingBottom = Math.max(paddingBottom, tourReservedBottom);
+    // Le bandeau du tour guide est en surimpression et ne reserve RIEN ici :
+    // une hauteur globale republiee a chaque changement de forme decalait les
+    // 149 ecrans (R03, audit 2026-07-31 §2.2). Il vit au-dessus du dock et se
+    // replie en pastille pour ne pas masquer les CTA.
+    nextSpaces.paddingBottom = paddingBottom;
 
     return nextSpaces;
   }, [
@@ -102,7 +101,6 @@ function ScreenContainer({
     headerHeightNative,
     insets.bottom,
     insets.top,
-    tourReservedBottom,
     withHeaderPadding,
   ]);
 

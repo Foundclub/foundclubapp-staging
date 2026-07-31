@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
@@ -52,10 +53,6 @@ export function TourProvider({ children }) {
   const userId = userData?.documentId || null;
 
   const [tourState, setTourState] = useState(/** @type {any} */ (null));
-  // Hauteur reservee en bas d'ecran par le bandeau flottant du tour : publiee par
-  // TourBanner (onLayout), consommee par ScreenContainer pour que le bandeau ne
-  // recouvre jamais le contenu reel.
-  const [tourBannerReservedSpace, setTourBannerReservedSpace] = useState(0);
   const tourStateRef = useRef(/** @type {any} */ (null));
   tourStateRef.current = tourState;
   const successTimerRef = useRef(/** @type {any} */ (null));
@@ -119,6 +116,10 @@ export function TourProvider({ children }) {
   }, [userData]);
 
   const startTour = useCallback((/** @type {string} */ profileKey) => {
+    // Sur le site, TourBanner n'est pas monté (audit 2026-07-31 §4.5) : démarrer
+    // baladerait l'utilisateur de page en page sans instruction ni porte de
+    // sortie. Refuser ⇒ Welcome navigue vers l'accueil (son chemin `!started`).
+    if (Platform.OS === 'web') return false;
     const profile = getTourProfile(profileKey);
     if (!profile || profile.steps.length === 0) return false;
     clearSuccessTimer();
@@ -225,11 +226,9 @@ export function TourProvider({ children }) {
     exitTour,
     isTourActive: Boolean(tourState),
     resumeTour,
-    setTourBannerReservedSpace,
     startTour,
     stepIndex: Number(tourState?.stepIndex || 0),
     totalSteps: profile?.steps?.length || 0,
-    tourBannerReservedSpace,
     tourStatus: tourState?.status || null,
   }), [
     completeCurrentStep,
@@ -238,7 +237,6 @@ export function TourProvider({ children }) {
     profile?.steps?.length,
     resumeTour,
     startTour,
-    tourBannerReservedSpace,
     tourState,
   ]);
 
@@ -255,10 +253,8 @@ export const useTour = () => useContext(TourContext) || {
   exitTour: () => {},
   isTourActive: false,
   resumeTour: () => {},
-  setTourBannerReservedSpace: () => {},
   startTour: () => false,
   stepIndex: 0,
   totalSteps: 0,
-  tourBannerReservedSpace: 0,
   tourStatus: null,
 };
