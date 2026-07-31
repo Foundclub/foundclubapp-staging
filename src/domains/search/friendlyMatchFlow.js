@@ -264,6 +264,17 @@ export const normalizeCandidateDates = (value) => {
 };
 
 /**
+ * L instant ou un creneau candidat cesse d etre jouable : sa fin si elle est
+ * connue, sinon la fin de la journee. Convention UNIQUE du dossier — la meme
+ * formule ecrite a deux endroits finit toujours par diverger.
+ * @param {any} slot
+ * @returns {number} L horodatage, ou NaN si le creneau est illisible.
+ */
+export const getCandidateSlotInstant = (slot) => (
+  new Date(`${slot?.date}T${slot?.end || '23:59'}:59.999Z`).getTime()
+);
+
+/**
  * Premier creneau encore a venir, sinon le premier de la liste.
  * @param {any} ad
  * @param {Date} [now]
@@ -275,11 +286,27 @@ export const getNextCandidateDate = (ad, now = new Date()) => {
 
   const nowTimestamp = now instanceof Date ? now.getTime() : new Date(now).getTime();
   const upcoming = slots.find((slot) => {
-    const instant = new Date(`${slot.date}T${slot.end || '23:59'}:59.999Z`).getTime();
+    const instant = getCandidateSlotInstant(slot);
     return Number.isFinite(instant) && instant >= nowTimestamp;
   });
 
   return upcoming || slots[0];
+};
+
+/**
+ * Reste-t-il au moins un creneau jouable ? Une annonce dont toutes les dates
+ * sont passees naitrait `expired` (§4.7) : c est ce que l assistant refuse de
+ * publier, et ce que la liste utilise pour dire « c est fini ».
+ * @param {any} ad
+ * @param {Date} [now]
+ * @returns {boolean}
+ */
+export const hasUpcomingCandidateDate = (ad, now = new Date()) => {
+  const nowTimestamp = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  return normalizeCandidateDates(ad?.candidateDates).some((slot) => {
+    const instant = getCandidateSlotInstant(slot);
+    return Number.isFinite(instant) && instant >= nowTimestamp;
+  });
 };
 
 /**
@@ -327,7 +354,7 @@ const matchesPeriod = (ad, periodDays, now) => {
   const nowTimestamp = now.getTime();
   const horizon = nowTimestamp + days * 24 * 60 * 60 * 1000;
   return slots.some((slot) => {
-    const instant = new Date(`${slot.date}T${slot.end || '23:59'}:59.999Z`).getTime();
+    const instant = getCandidateSlotInstant(slot);
     return Number.isFinite(instant) && instant >= nowTimestamp && instant <= horizon;
   });
 };

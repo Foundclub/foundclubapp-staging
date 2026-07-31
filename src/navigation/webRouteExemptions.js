@@ -35,6 +35,8 @@ const MOBILE_ONLY_SCREENS = {
     'Conteneur de stack : les ecrans /clubs/* sont routes individuellement',
   [RouteNames.EventStack]:
     'Conteneur de stack : les ecrans /events/* sont routes individuellement',
+  [RouteNames.FriendlyMatchWizardStack]:
+    'Conteneur de stack : les etapes de l assistant amicaux sont routees individuellement',
   [RouteNames.ProfileStack]:
     'Conteneur de stack : les ecrans /profile/* sont routes individuellement',
   [RouteNames.PublicAuthStack]:
@@ -53,6 +55,46 @@ const MOBILE_ONLY_SCREENS = {
     'Onglet-leurre public : déclenche le tunnel de connexion, ne monte aucun écran',
   [RouteNames.AuthStackPlanning]:
     'Onglet-leurre public : déclenche le tunnel de connexion, ne monte aucun écran',
+
+  // --- TODO(L7) : matchs amicaux, ecrans ecrits mais pas encore routes sur le web ---
+  // Ces 8 ecrans DEVRAIENT exister sur le web (la liste des annonces y est deja
+  // publique, spec Q12) : ils sont ici parce que leur routage web est le lot L7,
+  // pas parce que le web n'aurait pas de sens.
+  //
+  // Pourquoi ils ne peuvent pas etre routes depuis le depot `app` seul : poser un
+  // motif dans WEB_ROUTE_PATTERNS sans l'entree correspondante dans
+  // web/src/routes/screenRegistry.tsx fait echouer `npm run check:routes` cote web
+  // (unsupportedByRegistry, check-web-route-coverage.mjs:73-77). L7 fait les deux
+  // gestes ensemble ; l'exemption disparait alors toute seule, le test de parite
+  // « ne contient pas d'entree obsolete » le prouve.
+  //
+  // CE QUE L7 DOIT FAIRE, pour chacun des 8 :
+  //   1. retirer sa ligne ici ;
+  //   2. ajouter son motif dans app/src/navigation/webRoutes.js ;
+  //   3. ajouter son import lazy + son defineSharedScreen dans
+  //      web/src/routes/screenRegistry.tsx ;
+  //   4. ajouter les 7 etapes au Set d'un FriendlyMatchWizardRouteProvider dans
+  //      web/src/routes/sharedRouteProviders.tsx (sinon useFriendlyMatchWizard leve).
+  //
+  // En attendant, aucun atterrissage silencieux sur « / » : les points d'entree
+  // passent par navigateOrExplainOnWeb() (navigation/webNavigationGuard.js), qui
+  // lit isWebRouteSupported() et se desactive tout seul des que le motif existe.
+  [RouteNames.FriendlyMatchAdDetails]:
+    'TODO(L7) : ecran ecrit, routage web = lot L7 (screenRegistry.tsx a completer)',
+  [RouteNames.FriendlyMatchWizardDates]:
+    'TODO(L7) : etape ecrite, routage web = lot L7 (screenRegistry.tsx a completer)',
+  [RouteNames.FriendlyMatchWizardDescription]:
+    'TODO(L7) : etape ecrite, routage web = lot L7 (screenRegistry.tsx a completer)',
+  [RouteNames.FriendlyMatchWizardHosting]:
+    'TODO(L7) : etape ecrite, routage web = lot L7 (screenRegistry.tsx a completer)',
+  [RouteNames.FriendlyMatchWizardLocation]:
+    'TODO(L7) : etape ecrite, routage web = lot L7 (screenRegistry.tsx a completer)',
+  [RouteNames.FriendlyMatchWizardOpponent]:
+    'TODO(L7) : etape ecrite, routage web = lot L7 (screenRegistry.tsx a completer)',
+  [RouteNames.FriendlyMatchWizardRecap]:
+    'TODO(L7) : etape ecrite, routage web = lot L7 (screenRegistry.tsx a completer)',
+  [RouteNames.FriendlyMatchWizardTeam]:
+    'TODO(L7) : etape ecrite, routage web = lot L7 (screenRegistry.tsx a completer)',
 
   // --- Alias interne de navigateur ---
   // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le

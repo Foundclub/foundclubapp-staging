@@ -3,7 +3,6 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
-  Alert,
   FlatList,
   Platform,
   Text,
@@ -28,6 +27,8 @@ import FriendlyMatchAdCard from '@/components/molecules/friendlyMatchAdCard/Frie
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
+import { RouteNames } from '@/navigation/routeNames';
+import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
 import {
   getFriendlyMatchAds,
@@ -247,17 +248,20 @@ function FriendlyMatchListContent({
     });
   }, [activeResultCount, activeTab, filtersCount, isStaff, loading, screenActive, searchValue]);
 
-  const handleAdPress = useCallback(() => {
-    // ponytail: L4 livre la LISTE. Le detail, l assistant de publication et le
-    // fil de discussion sont le lot L5 : tant qu ils n existent pas, on le dit
-    // au lieu d ouvrir un ecran vide. A remplacer par la navigation en L5.
-    Alert.alert(
-      'Matchs amicaux',
-      "Le détail d'une annonce et la réponse aux annonces arrivent très vite.",
-    );
-  }, []);
+  const handleAdPress = useCallback((/** @type {any} */ ad) => {
+    const targetAdId = getAdKey(ad);
+    if (!targetAdId) return;
+    navigateOrExplainOnWeb(navigation, RouteNames.FriendlyMatchAdDetails, { adId: targetAdId });
+  }, [navigation]);
 
-  const handleApplyPress = useCallback(() => {
+  const handlePublishPress = useCallback(() => {
+    navigateOrExplainOnWeb(navigation, RouteNames.FriendlyMatchWizardStack);
+  }, [navigation]);
+
+  // Candidater passe par le detail : c est la que le choix « qui recoit » est
+  // contraint par l annonce (§3.3), et il n a de sens qu avec l annonce sous
+  // les yeux. Le bouton de la carte est donc un raccourci, pas un second chemin.
+  const handleApplyPress = useCallback((/** @type {any} */ ad) => {
     if (!isAuthenticated) {
       openPublicAuthFlow(navigation, {
         origin: 'friendly-match-list',
@@ -265,7 +269,7 @@ function FriendlyMatchListContent({
       });
       return;
     }
-    handleAdPress();
+    handleAdPress(ad);
   }, [handleAdPress, isAuthenticated, navigation]);
 
   /**
@@ -363,7 +367,7 @@ function FriendlyMatchListContent({
         <TouchableOpacity
           accessibilityLabel="Publier une annonce de match amical"
           accessibilityRole="button"
-          onPress={handleAdPress}
+          onPress={handlePublishPress}
           style={[Spaces.padding[16], {
             alignItems: 'center',
             backgroundColor: Colors.primary500,

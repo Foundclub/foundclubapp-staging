@@ -38,6 +38,12 @@ const AD_OWNER_POPULATE = [
   'applications.team.club',
   'applications.team.club.logo',
   'applications.applicant',
+  // Le fil ouvert par la candidature (§4.3). C est la SEULE facon pour l equipe
+  // candidate d en connaitre l identifiant : `GET /friendly-match-ads/:id/
+  // applications` est reserve au staff de l ANNONCE (assertManagesAdSide), et
+  // `POST /apply` rend la candidature sans populate (friendly-match-workflow.ts:285).
+  'applications.chat',
+  'chat',
   'resultingEvent',
 ];
 
@@ -148,6 +154,19 @@ export const findMyApplicationOnAd = (ad, teamIds) => {
     wantedTeamIds.has(getDocumentKey(application?.team))
   )) || null;
 };
+
+/**
+ * L identifiant du fil ouvert par une candidature (§4.3).
+ *
+ * Le serveur cree bien le fil au moment du `apply`, mais rend la candidature
+ * SANS le populer (friendly-match-workflow.ts:285) : on ne peut donc pas se
+ * contenter de la reponse du POST. On accepte les deux formes — la relation
+ * populee, ou l identifiant nu — et on rend '' plutot que de lever : ne pas
+ * trouver le fil n annule pas la candidature, elle a bien ete envoyee.
+ * @param {any} application
+ * @returns {string}
+ */
+export const getFriendlyMatchChatId = (application) => getDocumentKey(application?.chat);
 
 /**
  * Recherche texte : elle part au SERVEUR, pas au tableau deja charge. Filtrer la
