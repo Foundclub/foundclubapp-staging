@@ -54,6 +54,9 @@ export const colors = {
 
   transparent: 'transparent',
 
+  // Rose du chip TOURNOI (handoff « Cartes Rechercher », tour 3b).
+  rose500: '#ff2e7e',
+
   // Verrou des fonctionnalites de l'offre Club (handoff design, decision 7).
   violet200: '#b7a5ff',
   violet500: '#8567ff',

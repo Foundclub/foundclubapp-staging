@@ -22,8 +22,7 @@ import useTheme from '@/theme/themeContext';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
 import SearchMapFab from '@/components/atoms/searchMapFab/SearchMapFab';
-import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
-import ClubSearchResultCard from '@/components/molecules/clubSearchResultCard/ClubSearchResultCard';
+import ClubCard from '@/components/molecules/clubCard/ClubCard';
 import SearchResultsLoadingState from '@/components/molecules/searchResultsLoadingState/SearchResultsLoadingState';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
@@ -535,30 +534,9 @@ function ClubListContent({
     const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
     const searchMeta = Reflect.get(item || {}, '__search');
     const primaryReasonLabel = getMatchReasonLabel(searchMeta?.matchReasons?.[0]);
-    const footer = !isMultisport && item.sponsor?.length > 0 ? (
-      <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[8], { flexWrap: 'wrap' }]}>
-        {item.sponsor.slice(0, 5).map((sponsor, idx) => (
-          <SponsorLogoTile
-            borderRadius={20}
-            height={40}
-            imageUrl={sponsor.logo?.url}
-            key={sponsor.id || idx}
-            link={sponsor.link}
-            title={sponsor.title || sponsor.name || 'Sponsor'}
-            titleStyle={[
-              Fonts.p4Bold,
-              Fonts.neutral00,
-              { fontSize: 10, textAlign: 'center' },
-            ]}
-            width={40}
-          />
-        ))}
-      </View>
-    ) : null;
 
     return (
-      <ClubSearchResultCard
-        footer={footer}
+      <ClubCard
         item={item}
         onPress={() => (isMultisport
           ? handleMultisportSelection(item.documentId)
@@ -566,7 +544,7 @@ function ClubListContent({
         reasonLabel={primaryReasonLabel ? `Tri pertinence: ${primaryReasonLabel}` : ''}
       />
     );
-  }, [Alignments.row, Fonts.neutral00, Fonts.p4Bold, Spaces.gap, Spaces.marginTop, handleClubSelection, handleMultisportSelection]);
+  }, [handleClubSelection, handleMultisportSelection]);
 
   const renderEmptyList = useCallback(() => {
     if (showLoadingPlaceholder) {
@@ -678,7 +656,7 @@ function ClubListContent({
             displayedClubs.length === 0 ? Alignments.fill : null,
           ]}
           data={displayedClubs}
-          estimatedItemSize={112}
+          estimatedItemSize={148}
           ItemSeparatorComponent={ClubsListSeparator}
           keyExtractor={(item, index) => item?.documentId || `unknown-${item?.name || ''}-${index}`}
           ListEmptyComponent={renderEmptyList}

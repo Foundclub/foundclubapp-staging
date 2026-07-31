@@ -12,6 +12,8 @@ export const images = {
   eventCardMatch: require('../assets/background-card-event/card-match.png'),
   eventCardOther: require('../assets/background-card-event/card-autre.png'),
   eventCardReservation: require('../assets/background-card-event/card-reservation.png'),
+  eventCardStage: require('../assets/background-card-event/card-stage.png'),
+  eventCardTournament: require('../assets/background-card-event/card-tournoi.png'),
   eventCardTraining: require('../assets/background-card-event/card-entrainement.png'),
   logo: require('../assets/pictures/logo.png'),
   roundAvatar: require('../assets/pictures/avatar-round.png'),
