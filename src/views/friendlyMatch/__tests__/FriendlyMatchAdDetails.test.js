@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import FriendlyMatchAdDetails from '../FriendlyMatchAdDetails';
@@ -52,6 +53,8 @@ const mockGetFriendlyMatchAd = jest.fn();
 const mockGetFriendlyMatchApplications = jest.fn();
 const mockApplyToFriendlyMatchAd = jest.fn();
 const mockRespond = jest.fn();
+const mockUpdateAd = jest.fn();
+const mockRepostAd = jest.fn();
 jest.mock('@/services/friendlyMatch/friendlyMatchService', () => {
   const actual = jest.requireActual('@/services/friendlyMatch/friendlyMatchService');
   return {
@@ -64,9 +67,11 @@ jest.mock('@/services/friendlyMatch/friendlyMatchService', () => {
     getFriendlyMatchAd: (/** @type {any} */ id) => mockGetFriendlyMatchAd(id),
     getFriendlyMatchApplications: (/** @type {any} */ id) => mockGetFriendlyMatchApplications(id),
     getFriendlyMatchChatId: actual.getFriendlyMatchChatId,
+    repostFriendlyMatchAd: (/** @type {any} */ a, /** @type {any} */ b) => mockRepostAd(a, b),
     respondToFriendlyMatchApplication: (/** @type {any} */ a, /** @type {any} */ b) => (
       mockRespond(a, b)
     ),
+    updateFriendlyMatchAd: (/** @type {any} */ a, /** @type {any} */ b) => mockUpdateAd(a, b),
     withdrawFriendlyMatchApplication: jest.fn(),
   };
 });
@@ -330,5 +335,102 @@ describe('FriendlyMatchAdDetails — candidater ouvre la conversation (§4.3)', 
     expect(rendered).toContain('Ouvrir la discussion');
     expect(rendered).toContain('Retirer ma proposition');
     expect(rendered).not.toContain('Proposer un match');
+  });
+});
+
+// Filet des 3 gestes ajoutes apres l'etat des lieux du 31/07 : sans eux,
+// l'annonceur pouvait publier mais jamais annuler, jamais reposter, et jamais
+// enregistrer ce qui avait ete convenu dans le fil. Trois culs-de-sac.
+describe('FriendlyMatchAdDetails — ce que l annonceur peut faire de son annonce', () => {
+  const AD_STAFF = {
+    documentId: 'u-annonceur',
+    role: { name: 'Entraineur' },
+    trainedTeams: [{ documentId: 'team-annonceur', name: 'FC Annonceur U15' }],
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetFriendlyMatchApplications.mockResolvedValue([]);
+  });
+
+  /**
+   * Le premier bouton portant ce titre.
+   * @param {any} tree
+   * @param {string} title
+   * @returns {any}
+   */
+  const findButton = (tree, title) => tree.root.findAll(
+    (/** @type {any} */ node) => node.props?.title === title,
+    { deep: true },
+  )[0];
+
+  it('annonce ouverte : « Annuler » la passe en cancelled, sans supprimer', async () => {
+    mockGetFriendlyMatchAd.mockResolvedValue(AD_OPEN);
+    mockUpdateAd.mockResolvedValue({ ...AD_OPEN, status: 'cancelled' });
+
+    const tree = await renderFor(AD_STAFF);
+    const cancelButton = findButton(tree, 'Annuler l’annonce');
+    expect(cancelButton).toBeDefined();
+
+    // La confirmation passe par Alert : on rejoue le bouton destructeur.
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    await act(async () => { cancelButton.props.onPress(); });
+    const destructive = alertSpy.mock.calls[0][2]
+      .find((/** @type {any} */ action) => action.style === 'destructive');
+    await act(async () => { await destructive.onPress(); });
+
+    expect(mockUpdateAd).toHaveBeenCalledWith('ad-1', { status: 'cancelled' });
+    alertSpy.mockRestore();
+  });
+
+  it('annonce expirée : le bouton de repostage apparaît, pas avant', async () => {
+    mockGetFriendlyMatchAd.mockResolvedValue({ ...AD_OPEN, status: 'open' });
+    const openTree = await renderFor(AD_STAFF);
+    expect(findButton(openTree, 'Reposter avec de nouvelles dates')).toBeUndefined();
+
+    mockGetFriendlyMatchAd.mockResolvedValue({ ...AD_OPEN, status: 'expired' });
+    const expiredTree = await renderFor(AD_STAFF);
+    expect(findButton(expiredTree, 'Reposter avec de nouvelles dates')).toBeDefined();
+  });
+
+  it('une annonce pourvue ne propose ni annulation ni repostage', async () => {
+    mockGetFriendlyMatchAd.mockResolvedValue({ ...AD_OPEN, status: 'matched' });
+    const tree = await renderFor(AD_STAFF);
+
+    expect(findButton(tree, 'Annuler l’annonce')).toBeUndefined();
+    expect(findButton(tree, 'Reposter avec de nouvelles dates')).toBeUndefined();
+  });
+
+  it('une proposition en attente permet de convenir des modalités (§4.4)', async () => {
+    mockGetFriendlyMatchAd.mockResolvedValue(AD_OPEN);
+    mockGetFriendlyMatchApplications.mockResolvedValue([{
+      chat: { documentId: CHAT_ID },
+      chosenHosting: 'AWAY',
+      documentId: 'app-1',
+      status: 'pending',
+      team: { name: 'US Candidat U15' },
+    }]);
+
+    const tree = await renderFor(AD_STAFF);
+
+    expect(findButton(tree, 'Convenir date, heure et lieu')).toBeDefined();
+  });
+
+  it('ce qui est convenu s affiche, et remplace le libellé de saisie', async () => {
+    mockGetFriendlyMatchAd.mockResolvedValue(AD_OPEN);
+    mockGetFriendlyMatchApplications.mockResolvedValue([{
+      agreedTerms: { date: '2099-05-15T18:00:00.000Z', venue: 'Stade Nord' },
+      chosenHosting: 'AWAY',
+      documentId: 'app-1',
+      status: 'pending',
+      team: { name: 'US Candidat U15' },
+    }]);
+
+    const tree = await renderFor(AD_STAFF);
+    const rendered = allText(tree);
+
+    expect(rendered).toContain('Convenu :');
+    expect(rendered).toContain('Stade Nord');
+    expect(findButton(tree, 'Modifier ce qui est convenu')).toBeDefined();
   });
 });

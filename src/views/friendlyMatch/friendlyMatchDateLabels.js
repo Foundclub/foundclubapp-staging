@@ -62,6 +62,26 @@ export const getSlotHoursLabel = (slot) => {
 };
 
 /**
+ * Le jour et l heure convenus, en un instant que le serveur pose tel quel dans
+ * la date de l evenement (`agreedTerms.date` -> `event.date`,
+ * friendly-match-workflow.ts:148).
+ *
+ * L heure est lue dans le fuseau de celui qui la saisit — « 18:00 le 12 mai »
+ * veut dire 18 h chez lui, pas 18 h UTC. Sans heure, on prend midi plutot que
+ * minuit : minuit bascule de jour au moindre decalage, et le match se
+ * retrouverait affiche la veille.
+ * @param {any} isoDay - Jour au format AAAA-MM-JJ.
+ * @param {any} [time] - Heure au format HH:MM.
+ * @returns {string} L instant en ISO, ou '' si le jour est illisible.
+ */
+export const toAgreedInstant = (isoDay, time) => {
+  const day = String(isoDay || '').slice(0, 10);
+  const hours = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(time || '')) ? String(time) : '12:00';
+  const parsed = parse(`${day} ${hours}`, `${ISO_DAY_FORMAT} HH:mm`, new Date());
+  return isValid(parsed) ? parsed.toISOString() : '';
+};
+
+/**
  * Un creneau entier : le jour, puis son horaire s il en a un.
  * @param {any} slot
  * @returns {string}

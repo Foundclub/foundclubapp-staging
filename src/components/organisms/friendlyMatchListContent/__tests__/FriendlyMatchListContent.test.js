@@ -13,6 +13,14 @@ jest.mock('@/domains/auth/useAuth', () => ({
   default: () => mockUseAuth(),
 }));
 
+// Cette suite monte la VRAIE carte d'annonce dans une VRAIE FlatList — c'est
+// voulu, c'est elle qu'on verifie. Le premier rendu coute ~4 s seul, mais frole
+// les 5 s par defaut quand toute la base de tests tourne en parallele : mesure
+// du 31/07, `--maxWorkers=4` passe, la valeur par defaut echoue. Le plafond est
+// donc explicite plutot que subi — un filet qui tombe une fois sur deux ne
+// protege rien, et personne ne saurait dire si c'est le code ou la machine.
+jest.setTimeout(30000);
+
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),

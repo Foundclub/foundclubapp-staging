@@ -10,7 +10,8 @@ import { respondToFriendlyMatchApplication } from '@/services/friendlyMatch/frie
 
 import { createLogger } from '@/utils/logger/logger';
 
-import { toReadableDay } from '../friendlyMatchDateLabels';
+import { getSlotHoursLabel, toReadableDay } from '../friendlyMatchDateLabels';
+import FriendlyMatchTermsSheet from './FriendlyMatchTermsSheet';
 
 const logger = createLogger('friendly-match-application');
 
@@ -62,10 +63,22 @@ function FriendlyMatchApplicationCard({
 }) {
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTermsSheetVisible, setIsTermsSheetVisible] = useState(false);
 
   const isPending = application?.status === 'pending';
   const isAccepted = application?.status === 'accepted';
   const chosenDayLabel = toReadableDay(application?.chosenDate);
+
+  // Ce qui est convenu (§4.4) prime sur ce que le candidat avait coche : c est
+  // cette date-la qui deviendra celle du match a l acceptation.
+  const agreedDate = application?.agreedTerms?.date;
+  const agreedLabel = agreedDate
+    ? [
+      toReadableDay(agreedDate),
+      getSlotHoursLabel({ start: new Date(agreedDate).toTimeString().slice(0, 5) }),
+      application?.agreedTerms?.venue,
+    ].filter(Boolean).join(' · ')
+    : '';
 
   /**
    * Accepte ou refuse la proposition, puis fait relire l annonce a l ecran.
@@ -132,6 +145,12 @@ function FriendlyMatchApplicationCard({
         ] || 'Hébergement à confirmer'}
       </Text>
 
+      {agreedLabel ? (
+        <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
+          {`Convenu : ${agreedLabel}`}
+        </Text>
+      ) : null}
+
       {chosenDayLabel ? (
         <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
           {`Date souhaitée : ${chosenDayLabel}`}
@@ -166,6 +185,12 @@ function FriendlyMatchApplicationCard({
           <>
             <Button
               disabled={isSubmitting}
+              onPress={() => setIsTermsSheetVisible(true)}
+              title={agreedLabel ? 'Modifier ce qui est convenu' : 'Convenir date, heure et lieu'}
+              variant="Secondary"
+            />
+            <Button
+              disabled={isSubmitting}
               isLoading={isSubmitting}
               onPress={confirmAccept}
               title="Accepter ce match"
@@ -180,6 +205,17 @@ function FriendlyMatchApplicationCard({
           </>
         ) : null}
       </View>
+
+      <FriendlyMatchTermsSheet
+        ad={ad}
+        application={application}
+        onClose={() => setIsTermsSheetVisible(false)}
+        onSaved={() => {
+          setIsTermsSheetVisible(false);
+          onResponded();
+        }}
+        visible={isTermsSheetVisible}
+      />
     </View>
   );
 }

@@ -29,6 +29,7 @@ import {
   getFriendlyMatchAd,
   getFriendlyMatchApplications,
   getFriendlyMatchChatId,
+  updateFriendlyMatchAd,
   withdrawFriendlyMatchApplication,
 } from '@/services/friendlyMatch/friendlyMatchService';
 
@@ -36,6 +37,7 @@ import { createLogger } from '@/utils/logger/logger';
 
 import FriendlyMatchApplicationCard from './components/FriendlyMatchApplicationCard';
 import FriendlyMatchApplySheet from './components/FriendlyMatchApplySheet';
+import FriendlyMatchRepostSheet from './components/FriendlyMatchRepostSheet';
 import { getSlotLabel } from './friendlyMatchDateLabels';
 
 const logger = createLogger('friendly-match-details');
@@ -86,6 +88,7 @@ function FriendlyMatchAdDetails({ navigation, route }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [isApplySheetVisible, setIsApplySheetVisible] = useState(false);
+  const [isRepostSheetVisible, setIsRepostSheetVisible] = useState(false);
 
   const isAuthenticated = Boolean(userData?.documentId);
   const canApply = canApplyToFriendlyMatchAd(userData);
@@ -205,6 +208,42 @@ function FriendlyMatchAdDetails({ navigation, route }) {
     }
     openConversation(freshApplication);
   }, [adId, managedTeamIds, openConversation]);
+
+  /**
+   * Annuler son annonce (§4.6). On ne SUPPRIME pas : le statut passe a
+   * `cancelled`, ce qui garde la trace des propositions deja recues — qui avait
+   * repondu, qui avait ete refuse. Le menage automatique s occupe du reste.
+   * @returns {void}
+   */
+  const handleCancelAd = useCallback(() => {
+    const applicationCount = Number(ad?.applicationsCount || 0);
+    Alert.alert(
+      'Annuler cette annonce ?',
+      applicationCount > 0
+        ? `Elle ne sera plus visible, et les ${applicationCount} équipe(s) qui ont`
+          + ' répondu ne pourront plus aller plus loin.'
+        : 'Elle ne sera plus visible par les autres équipes.',
+      [
+        { style: 'cancel', text: 'Garder l’annonce' },
+        {
+          onPress: async () => {
+            try {
+              await updateFriendlyMatchAd(getKey(ad), { status: 'cancelled' });
+              await loadAd();
+            } catch (error) {
+              logger.error('Annulation d annonce impossible', { error });
+              Alert.alert(
+                'Annulation impossible',
+                /** @type {any} */ (error)?.message || 'Réessaie dans un instant.',
+              );
+            }
+          },
+          style: 'destructive',
+          text: 'Annuler l’annonce',
+        },
+      ],
+    );
+  }, [ad, loadAd]);
 
   const handleWithdraw = useCallback(() => {
     Alert.alert(
@@ -365,6 +404,25 @@ function FriendlyMatchAdDetails({ navigation, route }) {
         ) : null}
 
         {isAdSideStaff ? (
+          <View style={[Spaces.gap[8]]}>
+            {ad.status === 'expired' ? (
+              <Button
+                onPress={() => setIsRepostSheetVisible(true)}
+                title="Reposter avec de nouvelles dates"
+                variant="Primary"
+              />
+            ) : null}
+            {ad.status === 'open' || ad.status === 'expired' ? (
+              <Button
+                onPress={handleCancelAd}
+                title="Annuler l’annonce"
+                variant="Secondary"
+              />
+            ) : null}
+          </View>
+        ) : null}
+
+        {isAdSideStaff ? (
           <View style={[Spaces.gap[12]]}>
             <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginTop[8]]}>
               {pendingApplications.length > 0
@@ -444,6 +502,16 @@ function FriendlyMatchAdDetails({ navigation, route }) {
         onClose={() => setIsApplySheetVisible(false)}
         onSubmitted={handleApplied}
         visible={isApplySheetVisible}
+      />
+
+      <FriendlyMatchRepostSheet
+        ad={ad}
+        onClose={() => setIsRepostSheetVisible(false)}
+        onReposted={() => {
+          setIsRepostSheetVisible(false);
+          loadAd();
+        }}
+        visible={isRepostSheetVisible}
       />
     </ScreenContainer>
   );
