@@ -1,4 +1,5 @@
 import {
+  coerceSearchHubType,
   consumeSearchHubGuidanceSignal,
   getSearchHubGuidanceSignalKey,
   hasLegacySearchParams,
@@ -20,6 +21,16 @@ describe('searchRouteHelpers', () => {
     expect(consumeSearchHubGuidanceSignal('clubs', exposedTypes)).toBeNull();
     expect(consumeSearchHubGuidanceSignal('recruitment', exposedTypes)).toBe('search.tab.recruitment');
     expect(consumeSearchHubGuidanceSignal('clubs', exposedTypes)).toBeNull();
+  });
+
+  it('reconnait l onglet des matchs amicaux et retombe sur les evenements sinon', () => {
+    expect(coerceSearchHubType('amicaux')).toBe('amicaux');
+    expect(coerceSearchHubType('amical')).toBe('amicaux');
+    expect(coerceSearchHubType('friendly')).toBe('amicaux');
+    expect(coerceSearchHubType('AMICAUX')).toBe('amicaux');
+    expect(coerceSearchHubType('recruitment')).toBe('recruitment');
+    expect(coerceSearchHubType('inconnu')).toBe('events');
+    expect(getSearchHubGuidanceSignalKey('amicaux')).toBe('search.tab.amicaux');
   });
 
   it('treats activeType params as a valid SearchHub redirect target', () => {

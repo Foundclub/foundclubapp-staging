@@ -11,7 +11,7 @@ import {
 import useTheme from '@/theme/themeContext';
 
 /**
- * @typedef {'events' | 'clubs' | 'reservations' | 'recruitment'} SearchType
+ * @typedef {'events' | 'clubs' | 'reservations' | 'recruitment' | 'amicaux'} SearchType
  */
 
 /**
@@ -49,6 +49,10 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
       {
         key: 'recruitment',
         label: t('searchTypeSwitcher.recruitment', 'Recrutement'),
+      },
+      {
+        key: 'amicaux',
+        label: t('searchTypeSwitcher.amicaux', 'Matchs amicaux'),
       },
     ],
     [t],

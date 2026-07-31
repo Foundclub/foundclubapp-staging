@@ -1301,6 +1301,10 @@ export default {
           subtitle: 'Postuler aux annonces de recherche des équipes.',
           title: 'Recrutement',
         },
+        amicaux: {
+          subtitle: 'Trouve un adversaire pour ton équipe.',
+          title: 'Matchs amicaux',
+        },
         clubs: {
           subtitle: 'Trouve la page d\u2019un club.',
           title: 'Club',
@@ -2376,6 +2380,7 @@ export default {
     title: 'Événements :',
   },
   searchTypeSwitcher: {
+    amicaux: 'Matchs amicaux',
     recruitment: 'Recrutement',
   },
   teamSlotList: {

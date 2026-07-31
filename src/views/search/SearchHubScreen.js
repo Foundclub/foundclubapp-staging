@@ -22,6 +22,7 @@ import {
 
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
+import FriendlyMatchListContent from '@/components/organisms/friendlyMatchListContent/FriendlyMatchListContent';
 import RecrutementListContent from '@/components/organisms/recrutementListContent/RecrutementListContent';
 
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
@@ -34,6 +35,7 @@ const SEARCH_TAB_TYPES = /** @type {const} */ ([
   'clubs',
   'reservations',
   'recruitment',
+  'amicaux',
 ]);
 const SEARCH_STALE_WINDOW_MS = 30_000;
 const DEFAULT_EVENT_FILTERS = Object.freeze({
@@ -53,6 +55,7 @@ function SearchHubScreen({ navigation, route }) {
   const [activeType, setActiveType] = useState(requestedType);
   const [visitedTypes, setVisitedTypes] = useState(() => new Set([requestedType]));
   const [refreshSignals, setRefreshSignals] = useState({
+    amicaux: 0,
     clubs: 0,
     events: 0,
     recruitment: 0,
@@ -172,6 +175,16 @@ function SearchHubScreen({ navigation, route }) {
       );
     }
 
+    if (type === 'amicaux') {
+      return (
+        <FriendlyMatchListContent
+          initialTab={route?.params?.initialFriendlyMatchTab}
+          refreshSignal={refreshSignals.amicaux}
+          screenActive={activeType === 'amicaux'}
+        />
+      );
+    }
+
     if (type === 'reservations') {
       // C30 (décision D5) : l'onglet reste, mais la réservation n'est pas encore
       // ouverte -> écran « Bientôt disponible » au lieu de la liste.
@@ -205,7 +218,14 @@ function SearchHubScreen({ navigation, route }) {
         timestamp={route?.params?.timestamp}
       />
     );
-  }, [Colors, activeType, initialRecruitmentTab, refreshSignals, route?.params?.timestamp]);
+  }, [
+    Colors,
+    activeType,
+    initialRecruitmentTab,
+    refreshSignals,
+    route?.params?.initialFriendlyMatchTab,
+    route?.params?.timestamp,
+  ]);
 
   return (
     <SearchScreenShell

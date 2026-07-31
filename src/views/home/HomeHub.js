@@ -1753,6 +1753,24 @@ function HomeHubContent({ auth, navigation, route }) {
       });
     }
 
+    // Matchs amicaux : case A PART, bien distincte du recrutement (decision
+    // d'Adel du 31/07, Q13 de la spec). La liste est publique : la carte est donc
+    // montree a tout le monde, connecte ou non.
+    cards.push({
+      accentColor: Colors.primary500,
+      icon: 'flag',
+      key: 'search-amicaux',
+      onPress: () => navigation.navigate(RouteNames.SearchHub, { activeType: 'amicaux' }),
+      subtitle: t('homeHub.cards.search.amicaux.subtitle', 'Trouve un adversaire.'),
+      title: t('homeHub.cards.search.amicaux.title', 'Matchs amicaux'),
+      tutorial: makeTutorial(
+        'searchAmicaux',
+        15,
+        'Matchs amicaux',
+        'Consulte les équipes qui cherchent un match amical, et publie le tien.',
+      ),
+    });
+
     return cards;
   }, [Colors.primary500, hasManageSection, makeTutorial, navigation, scrollDownLabel, scrollToLeagueSection, t, userData]);
 
