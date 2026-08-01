@@ -1,0 +1,291 @@
+import { Text, TouchableOpacity } from 'react-native';
+import renderer, { act } from 'react-test-renderer';
+
+import GuideOffersRecap from '../GuideOffersRecap';
+
+// Filet L10-A (docs/STRATEGIE_PAYWALL_2026_08_01.md) : l'ecran de comparaison des
+// offres n'avait AUCUN test (E6). Il grisait l'offre Club derriere `clubVerified`
+// alors que le serveur a acte le 2026-07-17 que la verification ne bloque plus la
+// porte payante (subscription-permission.ts:751-756). Ces tests verrouillent le
+// fait que l'offre Club est achetable, club verifie ou non.
+
+const mockTrackFunnelEvent = jest.fn();
+const mockPerformPurchase = jest.fn();
+const mockIsPurchaseAvailable = jest.fn();
+const mockScheduleRefresh = jest.fn();
+const mockUseAuth = jest.fn();
+const mockNavigate = jest.fn();
+const mockAlert = jest.fn();
+const mockRefetchCatalog = jest.fn();
+
+let mockCatalogQueryState = { data: undefined, isError: false, isLoading: false };
+let mockPurchaseIsPending = false;
+
+jest.mock('@tanstack/react-query', () => ({
+  useMutation: (/** @type {any} */ options) => ({
+    isPending: mockPurchaseIsPending,
+    mutateAsync: (/** @type {any} */ input) => options.mutationFn(input),
+  }),
+  useQuery: () => ({ ...mockCatalogQueryState, refetch: mockRefetchCatalog }),
+  useQueryClient: () => ({}),
+}));
+
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => mockUseAuth(),
+}));
+
+jest.mock('@/services/subscription/subscriptionService', () => ({
+  getSubscriptionCatalog: jest.fn(),
+  trackSubscriptionFunnelEvent: (/** @type {any} */ ...args) => mockTrackFunnelEvent(...args),
+}));
+
+jest.mock('@/domains/subscription/subscriptionPurchaseRail', () => ({
+  isSubscriptionPurchaseAvailable: (/** @type {any} */ ...args) => mockIsPurchaseAvailable(...args),
+  performSubscriptionPurchase: (/** @type {any} */ ...args) => mockPerformPurchase(...args),
+}));
+
+jest.mock('@/domains/subscription/subscriptionRefresh', () => ({
+  scheduleSubscriptionStateRefresh: (/** @type {any} */ ...args) => mockScheduleRefresh(...args),
+}));
+
+jest.mock('@/components/templates/ScreenContainer', () => {
+  const { View } = jest.requireActual('react-native');
+  return { __esModule: true, default: ({ children }) => <View>{children}</View> };
+});
+
+jest.mock('@/components/molecules/legalFooter/LegalFooter', () => {
+  const { View } = jest.requireActual('react-native');
+  return { __esModule: true, default: () => <View /> };
+});
+
+// Le vrai Button rend un TouchableOpacity + Text : le mock garde ce contrat.
+jest.mock('@/components/atoms/button/Button', () => {
+  const { Text: RNText, TouchableOpacity: RNTouchable } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: ({
+      disabled, isLoading, onPress, title,
+    }) => (
+      <RNTouchable
+        accessibilityRole="button"
+        accessibilityState={{ busy: Boolean(isLoading), disabled: Boolean(disabled) }}
+        disabled={Boolean(disabled)}
+        onPress={onPress}
+      >
+        <RNText>{title}</RNText>
+      </RNTouchable>
+    ),
+  };
+});
+
+// Le theme n'est ici qu'un porteur de styles : un proxy evite d'enumerer 40 tokens
+// dont aucun n'a d'incidence sur ce qui est teste (textes et commandes).
+jest.mock('@/theme/themeContext', () => {
+  const styleLeaf = () => new Proxy({}, { get: () => ({}) });
+  const styles = () => new Proxy({}, { get: () => styleLeaf() });
+  const colorNames = () => new Proxy({}, {
+    get: (/** @type {any} */ _target, /** @type {any} */ name) => `couleur-${String(name)}`,
+  });
+
+  return {
+    __esModule: true,
+    default: () => ({
+      Alignments: styleLeaf(),
+      ApplicationStyle: styles(),
+      // Chaines opaques volontairement non-hex : le contrat de theme interdit les
+      // litteraux hex hors allowlist, et un mock n'a pas besoin de vraies couleurs.
+      Colors: colorNames(),
+      Fonts: styleLeaf(),
+      Images: styleLeaf(),
+      Spaces: styles(),
+    }),
+  };
+});
+
+jest.mock('react-native/Libraries/Alert/Alert', () => ({
+  alert: (/** @type {any} */ ...args) => mockAlert(...args),
+}));
+
+/* Catalogue : copie fidele du catalogue STATIQUE du serveur
+   (admin/src/api/subscription/services/subscription-catalog.ts). */
+const TEAM_PRICES = {
+  1: { monthly: 799, yearly: 5999 },
+  2: { monthly: 1299, yearly: 9999 },
+  3: { monthly: 1699, yearly: 12999 },
+};
+const CLUB_TIERS = {
+  1: {
+    label: 'Club S', maxTeams: 3, monthly: 1999, yearly: 19999,
+  },
+  2: {
+    label: 'Club M', maxTeams: 8, monthly: 3499, yearly: 34999,
+  },
+  3: {
+    label: 'Club L', maxTeams: null, monthly: 5499, yearly: 54999,
+  },
+};
+
+const CATALOG_ENTRIES = [
+  ...[1, 2, 3].flatMap((slotCount) => ['monthly', 'yearly'].map((billingPeriod) => ({
+    billingPeriod,
+    displayName: `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+    isActive: true,
+    maxTeams: null,
+    planCode: `fc_team_${slotCount}_${billingPeriod}`,
+    providerProductId: `fc_team_${slotCount}_${billingPeriod}`,
+    referencePriceEurCents: TEAM_PRICES[slotCount][billingPeriod],
+    requiresClubVerification: false,
+    scopeType: 'TEAM',
+    slotCount,
+  }))),
+  ...[1, 2, 3].flatMap((tier) => ['monthly', 'yearly'].map((billingPeriod) => ({
+    billingPeriod,
+    displayName: CLUB_TIERS[tier].label,
+    isActive: true,
+    maxTeams: CLUB_TIERS[tier].maxTeams,
+    planCode: `fc_club_tier_${tier}_${billingPeriod}`,
+    providerProductId: `fc_club_tier_${tier}_${billingPeriod}`,
+    referencePriceEurCents: CLUB_TIERS[tier][billingPeriod],
+    requiresClubVerification: true,
+    scopeType: 'CLUB',
+    slotCount: null,
+  }))),
+];
+
+const authValue = ({
+  clubVerified = false,
+  club = { clubVerified, documentId: 'club-1' },
+} = {}) => ({
+  subscriptionSummary: { teamSlotSummary: { assigned: 0, available: 0, total: 0 } },
+  userData: {
+    club,
+    documentId: 'user-1',
+    myTeams: [{ documentId: 'team-1', name: 'U15' }],
+    trainedTeams: [],
+  },
+});
+
+const renderRecap = (auth = authValue()) => {
+  mockUseAuth.mockReturnValue(auth);
+  let tree;
+  act(() => {
+    tree = renderer.create(<GuideOffersRecap navigation={{ navigate: mockNavigate }} />);
+  });
+  return tree;
+};
+
+const allTexts = (/** @type {any} */ tree) => tree.root.findAllByType(Text)
+  .map((/** @type {any} */ node) => (Array.isArray(node.props.children)
+    ? node.props.children.join('') : String(node.props.children)));
+
+const findByText = (/** @type {any} */ tree, /** @type {string} */ label) => tree.root
+  .findAllByType(TouchableOpacity)
+  .find((/** @type {any} */ touchable) => touchable.findAllByType(Text)
+    .some((/** @type {any} */ node) => String(node.props.children) === label));
+
+const hasTextContaining = (/** @type {any} */ tree, /** @type {string} */ part) => allTexts(tree)
+  .some((/** @type {string} */ text) => text.includes(part));
+
+const ctaTitles = (/** @type {any} */ tree) => allTexts(tree)
+  .filter((/** @type {string} */ text) => text.startsWith('Débloquer'));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockCatalogQueryState = { data: { data: CATALOG_ENTRIES }, isError: false, isLoading: false };
+  mockPurchaseIsPending = false;
+  mockIsPurchaseAvailable.mockReturnValue(true);
+  mockPerformPurchase.mockResolvedValue({ ok: true });
+});
+
+describe('GuideOffersRecap — les deux offres sont proposees (comportement conserve)', () => {
+  it('affiche les deux cartes d\'offre', () => {
+    const texts = allTexts(renderRecap());
+
+    expect(texts).toContain('Équipe');
+    expect(texts).toContain('Club');
+  });
+
+  it('l\'offre Équipe reste selectionnee par defaut et achetable', async () => {
+    const tree = renderRecap();
+    expect(ctaTitles(tree)).toContain('Débloquer Équipe · 59,99 €/an');
+
+    await act(async () => { findByText(tree, 'Débloquer Équipe · 59,99 €/an').props.onPress(); });
+
+    expect(mockPerformPurchase).toHaveBeenCalledTimes(1);
+    expect(mockPerformPurchase.mock.calls[0][0].catalogEntry.planCode).toBe('fc_team_1_yearly');
+  });
+
+  it('un catalogue en panne propose de reessayer', () => {
+    mockCatalogQueryState = { data: undefined, isError: true, isLoading: false };
+    const tree = renderRecap();
+
+    expect(hasTextContaining(tree, 'Impossible de charger les tarifs')).toBe(true);
+    act(() => { findByText(tree, 'Réessayer').props.onPress(); });
+    expect(mockRefetchCatalog).toHaveBeenCalled();
+  });
+});
+
+describe('GuideOffersRecap — l\'offre Club ne depend plus de la verification du club', () => {
+  it.each([
+    ['club non verifie', false],
+    ['club verifie', true],
+  ])('%s : la carte Club est selectionnable et affiche son prix', (_label, clubVerified) => {
+    const tree = renderRecap(authValue({ clubVerified }));
+
+    const clubCard = findByText(tree, 'Club');
+    expect(clubCard.props.disabled).toBeFalsy();
+
+    act(() => { clubCard.props.onPress(); });
+    expect(ctaTitles(tree)).toContain('Débloquer Club S · 199,99 €/an');
+  });
+
+  it('l\'argument de vente Club reste lisible sans verification', () => {
+    const tree = renderRecap(authValue({ clubVerified: false }));
+    // Le grisage masquait aussi le resume de l'offre : la carte ne disait plus
+    // ce qu'elle vendait, seulement pourquoi elle etait fermee.
+    expect(hasTextContaining(tree, 'Installations, sponsors, cotisations du club')).toBe(true);
+  });
+
+  it('un club non verifie peut acheter l\'offre Club', async () => {
+    const tree = renderRecap(authValue({ clubVerified: false }));
+
+    const clubCard = findByText(tree, 'Club');
+    expect(clubCard.props.disabled).toBeFalsy();
+    act(() => { clubCard.props.onPress(); });
+    await act(async () => {
+      findByText(tree, 'Débloquer Club S · 199,99 €/an').props.onPress();
+    });
+
+    expect(mockPerformPurchase).toHaveBeenCalledTimes(1);
+    const input = mockPerformPurchase.mock.calls[0][0];
+    expect(input.catalogEntry.planCode).toBe('fc_club_tier_1_yearly');
+    // Le serveur exige clubDocumentId pour une offre CLUB et n'attend aucun slot.
+    expect(input.clubDocumentId).toBe('club-1');
+    expect(input.teamDocumentIds).toEqual([]);
+  });
+
+  // `clubVerified` est balaye dans les deux sens : les 3 textes ne doivent plus
+  // apparaitre, que le club soit verifie ou non.
+  it.each([
+    ['la promesse de blocage', 'Réservée aux clubs vérifiés', false],
+    ['le renvoi vers la verification', 'Vérifier mon club', false],
+    ['la mention de prerequis', 'club vérifié requis', true],
+    ['la pastille de verification', 'club vérifié', false],
+  ])('ne montre plus %s', (_label, deadText, clubVerified) => {
+    const tree = renderRecap(authValue({ clubVerified }));
+    expect(hasTextContaining(tree, deadText)).toBe(false);
+  });
+
+  it('sans club rattache, on n\'envoie pas un achat que le serveur refusera', async () => {
+    const tree = renderRecap(authValue({ club: null }));
+
+    act(() => { findByText(tree, 'Club').props.onPress(); });
+    await act(async () => {
+      findByText(tree, 'Débloquer Club S · 199,99 €/an').props.onPress();
+    });
+
+    expect(mockPerformPurchase).not.toHaveBeenCalled();
+    expect(mockAlert).toHaveBeenCalled();
+  });
+});
