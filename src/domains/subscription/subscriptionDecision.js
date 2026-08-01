@@ -501,6 +501,53 @@ export const getSubscriptionPaywallBenefits = (decision) => {
   return benefits.slice(0, 3);
 };
 
+// Murs qui exigent l'offre Club et dont le blocage se leve par un PREMIER achat
+// Club (docs/STRATEGIE_PAYWALL_2026_08_01.md §1.4).
+// `club-tier-team-limit` en est volontairement ABSENT : son utilisateur a deja une
+// offre Club, et un second achat sur un club deja couvert leve CLUB_ALREADY_COVERED
+// (admin/src/api/subscription/services/subscription-billing.ts:617). Sa montee de
+// palier passe par l'ecran d'abonnement, qui sait deja faire un changement de plan.
+const CLUB_PURCHASE_PAYWALL_KEYS = new Set([
+  // `club.roles.manage` : la cle est calculee par le serveur mais jetee par ses 9
+  // branches muettes (§1.3a) — elle redeviendra atteignable avec ce chantier-la.
+  'club-roles-manage-required',
+  'dues-limit',
+  'facility-manage-required',
+  'sponsor-manage-required',
+]);
+
+/**
+ * Contenu de la feuille de vente Club : meme forme que la feuille de quota, pour
+ * que les deux partagent la meme presentation (paliers + prix + achat direct).
+ * Retourne null pour tout ce qui n'est pas un premier achat Club.
+ * @param {any} decision
+ * @returns {{
+ *   benefits: string[];
+ *   description: string;
+ *   kicker: string;
+ *   successCtaLabel: string;
+ *   title: string;
+ * } | null}
+ */
+export const getSubscriptionClubSheetContent = (decision) => {
+  const paywall = mapSubscriptionDecisionToPaywall(decision);
+  if (!CLUB_PURCHASE_PAYWALL_KEYS.has(paywall.paywallKey)) {
+    return null;
+  }
+
+  // Sans `requiredPlan`, la description perd son suffixe « Offre conseillée: Club. » :
+  // la feuille affiche deja les paliers Club, le repeter est du bruit sur un ecran
+  // de vente. Le titre, lui, n'en depend pas.
+  const content = getSubscriptionPaywallContent({ ...decision, requiredPlan: [] });
+  return {
+    benefits: getSubscriptionPaywallBenefits(decision),
+    description: content.description,
+    kicker: 'Offre Club',
+    successCtaLabel: 'Reprendre',
+    title: content.title,
+  };
+};
+
 /**
  * @param {any} decision
  * @returns {string}

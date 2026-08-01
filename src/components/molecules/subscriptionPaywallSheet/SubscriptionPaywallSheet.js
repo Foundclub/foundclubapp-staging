@@ -21,6 +21,7 @@ import {
 } from '@/domains/subscription/subscriptionBilling';
 import {
   formatSubscriptionRequiredPlanText,
+  getSubscriptionClubSheetContent,
   getSubscriptionPaywallBenefits,
   getSubscriptionPaywallContent,
   getSubscriptionQuotaSheetContent,
@@ -65,16 +66,41 @@ const getCatalogEntriesFromResponse = (payload) => {
 };
 
 /**
- * Paliers Équipe du catalogue pour une periode de facturation donnee,
- * tries par nombre d'equipes couvertes.
- * @param {any[]} entries
- * @param {string} billingPeriod - 'monthly' ou 'yearly'.
- * @returns {any[]}
+ * Rang d'un palier dans sa famille : nombre d'equipes couvertes pour une offre
+ * Équipe, numero de tier pour une offre Club (fc_club_tier_2_yearly -> 2).
+ * @param {any} entry
+ * @returns {number}
  */
-const getTeamEntriesForPeriod = (entries, billingPeriod) => entries
-  .filter((entry) => String(entry?.scopeType || '').trim().toUpperCase() === 'TEAM'
+const getCatalogEntryTierRank = (entry) => (
+  String(entry?.scopeType || '').trim().toUpperCase() === 'CLUB'
+    ? Number(String(entry?.planCode || '').match(/tier_(\d+)/)?.[1] || 0)
+    : Number(entry?.slotCount || 0)
+);
+
+/**
+ * Paliers d'une famille d'offre pour une periode de facturation donnee, du moins
+ * cher au plus cher.
+ * @param {any[]} entries
+ * @param {'TEAM' | 'CLUB'} scopeType
+ * @param {string} billingPeriod - 'monthly' ou 'yearly'.
+ * @returns {Array<{ entry: any; id: number; label: string }>}
+ */
+const getTierOptionsForPeriod = (entries, scopeType, billingPeriod) => entries
+  .filter((entry) => String(entry?.scopeType || '').trim().toUpperCase() === scopeType
     && String(entry?.billingPeriod || '').trim().toLowerCase() === billingPeriod)
-  .sort((left, right) => Number(left?.slotCount || 0) - Number(right?.slotCount || 0));
+  .sort((left, right) => getCatalogEntryTierRank(left) - getCatalogEntryTierRank(right))
+  .map((entry) => {
+    const slotCount = Number(entry?.slotCount || 0);
+    return {
+      entry,
+      id: getCatalogEntryTierRank(entry),
+      // Cote Club, le catalogue serveur porte deja les noms de paliers (Club S/M/L).
+      label: scopeType === 'CLUB'
+        ? String(entry?.displayName || '').trim()
+        : `${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+    };
+  })
+  .filter((option) => option.id > 0 && option.label);
 
 // Selecteur de periode de facturation (defaut produit : annuel, 2 mois offerts).
 const BILLING_PERIOD_OPTIONS = [
@@ -129,6 +155,15 @@ function SubscriptionPaywallSheet({
     () => getSubscriptionQuotaSheetContent(decision),
     [decision],
   );
+  const clubSheetContent = useMemo(
+    () => getSubscriptionClubSheetContent(decision),
+    [decision],
+  );
+  // Une seule presentation pour les deux familles d'offre (L10-A) : la feuille de
+  // quota Équipe et la feuille Club partagent paliers, prix, achat direct et
+  // portes de sortie. Le reste des paywalls garde la presentation legacy.
+  const sellingSheet = quotaSheetContent || clubSheetContent;
+  const sellingScope = quotaSheetContent ? 'TEAM' : 'CLUB';
   const paywallContent = useMemo(
     () => getSubscriptionPaywallContent(decision),
     [decision],
@@ -158,19 +193,19 @@ function SubscriptionPaywallSheet({
     [catalogQuery.data],
   );
   const [billingPeriod, setBillingPeriod] = useState('yearly');
-  const teamTierEntries = useMemo(
-    () => getTeamEntriesForPeriod(catalogEntries, billingPeriod),
-    [billingPeriod, catalogEntries],
+  const tierOptions = useMemo(
+    () => getTierOptionsForPeriod(catalogEntries, sellingScope, billingPeriod),
+    [billingPeriod, catalogEntries, sellingScope],
   );
-  // Paliers annuels : base stable pour la preselection (les slots 1/2/3 sont
-  // identiques d'une periode a l'autre, on ne reset pas le palier au toggle).
-  const teamYearlyEntries = useMemo(
-    () => getTeamEntriesForPeriod(catalogEntries, 'yearly'),
-    [catalogEntries],
+  // Paliers annuels : base stable pour la preselection (les paliers sont les memes
+  // d'une periode a l'autre, on ne reset pas le palier au toggle).
+  const yearlyTierOptions = useMemo(
+    () => getTierOptionsForPeriod(catalogEntries, sellingScope, 'yearly'),
+    [catalogEntries, sellingScope],
   );
-  const hasMonthlyTeamEntries = useMemo(
-    () => getTeamEntriesForPeriod(catalogEntries, 'monthly').length > 0,
-    [catalogEntries],
+  const hasMonthlyTierOptions = useMemo(
+    () => getTierOptionsForPeriod(catalogEntries, sellingScope, 'monthly').length > 0,
+    [catalogEntries, sellingScope],
   );
   const recommendedEntry = useMemo(() => {
     const recommendedPlanCode = getSubscriptionRecommendedPlanCode(decision);
@@ -178,30 +213,28 @@ function SubscriptionPaywallSheet({
       .find((entry) => String(entry?.planCode || '').trim() === recommendedPlanCode) || null;
   }, [catalogEntries, decision]);
 
-  const [selectedSlotCount, setSelectedSlotCount] = useState(0);
+  const [selectedTierId, setSelectedTierId] = useState(0);
   const funnelAbBucket = getSubscriptionTierAbBucket(userData?.documentId);
 
-  // Palier preselectionne a chaque ouverture (2e equipe -> palier 2), borne au
-  // catalogue, et retour a la periode annuelle recommandee. Si le test A/B est
-  // actif, le bucket prime (handoff 13).
+  // Palier preselectionne a chaque ouverture (2e equipe -> palier 2 ; offre Club ->
+  // le palier le moins cher qui debloque), borne au catalogue, et retour a la
+  // periode annuelle recommandee. Si le test A/B est actif, le bucket prime (handoff 13).
   useEffect(() => {
-    if (!isVisible || !quotaSheetContent || teamYearlyEntries.length === 0) {
+    if (!isVisible || !sellingSheet || yearlyTierOptions.length === 0) {
       return;
     }
     setBillingPeriod('yearly');
-    const availableSlotCounts = teamYearlyEntries.map((entry) => Number(entry?.slotCount || 0));
-    const wantedSlotCount = SUBSCRIPTION_TIER_AB_TEST_ENABLED
-      ? getSubscriptionPreselectedSlotCount(funnelAbBucket)
-      : quotaSheetContent.preselectedSlotCount;
-    const preselected = availableSlotCounts.includes(wantedSlotCount)
-      ? wantedSlotCount
-      : availableSlotCounts[0];
-    setSelectedSlotCount(preselected);
-  }, [funnelAbBucket, isVisible, quotaSheetContent, teamYearlyEntries]);
+    const availableTierIds = yearlyTierOptions.map((option) => option.id);
+    let wantedTierId = quotaSheetContent ? quotaSheetContent.preselectedSlotCount : 1;
+    if (quotaSheetContent && SUBSCRIPTION_TIER_AB_TEST_ENABLED) {
+      wantedTierId = getSubscriptionPreselectedSlotCount(funnelAbBucket);
+    }
+    setSelectedTierId(availableTierIds.includes(wantedTierId) ? wantedTierId : availableTierIds[0]);
+  }, [funnelAbBucket, isVisible, quotaSheetContent, sellingSheet, yearlyTierOptions]);
 
-  // Jalon funnel : ouverture de la sheet quota (handoff 13).
+  // Jalon funnel : ouverture de la feuille de vente (handoff 13).
   useEffect(() => {
-    if (!isVisible || !quotaSheetContent) return;
+    if (!isVisible || !sellingSheet) return;
     trackSubscriptionFunnelEvent('paywall_quota_sheet_viewed', {
       abBucket: funnelAbBucket,
       paywallKey: paywall.paywallKey,
@@ -209,11 +242,11 @@ function SubscriptionPaywallSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible]);
 
-  const selectedEntry = useMemo(
-    () => teamTierEntries
-      .find((entry) => Number(entry?.slotCount || 0) === selectedSlotCount) || null,
-    [selectedSlotCount, teamTierEntries],
+  const selectedTierOption = useMemo(
+    () => tierOptions.find((option) => option.id === selectedTierId) || null,
+    [selectedTierId, tierOptions],
   );
+  const selectedEntry = selectedTierOption?.entry || null;
 
   const purchaseMutation = useMutation({
     mutationFn: async (/** @type {any} */ purchaseInput) => (
@@ -288,10 +321,17 @@ function SubscriptionPaywallSheet({
     trackSubscriptionFunnelEvent('paywall_dismissed', {
       abBucket: funnelAbBucket,
       paywallKey: paywall.paywallKey,
-      slotCount: selectedSlotCount,
+      slotCount: selectedTierId,
     });
     close();
   };
+
+  // Une offre Club couvre un club : le club du contexte de l'action d'abord (les
+  // installations qu'on voulait gerer), a defaut celui du compte. Le serveur refuse
+  // l'achat sans lui (subscription-billing.ts:427).
+  const purchaseClubDocumentId = String(
+    clubDocumentId || userData?.club?.documentId || '',
+  ).trim();
 
   // Achat direct dans la sheet. Aujourd'hui : mode test backend (trustedValidation) —
   // Purchases.purchase (RevenueCat) se branchera ici a l'item 14 du plan.
@@ -308,6 +348,15 @@ function SubscriptionPaywallSheet({
       return;
     }
 
+    const isClubPurchase = sellingScope === 'CLUB';
+    if (isClubPurchase && !purchaseClubDocumentId) {
+      Alert.alert(
+        'Club requis',
+        "Rattache d'abord ton compte à un club avant de prendre une offre Club.",
+      );
+      return;
+    }
+
     const slotCount = Number(selectedEntry?.slotCount || 0);
     trackSubscriptionFunnelEvent('paywall_purchase_started', {
       abBucket: funnelAbBucket,
@@ -320,8 +369,10 @@ function SubscriptionPaywallSheet({
     try {
       await purchaseMutation.mutateAsync({
         catalogEntry: selectedEntry,
+        clubDocumentId: isClubPurchase ? purchaseClubDocumentId : undefined,
         payerUserDocumentId: String(userData?.documentId || '').trim(),
-        teamDocumentIds: getInitialTeamSelection({
+        // Une offre Club couvre tout le club : elle n'occupe aucun slot d'equipe.
+        teamDocumentIds: isClubPurchase ? [] : getInitialTeamSelection({
           availableTeams,
           coveredTeamDocumentIds: getSubscriptionTeamSlotSummary(subscriptionSummary)
             .coveredTeamDocumentIds,
@@ -346,9 +397,11 @@ function SubscriptionPaywallSheet({
         renewalDate.setFullYear(renewalDate.getFullYear() + 1);
       }
       navigation.navigate(RouteNames.SubscriptionSuccess, {
-        offerLabel: `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+        offerLabel: isClubPurchase
+          ? String(selectedTierOption?.label || 'Club')
+          : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
         renewalDateLabel: format(renewalDate, 'd MMMM yyyy', { locale: fr }),
-        resumeCtaLabel: quotaSheetContent?.successCtaLabel || 'Reprendre',
+        resumeCtaLabel: sellingSheet?.successCtaLabel || 'Reprendre',
       });
     } catch (error) {
       trackSubscriptionFunnelEvent('paywall_purchase_failed', {
@@ -361,18 +414,9 @@ function SubscriptionPaywallSheet({
     }
   };
 
-  /* ---------- Sheet de quota v2 (equipe / evenement / match / annonce) ---------- */
-  if (quotaSheetContent) {
-    const tierOptions = teamTierEntries.map((entry) => {
-      const slotCount = Number(entry?.slotCount || 0);
-      return {
-        id: slotCount,
-        label: `${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
-      };
-    });
-    const selectedTierLabel = selectedSlotCount > 0
-      ? `${selectedSlotCount} équipe${selectedSlotCount > 1 ? 's' : ''}`
-      : '';
+  /* ---------- Feuille de vente v2 (paliers Équipe ou paliers Club) ---------- */
+  if (sellingSheet) {
+    const selectedTierLabel = String(selectedTierOption?.label || '');
     const priceCents = Number(selectedEntry?.referencePriceEurCents);
     const priceAmountLabel = Number.isFinite(priceCents) && priceCents > 0
       ? `${(priceCents / 100).toFixed(2).replace('.', ',')} €`
@@ -383,11 +427,24 @@ function SubscriptionPaywallSheet({
     const monthlyLabel = isYearlySelected
       ? formatSubscriptionMonthlyEquivalentLabel(selectedEntry?.referencePriceEurCents)
       : '';
-    const isCatalogLoading = catalogQuery.isLoading || teamTierEntries.length === 0;
+    const isCatalogLoading = catalogQuery.isLoading;
+    // Le catalogue serveur est STATIQUE et ne peut jamais etre vide : un catalogue
+    // absent une fois le chargement fini est toujours un probleme de transport.
+    // Sans cet etat, la feuille restait bloquee sur « Chargement des tarifs… ».
+    const isCatalogUnavailable = !isCatalogLoading && tierOptions.length === 0;
     const purchasing = purchaseMutation.isPending;
+    // Ce qui distingue Club S / M / L : le nombre d'equipes couvertes. Sans lui,
+    // le palier n'est qu'un prix sans critere de choix.
+    const clubTierMaxTeams = Number(selectedEntry?.maxTeams);
+    let clubTierCoverageLabel = '';
+    if (sellingScope === 'CLUB' && selectedEntry) {
+      clubTierCoverageLabel = Number.isFinite(clubTierMaxTeams) && clubTierMaxTeams > 0
+        ? `Jusqu'à ${clubTierMaxTeams} équipes du club`
+        : 'Équipes du club illimitées';
+    }
     let ctaLabel = 'Chargement des tarifs…';
-    if (!isCatalogLoading) {
-      ctaLabel = selectedSlotCount === 1
+    if (!isCatalogLoading && !isCatalogUnavailable) {
+      ctaLabel = (sellingScope === 'TEAM' && selectedTierId === 1)
         ? 'Débloquer mon équipe'
         : `Débloquer ${selectedTierLabel}`;
     }
@@ -407,11 +464,16 @@ function SubscriptionPaywallSheet({
                 { letterSpacing: 1.5, textTransform: 'uppercase' },
               ]}
             >
-              {quotaSheetContent.kicker}
+              {sellingSheet.kicker}
             </Text>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {quotaSheetContent.title}
+              {sellingSheet.title}
             </Text>
+            {clubSheetContent ? (
+              <Text style={[Fonts.p2, Fonts.neutral300]}>
+                {clubSheetContent.description}
+              </Text>
+            ) : null}
           </View>
 
           {contextLabel ? (
@@ -454,9 +516,23 @@ function SubscriptionPaywallSheet({
                 ]}
               />
             </View>
-          ) : (
+          ) : null}
+
+          {isCatalogUnavailable ? (
+            <View style={Spaces.gap[4]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                Tarifs indisponibles
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                Impossible de charger les tarifs pour le moment. Vérifie ta
+                connexion puis réessaie.
+              </Text>
+            </View>
+          ) : null}
+
+          {!isCatalogLoading && !isCatalogUnavailable ? (
             <>
-              {hasMonthlyTeamEntries ? (
+              {hasMonthlyTierOptions ? (
                 <TierSelector
                   onChange={(periodId) => setBillingPeriod(String(periodId))}
                   options={BILLING_PERIOD_OPTIONS}
@@ -464,16 +540,19 @@ function SubscriptionPaywallSheet({
                 />
               ) : null}
               <TierSelector
-                onChange={(slotCount) => {
-                  setSelectedSlotCount(Number(slotCount));
+                onChange={(tierId) => {
+                  const nextTierId = Number(tierId);
+                  const nextOption = tierOptions.find((option) => option.id === nextTierId);
+                  setSelectedTierId(nextTierId);
                   trackSubscriptionFunnelEvent('paywall_tier_selected', {
                     abBucket: funnelAbBucket,
                     paywallKey: paywall.paywallKey,
-                    slotCount: Number(slotCount),
+                    planCode: String(nextOption?.entry?.planCode || ''),
+                    slotCount: nextTierId,
                   });
                 }}
                 options={tierOptions}
-                value={selectedSlotCount}
+                value={selectedTierId}
               />
               <View style={[Alignments.row, { alignItems: 'baseline' }, Spaces.gap[8]]}>
                 <Text style={[Fonts.h1Bold, Fonts.neutral00]}>
@@ -485,11 +564,16 @@ function SubscriptionPaywallSheet({
                   {monthlyLabel}
                 </Text>
               </View>
+              {clubTierCoverageLabel ? (
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {clubTierCoverageLabel}
+                </Text>
+              ) : null}
             </>
-          )}
+          ) : null}
 
           <View style={Spaces.gap[8]}>
-            {quotaSheetContent.benefits.map((benefit) => (
+            {sellingSheet.benefits.map((benefit) => (
               <View
                 key={benefit}
                 style={[Alignments.row, Spaces.gap[8]]}
@@ -503,13 +587,21 @@ function SubscriptionPaywallSheet({
           </View>
 
           <View style={Spaces.gap[4]}>
-            <Button
-              disabled={isCatalogLoading}
-              isLoading={purchasing}
-              onPress={handlePurchase}
-              title={purchasing ? 'Achat en cours…' : ctaLabel}
-              variant="Primary"
-            />
+            {isCatalogUnavailable ? (
+              <Button
+                onPress={() => catalogQuery.refetch?.()}
+                title="Réessayer"
+                variant="Primary"
+              />
+            ) : (
+              <Button
+                disabled={isCatalogLoading}
+                isLoading={purchasing}
+                onPress={handlePurchase}
+                title={purchasing ? 'Achat en cours…' : ctaLabel}
+                variant="Primary"
+              />
+            )}
             <View
               style={[
                 Alignments.row,
