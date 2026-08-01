@@ -17,6 +17,7 @@ import {
   isSubscriptionPurchaseAvailable,
   performSubscriptionPurchase,
 } from '@/domains/subscription/subscriptionPurchaseRail';
+import { scheduleSubscriptionStateRefresh } from '@/domains/subscription/subscriptionRefresh';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -327,10 +328,10 @@ function GuideOffersRecap({ navigation }) {
         slotCount,
         source: selectedOffer,
       });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] }),
-        queryClient.invalidateQueries({ queryKey: ['get-me'] }),
-      ]);
+      // Les droits arrivent par le webhook du store, quelques secondes apres la
+      // reussite cote client : le calendrier de convergence relit jusqu'a ce que
+      // l'etat bouge, sans dependre de l'ecran affiche (L08).
+      scheduleSubscriptionStateRefresh(queryClient);
       const renewalDate = new Date();
       if (getCatalogEntryBillingPeriod(selectedEntry) === 'monthly') {
         renewalDate.setMonth(renewalDate.getMonth() + 1);

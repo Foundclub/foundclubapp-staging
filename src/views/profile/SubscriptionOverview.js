@@ -35,6 +35,10 @@ import {
   restoreAllSubscriptionPurchases,
   SUBSCRIPTION_PURCHASE_RAILS,
 } from '@/domains/subscription/subscriptionPurchaseRail';
+import {
+  invalidateSubscriptionState,
+  scheduleSubscriptionStateRefresh,
+} from '@/domains/subscription/subscriptionRefresh';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -866,11 +870,13 @@ function SubscriptionOverview({ navigation }) {
     }));
   }, []);
 
+  // Les droits d'un achat store sont ouverts par le webhook, quelques secondes
+  // APRES la reussite cote client : une invalidation immediate seule relit
+  // l'ancien etat et le fige (L08). On arme le calendrier de convergence, puis
+  // on attend la premiere lecture pour que l'ecran courant soit a jour.
   const refreshSubscriptionContext = useCallback(async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] }),
-      queryClient.invalidateQueries({ queryKey: ['get-me'] }),
-    ]);
+    scheduleSubscriptionStateRefresh(queryClient);
+    await invalidateSubscriptionState(queryClient);
   }, [queryClient]);
 
   /**

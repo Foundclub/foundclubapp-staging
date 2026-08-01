@@ -2,6 +2,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
+import {
+  invalidateSubscriptionState,
+  scheduleSubscriptionStateRefresh,
+} from '@/domains/subscription/subscriptionRefresh';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -38,12 +42,6 @@ function SubscriptionWebSuccess({ navigation, route }) {
     startedRef.current = true;
 
     let cancelled = false;
-    const timers = [];
-
-    const refreshSubscriptionState = () => {
-      queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
-      queryClient.invalidateQueries({ queryKey: ['get-me'] });
-    };
 
     const finalize = async () => {
       if (!sessionId) {
@@ -58,9 +56,9 @@ function SubscriptionWebSuccess({ navigation, route }) {
         }
         if (result?.status === 'submitted') {
           trackSubscriptionFunnelEvent('purchase_succeeded', { source: 'stripe-web' });
-          refreshSubscriptionState();
-          timers.push(setTimeout(refreshSubscriptionState, 3000));
-          timers.push(setTimeout(refreshSubscriptionState, 8000));
+          // Posees ici, les relances differees mouraient au demontage — et cet
+          // ecran se remplace lui-meme des `status === 'success'` (L08).
+          scheduleSubscriptionStateRefresh(queryClient);
           setStatus('success');
           return;
         }
@@ -78,14 +76,12 @@ function SubscriptionWebSuccess({ navigation, route }) {
     finalize();
     return () => {
       cancelled = true;
-      timers.forEach((timer) => clearTimeout(timer));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleContinue = () => {
-    queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
-    queryClient.invalidateQueries({ queryKey: ['get-me'] });
+    invalidateSubscriptionState(queryClient);
     if (status === 'success') {
       navigation.replace(RouteNames.SubscriptionSuccess, {
         offerLabel: 'FoundClub',
