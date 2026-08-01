@@ -157,7 +157,7 @@ const SUBSCRIPTION_STATUS_META = {
     label: 'Club',
   },
   CLUB_UNVERIFIED: {
-    description: 'Ton offre Club est activé, mais les droits club restent bloques tant que la vérification n est pas terminée.',
+    description: 'Tes droits Club sont actifs. Il reste à faire vérifier ton club — sans effet sur ton offre.',
     label: 'Club à vérifier',
   },
   FREE: {
@@ -564,6 +564,21 @@ export const getSubscriptionRecommendedPlanCode = (decision) => {
 
   return RECOMMENDED_PLAN_CODES.TEAM;
 };
+
+/**
+ * Les droits Club sont-ils ouverts ? La verification du dirigeant est un SIGNAL
+ * D'AFFICHAGE, pas une porte : depuis la decision produit du 2026-07-17, un
+ * entitlement CLUB actif ouvre l'acces meme sans club verifie
+ * (admin/src/api/subscription/services/subscription-permission.ts:751-756 —
+ * motif : aucun club n'etant verifie en production, la porte refusait le
+ * premier client payant). Traiter CLUB_UNVERIFIED comme « pas de droits »
+ * revient a revendre l'offre Club a quelqu'un qui l'a deja payee.
+ * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [subscriptionAccessLevel]
+ * @returns {boolean}
+ */
+export const hasActiveClubOffer = (subscriptionAccessLevel) => (
+  subscriptionAccessLevel === 'CLUB' || subscriptionAccessLevel === 'CLUB_UNVERIFIED'
+);
 
 /**
  * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [subscriptionAccessLevel]
