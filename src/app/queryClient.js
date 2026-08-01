@@ -4,6 +4,8 @@ import {
   QueryClient,
 } from '@tanstack/react-query';
 
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+
 import {
   BOOT_REQUEST_BLOCKED_CODE,
   BOOT_REQUEST_NO_SESSION_CODE,
@@ -73,6 +75,27 @@ export const shouldRetryQuery = (failureCount, error) => {
 };
 
 /**
+ * Un seul message par geste.
+ *
+ * Un refus payant produisait DEUX interruptions : la feuille de vente ouverte par l'écran, et
+ * l'alerte générique de ce filet global. Mesuré le 2026-08-01 : 14 écrans / 22 mutations sont
+ * concernés — poser `meta.preventToastError` 22 fois serait 22 occasions de l'oublier.
+ * Le filet se tait donc dès que l'erreur porte une décision d'abonnement exploitable :
+ * dans ce cas c'est l'écran qui parle, et il parle mieux (il peut vendre).
+ *
+ * ponytail: le plafond assumé — un écran qui recevrait un refus payant SANS héberger la feuille
+ * n'afficherait plus rien. Voie de sortie : brancher la feuille sur cet écran (c'est ce qui a été
+ * fait pour AddCoach.js), ou poser `meta.errorMessageFallback` pour forcer un message.
+ * @param {unknown} error
+ * @param {any} mutation
+ * @returns {boolean}
+ */
+export const shouldSkipMutationErrorAlert = (error, mutation) => {
+  if (mutation?.options?.meta?.preventToastError) return true;
+  return Boolean(extractSubscriptionDecisionFromError(error));
+};
+
+/**
  * @param {{
  *   captureQueryError?: (error: unknown) => void,
  *   onMutationError?: (error: unknown, fallbackMessage?: string) => void
@@ -95,7 +118,8 @@ export const createFoundClubQueryClient = (options = {}) => {
     },
     mutationCache: new MutationCache({
       onError: (error, variables, context, mutation) => {
-        if (!mutation?.options?.meta?.preventToastError && typeof onMutationError === 'function') {
+        if (shouldSkipMutationErrorAlert(error, mutation)) return;
+        if (typeof onMutationError === 'function') {
           onMutationError(
             error,
             mutation?.options?.meta?.errorMessageFallback?.toString(),

@@ -9,12 +9,14 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import PhoneInput from '@/components/organisms/phoneInput/PhoneInput';
 import TrainerInvitedModal from '@/components/organisms/trainerInvitedModal/TrainerInvitedModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -75,6 +77,9 @@ function AddCoach({ navigation, route }) {
     /** @type {{ firstname?: string, phoneNumber?: string } | null} */
     (null),
   );
+  // `club.roles.manage` exige l'offre Club : ces deux mutations sont les seules de l'ecran
+  // qui peuvent revenir avec une decision d'abonnement, depuis que le serveur la transmet.
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   const { t } = useTranslation();
   const { Alignments, Spaces } = useTheme();
@@ -115,7 +120,13 @@ function AddCoach({ navigation, route }) {
 
   const linkTrainerToClubMutation = useMutation({
     mutationFn: /** @type {any} */ (isManagerMode ? linkManagerToClub : linkTrainerToClub),
-    onError: () => {
+    onError: (/** @type {any} */ mutationError) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
+
       Alert.alert(
         t('common.error', 'Erreur'),
         isManagerMode
@@ -133,6 +144,12 @@ function AddCoach({ navigation, route }) {
   const createTrainerMutation = useMutation({
     mutationFn: isManagerMode ? createManager : createTrainer,
     onError: (/** @type {import('axios').AxiosError} */error) => {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+      if (subscriptionDecision) {
+        setSubscriptionPaywallDecision(subscriptionDecision);
+        return;
+      }
+
       const errorResponse = error?.response?.data?.error;
       if (errorResponse?.message === 'Uniqueness check failed' && errorResponse?.details?.user) {
         const { user } = errorResponse.details;
@@ -428,6 +445,14 @@ function AddCoach({ navigation, route }) {
           trainerName={createdTrainer?.firstname || ''}
         />
       ) : null}
+
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={routeClubId || clubData?.documentId || userData?.club?.documentId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
     </ScreenContainer>
   );
 }

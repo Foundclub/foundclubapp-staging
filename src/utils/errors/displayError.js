@@ -102,6 +102,14 @@ export const getErrorMessage = (errorInput, genericI18nKey = 'generic') => {
   const errorCode = extractErrorCode(errorInput);
   const errorMessage = extractErrorMessage(errorInput);
   const errorStatus = extractErrorStatus(errorInput);
+
+  // Un code explicite du serveur bat le statut HTTP. Sans ce passage, `resolveMappedErrorKey`
+  // court-circuite sur le statut et TOUT 403 devient « Acces refuse. » : un refus payant
+  // (SUBSCRIPTION_PERMISSION_DENIED) perdait son motif avant meme d'etre lu.
+  if (errorCode && i18next.exists(`APIerrors.${errorCode}`)) {
+    return i18next.t(`APIerrors.${errorCode}`);
+  }
+
   const mappedCode = resolveMappedErrorKey(errorCode, errorStatus);
   const mappedMessage = resolveMappedErrorKey(errorMessage, errorStatus);
 

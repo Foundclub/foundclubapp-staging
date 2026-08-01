@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { getUploadEndpoint } from '@/config/runtimeUrls';
+import { buildPreservedApiError } from '@/utils/errors/apiError';
 
 import client from '../client';
 /* eslint-enable perfectionist/sort-imports */
@@ -586,10 +587,9 @@ export const updateClub = async (clubData) => {
   } catch (error) {
     const normalizedError = /** @type {any} */ (error);
     console.error('updateClub error full:', JSON.stringify(normalizedError?.response?.data || normalizedError, null, 2));
-    const errorToDisplay = normalizedError?.response?.data?.error?.message
-      || normalizedError?.message
-      || JSON.stringify(normalizedError);
-    throw new Error(`Failed to update club: ${errorToDisplay}`);
+    // C'est le chemin des SPONSORS : sans conservation de `details.decision`, le mur payant
+    // de ClubDetails.js:338 est inatteignable et l'utilisateur ne voit qu'« Acces refuse ».
+    throw buildPreservedApiError(normalizedError, 'Failed to update club');
   }
 };
 /**
@@ -729,27 +729,7 @@ export const updateClubInfo = async (clubData) => {
 
     return validationResult.data;
   } catch (error) {
-    const requestError = /** @type {any} */ (error);
-    const responseError = requestError?.response?.data?.error;
-    const responseData = requestError?.response?.data;
-    const errorToDisplay = responseError?.message
-      || responseData?.message
-      || (requestError && typeof requestError === 'object' && 'message' in requestError ? requestError.message : requestError)
-      || 'Unknown error';
-    const nextError = /** @type {any} */ (new Error(`Failed to update club info: ${errorToDisplay}`));
-    nextError.code = responseError?.code || responseData?.code || requestError?.code || null;
-    nextError.details = responseError?.details || responseData?.details || requestError?.details || null;
-    nextError.status = Number(
-      requestError?.status
-      || requestError?.response?.status
-      || responseError?.status
-      || responseData?.status
-      || 0,
-    ) || null;
-    if (nextError?.details?.decision) {
-      nextError.decision = nextError.details.decision;
-    }
-    throw nextError;
+    throw buildPreservedApiError(error, 'Failed to update club info');
   }
 };
 

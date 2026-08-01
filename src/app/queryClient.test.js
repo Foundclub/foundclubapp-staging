@@ -1,6 +1,6 @@
 import { BOOT_REQUEST_BLOCKED_CODE } from '@/services/bootRequestGuard';
 
-import { shouldRetryQuery } from './queryClient';
+import { shouldRetryQuery, shouldSkipMutationErrorAlert } from './queryClient';
 
 // L'intercepteur de réponse des clients HTTP (client.native.js:83, client.web.js:81)
 // REJETTE la charge déballée `error.response.data.error`, pas l'erreur axios.
@@ -69,5 +69,60 @@ describe('shouldRetryQuery', () => {
   test('s\'arrête au bout de 2 échecs même sur une erreur retentable', () => {
     expect(shouldRetryQuery(1, unwrappedStrapiError(500))).toBe(true);
     expect(shouldRetryQuery(2, unwrappedStrapiError(500))).toBe(false);
+  });
+});
+
+// Un seul message par geste. Mesuré le 2026-08-01 : 14 écrans / 22 mutations ouvrent la
+// feuille de vente ET recevaient en plus l'alerte générique de ce filet global.
+describe('shouldSkipMutationErrorAlert', () => {
+  const mutationWithMeta = (meta) => ({ options: { meta } });
+
+  const subscriptionDenial = {
+    details: {
+      code: 'SUBSCRIPTION_PERMISSION_DENIED',
+      decision: {
+        allowed: false,
+        paywall: 'CLUB_ROLES_MANAGE_REQUIRED',
+        reason: 'SUBSCRIPTION_REQUIRED',
+        requiredPlan: ['CLUB'],
+      },
+    },
+    message: 'Cette fonctionnalite necessite une offre FoundClub active.',
+    status: 403,
+  };
+
+  test('se tait quand l\'erreur porte une décision d\'abonnement exploitable', () => {
+    expect(shouldSkipMutationErrorAlert(
+      subscriptionDenial,
+      mutationWithMeta(undefined),
+    )).toBe(true);
+  });
+
+  test('se tait aussi quand la décision est déjà remontée à plat par un service', () => {
+    expect(shouldSkipMutationErrorAlert(
+      { decision: subscriptionDenial.details.decision, message: 'Failed to create trainer' },
+      mutationWithMeta(undefined),
+    )).toBe(true);
+  });
+
+  test('parle toujours sur un 403 de DROITS, qui n\'a aucune décision à montrer', () => {
+    expect(shouldSkipMutationErrorAlert(
+      { details: {}, message: 'Forbidden', status: 403 },
+      mutationWithMeta(undefined),
+    )).toBe(false);
+  });
+
+  test('parle toujours sur une panne réseau', () => {
+    expect(shouldSkipMutationErrorAlert(
+      { message: 'Network Error' },
+      mutationWithMeta(undefined),
+    )).toBe(false);
+  });
+
+  test('respecte le drapeau existant meta.preventToastError', () => {
+    expect(shouldSkipMutationErrorAlert(
+      { message: 'Network Error' },
+      mutationWithMeta({ preventToastError: true }),
+    )).toBe(true);
   });
 });

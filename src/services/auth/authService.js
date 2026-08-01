@@ -7,6 +7,7 @@ import { getAuthTokens } from '@/domains/auth/authUseCases';
 
 import client from '@/services/client';
 
+import { buildPreservedApiError } from '@/utils/errors/apiError';
 import { formatBootMeta } from '@/utils/performance/bootPerformance';
 
 import { getApiBaseUrl } from '@/config/runtimeUrls';
@@ -634,8 +635,10 @@ const createClubStaff = async (userData, kind) => {
     });
     return validationResult;
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to create ${kind}: ${errorToDisplay}`);
+    // `club.roles.manage` est une action payante : sans conservation de `details.decision`,
+    // l'ecran de vente « Roles club reserves » ne peut pas s'ouvrir (POST create-trainer /
+    // create-manager est la seule des 7 routes sans policy, son 403 vient du controleur).
+    throw buildPreservedApiError(error, `Failed to create ${kind}`);
   }
 };
 
@@ -723,8 +726,7 @@ export const linkTrainerToClub = async (id) => {
     });
     return validationResult;
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to add trainer to my club: ${errorToDisplay}`);
+    throw buildPreservedApiError(error, 'Failed to add trainer to my club');
   }
 };
 
@@ -746,8 +748,7 @@ export const linkManagerToClub = async (id) => {
     });
     return validationResult;
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to add manager to my club: ${errorToDisplay}`);
+    throw buildPreservedApiError(error, 'Failed to add manager to my club');
   }
 };
 

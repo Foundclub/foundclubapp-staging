@@ -77,6 +77,9 @@ export default {
 
     // Authorization errors
     FORBIDDEN: 'Accès refusé.',
+    // Repli quand un écran n'héberge pas encore la feuille de vente : le refus est bien un
+    // refus d'abonnement, pas un refus de droits — les deux ne se disent pas pareil.
+    SUBSCRIPTION_PERMISSION_DENIED: "Cette action nécessite une offre FoundClub active. Rends-toi dans Mon abonnement pour l'activer.",
     UNAUTHORIZED: "Tu n'es pas autorisé·e à effectuer cette action.",
 
     // Validation errors

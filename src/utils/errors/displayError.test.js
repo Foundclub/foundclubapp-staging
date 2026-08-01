@@ -21,6 +21,7 @@ describe('displayError', () => {
       'APIerrors.OTP_ERROR',
       'APIerrors.Request failed with status code 404',
       'APIerrors.schemaMismatch',
+      'APIerrors.SUBSCRIPTION_PERMISSION_DENIED',
       'APIerrors.UNAUTHORIZED',
     ]);
 
@@ -63,6 +64,32 @@ describe('displayError', () => {
         },
         status: 403,
       },
+    });
+
+    expect(result).toBe('translated:APIerrors.FORBIDDEN');
+  });
+
+  // Le filet global court-circuitait sur le STATUT : tout 403 devenait « Accès refusé. »
+  // avant même que le code du serveur soit lu. Un refus payant perdait donc son motif, et
+  // l'utilisateur ne pouvait pas comprendre qu'il s'agissait d'un abonnement, pas d'un droit.
+  test('un code explicite du serveur bat le statut HTTP 403', () => {
+    const result = getErrorMessage({
+      details: {
+        code: 'SUBSCRIPTION_PERMISSION_DENIED',
+        decision: { paywall: 'CLUB_ROLES_MANAGE_REQUIRED', requiredPlan: ['CLUB'] },
+      },
+      message: 'Cette fonctionnalite necessite une offre FoundClub active.',
+      status: 403,
+    });
+
+    expect(result).toBe('translated:APIerrors.SUBSCRIPTION_PERMISSION_DENIED');
+  });
+
+  test('un 403 sans code connu reste « accès refusé »', () => {
+    const result = getErrorMessage({
+      details: { code: 'UNKNOWN_SERVER_CODE' },
+      message: 'Forbidden',
+      status: 403,
     });
 
     expect(result).toBe('translated:APIerrors.FORBIDDEN');
