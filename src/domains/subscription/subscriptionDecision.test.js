@@ -349,7 +349,7 @@ describe('subscriptionDecision', () => {
       label: 'Gratuit',
     });
     expect(getSubscriptionStatusMeta('CLUB_UNVERIFIED')).toEqual({
-      description: 'Ton offre Club est activé, mais les droits club restent bloques tant que la vérification n est pas terminée.',
+      description: 'Tes droits Club sont actifs. Il reste à faire vérifier ton club — sans effet sur ton offre.',
       label: 'Club à vérifier',
     });
   });

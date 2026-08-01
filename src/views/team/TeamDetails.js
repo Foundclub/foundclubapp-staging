@@ -25,7 +25,10 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
-import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import {
+  extractSubscriptionDecisionFromError,
+  hasActiveClubOffer,
+} from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -1685,7 +1688,7 @@ function TeamDetails({ navigation, route }) {
       && (entry?.scopeTeamDocumentId === team?.documentId
         || (String(entry?.scopeType || '').toUpperCase() === 'CLUB'
           && entry?.scopeClubDocumentId === team?.club?.documentId)));
-  const isClubOfferUnlocked = subscriptionAccessLevel === 'CLUB';
+  const isClubOfferUnlocked = hasActiveClubOffer(subscriptionAccessLevel);
   const openTeamOfferUnlockSheet = () => setSubscriptionPaywallDecision(/** @type {any} */ ({
     allowed: false,
     paywall: 'TEAM_OFFER_UNLOCK',

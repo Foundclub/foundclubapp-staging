@@ -26,6 +26,7 @@ import {
   getSubscriptionQuotaItems,
   getSubscriptionStatusMeta,
   getSubscriptionTeamSlotSummary,
+  hasActiveClubOffer,
 } from '@/domains/subscription/subscriptionDecision';
 import {
   getActiveSubscriptionPurchaseRail,
@@ -732,13 +733,13 @@ function SubscriptionOverview({ navigation }) {
   const verificationLabel = getVerificationLabel(clubVerificationSummary);
   const activePlanLabel = planLabels[0] || 'Aucun plan payant actif';
   const isFreeLevel = subscriptionAccessLevel === 'FREE';
-  const isClubLevel = subscriptionAccessLevel === 'CLUB' || subscriptionAccessLevel === 'CLUB_UNVERIFIED';
+  const isClubLevel = hasActiveClubOffer(subscriptionAccessLevel);
   // Titre humain de la carte statut : le vrai nom d'offre si payant, sinon l'offre gratuite.
   const planCardTitle = isFreeLevel ? 'Offre gratuite FoundClub' : (planLabels[0] || statusMeta.label);
   // Description tutoyée par niveau (remplace la copie technique/vouvoyée du backend).
   const planCardDescription = {
     CLUB: 'Les droits Club sont actifs sur ton club vérifié : toutes tes équipes sont couvertes.',
-    CLUB_UNVERIFIED: 'Ton offre Club est activé. Les droits club s\'ouvrent dès la vérification du dirigeant.',
+    CLUB_UNVERIFIED: 'Tes droits Club sont actifs sur tout ton club. Il reste à faire vérifier ton club, mais cela ne bloque rien.',
     FREE: 'Tu publies en quantité limitée. Passe à une offre payante pour lever les limites.',
     TEAM: 'Tes équipes couvertes profitent des droits Équipe, sans limite de publication.',
   }[subscriptionAccessLevel] || 'Tu utilises l\'offre gratuite FoundClub.';
@@ -1308,12 +1309,12 @@ function SubscriptionOverview({ navigation }) {
           ]}
           >
             <Text style={[Fonts.p1Bold, { color: Colors.violet200 }]}>
-              {t('profile.subscription.unverified.title', 'Vérification du club requise')}
+              {t('profile.subscription.unverified.title', 'Vérification du club à finaliser')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 20 }]}>
               {t(
                 'profile.subscription.unverified.description',
-                'Ton offre Club est déjà activé, mais les droits club restent bloqués tant que la vérification du dirigeant n\'est pas terminée.',
+                'Tes droits Club sont déjà actifs — rien n\'est bloqué. La vérification du dirigeant reste à faire : elle certifie ton club auprès des joueurs.',
               )}
             </Text>
             {currentClubDocumentId ? (
