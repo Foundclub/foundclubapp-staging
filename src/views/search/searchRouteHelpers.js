@@ -81,6 +81,43 @@ export function getSearchTypeFromRouteName(routeName) {
 }
 
 /**
+ * Ouvre l'onglet Rechercher sur un type donne, DEPUIS N'IMPORTE OU.
+ *
+ * R06 — pourquoi cet utilitaire existe. Deux appelants ecrivaient
+ * `navigate(RouteNames.Search, { screen: RouteNames.SearchClubs })`, c'est-a-dire
+ * DEUX niveaux. Or `Search` n'est pas une route du navigateur racine : c'est un
+ * onglet, monte un cran plus bas, DANS `HomeTab`. Un ecran pousse sur le
+ * navigateur racine (l'assistant d'equipe, par exemple, qui n'affiche donc pas
+ * la barre d'onglets) ne trouve aucune route `Search` a son niveau : l'appel
+ * echoue en silence et le bouton parait inerte. Constate sur la build
+ * 2.6.1 (821) le 2026-08-01.
+ *
+ * La forme correcte est celle qu'utilise deja SearchRouteRedirect.js : TROIS
+ * niveaux, `HomeTab` -> `Search` -> `SearchHub`. Elle fonctionne aussi bien
+ * depuis un ecran d'onglet que depuis le navigateur racine, ce qui evite d'avoir
+ * a savoir ou l'on se trouve.
+ *
+ * On vise `SearchHub` avec `activeType` plutot que la route `SearchClubs` :
+ * dans SearchStack, `SearchClubs` n'est qu'un alias (`SearchHubRouteAlias`).
+ * @param {any} navigation
+ * @param {unknown} [searchType] type d'onglet vise ; defaut 'events'
+ * @param {Record<string, unknown>} [extraParams] parametres additionnels
+ * @returns {void}
+ */
+export function navigateToSearchHub(navigation, searchType, extraParams) {
+  navigation.navigate(RouteNames.HomeTab, {
+    params: {
+      params: {
+        ...(extraParams || {}),
+        activeType: coerceSearchHubType(searchType),
+      },
+      screen: RouteNames.SearchHub,
+    },
+    screen: RouteNames.Search,
+  });
+}
+
+/**
  * @param {SearchHubType | unknown} searchType
  * @returns {`search.tab.${SearchHubType}`}
  */

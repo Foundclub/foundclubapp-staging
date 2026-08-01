@@ -29,6 +29,7 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
+import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
 import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -357,9 +358,10 @@ function TeamListContent({
   );
 
   const handleOpenClubSearch = useCallback(() => {
-    /** @type {any} */ (navigation).navigate(RouteNames.Search, {
-      screen: RouteNames.SearchClubs,
-    });
+    // R06 — meme defaut que TeamWizardName : cet organisme est rendu par des
+    // ecrans montes AUSSI sur le navigateur racine (TeamDetails, TeamList), ou
+    // la route `Search` n'existe pas. La forme a trois niveaux marche partout.
+    navigateToSearchHub(navigation, 'clubs');
   }, [navigation]);
 
   // Carte pointillee « Nouvelle équipe » avec statut du quota (handoff 9a).

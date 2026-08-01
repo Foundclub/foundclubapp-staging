@@ -17,6 +17,7 @@ import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywall
 import SubscriptionQuotaBanner from '@/components/molecules/subscriptionQuotaBanner/SubscriptionQuotaBanner';
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
@@ -183,9 +184,10 @@ function TeamWizardName({ navigation, route }) {
   // Aiguillage « pas de club » : rechercher son club (pour le rejoindre/revendiquer)
   // ou ouvrir le tunnel de création de club (« je ne trouve pas mon club »).
   const handleSearchClub = () => {
-    /** @type {any} */ (navigation).navigate(RouteNames.Search, {
-      screen: RouteNames.SearchClubs,
-    });
+    // R06 : cet ecran est pousse sur le navigateur RACINE (TeamStack y est monte,
+    // d'ou l'absence de barre d'onglets). L'ancien appel visait `Search`, qui
+    // n'existe qu'un cran plus bas, dans `HomeTab` : il echouait en silence.
+    navigateToSearchHub(navigation, 'clubs');
   };
   const handleCreateClub = () => {
     /** @type {any} */ (navigation).navigate(RouteNames.ClubStack, {

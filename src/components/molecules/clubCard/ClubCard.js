@@ -114,12 +114,27 @@ function ClubCard({ item, onPress, reasonLabel = '' }) {
       disabled={!onPress}
       onPress={onPress}
     >
-      <LinearGradient
-        colors={[withAlpha(Colors.primary700, 0.9), withAlpha(Colors.primary900, 0.96)]}
-        end={{ x: 0, y: 1 }}
-        start={{ x: 0, y: 0 }}
-        style={[styles.container, { borderColor: withAlpha(Colors.primary500, 0.25) }]}
-      >
+      {/*
+        R07 — le degrade est un FOND POSE DERRIERE, jamais le conteneur.
+        Avant : <LinearGradient style={styles.container}> enveloppait tout le
+        contenu, donc il devait se dimensionner sur ses enfants — et le bandeau
+        de statistiques se retrouvait tranche par le bas de la carte (constate
+        sur la build 2.6.1 (821) le 2026-08-01).
+        C'est exactement le motif deja utilise par EventCardNew.js:703, la carte
+        qui, elle, s'affiche correctement : un conteneur normal qui porte la
+        taille, et le degrade en absoluteFill derriere (§1 bis — on reutilise le
+        motif du depot au lieu d'en inventer un).
+        `overflow: 'hidden'` sur le conteneur est INDISPENSABLE : sans lui le
+        degrade en absoluteFill deborde des coins arrondis.
+      */}
+      <View style={[styles.container, { borderColor: withAlpha(Colors.primary500, 0.25) }]}>
+        <LinearGradient
+          colors={[withAlpha(Colors.primary700, 0.9), withAlpha(Colors.primary900, 0.96)]}
+          end={{ x: 0, y: 1 }}
+          pointerEvents="none"
+          start={{ x: 0, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
         {reasonLabel ? (
           <Text style={[styles.reasonLabel, { color: Colors.primary200 }]}>
             {reasonLabel}
@@ -225,7 +240,7 @@ function ClubCard({ item, onPress, reasonLabel = '' }) {
 
         {/* Pied sponsors — marquee continue, masqué sans sponsor */}
         <SponsorMarquee fadeColor={Colors.primary900} sponsors={sponsors} />
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -261,6 +276,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     gap: 12,
+    // Le degrade est pose en absoluteFill derriere le contenu : sans cette
+    // decoupe il depasserait des coins arrondis. Voir le commentaire du rendu.
+    overflow: 'hidden',
     paddingHorizontal: 18,
     paddingVertical: 16,
   },
