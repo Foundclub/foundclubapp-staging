@@ -4,6 +4,7 @@ import {
   formatSubscriptionRequiredPlanText,
   getCoveredTeamCount,
   getSubscriptionAccessLevel,
+  getSubscriptionEntryPointLock,
   getSubscriptionPaywallBenefits,
   getSubscriptionPaywallContent,
   getSubscriptionPlanLabels,
@@ -341,6 +342,119 @@ describe('subscriptionDecision', () => {
     expect(getSubscriptionRecommendedPlanCode({ requiredPlan: ['CLUB', 'TEAM'] })).toBe('fc_team_1_yearly');
     expect(getSubscriptionRecommendedPlanCode({ requiredPlan: [] })).toBe('fc_team_1_yearly');
     expect(getSubscriptionRecommendedPlanCode(null)).toBe('fc_team_1_yearly');
+  });
+
+  // L10-C — le verrou des points d'entree (STRATEGIE_PAYWALL_2026_08_01 §2.3).
+  // Un seul juge partage par tous les points d'entree : le grisage se decide
+  // ici, pas dans chaque ecran. Les cas qui rendent `null` sont l'essentiel du
+  // filet — griser a tort est pire que ne pas griser.
+  describe('getSubscriptionEntryPointLock', () => {
+    /**
+     * Une ligne de compteur gratuit telle que le bootstrap la renvoie.
+     * @param {{ limit: number; quotaType: string; used: number }} usage
+     * @returns {any[]}
+     */
+    const usageOf = ({ limit, quotaType, used }) => [{
+      limit, quotaType, remaining: Math.max(0, limit - used), used,
+    }];
+
+    const exhaustedTeam = usageOf({ limit: 1, quotaType: 'FREE_TEAM', used: 1 });
+
+    test('verrouille chaque quota sur la cle de paywall qui sait vendre', () => {
+      const cases = [
+        ['EVENT_PUBLISH', 'EVENT_LIMIT'],
+        ['FREE_TEAM', 'TEAM_LIMIT'],
+        ['MATCH_PUBLISH', 'MATCH_LIMIT'],
+        ['RECRUITMENT_AD_PUBLISH', 'RECRUITMENT_AD_LIMIT'],
+      ];
+
+      cases.forEach(([quotaType, paywallKey]) => {
+        const lock = getSubscriptionEntryPointLock({
+          freeUsageSummary: usageOf({ limit: 1, quotaType, used: 1 }),
+          quotaType,
+          roleKey: 'president',
+          subscriptionAccessLevel: 'FREE',
+        });
+
+        expect(lock?.decision).toEqual({
+          allowed: false,
+          paywall: paywallKey,
+          reason: 'SUBSCRIPTION_REQUIRED',
+          requiredPlan: ['TEAM'],
+        });
+        // Ces 4 cles ouvrent la sheet MODERNE, celle qui a un bouton d'achat :
+        // griser vers une presentation sans achat serait une impasse.
+        expect(getSubscriptionQuotaSheetContent(lock?.decision)).not.toBeNull();
+      });
+    });
+
+    test('porte toujours une etiquette et une phrase — jamais de gris muet', () => {
+      const lock = getSubscriptionEntryPointLock({
+        freeUsageSummary: exhaustedTeam,
+        quotaType: 'FREE_TEAM',
+        roleKey: 'coach',
+      });
+
+      expect(lock?.badgeLabel).toBe('Offre Équipe');
+      expect(lock?.hint).toBe("Ta création gratuite est utilisée — débloque l'offre Équipe");
+      expect(lock?.scope).toBe('team');
+    });
+
+    test('ne verrouille PAS tant qu il reste du quota gratuit', () => {
+      expect(getSubscriptionEntryPointLock({
+        freeUsageSummary: usageOf({ limit: 1, quotaType: 'FREE_TEAM', used: 0 }),
+        quotaType: 'FREE_TEAM',
+        roleKey: 'president',
+      })).toBeNull();
+    });
+
+    test('ne verrouille PAS un abonne : il n a plus de compteur', () => {
+      expect(getSubscriptionEntryPointLock({
+        freeUsageSummary: exhaustedTeam,
+        quotaType: 'FREE_TEAM',
+        roleKey: 'president',
+        subscriptionAccessLevel: 'TEAM',
+      })).toBeNull();
+      expect(getSubscriptionEntryPointLock({
+        freeUsageSummary: exhaustedTeam,
+        quotaType: 'FREE_TEAM',
+        roleKey: 'president',
+        subscriptionAccessLevel: 'CLUB',
+      })).toBeNull();
+    });
+
+    // Arbitrage Adel Q4 du 2026-08-01 : on n'ouvre pas les compteurs aux joueurs.
+    // Le serveur ne les calcule pas pour eux — un grisage serait invente.
+    test('ne verrouille JAMAIS un profil qui ne peut pas acheter', () => {
+      /** @type {any[]} */
+      const nonBuyerRoleKeys = ['player', 'parent', '', undefined];
+
+      nonBuyerRoleKeys.forEach((roleKey) => {
+        expect(getSubscriptionEntryPointLock({
+          freeUsageSummary: exhaustedTeam,
+          quotaType: 'FREE_TEAM',
+          roleKey,
+        })).toBeNull();
+      });
+    });
+
+    test('ne verrouille PAS un quota inconnu ou absent du bootstrap', () => {
+      expect(getSubscriptionEntryPointLock({
+        freeUsageSummary: exhaustedTeam,
+        quotaType: 'PROFILE_CONTACT',
+        roleKey: 'president',
+      })).toBeNull();
+      expect(getSubscriptionEntryPointLock({
+        freeUsageSummary: [],
+        quotaType: 'FREE_TEAM',
+        roleKey: 'president',
+      })).toBeNull();
+      expect(getSubscriptionEntryPointLock({
+        freeUsageSummary: /** @type {any} */ (null),
+        quotaType: 'FREE_TEAM',
+        roleKey: 'president',
+      })).toBeNull();
+    });
   });
 
   test('exposes stable subscription status copy for UI surfaces', () => {

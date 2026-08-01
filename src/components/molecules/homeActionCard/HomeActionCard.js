@@ -45,6 +45,9 @@ const GHOST_ICON_PLACEMENT = {
  * @param {HomeCardEmphasis} [props.emphasis]
  * @param {HomeCardTone} [props.tone]
  * @param {boolean} [props.highlighted] - Surbrillance pulsée (étape du tour guidé)
+ * @param {boolean} [props.locked] - Quota gratuit épuisé : la carte est grisée mais reste
+ *   pressable, l'appui ouvrant la feuille de vente (L10-C, stratégie paywall §2.3).
+ *   Ne jamais l'utiliser sans `premiumScope` : griser en silence est interdit.
  * @param {'club' | 'team'} [props.premiumScope] - Offre couvrant l'action (badge informatif, handoff 12)
  * @param {1 | 2} [props.subtitleLines]
  * @param {((node: any) => void) | { current: any }} [props.tutorialTargetRef]
@@ -58,6 +61,7 @@ function HomeActionCard({
   icon = 'search',
   illustration,
   illustrationPlacement,
+  locked = false,
   onPress,
   premiumScope,
   subtitle,
@@ -119,6 +123,11 @@ function HomeActionCard({
         },
         disabled && {
           opacity: 0.5,
+        },
+        // Grisee mais vivante : `disabled` couperait l'appui, or c'est
+        // justement l'appui qui ouvre la vente.
+        !disabled && locked && {
+          opacity: 0.55,
         },
       ])}
     >
