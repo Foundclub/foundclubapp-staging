@@ -397,9 +397,14 @@ function SubscriptionPaywallSheet({
         renewalDate.setFullYear(renewalDate.getFullYear() + 1);
       }
       navigation.navigate(RouteNames.SubscriptionSuccess, {
+        // La portee vient de l'ACHAT, pas du cache d'abonnement : juste apres
+        // l'achat, le webhook du store n'a pas encore converge (L08). L'ecran
+        // de succes en deduit la liste de ce qui est reellement debloque (L11).
+        clubDocumentId: isClubPurchase ? purchaseClubDocumentId : undefined,
         offerLabel: isClubPurchase
           ? String(selectedTierOption?.label || 'Club')
           : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+        offerScope: isClubPurchase ? 'CLUB' : 'TEAM',
         renewalDateLabel: format(renewalDate, 'd MMMM yyyy', { locale: fr }),
         resumeCtaLabel: sellingSheet?.successCtaLabel || 'Reprendre',
       });

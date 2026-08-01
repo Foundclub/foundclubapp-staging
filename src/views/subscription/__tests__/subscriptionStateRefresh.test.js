@@ -34,6 +34,16 @@ jest.mock('@/services/bootstrap/bootstrapService', () => ({
   getAppBootstrap: jest.fn(),
 }));
 
+// L11 : l'ecran traduit ses libelles ; sans instance i18next initialisee, le
+// vrai hook rendrait les cles — le repli suffit ici, le scenario ne lit pas la copy.
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (/** @type {string} */ key, /** @type {any} */ fallback) => (
+      typeof fallback === 'string' ? fallback : key
+    ),
+  }),
+}));
+
 jest.mock('@/services/subscription/subscriptionService', () => ({
   trackSubscriptionFunnelEvent: jest.fn(),
 }));

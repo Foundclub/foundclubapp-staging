@@ -2193,6 +2193,30 @@ export default {
       updated: 'Créneau modifié',
     },
   },
+  // L11 — écran d'après-achat : la liste reflète la matrice serveur
+  // (subscription-permission.ts) via getSubscriptionUnlockedCapabilities,
+  // ne pas y ajouter une capacité que le serveur ne débloque pas.
+  subscriptionSuccess: {
+    firstActions: {
+      club: 'Gérer mon club',
+      composition: 'Préparer ma compo',
+      events: 'Publier un événement ou un match',
+      recruitment: 'Publier une annonce de recrutement',
+    },
+    firstActionTitle: 'Que veux-tu faire en premier pour profiter de ton abonnement ?',
+    unlockedTitle: 'Ton offre débloque :',
+    unlocks: {
+      clubRoles: 'Gestion des entraîneurs et dirigeants',
+      clubTeams: 'Toutes les équipes du club couvertes',
+      composition: 'Composition et convocations',
+      dues: 'Campagnes de cotisations',
+      events: 'Événements et matchs illimités',
+      facilities: 'Installations du club',
+      recruitment: 'Annonces de recrutement illimitées',
+      sponsors: 'Sponsors du club',
+      teams: 'Équipes supplémentaires',
+    },
+  },
   superAdminContentManager: {
     actions: {
       addId: 'Ajouter ID',

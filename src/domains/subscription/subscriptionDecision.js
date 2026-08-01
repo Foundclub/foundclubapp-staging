@@ -548,6 +548,45 @@ export const getSubscriptionClubSheetContent = (decision) => {
   };
 };
 
+// L11 — ce que l'offre qui vient d'etre achetee debloque REELLEMENT, miroir de la
+// matrice serveur (admin/src/api/subscription/services/subscription-permission.ts:43-80) :
+// FREE_QUOTAS leve les quotas event.publish / match.publish / recruitment.ad.publish /
+// team.create avec TEAM ou CLUB ; ACTION_REQUIRED_PLANS reserve composition.manage a
+// TEAM ou CLUB, et club.roles.manage / dues.campaign.create / facility.manage /
+// sponsor.manage a CLUB seul. `club.broadcast` (CLUB aussi) est volontairement
+// absent : aucun point d'appel dans l'app, la porte n'existe pas
+// (docs/STRATEGIE_PAYWALL_2026_08_01.md §1.2).
+/** @type {string[]} */
+const TEAM_UNLOCKED_CAPABILITIES = ['events', 'recruitment', 'composition', 'teams'];
+/** @type {string[]} */
+const CLUB_UNLOCKED_CAPABILITIES = [
+  'clubTeams',
+  'events',
+  'recruitment',
+  'composition',
+  'facilities',
+  'sponsors',
+  'dues',
+  'clubRoles',
+];
+
+/**
+ * Liste des capacites ouvertes par l'achat qui vient d'aboutir. La portee vient
+ * de l'ACHAT (l'appelant sait ce qu'il a vendu), jamais du cache d'abonnement :
+ * juste apres l'achat, le webhook du store n'a pas encore converge et le cache
+ * decrit l'ANCIEN etat (L08). Portee inconnue (achat Stripe web sans detail
+ * d'offre) : on rend le socle commun aux deux offres — en dire moins est
+ * honnete, inventer ne l'est pas.
+ * @param {string | null | undefined} offerScope 'TEAM' | 'CLUB' | absent
+ * @returns {string[]} cles de `subscriptionSuccess.unlocks.*` dans fr.js
+ */
+export const getSubscriptionUnlockedCapabilities = (offerScope) => {
+  const normalizedScope = String(offerScope || '').trim().toUpperCase();
+  return normalizedScope === 'CLUB'
+    ? [...CLUB_UNLOCKED_CAPABILITIES]
+    : [...TEAM_UNLOCKED_CAPABILITIES];
+};
+
 /**
  * @param {any} decision
  * @returns {string}
