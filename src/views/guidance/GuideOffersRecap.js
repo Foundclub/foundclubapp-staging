@@ -242,7 +242,6 @@ function GuideOffersRecap({ navigation }) {
     [clubTier, clubTierEntries],
   );
 
-  const isClubVerified = userData?.club?.clubVerified === true;
   const currentClubDocumentId = String(userData?.club?.documentId || '').trim();
   const isCatalogLoading = catalogQuery.isLoading;
   const isCatalogError = catalogQuery.isError
@@ -267,17 +266,6 @@ function GuideOffersRecap({ navigation }) {
       ? getPostOnboardingHomeRoute()
       : RouteNames.HomeTab;
     navigation.navigate(homeRoute);
-  };
-
-  const handleVerifyClub = () => {
-    if (!currentClubDocumentId) {
-      handleLater();
-      return;
-    }
-    navigation.navigate(RouteNames.ClubStack, {
-      params: { clubId: currentClubDocumentId },
-      screen: RouteNames.Club,
-    });
   };
 
   // Achat direct depuis le Recap (mode test backend — RevenueCat a l'item 14).
@@ -357,14 +345,13 @@ function GuideOffersRecap({ navigation }) {
   };
 
   /**
-   * Carte d'offre selectionnable (repliee / depliee / verrouillee).
+   * Carte d'offre selectionnable (repliee / depliee).
    * @param {'team' | 'club'} offerKey
    * @returns {import('react').ReactElement}
    */
   const renderOfferCard = (offerKey) => {
     const isClub = offerKey === 'club';
-    const isDisabled = isClub && !isClubVerified;
-    const isSelected = selectedOffer === offerKey && !isDisabled;
+    const isSelected = selectedOffer === offerKey;
     const offerName = isClub ? 'Club' : 'Équipe';
     const offerSub = isClub
       ? 'Pour les dirigeants — tout le club'
@@ -390,19 +377,15 @@ function GuideOffersRecap({ navigation }) {
       ? formatSubscriptionMonthlyEquivalentLabel(cardEntry?.referencePriceEurCents)
       : '';
 
-    let cardBackgroundColor = 'rgba(255,255,255,0.04)';
-    if (isDisabled) {
-      cardBackgroundColor = 'rgba(255,255,255,0.025)';
-    } else if (isSelected) {
-      cardBackgroundColor = 'rgba(1,179,244,0.10)';
-    }
+    const cardBackgroundColor = isSelected
+      ? 'rgba(1,179,244,0.10)'
+      : 'rgba(255,255,255,0.04)';
 
     return (
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityState={{ disabled: isDisabled, selected: isSelected }}
+        accessibilityState={{ selected: isSelected }}
         activeOpacity={0.9}
-        disabled={isDisabled}
         key={offerKey}
         onPress={() => {
           setSelectedOffer(offerKey);
@@ -413,17 +396,16 @@ function GuideOffersRecap({ navigation }) {
           borderColor: isSelected ? Colors.primary500 : 'rgba(255,255,255,0.10)',
           borderRadius: 20,
           borderWidth: 1.5,
-          opacity: isDisabled ? 0.75 : 1,
           paddingBottom: 18,
           paddingHorizontal: 16,
           paddingTop: 16,
         }}
       >
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-          <Text style={[Fonts.h4Black, isDisabled ? Fonts.neutral400 : Fonts.neutral00]}>
+          <Text style={[Fonts.h4Black, Fonts.neutral00]}>
             {offerName}
           </Text>
-          {!isClub && !isDisabled ? (
+          {!isClub ? (
             <View style={{
               backgroundColor: Colors.primary500,
               borderRadius: 999,
@@ -442,67 +424,28 @@ function GuideOffersRecap({ navigation }) {
               </Text>
             </View>
           ) : null}
-          {isClub && !isDisabled ? (
-            <Text style={[Fonts.p4Bold, Fonts.primary200]}>
-              club vérifié requis
-            </Text>
-          ) : null}
-          {isDisabled ? (
-            <View style={{
-              backgroundColor: 'rgba(1,179,244,0.10)',
-              borderColor: 'rgba(1,179,244,0.28)',
-              borderRadius: 999,
-              borderWidth: 1,
-              paddingHorizontal: 8,
-              paddingVertical: 2,
-            }}
-            >
-              <Text style={[Fonts.p4Bold, Fonts.primary200, { textTransform: 'uppercase' }]}>
-                club vérifié
-              </Text>
-            </View>
-          ) : null}
           <View style={Alignments.fill} />
-          {!isDisabled ? (
-            <View style={{
-              alignItems: 'center',
-              backgroundColor: isSelected ? Colors.primary500 : 'transparent',
-              borderColor: isSelected ? Colors.primary500 : Colors.neutral600,
-              borderRadius: 999,
-              borderWidth: 2,
-              height: 22,
-              justifyContent: 'center',
-              width: 22,
-            }}
-            >
-              {isSelected ? (
-                <Text style={{ color: Colors.primary900, fontSize: 12, fontWeight: '900' }}>✓</Text>
-              ) : null}
-            </View>
-          ) : null}
+          <View style={{
+            alignItems: 'center',
+            backgroundColor: isSelected ? Colors.primary500 : 'transparent',
+            borderColor: isSelected ? Colors.primary500 : Colors.neutral600,
+            borderRadius: 999,
+            borderWidth: 2,
+            height: 22,
+            justifyContent: 'center',
+            width: 22,
+          }}
+          >
+            {isSelected ? (
+              <Text style={{ color: Colors.primary900, fontSize: 12, fontWeight: '900' }}>✓</Text>
+            ) : null}
+          </View>
         </View>
         <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[4]]}>
           {offerSub}
         </Text>
 
-        {isDisabled ? (
-          <>
-            <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[12]]}>
-              Réservée aux clubs vérifiés. Fais vérifier ton club pour la débloquer.
-            </Text>
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={handleVerifyClub}
-              style={[Spaces.paddingVertical[8], { alignSelf: 'flex-start' }]}
-            >
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                Vérifier mon club →
-              </Text>
-            </TouchableOpacity>
-          </>
-        ) : null}
-
-        {!isDisabled && isCatalogLoading ? (
+        {isCatalogLoading ? (
           <View style={[Spaces.gap[8], Spaces.marginTop[12]]}>
             <View style={{
               backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 8, height: 26, width: 128,
@@ -515,7 +458,7 @@ function GuideOffersRecap({ navigation }) {
           </View>
         ) : null}
 
-        {!isDisabled && !isCatalogLoading && isSelected ? (
+        {!isCatalogLoading && isSelected ? (
           <>
             <View style={Spaces.marginTop[12]}>
               <TierSelector
@@ -556,7 +499,7 @@ function GuideOffersRecap({ navigation }) {
           </>
         ) : null}
 
-        {!isDisabled && !isCatalogLoading && !isSelected ? (
+        {!isCatalogLoading && !isSelected ? (
           <>
             <View
               style={[
