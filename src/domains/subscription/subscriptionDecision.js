@@ -673,3 +673,82 @@ export const getSubscriptionQuotaItem = (
   return getSubscriptionQuotaItems(freeUsageSummary, subscriptionAccessLevel)
     .find((entry) => entry?.quotaType === normalizedQuotaType) || null;
 };
+
+// Cle de paywall « moderne » (feuille de vente AVEC bouton d'achat) qui repond a
+// chaque quota gratuit. Les 4 se debloquent avec l'offre Équipe, qui est la
+// seule achetable dans la sheet aujourd'hui — d'ou l'absence de quota Club ici.
+/** @type {Record<string, string>} */
+const ENTRY_POINT_PAYWALL_BY_QUOTA_TYPE = {
+  EVENT_PUBLISH: 'EVENT_LIMIT',
+  FREE_TEAM: 'TEAM_LIMIT',
+  MATCH_PUBLISH: 'MATCH_LIMIT',
+  RECRUITMENT_AD_PUBLISH: 'RECRUITMENT_AD_LIMIT',
+};
+
+// Ce que le point d'entree dit une fois grise. Griser en silence est interdit
+// (STRATEGIE_PAYWALL_2026_08_01 §2.3) : sans phrase, l'utilisateur croit a un bug.
+/** @type {Record<string, string>} */
+const ENTRY_POINT_EXHAUSTED_HINTS = {
+  EVENT_PUBLISH: "Ton événement gratuit est déjà en ligne — débloque l'offre Équipe",
+  FREE_TEAM: "Ta création gratuite est utilisée — débloque l'offre Équipe",
+  MATCH_PUBLISH: "Ton match gratuit est déjà en ligne — débloque l'offre Équipe",
+  RECRUITMENT_AD_PUBLISH: "Ton annonce gratuite est déjà en ligne — débloque l'offre Équipe",
+};
+
+// Seuls ces roles peuvent acheter, et ce sont les seuls pour qui le serveur
+// calcule les compteurs (admin/src/api/app-bootstrap/services/app-bootstrap.ts:111,
+// arbitrage Adel Q4 du 2026-08-01). Pour les autres, griser serait un mensonge :
+// l'app n'a aucun compteur a lire, et leur vendre un abonnement est exclu.
+const SUBSCRIPTION_CAPABLE_ROLE_KEYS = new Set(['coach', 'president', 'superAdmin']);
+
+/**
+ * Verrou d'un POINT D'ENTREE payant (STRATEGIE_PAYWALL_2026_08_01 §2.3).
+ *
+ * Repond a une seule question, AVANT que l'utilisateur ne s'engage : l'app
+ * sait-elle DEJA que l'action est bloquee par le quota gratuit ? Si oui, le
+ * point d'entree se grise, porte son etiquette, et l'appui ouvre la feuille de
+ * vente — au lieu de laisser remplir un tunnel entier pour refuser a la fin.
+ *
+ * Rend `null` des que griser serait un mensonge : profil qui ne peut pas
+ * acheter, abonne, quota encore disponible, ou quota inconnu. La decision
+ * rendue vise les 4 cles a presentation moderne, donc avec bouton d'achat.
+ * @param {object} input
+ * @param {any[]} input.freeUsageSummary - Compteurs gratuits de `GET /app/bootstrap`.
+ * @param {string} input.quotaType - Une cle de `ENTRY_POINT_PAYWALL_BY_QUOTA_TYPE`.
+ * @param {string} [input.roleKey] - Cle de role rendue par `getUserRoleKey`.
+ * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [input.subscriptionAccessLevel]
+ * @returns {{ badgeLabel: string; decision: any; hint: string; scope: 'team' } | null}
+ */
+export const getSubscriptionEntryPointLock = ({
+  freeUsageSummary,
+  quotaType,
+  roleKey,
+  subscriptionAccessLevel = 'FREE',
+}) => {
+  const normalizedQuotaType = String(quotaType || '').trim();
+  const paywallKey = ENTRY_POINT_PAYWALL_BY_QUOTA_TYPE[normalizedQuotaType];
+  if (!paywallKey || !SUBSCRIPTION_CAPABLE_ROLE_KEYS.has(String(roleKey || '').trim())) {
+    return null;
+  }
+
+  const quotaItem = getSubscriptionQuotaItem(
+    freeUsageSummary,
+    normalizedQuotaType,
+    subscriptionAccessLevel,
+  );
+  if (!quotaItem || quotaItem.remaining > 0) {
+    return null;
+  }
+
+  return {
+    badgeLabel: 'Offre Équipe',
+    decision: {
+      allowed: false,
+      paywall: paywallKey,
+      reason: 'SUBSCRIPTION_REQUIRED',
+      requiredPlan: ['TEAM'],
+    },
+    hint: ENTRY_POINT_EXHAUSTED_HINTS[normalizedQuotaType],
+    scope: /** @type {'team'} */ ('team'),
+  };
+};

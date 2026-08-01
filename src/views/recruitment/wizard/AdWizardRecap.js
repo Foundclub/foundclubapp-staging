@@ -676,6 +676,7 @@ function AdWizardRecap({ navigation }) {
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
         clubDocumentId={state.team?.club?.documentId || null}
+        contextLabel="Ton annonce de recrutement"
         decision={subscriptionPaywallDecision}
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}

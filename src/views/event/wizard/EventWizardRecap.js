@@ -1465,6 +1465,7 @@ function EventWizardRecap({ navigation }) {
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
         clubDocumentId={clubVerificationSummary?.clubDocumentId || null}
+        contextLabel={state.type?.name || 'Ton événement'}
         decision={subscriptionPaywallDecision}
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}

@@ -481,6 +481,7 @@ function TeamWizardRecap({ navigation }) {
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
         clubDocumentId={selectedOverview.clubId || null}
+        contextLabel={selectedOverview.name || 'Ta nouvelle équipe'}
         decision={subscriptionPaywallDecision}
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}

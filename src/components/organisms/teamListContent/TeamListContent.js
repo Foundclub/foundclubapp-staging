@@ -14,9 +14,13 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
-import { getSubscriptionQuotaItem } from '@/domains/subscription/subscriptionDecision';
+import {
+  getSubscriptionEntryPointLock,
+  getSubscriptionQuotaItem,
+} from '@/domains/subscription/subscriptionDecision';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -26,7 +30,10 @@ import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
+import PremiumBadge from '@/components/molecules/premiumBadge/PremiumBadge';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SubscriptionPaywallSheet
+  from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
@@ -86,6 +93,19 @@ function TeamListContent({
   const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const { width } = useWindowDimensions();
   const isCompactScreen = width <= 375;
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+
+  // Le juge partage du grisage (§2.3) : rend `null` des qu'il resterait du
+  // quota, que l'utilisateur est abonne, ou qu'il ne peut pas acheter.
+  const newTeamLock = useMemo(
+    () => getSubscriptionEntryPointLock({
+      freeUsageSummary,
+      quotaType: 'FREE_TEAM',
+      roleKey: getUserRoleKey(userData?.role?.type || userData?.role?.name),
+      subscriptionAccessLevel,
+    }),
+    [freeUsageSummary, subscriptionAccessLevel, userData?.role?.name, userData?.role?.type],
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -365,6 +385,9 @@ function TeamListContent({
   }, [navigation]);
 
   // Carte pointillee « Nouvelle équipe » avec statut du quota (handoff 9a).
+  // L10-C : quand le quota gratuit est deja epuise, ce point d'entree se grise
+  // et s'etiquette AVANT le tunnel — l'appui ouvre la feuille de vente au lieu
+  // de faire remplir le wizard pour refuser a la fin (§2.3).
   const renderNewTeamFooterCard = useCallback(() => {
     if (isLeagueMode || !canManageTeam) {
       return null;
@@ -382,11 +405,20 @@ function TeamListContent({
     }
     return (
       <TouchableOpacity
+        accessibilityHint={quotaHint}
+        accessibilityLabel="Nouvelle équipe"
         accessibilityRole="button"
-        onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
-          params: { clubId },
-          screen: RouteNames.TeamWizardName,
-        })}
+        onPress={() => {
+          if (newTeamLock) {
+            setSubscriptionPaywallDecision(newTeamLock.decision);
+            return;
+          }
+
+          /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
+            params: { clubId },
+            screen: RouteNames.TeamWizardName,
+          });
+        }}
         style={[
           Alignments.row,
           Alignments.alignCenter,
@@ -401,10 +433,18 @@ function TeamListContent({
             paddingHorizontal: 16,
             paddingVertical: 10,
           },
+          // Grise, mais jamais muet ni inerte : l'etiquette dit pourquoi et
+          // l'appui reste actif pour ouvrir la vente (§2.3).
+          Boolean(newTeamLock) && { opacity: 0.55 },
         ]}
       >
         <Text style={[Fonts.p1Bold, Fonts.primary500]}>+</Text>
-        <View style={[Alignments.fill]}>
+        <View style={[Alignments.fill, Spaces.gap[4]]}>
+          {newTeamLock ? (
+            <View style={[Alignments.row]}>
+              <PremiumBadge label={newTeamLock.badgeLabel} scope={newTeamLock.scope} />
+            </View>
+          ) : null}
           <Text style={[Fonts.p2Bold, Fonts.primary500]}>Nouvelle équipe</Text>
           <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral400, { marginTop: 1 }]}>
             {quotaHint}
@@ -420,6 +460,7 @@ function TeamListContent({
     freeUsageSummary,
     isLeagueMode,
     navigation,
+    newTeamLock,
     Spaces,
     subscriptionAccessLevel,
   ]);
@@ -1009,6 +1050,13 @@ function TeamListContent({
           </WebFloatingOverlay>
         ) : null}
       </WithDataWrapper>
+
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
     </View>
   );
 }

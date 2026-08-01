@@ -25,6 +25,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
 import {
+  getSubscriptionEntryPointLock,
   getSubscriptionQuotaItem,
   getSubscriptionStatusMeta,
 } from '@/domains/subscription/subscriptionDecision';
@@ -42,6 +43,8 @@ import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import SubscriptionPaywallSheet
+  from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
@@ -96,6 +99,7 @@ const ScreenContainerView = /** @type {any} */ (ScreenContainer);
  *  emphasis?: 'default' | 'primary';
  *  tone?: 'default' | 'destructive';
  *  highlighted?: boolean;
+ *  locked?: boolean;
  *  premiumScope?: 'club' | 'team';
  *  subtitleLines?: 1 | 2;
  *  tutorial?: any;
@@ -165,6 +169,7 @@ function HomeSection({
               icon={card.icon}
               illustration={card.illustration}
               illustrationPlacement={card.illustrationPlacement}
+              locked={card.locked}
               onPress={card.onPress}
               premiumScope={card.premiumScope}
               subtitle={card.subtitle}
@@ -422,6 +427,31 @@ function HomeHubContent({ auth, navigation, route }) {
     () => getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', subscriptionAccessLevel),
     [freeUsageSummary, subscriptionAccessLevel],
   );
+
+  // L10-C — les deux cartes de publication sont des POINTS D'ENTREE : quand le
+  // quota gratuit est deja epuise, l'app le sait des le demarrage (bootstrap) et
+  // doit le dire ICI, au lieu de laisser remplir le wizard entier pour refuser a
+  // la fin (STRATEGIE_PAYWALL_2026_08_01 §2.3). Le juge est partage avec la
+  // liste des equipes : une seule regle, un seul endroit.
+  const addEventLock = useMemo(
+    () => getSubscriptionEntryPointLock({
+      freeUsageSummary,
+      quotaType: 'EVENT_PUBLISH',
+      roleKey,
+      subscriptionAccessLevel,
+    }),
+    [freeUsageSummary, roleKey, subscriptionAccessLevel],
+  );
+  const addAdLock = useMemo(
+    () => getSubscriptionEntryPointLock({
+      freeUsageSummary,
+      quotaType: 'RECRUITMENT_AD_PUBLISH',
+      roleKey,
+      subscriptionAccessLevel,
+    }),
+    [freeUsageSummary, roleKey, subscriptionAccessLevel],
+  );
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   const lastLegacyRedirectRef = useRef('');
   useEffect(() => {
@@ -1199,8 +1229,15 @@ function HomeHubContent({ auth, navigation, route }) {
       return;
     }
 
+    // Quota gratuit deja epuise : on vend ici plutot que de faire remplir le
+    // wizard pour refuser au recapitulatif (§2.3).
+    if (addEventLock) {
+      setSubscriptionPaywallDecision(addEventLock.decision);
+      return;
+    }
+
     navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType });
-  }, [isPublishingGovernedBlocked, navigation, showBanner, t]);
+  }, [addEventLock, isPublishingGovernedBlocked, navigation, showBanner, t]);
 
   const handleAddRecruitmentAd = useCallback(() => {
     if (isPublishingGovernedBlocked) {
@@ -1218,8 +1255,13 @@ function HomeHubContent({ auth, navigation, route }) {
       return;
     }
 
+    if (addAdLock) {
+      setSubscriptionPaywallDecision(addAdLock.decision);
+      return;
+    }
+
     navigation.navigate(RouteNames.AdWizardStack);
-  }, [isPublishingGovernedBlocked, navigation, showBanner, t]);
+  }, [addAdLock, isPublishingGovernedBlocked, navigation, showBanner, t]);
 
   const handleOpenMyRecruitmentAds = useCallback(() => {
     navigation.navigate(RouteNames.SearchRecruitment, {
@@ -1457,9 +1499,10 @@ function HomeHubContent({ auth, navigation, route }) {
           highlighted: highlightAddEventCard,
           icon: 'calendar',
           key: 'manage-add-event',
+          locked: Boolean(addEventLock),
           onPress: handleAddEvent,
-          premiumScope: teamCardPremiumScope,
-          subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
+          premiumScope: addEventLock ? addEventLock.scope : teamCardPremiumScope,
+          subtitle: addEventLock ? addEventLock.hint : t('homeHub.cards.manage.addEvent.subtitle'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addEvent.title'),
           tutorial: makeTutorial(
@@ -1474,9 +1517,12 @@ function HomeHubContent({ auth, navigation, route }) {
           disabled: isPublishingGovernedBlocked,
           icon: 'running',
           key: 'manage-add-ad',
+          locked: Boolean(addAdLock),
           onPress: handleAddRecruitmentAd,
-          premiumScope: teamCardPremiumScope,
-          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publie une annonce de recrutement.'),
+          premiumScope: addAdLock ? addAdLock.scope : teamCardPremiumScope,
+          subtitle: addAdLock
+            ? addAdLock.hint
+            : t('homeHub.cards.manage.addAd.subtitle', 'Publie une annonce de recrutement.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
           tutorial: makeTutorial(
@@ -1571,9 +1617,10 @@ function HomeHubContent({ auth, navigation, route }) {
           highlighted: highlightAddEventCard,
           icon: 'calendar',
           key: 'manage-add-event',
+          locked: Boolean(addEventLock),
           onPress: handleAddEvent,
-          premiumScope: teamCardPremiumScope,
-          subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
+          premiumScope: addEventLock ? addEventLock.scope : teamCardPremiumScope,
+          subtitle: addEventLock ? addEventLock.hint : t('homeHub.cards.manage.addEvent.subtitle'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addEvent.title'),
           tutorial: makeTutorial('manageAddEvent', 4, 'Ajouter un événement', 'Crée un entraînement, match ou détection pour tes équipes.'),
@@ -1583,9 +1630,12 @@ function HomeHubContent({ auth, navigation, route }) {
           disabled: isPublishingGovernedBlocked,
           icon: 'running',
           key: 'manage-add-ad',
+          locked: Boolean(addAdLock),
           onPress: handleAddRecruitmentAd,
-          premiumScope: teamCardPremiumScope,
-          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publie une annonce de recrutement.'),
+          premiumScope: addAdLock ? addAdLock.scope : teamCardPremiumScope,
+          subtitle: addAdLock
+            ? addAdLock.hint
+            : t('homeHub.cards.manage.addAd.subtitle', 'Publie une annonce de recrutement.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
           tutorial: makeTutorial(
@@ -1649,6 +1699,8 @@ function HomeHubContent({ auth, navigation, route }) {
 
     return [];
   }, [
+    addAdLock,
+    addEventLock,
     clubCardPremiumScope,
     highlightAddEventCard,
     Colors.primary500,
@@ -2234,6 +2286,13 @@ function HomeHubContent({ auth, navigation, route }) {
       <ExternalCompetitionPromptGate
         enabled={isExternalCompetitionPromptEnabled}
         userData={userData}
+      />
+
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
       />
     </ScreenContainerView>
   );
