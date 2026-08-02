@@ -54,7 +54,16 @@ function SubscriptionQuotaBanner({ label, quotaType }) {
     return null;
   }
 
-  if (subscriptionAccessLevel !== 'FREE' && subscriptionAccessLevel !== 'CLUB_UNVERIFIED') {
+  // Le SEUL juge des compteurs gratuits est `getSubscriptionQuotaItem`
+  // (subscriptionDecision.js) : il rend `null` des que l'utilisateur a paye,
+  // offre Équipe comme offre Club — CERTIFIEE OU NON (cf. `hasActiveClubOffer`).
+  // La condition qui vivait ici recopiait la sienne a la main et n'a pas suivi :
+  // elle laissait passer CLUB_UNVERIFIED, donc on revendait du gratuit a un
+  // abonne Club. On ne rejuge plus, on demande — le `if (!quotaItem)` ci-dessous
+  // suffit desormais.
+  // Reste le seul garde-fou propre a ce bandeau : tant que le niveau n'est pas
+  // connu (bootstrap en cours), on n'affiche aucun argument de vente.
+  if (!subscriptionAccessLevel) {
     return null;
   }
 

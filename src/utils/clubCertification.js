@@ -22,8 +22,13 @@ export const isVerifiedClub = (club) => (
  * @param {any} club
  * @returns {string}
  */
+// R10 — un seul mot pour une seule idee : CERTIFIE. L'ancien couple melangeait
+// deux vocabulaires pour le meme etat, et son accord au feminin visait l'equipe
+// alors que c'est le CLUB qui est certifie.
+// Portee assumee (validee par Adel) : ce libelle s'affiche sur la fiche club
+// ET sur les pages evenements du site web.
 export const getClubCertificationLabel = (club) => (
-  isVerifiedClub(club) ? 'Vérifié' : 'Non certifiée'
+  isVerifiedClub(club) ? 'Certifié' : 'Non certifié'
 );
 
 /**

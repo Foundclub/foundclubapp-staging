@@ -2044,14 +2044,14 @@ export default {
         used: 'offert utilisé',
       },
       states: {
-        club: 'Club',
-        clubUnverified: 'Club · en vérification',
+        club: 'Club · actif',
+        clubUnverified: 'Club · actif',
         free: 'Gratuit',
         team: 'Équipe',
       },
       status: {
-        club: 'Les droits Club sont actifs sur ton club vérifié.',
-        clubUnverified: 'Paiement Club actif, vérification du dirigeant en cours.',
+        club: 'Les droits Club sont actifs sur tout ton club.',
+        clubUnverified: 'Tes droits Club sont actifs. Ton club est en cours de certification par la plateforme.',
         free: 'Tu utilises l\'offre gratuite FoundClub.',
         team: 'Tes équipes couvertes profitent des droits Équipe.',
       },

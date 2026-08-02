@@ -152,13 +152,19 @@ const RETIRED_QUOTA_TYPES = new Set(['PROFILE_CONTACT']);
 
 /** @type {Record<string, { description: string; label: string }>} */
 const SUBSCRIPTION_STATUS_META = {
+  // R10 — les DEUX etats Club portent la meme etiquette, volontairement :
+  // l'abonnement est identique de part et d'autre, et la certification est une
+  // action de la console SuperAdmin (admin/src/bootstrap/permission-sync.js:173)
+  // qu'aucune route n'ouvre au dirigeant. Un badge « Club à vérifier » lui
+  // demandait donc un geste impossible — et rendait l'etat NON certifie plus
+  // inquietant que l'etat certifie, alors qu'il n'ouvre pas moins de droits.
   CLUB: {
-    description: 'Les droits Club sont actifs pour ton club vérifie.',
-    label: 'Club',
+    description: 'Les droits Club sont actifs sur tout ton club.',
+    label: 'Club · actif',
   },
   CLUB_UNVERIFIED: {
-    description: 'Tes droits Club sont actifs. Il reste à faire vérifier ton club — sans effet sur ton offre.',
-    label: 'Club à vérifier',
+    description: 'Tes droits Club sont actifs. Ton club est en cours de certification par la plateforme.',
+    label: 'Club · actif',
   },
   FREE: {
     description: 'Tu utilises actuellement les quotas gratuits FoundClub.',
@@ -712,7 +718,17 @@ export const getCoveredTeamCount = (entitlementsSummary, subscriptionSummary) =>
  * @returns {Array<{ label: string; quotaType: string; remaining: number; total: number; used: number }>}
  */
 export const getSubscriptionQuotaItems = (freeUsageSummary, subscriptionAccessLevel = 'FREE') => {
-  if (!['CLUB_UNVERIFIED', 'FREE'].includes(subscriptionAccessLevel)) {
+  // Les compteurs de l'offre GRATUITE ne concernent que ceux qui ne paient rien.
+  // CLUB_UNVERIFIED figurait ici par erreur, d'avant la decision produit du
+  // 2026-07-17 (admin/src/api/subscription/services/subscription-permission.ts
+  // :751-756) : un entitlement CLUB actif ouvre TOUT, club certifie ou pas —
+  // c'est ce que tranche `hasActiveClubOffer` (ligne 618) et ses 8 lignes de
+  // motif. Lui afficher « il te reste 1 publication gratuite » revenait a lui
+  // revendre ce qu'il paye deja.
+  // On teste `!== 'FREE'` plutot que d'appeler le juge : la question posee ici
+  // n'est pas « a-t-il l'offre Club ? » mais « ne paie-t-il rien ? ». Un niveau
+  // futur tombe alors du cote sur — celui qui ne revend rien a un client.
+  if (subscriptionAccessLevel !== 'FREE') {
     return [];
   }
 

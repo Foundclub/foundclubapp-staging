@@ -259,7 +259,13 @@ describe('subscriptionDecision', () => {
     })).toBe(3);
   });
 
-  test('keeps free quota counters visible only for FREE and CLUB_UNVERIFIED states', () => {
+  // R09 — CE TEST A CHANGE DE SENS le 2026-08-02. Il figeait « FREE et
+  // CLUB_UNVERIFIED », ce qui etait ANTERIEUR a la decision produit du
+  // 2026-07-17 : un entitlement CLUB actif ouvre tout, club certifie ou pas
+  // (admin/src/api/subscription/services/subscription-permission.ts:751-756).
+  // Montrer un compteur gratuit a un abonne Club, c'est lui revendre ce qu'il
+  // paye deja. Les compteurs gratuits ne concernent donc plus que FREE.
+  test('keeps free quota counters visible for FREE only — a paid club is never sold its own offer', () => {
     const freeUsageSummary = [
       {
         limit: 1,
@@ -293,9 +299,14 @@ describe('subscriptionDecision', () => {
         used: 1,
       },
     ]);
-    expect(getSubscriptionQuotaItems(freeUsageSummary, 'CLUB_UNVERIFIED')).toHaveLength(1);
+    expect(getSubscriptionQuotaItems(freeUsageSummary, 'CLUB_UNVERIFIED')).toEqual([]);
     expect(getSubscriptionQuotaItems(freeUsageSummary, 'TEAM')).toEqual([]);
     expect(getSubscriptionQuotaItems(freeUsageSummary, 'CLUB')).toEqual([]);
+    // Les deux etats Club rendent EXACTEMENT la meme chose : c'est l'invariant
+    // que la ligne fautive cassait, et le seul qui compte pour le client.
+    expect(getSubscriptionQuotaItems(freeUsageSummary, 'CLUB_UNVERIFIED'))
+      .toEqual(getSubscriptionQuotaItems(freeUsageSummary, 'CLUB'));
+    expect(getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', 'CLUB_UNVERIFIED')).toBeNull();
     expect(getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', 'FREE')).toEqual({
       label: 'Evenements',
       quotaType: 'EVENT_PUBLISH',
@@ -463,8 +474,8 @@ describe('subscriptionDecision', () => {
       label: 'Gratuit',
     });
     expect(getSubscriptionStatusMeta('CLUB_UNVERIFIED')).toEqual({
-      description: 'Tes droits Club sont actifs. Il reste à faire vérifier ton club — sans effet sur ton offre.',
-      label: 'Club à vérifier',
+      description: 'Tes droits Club sont actifs. Ton club est en cours de certification par la plateforme.',
+      label: 'Club · actif',
     });
   });
 

@@ -2776,23 +2776,17 @@ function TeamDetails({ navigation, route }) {
                   },
                 ]}
               >
+                {/* C'est le CLUB qui est certifie, jamais l'equipe. Et le lien
+                    « Certifier → » qui vivait ici promettait l'impossible : la
+                    certification est une action de la console SuperAdmin
+                    (admin/src/bootstrap/permission-sync.js:173), aucune route ne
+                    l'ouvre a un dirigeant. Le libelle d'etat reste, le lien part. */}
                 <Text style={isVerifiedClub(team?.club)
                   ? [Fonts.p3, { color: Colors.success500 }]
                   : [Fonts.p3, Fonts.neutral300]}
                 >
-                  {isVerifiedClub(team?.club) ? 'Équipe certifiée' : 'Équipe non certifiée'}
+                  {isVerifiedClub(team?.club) ? 'Club certifié' : 'Club non certifié'}
                 </Text>
-                {!isVerifiedClub(team?.club) && team?.club?.documentId ? (
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    onPress={() => navigation.navigate(RouteNames.ClubStack, {
-                      params: { clubId: team?.club?.documentId },
-                      screen: RouteNames.Club,
-                    })}
-                  >
-                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>Certifier →</Text>
-                  </TouchableOpacity>
-                ) : null}
               </View>
             </View>
             <View

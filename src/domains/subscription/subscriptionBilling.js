@@ -144,7 +144,10 @@ export const getSubscriptionCatalogEntryMeta = (entry) => {
   }
 
   return {
-    description: 'Debloque les droits club. La vérification dirigeant reste obligatoire.',
+    // R10 — l'argumentaire posait une condition qui n'existe plus depuis la
+    // decision produit du 2026-07-17 : l'offre ouvre les droits immediatement,
+    // club certifie ou pas. On supprime l'affirmation au lieu de la reformuler.
+    description: 'Débloque les droits club sur tout ton club.',
     label: displayName || formatSubscriptionPlanLabel(entry?.planCode),
     priceLabel,
     secondaryLabel: ['Droits Club', periodLabel, priceLabel].filter(Boolean).join(' - '),

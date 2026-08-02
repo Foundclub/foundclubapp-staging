@@ -144,12 +144,14 @@ const getVerificationLabel = (clubVerificationSummary) => {
     return 'Aucun club rattaché';
   }
   if (clubVerificationSummary?.clubVerified === true) {
-    return 'Club vérifié';
+    return 'Club certifié';
   }
   if (clubVerificationSummary?.requiresClubVerification === true) {
-    return 'Vérification dirigeant requise';
+    // L'ancien libelle reclamait ici un geste qui n'existe pas pour un
+    // dirigeant : la certification est faite par la plateforme, jamais par lui.
+    return 'Certification en cours';
   }
-  return 'Club non vérifié';
+  return 'Club non certifié';
 };
 
 /**
@@ -738,8 +740,8 @@ function SubscriptionOverview({ navigation }) {
   const planCardTitle = isFreeLevel ? 'Offre gratuite FoundClub' : (planLabels[0] || statusMeta.label);
   // Description tutoyée par niveau (remplace la copie technique/vouvoyée du backend).
   const planCardDescription = {
-    CLUB: 'Les droits Club sont actifs sur ton club vérifié : toutes tes équipes sont couvertes.',
-    CLUB_UNVERIFIED: 'Tes droits Club sont actifs sur tout ton club. Il reste à faire vérifier ton club, mais cela ne bloque rien.',
+    CLUB: 'Les droits Club sont actifs sur ton club certifié : toutes tes équipes sont couvertes.',
+    CLUB_UNVERIFIED: 'Tes droits Club sont actifs sur tout ton club — rien n\'est bloqué. Ton club est en cours de certification par la plateforme.',
     FREE: 'Tu publies en quantité limitée. Passe à une offre payante pour lever les limites.',
     TEAM: 'Tes équipes couvertes profitent des droits Équipe, sans limite de publication.',
   }[subscriptionAccessLevel] || 'Tu utilises l\'offre gratuite FoundClub.';
@@ -985,7 +987,9 @@ function SubscriptionOverview({ navigation }) {
       catalogEntry,
       input,
       successMessage: getCatalogEntryScopeType(catalogEntry) === 'CLUB'
-        ? 'Ton offre Club est bien enregistrée. Si ton club n est pas encore vérifie, il apparaîtra en CLUB_UNVERIFIED.'
+        // Le client qui vient de payer n'a pas a lire un code technique, ni une
+        // condition qui n'existe plus : ses droits sont ouverts immediatement.
+        ? 'Ton offre Club est bien enregistrée. Tous tes droits Club sont actifs immédiatement.'
         : 'Ton offre a bien été activee.',
     });
   }, [
@@ -1291,7 +1295,7 @@ function SubscriptionOverview({ navigation }) {
           {isClubLevel ? (
             <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
               <Text style={[Fonts.p4Bold, Fonts.neutral300, { letterSpacing: 0.6, textTransform: 'uppercase' }]}>
-                Vérification
+                Certification
               </Text>
               <Text style={[Fonts.p2Bold, { color: subscriptionChip.textColor }]}>
                 {verificationLabel}
@@ -1309,12 +1313,12 @@ function SubscriptionOverview({ navigation }) {
           ]}
           >
             <Text style={[Fonts.p1Bold, { color: Colors.violet200 }]}>
-              {t('profile.subscription.unverified.title', 'Vérification du club à finaliser')}
+              {t('profile.subscription.unverified.title', 'Certification de ton club en cours')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 20 }]}>
               {t(
                 'profile.subscription.unverified.description',
-                'Tes droits Club sont déjà actifs — rien n\'est bloqué. La vérification du dirigeant reste à faire : elle certifie ton club auprès des joueurs.',
+                'Tes droits Club sont déjà actifs — rien n\'est bloqué. Ton club est en cours de certification par la plateforme. Une fois certifié, il porte le badge Certifié : un gage de confiance pour les joueurs et les partenaires.',
               )}
             </Text>
             {currentClubDocumentId ? (
@@ -1323,7 +1327,7 @@ function SubscriptionOverview({ navigation }) {
                   params: { clubId: currentClubDocumentId },
                   screen: RouteNames.Club,
                 })}
-                title={t('profile.subscription.unverified.cta', 'Ouvrir mon club')}
+                title={t('profile.subscription.unverified.cta', 'Voir ma fiche club')}
                 variant="SecondaryLight"
               />
             ) : null}
@@ -1366,7 +1370,7 @@ function SubscriptionOverview({ navigation }) {
               {isClubLevel ? (
                 <View style={[Spaces.gap[4]]}>
                   <Text style={[Fonts.p4Bold, Fonts.neutral300, { letterSpacing: 0.6, textTransform: 'uppercase' }]}>
-                    {t('profile.subscription.section.verification', 'État de vérification')}
+                    {t('profile.subscription.section.verification', 'État de certification')}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
                     {verificationLabel}
@@ -1751,11 +1755,12 @@ function SubscriptionOverview({ navigation }) {
 
                   <OfferFeatureList featureKeys={selectedClubOfferEntry?.featureKeys} />
 
-                  {selectedClubOfferEntry?.requiresClubVerification ? (
-                    <Text style={[Fonts.p4, Fonts.neutral200]}>
-                      {'Vérification du dirigeant obligatoire avant l\'ouverture des droits Club sensibles.'}
-                    </Text>
-                  ) : null}
+                  {/* R10 — un avertissement posant une condition a l'ouverture des
+                      droits s'affichait ICI, juste avant le bouton de paiement.
+                      Il etait faux depuis la decision produit du 2026-07-17 (les
+                      droits ouvrent immediatement) et reclamait au dirigeant un
+                      geste reserve a la console SuperAdmin. Supprime plutot que
+                      reformule : il n'y a plus de condition a annoncer. */}
 
                   <View style={[
                     Alignments.row,
@@ -1817,7 +1822,7 @@ function SubscriptionOverview({ navigation }) {
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {t(
                 'profile.subscription.section.clubCtaDescription',
-                'Retrouve les écrans du club, les demandes et l\'état de vérification.',
+                'Retrouve les écrans du club, les demandes et l\'état de certification.',
               )}
             </Text>
           </TouchableOpacity>
