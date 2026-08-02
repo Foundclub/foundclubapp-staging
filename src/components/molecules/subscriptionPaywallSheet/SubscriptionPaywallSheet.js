@@ -295,19 +295,6 @@ function SubscriptionPaywallSheet({
     });
   };
 
-  const handleOpenClub = () => {
-    close();
-    if (!clubDocumentId) {
-      handleOpenSubscription();
-      return;
-    }
-
-    navigation.navigate(RouteNames.ClubStack, {
-      params: { clubId: clubDocumentId },
-      screen: RouteNames.Club,
-    });
-  };
-
   const handleCompareOffers = () => {
     trackSubscriptionFunnelEvent('paywall_compare_offers_opened', {
       abBucket: funnelAbBucket,
@@ -658,10 +645,11 @@ function SubscriptionPaywallSheet({
     ? `${recommendedPriceLabel} · ${monthlyEquivalentLabel}`
     : recommendedPriceLabel;
 
-  const isClubVerificationGate = paywall.reason === 'CLUB_VERIFICATION_REQUIRED';
-  const primaryActionLabel = isClubVerificationGate && clubDocumentId
-    ? paywallContent.ctaLabel
-    : t('profile.subscription.actions.viewOverview', 'Voir mon abonnement');
+  // R10 — le refus CLUB_VERIFICATION_REQUIRED est supprime (GO Adel 2026-08-02).
+  // Il renvoyait le client vers sa fiche club pour y faire une certification que
+  // seule la console SuperAdmin peut declencher, et le serveur ne l'emet plus
+  // (0 occurrence dans admin/src). Un seul bouton, une seule destination.
+  const primaryActionLabel = t('profile.subscription.actions.viewOverview', 'Voir mon abonnement');
 
   return (
     <BottomModal
@@ -759,17 +747,10 @@ function SubscriptionPaywallSheet({
 
         <View style={Spaces.gap[12]}>
           <Button
-            onPress={isClubVerificationGate ? handleOpenClub : handleOpenSubscription}
+            onPress={handleOpenSubscription}
             title={primaryActionLabel}
             variant="Primary"
           />
-          {isClubVerificationGate && clubDocumentId ? (
-            <Button
-              onPress={handleOpenSubscription}
-              title={t('profile.subscription.actions.viewOverview', 'Voir mon abonnement')}
-              variant="Secondary"
-            />
-          ) : null}
           <LegalFooter />
         </View>
       </View>

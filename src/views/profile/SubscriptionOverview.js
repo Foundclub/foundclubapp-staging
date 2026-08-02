@@ -629,7 +629,9 @@ function SubscriptionOverview({ navigation }) {
         return {
           container: { backgroundColor: 'rgba(133,103,255,0.10)', borderColor: 'rgba(133,103,255,0.45)' },
           label: t('profile.subscription.states.clubUnverified'),
-          showClock: true,
+          // R10 — plus de sablier : les deux etats Club ouvrent les memes droits,
+          // et l'horloge suggerait au client une attente qui ne le concerne pas.
+          showClock: false,
           textColor: Colors.violet200,
         };
       case 'TEAM':

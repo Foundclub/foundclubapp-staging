@@ -3,8 +3,10 @@ import fr from '@/theme/strings/translations/fr';
 import { getSubscriptionCatalogEntryMeta } from './subscriptionBilling';
 import {
   getSubscriptionAccessLevel,
+  getSubscriptionPaywallContent,
   getSubscriptionStatusMeta,
   hasActiveClubOffer,
+  mapSubscriptionDecisionToPaywall,
 } from './subscriptionDecision';
 
 // Fichier SEPARE de subscriptionDecision.test.js a dessein : la branche
@@ -110,6 +112,30 @@ describe('R10 — le vocabulaire vu par l utilisateur ne reclame plus rien a per
 
     expect(meta.description).toBe('Débloque les droits club sur tout ton club.');
     MOTS_INTERDITS.forEach((mot) => expect(meta.description).not.toMatch(mot));
+  });
+
+  // GO Adel du 2026-08-02 : le refus CLUB_VERIFICATION_REQUIRED est supprime.
+  // Il renvoyait vers la fiche club pour y declencher une certification reservee
+  // a la console SuperAdmin. Verifie avant suppression : 0 occurrence dans
+  // admin/src — le serveur ne peut plus l'emettre, la branche etait inatteignable.
+  it('le refus « certification requise » n existe plus, meme si le serveur en renvoyait un', () => {
+    const refusServeur = {
+      allowed: false,
+      paywall: 'CLUB_VERIFICATION_REQUIRED',
+      reason: 'CLUB_VERIFICATION_REQUIRED',
+    };
+    const paywall = mapSubscriptionDecisionToPaywall(refusServeur);
+
+    // Plus de cle dediee : on retombe sur le paywall generique, qui vend une
+    // offre au lieu de reclamer un geste impossible.
+    expect(paywall.paywallKey).toBe('subscription-required');
+    expect(paywall.message).not.toMatch(/vérifi/i);
+
+    const contenu = getSubscriptionPaywallContent(refusServeur);
+    [/dirigeant/i, /vérifi/i, /reste obligatoire/i].forEach((mot) => {
+      expect(contenu.title).not.toMatch(mot);
+      expect(contenu.description).not.toMatch(mot);
+    });
   });
 
   it.each(['club', 'clubUnverified'])(

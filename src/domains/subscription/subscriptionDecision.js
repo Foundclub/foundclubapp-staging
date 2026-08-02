@@ -41,7 +41,6 @@ export const getSubscriptionAccessLevel = ({
 const DEFAULT_REASON_LABELS = {
   AUTH_REQUIRED: 'Connexion requise',
   CLUB_TIER_LIMIT_REACHED: 'Limite d équipes de ton offre Club atteinte',
-  CLUB_VERIFICATION_REQUIRED: 'Vérification du club requise',
   FREE_INCLUDED: 'Inclus dans le plan gratuit',
   FREE_QUOTA_AVAILABLE: 'Quota gratuit disponible',
   FREE_QUOTA_EXHAUSTED: 'Quota gratuit épuisé',
@@ -56,7 +55,6 @@ const DEFAULT_PAYWALL_KEYS = {
   CLUB_ROLES_MANAGE_REQUIRED: 'club-roles-manage-required',
   CLUB_TIER_TEAM_LIMIT: 'club-tier-team-limit',
   CLUB_UPDATE_REQUIRED: 'club-update-required',
-  CLUB_VERIFICATION_REQUIRED: 'club-verification-required',
   COMPOSITION_MANAGE_REQUIRED: 'composition-required',
   DUES_CAMPAIGN_CREATE_REQUIRED: 'dues-limit',
   DUES_LIMIT: 'dues-limit',
@@ -80,7 +78,6 @@ const CLUB_PAYWALL_BENEFITS = [
 /** @type {Record<string, string[]>} */
 const PAYWALL_BENEFITS_BY_KEY = {
   'club-tier-team-limit': CLUB_PAYWALL_BENEFITS,
-  'club-verification-required': CLUB_PAYWALL_BENEFITS,
   'composition-required': [
     'Composition et convocations en 2 taps',
     'Événements et matchs illimités',
@@ -324,12 +321,6 @@ export const getSubscriptionPaywallContent = (decision) => {
           'La modification de la fiche du club est réservée a l offre Club.',
         ),
         title: 'Fiche club réservée',
-      };
-    case 'club-verification-required':
-      return {
-        ctaLabel: 'Voir mon club',
-        description: 'Ton offre Club est activé, mais les droits club restent bloques tant que la vérification du dirigeant n est pas terminée.',
-        title: 'Vérification du club requise',
       };
     case 'composition-required':
       return {

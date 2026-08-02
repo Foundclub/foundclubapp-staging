@@ -340,8 +340,6 @@ describe('subscriptionDecision', () => {
       'Droits club et gestion centralisée',
       'Cotisations et recrutement illimités',
     ]);
-    expect(getSubscriptionPaywallBenefits({ paywall: 'CLUB_VERIFICATION_REQUIRED' }))
-      .toEqual(getSubscriptionPaywallBenefits({ paywall: 'CLUB_TIER_TEAM_LIMIT' }));
     expect(getSubscriptionPaywallBenefits({}))
       .toEqual(getSubscriptionPaywallBenefits({ paywall: 'CLUB_TIER_TEAM_LIMIT' }));
   });
