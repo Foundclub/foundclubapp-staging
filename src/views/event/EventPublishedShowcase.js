@@ -18,21 +18,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator, Image, KeyboardAvoidingView, Platform,
+  AccessibilityInfo, ActivityIndicator, Image, KeyboardAvoidingView, Platform,
   ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 
 import useVisualShowcase, { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEventShowcase';
 import useTheme from '@/theme/themeContext';
 
+import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import Input from '@/components/molecules/input/Input';
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 
 import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
-
-import SharePlatform from '@/platform/share';
 
 /**
  *
@@ -68,9 +67,10 @@ export default function EventPublishedShowcase({ navigation, route }) {
   const chatShareEnabled = params.chatShareEnabled ?? (subjectType === 'event');
 
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [busyAction, setBusyAction] = useState(null); // 'story' | 'poster' | null
+  const [busyAction, setBusyAction] = useState(null); // 'visual' | 'story' | 'poster' | null
   const [editorOpen, setEditorOpen] = useState(false);
   const [downloadError, setDownloadError] = useState(null);
+  const reduceMotion = useReduceMotion();
 
   // L'aperçu est un visuel PORTRAIT (4:5) rendu à sa taille réelle : sur un grand écran
   // (web/desktop) il déborde et masque les boutons d'action. On plafonne sa largeur par la
@@ -80,8 +80,8 @@ export default function EventPublishedShowcase({ navigation, route }) {
   const previewWidth = Math.max(200, Math.min(windowWidth - 40, Math.round(windowHeight * 0.5)));
 
   const {
-    downloadPoster, downloadStory, error, event, isLoading, overrides,
-    previewUri, resetOverrides, retry, setOverride, setVariant, variant, variants,
+    downloadPoster, downloadStory, error, event, isLoading, overrides, previewUri,
+    resetOverrides, retry, setOverride, setVariant, shareVisual, variant, variants,
   } = useVisualShowcase({
     eventId, subjectId, subjectType, template, variants: variantsParam,
   });
@@ -109,15 +109,14 @@ export default function EventPublishedShowcase({ navigation, route }) {
     return undefined;
   }, [creationCelebration]);
 
-  const onNativeShare = async () => {
-    if (!shareUrl) return;
-    const message = buildShareMessageWithUrl({
-      intro: shareIntroParam || t(texts.shareIntro.key, texts.shareIntro.default),
-      linkLabel: shareLinkLabelParam || t(texts.shareLinkLabel.key, texts.shareLinkLabel.default),
-      url: shareUrl,
-    });
-    await SharePlatform.share({ message, url: shareUrl });
-  };
+  // Texte qui ACCOMPAGNE l'affiche dans le partage. Le lien ne la remplace plus :
+  // buildShareMessageWithUrl rend l'intro seule quand `url` est absent, donc un
+  // appelant sans shareUrl envoie quand même l'affiche — plus de bouton muet.
+  const shareMessage = useMemo(() => buildShareMessageWithUrl({
+    intro: shareIntroParam || t(texts.shareIntro.key, texts.shareIntro.default),
+    linkLabel: shareLinkLabelParam || t(texts.shareLinkLabel.key, texts.shareLinkLabel.default),
+    url: shareUrl,
+  }), [shareIntroParam, shareLinkLabelParam, shareUrl, t, texts]);
 
   // useEventShowcase.shareFile journalise puis RE-LEVE l'erreur : sans ce catch, un
   // telechargement echoue en silence (spinner qui s'arrete, aucun retour a l'ecran).
@@ -136,6 +135,10 @@ export default function EventPublishedShowcase({ navigation, route }) {
     }
   };
 
+  // Tant qu'aucune affiche n'existe (première génération, ou génération en échec),
+  // le bouton principal n'aurait rien à envoyer : il est GRISÉ, pas muet. En
+  // régénération l'aperçu précédent est toujours là, donc il reste actif.
+  const posterUnavailable = !previewUri && (isLoading || !!error);
   const styles = makeStyles(Colors);
 
   // Champs texte éditables du gabarit courant (résolus depuis editableFields). Les
@@ -189,16 +192,33 @@ export default function EventPublishedShowcase({ navigation, route }) {
           {previewUri ? (
             <Image resizeMode="contain" source={{ uri: previewUri }} style={styles.previewImage} />
           ) : null}
-          {isLoading ? (
-            // Premier rendu : spinner plein cadre. Régénérations (édition/style) : simple
-            // overlay au-dessus de l'aperçu existant → il ne disparaît pas (pas de clignotement).
-            <View style={[styles.previewLoading, previewUri ? styles.previewOverlay : null]}>
+          {isLoading && !previewUri ? (
+            // PREMIER rendu : squelette plein cadre, aux proportions de l'affiche —
+            // l'utilisateur voit la FORME de ce qui arrive, pas un rond qui tourne.
+            // « Réduire les animations » (réglage système) coupe le balayage :
+            // SkeletonLoader rend alors les mêmes blocs, figés (isActive=false).
+            <View style={styles.previewSkeleton} testID="showcase-skeleton">
+              <SkeletonLoader isActive={!reduceMotion} wrapperStyle={[styles.skeletonBody]}>
+                <View style={styles.skeletonBadge} />
+                <View style={styles.skeletonTitle} />
+                <View style={styles.skeletonTitleShort} />
+                <View style={styles.skeletonMeta} />
+                <View style={styles.skeletonQr} />
+                <View style={styles.skeletonFooter} />
+              </SkeletonLoader>
+              <Text style={styles.previewLoadingText}>
+                {t('showcase.generating', 'Génération du visuel…')}
+              </Text>
+            </View>
+          ) : null}
+          {isLoading && previewUri ? (
+            // RÉGÉNÉRATION (changement de style ou de texte) : simple voile au-dessus
+            // de l'aperçu existant → il ne disparaît pas (pas de clignotement).
+            <View
+              style={[styles.previewLoading, styles.previewOverlay]}
+              testID="showcase-preview-veil"
+            >
               <ActivityIndicator color={Colors.primary500} />
-              {!previewUri ? (
-                <Text style={styles.previewLoadingText}>
-                  {t('showcase.generating', 'Génération du visuel…')}
-                </Text>
-              ) : null}
             </View>
           ) : null}
           {!isLoading && !previewUri && error ? (
@@ -273,56 +293,56 @@ export default function EventPublishedShowcase({ navigation, route }) {
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity
-            accessibilityLabel={t('showcase.share', 'Partager')}
-            accessibilityRole="button"
-            activeOpacity={0.85}
-            onPress={onNativeShare}
-            style={styles.primaryBtn}
-          >
-            <Text style={styles.primaryBtnText}>{t('showcase.share', 'Partager')}</Text>
-          </TouchableOpacity>
+          {/* Geste PRINCIPAL : il envoie le FICHIER de l'affiche (format affiché),
+              le lien voyage dans le message. Un seul bouton plein à l'écran. */}
+          <ShowcaseAction
+            busy={busyAction === 'visual'}
+            busyColor={Colors.primary900}
+            disabled={busyAction != null || posterUnavailable}
+            hint={t(
+              'showcase.shareHint',
+              'L’image part telle que tu la vois. Dans la fenêtre de partage, '
+              + 'tu peux aussi l’enregistrer dans ton téléphone.',
+            )}
+            label={t('showcase.share', 'Envoyer l’affiche')}
+            onPress={() => runDownload('visual', () => shareVisual(shareMessage))}
+            styles={styles}
+            variant="primary"
+          />
 
           {chatShareEnabled ? (
-            <TouchableOpacity
-              accessibilityLabel={t('showcase.sendInChat', 'Envoyer dans une conversation')}
-              accessibilityRole="button"
-              activeOpacity={0.85}
+            <ShowcaseAction
+              busyColor={Colors.primary500}
+              disabled={busyAction != null}
+              hint={t('showcase.sendInChatHint', 'Directement dans une discussion FoundClub.')}
+              label={t('showcase.sendInChat', 'Envoyer dans une conversation')}
               onPress={() => setShareModalOpen(true)}
-              style={styles.secondaryBtn}
-            >
-              <Text style={styles.secondaryBtnText}>
-                {t('showcase.sendInChat', 'Envoyer dans une conversation')}
-              </Text>
-            </TouchableOpacity>
+              styles={styles}
+              variant="secondary"
+            />
           ) : null}
 
-          <View style={styles.row}>
-            <TouchableOpacity
-              accessibilityLabel={t('showcase.story', 'Story / Post')}
-              accessibilityRole="button"
-              accessibilityState={{ busy: busyAction === 'story', disabled: busyAction != null }}
-              disabled={busyAction != null}
-              onPress={() => runDownload('story', downloadStory)}
-              style={styles.ghostBtn}
-            >
-              {busyAction === 'story'
-                ? <ActivityIndicator color={Colors.primary700} />
-                : <Text style={styles.ghostBtnText}>{t('showcase.story', 'Story / Post')}</Text>}
-            </TouchableOpacity>
-            <TouchableOpacity
-              accessibilityLabel={t('showcase.poster', 'Affiche à imprimer')}
-              accessibilityRole="button"
-              accessibilityState={{ busy: busyAction === 'poster', disabled: busyAction != null }}
-              disabled={busyAction != null}
-              onPress={() => runDownload('poster', downloadPoster)}
-              style={styles.ghostBtn}
-            >
-              {busyAction === 'poster'
-                ? <ActivityIndicator color={Colors.primary700} />
-                : <Text style={styles.ghostBtnText}>{t('showcase.poster', 'Affiche à imprimer')}</Text>}
-            </TouchableOpacity>
-          </View>
+          <ShowcaseAction
+            busy={busyAction === 'story'}
+            busyColor={Colors.primary500}
+            disabled={busyAction != null}
+            hint={t(
+              'showcase.storyHint',
+              'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
+            )}
+            label={t('showcase.story', 'Version story 9:16')}
+            onPress={() => runDownload('story', downloadStory)}
+            styles={styles}
+          />
+          <ShowcaseAction
+            busy={busyAction === 'poster'}
+            busyColor={Colors.primary500}
+            disabled={busyAction != null}
+            hint={t('showcase.posterHint', 'Fichier PDF, prêt pour l’imprimante du club.')}
+            label={t('showcase.poster', 'Affiche A4 à imprimer')}
+            onPress={() => runDownload('poster', downloadPoster)}
+            styles={styles}
+          />
 
           {downloadError ? (
             <Text
@@ -357,8 +377,83 @@ export default function EventPublishedShowcase({ navigation, route }) {
   );
 }
 
+/**
+ * Suit le réglage système « réduire les animations ».
+ * Un balayage de squelette est décoratif : quand l'utilisateur demande moins de
+ * mouvement, on garde la FORME (les blocs) et on coupe l'animation.
+ * @returns {boolean} - true si le système demande de réduire les animations.
+ */
+const useReduceMotion = () => {
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(AccessibilityInfo.isReduceMotionEnabled?.())
+      .then((enabled) => { if (!cancelled) setReduceMotion(!!enabled); })
+      .catch(() => {});
+    const subscription = AccessibilityInfo.addEventListener?.(
+      'reduceMotionChanged',
+      (enabled) => setReduceMotion(!!enabled),
+    );
+    return () => {
+      cancelled = true;
+      subscription?.remove?.();
+    };
+  }, []);
+
+  return reduceMotion;
+};
+
+/** Clés de style par niveau de hiérarchie : un seul `primary` par écran. */
+const ACTION_STYLE_KEYS = {
+  ghost: { button: 'ghostBtn', hint: 'ghostBtnHint', label: 'ghostBtnText' },
+  primary: { button: 'primaryBtn', hint: 'primaryBtnHint', label: 'primaryBtnText' },
+  secondary: { button: 'secondaryBtn', hint: 'secondaryBtnHint', label: 'secondaryBtnText' },
+};
+
+/**
+ * Bouton d'action du showcase : un titre qui dit CE QU'ON OBTIENT, et une ligne
+ * d'explication juste dessous (la ligne part aussi en accessibilityHint).
+ * @param {object} props
+ * @param {boolean} [props.busy] - Action en cours : indicateur à la place du texte.
+ * @param {string} props.busyColor - Couleur de l'indicateur, lisible sur ce fond.
+ * @param {boolean} [props.disabled]
+ * @param {string} props.hint - Ce que le bouton produit, en une phrase.
+ * @param {string} props.label
+ * @param {() => void} props.onPress
+ * @param {Record<string, object>} props.styles
+ * @param {'ghost'|'primary'|'secondary'} [props.variant]
+ * @returns {import('react').ReactElement}
+ */
+function ShowcaseAction({
+  busy, busyColor, disabled, hint, label, onPress, styles, variant = 'ghost',
+}) {
+  const styleKeys = ACTION_STYLE_KEYS[variant] || ACTION_STYLE_KEYS.ghost;
+  return (
+    <TouchableOpacity
+      accessibilityHint={hint}
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ busy: !!busy, disabled: !!disabled }}
+      activeOpacity={0.85}
+      disabled={!!disabled}
+      onPress={onPress}
+      style={[styles[styleKeys.button], disabled ? styles.btnDisabled : null]}
+    >
+      {busy ? <ActivityIndicator color={busyColor} /> : (
+        <>
+          <Text style={styles[styleKeys.label]}>{label}</Text>
+          <Text style={styles[styleKeys.hint]}>{hint}</Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 const makeStyles = (Colors) => StyleSheet.create({
   actions: { gap: 10 },
+  // Opacité 0.5 : la cible reste lisible mais visiblement hors service (Material).
+  btnDisabled: { opacity: 0.5 },
   container: {
     backgroundColor: Colors.primary900, flexGrow: 1, gap: 16, padding: 20,
   },
@@ -393,12 +488,17 @@ const makeStyles = (Colors) => StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.primary800,
     borderRadius: 12,
-    flex: 1,
+    gap: 2,
     justifyContent: 'center',
     minHeight: 44,
+    paddingHorizontal: 12,
     paddingVertical: 12,
   },
-  ghostBtnText: { color: Colors.primary500, fontWeight: '600' },
+  // Sur fond primary800 : neutral300 = ~7:1.
+  ghostBtnHint: {
+    color: Colors.neutral300, fontSize: 12, lineHeight: 16, textAlign: 'center',
+  },
+  ghostBtnText: { color: Colors.primary500, fontSize: 15, fontWeight: '600' },
   // Sur fond sombre primary900 : neutral300 = ~8,4:1.
   later: { color: Colors.neutral300, paddingVertical: 8, textAlign: 'center' },
   preview: {
@@ -427,10 +527,29 @@ const makeStyles = (Colors) => StyleSheet.create({
     right: 0,
     top: 0,
   },
+  previewSkeleton: {
+    alignItems: 'center',
+    bottom: 0,
+    gap: 12,
+    justifyContent: 'center',
+    left: 0,
+    padding: 20,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   primaryBtn: {
-    alignItems: 'center', backgroundColor: Colors.primary500, borderRadius: 12, paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: Colors.primary500,
+    borderRadius: 12,
+    gap: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   // Encre unique sur fond primary500 (THEME.md) : primary900 = 7,96:1.
+  primaryBtnHint: {
+    color: Colors.primary900, fontSize: 12, lineHeight: 16, opacity: 0.8, textAlign: 'center',
+  },
   primaryBtnText: { color: Colors.primary900, fontSize: 16, fontWeight: '700' },
   resetBtn: { alignItems: 'center', paddingVertical: 8 },
   // Sur fond sombre primary900 : primary500 = ~7,3:1.
@@ -438,13 +557,43 @@ const makeStyles = (Colors) => StyleSheet.create({
   retryBtn: { paddingHorizontal: 16, paddingVertical: 8 },
   // Sur fond primary800 (cadre d'apercu sombre) : primary500 = ~5,9:1.
   retryBtnText: { color: Colors.primary500, fontWeight: '600' },
-  row: { flexDirection: 'row', gap: 10 },
   secondaryBtn: {
     // Lisere du bouton : primary500 sur fond sombre primary900 = ~7,3:1 (au-dessus du seuil 3:1).
-    alignItems: 'center', borderColor: Colors.primary500, borderRadius: 12, borderWidth: 1, paddingVertical: 12,
+    alignItems: 'center',
+    borderColor: Colors.primary500,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  // Sur fond sombre primary900 : neutral300 = ~8,4:1.
+  secondaryBtnHint: {
+    color: Colors.neutral300, fontSize: 12, lineHeight: 16, textAlign: 'center',
   },
   // Sur fond sombre primary900 : primary500 = ~7,3:1.
   secondaryBtnText: { color: Colors.primary500, fontWeight: '700' },
+  // Ossature de l'affiche : blocs primary700 sur le cadre primary800 — visibles
+  // meme fige, quand « reduire les animations » coupe le balayage.
+  skeletonBadge: {
+    backgroundColor: Colors.primary700, borderRadius: 999, height: 44, width: 44,
+  },
+  skeletonBody: { alignItems: 'center', gap: 10, width: '100%' },
+  skeletonFooter: {
+    backgroundColor: Colors.primary700, borderRadius: 5, height: 9, width: '40%',
+  },
+  skeletonMeta: {
+    backgroundColor: Colors.primary700, borderRadius: 5, height: 10, width: '64%',
+  },
+  skeletonQr: {
+    backgroundColor: Colors.primary700, borderRadius: 8, height: 62, marginTop: 6, width: 62,
+  },
+  skeletonTitle: {
+    backgroundColor: Colors.primary700, borderRadius: 6, height: 16, width: '78%',
+  },
+  skeletonTitleShort: {
+    backgroundColor: Colors.primary700, borderRadius: 6, height: 16, width: '52%',
+  },
   subtitle: { color: Colors.neutral300, fontSize: 15 },
   title: { color: Colors.neutral00, fontSize: 24, fontWeight: '800' },
   variantChip: {

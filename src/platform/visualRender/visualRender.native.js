@@ -58,6 +58,21 @@ export const fetchRenderBase64 = async (params) => {
 /**
  * Écrit le rendu dans un fichier de cache puis déclenche le partage système.
  * Renvoie le chemin file:// du fichier généré.
+ *
+ * CONSTAT (L16) sur `@/platform/share` → `Share.share` de React Native 0.78
+ * (node_modules/react-native/Libraries/Share/Share.js) :
+ *   - iOS   : `message` ET `url` sont transmis ensemble à la feuille de partage
+ *             ⇒ le FICHIER et le texte voyagent dans le MÊME appel.
+ *   - Android : seul `{ title, message }` atteint le module natif, `url` est PURGÉ.
+ *             L'app n'embarque pas `react-native-share` (deps : uniquement
+ *             `react-native-blob-util`) ⇒ joindre un fichier y est hors de portée.
+ * ⇒ Règle appliquée : l'affiche prime là où elle peut voyager (iOS), et le lien
+ *   part dans le texte sur les deux plateformes. `message` reste OPTIONNEL :
+ *   sans lui, le comportement livré (story / A4) est inchangé.
+ * @param {object} params
+ * @param {string} params.format
+ * @param {string} [params.message] - Texte joint au fichier (lien public).
+ * @returns {Promise<string>}
  */
 export const downloadAndShareRender = async (params) => {
   const { base64, contentType } = await fetchRenderBase64(params);
@@ -66,8 +81,11 @@ export const downloadAndShareRender = async (params) => {
   const path = `${dir}/foundclub-${params.template}-${params.variant || 'defaut'}-${params.format}-${params.subjectId}.${ext}`;
   await ReactNativeBlobUtil.fs.writeFile(path, base64, 'base64');
   const fileUri = `file://${path}`;
+  const message = typeof params.message === 'string' ? params.message : '';
   await SharePlatform.share(
-    Platform.OS === 'ios' ? { url: fileUri } : { message: '', url: fileUri },
+    Platform.OS === 'ios'
+      ? { ...(message ? { message } : {}), url: fileUri }
+      : { message, url: fileUri },
   );
   return fileUri;
 };
