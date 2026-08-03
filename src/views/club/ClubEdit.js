@@ -30,6 +30,23 @@ import { updateClubInfo } from '@/services/club/clubService';
 import { getFieldError } from '@/utils/form/formUtils';
 import safeJsonParse from '@/utils/safeJsonParse';
 
+// L15 — apercu du logo : le cadre doit epouser le format reel de l'image.
+// SelectAvatar peint son fond en neutral00 (blanc) VOLONTAIREMENT : les ecussons
+// sont des PNG a fond transparent, sans cette pastille claire ils disparaitraient
+// sur le theme sombre. Mais avec un cadre CARRE et resizeMode="contain", toute
+// image non carree laisse voir ce fond sur les cotes : ce sont les bandes
+// blanches. On garde donc le fond, et on donne au cadre le ratio de l'image.
+// Meme motif que AddSponsor.js, avec des bornes differentes : un sponsor est une
+// banniere large (0.7-3.2), un ecusson est proche du carre. Mesure du 2026-08-02
+// sur GET /api/clubs?populate=logo en production : 84x100, 81x100, 100x100.
+// 0.5 laisse passer le fanion vertical (1:2) et 2.5 le logo-texte large (5:2) —
+// rares mais reels ; au-dela, le cadre deborderait de l'ecran et le bouton "+"
+// (pose a right:-12) serait rogne. Une image hors bornes retrouve des bandes :
+// c'est le prix assume d'un cadre qui reste tenable a l'ecran.
+const LOGO_PREVIEW_HEIGHT = 110;
+const LOGO_PREVIEW_MIN_RATIO = 0.5;
+const LOGO_PREVIEW_MAX_RATIO = 2.5;
+
 /** @type {{ name: string; email: string; phoneNumber: string; addressDetails: string; activites: string[]; clubMembersPublicVisibility: boolean; membershipRequestManagementMode: 'CLUB_OWNER_ONLY'|'COACH_ALLOWED_BY_TEAM' }} */
 const defaultValues = {
   activites: [],
@@ -97,6 +114,17 @@ function ClubEdit({ navigation, route }) {
   );
   const [activitySearch, setActivitySearch] = useState('');
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+
+  // width/height manquent sur deux chemins reels : le selecteur de fichier du
+  // web (SelectAvatar.handleBrowserFileSelection les met a undefined) et un
+  // payload serveur qui ne les porterait pas. Repli sur 1 = le cadre carre
+  // d'origine : ni ecrase, ni geant. Un 0 ou un NaN retombe au meme endroit,
+  // la garde etant une comparaison de verite et non un test d'existence.
+  const rawLogoRatio = logo?.width && logo?.height ? logo.width / logo.height : 1;
+  const logoPreviewRatio = Math.min(
+    Math.max(rawLogoRatio, LOGO_PREVIEW_MIN_RATIO),
+    LOGO_PREVIEW_MAX_RATIO,
+  );
 
   const { data: allActivities } = useGetActivities();
 
@@ -267,10 +295,21 @@ function ClubEdit({ navigation, route }) {
             <View style={[Alignments.fill, Spaces.gap[24]]}>
               <View style={[Alignments.row, Spaces.marginVertical[24]]}>
                 <SelectAvatar
+                  containerStyle={{
+                    // width est calculee a partir du MEME ratio, et non laissee
+                    // a Yoga : SelectAvatar pose deja { height: size, width: size }
+                    // et un tableau de styles FUSIONNE au lieu de remplacer — sans
+                    // largeur explicite, le carre repasserait devant et aspectRatio
+                    // serait ignore (deux dimensions definies l'emportent).
+                    aspectRatio: logoPreviewRatio,
+                    height: LOGO_PREVIEW_HEIGHT,
+                    width: LOGO_PREVIEW_HEIGHT * logoPreviewRatio,
+                  }}
                   currentAvatar={logo}
                   imageResizeMode="contain"
+                  imageStyle={{ height: '100%', width: '100%' }}
                   onAvatarSelected={setLogo}
-                  size={110}
+                  size={LOGO_PREVIEW_HEIGHT}
                 />
               </View>
 
