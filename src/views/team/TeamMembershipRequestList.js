@@ -234,6 +234,7 @@ function TeamMembershipRequestList({ navigation, route }) {
           <ProfileAvatar
             imageStyle={{ borderRadius: 40 }}
             imageUrl={item?.user?.avatar?.url}
+            name={[item?.user?.firstname, item?.user?.lastname].filter(Boolean).join(' ')}
             size={40}
             style={[
               ApplicationStyle.borderWidth1,

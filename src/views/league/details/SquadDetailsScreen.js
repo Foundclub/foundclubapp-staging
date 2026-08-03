@@ -2812,7 +2812,11 @@ function SquadDetailsScreen({ navigation, route }) {
                     },
                   ]}
                 >
-                  <ProfileAvatar imageUrl={player.avatar?.url} size={40} />
+                  <ProfileAvatar
+                    imageUrl={player.avatar?.url}
+                    name={getPlayerDisplayName(player)}
+                    size={40}
+                  />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
                       {getPlayerDisplayName(player)}

@@ -9,6 +9,7 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
@@ -205,7 +206,11 @@ function AdminUserDetail() {
         ]}
         >
           <View style={[Alignments.row, Alignments.alignCenter]}>
-            <ProfileAvatar imageUrl={user.avatar?.url} size={80} />
+            <ProfileAvatar
+              imageUrl={user.avatar?.url}
+              name={[user.firstname, user.lastname].filter(Boolean).join(' ')}
+              size={80}
+            />
             <View style={[Spaces.marginLeft[16], { flex: 1 }]}>
               <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>
                 {user.firstname}
@@ -231,7 +236,9 @@ function AdminUserDetail() {
         >
           <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>Club Associé</Text>
           <View style={[Alignments.row, Alignments.alignCenter]}>
-            <ProfileAvatar imageUrl={user.club.logo?.url} size={40} variant="logo" />
+            {/* L14 : un CLUB sans logo montre l'ECUSSON, pas le dessin de
+                personne que servait ProfileAvatar variant="logo" non garde. */}
+            <ClubLogoMark club={user.club} size={40} />
             <Text style={[Fonts.p1, { color: Colors.neutral00 }, Spaces.marginLeft[12]]}>
               {user.club.name}
             </Text>

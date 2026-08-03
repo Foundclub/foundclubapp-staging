@@ -1,26 +1,29 @@
 import React from 'react';
-import { Image, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
-import { getImageUrl } from '@/utils/imageUrl';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 /**
  * StatRow component - displays a player's statistics in a row
  * @param {object} props
- * @param {object} props.player - Player data with user info and stats
+ * @param {{
+ *   user?: {
+ *     avatar?: { url?: string } | null,
+ *     firstname?: string,
+ *     lastname?: string,
+ *     position?: string,
+ *   } | null,
+ * } & Record<string, any>} props.player - Player data with user info and stats
  * @param {Array<{key: string, label: string}>} props.columns - Column definitions
  * @param {boolean} [props.isEven] - For zebra striping
  * @returns {React.ReactElement}
  */
 function StatRow({ columns, isEven = false, player }) {
   const {
-    Alignments, Colors, Fonts, Images, Spaces,
+    Alignments, Colors, Fonts, Spaces,
   } = useTheme();
-
-  const avatarSource = player.user?.avatar?.url
-    ? { uri: getImageUrl(player.user.avatar.url) }
-    : Images.roundAvatar;
 
   return (
     <View
@@ -39,15 +42,16 @@ function StatRow({ columns, isEven = false, player }) {
     >
       {/* Player Column - Bigger Avatar and Name */}
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 2 }]}>
-        <Image
-          source={avatarSource}
+        {/* Photo du joueur, repli = ses INITIALES (L14) */}
+        <ProfileAvatar
+          enablePreview={false}
+          imageUrl={player.user?.avatar?.url}
+          name={[player.user?.firstname, player.user?.lastname].filter(Boolean).join(' ')}
+          size={50}
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
             borderColor: Colors.neutral600,
             borderRadius: 25,
             borderWidth: 1,
-            height: 50,
-            width: 50,
           }}
         />
         <View style={{ flex: 1 }}>

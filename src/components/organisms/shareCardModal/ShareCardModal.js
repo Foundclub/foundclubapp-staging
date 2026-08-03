@@ -144,7 +144,13 @@ function ShareCardModal({
       default: {
         const participant = chat.participants?.find((p) => p.documentId !== userData?.documentId)
           || chat.participants?.[0];
-        return <ProfileAvatar imageUrl={participant?.avatar?.url} size={40} />;
+        return (
+          <ProfileAvatar
+            imageUrl={participant?.avatar?.url}
+            name={[participant?.firstname, participant?.lastname].filter(Boolean).join(' ')}
+            size={40}
+          />
+        );
       }
     }
   };

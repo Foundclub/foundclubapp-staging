@@ -730,6 +730,7 @@ function UserDetails({ navigation, route }) {
                 enablePreview
                 imageStyle={{ borderRadius: 72 }}
                 imageUrl={user?.avatar?.url}
+                name={displayName}
                 size={72}
                 style={[
                   ApplicationStyle.borderColor.primary500,

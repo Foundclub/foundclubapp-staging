@@ -447,7 +447,7 @@ function AssignmentCard({
         }}
         >
           <View style={{ paddingTop: 2 }}>
-            <ProfileAvatar enablePreview={false} imageUrl={avatarUrl} size={48} />
+            <ProfileAvatar enablePreview={false} imageUrl={avatarUrl} name={name} size={48} />
           </View>
           <View style={[Spaces.gap[4], { flex: 1 }]}>
             <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{name}</Text>
@@ -517,7 +517,7 @@ function AssignmentSignalCard({
         }}
         >
           <View style={{ paddingTop: 2 }}>
-            <ProfileAvatar enablePreview={false} imageUrl={avatarUrl} size={40} />
+            <ProfileAvatar enablePreview={false} imageUrl={avatarUrl} name={name} size={40} />
           </View>
           <View style={[Spaces.gap[4], { flex: 1 }]}>
             <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{name}</Text>

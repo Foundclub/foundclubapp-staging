@@ -376,7 +376,11 @@ function TournamentTeamDetails({ navigation, route }) {
       >
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
-            <ProfileAvatar imageUrl={member?.user?.avatar?.url} size={42} />
+            <ProfileAvatar
+              imageUrl={member?.user?.avatar?.url}
+              name={[member?.user?.firstname, member?.user?.lastname].filter(Boolean).join(' ')}
+              size={42}
+            />
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 {[member?.user?.firstname, member?.user?.lastname].filter(Boolean).join(' ') || 'Participant'}
@@ -492,7 +496,11 @@ function TournamentTeamDetails({ navigation, route }) {
               </View>
               {team?.captainUser ? (
                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                  <ProfileAvatar imageUrl={team?.captainUser?.avatar?.url} size={36} />
+                  <ProfileAvatar
+                    imageUrl={team?.captainUser?.avatar?.url}
+                    name={[team?.captainUser?.firstname, team?.captainUser?.lastname].filter(Boolean).join(' ')}
+                    size={36}
+                  />
                   <Text style={[Fonts.p4, Fonts.neutral100]}>
                     {[team?.captainUser?.firstname, team?.captainUser?.lastname].filter(Boolean).join(' ') || 'Capitaine'}
                   </Text>
@@ -693,7 +701,11 @@ function TournamentTeamDetails({ navigation, route }) {
                       >
                         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
-                            <ProfileAvatar imageUrl={user?.avatar?.url} size={38} />
+                            <ProfileAvatar
+                              imageUrl={user?.avatar?.url}
+                              name={[user?.firstname, user?.lastname].filter(Boolean).join(' ') || user?.username}
+                              size={38}
+                            />
                             <View style={{ flex: 1 }}>
                               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                                 {[user?.firstname, user?.lastname].filter(Boolean).join(' ') || user?.username || 'Participant'}

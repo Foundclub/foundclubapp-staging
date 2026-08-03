@@ -895,6 +895,7 @@ function RecruitmentAdDetails() {
                       <ProfileAvatar
                         imageStyle={{ borderRadius: 40 }}
                         imageUrl={participation?.user?.avatar?.url}
+                        name={requesterName}
                         size={42}
                         style={{
                           borderColor: Colors.primary500,
@@ -1057,6 +1058,7 @@ function RecruitmentAdDetails() {
                         <ProfileAvatar
                           imageStyle={{ borderRadius: 40 }}
                           imageUrl={candidate?.avatar?.url}
+                          name={candidateName}
                           size={42}
                           style={{
                             borderColor: Colors.primary500,

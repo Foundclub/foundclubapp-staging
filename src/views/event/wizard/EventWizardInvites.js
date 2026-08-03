@@ -1301,6 +1301,7 @@ function EventWizardInvites({ navigation }) {
                           <ProfileAvatar
                             enablePreview={false}
                             imageUrl={member?.avatar?.url}
+                            name={getUserDisplayName(member)}
                             size={36}
                           />
                           <View style={{ flex: 1 }}>

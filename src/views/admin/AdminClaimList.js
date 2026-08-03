@@ -151,6 +151,7 @@ function AdminClaimList() {
         >
           <ProfileAvatar
             imageUrl={user?.avatar?.url}
+            name={fullName}
             size={50}
           />
 

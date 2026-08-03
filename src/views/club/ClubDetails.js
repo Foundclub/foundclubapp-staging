@@ -26,6 +26,7 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
 import ClubScopeToggle from '@/components/molecules/header/ClubScopeToggle';
 import Input from '@/components/molecules/input/Input';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -59,7 +60,6 @@ import {
   isPartnerClub,
 } from '@/utils/clubCertification';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
-import { getImageUrl } from '@/utils/imageUrl';
 import safeJsonParse from '@/utils/safeJsonParse';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
@@ -2411,11 +2411,11 @@ function ClubDetails({ navigation, route }) {
                           <View style={[
                             Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
                           >
-                            <Image
-                              source={user.avatar ? { uri: getImageUrl(user?.avatar?.url) } : Images.roundAvatar}
-                              style={[
-                                ApplicationStyle.roundIcon40,
-                              ]}
+                            <ProfileAvatar
+                              enablePreview={false}
+                              imageUrl={user?.avatar?.url}
+                              name={[user.firstname, user.lastname].filter(Boolean).join(' ')}
+                              size={40}
                             />
                             <Text
                               numberOfLines={2}
@@ -2490,11 +2490,11 @@ function ClubDetails({ navigation, route }) {
                           <View style={[
                             Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
                           >
-                            <Image
-                              source={user.avatar ? { uri: getImageUrl(user?.avatar?.url) } : Images.roundAvatar}
-                              style={[
-                                ApplicationStyle.roundIcon40,
-                              ]}
+                            <ProfileAvatar
+                              enablePreview={false}
+                              imageUrl={user?.avatar?.url}
+                              name={[user.firstname, user.lastname].filter(Boolean).join(' ')}
+                              size={40}
                             />
                             <Text
                               numberOfLines={2}

@@ -365,7 +365,11 @@ function NewConversation({ navigation, route }) {
           isSelected ? { backgroundColor: 'rgba(255, 255, 255, 0.1)' } : {},
         ]}
       >
-        <ProfileAvatar imageUrl={item.avatar?.url} size={48} />
+        <ProfileAvatar
+          imageUrl={item.avatar?.url}
+          name={[item.firstname, item.lastname].filter(Boolean).join(' ')}
+          size={48}
+        />
         <View style={[Spaces.marginLeft[12], Alignments.fill]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
             {item.firstname}

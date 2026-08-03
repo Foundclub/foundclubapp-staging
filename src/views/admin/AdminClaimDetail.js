@@ -11,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import Button from '@/components/atoms/button/Button';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -221,7 +222,11 @@ function AdminClaimDetail() {
             Demandeur
           </Text>
           <View style={[Alignments.row, Alignments.alignCenter]}>
-            <ProfileAvatar imageUrl={requester?.avatar} size={60} />
+            <ProfileAvatar
+              imageUrl={requester?.avatar}
+              name={[requester.firstname, requester.lastname].filter(Boolean).join(' ').trim()}
+              size={60}
+            />
             <View style={[Spaces.marginLeft[16], { flex: 1 }]}>
               <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
                 {[requester.firstname, requester.lastname].filter(Boolean).join(' ').trim() || 'Utilisateur'}
@@ -318,7 +323,9 @@ function AdminClaimDetail() {
               Club revendique
             </Text>
             <View style={[Alignments.row, Alignments.alignCenter]}>
-              <ProfileAvatar imageUrl={request?.club?.logo?.url} size={60} variant="logo" />
+              {/* L14 : un CLUB sans logo montre l'ECUSSON, pas le dessin de
+                  personne que servait ProfileAvatar variant="logo" non garde. */}
+              <ClubLogoMark club={request?.club} size={60} />
               <View style={Spaces.marginLeft[16]}>
                 <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{request?.club?.name}</Text>
                 <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>

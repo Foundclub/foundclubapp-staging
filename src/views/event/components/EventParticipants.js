@@ -293,6 +293,7 @@ function EventParticipants({
         <ProfileAvatar
           imageStyle={{ borderRadius: 40 }}
           imageUrl={participation.user.avatar?.url}
+          name={getUserDisplayName(participation.user)}
           size={40}
           style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 40 }]}
         />
@@ -698,6 +699,7 @@ function ParticipantItem({
           <ProfileAvatar
             imageStyle={{ borderRadius: 40 }}
             imageUrl={player?.avatar?.url}
+            name={getUserDisplayName(player)}
             size={40}
             style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 40 }]}
           />

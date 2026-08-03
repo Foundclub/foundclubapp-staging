@@ -362,7 +362,13 @@ function AdminClubDetail() {
         <View style={Spaces.gap[8]}>
           {items.slice(0, 6).map((item) => (
             <View key={getDocumentId(item)} style={[Alignments.row, Alignments.alignCenter, Spaces.gap[10]]}>
-              {config.field === 'members' ? <ProfileAvatar imageUrl={item?.avatar?.url} size={32} /> : null}
+              {config.field === 'members' ? (
+                <ProfileAvatar
+                  imageUrl={item?.avatar?.url}
+                  name={[item?.firstname, item?.lastname].filter(Boolean).join(' ')}
+                  size={32}
+                />
+              ) : null}
               <Text numberOfLines={2} style={[Fonts.p2, { color: Colors.neutral100, flex: 1 }]}>
                 {getClubRelationLabel(item)}
               </Text>

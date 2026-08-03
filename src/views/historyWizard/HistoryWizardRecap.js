@@ -7,6 +7,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useHistoryWizard } from '@/views/historyWizard/HistoryWizardContext';
 
@@ -14,11 +15,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useCreateHistory, useUpdateHistory } from '@/services/userHistory/userHistoryQueries';
 
-import { getImageUrl } from '@/utils/imageUrl';
-
 // imports statiques (pas require) : require n'existe pas sur le rendu web ESM.
 import calendarIcon from '@/assets/icons/calendar.png';
-import defaultClubIcon from '@/assets/icons/shield.png';
 
 /**
  * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props
@@ -161,16 +159,12 @@ function HistoryWizardRecap({ navigation }) {
                 width: 80,
               }}
             >
-              <Image
-                resizeMode="contain"
-                source={(state.club?.logo?.url || state.multisportClub?.logo?.url)
-                  ? { uri: getImageUrl(state.club?.logo?.url || state.multisportClub?.logo?.url) }
-                  : defaultClubIcon}
-                style={{
-                  height: 56,
-                  tintColor: (state.club?.logo?.url || state.multisportClub?.logo?.url) ? undefined : Colors.primary500,
-                  width: 56,
-                }}
+              {/* L14 : logo reel s'il existe, sinon l'ECUSSON aux initiales du
+                  club — l'icone generique teintee ne disait rien du club. */}
+              <ClubLogoMark
+                club={state.club || state.multisportClub}
+                name={getClubName()}
+                size={56}
               />
             </View>
           </View>

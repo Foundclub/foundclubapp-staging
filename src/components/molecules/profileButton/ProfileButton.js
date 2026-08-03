@@ -58,6 +58,7 @@ function ProfileButton() {
       <ProfileAvatar
         enablePreview={false}
         imageUrl={!isAddingAccount ? userData?.avatar?.url : undefined}
+        name={!isAddingAccount ? [userData?.firstname, userData?.lastname].filter(Boolean).join(' ') : ''}
         size={40}
       />
     </TouchableOpacity>

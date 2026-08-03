@@ -197,6 +197,7 @@ function CMMembersScreen({ navigation, route }) {
       <ProfileAvatar
         imageStyle={{ borderRadius: 25 }}
         imageUrl={item.avatarUrl}
+        name={[item.firstname, item.lastname].filter(Boolean).join(' ')}
         size={50}
         style={{ borderRadius: 25 }}
       />

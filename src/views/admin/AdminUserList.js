@@ -92,7 +92,11 @@ function AdminUserList() {
         ]}
       >
         <View style={[Alignments.row, Alignments.alignCenter]}>
-          <ProfileAvatar imageUrl={item.avatar?.url} size={50} />
+          <ProfileAvatar
+            imageUrl={item.avatar?.url}
+            name={[item.firstname, item.lastname].filter(Boolean).join(' ')}
+            size={50}
+          />
 
           <View style={[Spaces.marginLeft[12], { flex: 1 }]}>
             <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>

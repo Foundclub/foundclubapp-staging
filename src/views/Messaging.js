@@ -245,6 +245,7 @@ function Messaging({ navigation, route }) {
           <ProfileAvatar
             imageStyle={{ borderRadius: 40 }}
             imageUrl={participant?.avatar?.url}
+            name={[participant?.firstname, participant?.lastname].filter(Boolean).join(' ')}
             size={40}
             style={[
               ApplicationStyle.borderWidth1,
@@ -287,15 +288,9 @@ function Messaging({ navigation, route }) {
           />
         );
       default:
-        return (
-          <Image
-            source={Images.roundAvatar}
-            style={[
-              ApplicationStyle.borderRadius24,
-              { height: 48, width: 48 },
-            ]}
-          />
-        );
+        // Type de conversation inconnu : aucun nom fiable a montrer, donc le
+        // repli neutre de ProfileAvatar (et non plus un dessin de personne).
+        return <ProfileAvatar enablePreview={false} size={48} />;
     }
   };
 

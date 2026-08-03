@@ -132,6 +132,7 @@ function SquadRequestsScreen({ navigation, route }) {
           <ProfileAvatar
             imageStyle={{ borderRadius: 44 }}
             imageUrl={item?.avatar?.url}
+            name={requesterName}
             size={44}
             style={[
               ApplicationStyle.borderWidth1,

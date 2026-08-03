@@ -22,6 +22,7 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SearchCountdown from '@/components/organisms/league/SearchCountdown';
 import TeamSlotCreationForm from '@/components/organisms/teamSlotCreationForm/TeamSlotCreationForm';
@@ -104,7 +105,6 @@ import NextMatchCard from './components/NextMatchCard';
 /**
  * @param {{
  *  Colors: Record<string, any>,
- *  Images: Record<string, any>,
  *  rsvpCount?: number,
  *  total?: number,
  * }} props
@@ -112,7 +112,6 @@ import NextMatchCard from './components/NextMatchCard';
  */
 function VisualRoster({
   Colors,
-  Images,
   rsvpCount = 0,
   total = 5,
 }) {
@@ -145,7 +144,7 @@ function VisualRoster({
             }}
           >
             {isFilled ? (
-              <Image source={Images.roundAvatar} style={{ height: '100%', width: '100%' }} />
+              <ProfileAvatar enablePreview={false} size={32} />
             ) : (
               <View style={{
                 backgroundColor: Colors.neutral700, borderRadius: 4, height: 8, width: 8,
@@ -2591,7 +2590,6 @@ function MatchCenterScreen() {
                     </Text>
                     <VisualRoster
                       Colors={Colors}
-                      Images={Images}
                       rsvpCount={item.rsvp_count || 0}
                       total={squadRequiredPlayers}
                     />

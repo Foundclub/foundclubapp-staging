@@ -1,20 +1,30 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, StyleSheet, TouchableOpacity, View,
+  Image, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
+
+import { getCompositionPlayerInitials } from '@/views/tactical_v2/multiTeamCompositionUtils';
 
 import { getImageUrl } from '@/utils/imageUrl';
 
 import ProfilePicturePreviewOverlay from '../profilePicturePreviewOverlay/ProfilePicturePreviewOverlay';
+
+// Repli neutre quand aucun nom n'est disponible : jamais « undefined », jamais
+// un dessin de personne generique. Meme signe que MemberAvatar, pour que les
+// deux repliques se ressemblent a l'ecran.
+const REPLI_SANS_NOM = '·';
 
 /**
  * ProfileAvatar component
  * Displays an avatar that opens a full-screen preview on tap.
  * @param {object} props
  * @param {string} [props.imageUrl] - The URL of the avatar image
+ * @param {string} [props.name] - Display name of the PERSON, used to build the
+ *   initials fallback when no photo is available (ignored in logo variant).
  * @param {number} [props.size] - Size of the avatar (width/height)
  * @param {object} [props.style] - Additional styles for the container
  * @param {object} [props.imageStyle] - Additional styles for the image
@@ -30,6 +40,7 @@ function ProfileAvatar({
   fitMode,
   imageStyle,
   imageUrl,
+  name,
   safeInsetRatio,
   shape = 'auto',
   size = 40,
@@ -37,7 +48,7 @@ function ProfileAvatar({
   variant = 'avatar',
 }) {
   const {
-    Alignments, ApplicationStyle, Colors, Images,
+    Alignments, ApplicationStyle, Colors, Fonts, Images,
   } = useTheme();
   const { t } = useTranslation();
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
@@ -45,6 +56,15 @@ function ProfileAvatar({
   const processedUrl = getImageUrl(imageUrl);
   const hasImage = !!processedUrl;
   const isLogoVariant = variant === 'logo';
+  // Regle Adel du 2026-08-02 : une PERSONNE sans photo montre ses INITIALES.
+  // Les clubs et equipes passent par ClubLogoMark, qui n'atteint ce composant
+  // qu'avec une URL de logo -> la branche ci-dessous lui reste inaccessible et
+  // variant="logo" garde son repli d'origine, inchange.
+  const trimmedName = String(name || '').trim();
+  const personInitials = trimmedName
+    ? getCompositionPlayerInitials({ name: trimmedName })
+    : '';
+  const showInitials = !hasImage && !isLogoVariant;
   const flattenedStyle = StyleSheet.flatten([{ height: size, width: size }, style]) || {};
   const resolvedWidth = typeof flattenedStyle.width === 'number' ? flattenedStyle.width : size;
   const resolvedHeight = typeof flattenedStyle.height === 'number' ? flattenedStyle.height : size;
@@ -100,7 +120,9 @@ function ProfileAvatar({
   return (
     <>
       <TouchableOpacity
-        accessibilityLabel={t('profile.actions.viewAvatar', 'Agrandir la photo')}
+        accessibilityLabel={showInitials && trimmedName
+          ? trimmedName
+          : t('profile.actions.viewAvatar', 'Agrandir la photo')}
         accessibilityRole={hasImage && enablePreview ? 'imagebutton' : 'image'}
         accessibilityState={{ disabled: !hasImage || !enablePreview }}
         activeOpacity={hasImage && enablePreview ? 0.8 : 1}
@@ -130,25 +152,52 @@ function ProfileAvatar({
           },
         ]}
         >
-          <Image
-            resizeMode={resolvedFitMode}
-            source={hasImage ? { uri: processedUrl } : Images.roundAvatar}
-            style={[
-              !isLogoVariant && ApplicationStyle.borderRadius24,
-              {
-                backgroundColor: isLogoVariant ? (Colors?.neutral00 || '#FFFFFF') : 'transparent',
-                borderRadius: isLogoVariant ? 0 : resolvedRadius,
-                height: isLogoVariant ? innerHeight : resolvedHeight,
-                width: isLogoVariant ? innerWidth : resolvedWidth,
-              },
-              shouldSuppressCircleBorder && {
-                borderColor: 'transparent',
-                borderWidth: 0,
-              },
-              imageStyle,
-              isLogoVariant && { borderRadius: 0 },
-            ]}
-          />
+          {showInitials ? (
+            <View
+              style={[
+                Alignments.alignCenter,
+                Alignments.justifyCenter,
+                {
+                  backgroundColor: withAlpha(Colors.primary500, 0.16),
+                  borderRadius: resolvedRadius,
+                  height: resolvedHeight,
+                  width: resolvedWidth,
+                },
+                imageStyle,
+              ]}
+            >
+              <Text
+                numberOfLines={1}
+                style={[
+                  Fonts.p2Bold,
+                  Fonts.primary500,
+                  { fontSize: Math.max(11, Math.round(Math.min(resolvedWidth, resolvedHeight) * 0.29)) },
+                ]}
+              >
+                {personInitials || REPLI_SANS_NOM}
+              </Text>
+            </View>
+          ) : (
+            <Image
+              resizeMode={resolvedFitMode}
+              source={hasImage ? { uri: processedUrl } : Images.roundAvatar}
+              style={[
+                !isLogoVariant && ApplicationStyle.borderRadius24,
+                {
+                  backgroundColor: isLogoVariant ? (Colors?.neutral00 || '#FFFFFF') : 'transparent',
+                  borderRadius: isLogoVariant ? 0 : resolvedRadius,
+                  height: isLogoVariant ? innerHeight : resolvedHeight,
+                  width: isLogoVariant ? innerWidth : resolvedWidth,
+                },
+                shouldSuppressCircleBorder && {
+                  borderColor: 'transparent',
+                  borderWidth: 0,
+                },
+                imageStyle,
+                isLogoVariant && { borderRadius: 0 },
+              ]}
+            />
+          )}
         </View>
       </TouchableOpacity>
 

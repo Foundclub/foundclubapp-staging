@@ -1,5 +1,4 @@
 import {
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,7 +9,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
-import { getImageUrl } from '@/utils/imageUrl';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 // Carte annonce du handoff « Cartes Rechercher » (tour 5b), adaptée aux
 // données réelles du flux mercato : des PROFILS de joueurs ouverts au
@@ -21,16 +20,21 @@ import { getImageUrl } from '@/utils/imageUrl';
 /**
  * MercatoCard component
  * @param {object} props
- * @param {object} props.user
+ * @param {{
+ *   avatar?: { url?: string } | null,
+ *   category?: string | null,
+ *   club?: { name?: string } | null,
+ *   firstname?: string,
+ *   lastname?: string,
+ *   position?: string | null,
+ *   preferredSport?: string | null,
+ *   section?: { name?: string } | null,
+ * } & Record<string, any>} props.user
  * @param {Function} [props.onPress]
  * @returns {React.ReactElement}
  */
 function MercatoCard({ onPress, user }) {
-  const { Colors, Images } = useTheme();
-
-  const avatarSource = user.avatar?.url
-    ? { uri: getImageUrl(user.avatar.url) }
-    : Images.roundAvatar;
+  const { Colors } = useTheme();
 
   // Data for badges
   const position = user.position || 'Joueur';
@@ -74,11 +78,15 @@ function MercatoCard({ onPress, user }) {
           </Text>
         </View>
 
-        {/* Rangée profil : avatar (photo réelle, repli avatar générique) */}
+        {/* Rangée profil : photo réelle, repli = les INITIALES du joueur (L14) */}
         <View style={styles.profileRow}>
-          <Image
-            source={avatarSource}
-            style={[styles.avatar, { backgroundColor: Colors.neutral200 }]}
+          {/* Pas de `imageStyle` avec un fond ici : il s'applique AUSSI au
+              medaillon d'initiales et ecraserait sa couleur commune. */}
+          <ProfileAvatar
+            enablePreview={false}
+            imageUrl={user.avatar?.url}
+            name={`${user.firstname || ''} ${user.lastname || ''}`.trim()}
+            size={styles.avatar.width}
           />
           <View style={styles.profileTextContainer}>
             <Text

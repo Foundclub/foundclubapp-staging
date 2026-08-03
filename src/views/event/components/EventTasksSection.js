@@ -477,6 +477,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                       <ProfileAvatar
                         enablePreview={false}
                         imageUrl={member?.avatar?.url}
+                        name={getUserDisplayName(member)}
                         size={40}
                       />
                       <View style={{ flex: 1 }}>

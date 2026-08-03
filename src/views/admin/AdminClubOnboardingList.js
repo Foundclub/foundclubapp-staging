@@ -158,7 +158,7 @@ function AdminClubOnboardingList() {
         </View>
 
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
-          <ProfileAvatar imageUrl={requester?.avatar?.url} size={42} />
+          <ProfileAvatar imageUrl={requester?.avatar?.url} name={requesterLabel} size={42} />
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{requesterLabel}</Text>
             <Text style={[Fonts.p3, Fonts.neutral300]}>

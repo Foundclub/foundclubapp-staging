@@ -172,6 +172,7 @@ function RequestFeedItem({
         <ProfileAvatar
           enablePreview={false}
           imageUrl={requesterAvatarUrl}
+          name={requesterName}
           size={40}
         />
         <View style={{ flex: 1 }}>
@@ -197,6 +198,7 @@ function RequestFeedItem({
             <ProfileAvatar
               enablePreview={false}
               imageUrl={requesterAvatarUrl}
+              name={requesterName}
               size={40}
             />
             <View style={{ flex: 1 }}>

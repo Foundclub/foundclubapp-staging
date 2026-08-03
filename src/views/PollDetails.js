@@ -466,6 +466,7 @@ function PollDetails({ navigation, route }) {
                       <ProfileAvatar
                         enablePreview={false}
                         imageUrl={voter.avatarUrl}
+                        name={displayLabel}
                         size={34}
                         style={{ borderRadius: 17 }}
                       />

@@ -69,6 +69,7 @@ function MultisportAdminsSection({ admins, onAdminPress }) {
             <ProfileAvatar
               imageStyle={{ borderRadius: 20 }}
               imageUrl={admin.avatar?.url ? getImageUrl(admin.avatar.url) : undefined}
+              name={`${admin.firstname || ''} ${admin.lastname || ''}`.trim()}
               size={40}
               style={{ borderRadius: 20 }}
             />

@@ -302,6 +302,10 @@ function ClubMembershipRequestList({ navigation, route }) {
             <ProfileAvatar
               imageStyle={{ borderRadius: 44 }}
               imageUrl={item?.user?.avatar?.url || item?.requester?.avatar?.url}
+              name={[
+                item?.user?.firstname || item?.requester?.firstname,
+                item?.user?.lastname || item?.requester?.lastname,
+              ].filter(Boolean).join(' ')}
               size={44}
               style={[
                 ApplicationStyle.borderWidth1,

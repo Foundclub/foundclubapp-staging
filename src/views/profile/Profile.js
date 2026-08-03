@@ -270,7 +270,6 @@ function Profile({ navigation, route }) {
   const identityFirstName = userData?.firstname || '';
   const identityLastName = userData?.lastname || '';
   const identityFullName = `${identityFirstName} ${identityLastName}`.trim();
-  const identityInitials = `${identityFirstName.charAt(0)}${identityLastName.charAt(0)}`.toUpperCase();
   const identityRoleLabel = t(`profile.identity.roles.${currentRoleKey}`, t('profile.identity.roles.new'));
   const identityClubName = userData?.club?.name
     || firstMultisportClub?.name
@@ -295,34 +294,20 @@ function Profile({ navigation, route }) {
 
   const identityContent = (
     <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
-      {userData?.avatar?.url ? (
-        <ProfileAvatar
-          imageStyle={{ borderRadius: 27 }}
-          imageUrl={userData?.avatar?.url}
-          size={54}
-          style={[
-            ApplicationStyle.borderColor.neutral00,
-            ApplicationStyle.borderWidth1,
-            { borderRadius: 27 },
-          ]}
-        />
-      ) : (
-        <View style={{
-          alignItems: 'center',
-          backgroundColor: 'rgba(1,179,244,0.16)',
-          borderColor: 'rgba(1,179,244,0.35)',
-          borderRadius: 27,
-          borderWidth: 1,
-          height: 54,
-          justifyContent: 'center',
-          width: 54,
-        }}
-        >
-          <Text style={[Fonts.neutral00, { fontFamily: 'Montserrat-Bold', fontSize: 18 }]}>
-            {identityInitials || '?'}
-          </Text>
-        </View>
-      )}
+      {/* L14 : un seul medaillon pour tout le monde — ProfileAvatar rend la
+          photo si elle existe, sinon les initiales. Le repli maison qui vivait
+          ici (2e variante de medaillon dans l'app) a ete supprime. */}
+      <ProfileAvatar
+        imageStyle={{ borderRadius: 27 }}
+        imageUrl={userData?.avatar?.url}
+        name={identityFullName}
+        size={54}
+        style={[
+          ApplicationStyle.borderColor.neutral00,
+          ApplicationStyle.borderWidth1,
+          { borderRadius: 27 },
+        ]}
+      />
       <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
         <Text numberOfLines={1} style={[Fonts.neutral00, { fontFamily: 'Montserrat-Bold', fontSize: 17 }]}>
           {identityFullName}
@@ -699,6 +684,7 @@ function Profile({ navigation, route }) {
           >
             <ProfileAvatar
               imageUrl={avatarUrl}
+              name={displayName}
               size={40}
               style={{ marginRight: 12 }}
             />
