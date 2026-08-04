@@ -20,7 +20,6 @@ import { extractSubscriptionDecisionFromError } from '@/domains/subscription/sub
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Loader from '@/components/atoms/loader/Loader';
 import Input from '@/components/molecules/input/Input';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
@@ -516,18 +515,20 @@ function FacilityForm() {
           contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[24]]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
-            <HeaderBackButton onPress={() => navigation.goBack()} withDefaultMargin={false} />
-            <View style={[Alignments.fill]}>
-              <Text numberOfLines={1} style={[Fonts.h4Black, Fonts.neutral00]}>
-                {isEdit
-                  ? t('facilityForm.title.edit', 'Modifier l\'installation')
-                  : t('facilityForm.title.create', 'Nouvelle installation')}
-              </Text>
-              <Text numberOfLines={1} style={[Fonts.p3, Fonts.primary100]}>
-                {subtitle}
-              </Text>
-            </View>
+          {/* Pas de bouton retour ici : le navigateur en pose deja un juste
+              au-dessus (ce Stack.Screen est declare avec `headerTitle: ''`,
+              donc un en-tete VIDE mais present, cf. PrivateNavigator et
+              ClubStack). En ajouter un second faisait deux fleches empilees —
+              constate a l'ecran sur emulateur le 2026-08-05. */}
+          <View>
+            <Text numberOfLines={1} style={[Fonts.h4Black, Fonts.neutral00]}>
+              {isEdit
+                ? t('facilityForm.title.edit', 'Modifier l\'installation')
+                : t('facilityForm.title.create', 'Nouvelle installation')}
+            </Text>
+            <Text numberOfLines={1} style={[Fonts.p3, Fonts.primary100]}>
+              {subtitle}
+            </Text>
           </View>
 
           <View
