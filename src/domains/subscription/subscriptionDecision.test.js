@@ -107,17 +107,6 @@ describe('subscriptionDecision', () => {
     });
     expect(getSubscriptionPaywallContent({
       allowed: false,
-      paywall: 'CLUB_UPDATE_REQUIRED',
-      reason: 'SUBSCRIPTION_REQUIRED',
-      requiredPlan: ['CLUB'],
-    })).toEqual({
-      ctaLabel: 'Voir mon abonnement',
-      description: 'La modification de la fiche du club est réservée a l offre Club.'
-        + ' Offre conseillée: Club.',
-      title: 'Fiche club réservée',
-    });
-    expect(getSubscriptionPaywallContent({
-      allowed: false,
       paywall: 'SPONSOR_MANAGE_REQUIRED',
       reason: 'SUBSCRIPTION_REQUIRED',
       requiredPlan: ['CLUB'],
@@ -145,8 +134,6 @@ describe('subscriptionDecision', () => {
       .paywallKey).toBe('dues-limit');
     expect(mapSubscriptionDecisionToPaywall({ paywall: 'FACILITY_MANAGE_REQUIRED' }).paywallKey)
       .toBe('facility-manage-required');
-    expect(mapSubscriptionDecisionToPaywall({ paywall: 'CLUB_UPDATE_REQUIRED' }).paywallKey)
-      .toBe('club-update-required');
     expect(mapSubscriptionDecisionToPaywall({ paywall: 'SPONSOR_MANAGE_REQUIRED' }).paywallKey)
       .toBe('sponsor-manage-required');
     expect(mapSubscriptionDecisionToPaywall({ paywall: 'CLUB_ROLES_MANAGE_REQUIRED' }).paywallKey)
@@ -334,7 +321,7 @@ describe('subscriptionDecision', () => {
     ]);
     expect(getSubscriptionPaywallBenefits({ paywall: 'MATCH_LIMIT' })).toHaveLength(3);
     expect(getSubscriptionPaywallBenefits({ paywall: 'RECRUITMENT_AD_LIMIT' })).toHaveLength(3);
-    expect(getSubscriptionPaywallBenefits({ paywall: 'DUES_LIMIT' })).toHaveLength(3);
+    expect(getSubscriptionPaywallBenefits({ paywall: 'DUES_CAMPAIGN_CREATE_REQUIRED' })).toHaveLength(3);
     expect(getSubscriptionPaywallBenefits({ paywall: 'CLUB_TIER_TEAM_LIMIT' })).toEqual([
       'Toutes les équipes du club couvertes',
       'Droits club et gestion centralisée',
