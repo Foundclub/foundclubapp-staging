@@ -1107,20 +1107,56 @@ export default {
     },
   },
   facilityForm: {
+    actions: {
+      create: 'Créer',
+      save: 'Enregistrer',
+    },
     capacity: {
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',
+    },
+    conflictModes: {
+      allow: {
+        description: 'Le créneau reste confirmé, les dirigeants sont notifiés.',
+        label: 'Autoriser et notifier',
+      },
+      pending: {
+        description: 'Le créneau passe en demande, un dirigeant valide avant confirmation.',
+        label: 'Demande en attente',
+      },
+    },
+    defaults: {
+      name: 'Nom de l\'installation',
+      type: 'Type inconnu',
     },
     errors: {
       addressGeocodeRequired: 'Sélectionne une adresse géolocalisée dans la liste.',
       planningColorInvalid: 'Sélectionne une couleur validé.',
     },
     fields: {
+      address: 'Adresse (lieu exact)',
+      capacity: 'Capacité',
+      capacityConflictMode: 'Comportement en cas de conflit',
+      name: 'Nom de l\'installation',
       planningColor: 'Couleur dans le planning',
+      type: 'Type',
     },
     hints: {
       addressSelection: 'Sélectionne une adresse dans la liste pour activer le GPS.',
+      gpsActive: '✓ GPS activé',
       planningColor: 'Cette couleur apparaîtra dans le planning pour identifier rapidement l\'installation.',
+    },
+    placeholders: {
+      address: 'Ex: 12 Rue du Stade...',
+      name: 'Ex: Terrain Honneur, Salle A...',
+    },
+    subtitle: {
+      create: 'Configure une nouvelle installation pour ton club.',
+      edit: 'Mets à jour les informations de cette installation.',
+    },
+    title: {
+      create: 'Nouvelle installation',
+      edit: 'Modifier l\'installation',
     },
   },
   facilityList: {
