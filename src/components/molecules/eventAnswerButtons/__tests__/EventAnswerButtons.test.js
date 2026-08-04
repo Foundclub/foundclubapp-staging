@@ -1,0 +1,217 @@
+import renderer, { act } from 'react-test-renderer';
+
+import { USER_ROLES } from '@/domains/auth/authUseCases';
+
+import Button from '@/components/atoms/button/Button';
+import Tag from '@/components/atoms/tag/Tag';
+
+import EventAnswerButtons from '../EventAnswerButtons';
+
+// AUDIT L19 (E6) — filet de caracterisation sur EventAnswerButtons, le SEUL
+// endroit ou un joueur repond « present » ou « absent ». Ce composant n avait
+// aucun test alors qu il est monte a la fois par la carte (EventCardNew) et par
+// l ecran de detail (EventDetails) — avec des props DIFFERENTES.
+//
+// Ces tests decrivent le comportement ACTUEL, y compris ce qui parait faux :
+// un test qui fige un defaut est utile, il devient rouge le jour ou on corrige.
+//
+// Reference : docs/AUDIT_PARTICIPATION_2026_08_02.md, maillons M1, M2 et M6.
+
+// Jetons opaques : le contrat de theme interdit les litteraux hex, et un mock
+// n a pas besoin de vraies couleurs. Les assertions portent sur les props des
+// boutons, jamais sur le style — les echecs restent donc lisibles.
+jest.mock('@/theme/themeContext', () => {
+  const styleLeaf = {};
+  const makeRamp = () => new Proxy({}, { get: () => styleLeaf });
+  return {
+    __esModule: true,
+    default: () => ({
+      Alignments: makeRamp(),
+      ApplicationStyle: new Proxy({}, { get: () => makeRamp() }),
+      Colors: new Proxy({}, { get: (_target, key) => `couleur-${String(key)}` }),
+      Fonts: makeRamp(),
+      Images: new Proxy({}, { get: (_target, key) => `image-${String(key)}` }),
+      Spaces: makeRamp(),
+    }),
+  };
+});
+
+// `t` rend la CLE : les assertions ne dependent pas de la copie de fr.js.
+jest.mock('react-i18next', () => ({
+  initReactI18next: { init: jest.fn(), type: '3rdParty' },
+  useTranslation: () => ({ t: (key) => key }),
+}));
+
+const mockUserData = jest.fn();
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ userData: mockUserData() }),
+}));
+
+// Copies fideles de eventUseCases : la comparaison se fait sur documentId.
+jest.mock('@/domains/event/useEvent', () => ({
+  __esModule: true,
+  default: () => ({
+    canEventBeJoined: () => true,
+    haveIAlreadyAnsweredNo: ({ missings, userId }) => (missings || [])
+      .some((m) => m.documentId === userId),
+    haveIAlreadyJoined: ({ participations, userId }) => (participations || [])
+      .some((p) => p.documentId === userId),
+  }),
+}));
+
+const ME = 'user-me';
+const player = { documentId: ME, role: { name: USER_ROLES.player } };
+
+// Date FUTURE : le flux de participation bloque un evenement passe.
+const buildEvent = (overrides = {}) => ({
+  capacity: 0,
+  date: '2027-05-12T18:00:00.000Z',
+  documentId: 'event-1',
+  missings: [],
+  participationRequests: [],
+  participations: [],
+  sessionStatus: 'closed', // « Prive » cote produit : l evenement d une equipe
+  team: { documentId: 'team-1', name: 'Senior A', players: [{ documentId: ME }] },
+  type: { name: 'Entrainement' },
+  ...overrides,
+});
+
+const render = (props) => {
+  let tree;
+  act(() => {
+    // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
+    tree = renderer.create(<EventAnswerButtons {...props} />);
+  });
+  return tree;
+};
+
+const buttonTitles = (tree) => tree.root.findAllByType(Button).map((node) => node.props.title);
+const tagTexts = (tree) => tree.root.findAllByType(Tag).map((node) => node.props.text);
+
+beforeEach(() => {
+  mockUserData.mockReturnValue(player);
+});
+
+describe('EventAnswerButtons — repondre present ou absent (caracterisation)', () => {
+  it('evenement PRIVE sans reponse : deux boutons distincts, present et absent', () => {
+    const tree = render({ event: buildEvent(), onDecline: jest.fn(), onParticipate: jest.fn() });
+
+    expect(buttonTitles(tree)).toEqual([
+      'eventList.actions.present',
+      'eventList.actions.absent',
+    ]);
+  });
+
+  it('les deux boutons appellent des handlers DIFFERENTS (present et absent)', () => {
+    const onDecline = jest.fn();
+    const onParticipate = jest.fn();
+    const tree = render({ event: buildEvent(), onDecline, onParticipate });
+
+    const [present, absent] = tree.root.findAllByType(Button);
+    act(() => { present.props.onPress(); });
+    act(() => { absent.props.onPress(); });
+
+    expect(onParticipate).toHaveBeenCalledTimes(1);
+    expect(onDecline).toHaveBeenCalledTimes(1);
+  });
+
+  it('TROU fige — evenement PUBLIC : aucun bouton « absent », seulement « participer »', () => {
+    // sessionStatus « open » = « Public » cote produit. Un joueur de l equipe
+    // conviee n a alors AUCUN moyen de se declarer absent, ni sur la carte ni
+    // sur le detail : la branche a deux boutons est reservee au prive.
+    const tree = render({
+      event: buildEvent({ sessionStatus: 'open' }),
+      onDecline: jest.fn(),
+      onJoin: jest.fn(),
+      onParticipate: jest.fn(),
+    });
+
+    // Le libelle vient de resolveParticipationFlow (texte en dur, pas une cle).
+    expect(buttonTitles(tree)).toEqual(['Participer']);
+  });
+});
+
+describe('EventAnswerButtons — changer d avis (caracterisation)', () => {
+  it('TROU fige — depuis la CARTE (sans onDeleteParticipation) : aucun retour en arriere', () => {
+    // EventCardNew ne passe jamais `onDeleteParticipation`. Une fois la reponse
+    // donnee, la carte n affiche qu une etiquette : il FAUT ouvrir le detail.
+    const tree = render({ event: buildEvent({ missings: [{ documentId: ME }] }) });
+
+    expect(tagTexts(tree)).toEqual(['eventList.info.alreadyMissing']);
+    expect(buttonTitles(tree)).toEqual([]);
+  });
+
+  it('depuis le DETAIL (avec onDeleteParticipation) : un retour en arriere apparait', () => {
+    const tree = render({
+      event: buildEvent({ missings: [{ documentId: ME }] }),
+      onDeleteParticipation: jest.fn(),
+    });
+
+    expect(tagTexts(tree)).toEqual(['eventList.info.alreadyMissing']);
+    expect(buttonTitles(tree)).toEqual(['eventDetails.actions.editResponse']);
+  });
+
+  it('deja present : etiquette « je participe » + annulation de la participation', () => {
+    const tree = render({
+      event: buildEvent({ participations: [{ documentId: ME }] }),
+      onDeleteParticipation: jest.fn(),
+    });
+
+    expect(tagTexts(tree)).toEqual(['eventList.info.alreadyJoined']);
+    expect(buttonTitles(tree)).toEqual(['eventDetails.actions.cancelResponse']);
+  });
+});
+
+describe('EventAnswerButtons — validation manuelle (caracterisation)', () => {
+  it('demande en attente : le joueur voit « demande en attente », pas « je participe »', () => {
+    const tree = render({
+      event: buildEvent(),
+      hasPendingRequest: true,
+      onDeleteParticipation: jest.fn(),
+    });
+
+    expect(tagTexts(tree)).toEqual(['eventList.info.pendingRequest']);
+    expect(buttonTitles(tree)).toEqual(['eventDetails.actions.cancelResponse']);
+  });
+
+  it('TROU fige — demande REFUSEE : aucune trace du refus, le bouton de depart revient', () => {
+    // Un refus met la demande en `declined` : ni acceptee, ni en attente, ni
+    // absente. Le composant retombe donc sur la branche « pas encore repondu »
+    // et propose a nouveau de repondre, sans dire que le staff a refuse.
+    const tree = render({
+      event: buildEvent(),
+      hasAcceptedRequest: false,
+      hasPendingRequest: false,
+      onDecline: jest.fn(),
+      onParticipate: jest.fn(),
+    });
+
+    expect(tagTexts(tree)).toEqual([]);
+    expect(buttonTitles(tree)).toEqual([
+      'eventList.actions.present',
+      'eventList.actions.absent',
+    ]);
+  });
+});
+
+describe('EventAnswerButtons — qui a le droit de repondre (caracterisation)', () => {
+  it('un entraineur ne voit pas les boutons de reponse mais les commandes d organisateur', () => {
+    mockUserData.mockReturnValue({ documentId: 'user-coach', role: { name: USER_ROLES.coach } });
+
+    const tree = render({ event: buildEvent(), onCancel: jest.fn(), onEdit: jest.fn() });
+
+    expect(buttonTitles(tree)).toEqual([
+      'eventDetails.actions.edit',
+      'eventDetails.actions.cancelEvent',
+    ]);
+  });
+
+  it('un visiteur non connecte voit uniquement l invitation a se connecter', () => {
+    mockUserData.mockReturnValue(null);
+
+    const tree = render({ event: buildEvent(), onLogin: jest.fn() });
+
+    expect(buttonTitles(tree)).toEqual(['eventList.actions.join']);
+  });
+});
