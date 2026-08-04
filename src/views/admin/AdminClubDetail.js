@@ -161,7 +161,7 @@ function AdminClubDetail() {
         onSuccess: () => {
           refetch?.();
           Alert.alert(
-            nextVerified ? 'Club vérifié' : 'Vérification retirée',
+            nextVerified ? 'Club certifié' : 'Certification retirée',
             nextVerified ? 'Le club est maintenant certifié.' : 'Le club n’est plus certifié.',
           );
         },
@@ -201,7 +201,7 @@ function AdminClubDetail() {
       tone: club?.isReservationProvider ? 'primary' : 'neutral',
     },
     {
-      label: club?.clubVerified ? 'Verifie' : 'Non vérifié',
+      label: club?.clubVerified ? 'Certifié' : 'Non certifié',
       tone: club?.clubVerified ? 'success' : 'neutral',
     },
   ]), [club?.clubPartner, club?.clubVerified, club?.isReservationProvider]);
@@ -614,7 +614,7 @@ function AdminClubDetail() {
               { label: 'Email', value: club.email },
               { label: 'Telephone', value: club.phoneNumber },
               { label: 'Partenariat', value: club.clubPartner ? 'Oui' : 'Non' },
-              { label: 'Club vérifie', value: club.clubVerified ? 'Oui' : 'Non' },
+              { label: 'Club certifié', value: club.clubVerified ? 'Oui' : 'Non' },
               { label: 'Reservation', value: club.isReservationProvider ? 'Oui' : 'Non' },
               { label: 'Multisport parent', value: getClubRelationLabel(parentMultisport) },
             ])}

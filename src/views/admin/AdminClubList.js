@@ -61,7 +61,7 @@ const BOOLEAN_FILTERS = [
 
 const getStatusBadges = (club = {}) => [
   club?.clubPartner ? { label: 'Partenaire', tone: 'primary' } : { label: 'Standard', tone: 'neutral' },
-  club?.clubVerified ? { label: 'Verifie', tone: 'success' } : { label: 'Non vérifié', tone: 'neutral' },
+  club?.clubVerified ? { label: 'Certifié', tone: 'success' } : { label: 'Non certifié', tone: 'neutral' },
   club?.isReservationProvider ? { label: 'Réservation', tone: 'primary' } : null,
 ].filter(Boolean);
 

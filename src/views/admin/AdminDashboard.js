@@ -463,7 +463,7 @@ function AdminDashboard() {
         onError: (error) => {
           Alert.alert(
             'Mise à jour impossible',
-            getErrorMessage(error, 'generic') || 'Impossible de mettre à jour la publication des coachs non certifies.',
+            getErrorMessage(error, 'generic') || 'Impossible de mettre à jour la publication des coachs non certifiés.',
           );
         },
       },
@@ -690,13 +690,13 @@ function AdminDashboard() {
       ? {
         backgroundColor: `${Colors.success500}18`,
         borderColor: `${Colors.success500}44`,
-        label: 'Verifie',
+        label: 'Certifié',
         textColor: Colors.success500,
       }
       : {
         backgroundColor: `${Colors.neutral300}18`,
         borderColor: `${Colors.neutral300}44`,
-        label: 'Non certifiée',
+        label: 'Non certifié',
         textColor: Colors.neutral100,
       }
   ), [Colors.neutral100, Colors.neutral300, Colors.success500]);
@@ -1440,12 +1440,12 @@ function AdminDashboard() {
               Gouvernance
             </Text>
             <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginTop[6]]}>
-              Publication coachs non certifies
+              Publication coachs non certifiés
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
               {publishingGovernance.globalEnabled
                 ? 'Les coachs rattaches a un club non certifié peuvent publier leurs événements et annonces.'
-                : 'Les coachs de clubs non certifies restent bloques tant qu aucune exception superadmin n est accordee.'}
+                : 'Les coachs de clubs non certifiés restent bloqués tant qu\'aucune exception superadmin n\'est accordée.'}
             </Text>
           </View>
           <TouchableOpacity
@@ -1647,13 +1647,13 @@ function AdminDashboard() {
           <DashboardCard
             color={Colors.neutral100}
             meta="Gouvernance"
-            title="Coachs non certifies"
+            title="Coachs non certifiés"
             value={publishingGovernance?.nonPartnerCoaches || 0}
           />
           <DashboardCard
             color={Colors.neutral100}
             meta="Gouvernance"
-            title="Clubs non certifies actifs"
+            title="Clubs non certifiés actifs"
             value={publishingGovernance?.nonPartnerClubsWithAffiliatedCoaches || 0}
           />
           <DashboardCard
@@ -1827,7 +1827,7 @@ function AdminDashboard() {
         >
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Coachs non certifies</Text>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Coachs non certifiés</Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
                 {publishingGovernance?.nonPartnerCoaches || 0}
                 {' '}

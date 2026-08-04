@@ -113,7 +113,7 @@ function AdminClubWizardRecap({ navigation }) {
       action: RouteNames.AdminClubWizardBusiness,
       lines: [
         state.clubPartner ? 'Club partenaire' : 'Club standard',
-        state.clubVerified ? 'Club vérifie' : 'Club non vérifié',
+        state.clubVerified ? 'Club certifié' : 'Club non certifié',
         state.isReservationProvider ? 'Réservation active' : 'Pas réservation',
         'Abonnements et capacité Team geres depuis les opérations abonnements',
       ],

@@ -89,7 +89,7 @@ function AdminClubWizardBusiness({ navigation }) {
           'Signal commercial et interne uniquement. Ce statut n ouvre aucun droit produit a lui seul.',
         )}
         {renderToggle(
-          'Club vérifie',
+          'Club certifié',
           'clubVerified',
           'Badge public et legitimite dirigeant. A activer seulement après review claim, migration approuvee ou action superadmin auditée.',
         )}

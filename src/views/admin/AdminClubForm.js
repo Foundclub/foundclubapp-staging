@@ -434,7 +434,7 @@ function AdminClubForm() {
             Cette fiche pilote le partenariat, la vérification et la réservation. Les abonnements et la couverture Team se gerent dans les opérations abonnements.
           </Text>
           {renderToggle('Club partenaire', 'clubPartner')}
-          {renderToggle('Club vérifie', 'clubVerified')}
+          {renderToggle('Club certifié', 'clubVerified')}
           {renderToggle('Fournisseur de réservation', 'isReservationProvider')}
         </View>
 
