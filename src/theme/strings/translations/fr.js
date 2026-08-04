@@ -673,6 +673,14 @@ export default {
       homeTeamBadge: 'Équipe organisatrice',
       invitedTeamBadge: 'équipe invitée',
     },
+    managePanel: {
+      cancel: 'Annuler',
+      edit: 'Modifier',
+      feature: 'À la une',
+      lineup: 'Compo',
+      title: 'Gérer l\'événement',
+      tournamentSettings: 'Réglages tournoi',
+    },
     modals: {
       accept: {
         title: 'Es-tu sûr·e de vouloir accepter cette demande ?',

@@ -7,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Image,
   InteractionManager,
   KeyboardAvoidingView,
   Modal,
@@ -30,6 +31,7 @@ import {
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
 import { getSubscriptionQuotaItem } from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -486,8 +488,9 @@ function EventDetails({ navigation, route }) {
   const [isTrainingOpenModalVisible, setIsTrainingOpenModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
   const [stageDetailsTab, setStageDetailsTab] = useState('overview');
-  const [isEventActionsOpen, setIsEventActionsOpen] = useState(true);
-  const [isTournamentActionsOpen, setIsTournamentActionsOpen] = useState(true);
+  // D4 : le panneau d'organisation part REPLIE. Ouvert par defaut, il mangeait
+  // ~230 px au-dessus des participants et de la composition.
+  const [isEventActionsOpen, setIsEventActionsOpen] = useState(false);
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
   const [dismissedMatchStatsPromptKey, setDismissedMatchStatsPromptKey] = useState(null);
   const [areDeferredQueriesEnabled, setAreDeferredQueriesEnabled] = useState(false);
@@ -511,7 +514,7 @@ function EventDetails({ navigation, route }) {
   const [selfArrivalMarkedLocal, setSelfArrivalMarkedLocal] = useState(false);
 
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const tournamentDs = createTournamentDesignSystem({
     ApplicationStyle,
@@ -2507,67 +2510,10 @@ function EventDetails({ navigation, route }) {
     );
   }, [event?.recurrenceGroupId, eventId, mutations.cancelEventMutation, t]);
 
-  const handleOpenEventActionsMenu = useCallback(() => {
-    const actions = [
-      { style: 'cancel', text: t('common.cancel', 'Annuler') },
-      {
-        onPress: handleEditEvent,
-        text: t('eventDetails.actions.edit', "Modifier l'événement"),
-      },
-    ];
-
-    if (canManageFeatured && canRequestFeatured) {
-      actions.push({
-        // @ts-ignore: FIXME: Baseline TS regression
-        onPress: () => setIsFeaturedModalVisible(true),
-        text: 'Mettre à la une',
-      });
-    }
-
-    actions.push({
-      onPress: handleCancelEvent,
-      style: 'destructive',
-      text: t('eventDetails.actions.cancelEvent', "Annuler l'événement"),
-    });
-
-    Alert.alert(
-      t('eventDetails.actions.menuTitle', 'Actions événement'),
-      t('eventDetails.actions.menuDescription', 'Choisis une action.'),
-      // @ts-ignore: FIXME: Baseline TS regression
-      actions,
-    );
-  }, [canManageFeatured, canRequestFeatured, handleCancelEvent, handleEditEvent, t]);
-
-  const handleOpenTournamentActionsMenu = useCallback(() => {
-    const actions = [
-      { style: 'cancel', text: t('common.cancel', 'Annuler') },
-    ];
-
-    if (canEdit) {
-      actions.push({
-        // @ts-ignore: FIXME: Baseline TS regression
-        onPress: handleOpenTournamentSettings,
-        text: 'Paramètres tournoi',
-      });
-      actions.push({
-        // @ts-ignore: FIXME: Baseline TS regression
-        onPress: handleOpenEventActionsMenu,
-        text: 'Actions événement',
-      });
-    }
-
-    Alert.alert(
-      'Actions tournoi',
-      'Choisis ce que tu veux gérer.',
-      // @ts-ignore: FIXME: Baseline TS regression
-      actions,
-    );
-  }, [
-    canEdit,
-    handleOpenEventActionsMenu,
-    handleOpenTournamentSettings,
-    t,
-  ]);
+  // D4 : les deux menus intermediaires (« Actions evenement » et « Actions
+  // tournoi ») ont ete supprimes. Chaque chip du panneau compact appelle
+  // directement son handler — un tap au lieu de deux, et parfois trois pour un
+  // tournoi. Verifie orphelins par recherche avant suppression.
 
   const openEventLicenseCampaignSettings = useCallback(() => {
     if (!eventClubId || !licenseCampaignEventId) return;
@@ -3011,53 +2957,9 @@ function EventDetails({ navigation, route }) {
     ), 0),
     [convocationBranches],
   );
-  const compositionEligiblePlayerCount = useMemo(
-    () => (Array.isArray(staffCompositionPayload?.eligiblePlayers) ? staffCompositionPayload.eligiblePlayers.length : 0),
-    [staffCompositionPayload?.eligiblePlayers],
-  );
-
-  const compositionPrimaryAction = useMemo(() => {
-    const compositionTitle = "Composition d'équipes";
-
-    if (staffCompositionPayload?.draft) {
-      return {
-        subtitle: staffCompositionPayload?.draft?.updatedAt
-          ? `Brouillon enregistre le ${new Date(staffCompositionPayload.draft.updatedAt).toLocaleString('fr-FR')}`
-          : 'Brouillon enregistre',
-        title: compositionTitle,
-      };
-    }
-
-    if (staffCompositionPayload?.published) {
-      const publishedVersion = Number(staffCompositionPayload?.published?.version || 1);
-      return {
-        subtitle: staffCompositionPayload?.published?.publishedAt
-          ? `Publication v${publishedVersion} le ${new Date(staffCompositionPayload.published.publishedAt).toLocaleString('fr-FR')}`
-          : `Publication v${publishedVersion}`,
-        title: compositionTitle,
-      };
-    }
-
-    const bootstrapSource = staffCompositionPayload?.bootstrap?.source;
-    if (bootstrapSource && bootstrapSource !== 'empty') {
-      return {
-        subtitle: `Preremplissage disponible : ${getCompositionSourceLabel(bootstrapSource)}`,
-        title: compositionTitle,
-      };
-    }
-
-    if (compositionEligiblePlayerCount === 0) {
-      return {
-        subtitle: 'Tu peux déjà créer les équipes même sans participant: les postes resteront libres et se completeront ensuite.',
-        title: compositionTitle,
-      };
-    }
-
-    return {
-      subtitle: 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.',
-      title: compositionTitle,
-    };
-  }, [compositionEligiblePlayerCount, getCompositionSourceLabel, staffCompositionPayload]);
+  // D4 : `compositionPrimaryAction` decrivait le titre et le sous-titre du gros
+  // bouton de composition (« Brouillon enregistre le ... »). Ce bouton est
+  // devenu la chip « Compo » ; le bloc n'avait plus aucun lecteur.
 
   const matchStatsPrimaryAction = useMemo(() => {
     if (!isMatchFinished) {
@@ -3618,6 +3520,158 @@ function EventDetails({ navigation, route }) {
     );
   }, [eventId, eventStartAt, hasSelfArrived, mutations.selfArrivalMutation, t]);
 
+  /**
+   * Les actions d'organisation reellement ouvertes a cette personne, sur cet
+   * evenement. C'est le SEUL juge : le panneau ne se dessine qu'a partir de
+   * cette liste, et disparait quand elle est vide.
+   * @param {{ includeTournamentSettings?: boolean }} [options] - Variante tournoi.
+   * @returns {Array<any>} - Les chips visibles, dans l'ordre d'affichage.
+   */
+  const buildManageChips = (options = {}) => {
+    const chips = [];
+
+    if (canEdit) {
+      chips.push({
+        icon: 'edit',
+        key: 'edit',
+        label: t('eventDetails.managePanel.edit', 'Modifier'),
+        onPress: handleEditEvent,
+      });
+    }
+
+    if (canManageFeatured && canRequestFeatured) {
+      chips.push({
+        icon: 'bell',
+        key: 'feature',
+        label: t('eventDetails.managePanel.feature', 'À la une'),
+        onPress: () => setIsFeaturedModalVisible(true),
+      });
+    }
+
+    if (canEdit && supportsEventComposition) {
+      chips.push({
+        disabled: isStaffCompositionFetching,
+        icon: 'users',
+        key: 'lineup',
+        label: t('eventDetails.managePanel.lineup', 'Compo'),
+        onPress: handleManageComposition,
+      });
+    }
+
+    if (options.includeTournamentSettings && canEdit) {
+      chips.push({
+        icon: 'filter',
+        key: 'tournamentSettings',
+        label: t('eventDetails.managePanel.tournamentSettings', 'Réglages tournoi'),
+        onPress: handleOpenTournamentSettings,
+      });
+    }
+
+    if (canEdit) {
+      chips.push({
+        icon: 'close',
+        isDestructive: true,
+        key: 'cancel',
+        label: t('eventDetails.managePanel.cancel', 'Annuler'),
+        onPress: handleCancelEvent,
+      });
+    }
+
+    return chips;
+  };
+
+  /**
+   * Panneau compact d'organisation, en pied d'ecran. Replie, il ne coute qu'une
+   * rangee de 44 px : c'est ce qui rend les participants et la composition
+   * visibles sans defiler.
+   * @param {Array<any>} chips - Les chips a proposer (liste vide = pas de panneau).
+   * @returns {any} - Le panneau, ou null.
+   */
+  const renderManagePanel = (chips) => {
+    if (!chips.length) return null;
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderWidth1,
+          {
+            backgroundColor: withAlpha(Colors.primary900, 0.88),
+            borderColor: withAlpha(Colors.primary500, 0.3),
+            borderRadius: 18,
+            marginHorizontal: 14,
+            overflow: 'hidden',
+            paddingHorizontal: 14,
+          },
+        ]}
+        testID="event-manage-panel"
+      >
+        <TouchableOpacity
+          accessibilityLabel={eventActionsToggleLabel}
+          accessibilityRole="button"
+          activeOpacity={0.82}
+          onPress={() => setIsEventActionsOpen((previousValue) => !previousValue)}
+        >
+          <View
+            style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              Alignments.justifySpaceBetween,
+              { height: 44 },
+            ]}
+            testID="event-manage-panel-row"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t('eventDetails.managePanel.title', "Gérer l'événement")}
+            </Text>
+            <Image
+              source={Images.chevronDown}
+              style={{
+                height: 16,
+                tintColor: Colors.primary500,
+                transform: [{ rotate: isEventActionsOpen ? '180deg' : '0deg' }],
+                width: 16,
+              }}
+            />
+          </View>
+        </TouchableOpacity>
+
+        {isEventActionsOpen ? (
+          <View
+            style={[
+              Alignments.row,
+              Spaces.gap[8],
+              Spaces.paddingBottom[12],
+              { flexWrap: 'wrap' },
+            ]}
+          >
+            {chips.map((chip, index) => {
+              // Une chip orpheline en fin de grille prend toute la largeur :
+              // une demi-chip seule au milieu se lit comme un bug d'affichage.
+              const isLastAlone = chips.length % 2 === 1 && index === chips.length - 1;
+              const chipColor = chip.isDestructive ? Colors.error500 : Colors.primary500;
+
+              return (
+                <View key={chip.key} style={{ width: isLastAlone ? '100%' : '48%' }} testID="event-manage-chip">
+                  <Button
+                    disabled={chip.disabled}
+                    icon={chip.icon}
+                    iconColor={chipColor}
+                    onPress={chip.onPress}
+                    size="sm"
+                    style={{ borderColor: withAlpha(chipColor, 0.45) }}
+                    textStyle={[Fonts.p3Bold, { color: chipColor }]}
+                    title={chip.label}
+                    variant="Secondary"
+                  />
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
   const renderTournamentActionsPanel = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
     const primaryActionTitle = canEdit ? 'Gérer le tournoi' : 'Voir le tournoi';
@@ -3627,112 +3681,73 @@ function EventDetails({ navigation, route }) {
         (member) => member?.user?.documentId === userData?.documentId,
       )?.responseStatus,
     );
-    const canShowTournamentActions = canEdit || (canManageFeatured && canRequestFeatured);
-
+    // D4 : la participation au tournoi (gerer / voir, mon equipe, m'inscrire)
+    // reste TOUJOURS visible — c'est le coeur de l'ecran pour un visiteur. Seules
+    // les actions d'organisation passent dans le panneau compact, replie.
     return (
-      <View
-        style={[
-          ApplicationStyle.backgroundColor.primary700,
-          ApplicationStyle.borderRadius24,
-          Spaces.paddingHorizontal[16],
-          {
-            borderColor: `${Colors.primary500}44`,
-            borderWidth: 1,
-            overflow: 'hidden',
-          },
-        ]}
-      >
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => setIsTournamentActionsOpen((previousValue) => !previousValue)}
+      <View style={[Spaces.gap[12]]}>
+        <View
           style={[
-            // @ts-ignore: FIXME: Baseline TS regression
-            Spaces.paddingTop[8],
-            Spaces.paddingBottom[12],
-            // @ts-ignore: FIXME: Baseline TS regression
-            Spaces.gap[8],
+            ApplicationStyle.backgroundColor.primary700,
+            ApplicationStyle.borderRadius24,
+            Spaces.paddingHorizontal[16],
+            Spaces.paddingVertical[16],
+            Spaces.gap[12],
+            {
+              borderColor: withAlpha(Colors.primary500, 0.27),
+              borderWidth: 1,
+              overflow: 'hidden',
+            },
           ]}
         >
-          <View style={[Alignments.alignCenter]}>
-            <View
-              style={{
-                backgroundColor: `${Colors.neutral00}55`,
-                borderRadius: 999,
-                height: 4,
-                width: 48,
-              }}
-            />
-          </View>
-          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Actions événement</Text>
-              <Text style={[Fonts.p4, Fonts.neutral300, { marginTop: 2 }]}>
-                Gère le tournoi, les équipes inscrites et les options de l’événement.
-              </Text>
-            </View>
-            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              {isTournamentActionsOpen ? 'Fermer' : 'Ouvrir'}
-            </Text>
-          </View>
-        </TouchableOpacity>
+          <Button
+            onPress={handleOpenTournamentManagement}
+            title={primaryActionTitle}
+            variant={canEdit ? 'Primary' : 'Secondary'}
+          />
 
-        {isTournamentActionsOpen ? (
-          <View style={[Spaces.gap[12], Spaces.paddingBottom[16]]}>
+          {managedTournamentTeam?.documentId ? (
             <Button
-              onPress={handleOpenTournamentManagement}
-              title={primaryActionTitle}
-              variant={canEdit ? 'Primary' : 'Secondary'}
+              onPress={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
+              title="Gérer mon équipe inscrite"
+              variant="Primary"
             />
+          ) : null}
 
-            {managedTournamentTeam?.documentId ? (
-              <Button
-                onPress={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
-                title="Gérer mon équipe inscrite"
-                variant="Primary"
-              />
-            ) : null}
+          {!managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
+            <Button
+              onPress={() => handleOpenTournamentTeam(currentUserTournamentTeam.documentId)}
+              title="Voir mon équipe inscrite"
+              variant="Primary"
+            />
+          ) : null}
 
-            {!managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
-              <Button
-                onPress={() => handleOpenTournamentTeam(currentUserTournamentTeam.documentId)}
-                title="Voir mon équipe inscrite"
-                variant="Primary"
-              />
-            ) : null}
+          {!managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
+            <Button
+              onPress={() => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId)}
+              title={currentUserPendingTournamentMemberStatus === 'invited' ? 'Répondre à mon invitation' : 'Suivre ma demande'}
+              variant="Primary"
+            />
+          ) : null}
 
-            {!managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
-              <Button
-                onPress={() => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId)}
-                title={currentUserPendingTournamentMemberStatus === 'invited' ? 'Répondre à mon invitation' : 'Suivre ma demande'}
-                variant="Primary"
-              />
-            ) : null}
+          {canRegisterTournamentSourceTeam ? (
+            <Button
+              onPress={() => setIsTournamentRegisterModalVisible(true)}
+              title="Inscrire une équipe du club"
+              variant="Secondary"
+            />
+          ) : null}
 
-            {canRegisterTournamentSourceTeam ? (
-              <Button
-                onPress={() => setIsTournamentRegisterModalVisible(true)}
-                title="Inscrire une équipe du club"
-                variant="Secondary"
-              />
-            ) : null}
+          {canCreateCustomTournamentTeam ? (
+            <Button
+              onPress={() => setIsTournamentCreateModalVisible(true)}
+              title="Créer une équipe pour ce tournoi"
+              variant="Secondary"
+            />
+          ) : null}
+        </View>
 
-            {canCreateCustomTournamentTeam ? (
-              <Button
-                onPress={() => setIsTournamentCreateModalVisible(true)}
-                title="Créer une équipe pour ce tournoi"
-                variant="Secondary"
-              />
-            ) : null}
-
-            {canShowTournamentActions ? (
-              <Button
-                onPress={handleOpenTournamentActionsMenu}
-                title="Actions tournoi"
-                variant="Secondary"
-              />
-            ) : null}
-          </View>
-        ) : null}
+        {renderManagePanel(buildManageChips({ includeTournamentSettings: true }))}
       </View>
     );
   };
@@ -4116,6 +4131,7 @@ function EventDetails({ navigation, route }) {
   const renderActionButtons = () => {
     const isReservation = event?.type?.name?.toLowerCase()?.includes('reservation')
       || event?.type?.name?.toLowerCase()?.includes('reservation');
+    const managePanelNode = renderManagePanel(buildManageChips());
 
     if (isReservation) {
       const userDocumentId = userData?.documentId;
@@ -4130,11 +4146,9 @@ function EventDetails({ navigation, route }) {
           />
           {hasAlreadyJoined && <Button disabled title="Je participe !" variant="Primary" />}
           {!hasAlreadyJoined && <Button onPress={handleJoinEvent} title="Reserver" variant="Primary" />}
-          {canEdit && (
-            <View style={Spaces.marginTop[12]}>
-              <Button onPress={handleOpenEventActionsMenu} title="Actions événement" variant="Secondary" />
-            </View>
-          )}
+          {managePanelNode ? (
+            <View style={Spaces.marginTop[12]}>{managePanelNode}</View>
+          ) : null}
         </View>
       );
     }
@@ -4143,11 +4157,8 @@ function EventDetails({ navigation, route }) {
       return null;
     }
 
-    const featuredActionNode = canManageFeatured && canRequestFeatured ? (
-      <View style={{ marginTop: 12 }}>
-        <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title="Mettre à la une" variant="Secondary" />
-      </View>
-    ) : null;
+    // D4 : le bouton autonome « Mettre à la une » a disparu — c'est la chip
+    // « À la une » du panneau qui ouvre la meme modale, sous la meme condition.
     const pendingFeaturedActionNode = (() => {
       if (hasPendingFeaturedScope) {
         return (
@@ -4167,9 +4178,6 @@ function EventDetails({ navigation, route }) {
 
       return null;
     })();
-    const canShowEventActionsPanel = Boolean(
-      canEdit || canManageEventLicenseCampaigns,
-    );
     const eventLicenseCampaignActionsNode = canManageEventLicenseCampaigns
       ? renderEventLicenseCampaignActions()
       : null;
@@ -4189,173 +4197,36 @@ function EventDetails({ navigation, route }) {
         participationFlow={tournamentAwareParticipationFlow}
       />
     );
-    const actionButtonsNode = (
-      <View style={[Spaces.gap[12]]}>
-        {canEdit ? (
-          <Button
-            onPress={handleOpenEventActionsMenu}
-            title="Actions événement"
-            variant="Secondary"
-          />
+    // La composition passe dans la chip « Compo ». Les statistiques de match, qui
+    // vivaient imbriquees dans ce meme bloc, ne sont PAS une action
+    // d'organisation : elles restent un bouton a part, au-dessus du panneau.
+    const matchStatsNode = canEdit && supportsEventComposition && isMatchEvent ? (
+      <View>
+        <Button
+          disabled={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
+          onPress={openMatchStatsEditor}
+          title={isMatchStatsFetching ? 'Chargement...' : matchStatsPrimaryAction.title}
+          variant="Secondary"
+        />
+        {matchStatsPrimaryAction.subtitle ? (
+          <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 8, textAlign: 'center' }]}>
+            {matchStatsPrimaryAction.subtitle}
+          </Text>
         ) : null}
-        {eventLicenseCampaignActionsNode}
-        {canEdit && supportsEventComposition && (
-          <View style={{ marginTop: 12 }}>
-            <Button
-              disabled={isStaffCompositionFetching}
-              onPress={handleManageComposition}
-              title={isStaffCompositionFetching ? 'Chargement...' : compositionPrimaryAction.title}
-              variant="Secondary"
-            />
-            {compositionPrimaryAction.subtitle ? (
-              <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 8, textAlign: 'center' }]}>
-                {compositionPrimaryAction.subtitle}
-              </Text>
-            ) : null}
-
-            {isMatchEvent ? (
-              <View style={{ marginTop: 12 }}>
-                <Button
-                  disabled={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
-                  onPress={openMatchStatsEditor}
-                  title={isMatchStatsFetching ? 'Chargement...' : matchStatsPrimaryAction.title}
-                  variant="Secondary"
-                />
-                {matchStatsPrimaryAction.subtitle ? (
-                  <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 8, textAlign: 'center' }]}>
-                    {matchStatsPrimaryAction.subtitle}
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
-          </View>
-        )}
       </View>
-    );
+    ) : null;
 
-    if (canEdit && isTournamentEvent && !isStageDayEvent) {
-      return null;
-    }
-
-    if (canEdit && supportsEventComposition) {
+    // Un seul assemblage remplace les deux panneaux bavards : ce qui n'est pas
+    // une action d'organisation reste AU-DESSUS, le panneau compact ferme la
+    // marche. Il n'apparait que si au moins une chip est visible.
+    if (managePanelNode || eventLicenseCampaignActionsNode || matchStatsNode) {
       return (
-        <View>
-          <View
-            style={[
-              ApplicationStyle.card,
-              ApplicationStyle.backgroundColor.primary900,
-              ApplicationStyle.borderColor.primary500,
-              ApplicationStyle.borderRadius24,
-              ApplicationStyle.borderWidth1,
-              Spaces.padding[16],
-              Spaces.gap[12],
-            ]}
-          >
-            <View
-              style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}
-            >
-              <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions événement</Text>
-                <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  Modifie cet evenement, gere son annulation ou prepare la composition d&apos;equipes.
-                </Text>
-              </View>
-              <TouchableOpacity
-                accessibilityLabel={eventActionsToggleLabel}
-                accessibilityRole="button"
-                activeOpacity={0.82}
-                hitSlop={{
-                  bottom: 8,
-                  left: 8,
-                  right: 8,
-                  top: 8,
-                }}
-                onPress={() => setIsEventActionsOpen((prev) => !prev)}
-                style={[
-                  ApplicationStyle.backgroundColor.primary700,
-                  ApplicationStyle.borderColor.primary500,
-                  ApplicationStyle.borderWidth1,
-                  Spaces.paddingHorizontal[12],
-                  Spaces.paddingVertical[8],
-                  { borderRadius: 20 },
-                ]}
-              >
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                  {isEventActionsOpen ? 'Fermer' : 'Ouvrir'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {isEventActionsOpen ? actionButtonsNode : null}
-          </View>
-
-          {featuredActionNode}
+        <View style={[Spaces.gap[12]]}>
+          {eventLicenseCampaignActionsNode}
+          {matchStatsNode}
+          {!canEdit ? eventAnswerButtonsNode : null}
           {pendingFeaturedActionNode}
-        </View>
-      );
-    }
-
-    if (canShowEventActionsPanel) {
-      return (
-        <View>
-          <View
-            style={[
-              ApplicationStyle.card,
-              ApplicationStyle.backgroundColor.primary900,
-              ApplicationStyle.borderColor.primary500,
-              ApplicationStyle.borderRadius24,
-              ApplicationStyle.borderWidth1,
-              Spaces.padding[16],
-              Spaces.gap[12],
-            ]}
-          >
-            <View
-              style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}
-            >
-              <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions événement</Text>
-                <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  {canEdit
-                    ? 'Modifie cet événement ou gère son annulation.'
-                    : 'Gère les cotisations rattachées à cet événement.'}
-                </Text>
-              </View>
-              <TouchableOpacity
-                accessibilityLabel={eventActionsToggleLabel}
-                accessibilityRole="button"
-                activeOpacity={0.82}
-                hitSlop={{
-                  bottom: 8,
-                  left: 8,
-                  right: 8,
-                  top: 8,
-                }}
-                onPress={() => setIsEventActionsOpen((prev) => !prev)}
-                style={[
-                  ApplicationStyle.backgroundColor.primary700,
-                  ApplicationStyle.borderColor.primary500,
-                  ApplicationStyle.borderWidth1,
-                  Spaces.paddingHorizontal[12],
-                  Spaces.paddingVertical[8],
-                  { borderRadius: 20 },
-                ]}
-              >
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                  {isEventActionsOpen ? 'Fermer' : 'Ouvrir'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {isEventActionsOpen ? actionButtonsNode : null}
-          </View>
-
-          {!canEdit ? (
-            <View style={{ marginTop: 12 }}>
-              {eventAnswerButtonsNode}
-            </View>
-          ) : null}
-          {featuredActionNode}
-          {pendingFeaturedActionNode}
+          {managePanelNode}
         </View>
       );
     }
@@ -4363,7 +4234,6 @@ function EventDetails({ navigation, route }) {
     return (
       <View>
         {eventAnswerButtonsNode}
-        {featuredActionNode}
         {pendingFeaturedActionNode}
       </View>
     );
