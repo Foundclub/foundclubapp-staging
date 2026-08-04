@@ -34,6 +34,12 @@ jest.mock('@/services/bootstrap/bootstrapService', () => ({
   getAppBootstrap: jest.fn(),
 }));
 
+// Tour 7a : l'ecran pose desormais une carte verre en degrade. Le paquet natif
+// est publie en ESM pur et n'est pas transpile par Jest ; comme toutes les
+// suites qui montent un degrade (ClubCard.test.js:18), on le remplace par un
+// element inerte. Ce test ne regarde pas le rendu, seulement le calendrier.
+jest.mock('react-native-linear-gradient', () => 'LinearGradient');
+
 // L11 : l'ecran traduit ses libelles ; sans instance i18next initialisee, le
 // vrai hook rendrait les cles — le repli suffit ici, le scenario ne lit pas la copy.
 jest.mock('react-i18next', () => ({

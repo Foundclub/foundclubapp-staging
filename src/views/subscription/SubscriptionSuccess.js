@@ -2,14 +2,22 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Platform, ScrollView, Text, TouchableOpacity, View,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
 import { getSubscriptionUnlockedCapabilities } from '@/domains/subscription/subscriptionDecision';
 import {
   invalidateSubscriptionState,
   scheduleSubscriptionStateRefresh,
 } from '@/domains/subscription/subscriptionRefresh';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -20,25 +28,34 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { trackSubscriptionFunnelEvent } from '@/services/subscription/subscriptionService';
 
-// Confettis statiques de la celebration compacte (positions relatives du handoff 6a).
+// Cotes de la mise en page compacte (handoff design tour 7a) : l'ecran doit
+// tenir en entier sur un iPhone 13/14 SANS defiler. Le ScrollView reste en
+// secours pour les petits ecrans, il ne porte plus le cas nominal.
+const HERO_HALO_SIZE = 84;
+const HERO_RING_SIZE = 56;
+const CONTENT_MAX_WIDTH = 360;
+
+// Confettis statiques : positions relatives DANS la bande decorative posee
+// au-dessus du heros (styles.celebrationBand). Cette bande est hors du flux,
+// donc aucun point ne peut retomber sur un texte (handoff 7a, point 6).
 const CELEBRATION_DOTS = [
   {
-    color: 'primary500', left: '16%', size: 6, top: '18%',
+    color: 'primary500', left: '6%', size: 6, top: '46%',
   },
   {
-    color: 'success500', left: '80%', size: 5, top: '15%',
+    color: 'success500', left: '24%', size: 4, top: '10%',
   },
   {
-    color: 'gold500', left: '26%', size: 4, top: '28%',
+    color: 'gold500', left: '45%', size: 5, top: '58%',
   },
   {
-    color: 'primary500', left: '72%', size: 4, top: '29%',
+    color: 'primary500', left: '66%', size: 4, top: '14%',
   },
   {
-    color: 'success500', left: '12%', size: 4, top: '38%',
+    color: 'success500', left: '84%', size: 5, top: '50%',
   },
   {
-    color: 'gold500', left: '87%', size: 5, top: '37%',
+    color: 'gold500', left: '95%', size: 4, top: '8%',
   },
 ];
 
@@ -57,6 +74,22 @@ const UNLOCK_FALLBACK_LABELS = {
   teams: 'Équipes supplémentaires',
 };
 
+// Version courte des memes libelles, pour la grille a 2 colonnes (tour 7a).
+// C'est un raccourci d'AFFICHAGE : la liste des capacites vient toujours de
+// getSubscriptionUnlockedCapabilities. Une capacite absente de cette table
+// retombe sur son libelle long — elle ne doit JAMAIS disparaitre de l'ecran.
+/** @type {Record<string, string>} */
+const UNLOCK_SHORT_FALLBACK_LABELS = {
+  clubRoles: 'Rôles du club',
+  clubTeams: 'Toutes les équipes du club',
+  composition: 'Compo & convocations',
+  dues: 'Cotisations',
+  events: 'Événements illimités',
+  facilities: 'Installations',
+  recruitment: 'Annonces illimitées',
+  sponsors: 'Sponsors',
+};
+
 /** @type {Record<string, string>} */
 const FIRST_ACTION_FALLBACK_LABELS = {
   club: 'Gérer mon club',
@@ -66,11 +99,13 @@ const FIRST_ACTION_FALLBACK_LABELS = {
 };
 
 /**
- * Ecran de succes d'achat (handoff 6a, enrichi au lot L11) : celebration
- * compacte, la liste de ce que l'offre achetee debloque REELLEMENT (miroir de
- * la matrice serveur, voir getSubscriptionUnlockedCapabilities), les premiers
- * pas qui ouvrent les onglets concernes, recu discret vers Mon abonnement, CTA
- * unique qui relance la tache interrompue (la reprise de tache reste le heros).
+ * Ecran de succes d'achat (handoff 6a, enrichi au lot L11, remis en page au
+ * tour 7a) : celebration compacte, la liste de ce que l'offre achetee debloque
+ * REELLEMENT (miroir de la matrice serveur, voir
+ * getSubscriptionUnlockedCapabilities) en grille a 2 colonnes, les premiers pas
+ * en grille 2x2 qui ouvrent les onglets concernes, recu discret vers Mon
+ * abonnement, CTA unique qui relance la tache interrompue (la reprise de tache
+ * reste le heros).
  * Params navigation :
  * - offerLabel : ex. « Équipe · 2 équipes »
  * - offerScope : 'TEAM' | 'CLUB' — portee de l'offre ACHETEE ; absent (achat
@@ -83,7 +118,7 @@ const FIRST_ACTION_FALLBACK_LABELS = {
  */
 function SubscriptionSuccess({ navigation, route }) {
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const offerLabel = String(route?.params?.offerLabel || 'Équipe');
@@ -98,6 +133,24 @@ function SubscriptionSuccess({ navigation, route }) {
   const queryClient = useQueryClient();
 
   const unlockedCapabilities = getSubscriptionUnlockedCapabilities(offerScope);
+
+  /**
+   * Libelle affiche pour une capacite debloquee : la version courte quand elle
+   * existe, sinon la version longue. Aucun identifiant ne peut sortir sans
+   * texte — au pire il rend sa propre cle, jamais rien (tour 7a, point 3).
+   * @param {string} capabilityId - Identifiant rendu par getSubscriptionUnlockedCapabilities.
+   * @returns {string} - Libelle a afficher dans la grille.
+   */
+  const resolveUnlockLabel = (capabilityId) => {
+    const longLabel = t(
+      `subscriptionSuccess.unlocks.${capabilityId}`,
+      UNLOCK_FALLBACK_LABELS[capabilityId] || capabilityId,
+    );
+    return t(
+      `subscriptionSuccess.unlocksShort.${capabilityId}`,
+      UNLOCK_SHORT_FALLBACK_LABELS[capabilityId] || longLabel,
+    );
+  };
 
   const handleGoHome = () => {
     invalidateSubscriptionState(queryClient);
@@ -140,18 +193,22 @@ function SubscriptionSuccess({ navigation, route }) {
     });
   };
 
-  // Premiers pas : chaque bouton ouvre l'ONGLET qui heberge la capacite
+  // Premiers pas : chaque carte ouvre l'ONGLET qui heberge la capacite
   // debloquee. Planning et Équipes sont des onglets directs de HomeTab (motif
   // EventDetails.js:2335) ; le recrutement vit DANS SearchStack, donc trois
   // niveaux via navigateToSearchHub — deux niveaux echouent en silence depuis
   // un ecran pousse sur le navigateur racine, comme celui-ci (R06).
+  // `icon` pointe la banque d'icones du theme (Images), la meme que les cartes
+  // de l'accueil (HomeActionCard.js:186) : aucune image nouvelle a embarquer.
   const firstActions = [
     {
+      icon: 'calendar',
       id: 'events',
       label: t('subscriptionSuccess.firstActions.events', FIRST_ACTION_FALLBACK_LABELS.events),
       open: () => navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.MyEventList }),
     },
     {
+      icon: 'users',
       id: 'composition',
       label: t(
         'subscriptionSuccess.firstActions.composition',
@@ -160,6 +217,7 @@ function SubscriptionSuccess({ navigation, route }) {
       open: () => navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.MyTeamList }),
     },
     {
+      icon: 'search',
       id: 'recruitment',
       label: t(
         'subscriptionSuccess.firstActions.recruitment',
@@ -168,9 +226,10 @@ function SubscriptionSuccess({ navigation, route }) {
       open: () => navigateToSearchHub(navigation, 'recruitment'),
     },
     // Installations, sponsors, cotisations et roles vivent sur la fiche club :
-    // le bouton n'apparait que si l'achat est Club ET que le club couvert est
-    // connu — un bouton vers un club absent serait un mensonge (§2.3).
+    // la carte n'apparait que si l'achat est Club ET que le club couvert est
+    // connu — une carte vers un club absent serait un mensonge (§2.3).
     ...(offerScope === 'CLUB' && purchasedClubDocumentId ? [{
+      icon: 'shield',
       id: 'club',
       label: t('subscriptionSuccess.firstActions.club', FIRST_ACTION_FALLBACK_LABELS.club),
       open: () => navigation.navigate(RouteNames.ClubStack, {
@@ -196,105 +255,149 @@ function SubscriptionSuccess({ navigation, route }) {
 
   return (
     <ScreenContainer bgImage="bg2">
-      <View style={[Alignments.fill, Spaces.padding[24]]}>
-        {CELEBRATION_DOTS.map((dot) => (
-          <View
-            key={`${dot.left}-${dot.top}`}
-            pointerEvents="none"
-            style={{
-              backgroundColor: Colors[/** @type {keyof typeof Colors} */ (dot.color)],
-              borderRadius: 999,
-              height: dot.size,
-              left: /** @type {any} */ (dot.left),
-              opacity: 0.8,
-              position: 'absolute',
-              top: /** @type {any} */ (dot.top),
-              width: dot.size,
-            }}
-          />
-        ))}
-
+      <View style={[Alignments.fill, Spaces.paddingHorizontal[24], Spaces.paddingVertical[16]]}>
         <ScrollView
           contentContainerStyle={[
             Alignments.alignCenter,
             Alignments.justifyCenter,
-            Spaces.gap[16],
+            Spaces.gap[12],
             { flexGrow: 1 },
           ]}
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
-          <View
-            style={{
-              alignItems: 'center',
-              backgroundColor: 'rgba(39,214,163,0.08)',
-              borderRadius: 999,
-              height: 150,
-              justifyContent: 'center',
-              width: 150,
-            }}
-          >
+          <View style={styles.hero}>
+            <View pointerEvents="none" style={styles.celebrationBand}>
+              {CELEBRATION_DOTS.map((dot) => (
+                <View
+                  key={`${dot.left}-${dot.top}`}
+                  style={{
+                    backgroundColor: Colors[/** @type {keyof typeof Colors} */ (dot.color)],
+                    borderRadius: 999,
+                    height: dot.size,
+                    left: /** @type {any} */ (dot.left),
+                    opacity: 0.8,
+                    position: 'absolute',
+                    top: /** @type {any} */ (dot.top),
+                    width: dot.size,
+                  }}
+                />
+              ))}
+            </View>
             <View
-              style={{
-                alignItems: 'center',
-                backgroundColor: 'rgba(39,214,163,0.12)',
-                borderColor: Colors.success500,
-                borderRadius: 999,
-                borderWidth: 2,
-                height: 92,
-                justifyContent: 'center',
-                width: 92,
-              }}
+              style={[
+                styles.heroHalo,
+                { backgroundColor: withAlpha(Colors.success500, 0.08) },
+              ]}
             >
-              <Text style={{ color: Colors.success500, fontSize: 44, lineHeight: 52 }}>✓</Text>
+              <View
+                style={[
+                  styles.heroRing,
+                  {
+                    backgroundColor: withAlpha(Colors.success500, 0.12),
+                    borderColor: Colors.success500,
+                  },
+                ]}
+              >
+                <Text style={{ color: Colors.success500, fontSize: 26, lineHeight: 32 }}>✓</Text>
+              </View>
             </View>
           </View>
-          <Text style={[Fonts.h1Bold, Fonts.neutral00, Fonts.textCenter]}>
+
+          <Text style={[Fonts.h2Bold, Fonts.neutral00, Fonts.textCenter]}>
             C&apos;est débloqué !
           </Text>
-          <Text style={[Fonts.p1, Fonts.neutral200, Fonts.textCenter, { maxWidth: 300 }]}>
+          <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter, styles.offerLine]}>
             Offre
             {' '}
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{offerLabel}</Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{offerLabel}</Text>
             {' '}
             — active pour toute l&apos;équipe, dès maintenant.
           </Text>
 
-          <View style={[Spaces.gap[8], { maxWidth: 300 }]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          <View
+            style={[
+              styles.glassCard,
+              { borderColor: withAlpha(Colors.primary500, 0.25) },
+            ]}
+          >
+            {/* Motif de carte verre du depot (ClubCardSurface.js:45) : le
+                degrade est POSE DERRIERE en absoluteFill, le conteneur garde sa
+                hauteur naturelle. L'angle suit le handoff (168deg). */}
+            <LinearGradient
+              colors={[withAlpha(Colors.primary700, 0.9), withAlpha(Colors.primary900, 0.96)]}
+              end={{ x: 0.21, y: 1 }}
+              pointerEvents="none"
+              start={{ x: 0, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View
+              pointerEvents="none"
+              style={[
+                styles.innerTopHighlight,
+                { backgroundColor: withAlpha(Colors.neutral00, 0.14) },
+              ]}
+            />
+            <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
               {t('subscriptionSuccess.unlockedTitle', 'Ton offre débloque :')}
             </Text>
-            {unlockedCapabilities.map((capabilityId) => (
-              <View
-                key={capabilityId}
-                style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}
-              >
-                <Text style={{ color: Colors.success500, fontSize: 14, lineHeight: 18 }}>✓</Text>
-                <Text style={[Fonts.p2, Fonts.neutral200, { flexShrink: 1 }]}>
-                  {t(
-                    `subscriptionSuccess.unlocks.${capabilityId}`,
-                    UNLOCK_FALLBACK_LABELS[capabilityId] || capabilityId,
-                  )}
-                </Text>
-              </View>
-            ))}
+            <View style={styles.unlockGrid}>
+              {unlockedCapabilities.map((capabilityId) => (
+                <View key={capabilityId} style={styles.unlockCell}>
+                  <Text style={{ color: Colors.success500, fontSize: 12, lineHeight: 16 }}>✓</Text>
+                  <Text
+                    numberOfLines={2}
+                    style={[Fonts.small, Fonts.neutral200, styles.unlockLabel]}
+                  >
+                    {resolveUnlockLabel(capabilityId)}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
 
-          <View style={[Spaces.gap[8], { alignSelf: 'stretch', maxWidth: 340 }]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
+          <View style={styles.firstActionBlock}>
+            <Text style={[Fonts.p3Bold, Fonts.neutral00, Fonts.textCenter]}>
               {t(
                 'subscriptionSuccess.firstActionTitle',
                 'Que veux-tu faire en premier pour profiter de ton abonnement ?',
               )}
             </Text>
-            {firstActions.map((action) => (
-              <Button
-                key={action.id}
-                onPress={() => handleFirstAction(action)}
-                title={action.label}
-                variant="Secondary"
-              />
-            ))}
+            <View style={styles.firstActionGrid}>
+              {firstActions.map((action) => (
+                <TouchableOpacity
+                  accessibilityLabel={action.label}
+                  accessibilityRole="button"
+                  key={action.id}
+                  onPress={() => handleFirstAction(action)}
+                  style={[
+                    styles.firstActionCard,
+                    {
+                      backgroundColor: withAlpha(Colors.primary700, 0.55),
+                      borderColor: withAlpha(Colors.primary500, 0.28),
+                    },
+                  ]}
+                >
+                  <Image
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                    resizeMode="contain"
+                    // `?.` volontaire : c'est l'ecran qui suit un PAIEMENT. Une
+                    // icone manquante doit laisser un trou, jamais faire tomber
+                    // l'ecran (RN ignore une `source` indefinie sans broncher).
+                    source={Images?.[/** @type {keyof typeof Images} */ (action.icon)]}
+                    style={styles.firstActionIcon}
+                    tintColor={Colors.primary500}
+                  />
+                  <Text
+                    numberOfLines={2}
+                    style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}
+                  >
+                    {action.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </ScrollView>
 
@@ -304,7 +407,12 @@ function SubscriptionSuccess({ navigation, route }) {
             title={resumeCtaLabel}
             variant="Primary"
           />
+          {/* Le pied reste celui du lot L11. Seul ajout : le libelle
+              d'accessibilite, rendu necessaire par les cartes de premiers pas
+              qui sont, elles aussi, des TouchableOpacity — il nomme la cible
+              pour un lecteur d'ecran comme pour un test. */}
           <TouchableOpacity
+            accessibilityLabel="Retour à l'accueil"
             accessibilityRole="button"
             onPress={handleGoHome}
             style={[Spaces.paddingVertical[12]]}
@@ -326,5 +434,99 @@ function SubscriptionSuccess({ navigation, route }) {
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  // Bande decorative des confettis : hors du flux, debordant de part et d'autre
+  // du heros et POSEE AU-DESSUS de lui. Cout en hauteur : zero.
+  celebrationBand: {
+    height: 44,
+    left: -70,
+    position: 'absolute',
+    right: -70,
+    top: -40,
+  },
+  firstActionBlock: {
+    gap: 8,
+    maxWidth: CONTENT_MAX_WIDTH,
+    width: '100%',
+  },
+  firstActionCard: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 6,
+    justifyContent: 'center',
+    minHeight: 62,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    width: '48%',
+  },
+  firstActionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+  },
+  firstActionIcon: {
+    height: 18,
+    width: 18,
+  },
+  glassCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    maxWidth: CONTENT_MAX_WIDTH,
+    // Le degrade est en absoluteFill derriere le contenu : sans cette decoupe
+    // il depasserait des coins arrondis.
+    overflow: 'hidden',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    width: '100%',
+  },
+  hero: {
+    alignItems: 'center',
+  },
+  heroHalo: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: HERO_HALO_SIZE,
+    justifyContent: 'center',
+    width: HERO_HALO_SIZE,
+  },
+  heroRing: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 2,
+    height: HERO_RING_SIZE,
+    justifyContent: 'center',
+    width: HERO_RING_SIZE,
+  },
+  // Lisere clair interieur en haut de la carte verre (handoff 7a).
+  innerTopHighlight: {
+    height: 1,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  offerLine: {
+    maxWidth: 300,
+  },
+  unlockCell: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 6,
+    paddingBottom: 6,
+    paddingRight: 8,
+    width: '50%',
+  },
+  unlockGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  unlockLabel: {
+    flexShrink: 1,
+  },
+});
 
 export default SubscriptionSuccess;

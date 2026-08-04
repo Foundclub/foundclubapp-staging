@@ -1,5 +1,7 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import { getSubscriptionUnlockedCapabilities } from '@/domains/subscription/subscriptionDecision';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -9,6 +11,11 @@ import SubscriptionSuccess from '../SubscriptionSuccess';
 // existant (subscriptionStateRefresh.test.js) ne verifie que le calendrier de
 // rafraichissement L08. Ces tests caracterisent d'abord le comportement livre
 // (handoff 6a), puis verrouillent la liste de deblocages et les premiers pas.
+//
+// Tour 7a (mise en page compacte) : les premiers pas sont passes de boutons
+// empiles a une grille 2x2 de cartes. Ils ne sont donc plus atteignables par le
+// mock de <Button> mais par leur libelle d'accessibilite — meme handler, meme
+// navigation, meme jalon funnel : c'est exactement ce que ces tests verifient.
 
 const mockTrackFunnelEvent = jest.fn();
 const mockInvalidate = jest.fn();
@@ -35,6 +42,11 @@ jest.mock('@/domains/subscription/subscriptionRefresh', () => ({
   scheduleSubscriptionStateRefresh: (/** @type {any} */ ...args) => mockScheduleRefresh(...args),
 }));
 
+// Tour 7a : la carte verre pose un degrade, comme les cartes club
+// (ClubCard.test.js:18 — meme mock, meme raison : le module natif n'existe pas
+// sous Jest).
+jest.mock('react-native-linear-gradient', () => 'LinearGradient');
+
 jest.mock('@/theme/themeContext', () => {
   const styleLeaf = {};
   const makeRamp = () => new Proxy({}, { get: () => styleLeaf });
@@ -44,6 +56,10 @@ jest.mock('@/theme/themeContext', () => {
       Alignments: makeRamp(),
       Colors: new Proxy({}, { get: (_target, key) => `couleur-${String(key)}` }),
       Fonts: makeRamp(),
+      // Tour 7a : les cartes de premiers pas portent une icone de la banque du
+      // theme (`Images`), comme les cartes de l'accueil. Sans cette entree le
+      // mock rendait `Images` indefini et le rendu levait une TypeError.
+      Images: new Proxy({}, { get: (_target, key) => `image-${String(key)}` }),
       Spaces: new Proxy({}, { get: () => makeRamp() }),
     }),
   };
@@ -94,6 +110,32 @@ const renderScreen = async (params = {}) => {
  */
 const renderedText = (tree) => JSON.stringify(tree.toJSON());
 
+/**
+ * Retrouve une zone tactile par son libelle d'accessibilite. Depuis le tour 7a,
+ * les premiers pas sont des cartes et non plus des <Button> : c'est le libelle
+ * qui les nomme, pour un lecteur d'ecran comme pour ce test.
+ * @param {import('react-test-renderer').ReactTestRenderer} tree
+ * @param {string} label
+ * @returns {any}
+ */
+const findTouchableByLabel = (tree, label) => tree.root
+  .findAllByType(TouchableOpacity)
+  .find((node) => node.props.accessibilityLabel === label);
+
+/**
+ * Cellules de la grille des capacites debloquees (une par identifiant rendu par
+ * getSubscriptionUnlockedCapabilities).
+ * @param {import('react-test-renderer').ReactTestRenderer} tree
+ * @returns {any[]}
+ */
+const unlockCells = (tree) => tree.root.findAll(
+  // `typeof node.type === 'string'` : les noeuds hotes seulement. Sans ce
+  // filtre, chaque cellule est comptee deux fois (le composant View ET la vue
+  // native qu'il rend).
+  (node) => typeof node.type === 'string'
+    && StyleSheet.flatten(node.props.style)?.width === '50%',
+);
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockButtonHandlers.clear();
@@ -137,10 +179,12 @@ describe('SubscriptionSuccess — comportement livre (handoff 6a)', () => {
 
   it('« Retour à l accueil » invalide puis reset vers l accueil', async () => {
     const tree = await renderScreen({});
-    const touchables = tree.root.findAllByType(TouchableOpacity);
-    expect(touchables.length).toBeGreaterThanOrEqual(1);
+    // Tour 7a : selection par libelle, l'index 0 designant desormais la
+    // premiere carte de premiers pas.
+    const homeLink = findTouchableByLabel(tree, "Retour à l'accueil");
+    expect(homeLink).toBeTruthy();
     await act(async () => {
-      touchables[0].props.onPress();
+      homeLink.props.onPress();
     });
     expect(mockInvalidate).toHaveBeenCalled();
     expect(navigation.reset).toHaveBeenCalledWith({
@@ -169,44 +213,46 @@ describe('SubscriptionSuccess — comportement livre (handoff 6a)', () => {
 // serveur (subscription-permission.ts:43-80) : ces tests verrouillent qu'on
 // n'affiche jamais une capacite que l'offre achetee ne debloque pas.
 describe('SubscriptionSuccess — L11, ce que l achat debloque et les premiers pas', () => {
+  // Tour 7a : les libelles attendus sont ceux de la grille COURTE
+  // (`unlocksShort.*`). Le sens ne change pas, la place tenue si.
   it('achat Équipe : le socle Équipe, jamais les capacites Club', async () => {
     const tree = await renderScreen({ offerScope: 'TEAM' });
     const text = renderedText(tree);
     expect(text).toContain('Ton offre débloque :');
-    expect(text).toContain('Événements et matchs illimités');
-    expect(text).toContain('Annonces de recrutement illimitées');
-    expect(text).toContain('Composition et convocations');
+    expect(text).toContain('Événements illimités');
+    expect(text).toContain('Annonces illimitées');
+    expect(text).toContain('Compo & convocations');
     expect(text).toContain('Équipes supplémentaires');
-    expect(text).not.toContain('Installations du club');
-    expect(text).not.toContain('Sponsors du club');
-    expect(text).not.toContain('Campagnes de cotisations');
-    expect(text).not.toContain('Gestion des entraîneurs et dirigeants');
-    expect(mockButtonHandlers.has('Gérer mon club')).toBe(false);
+    expect(text).not.toContain('Installations');
+    expect(text).not.toContain('Sponsors');
+    expect(text).not.toContain('Cotisations');
+    expect(text).not.toContain('Rôles du club');
+    expect(findTouchableByLabel(tree, 'Gérer mon club')).toBeUndefined();
   });
 
   it('achat Club : les capacites Club s ajoutent au socle', async () => {
     const tree = await renderScreen({ clubDocumentId: 'club-doc-1', offerScope: 'CLUB' });
     const text = renderedText(tree);
-    expect(text).toContain('Toutes les équipes du club couvertes');
-    expect(text).toContain('Événements et matchs illimités');
-    expect(text).toContain('Installations du club');
-    expect(text).toContain('Sponsors du club');
-    expect(text).toContain('Campagnes de cotisations');
-    expect(text).toContain('Gestion des entraîneurs et dirigeants');
+    expect(text).toContain('Toutes les équipes du club');
+    expect(text).toContain('Événements illimités');
+    expect(text).toContain('Installations');
+    expect(text).toContain('Sponsors');
+    expect(text).toContain('Cotisations');
+    expect(text).toContain('Rôles du club');
   });
 
-  it('portee inconnue (achat Stripe web) : le socle commun, sans bouton club', async () => {
+  it('portee inconnue (achat Stripe web) : le socle commun, sans carte club', async () => {
     const tree = await renderScreen({ offerLabel: 'FoundClub' });
     const text = renderedText(tree);
-    expect(text).toContain('Événements et matchs illimités');
-    expect(text).not.toContain('Installations du club');
-    expect(mockButtonHandlers.has('Gérer mon club')).toBe(false);
+    expect(text).toContain('Événements illimités');
+    expect(text).not.toContain('Installations');
+    expect(findTouchableByLabel(tree, 'Gérer mon club')).toBeUndefined();
   });
 
   it('« Publier un événement ou un match » ouvre l onglet Planning et invalide l abonnement', async () => {
-    await renderScreen({ offerScope: 'TEAM' });
+    const tree = await renderScreen({ offerScope: 'TEAM' });
     await act(async () => {
-      mockButtonHandlers.get('Publier un événement ou un match')();
+      findTouchableByLabel(tree, 'Publier un événement ou un match').props.onPress();
     });
     expect(mockInvalidate).toHaveBeenCalled();
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
@@ -218,9 +264,9 @@ describe('SubscriptionSuccess — L11, ce que l achat debloque et les premiers p
   });
 
   it('« Préparer ma compo » ouvre l onglet Équipes', async () => {
-    await renderScreen({ offerScope: 'TEAM' });
+    const tree = await renderScreen({ offerScope: 'TEAM' });
     await act(async () => {
-      mockButtonHandlers.get('Préparer ma compo')();
+      findTouchableByLabel(tree, 'Préparer ma compo').props.onPress();
     });
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
       screen: RouteNames.MyTeamList,
@@ -228,9 +274,9 @@ describe('SubscriptionSuccess — L11, ce que l achat debloque et les premiers p
   });
 
   it('« Publier une annonce de recrutement » passe par les TROIS niveaux (R06)', async () => {
-    await renderScreen({ offerScope: 'TEAM' });
+    const tree = await renderScreen({ offerScope: 'TEAM' });
     await act(async () => {
-      mockButtonHandlers.get('Publier une annonce de recrutement')();
+      findTouchableByLabel(tree, 'Publier une annonce de recrutement').props.onPress();
     });
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
       params: {
@@ -242,9 +288,9 @@ describe('SubscriptionSuccess — L11, ce que l achat debloque et les premiers p
   });
 
   it('« Gérer mon club » ouvre la fiche du club COUVERT par l achat', async () => {
-    await renderScreen({ clubDocumentId: 'club-doc-1', offerScope: 'CLUB' });
+    const tree = await renderScreen({ clubDocumentId: 'club-doc-1', offerScope: 'CLUB' });
     await act(async () => {
-      mockButtonHandlers.get('Gérer mon club')();
+      findTouchableByLabel(tree, 'Gérer mon club').props.onPress();
     });
     expect(mockInvalidate).toHaveBeenCalled();
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.ClubStack, {
@@ -256,8 +302,74 @@ describe('SubscriptionSuccess — L11, ce que l achat debloque et les premiers p
     });
   });
 
-  it('achat Club sans club connu : pas de bouton « Gérer mon club », pas de mensonge', async () => {
-    await renderScreen({ offerScope: 'CLUB' });
-    expect(mockButtonHandlers.has('Gérer mon club')).toBe(false);
+  it('achat Club sans club connu : pas de carte « Gérer mon club », pas de mensonge', async () => {
+    const tree = await renderScreen({ offerScope: 'CLUB' });
+    expect(findTouchableByLabel(tree, 'Gérer mon club')).toBeUndefined();
+  });
+});
+
+// Tour 7a — la mise en page compacte. Ces tests ne decrivent pas un gout : ils
+// verrouillent les deux choses qu'une remise en page peut casser en silence,
+// une capacite qui disparait et un premier pas qui perd son jalon.
+describe('SubscriptionSuccess — tour 7a, grille 2 colonnes et premiers pas', () => {
+  it.each([
+    ['TEAM', 'club-doc-1'],
+    ['CLUB', 'club-doc-1'],
+    ['', ''],
+  ])('portee %s : une cellule par capacite, avec libelle', async (offerScope, clubId) => {
+    const expectedCapabilities = getSubscriptionUnlockedCapabilities(offerScope);
+    const tree = await renderScreen({ clubDocumentId: clubId, offerScope });
+
+    const cells = unlockCells(tree);
+    // 2 colonnes : chaque cellule occupe la moitie de la largeur de la carte.
+    expect(cells).toHaveLength(expectedCapabilities.length);
+
+    // Aucun identifiant ne sort sans texte : chaque cellule porte un libelle
+    // non vide, et ce libelle n'est jamais l'identifiant brut.
+    const labels = cells.map((cell) => {
+      const texts = cell.findAllByType(Text);
+      return String(texts[texts.length - 1].props.children || '');
+    });
+    expect(labels.filter(Boolean)).toHaveLength(expectedCapabilities.length);
+    expectedCapabilities.forEach((capabilityId) => {
+      expect(labels).not.toContain(capabilityId);
+    });
+  });
+
+  it('une capacite sans libelle court retombe sur le libelle long (`teams`)', async () => {
+    // `teams` n'existe QUE dans l'offre Équipe et n'a pas de version courte :
+    // c'est le temoin que le repli fonctionne au lieu de laisser un trou.
+    expect(getSubscriptionUnlockedCapabilities('TEAM')).toContain('teams');
+    const tree = await renderScreen({ offerScope: 'TEAM' });
+    expect(renderedText(tree)).toContain('Équipes supplémentaires');
+  });
+
+  it('les 4 premiers pas gardent leur handler et leur jalon funnel', async () => {
+    const expectedSources = [
+      ['Publier un événement ou un match', 'first-action:events'],
+      ['Préparer ma compo', 'first-action:composition'],
+      ['Publier une annonce de recrutement', 'first-action:recruitment'],
+      ['Gérer mon club', 'first-action:club'],
+    ];
+
+    const tree = await renderScreen({ clubDocumentId: 'club-doc-1', offerScope: 'CLUB' });
+    expect(tree.root.findAllByType(TouchableOpacity)).toHaveLength(
+      // 4 cartes de premiers pas + le lien « Retour à l'accueil ».
+      expectedSources.length + 1,
+    );
+
+    /* eslint-disable no-restricted-syntax, no-await-in-loop */
+    for (const [label, source] of expectedSources) {
+      const card = findTouchableByLabel(tree, label);
+      expect(card).toBeTruthy();
+      await act(async () => {
+        card.props.onPress();
+      });
+      expect(mockTrackFunnelEvent).toHaveBeenCalledWith('success_resume_clicked', { source });
+      expect(mockInvalidate).toHaveBeenCalled();
+    }
+    /* eslint-enable no-restricted-syntax, no-await-in-loop */
+
+    expect(navigation.navigate).toHaveBeenCalledTimes(expectedSources.length);
   });
 });

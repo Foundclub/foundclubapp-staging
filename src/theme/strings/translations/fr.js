@@ -2240,6 +2240,21 @@ export default {
       sponsors: 'Sponsors du club',
       teams: 'Équipes supplémentaires',
     },
+    // Tour 7a — version courte des mêmes libellés pour la grille à 2 colonnes.
+    // Raccourci d'AFFICHAGE seulement : la liste vient toujours de
+    // getSubscriptionUnlockedCapabilities. Une capacité absente d'ici retombe
+    // sur son libellé long ci-dessus (`teams` est dans ce cas), elle ne
+    // disparaît jamais de l'écran.
+    unlocksShort: {
+      clubRoles: 'Rôles du club',
+      clubTeams: 'Toutes les équipes du club',
+      composition: 'Compo & convocations',
+      dues: 'Cotisations',
+      events: 'Événements illimités',
+      facilities: 'Installations',
+      recruitment: 'Annonces illimitées',
+      sponsors: 'Sponsors',
+    },
   },
   superAdminContentManager: {
     actions: {
