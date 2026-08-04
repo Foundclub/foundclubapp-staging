@@ -580,7 +580,6 @@ function ClubMembershipRequestList({ navigation, route }) {
             >
               <FlashList
                 data={requests}
-                estimatedItemSize={150}
                 keyExtractor={(item) => item?.documentId || 'unknown'}
                 ListEmptyComponent={renderEmptyList}
                 onEndReached={handleEndReached}

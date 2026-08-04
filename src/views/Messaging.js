@@ -791,7 +791,6 @@ function Messaging({ navigation, route }) {
                   <FlashList
                     contentContainerStyle={{ paddingBottom: chatListBottomInset }}
                     data={filteredChats}
-                    estimatedItemSize={92}
                     keyExtractor={(item) => item.documentId}
                     ListEmptyComponent={renderEmptyList}
                     onEndReached={() => hasNextPage && fetchNextPage()}
@@ -813,7 +812,6 @@ function Messaging({ navigation, route }) {
                 <FlashList
                   contentContainerStyle={{ paddingBottom: chatListBottomInset }}
                   data={filteredChats}
-                  estimatedItemSize={92}
                   keyExtractor={(item) => item.documentId}
                   ListEmptyComponent={renderEmptyList}
                   onEndReached={() => hasNextPage && fetchNextPage()}

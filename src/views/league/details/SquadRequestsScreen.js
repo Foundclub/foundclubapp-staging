@@ -351,7 +351,6 @@ function SquadRequestsScreen({ navigation, route }) {
       <FlashList
         contentContainerStyle={{ paddingBottom: listBottomPadding, paddingTop: 4 }}
         data={requests}
-        estimatedItemSize={200}
         keyExtractor={(item, index) => String(getEntityDocumentId(item) || item?.id || `request-${index}`)}
         ListEmptyComponent={emptyState}
         onRefresh={refetch}

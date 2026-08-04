@@ -231,7 +231,6 @@ function ShareCompositionModal({
           <FlashList
             contentContainerStyle={[Spaces.paddingBottom[24]]}
             data={allChats}
-            estimatedItemSize={64}
             keyExtractor={(item) => item.documentId}
             renderItem={renderItem}
           />

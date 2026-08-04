@@ -366,7 +366,6 @@ function AssignCoachTeams({ navigation, route }) {
 
           <FlashList
             data={teams}
-            estimatedItemSize={94}
             keyExtractor={(item, index) => item?.documentId || String(index)}
             ListEmptyComponent={renderEmptyList}
             onEndReached={handleEndReached}

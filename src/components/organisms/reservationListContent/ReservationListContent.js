@@ -592,7 +592,6 @@ function ReservationListContent({
         <FlashList
           contentContainerStyle={{ paddingBottom: listBottomPadding }}
           data={displayedReservations}
-          estimatedItemSize={200}
           ItemSeparatorComponent={ReservationsListSeparator}
           keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
           ListEmptyComponent={renderEmptyList}

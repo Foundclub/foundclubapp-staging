@@ -345,7 +345,6 @@ function ShareEventModal({
             <FlashList
               contentContainerStyle={styles.chatListContent}
               data={allChats}
-              estimatedItemSize={96}
               keyExtractor={(item) => item.documentId}
               ListEmptyComponent={renderEmptyState}
               renderItem={renderItem}

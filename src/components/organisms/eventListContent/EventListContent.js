@@ -1382,7 +1382,6 @@ function EventListContent({
           <FlashList
             contentContainerStyle={{ paddingBottom: listBottomPadding }}
             data={/** @type {FCEvent[]} */ (visibleEvents)}
-            estimatedItemSize={200}
             ItemSeparatorComponent={EventListSeparator}
             keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
             ListEmptyComponent={emptyListContent}

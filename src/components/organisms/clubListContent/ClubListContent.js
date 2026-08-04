@@ -656,7 +656,6 @@ function ClubListContent({
             displayedClubs.length === 0 ? Alignments.fill : null,
           ]}
           data={displayedClubs}
-          estimatedItemSize={148}
           ItemSeparatorComponent={ClubsListSeparator}
           keyExtractor={(item, index) => item?.documentId || `unknown-${item?.name || ''}-${index}`}
           ListEmptyComponent={renderEmptyList}

@@ -410,7 +410,6 @@ function PlanningCalendarView({
           <FlashList
             contentContainerStyle={{ paddingBottom: 100 }}
             data={selectedEvents}
-            estimatedItemSize={120}
             keyExtractor={(item, index) => item?.documentId || String(item?.id || index)}
             ListEmptyComponent={renderEmptyList}
             renderItem={renderPlanningListCard}

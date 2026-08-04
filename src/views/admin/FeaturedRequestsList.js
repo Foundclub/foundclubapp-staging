@@ -228,7 +228,6 @@ function FeaturedRequestsList() {
           <FlashList
             contentContainerStyle={{ paddingBottom: 24 }}
             data={requests}
-            estimatedItemSize={200}
             ItemSeparatorComponent={RequestItemSeparator}
             keyExtractor={(item) => item?.documentId || 'unknown'}
             ListEmptyComponent={renderEmptyList}

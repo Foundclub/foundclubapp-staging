@@ -1049,9 +1049,6 @@ function TeamListContent({
           <FlashList
             contentContainerStyle={{ paddingBottom: listBottomPadding }}
             data={otherTeams}
-            // Ces elements sont desormais des rangees compactes (7f) et non plus
-            // des cartes : une estimation restee a 200 ferait sauter le defilement.
-            estimatedItemSize={76}
             keyExtractor={(item) => item?.documentId || 'unknown'}
             ListEmptyComponent={
               myTeams.length === 0 && pendingTeams.length === 0 && invitedTeams.length === 0

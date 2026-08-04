@@ -218,7 +218,6 @@ function MissingPlayersView({ navigation }) {
           <FlashList
             contentContainerStyle={{ paddingBottom: 100 }}
             data={sharedReservations}
-            estimatedItemSize={220}
             ItemSeparatorComponent={ReservationListSeparator}
             keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
             ListEmptyComponent={emptyListContent}
