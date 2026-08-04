@@ -2007,6 +2007,10 @@ export default {
           cancel: 'Annuler',
           confirm: 'Supprimer',
         },
+        // Lot L28 : le serveur retire desormais les inscriptions a venir et
+        // previent le staff. Cette phrase l annonce AVANT la confirmation.
+        consequences: 'Tes inscriptions aux événements à venir seront retirées et tes entraîneurs'
+          + ' en seront informés. Ton historique passé est conservé. Cette action est définitive.',
         subtitle: 'Pour demander la suppression de ton compte merci de remplir le formulaire de contact'
           + ' suivant en précisant ta demande.',
         title: 'Supprimer ton compte ?',

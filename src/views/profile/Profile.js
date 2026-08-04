@@ -190,7 +190,11 @@ function Profile({ navigation, route }) {
   const handleDeleteAccount = () => {
     Alert.alert(
       t('profile.alerts.deleteAlert.title'),
-      t('profile.alerts.deleteAlert.subtitle'),
+      // Lot L28 : on annonce ce que la suppression FAIT (retrait des inscriptions
+      // a venir, staff prevenu, historique conserve). L ancienne cle `subtitle`
+      // renvoyait vers un formulaire de contact alors que ce bouton supprime le
+      // compte immediatement — elle reste en place, plus personne ne l affiche.
+      t('profile.alerts.deleteAlert.consequences'),
       [
         {
           style: 'cancel',
