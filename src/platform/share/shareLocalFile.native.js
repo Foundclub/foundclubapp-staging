@@ -19,11 +19,12 @@
  * du compte rendu L20. Le libelle de l'ecran dit donc « enregistrer puis ouvrir »,
  * il ne promet pas d'envoyer.
  *
- * Fichier `.native` volontaire : il importe `react-native-blob-util`, qui n'existe
- * pas sur le web. Le web resout `visualRender.web.js`, qui telecharge via <a download>
- * et ne passe jamais ici — une importation web echouerait bruyamment a la compilation
- * (`.native.js` n'est pas dans `resolve.extensions` de web/vite.config.ts), ce qui
- * est exactement le garde-fou voulu.
+ * Fichier `.native` volontaire : il importe `react-native-blob-util`, qui n'a de
+ * sens que sur mobile. Le web resout le jumeau `shareLocalFile.web.js` — ajoute
+ * par L27, parce que `useShareCard.js` (carte joueur) est compile par Vite ET
+ * par Metro, et que `.native.js` n'est PAS dans `resolve.extensions` de
+ * web/vite.config.ts : sans ce jumeau, la seule importation depuis un fichier
+ * sans suffixe de plateforme casse la compilation du site.
  */
 
 import { PermissionsAndroid, Platform } from 'react-native';
@@ -124,14 +125,23 @@ const saveToDevice = async ({
  * @param {string} params.fileUri - `file://…` du fichier deja ecrit.
  * @param {string} [params.message] - Texte joint au fichier (feuille de partage).
  * @param {string} params.mimeType
+ * @param {string} [params.title] - Titre de la charge partagee (feuille de partage).
  * @returns {Promise<{ opened: boolean, outcome: string }>}
  */
 export const shareLocalFile = async ({
-  dialogTitle, fileName, fileUri, message, mimeType,
+  dialogTitle, fileName, fileUri, message, mimeType, title,
 }) => {
   if (getFileShareCapability() !== FILE_SHARE_CAPABILITIES.SAVE_THEN_OPEN) {
     // iOS : charge identique a celle livree avant L20 — `message` reste optionnel.
-    await SharePlatform.share({ ...(message ? { message } : {}), url: fileUri });
+    // `title` est optionnel LUI AUSSI, et pour une raison mesuree : iOS ne le lit
+    // pas (Share.js l.113-141 n'envoie que message/url/options.subject), mais le
+    // WEB, si (`share.web.js` -> `navigator.share({ title })`). Le laisser tomber
+    // couterait le titre du partage sur le site — pas sur le telephone.
+    await SharePlatform.share({
+      ...(message ? { message } : {}),
+      ...(title ? { title } : {}),
+      url: fileUri,
+    });
     return { opened: true, outcome: FILE_SHARE_OUTCOMES.SHARE_SHEET };
   }
 

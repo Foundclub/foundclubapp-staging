@@ -42,6 +42,8 @@ import { useGetMyHistories } from '@/services/userHistory/userHistoryQueries';
 
 import { getImageUrl } from '@/utils/imageUrl';
 
+import { FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES } from '@/platform/share/fileShareContract';
+
 /**
  * Rarete 5 niveaux du design final a partir du score deterministe (0..100).
  * Prolonge les paliers historiques de computeRarity (>=85 legendary) en
@@ -137,17 +139,52 @@ function PlayerCardScreen({ navigation, route }) {
     linkLabel: t('playerCard.shareLinkLabel', 'Retrouve-moi sur FoundClub'),
   }), [t]);
 
+  // Sur Android le partage ENREGISTRE l'image puis propose une application pour
+  // l'ouvrir : sans un mot, un fichier rangé hors de l'écran est indiscernable
+  // d'un échec. Sur iOS et sur le web, le système a déjà montré ce qu'il faisait
+  // — un message de plus serait du bruit.
+  const sharedNotice = (outcome) => (outcome === FILE_SHARE_OUTCOMES.GALLERY
+    ? t('playerCard.shareSavedGallery', 'Ta carte est enregistrée dans tes photos (album FoundClub). Choisis maintenant où la publier.')
+    : null);
+
+  // L'erreur porte sa cause (`reason`, posé par shareLocalFile) : un refus de
+  // permission n'est pas un échec de génération, et le message générique
+  // enverrait l'utilisateur chercher un problème qui n'existe pas.
+  const shareErrorText = (failure) => {
+    if (failure?.reason === FILE_SHARE_FAILURES.PERMISSION_DENIED) {
+      return t(
+        'playerCard.sharePermissionError',
+        'FoundClub n\'a pas le droit d\'enregistrer dans ton téléphone. '
+        + 'Autorise-le dans les réglages, puis réessaie.',
+      );
+    }
+    if (failure?.reason === FILE_SHARE_FAILURES.SAVE_FAILED) {
+      return t(
+        'playerCard.shareSaveError',
+        'L\'enregistrement a échoué. Il reste peut-être trop peu de place sur ton téléphone.',
+      );
+    }
+    return t('playerCard.shareError', 'Impossible de générer l\'image pour le moment.');
+  };
+
   const handleExternalShare = async () => {
     if (!consent.canShare) return;
     try {
       const { message, title } = buildCardShareMessage({ labels: shareLabels, model });
-      await shareCard({ message, title });
+      // Titre du sélecteur d'application Android. Sans lui, le système ouvre
+      // directement l'application par défaut : l'utilisateur ne CHOISIT plus.
+      const result = await shareCard({
+        dialogTitle: t('playerCard.shareOpenWith', 'Ouvrir ta carte avec…'),
+        message,
+        title,
+      });
       setIsShareVisible(false);
+      const notice = sharedNotice(result?.outcome);
+      if (notice) {
+        Alert.alert(t('playerCard.savedTitle', 'Image enregistrée'), notice);
+      }
     } catch (err) {
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        t('playerCard.shareError', 'Impossible de générer l\'image pour le moment.'),
-      );
+      Alert.alert(t('common.error', 'Erreur'), shareErrorText(err));
     }
   };
 

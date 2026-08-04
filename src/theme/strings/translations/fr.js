@@ -1933,6 +1933,13 @@ export default {
     shareFallbackName: 'Ma carte FoundClub',
     shareIntro: 'Voici ma carte FoundClub.',
     shareLinkLabel: 'Retrouve-moi sur FoundClub',
+    shareOpenWith: 'Ouvrir ta carte avec…',
+    sharePermissionError: 'FoundClub n\'a pas le droit d\'enregistrer dans ton téléphone. '
+      + 'Autorise-le dans les réglages, puis réessaie.',
+    shareSavedGallery: 'Ta carte est enregistrée dans tes photos (album FoundClub). '
+      + 'Choisis maintenant où la publier.',
+    shareSaveError: 'L\'enregistrement a échoué. '
+      + 'Il reste peut-être trop peu de place sur ton téléphone.',
     uploadError: 'L\'envoi de l\'image a échoué.',
     // ShareCardModal
     shareChatA11yHint: 'Envoyer ma carte dans cette conversation',
