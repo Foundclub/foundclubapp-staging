@@ -6,16 +6,20 @@
  * Reprend à l'identique le comportement historique de useEventShowcase :
  *   - fetchRenderBase64 : POST /api/visual-assets/render via react-native-blob-util,
  *     renvoie { base64, contentType } pour l'aperçu <Image> en data URI.
- *   - downloadAndShareRender : écrit le rendu dans le cache puis déclenche le
- *     partage système (SharePlatform), renvoie le chemin file://.
+ *   - downloadAndShareRender : écrit le rendu dans le cache puis le confie au
+ *     système via `shareLocalFile` (feuille de partage iOS / enregistrement
+ *     Android), et renvoie { fileUri, opened, outcome }.
  */
 
-import { Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { getApiBaseUrl } from '@/config/runtimeUrls';
-import SharePlatform from '@/platform/share';
+// Suffixe de plateforme VOULU : il fait échouer bruyamment une importation depuis
+// le web, qui n'a pas react-native-blob-util. Metro et Jest résolvent
+// shareLocalFile.native.js ; le résolveur du linter, lui, ne connaît pas ce suffixe.
+// eslint-disable-next-line import/extensions, import/no-unresolved -- cf. ci-dessus
+import { shareLocalFile } from '@/platform/share/shareLocalFile';
 
 // getApiBaseUrl() inclut déjà « /api » : le chemin ne doit PAS le répéter
 // (sinon POST .../api/api/visual-assets/render -> 405). Même bug corrigé côté web.
@@ -56,38 +60,47 @@ export const fetchRenderBase64 = async (params) => {
 };
 
 /**
- * Écrit le rendu dans un fichier de cache puis déclenche le partage système.
- * Renvoie le chemin file:// du fichier généré.
+ * Écrit le rendu dans un fichier de cache puis le confie au système.
  *
- * CONSTAT (L16) sur `@/platform/share` → `Share.share` de React Native 0.78
- * (node_modules/react-native/Libraries/Share/Share.js) :
+ * CONSTAT (L16, corrigé par L20) sur `Share.share` de React Native 0.78
+ * (node_modules/react-native/Libraries/Share/Share.js, l.91-107) :
  *   - iOS   : `message` ET `url` sont transmis ensemble à la feuille de partage
  *             ⇒ le FICHIER et le texte voyagent dans le MÊME appel.
- *   - Android : seul `{ title, message }` atteint le module natif, `url` est PURGÉ.
- *             L'app n'embarque pas `react-native-share` (deps : uniquement
- *             `react-native-blob-util`) ⇒ joindre un fichier y est hors de portée.
- * ⇒ Règle appliquée : l'affiche prime là où elle peut voyager (iOS), et le lien
- *   part dans le texte sur les deux plateformes. `message` reste OPTIONNEL :
- *   sans lui, le comportement livré (story / A4) est inchangé.
+ *   - Android : seul `{ title, message }` atteint le module natif, `url` est PURGÉ
+ *             ⇒ l'affiche disparaissait, SANS erreur (fenêtre de partage vide).
+ * ⇒ La décision par plateforme n'est plus prise ici : elle est nommée une seule
+ *   fois dans `@/platform/share/fileShareContract` et exécutée par `shareLocalFile`.
+ *   Sur Android l'affiche est désormais ENREGISTRÉE (galerie / téléchargements)
+ *   puis une application est proposée pour l'ouvrir.
  * @param {object} params
+ * @param {string} [params.dialogTitle] - Titre du sélecteur d'application (Android).
  * @param {string} params.format
  * @param {string} [params.message] - Texte joint au fichier (lien public).
- * @returns {Promise<string>}
+ * @returns {Promise<{ fileUri: string, opened: boolean, outcome: string }>} - `outcome`
+ *   vaut une valeur de FILE_SHARE_OUTCOMES ; l'écran s'en sert pour dire ce qui
+ *   s'est passé. ⚠️ Le pendant web (`visualRender.web.js`) résout, lui, l'URL objet
+ *   du téléchargement navigateur : un appelant partagé lit `result?.outcome`.
  */
 export const downloadAndShareRender = async (params) => {
   const { base64, contentType } = await fetchRenderBase64(params);
   const ext = contentType.includes('pdf') ? 'pdf' : 'png';
   const dir = ReactNativeBlobUtil.fs.dirs.CacheDir;
-  const path = `${dir}/foundclub-${params.template}-${params.variant || 'defaut'}-${params.format}-${params.subjectId}.${ext}`;
+  const variant = params.variant || 'defaut';
+  const fileName = `foundclub-${params.template}-${variant}-${params.format}-${params.subjectId}.${ext}`;
+  const path = `${dir}/${fileName}`;
   await ReactNativeBlobUtil.fs.writeFile(path, base64, 'base64');
   const fileUri = `file://${path}`;
   const message = typeof params.message === 'string' ? params.message : '';
-  await SharePlatform.share(
-    Platform.OS === 'ios'
-      ? { ...(message ? { message } : {}), url: fileUri }
-      : { message, url: fileUri },
-  );
-  return fileUri;
+  // Le type MIME décrit le fichier RÉELLEMENT écrit (l'extension), pas l'en-tête
+  // serveur, qui peut porter un charset et ferait échouer l'intent Android.
+  const { opened, outcome } = await shareLocalFile({
+    dialogTitle: params.dialogTitle,
+    fileName,
+    fileUri,
+    message,
+    mimeType: ext === 'pdf' ? 'application/pdf' : 'image/png',
+  });
+  return { fileUri, opened, outcome };
 };
 
 export default {
