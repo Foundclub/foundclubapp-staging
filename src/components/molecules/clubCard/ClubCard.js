@@ -5,33 +5,24 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee';
 
-import { getShortAddress } from '@/utils/location';
+import { formatClubDistanceLabel, getShortAddress } from '@/utils/location';
 
 // Carte club du handoff « Cartes Rechercher » (tour 5a). Remplace la rangée
 // de ClubListContent. Chaque bloc (chips sections, bandeau stats, badge
 // RECRUTE, distance) ne s'affiche que si la donnée existe dans le payload —
 // la liste des clubs ne charge aujourd'hui que logo + sponsors.
-
-/**
- * Libéllé de distance de la sous-ligne d'en-tête.
- * @param {any} distanceKm - Distance en kilomètres (recherche intelligente).
- * @returns {string} - Libellé « à X km », vide si inconnue.
- */
-const formatDistanceLabel = (distanceKm) => {
-  const value = Number(distanceKm);
-  if (!Number.isFinite(value) || value < 0) return '';
-  if (value < 1) return `à ${Math.max(50, Math.round((value * 1000) / 50) * 50)} m`;
-  const rounded = value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
-  return `à ${String(rounded).replace('.', ',')} km`;
-};
+//
+// L23 — le formateur de distance et l'enveloppe dégradée sont PARTAGÉS avec
+// `views/onboarding/components/OnboardingClubCard`. Ces deux morceaux avaient
+// été corrigés chacun d'un seul côté ; ils n'ont plus qu'un exemplaire.
 
 /**
  * Libellés des chips sections, depuis les relations réellement chargées.
@@ -75,7 +66,7 @@ function ClubCard({ item, onPress, reasonLabel = '' }) {
   const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
   const shortAddress = getShortAddress(item?.addressDetails || item?.address);
   const searchMeta = Reflect.get(item || {}, '__search');
-  const distanceLabel = formatDistanceLabel(searchMeta?.distanceKm);
+  const distanceLabel = formatClubDistanceLabel(searchMeta?.distanceKm);
   const sectionLabels = resolveSectionLabels(item);
   const sponsors = Array.isArray(item?.sponsor) ? item.sponsor : [];
   const isRecruiting = Boolean(
@@ -115,26 +106,13 @@ function ClubCard({ item, onPress, reasonLabel = '' }) {
       onPress={onPress}
     >
       {/*
-        R07 — le degrade est un FOND POSE DERRIERE, jamais le conteneur.
-        Avant : <LinearGradient style={styles.container}> enveloppait tout le
-        contenu, donc il devait se dimensionner sur ses enfants — et le bandeau
-        de statistiques se retrouvait tranche par le bas de la carte (constate
-        sur la build 2.6.1 (821) le 2026-08-01).
-        C'est exactement le motif deja utilise par EventCardNew.js:703, la carte
-        qui, elle, s'affiche correctement : un conteneur normal qui porte la
-        taille, et le degrade en absoluteFill derriere (§1 bis — on reutilise le
-        motif du depot au lieu d'en inventer un).
-        `overflow: 'hidden'` sur le conteneur est INDISPENSABLE : sans lui le
-        degrade en absoluteFill deborde des coins arrondis.
+        R07 — le degrade est un FOND POSE DERRIERE, jamais le conteneur. Le motif
+        (conteneur ordinaire + degrade en absoluteFill + overflow hidden) vit
+        maintenant dans ClubCardSurface, partage avec la carte d'inscription :
+        c'est ce qui empeche la correction de ne s'appliquer qu'a une carte sur
+        deux, comme c'etait le cas jusqu'a L23.
       */}
-      <View style={[styles.container, { borderColor: withAlpha(Colors.primary500, 0.25) }]}>
-        <LinearGradient
-          colors={[withAlpha(Colors.primary700, 0.9), withAlpha(Colors.primary900, 0.96)]}
-          end={{ x: 0, y: 1 }}
-          pointerEvents="none"
-          start={{ x: 0, y: 0 }}
-          style={StyleSheet.absoluteFill}
-        />
+      <ClubCardSurface style={styles.container}>
         {reasonLabel ? (
           <Text style={[styles.reasonLabel, { color: Colors.primary200 }]}>
             {reasonLabel}
@@ -240,7 +218,7 @@ function ClubCard({ item, onPress, reasonLabel = '' }) {
 
         {/* Pied sponsors — marquee continue, masqué sans sponsor */}
         <SponsorMarquee fadeColor={Colors.primary900} sponsors={sponsors} />
-      </View>
+      </ClubCardSurface>
     </TouchableOpacity>
   );
 }
@@ -272,13 +250,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
+  // Cotes propres a la carte de recherche. La bordure, le fond degrade et la
+  // decoupe des coins viennent de ClubCardSurface.
   container: {
     borderRadius: 18,
-    borderWidth: 1,
     gap: 12,
-    // Le degrade est pose en absoluteFill derriere le contenu : sans cette
-    // decoupe il depasserait des coins arrondis. Voir le commentaire du rendu.
-    overflow: 'hidden',
     paddingHorizontal: 18,
     paddingVertical: 16,
   },

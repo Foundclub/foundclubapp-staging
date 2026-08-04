@@ -81,6 +81,44 @@ const DEFAULT_RADIUS_KM = 20;
 const MIN_RADIUS_KM = 5;
 const MAX_RADIUS_KM = 100;
 
+/**
+ * Libellé de distance des cartes club — POINT DE VÉRITÉ UNIQUE.
+ *
+ * Partagé par la carte de recherche (`components/molecules/clubCard/ClubCard`)
+ * et la carte d'inscription (`views/onboarding/components/OnboardingClubCard`).
+ * Les deux en portaient une copie ; le garde ci-dessous n'existait que dans la
+ * seconde, si bien que la première affichait « à 50 m » sur TOUS les clubs dès
+ * que la distance était inconnue.
+ *
+ * CE QUE LE SERVEUR ENVOIE VRAIMENT (vérifié dans le dépôt admin) :
+ * - `computeDistanceKm` rend `undefined` dès qu'une coordonnée manque
+ *   (`src/api/search/services/scoring.ts:211-213`) ;
+ * - la charge est normalisée en `distanceKm: distanceKm ?? null`
+ *   (`src/api/search/services/search.ts:439`, et 6 autres appels identiques).
+ * Le serveur envoie donc **`null`**, jamais `0`, pour « je ne sais pas ».
+ * Côté inscription, `getClubDistanceKm` rend lui aussi `null`.
+ * ⇒ `0` reste une VRAIE distance (club situé sur le point cherché) : la traiter
+ * comme inconnue effacerait le résultat le plus proche. Le « 0 partout » qu'on
+ * observait ne venait pas du serveur mais de `Number(null) === 0` ici même.
+ * @param {any} distanceKm - Distance en kilomètres, ou une valeur non mesurable.
+ * @returns {string} - « à X km » / « à X m », chaîne vide si la distance est inconnue.
+ */
+export const formatClubDistanceLabel = (distanceKm) => {
+  // `Number(null)`, `Number('')`, `Number([])` et `Number(false)` valent tous 0,
+  // pas NaN : un contrôle sur la seule finitude laisse donc passer « inconnu »
+  // et l'affiche comme une distance nulle. On exige d'abord une vraie mesure.
+  const isMeasurable = typeof distanceKm === 'number'
+    || (typeof distanceKm === 'string' && distanceKm.trim() !== '');
+  if (!isMeasurable) return '';
+
+  const value = Number(distanceKm);
+  if (!Number.isFinite(value) || value < 0) return '';
+  if (value < 1) return `à ${Math.max(50, Math.round((value * 1000) / 50) * 50)} m`;
+
+  const rounded = value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
+  return `à ${String(rounded).replace('.', ',')} km`;
+};
+
 const parseMaybeJson = (value) => {
   if (typeof value !== 'string') return value;
   const trimmed = value.trim();

@@ -121,7 +121,12 @@ function AffiliationTutorialStep({
   title,
 }) {
   if (!ENABLE_AFFILIATION_ONBOARDING_TUTORIAL) {
-    return children;
+    // Le drapeau est éteint : on ne monte pas le tour guidé, mais le `style` que
+    // l'appelant confie à l'ancre reste le SIEN et doit s'appliquer. Sans cette
+    // enveloppe, la carte de résultat qui porte l'ancre (index 1) perdait sa
+    // gouttière et se collait à la suivante — écart de 0 px là où les autres en
+    // ont 10 (règle « touch spacing », minimum 8 px entre cibles tactiles).
+    return <View style={style}>{children}</View>;
   }
 
   return (
@@ -1231,9 +1236,19 @@ function UserAffiliationGuideContent({ navigation }) {
     </AffiliationTutorialStep>
   );
 
+  // D2 — la zone RÉSULTATS était écrasée sur iPhone. ScreenContainer pose
+  // TOUJOURS un plancher `insets.bottom` (mode `none` ; sa documentation le dit
+  // lignes 26-32), et cet écran applique DE NOUVEAU `insets.bottom + 8` sur son
+  // lien d'aide plus bas : le retrait système était compté deux fois. La zone de
+  // résultats étant le seul enfant élastique de la colonne, c'est elle — et elle
+  // seule — qui payait les ~34 pt perdus. Sur Android `insets.bottom` vaut le
+  // plus souvent 0, d'où un symptôme visible uniquement sur iPhone.
+  // `edge-to-edge` est le mode que le conteneur prévoit exactement pour ça :
+  // « les écrans qui appliquent déjà eux-mêmes insets.bottom à leur contenu ».
   return (
     <FormScreenContainer
       bgImage="bg2"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Spaces.paddingVertical[16],
         Alignments.fill,

@@ -5,14 +5,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
-import { getShortAddress } from '@/utils/location';
+import { formatClubDistanceLabel, getShortAddress } from '@/utils/location';
 
 // Carte club COMPACTE du handoff onboarding 6b. C'est la carte 5a
 // (components/molecules/clubCard/ClubCard) resserrée pour l'étape onboarding :
@@ -24,23 +24,11 @@ import { getShortAddress } from '@/utils/location';
 // 2026-07-31 sur api-staging), donc chips sections et bandeau stats restent
 // masqués tant que le serveur ne les renvoie pas. Le jour où il les renvoie,
 // la carte les affiche sans changement de code.
-
-/**
- * Libellé de distance, non tronquable dans la sous-ligne.
- * @param {any} distanceKm - Distance en kilomètres, ou null.
- * @returns {string} - « à X km », vide si la distance est inconnue.
- */
-export const formatOnboardingDistance = (distanceKm) => {
-  // `Number(null)` vaut 0, pas NaN : sans ce garde, une distance inconnue
-  // s'afficherait « à 50 m ». La distance est calculée ici et renvoie null
-  // quand un point manque — le cas passe donc par cette porte à chaque rendu.
-  if (distanceKm === null || distanceKm === undefined || distanceKm === '') return '';
-  const value = Number(distanceKm);
-  if (!Number.isFinite(value) || value < 0) return '';
-  if (value < 1) return `à ${Math.max(50, Math.round((value * 1000) / 50) * 50)} m`;
-  const rounded = value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
-  return `à ${String(rounded).replace('.', ',')} km`;
-};
+//
+// L23 — les DEUX morceaux qui avaient divergé avec la carte 5a sont désormais
+// partagés : le formateur de distance (`@/utils/location`) et l'enveloppe
+// dégradée (`ClubCardSurface`). Corriger l'un des deux côtés seulement rend
+// rouge `src/utils/clubDistanceLabel.test.js`.
 
 /**
  * Libellés des sections sportives réellement chargées.
@@ -89,7 +77,7 @@ function OnboardingClubCard({
 
   const clubName = item?.name || 'Club';
   const shortAddress = getShortAddress(item?.addressDetails || item?.address);
-  const distanceLabel = formatOnboardingDistance(distanceKm);
+  const distanceLabel = formatClubDistanceLabel(distanceKm);
   const sectionLabels = resolveSectionLabels(item);
   const isRecruiting = Boolean(
     (Array.isArray(item?.recruitmentAds) && item.recruitmentAds.length > 0)
@@ -137,12 +125,12 @@ function OnboardingClubCard({
       disabled={!onPress}
       onPress={onPress}
     >
-      <LinearGradient
-        colors={[withAlpha(Colors.primary700, 0.9), withAlpha(Colors.primary900, 0.96)]}
-        end={{ x: 0, y: 1 }}
-        start={{ x: 0, y: 0 }}
-        style={[styles.container, { borderColor: withAlpha(Colors.primary500, 0.25) }]}
-      >
+      {/*
+        R18 — le dégradé ENVELOPPAIT ce contenu : il devait donc se dimensionner
+        sur ses enfants, et tranchait la carte. Même défaut que R07 sur la carte
+        de recherche, même remède, désormais dans un seul endroit.
+      */}
+      <ClubCardSurface style={styles.container}>
         {/* Rangée 1 — logo réel ou initiale, nom, ville + distance, RECRUTE */}
         <View style={styles.headerRow}>
           <ClubLogoMark
@@ -231,7 +219,7 @@ function OnboardingClubCard({
             ))}
           </View>
         ) : null}
-      </LinearGradient>
+      </ClubCardSurface>
     </TouchableOpacity>
   );
 }
@@ -262,9 +250,10 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     fontWeight: '800',
   },
+  // Cotes resserrées propres à l'étape onboarding. La bordure, le fond dégradé
+  // et la découpe des coins viennent de ClubCardSurface.
   container: {
     borderRadius: 16,
-    borderWidth: 1,
     gap: 10,
     paddingHorizontal: 15,
     paddingVertical: 13,

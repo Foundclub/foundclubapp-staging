@@ -1,8 +1,12 @@
+import { Children } from 'react';
+import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
-import OnboardingClubCard, { formatOnboardingDistance } from '../OnboardingClubCard';
+import { formatClubDistanceLabel } from '@/utils/location';
+
+import OnboardingClubCard from '../OnboardingClubCard';
 
 // Carte club compacte du handoff onboarding 6b.
 //
@@ -152,20 +156,85 @@ describe('OnboardingClubCard — blocs conditionnels', () => {
   });
 });
 
-describe('formatOnboardingDistance', () => {
+// Le formateur vit désormais dans `@/utils/location`, partagé avec la carte de
+// recherche (L23). Ces cas restent ici parce qu'ils décrivent ce que CETTE carte
+// promet ; la preuve que les deux cartes tirent du même puits est dans
+// `src/utils/clubDistanceLabel.test.js`.
+describe('formatClubDistanceLabel — vu depuis la carte d\'inscription', () => {
   it('arrondit au mètre en dessous du kilomètre', () => {
-    expect(formatOnboardingDistance(0.42)).toBe('à 400 m');
-    expect(formatOnboardingDistance(0.01)).toBe('à 50 m');
+    expect(formatClubDistanceLabel(0.42)).toBe('à 400 m');
+    expect(formatClubDistanceLabel(0.01)).toBe('à 50 m');
   });
 
   it('garde une décimale sous 10 km, arrondit au-dessus', () => {
-    expect(formatOnboardingDistance(2.44)).toBe('à 2,4 km');
-    expect(formatOnboardingDistance(12.6)).toBe('à 13 km');
+    expect(formatClubDistanceLabel(2.44)).toBe('à 2,4 km');
+    expect(formatClubDistanceLabel(12.6)).toBe('à 13 km');
   });
 
   it('rend une chaîne vide pour une distance inconnue', () => {
-    expect(formatOnboardingDistance(null)).toBe('');
-    expect(formatOnboardingDistance(undefined)).toBe('');
-    expect(formatOnboardingDistance(-3)).toBe('');
+    expect(formatClubDistanceLabel(null)).toBe('');
+    expect(formatClubDistanceLabel(undefined)).toBe('');
+    expect(formatClubDistanceLabel(-3)).toBe('');
+  });
+});
+
+// R18 / D1 — l'enveloppe visuelle, motif déjà prouvé sur la carte de recherche
+// (correction R07, build 2.6.1 (821) du 2026-08-01) et jamais recopié ici.
+describe('OnboardingClubCard — enveloppe visuelle (R18)', () => {
+  /**
+   * Conteneurs qui découpent leur contenu aux coins arrondis.
+   * @param {any} tree - Arbre rendu par react-test-renderer.
+   * @returns {any[]} - Nœuds hôtes portant `overflow: 'hidden'`.
+   */
+  const clippedContainers = (tree) => tree.root.findAll((node) => (
+    typeof node.type === 'string'
+    && StyleSheet.flatten(node.props?.style)?.overflow === 'hidden'
+  ));
+
+  it('le dégradé est un FOND : il n\'enveloppe plus le contenu de la carte', () => {
+    const tree = renderCard({ item: baseClub });
+    const gradients = tree.root.findAllByType('LinearGradient');
+    expect(gradients).toHaveLength(1);
+
+    // LA ligne qui porte tout : un dégradé sans enfant ne se dimensionne plus
+    // sur eux, il ne peut donc plus trancher la carte en plein milieu.
+    expect(Children.count(gradients[0].props.children)).toBe(0);
+    expect(StyleSheet.flatten(gradients[0].props.style)).toMatchObject({ position: 'absolute' });
+    expect(gradients[0].props.pointerEvents).toBe('none');
+  });
+
+  it('un conteneur ordinaire porte la taille et découpe les coins arrondis', () => {
+    const tree = renderCard({ item: baseClub });
+    const clipped = clippedContainers(tree);
+
+    expect(clipped.length).toBeGreaterThan(0);
+    expect(clipped[0].type).toBe('View');
+    // La hauteur de la carte vient de ce conteneur, donc de ses enfants réels.
+    expect(clipped[0].findAllByType('LinearGradient')).toHaveLength(1);
+  });
+
+  it('le contenu grandit dans le conteneur, pas dans le dégradé', () => {
+    /**
+     * Nombre de blocs rendus SOUS le conteneur qui porte la taille.
+     * @param {any} item - Club à rendre.
+     * @returns {number} - Vues descendantes du conteneur découpé.
+     */
+    const blocsDansLeConteneur = (item) => {
+      const tree = renderCard({ item });
+      return clippedContainers(tree)[0].findAllByType('View').length;
+    };
+
+    const maigre = blocsDansLeConteneur(baseClub);
+    const garni = blocsDansLeConteneur({
+      ...baseClub,
+      activites: [{ name: 'Judo' }, { name: 'Karaté' }],
+      membersCount: 120,
+      teamsCount: 6,
+    });
+
+    // Les blocs en plus atterrissent DANS le conteneur qui porte la taille ; le
+    // dégradé, lui, reste vide (vérifié par le premier test de ce bloc). C'est
+    // ce qui fait que la hauteur de la carte suit son contenu.
+    expect(garni).toBeGreaterThan(maigre);
   });
 });

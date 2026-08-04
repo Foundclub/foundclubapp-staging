@@ -1,4 +1,5 @@
-import { TouchableOpacity } from 'react-native';
+import { Children } from 'react';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -179,5 +180,52 @@ describe('ClubCard — blocs conditionnels (5a)', () => {
       pressable.props.onPress();
     });
     expect(onPress).toHaveBeenCalled();
+  });
+});
+
+// L23 — la distance INCONNUE. `Number(null)` vaut 0, pas NaN : sans garde, le
+// 0 franchissait les contrôles et `Math.max(50, 0)` collait « à 50 m » sur
+// TOUTES les cartes dès que la recherche ne pouvait pas calculer de distance.
+// Le serveur envoie bien `null` dans ce cas (admin `search.ts:439`).
+describe('ClubCard — distance inconnue', () => {
+  it.each([
+    ['nulle', null],
+    ['absente', undefined],
+    ['chaîne vide', ''],
+  ])('distance %s : aucun libellé de distance', (_libelle, distanceKm) => {
+    const texts = textsOf(renderCard({ item: { ...baseClub, __search: { distanceKm } } }));
+    expect(texts).toContain('13008 Marseille');
+    expect(texts).not.toMatch(/à \d/);
+  });
+
+  it('TÉMOIN POSITIF : une vraie distance s\'affiche toujours', () => {
+    expect(textsOf(renderCard({ item: { ...baseClub, __search: { distanceKm: 2.4 } } })))
+      .toContain('à 2,4 km');
+    expect(textsOf(renderCard({ item: { ...baseClub, __search: { distanceKm: 0.3 } } })))
+      .toContain('à 300 m');
+  });
+});
+
+// R07 gelé : cette carte a DÉJÀ été corrigée une fois. Le test existe pour que
+// la correction ne reparte pas au prochain redesign (§ L23 : les deux cartes
+// ont divergé dans les deux sens, faute d'invariant écrit).
+describe('ClubCard — enveloppe visuelle (R07 gelé)', () => {
+  it('le dégradé est un FOND, jamais le conteneur', () => {
+    const tree = renderCard({ item: baseClub });
+    const gradients = tree.root.findAllByType('LinearGradient');
+    expect(gradients).toHaveLength(1);
+
+    expect(Children.count(gradients[0].props.children)).toBe(0);
+    expect(StyleSheet.flatten(gradients[0].props.style)).toMatchObject({ position: 'absolute' });
+    expect(gradients[0].props.pointerEvents).toBe('none');
+  });
+
+  it('un conteneur ordinaire porte la taille et découpe les coins arrondis', () => {
+    const clipped = renderCard({ item: baseClub }).root.findAll((node) => (
+      typeof node.type === 'string'
+      && StyleSheet.flatten(node.props?.style)?.overflow === 'hidden'
+    ));
+    expect(clipped.length).toBeGreaterThan(0);
+    expect(clipped[0].type).toBe('View');
   });
 });

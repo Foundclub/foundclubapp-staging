@@ -130,6 +130,8 @@ jest.mock('@/platform/maps/searchMapGeolocation', () => ({
 }));
 
 // ScreenContainer tire @react-navigation/elements, publié en ESM : hors sujet ici.
+// Les props sont reportées sur la vue de remplacement : le retrait bas est un
+// RÉGLAGE du conteneur, il ne se lit nulle part ailleurs (L23 / D2).
 jest.mock('@/components/templates/FormScreenContainer', () => {
   /* eslint-disable global-require */
   const React = require('react');
@@ -137,7 +139,11 @@ jest.mock('@/components/templates/FormScreenContainer', () => {
   /* eslint-enable global-require */
   return {
     __esModule: true,
-    default: (/** @type {any} */ { children }) => React.createElement(RN.View, null, children),
+    default: (/** @type {any} */ { children, ...props }) => React.createElement(
+      RN.View,
+      { ...props, testID: 'form-screen-container' },
+      children,
+    ),
   };
 });
 
@@ -489,6 +495,36 @@ describe('UserAffiliationGuide — refonte 6b', () => {
     const texts = collectTexts(rendered.tree);
     expect(texts).toContain('Recherche en cours...');
     expect(texts).not.toContain('FC Fuveau');
+  });
+
+  // L23 / D2 — LA ZONE « RÉSULTATS » ÉCRASÉE SUR IPHONE.
+  //
+  // ScreenContainer pose TOUJOURS un plancher `insets.bottom` (mode `none`, sa
+  // documentation le dit en toutes lettres lignes 26-32). Cet écran applique en
+  // plus `insets.bottom + 8` sur son lien d'aide : le retrait système est donc
+  // compté DEUX FOIS. Sur iPhone cela retire 34 pt à la colonne de résultats,
+  // qui est le seul enfant élastique de la colonne ; sur Android `insets.bottom`
+  // vaut le plus souvent 0, ce qui explique que le symptôme soit iPhone.
+  // Le remède est nommé par le conteneur lui-même : `edge-to-edge`, « pour les
+  // écrans qui appliquent déjà eux-mêmes insets.bottom à leur contenu ».
+  it('le retrait bas système n\'est pas compté deux fois', () => {
+    const rendered = renderScreen();
+    const container = findHandle(rendered, 'form-screen-container');
+
+    expect(container).toBeDefined();
+    expect(container.props.bottomInsetMode).toBe('edge-to-edge');
+  });
+
+  it('toutes les cartes de résultat gardent la même gouttière', () => {
+    const rendered = renderScreen();
+    // `AffiliationTutorialStep` rend ses enfants TELS QUELS quand le drapeau du
+    // tour guidé est éteint : le `style` qu'on lui passe est perdu, et la carte
+    // qui porte l'ancre (index 1) se colle à la suivante.
+    const gutters = rendered.tree.root.findAll((node) => (
+      typeof node.type === 'string'
+      && node.props?.style?.marginBottom === 10
+    ));
+    expect(gutters).toHaveLength(CLUBS.length);
   });
 
   it('les 4 ancres du tour guidé restent posées sur les mêmes cibles', () => {
