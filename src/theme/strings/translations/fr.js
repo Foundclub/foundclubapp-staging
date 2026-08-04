@@ -2136,6 +2136,9 @@ export default {
     fieldTitreAccent: 'Accroche',
     generating: 'Génération du visuel…',
     later: 'Plus tard',
+    // Android : la feuille de partage de React Native jette le fichier (cf. L20).
+    // Le geste devient « enregistrer, puis ouvrir avec » — les libellés le disent.
+    openWith: 'Ouvrir l’affiche avec…',
     placeholderQrLabel: 'Scanne pour participer',
     placeholderQrLabelDecouverte: 'Scanne pour essayer',
     placeholderTitre: 'Viens montrer',
@@ -2144,8 +2147,19 @@ export default {
     placeholderTitreDecouverte: 'Viens essayer,',
     poster: 'Affiche A4 à imprimer',
     posterHint: 'Fichier PDF, prêt pour l’imprimante du club.',
+    posterHintSave: 'Fichier PDF enregistré dans tes téléchargements, '
+      + 'prêt pour l’imprimante du club.',
     reset: 'Réinitialiser',
     retry: 'Réessayer',
+    save: 'Enregistrer l’affiche',
+    savedDownloads: 'C’est enregistré dans tes téléchargements.',
+    savedGallery: 'C’est enregistré dans ta galerie photo.',
+    saveError: 'L’enregistrement a échoué. '
+      + 'Il reste peut-être trop peu de place sur ton téléphone.',
+    saveHint: 'Elle part dans ta galerie photo, telle que tu la vois. '
+      + 'Tu choisis ensuite l’application qui l’ouvre.',
+    savePermissionError: 'FoundClub n’a pas le droit d’enregistrer dans ton téléphone. '
+      + 'Autorise-le dans les réglages, puis réessaie.',
     sendInChat: 'Envoyer dans une conversation',
     sendInChatHint: 'Directement dans une discussion FoundClub.',
     share: 'Envoyer l’affiche',
@@ -2154,6 +2168,8 @@ export default {
     shareLabel: 'Voir l’événement',
     story: 'Version story 9:16',
     storyHint: 'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
+    storyHintSave: 'Image verticale plein écran, enregistrée dans ta galerie, '
+      + 'pour Instagram, WhatsApp ou Snap.',
     subtitle: 'Fais-le voir. Plus il est vu, plus tu remplis.',
     title: 'Ton événement est en ligne',
     variantHint: 'Choisir le style {{label}}',

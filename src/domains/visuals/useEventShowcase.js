@@ -358,16 +358,18 @@ export default function useVisualShowcase({
   }, [subjectType, resolvedSubjectId, initialEvent]);
 
   const shareFile = useCallback(async ({
-    format, message, template: tpl, variant: v,
+    dialogTitle, format, message, template: tpl, variant: v,
   }) => {
     try {
       // Téléchargements : on utilise les surcharges VIVES (le fichier reflète le texte
       // courant même si l'aperçu temporisé n'a pas encore rattrapé la dernière frappe).
       // Le téléchargement/partage réel est délégué à la couche plateforme :
       // natif = fichier cache + partage système ; web = fetch Blob + <a download>.
-      // `message` (optionnel) accompagne le fichier dans le même partage — cf. le
+      // `message` (optionnel) accompagne le fichier dans le même partage, et
+      // `dialogTitle` (optionnel) titre le sélecteur d'application Android — cf. le
       // constat iOS/Android consigné dans visualRender.native.js.
       return await downloadAndShareRender({
+        dialogTitle,
         format,
         message,
         overrides: cleanOverrides(overrides),
@@ -382,19 +384,23 @@ export default function useVisualShowcase({
   }, [subject, overrides]);
 
   const downloadStory = useCallback(
-    () => shareFile({ format: storyFormat, template, variant }),
+    (dialogTitle) => shareFile({
+      dialogTitle, format: storyFormat, template, variant,
+    }),
     [shareFile, storyFormat, template, variant],
   );
   const downloadPoster = useCallback(
-    () => shareFile({ format: posterFormat, template, variant }),
+    (dialogTitle) => shareFile({
+      dialogTitle, format: posterFormat, template, variant,
+    }),
     [shareFile, posterFormat, template, variant],
   );
   // Geste PRINCIPAL de l'écran : envoyer l'affiche TELLE QU'ELLE EST À L'ÉCRAN.
   // Même format que l'aperçu (post 4:5) ⇒ ce que l'utilisateur voit est ce qu'il
   // envoie, et les deux autres boutons restent des FORMATS alternatifs (story, A4).
   const shareVisual = useCallback(
-    (message) => shareFile({
-      format: previewFormat, message, template, variant,
+    (message, dialogTitle) => shareFile({
+      dialogTitle, format: previewFormat, message, template, variant,
     }),
     [shareFile, previewFormat, template, variant],
   );

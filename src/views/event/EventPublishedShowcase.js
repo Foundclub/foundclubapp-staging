@@ -33,6 +33,10 @@ import { celebrate } from '@/services/celebrations/celebrationRuntime';
 
 import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
 
+import {
+  FILE_SHARE_CAPABILITIES, FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES, getFileShareCapability,
+} from '@/platform/share/fileShareContract';
+
 /**
  *
  * @param root0
@@ -70,7 +74,14 @@ export default function EventPublishedShowcase({ navigation, route }) {
   const [busyAction, setBusyAction] = useState(null); // 'visual' | 'story' | 'poster' | null
   const [editorOpen, setEditorOpen] = useState(false);
   const [downloadError, setDownloadError] = useState(null);
+  const [downloadNotice, setDownloadNotice] = useState(null);
   const reduceMotion = useReduceMotion();
+
+  // CE QUI VA SE PASSER quand on presse, décidé une seule fois dans la couche
+  // plateforme (fileShareContract). L'écran n'interroge PAS Platform.OS pour ça :
+  // c'est un Platform.OS dispersé qui a produit le défaut L20 (sur Android, le
+  // fichier était confié à une feuille de partage qui le jetait).
+  const saveThenOpen = getFileShareCapability() === FILE_SHARE_CAPABILITIES.SAVE_THEN_OPEN;
 
   // L'aperçu est un visuel PORTRAIT (4:5) rendu à sa taille réelle : sur un grand écran
   // (web/desktop) il déborde et masque les boutons d'action. On plafonne sa largeur par la
@@ -118,18 +129,60 @@ export default function EventPublishedShowcase({ navigation, route }) {
     url: shareUrl,
   }), [shareIntroParam, shareLinkLabelParam, shareUrl, t, texts]);
 
+  // Titre du sélecteur d'application Android. Sans lui, le système ouvre
+  // directement l'application par défaut : l'utilisateur ne CHOISIT plus.
+  const chooserTitle = t('showcase.openWith', 'Ouvrir l’affiche avec…');
+
+  // Un fichier rangé hors de l'écran (galerie, téléchargements) sans un mot est
+  // indiscernable d'un échec : l'écran dit OÙ il est parti.
+  const savedNotice = (outcome) => {
+    if (outcome === FILE_SHARE_OUTCOMES.GALLERY) {
+      return t('showcase.savedGallery', 'C’est enregistré dans ta galerie photo.');
+    }
+    if (outcome === FILE_SHARE_OUTCOMES.DOWNLOADS) {
+      return t('showcase.savedDownloads', 'C’est enregistré dans tes téléchargements.');
+    }
+    // Feuille de partage (iOS) ou téléchargement navigateur (web) : le système a
+    // déjà montré ce qu'il faisait, un message de plus serait du bruit.
+    return null;
+  };
+
+  // L'erreur porte sa cause (`reason`, posé par shareLocalFile) : un refus de
+  // permission n'est pas une panne de réseau, et le message générique enverrait
+  // l'utilisateur regarder sa connexion pour rien.
+  const downloadErrorText = (failure) => {
+    if (failure?.reason === FILE_SHARE_FAILURES.PERMISSION_DENIED) {
+      return t(
+        'showcase.savePermissionError',
+        'FoundClub n’a pas le droit d’enregistrer dans ton téléphone. '
+        + 'Autorise-le dans les réglages, puis réessaie.',
+      );
+    }
+    if (failure?.reason === FILE_SHARE_FAILURES.SAVE_FAILED) {
+      return t(
+        'showcase.saveError',
+        'L’enregistrement a échoué. Il reste peut-être trop peu de place sur ton téléphone.',
+      );
+    }
+    return t(
+      'showcase.downloadError',
+      'Le téléchargement a échoué. Vérifie ta connexion et réessaie.',
+    );
+  };
+
   // useEventShowcase.shareFile journalise puis RE-LEVE l'erreur : sans ce catch, un
   // telechargement echoue en silence (spinner qui s'arrete, aucun retour a l'ecran).
   const runDownload = async (key, fn) => {
     setBusyAction(key);
     setDownloadError(null);
+    setDownloadNotice(null);
     try {
-      await fn();
+      // Le web résout l'URL objet du téléchargement (une chaîne) : `outcome` y est
+      // absent, et savedNotice retombe alors sur null. Rien à changer côté web.
+      const result = await fn();
+      setDownloadNotice(savedNotice(result?.outcome));
     } catch (e) {
-      setDownloadError(t(
-        'showcase.downloadError',
-        'Le téléchargement a échoué. Vérifie ta connexion et réessaie.',
-      ));
+      setDownloadError(downloadErrorText(e));
     } finally {
       setBusyAction(null);
     }
@@ -293,19 +346,29 @@ export default function EventPublishedShowcase({ navigation, route }) {
         </View>
 
         <View style={styles.actions}>
-          {/* Geste PRINCIPAL : il envoie le FICHIER de l'affiche (format affiché),
-              le lien voyage dans le message. Un seul bouton plein à l'écran. */}
+          {/* Geste PRINCIPAL : il traite le FICHIER de l'affiche (format affiché),
+              le lien voyage dans le message. Un seul bouton plein à l'écran.
+              Le libellé annonce ce que la plateforme sait vraiment faire : envoyer
+              (iOS / web) ou enregistrer puis proposer une application (Android). */}
           <ShowcaseAction
             busy={busyAction === 'visual'}
             busyColor={Colors.primary900}
             disabled={busyAction != null || posterUnavailable}
-            hint={t(
-              'showcase.shareHint',
-              'L’image part telle que tu la vois. Dans la fenêtre de partage, '
-              + 'tu peux aussi l’enregistrer dans ton téléphone.',
-            )}
-            label={t('showcase.share', 'Envoyer l’affiche')}
-            onPress={() => runDownload('visual', () => shareVisual(shareMessage))}
+            hint={saveThenOpen
+              ? t(
+                'showcase.saveHint',
+                'Elle part dans ta galerie photo, telle que tu la vois. '
+                + 'Tu choisis ensuite l’application qui l’ouvre.',
+              )
+              : t(
+                'showcase.shareHint',
+                'L’image part telle que tu la vois. Dans la fenêtre de partage, '
+                + 'tu peux aussi l’enregistrer dans ton téléphone.',
+              )}
+            label={saveThenOpen
+              ? t('showcase.save', 'Enregistrer l’affiche')
+              : t('showcase.share', 'Envoyer l’affiche')}
+            onPress={() => runDownload('visual', () => shareVisual(shareMessage, chooserTitle))}
             styles={styles}
             variant="primary"
           />
@@ -326,23 +389,41 @@ export default function EventPublishedShowcase({ navigation, route }) {
             busy={busyAction === 'story'}
             busyColor={Colors.primary500}
             disabled={busyAction != null}
-            hint={t(
-              'showcase.storyHint',
-              'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
-            )}
+            hint={saveThenOpen
+              ? t(
+                'showcase.storyHintSave',
+                'Image verticale plein écran, enregistrée dans ta galerie, '
+                + 'pour Instagram, WhatsApp ou Snap.',
+              )
+              : t(
+                'showcase.storyHint',
+                'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
+              )}
             label={t('showcase.story', 'Version story 9:16')}
-            onPress={() => runDownload('story', downloadStory)}
+            onPress={() => runDownload('story', () => downloadStory(chooserTitle))}
             styles={styles}
           />
           <ShowcaseAction
             busy={busyAction === 'poster'}
             busyColor={Colors.primary500}
             disabled={busyAction != null}
-            hint={t('showcase.posterHint', 'Fichier PDF, prêt pour l’imprimante du club.')}
+            hint={saveThenOpen
+              ? t(
+                'showcase.posterHintSave',
+                'Fichier PDF enregistré dans tes téléchargements, '
+                + 'prêt pour l’imprimante du club.',
+              )
+              : t('showcase.posterHint', 'Fichier PDF, prêt pour l’imprimante du club.')}
             label={t('showcase.poster', 'Affiche A4 à imprimer')}
-            onPress={() => runDownload('poster', downloadPoster)}
+            onPress={() => runDownload('poster', () => downloadPoster(chooserTitle))}
             styles={styles}
           />
+
+          {downloadNotice ? (
+            <Text accessibilityLiveRegion="polite" style={styles.downloadNoticeText}>
+              {downloadNotice}
+            </Text>
+          ) : null}
 
           {downloadError ? (
             <Text
@@ -460,6 +541,10 @@ const makeStyles = (Colors) => StyleSheet.create({
   // error300 sur fond sombre primary900 : ~8:1 (AA).
   downloadErrorText: {
     color: Colors.error300, fontSize: 13, paddingHorizontal: 4, textAlign: 'center',
+  },
+  // success200 sur fond sombre primary900 : ~13:1 (AAA).
+  downloadNoticeText: {
+    color: Colors.success200, fontSize: 13, paddingHorizontal: 4, textAlign: 'center',
   },
   editor: { gap: 8 },
   editorBody: { gap: 14, marginTop: 4 },

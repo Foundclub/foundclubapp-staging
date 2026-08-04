@@ -60,6 +60,15 @@ jest.mock('@/platform/share', () => ({
   share: (/** @type {any} */ ...args) => mockShare(...args),
 }));
 
+// L20 : la capacite est une ENTREE de l'ecran (elle est decidee et testee dans
+// la couche plateforme). Platform.OS de React Native est un getter non mutable
+// sous Jest : on pilote donc la capacite, pas la plateforme.
+let mockCapability = 'share-sheet';
+jest.mock('@/platform/share/fileShareContract', () => ({
+  ...jest.requireActual('@/platform/share/fileShareContract'),
+  getFileShareCapability: () => mockCapability,
+}));
+
 jest.mock('@/services/client', () => ({
   __esModule: true,
   default: { get: (/** @type {any} */ ...args) => mockClientGet(...args) },
@@ -187,8 +196,13 @@ const renderedText = (tree) => JSON.stringify(tree.toJSON());
 beforeEach(() => {
   jest.clearAllMocks();
   mockSkeletonProps.length = 0;
+  mockCapability = 'share-sheet';
   mockFetchRenderBase64.mockResolvedValue({ base64: 'QUJD', contentType: 'image/png' });
-  mockDownloadAndShareRender.mockResolvedValue('file:///cache/affiche.png');
+  mockDownloadAndShareRender.mockResolvedValue({
+    fileUri: 'file:///cache/affiche.png',
+    opened: true,
+    outcome: 'shareSheet',
+  });
   mockClientGet.mockResolvedValue({ data: { data: null } });
 });
 
@@ -370,5 +384,136 @@ describe('EventPublishedShowcase — hierarchie et etats', () => {
     await press(tree, 'Version story 9:16');
     expect(renderedText(tree)).toContain('Le téléchargement a échoué');
     expect(tree.root.findAllByType(Text).length).toBeGreaterThan(0);
+  });
+});
+
+describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
+  beforeEach(() => {
+    mockCapability = 'save-then-open';
+  });
+
+  it('le bouton principal annonce l ENREGISTREMENT, pas un envoi qui n arrive pas', async () => {
+    const tree = await renderScreen(clubParams());
+    const labels = tree.root
+      .findAllByType(TouchableOpacity)
+      .map((/** @type {any} */ node) => node.props.accessibilityLabel);
+    expect(labels).toContain('Enregistrer l’affiche');
+    expect(labels).not.toContain('Envoyer l’affiche');
+    expect(renderedText(tree)).toContain('galerie photo');
+  });
+
+  it('les formats story et A4 disent OU le fichier atterrit', async () => {
+    const tree = await renderScreen(clubParams());
+    const text = renderedText(tree);
+    expect(text).toContain('enregistrée dans ta galerie');
+    expect(text).toContain('enregistré dans tes téléchargements');
+  });
+
+  // Sans titre de selecteur, Android ouvre l application par defaut : plus de choix.
+  it('le selecteur d application est titre', async () => {
+    const tree = await renderScreen(clubParams());
+    await press(tree, 'Enregistrer l’affiche');
+    expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
+      dialogTitle: 'Ouvrir l’affiche avec…',
+      format: 'post',
+    }));
+  });
+
+  // Un fichier range en silence, hors de l ecran, est percu comme un echec.
+  it('un enregistrement reussi se dit a l ecran', async () => {
+    mockDownloadAndShareRender.mockResolvedValue({
+      fileUri: 'file:///cache/affiche.png', opened: true, outcome: 'gallery',
+    });
+    const tree = await renderScreen(clubParams());
+    await press(tree, 'Enregistrer l’affiche');
+    expect(renderedText(tree)).toContain('C’est enregistré dans ta galerie photo.');
+  });
+
+  it('un PDF range dans les telechargements le dit aussi', async () => {
+    mockDownloadAndShareRender.mockResolvedValue({
+      fileUri: 'file:///cache/affiche.pdf', opened: false, outcome: 'downloads',
+    });
+    const tree = await renderScreen(clubParams());
+    await press(tree, 'Affiche A4 à imprimer');
+    expect(renderedText(tree)).toContain('C’est enregistré dans tes téléchargements.');
+  });
+});
+
+describe('EventPublishedShowcase — L20, un refus parle et nomme sa cause', () => {
+  beforeEach(() => {
+    mockCapability = 'save-then-open';
+  });
+
+  it('permission refusee : le message envoie aux REGLAGES, pas a la connexion', async () => {
+    const refus = Object.assign(new Error('permission_denied'), { reason: 'permission_denied' });
+    mockDownloadAndShareRender.mockRejectedValue(refus);
+    const tree = await renderScreen(clubParams());
+    await press(tree, 'Enregistrer l’affiche');
+    const text = renderedText(tree);
+    expect(text).toContain('n’a pas le droit d’enregistrer');
+    expect(text).not.toContain('Vérifie ta connexion');
+  });
+
+  it('ecriture impossible : le message parle de PLACE, pas de connexion', async () => {
+    const echec = Object.assign(new Error('save_failed'), { reason: 'save_failed' });
+    mockDownloadAndShareRender.mockRejectedValue(echec);
+    const tree = await renderScreen(clubParams());
+    await press(tree, 'Enregistrer l’affiche');
+    const text = renderedText(tree);
+    expect(text).toContain('trop peu de place');
+    expect(text).not.toContain('Vérifie ta connexion');
+  });
+
+  it('cause inconnue : le message generique reste (jamais de silence)', async () => {
+    mockDownloadAndShareRender.mockRejectedValue(new Error('reseau'));
+    const tree = await renderScreen(clubParams());
+    await press(tree, 'Enregistrer l’affiche');
+    expect(renderedText(tree)).toContain('Le téléchargement a échoué');
+  });
+
+  it('apres un echec, un succes efface le message d erreur', async () => {
+    mockDownloadAndShareRender.mockRejectedValueOnce(new Error('reseau'));
+    const tree = await renderScreen(clubParams());
+    await press(tree, 'Enregistrer l’affiche');
+    expect(renderedText(tree)).toContain('Le téléchargement a échoué');
+
+    mockDownloadAndShareRender.mockResolvedValue({
+      fileUri: 'file:///cache/affiche.png', opened: true, outcome: 'gallery',
+    });
+    await press(tree, 'Enregistrer l’affiche');
+    const text = renderedText(tree);
+    expect(text).not.toContain('Le téléchargement a échoué');
+    expect(text).toContain('C’est enregistré dans ta galerie photo.');
+  });
+});
+
+describe('EventPublishedShowcase — L20, TEMOIN POSITIF : iOS et web ne changent pas', () => {
+  it('le bouton principal reste « Envoyer l affiche », fenetre de partage', async () => {
+    const tree = await renderScreen(clubParams());
+    const labels = tree.root
+      .findAllByType(TouchableOpacity)
+      .map((/** @type {any} */ node) => node.props.accessibilityLabel);
+    expect(labels).toContain('Envoyer l’affiche');
+    expect(labels).not.toContain('Enregistrer l’affiche');
+    expect(renderedText(tree)).toContain('Dans la fenêtre de partage');
+  });
+
+  it('la feuille de partage etant son propre retour, aucun message ne s ajoute', async () => {
+    const tree = await renderScreen(clubParams());
+    await press(tree, 'Envoyer l’affiche');
+    const text = renderedText(tree);
+    expect(text).not.toContain('C’est enregistré');
+    expect(text).not.toContain('Le téléchargement a échoué');
+  });
+
+  // Le web resout l'URL objet du telechargement navigateur : une CHAINE, sans
+  // `outcome`. L'ecran doit la traverser sans message et sans planter.
+  it('web : une chaine en retour ne produit ni message ni erreur', async () => {
+    mockDownloadAndShareRender.mockResolvedValue('blob:https://test.foundclub/abc');
+    const tree = await renderScreen(clubParams());
+    await press(tree, 'Envoyer l’affiche');
+    const text = renderedText(tree);
+    expect(text).not.toContain('C’est enregistré');
+    expect(text).not.toContain('Le téléchargement a échoué');
   });
 });
