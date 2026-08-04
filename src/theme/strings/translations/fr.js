@@ -2645,6 +2645,12 @@ export default {
         title: 'Limite d\'équipes atteinte',
       },
     },
+    badges: {
+      coach: 'COACH',
+      invitation: 'INVITATION',
+      pending: 'EN ATTENTE',
+      player: 'JOUEUR·SE',
+    },
     fields: {
       category: 'Catégorie',
       level: 'Niveau',
@@ -2653,6 +2659,10 @@ export default {
     },
     noData: 'Aucune équipe trouvée.',
     searchPlaceholder: 'Mes équipes',
+    stats: {
+      members: 'Membres',
+      trainers: 'Entraîneur·e·s',
+    },
     title: 'Équipes de mon club',
   },
   teamMembershipRequestList: {
