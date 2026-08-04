@@ -1,3 +1,4 @@
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
@@ -63,6 +64,17 @@ jest.mock('@/domains/event/useEvent', () => ({
 const ME = 'user-me';
 const player = { documentId: ME, role: { name: USER_ROLES.player } };
 
+// Forme REELLE d une demande refusee : le serveur laisse la ligne ACTIVE et y
+// range le motif saisi par le staff (event-participation.ts:798-802).
+const declinedRequest = {
+  documentId: 'request-declined',
+  isActive: true,
+  participationStatus: 'declined',
+  reason: 'Effectif complet pour ce match.',
+  updatedAt: '2026-08-03T10:00:00.000Z',
+  user: { documentId: ME },
+};
+
 // Date FUTURE : le flux de participation bloque un evenement passe.
 const buildEvent = (overrides = {}) => ({
   capacity: 0,
@@ -88,6 +100,7 @@ const render = (props) => {
 
 const buttonTitles = (tree) => tree.root.findAllByType(Button).map((node) => node.props.title);
 const tagTexts = (tree) => tree.root.findAllByType(Tag).map((node) => node.props.text);
+const textContents = (tree) => tree.root.findAllByType(Text).map((node) => node.props.children);
 
 beforeEach(() => {
   mockUserData.mockReturnValue(player);
@@ -175,23 +188,66 @@ describe('EventAnswerButtons — validation manuelle (caracterisation)', () => {
     expect(buttonTitles(tree)).toEqual(['eventDetails.actions.cancelResponse']);
   });
 
-  it('TROU fige — demande REFUSEE : aucune trace du refus, le bouton de depart revient', () => {
+  it('demande REFUSEE : le joueur VOIT le refus, et il voit le MOTIF', () => {
     // Un refus met la demande en `declined` : ni acceptee, ni en attente, ni
-    // absente. Le composant retombe donc sur la branche « pas encore repondu »
-    // et propose a nouveau de repondre, sans dire que le staff a refuse.
+    // absente. Le composant retombait donc sur la branche « pas encore repondu »
+    // et reproposait de repondre sans dire que le staff avait refuse — le joueur
+    // redemandait, le staff refusait, en boucle.
     const tree = render({
-      event: buildEvent(),
+      event: buildEvent({ participationRequests: [declinedRequest] }),
       hasAcceptedRequest: false,
       hasPendingRequest: false,
       onDecline: jest.fn(),
       onParticipate: jest.fn(),
     });
 
-    expect(tagTexts(tree)).toEqual([]);
+    expect(tagTexts(tree)).toEqual(['eventList.info.declinedRequest']);
+    expect(textContents(tree)).toContain('Effectif complet pour ce match.');
+  });
+
+  it('demande refusee SANS motif : le refus se voit quand meme', () => {
+    const tree = render({
+      event: buildEvent({
+        participationRequests: [{ ...declinedRequest, reason: null }],
+      }),
+      onDecline: jest.fn(),
+      onParticipate: jest.fn(),
+    });
+
+    expect(tagTexts(tree)).toEqual(['eventList.info.declinedRequest']);
+  });
+
+  it('TEMOIN POSITIF — refuse, le joueur n est pas coince : il peut encore repondre', () => {
+    // Sans ce temoin, un ecran qui n afficherait PLUS RIEN passerait pour corrige.
+    const onDecline = jest.fn();
+    const onParticipate = jest.fn();
+    const tree = render({
+      event: buildEvent({ participationRequests: [declinedRequest] }),
+      onDecline,
+      onParticipate,
+    });
+
     expect(buttonTitles(tree)).toEqual([
       'eventList.actions.present',
       'eventList.actions.absent',
     ]);
+
+    const [present, absent] = tree.root.findAllByType(Button);
+    act(() => { present.props.onPress(); });
+    act(() => { absent.props.onPress(); });
+
+    expect(onParticipate).toHaveBeenCalledTimes(1);
+    expect(onDecline).toHaveBeenCalledTimes(1);
+  });
+
+  it('ACQUIS protege — sans demande refusee, aucune etiquette de refus', () => {
+    const tree = render({
+      event: buildEvent(),
+      onDecline: jest.fn(),
+      onParticipate: jest.fn(),
+    });
+
+    expect(tagTexts(tree)).toEqual([]);
   });
 });
 

@@ -3,6 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
+import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
+
 import {
   cancelEvent,
   declareSelfLate,
@@ -55,7 +57,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer ta participation pour le moment.",
+        getParticipationErrorMessage(
+          error,
+          "Impossible d'enregistrer ta participation pour le moment.",
+        ),
       );
     },
     onSuccess: () => {
@@ -70,7 +75,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || 'Impossible de valider cette participation pour le moment.',
+        getParticipationErrorMessage(
+          error,
+          'Impossible de valider cette participation pour le moment.',
+        ),
       );
     },
     onSuccess: () => {
@@ -85,7 +93,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || 'Impossible de refuser cette participation pour le moment.',
+        getParticipationErrorMessage(
+          error,
+          'Impossible de refuser cette participation pour le moment.',
+        ),
       );
     },
     onSuccess: () => {
@@ -100,7 +111,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || t('errors.EVENT_PARTICIPATION_DELETE_ERROR'),
+        getParticipationErrorMessage(error, t('errors.EVENT_PARTICIPATION_DELETE_ERROR')),
       );
     },
     onSuccess: () => {
@@ -115,7 +126,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer ton absence pour le moment.",
+        getParticipationErrorMessage(error, "Impossible d'enregistrer ton absence pour le moment."),
       );
     },
     onSuccess: () => {
@@ -130,7 +141,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer ta réponse pour le moment.",
+        getParticipationErrorMessage(error, "Impossible d'enregistrer ta réponse pour le moment."),
       );
     },
     onSuccess: () => {
@@ -209,7 +220,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const joinReservationMutation = useMutation({
     mutationFn: (reservationId) => joinReservation(reservationId),
     onError: (error) => {
-      Alert.alert(t('common.error'), error?.message || t('reservation.joinError'));
+      Alert.alert(
+        t('common.error'),
+        getParticipationErrorMessage(error, t('reservation.joinError')),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -226,7 +240,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const bookFullMutation = useMutation({
     mutationFn: (reservationId) => bookFullReservation(reservationId),
     onError: (error) => {
-      Alert.alert(t('common.error'), error?.message || t('reservation.bookFull.error'));
+      Alert.alert(
+        t('common.error'),
+        getParticipationErrorMessage(error, t('reservation.bookFull.error')),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -243,7 +260,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const openForPlayersMutation = useMutation({
     mutationFn: ({ reservationId, targetPlayers }) => openForPlayers(reservationId, targetPlayers),
     onError: (error) => {
-      Alert.alert(t('common.error'), error?.message || t('reservation.openForPlayers.error'));
+      Alert.alert(
+        t('common.error'),
+        getParticipationErrorMessage(error, t('reservation.openForPlayers.error')),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -260,7 +280,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const sosAlertMutation = useMutation({
     mutationFn: (reservationId) => triggerSosAlert(reservationId),
     onError: (error) => {
-      Alert.alert(t('common.error'), error?.message || t('reservation.sosAlert.error'));
+      Alert.alert(
+        t('common.error'),
+        getParticipationErrorMessage(error, t('reservation.sosAlert.error')),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -278,7 +301,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer ton arrivée.",
+        getParticipationErrorMessage(error, "Impossible d'enregistrer ton arrivée."),
       );
     },
     onSuccess: () => {
@@ -297,7 +320,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer ton retard.",
+        getParticipationErrorMessage(error, "Impossible d'enregistrer ton retard."),
       );
     },
     onSuccess: () => {
@@ -362,7 +385,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const requestFeaturedMutation = useMutation({
     mutationFn: requestFeatured,
     onError: (error) => {
-      Alert.alert(t('common.error'), error?.message || t('eventDetails.featuredRequest.error'));
+      Alert.alert(
+        t('common.error'),
+        getParticipationErrorMessage(error, t('eventDetails.featuredRequest.error')),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });

@@ -1,15 +1,25 @@
 import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
 
-// AUDIT L19 (E6) — filet de caracterisation sur le message d erreur montre au
-// joueur quand le serveur REFUSE sa reponse. `getParticipationErrorMessage`
-// n avait aucun test, alors que c est lui qui alimente les Alert.alert de
-// EventListContent (carte) et de EventDetails (modale de confirmation).
+// LOT L22 (defaut D1 / audit T5) — quand le serveur REFUSE la reponse d un joueur,
+// ce helper est ce qu il lit. Il alimente les Alert.alert de EventListContent
+// (carte), de EventDetails (modale de confirmation) et les 13 mutations de
+// useEventMutations.
+//
+// Ce fichier decrivait le TROU (le message anglais brut passait tel quel) ;
+// il decrit maintenant le CONTRAT :
+//   1. code machine traduit  -> le francais de fr.js ;
+//   2. rien de traduisible   -> le repli francais de l appelant ;
+//   3. jamais, dans aucun cas, la phrase brute du serveur.
+//
+// Le point 3 vaut AUSSI en developpement : `getErrorMessage` laisse passer le
+// texte brut quand `__DEV__` est vrai, ce qui est utile au developpeur mais pas
+// au joueur — or la recette tourne justement sur emulateur, ou `__DEV__` est vrai.
 //
 // Fait mesure sur ce projet : l intercepteur axios (src/services/client.native.js:89-95)
 // rejette la charge Strapi DEBALLEE — `error.response` n existe plus a ce
 // stade. Les fixtures ci-dessous reproduisent la forme REELLE de l objet reçu.
 //
-// Reference : docs/AUDIT_PARTICIPATION_2026_08_02.md, maillon M3.
+// Reference : docs/AUDIT_PARTICIPATION_2026_08_02.md, maillon M3 / trou T5.
 
 // Erreur telle que l intercepteur la rejette pour un refus de participation.
 const rejectedByInterceptor = {
@@ -22,32 +32,42 @@ const rejectedByInterceptor = {
   status: 400,
 };
 
-describe('getParticipationErrorMessage (caracterisation)', () => {
-  it('TROU fige — le code machine du refus est IGNORE, le message brut passe tel quel', () => {
-    // `APIerrors.EVENT_USER_NOT_PLAYER_OF_TEAM_ERROR` existe pourtant dans fr.js
-    // (« L'utilisateur n'est pas joueur de l'équipe. ») et `getErrorMessage`
-    // de src/utils/errors/displayError.js sait le resoudre — ce helper-ci non.
+describe('getParticipationErrorMessage — le refus arrive en francais', () => {
+  it('le code machine du refus est traduit par fr.js', () => {
     expect(getParticipationErrorMessage(rejectedByInterceptor)).toBe(
-      'Error creating event participation: User is not eligible for this closed event',
+      "L'utilisateur n'est pas joueur de l'équipe.",
     );
   });
 
-  it('TROU fige — le repli francais ne sert jamais quand le serveur a repondu', () => {
-    // Le message serveur etant toujours present, le 2e argument (le repli
-    // redige en francais) est du code mort sur tout refus HTTP.
-    expect(
-      getParticipationErrorMessage(rejectedByInterceptor, 'Action impossible pour le moment.'),
-    ).not.toBe('Action impossible pour le moment.');
+  it('la phrase anglaise du serveur n est plus JAMAIS montree au joueur', () => {
+    expect(getParticipationErrorMessage(rejectedByInterceptor))
+      .not.toContain('Error creating event participation');
+
+    // Meme exigence sur la forme d avant l intercepteur : quelle que soit
+    // l enveloppe, le texte brut du serveur ne remonte pas a l ecran.
+    expect(getParticipationErrorMessage(
+      { response: { data: { error: { message: 'Something went sideways' } } } },
+      'Action impossible pour le moment.',
+    )).toBe('Action impossible pour le moment.');
   });
 
-  it('TROU fige — la branche `error.response.data` est morte apres l intercepteur', () => {
-    // Cette forme n arrive JAMAIS a ce helper : elle est deballee en amont.
-    // Le test la fige pour montrer que le code qui la lit n a plus d appelant.
-    const neverReachesHere = {
-      response: { data: { error: { message: 'Message enveloppe' } } },
-    };
+  it('code inconnu de fr.js : le repli francais de l appelant reprend la main', () => {
+    // C est ce 2e argument qui etait du code mort : le message serveur gagnait
+    // toujours. Il porte le seul contexte que le helper ne peut pas deviner.
+    expect(getParticipationErrorMessage(
+      {
+        details: { code: 'UN_CODE_QUE_FR_JS_NE_CONNAIT_PAS' },
+        message: 'User is not eligible',
+        status: 400,
+      },
+      'Impossible de confirmer ta participation pour le moment.',
+    )).toBe('Impossible de confirmer ta participation pour le moment.');
+  });
 
-    expect(getParticipationErrorMessage(neverReachesHere, 'repli')).toBe('Message enveloppe');
+  it('le socle commun reste branche : un 403 sans code reste « accès refusé »', () => {
+    // La traduction n est pas reecrite ici, elle est deleguee a displayError.js.
+    expect(getParticipationErrorMessage({ message: 'Forbidden', status: 403 }, 'repli'))
+      .toBe('Accès refusé.');
   });
 
   it('ACQUIS protege — sans erreur exploitable, le repli francais est bien rendu', () => {
@@ -57,5 +77,9 @@ describe('getParticipationErrorMessage (caracterisation)', () => {
     expect(getParticipationErrorMessage({}, 'Action impossible pour le moment.')).toBe(
       'Action impossible pour le moment.',
     );
+  });
+
+  it('ACQUIS protege — repli vide : une phrase francaise par defaut, jamais du vide', () => {
+    expect(getParticipationErrorMessage({}, '   ')).toBe('Action impossible pour le moment.');
   });
 });

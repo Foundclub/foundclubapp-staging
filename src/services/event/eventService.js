@@ -600,7 +600,11 @@ const REQUEST_HUB_EVENT_FIELDS = [
   'validationMode',
 ];
 
-const PARTICIPATION_REQUEST_STATUSES = ['accepted', 'missing', 'pending'];
+// `declined` en fait partie : sans lui, la vue reduite des cartes EFFACE les refus
+// et le joueur repropose sa demande indefiniment. Le serveur laisse la ligne
+// refusee ACTIVE (`isActive: true`, event-participation.ts:798-802), elle passe
+// donc bien le filtre `isActive` juste en dessous.
+const PARTICIPATION_REQUEST_STATUSES = ['accepted', 'declined', 'missing', 'pending'];
 const REQUEST_HUB_PARTICIPATION_REQUEST_STATUSES = ['pending'];
 
 const buildViewerScopedUserRelation = (viewerDocumentId) => {
@@ -649,7 +653,9 @@ const buildCompactEventCardPopulate = (viewerDocumentId) => ({
     fields: ['documentId'],
   },
   participationRequests: {
-    fields: ['createdAt', 'documentId', 'isActive', 'participationStatus', 'updatedAt'],
+    // `reason` transporte le MOTIF du refus, saisi par le staff : sans lui la carte
+    // saurait dire « refusee » sans jamais pouvoir dire pourquoi.
+    fields: ['createdAt', 'documentId', 'isActive', 'participationStatus', 'reason', 'updatedAt'],
     filters: {
       isActive: {
         $ne: false,

@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useEvent from '@/domains/event/useEvent';
 import { resolveParticipationFlow } from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
@@ -66,6 +67,16 @@ function EventAnswerButtons({
     },
     user: userData,
   });
+  // Derive ici plutot que recu en prop : les trois ecrans qui montent ce composant
+  // (les deux cartes et le detail) transportent tous `event.participationRequests`,
+  // et aucun ne savait dire « refusee ». Une seule source, trois trous fermes.
+  const ownAnswer = getCurrentUserEventParticipationState({
+    missings: event?.missings,
+    participationRequests: event?.participationRequests,
+    participations: event?.participations,
+    user: userData,
+  });
+  const declinedAnswer = ownAnswer?.requestStatus === 'declined' ? ownAnswer.activeRequest : null;
   const isStageDayEvent = String(event?.eventFormat || '').trim().toLowerCase() === 'stage_day';
   let dailyRsvpStatus = null;
   if (alreadyMissing) {
@@ -153,69 +164,94 @@ function EventAnswerButtons({
       );
     }
 
-    if (event?.sessionStatus?.toLowerCase() === 'closed') {
-      if (!resolvedParticipationFlow?.canAct) {
-        return (
-          <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
-            <Tag
-              text={t('eventList.info.restrictedEvent', 'Accès réserve')}
-              textStyle={Fonts.p1Bold}
-            />
-            {onAbout ? (
-              <Button
-                onPress={onAbout}
-                style={Alignments.fullWidth}
-                title={t('common.actions.seeMore', 'Voir le detail')}
-                variant="SecondaryLight"
+    const answerChoicesNode = (() => {
+      if (event?.sessionStatus?.toLowerCase() === 'closed') {
+        if (!resolvedParticipationFlow?.canAct) {
+          return (
+            <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
+              <Tag
+                text={t('eventList.info.restrictedEvent', 'Accès réserve')}
+                textStyle={Fonts.p1Bold}
               />
-            ) : null}
+              {onAbout ? (
+                <Button
+                  onPress={onAbout}
+                  style={Alignments.fullWidth}
+                  title={t('common.actions.seeMore', 'Voir le detail')}
+                  variant="SecondaryLight"
+                />
+              ) : null}
+            </View>
+          );
+        }
+
+        return (
+          <View style={[Alignments.row, Alignments.fullWidth, Spaces.gap[12]]}>
+            <View style={{ flex: 1 }}>
+              <Button
+                onPress={onParticipate}
+                style={Alignments.fullWidth}
+                title={t('eventList.actions.present')}
+                variant="Primary"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button
+                onPress={onDecline}
+                style={Alignments.fullWidth}
+                title={t('eventList.actions.absent')}
+                variant="Secondary"
+              />
+            </View>
           </View>
         );
       }
 
       return (
-        <View style={[Alignments.row, Alignments.fullWidth, Spaces.gap[12]]}>
-          <View style={{ flex: 1 }}>
-            <Button
-              onPress={onParticipate}
-              style={Alignments.fullWidth}
-              title={t('eventList.actions.present')}
-              variant="Primary"
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Button
-              onPress={onDecline}
-              style={Alignments.fullWidth}
-              title={t('eventList.actions.absent')}
-              variant="Secondary"
-            />
-          </View>
+        <View style={[Alignments.fullWidth, Spaces.gap[10]]}>
+          <Button
+            disabled={!resolvedParticipationFlow?.canAct || !canEventBeJoined({
+              capacity: event?.capacity,
+              participations: event?.participations,
+              userId: userData?.documentId,
+              userRole: userData?.role,
+            })}
+            onPress={onJoin}
+            style={Alignments.fullWidth}
+            title={resolvedParticipationFlow?.actionLabel || t('eventList.actions.join')}
+            variant="Primary"
+          />
+          {!resolvedParticipationFlow?.canAct && resolvedParticipationFlow?.blockedReason ? (
+            <Text style={[Fonts.p4, Fonts.neutral300]}>
+              {resolvedParticipationFlow.blockedReason}
+            </Text>
+          ) : null}
+        </View>
+      );
+    })();
+
+    // Un refus ne se voyait NULLE PART : ni acceptee, ni en attente, ni absente,
+    // la demande refusee remettait le joueur devant le bouton de depart, et il
+    // redemandait en boucle. On le dit, avec le motif du staff quand il existe,
+    // et on laisse les choix de reponse dessous : savoir ne doit pas bloquer.
+    if (declinedAnswer) {
+      return (
+        <View style={[Alignments.fullWidth, Spaces.gap[12]]}>
+          <Tag
+            text={t('eventList.info.declinedRequest')}
+            textStyle={Fonts.p1Bold}
+          />
+          {declinedAnswer.reason ? (
+            <Text style={[Fonts.p4, Fonts.neutral300]}>
+              {declinedAnswer.reason}
+            </Text>
+          ) : null}
+          {answerChoicesNode}
         </View>
       );
     }
 
-    return (
-      <View style={[Alignments.fullWidth, Spaces.gap[10]]}>
-        <Button
-          disabled={!resolvedParticipationFlow?.canAct || !canEventBeJoined({
-            capacity: event?.capacity,
-            participations: event?.participations,
-            userId: userData?.documentId,
-            userRole: userData?.role,
-          })}
-          onPress={onJoin}
-          style={Alignments.fullWidth}
-          title={resolvedParticipationFlow?.actionLabel || t('eventList.actions.join')}
-          variant="Primary"
-        />
-        {!resolvedParticipationFlow?.canAct && resolvedParticipationFlow?.blockedReason ? (
-          <Text style={[Fonts.p4, Fonts.neutral300]}>
-            {resolvedParticipationFlow.blockedReason}
-          </Text>
-        ) : null}
-      </View>
-    );
+    return answerChoicesNode;
   }
 
   // If user is a coach or president, show edit and cancel buttons if provided

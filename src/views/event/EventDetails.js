@@ -90,6 +90,7 @@ import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { useEventMutations } from './hooks/useEventMutations';
+import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
   getTournamentPendingMembershipForUser,
@@ -2336,22 +2337,22 @@ function EventDetails({ navigation, route }) {
   }, [navigation]);
 
   const handleDeleteParticipation = useCallback(() => {
-    const currentUserKey = getUserKey(userData);
-    if (!currentUserKey) return;
+    const { kind, participationId } = resolveOwnAnswerAction({
+      activeEventParticipations,
+      event,
+      user: userData,
+    });
 
-    const myParticipation = activeEventParticipations.find(
-      (participation) => participation?.documentId
-        && getUserKey(participation?.user) === currentUserKey,
-    );
+    if (kind === OwnAnswerAction.none) return;
 
-    if (myParticipation?.documentId) {
+    if (kind === OwnAnswerAction.deleteParticipation) {
       Alert.alert(
         t('eventDetails.modals.deleteParticipation.title'),
         t('eventDetails.modals.deleteParticipation.description'),
         [
           { style: 'cancel', text: t('eventDetails.modals.deleteParticipation.actions.cancel') },
           {
-            onPress: () => mutations.deleteParticipationMutation.mutate(String(myParticipation.documentId)),
+            onPress: () => mutations.deleteParticipationMutation.mutate(participationId),
             style: 'destructive',
             text: t('eventDetails.modals.deleteParticipation.actions.confirm'),
           },
@@ -2360,7 +2361,7 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
-    if (event?.missings?.some((/** @type {User} */ missing) => getUserKey(missing) === currentUserKey)) {
+    if (kind === OwnAnswerAction.switchToPresent) {
       Alert.alert(
         t('eventDetails.modals.editResponse.title'),
         t('eventDetails.modals.editResponse.description'),
@@ -2382,11 +2383,7 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
-    const isListedAsParticipant = (event?.participations || []).some(
-      (/** @type {User} */ participant) => getUserKey(participant) === currentUserKey,
-    );
-
-    if (isListedAsParticipant && event?.documentId) {
+    if (kind === OwnAnswerAction.declareMissing) {
       Alert.alert(
         t('eventDetails.modals.deleteParticipation.title'),
         t('eventDetails.modals.deleteParticipation.description'),

@@ -905,6 +905,7 @@ export default {
     info: {
       alreadyJoined: 'Je participe !',
       alreadyMissing: 'Je serai absent·e',
+      declinedRequest: 'Demande refusée',
       pendingRequest: 'Demande en attente',
     },
     joinModal: {

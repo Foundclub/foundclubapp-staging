@@ -5,6 +5,8 @@ import {
 } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 
+import { getApiErrorTranslation } from '@/utils/errors/displayError';
+
 export const ParticipationFlowKind = Object.freeze({
   detectionSlot: 'detection-slot',
   eventClosed: 'event-closed',
@@ -304,9 +306,26 @@ export const resolveParticipationFlow = (entity, context = {}) => {
   return buildEventFlow(entity, context);
 };
 
-export const getParticipationErrorMessage = (error, fallback = 'Action impossible pour le moment.') => String(
-  error?.response?.data?.error?.message
-  || error?.response?.data?.message
-  || error?.message
-  || fallback,
-).trim() || fallback;
+const DEFAULT_PARTICIPATION_ERROR = 'Action impossible pour le moment.';
+
+/**
+ * Message montre au joueur quand le serveur REFUSE sa reponse a un evenement.
+ *
+ * Contrat : le code machine traduit gagne, sinon le repli francais de l'appelant.
+ * La phrase brute du serveur — anglaise — n'est JAMAIS rendue. C'est la seule
+ * difference avec `getErrorMessage`, qui la laisse passer quand `__DEV__` est
+ * vrai pour aider le developpeur : ici l'ecran est celui du joueur, y compris en
+ * recette sur emulateur, ou `__DEV__` vaut justement vrai.
+ *
+ * L'ancienne version lisait `error.response.data.…` : l'intercepteur axios
+ * DEBALLE deja la charge Strapi (services/client.native.js:89-95), cette branche
+ * n'avait plus d'appelant et le repli francais etait du code mort.
+ * @param {any} error
+ * @param {string} [fallback] - Repli francais, propre a l'appel.
+ * @returns {string} Un message en francais, toujours.
+ */
+export const getParticipationErrorMessage = (error, fallback = DEFAULT_PARTICIPATION_ERROR) => (
+  getApiErrorTranslation(error)
+  || String(fallback || '').trim()
+  || DEFAULT_PARTICIPATION_ERROR
+);

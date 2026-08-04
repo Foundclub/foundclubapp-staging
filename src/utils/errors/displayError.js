@@ -93,35 +93,55 @@ const isTechnicalErrorMessage = (message) => (
 );
 
 /**
+ * Separe ce que l'on SAIT traduire de ce que l'on ne fait que recopier.
+ *
+ * L'ordre des trois cles est celui d'origine et il compte : un code explicite du
+ * serveur bat le statut HTTP. Sans lui, `resolveMappedErrorKey` court-circuite sur
+ * le statut et TOUT 403 devient « Acces refuse. » — un refus payant
+ * (SUBSCRIPTION_PERMISSION_DENIED) perdrait son motif avant meme d'etre lu.
+ * @param {any} errorInput
+ * @returns {{ candidate: string, translated: string }} `translated` vide = rien de traduisible.
+ */
+const resolveApiError = (errorInput) => {
+  const errorCode = extractErrorCode(errorInput);
+  const errorMessage = extractErrorMessage(errorInput);
+  const errorStatus = extractErrorStatus(errorInput);
+
+  const mappedCode = resolveMappedErrorKey(errorCode, errorStatus);
+  const mappedMessage = resolveMappedErrorKey(errorMessage, errorStatus);
+
+  const translatableKey = [errorCode, mappedCode, mappedMessage]
+    .find((key) => key && i18next.exists(`APIerrors.${key}`));
+
+  return {
+    candidate: mappedMessage || mappedCode,
+    translated: translatableKey ? i18next.t(`APIerrors.${translatableKey}`) : '',
+  };
+};
+
+/**
+ * Traduction francaise d'une erreur API, ou chaine VIDE si aucune ne correspond.
+ *
+ * A preferer a `getErrorMessage` partout ou l'appelant dispose deja d'un repli
+ * redige en francais : ce helper ne rend jamais la phrase brute du serveur.
+ * @param {any} errorInput
+ * @returns {string} La traduction, ou '' si le serveur n'a envoye aucun code connu.
+ */
+export const getApiErrorTranslation = (errorInput) => resolveApiError(errorInput).translated;
+
+/**
  * Get the error message for the given error payload.
  * @param {string | { message?: string, details?: { error?: string, message?: string, code?: string }, response?: { status?: number, data?: { details?: { error?: string }, error?: { message?: string, details?: { error?: string, code?: string } } } }, error?: { status?: number, message?: string }, status?: number, code?: string }} errorInput
  * @param {string} [genericI18nKey] - The generic i18n key to use if the error code is not found.
  * @returns {string} The error message
  */
 export const getErrorMessage = (errorInput, genericI18nKey = 'generic') => {
-  const errorCode = extractErrorCode(errorInput);
-  const errorMessage = extractErrorMessage(errorInput);
-  const errorStatus = extractErrorStatus(errorInput);
+  const { candidate, translated } = resolveApiError(errorInput);
 
-  // Un code explicite du serveur bat le statut HTTP. Sans ce passage, `resolveMappedErrorKey`
-  // court-circuite sur le statut et TOUT 403 devient « Acces refuse. » : un refus payant
-  // (SUBSCRIPTION_PERMISSION_DENIED) perdait son motif avant meme d'etre lu.
-  if (errorCode && i18next.exists(`APIerrors.${errorCode}`)) {
-    return i18next.t(`APIerrors.${errorCode}`);
+  if (translated) {
+    return translated;
   }
 
-  const mappedCode = resolveMappedErrorKey(errorCode, errorStatus);
-  const mappedMessage = resolveMappedErrorKey(errorMessage, errorStatus);
-
-  if (mappedCode && i18next.exists(`APIerrors.${mappedCode}`)) {
-    return i18next.t(`APIerrors.${mappedCode}`);
-  }
-
-  if (mappedMessage && i18next.exists(`APIerrors.${mappedMessage}`)) {
-    return i18next.t(`APIerrors.${mappedMessage}`);
-  }
-
-  const candidate = mappedMessage || mappedCode;
   if (!candidate || typeof candidate !== 'string') {
     return i18next.t(`APIerrors.${genericI18nKey}`);
   }
