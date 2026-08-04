@@ -7,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Image,
+  StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -22,16 +23,18 @@ import {
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
 import { useAppContext } from '@/store/appContext';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
+import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import PremiumBadge from '@/components/molecules/premiumBadge/PremiumBadge';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -53,6 +56,39 @@ import { sortTeamsForDisplay } from '@/utils/teamSort';
 /** @typedef {any} Team */
 /** @typedef {any} User */
 /** @typedef {{ requestId?: string } & Team} PendingTeam */
+
+// D3 (tours 7e / 7f) — la carte d'equipe partage desormais l'enveloppe verre des
+// cartes club (`ClubCardSurface`) et leur pied sponsors defilant
+// (`SponsorMarquee`). Les deux existaient deja : rien n'est reecrit ici.
+// ⚠️ Le degrade doit rester un FOND POSE DERRIERE, jamais le conteneur — sinon
+// il se dimensionne sur ses enfants et tranche la carte (bug R07/R18, paye deux
+// fois). C'est exactement ce que `ClubCardSurface` encapsule.
+
+/**
+ * Libelle affichable d'une information d'equipe (relation, chaine, ou rien).
+ * Renvoyer une chaine VIDE plutot que la valeur brute est ce qui garantit
+ * qu'aucune etiquette vide n'est rendue pour un champ absent.
+ * @param {any} value - Relation Strapi, chaine libre, ou valeur absente.
+ * @returns {string} - Libelle nettoye, vide si l'information manque.
+ */
+const toChipLabel = (value) => {
+  if (typeof value === 'string') return value.trim();
+  if (value && typeof value.name === 'string') return value.name.trim();
+  return '';
+};
+
+/**
+ * Nombre d'entraineurs a afficher.
+ * Meme precaution que `getTeamMemberCount` : quand le club masque ses membres,
+ * le serveur retire la liste et n'expose plus qu'un compteur.
+ * @param {any} team - Equipe telle que renvoyee par l'API.
+ * @returns {number} - Nombre d'entraineurs.
+ */
+const getTeamTrainerCount = (team) => (
+  Array.isArray(team?.trainers) && team.trainers.length
+    ? team.trainers.length
+    : Number(team?.trainersCount) || 0
+);
 
 /**
  * Team list content to be used in home page or dedicated team list screen
@@ -425,7 +461,7 @@ function TeamListContent({
           Spaces.gap[12],
           {
             borderColor: 'rgba(1,179,244,0.45)',
-            borderRadius: 20,
+            borderRadius: 16,
             borderStyle: 'dashed',
             borderWidth: 1.5,
             marginTop: 12,
@@ -481,9 +517,9 @@ function TeamListContent({
     const isLeagueCard = isLeagueMode;
     let stateLabel = '';
     if (isPending) {
-      stateLabel = 'EN ATTENTE';
+      stateLabel = t('teamList.badges.pending', 'EN ATTENTE');
     } else if (isInvitation) {
-      stateLabel = 'INVITATION';
+      stateLabel = t('teamList.badges.invitation', 'INVITATION');
     }
 
     const activityTag = sportLabel ? (
@@ -507,13 +543,9 @@ function TeamListContent({
     ) : (
       <ClubLogoMark
         club={item?.club}
-        logoStyle={[
-          ApplicationStyle.borderWidth1,
-          ApplicationStyle.borderColor.primary500,
-          { borderRadius: 16 },
-        ]}
+        logoStyle={styles.identityLogo}
         name={item?.club?.name || item?.name}
-        size={60}
+        size={50}
       />
     );
 
@@ -543,115 +575,124 @@ function TeamListContent({
         && item.players.some(
           (/** @type {any} */ player) => player?.documentId === userData?.documentId,
         );
-      let roleTagLabel = '';
-      if (isSelfTrainer) {
-        roleTagLabel = 'Coach';
+      // Un seul emplacement de badge, en haut a droite : l'etat REMPLACE le role.
+      // « en attente » et « invitation » sont des informations plus urgentes que
+      // « je suis coach ici », et deux capsules cote a cote se disputeraient la
+      // largeur du nom d'equipe.
+      let badge = null;
+      if (stateLabel) {
+        badge = {
+          color: cardAccentColor,
+          label: stateLabel,
+          tone: isPending ? 'warning500' : 'gold500',
+        };
+      } else if (isSelfTrainer) {
+        badge = {
+          color: Colors.primary500,
+          label: t('teamList.badges.coach', 'COACH'),
+          tone: 'primary500',
+        };
       } else if (isSelfPlayer) {
-        roleTagLabel = 'Joueur·se';
+        badge = {
+          color: Colors.primary500,
+          label: t('teamList.badges.player', 'JOUEUR·SE'),
+          tone: 'primary500',
+        };
       }
+
       const memberCount = getTeamMemberCount(item);
-      const metaLine = [
-        sportLabel,
-        item?.section?.name,
-        item?.category?.name || item?.category,
-        item?.level?.name || item?.level,
-      ].filter(Boolean).join(' · ');
-      const allSponsors = Array.isArray(item?.club?.sponsor) ? item.club.sponsor.filter(Boolean) : [];
-      const sponsors = allSponsors.slice(0, 5);
+      const trainerCount = getTeamTrainerCount(item);
+      // Une etiquette par information REELLEMENT presente : les absentes sont
+      // retirees de la liste, jamais rendues vides.
+      const metaChips = [
+        { key: 'sport', label: toChipLabel(sportLabel) },
+        { key: 'section', label: toChipLabel(item?.section) },
+        { key: 'category', label: toChipLabel(item?.category) },
+        { key: 'level', label: toChipLabel(item?.level) },
+      ].filter((chip) => chip.label);
+      const sponsors = Array.isArray(item?.club?.sponsor)
+        ? item.club.sponsor.filter(Boolean)
+        : [];
 
       return (
         <>
-          <View
-            style={[
-              Alignments.fullWidth,
-              Alignments.row,
-              Alignments.alignCenter,
-              Spaces.gap[12],
-            ]}
-          >
+          <View style={styles.identityRow}>
             <View>{identityAvatar}</View>
-            <View style={[Alignments.fill, { minWidth: 0 }]}>
-              <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+            <View style={styles.identityText}>
+              <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00, styles.teamName]}>
                 {item.name}
               </Text>
               {item?.club?.name ? (
-                <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300, { marginTop: 2 }]}>
+                <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300, styles.clubName]}>
                   {item.club.name}
                 </Text>
               ) : null}
             </View>
-            {roleTagLabel ? (
+            {badge ? (
               <Tag
-                style={{
-                  backgroundColor: `${Colors.primary500}14`,
-                  borderColor: Colors.primary500,
-                }}
-                text={roleTagLabel}
-                textStyle={Fonts.p3Bold}
+                style={[
+                  styles.stateBadge,
+                  { backgroundColor: withAlpha(badge.color, 0.12), borderColor: badge.color },
+                ]}
+                text={badge.label}
+                textColor={badge.tone}
+                textStyle={Fonts.p4Bold}
               />
             ) : null}
           </View>
 
-          {metaLine ? (
-            <Text
-              numberOfLines={1}
-              style={[Fonts.p3Bold, Fonts.primary200, Spaces.marginTop[12], Alignments.fullWidth]}
-            >
-              {metaLine}
-            </Text>
+          {metaChips.length > 0 ? (
+            <View style={styles.chipsRow}>
+              {metaChips.map((chip) => (
+                <View
+                  key={chip.key}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: withAlpha(Colors.neutral00, 0.08),
+                      borderColor: withAlpha(Colors.neutral00, 0.16),
+                    },
+                  ]}
+                  testID="team-card-chip"
+                >
+                  <Text numberOfLines={1} style={[Fonts.p4Bold, Fonts.neutral100]}>
+                    {chip.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
           ) : null}
 
           <View
-            style={[
-              Alignments.fullWidth,
-              Alignments.row,
-              Alignments.alignCenter,
-              Spaces.marginTop[12],
-              Spaces.gap[12],
-              {
-                borderTopColor: 'rgba(255,255,255,0.08)',
-                borderTopWidth: 1,
-                paddingTop: 12,
-              },
-            ]}
+            style={[styles.statsBand, { backgroundColor: withAlpha(Colors.neutral00, 0.05) }]}
+            testID="team-card-stats"
           >
-            <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
-              {`${memberCount} membre${memberCount > 1 ? 's' : ''}`}
-            </Text>
+            <View style={styles.statCell}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{memberCount}</Text>
+              <Text style={[Fonts.p4, Fonts.neutral300]}>
+                {t('teamList.stats.members', 'Membres')}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statCell,
+                { borderLeftColor: withAlpha(Colors.neutral00, 0.1), borderLeftWidth: 1 },
+              ]}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{trainerCount}</Text>
+              <Text style={[Fonts.p4, Fonts.neutral300]}>
+                {t('teamList.stats.trainers', 'Entraîneur·e·s')}
+              </Text>
+            </View>
           </View>
 
-          {sponsors.length > 0 ? (
-            <View style={[Alignments.fullWidth, Spaces.marginTop[12], Spaces.gap[8]]}>
-              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
-                {sponsors.map((sponsor) => (
-                  <SponsorLogoTile
-                    borderRadius={16}
-                    containerStyle={{ minWidth: isCompactScreen ? 86 : 94 }}
-                    height={isCompactScreen ? 34 : 38}
-                    imageUrl={sponsor?.logo?.url}
-                    key={sponsor?.documentId || sponsor?.id || sponsor?.link || sponsor?.title}
-                    link={sponsor?.link}
-                    title={sponsor?.title || sponsor?.name}
-                    titleLines={2}
-                    titleStyle={[
-                      Fonts.p4Bold,
-                      Fonts.neutral100,
-                      {
-                        lineHeight: 14,
-                        marginTop: 4,
-                      },
-                    ]}
-                    width={isCompactScreen ? 86 : 94}
-                  />
-                ))}
-              </View>
-              {allSponsors.length > sponsors.length ? (
-                <Text style={[Fonts.p3Bold, Fonts.primary100]}>
-                  {`+${allSponsors.length - sponsors.length} autres sponsors`}
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
+          {/*
+            Le defilement de sponsors du depot (L03/L23) : il se masque tout seul
+            sans sponsor, suspend sa boucle hors ecran, et sait deja faire les
+            logos 22 px, les fondus de 18 px et les ~4 s par logo. On ne le
+            reecrit pas ici.
+          */}
+          <SponsorMarquee fadeColor={Colors.primary900} sponsors={sponsors} />
         </>
       );
     };
@@ -775,28 +816,23 @@ function TeamListContent({
     return (
       <View style={[{ position: 'relative' }]}>
         <TouchableOpacity
+          accessibilityRole="button"
           activeOpacity={0.92}
           onPress={() => handleTeamSelect(item)}
-          style={[
-            Spaces.marginVertical[12],
-            {
-              borderRadius: 24,
-            },
-          ]}
+          style={Spaces.marginVertical[12]}
         >
-          <View
-            style={{
-              backgroundColor: Colors.primary700,
-              borderColor: cardAccentColor,
-              borderRadius: 24,
-              borderWidth: 1,
-              justifyContent: 'center',
-              minHeight: isCompactScreen ? 138 : 150,
-              padding: cardPadding,
-            }}
+          <ClubCardSurface
+            style={[
+              styles.richCard,
+              { paddingHorizontal: cardPadding, paddingVertical: cardPadding },
+              // La bordure cyan 25 % vient de ClubCardSurface. Seuls les etats
+              // « en attente » / « invitation » la teintent, pour que la couleur
+              // de la carte porte la meme information que son badge.
+              stateLabel ? { borderColor: cardAccentColor } : null,
+            ]}
           >
             {renderClassicContent()}
-          </View>
+          </ClubCardSurface>
         </TouchableOpacity>
       </View>
     );
@@ -810,8 +846,60 @@ function TeamListContent({
     handleTeamSelect,
     isCompactScreen,
     isLeagueMode,
+    t,
     userData?.documentId,
   ]);
+
+  // Rangee compacte (tour 7f) — « Autres equipes du club ». Ces equipes ne sont
+  // pas les miennes : un nom, de quoi les distinguer, et un chevron. La carte
+  // riche est reservee a ce qui me concerne.
+  const renderCompactTeamRow = useCallback((/** @type {Team} */ item) => {
+    const memberCount = getTeamMemberCount(item);
+    const metaLine = [
+      toChipLabel(item?.activities?.[0]?.name || item?.sport),
+      toChipLabel(item?.category),
+      toChipLabel(item?.section),
+      `${memberCount} membre${memberCount > 1 ? 's' : ''}`,
+    ].filter(Boolean).join(' · ');
+
+    return (
+      <TouchableOpacity
+        accessibilityLabel={item?.name}
+        accessibilityRole="button"
+        activeOpacity={0.85}
+        onPress={() => handleTeamSelect(item)}
+        style={[
+          styles.compactRow,
+          {
+            backgroundColor: withAlpha(Colors.primary700, 0.45),
+            borderColor: withAlpha(Colors.neutral00, 0.12),
+          },
+        ]}
+      >
+        <ClubLogoMark
+          club={item?.club}
+          logoStyle={styles.compactLogo}
+          name={item?.club?.name || item?.name}
+          size={40}
+        />
+        <View style={styles.compactText}>
+          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {item?.name}
+          </Text>
+          {metaLine ? (
+            <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300]}>
+              {metaLine}
+            </Text>
+          ) : null}
+        </View>
+        <Image
+          resizeMode="contain"
+          source={Images.arrowRight}
+          style={[styles.compactChevron, { tintColor: Colors.primary500 }]}
+        />
+      </TouchableOpacity>
+    );
+  }, [Colors, Fonts, handleTeamSelect, Images]);
 
   const headerComponent = useMemo(() => (
     <View>
@@ -961,7 +1049,9 @@ function TeamListContent({
           <FlashList
             contentContainerStyle={{ paddingBottom: listBottomPadding }}
             data={otherTeams}
-            estimatedItemSize={200}
+            // Ces elements sont desormais des rangees compactes (7f) et non plus
+            // des cartes : une estimation restee a 200 ferait sauter le defilement.
+            estimatedItemSize={76}
             keyExtractor={(item) => item?.documentId || 'unknown'}
             ListEmptyComponent={
               myTeams.length === 0 && pendingTeams.length === 0 && invitedTeams.length === 0
@@ -974,7 +1064,7 @@ function TeamListContent({
             onEndReachedThreshold={0.5}
             onRefresh={refetchTeams}
             refreshing={isLoadingTeams && !isFetchingNextPage}
-            renderItem={({ item }) => renderTeamCard(item, false)}
+            renderItem={({ item }) => renderCompactTeamRow(item)}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -1060,5 +1150,85 @@ function TeamListContent({
     </View>
   );
 }
+
+// Cotes de la carte d'equipe (7e) et de la rangee compacte (7f). Les couleurs
+// restent chez l'appelant : elles dependent du theme et de l'etat de la carte.
+const styles = StyleSheet.create({
+  chip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 11,
+    paddingVertical: 4,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  clubName: {
+    marginTop: 2,
+  },
+  compactChevron: {
+    height: 14,
+    width: 14,
+  },
+  compactLogo: {
+    borderRadius: 10,
+  },
+  compactRow: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 10,
+    minHeight: 64,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  compactText: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  identityLogo: {
+    borderRadius: 13,
+  },
+  identityRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  identityText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  // Le fond degrade, la bordure et la decoupe des coins viennent de
+  // ClubCardSurface : ici, uniquement les cotes propres a la carte d'equipe.
+  richCard: {
+    borderRadius: 20,
+    gap: 12,
+  },
+  statCell: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 1,
+  },
+  stateBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statsBand: {
+    borderRadius: 12,
+    flexDirection: 'row',
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+  },
+  teamName: {
+    fontWeight: '800',
+  },
+});
 
 export default TeamListContent;
