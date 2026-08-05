@@ -293,6 +293,9 @@ function RecrutementListContent({
   const [activeTab, setActiveTab] = useState(
     sanitizeRecruitmentTabForRole(initialTab, userData),
   );
+  // L'onglet demande de l'exterieur qu'on a deja applique. Amorce a la valeur
+  // du montage : elle vient d'etre honoree par l'etat initial ci-dessus.
+  const honoredInitialTabRef = useRef(initialTab);
   const [ads, setAds] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
   const [myAds, setMyAds] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
   const [myApplications, setMyApplications] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
@@ -310,20 +313,31 @@ function RecrutementListContent({
   );
   const hasAdFilters = adFiltersCount > 0;
 
+  // La regle « quel onglet a-t-on le droit d'afficher », en UN SEUL endroit :
+  // un visiteur non connecte n'a acces qu'aux annonces, un compte connecte a ce
+  // que son role autorise.
+  const resolveAllowedTab = useCallback((/** @type {any} */ tab) => (
+    isAuthenticated ? sanitizeRecruitmentTabForRole(tab, userData) : 'annonces'
+  ), [isAuthenticated, userData]);
+
+  // Garde-fou de role : un onglet interdit ne doit jamais RESTER affiche (perte
+  // du staff, deconnexion). Il ne lit pas `activeTab` — forme « updater » — donc
+  // il ne peut pas se battre avec le geste de l'utilisateur.
+  useEffect(() => {
+    setActiveTab((previousTab) => resolveAllowedTab(previousTab));
+  }, [resolveAllowedTab]);
+
   // Handle external tab switching (e.g. from creation wizard)
+  // Une demande venue de l'exterieur n'est honoree QU'UNE FOIS. La rejouer a
+  // chaque rendu clouerait l'onglet : `initialTab` ne bouge pas quand
+  // l'utilisateur appuie sur un onglet, il ramenerait donc toujours au depart.
+  // L'ecran inactif ne consomme pas la demande : elle l'attend au retour.
   useEffect(() => {
     if (!screenActive) return;
-    if (!isAuthenticated) {
-      if (activeTab !== 'annonces') {
-        setActiveTab('annonces');
-      }
-      return;
-    }
-    const nextTab = sanitizeRecruitmentTabForRole(initialTab, userData);
-    setActiveTab((previousTab) => (
-      previousTab === nextTab ? previousTab : nextTab
-    ));
-  }, [activeTab, initialTab, isAuthenticated, screenActive, userData]);
+    if (honoredInitialTabRef.current === initialTab) return;
+    honoredInitialTabRef.current = initialTab;
+    setActiveTab(resolveAllowedTab(initialTab));
+  }, [initialTab, resolveAllowedTab, screenActive]);
 
   // State for pagination (ads)
   const [adsPage, setAdsPage] = useState(1);
