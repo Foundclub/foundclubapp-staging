@@ -593,4 +593,55 @@ describe('TeamListContent — les 4 sections (filet E6)', () => {
       expect(rangee.findAllByType(SponsorMarquee)).toHaveLength(0);
     });
   });
+
+  // FILET L49 — defaut rapporte a la recette du 2026-08-06 : « je suis entraineur
+  // de plusieurs equipes, l'onglet n'en reconnait qu'UNE ; les autres tombent sous
+  // AUTRES EQUIPES ». Ces deux tests epinglent le tri de l'ECRAN, seul endroit ou
+  // la separation se decide. Ils sont VERTS : `myTeamIds` lit l'UNION de `myTeams`
+  // et `trainedTeams`, sans plafond, sans deduplication par club.
+  // ⇒ Une equipe qui tombe dans « Autres » n'est donc PAS dans `trainedTeams` :
+  //   la cause est en amont (donnee ou charge serveur), jamais ici.
+  describe('L49 — un entraineur de plusieurs equipes les voit TOUTES comme siennes', () => {
+    const EQUIPES_ENTRAINEES = ['t-a', 't-b', 't-c', 't-d'].map((documentId, index) => ({
+      activities: [{ name: 'Football' }],
+      club: CLUB_SANS_SPONSOR,
+      documentId,
+      name: `Equipe entrainee ${index + 1}`,
+      section: { name: 'Mixte' },
+    }));
+
+    // Le cas d'Adel : aucune equipe en tant que JOUEUR (`myTeams` vide, mesure du
+    // 2026-08-06 : 0 ligne dans `teams_players_lnk`), plusieurs en tant que COACH.
+    const COACH_MULTI = {
+      ...UTILISATEUR,
+      clubMembershipRequests: [],
+      myTeams: [],
+      teamMembershipRequests: [],
+      trainedTeams: EQUIPES_ENTRAINEES.map(({ documentId }) => ({ documentId })),
+    };
+
+    it('classe les 4 equipes entrainees sous « Mes equipes », et aucune sous « Autres »', async () => {
+      const tree = await renderList({
+        auth: { userData: COACH_MULTI },
+        teams: EQUIPES_ENTRAINEES,
+      });
+      const rendu = allText(tree);
+
+      expect(rendu).toContain('Mes équipes');
+      EQUIPES_ENTRAINEES.forEach(({ name }) => expect(rendu).toContain(name));
+      expect(rendu).not.toContain('Autres équipes');
+    });
+
+    it('ne laisse dans « Autres » que l\'equipe qu\'il n\'entraine pas', async () => {
+      const tree = await renderList({
+        auth: { userData: COACH_MULTI },
+        teams: [...EQUIPES_ENTRAINEES, TEAM_AUTRE],
+      });
+      const rendu = allText(tree);
+
+      expect(rendu).toContain('Autres équipes');
+      expect(findCard(tree, 'U13 Rugby')).toBeDefined();
+      EQUIPES_ENTRAINEES.forEach(({ name }) => expect(rendu).toContain(name));
+    });
+  });
 });
