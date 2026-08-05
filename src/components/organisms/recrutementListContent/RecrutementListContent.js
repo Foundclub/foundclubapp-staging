@@ -19,6 +19,7 @@ import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 // Components
+import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
 import RecruitmentAdCard from '@/components/molecules/recruitmentAdCard/RecruitmentAdCard';
 import RecruitmentProfilesList from '@/components/organisms/recruitmentProfilesList/RecruitmentProfilesList';
@@ -37,6 +38,7 @@ import {
 } from '@/services/recruitment/recruitmentService';
 import { getMatchReasonLabel, mapSearchPayload, searchRecruitment } from '@/services/search/searchService';
 
+import { getApiErrorTranslation } from '@/utils/errors/displayError';
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
 /**
@@ -243,6 +245,13 @@ const dedupeManagedTeams = (/** @type {any[]} */ teams) => {
   return Array.from(teamsByKey.values());
 };
 
+// Ce que l'utilisateur lit quand une liste n'a PAS PU etre chargee — a ne pas
+// confondre avec « il n'y a rien a afficher ». Ecrit ici une seule fois : les
+// trois listes de l'ecran partagent ces mots.
+const UNREACHABLE_TITLE = 'On n’arrive pas à joindre le serveur.';
+const UNREACHABLE_DESCRIPTION = 'Vérifie ta connexion, puis réessaie.';
+const UNREACHABLE_ACTION = 'Réessayer';
+
 /**
  * Recrutement List Content - Main component for recruitment marketplace
  * Shows different content based on user role:
@@ -299,6 +308,11 @@ function RecrutementListContent({
   const [ads, setAds] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
   const [myAds, setMyAds] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
   const [myApplications, setMyApplications] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
+  // Un drapeau par liste, et rien de plus : « je n'ai pas pu charger » n'est pas
+  // « il n'y a rien », et les trois listes tombent en panne separement.
+  const [adsUnreachable, setAdsUnreachable] = useState(false);
+  const [myAdsUnreachable, setMyAdsUnreachable] = useState(false);
+  const [myApplicationsUnreachable, setMyApplicationsUnreachable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [applyingAdId, setApplyingAdId] = useState('');
@@ -389,10 +403,14 @@ function RecrutementListContent({
         setAds(newAds);
       }
 
+      setAdsUnreachable(false);
       setAdsHasMore(meta.pagination ? page < meta.pagination.pageCount : false);
       setAdsPage(page);
     } catch (error) {
       console.error('[RecrutementListContent] Error fetching ads:', error);
+      // Une page suivante ratee ne condamne pas les pages deja affichees :
+      // seule la premiere page decide de l'etat « injoignable ».
+      if (!append) setAdsUnreachable(true);
     } finally {
       if (page === 1 && !isRefresh) setLoading(false);
       else if (page > 1) setAdsLoadingMore(false);
@@ -430,8 +448,10 @@ function RecrutementListContent({
         data = await getMyRecruitmentAds(ownerFilters);
       }
       setMyAds(data || []);
+      setMyAdsUnreachable(false);
     } catch (error) {
       console.error('[RecrutementListContent] Error fetching my ads:', error);
+      setMyAdsUnreachable(true);
     } finally {
       if (!isRefresh) setLoading(false);
     }
@@ -456,8 +476,10 @@ function RecrutementListContent({
     try {
       const data = await getMyApplications(userData);
       setMyApplications(data || []);
+      setMyApplicationsUnreachable(false);
     } catch (error) {
       console.error('[RecrutementListContent] Error fetching applications:', error);
+      setMyApplicationsUnreachable(true);
     } finally {
       if (!isRefresh) setLoading(false);
     }
@@ -471,8 +493,12 @@ function RecrutementListContent({
     try {
       const data = await getMyApplications(userData);
       setMyApplications(data || []);
+      setMyApplicationsUnreachable(false);
     } catch (error) {
       console.error('[RecrutementListContent] Error silently fetching applications:', error);
+      // Volontairement SANS drapeau : ce rafraichissement de fond tourne sur
+      // tous les onglets. Le lever remplacerait une liste parfaitement valide,
+      // deja a l'ecran, par un ecran de panne.
     }
   }, [userData]);
 
@@ -650,9 +676,16 @@ function RecrutementListContent({
         result?.message || 'Ta candidature a bien été envoyée.',
       );
     } catch (error) {
+      // Les deux lectures `error.response.data...` qui ouvraient cette chaine
+      // etaient MORTES : l'intercepteur HTTP rejette la charge Strapi DEBALLEE
+      // (`services/client.native.js:87-93`), donc `error.response` n'existe
+      // jamais ici. Seul `error.message` travaillait — par accident du repli.
+      // `getApiErrorTranslation` passe devant pour traduire ce qu'on sait
+      // traduire (401, 403, 5xx, codes connus) ; en dessous, le message du
+      // serveur reste, parce qu'il porte de VRAIS motifs metier rediges en
+      // francais (« Ce poste est deja complet. ») qu'aucune cle ne remplace.
       const requestError = /** @type {any} */ (error);
-      const message = requestError?.response?.data?.error?.message
-        || requestError?.response?.data?.message
+      const message = getApiErrorTranslation(error)
         || requestError?.message
         || 'Impossible d envoyer la candidature pour le moment.';
       Alert.alert('Candidature', message);
@@ -775,6 +808,21 @@ function RecrutementListContent({
     </View>
   );
 
+  // Le repli « je n'ai pas pu charger », ecrit UNE fois et partage par les trois
+  // listes. On reutilise EmptyState (deja en service dans ClubListContent et
+  // EventListContent) plutot que de recopier un bloc de JSX par liste.
+  // Le rappel est enveloppe : sans ca, Button passerait son evenement de
+  // pression en premier argument, et `fetchMyAds(event)` partirait en
+  // rafraichissement silencieux, sans jamais montrer le chargement.
+  const renderUnreachableState = (/** @type {() => void} */ onRetry) => (
+    <EmptyState
+      actionLabel={UNREACHABLE_ACTION}
+      description={UNREACHABLE_DESCRIPTION}
+      onAction={onRetry}
+      title={UNREACHABLE_TITLE}
+    />
+  );
+
   // Render content for Coach - Annonces tab
   const renderAnnoncesContent = () => {
     const annoncesHeader = (
@@ -838,7 +886,7 @@ function RecrutementListContent({
         data={filteredMyAds}
         keyboardShouldPersistTaps="handled"
         keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
-        ListEmptyComponent={(
+        ListEmptyComponent={myAdsUnreachable ? renderUnreachableState(() => fetchMyAds()) : (
           <Text style={[Fonts.p1, Fonts.neutral500, { textAlign: 'center' }, Spaces.marginTop[24]]}>
             {managedTeamIds.length > 0
               ? 'Aucune annonce publiée pour tes équipes sur ce filtre'
@@ -956,6 +1004,12 @@ function RecrutementListContent({
   }, [hasProfileSignals, showProfileMatchesOnly]);
 
   const renderPlayerEmptyState = () => {
+    // La panne passe AVANT le filtre : sans ca, un serveur muet renverrait
+    // l'utilisateur ajuster une recherche qui n'y est pour rien.
+    if (adsUnreachable) {
+      return renderUnreachableState(() => fetchAdsForPlayer(1, false));
+    }
+
     if (showProfileMatchesOnly) {
       return (
         <View
@@ -1249,7 +1303,9 @@ function RecrutementListContent({
         contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[160], { flexGrow: 1 }]}
         data={filteredMyApplications}
         keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
-        ListEmptyComponent={(
+        ListEmptyComponent={myApplicationsUnreachable ? renderUnreachableState(
+          () => fetchMyApplications(),
+        ) : (
           <View style={[Spaces.padding[24], {
             alignItems: 'center',
             backgroundColor: recruitmentSurface,

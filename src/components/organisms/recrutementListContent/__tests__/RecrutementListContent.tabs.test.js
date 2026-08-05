@@ -420,19 +420,147 @@ describe('RecrutementListContent — ce que chaque onglet affiche (relevé L35)'
     expect(texteVisible(tree)).toContain('Tu n’as pas encore postulé à une annonce.');
   });
 
-  it('COMPORTEMENT ACTUEL, PAS UN SOUHAIT : serveur en panne = le même écran que « rien à afficher »', async () => {
-    // L'erreur reseau part en `console.error` et rien d'autre : l'utilisateur
-    // lit « Aucune annonce disponible », pas « le serveur ne repond pas ».
-    // Fige ici pour qu'un futur ecran d'erreur se voie tout de suite.
+  // Ce temoin figeait le defaut : jusqu'a L42, une panne serveur affichait mot
+  // pour mot le meme ecran que « rien a afficher ». Il annoncait sa propre
+  // chute (« pour qu'un futur ecran d'erreur se voie tout de suite ») ; L42 l'a
+  // fait tomber, il dit maintenant la verite. Le detail est dans le bloc
+  // « serveur injoignable (L42) » plus bas.
+  it('serveur en panne : le message de liste vide n est PLUS celui de la panne', async () => {
     const journalErreur = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockGetRecruitmentAds.mockRejectedValue(new Error('Network Error 500'));
     mockGetMyRecruitmentAds.mockRejectedValue(new Error('Network Error 500'));
 
     const tree = await rendrePour(DIRIGEANT, { initialTab: 'annonces' });
-    expect(texteVisible(tree)).toContain('Aucune annonce publiée pour tes équipes sur ce filtre');
+    expect(texteVisible(tree))
+      .not.toContain('Aucune annonce publiée pour tes équipes sur ce filtre');
 
     await appuyerSur(tree, 'Opportunités');
+    expect(texteVisible(tree)).not.toContain('Aucune annonce disponible pour le moment.');
+
+    journalErreur.mockRestore();
+  });
+});
+
+// L42 : une panne serveur se deguisait en placard vide. L'utilisateur lisait
+// « aucune annonce », il ajustait donc une recherche parfaitement bonne, puis
+// il partait — et rien ne remontait. Ces temoins decrivent ce qu'il DOIT lire
+// quand le chargement echoue, et surtout ce qu'il ne doit PLUS lire.
+describe('RecrutementListContent — serveur injoignable (L42)', () => {
+  const PANNE = 'On n’arrive pas à joindre le serveur.';
+
+  /**
+   * Demande la page suivante, comme le fait le defilement en bas de liste.
+   * @param {any} tree
+   * @returns {Promise<void>}
+   */
+  const chargerPageSuivante = async (tree) => {
+    const listes = tree.root.findAll(
+      (/** @type {any} */ node) => typeof node.props?.onEndReached === 'function',
+      { deep: true },
+    );
+    if (listes.length === 0) {
+      throw new Error('Aucune liste ne sait charger la page suivante');
+    }
+    await act(async () => {
+      listes[0].props.onEndReached();
+    });
+  };
+
+  it('LE TEMOIN : chaque onglet propose de réessayer au lieu d annoncer un vide', async () => {
+    const journalErreur = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetRecruitmentAds.mockRejectedValue(new Error('Network Error'));
+    mockGetMyRecruitmentAds.mockRejectedValue(new Error('Network Error'));
+    mockGetMyApplications.mockRejectedValue(new Error('Network Error'));
+
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'annonces' });
+    expect(texteVisible(tree)).toContain(PANNE);
+    expect(texteVisible(tree)).toContain('Réessayer');
+    expect(texteVisible(tree))
+      .not.toContain('Aucune annonce publiée pour tes équipes sur ce filtre');
+
+    await appuyerSur(tree, 'Opportunités');
+    expect(texteVisible(tree)).toContain(PANNE);
+    expect(texteVisible(tree)).not.toContain('Aucune annonce disponible pour le moment.');
+
+    await appuyerSur(tree, 'Candidatures');
+    expect(texteVisible(tree)).toContain(PANNE);
+    expect(texteVisible(tree)).not.toContain('Tu n’as pas encore postulé à une annonce.');
+
+    journalErreur.mockRestore();
+  });
+
+  it('le bouton « Réessayer » rappelle bien le chargement, et la liste revient', async () => {
+    const journalErreur = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetMyRecruitmentAds.mockRejectedValue(new Error('Network Error'));
+
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'annonces' });
+    expect(texteVisible(tree)).toContain(PANNE);
+
+    // Le serveur repond de nouveau : l'utilisateur ne doit pas avoir a quitter
+    // l'ecran pour s'en apercevoir.
+    mockGetMyRecruitmentAds.mockResolvedValue([MON_ANNONCE]);
+    await appuyerSur(tree, 'Réessayer');
+
+    expect(texteVisible(tree)).toContain('Club des Dirigeants');
+    expect(texteVisible(tree)).not.toContain(PANNE);
+
+    journalErreur.mockRestore();
+  });
+
+  // Les trois boutons partagent le meme repli mais PAS le meme rappel : c'est
+  // exactement l'endroit ou une recopie se trompe de liste, sans que rien ne le
+  // dise. Les deux autres onglets sont donc verifies eux aussi.
+  it('le bouton de chaque onglet rappelle SA liste, pas celle du voisin', async () => {
+    const journalErreur = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetRecruitmentAds.mockRejectedValue(new Error('Network Error'));
+    mockGetMyApplications.mockRejectedValue(new Error('Network Error'));
+
+    const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
+    expect(texteVisible(tree)).toContain(PANNE);
+
+    mockGetRecruitmentAds.mockResolvedValue({ data: [ANNONCE_PUBLIQUE], meta: {} });
+    await appuyerSur(tree, 'Réessayer');
+    expect(texteVisible(tree)).toContain('Olympique Public');
+    expect(texteVisible(tree)).not.toContain(PANNE);
+
+    await appuyerSur(tree, 'Mes candidatures');
+    expect(texteVisible(tree)).toContain(PANNE);
+
+    mockGetMyApplications.mockResolvedValue([MA_CANDIDATURE]);
+    await appuyerSur(tree, 'Réessayer');
+    expect(texteVisible(tree)).toContain('Club Postule');
+    expect(texteVisible(tree)).not.toContain(PANNE);
+
+    journalErreur.mockRestore();
+  });
+
+  it('page 2 en erreur : la page 1 reste, et un filtre vide n est pas une panne', async () => {
+    const journalErreur = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetRecruitmentAds.mockImplementation((/** @type {any} */ params) => (
+      params?.page === 1
+        ? Promise.resolve({
+          data: [ANNONCE_PUBLIQUE],
+          meta: { pagination: { page: 1, pageCount: 3 } },
+        })
+        : Promise.reject(new Error('Network Error'))
+    ));
+
+    const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
+    expect(texteVisible(tree)).toContain('Olympique Public');
+
+    await chargerPageSuivante(tree);
+
+    // Ce qui est deja affiche reste affiche : une page suivante ratee ne
+    // condamne pas les precedentes.
+    expect(texteVisible(tree)).toContain('Olympique Public');
+    expect(texteVisible(tree)).not.toContain(PANNE);
+
+    // Et le drapeau de panne n'a pas ete leve en douce. On vide la liste par un
+    // FILTRE (le serveur n'est pour rien la-dedans) : l'ecran doit dire « aucune
+    // annonce », jamais « serveur injoignable ».
+    await appuyerSur(tree, 'Entraineurs');
     expect(texteVisible(tree)).toContain('Aucune annonce disponible pour le moment.');
+    expect(texteVisible(tree)).not.toContain(PANNE);
 
     journalErreur.mockRestore();
   });
