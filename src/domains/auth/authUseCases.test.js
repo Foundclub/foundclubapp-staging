@@ -449,6 +449,32 @@ describe('authUseCases', () => {
       expect(positionStep).toEqual({ canShow: false, index: 7, route: RouteNames.UserPosition });
     });
 
+    // L44 — la liste des sports « qui ont des postes » etait derivee de
+    // `sportsPositions.js`, ou le RUGBY n'existait pas : l'inscription sautait
+    // purement et simplement l'etape des postes pour un rugbyman. Il n'arrivait
+    // donc jamais a `UserPosition`, qui, lui, connait les 10 postes de rugby.
+    it('shows position step for rugby, which has ten positions', () => {
+      const result = getOnboardingViews({
+        preferredSport: 'rugby',
+        role: { name: USER_ROLES.player },
+      });
+
+      const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
+      expect(positionStep).toEqual({ canShow: true, index: 7, route: RouteNames.UserPosition });
+    });
+
+    // `UserSport.js` enregistre `activity.name` tel que Strapi le nomme : la
+    // comparaison doit tenir la majuscule.
+    it('shows position step when the sport is stored capitalised, as onboarding writes it', () => {
+      const result = getOnboardingViews({
+        preferredSport: 'Rugby',
+        role: { name: USER_ROLES.player },
+      });
+
+      const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
+      expect(positionStep).toEqual({ canShow: true, index: 7, route: RouteNames.UserPosition });
+    });
+
     it('skips position step when preferred sport is not selected', () => {
       const result = getOnboardingViews({
         role: { name: USER_ROLES.player },

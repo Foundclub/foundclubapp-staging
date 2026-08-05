@@ -8,9 +8,7 @@ import {
 import { RouteNames } from '@/navigation/routeNames';
 
 import { isBirthdateUnderParentalAge } from '@/constants/parentalDeclaration';
-import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
-
-const SPORTS_WITH_POSITIONS = Object.keys(SPORTS_POSITIONS).map((s) => s.toLowerCase());
+import { sportHasPositions } from '@/constants/positions';
 
 export const USER_ROLES = /** @type {const} */({
   coach: 'Entraineur',
@@ -435,7 +433,7 @@ export const getOnboardingViews = ({
         return Object.assign(view, { canShow: false });
       }
       // If sport is set but doesn't have positions, skip this step
-      if (preferredSport && !SPORTS_WITH_POSITIONS.includes(preferredSport.toLowerCase())) {
+      if (preferredSport && !sportHasPositions(preferredSport)) {
         return Object.assign(view, { canShow: false });
       }
     }

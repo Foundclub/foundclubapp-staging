@@ -14,13 +14,7 @@ import useTheme from '@/theme/themeContext';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { createRecruitmentAd } from '@/services/recruitment/recruitmentService';
 
-// Position options by sport
-const POSITIONS_BY_SPORT = {
-  Basketball: ['Meneur', 'Arrière', 'Ailier', 'Ailier fort', 'Pivot'],
-  Football: ['Gardien', 'Défenseur', 'Milieu', 'Attaquant'],
-  Handball: ['Gardien', 'Arrière', 'Ailier', 'Demi-centre', 'Pivot'],
-  Volleyball: ['Passeur', 'Central', 'Réceptionneur-Attaquant', 'Pointu', 'Libéro'],
-};
+import { getPositionValuesForSport } from '@/constants/positions';
 
 // Validation mode options
 const VALIDATION_MODES = [
@@ -75,10 +69,13 @@ function CreateAdModal({
     }));
   }, [levelsData]);
 
-  // Get positions based on team sport
+  // Get positions based on team sport. Meme source que l'inscription : ce fichier
+  // portait sa propre liste, qui contredisait celle enregistree en base.
   const sportName = team?.sport?.name || team?.activities?.[0]?.name || 'Football';
-  const capitalizedSport = sportName.charAt(0).toUpperCase() + sportName.slice(1).toLowerCase();
-  const positions = POSITIONS_BY_SPORT[/** @type {keyof typeof POSITIONS_BY_SPORT} */ (capitalizedSport)] || POSITIONS_BY_SPORT.Football;
+  const positionsDuSport = getPositionValuesForSport(sportName);
+  const positions = positionsDuSport.length > 0
+    ? positionsDuSport
+    : getPositionValuesForSport('football');
 
   // Handle form submission
   const handleSubmit = async () => {

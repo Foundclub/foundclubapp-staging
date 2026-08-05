@@ -34,7 +34,7 @@ import {
   buildMinorParentalDeclarationPayload,
   isBirthdateUnderParentalAge,
 } from '@/constants/parentalDeclaration';
-import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
+import { getPositionsForSport } from '@/constants/positions';
 
 const defaultValues = {
   address: null,
@@ -628,8 +628,9 @@ function ProfileEdit({ navigation, route }) {
                         name, onBlur, onChange, ref, value,
                       },
                     }) => {
-                      const sportKey = Object.keys(SPORTS_POSITIONS).find((k) => k.toLowerCase() === preferredSport);
-                      const positions = sportKey ? SPORTS_POSITIONS[sportKey] : [];
+                      // Meme source que l'inscription (`UserPosition`) : sans ca,
+                      // le poste choisi a l'inscription ne se retrouve pas ici.
+                      const positions = getPositionsForSport(preferredSport);
 
                       if (positions.length > 0) {
                         return (
@@ -637,7 +638,7 @@ function ProfileEdit({ navigation, route }) {
                             error={getFieldError({ errors: formErrors, fieldName: name })}
                             label={t('profile.fields.position.label')}
                             onBlur={onBlur}
-                            options={positions.map((p) => ({ label: p, value: p }))}
+                            options={positions}
                             placeholder={t('profile.fields.position.placeholder')}
                             ref={ref}
                             setValue={

@@ -31,7 +31,7 @@ import { useGetSections } from '@/services/section/sectionQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
-import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
+import { getPositionValuesForSport } from '@/constants/positions';
 
 const WEB_FILTER_SURFACE_PROPS = {
   contentWidth: 720,
@@ -259,18 +259,15 @@ function MercatoFilters({ navigation }) {
     if (!selectedActivityIds || selectedActivityIds.length === 0 || !allActivities) return [];
 
     const selectedIds = Array.isArray(selectedActivityIds) ? selectedActivityIds : [selectedActivityIds];
-    const positionsBySport = /** @type {Record<string, string[]>} */ (SPORTS_POSITIONS);
     const selectedNames = allActivities
       .filter((a) => selectedIds.includes(a.documentId))
       .map((a) => a.name);
 
+    // Meme source que l'inscription : on filtre sur les valeurs REELLEMENT
+    // enregistrees en base, sinon un filtre ne peut rien trouver.
     const positions = new Set();
     selectedNames.forEach((name) => {
-      // Find key case-insensitive
-      const key = Object.keys(positionsBySport).find((k) => k.toLowerCase() === name.toLowerCase());
-      if (key) {
-        positionsBySport[key].forEach((/** @type {string} */ p) => positions.add(p));
-      }
+      getPositionValuesForSport(name).forEach((/** @type {string} */ p) => positions.add(p));
     });
 
     return Array.from(positions).map((p) => ({ label: p, value: p }));

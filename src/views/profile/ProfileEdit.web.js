@@ -35,7 +35,7 @@ import {
   buildMinorParentalDeclarationPayload,
   isBirthdateUnderParentalAge,
 } from '@/constants/parentalDeclaration';
-import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
+import { getPositionsForSport } from '@/constants/positions';
 
 const defaultValues = {
   address: null,
@@ -255,12 +255,9 @@ function ProfileEditWeb({ navigation, route }) {
     return defaultSports;
   }, [userData?.preferredSport]);
 
-  const sportPositions = useMemo(() => {
-    const sportKey = Object.keys(SPORTS_POSITIONS).find(
-      (key) => key.toLowerCase() === preferredSport,
-    );
-    return sportKey ? SPORTS_POSITIONS[sportKey] : [];
-  }, [preferredSport]);
+  // Meme source que l'inscription (`UserPosition`) : sans ca, le poste choisi a
+  // l'inscription ne se retrouve pas ici.
+  const sportPositions = useMemo(() => getPositionsForSport(preferredSport), [preferredSport]);
   const requiresParentalDeclaration = Boolean(
     formValues.birthdate
     && isBirthdateUnderParentalAge(formatBirthdateToSend(formValues.birthdate || ''))
@@ -503,7 +500,7 @@ function ProfileEditWeb({ navigation, route }) {
                       <AutocompleteSelect
                         error={formErrors.position}
                         label={t('profile.fields.position.label')}
-                        options={sportPositions.map((position) => ({ label: position, value: position }))}
+                        options={sportPositions}
                         placeholder={t('profile.fields.position.placeholder')}
                         setValue={(option) => setFieldValue('position', option?.value || '')}
                         value={formValues.position}
