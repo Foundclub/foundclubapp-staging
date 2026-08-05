@@ -29,6 +29,7 @@ import {
   getSubscriptionQuotaSheetContent,
   getSubscriptionRecommendedPlanCode,
   getSubscriptionRequiredPlanLabels,
+  getSubscriptionRequiredScope,
   getSubscriptionTeamSlotSummary,
   mapSubscriptionDecisionToPaywall,
 } from '@/domains/subscription/subscriptionDecision';
@@ -297,9 +298,12 @@ function SubscriptionPaywallSheet({
   // buter sur un mur payant : le hub ne porte plus aucun catalogue, elle y
   // arriverait sans aucune offre a acheter. C'est exactement le trou que L10-A
   // a comble (« un dirigeant carte bleue en main n'a aucun chemin pour payer »).
+  // L38 — et sur la BONNE carte : le refus porte la famille d'offre exigee, le
+  // carrousel s'ouvrait sinon toujours sur Équipe, y compris pour un mur Club.
   const handleOpenSubscription = () => {
     close();
     navigation.navigate(RouteNames.ProfileStack, {
+      params: { focusScope: getSubscriptionRequiredScope(decision) },
       screen: RouteNames.SubscriptionOffers,
     });
   };

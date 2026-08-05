@@ -585,6 +585,18 @@ export const getSubscriptionRecommendedPlanCode = (decision) => {
 };
 
 /**
+ * Famille d'offre qu'un refus reclame, pour ouvrir le carrousel sur la BONNE
+ * carte (L38). Deleguee a `getSubscriptionRecommendedPlanCode` : la regle « qui
+ * a besoin de Club » est deja ecrite la, et deux copies d'une meme regle
+ * finissent toujours par diverger.
+ * @param {any} decision
+ * @returns {'TEAM' | 'CLUB'}
+ */
+export const getSubscriptionRequiredScope = (decision) => (
+  getSubscriptionRecommendedPlanCode(decision) === RECOMMENDED_PLAN_CODES.CLUB ? 'CLUB' : 'TEAM'
+);
+
+/**
  * Les droits Club sont-ils ouverts ? La verification du dirigeant est un SIGNAL
  * D'AFFICHAGE, pas une porte : depuis la decision produit du 2026-07-17, un
  * entitlement CLUB actif ouvre l'acces meme sans club verifie

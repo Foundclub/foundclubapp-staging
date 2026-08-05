@@ -223,6 +223,16 @@ const CLUB_TIER_LIMIT_DECISION = {
   requiredPlan: ['CLUB'],
 };
 
+// Mur generique (paywall hors table) qui n'exige que l'offre Équipe : il emprunte
+// la meme porte « Voir les offres » que le palier Club plein.
+const GENERIC_TEAM_DECISION = {
+  allowed: false,
+  paywall: 'SOMETHING_ELSE_REQUIRED',
+  reason: 'SUBSCRIPTION_REQUIRED',
+  remainingFreeUses: null,
+  requiredPlan: ['TEAM'],
+};
+
 const baseAuthValue = (overrides = {}) => ({
   subscriptionSummary: { teamSlotSummary: { assigned: 0, available: 0, total: 0 } },
   userData: {
@@ -475,8 +485,25 @@ describe('SubscriptionPaywallSheet — palier Club plein (CLUB_TIER_TEAM_LIMIT)'
     const cta = findButtonByText(tree, 'Voir les offres');
     expect(cta).toBeTruthy();
     act(() => { cta.props.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', { screen: 'SubscriptionOffers' });
+    // L38 — le carrousel demarrait TOUJOURS sur Équipe : quelqu'un qui bute sur
+    // un mur exigeant Club atterrissait donc sur la mauvaise offre. Le mur
+    // connait la portee exigee, il la transporte.
+    expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', {
+      params: { focusScope: 'CLUB' },
+      screen: 'SubscriptionOffers',
+    });
     expect(findButtonByText(tree, 'Débloquer Club S')).toBeFalsy();
+  });
+
+  it('TEMOIN — un mur qui n\'exige que l\'offre Équipe ouvre sur Équipe', () => {
+    const tree = renderSheet({ decision: GENERIC_TEAM_DECISION });
+
+    act(() => { findButtonByText(tree, 'Voir les offres').props.onPress(); });
+
+    expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', {
+      params: { focusScope: 'TEAM' },
+      screen: 'SubscriptionOffers',
+    });
   });
 });
 

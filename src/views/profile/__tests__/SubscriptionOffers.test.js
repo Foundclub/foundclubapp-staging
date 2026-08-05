@@ -380,15 +380,19 @@ const libelleDuCta = (arbre) => arbre.root
 
 /**
  * Monte le carrousel avec le contexte d'authentification demande.
+ * `parametres` = les params de route (L38 : la portee exigee par le mur payant).
  * @param {Record<string, any>} [surcharges]
+ * @param {Record<string, any> | undefined} [parametres]
  * @returns {Promise<any>}
  */
-const rendre = async (surcharges = {}) => {
+const rendre = async (surcharges = {}, parametres = undefined) => {
   mockAuthValue = contexteAuth(surcharges);
   /** @type {any} */
   let arbre;
   await act(async () => {
-    arbre = renderer.create(<SubscriptionOffers />);
+    arbre = renderer.create(
+      <SubscriptionOffers route={parametres ? { params: parametres } : undefined} />,
+    );
   });
   return arbre;
 };
@@ -443,6 +447,36 @@ describe('Carrousel d\'offres — le temoin anti-regression de L10-A', () => {
     expect(texte).toContain("Cette offre couvre jusqu'à 1 équipe.");
     expect(texte).toContain('U15');
     expect(mockPerformPurchase).not.toHaveBeenCalled();
+  });
+});
+
+// L38 — le carrousel demarrait TOUJOURS sur Équipe (index 1). Quelqu'un a qui le
+// serveur vient de dire « il te faut l'offre Club » atterrissait donc sur la
+// carte Equipe : la mauvaise offre, au moment precis ou il est pret a payer.
+describe('Carrousel d\'offres — il s\'ouvre sur l\'offre que le mur exigeait (L38)', () => {
+  it('un mur exigeant CLUB ouvre le carrousel centre sur Club', async () => {
+    const arbre = await rendre({}, { focusScope: 'CLUB' });
+
+    expect(libelleDuCta(arbre)).toBe('Choisir Club S · 199,99 €/an');
+  });
+
+  it('un mur exigeant TEAM ouvre le carrousel centre sur Équipe', async () => {
+    const arbre = await rendre({}, { focusScope: 'TEAM' });
+
+    expect(libelleDuCta(arbre)).toBe('Choisir Équipe · 59,99 €/an');
+  });
+
+  it('TEMOIN — une entree SANS portee garde le comportement d\'origine : Équipe', async () => {
+    // « Changer d'offre » depuis le hub n'exige aucune offre en particulier.
+    const arbre = await rendre();
+
+    expect(libelleDuCta(arbre)).toBe('Choisir Équipe · 59,99 €/an');
+  });
+
+  it('une portee inconnue ne casse rien : on retombe sur Équipe', async () => {
+    const arbre = await rendre({}, { focusScope: 'PREMIUM' });
+
+    expect(libelleDuCta(arbre)).toBe('Choisir Équipe · 59,99 €/an');
   });
 });
 

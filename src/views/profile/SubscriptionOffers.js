@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  useCallback, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -109,6 +109,13 @@ const CARD_GAP = 10;
 // que l'ordre bougerait, et la regle react/no-array-index-key l'interdit.
 const CARD_KEYS = ['gratuit', 'equipe', 'club'];
 
+// L38 — carte d'ouverture selon la famille d'offre que le mur payant exigeait.
+// Le defaut reste Équipe : c'est l'offre d'appel, et toutes les entrees sans
+// portee (« Changer d'offre » depuis le hub, compteurs) doivent y atterrir.
+/** @type {Record<string, number>} */
+const CARD_INDEX_BY_FOCUS_SCOPE = { CLUB: 2, TEAM: 1 };
+const DEFAULT_CARD_INDEX = 1;
+
 /**
  * Capacites d'une entree, en libelles lisibles.
  * @param {SubscriptionCatalogEntry | null} entry
@@ -129,9 +136,13 @@ const getEntryFeatureLabels = (entry, excludedFeatureKeys = []) => (
  * C'est la seule surface de vente atteinte depuis un mur payant ou un compteur :
  * si elle cesse de proposer un bouton d'achat, un dirigeant carte bleue en main
  * n'a plus aucun chemin pour payer (regression L10-A).
+ *
+ * Param de route `focusScope` ('TEAM' | 'CLUB', L38) : famille d'offre exigee par
+ * le mur payant d'ou l'on vient. Absent, le carrousel s'ouvre sur Équipe.
+ * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement | null}
  */
-function SubscriptionOffers() {
+function SubscriptionOffers({ route }) {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -152,8 +163,15 @@ function SubscriptionOffers() {
     || roleKey === 'president'
     || roleKey === 'superAdmin';
 
+  // Un mur payant qui exige Club doit ouvrir SUR la carte Club : atterrir sur
+  // Équipe montre la mauvaise offre a quelqu'un a qui le serveur vient
+  // precisement de dire qu'il lui faut Club. Portee absente ou inconnue : Équipe.
+  const focusCardIndex = CARD_INDEX_BY_FOCUS_SCOPE[
+    String(route?.params?.focusScope || '').trim().toUpperCase()
+  ] || DEFAULT_CARD_INDEX;
+
   const scrollRef = useRef(/** @type {any} */ (null));
-  const [activeIndex, setActiveIndex] = useState(1);
+  const [activeIndex, setActiveIndex] = useState(focusCardIndex);
   const [billingPeriod, setBillingPeriod] = useState('yearly');
   const [teamSlotCount, setTeamSlotCount] = useState(1);
   const [clubTier, setClubTier] = useState(1);
@@ -518,6 +536,16 @@ function SubscriptionOffers() {
     setActiveIndex(index);
     scrollRef.current?.scrollTo?.({ animated: true, x: index * (cardWidth + CARD_GAP) });
   }, [cardWidth]);
+
+  // La carte visee doit aussi etre AMENEE SOUS LES YEUX : `activeIndex` la
+  // surligne et pilote le CTA, mais sans ce defilement elle resterait hors de
+  // l'ecran. Une seule fois, au montage — ensuite c'est le doigt qui commande.
+  useEffect(() => {
+    if (focusCardIndex !== DEFAULT_CARD_INDEX) {
+      goToCard(focusCardIndex);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!canShowSubscriptionExperience) {
     return null;
