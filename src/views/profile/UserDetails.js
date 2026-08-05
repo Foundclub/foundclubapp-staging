@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
@@ -32,6 +33,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -630,6 +632,18 @@ function UserDetails({ navigation, route }) {
       screen: RouteNames.TeamDetails,
     });
   };
+
+  // D06 — MON profil de DIRIGEANT est desormais rendu par l'ecran unifie
+  // (voir = modifier). Deux chemins restent rendus ci-dessous, inchanges :
+  //   - le profil de QUELQU'UN D'AUTRE, avec son masquage « Prive » et ses
+  //     douze points d'entree ;
+  //   - MON profil quand je suis joueur ou entraineur, qui garde ses stats de
+  //     match, ses retours du coach et ses equipes — les retirer serait une
+  //     perte, alors que pour un dirigeant ce sont des cases vides.
+  // Le branchement est place APRES tous les hooks : leur ordre reste stable.
+  if (isSelfProfile && getUserRoleKey(user?.role?.type || user?.role?.name) === 'president') {
+    return <SelfProfileUnified navigation={navigation} />;
+  }
 
   const renderTeamCard = (team, index, prefix = 'team') => (
     <TouchableOpacity
