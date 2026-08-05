@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -82,13 +83,19 @@ const statusFilters = [
   { label: 'Payee', value: 'paid' },
   { label: 'Exemptee', value: 'waived' },
 ];
+// Vocabulaire du pack de design des cotisations : le dirigeant lit l'etat de
+// sa campagne, pas celui d'un enregistrement. « Ouverte » dit qu'un membre peut
+// payer maintenant ; « Active » ne disait rien de tel.
+// Corrige a la RACINE, une seule fois : les 3 endroits qui affichent un statut
+// de campagne (carte du hub, entete du detail, pastille de recapitulatif) lisent
+// tous cette table.
 const campaignStatusLabel = {
-  active: 'Active',
-  archived: 'Archivee',
-  closed: 'Terminee',
+  active: 'Ouverte',
+  archived: 'Archivée',
+  closed: 'Terminée',
   draft: 'Brouillon',
   paused: 'En pause',
-  scheduled: 'Programme',
+  scheduled: 'Programmée',
 };
 const providerReadinessLabel = {
   checkout_failed: 'Test checkout en erreur',
@@ -408,6 +415,95 @@ function StatCard({
 }
 
 /**
+ * Bloc de synthese du hub : une seule carte a la place des 4 cartes de
+ * statistiques de 4 couleurs. Elle repond a la seule question que le dirigeant
+ * se pose en arrivant : « combien est rentre, combien manque, qui est en
+ * retard ».
+ *
+ * Le rouge n'apparait QUE s'il y a un retard : ici, une couleur est une
+ * information, jamais une decoration.
+ * @param {object} props
+ * @param {string} [props.currency] - Devise ISO de la campagne.
+ * @param {number} [props.expectedCents] - Montant total attendu, en centimes.
+ * @param {number} [props.overdueCount] - Nombre de dossiers en retard.
+ * @param {number} [props.paidCents] - Montant deja encaisse, en centimes.
+ * @param {number} [props.remainingCents] - Reste a encaisser, en centimes.
+ * @returns {import('react').ReactElement}
+ */
+function CampaignSummary({
+  currency = 'EUR',
+  expectedCents = 0,
+  overdueCount = 0,
+  paidCents = 0,
+  remainingCents = 0,
+}) {
+  const {
+    ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
+  const attendu = Math.max(expectedCents || 0, 0);
+  const encaisse = Math.max(paidCents || 0, 0);
+  // Rien d'attendu = barre a zero, jamais a 100 % : une campagne vide n'est pas
+  // une campagne soldee. Et la part est bornee, un trop-percu ne deborde pas.
+  const partEncaissee = attendu > 0 ? Math.min(encaisse / attendu, 1) : 0;
+  const pourcentage = Math.round(partEncaissee * 100);
+  const retards = Math.max(overdueCount || 0, 0);
+  const libelleRetards = retards === 0 ? 'Aucun retard' : `${retards} retard${retards > 1 ? 's' : ''}`;
+
+  return (
+    <View style={[ApplicationStyle.card, Spaces.gap[12], {
+      backgroundColor: Colors.primary800,
+      borderColor: withAlpha(Colors.primary500, 0.33),
+      borderRadius: licenseRadius.card,
+      borderWidth: 1,
+      paddingHorizontal: licenseSpacing.cardPadding,
+      paddingVertical: licenseSpacing.cardPadding,
+    }]}
+    >
+      <Text style={Fonts.p2}>
+        <Text style={[Fonts.h3, Fonts.neutral00]}>{money(encaisse, currency)}</Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {' encaissés sur '}
+          {money(attendu, currency)}
+          {' attendus'}
+        </Text>
+      </Text>
+
+      <View
+        accessibilityLabel="Progression des encaissements"
+        accessibilityRole="progressbar"
+        accessibilityValue={{
+          max: 100, min: 0, now: pourcentage, text: `${pourcentage} % encaissés`,
+        }}
+        style={{
+          backgroundColor: withAlpha(Colors.primary500, 0.18),
+          borderRadius: licenseRadius.pill,
+          height: 8,
+          overflow: 'hidden',
+        }}
+      >
+        <View style={{
+          backgroundColor: Colors.primary500,
+          borderRadius: licenseRadius.pill,
+          height: 8,
+          width: `${pourcentage}%`,
+        }}
+        />
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap, justifyContent: 'space-between' }}>
+        <Text style={[Fonts.p2Bold, { color: Colors.warning500 }]}>
+          {'Reste '}
+          {money(Math.max(remainingCents || 0, 0), currency)}
+        </Text>
+        <Text style={[Fonts.p2Bold, { color: retards === 0 ? Colors.success500 : Colors.error500 }]}>
+          {libelleRetards}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
  *
  * @param root0
  * @param root0.item
@@ -541,110 +637,158 @@ function AssignmentSignalCard({
  * @param root0.onPress
  * @param root0.isSelected
  */
+/**
+ * Une ligne « libelle a gauche, valeur a droite » de la carte de campagne.
+ * @param {object} props
+ * @param {string} props.label
+ * @param {string} props.value
+ * @param {string} props.valueColor
+ * @returns {import('react').ReactElement}
+ */
+function CampaignCardRow({ label, value, valueColor }) {
+  const { Fonts } = useTheme();
+  return (
+    <View style={{
+      alignItems: 'baseline', flexDirection: 'row', gap: licenseSpacing.actionGap, justifyContent: 'space-between',
+    }}
+    >
+      <Text style={[Fonts.p3, Fonts.neutral200]}>{label}</Text>
+      <Text style={[Fonts.p3Bold, { color: valueColor, flexShrink: 1, textAlign: 'right' }]}>{value}</Text>
+    </View>
+  );
+}
+
 function CampaignCard({
   isSelected = false,
   item,
-  onDuplicate,
-  onLifecycle,
+  onOpenActions,
   onPress,
 }) {
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const totals = item?.totals || {};
-  const lifecycle = lifecycleForCampaign(item);
   const helloAssoReadiness = item?.paymentProviderSnapshot?.helloasso?.readiness;
   const normalizedStatus = String(item?.status || '').toLowerCase();
   const isInactiveCampaign = ['archived', 'closed', 'paused'].includes(normalizedStatus);
   const statusColor = isInactiveCampaign ? Colors.neutral300 : Colors.primary500;
   const secondaryTextColor = isInactiveCampaign ? Colors.neutral300 : Colors.neutral200;
+  const currency = item?.currency || 'EUR';
+  const nombreDocuments = (item?.documentRequests || []).length;
+  const nombreRetards = totals.overdueCount || 0;
   let backgroundColor = Colors.primary800;
   if (isInactiveCampaign) backgroundColor = Colors.primary900;
   else if (isSelected) backgroundColor = Colors.primary700;
 
-  let borderColor = `${Colors.primary500}55`;
-  if (isSelected) borderColor = isInactiveCampaign ? `${Colors.neutral300}99` : Colors.primary500;
-  else if (isInactiveCampaign) borderColor = `${Colors.neutral400}55`;
+  let borderColor = withAlpha(Colors.primary500, 0.33);
+  if (isSelected) borderColor = isInactiveCampaign ? withAlpha(Colors.neutral300, 0.6) : Colors.primary500;
+  else if (isInactiveCampaign) borderColor = withAlpha(Colors.neutral400, 0.33);
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        { opacity: pressed ? 0.9 : 1 },
-        Platform.OS === 'web' ? { cursor: 'pointer' } : null,
-      ]}
+    <View style={[ApplicationStyle.card, Spaces.gap[12], {
+      backgroundColor,
+      borderColor,
+      borderRadius: licenseRadius.card,
+      borderWidth: isSelected ? 1.5 : 1,
+      paddingHorizontal: licenseSpacing.cardPadding,
+      paddingVertical: licenseSpacing.cardPadding,
+    }]}
     >
-      <View style={[ApplicationStyle.card, Spaces.gap[8], {
-        backgroundColor,
-        borderColor,
-        borderRadius: licenseRadius.card,
-        borderWidth: isSelected ? 1.5 : 1,
-        paddingHorizontal: licenseSpacing.cardPadding,
-        paddingVertical: licenseSpacing.cardPadding,
-      }]}
+      <View style={{
+        alignItems: 'flex-start', flexDirection: 'row', gap: licenseSpacing.actionGap, justifyContent: 'space-between',
+      }}
       >
-        <View style={{
-          alignItems: 'flex-start', flexDirection: 'row', gap: licenseSpacing.actionGap, justifyContent: 'space-between',
-        }}
-        >
-          <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{item?.name || 'Campagne'}</Text>
-            <Text style={[Fonts.p3, { color: secondaryTextColor }]}>{item?.seasonLabel || '-'}</Text>
-          </View>
-          <View style={{ alignItems: 'flex-end', gap: 4 }}>
-            {isSelected ? <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Suivi actuel</Text> : null}
-            <View style={{
-              backgroundColor: isInactiveCampaign ? 'rgba(255,255,255,0.08)' : 'rgba(1,179,244,0.14)',
-              borderColor: isInactiveCampaign ? 'rgba(255,255,255,0.12)' : 'rgba(1,179,244,0.4)',
-              borderRadius: licenseRadius.pill,
-              borderWidth: 1,
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-            }}
-            >
-              <Text style={[Fonts.p4Bold, { color: statusColor }]}>
-                {campaignStatusLabel[item?.status] || item?.status}
-              </Text>
-            </View>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{money(totals.remainingCents || 0, item?.currency || 'EUR')}</Text>
-          </View>
-        </View>
-        <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
-          {totals.total || 0}
-          {' membres - '}
-          {money(totals.expectedCents || 0, item?.currency || 'EUR')}
-          {' attendus'}
-        </Text>
-        <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
-          {(item?.documentRequests || []).length}
-          {' document(s) demande(s)'}
-        </Text>
-        {item?.paymentModes?.helloasso ? (
+        <View style={{ flex: 1 }}>
+          {/*
+            Plus de `numberOfLines` : un nom de campagne coupe en plein milieu
+            est la premiere chose que le dirigeant ne reconnait pas. Il passe a
+            la ligne, la carte grandit.
+          */}
+          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{item?.name || 'Campagne'}</Text>
           <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
-            HelloAsso:
-            {' '}
-            {providerReadinessLabel[helloAssoReadiness] || helloAssoReadiness || 'A configurer'}
+            {item?.seasonLabel || '-'}
+            {item?.defaultAmountCents ? ` · ${money(item.defaultAmountCents, currency)} par membre` : ''}
           </Text>
-        ) : null}
-        <Pressable
-          accessibilityRole="button"
-          onPress={onPress}
-          style={({ pressed }) => [{
-            alignSelf: 'flex-start',
-            opacity: pressed ? 0.8 : 1,
-            paddingVertical: 4,
-          }, Platform.OS === 'web' ? { cursor: 'pointer' } : null]}
-        >
-          <Text style={[Fonts.p3Bold, { color: statusColor }]}>
-            {isSelected ? 'Campagne ouverte' : 'Voir le detail de la campagne'}
-          </Text>
-        </Pressable>
-        <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-          <Button onPress={onDuplicate} style={{ flex: 1 }} title="Dupliquer" variant="Secondary" />
-          {lifecycle ? <Button onPress={onLifecycle} style={{ flex: 1 }} title={lifecycle.label} variant="Secondary" /> : null}
+        </View>
+        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+          {isSelected ? <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Suivi actuel</Text> : null}
+          <View style={{
+            backgroundColor: isInactiveCampaign
+              ? withAlpha(Colors.neutral00, 0.08)
+              : withAlpha(Colors.primary500, 0.14),
+            borderColor: isInactiveCampaign
+              ? withAlpha(Colors.neutral00, 0.12)
+              : withAlpha(Colors.primary500, 0.4),
+            borderRadius: licenseRadius.pill,
+            borderWidth: 1,
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+          }}
+          >
+            <Text style={[Fonts.p4Bold, { color: statusColor }]}>
+              {campaignStatusLabel[item?.status] || item?.status}
+            </Text>
+          </View>
         </View>
       </View>
-    </Pressable>
+
+      <View style={{ backgroundColor: withAlpha(Colors.neutral00, 0.08), height: 1 }} />
+
+      <View style={Spaces.gap[8]}>
+        <CampaignCardRow
+          label="Encaissé"
+          value={`${money(totals.paidCents || 0, currency)} sur ${money(totals.expectedCents || 0, currency)}`}
+          valueColor={Colors.neutral00}
+        />
+        <CampaignCardRow
+          label="Membres"
+          value={`${totals.total || 0} · ${nombreRetards} en retard`}
+          // Le rouge ne sert qu'au retard : sans retard, la ligne reste neutre.
+          valueColor={nombreRetards > 0 ? Colors.error500 : Colors.neutral00}
+        />
+        <CampaignCardRow
+          label="Documents"
+          value={nombreDocuments === 0 ? 'Aucun demandé' : `${nombreDocuments} demandé${nombreDocuments > 1 ? 's' : ''}`}
+          valueColor={Colors.neutral00}
+        />
+        {item?.paymentModes?.helloasso ? (
+          <CampaignCardRow
+            label="HelloAsso"
+            value={providerReadinessLabel[helloAssoReadiness] || helloAssoReadiness || 'A configurer'}
+            valueColor={Colors.neutral00}
+          />
+        ) : null}
+      </View>
+
+      <View style={{ alignItems: 'center', flexDirection: 'row', gap: licenseSpacing.actionGap }}>
+        <View style={{ flex: 1 }}>
+          <Button onPress={onPress} title={isSelected ? 'Campagne ouverte' : 'Voir le détail'} />
+        </View>
+        {/*
+          Les actions secondaires passent sous ce bouton : c'est ce qui supprime
+          les libelles tronques (« Mettre en pau... ») de l'ancienne rangee.
+          La cible tactile fait 44 pt de cote, comme l'exige le pack de design.
+        */}
+        <Pressable
+          accessibilityHint="Dupliquer, mettre en pause ou modifier cette campagne."
+          accessibilityLabel={`Autres actions pour la campagne ${item?.name || 'sans nom'}`}
+          accessibilityRole="button"
+          onPress={onOpenActions}
+          style={({ pressed }) => [{
+            alignItems: 'center',
+            borderColor: withAlpha(Colors.primary500, 0.4),
+            borderRadius: licenseRadius.pill,
+            borderWidth: 1,
+            height: 44,
+            justifyContent: 'center',
+            opacity: pressed ? 0.8 : 1,
+            width: 44,
+          }, Platform.OS === 'web' ? { cursor: 'pointer' } : null]}
+        >
+          <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>…</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -782,6 +926,9 @@ function ClubLicenses({ navigation, route }) {
   const [setupFooterHeight, setSetupFooterHeight] = useState(0);
   const [pendingReminderAssignmentId, setPendingReminderAssignmentId] = useState(null);
   const [memberFilterMenuKey, setMemberFilterMenuKey] = useState(null);
+  // Campagne dont la feuille « … » est ouverte, ou `null`. C'est elle qui
+  // remplace les boutons secondaires tronques de l'ancienne carte.
+  const [campaignActionsFor, setCampaignActionsFor] = useState(null);
   const [memberFilters, setMemberFilters] = useState({ ...emptyMemberFilters });
   const [membersSectionOffset, setMembersSectionOffset] = useState(null);
   const [shouldAutoScrollMembers, setShouldAutoScrollMembers] = useState(routeAutoScrollToMembers);
@@ -1342,6 +1489,13 @@ function ClubLicenses({ navigation, route }) {
     return <MyLicense navigation={navigation} route={route} />;
   }
 
+  // Sur le hub, l'ecran ne rend plus de titre : le navigateur en pose deja un
+  // (`ClubStack.js:172`, « Cotisations », avec sa fleche de retour dont la
+  // cible tactile fait deja 44 pt via `hitSlop.min44From32`). Le dirigeant
+  // lisait donc « Cotisations » DEUX FOIS, l'un sous l'autre — meme famille que
+  // les deux fleches de retour empilees du lot D2.
+  // La vue « detail d'une campagne » garde son entete : elle est hors lot, et
+  // son entete de navigation porte le nom de la campagne, pas « Cotisations ».
   const renderTopHeader = () => (
     <View>
       {managerViewEnabled && clubs?.length > 1 ? (
@@ -1353,67 +1507,74 @@ function ClubLicenses({ navigation, route }) {
           title="Choisir un club"
         />
       ) : null}
-      <Text style={[Fonts.h2, Fonts.neutral00]}>Cotisations</Text>
-      <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
-        {isFocusedCampaignView
-          ? `Detail complet de la campagne ${campaign?.name || 'selectionnee'}.`
-          : 'Suivi des paiements, relances et echeanciers du club.'}
-      </Text>
+      {isFocusedCampaignView ? (
+        <>
+          <Text style={[Fonts.h2, Fonts.neutral00]}>Cotisations</Text>
+          <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
+            {`Detail complet de la campagne ${campaign?.name || 'selectionnee'}.`}
+          </Text>
+        </>
+      ) : null}
     </View>
   );
 
   const renderDashboardHeader = () => (
     <View style={Spaces.gap[licenseSpacing.sectionGap]}>
-      <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-        <StatCard
-          active={memberQuickFilter === 'expected'}
-          label="Attendu"
-          onPress={() => handleOpenMemberStatView('expected')}
-          tone={Colors.primary500}
-          value={money(totals.expectedCents, campaign?.currency || 'EUR')}
+      {/*
+        Le hub repond en un bloc : encaisse / attendu, la barre, le reste et les
+        retards. Les 4 cartes de statistiques restent sur la vue « detail d'une
+        campagne », ou elles servent de filtre sur la liste des membres — c'est
+        leur seul role reel, et cette vue est hors lot.
+      */}
+      {isFocusedCampaignView ? (
+        <>
+          <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
+            <StatCard
+              active={memberQuickFilter === 'expected'}
+              label="Attendu"
+              onPress={() => handleOpenMemberStatView('expected')}
+              tone={Colors.primary500}
+              value={money(totals.expectedCents, campaign?.currency || 'EUR')}
+            />
+            <StatCard
+              active={memberQuickFilter === 'paid'}
+              label="Encaisse"
+              onPress={() => handleOpenMemberStatView('paid')}
+              tone={Colors.success500}
+              value={money(totals.paidCents, campaign?.currency || 'EUR')}
+            />
+          </View>
+          <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
+            <StatCard
+              active={memberQuickFilter === 'remaining'}
+              label="Reste"
+              onPress={() => handleOpenMemberStatView('remaining')}
+              tone={Colors.warning500}
+              value={money(totals.remainingCents, campaign?.currency || 'EUR')}
+            />
+            <StatCard
+              active={memberQuickFilter === 'overdue'}
+              label="Retards"
+              onPress={() => handleOpenMemberStatView('overdue')}
+              tone={Colors.error500}
+              value={String(totals.overdueCount || 0)}
+            />
+          </View>
+        </>
+      ) : (
+        <CampaignSummary
+          currency={campaign?.currency || 'EUR'}
+          expectedCents={totals.expectedCents}
+          overdueCount={totals.overdueCount}
+          paidCents={totals.paidCents}
+          remainingCents={totals.remainingCents}
         />
-        <StatCard
-          active={memberQuickFilter === 'paid'}
-          label="Encaisse"
-          onPress={() => handleOpenMemberStatView('paid')}
-          tone={Colors.success500}
-          value={money(totals.paidCents, campaign?.currency || 'EUR')}
-        />
-      </View>
-      <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-        <StatCard
-          active={memberQuickFilter === 'remaining'}
-          label="Reste"
-          onPress={() => handleOpenMemberStatView('remaining')}
-          tone={Colors.warning500}
-          value={money(totals.remainingCents, campaign?.currency || 'EUR')}
-        />
-        <StatCard
-          active={memberQuickFilter === 'overdue'}
-          label="Retards"
-          onPress={() => handleOpenMemberStatView('overdue')}
-          tone={Colors.error500}
-          value={String(totals.overdueCount || 0)}
-        />
-      </View>
+      )}
       {(() => {
+        // La carte « Vue d ensemble des campagnes » a ete retiree : elle
+        // n'affichait aucun chiffre et ne portait aucune action.
         if (!isFocusedCampaignView) {
-          return (
-            <View style={[Spaces.gap[8], {
-              backgroundColor: Colors.primary800,
-              borderColor: `${Colors.primary500}44`,
-              borderRadius: licenseRadius.card,
-              borderWidth: 1,
-              paddingHorizontal: licenseSpacing.cardPadding,
-              paddingVertical: licenseSpacing.cardPadding,
-            }]}
-            >
-              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Vue d ensemble des campagnes</Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Ouvre une campagne pour suivre ses membres, ses relances et ses paiements en detail.
-              </Text>
-            </View>
-          );
+          return null;
         }
 
         if (isFocusedMembersView) {
@@ -1879,7 +2040,9 @@ function ClubLicenses({ navigation, route }) {
       ) : null}
       {campaigns.length && shouldShowCampaignSwitcher ? (
         <View style={Spaces.gap[licenseSpacing.listGap]}>
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{isFocusedCampaignView ? 'Autres campagnes' : 'Campagnes'}</Text>
+          <Text style={[Fonts.p3Bold, Fonts.neutral200, { letterSpacing: 1, textTransform: 'uppercase' }]}>
+            {isFocusedCampaignView ? 'Autres campagnes' : `Campagnes · ${campaigns.length}`}
+          </Text>
           {(isFocusedCampaignView
             ? campaigns.filter((item) => (item?.documentId || item?.id) !== campaignId)
             : campaigns
@@ -1888,8 +2051,7 @@ function ClubLicenses({ navigation, route }) {
               isSelected={campaignId === (item.documentId || item.id)}
               item={item}
               key={item.documentId || item.id}
-              onDuplicate={() => handleDuplicateCampaign(item)}
-              onLifecycle={() => handleLifecycleCampaign(item)}
+              onOpenActions={() => setCampaignActionsFor(item)}
               onPress={() => handleOpenCampaignDashboard(item)}
             />
           ))}
@@ -1897,20 +2059,49 @@ function ClubLicenses({ navigation, route }) {
       ) : null}
       {shouldShowCampaignManagementActions ? (
         <>
-          <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-            <Button
-              onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, editorCampaignId ? { campaignId: editorCampaignId, clubId } : { clubId })}
-              style={{ flex: 1 }}
-              title={isFocusedCampaignView ? 'Parametres' : 'Modifier l active'}
-              variant="Secondary"
-            />
-            <Button
+          {/*
+            Sur le hub, « Nouvelle campagne » est la seule action de premier
+            plan : c'est une tuile pointillee, qui se lit comme un emplacement
+            vide a remplir. « Modifier l active » a rejoint la feuille « … » de
+            chaque carte, la ou l'action porte enfin le nom de sa campagne.
+          */}
+          {isFocusedCampaignView ? (
+            <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
+              <Button
+                onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, editorCampaignId ? { campaignId: editorCampaignId, clubId } : { clubId })}
+                style={{ flex: 1 }}
+                title="Parametres"
+                variant="Secondary"
+              />
+              <Button
+                onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { clubId })}
+                style={{ flex: 1 }}
+                title="Nouvelle campagne"
+                variant="Secondary"
+              />
+            </View>
+          ) : (
+            <Pressable
+              accessibilityHint="Ouvre le tunnel de creation d une campagne de cotisation."
+              accessibilityLabel="Nouvelle campagne"
+              accessibilityRole="button"
               onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { clubId })}
-              style={{ flex: 1 }}
-              title="Nouvelle campagne"
-              variant="Secondary"
-            />
-          </View>
+              style={({ pressed }) => [{
+                alignItems: 'center',
+                borderColor: withAlpha(Colors.primary500, 0.4),
+                borderRadius: licenseRadius.card,
+                borderStyle: 'dashed',
+                borderWidth: 1,
+                justifyContent: 'center',
+                minHeight: 64,
+                opacity: pressed ? 0.8 : 1,
+                paddingHorizontal: licenseSpacing.cardPadding,
+                paddingVertical: licenseSpacing.cardPadding,
+              }, Platform.OS === 'web' ? { cursor: 'pointer' } : null]}
+            >
+              <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>+ Nouvelle campagne</Text>
+            </Pressable>
+          )}
           {campaign ? (
             <Button
               isLoading={transitionMutation.isPending}
@@ -1938,7 +2129,7 @@ function ClubLicenses({ navigation, route }) {
     if (hasError) {
       return (
         <LicenseEmptyState
-          action={<Button onPress={retryData} title="Reessayer" variant="Secondary" />}
+          action={<Button onPress={retryData} title="Réessayer" variant="Secondary" />}
           description="Impossible de charger la campagne ou les cotisations pour le moment."
           title="Cotisations indisponibles"
         />
@@ -1978,6 +2169,64 @@ function ClubLicenses({ navigation, route }) {
       onRemind={() => handleSingleReminder(item)}
     />
   );
+  /**
+   * Feuille des actions secondaires d'une campagne, ouverte par le bouton « … »
+   * de sa carte. Chaque action y porte le nom de SA campagne : l'ancienne
+   * rangee de boutons ne le disait pas, et « Modifier l active » designait une
+   * campagne que le dirigeant devait deviner.
+   * @returns {import('react').ReactElement | null}
+   */
+  const renderCampaignActionsSheet = () => {
+    if (!campaignActionsFor) return null;
+
+    const lifecycle = lifecycleForCampaign(campaignActionsFor);
+    const fermer = () => setCampaignActionsFor(null);
+    /**
+     * @param {() => void} action
+     * @returns {() => void}
+     */
+    const fermerPuis = (action) => () => {
+      fermer();
+      action();
+    };
+
+    return (
+      <BottomModal close={fermer} isVisible snapPoints={['40%']}>
+        <View style={Spaces.gap[12]}>
+          <View style={Spaces.gap[4]}>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{campaignActionsFor?.name || 'Campagne'}</Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {campaignActionsFor?.seasonLabel || '-'}
+              {' · '}
+              {campaignStatusLabel[campaignActionsFor?.status] || campaignActionsFor?.status}
+            </Text>
+          </View>
+          <Button
+            onPress={fermerPuis(() => handleDuplicateCampaign(campaignActionsFor))}
+            title="Dupliquer"
+            variant="Secondary"
+          />
+          {lifecycle ? (
+            <Button
+              isLoading={transitionMutation.isPending}
+              onPress={fermerPuis(() => handleLifecycleCampaign(campaignActionsFor))}
+              title={lifecycle.label}
+              variant="Secondary"
+            />
+          ) : null}
+          <Button
+            onPress={fermerPuis(() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, {
+              campaignId: campaignActionsFor?.documentId || campaignActionsFor?.id,
+              clubId,
+            }))}
+            title="Modifier"
+            variant="Secondary"
+          />
+        </View>
+      </BottomModal>
+    );
+  };
+
   const renderMemberFilterModal = () => {
     if (memberFilterMenuKey !== 'filters') return null;
 
@@ -2087,6 +2336,7 @@ function ClubLicenses({ navigation, route }) {
           showsVerticalScrollIndicator={false}
         />
         {renderMemberFilterModal()}
+        {renderCampaignActionsSheet()}
       </ScreenContainer>
     );
   }
@@ -2131,6 +2381,7 @@ function ClubLicenses({ navigation, route }) {
           </View>
         ) : null}
       </View>
+      {renderCampaignActionsSheet()}
     </ScreenContainer>
   );
 }

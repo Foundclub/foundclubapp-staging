@@ -26,6 +26,10 @@ let mockDonneesAuth;
 let mockCampagnesRequete;
 /** @type {any} */
 let mockCampagneCouranteRequete;
+/** @type {any} */
+let mockCampagneParIdRequete;
+/** @type {any} */
+let mockTableauDeBordRequete;
 
 const mockRequeteVide = { data: null, isError: false, isLoading: false };
 const mockMutationFigee = { isPending: false, mutate: jest.fn(), mutateAsync: jest.fn() };
@@ -91,9 +95,9 @@ jest.mock('@/services/license/licenseQueries', () => ({
   transitionLicenseCampaign: jest.fn(),
   useCurrentLicenseCampaign: () => mockCampagneCouranteRequete,
   useLicenseAssignments: () => mockRequeteVide,
-  useLicenseCampaign: () => mockRequeteVide,
+  useLicenseCampaign: () => mockCampagneParIdRequete,
   useLicenseCampaigns: () => mockCampagnesRequete,
-  useLicenseDashboard: () => mockRequeteVide,
+  useLicenseDashboard: () => mockTableauDeBordRequete,
   useLicenseMutation: () => mockMutationFigee,
   useLicensePaymentReviews: () => mockRequeteVide,
 }));
@@ -223,8 +227,13 @@ const monterHub = (surcharges = {}) => {
   mockCampagnesRequete = surcharges.campagnes || {
     data: { data: [CAMPAGNE_OUVERTE] }, isError: false, isLoading: false,
   };
+  mockCampagneParIdRequete = surcharges.campagneParId || mockRequeteVide;
+  mockTableauDeBordRequete = surcharges.tableauDeBord || mockRequeteVide;
 
-  const route = { name: 'ClubLicenses', params: { clubId: 'club-hub' } };
+  const route = {
+    name: surcharges.routeName || 'ClubLicenses',
+    params: { clubId: 'club-hub', ...(surcharges.params || {}) },
+  };
   const navigation = {
     addListener: () => () => {},
     goBack: jest.fn(),
@@ -248,96 +257,205 @@ describe('ClubLicenses — le hub des cotisations (filet E6, avant la refonte D1
     arbreCourant = null;
   });
 
-  describe('l en-tete', () => {
-    // ⚠️ ASSERTION QUE LA REFONTE D18 DOIT CHANGER : le design demande UN SEUL
-    // titre. Comme le navigateur en pose deja un (`ClubStack.js:172`), c'est
-    // celui de l'ecran qui part.
-    it('rend son propre titre « Cotisations », en plus de celui du navigateur', () => {
-      expect(texteDeLEcran(monterHub())).toContain('Cotisations');
+  describe('l en-tete — un seul titre', () => {
+    // AVANT : l'ecran rendait « Cotisations » en plus du titre du navigateur.
+    // Le dirigeant lisait donc le mot deux fois, l'un sous l'autre.
+    it('ne rend plus son propre titre : celui du navigateur suffit', () => {
+      expect(texteDeLEcran(monterHub())).not.toContain('Cotisations');
     });
 
-    // ⚠️ ASSERTION QUE LA REFONTE D18 DOIT CHANGER : le sous-titre disparait de
-    // la capture `00-hub`. Il porte au passage la faute d'accent « echeanciers ».
-    it('affiche un sous-titre ou « echeanciers » est ecrit sans accent', () => {
-      expect(texteDeLEcran(monterHub())).toContain('Suivi des paiements, relances et echeanciers du club.');
+    // AVANT : « Suivi des paiements, relances et echeanciers du club. » — un
+    // sous-titre qui n'apprenait rien, et qui portait la faute « echeanciers ».
+    it('ne rend plus de sous-titre, donc plus aucun « echeanciers » sans accent', () => {
+      expect(texteDeLEcran(monterHub())).not.toContain('echeanciers');
     });
   });
 
-  describe('les 4 cartes de statistiques', () => {
-    // ⚠️ ASSERTIONS QUE LA REFONTE D18 DOIT CHANGER : les 4 cartes de 4 couleurs
-    // deviennent un bloc de synthese unique.
-    it('affiche les 4 libelles Attendu, Encaisse, Reste et Retards', () => {
+  describe('le bloc de synthese qui remplace les 4 cartes de statistiques', () => {
+    // AVANT : 4 cartes de 4 couleurs (Attendu / Encaisse / Reste / Retards),
+    // dont deux rouges en permanence.
+    it('ne rend plus les 4 cartes de statistiques du hub', () => {
       const texte = texteDeLEcran(monterHub());
 
-      expect(texte).toContain('Attendu');
-      expect(texte).toContain('Encaisse');
-      expect(texte).toContain('Reste');
-      expect(texte).toContain('Retards');
+      expect(texte).not.toContain('Attendu');
+      expect(texte).not.toContain('Retards');
     });
 
-    it('affiche les montants en euros formates a la francaise', () => {
-      expect(texteDeLEcran(monterHub())).toContain('100,00 €');
+    it('annonce en une phrase ce qui est encaisse sur ce qui est attendu', () => {
+      const texte = texteDeLEcran(monterHub());
+
+      expect(texte).toContain('encaissés sur');
+      expect(texte).toContain('100,00 €');
+    });
+
+    it('annonce le reste a encaisser', () => {
+      expect(texteDeLEcran(monterHub())).toContain('Reste');
+    });
+
+    it('dit « Aucun retard » quand il n y en a pas', () => {
+      expect(texteDeLEcran(monterHub())).toContain('Aucun retard');
+    });
+
+    it('compte les retards au pluriel des qu il y en a', () => {
+      const campagneEnRetard = {
+        ...CAMPAGNE_OUVERTE,
+        totals: { ...CAMPAGNE_OUVERTE.totals, overdueCount: 3 },
+      };
+      const texte = texteDeLEcran(monterHub({
+        campagneCourante: { data: campagneEnRetard, isError: false, isLoading: false },
+        campagnes: { data: { data: [campagneEnRetard] }, isError: false, isLoading: false },
+      }));
+
+      expect(texte).toContain('3 retards');
+      expect(texte).not.toContain('Aucun retard');
+    });
+  });
+
+  describe('la barre de progression', () => {
+    /**
+     * @param {any} noeud
+     * @param {any[]} [collecteur]
+     * @returns {any[]} Tous les noeuds qui s'annoncent comme barre de progression.
+     */
+    const collecterBarres = (noeud, collecteur = []) => {
+      if (!noeud || typeof noeud !== 'object') return collecteur;
+      if (Array.isArray(noeud)) {
+        noeud.forEach((enfant) => collecterBarres(enfant, collecteur));
+        return collecteur;
+      }
+      if (noeud.props?.accessibilityRole === 'progressbar') collecteur.push(noeud);
+      collecterBarres(noeud.children, collecteur);
+      return collecteur;
+    };
+
+    /**
+     * @param {number} paidCents
+     * @param {number} expectedCents
+     * @returns {any} La barre de progression du hub.
+     */
+    const barrePour = (paidCents, expectedCents) => {
+      const campagne = {
+        ...CAMPAGNE_OUVERTE,
+        totals: {
+          ...CAMPAGNE_OUVERTE.totals,
+          expectedCents,
+          paidCents,
+          remainingCents: Math.max(expectedCents - paidCents, 0),
+        },
+      };
+      const arbre = monterHub({
+        campagneCourante: { data: campagne, isError: false, isLoading: false },
+        campagnes: { data: { data: [campagne] }, isError: false, isLoading: false },
+      });
+      return collecterBarres(arbre.toJSON())[0];
+    };
+
+    it('s annonce comme une barre de progression, avec une valeur lisible', () => {
+      const barre = barrePour(2500, 10000);
+
+      expect(barre).toBeDefined();
+      expect(barre.props.accessibilityValue).toEqual({
+        max: 100, min: 0, now: 25, text: '25 % encaissés',
+      });
+    });
+
+    it('reste a 0 % quand rien n a ete encaisse', () => {
+      expect(barrePour(0, 10000).props.accessibilityValue.now).toBe(0);
+    });
+
+    // Une campagne dont on n attend rien n'est pas une campagne soldee : une
+    // division par zero aurait rempli la barre a 100 %.
+    it('reste a 0 % quand il n y a rien a encaisser', () => {
+      expect(barrePour(0, 0).props.accessibilityValue.now).toBe(0);
+    });
+
+    // Un trop-percu ne fait pas deborder la barre.
+    it('plafonne a 100 % quand on a encaisse plus que prevu', () => {
+      expect(barrePour(15000, 10000).props.accessibilityValue.now).toBe(100);
     });
   });
 
   describe('la carte decorative « Vue d ensemble des campagnes »', () => {
-    // ⚠️ ASSERTION QUE LA REFONTE D18 DOIT CHANGER : cette carte est purement
-    // decorative, le design la supprime.
-    it('occupe de la place sans porter aucune action', () => {
-      const texte = texteDeLEcran(monterHub());
-
-      expect(texte).toContain('Vue d ensemble des campagnes');
-      expect(texte).toContain('Ouvre une campagne pour suivre ses membres, ses relances et ses paiements en detail.');
+    // AVANT : une carte qui n'affichait aucun chiffre et ne portait aucune
+    // action, entre les statistiques et la liste.
+    it('a disparu du hub', () => {
+      expect(texteDeLEcran(monterHub())).not.toContain('Vue d ensemble des campagnes');
     });
   });
 
-  describe('la carte de campagne — ce que le dirigeant y lit aujourd hui', () => {
-    it('porte le nom de la campagne et sa saison', () => {
+  describe('la carte de campagne', () => {
+    it('porte le nom de la campagne, sa saison et son prix par membre', () => {
+      // La saison et le prix sont deux morceaux de texte voisins dans le meme
+      // paragraphe : le releve les separe, l'ecran les affiche colles.
       const texte = texteDeLEcran(monterHub());
 
       expect(texte).toContain('Cotisation licences 2026/2027');
       expect(texte).toContain('Saison 2026-2027');
+      expect(texte).toContain('· 100,00 € par membre');
     });
 
-    // ⚠️ ASSERTION QUE LA REFONTE D18 DOIT CHANGER : le design renomme le
-    // statut `active` en « Ouverte ».
-    it('affiche le statut d une campagne active sous le libelle « Active »', () => {
-      expect(texteDeLEcran(monterHub())).toContain('Active');
-    });
-
-    // ⚠️ ASSERTIONS QUE LA REFONTE D18 DOIT CHANGER : les lignes deviennent
-    // « Encaisse / Membres / Documents » en deux colonnes.
-    it('resume les membres et le montant attendu sur une seule ligne', () => {
+    // AVANT : le statut `active` s'affichait « Active ».
+    it('affiche une campagne active sous le libelle « Ouverte »', () => {
       const texte = texteDeLEcran(monterHub());
 
-      expect(texte).toContain('membres - ');
-      expect(texte).toContain(' attendus');
+      expect(texte).toContain('Ouverte');
+      expect(texte).not.toContain('Active');
     });
 
-    it('compte les documents demandes', () => {
-      expect(texteDeLEcran(monterHub())).toContain('document(s) demande(s)');
-    });
-
-    // ⚠️ ASSERTION QUE LA REFONTE D18 DOIT CHANGER : le pied devient un bouton
-    // plein « Voir le detail » + un bouton « … ».
-    it('propose un lien « Voir le detail de la campagne »', () => {
-      expect(texteDeLEcran(monterHub())).toContain('Voir le detail de la campagne');
-    });
-
-    // ⚠️ ASSERTION QUE LA REFONTE D18 DOIT CHANGER : « Dupliquer » et « Mettre
-    // en pause » passent sous le bouton « … ».
-    it('empile les actions secondaires en boutons pleine largeur', () => {
+    // AVANT : « 1 membres - 100,00 € attendus » et « 0 document(s) demande(s) »,
+    // deux phrases collees que l'oeil ne pouvait pas comparer.
+    it('range les chiffres en trois lignes libelle / valeur', () => {
       const texte = texteDeLEcran(monterHub());
 
-      expect(texte).toContain('Dupliquer');
-      expect(texte).toContain('Mettre en pause');
+      expect(texte).toContain('Encaissé');
+      expect(texte).toContain('0,00 € sur 100,00 €');
+      expect(texte).toContain('Membres');
+      expect(texte).toContain('1 · 0 en retard');
+      expect(texte).toContain('Documents');
+      expect(texte).toContain('Aucun demandé');
+    });
+
+    // AVANT : un lien texte « Voir le detail de la campagne ».
+    it('propose « Voir le détail » en action principale', () => {
+      const texte = texteDeLEcran(monterHub());
+
+      expect(texte).toContain('Voir le détail');
+      expect(texte).not.toContain('Voir le detail de la campagne');
+    });
+
+    // AVANT : « Dupliquer » et « Mettre en pause » etaient deux boutons de la
+    // carte, dont les libelles se tronquaient.
+    it('range les actions secondaires derriere un bouton « … », donc hors de la carte', () => {
+      const texte = texteDeLEcran(monterHub());
+
+      expect(texte).toContain('…');
+      expect(texte).not.toContain('Dupliquer');
+      expect(texte).not.toContain('Mettre en pause');
+    });
+
+    it('donne au bouton « … » un libelle d accessibilite qui nomme la campagne', () => {
+      /**
+       * @param {any} noeud
+       * @param {any[]} [collecteur]
+       * @returns {any[]}
+       */
+      const collecterLibelles = (noeud, collecteur = []) => {
+        if (!noeud || typeof noeud !== 'object') return collecteur;
+        if (Array.isArray(noeud)) {
+          noeud.forEach((enfant) => collecterLibelles(enfant, collecteur));
+          return collecteur;
+        }
+        if (noeud.props?.accessibilityLabel) collecteur.push(noeud.props.accessibilityLabel);
+        collecterLibelles(noeud.children, collecteur);
+        return collecteur;
+      };
+
+      expect(collecterLibelles(monterHub().toJSON()))
+        .toContain('Autres actions pour la campagne Cotisation licences 2026/2027');
     });
   });
 
-  describe('le nom de la campagne est tronque', () => {
-    // C'est le defaut que la capture `00-hub` corrige : le nom tient sur une
-    // seule ligne et se coupe. On l'epingle par la PROP, faute de mise en page
-    // reelle dans un rendu de test.
+  describe('le nom de la campagne n est plus tronque', () => {
     /**
      * @param {any} noeud
      * @param {any[]} [collecteur]
@@ -354,24 +472,60 @@ describe('ClubLicenses — le hub des cotisations (filet E6, avant la refonte D1
       return collecteur;
     };
 
-    it('coupe le nom a une ligne, meme quand il est long', () => {
+    // AVANT : `numberOfLines={1}` coupait le nom en plein milieu.
+    it('laisse le nom passer a la ligne au lieu de le couper', () => {
       const noeuds = collecterNoeudsTexte(monterHub().toJSON());
       const noeudDuNom = noeuds.find((noeud) => (
         recolterTextes(noeud.children).join('') === 'Cotisation licences 2026/2027'
       ));
 
-      expect(noeudDuNom?.props?.numberOfLines).toBe(1);
+      expect(noeudDuNom).toBeDefined();
+      expect(noeudDuNom?.props?.numberOfLines).toBeUndefined();
     });
   });
 
-  describe('les actions de bas de page', () => {
-    // ⚠️ ASSERTIONS QUE LA REFONTE D18 DOIT CHANGER : « Nouvelle campagne »
-    // devient une tuile pointillee, et « Modifier l active » rejoint le « … ».
-    it('propose « Modifier l active » et « Nouvelle campagne » cote a cote', () => {
+  describe('la creation d une campagne', () => {
+    // AVANT : deux boutons secondaires cote a cote, « Modifier l active » et
+    // « Nouvelle campagne » — dont le premier ne disait pas QUELLE campagne.
+    it('propose une tuile « + Nouvelle campagne » et plus de « Modifier l active »', () => {
       const texte = texteDeLEcran(monterHub());
 
-      expect(texte).toContain('Modifier l active');
-      expect(texte).toContain('Nouvelle campagne');
+      expect(texte).toContain('+ Nouvelle campagne');
+      expect(texte).not.toContain('Modifier l active');
+    });
+  });
+
+  // La vue « detail d'une campagne » est HORS LOT — mais elle partage le meme
+  // composant, et le lot D18 a restructure `renderDashboardHeader`. Ces deux
+  // controles sont la pour prouver qu'elle n'a rien perdu au passage : sans
+  // eux, la seule chose qui garantissait qu'elle rende encore etait un espoir.
+  describe('la vue detail d une campagne — hors lot, doit rester intacte', () => {
+    /** @returns {any} */
+    const monterDetail = () => monterHub({
+      campagneParId: { data: CAMPAGNE_OUVERTE, isError: false, isLoading: false },
+      params: { campaignId: 'camp-hub-1' },
+      routeName: 'ClubLicenseCampaignDetail',
+      tableauDeBord: {
+        data: { scope: 'club', totals: CAMPAGNE_OUVERTE.totals },
+        isError: false,
+        isLoading: false,
+      },
+    });
+
+    it('garde son entete « Cotisations » et son sous-titre de campagne', () => {
+      const texte = texteDeLEcran(monterDetail());
+
+      expect(texte).toContain('Cotisations');
+      expect(texte).toContain('Detail complet de la campagne Cotisation licences 2026/2027.');
+    });
+
+    it('garde ses 4 cartes de statistiques, qui y servent de filtre', () => {
+      const texte = texteDeLEcran(monterDetail());
+
+      expect(texte).toContain('Attendu');
+      expect(texte).toContain('Encaisse');
+      expect(texte).toContain('Reste');
+      expect(texte).toContain('Retards');
     });
   });
 
@@ -385,10 +539,12 @@ describe('ClubLicenses — le hub des cotisations (filet E6, avant la refonte D1
       expect(texteDeLEcran(monterHub(enPanne))).toContain('Cotisations indisponibles');
     });
 
-    // ⚠️ ASSERTION QUE LA REFONTE D18 DOIT CHANGER : « Reessayer » doit prendre
-    // ses accents (« Réessayer »).
-    it('propose un bouton « Reessayer » ecrit sans accent', () => {
-      expect(texteDeLEcran(monterHub(enPanne))).toContain('Reessayer');
+    // AVANT : « Reessayer », sans accent.
+    it('propose un bouton « Réessayer » correctement accentue', () => {
+      const texte = texteDeLEcran(monterHub(enPanne));
+
+      expect(texte).toContain('Réessayer');
+      expect(texte).not.toContain('Reessayer');
     });
   });
 });
