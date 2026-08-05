@@ -516,3 +516,37 @@ describe('SubscriptionPaywallSheet — catalogue indisponible', () => {
     expect(hasTextContaining(tree, 'Tarifs indisponibles')).toBe(true);
   });
 });
+
+/* ================================================================== */
+/* 4. L38 — la TROISIEME surface de vente cessait de sous-vendre       */
+/* ================================================================== */
+
+// La pilule annoncait « Annuel · 2 mois offerts » (= -17 %) sur TOUS les paliers,
+// alors que la grille serveur donne -36 % sur l'offre Équipe. C'est la surface
+// la plus vue des trois : elle s'ouvre a chaque refus payant.
+describe('SubscriptionPaywallSheet — la remise annoncee est celle DU PALIER (L38)', () => {
+  it('le palier Équipe retenu annonce sa vraie remise, jamais « 2 mois offerts »', () => {
+    // Palier 2 preselectionne : 12,99 x 12 = 155,88 contre 99,99 l'annee -> -36 %.
+    const tree = renderSheet({ decision: TEAM_QUOTA_DECISION });
+
+    expect(hasTextContaining(tree, '−36 %')).toBe(true);
+    expect(hasTextContaining(tree, '2 mois offerts')).toBe(false);
+  });
+
+  it('TEMOIN — sur un palier Club, la meme etiquette affiche −17 %', () => {
+    // La correction ne remplace pas un mensonge par un autre : Club suit
+    // exactement x10, ou « 2 mois offerts » etait juste.
+    const tree = renderSheet({ decision: FACILITY_DECISION });
+
+    expect(hasTextContaining(tree, '−17 %')).toBe(true);
+  });
+
+  it('TEMOIN — en mensuel, ni remise ni equivalence ne sont affichees', () => {
+    const tree = renderSheet({ decision: FACILITY_DECISION });
+
+    act(() => { findButtonByText(tree, 'Mensuel').props.onPress(); });
+
+    expect(hasTextContaining(tree, '%')).toBe(false);
+    expect(hasTextContaining(tree, 'soit ')).toBe(false);
+  });
+});

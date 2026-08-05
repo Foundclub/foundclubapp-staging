@@ -10,8 +10,10 @@ import {
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  findSubscriptionMonthlySiblingEntry,
   formatSubscriptionMonthlyEquivalentLabel,
   formatSubscriptionPriceLabel,
+  formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
@@ -102,9 +104,12 @@ const getTierOptionsForPeriod = (entries, scopeType, billingPeriod) => entries
   })
   .filter((option) => option.id > 0 && option.label);
 
-// Selecteur de periode de facturation (defaut produit : annuel, 2 mois offerts).
+// Selecteur de periode de facturation (defaut produit : annuel).
+// L38 — la pilule ne porte PLUS de tag de remise : le catalogue a deux grilles
+// (Club x10 = -17 %, Equipe x7,5-7,7 = -36/-37 %), et « 2 mois offerts » sous-vendait
+// l'offre Equipe de plus de la moitie. La remise est calculee sur le palier retenu.
 const BILLING_PERIOD_OPTIONS = [
-  { id: 'yearly', label: 'Annuel · 2 mois offerts' },
+  { id: 'yearly', label: 'Annuel' },
   { id: 'monthly', label: 'Mensuel' },
 ];
 
@@ -423,6 +428,14 @@ function SubscriptionPaywallSheet({
     const monthlyLabel = isYearlySelected
       ? formatSubscriptionMonthlyEquivalentLabel(selectedEntry?.referencePriceEurCents)
       : '';
+    // Remise calculee sur les DEUX prix du palier retenu. Sans jumelle mensuelle
+    // dans le catalogue, le libelle est vide : on n'invente jamais une remise.
+    const discountLabel = isYearlySelected
+      ? formatSubscriptionYearlyDiscountLabel(
+        findSubscriptionMonthlySiblingEntry(catalogEntries, selectedEntry)?.referencePriceEurCents,
+        selectedEntry?.referencePriceEurCents,
+      )
+      : '';
     const isCatalogLoading = catalogQuery.isLoading;
     // Le catalogue serveur est STATIQUE et ne peut jamais etre vide : un catalogue
     // absent une fois le chargement fini est toujours un probleme de transport.
@@ -555,6 +568,11 @@ function SubscriptionPaywallSheet({
                   {priceAmountLabel}
                 </Text>
                 <Text style={[Fonts.p2Bold, Fonts.neutral300]}>{priceSuffix}</Text>
+                {discountLabel ? (
+                  <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
+                    {discountLabel}
+                  </Text>
+                ) : null}
                 <View style={Alignments.fill} />
                 <Text style={[Fonts.p3Bold, Fonts.primary200]}>
                   {monthlyLabel}

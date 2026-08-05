@@ -1,6 +1,7 @@
 import {
   buildSubscriptionChangePlanPayload,
   buildSubscriptionPurchasePayload,
+  findSubscriptionMonthlySiblingEntry,
   formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
@@ -166,5 +167,56 @@ describe('subscriptionBilling', () => {
     expect(formatSubscriptionYearlyDiscountLabel(0, 5999)).toBe('');
     expect(formatSubscriptionYearlyDiscountLabel(799, 9588)).toBe('');
     expect(formatSubscriptionYearlyDiscountLabel(799, 12000)).toBe('');
+  });
+
+  // L38 — les TROIS surfaces de vente ont besoin des deux prix d'un meme palier
+  // pour calculer sa remise. La recherche de la jumelle vit ici, une seule fois.
+  test('finds the monthly twin of a yearly entry, by scope AND tier', () => {
+    const catalog = [
+      {
+        billingPeriod: 'monthly',
+        planCode: 'fc_team_1_monthly',
+        scopeType: 'TEAM',
+        slotCount: 1,
+      },
+      {
+        billingPeriod: 'monthly',
+        planCode: 'fc_team_2_monthly',
+        scopeType: 'TEAM',
+        slotCount: 2,
+      },
+      {
+        billingPeriod: 'monthly',
+        planCode: 'fc_club_tier_1_monthly',
+        scopeType: 'CLUB',
+      },
+      {
+        billingPeriod: 'yearly',
+        planCode: 'fc_team_2_yearly',
+        scopeType: 'TEAM',
+        slotCount: 2,
+      },
+    ];
+
+    // Le palier 2 d'Équipe ne doit JAMAIS retomber sur le palier 1, ni sur Club :
+    // ce sont deux grilles differentes, la remise en dependrait entierement.
+    expect(findSubscriptionMonthlySiblingEntry(catalog, catalog[3]).planCode)
+      .toBe('fc_team_2_monthly');
+    expect(findSubscriptionMonthlySiblingEntry(catalog, {
+      billingPeriod: 'yearly', planCode: 'fc_club_tier_1_yearly', scopeType: 'CLUB',
+    }).planCode).toBe('fc_club_tier_1_monthly');
+  });
+
+  test('returns null rather than a wrong twin when the catalogue is partial', () => {
+    // Palier absent du catalogue mensuel : aucune remise ne pourra etre calculee,
+    // et c'est voulu — mieux vaut ne rien annoncer qu'annoncer un chiffre faux.
+    expect(findSubscriptionMonthlySiblingEntry([], {
+      billingPeriod: 'yearly', scopeType: 'TEAM', slotCount: 1,
+    })).toBeNull();
+    expect(findSubscriptionMonthlySiblingEntry(null, {
+      billingPeriod: 'yearly', scopeType: 'TEAM', slotCount: 1,
+    })).toBeNull();
+    const monthlyOnly = [{ billingPeriod: 'monthly', scopeType: 'TEAM', slotCount: 1 }];
+    expect(findSubscriptionMonthlySiblingEntry(monthlyOnly, null)).toBeNull();
   });
 });

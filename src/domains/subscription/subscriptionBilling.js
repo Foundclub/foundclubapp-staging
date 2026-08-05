@@ -124,6 +124,32 @@ export const formatSubscriptionYearlyDiscountLabel = (
 };
 
 /**
+ * Entree jumelle en mensuel d'une entree annuelle : meme portee, meme palier.
+ *
+ * C'est la seule facon d'obtenir les DEUX prix qu'exige
+ * `formatSubscriptionYearlyDiscountLabel` — le catalogue serveur ne porte aucune
+ * remise, il porte deux lignes par palier.
+ *
+ * L38 — cette lecture vivait dans le carrousel ; les deux autres surfaces de
+ * vente en avaient besoin a l'identique, elle vit donc ici plutot qu'en trois
+ * exemplaires.
+ * @param {any[]} entries - Catalogue complet, TOUTES periodes confondues.
+ * @param {any} entry
+ * @returns {any | null}
+ */
+export const findSubscriptionMonthlySiblingEntry = (entries, entry) => {
+  if (!entry) return null;
+
+  const scopeType = getSubscriptionEntryScope(entry);
+  const tierRank = getSubscriptionEntryTierRank(entry);
+  return (Array.isArray(entries) ? entries : []).find(
+    (candidate) => getSubscriptionEntryScope(candidate) === scopeType
+      && getSubscriptionEntryPeriod(candidate) === 'monthly'
+      && getSubscriptionEntryTierRank(candidate) === tierRank,
+  ) || null;
+};
+
+/**
  * @param {any[]} entries
  * @returns {any[]}
  */

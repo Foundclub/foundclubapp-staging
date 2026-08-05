@@ -15,6 +15,7 @@ import {
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  findSubscriptionMonthlySiblingEntry,
   formatSubscriptionMonthlyEquivalentLabel,
   formatSubscriptionPriceLabel,
   formatSubscriptionYearlyDiscountLabel,
@@ -243,31 +244,19 @@ function SubscriptionOffers() {
   const clubEntry = clubTiers.find((option) => option.id === resolvedClubTier)?.entry || null;
 
   /**
-   * Entree jumelle en mensuel, pour calculer la remise reelle de l'annuel.
-   * @param {SubscriptionCatalogEntry | null} entry
-   * @returns {SubscriptionCatalogEntry | null}
-   */
-  const findMonthlySibling = useCallback((entry) => {
-    if (!entry) return null;
-    const scopeType = getSubscriptionEntryScope(entry);
-    const tierRank = getSubscriptionEntryTierRank(entry);
-    return catalogEntries.find((candidate) => getSubscriptionEntryScope(candidate) === scopeType
-      && getSubscriptionEntryPeriod(candidate) === 'monthly'
-      && getSubscriptionEntryTierRank(candidate) === tierRank) || null;
-  }, [catalogEntries]);
-
-  /**
    * Badge de remise d'une carte : calcule sur SES deux prix, jamais global.
+   * L38 — la recherche de la jumelle mensuelle est partie dans
+   * `subscriptionBilling`, ou les deux autres surfaces de vente la partagent.
    * @param {SubscriptionCatalogEntry | null} entry
    * @returns {string}
    */
   const getDiscountLabel = useCallback((entry) => {
     if (billingPeriod !== 'yearly') return '';
     return formatSubscriptionYearlyDiscountLabel(
-      findMonthlySibling(entry)?.referencePriceEurCents,
+      findSubscriptionMonthlySiblingEntry(catalogEntries, entry)?.referencePriceEurCents,
       entry?.referencePriceEurCents,
     );
-  }, [billingPeriod, findMonthlySibling]);
+  }, [billingPeriod, catalogEntries]);
 
   const teamFeatureKeys = useMemo(
     () => (Array.isArray(teamEntry?.featureKeys) ? teamEntry.featureKeys.map(String) : []),

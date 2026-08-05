@@ -289,3 +289,38 @@ describe('GuideOffersRecap — l\'offre Club ne depend plus de la verification d
     expect(mockAlert).toHaveBeenCalled();
   });
 });
+
+// L38 — cet ecran est la DEUXIEME des trois surfaces de vente de l'app. L33 a
+// corrige la remise sur le carrousel ; ici la pilule annoncait encore « Annuel ·
+// 2 mois offerts », c'est-a-dire -17 %, alors que la grille serveur donne -37 %
+// sur l'offre Équipe. Deux surfaces sur trois sous-vendaient donc de plus de la
+// moitie ce qu'Adel offre reellement (prix reconfirmes le 2026-08-05).
+describe('GuideOffersRecap — la remise annoncee est celle DE LA CARTE (L38)', () => {
+  it('l\'offre Équipe annonce sa vraie remise, jamais « 2 mois offerts »', () => {
+    const tree = renderRecap();
+
+    // 7,99 x 12 = 95,88 contre 59,99 l'annee -> -37 %.
+    expect(hasTextContaining(tree, '−37 %')).toBe(true);
+    expect(hasTextContaining(tree, '2 mois offerts')).toBe(false);
+  });
+
+  it('TEMOIN — sur un palier Club, la meme etiquette affiche −17 %', () => {
+    // La correction ne doit pas remplacer un mensonge par un autre : Club suit
+    // exactement x10, ou « 2 mois offerts » etait juste.
+    const tree = renderRecap();
+
+    act(() => { findByText(tree, 'Club').props.onPress(); });
+
+    expect(hasTextContaining(tree, '−17 %')).toBe(true);
+  });
+
+  it('TEMOIN — en mensuel, ni remise ni equivalence ne sont affichees', () => {
+    const tree = renderRecap();
+
+    act(() => { findByText(tree, 'Mensuel').props.onPress(); });
+
+    expect(hasTextContaining(tree, '−37 %')).toBe(false);
+    expect(hasTextContaining(tree, '%')).toBe(false);
+    expect(hasTextContaining(tree, 'soit ')).toBe(false);
+  });
+});

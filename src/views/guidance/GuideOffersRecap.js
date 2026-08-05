@@ -8,7 +8,9 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import {
+  findSubscriptionMonthlySiblingEntry,
   formatSubscriptionMonthlyEquivalentLabel,
+  formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
 } from '@/domains/subscription/subscriptionBilling';
@@ -64,8 +66,11 @@ const CLUB_TIER_OFFER_LABELS = {
 };
 
 // Selecteur de periode de facturation, global a l'ecran (defaut produit : annuel).
+// L38 — la pilule ne porte PLUS de tag de remise : le catalogue a deux grilles
+// (Club x10 = -17 %, Equipe x7,5-7,7 = -36/-37 %), et « 2 mois offerts » sous-vendait
+// l'offre Equipe de plus de la moitie. La remise est calculee et portee PAR CARTE.
 const BILLING_PERIOD_OPTIONS = [
-  { id: 'yearly', label: 'Annuel · 2 mois offerts' },
+  { id: 'yearly', label: 'Annuel' },
   { id: 'monthly', label: 'Mensuel' },
 ];
 
@@ -381,6 +386,14 @@ function GuideOffersRecap({ navigation }) {
     const cardMonthlyLabel = isYearlyPeriod
       ? formatSubscriptionMonthlyEquivalentLabel(cardEntry?.referencePriceEurCents)
       : '';
+    // Remise calculee sur les DEUX prix de CETTE carte. Sans jumelle mensuelle
+    // dans le catalogue, le libelle est vide : on n'invente jamais une remise.
+    const cardDiscountLabel = isYearlyPeriod
+      ? formatSubscriptionYearlyDiscountLabel(
+        findSubscriptionMonthlySiblingEntry(catalogEntries, cardEntry)?.referencePriceEurCents,
+        cardEntry?.referencePriceEurCents,
+      )
+      : '';
 
     const cardBackgroundColor = isSelected
       ? 'rgba(1,179,244,0.10)'
@@ -486,6 +499,11 @@ function GuideOffersRecap({ navigation }) {
                 {cardPriceAmount}
               </Text>
               <Text style={[Fonts.p3Bold, Fonts.neutral300]}>{billingPeriodSuffix}</Text>
+              {cardDiscountLabel ? (
+                <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
+                  {cardDiscountLabel}
+                </Text>
+              ) : null}
               <View style={Alignments.fill} />
               <Text style={[Fonts.p3Bold, Fonts.primary200]}>
                 {cardMonthlyLabel}
