@@ -6,6 +6,8 @@ import HistoryWizardSingle from '@/views/historyWizard/HistoryWizardSingle';
 import PlayerCardScreen from '@/views/profile/PlayerCardScreen';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
+import SubscriptionCompare from '@/views/profile/SubscriptionCompare';
+import SubscriptionOffers from '@/views/profile/SubscriptionOffers';
 import SubscriptionOverview from '@/views/profile/SubscriptionOverview';
 import UserDetails from '@/views/profile/UserDetails';
 
@@ -51,6 +53,26 @@ function ProfileStack() {
             ...commonOptions,
             // Header court (handoff 7b) : le titre long entrait en collision avec la fleche.
             headerTitle: t('profile.subscription.headerTitle', 'Abonnement'),
+          }}
+        />
+        {/* L33 — les deux ecrans pousses par le hub. L'entete NATIF porte deja
+            la fleche de retour et le titre : aucun des deux ecrans ne dessine
+            la sienne, sinon l'ecran affiche DEUX fleches empilees (defaut trouve
+            a la recette du lot D2, corrige par soustraction). */}
+        <Stack.Screen
+          component={SubscriptionOffers}
+          name={RouteNames.SubscriptionOffers}
+          options={{
+            ...commonOptions,
+            headerTitle: t('profile.subscription.offersHeaderTitle', 'Changer d\'offre'),
+          }}
+        />
+        <Stack.Screen
+          component={SubscriptionCompare}
+          name={RouteNames.SubscriptionCompare}
+          options={{
+            ...commonOptions,
+            headerTitle: t('profile.subscription.compareHeaderTitle', 'Comparer'),
           }}
         />
         <Stack.Screen

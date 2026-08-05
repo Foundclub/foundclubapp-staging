@@ -11,6 +11,8 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.ProfileEdit]: '/profile/edit',
   [RouteNames.PlayerCard]: '/profile/player-card',
   [RouteNames.SubscriptionOverview]: '/profile/subscription',
+  [RouteNames.SubscriptionOffers]: '/profile/subscription/offers',
+  [RouteNames.SubscriptionCompare]: '/profile/subscription/compare',
   [RouteNames.Welcome]: '/onboarding/welcome',
   [RouteNames.UserRole]: '/onboarding/role',
   [RouteNames.UserName]: '/onboarding/name',

@@ -1,9 +1,11 @@
 import {
   buildSubscriptionChangePlanPayload,
   buildSubscriptionPurchasePayload,
+  formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
+  getSubscriptionEntryTierRank,
   getSubscriptionTestProvider,
   isSubscriptionBillingTestModeEnabled,
   sortSubscriptionCatalogEntries,
@@ -24,8 +26,12 @@ describe('subscriptionBilling', () => {
   test('sorts Team offers before Club offers', () => {
     const sortedEntries = sortSubscriptionCatalogEntries([
       { billingPeriod: 'yearly', planCode: 'fc_club_tier_1_yearly', scopeType: 'CLUB' },
-      { billingPeriod: 'monthly', planCode: 'fc_team_2_monthly', scopeType: 'TEAM', slotCount: 2 },
-      { billingPeriod: 'monthly', planCode: 'fc_team_1_monthly', scopeType: 'TEAM', slotCount: 1 },
+      {
+        billingPeriod: 'monthly', planCode: 'fc_team_2_monthly', scopeType: 'TEAM', slotCount: 2,
+      },
+      {
+        billingPeriod: 'monthly', planCode: 'fc_team_1_monthly', scopeType: 'TEAM', slotCount: 1,
+      },
     ]);
 
     expect(sortedEntries.map((entry) => entry.planCode)).toEqual([
@@ -85,10 +91,10 @@ describe('subscriptionBilling', () => {
         planCode: 'fc_team_1_monthly',
         providerProductId: 'fc_team_1_monthly',
       },
+      now,
       provider: 'google',
       teamDocumentIds: ['team-1'],
       trustedValidation: true,
-      now,
     })).toMatchObject({
       autoRenew: true,
       billingPeriod: 'monthly',
@@ -113,10 +119,10 @@ describe('subscriptionBilling', () => {
         providerProductId: 'fc_club_tier_1_yearly',
       },
       clubDocumentId: 'club-1',
+      now,
       provider: 'apple',
       subscriptionDocumentId: 'subscription-1',
       trustedValidation: true,
-      now,
     })).toMatchObject({
       autoRenew: true,
       billingPeriod: 'yearly',
@@ -134,5 +140,31 @@ describe('subscriptionBilling', () => {
   test('maps Team slot errors to actionable copy', () => {
     expect(getSubscriptionBillingErrorMessage({ message: 'TEAM_SLOT_COUNT_EXCEEDED' }))
       .toBe('Cette offre n a pas assez de slots pour couvrir autant d équipes. Ajuste la sélection avant de continuer.');
+  });
+
+  test('reads the tier rank from slot count (Team) or plan code (Club)', () => {
+    expect(getSubscriptionEntryTierRank({ scopeType: 'TEAM', slotCount: 3 })).toBe(3);
+    expect(getSubscriptionEntryTierRank({ planCode: 'fc_club_tier_2_yearly', scopeType: 'CLUB' })).toBe(2);
+    expect(getSubscriptionEntryTierRank(null)).toBe(0);
+  });
+
+  // L33 — les six paliers du catalogue serveur portent DEUX grilles de remise.
+  // Un tag global « 2 mois offerts » (= 17 %) est faux pour la moitie d'entre
+  // eux : c'est pour ca que le badge est calcule par carte.
+  test('computes the real yearly discount, which differs between Team and Club', () => {
+    expect(formatSubscriptionYearlyDiscountLabel(799, 5999)).toBe('−37 %');
+    expect(formatSubscriptionYearlyDiscountLabel(1299, 9999)).toBe('−36 %');
+    expect(formatSubscriptionYearlyDiscountLabel(1699, 12999)).toBe('−36 %');
+    expect(formatSubscriptionYearlyDiscountLabel(1999, 19999)).toBe('−17 %');
+    expect(formatSubscriptionYearlyDiscountLabel(3499, 34999)).toBe('−17 %');
+    expect(formatSubscriptionYearlyDiscountLabel(5499, 54999)).toBe('−17 %');
+  });
+
+  test('never invents a discount when a price is missing or the yearly is not cheaper', () => {
+    expect(formatSubscriptionYearlyDiscountLabel(null, 5999)).toBe('');
+    expect(formatSubscriptionYearlyDiscountLabel(799, null)).toBe('');
+    expect(formatSubscriptionYearlyDiscountLabel(0, 5999)).toBe('');
+    expect(formatSubscriptionYearlyDiscountLabel(799, 9588)).toBe('');
+    expect(formatSubscriptionYearlyDiscountLabel(799, 12000)).toBe('');
   });
 });

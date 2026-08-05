@@ -49,6 +49,81 @@ export const getSubscriptionTestProvider = (platform) => (
 );
 
 /**
+ * Entrees du catalogue, quelle que soit la forme rendue par le serveur
+ * (`{ data: [...] }` ou un tableau nu).
+ *
+ * L33 — cette lecture etait recopiee a l'identique dans TROIS surfaces de vente
+ * (SubscriptionOverview, GuideOffersRecap, SubscriptionPaywallSheet). Elle vit
+ * desormais ici, avec les trois lectures d'entree ci-dessous.
+ * @param {any} payload
+ * @returns {any[]}
+ */
+export const getSubscriptionCatalogEntries = (payload) => {
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload)) return payload;
+  return [];
+};
+
+/**
+ * @param {any} entry
+ * @returns {string} 'TEAM', 'CLUB' ou ''.
+ */
+export const getSubscriptionEntryScope = (entry) => (
+  String(entry?.scopeType || '').trim().toUpperCase()
+);
+
+/**
+ * @param {any} entry
+ * @returns {string} 'monthly', 'yearly' ou ''.
+ */
+export const getSubscriptionEntryPeriod = (entry) => (
+  String(entry?.billingPeriod || '').trim().toLowerCase()
+);
+
+/**
+ * Rang du palier dans sa famille : nombre d'equipes couvertes cote Equipe,
+ * numero de tier cote Club (`fc_club_tier_2_yearly` -> 2).
+ * @param {any} entry
+ * @returns {number}
+ */
+export const getSubscriptionEntryTierRank = (entry) => (
+  getSubscriptionEntryScope(entry) === 'CLUB'
+    ? Number(String(entry?.planCode || '').match(/tier_(\d+)/)?.[1] || 0)
+    : Number(entry?.slotCount || 0)
+);
+
+/**
+ * Remise reelle de l'annuel face a douze mensualites, arrondie a l'entier.
+ *
+ * L33 — pourquoi ce calcul plutot qu'un tag « 2 mois offerts » pose une fois
+ * pour toutes sur la pilule Annuel : le catalogue porte DEUX grilles.
+ * Club suit exactement x10 (remise 17 %) ; Equipe est a x7,5-x7,7 (remise 36 %).
+ * Un tag unique sous-vend Equipe de plus de moitie OU surestime Club du double.
+ * Le badge est donc calcule et porte PAR CARTE (decision d'Adel du 2026-08-05).
+ *
+ * Rend '' des qu'un des deux prix manque ou que l'annuel n'est pas avantageux :
+ * on n'affiche jamais une remise inventee ni une remise negative.
+ * @param {number | null | undefined} monthlyPriceEurCents
+ * @param {number | null | undefined} yearlyPriceEurCents
+ * @returns {string}
+ */
+export const formatSubscriptionYearlyDiscountLabel = (
+  monthlyPriceEurCents,
+  yearlyPriceEurCents,
+) => {
+  const monthlyCents = Number(monthlyPriceEurCents);
+  const yearlyCents = Number(yearlyPriceEurCents);
+  if (!Number.isFinite(monthlyCents) || monthlyCents <= 0) return '';
+  if (!Number.isFinite(yearlyCents) || yearlyCents <= 0) return '';
+
+  const discountRatio = 1 - (yearlyCents / (monthlyCents * 12));
+  const discountPercent = Math.round(discountRatio * 100);
+  if (discountPercent <= 0) return '';
+
+  return `−${discountPercent} %`;
+};
+
+/**
  * @param {any[]} entries
  * @returns {any[]}
  */

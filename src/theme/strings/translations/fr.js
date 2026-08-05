@@ -2086,8 +2086,21 @@ export default {
       administration: 'Administration',
       profileActivity: 'Profil & activité',
     },
+    // L33 — le parcours Abonnement est en trois ecrans : le hub (gerer), le
+    // carrousel (choisir) et la matrice (comparer). Ces cles nomment les
+    // rangees du hub et les entetes natifs des deux ecrans pousses.
     subscription: {
+      actions: {
+        changeOffer: 'Changer d\'offre',
+        compareOffers: 'Comparer les offres',
+        restore: 'Restaurer mes achats',
+        viewClub: 'Voir mon club',
+        viewClubHint: 'Demandes · certification',
+      },
+      compareHeaderTitle: 'Comparer',
       cta: 'Voir le détail des offres',
+      headerTitle: 'Abonnement',
+      offersHeaderTitle: 'Changer d\'offre',
       quota: {
         labels: {
           EVENT_PUBLISH: 'Événements',

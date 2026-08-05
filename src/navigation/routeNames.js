@@ -147,6 +147,14 @@ export const RouteNames = /** @type {const} */ ({
   SearchReservations: 'SearchReservations',
   SquadDetails: 'SquadDetails', // New route for League Squad Details
   SquadEdit: 'SquadEdit',
+  // L33 — le parcours Abonnement est en TROIS ecrans : le hub garde le nom
+  // historique `SubscriptionOverview` et son URL `/profile/subscription`
+  // (trois fichiers de test et la table des routes du site en dependent) ;
+  // `SubscriptionCompare` (matrice) et `SubscriptionOffers` (carrousel de
+  // vente) sont neufs. Toute surface qui vient d'un mur payant ou d'un
+  // compteur doit viser SubscriptionOffers, jamais le hub : le hub ne vend rien.
+  SubscriptionCompare: 'SubscriptionCompare',
+  SubscriptionOffers: 'SubscriptionOffers',
   SubscriptionOverview: 'SubscriptionOverview',
   SubscriptionSuccess: 'SubscriptionSuccess',
   SubscriptionWebSuccess: 'SubscriptionWebSuccess',
