@@ -44,7 +44,12 @@ describe('fr.js — libellés de l\'étape « Trouve ton club » (6b)', () => {
       .not.toContain('revendiquer');
   });
 
-  it('« Continuer plus tard » reste dans le carnet commun, utilisé par 18 autres écrans', () => {
+  // Le titre annonçait « 18 autres écrans ». Mesure du 2026-08-06 : il y en
+  // avait 9, tous dans views/onboarding — et depuis D15 il n'y en a plus AUCUN,
+  // le lien « Passer cette étape » les a tous remplacés. La clé reste malgré
+  // tout : rien ne prouve qu'aucune traduction ni aucun futur écran ne s'y
+  // rattachera, et la retirer du carnet commun est un geste à part.
+  it('« Continuer plus tard » reste dans le carnet commun, même sans utilisateur', () => {
     expect(lire('common.actions.continueLater')).toBe('Continuer plus tard');
   });
 });
