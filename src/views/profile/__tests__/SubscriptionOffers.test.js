@@ -22,6 +22,7 @@ const mockIsPurchaseAvailable = jest.fn();
 const mockGetActiveRail = jest.fn();
 const mockInvalidate = jest.fn();
 const mockScheduleRefresh = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
@@ -391,7 +392,10 @@ const rendre = async (surcharges = {}, parametres = undefined) => {
   let arbre;
   await act(async () => {
     arbre = renderer.create(
-      <SubscriptionOffers route={parametres ? { params: parametres } : undefined} />,
+      <SubscriptionOffers
+        navigation={{ navigate: mockNavigate }}
+        route={parametres ? { params: parametres } : undefined}
+      />,
     );
   });
   return arbre;
@@ -546,6 +550,68 @@ describe('Carrousel d\'offres — les prix viennent du catalogue', () => {
 
     expect(texteVisible(arbre)).toContain('Aucune offre Équipe pour cette période.');
     expect(libelleDuCta(arbre)).toBe('Offre indisponible');
+  });
+});
+
+// L38 — il y avait TROIS comportements d'apres-achat sur trois surfaces. Le
+// Recap du tour guide poussait vers l'ecran de succes refondu ; le carrousel,
+// lui, avait repris verbatim l'`Alert.alert()` de l'ancien ecran Abonnement.
+// Un client qui payait depuis le carrousel voyait donc une alerte systeme au
+// lieu de l'ecran de celebration — et perdait la liste de ce qu'il vient de
+// debloquer ainsi que ses premiers pas.
+describe('Carrousel d\'offres — apres l\'achat, l\'ecran de succes (L38)', () => {
+  it('un achat Club pousse vers SubscriptionSuccess, sans alerte systeme', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+
+    expect(mockNavigate).toHaveBeenCalledWith('SubscriptionSuccess', expect.objectContaining({
+      // La portee vient de l'ACHAT, pas du cache d'abonnement : le webhook du
+      // store n'a pas encore converge (L08).
+      clubDocumentId: 'club-1',
+      offerLabel: 'Club S',
+      offerScope: 'CLUB',
+    }));
+    expect(mockAlert).not.toHaveBeenCalled();
+  });
+
+  it('un achat Équipe pousse lui aussi vers SubscriptionSuccess', async () => {
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Choisir Équipe · 59,99 €/an');
+    await appuyerSur(arbre, 'Activer cette offre');
+
+    expect(mockNavigate).toHaveBeenCalledWith('SubscriptionSuccess', expect.objectContaining({
+      offerLabel: 'Équipe · 1 équipe',
+      offerScope: 'TEAM',
+    }));
+    expect(mockAlert).not.toHaveBeenCalled();
+  });
+
+  it('le calendrier de convergence L08 est arme AVANT la bascule d\'ecran', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+
+    expect(mockScheduleRefresh).toHaveBeenCalled();
+  });
+
+  it('TEMOIN — un achat en echec ne pousse PAS vers l\'ecran de succes', async () => {
+    mockPerformPurchase.mockRejectedValue(new Error('CLUB_ALREADY_COVERED'));
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockAlert).toHaveBeenCalledWith('Erreur abonnement', expect.any(String));
+  });
+
+  it('TEMOIN — un achat abandonne dans la feuille ne pousse rien du tout', async () => {
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Choisir Équipe · 59,99 €/an');
+    await appuyerSur(arbre, 'Annuler');
+
+    expect(mockPerformPurchase).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
 

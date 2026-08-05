@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -51,6 +53,8 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
 import TierSelector from '@/components/molecules/tierSelector/TierSelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { getSubscriptionCatalog } from '@/services/subscription/subscriptionService';
 
@@ -142,7 +146,7 @@ const getEntryFeatureLabels = (entry, excludedFeatureKeys = []) => (
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement | null}
  */
-function SubscriptionOffers({ route }) {
+function SubscriptionOffers({ navigation, route }) {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -307,13 +311,46 @@ function SubscriptionOffers({ route }) {
   });
 
   /**
-   * @param {{ action: 'change' | 'purchase'; catalogEntry: SubscriptionCatalogEntry; input: Record<string, any>; successMessage?: string }} params
+   * Ce que l'ecran de succes doit annoncer pour l'offre qui vient d'etre
+   * encaissee. La portee vient de l'ACHAT, jamais du cache d'abonnement : juste
+   * apres l'achat, le webhook du store n'a pas encore converge (L08).
+   * @param {SubscriptionCatalogEntry | null} catalogEntry
+   * @returns {Record<string, any>}
+   */
+  const buildPurchaseSuccessParams = useCallback((catalogEntry) => {
+    const isClubOffer = getSubscriptionEntryScope(catalogEntry) === 'CLUB';
+    const slotCount = Number(catalogEntry?.slotCount || 0);
+    const renewalDate = new Date();
+    if (getSubscriptionEntryPeriod(catalogEntry) === 'monthly') {
+      renewalDate.setMonth(renewalDate.getMonth() + 1);
+    } else {
+      renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+    }
+
+    return {
+      clubDocumentId: isClubOffer ? currentClubDocumentId : undefined,
+      offerLabel: isClubOffer
+        ? `Club ${CLUB_TIER_LETTERS[getSubscriptionEntryTierRank(catalogEntry)] || ''}`.trim()
+        : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+      offerScope: isClubOffer ? 'CLUB' : 'TEAM',
+      renewalDateLabel: format(renewalDate, 'd MMMM yyyy', { locale: fr }),
+      // Sous cet ecran, dans la pile, il y a le CATALOGUE : « revenir » y
+      // rouvrirait des offres a quelqu'un qui vient de payer. On repart de
+      // l'accueil, comme le Recap du tour guide.
+      resumeCtaLabel: 'C\'est parti !',
+      resumeMode: 'home',
+    };
+  }, [currentClubDocumentId]);
+
+  /**
+   * @param {object} params
+   * @param {'change' | 'purchase'} params.action
+   * @param {SubscriptionCatalogEntry} params.catalogEntry
+   * @param {Record<string, any>} params.input
    * @returns {Promise<any>}
    */
   const commitSubscriptionMutation = useCallback(async (params) => {
-    const {
-      action, catalogEntry, input, successMessage,
-    } = params;
+    const { action, catalogEntry, input } = params;
     setActiveActionPlanCode(String(catalogEntry?.planCode || '').trim());
 
     try {
@@ -321,21 +358,28 @@ function SubscriptionOffers({ route }) {
       await refreshSubscriptionContext();
       closeTeamPlanModal();
 
-      Alert.alert(
-        action === 'change' ? 'Abonnement mis à jour' : 'Abonnement active',
-        result?.pendingWebhook
-          ? 'Paiement confirmé par le store. Tes accès se mettent à jour automatiquement d\'ici quelques instants.'
-          : (successMessage || 'Ton contexte abonnement vient d être mis à jour.'),
-      );
+      // L38 — l'ecran de succes (refondu par L11 puis par le lot design D1), et
+      // non plus une alerte systeme. Le decalage d'ouverture des droits par le
+      // webhook du store y est deja gere (calendrier de relances 0/2/5/10/20 s) :
+      // on passe par le meme chemin que le Recap du tour guide.
+      navigation.navigate(RouteNames.SubscriptionSuccess, buildPurchaseSuccessParams(catalogEntry));
 
       return result;
     } catch (error) {
+      // Pas de `throw` : aucun appelant ne rattrape cette promesse, et la
+      // relancer produisait un rejet non traite APRES l'alerte (mesure L38).
       Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
-      throw error;
+      return null;
     } finally {
       setActiveActionPlanCode('');
     }
-  }, [closeTeamPlanModal, refreshSubscriptionContext, subscriptionMutation]);
+  }, [
+    buildPurchaseSuccessParams,
+    closeTeamPlanModal,
+    navigation,
+    refreshSubscriptionContext,
+    subscriptionMutation,
+  ]);
 
   /**
    * @param {SubscriptionCatalogEntry} catalogEntry
@@ -401,14 +445,7 @@ function SubscriptionOffers({ route }) {
       input.subscriptionDocumentId = primarySubscriptionDocumentId;
     }
 
-    await commitSubscriptionMutation({
-      action,
-      catalogEntry,
-      input,
-      // R10 — le client qui vient de payer n'a pas a lire une condition qui
-      // n'existe plus : ses droits Club sont ouverts immediatement.
-      successMessage: 'Ton offre Club est bien enregistrée. Tous tes droits Club sont actifs immédiatement.',
-    });
+    await commitSubscriptionMutation({ action, catalogEntry, input });
   }, [
     activePlanCodes,
     commitSubscriptionMutation,
@@ -510,7 +547,6 @@ function SubscriptionOffers({ route }) {
       action,
       catalogEntry: selectedTeamPlanEntry,
       input,
-      successMessage: `Ton offre Team couvre maintenant ${selectedTeamIds.length} équipe${selectedTeamIds.length > 1 ? 's' : ''}.`,
     });
   }, [
     activePlanCodes,
