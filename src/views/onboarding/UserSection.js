@@ -78,7 +78,10 @@ function UserSection({ navigation }) {
       const nextRoute = resolveAvailableRoute(
         navigation,
         getNextOnboardingRoute(RouteNames.UserSection),
-        RouteNames.UserBirthdate,
+        // D15 - le repli etait `UserBirthdate`, qui n'est plus une etape :
+        // la date de naissance est saisie sur l'ecran fusionne « Qui es-tu ? »,
+        // AVANT celui-ci. L'etape suivante commune aux parcours est l'adresse.
+        RouteNames.UserAddress,
       );
       if (nextRoute) {
         navigation.navigate(nextRoute);

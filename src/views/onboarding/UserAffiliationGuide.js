@@ -28,6 +28,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import Stepper from '@/components/atoms/stepper/Stepper';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
@@ -35,7 +36,6 @@ import OnboardingOverlay from '@/components/molecules/onboardingOverlay/Onboardi
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingClubCard from '@/views/onboarding/components/OnboardingClubCard';
-import OnboardingSegmentedStepper from '@/views/onboarding/components/OnboardingSegmentedStepper';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -377,10 +377,13 @@ function UserAffiliationGuideContent({ navigation }) {
     });
   }, [getNextOnboardingRoute, getPostOnboardingHomeRoute, navigation, userData?.documentId]);
 
-  // Header : bouton retour rond (headerBackImage de commonOptions, inchangé),
-  // stepper SEGMENTÉ à la place de la barre continue, et « Passer » à la place
-  // du compteur « 3/4 ». Posé ici par setOptions pour ne toucher qu'à cet écran :
-  // PrivateNavigator continue de servir la barre continue aux autres étapes.
+  // Header : bouton retour rond (headerBackImage de commonOptions, inchangé).
+  //
+  // D15 — cet écran rejoint la progression COMMUNE : la même barre continue que
+  // les 12 autres étapes, et le compteur « n/N » de retour à l'écran. Le stepper
+  // segmenté propre à cette étape a été supprimé ; le pack ne veut plus qu'UNE
+  // seule progression, identique partout. « Passer » reste à droite, à côté du
+  // compteur.
   const stepNumber = onboardingViews?.views
     ?.find((view) => view.route === RouteNames.UserAffiliationGuide)?.index || 0;
   const onboardingTotalViews = onboardingViews?.totalViews || 0;
@@ -392,17 +395,26 @@ function UserAffiliationGuideContent({ navigation }) {
 
   useLayoutEffect(() => {
     if (typeof navigation?.setOptions !== 'function') return;
-    const skipLink = (
-      <AffiliationSkipLink hint={skipHint} label={skipLabel} onPress={handleContinueLater} />
+    const headerRight = (
+      <View style={[Alignments.row, Alignments.alignCenter]}>
+        {stepNumber > 0 && onboardingTotalViews > 0 ? (
+          <Text style={[Fonts.p2, Fonts.neutral300]}>
+            {`${stepNumber}/${onboardingTotalViews}`}
+          </Text>
+        ) : null}
+        <AffiliationSkipLink hint={skipHint} label={skipLabel} onPress={handleContinueLater} />
+      </View>
     );
     const stepper = (
-      <OnboardingSegmentedStepper currentStep={stepNumber} steps={onboardingTotalViews} />
+      <Stepper currentStep={stepNumber} steps={onboardingTotalViews} />
     );
     navigation.setOptions({
-      headerRight: asHeaderSlot(skipLink),
+      headerRight: asHeaderSlot(headerRight),
       headerTitle: asHeaderSlot(stepper),
     });
   }, [
+    Alignments,
+    Fonts,
     handleContinueLater,
     navigation,
     onboardingTotalViews,

@@ -10,6 +10,7 @@ import {
   getRoleDocumentIdByKey,
   getStoredAuthSessions,
   getUserRoleKey,
+  onboardingCollectsBirthdate,
   USER_ROLES,
 } from '@/domains/auth/authUseCases';
 import { storage } from '@/store/appContext';
@@ -266,11 +267,11 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.new },
       });
 
-      expect(result.totalViews).toBe(14);
+      expect(result.totalViews).toBe(13);
       expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserRole });
       expect(result.views[result.views.length - 1]).toEqual({
         canShow: true,
-        index: 14,
+        index: 13,
         route: RouteNames.Welcome,
       });
     });
@@ -280,10 +281,9 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.coach },
       });
 
-      expect(result.totalViews).toBe(6);
+      expect(result.totalViews).toBe(5);
       expect(result.views.map((v) => v.route)).toEqual([
         RouteNames.UserName,
-        RouteNames.UserBirthdate,
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
         RouteNames.UserAffiliationGuide,
@@ -298,7 +298,6 @@ describe('authUseCases', () => {
 
       expect(result.views.map((v) => v.route)).toEqual([
         RouteNames.UserName,
-        RouteNames.UserBirthdate,
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
         RouteNames.UserAffiliationGuide,
@@ -316,7 +315,7 @@ describe('authUseCases', () => {
       const parentalStep = result.views.find((view) => view.route === RouteNames.UserParentalDeclaration);
       expect(parentalStep).toEqual({
         canShow: true,
-        index: 4,
+        index: 2,
         route: RouteNames.UserParentalDeclaration,
       });
     });
@@ -394,11 +393,10 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.player },
       });
 
-      expect(result.totalViews).toBe(14);
+      expect(result.totalViews).toBe(13);
       expect(result.views.map((v) => v.route)).toEqual([
         RouteNames.UserName,
         RouteNames.UserSection,
-        RouteNames.UserBirthdate,
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
         RouteNames.UserSport,
@@ -429,14 +427,41 @@ describe('authUseCases', () => {
 
     it('hides steps already filled', () => {
       const result = getOnboardingViews({
+        birthdate: '1990-01-01',
         firstname: 'John',
         lastname: 'Doe',
         role: { name: USER_ROLES.coach },
       });
 
-      expect(result.totalViews).toBe(6);
+      expect(result.totalViews).toBe(5);
       expect(result.views[0]).toEqual({ canShow: false, index: 1, route: RouteNames.UserName });
-      expect(result.views[1]).toEqual({ canShow: true, index: 2, route: RouteNames.UserBirthdate });
+      expect(result.views[1]).toEqual({ canShow: true, index: 2, route: RouteNames.UserAddress });
+    });
+
+    // D15 - l'ecran fusionne ne se saute que si les TROIS champs sont connus.
+    // Sans cette regle, un coach dont le nom est deja rempli n'aurait plus
+    // AUCUN ecran ou saisir sa date de naissance : la declaration parentale
+    // deviendrait injoignable.
+    it('keeps the merged identity step visible when only the name is known', () => {
+      const result = getOnboardingViews({
+        firstname: 'John',
+        lastname: 'Doe',
+        role: { name: USER_ROLES.coach },
+      });
+
+      expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserName });
+    });
+
+    // ... mais le dirigeant, lui, n'a jamais de date de naissance a saisir :
+    // son ecran doit bien se sauter des que nom et prenom sont connus.
+    it('hides the merged identity step for a president once the name is known', () => {
+      const result = getOnboardingViews({
+        firstname: 'John',
+        lastname: 'Doe',
+        role: { name: USER_ROLES.president },
+      });
+
+      expect(result.views[0]).toEqual({ canShow: false, index: 1, route: RouteNames.UserName });
     });
 
     it('skips position step when selected sport has no positions', () => {
@@ -446,7 +471,7 @@ describe('authUseCases', () => {
       });
 
       const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
-      expect(positionStep).toEqual({ canShow: false, index: 7, route: RouteNames.UserPosition });
+      expect(positionStep).toEqual({ canShow: false, index: 6, route: RouteNames.UserPosition });
     });
 
     // L44 — la liste des sports « qui ont des postes » etait derivee de
@@ -460,7 +485,7 @@ describe('authUseCases', () => {
       });
 
       const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
-      expect(positionStep).toEqual({ canShow: true, index: 7, route: RouteNames.UserPosition });
+      expect(positionStep).toEqual({ canShow: true, index: 6, route: RouteNames.UserPosition });
     });
 
     // `UserSport.js` enregistre `activity.name` tel que Strapi le nomme : la
@@ -472,7 +497,7 @@ describe('authUseCases', () => {
       });
 
       const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
-      expect(positionStep).toEqual({ canShow: true, index: 7, route: RouteNames.UserPosition });
+      expect(positionStep).toEqual({ canShow: true, index: 6, route: RouteNames.UserPosition });
     });
 
     it('skips position step when preferred sport is not selected', () => {
@@ -481,7 +506,7 @@ describe('authUseCases', () => {
       });
 
       const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
-      expect(positionStep).toEqual({ canShow: false, index: 7, route: RouteNames.UserPosition });
+      expect(positionStep).toEqual({ canShow: false, index: 6, route: RouteNames.UserPosition });
     });
 
     it('keeps club visibility step visible even with default isLookingForClub value', () => {
@@ -493,7 +518,7 @@ describe('authUseCases', () => {
       const clubSearchStep = result.views.find((v) => v.route === RouteNames.UserClubSearch);
       expect(clubSearchStep).toEqual({
         canShow: true,
-        index: 12,
+        index: 11,
         route: RouteNames.UserClubSearch,
       });
     });
@@ -509,7 +534,7 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.coach },
       });
 
-      expect(result.totalViews).toBe(6);
+      expect(result.totalViews).toBe(5);
       const visibleRoutes = result.views.filter((v) => v.canShow).map((v) => v.route);
       expect(visibleRoutes).toEqual([RouteNames.Welcome]);
     });
@@ -523,7 +548,7 @@ describe('authUseCases', () => {
       const affiliationStep = result.views.find((v) => v.route === RouteNames.UserAffiliationGuide);
       expect(affiliationStep).toEqual({
         canShow: false,
-        index: 5,
+        index: 4,
         route: RouteNames.UserAffiliationGuide,
       });
     });
@@ -551,8 +576,181 @@ describe('authUseCases', () => {
       const affiliationStep = result.views.find((v) => v.route === RouteNames.UserAffiliationGuide);
       expect(affiliationStep).toEqual({
         canShow: false,
-        index: 13,
+        index: 12,
         route: RouteNames.UserAffiliationGuide,
+      });
+    });
+
+    // ------------------------------------------------------------------
+    // D15 - FILET DE CARACTERISATION (E6)
+    //
+    // `getOnboardingViews` est le SEUL endroit qui decide de l'ordre ET du
+    // nombre d'etapes de l'inscription : le `n/N` de l'en-tete en sort
+    // directement (`PrivateNavigator.js` -> `onboardingViews.totalViews`).
+    // Les 9 ecrans d'inscription, eux, n'ont aucun test.
+    //
+    // Ce bloc epingle la liste ORDONNEE des routes et le total pour les 5
+    // roles, cas majeur et cas mineur. Toute modification du parcours doit
+    // passer par ici : c'est le filet des lots D15/D16/D17.
+    // ------------------------------------------------------------------
+    describe('D15 - parcours complet, liste ordonnee et total par role', () => {
+      // Sous le seuil parental (15 ans) tant que la suite tourne avant 2033.
+      const BIRTHDATE_MINEUR = '2018-05-14';
+
+      const PARCOURS = [
+        {
+          roleName: USER_ROLES.player,
+          routes: [
+            RouteNames.UserName,
+            RouteNames.UserSection,
+            RouteNames.UserAddress,
+            RouteNames.UserAvatar,
+            RouteNames.UserSport,
+            RouteNames.UserPosition,
+            RouteNames.UserPhysique,
+            RouteNames.UserLevel,
+            RouteNames.UserCategory,
+            RouteNames.UserSportHistory,
+            RouteNames.UserClubSearch,
+            RouteNames.UserAffiliationGuide,
+            RouteNames.Welcome,
+          ],
+          totalViews: 13,
+          totalViewsMineur: 14,
+        },
+        {
+          roleName: USER_ROLES.coach,
+          routes: [
+            RouteNames.UserName,
+            RouteNames.UserAddress,
+            RouteNames.UserAvatar,
+            RouteNames.UserAffiliationGuide,
+            RouteNames.Welcome,
+          ],
+          totalViews: 5,
+          totalViewsMineur: 6,
+        },
+        {
+          roleName: USER_ROLES.president,
+          routes: [
+            RouteNames.UserName,
+            RouteNames.UserAvatar,
+            RouteNames.UserAffiliationGuide,
+            RouteNames.Welcome,
+          ],
+          // Le dirigeant n'a pas d'etape date de naissance : pas de
+          // declaration parentale possible, le total ne bouge pas.
+          totalViews: 4,
+          totalViewsMineur: 4,
+        },
+        {
+          roleName: USER_ROLES.superAdmin,
+          routes: [
+            RouteNames.UserName,
+            RouteNames.UserAvatar,
+            RouteNames.Welcome,
+          ],
+          totalViews: 3,
+          totalViewsMineur: 3,
+        },
+        {
+          roleName: USER_ROLES.new,
+          routes: [
+            RouteNames.UserRole,
+            RouteNames.UserName,
+            RouteNames.UserSection,
+            RouteNames.UserAddress,
+            RouteNames.UserAvatar,
+            RouteNames.UserSport,
+            RouteNames.UserPosition,
+            RouteNames.UserPhysique,
+            RouteNames.UserLevel,
+            RouteNames.UserCategory,
+            RouteNames.UserSportHistory,
+            RouteNames.UserClubSearch,
+            RouteNames.Welcome,
+          ],
+          totalViews: 13,
+          totalViewsMineur: 14,
+        },
+      ];
+
+      it.each(PARCOURS)(
+        'role $roleName : $totalViews etapes, dans cet ordre exact',
+        ({ roleName, routes, totalViews }) => {
+          const result = getOnboardingViews({ role: { name: roleName } });
+
+          expect(result.views.map((view) => view.route)).toEqual(routes);
+          expect(result.totalViews).toBe(totalViews);
+        },
+      );
+
+      it.each(PARCOURS)(
+        'role $roleName, utilisateur mineur : $totalViewsMineur etapes',
+        ({ roleName, totalViewsMineur }) => {
+          const result = getOnboardingViews({
+            birthdate: BIRTHDATE_MINEUR,
+            role: { name: roleName },
+          });
+
+          expect(result.totalViews).toBe(totalViewsMineur);
+        },
+      );
+
+      // Le piege de la fusion nom + date : `needsParentalDeclaration` se
+      // calcule A PARTIR de la date de naissance. Depuis D15 cette date est
+      // saisie sur l'ecran fusionne `UserName` ; la declaration parentale doit
+      // donc arriver JUSTE APRES lui, jamais avant.
+      it.each(PARCOURS.filter((parcours) => parcours.totalViewsMineur > parcours.totalViews))(
+        'role $roleName, mineur : la declaration parentale suit immediatement l ecran fusionne',
+        ({ roleName }) => {
+          const result = getOnboardingViews({
+            birthdate: BIRTHDATE_MINEUR,
+            role: { name: roleName },
+          });
+
+          const routes = result.views.map((view) => view.route);
+          const indexDeclaration = routes.indexOf(RouteNames.UserParentalDeclaration);
+          const indexEcranFusionne = routes.indexOf(RouteNames.UserName);
+
+          expect(indexDeclaration).toBeGreaterThan(-1);
+          expect(indexDeclaration).toBe(indexEcranFusionne + 1);
+        },
+      );
+
+      it.each(PARCOURS.filter((parcours) => parcours.totalViewsMineur === parcours.totalViews))(
+        'role $roleName : aucune declaration parentale, ce parcours ne demande pas la date de naissance',
+        ({ roleName }) => {
+          const result = getOnboardingViews({
+            birthdate: BIRTHDATE_MINEUR,
+            role: { name: roleName },
+          });
+
+          expect(result.views.map((view) => view.route))
+            .not.toContain(RouteNames.UserParentalDeclaration);
+        },
+      );
+
+      // D15 - LE LIEN QUI EMPECHE LA DIVERGENCE.
+      // `onboardingCollectsBirthdate` decide si l'ecran fusionne affiche les
+      // trois champs de date ; `getOnboardingViews` decide si une declaration
+      // parentale peut s'inserer. Les deux doivent dire la MEME chose, sinon
+      // un role se verrait demander une date qui ne sert a rien, ou pire, ne se
+      // la verrait jamais demander alors que son parcours l'attend.
+      it.each(PARCOURS)(
+        'role $roleName : l ecran fusionne demande la date de naissance ssi le parcours peut inserer la declaration parentale',
+        ({ roleName, totalViews, totalViewsMineur }) => {
+          expect(onboardingCollectsBirthdate({ name: roleName }))
+            .toBe(totalViewsMineur > totalViews);
+        },
+      );
+
+      // La date de naissance n'a plus d'etape a elle : l'ecran fusionne l'a
+      // absorbee. Aucun parcours ne doit la faire reapparaitre.
+      it.each(PARCOURS)('role $roleName : plus aucune etape date de naissance separee', ({ roleName }) => {
+        const result = getOnboardingViews({ role: { name: roleName } });
+
+        expect(result.views.map((view) => view.route)).not.toContain(RouteNames.UserBirthdate);
       });
     });
   });

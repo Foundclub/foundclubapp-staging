@@ -150,10 +150,6 @@ jest.mock('@/components/templates/FormScreenContainer', () => {
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => () => null);
 jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => () => null);
 jest.mock('@/components/molecules/onboardingOverlay/OnboardingOverlay', () => () => null);
-jest.mock(
-  '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint',
-  () => () => null,
-);
 
 const emptyQuery = {
   data: { pages: [{ data: [] }] },
@@ -346,27 +342,32 @@ describe('UserAffiliationGuide — étape club de l\'onboarding', () => {
 // Ce qui est NOUVEAU dans le handoff 6b. Le bloc ci-dessus dit « rien n'a été
 // cassé » ; celui-ci dit « le design est bien là ».
 describe('UserAffiliationGuide — refonte 6b', () => {
-  it('le header porte un stepper SEGMENTÉ (un segment par étape) et « Passer »', () => {
+  // D15 — l'étape club rejoint la progression COMMUNE. Le stepper segmenté qui
+  // ne servait qu'ici a été supprimé : c'est la même barre continue que les 12
+  // autres étapes, et le compteur « n/N » revient à l'écran, à côté de « Passer ».
+  it('le header porte la barre de progression COMMUNE et « Passer »', () => {
     const rendered = renderScreen();
     const [headerTitleTree, headerRightTree] = rendered.headerNodes();
 
     const stepper = headerTitleTree.root
-      .findAll((node) => node.props?.testID === 'onboarding-segmented-stepper')[0];
+      .findAll((node) => node.props?.testID === 'onboarding-stepper')[0];
     expect(stepper).toBeDefined();
-    // 4 étapes déclarées par onboardingViews => 4 segments, 3 franchis.
+    // 4 étapes déclarées par onboardingViews, 3 franchies.
+    expect(stepper.props.accessibilityRole).toBe('progressbar');
     expect(stepper.props.accessibilityLabel).toBe('Étape 3 sur 4');
+    // Une barre continue : un fond + un remplissage à 75 %, pas 4 segments.
     expect(stepper.findAllByType(View).filter(
       (/** @type {any} */ node) => node.props?.style?.some?.(
-        (/** @type {any} */ style) => style?.height === 4,
+        (/** @type {any} */ style) => style?.width === '75%',
       ),
-    ).length).toBe(4);
+    ).length).toBe(1);
 
     expect(collectTexts(headerRightTree)).toContain('Passer');
   });
 
-  it('le compteur « 3/4 » quitte l\'écran mais reste au lecteur d\'écran', () => {
-    const rendered = renderScreen();
-    expect(collectTexts(rendered.tree)).not.toContain('3/4');
+  it('le compteur « 3/4 » est de retour a l\'écran, comme sur les autres étapes', () => {
+    const [, headerRightTree] = renderScreen().headerNodes();
+    expect(collectTexts(headerRightTree)).toContain('3/4');
   });
 
   it('sous-titre bénéfice pour le joueur, sous-titre gestion pour le dirigeant', () => {

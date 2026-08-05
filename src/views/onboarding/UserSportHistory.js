@@ -7,9 +7,9 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection'; // Added import
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -132,18 +132,12 @@ function UserSportHistory({ navigation }) {
       </View>
 
       <View style={[Spaces.gap[16]]}>
-        <OnboardingOptionalHint />
         <Button
           onPress={handleNext}
           title={t('common.actions.next', 'Continuer')}
           variant="Primary"
         />
-        <Button
-          accessibilityLabel={t('common.actions.continueLater', 'Continuer plus tard')}
-          onPress={handleSkip}
-          title={t('common.actions.continueLater', 'Continuer plus tard')}
-          variant="Secondary"
-        />
+        <OnboardingSkipLink onPress={handleSkip} />
       </View>
     </FormScreenContainer>
   );

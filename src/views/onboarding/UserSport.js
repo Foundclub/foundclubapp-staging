@@ -11,8 +11,8 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
 
@@ -313,7 +313,6 @@ function UserSport({ navigation }) {
       </View>
 
       <OnboardingStickyFooter contentWidth="readable">
-        <OnboardingOptionalHint />
         <Button
           disabled={!selectedSport}
           isLoading={updateUserMutation.isPending}
@@ -321,12 +320,7 @@ function UserSport({ navigation }) {
           title={t('common.actions.next', 'Continuer')}
           variant="Primary"
         />
-        <Button
-          accessibilityLabel={t('common.actions.continueLater', 'Continuer plus tard')}
-          onPress={handleSkip}
-          title={t('common.actions.continueLater', 'Continuer plus tard')}
-          variant="Secondary"
-        />
+        <OnboardingSkipLink onPress={handleSkip} />
       </OnboardingStickyFooter>
     </FormScreenContainer>
   );

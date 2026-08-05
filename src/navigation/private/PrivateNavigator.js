@@ -58,15 +58,25 @@ function PrivateNavigator() {
   const getStepNumber = (/** @type {string} */ routeName) => onboardingViews?.views?.find((view) => view.route === routeName)?.index || 0;
   const getTotalSteps = () => onboardingViews?.totalViews || 0;
   const renderStepper = (/** @type {string} */ routeName) => <Stepper currentStep={getStepNumber(routeName)} steps={getTotalSteps()} />;
-  const renderStepperIndicator = (/** @type {string} */ routeName) => (
-    <View style={[Spaces.marginHorizontal[12]]}>
-      <Text style={[Fonts.p2, Fonts.neutral300]}>
-        {getStepNumber(routeName)}
-        /
-        {getTotalSteps()}
-      </Text>
-    </View>
-  );
+  // D15 - `getStepNumber` rend 0 des que la route n'est dans aucun parcours, et
+  // `views` peut etre vide : l'entete affichait alors « 0/13 ». On ne montre
+  // plus rien plutot qu'un zero. Meme garde que dans `Stepper`, qui rend `null`
+  // dans exactement les memes conditions.
+  const renderStepperIndicator = (/** @type {string} */ routeName) => {
+    const stepNumber = getStepNumber(routeName);
+    const totalSteps = getTotalSteps();
+    if (stepNumber === 0 || totalSteps === 0) return null;
+
+    return (
+      <View style={[Spaces.marginHorizontal[12]]}>
+        <Text style={[Fonts.p2, Fonts.neutral300]}>
+          {stepNumber}
+          /
+          {totalSteps}
+        </Text>
+      </View>
+    );
+  };
 
   const initialRouteName = useMemo(() => {
     const route = onboardingViews?.views?.reduce((acc, view) => {
