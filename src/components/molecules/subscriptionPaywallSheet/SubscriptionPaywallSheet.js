@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useEffect, useMemo, useState } from 'react';
@@ -38,6 +38,7 @@ import {
   performSubscriptionPurchase,
 } from '@/domains/subscription/subscriptionPurchaseRail';
 import { scheduleSubscriptionStateRefresh } from '@/domains/subscription/subscriptionRefresh';
+import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -47,26 +48,7 @@ import TierSelector from '@/components/molecules/tierSelector/TierSelector';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import {
-  getSubscriptionCatalog,
-  trackSubscriptionFunnelEvent,
-} from '@/services/subscription/subscriptionService';
-
-/**
- * @param {any} payload
- * @returns {any[]}
- */
-const getCatalogEntriesFromResponse = (payload) => {
-  if (Array.isArray(payload?.data)) {
-    return payload.data;
-  }
-
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-
-  return [];
-};
+import { trackSubscriptionFunnelEvent } from '@/services/subscription/subscriptionService';
 
 /**
  * Rang d'un palier dans sa famille : nombre d'equipes couvertes pour une offre
@@ -187,17 +169,10 @@ function SubscriptionPaywallSheet({
     [decision],
   );
 
-  const catalogQuery = useQuery({
+  const catalogQuery = useSubscriptionCatalog({
     enabled: Boolean(isVisible && decision && canShowSubscriptionPaywall),
-    queryFn: getSubscriptionCatalog,
-    queryKey: ['subscription-catalog'],
-    staleTime: 1000 * 60 * 10,
   });
-
-  const catalogEntries = useMemo(
-    () => getCatalogEntriesFromResponse(catalogQuery.data),
-    [catalogQuery.data],
-  );
+  const catalogEntries = catalogQuery.entries;
   const [billingPeriod, setBillingPeriod] = useState('yearly');
   const tierOptions = useMemo(
     () => getTierOptionsForPeriod(catalogEntries, sellingScope, billingPeriod),

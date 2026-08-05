@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -23,7 +23,6 @@ import {
   formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
-  getSubscriptionCatalogEntries,
   getSubscriptionEntryPeriod,
   getSubscriptionEntryScope,
   getSubscriptionEntryTierRank,
@@ -44,6 +43,7 @@ import {
   invalidateSubscriptionState,
   scheduleSubscriptionStateRefresh,
 } from '@/domains/subscription/subscriptionRefresh';
+import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -55,8 +55,6 @@ import TierSelector from '@/components/molecules/tierSelector/TierSelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
-
-import { getSubscriptionCatalog } from '@/services/subscription/subscriptionService';
 
 /**
  * @typedef {{
@@ -188,16 +186,8 @@ function SubscriptionOffers({ navigation, route }) {
     }),
   );
 
-  const catalogQuery = useQuery({
-    enabled: canShowSubscriptionExperience,
-    queryFn: getSubscriptionCatalog,
-    queryKey: ['subscription-catalog'],
-    staleTime: 1000 * 60 * 10,
-  });
-  const catalogEntries = useMemo(
-    () => getSubscriptionCatalogEntries(catalogQuery.data),
-    [catalogQuery.data],
-  );
+  const catalogQuery = useSubscriptionCatalog({ enabled: canShowSubscriptionExperience });
+  const catalogEntries = catalogQuery.entries;
 
   const activePlanCodes = useMemo(
     () => (Array.isArray(subscriptionSummary?.activePlanCodes) ? subscriptionSummary.activePlanCodes : []),

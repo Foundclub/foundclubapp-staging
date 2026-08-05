@@ -26,7 +26,13 @@ jest.mock('@tanstack/react-query', () => ({
     isPending: mockPurchaseIsPending,
     mutateAsync: (/** @type {any} */ input) => options.mutationFn(input),
   }),
-  useQuery: () => ({ ...mockCatalogQueryState, refetch: mockRefetchCatalog }),
+  // L39 — deux requetes derriere le catalogue : le serveur et les prix du STORE.
+  // Sans cle, la seconde recevrait le catalogue de la premiere.
+  useQuery: (/** @type {any} */ options) => (
+    String(options?.queryKey?.[0]) === 'subscription-store-prices'
+      ? { data: undefined, isError: false, isLoading: false }
+      : { ...mockCatalogQueryState, refetch: mockRefetchCatalog }
+  ),
   useQueryClient: () => ({}),
 }));
 

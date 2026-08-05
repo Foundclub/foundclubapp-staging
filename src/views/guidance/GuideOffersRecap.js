@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useEffect, useMemo, useState } from 'react';
@@ -20,6 +20,7 @@ import {
   performSubscriptionPurchase,
 } from '@/domains/subscription/subscriptionPurchaseRail';
 import { scheduleSubscriptionStateRefresh } from '@/domains/subscription/subscriptionRefresh';
+import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -29,10 +30,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import {
-  getSubscriptionCatalog,
-  trackSubscriptionFunnelEvent,
-} from '@/services/subscription/subscriptionService';
+import { trackSubscriptionFunnelEvent } from '@/services/subscription/subscriptionService';
 
 // Resume 1 ligne des cartes repliees (decision 3 — carte non selectionnee).
 const TEAM_SUMMARY = "Événements illimités, compo, convocations, cotisation d'équipe…";
@@ -73,22 +71,6 @@ const BILLING_PERIOD_OPTIONS = [
   { id: 'yearly', label: 'Annuel' },
   { id: 'monthly', label: 'Mensuel' },
 ];
-
-/**
- * @param {any} payload
- * @returns {any[]}
- */
-const getCatalogEntriesFromResponse = (payload) => {
-  if (Array.isArray(payload?.data)) {
-    return payload.data;
-  }
-
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-
-  return [];
-};
 
 /**
  * @param {any} entry
@@ -208,16 +190,8 @@ function GuideOffersRecap({ navigation }) {
   const [clubTier, setClubTier] = useState(1);
   const [billingPeriod, setBillingPeriod] = useState('yearly');
 
-  const catalogQuery = useQuery({
-    queryFn: getSubscriptionCatalog,
-    queryKey: ['subscription-catalog'],
-    staleTime: 1000 * 60 * 10,
-  });
-
-  const catalogEntries = useMemo(
-    () => getCatalogEntriesFromResponse(catalogQuery.data),
-    [catalogQuery.data],
-  );
+  const catalogQuery = useSubscriptionCatalog();
+  const catalogEntries = catalogQuery.entries;
   const teamTierEntries = useMemo(() => catalogEntries
     .filter((entry) => getCatalogEntryScopeType(entry) === 'TEAM'
       && getCatalogEntryBillingPeriod(entry) === billingPeriod)

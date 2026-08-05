@@ -1,12 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import {
-  getSubscriptionCatalogEntries,
   getSubscriptionEntryPeriod,
   getSubscriptionEntryScope,
 } from '@/domains/subscription/subscriptionBilling';
+import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -14,8 +13,6 @@ import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
-
-import { getSubscriptionCatalog } from '@/services/subscription/subscriptionService';
 
 // C'est CETTE matrice qui porte le detail complet des trois offres : depuis L33,
 // plus aucune liste de douze ✓ n'est repetee ailleurs. Chaque cellule vaut :
@@ -87,15 +84,7 @@ function SubscriptionCompare({ navigation }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
 
-  const catalogQuery = useQuery({
-    queryFn: getSubscriptionCatalog,
-    queryKey: ['subscription-catalog'],
-    staleTime: 1000 * 60 * 10,
-  });
-  const catalogEntries = useMemo(
-    () => getSubscriptionCatalogEntries(catalogQuery.data),
-    [catalogQuery.data],
-  );
+  const catalogEntries = useSubscriptionCatalog().entries;
 
   const columns = useMemo(() => [
     { key: 'free', priceLabel: '0 €', title: 'Gratuit' },

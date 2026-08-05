@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { createLogger } from '@/utils/logger/logger';
+
 /**
  * Intégration RevenueCat côté app (SETUP_REVENUECAT — branchement du rail réel).
  *
@@ -21,6 +23,13 @@ export const REVENUECAT_PURCHASE_ERROR_CODES = {
   CANCELLED: 'revenuecat-purchase-cancelled',
   PENDING: 'revenuecat-purchase-pending',
 };
+
+// Toute la mise en forme des prix de l'app est en euros (« 12,99 €/an »). Un
+// prix rendu par le store dans une AUTRE devise, affiche avec ce suffixe, serait
+// un faux prix : on garde alors celui du serveur.
+const STORE_PRICE_CURRENCY_CODE = 'EUR';
+
+const logger = createLogger('subscription-price');
 
 const REVENUECAT_APPLE_API_KEY = String(process.env.REVENUECAT_APPLE_API_KEY || '').trim();
 const REVENUECAT_GOOGLE_API_KEY = String(process.env.REVENUECAT_GOOGLE_API_KEY || '').trim();
@@ -177,6 +186,78 @@ export const resolveRevenueCatPackageForCatalogEntry = (offerings, catalogEntry)
   return candidatePackages
     .find((candidate) => normalizeStoreProductIdentifier(candidate?.product?.identifier) === planCode)
     || null;
+};
+
+/**
+ * Prix du store, en centimes d'euro, pour les entrees du catalogue serveur.
+ *
+ * L39 — le prix lu est celui du package que `purchaseSubscriptionViaRevenueCat`
+ * achetera, resolu par LA MEME fonction. Passer par une seconde table
+ * d'identifiants rouvrirait exactement l'ecart qu'on cherche a fermer : le
+ * prix affiche et le prix facture doivent venir du meme objet.
+ *
+ * Un palier absent du store est simplement absent du resultat : on ne l'invente
+ * jamais, et l'appelant en fait ce qu'il veut (ici : garder le prix serveur et
+ * le signaler).
+ * @param {any} offerings - Resultat de Purchases.getOfferings().
+ * @param {any[]} catalogEntries
+ * @returns {Record<string, number>}
+ */
+export const mapRevenueCatStorePricesInCents = (offerings, catalogEntries) => {
+  /** @type {Record<string, number>} */
+  const pricesEurCents = {};
+
+  (Array.isArray(catalogEntries) ? catalogEntries : []).forEach((catalogEntry) => {
+    const planCode = String(catalogEntry?.planCode || '').trim();
+    if (!planCode) {
+      return;
+    }
+
+    const storeProduct = resolveRevenueCatPackageForCatalogEntry(offerings, catalogEntry)?.product;
+    const price = Number(storeProduct?.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      return;
+    }
+
+    const currencyCode = String(storeProduct?.currencyCode || '').trim().toUpperCase();
+    if (currencyCode && currencyCode !== STORE_PRICE_CURRENCY_CODE) {
+      logger.warn('prix store ignore : devise non geree', { currencyCode, planCode });
+      return;
+    }
+
+    pricesEurCents[planCode] = Math.round(price * 100);
+  });
+
+  return pricesEurCents;
+};
+
+/**
+ * Lit les prix du store pour le catalogue serveur.
+ *
+ * Rend `null` des que le store ne peut pas repondre — web (pas de SDK store,
+ * la vente y passe par Stripe), build sans cle, panne reseau. L'appelant
+ * retombe alors sur les prix du serveur : **un ecran de vente doit toujours
+ * porter un prix**.
+ * @param {any[]} catalogEntries
+ * @returns {Promise<Record<string, number> | null>}
+ */
+export const readRevenueCatStorePricesInCents = async (catalogEntries) => {
+  // Web et builds sans cle : etat NORMAL de la plateforme, pas un incident.
+  // Aucun journal ici, sinon l'alarme sonnerait a chaque ouverture du site.
+  if (!isRevenueCatEnabled() || !configureRevenueCatIfNeeded()) {
+    return null;
+  }
+
+  try {
+    const offerings = await getPurchases().getOfferings();
+    return mapRevenueCatStorePricesInCents(offerings, catalogEntries);
+  } catch (error) {
+    const storeError = /** @type {any} */ (error);
+    logger.warn('store injoignable : les prix affiches restent ceux du serveur', {
+      message: storeError?.message || String(error),
+    });
+    return null;
+  }
 };
 
 /**

@@ -9,6 +9,7 @@ import {
   getSubscriptionEntryTierRank,
   getSubscriptionTestProvider,
   isSubscriptionBillingTestModeEnabled,
+  resolveSubscriptionCatalogPrices,
   sortSubscriptionCatalogEntries,
 } from './subscriptionBilling';
 
@@ -218,5 +219,168 @@ describe('subscriptionBilling', () => {
     })).toBeNull();
     const monthlyOnly = [{ billingPeriod: 'monthly', scopeType: 'TEAM', slotCount: 1 }];
     expect(findSubscriptionMonthlySiblingEntry(monthlyOnly, null)).toBeNull();
+  });
+});
+
+/* L39 — le prix AFFICHE devient celui du STORE (c'est le seul que le client
+   paiera), le catalogue serveur reste le repli, et tout desaccord est mesure. */
+describe('resolveSubscriptionCatalogPrices', () => {
+  const SERVER_ENTRIES = [
+    {
+      billingPeriod: 'monthly',
+      planCode: 'fc_team_1_monthly',
+      referencePriceEurCents: 799,
+      scopeType: 'TEAM',
+      slotCount: 1,
+    },
+    {
+      billingPeriod: 'yearly',
+      planCode: 'fc_team_1_yearly',
+      referencePriceEurCents: 5999,
+      scopeType: 'TEAM',
+      slotCount: 1,
+    },
+    {
+      billingPeriod: 'monthly',
+      planCode: 'fc_club_tier_1_monthly',
+      referencePriceEurCents: 1999,
+      scopeType: 'CLUB',
+    },
+    {
+      billingPeriod: 'yearly',
+      planCode: 'fc_club_tier_1_yearly',
+      referencePriceEurCents: 19999,
+      scopeType: 'CLUB',
+    },
+  ];
+
+  /**
+   * Prix de chaque entree, indexes par code de plan.
+   * @param {any[]} entries
+   * @returns {Record<string, number>}
+   */
+  const pricesByPlanCode = (entries) => Object.fromEntries(
+    entries.map((entry) => [entry.planCode, entry.referencePriceEurCents]),
+  );
+
+  test('sans prix du store, le catalogue serveur est rendu tel quel', () => {
+    [null, undefined, {}].forEach((storePricesEurCents) => {
+      const resolved = resolveSubscriptionCatalogPrices({
+        serverEntries: SERVER_ENTRIES,
+        storePricesEurCents,
+      });
+
+      expect(resolved.entries).toBe(SERVER_ENTRIES);
+      expect(resolved.mismatches).toEqual([]);
+      expect(resolved.missingFromStorePlanCodes).toEqual([]);
+    });
+  });
+
+  test('le prix du store remplace celui du serveur', () => {
+    const resolved = resolveSubscriptionCatalogPrices({
+      serverEntries: SERVER_ENTRIES,
+      storePricesEurCents: {
+        fc_club_tier_1_monthly: 1999,
+        fc_club_tier_1_yearly: 19999,
+        fc_team_1_monthly: 199,
+        fc_team_1_yearly: 1299,
+      },
+    });
+
+    expect(pricesByPlanCode(resolved.entries)).toEqual({
+      fc_club_tier_1_monthly: 1999,
+      fc_club_tier_1_yearly: 19999,
+      fc_team_1_monthly: 199,
+      fc_team_1_yearly: 1299,
+    });
+  });
+
+  // Le garde-fou central : `formatSubscriptionYearlyDiscountLabel` divise
+  // l'annuel par douze mensualites. Un annuel store face a un mensuel serveur
+  // donnerait ici 1 − 1299 / (799 × 12) = 86 % de remise — une remise inventee.
+  test('un palier a moitie present dans le store reste ENTIEREMENT au serveur', () => {
+    const resolved = resolveSubscriptionCatalogPrices({
+      serverEntries: SERVER_ENTRIES,
+      storePricesEurCents: { fc_team_1_yearly: 1299 },
+    });
+
+    expect(pricesByPlanCode(resolved.entries)).toEqual({
+      fc_club_tier_1_monthly: 1999,
+      fc_club_tier_1_yearly: 19999,
+      fc_team_1_monthly: 799,
+      fc_team_1_yearly: 5999,
+    });
+    // L'ecart est quand meme remonte, en disant que c'est le serveur qu'on affiche.
+    expect(resolved.mismatches).toEqual([{
+      planCode: 'fc_team_1_yearly',
+      retainedSource: 'server',
+      serverPriceEurCents: 5999,
+      storePriceEurCents: 1299,
+    }]);
+  });
+
+  test('un ecart d UN centime suffit : c est une configuration desaccordee, pas un arrondi', () => {
+    const resolved = resolveSubscriptionCatalogPrices({
+      serverEntries: SERVER_ENTRIES,
+      storePricesEurCents: {
+        ...pricesByPlanCode(SERVER_ENTRIES),
+        fc_club_tier_1_yearly: 20000,
+      },
+    });
+
+    expect(resolved.mismatches).toEqual([{
+      planCode: 'fc_club_tier_1_yearly',
+      retainedSource: 'store',
+      serverPriceEurCents: 19999,
+      storePriceEurCents: 20000,
+    }]);
+  });
+
+  test('TEMOIN NEGATIF — store et serveur d accord : aucun ecart, aucun manquant', () => {
+    const resolved = resolveSubscriptionCatalogPrices({
+      serverEntries: SERVER_ENTRIES,
+      storePricesEurCents: pricesByPlanCode(SERVER_ENTRIES),
+    });
+
+    expect(resolved.mismatches).toEqual([]);
+    expect(resolved.missingFromStorePlanCodes).toEqual([]);
+  });
+
+  // `fc_trial_team` (essai 30 j, prix 0) partage EXACTEMENT la famille de
+  // `fc_team_1`. Sans garde, l'activer un jour bloquerait en silence les prix du
+  // store sur le palier le plus vendu — le genre de panne muette que ce lot
+  // existe pour supprimer.
+  test('une ligne sans prix vendable n empeche pas sa famille de basculer', () => {
+    const resolved = resolveSubscriptionCatalogPrices({
+      serverEntries: [
+        ...SERVER_ENTRIES,
+        {
+          billingPeriod: 'manual',
+          planCode: 'fc_trial_team',
+          referencePriceEurCents: 0,
+          scopeType: 'TEAM',
+          slotCount: 1,
+        },
+      ],
+      storePricesEurCents: { fc_team_1_monthly: 199, fc_team_1_yearly: 1299 },
+    });
+
+    expect(pricesByPlanCode(resolved.entries).fc_team_1_yearly).toBe(1299);
+    expect(resolved.missingFromStorePlanCodes).not.toContain('fc_trial_team');
+  });
+
+  // Reglage de boutique, pas un defaut de code : le palier absent garde le prix
+  // du serveur et reste vendable, mais quelqu'un doit le configurer.
+  test('un palier absent du store est NOMME, jamais invente ni masque', () => {
+    const resolved = resolveSubscriptionCatalogPrices({
+      serverEntries: SERVER_ENTRIES,
+      storePricesEurCents: { fc_team_1_monthly: 799, fc_team_1_yearly: 5999 },
+    });
+
+    expect(resolved.missingFromStorePlanCodes).toEqual([
+      'fc_club_tier_1_monthly',
+      'fc_club_tier_1_yearly',
+    ]);
+    expect(pricesByPlanCode(resolved.entries).fc_club_tier_1_yearly).toBe(19999);
   });
 });

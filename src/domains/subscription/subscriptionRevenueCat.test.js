@@ -1,7 +1,9 @@
 import {
   getRevenueCatOfferingIdForPlanCode,
   isRevenueCatEnabled,
+  mapRevenueCatStorePricesInCents,
   purchaseSubscriptionViaRevenueCat,
+  readRevenueCatStorePricesInCents,
   resetRevenueCatStateForTests,
   resolveRevenueCatPackageForCatalogEntry,
   restoreRevenueCatPurchases,
@@ -211,5 +213,108 @@ describe('subscriptionRevenueCat', () => {
     await restoreRevenueCatPurchases();
     expect(Purchases.logIn).not.toHaveBeenCalled();
     expect(Purchases.restorePurchases).toHaveBeenCalledTimes(1);
+  });
+});
+
+/* L39 — le prix affiche doit etre celui du store. Il est lu sur LE MEME package
+   que celui qui sera achete : c'est ce qui garantit qu'afficher et facturer ne
+   peuvent pas diverger. */
+describe('subscriptionRevenueCat — prix du store', () => {
+  const CATALOG_ENTRIES = [
+    { billingPeriod: 'monthly', planCode: 'fc_team_1_monthly', scopeType: 'TEAM' },
+    { billingPeriod: 'yearly', planCode: 'fc_team_1_yearly', scopeType: 'TEAM' },
+  ];
+
+  /**
+   * Package store portant un identifiant produit et un prix.
+   * @param {string} productIdentifier
+   * @param {any} product
+   * @returns {any}
+   */
+  const buildPricedPackage = (productIdentifier, product) => ({
+    identifier: '$rc_package',
+    product: { currencyCode: 'EUR', identifier: productIdentifier, ...product },
+  });
+
+  /**
+   * Offerings RevenueCat de la famille `fc_team_1`, prix compris.
+   * @param {any} [surcharges]
+   * @returns {any}
+   */
+  const buildPricedOfferings = (surcharges = {}) => ({
+    all: {
+      fc_team_1: {
+        // Identifiant Google (`famille:basePlan`) cote mensuel, Apple cote annuel :
+        // les deux conventions coexistent vraiment dans ce projet.
+        annual: buildPricedPackage('fc_team_1_yearly', { price: 59.99 }),
+        availablePackages: [
+          buildPricedPackage('fc_team_1:monthly', { price: 7.99 }),
+          buildPricedPackage('fc_team_1_yearly', { price: 59.99 }),
+        ],
+        monthly: buildPricedPackage('fc_team_1:monthly', { price: 7.99 }),
+        ...surcharges,
+      },
+    },
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    resetRevenueCatStateForTests();
+  });
+
+  it('lit le prix du package qui sera ACHETE, les deux conventions d identifiant comprises', () => {
+    expect(mapRevenueCatStorePricesInCents(buildPricedOfferings(), CATALOG_ENTRIES)).toEqual({
+      fc_team_1_monthly: 799,
+      fc_team_1_yearly: 5999,
+    });
+  });
+
+  it('un palier sans package n est PAS invente : il manque, tout simplement', () => {
+    const offerings = buildPricedOfferings();
+    offerings.all.fc_team_1.annual = null;
+    offerings.all.fc_team_1.availablePackages = [
+      buildPricedPackage('fc_team_1:monthly', { price: 7.99 }),
+    ];
+
+    expect(mapRevenueCatStorePricesInCents(offerings, CATALOG_ENTRIES))
+      .toEqual({ fc_team_1_monthly: 799 });
+  });
+
+  // Toute la mise en forme de l'app est en euros (« 7,99 €/mois »). Afficher un
+  // prix en dollars avec ce suffixe serait un faux prix, pas une approximation.
+  it('un prix rendu dans une autre devise est ecarte, jamais affiche avec un €', () => {
+    const offerings = buildPricedOfferings();
+    offerings.all.fc_team_1.monthly = buildPricedPackage('fc_team_1:monthly', {
+      currencyCode: 'USD',
+      price: 8.99,
+    });
+    offerings.all.fc_team_1.availablePackages = [offerings.all.fc_team_1.monthly];
+
+    expect(mapRevenueCatStorePricesInCents(offerings, CATALOG_ENTRIES))
+      .toEqual({ fc_team_1_yearly: 5999 });
+  });
+
+  // C'est aussi le cas du WEB, ou Purchases n'existe pas : la vente y passe par
+  // Stripe et le prix doit rester celui du serveur.
+  it('sans SDK store, la lecture rend null sans rien appeler', async () => {
+    expect(await readRevenueCatStorePricesInCents(CATALOG_ENTRIES)).toBeNull();
+    expect(getMockPurchases().getOfferings).not.toHaveBeenCalled();
+  });
+
+  it('store injoignable : la lecture rend null au lieu de propager', async () => {
+    setRevenueCatApiKeyForTests('appl_test');
+    getMockPurchases().getOfferings.mockRejectedValueOnce(new Error('offline'));
+
+    expect(await readRevenueCatStorePricesInCents(CATALOG_ENTRIES)).toBeNull();
+  });
+
+  it('store joignable : la lecture rend les prix en centimes', async () => {
+    setRevenueCatApiKeyForTests('appl_test');
+    getMockPurchases().getOfferings.mockResolvedValueOnce(buildPricedOfferings());
+
+    expect(await readRevenueCatStorePricesInCents(CATALOG_ENTRIES)).toEqual({
+      fc_team_1_monthly: 799,
+      fc_team_1_yearly: 5999,
+    });
   });
 });

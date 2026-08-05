@@ -1,6 +1,10 @@
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import {
+  resetSubscriptionPriceReportForTests,
+} from '@/domains/subscription/useSubscriptionCatalog';
+
 import SubscriptionOffers from '../SubscriptionOffers';
 
 // L33 — le carrousel est la SEULE surface de vente atteinte depuis un mur payant
@@ -15,6 +19,8 @@ import SubscriptionOffers from '../SubscriptionOffers';
 let mockAuthValue;
 /** @type {any} */
 let mockCatalogQueryState;
+/** @type {any} */
+let mockStorePricesQueryState;
 const mockAlert = jest.fn();
 const mockPerformPurchase = jest.fn();
 const mockPerformPlanChange = jest.fn();
@@ -24,12 +30,19 @@ const mockInvalidate = jest.fn();
 const mockScheduleRefresh = jest.fn();
 const mockNavigate = jest.fn();
 
+// L39 — DEUX requetes vivent desormais derriere le catalogue : celle du serveur
+// et celle des prix du STORE. La doublure les distingue par leur cle, sinon la
+// seconde recevrait le catalogue de la premiere.
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
     isPending: false,
     mutateAsync: (/** @type {any} */ input) => options.mutationFn(input),
   }),
-  useQuery: () => mockCatalogQueryState,
+  useQuery: (/** @type {any} */ options) => (
+    String(options?.queryKey?.[0]) === 'subscription-store-prices'
+      ? mockStorePricesQueryState
+      : mockCatalogQueryState
+  ),
   useQueryClient: () => ({ id: 'query-client-test' }),
 }));
 
@@ -404,6 +417,11 @@ const rendre = async (surcharges = {}, parametres = undefined) => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockCatalogQueryState = { data: { data: CATALOG_ENTRIES }, error: null, isLoading: false };
+  // Defaut de TOUS les tests de ce fichier : le store ne dit rien. Le repli sur
+  // les prix du serveur est donc verifie par la suite entiere, pas seulement par
+  // le temoin dedie plus bas.
+  mockStorePricesQueryState = { data: undefined, error: null, isLoading: false };
+  resetSubscriptionPriceReportForTests();
   mockIsPurchaseAvailable.mockReturnValue(true);
   mockGetActiveRail.mockReturnValue('NATIVE_STORE');
   mockPerformPurchase.mockResolvedValue({ ok: true });
@@ -612,6 +630,135 @@ describe('Carrousel d\'offres — apres l\'achat, l\'ecran de succes (L38)', () 
 
     expect(mockPerformPurchase).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});
+
+/* L39 — le prix AFFICHE doit etre celui du STORE : c'est le seul que le client
+   paiera. Le catalogue serveur reste le repli, et tout desaccord entre les deux
+   est signale, meme quand on affiche le bon prix. */
+describe('L39 — le prix affiche vient du STORE, et l ecart est signale', () => {
+  /* Le store annonce le MEME catalogue que le serveur, sauf le palier Équipe 1,
+     ou il est VOLONTAIREMENT different (1,99 €/mois et 12,99 €/an au lieu de
+     7,99 € et 59,99 €). Si l'ecran affiche 12,99, c'est bien le store qui parle. */
+  const PRIX_STORE = {
+    fc_club_tier_1_monthly: 1999,
+    fc_club_tier_1_yearly: 19999,
+    fc_club_tier_2_monthly: 3499,
+    fc_club_tier_2_yearly: 34999,
+    fc_club_tier_3_monthly: 5499,
+    fc_club_tier_3_yearly: 54999,
+    fc_team_1_monthly: 199,
+    fc_team_1_yearly: 1299,
+    fc_team_2_monthly: 1299,
+    fc_team_2_yearly: 9999,
+    fc_team_3_monthly: 1699,
+    fc_team_3_yearly: 12999,
+  };
+
+  /**
+   * Le store rend exactement la grille du serveur : aucun ecart a signaler.
+   * @returns {Record<string, number>}
+   */
+  const prixStoreIdentiquesAuServeur = () => Object.fromEntries(
+    CATALOG_ENTRIES.map((entry) => [entry.planCode, entry.referencePriceEurCents]),
+  );
+
+  /** @type {any} */
+  let journal;
+
+  beforeEach(() => {
+    journal = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    journal.mockRestore();
+  });
+
+  it('quand le store repond, c est SON prix qui s affiche, pas celui du serveur', async () => {
+    mockStorePricesQueryState = { data: PRIX_STORE, error: null, isLoading: false };
+    const arbre = await rendre();
+    const texte = texteVisible(arbre);
+
+    // Le serveur annonce 59,99 €/an ; le store facturera 12,99 €. C'est 12,99
+    // qui doit etre a l'ecran, sur l'ancre prix ET sur le bouton d'achat.
+    expect(texte).toContain('12,99 €/an');
+    expect(texte).not.toContain('59,99 €/an');
+    expect(libelleDuCta(arbre)).toBe('Choisir Équipe · 12,99 €/an');
+
+    // Le palier Club, lui, est d'accord des deux cotes : il ne bouge pas.
+    await allerALaCarte(arbre, 2);
+    expect(libelleDuCta(arbre)).toBe('Choisir Club S · 199,99 €/an');
+  });
+
+  it('TEMOIN DE REPLI — store muet : un prix s affiche et l ecran reste vendable', async () => {
+    // Ni reseau, ni store, ni SDK (c'est aussi le cas du WEB, ou Purchases
+    // n'existe pas) : la requete ne rend rien.
+    mockStorePricesQueryState = { data: undefined, error: null, isLoading: true };
+    const arbre = await rendre();
+
+    // Le prix du serveur prend le relais, et le bouton reste ACTIF : un ecran de
+    // vente muet serait pire qu'un prix approximatif.
+    expect(texteVisible(arbre)).toContain('59,99 €/an');
+    expect(libelleDuCta(arbre)).toBe('Choisir Équipe · 59,99 €/an');
+    expect(pressablesPortant(arbre, 'Choisir Équipe · 59,99 €/an')[0]
+      .props.accessibilityState.disabled).toBe(false);
+  });
+
+  it('la remise reste juste : les deux prix du calcul viennent de la MEME source', async () => {
+    mockStorePricesQueryState = { data: PRIX_STORE, error: null, isLoading: false };
+    const arbre = await rendre();
+    const texte = texteVisible(arbre);
+
+    // Prix store : 1 − 1299 / (199 × 12) = 45,6 % -> −46 %.
+    expect(texte).toContain('−46 %');
+    expect(texteVisible(arbre)).toContain('soit 1,08 €/mois');
+    // Le melange interdit serait l'annuel du store face au mensuel du serveur :
+    // 1 − 1299 / (799 × 12) = 86 %. Ce chiffre ne doit exister nulle part.
+    expect(texte).not.toContain('−86 %');
+    // Club est d'accord des deux cotes : sa remise ne bouge pas.
+    expect(texte).toContain('−17 %');
+  });
+
+  it('un ecart est SIGNALE : le palier, les deux valeurs et la source retenue', async () => {
+    mockStorePricesQueryState = { data: PRIX_STORE, error: null, isLoading: false };
+    await rendre();
+
+    const signalements = journal.mock.calls
+      .filter((/** @type {any[]} */ appel) => String(appel[0]).includes('[subscription-price]'));
+    expect(signalements).toHaveLength(1);
+
+    const ecarts = signalements[0][1]?.ecarts || [];
+    expect(ecarts).toEqual(expect.arrayContaining([
+      {
+        planCode: 'fc_team_1_yearly',
+        prixServeurEurCents: 5999,
+        prixStoreEurCents: 1299,
+        sourceRetenue: 'store',
+      },
+      {
+        planCode: 'fc_team_1_monthly',
+        prixServeurEurCents: 799,
+        prixStoreEurCents: 199,
+        sourceRetenue: 'store',
+      },
+    ]));
+    // Les dix paliers d'accord ne sont PAS listes : une alarme qui sonne
+    // toujours n'est plus lue.
+    expect(ecarts).toHaveLength(2);
+  });
+
+  it('TEMOIN NEGATIF — store et serveur d accord : aucun signalement', async () => {
+    mockStorePricesQueryState = {
+      data: prixStoreIdentiquesAuServeur(),
+      error: null,
+      isLoading: false,
+    };
+    const arbre = await rendre();
+
+    expect(libelleDuCta(arbre)).toBe('Choisir Équipe · 59,99 €/an');
+    expect(journal.mock.calls
+      .filter((/** @type {any[]} */ appel) => String(appel[0]).includes('[subscription-price]')))
+      .toHaveLength(0);
   });
 });
 

@@ -123,6 +123,142 @@ export const formatSubscriptionYearlyDiscountLabel = (
   return `−${discountPercent} %`;
 };
 
+export const SUBSCRIPTION_PRICE_SOURCES = {
+  SERVER: 'server',
+  STORE: 'store',
+};
+
+/**
+ * Famille d'un palier : c'est l'unite dans laquelle un prix se COMPARE a un
+ * autre. `formatSubscriptionYearlyDiscountLabel` divise l'annuel par douze
+ * mensualites du MEME palier — melanger un prix store et un prix serveur dans
+ * ce calcul produirait une remise inventee.
+ *
+ * ⚠️ Cette cle DOIT rester alignee sur l'appariement de
+ * `findSubscriptionMonthlySiblingEntry` (scope + rang de palier) : c'est lui qui
+ * choisit les deux prix de la remise. Les desaccorder rouvrirait le melange que
+ * la regle de famille interdit.
+ * @param {any} entry
+ * @returns {string}
+ */
+const getSubscriptionEntryFamilyKey = (entry) => (
+  `${getSubscriptionEntryScope(entry)}:${getSubscriptionEntryTierRank(entry)}`
+);
+
+/**
+ * Code de plan d'une entree, normalise.
+ * @param {any} entry
+ * @returns {string}
+ */
+const getSubscriptionEntryPlanCode = (entry) => String(entry?.planCode || '').trim();
+
+/**
+ * Le prix AFFICHE devient celui du STORE, et l'ecart avec le catalogue serveur
+ * est mesure (decision d'Adel du 2026-08-05 : « A, mais verifier quand meme
+ * l'ecart »).
+ *
+ * Trois regles, dans cet ordre :
+ * 1. **Repli** — sans prix store, le catalogue serveur est rendu tel quel.
+ *    L'ecran reste vendable, toujours.
+ * 2. **Coherence par famille** — un palier ne bascule sur les prix du store que
+ *    si le store couvre TOUTES ses entrees. Sinon la famille entiere reste au
+ *    serveur : les deux prix d'un meme calcul viennent toujours de la meme
+ *    source.
+ * 3. **Signalement** — tout ecart d'au moins un centime est remonte, meme
+ *    quand c'est le bon prix qui s'affiche : un desaccord veut dire qu'une des
+ *    deux configurations est fausse, et il faut le savoir.
+ * @param {{ serverEntries: any[]; storePricesEurCents?: Record<string, number> | null }} params
+ * @returns {{
+ *   entries: any[];
+ *   mismatches: Array<{
+ *     planCode: string;
+ *     serverPriceEurCents: number;
+ *     storePriceEurCents: number;
+ *     retainedSource: string;
+ *   }>;
+ *   missingFromStorePlanCodes: string[];
+ * }}
+ */
+export const resolveSubscriptionCatalogPrices = ({ serverEntries, storePricesEurCents }) => {
+  const entries = Array.isArray(serverEntries) ? serverEntries : [];
+  const storePrices = storePricesEurCents && typeof storePricesEurCents === 'object'
+    ? storePricesEurCents
+    : null;
+
+  /**
+   * Prix du store d'une entree, ou null s'il n'y en a pas.
+   * @param {any} entry
+   * @returns {number | null}
+   */
+  const readStorePrice = (entry) => {
+    if (!storePrices) return null;
+    const cents = Number(storePrices[getSubscriptionEntryPlanCode(entry)]);
+    return Number.isFinite(cents) && cents > 0 ? cents : null;
+  };
+
+  /**
+   * Une ligne sans prix vendable (essai, offre manuelle) n'a aucun package cote
+   * store : elle ne doit donc ni empecher sa famille de basculer, ni etre
+   * annoncee comme « absente du store ». `fc_trial_team` partage exactement la
+   * famille de `fc_team_1` — sans cette garde, l'activer bloquerait en silence
+   * les prix du store sur le palier le plus vendu.
+   * @param {any} entry
+   * @returns {boolean}
+   */
+  const hasSellableServerPrice = (entry) => {
+    const cents = Number(entry?.referencePriceEurCents);
+    return Number.isFinite(cents) && cents > 0;
+  };
+
+  if (!storePrices || Object.keys(storePrices).length === 0) {
+    return { entries, mismatches: [], missingFromStorePlanCodes: [] };
+  }
+
+  /** @type {Set<string>} */
+  const uncoveredFamilyKeys = new Set();
+  entries.forEach((entry) => {
+    if (hasSellableServerPrice(entry) && readStorePrice(entry) === null) {
+      uncoveredFamilyKeys.add(getSubscriptionEntryFamilyKey(entry));
+    }
+  });
+
+  /** @type {any[]} */
+  const mismatches = [];
+  /** @type {string[]} */
+  const missingFromStorePlanCodes = [];
+
+  const resolvedEntries = entries.map((entry) => {
+    const storePriceEurCents = readStorePrice(entry);
+    if (storePriceEurCents === null) {
+      if (hasSellableServerPrice(entry)) {
+        missingFromStorePlanCodes.push(getSubscriptionEntryPlanCode(entry));
+      }
+      return entry;
+    }
+
+    const isFamilyCovered = !uncoveredFamilyKeys.has(getSubscriptionEntryFamilyKey(entry));
+    const retainedSource = isFamilyCovered
+      ? SUBSCRIPTION_PRICE_SOURCES.STORE
+      : SUBSCRIPTION_PRICE_SOURCES.SERVER;
+
+    const serverPriceEurCents = Number(entry?.referencePriceEurCents);
+    if (Number.isFinite(serverPriceEurCents) && serverPriceEurCents !== storePriceEurCents) {
+      mismatches.push({
+        planCode: getSubscriptionEntryPlanCode(entry),
+        retainedSource,
+        serverPriceEurCents,
+        storePriceEurCents,
+      });
+    }
+
+    return isFamilyCovered
+      ? { ...entry, referencePriceEurCents: storePriceEurCents }
+      : entry;
+  });
+
+  return { entries: resolvedEntries, mismatches, missingFromStorePlanCodes };
+};
+
 /**
  * Entree jumelle en mensuel d'une entree annuelle : meme portee, meme palier.
  *
