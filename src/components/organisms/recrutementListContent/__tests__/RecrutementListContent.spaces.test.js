@@ -32,8 +32,15 @@ describe('RecrutementListContent — aucun espacement ne se perd en silence', ()
   it('la rampe du theme est bien celle sur laquelle ces styles s\'appuient', () => {
     // Si cette liste change, les valeurs retenues ci-dessous sont a rejuger :
     // le test doit rougir plutot que de valider un arrondi devenu faux.
+    //
+    // D05, 2026-08-05 : 38 / 44 / 52 / 74 ajoutes a la rampe (GO Adel) pour les
+    // deux packs de design. Rejugement fait, les deux controles suivants sont
+    // inchanges : les quatre jetons valent tous moins de 128, ils ne peuvent
+    // donc pas entrer dans le filtre des reserves de bas de liste, et elargir
+    // la rampe ne peut que reduire le nombre d'appels hors rampe, jamais
+    // l'augmenter. Aucun appel de cet ecran ne les utilise.
     expect(Object.keys(sizes).map(Number)).toEqual([
-      0, 4, 8, 12, 16, 24, 32, 40, 64, 80, 128, 160,
+      0, 4, 8, 12, 16, 24, 32, 38, 40, 44, 52, 64, 74, 80, 128, 160,
     ]);
   });
 

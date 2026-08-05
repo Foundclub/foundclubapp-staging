@@ -18,14 +18,61 @@ import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 /**
+ * Grammaires d'en-tete disponibles.
+ *
+ * C'est un MODE, pas un remplacement : `default` rend EXACTEMENT ce que les
+ * 59 ecrans du depot rendaient avant le lot D05. Les tunnels basculent un par
+ * un sur `focus` (lots D06 a D10), sans que les autres bougent d'un pixel.
+ * Le filet `__tests__/WizardStepLayout.test.js` le prouve : ses 25 tests de
+ * caracterisation decrivent `default` et n'ont pas ete touches.
+ *
+ * `focus` est la grammaire des deux packs de design du 2026-08-05
+ * (`claude design/export/tunnel-evenement` et `.../profil-amical-annonces`) :
+ * titre-question en graisse 900, cibles tactiles de 44 pt, barre de progression
+ * fine, sous-titre tenu sur une ligne.
+ *
+ * La maquette demande un titre de 25 pt : la rampe typographique saute de 24
+ * (`h2*`) a 28 (`h1*`), sans rien entre les deux. Arbitrage d'Adel du
+ * 2026-08-05 : on prend `h1Black` (28 pt / 36 d'interlignage / Montserrat-Black),
+ * parce que la graisse 900 demandee existe deja et qu'ecrire `fontSize: 25` en
+ * dur sortirait de la rampe sans qu'aucune porte ne le voie.
+ * @type {Record<'default' | 'focus', {
+ *   collapsedTitleFont: 'h2' | 'h2Black',
+ *   progressHeight: number,
+ *   roundButtonSize: number,
+ *   subtitleLines: number | undefined,
+ *   titleFont: 'h1' | 'h1Black',
+ * }>}
+ */
+const HEADER_VARIANTS = {
+  default: {
+    collapsedTitleFont: 'h2',
+    progressHeight: 8,
+    roundButtonSize: 40,
+    subtitleLines: undefined,
+    titleFont: 'h1',
+  },
+  focus: {
+    collapsedTitleFont: 'h2Black',
+    progressHeight: 4,
+    roundButtonSize: 44,
+    subtitleLines: 1,
+    titleFont: 'h1Black',
+  },
+};
+
+/**
  * Bouton rond du header de tunnel (retour / fermer) — handoff decision 2.
  * @param {object} props
  * @param {'arrowLeft' | 'close'} props.icon
  * @param {string} props.label - Libelle accessibilite.
  * @param {() => void} [props.onPress]
+ * @param {number} [props.size] - Cote de la cible tactile, en points.
  * @returns {import('react').ReactElement}
  */
-function WizardRoundButton({ icon, label, onPress }) {
+function WizardRoundButton({
+  icon, label, onPress, size = 40,
+}) {
   const { Colors, Images } = useTheme();
   return (
     <TouchableOpacity
@@ -40,9 +87,9 @@ function WizardRoundButton({ icon, label, onPress }) {
         borderColor: 'rgba(1,179,244,0.45)',
         borderRadius: 999,
         borderWidth: 1,
-        height: 40,
+        height: size,
         justifyContent: 'center',
-        width: 40,
+        width: size,
       }}
     >
       <Image
@@ -60,6 +107,8 @@ function WizardRoundButton({ icon, label, onPress }) {
  * @param {object} root0
  * @param {import('react').ReactNode} root0.children
  * @param {boolean} [root0.collapsibleHeader]
+ * @param {'default' | 'focus'} [root0.headerVariant] - Grammaire d'en-tete, voir
+ *   HEADER_VARIANTS. `default` (valeur par defaut) ne change rien a l'existant.
  * @param {boolean} [root0.isNextDisabled]
  * @param {boolean} [root0.isNextLoading]
  * @param {string} [root0.nextLabel]
@@ -78,6 +127,7 @@ function WizardRoundButton({ icon, label, onPress }) {
 function WizardStepLayout({
   children,
   collapsibleHeader = false,
+  headerVariant = 'default',
   isNextDisabled = false,
   isNextLoading = false,
   nextLabel,
@@ -102,6 +152,9 @@ function WizardStepLayout({
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  // Un nom de grammaire inconnu retombe sur l'existant : un tunnel ne peut pas
+  // perdre son en-tete a cause d'une faute de frappe.
+  const header = HEADER_VARIANTS[headerVariant] || HEADER_VARIANTS.default;
 
   const safeStepIndex = Number(stepIndex);
   const safeStepCount = Number(stepCount);
@@ -216,9 +269,12 @@ function WizardStepLayout({
                   icon="arrowLeft"
                   label={t('common.back', 'Retour')}
                   onPress={onBack}
+                  size={header.roundButtonSize}
                 />
               ) : (
-                <View style={{ width: 40 }} />
+                // La place est reservee meme sans bouton : c'est elle qui tient
+                // « Étape n/N » au centre exact de l'ecran.
+                <View style={{ width: header.roundButtonSize }} />
               )}
               {hasProgress ? (
                 <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
@@ -234,9 +290,10 @@ function WizardStepLayout({
                   icon="close"
                   label={t('common.close', 'Fermer')}
                   onPress={onClose}
+                  size={header.roundButtonSize}
                 />
               ) : (
-                <View style={{ width: 40 }} />
+                <View style={{ width: header.roundButtonSize }} />
               )}
             </View>
             {hasProgress ? (
@@ -248,7 +305,7 @@ function WizardStepLayout({
                     backgroundColor: 'rgba(1, 179, 244, 0.08)',
                     borderColor: 'rgba(1, 179, 244, 0.22)',
                     borderRadius: 999,
-                    height: isHeaderCollapsed ? 4 : 8,
+                    height: isHeaderCollapsed ? 4 : header.progressHeight,
                     overflow: 'hidden',
                   },
                 ]}
@@ -267,7 +324,7 @@ function WizardStepLayout({
             <Text
               numberOfLines={isHeaderCollapsed ? 1 : undefined}
               style={[
-                isHeaderCollapsed ? Fonts.h2 : Fonts.h1,
+                Fonts[isHeaderCollapsed ? header.collapsedTitleFont : header.titleFont],
                 Fonts.neutral00,
                 isHeaderCollapsed ? Spaces.marginBottom[4] : Spaces.marginBottom[8],
               ]}
@@ -275,7 +332,10 @@ function WizardStepLayout({
               {title}
             </Text>
             {subtitle && !isHeaderCollapsed ? (
-              <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 22, maxWidth: 720 }]}>
+              <Text
+                numberOfLines={header.subtitleLines}
+                style={[Fonts.p2, Fonts.neutral100, { lineHeight: 22, maxWidth: 720 }]}
+              >
                 {subtitle}
               </Text>
             ) : null}

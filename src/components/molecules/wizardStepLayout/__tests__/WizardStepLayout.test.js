@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -108,7 +109,7 @@ const rendre = (/** @type {any} */ props) => {
   let arbre;
   act(() => {
     arbre = renderer.create(
-      <WizardStepLayout title="Quel type d'evenement ?" {...props} />,
+      createElement(WizardStepLayout, { title: "Quel type d'evenement ?", ...props }),
     );
   });
   return arbre;
@@ -161,6 +162,7 @@ const noeudsAffiches = (arbre, predicat) => {
 };
 
 /**
+ * Le style d'un noeud, aplati : il peut etre un objet ou un tableau.
  * @param {any} noeud
  * @returns {any}
  */
@@ -239,14 +241,22 @@ const noeudDuTexte = (arbre, titre) => noeudsAffiches(
   (noeud) => Array.isArray(noeud.children) && noeud.children.includes(titre),
 )[0];
 
-/** La barre pleine : le seul noeud dont la largeur est un pourcentage. */
-const remplissageDeBarre = (/** @type {any} */ arbre) => noeudsAffiches(
+/**
+ * La barre pleine : le seul noeud dont la largeur est un pourcentage.
+ * @param {any} arbre
+ * @returns {any}
+ */
+const remplissageDeBarre = (arbre) => noeudsAffiches(
   arbre,
   (noeud) => typeof style(noeud).width === 'string' && style(noeud).width.endsWith('%'),
 )[0];
 
-/** La gouttiere de la barre : le seul noeud qui rogne son contenu. */
-const gouttiereDeBarre = (/** @type {any} */ arbre) => noeudsAffiches(
+/**
+ * La gouttiere de la barre : le seul noeud qui rogne son contenu.
+ * @param {any} arbre
+ * @returns {any}
+ */
+const gouttiereDeBarre = (arbre) => noeudsAffiches(
   arbre,
   (noeud) => style(noeud).overflow === 'hidden',
 )[0];
@@ -313,7 +323,7 @@ describe("WizardStepLayout — l'indicateur d'etape", () => {
     expect(textesVisibles(rendre({ stepCount: 5, stepIndex: 2 }))).toContain('Étape 2/5');
   });
 
-  it("remplit la barre a stepIndex/stepCount — donc deja 1/5 a la premiere etape", () => {
+  it('remplit la barre a stepIndex/stepCount — donc deja 1/5 a la premiere etape', () => {
     // DESCRIPTION, PAS APPROBATION : a l'etape 1 sur 5 la barre est deja a 20 %,
     // et elle atteint 100 % sur l'ecran de recapitulatif. Corriger ce decalage
     // changerait les 52 ecrans qui affichent la progression : autre lot.
@@ -402,7 +412,7 @@ describe('WizardStepLayout — le bouton d action principal', () => {
     expect(propsDuBouton[0].isLoading).toBe(true);
   });
 
-  it("propose « Passer cette étape » seulement si showSkip est demande", () => {
+  it('propose « Passer cette étape » seulement si showSkip est demande', () => {
     const onSkip = jest.fn();
     const arbre = rendre({ onSkip, showSkip: true });
 
@@ -449,5 +459,72 @@ describe('WizardStepLayout — le retour et la fermeture', () => {
     expect(style(pressableNomme(arbre, 'Retour')).height).toBe(40);
     expect(style(pressableNomme(arbre, 'Retour')).width).toBe(40);
     expect(style(pressableNomme(arbre, 'Fermer')).height).toBe(40);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tout ce qui precede decrit l'existant et n'a pas bougé d'une ligne pendant le
+// lot D05. Ce qui suit decrit la grammaire NEUVE, celle des deux packs de
+// design du 2026-08-05. Les deux blocs cohabitent : c'est la preuve, executable,
+// que la nouvelle grammaire est un MODE et pas un remplacement.
+// ---------------------------------------------------------------------------
+
+describe("WizardStepLayout — la grammaire 'focus' (packs de design 2026-08-05)", () => {
+  const enFocus = (/** @type {any} */ props) => rendre({ headerVariant: 'focus', ...props });
+
+  it('met le titre en h1Black : 28 pt, Montserrat-Black, graisse 900', () => {
+    // La maquette demande 25 pt. La rampe saute de 24 (h2) a 28 (h1), sans rien
+    // entre les deux : arbitrage d'Adel du 2026-08-05, on prend h1Black plutot
+    // que d'ecrire une taille hors rampe qu'aucune porte ne verrait.
+    const titre = style(noeudDuTexte(enFocus({}), "Quel type d'evenement ?"));
+
+    expect(titre.fontSize).toBe(polices.h1Black.fontSize);
+    expect(titre.fontFamily).toBe(polices.h1Black.fontFamily);
+    expect(titre.fontSize).toBe(28);
+    expect(titre.fontSize).not.toBe(25);
+  });
+
+  it('porte les cibles tactiles a 44 pt, emplacements vides compris', () => {
+    const arbre = enFocus({ onBack: jest.fn(), onClose: jest.fn() });
+
+    expect(style(pressableNomme(arbre, 'Retour')).height).toBe(44);
+    expect(style(pressableNomme(arbre, 'Retour')).width).toBe(44);
+    expect(style(pressableNomme(arbre, 'Fermer')).width).toBe(44);
+
+    // Sans bouton, la place reservee suit la meme mesure, sinon « Étape n/N »
+    // se decalerait du centre.
+    expect(noeudsAffiches(enFocus({}), (noeud) => style(noeud).width === 44)).toHaveLength(2);
+  });
+
+  it('affine la barre de progression de 8 a 4 pt', () => {
+    expect(style(gouttiereDeBarre(enFocus({ stepCount: 7, stepIndex: 2 }))).height).toBe(4);
+  });
+
+  it('tient le sous-titre sur une seule ligne', () => {
+    const arbre = enFocus({ subtitle: 'Un sous-titre assez long pour deborder sur deux lignes' });
+
+    expect(noeudDuTexte(arbre, 'Un sous-titre assez long pour deborder sur deux lignes')
+      .props.numberOfLines).toBe(1);
+  });
+
+  it('ne touche NI au compteur, NI a la formule de la barre, NI au bouton', () => {
+    // La maquette calcule elle aussi `n / total` : la barre est deja a 28,6 % a
+    // l'etape 2 sur 7. Rien a corriger, donc rien de change.
+    const arbre = enFocus({
+      nextLabel: 'Continuer', onNext: jest.fn(), stepCount: 7, stepIndex: 2,
+    });
+
+    expect(textesVisibles(arbre)).toContain('Étape 2/7');
+    expect(remplissageDeBarre(arbre).props.style.width).toBe(`${(2 / 7) * 100}%`);
+    expect(textesVisibles(arbre)).toContain('Continuer');
+  });
+
+  it("retombe sur l'existant si le nom de grammaire est inconnu", () => {
+    // Une faute de frappe ne doit jamais faire disparaitre l'en-tete d'un tunnel.
+    const arbre = rendre({ headerVariant: 'grammaire-qui-nexiste-pas', onBack: jest.fn() });
+
+    expect(style(noeudDuTexte(arbre, "Quel type d'evenement ?")).fontFamily)
+      .toBe(polices.h1.fontFamily);
+    expect(style(pressableNomme(arbre, 'Retour')).width).toBe(40);
   });
 });
