@@ -40,8 +40,170 @@
 			</array>
 		</dict>
 	</array>
+	<!--
+	  LOT L48-B. Ce tableau etait VIDE, ce qui declare a Apple « cette app ne
+	  collecte aucune donnee » alors que le modele utilisateur du serveur porte
+	  49 attributs. Chaque entree ci-dessous est adossee a un envoi REEL de
+	  l app, cite en commentaire. Rien n est declare qui n ait ete constate
+	  dans le code.
+
+	  Toutes les entrees partagent les memes reponses, et elles sont vraies
+	  pour toutes : la donnee est rattachee a l identite (Linked = true), elle
+	  ne sert PAS au pistage (Tracking = false, coherent avec NSPrivacyTracking
+	  plus bas), et son seul usage est le fonctionnement de l app.
+
+	  ATTENTION : ce fichier doit rester COHERENT avec les reponses « Confidentialite de
+	  l app » d App Store Connect. Un manifeste qui contredit App Store Connect
+	  est pire qu un manifeste vide.
+	-->
 	<key>NSPrivacyCollectedDataTypes</key>
-	<array/>
+	<array>
+		<!-- firstname, lastname — ProfileEdit.js:257,262 (charge de `updateMe`) -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- email — champ editable SelfProfileUnified.js:317, envoye par `updateMe` -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- phoneNumber — authService.js:233 (`signInWithPhoneNumber`) et :314
+		     (POST /firebase-auth/login-bypass). C est l identifiant de connexion. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhoneNumber</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- address — ProfileEdit.js:252 (adresse postale saisie au profil) -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhysicalAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- geohash — ProfileEdit.js:243-247 puis :258.
+		     PRECISE et non Coarse, et c est une MESURE, pas une lecture : l app
+		     appelle `getGeohashForPointAndRadius(lat, lon, 0.001)`, or un rayon
+		     sous 0,076 km donne la precision 8 (placesUseCases.js:19-28). Sortie
+		     mesuree : 8 caracteres (« u09tvw0f » pour Paris), soit une cellule de
+		     ~38 m x 19 m. Le serveur, lui, n utilise que 6 caracteres pour les
+		     clubs et evenements (~1,2 km x 0,6 km) — mais c est bien la valeur a
+		     8 produite par l app qui atterrit sur le champ `geohash` du profil. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePreciseLocation</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- avatar — ProfileEdit.js:253, televerse par authService.js:496
+		     (`formData.append('avatar', fileToUpload)`) -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhotosorVideos</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- historique sportif — userHistoryService.js:56 (POST /user-histories),
+		     alimente par le tunnel HistoryWizard (clubs, periodes, niveaux). -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- birthdate, category, height, nationality, weight — ProfileEdit.js:255,
+		     256, 259, 263, 278. Meme charge : jerseyNumber (:261), position (:275),
+		     preferredSport (:276), bestLevel (:254), isLookingForClub (:260). -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherDataTypes</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- firebaseUid — authService.js:368-370 : `getIdToken()` puis
+		     POST /firebase-auth/login { idToken }. Le jeton porte l identifiant
+		     de compte, que le serveur range dans `firebaseUid`. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- fcmTokens — useNotifications.js:266 (`addDeviceToken`) : le jeton de
+		     notification de l appareil est envoye au serveur et conserve. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSPrivacyTracking</key>
 	<false/>
 </dict>

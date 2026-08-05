@@ -2011,8 +2011,13 @@ export default {
         // previent le staff. Cette phrase l annonce AVANT la confirmation.
         consequences: 'Tes inscriptions aux événements à venir seront retirées et tes entraîneurs'
           + ' en seront informés. Ton historique passé est conservé. Cette action est définitive.',
-        subtitle: 'Pour demander la suppression de ton compte merci de remplir le formulaire de contact'
-          + ' suivant en précisant ta demande.',
+        // Lot L48 : cette phrase envoyait remplir un formulaire de contact alors
+        // que le bouton supprime le compte tout de suite. CLE MORTE depuis L28 :
+        // `Profile.js:200` affiche `consequences`, plus personne ne lit celle-ci
+        // (0 appelant, verifie). On la corrige quand meme plutot que de la
+        // supprimer, pour qu elle ne mente plus si on la rebranche un jour.
+        subtitle: 'Ton compte sera désactivé et tes informations personnelles effacées.'
+          + ' Cette action est définitive.',
         title: 'Supprimer ton compte ?',
       },
       maxAccounts: {
