@@ -813,7 +813,7 @@ function RecrutementListContent({
             + Créer une annonce
           </Text>
         </TouchableOpacity>
-        <View style={[Spaces.marginTop[14]]}>
+        <View style={[Spaces.marginTop[16]]}>
           <SearchComponent
             filterNumber={adFiltersCount}
             handleSearchField={setAdSearchValue}
@@ -834,7 +834,7 @@ function RecrutementListContent({
       <Loader />
     ) : (
       <FlatList
-        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[140], { flexGrow: 1 }]}
+        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[160], { flexGrow: 1 }]}
         data={filteredMyAds}
         keyboardShouldPersistTaps="handled"
         keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
@@ -1005,7 +1005,7 @@ function RecrutementListContent({
     const isMatching = variant === 'matching';
     return (
       <View
-        style={[Spaces.marginTop[2], {
+        style={[Spaces.marginTop[4], {
           alignItems: 'center',
           backgroundColor: recruitmentSurface,
           borderColor: isMatching ? recruitmentBorder : recruitmentBorderSoft,
@@ -1054,7 +1054,7 @@ function RecrutementListContent({
   };
 
   const renderPlayerListHeader = () => (
-    <View style={[Spaces.gap[18], Spaces.marginBottom[14]]}>
+    <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
       {renderAudienceTypeTabs()}
       <View style={{
         backgroundColor: recruitmentSurfaceStrong,
@@ -1132,7 +1132,7 @@ function RecrutementListContent({
           </View>
         </TouchableOpacity>
       ) : null}
-      <View style={[Spaces.marginTop[14]]}>
+      <View style={[Spaces.marginTop[16]]}>
         <SearchComponent
           filterNumber={adFiltersCount}
           handleSearchField={setAdSearchValue}
@@ -1155,7 +1155,7 @@ function RecrutementListContent({
       <Loader />
     ) : (
       <FlatList
-        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[140], { flexGrow: 1 }]}
+        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[160], { flexGrow: 1 }]}
         data={playerFeedItems}
         keyboardShouldPersistTaps="handled"
         keyExtractor={(item) => item.key}
@@ -1223,7 +1223,7 @@ function RecrutementListContent({
       <View style={[
         Alignments.row,
         Alignments.justifyCenter,
-        Spaces.marginBottom[20],
+        Spaces.marginBottom[24],
         Spaces.gap[8],
         {
           backgroundColor: recruitmentSurfaceSoft,
@@ -1246,7 +1246,7 @@ function RecrutementListContent({
       <Loader />
     ) : (
       <FlatList
-        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[140], { flexGrow: 1 }]}
+        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[160], { flexGrow: 1 }]}
         data={filteredMyApplications}
         keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
         ListEmptyComponent={(
