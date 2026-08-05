@@ -1340,9 +1340,13 @@ function HomeHubContent({ auth, navigation, route }) {
     });
   }, [navigation, userData?.documentId, userData?.id]);
 
+  // L33 — cap sur le CARROUSEL : la carte d'accueil affiche un COMPTEUR
+  // (« N événements offerts restants »), c'est un argument de vente. Le hub ne
+  // porte plus de catalogue ; y renvoyer couterait un tap de plus a qui veut
+  // payer. La gestion reste atteignable depuis « Mon compte ».
   const handleOpenSubscriptionOverview = useCallback(() => {
     navigation.navigate(RouteNames.ProfileStack, {
-      screen: RouteNames.SubscriptionOverview,
+      screen: RouteNames.SubscriptionOffers,
     });
   }, [navigation]);
 

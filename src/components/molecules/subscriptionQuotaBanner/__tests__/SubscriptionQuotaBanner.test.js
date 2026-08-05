@@ -1,3 +1,4 @@
+import { TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import SubscriptionQuotaBanner from '../SubscriptionQuotaBanner';
@@ -162,5 +163,23 @@ describe('SubscriptionQuotaBanner — on ne revend jamais du gratuit a un client
 
   test('tant que le niveau d abonnement est inconnu, aucun argument de vente', async () => {
     expect(await renderTextFor({ subscriptionAccessLevel: undefined })).toBe('');
+  });
+
+  // L33 — le bandeau parle d'un COMPTEUR : son bouton doit ouvrir le carrousel
+  // d'offres, jamais le hub. Depuis la refonte en trois ecrans, le hub ne porte
+  // plus aucun catalogue : y renvoyer quelqu'un a court de quota, c'est lui
+  // fermer le seul chemin pour payer.
+  test('L33 : « Débloquer » mene au CARROUSEL, la seule surface qui vend', async () => {
+    await renderTextFor({
+      freeUsageSummary: eventUsage({ limit: 1, used: 1 }),
+      subscriptionAccessLevel: 'FREE',
+    });
+
+    const bouton = mountedTree.root.findAllByType(TouchableOpacity)[0];
+    await act(async () => {
+      bouton.props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', { screen: 'SubscriptionOffers' });
   });
 });

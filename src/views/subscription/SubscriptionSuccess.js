@@ -187,6 +187,9 @@ function SubscriptionSuccess({ navigation, route }) {
     navigation.goBack();
   };
 
+  // L33 — cap sur le HUB, volontairement : cette personne VIENT d'acheter. Lui
+  // reouvrir un catalogue juste apres serait au mieux inutile, au pire une
+  // invitation a payer deux fois.
   const handleOpenSubscription = () => {
     navigation.navigate(RouteNames.ProfileStack, {
       screen: RouteNames.SubscriptionOverview,

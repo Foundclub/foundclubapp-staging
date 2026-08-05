@@ -288,10 +288,14 @@ function SubscriptionPaywallSheet({
     );
   }
 
+  // L33 — cap sur le CARROUSEL, jamais sur le hub. Cette personne vient de
+  // buter sur un mur payant : le hub ne porte plus aucun catalogue, elle y
+  // arriverait sans aucune offre a acheter. C'est exactement le trou que L10-A
+  // a comble (« un dirigeant carte bleue en main n'a aucun chemin pour payer »).
   const handleOpenSubscription = () => {
     close();
     navigation.navigate(RouteNames.ProfileStack, {
-      screen: RouteNames.SubscriptionOverview,
+      screen: RouteNames.SubscriptionOffers,
     });
   };
 
@@ -649,7 +653,9 @@ function SubscriptionPaywallSheet({
   // Il renvoyait le client vers sa fiche club pour y faire une certification que
   // seule la console SuperAdmin peut declencher, et le serveur ne l'emet plus
   // (0 occurrence dans admin/src). Un seul bouton, une seule destination.
-  const primaryActionLabel = t('profile.subscription.actions.viewOverview', 'Voir mon abonnement');
+  // L33 — le bouton dit ou il mene : depuis un mur payant, il ouvre le
+  // carrousel d'offres, pas la page de gestion.
+  const primaryActionLabel = t('profile.subscription.actions.viewOffers', 'Voir les offres');
 
   return (
     <BottomModal

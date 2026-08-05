@@ -127,6 +127,9 @@ function Profile({ navigation, route }) {
     navigation.navigate(RouteNames.PlayerCard);
   };
 
+  // L33 — cap sur le HUB, volontairement : « Mon compte » est un geste de
+  // GESTION, pas un moment d'achat. Le catalogue reste a un tap, par la rangee
+  // « Changer d'offre » du hub.
   const handleOpenSubscriptionOverview = () => {
     if (!canShowSubscriptionExperience) {
       return;

@@ -75,9 +75,12 @@ function SubscriptionQuotaBanner({ label, quotaType }) {
   // FREE_TEAM compte des creations d'equipe, les autres quotas des publications.
   const quotaNoun = quotaType === 'FREE_TEAM' ? 'création' : 'publication';
 
+  // L33 — cap sur le CARROUSEL : cette personne vient de voir un compteur, elle
+  // doit tomber sur des offres achetables, pas sur la page de gestion (qui ne
+  // porte plus aucun catalogue).
   const handleOpenOffers = () => {
     navigation.navigate(RouteNames.ProfileStack, {
-      screen: RouteNames.SubscriptionOverview,
+      screen: RouteNames.SubscriptionOffers,
     });
   };
 

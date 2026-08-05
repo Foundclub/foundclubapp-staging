@@ -2096,6 +2096,7 @@ export default {
         restore: 'Restaurer mes achats',
         viewClub: 'Voir mon club',
         viewClubHint: 'Demandes · certification',
+        viewOffers: 'Voir les offres',
       },
       compareHeaderTitle: 'Comparer',
       cta: 'Voir le détail des offres',

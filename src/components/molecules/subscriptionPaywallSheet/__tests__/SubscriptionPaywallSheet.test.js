@@ -467,12 +467,15 @@ describe('SubscriptionPaywallSheet — palier Club plein (CLUB_TIER_TEAM_LIMIT)'
 
     expect(allTexts(tree)).toContain('Limite d équipes atteinte');
     // Un second achat Club sur un club deja couvert leve CLUB_ALREADY_COVERED
-    // (subscription-billing.ts:617) : la montee de palier passe par l'ecran
-    // d'abonnement, qui sait deja faire un changement de plan.
-    const cta = findButtonByText(tree, 'Voir mon abonnement');
+    // (subscription-billing.ts:617) : la montee de palier passe par le
+    // CARROUSEL, qui sait deja faire un changement de plan.
+    // L33 — la destination change (`SubscriptionOffers` et non plus le hub) et
+    // le libelle avec elle : depuis un mur payant, le hub n'a plus aucune offre
+    // a montrer. C'est le temoin anti-regression de L10-A, cote appelant.
+    const cta = findButtonByText(tree, 'Voir les offres');
     expect(cta).toBeTruthy();
     act(() => { cta.props.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', { screen: 'SubscriptionOverview' });
+    expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', { screen: 'SubscriptionOffers' });
     expect(findButtonByText(tree, 'Débloquer Club S')).toBeFalsy();
   });
 });

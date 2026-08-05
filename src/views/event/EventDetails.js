@@ -643,10 +643,12 @@ function EventDetails({ navigation, route }) {
     };
   }, [navigation, shouldSuggestSubscriptionAfterCreate]);
 
+  // L33 — cap sur le CARROUSEL : la relance qui suit une publication parle de
+  // quotas, donc elle doit ouvrir des offres achetables, pas la page de gestion.
   const handleOpenSubscriptionOverview = useCallback(() => {
     setIsSubscriptionFollowUpVisible(false);
     navigation.navigate(RouteNames.ProfileStack, {
-      screen: RouteNames.SubscriptionOverview,
+      screen: RouteNames.SubscriptionOffers,
     });
   }, [navigation]);
 
