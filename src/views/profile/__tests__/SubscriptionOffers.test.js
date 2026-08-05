@@ -388,9 +388,23 @@ const libelleDuCta = (arbre) => arbre.root
   .filter((/** @type {string} */ texte) => texte.startsWith('Choisir ')
     || texte === 'Ton plan actuel'
     || texte === 'Ton offre actuelle'
+    || texte === 'Gérer mes équipes couvertes'
     || texte === 'Gérer dans le store'
     || texte === 'Offre indisponible')
   .pop() || '';
+
+/**
+ * Cases a cocher de la feuille « equipes couvertes », par nom d'equipe.
+ * @param {any} arbre
+ * @returns {Array<{ coche: boolean; nom: string }>}
+ */
+const casesACocher = (arbre) => arbre.root
+  .findAllByType(TouchableOpacity)
+  .filter((/** @type {any} */ noeud) => noeud.props.accessibilityRole === 'checkbox')
+  .map((/** @type {any} */ noeud) => ({
+    coche: Boolean(noeud.props.accessibilityState?.checked),
+    nom: aplatirTexte(noeud.findAllByType(Text)[0]?.props?.children).trim(),
+  }));
 
 /**
  * Monte le carrousel avec le contexte d'authentification demande.
@@ -823,6 +837,130 @@ describe('Carrousel d\'offres — la carte Gratuit dit la verite sur les compteu
     expect(libelleDuCta(arbre)).toBe('Ton offre actuelle');
     expect(pressablesPortant(arbre, 'Ton offre actuelle')[0].props.accessibilityState.disabled)
       .toBe(true);
+  });
+});
+
+/* L40 partie A — un abonne Équipe a paye une offre qui couvre des equipes
+   NOMMEES, et il ne pouvait plus jamais changer lesquelles : le seul chemin vers
+   la feuille de gestion (`manage-team-slots`) passait par un CTA desactive
+   EXACTEMENT quand cette condition etait vraie. Du code mort, dont le titre
+   « Mettre à jour mes équipes couvertes » ne pouvait s'afficher nulle part. */
+describe('L40 — un abonne Équipe peut rouvrir ses equipes couvertes', () => {
+  /**
+   * @param {Record<string, any>} [surcharges]
+   * @returns {Record<string, any>}
+   */
+  const abonneEquipe = (surcharges = {}) => ({
+    allMyTeams: [
+      { club: { name: 'AS Test' }, documentId: 'team-1', name: 'U15' },
+      { club: { name: 'AS Test' }, documentId: 'team-2', name: 'U17' },
+      { club: { name: 'AS Test' }, documentId: 'team-3', name: 'U19' },
+    ],
+    subscriptionAccessLevel: 'TEAM',
+    subscriptionSummary: {
+      activePlanCodes: ['fc_team_1_yearly'],
+      payerSubscriptionIds: ['sub-1'],
+      teamSlotSummary: {
+        assigned: 1, available: 0, coveredTeamDocumentIds: ['team-2'], total: 1,
+      },
+    },
+    ...surcharges,
+  });
+
+  beforeEach(() => {
+    mockPerformPlanChange.mockResolvedValue({ ok: true });
+  });
+
+  it('TEMOIN D\'ARRIVEE — le CTA de son offre active ouvre la gestion des equipes', async () => {
+    const arbre = await rendre(abonneEquipe());
+
+    // Le CTA ne ment pas : il n'y a rien a acheter, mais il y a quelque chose a
+    // GERER. Il change de verbe au lieu de s'eteindre.
+    expect(libelleDuCta(arbre)).toBe('Gérer mes équipes couvertes');
+    expect(pressablesPortant(arbre, 'Gérer mes équipes couvertes')[0]
+      .props.accessibilityState.disabled).toBe(false);
+
+    await appuyerSur(arbre, 'Gérer mes équipes couvertes');
+
+    // Ce titre est le temoin du code mort : il ne pouvait s'afficher sur aucun
+    // ecran avant ce lot.
+    expect(texteVisible(arbre)).toContain('Mettre à jour mes équipes couvertes');
+  });
+
+  it('la feuille s\'ouvre PRE-COCHEE sur les equipes deja couvertes', async () => {
+    const arbre = await rendre(abonneEquipe());
+    await appuyerSur(arbre, 'Gérer mes équipes couvertes');
+
+    // Rouvrir la fenetre sur une selection vide ferait perdre a l'abonne la
+    // trace de ce qu'il paie.
+    expect(casesACocher(arbre)).toEqual([
+      { coche: false, nom: 'U15' },
+      { coche: true, nom: 'U17' },
+      { coche: false, nom: 'U19' },
+    ]);
+  });
+
+  it('changer d\'equipe passe par le MEME planCode — donc sans repasser a la caisse', async () => {
+    const arbre = await rendre(abonneEquipe());
+    await appuyerSur(arbre, 'Gérer mes équipes couvertes');
+    // On libere U17 et on couvre U19 a la place : 1 creneau, 1 equipe.
+    await appuyerSur(arbre, 'U17');
+    await appuyerSur(arbre, 'U19');
+    await appuyerSur(arbre, 'Confirmer le changement');
+
+    expect(mockPerformPurchase).not.toHaveBeenCalled();
+    // `currentPlanCode` EGAL a `planCode` est la condition exacte qui fait
+    // prendre a `performSubscriptionPlanChange` la branche « reassignation de
+    // creneaux, aucun passage store » (subscriptionPurchaseRail.js:241).
+    expect(mockPerformPlanChange).toHaveBeenCalledTimes(1);
+    const envoi = mockPerformPlanChange.mock.calls[0][0];
+    expect(envoi.catalogEntry.planCode).toBe('fc_team_1_yearly');
+    expect(envoi.currentPlanCode).toBe('fc_team_1_yearly');
+    expect(envoi.subscriptionDocumentId).toBe('sub-1');
+    expect(envoi.teamDocumentIds).toEqual(['team-3']);
+  });
+
+  it('une simple mise a jour de creneaux n\'invente PAS de date de renouvellement', async () => {
+    const arbre = await rendre(abonneEquipe());
+    await appuyerSur(arbre, 'Gérer mes équipes couvertes');
+    await appuyerSur(arbre, 'Confirmer le changement');
+
+    // La vraie echeance ne bouge pas (le serveur la preserve quand le payload
+    // omet les dates, subscription-billing.ts:1181). En afficher une calculee
+    // « aujourd'hui + 1 an » serait un mensonge sur l'ecran de succes.
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'SubscriptionSuccess',
+      expect.objectContaining({ offerScope: 'TEAM' }),
+    );
+    expect(mockNavigate.mock.calls[0][1].renewalDateLabel).toBeUndefined();
+  });
+
+  it('TEMOIN DE PORTEE — sur une offre CLUB active, le CTA reste desactive', async () => {
+    // Une offre Club couvre TOUT le club : il n'y a aucun creneau a gerer. Le
+    // CTA doit garder son ancien comportement, mot pour mot.
+    const arbre = await rendre({
+      subscriptionAccessLevel: 'CLUB',
+      subscriptionSummary: {
+        activePlanCodes: ['fc_club_tier_1_yearly'],
+        payerSubscriptionIds: ['sub-1'],
+        teamSlotSummary: {
+          assigned: 0, available: 0, coveredTeamDocumentIds: [], total: 0,
+        },
+      },
+    });
+    await allerALaCarte(arbre, 2);
+
+    expect(libelleDuCta(arbre)).toBe('Ton offre actuelle');
+    expect(pressablesPortant(arbre, 'Ton offre actuelle')[0].props.accessibilityState.disabled)
+      .toBe(true);
+  });
+
+  it('TEMOIN D\'ACHAT — un palier NON possede reste un achat, pas une gestion', async () => {
+    const arbre = await rendre(abonneEquipe());
+    // Palier 2 equipes : ce n'est pas son offre, c'est une montee en gamme.
+    await appuyerSur(arbre, '2');
+
+    expect(libelleDuCta(arbre)).toBe('Choisir Équipe · 99,99 €/an');
   });
 });
 

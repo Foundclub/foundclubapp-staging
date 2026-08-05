@@ -305,9 +305,10 @@ function SubscriptionOffers({ navigation, route }) {
    * encaissee. La portee vient de l'ACHAT, jamais du cache d'abonnement : juste
    * apres l'achat, le webhook du store n'a pas encore converge (L08).
    * @param {SubscriptionCatalogEntry | null} catalogEntry
+   * @param {{ isTeamSlotUpdate?: boolean }} [options]
    * @returns {Record<string, any>}
    */
-  const buildPurchaseSuccessParams = useCallback((catalogEntry) => {
+  const buildPurchaseSuccessParams = useCallback((catalogEntry, options = {}) => {
     const isClubOffer = getSubscriptionEntryScope(catalogEntry) === 'CLUB';
     const slotCount = Number(catalogEntry?.slotCount || 0);
     const renewalDate = new Date();
@@ -323,7 +324,13 @@ function SubscriptionOffers({ navigation, route }) {
         ? `Club ${CLUB_TIER_LETTERS[getSubscriptionEntryTierRank(catalogEntry)] || ''}`.trim()
         : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
       offerScope: isClubOffer ? 'CLUB' : 'TEAM',
-      renewalDateLabel: format(renewalDate, 'd MMMM yyyy', { locale: fr }),
+      // L40 — une simple reassignation de creneaux ne DEPLACE PAS l'echeance :
+      // le serveur preserve la fenetre quand le payload omet les dates
+      // (subscription-billing.ts:1181). Annoncer « aujourd'hui + 1 an » serait
+      // un mensonge d'etiquette ; on prefere ne rien annoncer.
+      renewalDateLabel: options.isTeamSlotUpdate
+        ? undefined
+        : format(renewalDate, 'd MMMM yyyy', { locale: fr }),
       // Sous cet ecran, dans la pile, il y a le CATALOGUE : « revenir » y
       // rouvrirait des offres a quelqu'un qui vient de payer. On repart de
       // l'accueil, comme le Recap du tour guide.
@@ -352,7 +359,14 @@ function SubscriptionOffers({ navigation, route }) {
       // non plus une alerte systeme. Le decalage d'ouverture des droits par le
       // webhook du store y est deja gere (calendrier de relances 0/2/5/10/20 s) :
       // on passe par le meme chemin que le Recap du tour guide.
-      navigation.navigate(RouteNames.SubscriptionSuccess, buildPurchaseSuccessParams(catalogEntry));
+      // L40 — un changement d'offre vers le MEME planCode n'est pas un achat :
+      // c'est la reassignation de creneaux, sans passage store ni facturation
+      // (subscriptionPurchaseRail.js:241). L'ecran de succes ne doit alors
+      // annoncer aucune nouvelle echeance.
+      navigation.navigate(RouteNames.SubscriptionSuccess, buildPurchaseSuccessParams(catalogEntry, {
+        isTeamSlotUpdate: action === 'change'
+          && String(input?.currentPlanCode || '') === String(catalogEntry?.planCode || ''),
+      }));
 
       return result;
     } catch (error) {
@@ -529,7 +543,16 @@ function SubscriptionOffers({ navigation, route }) {
       teamDocumentIds: selectedTeamIds,
     };
     if (primarySubscriptionDocumentId) {
-      input.currentPlanCode = String(activePlanCodes[0] || '');
+      // L40 — `currentPlanCode` EGAL au plan vise est ce qui fait prendre au rail
+      // la branche « reassignation de creneaux » : aucun passage store, aucune
+      // seconde facturation (subscriptionPurchaseRail.js:241). On le pointe donc
+      // sur l'offre elle-meme quand on ne fait que changer les equipes couvertes.
+      // `activePlanCodes[0]` ne suffit pas : le tableau peut porter PLUSIEURS
+      // offres actives (subscriptionDecision.test.js:209), et une autre en tete
+      // enverrait l'abonne repasser a la caisse pour ce qu'il paie deja.
+      input.currentPlanCode = teamPlanModalState.actionMode === 'manage-team-slots'
+        ? String(selectedTeamPlanEntry?.planCode || '')
+        : String(activePlanCodes[0] || '');
       input.subscriptionDocumentId = primarySubscriptionDocumentId;
     }
 
@@ -547,6 +570,7 @@ function SubscriptionOffers({ navigation, route }) {
     selectedTeamIds,
     selectedTeamPlanEntry,
     teamOptions.length,
+    teamPlanModalState.actionMode,
     userData?.documentId,
   ]);
 
@@ -742,6 +766,26 @@ function SubscriptionOffers({ navigation, route }) {
     }
 
     if (isActivePlan) {
+      // L40 — une offre Équipe couvre des equipes NOMMEES, et son abonne doit
+      // pouvoir changer lesquelles. Le seul chemin vers cette feuille
+      // (`manage-team-slots`, l.402) exige `activePlanCodes.includes(planCode)`,
+      // c'est-a-dire la condition MEME qui eteignait ce bouton : du code mort,
+      // et une impasse pour qui a paye. Le CTA ne ment pas davantage qu'avant —
+      // il n'y a toujours rien a acheter, mais il y a quelque chose a GERER,
+      // alors il change de verbe.
+      // Cote CLUB il n'y a rien de nommable (l'offre couvre tout le club) : le
+      // bouton reste eteint, mot pour mot comme avant.
+      if (getSubscriptionEntryScope(entry) === 'TEAM') {
+        return {
+          disabled: !isPurchaseAvailable,
+          entry,
+          label: 'Gérer mes équipes couvertes',
+          sub: isPurchaseAvailable
+            ? 'Change les équipes couvertes par ton offre, sans repayer.'
+            : purchaseHelperText,
+        };
+      }
+
       return {
         disabled: true,
         entry,
