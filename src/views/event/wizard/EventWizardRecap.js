@@ -1469,6 +1469,8 @@ function EventWizardRecap({ navigation }) {
         decision={subscriptionPaywallDecision}
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}
+        resumeRouteName={RouteNames.EventStack}
+        resumeRouteParams={{ screen: RouteNames.EventWizardRecap }}
       />
     </>
   );

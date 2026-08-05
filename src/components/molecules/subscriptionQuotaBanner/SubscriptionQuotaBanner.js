@@ -24,9 +24,18 @@ const EXHAUSTED_BODY_BY_QUOTA_TYPE = {
  * @param {object} props
  * @param {string} props.quotaType - 'EVENT_PUBLISH' | 'FREE_TEAM' | 'RECRUITMENT_AD_PUBLISH'
  * @param {string} props.label - Libelle du contenu concerne, ex. 'Evenements'
+ * @param {string} [props.resumeRouteName] - L40 : ou ramener la personne apres
+ *   l'achat, exprime depuis le navigateur RACINE (ex. 'EventStack').
+ * @param {Record<string, any>} [props.resumeRouteParams] - Cible imbriquee
+ *   ({ screen, params }) de cette route racine.
  * @returns {import('react').ReactElement | null}
  */
-function SubscriptionQuotaBanner({ label, quotaType }) {
+function SubscriptionQuotaBanner({
+  label,
+  quotaType,
+  resumeRouteName = '',
+  resumeRouteParams = undefined,
+}) {
   const {
     ApplicationStyle,
     Colors,
@@ -78,8 +87,13 @@ function SubscriptionQuotaBanner({ label, quotaType }) {
   // L33 — cap sur le CARROUSEL : cette personne vient de voir un compteur, elle
   // doit tomber sur des offres achetables, pas sur la page de gestion (qui ne
   // porte plus aucun catalogue).
+  // L40 — ce bandeau est affiche EN ENTREE d'assistant : il est la seule piece
+  // qui sache d'ou part la personne. Il le dit au catalogue, qui transportera
+  // l'information jusqu'a l'ecran de succes. Sans origine fournie, rien n'est
+  // ajoute et le comportement d'avant reste mot pour mot.
   const handleOpenOffers = () => {
     navigation.navigate(RouteNames.ProfileStack, {
+      ...(resumeRouteName ? { params: { resumeRouteName, resumeRouteParams } } : {}),
       screen: RouteNames.SubscriptionOffers,
     });
   };

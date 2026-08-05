@@ -172,6 +172,13 @@ function SubscriptionOffers({ navigation, route }) {
     String(route?.params?.focusScope || '').trim().toUpperCase()
   ] || DEFAULT_CARD_INDEX;
 
+  // L40 — l'origine est un COLIS : ce carrousel ne l'ouvre jamais, il la
+  // transporte. La porte qui a envoye ici sait d'ou part la personne ; cet ecran
+  // ne le sait pas, et l'ecran de succes encore moins. Absente, on garde le
+  // retour a l'accueil.
+  const resumeRouteName = String(route?.params?.resumeRouteName || '').trim();
+  const resumeRouteParams = route?.params?.resumeRouteParams;
+
   const scrollRef = useRef(/** @type {any} */ (null));
   const [activeIndex, setActiveIndex] = useState(focusCardIndex);
   const [billingPeriod, setBillingPeriod] = useState('yearly');
@@ -332,12 +339,18 @@ function SubscriptionOffers({ navigation, route }) {
         ? undefined
         : format(renewalDate, 'd MMMM yyyy', { locale: fr }),
       // Sous cet ecran, dans la pile, il y a le CATALOGUE : « revenir » y
-      // rouvrirait des offres a quelqu'un qui vient de payer. On repart de
-      // l'accueil, comme le Recap du tour guide.
-      resumeCtaLabel: 'C\'est parti !',
-      resumeMode: 'home',
+      // rouvrirait des offres a quelqu'un qui vient de payer. Sans origine
+      // connue, on repart donc de l'accueil, comme le Recap du tour guide.
+      // Avec une origine (L40), on y ramene la personne — et le bouton le dit :
+      // « C'est parti ! » promet l'accueil, « Reprendre » promet la tache
+      // interrompue. Un libelle qui se trompe de destination est un defaut a
+      // part entiere.
+      resumeCtaLabel: resumeRouteName ? 'Reprendre' : 'C\'est parti !',
+      resumeMode: resumeRouteName ? 'route' : 'home',
+      resumeRouteName: resumeRouteName || undefined,
+      resumeRouteParams: resumeRouteName ? resumeRouteParams : undefined,
     };
-  }, [currentClubDocumentId]);
+  }, [currentClubDocumentId, resumeRouteName, resumeRouteParams]);
 
   /**
    * @param {object} params

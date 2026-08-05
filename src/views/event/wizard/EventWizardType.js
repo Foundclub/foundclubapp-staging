@@ -80,7 +80,13 @@ function EventWizardType({ navigation, route }) {
         subtitle={t('eventWizard.steps.type.subtitle')}
         title={t('eventWizard.steps.type.title')}
       >
-        <SubscriptionQuotaBanner label="Evenements" quotaType="EVENT_PUBLISH" />
+        {/* L40 — si la personne part d'ici acheter, elle revient ICI. */}
+        <SubscriptionQuotaBanner
+          label="Evenements"
+          quotaType="EVENT_PUBLISH"
+          resumeRouteName={RouteNames.EventStack}
+          resumeRouteParams={{ screen: RouteNames.EventWizardType }}
+        />
 
         {isLoading ? (
           <ActivityIndicator color={Colors.primary500} size="large" />

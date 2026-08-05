@@ -109,6 +109,8 @@ const BILLING_PERIOD_OPTIONS = [
  *   decision?: any;
  *   isVisible: boolean;
  *   navigation: any;
+ *   resumeRouteName?: string;
+ *   resumeRouteParams?: Record<string, any>;
  * }} props
  * @returns {import('react').ReactElement | null}
  */
@@ -119,6 +121,11 @@ function SubscriptionPaywallSheet({
   decision,
   isVisible,
   navigation,
+  // L40 — ou ramener la personne apres un achat passe par le CATALOGUE, exprime
+  // depuis le navigateur RACINE. L'achat fait DANS cette feuille n'en a pas
+  // besoin : elle est posee SUR l'ecran, « revenir » y retombe pile.
+  resumeRouteName = '',
+  resumeRouteParams = undefined,
 }) {
   const {
     Alignments,
@@ -275,10 +282,16 @@ function SubscriptionPaywallSheet({
   // a comble (« un dirigeant carte bleue en main n'a aucun chemin pour payer »).
   // L38 — et sur la BONNE carte : le refus porte la famille d'offre exigee, le
   // carrousel s'ouvrait sinon toujours sur Équipe, y compris pour un mur Club.
+  // L40 — et on note d'ou part la personne : passee par le catalogue, elle
+  // atterrissait sur l'accueil apres avoir paye, son brouillon garde mais son
+  // chemin perdu.
   const handleOpenSubscription = () => {
     close();
     navigation.navigate(RouteNames.ProfileStack, {
-      params: { focusScope: getSubscriptionRequiredScope(decision) },
+      params: {
+        focusScope: getSubscriptionRequiredScope(decision),
+        ...(resumeRouteName ? { resumeRouteName, resumeRouteParams } : {}),
+      },
       screen: RouteNames.SubscriptionOffers,
     });
   };

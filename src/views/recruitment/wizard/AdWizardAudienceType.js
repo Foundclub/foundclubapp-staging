@@ -91,7 +91,13 @@ function AdWizardAudienceType({ navigation, route }) {
       title="Type d'annonce"
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
-        <SubscriptionQuotaBanner label="Annonces" quotaType="RECRUITMENT_AD_PUBLISH" />
+        {/* L40 — si la personne part d'ici acheter, elle revient ICI. */}
+        <SubscriptionQuotaBanner
+          label="Annonces"
+          quotaType="RECRUITMENT_AD_PUBLISH"
+          resumeRouteName={RouteNames.AdWizardStack}
+          resumeRouteParams={{ screen: RouteNames.AdWizardAudienceType }}
+        />
 
         <AudienceCard
           description="Publie une annonce par poste recherche, avec le volume de recrutement et les informations sportives de l&rsquo;équipe."

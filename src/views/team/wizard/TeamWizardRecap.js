@@ -485,6 +485,8 @@ function TeamWizardRecap({ navigation }) {
         decision={subscriptionPaywallDecision}
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}
+        resumeRouteName={RouteNames.TeamStack}
+        resumeRouteParams={{ screen: RouteNames.TeamWizardRecap }}
       />
     </>
   );

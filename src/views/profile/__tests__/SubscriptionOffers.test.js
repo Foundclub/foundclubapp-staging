@@ -964,6 +964,39 @@ describe('L40 — un abonne Équipe peut rouvrir ses equipes couvertes', () => {
   });
 });
 
+/* L40 partie B — le catalogue est un PASSAGE : il ne sait pas d'ou vient la
+   personne, mais la porte qui l'y a envoyee, si. Il transporte donc l'origine
+   sans jamais l'interpreter, jusqu'a l'ecran de succes. */
+describe('L40 — le catalogue transporte l origine jusqu a l ecran de succes', () => {
+  it('une origine recue en param voyage jusqu au succes, avec « Reprendre »', async () => {
+    const arbre = await rendre({}, {
+      resumeRouteName: 'EventStack',
+      resumeRouteParams: { screen: 'EventWizardType' },
+    });
+    await allerALaCarte(arbre, 2);
+    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+
+    expect(mockNavigate).toHaveBeenCalledWith('SubscriptionSuccess', expect.objectContaining({
+      // Le libelle doit dire ou il mene : « C'est parti ! » promet l'accueil.
+      resumeCtaLabel: 'Reprendre',
+      resumeMode: 'route',
+      resumeRouteName: 'EventStack',
+      resumeRouteParams: { screen: 'EventWizardType' },
+    }));
+  });
+
+  it('TEMOIN — sans origine, on repart de l accueil exactement comme avant', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+
+    const params = mockNavigate.mock.calls[0][1];
+    expect(params.resumeMode).toBe('home');
+    expect(params.resumeCtaLabel).toBe('C\'est parti !');
+    expect(params.resumeRouteName).toBeUndefined();
+  });
+});
+
 describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
   it('Club ne reenumere pas les benefices Équipe : il n\'affiche que le delta', async () => {
     const arbre = await rendre();

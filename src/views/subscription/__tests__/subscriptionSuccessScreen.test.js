@@ -209,6 +209,113 @@ describe('SubscriptionSuccess — comportement livre (handoff 6a)', () => {
   });
 });
 
+/* L40 partie B — quelqu'un remplit un formulaire, bute sur un mur payant, va au
+   catalogue, achete… et atterrit sur l'ACCUEIL. Son brouillon est garde (L10-C),
+   pas son chemin. On ne pouvait pas se contenter de basculer sur 'back' : sous
+   cet ecran, dans la pile, il y a le CATALOGUE — « revenir » rouvrirait une page
+   de vente a quelqu'un qui vient de payer. Il faut se souvenir de l'ecran
+   d'ORIGINE, celui d'AVANT le catalogue, et il voyage en PARAMETRE. */
+describe('SubscriptionSuccess — L40, on revient la ou on etait', () => {
+  it('mode `route` : « Reprendre » ramene a l origine, pas a l accueil', async () => {
+    await renderScreen({
+      resumeMode: 'route',
+      resumeRouteName: RouteNames.EventStack,
+      resumeRouteParams: { screen: RouteNames.EventWizardType },
+    });
+    await act(async () => {
+      mockButtonHandlers.get('Reprendre')();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.EventStack, {
+      screen: RouteNames.EventWizardType,
+    });
+    expect(navigation.reset).not.toHaveBeenCalled();
+    // Le catalogue est juste dessous : y « revenir » serait rouvrir des offres
+    // a quelqu'un qui vient de payer.
+    expect(navigation.goBack).not.toHaveBeenCalled();
+  });
+
+  it('une origine SANS params est visee telle quelle', async () => {
+    await renderScreen({ resumeMode: 'route', resumeRouteName: RouteNames.TeamStack });
+    await act(async () => {
+      mockButtonHandlers.get('Reprendre')();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.TeamStack, undefined);
+  });
+
+  it('REPLI — un nom d origine inconnu retombe sur l accueil, jamais un bouton mort', async () => {
+    await renderScreen({ resumeMode: 'route', resumeRouteName: 'EcranQuiNExistePas' });
+    await act(async () => {
+      mockButtonHandlers.get('Reprendre')();
+    });
+
+    expect(navigation.reset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{ name: RouteNames.HomeTab }],
+    });
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it('REPLI — mode `route` sans aucune origine retombe sur l accueil', async () => {
+    await renderScreen({ resumeMode: 'route' });
+    await act(async () => {
+      mockButtonHandlers.get('Reprendre')();
+    });
+
+    expect(navigation.reset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{ name: RouteNames.HomeTab }],
+    });
+  });
+
+  it('PIEGE R06 — un nom de FEUILLE ne peut pas etre vise d ici : repli accueil', async () => {
+    // Cet ecran est pousse sur le navigateur RACINE. Un nom qui ne vit que dans
+    // un sous-navigateur (`EventDetails` est dans EventStack) y echoue EN
+    // SILENCE — c'est deja ecrit dans le fichier a propos du recrutement. Un
+    // bouton qui ne fait rien est pire qu'un bouton qui ramene a l'accueil.
+    await renderScreen({ resumeMode: 'route', resumeRouteName: RouteNames.EventDetails });
+    await act(async () => {
+      mockButtonHandlers.get('Reprendre')();
+    });
+
+    expect(navigation.reset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{ name: RouteNames.HomeTab }],
+    });
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it('TEMOIN — le mode `home` n est pas touche par le nouveau mode', async () => {
+    await renderScreen({
+      resumeCtaLabel: "C'est parti !",
+      resumeMode: 'home',
+      // Une origine trainante ne doit pas detourner un mode explicite.
+      resumeRouteName: RouteNames.TeamStack,
+    });
+    await act(async () => {
+      mockButtonHandlers.get("C'est parti !")();
+    });
+
+    expect(navigation.reset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{ name: RouteNames.HomeTab }],
+    });
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it('TEMOIN — le mode `back` reste le defaut de la feuille payante', async () => {
+    // La feuille etait posee SUR l'ecran : « revenir » y retombe pile.
+    await renderScreen({ resumeCtaLabel: 'Reprendre' });
+    await act(async () => {
+      mockButtonHandlers.get('Reprendre')();
+    });
+
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    expect(navigation.reset).not.toHaveBeenCalled();
+  });
+});
+
 // La liste vient de getSubscriptionUnlockedCapabilities, miroir de la matrice
 // serveur (subscription-permission.ts:43-80) : ces tests verrouillent qu'on
 // n'affiche jamais une capacite que l'offre achetee ne debloque pas.

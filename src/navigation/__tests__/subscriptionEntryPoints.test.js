@@ -120,3 +120,25 @@ describe('Points d\'entree de l\'abonnement — chacun atterrit au bon endroit',
     expect(coupables).toEqual([]);
   });
 });
+
+// L40 — deuxieme decision par point d'entree, et elle ne se devine pas non plus.
+// Une porte ouverte par un MUR PAYANT interrompt une tache : elle doit dire d'ou
+// elle part, sinon l'achat renvoie la personne a l'accueil et lui laisse
+// retrouver son chemin toute seule (son brouillon est garde par L10-C, pas son
+// chemin). Une entree VOLONTAIRE depuis le hub n'interrompt rien : on y va pour
+// acheter, on repart a l'accueil, et ca ne doit PAS changer.
+describe('L40 — une porte dit d ou elle part, ou assume l accueil', () => {
+  it.each([
+    ['components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet.js', true],
+    ['components/molecules/subscriptionQuotaBanner/SubscriptionQuotaBanner.js', true],
+    ['views/event/EventDetails.js', true],
+    // L'accueil EST l'origine : le repli suffit, un retour explicite serait un
+    // aller-retour pour rien.
+    ['views/home/HomeHub.js', false],
+    // Les deux entrees volontaires du hub.
+    ['views/profile/SubscriptionCompare.js', false],
+    ['views/profile/SubscriptionOverview.js', false],
+  ])('%s transporte une origine : %s', (fichier, transporteUneOrigine) => {
+    expect(lireSource(fichier).includes('resumeRouteName')).toBe(transporteUneOrigine);
+  });
+});

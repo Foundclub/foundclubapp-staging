@@ -645,12 +645,20 @@ function EventDetails({ navigation, route }) {
 
   // L33 — cap sur le CARROUSEL : la relance qui suit une publication parle de
   // quotas, donc elle doit ouvrir des offres achetables, pas la page de gestion.
+  // L40 — et on note d'ou part la personne : apres l'achat, l'ecran de succes la
+  // ramene sur CET evenement au lieu de l'accueil. La cible s'exprime depuis la
+  // RACINE (`EventStack` + l'ecran), le seul niveau que l'ecran de succes sache
+  // viser — un nom de feuille y echouerait en silence (R06).
   const handleOpenSubscriptionOverview = useCallback(() => {
     setIsSubscriptionFollowUpVisible(false);
     navigation.navigate(RouteNames.ProfileStack, {
+      params: {
+        resumeRouteName: RouteNames.EventStack,
+        resumeRouteParams: { params: { eventId }, screen: RouteNames.EventDetails },
+      },
       screen: RouteNames.SubscriptionOffers,
     });
-  }, [navigation]);
+  }, [eventId, navigation]);
 
   useEffect(() => {
     const safeEventId = String(eventId || '');

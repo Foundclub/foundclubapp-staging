@@ -92,9 +92,11 @@ const collectText = (node) => {
  * le formateur d'echec de jest n'arrive pas a serialiser — un rouge legitime
  * devenait alors illisible. Une chaine vide dit la meme chose et s'affiche.
  * @param {any} auth
+ * @param {{ resumeRouteName?: string; resumeRouteParams?: Record<string, any> }} [origine]
+ *   - L40 : ou le bandeau doit dire de ramener la personne apres l'achat.
  * @returns {Promise<string>}
  */
-const renderTextFor = async (auth) => {
+const renderTextFor = async (auth, origine = {}) => {
   mockUseAuth.mockReturnValue({
     freeUsageSummary: eventUsage({ limit: 1, used: 0 }),
     subscriptionAccessLevel: 'FREE',
@@ -103,7 +105,12 @@ const renderTextFor = async (auth) => {
   });
   await act(async () => {
     mountedTree = renderer.create(
-      <SubscriptionQuotaBanner label="Événements" quotaType="EVENT_PUBLISH" />,
+      <SubscriptionQuotaBanner
+        label="Événements"
+        quotaType="EVENT_PUBLISH"
+        resumeRouteName={origine.resumeRouteName}
+        resumeRouteParams={origine.resumeRouteParams}
+      />,
     );
   });
 
@@ -178,6 +185,42 @@ describe('SubscriptionQuotaBanner — on ne revend jamais du gratuit a un client
     const bouton = mountedTree.root.findAllByType(TouchableOpacity)[0];
     await act(async () => {
       bouton.props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', { screen: 'SubscriptionOffers' });
+  });
+
+  // L40 — le bandeau est affiche EN ENTREE d'assistant. Qui part de la, achete,
+  // puis atterrit sur l'accueil doit retrouver tout seul ou il en etait. Le
+  // bandeau est la seule piece qui sache d'ou part la personne : il le dit au
+  // catalogue, qui le transportera jusqu'a l'ecran de succes.
+  test('L40 : le bandeau dit au catalogue OU ramener la personne', async () => {
+    await renderTextFor(
+      { freeUsageSummary: eventUsage({ limit: 1, used: 1 }), subscriptionAccessLevel: 'FREE' },
+      { resumeRouteName: 'EventStack', resumeRouteParams: { screen: 'EventWizardType' } },
+    );
+
+    await act(async () => {
+      mountedTree.root.findAllByType(TouchableOpacity)[0].props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', {
+      params: {
+        resumeRouteName: 'EventStack',
+        resumeRouteParams: { screen: 'EventWizardType' },
+      },
+      screen: 'SubscriptionOffers',
+    });
+  });
+
+  test('TEMOIN L40 : sans origine, le bandeau n invente aucun retour', async () => {
+    await renderTextFor({
+      freeUsageSummary: eventUsage({ limit: 1, used: 1 }),
+      subscriptionAccessLevel: 'FREE',
+    });
+
+    await act(async () => {
+      mountedTree.root.findAllByType(TouchableOpacity)[0].props.onPress();
     });
 
     expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', { screen: 'SubscriptionOffers' });

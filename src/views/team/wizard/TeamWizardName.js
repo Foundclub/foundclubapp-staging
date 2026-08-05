@@ -269,7 +269,13 @@ function TeamWizardName({ navigation, route }) {
             <Text style={[Fonts.p3Bold, Fonts.neutral100]}>{clubName}</Text>
           </View>
         ) : null}
-        <SubscriptionQuotaBanner label="Équipes" quotaType="FREE_TEAM" />
+        {/* L40 — si la personne part d'ici acheter, elle revient ICI. */}
+        <SubscriptionQuotaBanner
+          label="Équipes"
+          quotaType="FREE_TEAM"
+          resumeRouteName={RouteNames.TeamStack}
+          resumeRouteParams={{ screen: RouteNames.TeamWizardName }}
+        />
         <Input
           autoFocus
           label={t('teamEdit.fields.name.label')}
@@ -392,6 +398,8 @@ function TeamWizardName({ navigation, route }) {
         decision={claimPaywallDecision}
         isVisible={Boolean(claimPaywallDecision)}
         navigation={navigation}
+        resumeRouteName={RouteNames.TeamStack}
+        resumeRouteParams={{ screen: RouteNames.TeamWizardName }}
       />
     </WizardStepLayout>
   );

@@ -90,6 +90,20 @@ const UNLOCK_SHORT_FALLBACK_LABELS = {
   sponsors: 'Sponsors',
 };
 
+// L40 — cibles de reprise autorisees. Cet ecran est pousse sur le navigateur
+// RACINE : il ne sait viser QUE des routes de CE navigateur-la. Un nom de
+// feuille (`EventDetails`, qui vit dans EventStack) y echoue EN SILENCE — le
+// meme piege que le recrutement, deja paye et documente plus bas (R06). Une
+// origine absente de cette table retombe donc sur l'accueil : jamais un bouton
+// mort, jamais un ecran blanc.
+const RESUME_ROOT_ROUTES = new Set([
+  RouteNames.AdWizardStack,
+  RouteNames.ClubStack,
+  RouteNames.EventStack,
+  RouteNames.HomeTab,
+  RouteNames.TeamStack,
+]);
+
 /** @type {Record<string, string>} */
 const FIRST_ACTION_FALLBACK_LABELS = {
   club: 'Gérer mon club',
@@ -113,6 +127,9 @@ const FIRST_ACTION_FALLBACK_LABELS = {
  * - clubDocumentId : club couvert par un achat Club (porte « Gérer mon club »)
  * - resumeCtaLabel : ex. « Créer ma 2ᵉ équipe » (defaut « Reprendre »)
  * - renewalDateLabel : ex. « 10 juillet 2027 » (optionnel)
+ * - resumeMode : 'back' (defaut) | 'home' | 'route' (L40)
+ * - resumeRouteName / resumeRouteParams : en mode 'route', l'ecran d'ORIGINE,
+ *   exprime depuis le navigateur racine (cf. RESUME_ROOT_ROUTES)
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement}
  */
@@ -127,8 +144,13 @@ function SubscriptionSuccess({ navigation, route }) {
   const resumeCtaLabel = String(route?.params?.resumeCtaLabel || 'Reprendre');
   const renewalDateLabel = String(route?.params?.renewalDateLabel || '');
   // 'back' (defaut) = la tache interrompue vit sous cet ecran dans la pile ;
-  // 'home' = achat depuis le Recap de fin de tour, on repart sur l'accueil.
+  // 'home' = achat depuis le Recap de fin de tour, on repart sur l'accueil ;
+  // 'route' (L40) = on est passe par le CATALOGUE, qui s'est intercale entre la
+  // tache et cet ecran : « revenir » rouvrirait des offres a quelqu'un qui vient
+  // de payer. On vise donc l'ecran d'ORIGINE, nomme en parametre.
   const resumeMode = String(route?.params?.resumeMode || 'back');
+  const resumeRouteName = String(route?.params?.resumeRouteName || '').trim();
+  const resumeRouteParams = route?.params?.resumeRouteParams;
   const storeLabel = Platform.OS === 'ios' ? 'App Store' : 'Google Play';
   const queryClient = useQueryClient();
 
@@ -181,6 +203,16 @@ function SubscriptionSuccess({ navigation, route }) {
     trackSubscriptionFunnelEvent('success_resume_clicked', { source: resumeMode });
     invalidateSubscriptionState(queryClient);
     if (resumeMode === 'home') {
+      handleGoHome();
+      return;
+    }
+    // L40 — la destination VOYAGE, on ne la devine pas : inspecter la pile
+    // casserait au premier remaniement de navigation et ne se testerait pas.
+    if (resumeMode === 'route') {
+      if (RESUME_ROOT_ROUTES.has(resumeRouteName)) {
+        navigation.navigate(resumeRouteName, resumeRouteParams);
+        return;
+      }
       handleGoHome();
       return;
     }

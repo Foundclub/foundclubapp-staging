@@ -680,6 +680,8 @@ function AdWizardRecap({ navigation }) {
         decision={subscriptionPaywallDecision}
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}
+        resumeRouteName={RouteNames.AdWizardStack}
+        resumeRouteParams={{ screen: RouteNames.AdWizardRecap }}
       />
     </>
   );
