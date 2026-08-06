@@ -626,6 +626,8 @@ describe('D10 — etape 8 · Recapitulatif', () => {
 
     expect(gabarit.title).toBe('eventWizard.steps.recap.title');
     expect(gabarit.stepIndex).toBe(gabarit.stepCount);
+    expect(gabarit.headerVariant).toBe('focus');
+    expect(gabarit.subtitle).toContain('Relis, corrige, puis crée');
     demonter();
   });
 
@@ -641,13 +643,38 @@ describe('D10 — etape 8 · Recapitulatif', () => {
     demonter();
   });
 
-  it('affiche les 3 options avancees du pack : invitations, taches, mise a la une', () => {
+  it('regroupe les 3 options rares sous « Options avancees », valeurs comprises', () => {
     const { arbre, demonter } = monter(EventWizardRecap, ETAT_COMPLET);
     const contenu = contenuDe(arbre);
 
+    expect(contenu).toContain('Options avancées');
     expect(contenu).toContain('Invitations');
     expect(contenu).toContain('Tâches annexes');
     expect(contenu).toContain('Mise à la une');
+    // Repliee, chaque rangee dit quand meme CE QU ELLE CONTIENT : sinon on
+    // publie sans savoir ce qu on emporte.
+    expect(contenu).toContain('Aucune');
+    expect(contenu).toContain('Non');
+    demonter();
+  });
+
+  it('une rangee avancee remplie annonce son contenu sans etre depliee', () => {
+    const { arbre, demonter } = monter(EventWizardRecap, {
+      ...ETAT_COMPLET,
+      eventTasks: [{ requiredCount: 1, title: 'Accompagnateur', type: 'accompagnateur' }],
+    });
+
+    expect(contenuDe(arbre)).toContain('1 · Accompagnateur');
+    demonter();
+  });
+
+  it('la carte « Options avancees » reste a l ecran : rien n est deplie au depart', () => {
+    const { arbre, demonter } = monter(EventWizardRecap, ETAT_COMPLET);
+    const contenu = contenuDe(arbre);
+
+    // Le contenu des options, lui, est bien replie.
+    expect(contenu).not.toContain('Nouvelle tâche');
+    expect(contenu).not.toContain('A la une publique');
     demonter();
   });
 
@@ -686,10 +713,12 @@ describe('D10 — etape 8 · Recapitulatif', () => {
       return destinations;
     };
 
-    it('un evenement standard corrige type, date, participation et description', () => {
+    it('un evenement standard corrige type, date, lieu, participation, description', () => {
       expect(destinationsDuRecap(ETAT_COMPLET)).toEqual(expect.arrayContaining([
         RouteNames.EventWizardType,
         RouteNames.EventWizardLogistics,
+        // 🟢 NEUF en D10 : le lieu n'etait joignable par AUCUN chemin.
+        RouteNames.EventWizardLocation,
         RouteNames.EventWizardParticipants,
         RouteNames.EventWizardDescription,
         RouteNames.EventWizardInvites,
@@ -754,6 +783,9 @@ describe('D10 — etape 8 · Recapitulatif', () => {
     const { arbre, demonter } = monter(EventWizardRecap, ETAT_COMPLET);
 
     act(() => {
+      pressableQuiPorte(arbre, 'Tâches annexes').props.onPress();
+    });
+    act(() => {
       pressableQuiPorte(arbre, 'Ajouter').props.onPress();
     });
 
@@ -780,11 +812,75 @@ describe('D10 — etape 8 · Recapitulatif', () => {
 
   it('la mise a la une propose ses 3 portees, et n en coche aucune par defaut', () => {
     const { arbre, demonter } = monter(EventWizardRecap, ETAT_COMPLET);
-    const contenu = contenuDe(arbre);
 
+    act(() => {
+      pressableQuiPorte(arbre, 'Mise à la une').props.onPress();
+    });
+
+    const contenu = contenuDe(arbre);
     expect(contenu).toContain('A la une publique');
     expect(contenu).toContain('A la une du club');
     expect(contenu).toContain('A la une multisport');
+    // ⛔ Aucune regle metier inventee : la demande part seulement si l on
+    // coche. La rangee dit « Non » tant que rien n est choisi.
+    expect(contenu).toContain('Non');
+    demonter();
+  });
+
+  it('cocher une portee se lit sur la rangee, meme repliee', () => {
+    const { arbre, demonter } = monter(EventWizardRecap, ETAT_COMPLET);
+
+    act(() => {
+      pressableQuiPorte(arbre, 'Mise à la une').props.onPress();
+    });
+    act(() => {
+      pressableQuiPorte(arbre, 'A la une du club').props.onPress();
+    });
+    act(() => {
+      pressableQuiPorte(arbre, 'Mise à la une').props.onPress();
+    });
+
+    const contenu = contenuDe(arbre);
+    expect(contenu).toContain('1 espace(s)');
+    expect(contenu).not.toContain('A la une du club');
+    demonter();
+  });
+
+  // Le lieu n etait joignable depuis le Recap par AUCUN chemin : le corriger
+  // obligeait a repasser par l ecran Date & horaire.
+  it('le lieu a sa propre carte et son propre lien de correction', () => {
+    const { arbre, demonter, nav } = monter(EventWizardRecap, ETAT_COMPLET);
+
+    expect(contenuDe(arbre)).toContain('Date & horaire');
+
+    const liens = arbre.root.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function',
+      { deep: true },
+    );
+    liens.forEach((/** @type {any} */ lien) => {
+      act(() => {
+        lien.props.onPress();
+      });
+    });
+
+    expect(nav.navigate.mock.calls.map((/** @type {any[]} */ appel) => appel[0]))
+      .toContain(RouteNames.EventWizardLocation);
+    demonter();
+  });
+
+  it('une description absente devient une invitation a agir, pas une alerte', () => {
+    const { arbre, demonter, nav } = monter(EventWizardRecap, {
+      ...ETAT_COMPLET,
+      description: '',
+    });
+
+    expect(contenuDe(arbre)).toContain('+ Ajouter une description');
+
+    act(() => {
+      pressableQuiPorte(arbre, '+ Ajouter une description').props.onPress();
+    });
+
+    expect(nav.navigate).toHaveBeenCalledWith(RouteNames.EventWizardDescription);
     demonter();
   });
 

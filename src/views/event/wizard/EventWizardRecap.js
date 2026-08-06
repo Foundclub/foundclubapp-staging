@@ -178,10 +178,6 @@ const getErrorMessage = (error, fallback) => (
   || fallback
 );
 
-const getAudienceRecapKey = (audience) => (
-  `${String(audience?.audienceKind || 'audience')}:${String(audience?.team?.documentId || audience?.team?.id || 'team')}`
-);
-
 const buildWizardFormData = (wizardState) => {
   const isTournament = isTournamentEventType(wizardState?.type?.name);
   const tournamentScopeMode = wizardState.tournamentScopeMode === 'autonomous' ? 'autonomous' : 'team';
@@ -318,9 +314,16 @@ function EventWizardRecap({ navigation }) {
   const [submitProgress, setSubmitProgress] = useState(null);
   const [partialState, setPartialState] = useState(null);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+  // Une seule option avancee ouverte a la fois : `'tasks'`, `'featured'`, ou
+  // rien. Les invitations, elles, sont un ECRAN — leur rangee y navigue.
+  const [expandedAdvanced, setExpandedAdvanced] = useState(null);
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.24)',
+  };
+
+  const toggleAdvanced = (key) => {
+    setExpandedAdvanced((current) => (current === key ? null : key));
   };
 
   const isReservation = String(state.type?.name || '')
@@ -512,6 +515,60 @@ function EventWizardRecap({ navigation }) {
         : [...current, scope]
     ));
   };
+
+  // Les 3 valeurs affichees sur les rangees d'« Options avancees ». Repliee,
+  // une option doit quand meme dire ce qu'elle contient : sinon l'organisateur
+  // publie sans savoir ce qu'il emporte.
+  const advancedNone = t('eventWizard.recap.advanced.none', 'Aucune');
+  const invitesSummary = teamAudiences.length
+    ? t('eventWizard.recap.advanced.invitesCount', '{{count}} equipe(s)', {
+      count: teamAudiences.length,
+    })
+    : advancedNone;
+  const tasksSummary = eventTasks.length
+    ? `${eventTasks.length} · ${eventTasks[0]?.title || ''}`.trim()
+    : advancedNone;
+  const featuredSummary = hasFeaturedRequestSelection
+    ? t('eventWizard.recap.advanced.featuredCount', '{{count}} espace(s)', {
+      count: selectedFeaturedScopes.length,
+    })
+    : t('eventWizard.recap.advanced.no', 'Non');
+
+  /**
+   * Une rangee d'« Options avancees » : libelle a gauche, VALEUR a droite,
+   * chevron. Presser deplie le contenu, sauf pour les invitations, qui sont un
+   * ecran a part entiere et vers lequel on navigue.
+   * @param {object} options Parametres de la rangee.
+   * @param {string} options.label Le libelle affiche.
+   * @param {() => void} options.onPress Ce que fait la pression.
+   * @param {boolean} [options.isExpanded] La rangee est-elle depliee ?
+   * @param {boolean} [options.isFirst] Premiere rangee (pas de filet au-dessus).
+   * @param {string} options.value La valeur resumee.
+   * @returns {import('react').ReactElement}
+   */
+  const renderAdvancedRow = ({
+    isExpanded, isFirst, label, onPress, value,
+  }) => (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={isExpanded === undefined ? undefined : { expanded: isExpanded }}
+      onPress={onPress}
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        Spaces.gap[12],
+        {
+          borderTopColor: 'rgba(255, 255, 255, 0.07)',
+          borderTopWidth: isFirst ? 0 : 1,
+          minHeight: 44,
+        },
+      ]}
+    >
+      <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>{label}</Text>
+      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{value}</Text>
+      <Text style={[Fonts.p3Bold, Fonts.neutral300]}>{isExpanded ? '−' : '›'}</Text>
+    </TouchableOpacity>
+  );
 
   const runCreateBatch = async (payloads) => {
     const result = await createEventsWithConcurrency(payloads, {
@@ -797,6 +854,7 @@ function EventWizardRecap({ navigation }) {
   return (
     <>
       <WizardStepLayout
+        headerVariant="focus"
         isNextDisabled={!isRecapReady}
         isNextLoading={isSubmitting}
         nextLabel={t('eventWizard.recap.actions.createShort', 'Creer')}
@@ -804,122 +862,49 @@ function EventWizardRecap({ navigation }) {
         onNext={handleSubmit}
         stepCount={getEventWizardStepCount(state)}
         stepIndex={getEventWizardRecapStepIndex(state)}
-        subtitle={t('eventWizard.steps.recap.subtitle')}
+        subtitle={t(
+          'eventWizard.steps.recap.subtitleShort',
+          'Relis, corrige, puis crée. Tout reste modifiable après.',
+        )}
         title={t('eventWizard.steps.recap.title')}
       >
-        <View style={[Spaces.gap[16]]}>
-          <EventTasksEditor
-            editable
-            onChange={(nextTasks) => dispatch({ payload: { eventTasks: nextTasks }, type: 'SET_META' })}
-            value={eventTasks}
-          />
-
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
-            {/* D08 : les invitations ne sont plus une etape du tunnel. Ce lien
-                est le SEUL chemin vers `EventWizardInvites` — le retirer
-                rendrait l'ecran injoignable. */}
-            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Invitations avancées</Text>
-              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardInvites)}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
-              </TouchableOpacity>
-            </View>
-            {teamAudiences.length ? (
-              <View style={Spaces.gap[8]}>
-                {teamAudiences.map((audience) => (
-                  <View
-                    key={getAudienceRecapKey(audience)}
-                    style={[ApplicationStyle.card, Spaces.padding[12], {
-                      backgroundColor: 'rgba(1, 179, 244, 0.10)',
-                      borderColor: 'rgba(1, 179, 244, 0.25)',
-                    }]}
-                  >
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{audience?.team?.name || 'Equipe'}</Text>
-                    <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      {(audience?.audienceKind === 'external_invited' ? 'Externe' : 'Interne')}
-                      {' '}
-                      -
-                      {' '}
-                      {audience?.selectionMode === 'SELECTED_MEMBERS'
-                        ? `${Array.isArray(audience?.selectedMembers) ? audience.selectedMembers.length : 0} membre(s)`
-                        : 'Tous les membres'}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text style={[Fonts.p3, Fonts.neutral200]}>Aucune invitation avancée pour le moment.</Text>
-            )}
-          </View>
-
+        <View style={[Spaces.gap[12]]}>
+          {/* La carte « Vue d'ensemble » et ses 5 pastilles disparaissent :
+              elles recopiaient mot pour mot Type, Equipe, Date, Lieu et
+              Validation, qui sont juste en dessous. Ce qui RESTE est le seul
+              morceau qu'elles apportaient : la raison pour laquelle le bouton
+              « Creer » est parfois eteint. */}
           <View
             style={[
-              ApplicationStyle.card,
-              Spaces.padding[16],
+              Alignments.row,
+              Alignments.alignCenter,
+              Alignments.justifySpaceBetween,
               Spaces.gap[12],
-              {
-                ...cardSurfaceStyle,
-                borderColor: isRecapReady ? 'rgba(1, 179, 244, 0.45)' : 'rgba(255, 191, 71, 0.35)',
-              },
             ]}
           >
-            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                {t('eventWizard.recap.quickOverviewTitle', 'Vue d\'ensemble')}
-              </Text>
-              <View
-                style={[
-                  ApplicationStyle.card,
-                  Spaces.paddingHorizontal[8],
-                  Spaces.paddingVertical[4],
-                  {
-                    backgroundColor: isRecapReady ? 'rgba(1, 179, 244, 0.18)' : 'rgba(255, 191, 71, 0.18)',
-                    borderColor: isRecapReady ? Colors.primary500 : Colors.gold500,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
-                  {isRecapReady
-                    ? t('eventWizard.recap.ready', 'Prêt à créer')
-                    : t('eventWizard.recap.incomplete', 'A compléter')}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
+            <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
               {t('eventWizard.recap.completedCount', '{{done}}/5 infos cles completees', {
                 done: completedQuickOverviewCount,
               })}
             </Text>
-
-            <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
-              {quickOverviewItems.map((item) => (
-                <View
-                  key={item.label}
-                  style={[
-                    ApplicationStyle.card,
-                    Spaces.paddingHorizontal[8],
-                    Spaces.paddingVertical[8],
-                    Spaces.gap[4],
-                    {
-                      backgroundColor: 'rgba(1, 179, 244, 0.10)',
-                      borderColor: item.complete ? 'rgba(1, 179, 244, 0.30)' : 'rgba(255, 191, 71, 0.36)',
-                      borderWidth: 1,
-                      flexBasis: '48%',
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p4Bold, Fonts.neutral200]}>{item.label}</Text>
-                  <Text
-                    numberOfLines={2}
-                    style={[Fonts.p3, item.complete ? Fonts.neutral00 : Fonts.gold500]}
-                  >
-                    {item.value}
-                  </Text>
-                </View>
-              ))}
+            <View
+              style={[
+                ApplicationStyle.card,
+                Spaces.paddingHorizontal[8],
+                Spaces.paddingVertical[4],
+                {
+                  backgroundColor: isRecapReady ? 'rgba(1, 179, 244, 0.18)' : 'rgba(255, 191, 71, 0.18)',
+                  borderColor: isRecapReady ? Colors.primary500 : Colors.gold500,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
+                {isRecapReady
+                  ? t('eventWizard.recap.ready', 'Prêt à créer')
+                  : t('eventWizard.recap.incomplete', 'A compléter')}
+              </Text>
             </View>
           </View>
 
@@ -1022,9 +1007,10 @@ function EventWizardRecap({ navigation }) {
                     isTournament ? 'eventWizard.tournamentProgram.recapProgramTitle' : 'eventWizard.stage.recapProgramTitle',
                     isTournament ? 'Programme du tournoi' : 'Programme du stage',
                   )
-                  : t('eventWizard.recap.whenWhereTitle', 'Quand et lieu')}
+                  : t('eventWizard.recap.dateTimeTitle', 'Date & horaire')}
               </Text>
               <TouchableOpacity
+                accessibilityRole="button"
                 onPress={() => navigation.navigate(
                   isMultiDayProgram && !isTournament
                     ? RouteNames.EventWizardStageProgram
@@ -1062,10 +1048,15 @@ function EventWizardRecap({ navigation }) {
                   {isMultiDayProgram ? stageHoursValue : timeValue}
                 </Text>
               </View>
-              <View style={[Spaces.gap[4]]}>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.location')}</Text>
-                <Text style={[Fonts.p2, hasLocation ? Fonts.neutral00 : Fonts.gold500]}>{locationValue}</Text>
-              </View>
+              {/* Le lieu quitte cette carte pour la sienne, comme dans le
+                  tunnel — SAUF sur un programme multi-jours, ou il n'y a pas
+                  UN lieu mais un lieu par jour, edite dans le programme. */}
+              {isMultiDayProgram ? (
+                <View style={[Spaces.gap[4]]}>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.location')}</Text>
+                  <Text style={[Fonts.p2, hasLocation ? Fonts.neutral00 : Fonts.gold500]}>{locationValue}</Text>
+                </View>
+              ) : null}
               {isMultiDayProgram ? (
                 <View style={[Spaces.gap[8], Spaces.marginTop[8]]}>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -1117,6 +1108,31 @@ function EventWizardRecap({ navigation }) {
               ) : null}
             </View>
           </View>
+
+          {/* LE LIEU A SA PROPRE CARTE, et surtout son propre lien : jusqu'ici,
+              corriger l'installation obligeait a repasser par « Quand et lieu »
+              donc par l'ecran Date & horaire. `EventWizardLocation` n'etait
+              atteignable depuis le Recap par AUCUN chemin. */}
+          {!isMultiDayProgram ? (
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+                <Text style={[Fonts.h4, Fonts.neutral00]}>
+                  {t('eventWizard.recap.sections.location')}
+                </Text>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={() => navigation.navigate(RouteNames.EventWizardLocation)}
+                >
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('eventWizard.recap.actions.edit')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={[Fonts.p2, hasLocation ? Fonts.neutral00 : Fonts.gold500]}>
+                {locationValue}
+              </Text>
+            </View>
+          ) : null}
 
           {isTournament ? (
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
@@ -1327,87 +1343,153 @@ function EventWizardRecap({ navigation }) {
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>{t('eventWizard.recap.sections.description')}</Text>
-              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardDescription)}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
-              </TouchableOpacity>
-            </View>
-            <Text numberOfLines={3} style={[Fonts.p2, state.description ? Fonts.neutral100 : Fonts.gold500]}>
-              {state.description || t('eventWizard.recap.noDescription')}
-            </Text>
-          </View>
-
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
-            <View style={[Spaces.gap[4]]}>
-              <Text style={[Fonts.h4, Fonts.neutral00]}>
-                {t('eventWizard.recap.featured.title', 'Mise à la une')}
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral200, { lineHeight: 20 }]}>
-                {t(
-                  'eventWizard.recap.featured.description',
-                  "Optionnel : choisis les espaces ou demander la mise en avant. Rien n'est envoyé si aucune option n'est cochee.",
-                )}
-              </Text>
-              {recurrencePreviewCount > 1 ? (
-                <Text style={[Fonts.p3, Fonts.gold500, { lineHeight: 18 }]}>
-                  {t(
-                    'eventWizard.recap.featured.recurrentNote',
-                    'Pour une récurrence, la demande sera envoyée pour chaque occurrence créée.',
-                  )}
-                </Text>
+              {state.description ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={() => navigation.navigate(RouteNames.EventWizardDescription)}
+                >
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('eventWizard.recap.actions.edit')}
+                  </Text>
+                </TouchableOpacity>
               ) : null}
             </View>
+            {/* Une description manquante n'est pas une valeur absente a
+                signaler en orange : c'est une INVITATION A AGIR. Le lien
+                « Modifier » cede donc la place au geste lui-meme. */}
+            {state.description ? (
+              <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100]}>
+                {state.description}
+              </Text>
+            ) : (
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => navigation.navigate(RouteNames.EventWizardDescription)}
+                style={[
+                  ApplicationStyle.card,
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  {
+                    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                    borderColor: 'rgba(1, 179, 244, 0.40)',
+                    borderStyle: 'dashed',
+                    minHeight: 44,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('eventWizard.recap.addDescription', '+ Ajouter une description')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-            <View style={[Spaces.gap[8]]}>
-              {FEATURED_SCOPE_OPTIONS.map((option) => {
-                const isSelected = selectedFeaturedScopes.includes(option.value);
+          {/* ═══ OPTIONS AVANCEES ═══
+              Le pack replie ici les trois reglages rares : invitations,
+              taches annexes, mise a la une. Ils occupaient jusqu'a present
+              deux cartes en HAUT du Recap et une en bas — soit les premiers
+              blocs qu'on lisait, pour les reglages qu'on utilise le moins.
+              ⛔ La carte, elle, n'est PAS repliee : ses trois rangees sont
+              toujours a l'ecran, valeur comprise. C'est ce qui garantit que
+              `EventWizardInvites` reste a UNE pression du Recap. */}
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[4], cardSurfaceStyle]}>
+            <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[4]]}>
+              {t('eventWizard.recap.advanced.title', 'Options avancées')}
+            </Text>
 
-                return (
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    key={option.value}
-                    onPress={() => toggleFeaturedScope(option.value)}
-                    style={[
-                      ApplicationStyle.borderRadius16,
-                      ApplicationStyle.borderWidth1,
-                      Spaces.padding[12],
-                      {
-                        backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(1, 179, 244, 0.06)',
-                        borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.20)',
-                      },
-                    ]}
-                  >
-                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
-                      <View
-                        style={[
-                          Alignments.alignCenter,
-                          Alignments.justifyCenter,
-                          {
-                            backgroundColor: isSelected ? Colors.primary500 : 'transparent',
-                            borderColor: Colors.primary500,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                            height: 22,
-                            width: 22,
-                          },
-                        ]}
-                      >
-                        {isSelected ? (
-                          <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>x</Text>
-                        ) : null}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[Fonts.p2Bold, isSelected ? Fonts.primary500 : Fonts.neutral00]}>
+            {/* D08 : les invitations ne sont plus une etape du tunnel. Cette
+                rangee est le SEUL chemin vers `EventWizardInvites` — la
+                retirer rendrait l'ecran (1 474 lignes) injoignable. */}
+            {renderAdvancedRow({
+              isFirst: true,
+              label: t('eventWizard.recap.advanced.invites', 'Invitations'),
+              onPress: () => navigation.navigate(RouteNames.EventWizardInvites),
+              value: invitesSummary,
+            })}
+            {renderAdvancedRow({
+              isExpanded: expandedAdvanced === 'tasks',
+              label: t('eventWizard.recap.advanced.tasks', 'Tâches annexes'),
+              onPress: () => toggleAdvanced('tasks'),
+              value: tasksSummary,
+            })}
+            {expandedAdvanced === 'tasks' ? (
+              <EventTasksEditor
+                editable
+                onChange={(nextTasks) => dispatch({ payload: { eventTasks: nextTasks }, type: 'SET_META' })}
+                value={eventTasks}
+              />
+            ) : null}
+            {renderAdvancedRow({
+              isExpanded: expandedAdvanced === 'featured',
+              label: t('eventWizard.recap.featured.title', 'Mise à la une'),
+              onPress: () => toggleAdvanced('featured'),
+              value: featuredSummary,
+            })}
+            {expandedAdvanced === 'featured' ? (
+              <View style={[Spaces.gap[8], Spaces.paddingBottom[8]]}>
+                <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
+                  {t(
+                    'eventWizard.recap.featured.descriptionShort',
+                    "Rien n'est envoyé si aucun espace n'est coché.",
+                  )}
+                </Text>
+                {recurrencePreviewCount > 1 ? (
+                  <Text style={[Fonts.p3, Fonts.gold500, { lineHeight: 18 }]}>
+                    {t(
+                      'eventWizard.recap.featured.recurrentNote',
+                      'Pour une récurrence, la demande sera envoyée pour chaque occurrence créée.',
+                    )}
+                  </Text>
+                ) : null}
+                {FEATURED_SCOPE_OPTIONS.map((option) => {
+                  const isSelected = selectedFeaturedScopes.includes(option.value);
+
+                  return (
+                    <TouchableOpacity
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: isSelected }}
+                      activeOpacity={0.85}
+                      key={option.value}
+                      onPress={() => toggleFeaturedScope(option.value)}
+                      style={[
+                        ApplicationStyle.borderRadius16,
+                        ApplicationStyle.borderWidth1,
+                        Spaces.padding[12],
+                        {
+                          backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(1, 179, 244, 0.06)',
+                          borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.20)',
+                          minHeight: 44,
+                        },
+                      ]}
+                    >
+                      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+                        <View
+                          style={[
+                            Alignments.alignCenter,
+                            Alignments.justifyCenter,
+                            {
+                              backgroundColor: isSelected ? Colors.primary500 : 'transparent',
+                              borderColor: Colors.primary500,
+                              borderRadius: 999,
+                              borderWidth: 1,
+                              height: 22,
+                              width: 22,
+                            },
+                          ]}
+                        >
+                          {isSelected ? (
+                            <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>x</Text>
+                          ) : null}
+                        </View>
+                        <Text style={[Fonts.p2, isSelected ? Fonts.primary500 : Fonts.neutral00, { flex: 1 }]}>
                           {option.label}
                         </Text>
-                        <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 2 }]}>
-                          {option.description}
-                        </Text>
                       </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : null}
           </View>
 
           {isReservation ? (

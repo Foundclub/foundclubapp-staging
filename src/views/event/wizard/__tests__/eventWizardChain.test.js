@@ -456,10 +456,16 @@ const totalAnnonceALaFin = (marche) => marche.comptes[
 ];
 
 /**
- * Rend le Recap et presse TOUS ses liens « Modifier », puis rend les
- * destinations relevees. On les presse tous parce qu'ils portent le meme texte :
- * ce qui compte est l'ensemble des ecrans joignables depuis le Recap.
- * @returns {string[]} Les routes visees par les liens « Modifier ».
+ * Rend le Recap, presse TOUT ce qui s'y presse, et rend les destinations
+ * relevees. Ce qui compte ici est l'ensemble des ecrans JOIGNABLES depuis le
+ * Recap, pas la forme des liens qui y menent.
+ *
+ * ⚠️ Elargi par le lot D10 : cette fonction ne retenait que les pressables
+ * portant le texte « Modifier ». Le repli en « Options avancees » a transforme
+ * le lien vers les invitations en une RANGEE (libelle + valeur + chevron), qui
+ * ne porte plus ce mot — le test rougissait alors que l'ecran restait
+ * parfaitement atteignable. Viser le libelle, c'etait viser la peinture.
+ * @returns {string[]} Les routes joignables depuis le Recap.
  */
 const destinationsDesLiensModifier = () => {
   /** @type {string[]} */
@@ -484,9 +490,10 @@ const destinationsDesLiensModifier = () => {
     ));
   });
 
-  const liens = arbre.root
-    .findAll((/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function', { deep: true })
-    .filter((/** @type {any} */ noeud) => textesSous(noeud).includes('eventWizard.recap.actions.edit'));
+  const liens = arbre.root.findAll(
+    (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function',
+    { deep: true },
+  );
 
   expect(liens.length).toBeGreaterThan(0);
   liens.forEach((/** @type {any} */ lien) => act(() => lien.props.onPress()));
