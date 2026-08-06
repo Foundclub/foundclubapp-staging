@@ -421,6 +421,17 @@ describe('Carte d annonce amicale — CE QUE D07 CHANGE', () => {
     });
   });
 
+  // Un refus tronque est un refus muet (famille de defauts du lot L10-B) : le
+  // bouton grandit, il ne coupe pas. Le libelle le plus long du fichier sert
+  // de temoin — c'est celui qui cohabite avec « Voir » dans la meme rangee.
+  it('ne tronque pas la raison d un refus, meme a cote de « Voir »', () => {
+    const arbre = rendre({ canApply: false });
+    const refus = noeudDuTexte(arbre, 'Réservé aux entraîneurs et dirigeants');
+    expect(refus).toBeDefined();
+    expect(refus.props.numberOfLines).toBeUndefined();
+    expect(textesVisibles(arbre)).toContain('Voir');
+  });
+
   it('offre « Voir » a cote de « Proposer un match » sur l annonce d un autre', () => {
     const onPress = jest.fn();
     const arbre = rendre({ onPress });

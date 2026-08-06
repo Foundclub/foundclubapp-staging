@@ -186,8 +186,12 @@ function FriendlyMatchAdCard({
         : null,
     ];
     const inkColor = isOutline || !isPressable ? Colors.primary100 : Colors.primary900;
+    // Pas de `numberOfLines` : les libelles non interactifs portent la RAISON
+    // d'un refus (« Réservé aux entraîneurs et dirigeants »). Tronquee a cote
+    // de « Voir », cette raison devient un refus muet — la famille de defauts
+    // payee par le lot L10-B. Le bouton fait 44 pt AU MINIMUM, il grandit.
     const content = (
-      <Text numberOfLines={1} style={[Fonts.p3Bold, { color: inkColor }]}>{label}</Text>
+      <Text style={[Fonts.p3Bold, styles.footerButtonLabel, { color: inkColor }]}>{label}</Text>
     );
 
     if (!isPressable) return <View style={buttonStyle}>{content}</View>;
@@ -381,6 +385,9 @@ const styles = StyleSheet.create({
   },
   footerButtonGrow: {
     flex: 1,
+  },
+  footerButtonLabel: {
+    textAlign: 'center',
   },
   footerRow: {
     flexDirection: 'row',
