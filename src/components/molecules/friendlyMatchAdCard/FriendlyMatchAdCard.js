@@ -10,10 +10,11 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { getHostingSummary, normalizeCandidateDates } from '@/domains/search/friendlyMatchFlow';
+import { getHostingTag, normalizeCandidateDates } from '@/domains/search/friendlyMatchFlow';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import HostingIcon from '@/components/atoms/hostingIcon/HostingIcon';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
@@ -22,31 +23,22 @@ import { getShortAddress } from '@/utils/location';
 
 import CARD_BACKGROUND from '@/assets/background-card-event/card-match.png';
 
-const MAX_VISIBLE_DATES = 2;
-
 /**
- * Une date candidate en clair. Midi local evite qu un fuseau fasse reculer la
- * date d un jour a l affichage.
- * @param {{ date: string, end?: string, start?: string }} slot
- * @returns {string}
- */
-const formatCandidateSlot = (slot) => {
-  const label = formatDateWithDayPrefix(new Date(`${slot.date}T12:00:00`));
-  if (slot.start && slot.end) return `${label} · ${slot.start}-${slot.end}`;
-  if (slot.start) return `${label} · dès ${slot.start}`;
-  return label;
-};
-
-/**
- * Carte d une annonce de match amical (spec §4.2).
+ * Carte d une annonce de match amical (spec §4.2, redessinee par le lot D07).
  *
- * Adaptee de RecruitmentAdCard : meme grammaire visuelle (fond d evenement,
- * voile sombre, logo de club, lignes de detail), autres donnees — categorie,
- * format, QUI RECOIT, dates candidates et distance.
+ * 🧩 ANATOMIE REPRISE DE LA CARTE EVENEMENT (`molecules/eventCard/EventCardNew`) :
+ * blason + nom + sous-ligne, tag en contour, filet puis deux rangees meta a
+ * icones, boutons de pied de 44 pt. Le COMPOSANT, lui, n est pas reutilisable :
+ * il prend un FCEvent, appelle useAuth / useEvent / resolveParticipationFlow,
+ * rend EventAnswerButtons (Present / Absent) et une frise de sponsors. Une
+ * annonce n a ni participation, ni type, ni capacite, ni sponsor, et son action
+ * est « Proposer un match ». Le monter ici demanderait de fabriquer un faux
+ * evenement — ce qui coute plus cher, et ment davantage, que de reprendre sa
+ * grammaire. Ce qui EST partage l est vraiment : `ClubLogoMark`, le meme blason.
  *
- * ⚠️ Contrairement a son modele, cette carte ne porte AUCUN litteral de couleur :
- * tout passe par les jetons du theme et withAlpha(). RecruitmentAdCard vit dans
- * l allowlist d exceptions ; un fichier neuf n a aucune raison d y entrer.
+ * ⚠️ Cette carte ne porte AUCUN litteral de couleur : tout passe par les jetons
+ * du theme et withAlpha(). RecruitmentAdCard vit dans l allowlist d exceptions ;
+ * ce fichier n a aucune raison d y entrer.
  * @param {object} props
  * @param {any} props.ad
  * @param {boolean} [props.canApply]
@@ -70,15 +62,18 @@ function FriendlyMatchAdCard({
 }) {
   const { Colors, Fonts, Images } = /** @type {any} */ (useTheme());
 
+  // Les teintes sont calculees ici, et volontairement pas en ligne dans le
+  // rendu : `verify:theme-contract` signale toute encre claire ecrite a moins
+  // de 4 lignes d un `backgroundColor: ...primary500`, meme quand ce fond est
+  // un voile a 8 % sur lequel le blanc reste parfaitement lisible.
   const palette = useMemo(() => ({
     accentBorder: withAlpha(Colors.primary500, 0.18),
-    accentSoft: withAlpha(Colors.primary500, 0.1),
-    accentTint: withAlpha(Colors.primary500, 0.16),
-    chipSurface: withAlpha(Colors.neutral00, 0.08),
+    ctaOutlineBorder: withAlpha(Colors.primary500, 0.7),
     disabledBorder: withAlpha(Colors.neutral00, 0.12),
     disabledSurface: withAlpha(Colors.neutral00, 0.06),
-    ownerBorder: withAlpha(Colors.primary500, 0.14),
-    ownerSurface: withAlpha(Colors.neutral900, 0.3),
+    hairline: withAlpha(Colors.neutral00, 0.08),
+    mutedInk: withAlpha(Colors.neutral100, 0.72),
+    tagBorder: withAlpha(Colors.primary500, 0.7),
     veil: withAlpha(Colors.neutral900, 0.56),
   }), [Colors]);
 
@@ -96,18 +91,30 @@ function FriendlyMatchAdCard({
   const levelName = ad?.level?.name || 'Niveau libre';
   const formatLabel = ad?.format || 'Format à convenir';
   const sportName = ad?.activity?.name || team?.sport || 'Football';
-  const hosting = getHostingSummary(ad);
+  const hostingTag = getHostingTag(ad);
   const isOpen = ad?.status === 'open' && ad?.isActive !== false;
 
+  // Sous-ligne de la maquette : « Seniors A · Basketball · Sénior +18 · 5v5 ».
+  const subLine = [team?.name, sportName, categoryName, sectionName, formatLabel]
+    .filter(Boolean)
+    .join(' · ');
+
+  // La maquette separe date et heure en deux cellules meta. La carte ne montre
+  // donc plus que le PREMIER creneau, et compte les autres : le detail les
+  // affiche tous, et deux dates entieres ne tiennent pas dans une demi-rangee.
   const candidateSlots = normalizeCandidateDates(ad?.candidateDates);
-  const visibleSlots = candidateSlots.slice(0, MAX_VISIBLE_DATES);
-  const extraSlotsCount = candidateSlots.length - visibleSlots.length;
-  const datesLabel = visibleSlots.length > 0
+  const firstSlot = candidateSlots[0];
+  const extraSlotsCount = Math.max(0, candidateSlots.length - 1);
+  const dateLabel = firstSlot
     ? [
-      visibleSlots.map(formatCandidateSlot).join(' · '),
-      extraSlotsCount > 0 ? ` +${extraSlotsCount}` : '',
-    ].join('')
+      formatDateWithDayPrefix(new Date(`${firstSlot.date}T12:00:00`)),
+      extraSlotsCount > 0 ? `+${extraSlotsCount}` : '',
+    ].filter(Boolean).join(' ')
     : 'Dates à convenir';
+
+  let timeLabel = 'Heure à convenir';
+  if (firstSlot?.start && firstSlot?.end) timeLabel = `${firstSlot.start}-${firstSlot.end}`;
+  else if (firstSlot?.start) timeLabel = `dès ${firstSlot.start}`;
 
   const cityLabel = getShortAddress(ad?.city || ad?.location?.city || club?.city || '')
     || 'Lieu non précisé';
@@ -115,73 +122,104 @@ function FriendlyMatchAdCard({
     ? `${cityLabel} · à ${Math.round(distanceKm)} km`
     : cityLabel;
 
-  const headerLabel = [categoryName, formatLabel].filter(Boolean).join(' · ');
   const applicationsCount = ad?.pendingApplicationsCount ?? ad?.applicationsCount ?? 0;
-
-  // Le badge « qui recoit » porte toujours du TEXTE : la teinte seule ne dirait
-  // rien a qui ne distingue pas les couleurs (regle color-not-only).
-  const hostingTint = hosting.tone === 'unknown' ? Colors.neutral300 : Colors.primary500;
+  const hasApplications = Number(applicationsCount) > 0;
+  // Un seul pluriel pour les deux endroits qui comptent les propositions : le
+  // pied de statut et le CTA. Ecrit deux fois, il s'accorde une fois sur deux
+  // — c'est exactement ce que le filet a attrape (« Voir les 1 propositions »).
+  const applicationsPlural = applicationsCount > 1 ? 's' : '';
+  const applicationsLabel = `${applicationsCount} proposition${applicationsPlural}`;
+  // Les deux actions du proprietaire ouvrent son annonce : c'est la que vivent
+  // « Reposter avec de nouvelles dates » et « Annuler l'annonce »
+  // (FriendlyMatchAdDetails.js:409-419). Pas de second chemin invente ici.
+  const handleManage = () => onPress?.(ad);
 
   let ctaLabel = 'Proposer un match';
-  let ctaBackgroundColor = Colors.primary500;
-  let ctaBorderColor = Colors.transparent;
-  let ctaTextColor = Colors.neutral900;
-  let ctaBorderWidth = 0;
   let isCtaInteractive = Boolean(onApply) && canApply && isOpen && !isApplying;
 
   if (!isOpen) {
     ctaLabel = ad?.status === 'matched' ? 'Adversaire trouvé' : 'Annonce clôturée';
-    ctaBackgroundColor = palette.disabledSurface;
-    ctaBorderColor = palette.disabledBorder;
-    ctaTextColor = Colors.neutral300;
-    ctaBorderWidth = 1;
     isCtaInteractive = false;
   } else if (myApplicationStatus === 'accepted') {
     ctaLabel = 'Match confirmé';
-    ctaBackgroundColor = withAlpha(Colors.primary500, 0.12);
-    ctaBorderColor = withAlpha(Colors.primary500, 0.35);
-    ctaTextColor = Colors.primary500;
-    ctaBorderWidth = 1;
     isCtaInteractive = false;
   } else if (myApplicationStatus === 'pending') {
     ctaLabel = 'Proposition envoyée';
-    ctaBackgroundColor = palette.disabledSurface;
-    ctaBorderColor = withAlpha(Colors.primary500, 0.25);
-    ctaTextColor = Colors.primary100;
-    ctaBorderWidth = 1;
     isCtaInteractive = false;
   } else if (myApplicationStatus === 'declined') {
     ctaLabel = 'Proposition refusée';
-    ctaBackgroundColor = palette.disabledSurface;
-    ctaBorderColor = palette.disabledBorder;
-    ctaTextColor = Colors.neutral300;
-    ctaBorderWidth = 1;
     isCtaInteractive = false;
   } else if (isApplying) {
     ctaLabel = 'Envoi...';
   } else if (!canApply) {
     ctaLabel = 'Réservé aux entraîneurs et dirigeants';
-    ctaBackgroundColor = palette.disabledSurface;
-    ctaBorderColor = palette.disabledBorder;
-    ctaTextColor = Colors.neutral300;
-    ctaBorderWidth = 1;
+    isCtaInteractive = false;
   }
-
-  const ctaStyles = [
-    styles.ctaBadge,
-    {
-      backgroundColor: ctaBackgroundColor,
-      borderColor: ctaBorderColor,
-      borderWidth: ctaBorderWidth,
-    },
-  ];
-  const ctaContent = (
-    <Text style={[Fonts.p3Bold, { color: ctaTextColor }]}>{ctaLabel}</Text>
-  );
 
   let ownerStatusLabel = 'Clôturée';
   if (isOpen) ownerStatusLabel = 'En ligne';
   else if (ad?.status === 'matched') ownerStatusLabel = 'Match trouvé';
+
+  /**
+   * Un bouton de pied : plein par defaut, en contour sinon, toujours 44 pt.
+   * @param {{
+   *   isCompact?: boolean, isOutline?: boolean, label: string, onPressButton?: () => void,
+   * }} params Reglages du bouton.
+   * @returns {import('react').ReactElement} Le bouton.
+   */
+  const renderFooterButton = ({
+    isCompact = false, isOutline = false, label, onPressButton,
+  }) => {
+    const isPressable = typeof onPressButton === 'function';
+    const buttonStyle = [
+      styles.footerButton,
+      isCompact ? styles.footerButtonCompact : styles.footerButtonGrow,
+      isOutline
+        ? { borderColor: palette.ctaOutlineBorder, borderWidth: 1.5 }
+        : { backgroundColor: Colors.primary500 },
+      !isPressable && !isOutline
+        ? {
+          backgroundColor: palette.disabledSurface,
+          borderColor: palette.disabledBorder,
+          borderWidth: 1,
+        }
+        : null,
+    ];
+    const inkColor = isOutline || !isPressable ? Colors.primary100 : Colors.primary900;
+    const content = (
+      <Text numberOfLines={1} style={[Fonts.p3Bold, { color: inkColor }]}>{label}</Text>
+    );
+
+    if (!isPressable) return <View style={buttonStyle}>{content}</View>;
+
+    return (
+      <TouchableOpacity
+        accessibilityLabel={label}
+        accessibilityRole="button"
+        activeOpacity={0.9}
+        onPress={onPressButton}
+        style={buttonStyle}
+      >
+        {content}
+      </TouchableOpacity>
+    );
+  };
+
+  /**
+   * Une cellule meta : icone cyan + texte, comme sur la carte evenement.
+   * @param {any} iconSource Icone de la cellule.
+   * @param {string} label Texte de la cellule.
+   * @param {boolean} [isRight] Aligne la cellule a droite de sa rangee.
+   * @returns {import('react').ReactElement} La cellule.
+   */
+  const renderMetaCell = (iconSource, label, isRight = false) => (
+    <View style={[styles.metaCell, isRight ? styles.metaCellRight : null]}>
+      <Image source={iconSource} style={[styles.metaIcon, { tintColor: Colors.primary500 }]} />
+      <Text numberOfLines={1} style={[Fonts.p3Bold, styles.metaText, { color: Colors.neutral100 }]}>
+        {label}
+      </Text>
+    </View>
+  );
 
   return (
     <Animated.View
@@ -200,7 +238,7 @@ function FriendlyMatchAdCard({
 
       <Pressable
         accessibilityHint="Ouvrir le détail de l'annonce"
-        accessibilityLabel={`Match amical, ${clubName}, ${headerLabel}, ${hosting.label}`}
+        accessibilityLabel={`Match amical, ${clubName}, ${subLine}, ${hostingTag.label}`}
         accessibilityRole="button"
         onPress={() => onPress?.(ad)}
         onPressIn={() => { scale.value = withTiming(0.985, { duration: 100 }); }}
@@ -213,156 +251,92 @@ function FriendlyMatchAdCard({
         style={[styles.contentContainer, { backgroundColor: palette.veil }]}
       >
         <View pointerEvents="none">
-          <View style={[
-            styles.headerContainer,
-            { backgroundColor: palette.accentSoft, borderColor: Colors.primary500 },
-          ]}
-          >
-            <Text
-              numberOfLines={1}
-              style={[Fonts.p3Bold, styles.headerText, { color: Colors.primary500 }]}
-            >
-              {headerLabel.toUpperCase()}
-            </Text>
-          </View>
-
-          <View style={styles.clubInfoContainer}>
+          <View style={styles.clubRow}>
             <ClubLogoMark
-              logoStyle={{ borderColor: Colors.neutral200, borderRadius: 24, borderWidth: 1 }}
+              logoStyle={{ borderColor: Colors.neutral200, borderRadius: 10, borderWidth: 1 }}
               logoUrl={clubLogo}
               name={clubName}
-              size={48}
+              size={40}
             />
 
             <View style={styles.clubTextContainer}>
-              <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                {clubName}
+              {/* ③ Le nom du club n'est JAMAIS tronque : pas de numberOfLines,
+                  pas d'ellipse, pas de capitales. Un nom long passe a la ligne. */}
+              <Text style={[Fonts.p2Black, { color: Colors.neutral00 }]}>{clubName}</Text>
+              <Text style={[Fonts.small, styles.subLine, { color: palette.mutedInk }]}>
+                {subLine}
               </Text>
-
-              <View style={styles.subHeaderRow}>
-                {team?.name ? (
-                  <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                    {team.name}
-                  </Text>
-                ) : null}
-
-                <View style={[styles.sportBadge, { backgroundColor: palette.accentTint }]}>
-                  <Text
-                    numberOfLines={1}
-                    style={[Fonts.p4Bold, styles.badgeText, { color: Colors.primary500 }]}
-                  >
-                    {sportName}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={[
-                styles.hostingChip,
-                { backgroundColor: palette.chipSurface, borderColor: withAlpha(hostingTint, 0.35) },
-              ]}
-              >
-                <Text style={[Fonts.p4Bold, { color: hostingTint }]}>
-                  {hosting.label.toUpperCase()}
-                </Text>
-              </View>
             </View>
           </View>
 
-          <View style={styles.detailsContainer}>
-            <View style={styles.detailRow}>
-              <View style={styles.detailItem}>
-                <Image
-                  source={Images.filter}
-                  style={[styles.icon, { tintColor: Colors.primary500 }]}
-                />
-                <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral100 }]}>
-                  {levelName}
-                </Text>
-              </View>
+          {/* ② Le tag lieu occupe sa PROPRE ligne, sous le nom : sur la meme
+              ligne, un nom long l'ecrase. Icone + libelle, jamais une banniere. */}
+          <View style={[styles.hostingTag, { borderColor: palette.tagBorder }]}>
+            <HostingIcon color={Colors.primary100} iconKey={hostingTag.iconKey} size={11} />
+            <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>{hostingTag.label}</Text>
+          </View>
 
-              <View style={[styles.detailItem, styles.detailItemRight]}>
-                <Image
-                  source={Images.users}
-                  style={[styles.icon, { tintColor: Colors.neutral300 }]}
-                />
-                <Text
-                  numberOfLines={1}
-                  style={[Fonts.p4, styles.detailTextRight, { color: Colors.neutral100 }]}
-                >
-                  {[categoryName, sectionName].filter(Boolean).join(' - ')}
-                </Text>
-              </View>
+          <View style={[styles.metaGrid, { borderTopColor: palette.hairline }]}>
+            <View style={styles.metaRow}>
+              {renderMetaCell(Images.pin, distanceLabel)}
+              {renderMetaCell(Images.trophy, levelName, true)}
             </View>
-
-            <View style={styles.detailRow}>
-              <View style={[styles.detailItem, styles.detailItemFull]}>
-                <Image
-                  source={Images.calendar}
-                  style={[styles.icon, { tintColor: Colors.primary500 }]}
-                />
-                <Text
-                  numberOfLines={2}
-                  style={[Fonts.p4, styles.detailTextGrow, { color: Colors.neutral100 }]}
-                >
-                  {datesLabel}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.detailRow}>
-              <View style={[styles.detailItem, styles.detailItemFull]}>
-                <Image
-                  source={Images.pin}
-                  style={[styles.icon, { tintColor: Colors.primary500 }]}
-                />
-                <Text
-                  numberOfLines={2}
-                  style={[Fonts.p4, styles.detailTextGrow, { color: Colors.neutral100 }]}
-                >
-                  {distanceLabel}
-                </Text>
-              </View>
+            <View style={styles.metaRow}>
+              {renderMetaCell(Images.calendar, dateLabel)}
+              {renderMetaCell(Images.clock, timeLabel, true)}
             </View>
           </View>
-        </View>
 
-        <View pointerEvents="auto" style={styles.ctaContainer}>
           {isOwner ? (
-            <View style={[
-              styles.ownerStatusContainer,
-              { backgroundColor: palette.ownerSurface, borderColor: palette.ownerBorder },
-            ]}
-            >
+            <View style={[styles.ownerStatusRow, { borderTopColor: palette.hairline }]}>
               <View style={styles.ownerStatusLeft}>
                 <View style={[
                   styles.ownerStatusDot,
-                  { backgroundColor: isOpen ? Colors.primary500 : Colors.neutral500 },
+                  { backgroundColor: isOpen ? Colors.success500 : Colors.neutral500 },
                 ]}
                 />
-                <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>{ownerStatusLabel}</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.neutral200 }]}>{ownerStatusLabel}</Text>
               </View>
-              <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-                {`${applicationsCount} proposition${applicationsCount > 1 ? 's' : ''}`}
+              <Text style={[
+                Fonts.p3Bold,
+                { color: hasApplications ? Colors.neutral00 : palette.mutedInk },
+              ]}
+              >
+                {applicationsLabel}
               </Text>
             </View>
           ) : null}
+        </View>
 
-          {!isOwner && isCtaInteractive ? (
-            <TouchableOpacity
-              accessibilityHint="Proposer un match à cette équipe"
-              accessibilityLabel={ctaLabel}
-              accessibilityRole="button"
-              activeOpacity={0.9}
-              onPress={() => onApply?.(ad)}
-              style={ctaStyles}
-            >
-              {ctaContent}
-            </TouchableOpacity>
-          ) : null}
+        <View pointerEvents="auto" style={styles.footerRow}>
+          {isOwner ? null : renderFooterButton({
+            label: ctaLabel,
+            onPressButton: isCtaInteractive ? () => onApply?.(ad) : undefined,
+          })}
+          {isOwner ? null : renderFooterButton({
+            isCompact: true,
+            isOutline: true,
+            label: 'Voir',
+            onPressButton: () => onPress?.(ad),
+          })}
 
-          {!isOwner && !isCtaInteractive ? (
-            <View style={ctaStyles}>{ctaContent}</View>
-          ) : null}
+          {/* A N ≥ 1, les propositions recues passent devant : c'est ce que le
+              proprietaire vient faire. A N = 0, il n'y a rien a voir. */}
+          {isOwner && hasApplications ? renderFooterButton({
+            label: `Voir les ${applicationsCount} proposition${applicationsPlural}`,
+            onPressButton: handleManage,
+          }) : null}
+          {isOwner && hasApplications ? renderFooterButton({
+            isCompact: true,
+            isOutline: true,
+            label: 'Modifier',
+            onPressButton: handleManage,
+          }) : null}
+          {isOwner && !hasApplications ? renderFooterButton({
+            isOutline: true,
+            label: 'Modifier l’annonce',
+            onPressButton: handleManage,
+          }) : null}
         </View>
       </View>
     </Animated.View>
@@ -371,134 +345,110 @@ function FriendlyMatchAdCard({
 
 const styles = StyleSheet.create({
   backgroundImage: {
-    borderRadius: 24,
+    borderRadius: 18,
     opacity: 1,
   },
-  badgeText: {
-    fontSize: 10,
-    textTransform: 'uppercase',
-  },
-  clubInfoContainer: {
-    alignItems: 'center',
+  clubRow: {
+    alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 2,
+    gap: 11,
   },
   clubTextContainer: {
     flex: 1,
-    justifyContent: 'center',
-    marginRight: 6,
+    minWidth: 0,
   },
   container: {
-    borderRadius: 24,
+    borderRadius: 18,
     borderWidth: 1,
-    minHeight: 232,
     overflow: 'hidden',
     width: '100%',
   },
   contentContainer: {
     flex: 1,
-    gap: 12,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 16,
   },
-  ctaBadge: {
+  footerButton: {
     alignItems: 'center',
-    borderRadius: 19,
-    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 16,
+  },
+  footerButtonCompact: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  footerButtonGrow: {
+    flex: 1,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
     width: '100%',
   },
-  ctaContainer: {
-    elevation: 999,
-    marginTop: 16,
-    width: '100%',
-    zIndex: 999,
+  hostingTag: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
   },
-  detailItem: {
+  metaCell: {
     alignItems: 'center',
     flex: 1,
     flexDirection: 'row',
     gap: 8,
+    minHeight: 28,
   },
-  detailItemFull: {
-    width: '100%',
-  },
-  detailItemRight: {
+  metaCellRight: {
+    flexShrink: 0,
     justifyContent: 'flex-end',
   },
-  detailRow: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: 16,
-    justifyContent: 'space-between',
-    width: '100%',
+  metaGrid: {
+    borderTopWidth: 1,
+    marginTop: 12,
+    paddingTop: 10,
   },
-  detailsContainer: {
-    gap: 10,
-    marginTop: 4,
-  },
-  detailTextGrow: {
-    flex: 1,
-  },
-  detailTextRight: {
-    flex: 0,
-    textAlign: 'right',
-  },
-  headerContainer: {
-    alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 2,
-    justifyContent: 'center',
-    marginBottom: 8,
-    paddingVertical: 3,
-    width: '100%',
-  },
-  headerText: {
-    textTransform: 'uppercase',
-  },
-  hostingChip: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    borderWidth: 1,
-    marginTop: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  icon: {
-    height: 16,
+  metaIcon: {
+    height: 14,
     resizeMode: 'contain',
-    width: 16,
+    width: 14,
   },
-  ownerStatusContainer: {
+  metaRow: {
     alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
     flexDirection: 'row',
-    height: 44,
+    gap: 8,
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+  },
+  metaText: {
+    flexShrink: 1,
   },
   ownerStatusDot: {
     borderRadius: 999,
-    height: 8,
-    width: 8,
+    height: 7,
+    width: 7,
   },
   ownerStatusLeft: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 8,
+    gap: 7,
   },
-  sportBadge: {
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  subHeaderRow: {
+  ownerStatusRow: {
     alignItems: 'center',
+    borderTopWidth: 1,
     flexDirection: 'row',
-    gap: 6,
-    marginTop: 2,
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 11,
+  },
+  subLine: {
+    marginTop: 3,
   },
 });
 

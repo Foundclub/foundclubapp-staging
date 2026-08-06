@@ -195,6 +195,42 @@ export const getHostingSummary = (ad) => {
 };
 
 /**
+ * L icone de chaque etat de lieu, et le libelle COURT des surfaces compactes.
+ *
+ * Les deux tables sont indexees par le `tone` de getHostingSummary, jamais par
+ * `hostingPreference` : un seul endroit du depot lit la valeur brute, donc un
+ * seul endroit peut se tromper. C est ce qui evite qu un quatrieme etat ajoute
+ * demain soit gere a trois endroits sur quatre.
+ *
+ * Le libelle est court parce que sur une carte le club est nomme juste au-dessus :
+ * « Il » y serait redondant. Le detail et le recapitulatif, eux, gardent la
+ * phrase longue de getHostingSummary — elle s y lit sans contexte.
+ * @type {Record<'away' | 'both' | 'host' | 'unknown', {iconKey: string, label: string}>}
+ */
+const HOSTING_TAG_BY_TONE = {
+  away: { iconKey: 'running', label: 'Se déplace' },
+  both: { iconKey: 'switch', label: 'Reçoit ou se déplace' },
+  host: { iconKey: 'stadium', label: 'Reçoit' },
+  // Pas d icone : inventer un pictogramme pour « on ne sait pas » ferait croire
+  // a une information. Le libelle seul dit la verite.
+  unknown: { iconKey: 'none', label: 'À convenir' },
+};
+
+/**
+ * Le tag « qui recoit » d une carte d annonce : une icone ET un libelle.
+ *
+ * L icone ne voyage jamais seule (regle color-not-only, et un pictogramme
+ * s interprete mal) ; le libelle ne voyage jamais seul non plus, sinon le tag
+ * se confond avec les autres lignes de la carte.
+ * @param {any} ad
+ * @returns {{ iconKey: string, label: string, tone: 'away' | 'both' | 'host' | 'unknown' }}
+ */
+export const getHostingTag = (ad) => {
+  const { tone } = getHostingSummary(ad);
+  return { ...HOSTING_TAG_BY_TONE[tone], tone };
+};
+
+/**
  * Le filtre « je veux recevoir / me deplacer » MASQUE les annonces incompatibles
  * (§3.3) : le conflit ne se produit jamais, il n y a donc aucun message d erreur.
  * @param {any} ad

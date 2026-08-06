@@ -8,6 +8,7 @@ import {
   getDistanceKm,
   getFormatsForSport,
   getHostingSummary,
+  getHostingTag,
   getNextCandidateDate,
   isChosenHostingAllowed,
   matchesHostingIntent,
@@ -98,6 +99,34 @@ describe('friendlyMatchFlow — regle « qui recoit » (§3.3, Q1)', () => {
     expect(getHostingSummary({ hostingPreference: 'AWAY' }).label).toBe('Il se déplace');
     expect(getHostingSummary({ hostingPreference: 'BOTH' }).label).toBe('Reçoit ou se déplace');
     expect(getHostingSummary({}).label).toBe('À convenir');
+  });
+
+  // Lot D07. Le tag des surfaces compactes (carte d'annonce) porte le libelle
+  // COURT et une icone. Les deux se deduisent de la DONNEE, jamais d'un texte
+  // affiche : c'est ce qui empeche qu'un quatrieme etat ajoute demain soit
+  // gere a trois endroits sur quatre.
+  it('donne a chaque etat de lieu son tag court ET son icone', () => {
+    expect(getHostingTag({ hostingPreference: 'HOST' }))
+      .toEqual({ iconKey: 'stadium', label: 'Reçoit', tone: 'host' });
+    expect(getHostingTag({ hostingPreference: 'AWAY' }))
+      .toEqual({ iconKey: 'running', label: 'Se déplace', tone: 'away' });
+    expect(getHostingTag({ hostingPreference: 'BOTH' }))
+      .toEqual({ iconKey: 'switch', label: 'Reçoit ou se déplace', tone: 'both' });
+  });
+
+  // Pas d'icone pour « on ne sait pas » : un pictogramme inventé ferait croire
+  // a une information. Le libelle seul dit la verite.
+  it('n invente aucune icone quand l annonce ne porte pas d etat de lieu', () => {
+    expect(getHostingTag({})).toEqual({ iconKey: 'none', label: 'À convenir', tone: 'unknown' });
+    expect(getHostingTag(undefined).iconKey).toBe('none');
+    expect(getHostingTag({ hostingPreference: 'PEUT_ETRE' }).iconKey).toBe('none');
+  });
+
+  // Les valeurs voyagent jusqu'au serveur : elles sont normalisees a la lecture
+  // (casse, espaces), jamais reecrites.
+  it('lit la valeur serveur quelle que soit sa casse', () => {
+    expect(getHostingTag({ hostingPreference: ' host ' }).label).toBe('Reçoit');
+    expect(getHostingTag({ hostingPreference: 'both' }).label).toBe('Reçoit ou se déplace');
   });
 });
 

@@ -2,17 +2,12 @@ import {
   useCallback,
   useRef,
 } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Text,
-  View,
-} from 'react-native';
+import { View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
 import useTheme from '@/theme/themeContext';
 
-import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -39,6 +34,12 @@ import { RouteNames } from '@/navigation/routeNames';
  *  onTutorialLayout?: (key: 'header' | 'switcher', layout: { x: number; y: number; width: number; height: number }) => void;
  * }} props
  * @returns {import('react').ReactElement}
+ *
+ * ⚠️ `tutorialSteps.header` reste dans le type mais n'est PLUS rendu depuis le
+ * lot D07 : l'en-tete qu'il eclairait (fleche + titre « RECHERCHER ») a disparu.
+ * Le champ survit parce que trois appelants le passent encore — et qu'aucun des
+ * trois n'est monte (routeNames.js:16-19). Le supprimer est un lot de menage,
+ * pas un lot de design.
  */
 function SearchScreenShell({
   activeType,
@@ -50,14 +51,9 @@ function SearchScreenShell({
 }) {
   const {
     Alignments,
-    ApplicationStyle,
-    Fonts,
     Spaces,
   } = useTheme();
-  const { t } = useTranslation();
   const { userData } = useAuth();
-  const titleSideWidth = 44;
-  const headerTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
   const switcherTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
 
   const emitTutorialLayout = useCallback((key, ref) => {
@@ -74,14 +70,6 @@ function SearchScreenShell({
       });
     });
   }, [onTutorialLayout]);
-
-  const handleBackPress = useCallback(() => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-      return;
-    }
-    navigation.navigate(RouteNames.Search);
-  }, [navigation]);
 
   const handleTypeChange = useCallback(
     /**
@@ -153,83 +141,6 @@ function SearchScreenShell({
           <ProfileButton />
         </View>
       </View>
-
-      {tutorialSteps?.header ? (
-        <View
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            Spaces.marginBottom[16],
-          ]}
-        >
-          <View style={{ alignItems: 'flex-start', width: titleSideWidth }}>
-            <HeaderBackButton
-              onPress={handleBackPress}
-              withDefaultMargin={false}
-            />
-          </View>
-          <OnboardingWrapper
-            description={tutorialSteps.header.description}
-            id={tutorialSteps.header.id}
-            order={tutorialSteps.header.order}
-            spotlight={{
-              borderRadius: 14, overlayOpacity: 0.4, paddingX: 4, paddingY: 2,
-            }}
-            style={[Alignments.grow1, Alignments.alignCenter]}
-            title={tutorialSteps.header.title}
-          >
-            <View
-              onLayout={() => emitTutorialLayout('header', headerTargetRef)}
-              ref={headerTargetRef}
-              style={[Alignments.alignCenter, Spaces.gap[8]]}
-            >
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                {t('menu.search', 'Rechercher').toUpperCase()}
-              </Text>
-              <View
-                style={[
-                  ApplicationStyle.separator,
-                  ApplicationStyle.backgroundColor.neutral00,
-                  { width: 96 },
-                ]}
-              />
-            </View>
-          </OnboardingWrapper>
-          <View style={{ width: titleSideWidth }} />
-        </View>
-      ) : (
-        <View
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            Spaces.marginBottom[16],
-          ]}
-        >
-          <View style={{ alignItems: 'flex-start', width: titleSideWidth }}>
-            <HeaderBackButton
-              onPress={handleBackPress}
-              withDefaultMargin={false}
-            />
-          </View>
-          <View
-            onLayout={() => emitTutorialLayout('header', headerTargetRef)}
-            ref={headerTargetRef}
-            style={[Alignments.grow1, Alignments.alignCenter, Spaces.gap[8]]}
-          >
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('menu.search', 'Rechercher').toUpperCase()}
-            </Text>
-            <View
-              style={[
-                ApplicationStyle.separator,
-                ApplicationStyle.backgroundColor.neutral00,
-                { width: 96 },
-              ]}
-            />
-          </View>
-          <View style={{ width: titleSideWidth }} />
-        </View>
-      )}
 
       {tutorialSteps?.switcher ? (
         <OnboardingWrapper
