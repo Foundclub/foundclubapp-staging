@@ -86,12 +86,13 @@ function EventWizardLocation({ navigation }) {
 
   return (
     <WizardStepLayout
+      headerVariant="focus"
       isNextDisabled={!canGoNext}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(state)}
       stepIndex={getEventWizardLocationStepIndex(state)}
-      subtitle={t('eventWizard.steps.location.subtitle')}
+      subtitle={t('eventWizard.steps.location.focusSubtitle', "Où se déroule l'événement ?")}
       title={t('eventWizard.steps.location.title')}
     >
       <View style={[Spaces.gap[12]]}>

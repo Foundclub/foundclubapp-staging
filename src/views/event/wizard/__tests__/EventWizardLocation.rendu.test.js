@@ -137,11 +137,16 @@ afterEach(() => {
 });
 
 describe('D09 — l ecran « Lieu », etat du 2026-08-06', () => {
-  test('son entete vient des cles de traduction', () => {
+  test('son entete est en grammaire « focus »', () => {
     const { gabarit } = afficherLEcran();
 
     expect(gabarit.title).toBe('eventWizard.steps.location.title');
-    expect(gabarit.subtitle).toBe('eventWizard.steps.location.subtitle');
+    // INVERSE PAR D09 — motif : le pack pose une question, la ou l'ancien
+    // sous-titre enoncait une contrainte (« Le lieu est obligatoire pour
+    // continuer »). La contrainte n'est pas perdue : elle est dite en dessous,
+    // exactement quand « Suivant » est desactive. Cle NEUVE avec repli.
+    expect(gabarit.subtitle).toBe("Où se déroule l'événement ?");
+    expect(gabarit.headerVariant).toBe('focus');
   });
 
   test('« Suivant » est DESACTIVE tant qu aucun lieu n est choisi, et il l explique', () => {
