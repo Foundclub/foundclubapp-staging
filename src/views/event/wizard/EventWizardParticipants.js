@@ -26,6 +26,21 @@ import {
 const MIN_PARTICIPANTS = 1;
 const MAX_PARTICIPANTS = 200;
 const CAPACITY_PRESETS = [8, 10, 12, 14, 18, 22];
+// Pack « tunnel evenement » du 2026-08-05 : un evenement neuf s'ouvre sur
+// « Capacite fixe » a 12, pas sur « Illimite ».
+const DEFAULT_CAPACITY = 12;
+
+// 🔴 CE QUE LE PACK DEMANDE ET QUE D10 NE FAIT PAS — mesure, pas oubli.
+//
+// La maquette 07 replie les postes recherches DANS cet ecran, derriere un
+// interrupteur, et sa legende dit mot pour mot : « L'ancien ecran 8/11
+// disparait ». Ce serait un CHANGEMENT D'ENCHAINEMENT : `EventWizardDetectionSlots`
+// est une etape a part entiere de la chaine ecrite par D08
+// (`eventWizardDetectionUtils.js` → `getEventWizardStepRoutes`), et c'est elle
+// qui met une detection a 9 etapes la ou le pack en montre 8.
+// Le prompt de ce lot l'interdit explicitement : « Aucun changement
+// d'enchainement. Si le design l'exige, D08 a rate quelque chose : signale-le,
+// ne le repare pas ici. » ⇒ signale, et les postes restent leur propre ecran.
 
 const clampParticipants = (value) => (
   Math.min(MAX_PARTICIPANTS, Math.max(MIN_PARTICIPANTS, value))
@@ -63,8 +78,16 @@ function EventWizardParticipants({ navigation }) {
   const { t } = useTranslation();
   const { dispatch, state } = useEventWizard();
 
-  const [capacityMode, setCapacityMode] = useState(state.capacity === null ? 'unlimited' : 'fixed');
-  const [capacityValue, setCapacityValue] = useState(state.capacity || 12);
+  // Le mode est memorise DANS l'etat du tunnel, et pas deduit de `capacity`.
+  // Sans ca, « Illimite » (qui enregistre `capacity: null`) serait indiscernable
+  // d'un ecran jamais visite : revenir en arriere effacerait le choix de
+  // l'organisateur et rouvrirait sur « Capacite fixe ».
+  // ⚠️ `buildWizardFormData` (Recap) ne lit que des champs nommes : ce marqueur
+  // ne part donc PAS au serveur.
+  const [capacityMode, setCapacityMode] = useState(
+    state.capacityMode === 'unlimited' ? 'unlimited' : 'fixed',
+  );
+  const [capacityValue, setCapacityValue] = useState(state.capacity || DEFAULT_CAPACITY);
   const [externalParticipantLimitValue, setExternalParticipantLimitValue] = useState(
     state.externalParticipantLimit || 3,
   );
@@ -123,9 +146,19 @@ function EventWizardParticipants({ navigation }) {
     && (isTraining || capacityMode === 'unlimited' || clampedTotalPlayers < clampedCapacity)
   );
 
-  let capacityLabel = `${clampedCapacity} ${t('eventWizard.steps.participants.playersUnit', 'joueurs max')}`;
+  // La ligne d'aide dit la CONSEQUENCE du reglage courant, pas son intitule :
+  // elle remplace a elle seule la carte « Resume » et le rappel « tu pourras
+  // modifier », que le pack supprime tous les deux.
+  let capacityLabel = t(
+    'eventWizard.steps.participants.hintFixed',
+    'Les inscriptions restent libres dans la limite des {{count}} places.',
+    { count: clampedCapacity },
+  );
   if (capacityMode === 'unlimited') {
-    capacityLabel = t('eventWizard.steps.participants.unlimitedLabel', 'Illimite');
+    capacityLabel = t(
+      'eventWizard.steps.participants.hintUnlimited',
+      'Aucun plafond : tout le monde peut s inscrire.',
+    );
   }
   if (isTraining) {
     capacityLabel = isOpenTraining
@@ -139,16 +172,12 @@ function EventWizardParticipants({ navigation }) {
       );
   }
 
-  let previewModeLabel = capacityMode === 'fixed'
-    ? t('eventWizard.steps.participants.fixed', 'Capacité fixe')
-    : t('eventWizard.steps.participants.unlimited', 'Illimite');
-  if (isTraining) {
-    previewModeLabel = isOpenTraining
-      ? t('eventWizard.steps.participants.trainingModeOpen', 'Entraînement ouvert')
-      : t('eventWizard.steps.participants.trainingModePrivate', 'Entraînement prive');
-  }
-  let participantsSubtitleKey = 'eventWizard.steps.participants.subtitle';
-  let participantsSubtitleFallback = 'Choisis une capacité max, ou laisse l événement en accès illimité.';
+  // ⚠️ CLE NEUVE, et c'est voulu : `…participants.subtitle` existe deja dans
+  // `fr.js` avec l'ancienne phrase, et `fr.js` gagne toujours sur le repli.
+  // Modifier cette ligne-la compterait comme une SUPPRESSION dans le diff, ce
+  // que le lot s'interdit. Une cle neuve porte donc la copy du pack.
+  let participantsSubtitleKey = 'eventWizard.steps.participants.subtitleQuestion';
+  let participantsSubtitleFallback = "Combien de joueurs peuvent s'inscrire ?";
   if (isTraining && isOpenTraining) {
     participantsSubtitleKey = 'eventWizard.steps.participants.trainingOpenSubtitle';
     participantsSubtitleFallback = 'Définis uniquement combien de joueurs externes a l équipe tu veux accepter.';
@@ -168,6 +197,7 @@ function EventWizardParticipants({ navigation }) {
     width: '100%',
   };
 
+  // 44 pt : la cible tactile de la grammaire `focus` (lot D05).
   const counterButtonStyle = (isEnabled) => ([
     ApplicationStyle.card,
     Alignments.alignCenter,
@@ -176,9 +206,9 @@ function EventWizardParticipants({ navigation }) {
       backgroundColor: isEnabled ? 'rgba(1, 179, 244, 0.12)' : 'rgba(1, 179, 244, 0.06)',
       borderColor: 'rgba(1, 179, 244, 0.28)',
       borderRadius: 16,
-      height: 56,
+      height: 48,
       opacity: isEnabled ? 1 : 0.45,
-      width: 56,
+      width: 48,
     },
   ]);
 
@@ -202,6 +232,7 @@ function EventWizardParticipants({ navigation }) {
     dispatch({
       payload: {
         capacity: normalizedCapacity,
+        capacityMode,
         externalParticipantLimit: normalizedExternalParticipantLimit,
         totalPlayers: normalizedTotalPlayers,
       },
@@ -231,6 +262,7 @@ function EventWizardParticipants({ navigation }) {
 
   return (
     <WizardStepLayout
+      headerVariant="focus"
       isNextDisabled={hasInvalidPlayersConfig}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
@@ -242,112 +274,109 @@ function EventWizardParticipants({ navigation }) {
       <View style={[Spaces.gap[16]]}>
         {!isTraining ? (
           <>
-            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t('eventWizard.steps.participants.modeLabel', 'Mode de capacité')}
-              </Text>
-              <View style={capacityModeControlWrapperStyle}>
-                <SegmentedControl
-                  centerContent
-                  onChange={setCapacityMode}
-                  options={[
-                    {
-                      label: t('eventWizard.steps.participants.unlimited', 'Illimite'),
-                      value: 'unlimited',
-                    },
-                    {
-                      label: t('eventWizard.steps.participants.fixed', 'Capacité fixe'),
-                      value: 'fixed',
-                    },
+            {/* Deux choix binaires = une paire de pilules, sans carte ni titre
+                au-dessus : la question est deja dans le sous-titre de l'entete.
+                C'est le « moitie moins de texte » du pack. */}
+            <View style={capacityModeControlWrapperStyle}>
+              <SegmentedControl
+                centerContent
+                onChange={setCapacityMode}
+                options={[
+                  {
+                    label: t('eventWizard.steps.participants.unlimited', 'Illimite'),
+                    value: 'unlimited',
+                  },
+                  {
+                    label: t('eventWizard.steps.participants.fixed', 'Capacité fixe'),
+                    value: 'fixed',
+                  },
+                ]}
+                value={capacityMode}
+              />
+            </View>
+
+            {capacityMode === 'fixed' ? (
+              <View style={[Spaces.gap[8]]}>
+                <View
+                  style={[
+                    ApplicationStyle.card,
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
+                    Spaces.padding[8],
+                    surfaceStyle,
                   ]}
-                  value={capacityMode}
-                />
-              </View>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {capacityMode === 'unlimited'
-                  ? t(
-                    'eventWizard.steps.participants.modeHintUnlimited',
-                    'Mode illimité: aucun plafond de participants.',
-                  )
-                  : t(
-                    'eventWizard.steps.participants.modeHintFixed',
-                    'Mode capacité fixe: nombre de places limite.',
-                  )}
-              </Text>
-            </View>
-
-            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], surfaceStyle]}>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                {t('eventEdit.fields.capacity.label')}
-              </Text>
-              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-                <TouchableOpacity
-                  disabled={!canDecreaseCapacity}
-                  onPress={() => setCapacityValue((value) => clampParticipants(value - 1))}
-                  style={counterButtonStyle(canDecreaseCapacity)}
                 >
-                  <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'eventWizard.steps.participants.decrease',
+                      'Un joueur de moins',
+                    )}
+                    accessibilityRole="button"
+                    disabled={!canDecreaseCapacity}
+                    onPress={() => setCapacityValue((value) => clampParticipants(value - 1))}
+                    style={counterButtonStyle(canDecreaseCapacity)}
+                  >
+                    <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
+                  </TouchableOpacity>
 
-                <View style={[Spaces.paddingHorizontal[12]]}>
-                  <Text style={[Fonts.h1, Fonts.neutral00, { textAlign: 'center' }]}>
-                    {capacityMode === 'unlimited'
-                      ? t('eventWizard.steps.participants.unlimited', 'Illimite')
-                      : clampedCapacity}
-                  </Text>
-                  <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
-                    {capacityMode === 'unlimited'
-                      ? t('eventWizard.steps.participants.unlimitedHint', 'Aucune limite de places')
-                      : t('eventWizard.steps.participants.playersUnit', 'joueurs max')}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  disabled={!canIncreaseCapacity}
-                  onPress={() => setCapacityValue((value) => clampParticipants(value + 1))}
-                  style={counterButtonStyle(canIncreaseCapacity)}
-                >
-                  <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
-                </TouchableOpacity>
-              </View>
-
-              {capacityMode === 'fixed' ? (
-                <View style={[Spaces.gap[8]]}>
-                  <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-                    {t('eventWizard.steps.participants.quickPresets', 'Valeurs rapides')}
-                  </Text>
-                  <View style={[Alignments.row, Spaces.marginTop[4], { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
-                    {CAPACITY_PRESETS.map((preset) => {
-                      const selected = clampedCapacity === preset;
-                      return (
-                        <TouchableOpacity
-                          key={`capacity-preset-${preset}`}
-                          onPress={() => setCapacityValue(preset)}
-                          style={[
-                            ApplicationStyle.card,
-                            Alignments.alignCenter,
-                            Alignments.justifyCenter,
-                            Spaces.paddingVertical[12],
-                            Spaces.paddingHorizontal[16],
-                            {
-                              backgroundColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.08)',
-                              borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.26)',
-                              borderRadius: 14,
-                              minHeight: 40,
-                              minWidth: 46,
-                            },
-                          ]}
-                        >
-                          <Text style={[Fonts.p1Bold, selected ? Fonts.neutral900 : Fonts.neutral100]}>
-                            {preset}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
+                  <View style={[Spaces.paddingHorizontal[12]]}>
+                    <Text style={[Fonts.h1Black, Fonts.neutral00, { textAlign: 'center' }]}>
+                      {clampedCapacity}
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
+                      {t('eventWizard.steps.participants.playersUnit', 'joueurs max')}
+                    </Text>
                   </View>
+
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'eventWizard.steps.participants.increase',
+                      'Un joueur de plus',
+                    )}
+                    accessibilityRole="button"
+                    disabled={!canIncreaseCapacity}
+                    onPress={() => setCapacityValue((value) => clampParticipants(value + 1))}
+                    style={counterButtonStyle(canIncreaseCapacity)}
+                  >
+                    <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
+                  </TouchableOpacity>
                 </View>
-              ) : null}
-            </View>
+
+                {/* Les 6 valeurs rapides, sur UNE rangee, cibles a 44 pt. Le
+                    titre « Valeurs rapides » disparait : six nombres alignes
+                    sous un compteur n'ont pas besoin qu'on les nomme. */}
+                <View style={[Alignments.row, { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
+                  {CAPACITY_PRESETS.map((preset) => {
+                    const selected = clampedCapacity === preset;
+                    return (
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        key={`capacity-preset-${preset}`}
+                        onPress={() => setCapacityValue(preset)}
+                        style={[
+                          ApplicationStyle.card,
+                          Alignments.alignCenter,
+                          Alignments.justifyCenter,
+                          {
+                            backgroundColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.08)',
+                            borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.26)',
+                            borderRadius: 12,
+                            flexGrow: 1,
+                            minHeight: 44,
+                            minWidth: 44,
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p1Bold, selected ? Fonts.neutral900 : Fonts.neutral100]}>
+                          {preset}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
           </>
         ) : null}
 
@@ -407,63 +436,22 @@ function EventWizardParticipants({ navigation }) {
           </View>
         ) : null}
 
-        <View
-          style={[
-            ApplicationStyle.card,
-            Spaces.padding[16],
-            {
-              backgroundColor: 'rgba(1, 179, 244, 0.10)',
-              borderColor: 'rgba(1, 179, 244, 0.32)',
-            },
-          ]}
-        >
-          <Text style={[Fonts.p3Bold, Fonts.primary500, Spaces.marginBottom[8]]}>
-            {t('eventWizard.steps.participants.summaryTitle', 'Resume')}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {t('eventWizard.steps.participants.previewCapacity', 'Capacité: {{value}}', { value: capacityLabel })}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
+        {/* Le pack remplace la carte « Resume » et son rappel « tu pourras
+            modifier » par UNE ligne, qui dit la consequence du reglage courant.
+            Rien n'est perdu : le Recap (etape 8) recapitule tout, et les
+            valeurs saisies restent affichees dans leurs propres compteurs. */}
+        <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
+          {capacityLabel}
+        </Text>
+
+        {hasInvalidPlayersConfig ? (
+          <Text style={[Fonts.p3, Fonts.error700]}>
             {t(
-              'eventWizard.steps.participants.previewMode',
-              'Mode: {{value}}',
-              {
-                value: previewModeLabel,
-              },
+              'eventWizard.steps.participants.totalPlayersExceedsCapacity',
+              'Le nombre de joueurs attendus ne peut pas dépasser la capacité max.',
             )}
           </Text>
-          {shouldCollectInternalPlayers ? (
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t(
-                isTraining
-                  ? 'eventWizard.steps.participants.previewTrainingTotalPlayers'
-                  : 'eventWizard.steps.participants.previewTotalPlayers',
-                'Joueurs attendus: {{value}}',
-                { value: clampedTotalPlayers },
-              )}
-            </Text>
-          ) : null}
-          {isOpenTraining ? (
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('eventWizard.steps.participants.previewExternalQuota', 'Places externes: {{value}}', { value: clampedExternalParticipantLimit })}
-            </Text>
-          ) : null}
-          {hasInvalidPlayersConfig ? (
-            <Text style={[Fonts.p3, Fonts.error700, Spaces.marginTop[8]]}>
-              {t(
-                'eventWizard.steps.participants.totalPlayersExceedsCapacity',
-                'Le nombre de joueurs attendus ne peut pas dépasser la capacité max.',
-              )}
-            </Text>
-          ) : null}
-        </View>
-
-        <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {t(
-            'eventWizard.steps.participants.hint',
-            'Tu pourras encore modifier ces valeurs avant la création finale.',
-          )}
-        </Text>
+        ) : null}
 
         {shouldShowDetectionDisabledHint ? (
           <View style={[ApplicationStyle.card, Spaces.padding[16], surfaceStyle]}>

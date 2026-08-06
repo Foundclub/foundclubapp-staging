@@ -326,43 +326,52 @@ describe('D10 — etape 5 · Participants', () => {
     demonter();
   });
 
-  // 🔴 MESURE — ce test decrit ce que D10 va CHANGER, et c'est sa raison d'etre.
-  // Aujourd'hui l'ecran s'ouvre sur « Illimite » (`state.capacity` vaut `null`
-  // dans l'etat initial du tunnel), donc SANS le compteur ni les 6 valeurs
-  // rapides. Le pack du 05/08 demande l'inverse : « capacite 12 » par defaut.
-  it('AVANT D10 : s ouvre sur « Illimite », sans compteur ni valeurs rapides', () => {
+  // 🟢 CE QUE D10 A CHANGE. Avant ce lot, l'ecran s'ouvrait sur « Illimite »
+  // (`state.capacity` vaut `null` dans l'etat initial du tunnel, et le mode en
+  // decoulait) : ni compteur, ni valeurs rapides a l'arrivee. Le pack du 05/08
+  // demande l'inverse — « capacite 12 » est l'un de ses 5 defauts surs.
+  it('s ouvre sur « Capacite fixe » a 12, le defaut du pack', () => {
     const { arbre, demonter } = monter(EventWizardParticipants, ETAT_DETECTION);
     const contenu = contenuDe(arbre);
 
-    expect(contenu).toContain('Aucune limite de places');
-    expect(contenu).not.toContain('Valeurs rapides');
-    demonter();
-  });
-
-  it('bascule en capacite fixe a 12 quand on presse « Capacité fixe »', () => {
-    const { arbre, demonter } = monter(EventWizardParticipants, ETAT_DETECTION);
-
-    act(() => {
-      pressableQuiPorte(arbre, 'Capacité fixe').props.onPress();
-    });
-
-    const contenu = contenuDe(arbre);
     expect(contenu).toContain('12');
     expect(contenu).toContain('joueurs max');
     demonter();
   });
 
-  it('offre les 6 valeurs rapides du pack des que la capacite est fixe', () => {
+  it('offre d emblee les 6 valeurs rapides du pack', () => {
     const { arbre, demonter } = monter(EventWizardParticipants, ETAT_DETECTION);
-
-    act(() => {
-      pressableQuiPorte(arbre, 'Capacité fixe').props.onPress();
-    });
-
     const contenu = contenuDe(arbre);
+
     ['8', '10', '12', '14', '18', '22'].forEach((valeur) => {
       expect(contenu).toContain(valeur);
     });
+    demonter();
+  });
+
+  it('bascule en illimite quand on presse « Illimite », et le compteur disparait', () => {
+    const { arbre, demonter } = monter(EventWizardParticipants, ETAT_DETECTION);
+
+    act(() => {
+      pressableQuiPorte(arbre, 'Illimite').props.onPress();
+    });
+
+    const contenu = contenuDe(arbre);
+    expect(contenu).toContain('Aucun plafond');
+    expect(contenu).not.toContain('joueurs max');
+    demonter();
+  });
+
+  // Le choix « Illimite » enregistre `capacity: null` — indiscernable d'un
+  // ecran jamais visite. Sans marqueur, revenir ici effacerait le choix.
+  it('un « Illimite » deja choisi SURVIT a un retour sur l ecran', () => {
+    const { arbre, demonter } = monter(EventWizardParticipants, {
+      ...ETAT_DETECTION,
+      capacity: null,
+      capacityMode: 'unlimited',
+    });
+
+    expect(contenuDe(arbre)).toContain('Aucun plafond');
     demonter();
   });
 
@@ -370,13 +379,17 @@ describe('D10 — etape 5 · Participants', () => {
     const { arbre, demonter } = monter(EventWizardParticipants, ETAT_DETECTION);
 
     act(() => {
-      pressableQuiPorte(arbre, 'Capacité fixe').props.onPress();
-    });
-    act(() => {
       pressableQuiPorte(arbre, '18').props.onPress();
     });
 
     expect(contenuDe(arbre)).toContain('18');
+    demonter();
+  });
+
+  it('la grammaire d en-tete « focus » du lot D05 est ACTIVEE', () => {
+    const { demonter } = monter(EventWizardParticipants, ETAT_DETECTION);
+
+    expect(dernierGabarit().headerVariant).toBe('focus');
     demonter();
   });
 
