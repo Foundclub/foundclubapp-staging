@@ -196,11 +196,17 @@ afterEach(() => {
 });
 
 describe('D09 — l ecran « Equipe organisatrice », etat du 2026-08-06', () => {
-  test('son entete vient des cles de traduction, et il n a PAS de bouton « Suivant »', () => {
+  test('son entete est en grammaire « focus », et il n a PAS de bouton « Suivant »', () => {
     const { gabarit } = afficherLEcran();
 
     expect(gabarit.title).toBe('eventWizard.steps.team.title');
-    expect(gabarit.subtitle).toBe('eventWizard.steps.team.subtitle');
+    // INVERSE PAR D09 — motif : le pack pose une phrase qui dit ce que le choix
+    // ENGAGE, la ou l'ancien sous-titre repetait le titre (« Selectionne
+    // l'equipe organisatrice »). Cle NEUVE avec repli : `fr.js` n'est pas
+    // touche, l'ancienne valeur reste en place.
+    expect(gabarit.subtitle).toBe("L'événement sera rattaché à cette équipe.");
+    // D09 — la grammaire d'en-tete de D05 est ACTIVEE, elle n'est pas reecrite.
+    expect(gabarit.headerVariant).toBe('focus');
     // Choisir une equipe navigue AU TOUCHER : aucun `onNext` n'est passe.
     expect(gabarit.onNext).toBeUndefined();
   });
@@ -218,6 +224,9 @@ describe('D09 — l ecran « Equipe organisatrice », etat du 2026-08-06', () =>
     const { gabarit, textes } = afficherLEcran({ nomDuType: 'Tournoi' });
 
     expect(gabarit.title).toBe('Cadre du tournoi');
+    // La grammaire « focus » couvre AUSSI la branche tournoi : un seul en-tete
+    // pour les deux lectures de l'ecran.
+    expect(gabarit.headerVariant).toBe('focus');
     expect(textes).toContain("Tournoi d'une équipe");
     expect(textes).toContain('Tournoi autonome');
   });

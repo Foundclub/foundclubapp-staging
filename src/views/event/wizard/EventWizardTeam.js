@@ -306,6 +306,12 @@ function EventWizardTeam({ navigation }) {
     navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardTeam, state));
   };
 
+  // Grammaire d'intertitre du pack de design : petite capitale espacee, gris
+  // clair. La maquette demande 11,5 pt ; la rampe typographique saute de 10
+  // (`p4`) a 12 (`p3`) — on prend le voisin `p3Bold` plutot que d'ecrire une
+  // taille en dur, qu'aucune porte ne verrait passer.
+  const intertitreStyle = [Fonts.p3Bold, Fonts.neutral300, { letterSpacing: 1 }];
+
   const renderTeamCard = (team) => (
     <EventWizardTeamCard
       key={team.documentId}
@@ -411,6 +417,7 @@ function EventWizardTeam({ navigation }) {
 
     return (
       <WizardStepLayout
+        headerVariant="focus"
         onBack={() => navigation.goBack()}
         stepCount={getEventWizardStepCount(state)}
         stepIndex={getEventWizardStepIndex(RouteNames.EventWizardTeam, state)}
@@ -500,13 +507,13 @@ function EventWizardTeam({ navigation }) {
                 <View style={[Spaces.gap[16]]}>
                   {teamsByOwnership.myTeams.length > 0 ? (
                     <View style={[Spaces.gap[12]]}>
-                      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>MES ÉQUIPES</Text>
+                      <Text style={intertitreStyle}>MES ÉQUIPES</Text>
                       <View>{teamsByOwnership.myTeams.map(renderTeamCard)}</View>
                     </View>
                   ) : null}
                   {teamsByOwnership.otherTeams.length > 0 ? (
                     <View style={[Spaces.gap[12]]}>
-                      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>AUTRES ÉQUIPES DU CLUB</Text>
+                      <Text style={intertitreStyle}>AUTRES ÉQUIPES DU CLUB</Text>
                       <View>{teamsByOwnership.otherTeams.map(renderTeamCard)}</View>
                     </View>
                   ) : null}
@@ -596,10 +603,14 @@ function EventWizardTeam({ navigation }) {
 
   return (
     <WizardStepLayout
+      headerVariant="focus"
       onBack={() => navigation.goBack()}
       stepCount={getEventWizardStepCount(state)}
       stepIndex={getEventWizardStepIndex(RouteNames.EventWizardTeam, state)}
-      subtitle={t('eventWizard.steps.team.subtitle')}
+      subtitle={t(
+        'eventWizard.steps.team.focusSubtitle',
+        "L'événement sera rattaché à cette équipe.",
+      )}
       title={t('eventWizard.steps.team.title')}
     >
       <View style={[Spaces.gap[16]]}>
@@ -715,7 +726,7 @@ function EventWizardTeam({ navigation }) {
           <View style={[Spaces.gap[16]]}>
             {teamsByOwnership.myTeams.length > 0 ? (
               <>
-                <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+                <Text style={intertitreStyle}>
                   {t('eventWizard.steps.team.myTeams', 'MES ÉQUIPES')}
                 </Text>
                 <View style={[Spaces.gap[12]]}>
@@ -726,7 +737,7 @@ function EventWizardTeam({ navigation }) {
 
             {teamsByOwnership.otherTeams.length > 0 ? (
               <>
-                <Text style={[Fonts.p3Bold, Fonts.neutral200, Spaces.marginTop[8]]}>
+                <Text style={[...intertitreStyle, Spaces.marginTop[8]]}>
                   {t('eventWizard.steps.team.otherClubTeams', 'AUTRES ÉQUIPES DU CLUB')}
                 </Text>
                 <View style={[Spaces.gap[12]]}>
