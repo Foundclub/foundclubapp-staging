@@ -105,6 +105,17 @@ function EventWizardType({ navigation, route }) {
   // ① le brouillon d'evenement en cours n'est pas perdu ② le « Retour » de la
   // 1re etape amicale (`FriendlyMatchWizardTeam.js:91`, un simple `goBack`)
   // ramene ICI. Un aller sans retour serait un piege ; le filet le fige.
+  //
+  // ⚠️ POURQUOI PAS `navigateOrExplainOnWeb` ICI, alors que l'autre entree du
+  // tunnel amical l'utilise (`FriendlyMatchListContent.js:258`) : ce garde-fou
+  // interroge le nom qu'on lui passe. Le CONTENEUR n'a pas de motif d'URL — il
+  // est exempte parce que ce sont ses ENFANTS qui en portent un
+  // (`webRouteExemptions.js:38`). L'autre entree vise le conteneur SEUL, elle
+  // atterrirait donc sur « / » : son garde-fou est justifie. Ici on nomme
+  // l'etape visee, qui EST routee (`webRoutes.js:149`,
+  // /friendly-matches/wizard/team), et `buildWebPath` deplie deja `{ screen }`
+  // pour retomber dessus (`webRoutes.js:271`). Poser le garde-fou sur le
+  // conteneur refuserait donc une destination qui existe sur le site.
   const handleOpenFriendlyMatchWizard = () => {
     navigation.navigate(RouteNames.FriendlyMatchWizardStack, {
       screen: RouteNames.FriendlyMatchWizardTeam,
