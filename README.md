@@ -32,4 +32,6 @@ Ce repo est la source de vérité de l’application mobile FoundClub.
 La procédure solo complète est documentée dans `docs/manual-release.md`.
 
 ## Legacy
-Les fichiers Fastlane / CircleCI encore présents sont conservés comme archive technique, mais ne doivent plus être considérés comme le chemin officiel de publication.
+Les fichiers Fastlane encore présents sont conservés comme archive technique, mais ne doivent plus être considérés comme le chemin officiel de publication.
+
+`.circleci/config.yml` a été **supprimé le 2026-08-06** : il n'avait pas bougé depuis le 2025-10-08 et **aucun webhook ne le déclenchait plus** (`gh api repos/Foundclub/foundclubapp-staging/hooks` → `[]`). Les **6 chaînes GitHub Actions** font tout le travail. Pour le relire : `git show be106ff:.circleci/config.yml`.
