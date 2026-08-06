@@ -17,14 +17,27 @@ import EventWizardLogistics from '../EventWizardLogistics';
 
 /** Proprietes recues par le gabarit d'etape, dans l'ordre du rendu. */
 const mockGabarits = [];
+/** Proprietes recues par la feuille du bas, dans l'ordre du rendu. */
+const mockFeuilles = [];
 
+// Le traducteur double INTERPOLE `{{count}}` : sans cela « Toutes les {{count}}
+// semaines » ne deviendrait jamais « Toutes les 2 semaines », et le test de la
+// cadence serait un faux vert.
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: () => {}, type: '3rdParty' },
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
-      if (typeof repli === 'string') return repli;
-      if (repli && typeof repli.defaultValue === 'string') return repli.defaultValue;
-      return cle;
+    t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
+      let modele = cle;
+      if (typeof repli === 'string') modele = repli;
+      else if (repli && typeof repli.defaultValue === 'string') modele = repli.defaultValue;
+
+      const valeurs = repli && typeof repli === 'object' ? repli : options;
+      return String(modele).replace(
+        /\{\{(\w+)\}\}/g,
+        (/** @type {string} */ tout, /** @type {string} */ nom) => (
+          valeurs && valeurs[nom] !== undefined ? String(valeurs[nom]) : tout
+        ),
+      );
     },
   }),
 }));
@@ -92,6 +105,25 @@ jest.mock('@/components/atoms/button/Button', () => function BoutonMock(/** @typ
   );
 });
 
+// La feuille du bas tire `@gorhom/bottom-sheet`, un module natif qu'un test ne
+// charge pas. La doublure rend entete, contenu et pied UNIQUEMENT quand la
+// feuille est ouverte : c'est exactement ce que le vrai composant fait voir.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function FeuilleMock(
+  /** @type {any} */ props,
+) {
+  const reactActuel = jest.requireActual('react');
+  const { View: VueRN } = jest.requireActual('react-native');
+  mockFeuilles.push(props);
+  if (!props.isVisible) return null;
+  return reactActuel.createElement(
+    VueRN,
+    null,
+    props.headerComponent,
+    props.children,
+    props.footerComponent,
+  );
+});
+
 /**
  * Tous les textes rendus sous un noeud de l'arbre de test.
  * @param {any} noeud Noeud de depart.
@@ -140,6 +172,7 @@ let elementCourant;
  */
 const afficherLEcran = ({ nomDuType } = {}) => {
   mockGabarits.length = 0;
+  mockFeuilles.length = 0;
   const navigation = { goBack: () => {}, navigate: () => {}, setParams: () => {} };
   elementCourant = createElement(
     EventWizardProvider,
@@ -163,16 +196,33 @@ const afficherLEcran = ({ nomDuType } = {}) => {
 const textesCourants = () => textesSous(arbre.root);
 
 /**
- * Bascule le premier interrupteur de l'ecran.
- * @param {boolean} valeur Nouvelle position.
+ * Presse le premier pressable dont le texte visible vaut `libelle`.
+ * On cherche « ce qui porte un onPress » plutot qu'un type de composant.
+ * @param {string} libelle Texte visible du pressable a actionner.
  */
-const basculerLInterrupteur = (valeur) => {
-  const interrupteurs = arbre.root.findAll(
-    (/** @type {any} */ noeud) => typeof noeud.props?.onValueChange === 'function',
+const presserLeTexte = (libelle) => {
+  const pressables = arbre.root.findAll(
+    (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function',
     { deep: true },
   );
-  act(() => interrupteurs[0].props.onValueChange(valeur));
+  const cible = pressables.find((noeud) => textesSous(noeud).includes(libelle));
+  if (!cible) {
+    const vus = pressables.map((noeud) => textesSous(noeud).join('|')).filter(Boolean);
+    throw new Error(
+      `aucun pressable ne porte le texte « ${libelle} ». Pressables vus : ${JSON.stringify(vus)}`,
+    );
+  }
+  cible.props.onPress();
 };
+
+// La feuille est-elle ouverte, d'apres son dernier rendu ?
+const feuilleOuverte = () => Boolean(mockFeuilles[mockFeuilles.length - 1]?.isVisible);
+
+// Ouvre la feuille en touchant la rangee « Repeter ».
+const ouvrirLaFeuille = () => act(() => presserLeTexte('Répéter'));
+
+// Ferme la feuille par le fond, sans rien enregistrer.
+const fermerLaFeuille = () => mockFeuilles[mockFeuilles.length - 1].close();
 
 afterEach(() => {
   if (arbre) act(() => arbre.unmount());
@@ -180,42 +230,52 @@ afterEach(() => {
 });
 
 describe('D09 — l ecran « Logistique », etat du 2026-08-06', () => {
-  test('son entete vient des cles de traduction, et son « Suivant » est ACTIF d entree', () => {
+  test('son entete est en grammaire « focus », et son « Suivant » est ACTIF d entree', () => {
     const { gabarit } = afficherLEcran();
 
-    expect(gabarit.title).toBe('eventWizard.steps.logistics.title');
-    expect(gabarit.subtitle).toBe('eventWizard.steps.logistics.subtitle');
+    // INVERSE PAR D09 — motif : depuis D08 cette etape ne porte plus que la date
+    // et l'horaire. « Logistique » nommait un fourre-tout qui n'existe plus.
+    // Cles NEUVES avec repli : `fr.js` n'est pas touche.
+    expect(gabarit.title).toBe('Date & horaire');
+    expect(gabarit.subtitle).toBe("Quand a lieu l'événement ?");
+    expect(gabarit.headerVariant).toBe('focus');
     expect(typeof gabarit.onNext).toBe('function');
     // Rien n'est a choisir pour continuer : la date et l'horaire ont un defaut.
     expect(gabarit.isNextDisabled).toBeFalsy();
   });
 
-  test('il affiche la date et les deux horaires', () => {
+  test('il affiche la date et les deux horaires, sous leur intertitre', () => {
     const { textes } = afficherLEcran();
 
+    expect(textes).toContain('DATE ET HORAIRE');
     expect(textes).toContain('eventEdit.fields.date.label');
     expect(textes).toContain('eventEdit.fields.startTime.label');
     expect(textes).toContain('eventEdit.fields.endTime.label');
   });
 
-  test('TEMOIN D INVERSION — la recurrence est un INTERRUPTEUR, et elle est eteinte', () => {
+  // INVERSE PAR D09 — motif : le pack replie la recurrence dans une feuille du
+  // bas et laisse une RANGEE-VALEUR a chevron. Un interrupteur qui ouvre une
+  // fenetre serait incoherent ; la valeur reste lisible sans rien ouvrir.
+  test('la recurrence est une rangee « Répéter », dont la valeur par defaut est unique', () => {
     const { textes } = afficherLEcran();
 
-    expect(textes).toContain('eventWizard.steps.logistics.isRecurrent');
-    // Aucune rangee-valeur « Repeter » aujourd'hui : c'est ce que D09 apporte.
-    expect(textes).not.toContain('Répéter');
-    expect(textes).not.toContain('Une seule fois');
-    // Et le panneau de recurrence n'est pas la tant que l'interrupteur est eteint.
-    expect(textes).not.toContain('eventWizard.steps.logistics.recurrenceTitle');
+    expect(textes).toContain('Répéter');
+    expect(textes).toContain('Une seule fois');
+    // L'interrupteur a disparu, et avec lui le panneau qui allongeait la page.
+    expect(textes).not.toContain('eventWizard.steps.logistics.isRecurrent');
+    expect(textes).not.toContain('eventWizard.steps.logistics.recurrenceInterval');
   });
 
-  test('TEMOIN D INVERSION — allumer l interrupteur deplie les champs DANS la page', () => {
+  // INVERSE PAR D09 — motif : les champs sont les MEMES, ils ont seulement
+  // change de contenant. La feuille est doublee (elle tire un module natif).
+  test('toucher « Répéter » ouvre la feuille avec les MEMES champs qu avant', () => {
     afficherLEcran();
 
-    basculerLInterrupteur(true);
+    ouvrirLaFeuille();
     const textes = textesCourants();
 
-    expect(textes).toContain('eventWizard.steps.logistics.recurrenceTitle');
+    expect(feuilleOuverte()).toBe(true);
+    expect(textes).toContain("Répéter l'événement");
     expect(textes).toContain('eventEdit.fields.recurrenceFrequency.options.week');
     expect(textes).toContain('eventEdit.fields.recurrenceFrequency.options.month');
     expect(textes).toContain('eventWizard.steps.logistics.recurrenceInterval');
@@ -223,9 +283,48 @@ describe('D09 — l ecran « Logistique », etat du 2026-08-06', () => {
     expect(textes).toContain('CHOIX-DES-JOURS');
     expect(textes).toContain('eventEdit.fields.recurrenceStartDate.label');
     expect(textes).toContain('eventEdit.fields.recurrenceEndDate.label');
-    // Le panneau vit dans la page : il n'y a ni « Appliquer » ni « Ne pas repeter ».
-    expect(textes).not.toContain('Appliquer');
-    expect(textes).not.toContain('Ne pas répéter');
+    expect(textes).toContain('Appliquer');
+    expect(textes).toContain('Ne pas répéter');
+  });
+
+  // Le cas limite qui vaut le brouillon : sortir sans « Appliquer » ne doit
+  // RIEN enregistrer. Sans lui, ouvrir la feuille par curiosite rendrait
+  // l evenement recurrent.
+  test('fermer la feuille sans « Appliquer » n enregistre RIEN', () => {
+    afficherLEcran();
+
+    ouvrirLaFeuille();
+    act(() => presserLeTexte('+'));
+    act(() => fermerLaFeuille());
+
+    expect(textesCourants()).toContain('Une seule fois');
+  });
+
+  test('« Appliquer » enregistre la cadence, et la rangee l affiche', () => {
+    afficherLEcran();
+
+    ouvrirLaFeuille();
+    act(() => presserLeTexte('+'));
+    act(() => presserLeTexte('Appliquer'));
+
+    const textes = textesCourants();
+    expect(textes).toContain('Toutes les 2 semaines');
+    expect(textes).not.toContain('Une seule fois');
+    expect(feuilleOuverte()).toBe(false);
+  });
+
+  test('« Ne pas répéter » ramene la rangee a « Une seule fois »', () => {
+    afficherLEcran();
+
+    ouvrirLaFeuille();
+    act(() => presserLeTexte('Appliquer'));
+    expect(textesCourants()).toContain('Toutes les semaines');
+
+    ouvrirLaFeuille();
+    act(() => presserLeTexte('Ne pas répéter'));
+
+    expect(textesCourants()).toContain('Une seule fois');
+    expect(feuilleOuverte()).toBe(false);
   });
 
   test('pour un tournoi, c est le multi-jours qui remplace la recurrence', () => {

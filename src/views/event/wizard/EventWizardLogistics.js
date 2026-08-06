@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Image,
   Switch,
   Text,
   TextInput,
@@ -11,9 +12,11 @@ import {
   View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import DayPicker from '@/components/molecules/dayPicker/DayPicker';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
@@ -126,6 +129,48 @@ const buildDefaultRecurrenceEndDate = (startDate, frequency, interval) => {
   return fallbackEnd;
 };
 
+/**
+ * Le libelle d'une cadence : « Toutes les semaines », « Tous les 3 mois »…
+ *
+ * Ecrit UNE fois : la rangee « Repeter » de l'etape l'affiche pour la valeur
+ * enregistree, et la feuille l'affiche pour le brouillon en cours d'edition.
+ * @param {any} t Traducteur `useTranslation` (son type surcharge ne se decrit
+ *   pas en JSDoc sans reecrire les surcharges d'i18next).
+ * @param {string} frequency `week` ou `month`.
+ * @param {number} interval Nombre de periodes.
+ * @returns {string} Le libelle affichable.
+ */
+const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
+  const safeInterval = Math.max(MIN_RECURRENCE_INTERVAL, interval);
+  if (frequency === 'month') {
+    return safeInterval === 1
+      ? t('eventWizard.steps.logistics.recurrenceIntervalMonthlyOne', 'Tous les mois')
+      : t(
+        'eventWizard.steps.logistics.recurrenceIntervalMonthlyMany',
+        'Tous les {{count}} mois',
+        { count: safeInterval },
+      );
+  }
+
+  return safeInterval === 1
+    ? t('eventWizard.steps.logistics.recurrenceIntervalWeeklyOne', 'Toutes les semaines')
+    : t(
+      'eventWizard.steps.logistics.recurrenceIntervalWeeklyMany',
+      'Toutes les {{count}} semaines',
+      { count: safeInterval },
+    );
+};
+
+/**
+ * Ce que la feuille « Repeter » edite, tant qu'on n'a pas touche « Appliquer ».
+ * @typedef {object} BrouillonDeRecurrence
+ * @property {any[]} days Les jours de la semaine retenus.
+ * @property {any} endDate Date de fin de la repetition.
+ * @property {string} frequency `week` ou `month`.
+ * @property {string} intervalText Nombre de periodes, tel que saisi.
+ * @property {any} startDate Date a partir de laquelle la repetition court.
+ */
+
 const buildDateKey = (value) => format(new Date(value), 'yyyy-MM-dd');
 
 const buildDayRange = (startDate, endDate) => {
@@ -196,6 +241,7 @@ function EventWizardLogistics({ navigation }) {
     ApplicationStyle,
     Colors,
     Fonts,
+    Images,
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
@@ -208,6 +254,10 @@ function EventWizardLogistics({ navigation }) {
   const chipBorder = 'rgba(1, 179, 244, 0.24)';
   const intervalControlSurface = 'rgba(1, 179, 244, 0.1)';
   const intervalControlBorder = 'rgba(1, 179, 244, 0.28)';
+  // Grammaire d'intertitre du pack : petite capitale espacee, gris clair. La
+  // maquette demande 11,5 pt ; la rampe saute de 10 (`p4`) a 12 (`p3`) — on
+  // prend le VOISIN plutot qu'une taille en dur qu'aucune porte ne verrait.
+  const intertitreStyle = [Fonts.p3Bold, Fonts.neutral300, { letterSpacing: 1 }];
 
   const isReservation = isReservationTypeName(state.type?.name);
   const isTournament = isTournamentEventType(state.type?.name);
@@ -268,28 +318,30 @@ function EventWizardLogistics({ navigation }) {
     return parsed && parsed > 0 ? parsed : MIN_RECURRENCE_INTERVAL;
   }, [recurrenceIntervalText]);
 
-  const recurrenceIntervalLabel = useMemo(() => {
-    const safeInterval = Math.max(MIN_RECURRENCE_INTERVAL, recurrenceInterval);
-    if (recurrenceFrequency === 'month') {
-      return safeInterval === 1
-        ? t('eventWizard.steps.logistics.recurrenceIntervalMonthlyOne', 'Tous les mois')
-        : t(
-          'eventWizard.steps.logistics.recurrenceIntervalMonthlyMany',
-          'Tous les {{count}} mois',
-          { count: safeInterval },
-        );
-    }
+  const recurrenceIntervalLabel = useMemo(
+    () => buildRecurrenceIntervalLabel(t, recurrenceFrequency, recurrenceInterval),
+    [recurrenceFrequency, recurrenceInterval, t],
+  );
 
-    return safeInterval === 1
-      ? t('eventWizard.steps.logistics.recurrenceIntervalWeeklyOne', 'Toutes les semaines')
-      : t(
-        'eventWizard.steps.logistics.recurrenceIntervalWeeklyMany',
-        'Toutes les {{count}} semaines',
-        { count: safeInterval },
-      );
-  }, [recurrenceFrequency, recurrenceInterval, t]);
+  // D09 — la recurrence se replie dans une feuille du bas. Elle s'y edite sur un
+  // BROUILLON : sortir par le fond ou par le geste ne doit RIEN enregistrer.
+  // Seul « Appliquer » ecrit, seul « Ne pas repeter » eteint.
+  const [isRecurrenceSheetOpen, setIsRecurrenceSheetOpen] = useState(false);
+  const [recurrenceDraft, setRecurrenceDraft] = useState(
+    /** @type {BrouillonDeRecurrence | null} */ (null),
+  );
 
-  const canDecreaseRecurrenceInterval = recurrenceInterval > MIN_RECURRENCE_INTERVAL;
+  const draftInterval = useMemo(() => {
+    const parsed = parseInteger(recurrenceDraft?.intervalText);
+    return parsed && parsed > 0 ? parsed : MIN_RECURRENCE_INTERVAL;
+  }, [recurrenceDraft?.intervalText]);
+
+  const draftIntervalLabel = useMemo(
+    () => buildRecurrenceIntervalLabel(t, recurrenceDraft?.frequency || 'week', draftInterval),
+    [draftInterval, recurrenceDraft?.frequency, t],
+  );
+
+  const canDecreaseRecurrenceInterval = draftInterval > MIN_RECURRENCE_INTERVAL;
 
   const intervalAdjustButtonStyle = (isEnabled) => ([
     ApplicationStyle.card,
@@ -305,20 +357,57 @@ function EventWizardLogistics({ navigation }) {
     },
   ]);
 
+  const patchRecurrenceDraft = (/** @type {Partial<BrouillonDeRecurrence>} */ partialUpdate) => {
+    setRecurrenceDraft((current) => (current ? { ...current, ...partialUpdate } : current));
+  };
+
   const handleDecreaseRecurrenceInterval = () => {
-    setRecurrenceIntervalText((currentValue) => {
-      const parsed = parseInteger(currentValue);
-      const safeCurrent = parsed && parsed > 0 ? parsed : MIN_RECURRENCE_INTERVAL;
-      return toNumberInputText(Math.max(MIN_RECURRENCE_INTERVAL, safeCurrent - 1));
+    patchRecurrenceDraft({
+      intervalText: toNumberInputText(Math.max(MIN_RECURRENCE_INTERVAL, draftInterval - 1)),
     });
   };
 
   const handleIncreaseRecurrenceInterval = () => {
-    setRecurrenceIntervalText((currentValue) => {
-      const parsed = parseInteger(currentValue);
-      const safeCurrent = parsed && parsed > 0 ? parsed : MIN_RECURRENCE_INTERVAL;
-      return toNumberInputText(safeCurrent + 1);
+    patchRecurrenceDraft({ intervalText: toNumberInputText(draftInterval + 1) });
+  };
+
+  /**
+   * Ouvre la feuille sur une COPIE des valeurs enregistrees.
+   *
+   * Le jour de base est seme ici quand aucun n'est encore choisi : c'est ce que
+   * faisait deja l'effet qui suit l'allumage de la recurrence, on le rend
+   * simplement visible des l'ouverture.
+   */
+  const handleOpenRecurrenceSheet = () => {
+    const baseStartDate = recurrenceStartDate ? new Date(recurrenceStartDate) : new Date(date);
+    setRecurrenceDraft({
+      days: recurrenceDays.length > 0 ? recurrenceDays : [date.getDay()],
+      endDate: recurrenceEndDate
+        ? new Date(recurrenceEndDate)
+        : buildDefaultRecurrenceEndDate(baseStartDate, recurrenceFrequency, recurrenceInterval),
+      frequency: recurrenceFrequency,
+      intervalText: recurrenceIntervalText,
+      startDate: baseStartDate,
     });
+    setIsRecurrenceSheetOpen(true);
+  };
+
+  /** Enregistre le brouillon et allume la recurrence. Le SEUL chemin d'ecriture. */
+  const handleApplyRecurrence = () => {
+    if (!recurrenceDraft) return;
+    setRecurrenceFrequency(recurrenceDraft.frequency);
+    setRecurrenceIntervalText(recurrenceDraft.intervalText);
+    setRecurrenceDays(recurrenceDraft.days);
+    setRecurrenceStartDate(recurrenceDraft.startDate);
+    setRecurrenceEndDate(recurrenceDraft.endDate);
+    setIsRecurrent(true);
+    setIsRecurrenceSheetOpen(false);
+  };
+
+  /** Revient a « une seule fois ». Les valeurs saisies restent, elles ne servent plus. */
+  const handleClearRecurrence = () => {
+    setIsRecurrent(false);
+    setIsRecurrenceSheetOpen(false);
   };
 
   useEffect(() => {
@@ -666,16 +755,21 @@ function EventWizardLogistics({ navigation }) {
 
   return (
     <WizardStepLayout
+      headerVariant="focus"
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(projectedWizardState)}
       stepIndex={getEventWizardLogisticsStepIndex(projectedWizardState)}
-      subtitle={t('eventWizard.steps.logistics.subtitle')}
-      title={t('eventWizard.steps.logistics.title')}
+      subtitle={t('eventWizard.steps.logistics.focusSubtitle', "Quand a lieu l'événement ?")}
+      title={t('eventWizard.steps.logistics.focusTitle', 'Date & horaire')}
     >
       <View style={[Spaces.gap[24]]}>
         {showSingleDateTimeFields ? (
-          <>
+          <View style={[Spaces.gap[12]]}>
+            <Text style={intertitreStyle}>
+              {t('eventWizard.steps.logistics.dateTimeGroupLabel', 'DATE ET HORAIRE')}
+            </Text>
+
             <DatePickerInput
               label={t('eventEdit.fields.date.label')}
               minimumDate={new Date()}
@@ -683,7 +777,7 @@ function EventWizardLogistics({ navigation }) {
               value={toDateInputText(date)}
             />
 
-            <View style={[Alignments.row, Spaces.gap[16]]}>
+            <View style={[Alignments.row, Spaces.gap[12]]}>
               <View style={{ flex: 1 }}>
                 <TimePickerInput
                   label={t('eventEdit.fields.startTime.label')}
@@ -699,7 +793,51 @@ function EventWizardLogistics({ navigation }) {
                 />
               </View>
             </View>
-          </>
+
+            {/* D09 — « Repeter » est une RANGEE-VALEUR a chevron, pas un
+                interrupteur : un switch qui ouvre une fenetre serait
+                incoherent. La valeur reste lisible sans ouvrir la feuille, et
+                le defaut est « Une seule fois ». */}
+            {!isTournament ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityState={{ expanded: isRecurrenceSheetOpen }}
+                activeOpacity={0.85}
+                onPress={handleOpenRecurrenceSheet}
+                style={[
+                  ApplicationStyle.card,
+                  Spaces.paddingHorizontal[16],
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  {
+                    backgroundColor: cardSurface,
+                    borderColor: cardBorder,
+                    borderRadius: 16,
+                    columnGap: 12,
+                    minHeight: 56,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
+                  {t('eventWizard.steps.logistics.repeatRowLabel', 'Répéter')}
+                </Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
+                  {isRecurrent
+                    ? recurrenceIntervalLabel
+                    : t('eventWizard.steps.logistics.repeatRowOnce', 'Une seule fois')}
+                </Text>
+                <Image
+                  source={Images.chevronDown}
+                  style={{
+                    height: 16,
+                    tintColor: Colors.neutral600,
+                    transform: [{ rotate: '-90deg' }],
+                    width: 16,
+                  }}
+                />
+              </TouchableOpacity>
+            ) : null}
+          </View>
         ) : null}
 
         {isTournament ? (
@@ -732,28 +870,7 @@ function EventWizardLogistics({ navigation }) {
               value={isMultiDayTournament}
             />
           </View>
-        ) : (
-          <View
-            style={[
-              ApplicationStyle.card,
-              Spaces.padding[16],
-              Alignments.row,
-              Alignments.alignCenter,
-              Alignments.justifySpaceBetween,
-              { backgroundColor: cardSurface, borderColor: cardBorder },
-            ]}
-          >
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {t('eventWizard.steps.logistics.isRecurrent')}
-            </Text>
-            <Switch
-              onValueChange={setIsRecurrent}
-              thumbColor={Colors.neutral00}
-              trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
-              value={isRecurrent}
-            />
-          </View>
-        )}
+        ) : null}
 
         {isTournament && isMultiDayTournament ? (
           <View style={[Spaces.gap[24]]}>
@@ -961,125 +1078,164 @@ function EventWizardLogistics({ navigation }) {
           </View>
         ) : null}
 
-        {!isTournament && isRecurrent ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], { backgroundColor: cardSurface, borderColor: cardBorder }]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {t('eventWizard.steps.logistics.recurrenceTitle')}
-            </Text>
-
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                {t('eventEdit.fields.recurrenceFrequency.label')}
-              </Text>
-              <View style={[Alignments.row, Spaces.gap[12]]}>
-                {['week', 'month'].map((value) => {
-                  const selected = recurrenceFrequency === value;
-                  return (
-                    <TouchableOpacity
-                      key={value}
-                      onPress={() => setRecurrenceFrequency(value)}
-                      style={[
-                        ApplicationStyle.card,
-                        Spaces.paddingVertical[8],
-                        Spaces.paddingHorizontal[16],
-                        {
-                          backgroundColor: selected ? 'rgba(1, 179, 244, 0.16)' : chipSurface,
-                          borderColor: selected ? Colors.primary500 : chipBorder,
-                        },
-                      ]}
-                    >
-                      <Text style={[Fonts.p2Bold, selected ? Fonts.primary100 : Fonts.neutral100]}>
-                        {value === 'week'
-                          ? t('eventEdit.fields.recurrenceFrequency.options.week')
-                          : t('eventEdit.fields.recurrenceFrequency.options.month')}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View>
-              <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginBottom[8]]}>
-                {t('eventWizard.steps.logistics.recurrenceInterval')}
-              </Text>
-              <View
-                style={[
-                  ApplicationStyle.card,
-                  Spaces.padding[12],
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  Alignments.justifySpaceBetween,
-                  { backgroundColor: intervalControlSurface, borderColor: fieldBorder },
-                ]}
-              >
+        {/* D09 — la recurrence a quitte la page pour une feuille du bas :
+            l'etape ne s'allonge plus jamais. Les champs sont les MEMES, le
+            defaut reste « une seule fois ». */}
+        {!isTournament && recurrenceDraft ? (
+          <BottomModal
+            close={() => setIsRecurrenceSheetOpen(false)}
+            footerComponent={(
+              <View style={[Spaces.gap[8]]}>
+                <Button
+                  onPress={handleApplyRecurrence}
+                  title={t('eventWizard.steps.logistics.repeatApply', 'Appliquer')}
+                  variant="Primary"
+                />
                 <TouchableOpacity
-                  accessibilityLabel={t(
-                    'eventWizard.steps.logistics.recurrenceIntervalDecrement',
-                    "Reduire l'intervalle de récurrence",
-                  )}
-                  disabled={!canDecreaseRecurrenceInterval}
-                  onPress={handleDecreaseRecurrenceInterval}
-                  style={intervalAdjustButtonStyle(canDecreaseRecurrenceInterval)}
+                  accessibilityRole="button"
+                  onPress={handleClearRecurrence}
+                  style={Spaces.paddingVertical[12]}
                 >
-                  <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
-                </TouchableOpacity>
-
-                <View style={[Alignments.alignCenter, Spaces.gap[4], { flex: 1 }, Spaces.paddingHorizontal[12]]}>
-                  <Text style={[Fonts.h2, Fonts.neutral00, { textAlign: 'center' }]}>
-                    {recurrenceInterval}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral200, Fonts.textCenter]}>
+                    {t('eventWizard.steps.logistics.repeatClear', 'Ne pas répéter')}
                   </Text>
-                  <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
-                    {recurrenceIntervalLabel}
+                </TouchableOpacity>
+              </View>
+            )}
+            headerComponent={(
+              <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                {t('eventWizard.steps.logistics.repeatSheetTitle', "Répéter l'événement")}
+              </Text>
+            )}
+            isVisible={isRecurrenceSheetOpen}
+          >
+            <View style={[Spaces.gap[16]]}>
+              <View style={[Spaces.gap[8]]}>
+                <Text style={intertitreStyle}>
+                  {t('eventEdit.fields.recurrenceFrequency.label')}
+                </Text>
+                <View style={[Alignments.row, Spaces.gap[12]]}>
+                  {['week', 'month'].map((value) => {
+                    const selected = recurrenceDraft.frequency === value;
+                    return (
+                      <TouchableOpacity
+                        key={value}
+                        onPress={() => patchRecurrenceDraft({ frequency: value })}
+                        style={[
+                          ApplicationStyle.card,
+                          Spaces.paddingVertical[8],
+                          Spaces.paddingHorizontal[16],
+                          {
+                            backgroundColor: selected
+                              ? withAlpha(Colors.primary500, 0.16)
+                              : chipSurface,
+                            borderColor: selected ? Colors.primary500 : chipBorder,
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p2Bold, selected ? Fonts.primary100 : Fonts.neutral100]}>
+                          {value === 'week'
+                            ? t('eventEdit.fields.recurrenceFrequency.options.week')
+                            : t('eventEdit.fields.recurrenceFrequency.options.month')}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={[Spaces.gap[8]]}>
+                <Text style={intertitreStyle}>
+                  {t('eventWizard.steps.logistics.recurrenceInterval')}
+                </Text>
+                <View
+                  style={[
+                    ApplicationStyle.card,
+                    Spaces.padding[12],
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
+                    { backgroundColor: intervalControlSurface, borderColor: fieldBorder },
+                  ]}
+                >
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'eventWizard.steps.logistics.recurrenceIntervalDecrement',
+                      "Reduire l'intervalle de récurrence",
+                    )}
+                    disabled={!canDecreaseRecurrenceInterval}
+                    onPress={handleDecreaseRecurrenceInterval}
+                    style={intervalAdjustButtonStyle(canDecreaseRecurrenceInterval)}
+                  >
+                    <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
+                  </TouchableOpacity>
+
+                  <View style={[
+                    Alignments.alignCenter,
+                    Spaces.gap[4],
+                    { flex: 1 },
+                    Spaces.paddingHorizontal[12],
+                  ]}
+                  >
+                    <Text style={[Fonts.h2, Fonts.neutral00, { textAlign: 'center' }]}>
+                      {draftInterval}
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
+                      {draftIntervalLabel}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'eventWizard.steps.logistics.recurrenceIntervalIncrement',
+                      "Augmenter l'intervalle de récurrence",
+                    )}
+                    onPress={handleIncreaseRecurrenceInterval}
+                    style={intervalAdjustButtonStyle(true)}
+                  >
+                    <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {recurrenceDraft.frequency === 'week' ? (
+                <View style={[Spaces.gap[8]]}>
+                  <Text style={intertitreStyle}>
+                    {t('eventWizard.steps.logistics.recurrenceDays')}
+                  </Text>
+                  <DayPicker
+                    onChange={(days) => patchRecurrenceDraft({ days })}
+                    selectedDays={recurrenceDraft.days}
+                  />
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {t(
+                      'eventWizard.steps.logistics.recurrenceBaseDayHint',
+                      "Le jour de l'événement est présélectionné. Tu peux ajouter d'autres jours.",
+                    )}
                   </Text>
                 </View>
+              ) : null}
 
-                <TouchableOpacity
-                  accessibilityLabel={t(
-                    'eventWizard.steps.logistics.recurrenceIntervalIncrement',
-                    "Augmenter l'intervalle de récurrence",
-                  )}
-                  onPress={handleIncreaseRecurrenceInterval}
-                  style={intervalAdjustButtonStyle(true)}
-                >
-                  <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
-                </TouchableOpacity>
-              </View>
+              {/* ⚠️ Le pack ne montre que « Jusqu'au ». La date de DEBUT est
+                  conservee : elle est saisissable aujourd'hui et alimente
+                  `recurrenceStartDate`. La retirer supprimerait une donnee,
+                  pas un ornement. */}
+              <DatePickerInput
+                label={t('eventEdit.fields.recurrenceStartDate.label')}
+                onChange={(text) => patchRecurrenceDraft({
+                  startDate: mergeDateInput(text, recurrenceDraft.startDate || new Date()),
+                })}
+                value={toDateInputText(recurrenceDraft.startDate || new Date())}
+              />
+              <DatePickerInput
+                label={t('eventEdit.fields.recurrenceEndDate.label')}
+                onChange={(text) => patchRecurrenceDraft({
+                  endDate: mergeDateInput(text, recurrenceDraft.endDate || new Date()),
+                })}
+                value={toDateInputText(recurrenceDraft.endDate || new Date())}
+              />
             </View>
-
-            {recurrenceFrequency === 'week' ? (
-              <View>
-                <Text style={[Fonts.p2, Fonts.neutral200]}>
-                  {t('eventWizard.steps.logistics.recurrenceDays')}
-                </Text>
-                <DayPicker
-                  onChange={setRecurrenceDays}
-                  selectedDays={recurrenceDays}
-                />
-                <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
-                  {t(
-                    'eventWizard.steps.logistics.recurrenceBaseDayHint',
-                    "Le jour de l'événement est présélectionné. Tu peux ajouter d'autres jours.",
-                  )}
-                </Text>
-              </View>
-            ) : null}
-
-            <DatePickerInput
-              label={t('eventEdit.fields.recurrenceStartDate.label')}
-              onChange={(text) => setRecurrenceStartDate(
-                mergeDateInput(text, recurrenceStartDate || new Date()),
-              )}
-              value={toDateInputText(recurrenceStartDate || new Date())}
-            />
-            <DatePickerInput
-              label={t('eventEdit.fields.recurrenceEndDate.label')}
-              onChange={(text) => setRecurrenceEndDate(
-                mergeDateInput(text, recurrenceEndDate || new Date()),
-              )}
-              value={toDateInputText(recurrenceEndDate || new Date())}
-            />
-          </View>
+          </BottomModal>
         ) : null}
 
         {isReservation ? (
