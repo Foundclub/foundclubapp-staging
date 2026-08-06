@@ -6,6 +6,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { isTrainingEventType } from '@/domains/event/eventUseCases';
 import useTheme from '@/theme/themeContext';
 
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -19,245 +20,72 @@ import {
 } from './eventWizardDetectionUtils';
 
 // D08 — L'ACCES DE L'EVENEMENT EN UN SEUL ECRAN.
+// D10 — ET EN DEUX PAIRES DE PILULES.
 //
 // Cet ecran reunit ce qui vivait dans `EventWizardVisibility` (public/prive et
 // visibilite des participants) et dans `EventWizardValidationMode` (validation
-// automatique ou manuelle). Les deux rendus sont DEPLACES tels quels : aucune
-// couleur, aucune police, aucun espacement n'est touche — la peinture est le
-// sujet des lots D09 et D10.
+// automatique ou manuelle).
+//
+// Le pack du 2026-08-05 (maquette 08) le resume ainsi : « Deux choix binaires =
+// deux paires de pilules, avec UNE ligne d'explication dynamique sous chacune —
+// moitie moins de texte affiche qu'avant. » Les quatre grandes cartes de choix
+// (titre + description + phrase d'aide + pastille de selection, soit ~30 lignes
+// de texte a l'ecran) deviennent donc deux bascules et deux lignes.
+//
+// ⚠️ AUCUNE VALEUR DE DONNEE NE CHANGE. `sessionStatus` reste `open`/`closed`,
+// `validationMode` reste `auto`/`manual`, `participantIdentityVisibility` reste
+// `VISIBLE`/`ANONYMIZED` : ce sont les chaines deja en base.
 //
 // Le bloc « validation » ne s'affiche PAS pour un tournoi, exactement comme
 // avant : le tunnel tournoi ne traversait jamais `EventWizardValidationMode`,
 // son `validationMode` etant deduit du mode d'inscription
-// (`EventWizardTournamentSettings`). L'afficher ici aurait ajoute un reglage
-// qui n'existait pas.
+// (`EventWizardTournamentSettings`).
 
-const VISIBILITY_OPTIONS = [
-  {
-    description:
-      "L'événement peut être decouvert publiquement selon les règles du club et de l'application.",
-    helper:
-      'Utile pour les portes ouvertes, initiations et événements visibles à plus grande échelle.',
-    key: 'open',
-    title: 'Événement public',
-  },
-  {
-    description:
-      "L'événement reste réserve au groupe concerne, aux membres invites et aux encadrants autorises.",
-    helper:
-      'Ideal pour les entraînements, convocations internes et événements reserves a une équipe.',
-    key: 'closed',
-    title: 'Événement prive',
-  },
-];
-
-const PARTICIPANT_IDENTITY_OPTIONS = [
-  {
-    description:
-      'Les participants apparaissent avec leur nom, leur prénom et leur photo selon les règles habituelles.',
-    helper:
-      "Pratique quand les participants doivent pouvoir s'identifier facilement entre eux.",
-    key: 'VISIBLE',
-    title: 'Identités visibles',
-  },
-  {
-    description:
-      'Les autres utilisateurs verront uniquement le nombre de participants et des profils anonymisés.',
-    helper:
-      'Recommande si tu veux proteger les mineurs ou limiter la diffusion des identités.',
-    key: 'ANONYMIZED',
-    title: 'Participants anonymisés',
-  },
-];
-
-const buildValidationOptions = (t) => ([
-  {
-    detailOne: t(
-      'eventWizard.steps.validation.autoRuleOne',
-      'Check-in simplifie pour les joueurs',
-    ),
-    detailTwo: t(
-      'eventWizard.steps.validation.autoRuleTwo',
-      'Ideal pour les sessions ouvertes',
-    ),
-    icon: 'A',
-    isRecommended: true,
-    key: 'auto',
-    subtitle: t(
-      'eventWizard.steps.validation.autoDesc',
-      'Les participants peuvent confirmer automatiquement leur présence.',
-    ),
-    title: t('eventEdit.fields.validationMode.options.auto'),
-  },
-  {
-    detailOne: t(
-      'eventWizard.steps.validation.manualRuleOne',
-      'Controle total par le staff',
-    ),
-    detailTwo: t(
-      'eventWizard.steps.validation.manualRuleTwo',
-      'Recommande pour les groupes fermes',
-    ),
-    icon: 'M',
-    isRecommended: false,
-    key: 'manual',
-    subtitle: t(
-      'eventWizard.steps.validation.manualDesc',
-      'Le coach valide manuellement les participants.',
-    ),
-    title: t('eventEdit.fields.validationMode.options.manual'),
-  },
-]);
-
-function ValidationChoiceGroup({
-  Alignments,
-  ApplicationStyle,
-  Colors,
-  Fonts,
-  helperBorderColor,
-  helperCardBg,
-  options,
-  recommendedChipBg,
-  recommendedChipBorder,
-  selectedAccentBg,
-  selectedCardBg,
-  selectedValue,
-  setSelectedValue,
-  Spaces,
-  title,
-  unselectedCardBg,
-}) {
-  const cardBorder = `${Colors.primary500}52`;
-  const cardBorderSoft = `${Colors.primary500}36`;
-
+/**
+ * Intitule de groupe de la grammaire `focus` : petites capitales espacees.
+ * @param {object} props
+ * @param {string} props.children Le libelle.
+ * @returns {import('react').ReactElement}
+ */
+function GroupLabel({ children }) {
+  const { Fonts, Spaces } = useTheme();
   return (
-    <View style={[Spaces.gap[12]]}>
-      <Text style={[Fonts.h4, Fonts.neutral00]}>
-        {title}
-      </Text>
-      <View style={[Spaces.gap[16]]}>
-        {options.map((option) => {
-          const selected = selectedValue === option.key;
-          return (
-            <TouchableOpacity
-              accessibilityRole="button"
-              key={`${title}-${option.key}`}
-              onPress={() => setSelectedValue(option.key)}
-              style={[
-                ApplicationStyle.card,
-                Spaces.paddingHorizontal[16],
-                Spaces.paddingVertical[16],
-                {
-                  backgroundColor: selected ? selectedCardBg : unselectedCardBg,
-                  borderColor: selected ? cardBorder : cardBorderSoft,
-                  borderRadius: 18,
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-                <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
-                  <View
-                    style={[
-                      ApplicationStyle.card,
-                      Alignments.alignCenter,
-                      Alignments.justifyCenter,
-                      {
-                        backgroundColor: selected ? selectedAccentBg : `${Colors.primary500}14`,
-                        borderColor: selected ? Colors.primary500 : `${Colors.primary500}2F`,
-                        borderRadius: 999,
-                        height: 32,
-                        width: 32,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>{option.icon}</Text>
-                  </View>
-                  <View style={[Spaces.gap[8], { flex: 1 }]}>
-                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                      <Text style={[Fonts.h4, selected ? Fonts.primary100 : Fonts.neutral00]}>
-                        {option.title}
-                      </Text>
-                      {option.isRecommended ? (
-                        <View
-                          style={[
-                            ApplicationStyle.card,
-                            Spaces.paddingHorizontal[8],
-                            Spaces.paddingVertical[4],
-                            {
-                              backgroundColor: recommendedChipBg,
-                              borderColor: recommendedChipBorder,
-                              borderRadius: 999,
-                            },
-                          ]}
-                        >
-                          <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                            Recommande
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
-                      {option.subtitle}
-                    </Text>
-                  </View>
-                </View>
-                <View
-                  style={[
-                    ApplicationStyle.card,
-                    Alignments.alignCenter,
-                    Alignments.justifyCenter,
-                    {
-                      backgroundColor: selected ? Colors.primary500 : 'transparent',
-                      borderColor: selected ? Colors.primary500 : `${Colors.primary500}54`,
-                      borderRadius: 999,
-                      height: 22,
-                      width: 22,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p3Bold, selected ? Fonts.neutral900 : Fonts.primary500]}>
-                    {selected ? 'OK' : ''}
-                  </Text>
-                </View>
-              </View>
+    <Text
+      style={[
+        Fonts.p4Bold,
+        Fonts.neutral200,
+        Spaces.marginBottom[8],
+        { letterSpacing: 1, textTransform: 'uppercase' },
+      ]}
+    >
+      {children}
+    </Text>
+  );
+}
 
-              <View style={[Spaces.marginTop[12], Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral100, { lineHeight: 20 }]}>
-                  {`- ${option.detailOne}`}
-                </Text>
-                <Text style={[Fonts.p3, Fonts.neutral100, { lineHeight: 20 }]}>
-                  {`- ${option.detailTwo}`}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <View
-        style={[
-          Alignments.row,
-          Alignments.alignCenter,
-          Spaces.gap[8],
-          Spaces.paddingVertical[12],
-          Spaces.paddingHorizontal[12],
-          {
-            backgroundColor: helperCardBg,
-            borderColor: helperBorderColor,
-            borderRadius: 14,
-            borderWidth: 1,
-          },
-        ]}
-      >
-        <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-          Selection:
-        </Text>
-        <Text style={[Fonts.p2, Fonts.neutral100]}>
-          {selectedValue === 'manual' ? 'Manuelle' : 'Automatique'}
-        </Text>
-      </View>
-    </View>
+/**
+ * La ligne d'explication qui suit une paire de pilules. Elle dit la
+ * CONSEQUENCE du choix courant — c'est elle qui remplace les descriptions
+ * portees par les anciennes cartes.
+ * @param {object} props
+ * @param {string} props.children Le texte.
+ * @returns {import('react').ReactElement}
+ */
+function ChoiceHint({ children }) {
+  const { Fonts, Spaces } = useTheme();
+  return (
+    <Text
+      style={[
+        Fonts.p3,
+        Fonts.neutral200,
+        Spaces.marginTop[8],
+        // Deux lignes reservees : sans plancher, basculer d'une explication
+        // courte a une longue ferait sauter tout ce qui suit.
+        { lineHeight: 18, minHeight: 36 },
+      ]}
+    >
+      {children}
+    </Text>
   );
 }
 
@@ -270,7 +98,6 @@ function EventWizardAccess({ navigation }) {
   const {
     Alignments,
     ApplicationStyle,
-    Colors,
     Fonts,
     Spaces,
   } = useTheme();
@@ -285,8 +112,12 @@ function EventWizardAccess({ navigation }) {
   const [externalParticipantValidationMode, setExternalParticipantValidationMode] = useState(
     state.externalParticipantValidationMode || 'manual',
   );
+  // La visibilite des identites est le seul reglage « avance » du pack : il
+  // reste replie tant que personne ne le demande, mais sa VALEUR est toujours
+  // lisible sur la rangee — un reglage cache dont on ignore l'etat serait pire
+  // qu'un reglage deplie.
+  const [isIdentityExpanded, setIsIdentityExpanded] = useState(false);
 
-  const validationOptions = useMemo(() => buildValidationOptions(t), [t]);
   const isTraining = isTrainingEventType(state.type?.name);
   const isTournament = isTournamentEventType(state?.type?.name);
   const isOpenTraining = isTraining && sessionStatus !== 'closed';
@@ -300,92 +131,36 @@ function EventWizardAccess({ navigation }) {
     sessionStatus,
   }), [participantIdentityVisibility, sessionStatus, state]);
 
-  const cardSurfaceStyle = {
-    backgroundColor: 'rgba(4, 31, 44, 0.82)',
-    borderColor: 'rgba(1, 179, 244, 0.24)',
-    borderWidth: 1,
-  };
+  const advancedRowStyle = [
+    ApplicationStyle.card,
+    Alignments.row,
+    Alignments.alignCenter,
+    Spaces.paddingHorizontal[16],
+    Spaces.gap[12],
+    {
+      backgroundColor: 'rgba(4, 31, 44, 0.82)',
+      borderColor: 'rgba(1, 179, 244, 0.24)',
+      borderWidth: 1,
+      minHeight: 52,
+    },
+  ];
 
-  const selectedAccentBg = `${Colors.primary500}2A`;
-  const selectedCardBg = `${Colors.primary500}17`;
-  const unselectedCardBg = `${Colors.primary700}D0`;
-  const recommendedChipBg = `${Colors.primary500}21`;
-  const recommendedChipBorder = `${Colors.primary500}55`;
-  const helperCardBg = `${Colors.primary500}0F`;
-  const helperCardBorder = `${Colors.primary500}3A`;
+  const visibilityOptions = [
+    { label: t('eventWizard.steps.access.visibilityPublic', 'Public'), value: 'open' },
+    { label: t('eventWizard.steps.access.visibilityPrivate', 'Privé'), value: 'closed' },
+  ];
+  const validationOptions = [
+    { label: t('eventEdit.fields.validationMode.options.auto', 'Automatique'), value: 'auto' },
+    { label: t('eventEdit.fields.validationMode.options.manual', 'Manuelle'), value: 'manual' },
+  ];
+  const identityOptions = [
+    { label: t('eventWizard.steps.access.identityVisible', 'Visibles'), value: 'VISIBLE' },
+    { label: t('eventWizard.steps.access.identityAnonymized', 'Anonymisées'), value: 'ANONYMIZED' },
+  ];
 
-  const renderOptionCard = (option, selected, onPress, selectionLabel) => (
-    <TouchableOpacity
-      activeOpacity={0.92}
-      key={option.key}
-      onPress={onPress}
-      style={[
-        ApplicationStyle.card,
-        Spaces.padding[24],
-        Spaces.gap[16],
-        selected
-          ? {
-            backgroundColor: 'rgba(1, 179, 244, 0.14)',
-            borderColor: Colors.primary500,
-            borderWidth: 1,
-          }
-          : cardSurfaceStyle,
-      ]}
-    >
-      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
-        <View style={{ flex: 1 }}>
-          <Text style={[Fonts.h4, selected ? Fonts.primary100 : Fonts.neutral00]}>
-            {option.title}
-          </Text>
-        </View>
-        <View
-          style={[
-            Alignments.alignCenter,
-            Alignments.justifyCenter,
-            {
-              backgroundColor: selected ? `${Colors.primary500}18` : 'transparent',
-              borderColor: selected ? Colors.primary500 : 'rgba(255,255,255,0.28)',
-              borderRadius: 12,
-              borderWidth: 2,
-              height: 24,
-              width: 24,
-            },
-          ]}
-        >
-          {selected ? (
-            <View
-              style={{
-                backgroundColor: Colors.primary500,
-                borderRadius: 5,
-                height: 10,
-                width: 10,
-              }}
-            />
-          ) : null}
-        </View>
-      </View>
-      <Text style={[Fonts.p2, Fonts.neutral200]}>
-        {option.description}
-      </Text>
-      <View
-        style={[
-          Alignments.selfStart,
-          Spaces.paddingHorizontal[12],
-          Spaces.paddingVertical[8],
-          {
-            backgroundColor: selected ? `${Colors.primary500}16` : 'rgba(255,255,255,0.05)',
-            borderColor: selected ? `${Colors.primary500}66` : 'rgba(255,255,255,0.08)',
-            borderRadius: 999,
-            borderWidth: 1,
-          },
-        ]}
-      >
-        <Text style={[selected ? Fonts.p3Bold : Fonts.p3, selected ? Fonts.primary100 : Fonts.neutral200]}>
-          {selected ? selectionLabel : option.helper}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const identityValueLabel = participantIdentityVisibility === 'ANONYMIZED'
+    ? t('eventWizard.steps.access.identityAnonymized', 'Anonymisées')
+    : t('eventWizard.steps.access.identityVisible', 'Visibles');
 
   const handleNext = () => {
     dispatch({
@@ -415,112 +190,142 @@ function EventWizardAccess({ navigation }) {
 
   return (
     <WizardStepLayout
+      headerVariant="focus"
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(projectedState)}
       stepIndex={getEventWizardAccessStepIndex(projectedState)}
       subtitle={t(
-        'eventWizard.steps.access.subtitle',
-        "Choisis qui voit l'événement, puis comment les présences sont validées.",
+        'eventWizard.steps.access.subtitleShort',
+        "Qui voit l'événement, et comment on s'y inscrit.",
       )}
-      title={t('eventWizard.steps.access.title', "Accès à l'événement")}
+      title={t('eventWizard.steps.access.titleShort', 'Accès')}
     >
-      <View style={[Spaces.gap[24], Spaces.paddingBottom[24]]}>
-        <View style={[Spaces.gap[16]]}>
-          <Text style={[Fonts.h4, Fonts.neutral00]}>
-            {t('eventWizard.steps.visibility.eventAccessTitle', "Visibilité de l'événement")}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t(
-              'eventWizard.steps.visibility.eventAccessSubtitle',
-              "Définis si l'événement peut être vu publiquement ou s'il reste réserve au groupe.",
-            )}
-          </Text>
-          {VISIBILITY_OPTIONS.map((option) => {
-            const selected = sessionStatus === option.key;
-            return renderOptionCard(
-              option,
-              selected,
-              () => setSessionStatus(option.key),
-              option.key === 'open' ? 'Sélection actuelle : public' : 'Sélection actuelle : prive',
-            );
-          })}
-        </View>
-
-        <View style={[Spaces.gap[16]]}>
-          <Text style={[Fonts.h4, Fonts.neutral00]}>
-            {t('eventWizard.steps.visibility.participantPrivacyTitle', 'Visibilité des participants')}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t(
-              'eventWizard.steps.visibility.participantPrivacySubtitle',
-              'Choisis si les noms, prénoms et photos des participants restent visibles.',
-            )}
-          </Text>
-          {PARTICIPANT_IDENTITY_OPTIONS.map((option) => {
-            const selected = participantIdentityVisibility === option.key;
-            return renderOptionCard(
-              option,
-              selected,
-              () => setParticipantIdentityVisibility(option.key),
-              option.key === 'VISIBLE'
-                ? 'Sélection actuelle : identités visibles'
-                : 'Sélection actuelle : participants anonymisés',
-            );
-          })}
+      <View style={[Spaces.paddingBottom[24]]}>
+        <View>
+          <GroupLabel>
+            {t('eventWizard.steps.access.visibilityGroup', 'Visibilité')}
+          </GroupLabel>
+          <SegmentedControl
+            centerContent
+            onChange={setSessionStatus}
+            options={visibilityOptions}
+            value={sessionStatus}
+          />
+          <ChoiceHint>
+            {sessionStatus === 'closed'
+              ? t(
+                'eventWizard.steps.access.visibilityPrivateHint',
+                "Réservé aux membres de l'équipe et aux invités.",
+              )
+              : t(
+                'eventWizard.steps.access.visibilityPublicHint',
+                'Découvrable par tous — recommandé pour une détection.',
+              )}
+          </ChoiceHint>
         </View>
 
         {!isTournament ? (
-          <View style={[Spaces.gap[16]]}>
-            <ValidationChoiceGroup
-              Alignments={Alignments}
-              ApplicationStyle={ApplicationStyle}
-              Colors={Colors}
-              Fonts={Fonts}
-              helperBorderColor={helperCardBorder}
-              helperCardBg={helperCardBg}
-              options={validationOptions}
-              recommendedChipBg={recommendedChipBg}
-              recommendedChipBorder={recommendedChipBorder}
-              selectedAccentBg={selectedAccentBg}
-              selectedCardBg={selectedCardBg}
-              selectedValue={validationMode}
-              setSelectedValue={setValidationMode}
-              Spaces={Spaces}
-              title={t(
+          <View style={[Spaces.marginTop[16]]}>
+            <GroupLabel>
+              {t(
                 isTraining
-                  ? 'eventWizard.steps.validation.internalTitle'
-                  : 'eventWizard.steps.validation.defaultTitle',
-                isTraining ? 'Validation des membres internes' : 'Validation principale',
+                  ? 'eventWizard.steps.access.validationGroupInternal'
+                  : 'eventWizard.steps.access.validationGroup',
+                isTraining ? 'Validation des membres internes' : 'Validation des présences',
               )}
-              unselectedCardBg={unselectedCardBg}
+            </GroupLabel>
+            <SegmentedControl
+              centerContent
+              onChange={setValidationMode}
+              options={validationOptions}
+              value={validationMode}
             />
+            <ChoiceHint>
+              {validationMode === 'manual'
+                ? t(
+                  'eventWizard.steps.access.validationManualHint',
+                  'Le coach valide chaque participant, un par un.',
+                )
+                : t(
+                  'eventWizard.steps.access.validationAutoHint',
+                  'Les participants confirment seuls leur présence — recommandé.',
+                )}
+            </ChoiceHint>
 
             {isOpenTraining ? (
-              <ValidationChoiceGroup
-                Alignments={Alignments}
-                ApplicationStyle={ApplicationStyle}
-                Colors={Colors}
-                Fonts={Fonts}
-                helperBorderColor={helperCardBorder}
-                helperCardBg={helperCardBg}
-                options={validationOptions}
-                recommendedChipBg={recommendedChipBg}
-                recommendedChipBorder={recommendedChipBorder}
-                selectedAccentBg={selectedAccentBg}
-                selectedCardBg={selectedCardBg}
-                selectedValue={externalParticipantValidationMode}
-                setSelectedValue={setExternalParticipantValidationMode}
-                Spaces={Spaces}
-                title={t(
-                  'eventWizard.steps.validation.externalTitle',
-                  'Validation des joueurs externes',
-                )}
-                unselectedCardBg={unselectedCardBg}
-              />
+              <View style={[Spaces.marginTop[16]]}>
+                <GroupLabel>
+                  {t(
+                    'eventWizard.steps.validation.externalTitle',
+                    'Validation des joueurs externes',
+                  )}
+                </GroupLabel>
+                <SegmentedControl
+                  centerContent
+                  onChange={setExternalParticipantValidationMode}
+                  options={validationOptions}
+                  value={externalParticipantValidationMode}
+                />
+                <ChoiceHint>
+                  {externalParticipantValidationMode === 'manual'
+                    ? t(
+                      'eventWizard.steps.access.externalManualHint',
+                      'Chaque joueur exterieur au club passe par toi.',
+                    )
+                    : t(
+                      'eventWizard.steps.access.externalAutoHint',
+                      'Les joueurs exterieurs au club rejoignent la séance sans validation.',
+                    )}
+                </ChoiceHint>
+              </View>
             ) : null}
           </View>
         ) : null}
+
+        <View style={[Spaces.marginTop[16]]}>
+          <GroupLabel>
+            {t('eventWizard.steps.access.advancedGroup', 'Avancé')}
+          </GroupLabel>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isIdentityExpanded }}
+            onPress={() => setIsIdentityExpanded((current) => !current)}
+            style={advancedRowStyle}
+          >
+            <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
+              {t('eventWizard.steps.access.identityRow', 'Identités des participants')}
+            </Text>
+            <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+              {identityValueLabel}
+            </Text>
+            <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
+              {isIdentityExpanded ? '−' : '›'}
+            </Text>
+          </TouchableOpacity>
+
+          {isIdentityExpanded ? (
+            <View style={[Spaces.marginTop[8]]}>
+              <SegmentedControl
+                centerContent
+                onChange={setParticipantIdentityVisibility}
+                options={identityOptions}
+                value={participantIdentityVisibility}
+              />
+              <ChoiceHint>
+                {participantIdentityVisibility === 'ANONYMIZED'
+                  ? t(
+                    'eventWizard.steps.access.identityAnonymizedHint',
+                    'Les autres ne verront que le nombre de participants.',
+                  )
+                  : t(
+                    'eventWizard.steps.access.identityVisibleHint',
+                    'Les participants apparaissent avec leur nom et leur photo.',
+                  )}
+              </ChoiceHint>
+            </View>
+          ) : null}
+        </View>
       </View>
     </WizardStepLayout>
   );

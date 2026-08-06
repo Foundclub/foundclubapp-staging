@@ -425,16 +425,19 @@ describe('D10 — etape 6 · Acces', () => {
     const { arbre, demonter } = monter(EventWizardAccess, ETAT_DETECTION);
     const contenu = contenuDe(arbre);
 
-    expect(contenu).toContain('Événement public');
-    expect(contenu).toContain('Événement prive');
-    // ⚠️ Les deux libelles de validation viennent de `eventEdit.fields.
-    // validationMode.options.*` SANS repli : ici le stub de `t` rend la cle.
-    // Dans l'application, `fr.js` les traduit (« Automatique » / « Manuelle »).
-    // On epingle donc les DEUX cles, plus la ligne de selection qui, elle,
-    // est ecrite en dur dans l'ecran.
-    expect(contenu).toContain('eventEdit.fields.validationMode.options.auto');
-    expect(contenu).toContain('eventEdit.fields.validationMode.options.manual');
+    expect(contenu).toContain('Visibilité');
+    expect(contenu).toContain('Public');
+    expect(contenu).toContain('Privé');
+    expect(contenu).toContain('Validation des présences');
     expect(contenu).toContain('Automatique');
+    expect(contenu).toContain('Manuelle');
+    demonter();
+  });
+
+  it('la grammaire d en-tete « focus » du lot D05 est ACTIVEE', () => {
+    const { demonter } = monter(EventWizardAccess, ETAT_DETECTION);
+
+    expect(dernierGabarit().headerVariant).toBe('focus');
     demonter();
   });
 
@@ -446,32 +449,77 @@ describe('D10 — etape 6 · Acces', () => {
     });
 
     expect(nav.navigate).toHaveBeenCalledWith(RouteNames.EventWizardDescription);
-    // Les defauts se lisent a l ecran : ce sont les options selectionnees.
+    // Les 3 defauts se LISENT a l ecran : la ligne d explication sous chaque
+    // paire de pilules, et la valeur portee par la rangee « Avancé ».
     const contenu = contenuDe(arbre);
-    expect(contenu).toContain('Sélection actuelle : public');
-    expect(contenu).toContain('Sélection actuelle : identités visibles');
+    expect(contenu).toContain('Découvrable par tous');
+    expect(contenu).toContain('Les participants confirment seuls leur présence');
+    expect(contenu).toContain('Visibles');
     demonter();
   });
 
-  it('laisse choisir « prive », et le choix se voit', () => {
+  it('laisse choisir « Privé », et l explication suit le choix', () => {
     const { arbre, demonter } = monter(EventWizardAccess, ETAT_DETECTION);
 
     act(() => {
-      pressableQuiPorte(arbre, 'Événement prive').props.onPress();
+      pressableQuiPorte(arbre, 'Privé').props.onPress();
     });
 
-    expect(contenuDe(arbre)).toContain('Sélection actuelle : prive');
+    const contenu = contenuDe(arbre);
+    expect(contenu).toContain("Réservé aux membres de l'équipe");
+    expect(contenu).not.toContain('Découvrable par tous');
     demonter();
   });
 
-  it('laisse choisir « participants anonymises », et le choix se voit', () => {
+  it('laisse choisir « Manuelle », et l explication suit le choix', () => {
     const { arbre, demonter } = monter(EventWizardAccess, ETAT_DETECTION);
 
     act(() => {
-      pressableQuiPorte(arbre, 'Participants anonymisés').props.onPress();
+      pressableQuiPorte(arbre, 'Manuelle').props.onPress();
     });
 
-    expect(contenuDe(arbre)).toContain('Sélection actuelle : participants anonymisés');
+    expect(contenuDe(arbre)).toContain('Le coach valide chaque participant');
+    demonter();
+  });
+
+  // Les identites passent en « Avancé » : repliees, mais leur VALEUR reste
+  // lisible sur la rangee. Un reglage cache dont on ignore l etat serait pire
+  // qu un reglage deplie.
+  it('les identites sont repliees en « Avancé », et leur valeur reste lisible', () => {
+    const { arbre, demonter } = monter(EventWizardAccess, ETAT_DETECTION);
+    const contenu = contenuDe(arbre);
+
+    expect(contenu).toContain('Avancé');
+    expect(contenu).toContain('Identités des participants');
+    expect(contenu).toContain('Visibles');
+    // Repliee : le choix lui-meme n est pas encore offert.
+    expect(contenu).not.toContain('Anonymisées');
+    demonter();
+  });
+
+  it('la rangee « Avancé » deplie le choix des identites, et il se change', () => {
+    const { arbre, demonter } = monter(EventWizardAccess, ETAT_DETECTION);
+
+    act(() => {
+      pressableQuiPorte(arbre, 'Identités des participants').props.onPress();
+    });
+    expect(contenuDe(arbre)).toContain('Anonymisées');
+
+    act(() => {
+      pressableQuiPorte(arbre, 'Anonymisées').props.onPress();
+    });
+
+    expect(contenuDe(arbre)).toContain('Les autres ne verront que le nombre de participants');
+    demonter();
+  });
+
+  it('un choix d identite deja pris est celui qui s affiche a l arrivee', () => {
+    const { arbre, demonter } = monter(EventWizardAccess, {
+      ...ETAT_DETECTION,
+      participantIdentityVisibility: 'ANONYMIZED',
+    });
+
+    expect(contenuDe(arbre)).toContain('Anonymisées');
     demonter();
   });
 
@@ -482,8 +530,8 @@ describe('D10 — etape 6 · Acces', () => {
     });
 
     const contenu = contenuDe(arbre);
-    expect(contenu).toContain('Événement public');
-    expect(contenu).not.toContain('Validation principale');
+    expect(contenu).toContain('Visibilité');
+    expect(contenu).not.toContain('Validation des présences');
     demonter();
   });
 });
