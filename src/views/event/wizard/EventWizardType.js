@@ -50,6 +50,19 @@ const DESCRIPTIONS_PAR_TYPE = {
 const CLE_MATCH_AMICAL = 'porte-match-amical';
 
 /**
+ * Une rangee de l'etape 1 : soit un type servi par le serveur, soit la porte
+ * « Match amical », qui n'en est pas un.
+ * @typedef {object} RangeeDeType
+ * @property {string} description Ligne d'explication, vide si le type est inconnu.
+ * @property {boolean} disabled Rangee grisee et non pressable.
+ * @property {string} key Cle de rendu.
+ * @property {() => void} onPress Geste declenche au toucher.
+ * @property {boolean} selected Marqueur de choix courant.
+ * @property {string} tag Pilule courte, vide s'il n'y en a pas.
+ * @property {string} title Libelle affiche — le nom du SERVEUR, jamais reecrit.
+ */
+
+/**
  *
  * @param root0
  * @param root0.navigation
@@ -107,7 +120,21 @@ function EventWizardType({ navigation, route }) {
    * @returns {any[]} Les rangees, dans l'ordre d'affichage.
    */
   const buildRows = () => {
-    const rows = [];
+    const rows = /** @type {RangeeDeType[]} */ ([]);
+    /** @type {RangeeDeType} */
+    const friendlyMatchRow = {
+      description: t(
+        'eventWizard.steps.type.friendlyMatchDescription',
+        "Trouve un adversaire — ouvre l'annonce League",
+      ),
+      disabled: false,
+      key: CLE_MATCH_AMICAL,
+      onPress: handleOpenFriendlyMatchWizard,
+      selected: false,
+      tag: '',
+      title: t('eventWizard.steps.type.friendlyMatchTitle', 'Match amical'),
+    };
+
     (eventTypes || []).forEach((type) => {
       const normalized = normalizeTypeLabel(type?.name);
       rows.push({
@@ -126,35 +153,17 @@ function EventWizardType({ navigation, route }) {
           : '',
         title: type?.name,
       });
-      if (normalized === 'match') {
-        rows.push({
-          description: t(
-            'eventWizard.steps.type.friendlyMatchDescription',
-            "Trouve un adversaire — ouvre l'annonce League",
-          ),
-          disabled: false,
-          key: CLE_MATCH_AMICAL,
-          onPress: handleOpenFriendlyMatchWizard,
-          selected: false,
-          tag: '',
-          title: t('eventWizard.steps.type.friendlyMatchTitle', 'Match amical'),
-        });
+      // Une seule porte, meme si le serveur venait a servir deux types
+      // normalises en « match » : deux rangees porteraient la meme cle React.
+      if (normalized === 'match' && !rows.includes(friendlyMatchRow)) {
+        rows.push(friendlyMatchRow);
       }
     });
 
-    if (rows.length > 0 && !rows.some((row) => row.key === CLE_MATCH_AMICAL)) {
-      rows.push({
-        description: t(
-          'eventWizard.steps.type.friendlyMatchDescription',
-          "Trouve un adversaire — ouvre l'annonce League",
-        ),
-        disabled: false,
-        key: CLE_MATCH_AMICAL,
-        onPress: handleOpenFriendlyMatchWizard,
-        selected: false,
-        tag: '',
-        title: t('eventWizard.steps.type.friendlyMatchTitle', 'Match amical'),
-      });
+    // Sans type « Match » — un serveur qui l'aurait renomme — la porte se pose
+    // en fin de liste plutot que de disparaitre.
+    if (rows.length > 0 && !rows.includes(friendlyMatchRow)) {
+      rows.push(friendlyMatchRow);
     }
 
     return rows;
@@ -163,7 +172,7 @@ function EventWizardType({ navigation, route }) {
   /**
    * Une rangee de choix : titre, description sur une ligne, marqueur de
    * selection. Une rangee grisee ne porte ni marqueur ni action.
-   * @param {any} row Rangee construite par `buildRows`.
+   * @param {RangeeDeType} row Rangee construite par `buildRows`.
    * @returns {import('react').ReactElement} La rangee.
    */
   const renderRow = (row) => (
