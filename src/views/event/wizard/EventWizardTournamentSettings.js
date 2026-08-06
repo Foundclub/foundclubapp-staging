@@ -17,6 +17,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { createTournamentDesignSystem } from '../tournamentDesignSystem';
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardNextRoute,
   getEventWizardStepCount,
   getEventWizardTournamentSettingsStepIndex,
 } from './eventWizardDetectionUtils';
@@ -100,7 +101,7 @@ function EventWizardTournamentSettings({ navigation }) {
       },
       type: 'SET_TOURNAMENT_SETTINGS',
     });
-    navigation.navigate(RouteNames.EventWizardTournamentStructure);
+    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardTournamentSettings, state));
   };
 
   const renderRegistrationModeCard = (mode, title, subtitle) => {

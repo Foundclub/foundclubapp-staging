@@ -815,7 +815,15 @@ function EventWizardRecap({ navigation }) {
           />
 
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Invitations avancées</Text>
+            {/* D08 : les invitations ne sont plus une etape du tunnel. Ce lien
+                est le SEUL chemin vers `EventWizardInvites` — le retirer
+                rendrait l'ecran injoignable. */}
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Invitations avancées</Text>
+              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardInvites)}>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
+              </TouchableOpacity>
+            </View>
             {teamAudiences.length ? (
               <View style={Spaces.gap[8]}>
                 {teamAudiences.map((audience) => (
@@ -1188,7 +1196,7 @@ function EventWizardRecap({ navigation }) {
               <TouchableOpacity
                 onPress={() => navigation.navigate(
                   shouldSkipParticipantsStep
-                    ? RouteNames.EventWizardVisibility
+                    ? RouteNames.EventWizardAccess
                     : RouteNames.EventWizardParticipants,
                 )}
               >

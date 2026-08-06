@@ -26,8 +26,9 @@ import { sortTeamsForDisplay } from '@/utils/teamSort';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardNextRoute,
   getEventWizardStepCount,
-  isStageEventType,
+  getEventWizardStepIndex,
   isTournamentEventType,
 } from './eventWizardDetectionUtils';
 
@@ -260,12 +261,9 @@ function EventWizardTeam({ navigation }) {
   };
 
   const handleSelectTeam = (team) => {
-    let nextRoute = RouteNames.EventWizardInvites;
-    if (isStageEventType(state?.type?.name)) {
-      nextRoute = RouteNames.EventWizardStageProgram;
-    } else if (isTournamentEventType(state?.type?.name)) {
-      nextRoute = RouteNames.EventWizardLogistics;
-    }
+    // D08 : `EventWizardInvites` n'est plus l'etape par defaut apres l'equipe.
+    // Il est sorti de la chaine et se rejoint desormais depuis le Recap.
+    const nextRoute = getEventWizardNextRoute(RouteNames.EventWizardTeam, state);
 
     if (isTournamentEventType(state?.type?.name)) {
       dispatch({
@@ -305,7 +303,7 @@ function EventWizardTeam({ navigation }) {
       },
       type: 'SET_TOURNAMENT_CONTEXT',
     });
-    navigation.navigate(RouteNames.EventWizardLogistics);
+    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardTeam, state));
   };
 
   const renderTeamCard = (team) => (
@@ -415,7 +413,7 @@ function EventWizardTeam({ navigation }) {
       <WizardStepLayout
         onBack={() => navigation.goBack()}
         stepCount={getEventWizardStepCount(state)}
-        stepIndex={2}
+        stepIndex={getEventWizardStepIndex(RouteNames.EventWizardTeam, state)}
         subtitle="Choisis si le tournoi part d'une équipe existante ou s'il est autonome."
         title="Cadre du tournoi"
       >
@@ -600,7 +598,7 @@ function EventWizardTeam({ navigation }) {
     <WizardStepLayout
       onBack={() => navigation.goBack()}
       stepCount={getEventWizardStepCount(state)}
-      stepIndex={2}
+      stepIndex={getEventWizardStepIndex(RouteNames.EventWizardTeam, state)}
       subtitle={t('eventWizard.steps.team.subtitle')}
       title={t('eventWizard.steps.team.title')}
     >

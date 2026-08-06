@@ -210,6 +210,11 @@ export const RouteNames = /** @type {const} */ ({
   TeamStack: 'TeamStack',
 
   // Event Wizard
+  // D08 : `EventWizardAccess` porte l'acces de l'evenement — la visibilite
+  // (public/prive, identites) ET le mode de validation. Il remplace les deux
+  // routes `EventWizardVisibility` et `EventWizardValidationMode`, retirees
+  // apres avoir prouve par grep qu'aucun appelant ne subsistait.
+  EventWizardAccess: 'EventWizardAccess',
   EventWizardDescription: 'EventWizardDescription',
   EventWizardDetectionSlots: 'EventWizardDetectionSlots',
   EventWizardInvites: 'EventWizardInvites',
@@ -222,8 +227,6 @@ export const RouteNames = /** @type {const} */ ({
   EventWizardTournamentSettings: 'EventWizardTournamentSettings',
   EventWizardTournamentStructure: 'EventWizardTournamentStructure',
   EventWizardType: 'EventWizardType',
-  EventWizardValidationMode: 'EventWizardValidationMode',
-  EventWizardVisibility: 'EventWizardVisibility',
   TournamentManagement: 'TournamentManagement',
   TournamentMatchDetails: 'TournamentMatchDetails',
   TournamentSettingsEdit: 'TournamentSettingsEdit',

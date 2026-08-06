@@ -14,8 +14,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardLocationStepIndex,
+  getEventWizardNextRoute,
   getEventWizardStepCount,
-  isTournamentEventType,
 } from './eventWizardDetectionUtils';
 
 const buildDateTimeIso = (baseDate, timeValue) => {
@@ -74,11 +74,7 @@ function EventWizardLocation({ navigation }) {
       payload: { facility: facilityId, location },
       type: 'SET_LOCATION',
     });
-    navigation.navigate(
-      isTournamentEventType(state?.type?.name)
-        ? RouteNames.EventWizardTournamentSettings
-        : RouteNames.EventWizardVisibility,
-    );
+    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardLocation, state));
   };
 
   const handleAddFacility = () => {

@@ -16,7 +16,12 @@ import PositionSelectionList from '@/components/organisms/positionSelectionList/
 import { RouteNames } from '@/navigation/routeNames';
 
 import { getPositionValuesForSport } from '@/constants/positions';
-import { getEventWizardSportName, getEventWizardStepCount } from './eventWizardDetectionUtils';
+import {
+  getEventWizardDetectionSlotsStepIndex,
+  getEventWizardNextRoute,
+  getEventWizardSportName,
+  getEventWizardStepCount,
+} from './eventWizardDetectionUtils';
 import { useEventWizard } from './EventWizardContext';
 
 const MAX_SLOT_QUANTITY = 10;
@@ -146,7 +151,7 @@ function EventWizardDetectionSlots({ navigation }) {
       payload: isEnabled ? normalizeSlots(slots) : [],
       type: 'SET_DETECTION_SLOTS',
     });
-    navigation.navigate(RouteNames.EventWizardValidationMode);
+    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardDetectionSlots, state));
   };
 
   return (
@@ -155,7 +160,7 @@ function EventWizardDetectionSlots({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(state)}
-      stepIndex={8}
+      stepIndex={getEventWizardDetectionSlotsStepIndex(state)}
       subtitle={t(
         'eventWizard.steps.detectionSlots.subtitle',
         'Ajoute en option des postes recherchés et un nombre de places par poste.',

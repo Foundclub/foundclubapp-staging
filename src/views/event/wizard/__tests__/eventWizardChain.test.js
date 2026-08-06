@@ -3,6 +3,7 @@ import renderer, { act } from 'react-test-renderer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import EventWizardAccess from '../EventWizardAccess';
 import { EventWizardProvider, useEventWizard } from '../EventWizardContext';
 import EventWizardDescription from '../EventWizardDescription';
 import EventWizardDetectionSlots from '../EventWizardDetectionSlots';
@@ -10,13 +11,12 @@ import EventWizardInvites from '../EventWizardInvites';
 import EventWizardLocation from '../EventWizardLocation';
 import EventWizardLogistics from '../EventWizardLogistics';
 import EventWizardParticipants from '../EventWizardParticipants';
+import EventWizardRecap from '../EventWizardRecap';
 import EventWizardStageProgram from '../EventWizardStageProgram';
 import EventWizardTeam from '../EventWizardTeam';
 import EventWizardTournamentSettings from '../EventWizardTournamentSettings';
 import EventWizardTournamentStructure from '../EventWizardTournamentStructure';
 import EventWizardType from '../EventWizardType';
-import EventWizardValidationMode from '../EventWizardValidationMode';
-import EventWizardVisibility from '../EventWizardVisibility';
 
 // Filet D08 (E6) — moitie TRANSITIONS. La moitie NUMEROS vit dans
 // `eventWizardDetectionUtils.test.js`.
@@ -26,12 +26,13 @@ import EventWizardVisibility from '../EventWizardVisibility';
 // d'evenement par type d'evenement. C'est le test qui doit rougir quand la
 // machine change de forme — c'est son but.
 //
-// Il prouve aussi que les 4 ecrans hors chemin standard (DetectionSlots,
-// StageProgram, TournamentSettings, TournamentStructure) sont ATTEIGNABLES :
-// un parcours reel y passe. C'est le garde-fou contre la pire regression du
+// Il prouve aussi que les ecrans hors chemin standard sont ATTEIGNABLES :
+// StageProgram, TournamentSettings et TournamentStructure par un parcours reel,
+// et `EventWizardInvites` — que D08 a sorti de la chaine — par le lien
+// « Modifier » du Recap. C'est le garde-fou contre la pire regression du
 // projet, du code devenu inatteignable.
 //
-// Il DECRIT le comportement du 2026-08-06, il ne le corrige pas.
+// ETAT DU 2026-08-06, APRES D08.
 //
 // Methode : le VRAI `EventWizardProvider` reste monte pendant toute la marche
 // et seul l'ecran affiche change (`arbre.update`). L'etat du tunnel s'accumule
@@ -67,7 +68,7 @@ const mockDonnees = {
 const NOM_DE_L_EQUIPE = mockDonnees.equipes[0].name;
 
 jest.mock('react-i18next', () => ({
-  // `EventWizardValidationMode` tire `@/domains/event/eventUseCases`, qui charge
+  // `EventWizardAccess` tire `@/domains/event/eventUseCases`, qui charge
   // `@/theme/strings` et appelle `i18n.use(initReactI18next)` au chargement :
   // sans ce greffon, i18next refuse un module indefini et la suite meurt avant
   // le premier test.
@@ -133,6 +134,29 @@ jest.mock('@/domains/auth/useAuth', () => {
     }),
   };
 });
+
+// Le Recap tire six dependances de plus que les autres ecrans. On les remplace
+// pour pouvoir le RENDRE : c'est la seule facon de prouver que son lien
+// « Modifier » mene bien aux invitations.
+jest.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: () => {} }) }));
+
+jest.mock('@/domains/event/useEvent', () => ({
+  __esModule: true,
+  default: () => ({
+    createReccurrentEventPayload: () => [],
+    createStageEventPayload: () => ({}),
+  }),
+}));
+
+jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: () => {} }));
+
+jest.mock('@/services/event/eventService', () => ({
+  createEventsWithConcurrency: () => Promise.resolve([]),
+  getEventById: () => Promise.resolve(null),
+  requestFeatured: () => Promise.resolve(null),
+}));
+
+jest.mock('../../components/EventTasksEditor', () => () => null);
 
 jest.mock('@/domains/places/usePlaces', () => ({
   __esModule: true,
@@ -252,6 +276,7 @@ jest.mock('@/components/atoms/button/Button', () => function BoutonMock(/** @typ
 });
 
 const ECRANS = {
+  [RouteNames.EventWizardAccess]: EventWizardAccess,
   [RouteNames.EventWizardDescription]: EventWizardDescription,
   [RouteNames.EventWizardDetectionSlots]: EventWizardDetectionSlots,
   [RouteNames.EventWizardInvites]: EventWizardInvites,
@@ -262,9 +287,8 @@ const ECRANS = {
   [RouteNames.EventWizardTeam]: EventWizardTeam,
   [RouteNames.EventWizardTournamentSettings]: EventWizardTournamentSettings,
   [RouteNames.EventWizardTournamentStructure]: EventWizardTournamentStructure,
+  [RouteNames.EventWizardRecap]: EventWizardRecap,
   [RouteNames.EventWizardType]: EventWizardType,
-  [RouteNames.EventWizardValidationMode]: EventWizardValidationMode,
-  [RouteNames.EventWizardVisibility]: EventWizardVisibility,
 };
 
 /** Les deux ecrans dont l'avancement passe par une carte a presser. */
@@ -431,29 +455,66 @@ const totalAnnonceALaFin = (marche) => marche.comptes[
   marche.chaine[marche.chaine.length - 2]
 ];
 
+/**
+ * Rend le Recap et presse TOUS ses liens « Modifier », puis rend les
+ * destinations relevees. On les presse tous parce qu'ils portent le meme texte :
+ * ce qui compte est l'ensemble des ecrans joignables depuis le Recap.
+ * @returns {string[]} Les routes visees par les liens « Modifier ».
+ */
+const destinationsDesLiensModifier = () => {
+  /** @type {string[]} */
+  const destinations = [];
+  const navigation = {
+    goBack: () => {},
+    navigate: (/** @type {string} */ nom) => destinations.push(nom),
+    replace: (/** @type {string} */ nom) => destinations.push(nom),
+    setParams: () => {},
+  };
+
+  mockAffichage.rendreLeContenu = true;
+  mockProprietesDuGabarit.length = 0;
+
+  /** @type {any} */
+  let arbre;
+  act(() => {
+    arbre = renderer.create(createElement(
+      EventWizardProvider,
+      null,
+      createElement(EventWizardRecap, { navigation, route: { params: {} } }),
+    ));
+  });
+
+  const liens = arbre.root
+    .findAll((/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function', { deep: true })
+    .filter((/** @type {any} */ noeud) => textesSous(noeud).includes('eventWizard.recap.actions.edit'));
+
+  expect(liens.length).toBeGreaterThan(0);
+  liens.forEach((/** @type {any} */ lien) => act(() => lien.props.onPress()));
+  act(() => arbre.unmount());
+
+  return destinations;
+};
+
 describe('D08 — la chaine reelle du tunnel, type par type', () => {
-  test('evenement standard : 10 ecrans, Invites compris', () => {
+  test('evenement standard : 8 ecrans, sans Invites, acces fusionne', () => {
     const marche = marcherDansLeTunnel({ nomDuType: 'Match' });
     const { chaine } = marche;
 
     expect(chaine).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
-      // ⚠️ Invites EST dans la chaine standard : c'est la destination par
-      // DEFAUT apres le choix de l'equipe (EventWizardTeam.js:263).
-      RouteNames.EventWizardInvites,
       RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
-      RouteNames.EventWizardVisibility,
       RouteNames.EventWizardParticipants,
-      RouteNames.EventWizardValidationMode,
+      RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
-    expect(totalAnnonceALaFin(marche)).toBe(10);
+    expect(chaine).not.toContain(RouteNames.EventWizardInvites);
+    expect(totalAnnonceALaFin(marche)).toBe(8);
   });
 
-  test('stage : 9 ecrans, StageProgram remplace Invites', () => {
+  test('stage : 8 ecrans, et il GARDE son programme de stage', () => {
     const marche = marcherDansLeTunnel({ nomDuType: 'Stage' });
     const { chaine } = marche;
 
@@ -462,16 +523,15 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
       RouteNames.EventWizardTeam,
       RouteNames.EventWizardStageProgram,
       RouteNames.EventWizardLocation,
-      RouteNames.EventWizardVisibility,
       RouteNames.EventWizardParticipants,
-      RouteNames.EventWizardValidationMode,
+      RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
-    expect(totalAnnonceALaFin(marche)).toBe(9);
+    expect(totalAnnonceALaFin(marche)).toBe(8);
   });
 
-  test('tournoi : 10 ecrans, sans Invites ni Mode de validation', () => {
+  test('tournoi : 10 ecrans, il GARDE ses deux ecrans de tournoi', () => {
     const marche = marcherDansLeTunnel({ nomDuType: 'Tournoi' });
     const { chaine } = marche;
 
@@ -482,34 +542,33 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
       RouteNames.EventWizardLocation,
       RouteNames.EventWizardTournamentSettings,
       RouteNames.EventWizardTournamentStructure,
-      RouteNames.EventWizardVisibility,
       RouteNames.EventWizardParticipants,
-      // Le tournoi n'a PAS d'ecran « Mode de validation » : il est deduit du
-      // mode d'inscription (EventWizardTournamentSettings.js:99).
+      // L'ecran « Acces » du tournoi ne montre QUE la visibilite : sa validation
+      // est deduite du mode d'inscription (EventWizardTournamentSettings.js:99),
+      // exactement comme avant D08.
+      RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
     expect(totalAnnonceALaFin(marche)).toBe(10);
   });
 
-  test('detection sur un sport a postes : 11 ecrans, creneaux inseres', () => {
+  test('detection sur un sport a postes : 9 ecrans, creneaux inseres', () => {
     const marche = marcherDansLeTunnel({ nomDuType: 'Detection' });
     const { chaine } = marche;
 
     expect(chaine).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
-      RouteNames.EventWizardInvites,
       RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
-      RouteNames.EventWizardVisibility,
       RouteNames.EventWizardParticipants,
       RouteNames.EventWizardDetectionSlots,
-      RouteNames.EventWizardValidationMode,
+      RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
-    expect(totalAnnonceALaFin(marche)).toBe(11);
+    expect(totalAnnonceALaFin(marche)).toBe(9);
   });
 
   test('entrainement prive : l ecran Participants est saute', () => {
@@ -521,16 +580,13 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
       nomDuType: 'Entrainement',
     });
 
-    // Visibilite envoie directement sur le mode de validation : Participants
-    // n'est jamais traverse.
+    // Le lieu envoie directement sur l'acces : Participants n'est pas traverse.
     expect(chaine).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
-      RouteNames.EventWizardInvites,
       RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
-      RouteNames.EventWizardVisibility,
-      RouteNames.EventWizardValidationMode,
+      RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
@@ -544,40 +600,53 @@ describe('D08 — le compteur du 1er ecran est calcule AVANT le choix du type', 
   // « 1/10 » meme quand le parcours choisi juste apres en compte 9 ou 11. Le
   // compte ne devient juste qu'a partir de l'ecran suivant.
   test.each([
-    ['Stage', 9],
-    ['Detection', 11],
-  ])('parcours %s : le 1er ecran dit 10, la fin dit %i', (nomDuType, reel) => {
+    ['Tournoi', 10],
+    ['Detection', 9],
+  ])('parcours %s : le 1er ecran dit 8, la fin dit %i', (nomDuType, reel) => {
     const marche = marcherDansLeTunnel({ nomDuType });
 
-    expect(marche.comptes[RouteNames.EventWizardType]).toBe(10);
+    expect(marche.comptes[RouteNames.EventWizardType]).toBe(8);
     expect(totalAnnonceALaFin(marche)).toBe(reel);
   });
 
   test('des le 2e ecran, le compte annonce est le bon', () => {
-    const marche = marcherDansLeTunnel({ nomDuType: 'Stage' });
+    const marche = marcherDansLeTunnel({ nomDuType: 'Tournoi' });
 
-    expect(marche.comptes[RouteNames.EventWizardTeam]).toBe(9);
+    expect(marche.comptes[RouteNames.EventWizardTeam]).toBe(10);
   });
 });
 
-describe('D08 — les 5 ecrans hors chemin standard sont ATTEIGNABLES', () => {
+describe('D08 — les ecrans hors chemin standard restent ATTEIGNABLES', () => {
   test.each([
     ['Stage', RouteNames.EventWizardStageProgram],
     ['Tournoi', RouteNames.EventWizardTournamentSettings],
     ['Tournoi', RouteNames.EventWizardTournamentStructure],
     ['Detection', RouteNames.EventWizardDetectionSlots],
-    ['Match', RouteNames.EventWizardInvites],
   ])('un parcours %s traverse %s', (nomDuType, ecran) => {
     expect(marcherDansLeTunnel({ nomDuType }).chaine).toContain(ecran);
+  });
+
+  test('le Recap mene aux invitations — le SEUL chemin restant', () => {
+    // D08 a sorti `EventWizardInvites` de la chaine. Si ce lien disparait,
+    // l'ecran (1 474 lignes) devient injoignable : c'est exactement la pire
+    // regression du projet, du code que plus rien n'atteint.
+    expect(destinationsDesLiensModifier()).toContain(RouteNames.EventWizardInvites);
+  });
+
+  test('le Recap ne pointe plus vers les deux ecrans fusionnes', () => {
+    const destinations = destinationsDesLiensModifier();
+
+    expect(destinations).not.toContain('EventWizardVisibility');
+    expect(destinations).not.toContain('EventWizardValidationMode');
   });
 });
 
 describe('D08 — les positions annoncees a l ecran suivent la chaine reelle', () => {
   test.each([
-    ['Match', 10],
-    ['Stage', 9],
+    ['Match', 8],
+    ['Stage', 8],
     ['Tournoi', 10],
-    ['Detection', 11],
+    ['Detection', 9],
   ])('parcours %s : chaque ecran annonce sa place sur %i', (nomDuType, attendu) => {
     const marche = marcherDansLeTunnel({ nomDuType });
     const { chaine, positions } = marche;

@@ -21,7 +21,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetEventTypes } from '@/services/event/eventQueries';
 
 import { useEventWizard } from './EventWizardContext';
-import { getEventWizardStepCount } from './eventWizardDetectionUtils';
+import { getEventWizardNextRoute, getEventWizardStepCount } from './eventWizardDetectionUtils';
 
 /**
  *
@@ -54,7 +54,9 @@ function EventWizardType({ navigation, route }) {
 
   const handleSelectType = (type) => {
     dispatch({ payload: type, type: 'SET_TYPE' });
-    navigation.navigate(RouteNames.EventWizardTeam);
+    // Le type vient d'etre choisi : c'est lui qui decide de la suite du
+    // parcours, on interroge donc la chaine sur l'etat PROJETE.
+    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardType, { ...state, type }));
   };
 
   const hasTypes = Array.isArray(eventTypes) && eventTypes.length > 0;

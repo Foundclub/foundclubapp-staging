@@ -1,6 +1,8 @@
 import {
   getActiveStageScheduleDays,
+  getEventWizardAccessStepIndex,
   getEventWizardDescriptionStepIndex,
+  getEventWizardDetectionSlotsStepIndex,
   getEventWizardLocationStepIndex,
   getEventWizardLogisticsStepIndex,
   getEventWizardParticipantsStepIndex,
@@ -8,10 +10,9 @@ import {
   getEventWizardSportName,
   getEventWizardStageProgramStepIndex,
   getEventWizardStepCount,
+  getEventWizardStepRoutes,
   getEventWizardTournamentSettingsStepIndex,
   getEventWizardTournamentStructureStepIndex,
-  getEventWizardValidationStepIndex,
-  getEventWizardVisibilityStepIndex,
   hasCompletePerDayLocations,
   hasValidStageDayLocation,
   isDetectionEventType,
@@ -30,16 +31,18 @@ import {
 // fige les NUMEROS que rend la machine (combien d'etapes, et a quelle place se
 // trouve chaque ecran) pour chacun des parcours.
 //
-// Ce fichier DECRIT le comportement du 2026-08-06, il ne le corrige pas. Les
-// bizarreries mesurees sont figees telles quelles et signalees en commentaire,
-// notamment : les index sont 1-BASES (le 1er ecran est a l'index 1), et la
-// valeur 0 ne veut pas dire « premier » mais « cet ecran n'existe pas dans ce
-// parcours ».
+// Les index sont 1-BASES (le 1er ecran est a l'index 1) et la valeur 0 ne veut
+// pas dire « premier » mais « cet ecran n'appartient pas a ce parcours ».
+//
+// ETAT DU 2026-08-06, APRES D08. Le lot a ramene l'evenement simple a 8 etapes,
+// en sortant `EventWizardInvites` de la chaine (il se rejoint depuis le Recap)
+// et en fusionnant « Visibilite » et « Mode de validation » dans un seul ecran
+// `EventWizardAccess`. Les tournois et les stages gardent tous leurs ecrans.
 //
 // La moitie TRANSITIONS du filet (quel ecran mene a quel ecran) vit dans
-// `eventWizardChain.test.js` : ces deux moities decrivent la meme chaine par
-// deux bouts differents, et c'est volontaire — aujourd'hui elles sont tenues
-// synchronisees a la main, sans rien pour le verifier.
+// `eventWizardChain.test.js`. Depuis D08 les deux moities decoulent de la MEME
+// liste ordonnee (`getEventWizardStepRoutes`) : elles ne peuvent plus diverger,
+// alors qu'elles etaient tenues d'accord a la main jusque-la.
 
 const typeStage = { name: 'Stage' };
 const typeTournoi = { name: 'Tournoi' };
@@ -90,43 +93,82 @@ describe('D08 — reconnaissance du type d evenement', () => {
 });
 
 describe('D08 — getEventWizardStepCount : combien d etapes, par parcours', () => {
-  test('un stage compte 9 etapes', () => {
-    expect(getEventWizardStepCount({ type: typeStage })).toBe(9);
+  test('un evenement standard compte 8 etapes', () => {
+    expect(getEventWizardStepCount({ type: typeMatch })).toBe(8);
+    expect(getEventWizardStepCount({ type: typeEntrainement })).toBe(8);
   });
 
-  test('un tournoi compte 10 etapes', () => {
+  test('un stage compte 8 etapes : il garde son programme, il gagne la fusion', () => {
+    // Le stage n'a jamais eu ni l'etape Invites ni l'etape Logistique. Il perd
+    // donc UNE etape, celle gagnee par la fusion visibilite + validation, et
+    // conserve son ecran « Programme du stage ».
+    expect(getEventWizardStepCount({ type: typeStage })).toBe(8);
+  });
+
+  test('un tournoi compte toujours 10 etapes', () => {
+    // Le tournoi ne traversait ni Invites ni « Mode de validation » : ni la
+    // sortie de l'un ni la fusion de l'autre ne lui retirent quoi que ce soit.
     expect(getEventWizardStepCount({ type: typeTournoi })).toBe(10);
   });
 
-  test('un evenement standard compte 10 etapes', () => {
-    expect(getEventWizardStepCount({ type: typeMatch })).toBe(10);
-    expect(getEventWizardStepCount({ type: typeEntrainement })).toBe(10);
+  test('un standard avec creneaux de detection compte 9 etapes', () => {
+    expect(getEventWizardStepCount(etatDetectionAvecCreneaux)).toBe(9);
   });
 
-  test('un standard avec creneaux de detection compte 11 etapes', () => {
-    expect(getEventWizardStepCount(etatDetectionAvecCreneaux)).toBe(11);
-  });
-
-  test('un standard dont l etape Participants est sautee compte une etape de moins', () => {
-    expect(getEventWizardStepCount(etatEntrainementFerme)).toBe(9);
+  test('un standard dont l etape Participants est sautee compte 7 etapes', () => {
+    expect(getEventWizardStepCount(etatEntrainementFerme)).toBe(7);
   });
 
   test('le compte du stage et du tournoi ignore les creneaux de detection', () => {
-    // Les deux premiers `if` sortent avant tout calcul : un stage ou un tournoi
-    // rend un nombre FIXE, quel que soit le reste de l'etat.
     expect(getEventWizardStepCount({
       ...etatDetectionAvecCreneaux,
       type: typeStage,
-    })).toBe(9);
+    })).toBe(8);
     expect(getEventWizardStepCount({
       ...etatDetectionAvecCreneaux,
       type: typeTournoi,
     })).toBe(10);
   });
 
-  test('sans type du tout, la machine repond 10 comme pour un standard', () => {
-    expect(getEventWizardStepCount()).toBe(10);
-    expect(getEventWizardStepCount({})).toBe(10);
+  test('sans type du tout, la machine repond 8 comme pour un standard', () => {
+    expect(getEventWizardStepCount()).toBe(8);
+    expect(getEventWizardStepCount({})).toBe(8);
+  });
+});
+
+describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
+  test('l evenement simple traverse 8 ecrans, dans cet ordre', () => {
+    expect(getEventWizardStepRoutes({ type: typeMatch })).toEqual([
+      'EventWizardType',
+      'EventWizardTeam',
+      'EventWizardLogistics',
+      'EventWizardLocation',
+      'EventWizardParticipants',
+      'EventWizardAccess',
+      'EventWizardDescription',
+      'EventWizardRecap',
+    ]);
+  });
+
+  test('EventWizardInvites n appartient a AUCUN parcours', () => {
+    // Il reste enregistre et joignable depuis le Recap : c'est justement ce que
+    // prouve `eventWizardChain.test.js`. Il n'a simplement plus de numero.
+    [typeMatch, typeStage, typeTournoi, typeEntrainement, typeDetection]
+      .forEach((type) => {
+        expect(getEventWizardStepRoutes({ type })).not.toContain('EventWizardInvites');
+      });
+  });
+
+  test('le nombre d etapes est la longueur de la chaine, par construction', () => {
+    [
+      { type: typeMatch },
+      { type: typeStage },
+      { type: typeTournoi },
+      etatDetectionAvecCreneaux,
+      etatEntrainementFerme,
+    ].forEach((etat) => {
+      expect(getEventWizardStepCount(etat)).toBe(getEventWizardStepRoutes(etat).length);
+    });
   });
 });
 
@@ -141,20 +183,28 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
   };
 
   const attendu = {
+    access: {
+      detection: 7, stage: 6, standard: 6, tournoi: 8,
+    },
     description: {
-      detection: 10, stage: 8, standard: 9, tournoi: 9,
+      detection: 8, stage: 7, standard: 7, tournoi: 9,
+    },
+    detectionSlots: {
+      detection: 6, stage: 0, standard: 0, tournoi: 0,
     },
     location: {
-      detection: 5, stage: 4, standard: 5, tournoi: 4,
+      detection: 4, stage: 4, standard: 4, tournoi: 4,
     },
     logistics: {
-      detection: 4, stage: 4, standard: 4, tournoi: 3,
+      // 0 pour le stage, et c'est un progres : avant D08 cette fonction rendait
+      // 4 pour un stage, alors que le stage n'a jamais eu d'etape Logistique.
+      detection: 3, stage: 0, standard: 3, tournoi: 3,
     },
     participants: {
-      detection: 7, stage: 6, standard: 7, tournoi: 8,
+      detection: 5, stage: 5, standard: 5, tournoi: 7,
     },
     recap: {
-      detection: 11, stage: 9, standard: 10, tournoi: 10,
+      detection: 9, stage: 8, standard: 8, tournoi: 10,
     },
     stageProgram: {
       detection: 0, stage: 3, standard: 0, tournoi: 0,
@@ -165,16 +215,12 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
     tournamentStructure: {
       detection: 0, stage: 0, standard: 0, tournoi: 6,
     },
-    validation: {
-      detection: 9, stage: 7, standard: 8, tournoi: 0,
-    },
-    visibility: {
-      detection: 6, stage: 5, standard: 6, tournoi: 7,
-    },
   };
 
   const fonctions = {
+    access: getEventWizardAccessStepIndex,
     description: getEventWizardDescriptionStepIndex,
+    detectionSlots: getEventWizardDetectionSlotsStepIndex,
     location: getEventWizardLocationStepIndex,
     logistics: getEventWizardLogisticsStepIndex,
     participants: getEventWizardParticipantsStepIndex,
@@ -182,8 +228,6 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
     stageProgram: getEventWizardStageProgramStepIndex,
     tournamentSettings: getEventWizardTournamentSettingsStepIndex,
     tournamentStructure: getEventWizardTournamentStructureStepIndex,
-    validation: getEventWizardValidationStepIndex,
-    visibility: getEventWizardVisibilityStepIndex,
   };
 
   Object.entries(attendu).forEach(([ecran, parType]) => {
@@ -194,23 +238,22 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
     });
   });
 
-  test('l index de Logistics ne bouge PAS avec les creneaux de detection', () => {
-    // Contre-exemple utile : seuls les 3 ecrans de fin (validation, description,
-    // recap) decalent quand l'etape « creneaux » s'insere. Les ecrans d'avant,
-    // eux, gardent leur place.
-    expect(getEventWizardLogisticsStepIndex(etatDetectionAvecCreneaux)).toBe(4);
-    expect(getEventWizardLocationStepIndex(etatDetectionAvecCreneaux)).toBe(5);
-    expect(getEventWizardVisibilityStepIndex(etatDetectionAvecCreneaux)).toBe(6);
-    expect(getEventWizardParticipantsStepIndex(etatDetectionAvecCreneaux)).toBe(7);
+  test('les ecrans d avant les creneaux de detection gardent leur place', () => {
+    // Seuls les 3 ecrans de fin (acces, description, recap) decalent quand
+    // l'etape « creneaux » s'insere.
+    expect(getEventWizardLogisticsStepIndex(etatDetectionAvecCreneaux)).toBe(3);
+    expect(getEventWizardLocationStepIndex(etatDetectionAvecCreneaux)).toBe(4);
+    expect(getEventWizardParticipantsStepIndex(etatDetectionAvecCreneaux)).toBe(5);
+    expect(getEventWizardAccessStepIndex(etatDetectionAvecCreneaux)).toBe(7);
   });
 
   test('sauter Participants recule les 3 derniers ecrans d un cran', () => {
-    expect(getEventWizardValidationStepIndex(etatEntrainementFerme)).toBe(7);
-    expect(getEventWizardDescriptionStepIndex(etatEntrainementFerme)).toBe(8);
-    expect(getEventWizardRecapStepIndex(etatEntrainementFerme)).toBe(9);
-    // ... mais laisse l'index de Participants inchange, alors que l'ecran est
-    // saute. Bizarrerie figee telle quelle.
-    expect(getEventWizardParticipantsStepIndex(etatEntrainementFerme)).toBe(7);
+    expect(getEventWizardAccessStepIndex(etatEntrainementFerme)).toBe(5);
+    expect(getEventWizardDescriptionStepIndex(etatEntrainementFerme)).toBe(6);
+    expect(getEventWizardRecapStepIndex(etatEntrainementFerme)).toBe(7);
+    // ... et l'ecran saute rend 0, « je ne suis pas dans ce parcours ». Avant
+    // D08 il rendait encore 7, la place qu'il aurait eue s'il avait ete la.
+    expect(getEventWizardParticipantsStepIndex(etatEntrainementFerme)).toBe(0);
   });
 
   test('le dernier index vaut toujours le nombre total d etapes', () => {

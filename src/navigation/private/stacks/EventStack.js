@@ -9,6 +9,7 @@ import TournamentManagement from '@/views/event/TournamentManagement';
 import TournamentMatchDetails from '@/views/event/TournamentMatchDetails';
 import TournamentSettingsEdit from '@/views/event/TournamentSettingsEdit';
 import TournamentTeamDetails from '@/views/event/TournamentTeamDetails';
+import EventWizardAccess from '@/views/event/wizard/EventWizardAccess';
 import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
 import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
 import EventWizardDetectionSlots from '@/views/event/wizard/EventWizardDetectionSlots';
@@ -22,8 +23,6 @@ import EventWizardTeam from '@/views/event/wizard/EventWizardTeam';
 import EventWizardTournamentSettings from '@/views/event/wizard/EventWizardTournamentSettings';
 import EventWizardTournamentStructure from '@/views/event/wizard/EventWizardTournamentStructure';
 import EventWizardType from '@/views/event/wizard/EventWizardType';
-import EventWizardValidationMode from '@/views/event/wizard/EventWizardValidationMode';
-import EventWizardVisibility from '@/views/event/wizard/EventWizardVisibility';
 import MatchStatsEditor from '@/views/matchStats/MatchStatsEditor';
 import PendingMatchStatsScreen from '@/views/matchStats/PendingMatchStatsScreen';
 import PlayerMatchResponseScreen from '@/views/matchStats/PlayerMatchResponseScreen';
@@ -180,9 +179,11 @@ function EventStack() {
           name={RouteNames.EventWizardLocation}
           options={{ headerShown: false }}
         />
+        {/* D08 : `EventWizardAccess` remplace les ecrans « Visibilite » et
+            « Mode de validation », fusionnes en un seul. */}
         <Stack.Screen
-          component={EventWizardVisibility}
-          name={RouteNames.EventWizardVisibility}
+          component={EventWizardAccess}
+          name={RouteNames.EventWizardAccess}
           options={{ headerShown: false }}
         />
         <Stack.Screen
@@ -193,11 +194,6 @@ function EventStack() {
         <Stack.Screen
           component={EventWizardDetectionSlots}
           name={RouteNames.EventWizardDetectionSlots}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          component={EventWizardValidationMode}
-          name={RouteNames.EventWizardValidationMode}
           options={{ headerShown: false }}
         />
         <Stack.Screen

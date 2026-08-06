@@ -23,6 +23,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardNextRoute,
   getEventWizardStageProgramStepIndex,
   getEventWizardStepCount,
   isTournamentEventType,
@@ -310,7 +311,7 @@ function EventWizardStageProgram({ navigation }) {
     navigation.navigate(
       shouldSkipEventWizardLocationStep(nextWizardState)
         ? RouteNames.EventWizardTournamentSettings
-        : RouteNames.EventWizardLocation,
+        : getEventWizardNextRoute(RouteNames.EventWizardStageProgram, nextWizardState),
     );
   };
 

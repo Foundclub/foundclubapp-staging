@@ -24,6 +24,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardLogisticsStepIndex,
+  getEventWizardNextRoute,
   getEventWizardStepCount,
   isTournamentEventType,
 } from './eventWizardDetectionUtils';
@@ -657,7 +658,7 @@ function EventWizardLogistics({ navigation }) {
     });
 
     navigation.navigate(
-      RouteNames.EventWizardLocation,
+      getEventWizardNextRoute(RouteNames.EventWizardLogistics, projectedWizardState),
     );
   };
 

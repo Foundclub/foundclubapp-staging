@@ -16,11 +16,10 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardNextRoute,
   getEventWizardParticipantsStepIndex,
   getEventWizardStepCount,
-  isTournamentEventType,
   shouldExplainDetectionSlotsDisabled,
-  shouldShowDetectionSlotsStep,
   shouldSkipEventWizardParticipantsStep,
 } from './eventWizardDetectionUtils';
 
@@ -106,7 +105,6 @@ function EventWizardParticipants({ navigation }) {
     externalParticipantLimit: normalizedExternalParticipantLimit,
     totalPlayers: normalizedTotalPlayers,
   };
-  const shouldShowDetectionStep = shouldShowDetectionSlotsStep(projectedState);
   const shouldShowDetectionDisabledHint = shouldExplainDetectionSlotsDisabled(projectedState);
 
   const hasInvalidPlayersConfig = (
@@ -210,25 +208,21 @@ function EventWizardParticipants({ navigation }) {
       type: 'SET_PARTICIPANTS',
     });
 
-    let nextRoute = RouteNames.EventWizardValidationMode;
-    if (isTournamentEventType(state?.type?.name)) {
-      nextRoute = RouteNames.EventWizardDescription;
-    } else if (shouldShowDetectionStep) {
-      nextRoute = RouteNames.EventWizardDetectionSlots;
-    }
-
-    navigation.navigate(nextRoute);
+    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardParticipants, state));
   };
 
   useEffect(() => {
     if (!shouldSkipParticipantsStep) return;
 
+    // Garde-fou : quand l'etape est sautee, elle ne figure plus dans la chaine
+    // et `getEventWizardNextRoute` ne saurait pas d'ou repartir. C'est le seul
+    // endroit du tunnel ou l'ecran suivant est nomme en clair.
     if (typeof navigation.replace === 'function') {
-      navigation.replace(RouteNames.EventWizardValidationMode);
+      navigation.replace(RouteNames.EventWizardAccess);
       return;
     }
 
-    navigation.navigate(RouteNames.EventWizardValidationMode);
+    navigation.navigate(RouteNames.EventWizardAccess);
   }, [navigation, shouldSkipParticipantsStep]);
 
   if (shouldSkipParticipantsStep) {

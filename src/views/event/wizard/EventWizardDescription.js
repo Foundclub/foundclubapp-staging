@@ -11,6 +11,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardDescriptionStepIndex,
+  getEventWizardNextRoute,
   getEventWizardStepCount,
 } from './eventWizardDetectionUtils';
 
@@ -40,7 +41,7 @@ function EventWizardDescription({ navigation }) {
       payload: { description },
       type: 'SET_META',
     });
-    navigation.navigate(RouteNames.EventWizardRecap);
+    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardDescription, state));
   };
 
   return (

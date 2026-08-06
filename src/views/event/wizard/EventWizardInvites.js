@@ -37,7 +37,7 @@ import { useGetActivities } from '@/services/activity/activityQueries';
 import { getTeams } from '@/services/team/teamService';
 
 import { useEventWizard } from './EventWizardContext';
-import { getEventWizardStepCount } from './eventWizardDetectionUtils';
+import { getEventWizardNextRoute } from './eventWizardDetectionUtils';
 
 const getDocumentId = (value) => String(value?.documentId || value?.id || value || '').trim();
 
@@ -734,13 +734,13 @@ function EventWizardInvites({ navigation }) {
 
   const handleNext = () => {
     dispatch({ payload: getInternalInvitedTeamIdsFromAudiences(internalAudiences), type: 'SET_INVITES' });
-    navigation.navigate(RouteNames.EventWizardLogistics);
+    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardInvites, state));
   };
 
   const handleSkip = () => {
     dispatch({ payload: [], type: 'SET_INVITES' });
     dispatch({ payload: [], type: 'SET_TEAM_AUDIENCES' });
-    navigation.navigate(RouteNames.EventWizardLogistics);
+    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardInvites, state));
   };
 
   const renderInviteModeCard = (mode, {
@@ -890,8 +890,6 @@ function EventWizardInvites({ navigation }) {
       onNext={handleNext}
       onSkip={handleSkip}
       showSkip={false}
-      stepCount={getEventWizardStepCount(state)}
-      stepIndex={3}
       subtitle={t(
         'eventWizard.steps.invites.subtitle',
         'Tu peux inviter des membres de ton club, une ou plusieurs équipes externes, ou les deux.',

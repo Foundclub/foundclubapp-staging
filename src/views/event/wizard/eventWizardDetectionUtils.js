@@ -1,3 +1,5 @@
+import { RouteNames } from '@/navigation/routeNames';
+
 import { sportHasPositions } from '@/constants/positions';
 
 export const normalizeTypeLabel = (/** @type {any} */ value = '') => String(value || '')
@@ -79,70 +81,126 @@ export const shouldSkipEventWizardParticipantsStep = (/** @type {any} */ state =
   && String(state?.sessionStatus || 'open').trim().toLowerCase() === 'closed'
 );
 
-export const getEventWizardStepCount = (/** @type {any} */ state = {}) => {
-  if (isStageEventType(state?.type?.name)) return 9;
-  if (isTournamentEventType(state?.type?.name)) {
-    return 10;
+/**
+ * LA CHAINE DU TUNNEL, ecrite UNE SEULE FOIS (D08).
+ *
+ * Avant ce lot, l'ordre des ecrans etait encode DEUX fois : ici sous forme de
+ * numeros d'etape, et dans le `handleNext` de chaque ecran sous forme de
+ * `navigate`. Rien ne verifiait que les deux restaient d'accord. Tout le reste
+ * de ce fichier — le nombre d'etapes, la place de chaque ecran, l'ecran suivant
+ * — se deduit desormais de cette seule liste.
+ *
+ * `EventWizardInvites` n'y figure volontairement pas : il est sorti de la
+ * chaine par D08 et se rejoint depuis le Recap. Il reste enregistre et
+ * atteignable ; il n'a simplement plus de numero d'etape.
+ * @param {any} state Etat courant du tunnel.
+ * @returns {string[]} Les ecrans traverses, dans l'ordre.
+ */
+export const getEventWizardStepRoutes = (state = {}) => {
+  const routes = [RouteNames.EventWizardType, RouteNames.EventWizardTeam];
+
+  if (isStageEventType(state?.type?.name)) {
+    routes.push(RouteNames.EventWizardStageProgram);
+  } else {
+    routes.push(RouteNames.EventWizardLogistics);
   }
-  const baseStepCount = shouldShowDetectionSlotsStep(state) ? 11 : 10;
-  return shouldSkipEventWizardParticipantsStep(state) ? baseStepCount - 1 : baseStepCount;
+
+  routes.push(RouteNames.EventWizardLocation);
+
+  if (isTournamentEventType(state?.type?.name)) {
+    routes.push(
+      RouteNames.EventWizardTournamentSettings,
+      RouteNames.EventWizardTournamentStructure,
+    );
+  }
+
+  if (!shouldSkipEventWizardParticipantsStep(state)) {
+    routes.push(RouteNames.EventWizardParticipants);
+  }
+
+  if (shouldShowDetectionSlotsStep(state)) {
+    routes.push(RouteNames.EventWizardDetectionSlots);
+  }
+
+  routes.push(
+    RouteNames.EventWizardAccess,
+    RouteNames.EventWizardDescription,
+    RouteNames.EventWizardRecap,
+  );
+
+  return routes;
 };
 
-export const getEventWizardLogisticsStepIndex = (/** @type {any} */ state = {}) => {
-  if (isTournamentEventType(state?.type?.name)) return 3;
-  return 4;
+/**
+ * La place d'un ecran dans le parcours courant, comptee a partir de 1.
+ * @param {string} routeName Nom de la route.
+ * @param {any} state Etat courant du tunnel.
+ * @returns {number} Le rang de l'ecran, ou 0 s'il n'appartient pas au parcours.
+ */
+export const getEventWizardStepIndex = (routeName, state = {}) => (
+  getEventWizardStepRoutes(state).indexOf(routeName) + 1
+);
+
+/**
+ * L'ecran vers lequel envoie le bouton « Suivant ».
+ * Un ecran hors chaine (aujourd'hui `EventWizardInvites`, rejoint depuis le
+ * Recap) rend la main au Recap : c'est de la qu'on y est entre.
+ * @param {string} routeName Ecran courant.
+ * @param {any} state Etat courant du tunnel.
+ * @returns {string} Nom de la route suivante.
+ */
+export const getEventWizardNextRoute = (routeName, state = {}) => {
+  const routes = getEventWizardStepRoutes(state);
+  const position = routes.indexOf(routeName);
+  if (position < 0 || position === routes.length - 1) return RouteNames.EventWizardRecap;
+  return routes[position + 1];
 };
 
-export const getEventWizardLocationStepIndex = (/** @type {any} */ state = {}) => {
-  if (isStageEventType(state?.type?.name)) return 4;
-  if (isTournamentEventType(state?.type?.name)) return 4;
-  return 5;
-};
+export const getEventWizardStepCount = (/** @type {any} */ state = {}) => (
+  getEventWizardStepRoutes(state).length
+);
 
-export const getEventWizardTournamentSettingsStepIndex = (/** @type {any} */ state = {}) => {
-  if (isTournamentEventType(state?.type?.name)) return 5;
-  return 0;
-};
+export const getEventWizardLogisticsStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardLogistics, state)
+);
 
-export const getEventWizardTournamentStructureStepIndex = (/** @type {any} */ state = {}) => {
-  if (isTournamentEventType(state?.type?.name)) return 6;
-  return 0;
-};
+export const getEventWizardLocationStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardLocation, state)
+);
 
-export const getEventWizardVisibilityStepIndex = (/** @type {any} */ state = {}) => {
-  if (isStageEventType(state?.type?.name)) return 5;
-  if (isTournamentEventType(state?.type?.name)) return 7;
-  return 6;
-};
+export const getEventWizardTournamentSettingsStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardTournamentSettings, state)
+);
 
-export const getEventWizardParticipantsStepIndex = (/** @type {any} */ state = {}) => {
-  if (isStageEventType(state?.type?.name)) return 6;
-  if (isTournamentEventType(state?.type?.name)) return 8;
-  return 7;
-};
+export const getEventWizardTournamentStructureStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardTournamentStructure, state)
+);
 
-export const getEventWizardStageProgramStepIndex = (/** @type {any} */ state = {}) => {
-  if (isStageEventType(state?.type?.name)) return 3;
-  return 0;
-};
+export const getEventWizardParticipantsStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardParticipants, state)
+);
 
-export const getEventWizardValidationStepIndex = (/** @type {any} */ state = {}) => {
-  if (isStageEventType(state?.type?.name)) return 7;
-  if (isTournamentEventType(state?.type?.name)) return 0;
-  const baseStepIndex = shouldShowDetectionSlotsStep(state) ? 9 : 8;
-  return shouldSkipEventWizardParticipantsStep(state) ? baseStepIndex - 1 : baseStepIndex;
-};
+export const getEventWizardStageProgramStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardStageProgram, state)
+);
 
-export const getEventWizardDescriptionStepIndex = (/** @type {any} */ state = {}) => {
-  if (isStageEventType(state?.type?.name)) return 8;
-  if (isTournamentEventType(state?.type?.name)) return 9;
-  const baseStepIndex = shouldShowDetectionSlotsStep(state) ? 10 : 9;
-  return shouldSkipEventWizardParticipantsStep(state) ? baseStepIndex - 1 : baseStepIndex;
-};
+export const getEventWizardDetectionSlotsStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardDetectionSlots, state)
+);
 
-export const getEventWizardRecapStepIndex = (/** @type {any} */ state = {}) => {
-  if (isStageEventType(state?.type?.name)) return 9;
-  if (isTournamentEventType(state?.type?.name)) return 10;
-  const baseStepIndex = shouldShowDetectionSlotsStep(state) ? 11 : 10;
-  return shouldSkipEventWizardParticipantsStep(state) ? baseStepIndex - 1 : baseStepIndex;
-};
+/**
+ * L'ecran « Acces » : visibilite ET mode de validation, fusionnes par D08.
+ * @param {any} state Etat courant du tunnel.
+ * @returns {number} Le rang de l'ecran dans le parcours courant.
+ */
+export const getEventWizardAccessStepIndex = (state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardAccess, state)
+);
+
+export const getEventWizardDescriptionStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardDescription, state)
+);
+
+export const getEventWizardRecapStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardRecap, state)
+);
