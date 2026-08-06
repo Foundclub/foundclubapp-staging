@@ -548,6 +548,20 @@ describe('D10 — etape 7 · Description', () => {
 
     expect(gabarit.title).toBe('eventWizard.steps.description.title');
     expect(gabarit.showSkip).toBe(true);
+    expect(gabarit.headerVariant).toBe('focus');
+    expect(gabarit.subtitle).toContain("Ce que les joueurs liront avant de s'inscrire");
+    demonter();
+  });
+
+  it('montre un exemple concret plutot qu une consigne, et dit ce que ca rapporte', () => {
+    const { arbre, demonter } = monter(EventWizardDescription, ETAT_DETECTION);
+    const champ = arbre.root.findAll(
+      (/** @type {any} */ noeud) => noeud.props?.multiline === true,
+      { deep: true },
+    )[0];
+
+    expect(champ.props.placeholder).toContain('Ex. :');
+    expect(contenuDe(arbre)).toContain('Une description claire double les inscriptions');
     demonter();
   });
 
