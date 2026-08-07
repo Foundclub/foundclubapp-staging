@@ -21,6 +21,8 @@ const mockFocus = { appels: 0 };
 /** Ce que l'API rend a la place du reseau. */
 const mockReseau = {
   club: /** @type {any} */ (null),
+  /** La reponse du club est-elle deja arrivee ? */
+  clubRecu: true,
 };
 /** Le compte connecte. Objet FIGE : on remplace son contenu, jamais la boite. */
 const mockCompte = {
@@ -92,7 +94,12 @@ jest.mock('@/services/team/teamService', () => ({
 }));
 
 jest.mock('@/services/club/clubQueries', () => ({
-  useGetClub: () => ({ data: mockReseau.club, error: null, isLoading: false }),
+  useGetClub: () => ({
+    data: mockReseau.clubRecu ? mockReseau.club : undefined,
+    error: null,
+    isFetched: mockReseau.clubRecu,
+    isLoading: !mockReseau.clubRecu,
+  }),
 }));
 
 jest.mock('@/views/search/searchRouteHelpers', () => ({
@@ -222,6 +229,15 @@ const afficherLEcran = ({ params } = {}) => {
 };
 
 /**
+ * Le champ a-t-il reclame le clavier ? Peu importe COMMENT il s'y prend
+ * (`autoFocus` au montage ou `focus()` par reference) : la question posee est
+ * « le clavier monte-t-il ? ».
+ * @param {any} champ Les dernieres props recues par le champ.
+ * @returns {boolean} true si le clavier est reclame.
+ */
+const leClavierEstDemande = (champ) => champ?.autoFocus === true || mockFocus.appels > 0;
+
+/**
  * Appuie sur le pressable qui porte ce libelle.
  * @param {string} libelle Texte visible du bouton.
  * @returns {void}
@@ -239,6 +255,7 @@ afterEach(() => {
   if (arbre) act(() => arbre.unmount());
   arbre = null;
   mockReseau.club = null;
+  mockReseau.clubRecu = true;
   mockCompte.club = { documentId: 'club-1', name: 'FC Test' };
 });
 
@@ -261,15 +278,24 @@ describe('D25 — etape 1/8 « Nom de l equipe »', () => {
     expect(textes).toContain('Je ne trouve pas mon club');
   });
 
-  test('club sans equipe : le champ prend le focus tout seul, et aucun pop-up', () => {
+  test('club sans equipe : le clavier monte tout seul, et aucun pop-up', () => {
     mockReseau.club = { documentId: 'club-1', name: 'FC Test', teams: [] };
     const { champ, textes } = afficherLEcran();
 
-    expect(champ.autoFocus).toBe(true);
+    expect(leClavierEstDemande(champ)).toBe(true);
     expect(textes).not.toContain('Ton club a déjà des équipes');
   });
 
-  test('DEFAUT ② — club avec equipes : le pop-up s ouvre ET le clavier avec lui', () => {
+  test('D25 ② — tant que le club n a pas repondu, le clavier ne monte pas', () => {
+    mockReseau.clubRecu = false;
+    const { champ } = afficherLEcran();
+
+    // C'est l'instant ou `autoFocus` tranchait : on ne sait pas encore si un
+    // pop-up va s'ouvrir, donc on ne demande rien.
+    expect(leClavierEstDemande(champ)).toBe(false);
+  });
+
+  test('D25 ② — club avec equipes : le pop-up s ouvre SANS le clavier', () => {
     mockReseau.club = {
       documentId: 'club-1',
       name: 'FC Test',
@@ -277,14 +303,11 @@ describe('D25 — etape 1/8 « Nom de l equipe »', () => {
     };
     const { champ, textes } = afficherLEcran();
 
-    // Le pop-up pose une question...
     expect(textes).toContain('Ton club a déjà des équipes');
-    // ... et le champ demande le clavier au meme instant. C'est la collision
-    // photographiee par Adel le 2026-08-07.
-    expect(champ.autoFocus).toBe(true);
+    expect(leClavierEstDemande(champ)).toBe(false);
   });
 
-  test('« Creer une nouvelle equipe » referme le pop-up', () => {
+  test('D25 ② — « Creer une nouvelle equipe » referme le pop-up ET donne le clavier', () => {
     mockReseau.club = {
       documentId: 'club-1',
       name: 'FC Test',
@@ -295,6 +318,9 @@ describe('D25 — etape 1/8 « Nom de l equipe »', () => {
     appuyerSur('Créer une nouvelle équipe');
 
     expect(textesSous(arbre.root)).not.toContain('Ton club a déjà des équipes');
+    // Le tap economise par l'ancien `autoFocus` n'est pas perdu : il est rendu
+    // APRES la decision, pas pendant.
+    expect(mockFocus.appels).toBe(1);
   });
 
   test('une equipe sans entraineur actif est proposee « a reprendre »', () => {

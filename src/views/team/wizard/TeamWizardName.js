@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Text, TouchableOpacity, View,
@@ -8,6 +10,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { isMyTeam } from '@/domains/team/teamMembership';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -92,16 +95,34 @@ function TeamWizardName({ navigation, route }) {
   );
   const shouldOfferChooser = clubTeams.length > 0 && !isChooserDismissed;
 
-  // Equipes que je coache/dont je suis membre : signal fiable (le populate club
-  // ne renvoie pas toujours les trainers imbriques).
-  const myTeamIds = useMemo(() => {
-    const source = /** @type {any} */ (userData);
-    const ids = [
-      ...(Array.isArray(source?.trainedTeams) ? source.trainedTeams : []),
-      ...(Array.isArray(source?.myTeams) ? source.myTeams : []),
-    ].map((/** @type {any} */ team) => team?.documentId).filter(Boolean);
-    return new Set(ids);
-  }, [userData]);
+  // D25 ② — « ca ouvre le clavier en meme temps que le pop-up ».
+  //
+  // `autoFocus` etait pose en dur sur le champ. C'est un choix de MONTAGE, pris
+  // a un instant ou l'ecran ne sait PAS encore si le club a des equipes : la
+  // reponse arrive avec `useGetClub`, une fraction de seconde plus tard. Le
+  // clavier montait donc toujours, et le pop-up se posait par-dessus, masquant
+  // la moitie basse de la question (capture d'Adel du 2026-08-07).
+  //
+  // On garde l'intention — un ecran a un seul champ ne merite pas un tap de plus,
+  // c'est ce que font aussi `SquadNameStep` et `AdminClubWizardIdentity` — mais
+  // on la reporte au moment ou la question est TRANCHEE : tout de suite s'il n'y
+  // a pas de pop-up, apres la reponse s'il y en a un.
+  const nameInputRef = useRef(/** @type {any} */ (null));
+  const isChooserSettled = !(routeClubId || accountClubId || state.clubId) || clubQuery.isFetched;
+  const shouldFocusName = hasClubContext && isChooserSettled && !shouldOfferChooser;
+
+  useEffect(() => {
+    if (!shouldFocusName) {
+      return;
+    }
+    nameInputRef.current?.focus();
+  }, [shouldFocusName]);
+
+  // Equipes que je coache / dont je suis membre. D25 ① — le profil du compte
+  // (source unique jusqu'ici) est servi depuis un cache serveur de 60 s a 4 min :
+  // en revenant ici juste apres une creation, sa propre equipe apparaissait
+  // comme celle d'un autre. Le juge partage ecoute AUSSI les encadrants rendus
+  // avec le club — voir domains/team/teamMembership.js.
 
   const goToTeamDetails = (/** @type {string} */ teamDocumentId) => {
     setIsChooserDismissed(true);
@@ -277,10 +298,10 @@ function TeamWizardName({ navigation, route }) {
           resumeRouteParams={{ screen: RouteNames.TeamWizardName }}
         />
         <Input
-          autoFocus
           label={t('teamEdit.fields.name.label')}
           onChangeText={(value) => dispatch({ payload: value, type: 'SET_NAME' })}
           placeholder={t('teamWizard.steps.name.placeholder', 'Ex. : U15 Filles')}
+          ref={nameInputRef}
           value={state.name}
         />
         <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[8]]}>
@@ -344,7 +365,7 @@ function TeamWizardName({ navigation, route }) {
 
           <View style={[Spaces.gap[8]]}>
             {clubTeams.map((/** @type {any} */ team) => {
-              const isMine = myTeamIds.has(team?.documentId);
+              const isMine = isMyTeam(team, userData);
               const activeTrainers = (Array.isArray(team?.trainers) ? team.trainers : [])
                 .filter((/** @type {any} */ trainer) => !isDeletedTrainer(trainer));
               // Orpheline seulement si ce n'est pas mon equipe et qu'aucun
