@@ -573,35 +573,11 @@ describe('EventDetails — bas de page : ce qui est atteignable (invariant D21)'
 });
 
 describe('EventDetails — bas de page : etat LIVRE avant D21 (caracterisation)', () => {
-  test('la cotisation est un bouton DE PAGE, visible sans ouvrir le menu', () => {
-    const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
-
-    expect(pressableWithText(root, 'Préparer la campagne de cotisation')).toBeTruthy();
-  });
-
   test('TEMOIN NEGATIF : sans suggestion et sans campagne, AUCUN geste de cotisation', () => {
     const root = asClubManager();
 
     expect(bottomActionInventory(root)).toEqual([]);
     expect(hasText(root, 'cotisation')).toBe(false);
-  });
-
-  test('« Créer une campagne de cotisation » est INJOIGNABLE : sa condition est morte', () => {
-    // Le libelle « Creer une campagne… » n'est choisi que quand
-    // `eventCampaignCreationSuggested` est faux ; or la garde du bloc rend deja
-    // `null` dans ce cas des qu'aucune campagne n'existe. Les deux seuls etats
-    // possibles rendent donc soit « Preparer… », soit la liste des campagnes.
-    const suggested = asClubManager({ params: { eventCampaignCreationSuggested: true } });
-    expect(hasText(suggested, 'Préparer la campagne de cotisation')).toBe(true);
-    expect(hasText(suggested, 'Créer une campagne de cotisation')).toBe(false);
-
-    act(() => {
-      mounted.unmount();
-    });
-    mounted = null;
-
-    const notSuggested = asClubManager();
-    expect(hasText(notSuggested, 'Créer une campagne de cotisation')).toBe(false);
   });
 
   test('le menu « Gérer l evenement » est EN FLUX, il ne flotte pas', () => {
@@ -633,17 +609,6 @@ describe('EventDetails — bas de page : etat LIVRE avant D21 (caracterisation)'
     );
   });
 
-  test('TROU CONSTATE : sur un tournoi, la cotisation n est atteignable par AUCUN chemin', () => {
-    // `renderActionButtons` sort en `null` des que l'evenement est un tournoi :
-    // le bloc cotisation n'est jamais calcule, meme suggere.
-    const root = asOrganiser({
-      event: buildEvent({ type: { name: 'Tournoi' } }),
-      params: { eventCampaignCreationSuggested: true },
-    });
-
-    expect(bottomActionInventory(root)).not.toContain('campaign');
-  });
-
   test('TROU CONSTATE : une demande « a la une » a valider efface tout le menu', () => {
     // Le pied d'ecran choisit ENTRE valider/refuser ET `renderActionButtons()` :
     // tant qu'une demande attend, l'organisateur perd modifier, compo, annuler.
@@ -659,6 +624,65 @@ describe('EventDetails — bas de page : etat LIVRE avant D21 (caracterisation)'
     });
 
     expect(hasText(root, 'Valider')).toBe(true);
+    expect(bottomActionInventory(root)).toEqual([]);
+  });
+});
+
+describe('D21 ① — la cotisation est rangee dans le menu « Gérer l evenement »', () => {
+  // ⚠️ INVERSION VOLONTAIRE de la caracterisation « la cotisation est un bouton
+  // DE PAGE » : c'est exactement la demande d'Adel — le geste quitte le bas de
+  // page pour le menu depliant, sous un nom plus court.
+  test('le geste n est plus sur la page : il faut ouvrir le menu pour l atteindre', () => {
+    const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
+
+    expect(pressableWithText(root, 'cotisation')).toBeUndefined();
+    press(root, "Gérer l'événement");
+    expect(pressableWithText(root, 'Préparer la cotisation')).toBeTruthy();
+  });
+
+  test('le nom raccourci ouvre le MEME reglage de campagne, en un seul tap', () => {
+    const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
+    press(root, "Gérer l'événement");
+    press(root, 'Préparer la cotisation');
+
+    expect(mockNavigate).toHaveBeenCalledWith('ClubStack', {
+      params: expect.objectContaining({ clubId: CLUB_ID, createNew: true, eventId: 'event-1' }),
+      screen: 'ClubLicenseCampaignSettings',
+    });
+  });
+
+  // ⚠️ INVERSION VOLONTAIRE du « TROU CONSTATE » tournoi : la chip vit dans le
+  // constructeur PARTAGE, donc la variante tournoi en herite. C'est un AJOUT,
+  // aucune action n'a ete retiree.
+  test('sur un tournoi aussi, la cotisation devient atteignable', () => {
+    const root = asOrganiser({
+      event: buildEvent({ type: { name: 'Tournoi' } }),
+      params: { eventCampaignCreationSuggested: true },
+    });
+
+    expect(bottomActionInventory(root)).toContain('campaign');
+  });
+
+  test('TEMOIN NEGATIF : campagnes deja liees, aucune chip — la liste garde la main', () => {
+    const root = asClubManager({
+      campaigns: [{
+        currency: 'EUR',
+        defaultAmountCents: 5000,
+        documentId: 'camp-1',
+        name: 'Cotisation U15',
+        status: 'draft',
+        totals: { total: 3 },
+      }],
+    });
+    openManagePanel(root);
+
+    expect(pressableWithText(root, 'Préparer la cotisation')).toBeUndefined();
+    expect(pressableWithText(root, 'Créer une autre campagne')).toBeTruthy();
+  });
+
+  test('TEMOIN NEGATIF : un simple participant ne voit aucun geste de cotisation', () => {
+    const root = mountScreen({ params: { eventCampaignCreationSuggested: true } });
+
     expect(bottomActionInventory(root)).toEqual([]);
   });
 });

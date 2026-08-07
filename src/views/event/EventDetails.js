@@ -3577,6 +3577,31 @@ function EventDetails({ navigation, route }) {
       });
     }
 
+    // D21 ① : le geste « campagne de cotisation » quitte le bas de page pour ce
+    // menu. Les conditions sont REPRISES TELLES QUELLES du bloc d'ou il vient
+    // (`renderEventLicenseCampaignActions`) : c'est un deplacement, pas un
+    // elargissement de droits.
+    // ⚠️ DEUX libelles, et c'est volontaire : « preparer » dit que l'app le
+    // SUGGERE juste apres la creation de l'evenement, « creer » dit qu'il n'y a
+    // rien et qu'on peut en faire une. Un seul mot perdrait ce sens.
+    // 📌 MESURE D21 : la seconde branche est aujourd'hui INJOIGNABLE — la garde
+    // du bloc rend `null` quand rien n'est suggere et qu'aucune campagne
+    // n'existe. Elle est conservee telle quelle : retirer une branche est une
+    // decision produit, pas une decision d'agent.
+    if (canManageEventLicenseCampaigns
+      && (eventCampaignCreationSuggested || eventLicenseCampaigns.length > 0)
+      && !eventLicenseCampaignsQuery.isLoading
+      && eventLicenseCampaigns.length === 0) {
+      chips.push({
+        icon: 'euroCircle',
+        key: 'licenseCampaign',
+        label: eventCampaignCreationSuggested
+          ? t('eventDetails.managePanel.campaignPrepare', 'Préparer la cotisation')
+          : t('eventDetails.managePanel.campaignCreate', 'Créer une cotisation'),
+        onPress: openEventLicenseCampaignSettings,
+      });
+    }
+
     if (canEdit) {
       chips.push({
         icon: 'close',
@@ -3767,9 +3792,6 @@ function EventDetails({ navigation, route }) {
     if (!eventCampaignCreationSuggested && eventLicenseCampaigns.length === 0) return null;
 
     const hasLinkedCampaigns = eventLicenseCampaigns.length > 0;
-    const createCampaignTitle = eventCampaignCreationSuggested
-      ? 'Préparer la campagne de cotisation'
-      : 'Créer une campagne de cotisation';
 
     if (eventLicenseCampaignsQuery.isLoading) {
       return (
@@ -3782,15 +3804,10 @@ function EventDetails({ navigation, route }) {
       );
     }
 
-    if (!hasLinkedCampaigns) {
-      return (
-        <Button
-          onPress={openEventLicenseCampaignSettings}
-          title={createCampaignTitle}
-          variant={eventCampaignCreationSuggested ? 'Primary' : 'Secondary'}
-        />
-      );
-    }
+    // D21 ① : le bouton de creation qui vivait ici est devenu la chip
+    // « Préparer la cotisation » du menu « Gérer l'événement ». Le geste n'a
+    // pas disparu, il a change de place — voir `buildManageChips`.
+    if (!hasLinkedCampaigns) return null;
 
     return (
       <View style={[Spaces.gap[12], Spaces.paddingTop[4]]}>
