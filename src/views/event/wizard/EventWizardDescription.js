@@ -17,10 +17,8 @@ import {
 } from './eventWizardDetectionUtils';
 
 /**
- *
- * @param root0
- * @param root0.navigation
- * @param root0.route
+ * @param {{ navigation: any, route: any }} props Proprietes d'ecran.
+ * @returns {import('react').ReactElement} L'etape rendue.
  */
 function EventWizardDescription({ navigation, route }) {
   const {

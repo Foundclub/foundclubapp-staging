@@ -39,8 +39,8 @@ const normalizeSlots = (slots = []) => (
 );
 
 /**
- * @param {{ navigation: any, route: any }} props
- * @returns {import('react').ReactElement}
+ * @param {{ navigation: any, route: any }} props Proprietes d'ecran.
+ * @returns {import('react').ReactElement} L'etape rendue.
  */
 function EventWizardDetectionSlots({ navigation, route }) {
   const {

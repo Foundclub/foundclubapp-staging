@@ -109,6 +109,10 @@ const serializeStageSchedule = (stageDays = []) => stageDays.map((day) => ({
   startTime: new Date(day.startTime),
 }));
 
+/**
+ * @param {{ navigation: any, route: any }} props Proprietes d'ecran.
+ * @returns {import('react').ReactElement} L'etape rendue.
+ */
 function EventWizardStageProgram({ navigation, route }) {
   const {
     Alignments,

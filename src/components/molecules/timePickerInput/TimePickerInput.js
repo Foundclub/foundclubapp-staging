@@ -19,6 +19,7 @@ import useTheme from '@/theme/themeContext';
  * selection) ET etiree sur toute la largeur de la feuille, alors que ses
  * colonnes gardent leur largeur propre. On rend la main a la mesure native —
  * c'est une SUPPRESSION de contrainte, pas un reglage a la main.
+ * @type {import('react-native').ViewStyle}
  */
 const ROUE_NATIVE_STYLE = { alignSelf: 'center' };
 
