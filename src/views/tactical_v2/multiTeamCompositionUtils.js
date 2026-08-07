@@ -414,4 +414,36 @@ export const inferIsMultiTeamComposition = (params = {}) => {
   );
 };
 
+// D27 — quel board de composition ouvrir.
+//
+// inferIsMultiTeamComposition ci-dessus ne reconnait QUE des compositions qui
+// existent deja au format v3. Une composition NEUVE n'a aucun de ces marqueurs
+// et tombait donc toujours sur l'ancien board, alors que le nouveau sait partir
+// de rien : normalizeMultiTeamPack(null) rend un pack v3 a une seule equipe.
+//
+// On AJOUTE un chemin, on n'en ferme aucun : les portes existantes sont
+// interrogees en premier et gardent la main.
+//
+// Les deux exclusions sont mesurees, pas supposees :
+//
+// 1. `team-default` (la composition par defaut d'une equipe, hors evenement).
+//    Le nouveau board ne connait pas ce mode : ses deux boutons d'enregistrement
+//    commencent par `if (readOnly || !eventId || !teamId) return;`, donc sans
+//    evenement ils ne font RIEN, en silence. Cote serveur, la composition par
+//    defaut est de toute facon forcee a `schemaVersion: 1` et son tableau
+//    `teams` est jete (admin, team.ts, normalizeDefaultCompositionPayload).
+//    L'y envoyer donnerait un board qui ne sait pas sauvegarder.
+//
+// 2. La consultation en lecture seule, qui affiche des compositions deja
+//    publiees. Ce lot rend le nouveau board atteignable pour celui qui COMPOSE ;
+//    il ne redessine pas ce que voit un joueur.
+export const shouldOpenMultiTeamBoard = (params = {}) => {
+  if (inferIsMultiTeamComposition(params)) return true;
+  if (params?.readOnly) return false;
+  if (params?.editorMode === 'team-default') return false;
+
+  // Le nouveau board a besoin des deux identifiants pour enregistrer.
+  return Boolean(params?.eventId && params?.teamId);
+};
+
 export { MAX_COMPOSITION_TEAMS };

@@ -4,6 +4,7 @@ import {
   getReservePlayersForPack,
   inferIsMultiTeamComposition,
   normalizeMultiTeamPack,
+  shouldOpenMultiTeamBoard,
 } from './multiTeamCompositionUtils';
 
 describe('multiTeamCompositionUtils', () => {
@@ -164,6 +165,85 @@ describe('multiTeamCompositionUtils', () => {
       existingComposition: {
         placements: [],
       },
+    })).toBe(false);
+  });
+
+  // D27 — le nom "multiTeam" laissait croire que ce board ne savait faire que du
+  // multi-equipes. Ces trois tests prouvent le contraire AVANT qu'on y envoie
+  // les compositions neuves : parti de rien, il rend UNE equipe jouable.
+  test('a partir de RIEN, le pack rendu a exactement une equipe', () => {
+    const pack = normalizeMultiTeamPack(null, {
+      availablePresets: presets,
+      sportContext: 'football',
+    });
+
+    expect(pack.schemaVersion).toBe(3);
+    expect(pack.teams).toHaveLength(1);
+    expect(pack.teams[0].placements).toEqual([]);
+  });
+
+  test('a partir de rien, l\'equipe porte les postes de la formation', () => {
+    const pack = normalizeMultiTeamPack(undefined, {
+      availablePresets: presets,
+      sportContext: 'football',
+    });
+
+    expect(pack.teams[0].presetKey).toBe('4-4-2');
+    expect(pack.teams[0].slots).toHaveLength(2);
+    expect(pack.teams[0].slots[0].slotId).toBe('team_1:gk');
+  });
+
+  test('sans aucune formation connue, il rend quand meme une equipe', () => {
+    const pack = normalizeMultiTeamPack(null, {
+      availablePresets: [],
+      sportContext: null,
+    });
+
+    expect(pack.teams).toHaveLength(1);
+    expect(pack.teams[0].slots).toEqual([]);
+  });
+});
+
+describe('shouldOpenMultiTeamBoard', () => {
+  // D27 — l'aiguillage lui-meme est teste a l'ecran dans
+  // TacticalBoardEntry.test.js. Ici on ne fige que l'invariant de composition :
+  // le nouveau predicat n'a le droit de dire que OUI la ou l'ancien disait OUI.
+  const casQuiDisaientOui = [
+    { aggregateBranches: [{}] },
+    { multiTeamComposition: true },
+    { existingComposition: { schemaVersion: 3 } },
+    { existingComposition: { teams: [] } },
+    { existingComposition: { reservePlayerIds: [] } },
+    { teamComposition: { draft: { teams: [] } } },
+    { teamComposition: { published: { teams: [] } } },
+  ];
+
+  test('aucune porte existante ne se referme', () => {
+    casQuiDisaientOui.forEach((params) => {
+      expect(inferIsMultiTeamComposition(params)).toBe(true);
+      expect(shouldOpenMultiTeamBoard(params)).toBe(true);
+    });
+  });
+
+  test('les memes portes tiennent aussi en lecture seule', () => {
+    casQuiDisaientOui.forEach((params) => {
+      expect(shouldOpenMultiTeamBoard({ ...params, readOnly: true })).toBe(true);
+    });
+  });
+
+  test('une composition neuve d\'evenement ouvre le nouveau board', () => {
+    expect(shouldOpenMultiTeamBoard({
+      editorMode: 'event',
+      eventId: 'event-1',
+      teamId: 'team-1',
+    })).toBe(true);
+  });
+
+  test('le mode team-default ne bascule jamais', () => {
+    expect(shouldOpenMultiTeamBoard({
+      editorMode: 'team-default',
+      eventId: 'event-1',
+      teamId: 'team-1',
     })).toBe(false);
   });
 });
