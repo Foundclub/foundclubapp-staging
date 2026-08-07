@@ -9,24 +9,71 @@
  *     déclenchent le partage natif (réutilise SharePlatform).
  *
  * Réutilise les patterns EXISTANTS de l'app :
- *   - `@/services/client` (axios, Authorization auto)  — pour le rendu base64 léger
  *   - `react-native-blob-util` (déjà utilisé par eventService) pour écrire le fichier
  *   - `@/platform/share` pour le partage natif
- *   - `@/services/event/eventService` (getEventById) pour alimenter ShareEventModal
+ *
+ * D20 (2026-08-07) : la requête `/events/:id` a été retirée. Elle n'alimentait que
+ * `ShareEventModal`, qui a quitté cet écran — le geste « envoyer dans une
+ * conversation » vit sur EventDetails, qui charge l'événement lui-même.
+ * ⇒ une requête réseau de moins au montage, au moment précis où l'écran fabrique
+ * son affiche et où la bande passante est la ressource rare.
  *
  * NOTE : les imports `@/...` sont résolus dans app/. Fichier non exécuté ici (câblage app).
  */
 
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
-import client from '@/services/client';
 
 import { createLogger } from '@/utils/logger/logger';
 
 import { downloadAndShareRender, fetchRenderBase64 } from '@/platform/visualRender';
 
 const logger = createLogger('visual-showcase');
+
+/**
+ * D20 (⑥) — POURQUOI UN CACHE D'APERÇU, avec les chiffres qui l'ont décidé.
+ *
+ * Une affiche n'est pas un dessin local : le serveur ouvre une page Chromium sans
+ * écran, y charge le gabarit, et en fait une capture 2160 × 2700. Mesuré le
+ * 2026-08-07 en rejouant `admin/src/api/visual-asset/services/visual-renderer.ts`
+ * (format post 4:5, Chromium déjà chaud) : composer le HTML 3-5 ms · ouvrir la
+ * page 40-95 ms · charger la page 990 ms · **la capture 540 à 1 300 ms** ⇒
+ * **1,6 à 2,3 s par affiche**, pour **0,5 à 1,7 Mo** à rapatrier ensuite.
+ *
+ * Sans cache, revenir sur un style DÉJÀ AFFICHÉ repayait tout : l'aller-retour
+ * réseau et le mégaoctet. Le serveur, lui, a bien un cache (X-Visual-Cache) —
+ * il évite le Chromium, pas le transport.
+ *
+ * ⚠️ Une entrée PÈSE ce que pèse l'image (0,5 à 1,7 Mo de base64 en mémoire) :
+ * le cache est donc borné à 3 entrées, soit l'aller-retour entre deux styles
+ * plus celui d'origine. Au-delà, la plus ancienne est libérée.
+ */
+const PREVIEW_CACHE_MAX = 3;
+
+/**
+ * Tout ce qui change l'image, et rien d'autre. Les clés des surcharges sont
+ * triées : deux mêmes textes saisis dans un ordre différent doivent donner la
+ * MÊME clé, sinon le cache raterait sans raison.
+ * @param {object} params
+ * @param {string} params.format
+ * @param {Record<string, string>} [params.overrides]
+ * @param {string|number} params.subjectId
+ * @param {string} params.subjectType
+ * @param {string} params.template
+ * @param {string} [params.variant]
+ * @returns {string}
+ */
+const renderKey = ({
+  format, overrides, subjectId, subjectType, template, variant,
+}) => JSON.stringify([
+  subjectType,
+  subjectId,
+  template,
+  variant,
+  format,
+  Object.keys(overrides || {}).sort().map((key) => [key, overrides[key]]),
+]);
 
 // Référence vide partagée pour l'état initial des surcharges : `overrides` et son miroir
 // temporisé démarrent sur le MÊME objet, si bien que le premier tick du debounce appelle
@@ -263,13 +310,11 @@ export const SHOWCASE_TEMPLATES = {
  *   subjectType?: string,
  *   subjectId?: string|number,
  *   eventId?: string|number,
- *   event?: object,
  *   template?: string,
  *   variants?: Array<{ key: string, label: string }>,
  * }} params
  */
 export default function useVisualShowcase({
-  event: initialEvent,
   eventId,
   subjectId,
   subjectType = 'event',
@@ -287,7 +332,9 @@ export default function useVisualShowcase({
   const [previewUri, setPreviewUri] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [event, setEvent] = useState(initialEvent || null);
+  // Aperçus déjà fabriqués, du plus ancien au plus récent (Map = ordre d'insertion).
+  // Vit avec l'écran : quitter l'écran libère la mémoire, sans code de nettoyage.
+  const previewCache = useRef(new Map());
   // Style (variante design) choisi par l'utilisateur — première variante du gabarit.
   const [variant, setVariant] = useState((variantCatalog[0] || {}).key);
   // Surcharges texte de l'atelier éditeur (édition libre des champs de l'affiche).
@@ -325,37 +372,56 @@ export default function useVisualShowcase({
   useEffect(() => {
     let cancelled = false;
     if (!resolvedSubjectId) return undefined;
-    setIsLoading(true);
-    fetchRenderBase64({
+    const params = {
       format: previewFormat,
       overrides: cleanOverrides(debouncedOverrides),
       template,
       variant,
       ...subject,
-    })
+    };
+    const key = renderKey(params);
+
+    // Déjà fabriqué : on le remontre tel quel — aucun octet, aucune attente.
+    const known = previewCache.current.get(key);
+    if (known) {
+      // Réinsérer = « vu à l'instant » : c'est ce qui décide qui sera libéré.
+      previewCache.current.delete(key);
+      previewCache.current.set(key, known);
+      setPreviewUri(known);
+      setError(null);
+      setIsLoading(false);
+      logger.info(`aperçu ${variant}/${previewFormat} servi du cache — 0 ms, 0 octet`);
+      return undefined;
+    }
+
+    setIsLoading(true);
+    const startedAt = Date.now();
+    fetchRenderBase64(params)
       .then(({ base64, contentType }) => {
         if (cancelled) return;
-        setPreviewUri(`data:${contentType};base64,${base64}`);
+        const uri = `data:${contentType};base64,${base64}`;
+        previewCache.current.set(key, uri);
+        while (previewCache.current.size > PREVIEW_CACHE_MAX) {
+          previewCache.current.delete(previewCache.current.keys().next().value);
+        }
+        setPreviewUri(uri);
         setError(null);
+        // Instrumentation D20 (⑥). Muette en production : `logger.info` n'écrit
+        // que sous __DEV__ + APP_ENV=local (utils/logger/logger.js). C'est ce qui
+        // donnera des millisecondes RÉELLES de téléphone, réseau compris.
+        logger.info(
+          `aperçu ${variant}/${previewFormat} fabriqué en ${Date.now() - startedAt} ms `
+          + `— ${Math.round(base64.length / 1024)} Ko de base64`,
+        );
       })
       .catch((e) => {
         if (cancelled) return;
-        logger.warn(`aperçu showcase échoué: ${e?.message}`);
+        logger.warn(`aperçu showcase échoué après ${Date.now() - startedAt} ms: ${e?.message}`);
         setError(e);
       })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
   }, [resolvedSubjectId, subject, variant, debouncedOverrides, retryToken, template, previewFormat]);
-
-  // Charge l'événement pour ShareEventModal (sujet 'event' uniquement) si non fourni.
-  useEffect(() => {
-    let cancelled = false;
-    if (subjectType !== 'event' || initialEvent || !resolvedSubjectId) return undefined;
-    client.get(`/events/${resolvedSubjectId}`)
-      .then((res) => { if (!cancelled) setEvent(res?.data?.data || res?.data || null); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [subjectType, resolvedSubjectId, initialEvent]);
 
   const shareFile = useCallback(async ({
     dialogTitle, format, message, template: tpl, variant: v,
@@ -409,7 +475,6 @@ export default function useVisualShowcase({
     downloadPoster,
     downloadStory,
     error,
-    event,
     isLoading,
     overrides,
     previewUri,

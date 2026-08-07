@@ -363,15 +363,21 @@ describe('D20 — ⑦ l ecran propose TROIS gestes, dans l ordre voulu par Adel'
   });
 });
 
-describe('D20 filet — ⑥ ce que coute une fabrication d affiche', () => {
-  it('AVANT : le montage declenche 1 rendu serveur ET 1 requete evenement', async () => {
+describe('D20 — ⑥ ce que coute une fabrication d affiche', () => {
+  // INVERSE le 2026-08-07. AVANT : le montage lancait AUSSI GET /events/:id, dont
+  // le seul client etait ShareEventModal — parti de cet ecran (⑦). Une requete
+  // reseau de moins, au moment ou l'ecran fabrique son affiche.
+  it('le montage ne declenche plus QU UN seul appel : le rendu de l affiche', async () => {
     await renderScreen(eventParams());
     expect(mockFetchRenderBase64).toHaveBeenCalledTimes(1);
-    // La 2e requete n'alimente QUE ShareEventModal (le geste impasse ci-dessus).
-    expect(mockClientGet).toHaveBeenCalledWith('/events/evt-1');
+    expect(mockClientGet).not.toHaveBeenCalled();
   });
 
-  it('AVANT : revenir a un style DEJA VU le refabrique — aucun cache', async () => {
+  // INVERSE le 2026-08-07. AVANT : 3 rendus pour 2 affiches distinctes. Mesure du
+  // jour (rejeu de visual-renderer.ts, format post 4:5, Chromium chaud) : une
+  // affiche coute 1,6 a 2,3 s de Chromium et 0,5 a 1,7 Mo a rapatrier. Le 3e
+  // aller-retour repayait donc ~2 s et ~1 Mo pour une image deja a l'ecran.
+  it('revenir a un style DEJA VU ne refabrique rien', async () => {
     const tree = await renderScreen(clubParams());
     expect(mockFetchRenderBase64).toHaveBeenCalledTimes(1); // ecusson
     const chips = findVariantChips(tree);
@@ -379,19 +385,54 @@ describe('D20 filet — ⑥ ce que coute une fabrication d affiche', () => {
     // `findAll` rend le composite ET son hote pour chaque puce : le dernier noeud
     // est la derniere variante (famille), le premier est la premiere (ecusson).
     await act(async () => { chips[chips.length - 1].props.onPress(); }); // -> famille
-    await act(async () => { chips[0].props.onPress(); }); // <- retour a ecusson
+    expect(mockFetchRenderBase64).toHaveBeenCalledTimes(2);
 
-    // 3 rendus pour 2 affiches distinctes : le retour au style deja affiche
-    // repaie un aller-retour serveur complet.
-    expect(mockFetchRenderBase64).toHaveBeenCalledTimes(3);
+    await act(async () => { chips[0].props.onPress(); }); // <- retour a ecusson
+    expect(mockFetchRenderBase64).toHaveBeenCalledTimes(2);
   });
 
-  it('AVANT : enregistrer le format DEJA affiche relance un rendu complet', async () => {
+  it('le style repris depuis le cache est REMONTRE, pas efface', async () => {
     const tree = await renderScreen(clubParams());
-    expect(mockFetchRenderBase64).toHaveBeenCalledTimes(1);
+    const chips = findVariantChips(tree);
+    await act(async () => { chips[chips.length - 1].props.onPress(); });
+    await act(async () => { chips[0].props.onPress(); });
+    // L'image est la, tout de suite : ni squelette, ni voile d'attente.
+    expect(tree.root.findAllByType(Image).length).toBe(1);
+    expect(tree.root.findAllByProps({ testID: 'showcase-skeleton' }).length).toBe(0);
+    expect(tree.root.findAllByProps({ testID: 'showcase-preview-veil' }).length).toBe(0);
+  });
+
+  // Le cache ne doit JAMAIS montrer la mauvaise affiche : un texte modifie change
+  // l'image, donc change la cle.
+  it('modifier un texte refabrique l affiche (le cache ne ment pas)', async () => {
+    jest.useFakeTimers();
+    try {
+      const tree = await renderScreen(clubParams());
+      expect(mockFetchRenderBase64).toHaveBeenCalledTimes(1);
+      await press(tree, 'Personnaliser le texte'); // l'atelier de textes est replie
+      const champ = tree.root.findAll(
+        (/** @type {any} */ node) => node.props && typeof node.props.onChangeText === 'function',
+      )[0];
+      await act(async () => { champ.props.onChangeText('Ici, on gagne'); });
+      // Les surcharges sont temporisees (400 ms) avant de relancer un rendu.
+      await act(async () => { jest.advanceTimersByTime(500); });
+      expect(mockFetchRenderBase64).toHaveBeenLastCalledWith(expect.objectContaining({
+        overrides: { titre: 'Ici, on gagne' },
+      }));
+      expect(mockFetchRenderBase64).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  // NON CORRIGE, et c'est volontaire : `downloadAndShareRender` refait
+  // `fetchRenderBase64` en interne (visualRender.native.js l.86) avec les MEMES
+  // parametres que l'apercu deja affiche. Le corriger demande de changer la
+  // signature de la couche plateforme — hors du perimetre de ce lot. Ce test
+  // FIGE le fait que ce 2e aller-retour existe encore, pour qu'il ne se perde pas.
+  it('CONNU : enregistrer le format deja affiche repaie un aller-retour', async () => {
+    const tree = await renderScreen(clubParams());
     await press(tree, 'Partager l’affiche');
-    // `downloadAndShareRender` refait `fetchRenderBase64` avec les MEMES
-    // parametres que l'apercu deja affiche (visualRender.native.js l.86).
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       format: 'post', template: 'affiche-club', variant: 'ecusson',
     }));
