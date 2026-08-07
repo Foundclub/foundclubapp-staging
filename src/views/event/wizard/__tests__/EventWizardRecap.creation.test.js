@@ -1,6 +1,8 @@
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
+import { getEventShowcaseTemplate } from '@/domains/visuals/eventShowcaseTemplate';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 import { EventWizardProvider, useEventWizard } from '../EventWizardContext';
@@ -252,6 +254,21 @@ describe('D19 — le cout de « Creer », mesure en millisecondes', () => {
       RouteNames.EventDetails,
       RouteNames.EventPublishedShowcase,
     ]);
+  });
+
+  // D28 — l'ecran d'affiche ne recoit plus SEULEMENT un identifiant. Avant ce
+  // lot, aucun appelant du monde evenement ne passait `template` : l'ecran
+  // retombait sur `params.template || 'affiche-detection'` et TOUS les types —
+  // match, entrainement, tournoi, stage — heritaient de l'affiche de detection
+  // sans que personne ne l'ait decide. Le gabarit voyage desormais avec
+  // l'evenement publie, decide par son TYPE (ici « Detection »).
+  test('D28 — le gabarit d affiche voyage, decide par le type publie', async () => {
+    const { reset } = await chronometrerLaCreation();
+
+    const ecranAffiche = reset[0].routes
+      .find((/** @type {any} */ route) => route.name === RouteNames.EventPublishedShowcase);
+    expect(ecranAffiche.params.template).toBe(getEventShowcaseTemplate('Detection'));
+    expect(ecranAffiche.params.eventId).toBeTruthy();
   });
 
   test('les six caches sont rafraichis, aucun n est perdu en route', async () => {

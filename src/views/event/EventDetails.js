@@ -31,6 +31,7 @@ import {
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
 import { getSubscriptionQuotaItem } from '@/domains/subscription/subscriptionDecision';
+import { getEventShowcaseTemplate } from '@/domains/visuals/eventShowcaseTemplate';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -2047,10 +2048,17 @@ function EventDetails({ navigation, route }) {
   // plus rien n'y ramenait. On rouvre EXACTEMENT le meme chemin : meme route,
   // meme parametre `eventId`. Seule la celebration de creation est omise —
   // rejouer des confettis sur une simple consultation serait un mensonge.
+  // D28 : le gabarit voyage en PARAMETRE, decide par le TYPE de l'evenement.
+  // Sans lui, l'ecran retombait sur `params.template || 'affiche-detection'` :
+  // un match rouvert d'ici recevait l'affiche de detection par accident, pas par
+  // choix. Le type est deja charge ici (`event.type.name`), aucun appel de plus.
   const handleOpenEventPoster = useCallback(() => {
     if (!eventId) return;
-    navigation.navigate(RouteNames.EventPublishedShowcase, { eventId });
-  }, [eventId, navigation]);
+    navigation.navigate(RouteNames.EventPublishedShowcase, {
+      eventId,
+      template: getEventShowcaseTemplate(event?.type?.name),
+    });
+  }, [event?.type?.name, eventId, navigation]);
 
   // @ts-ignore: FIXME: Baseline TS regression
   const handleRespondTournamentPresence = useCallback((status) => {

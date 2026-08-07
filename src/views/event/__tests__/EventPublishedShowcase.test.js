@@ -3,6 +3,12 @@ import {
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import {
+  EVENT_SHOWCASE_FALLBACK_TEMPLATE,
+  getEventShowcaseTemplate,
+} from '@/domains/visuals/eventShowcaseTemplate';
+import { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEventShowcase';
+
 import EventPublishedShowcase from '../EventPublishedShowcase';
 
 // L16 (E6) : EventPublishedShowcase.js n'avait AUCUN test. Ce fichier caracterise
@@ -20,6 +26,12 @@ const mockClientGet = jest.fn();
 const mockSkeletonProps = [];
 
 jest.mock('react-i18next', () => ({
+  // 💥 D28 : ce double ne rendait QUE `useTranslation`. Des que le fichier a
+  // importe le resolveur de gabarit — qui tire `is*EventType` du domaine
+  // evenement, lequel tire `@/theme/strings` — le vrai i18n s'est initialise et
+  // a reclame `initReactI18next` : « You are passing an undefined module ».
+  // Suite MORTE, sur du code parfaitement sain. Le greffon minimal suffit.
+  initReactI18next: { init: () => {}, type: '3rdParty' },
   useTranslation: () => ({
     // i18next rend le 2e argument chaine comme defaultValue et interpole {{x}} :
     // le mock fait pareil, sinon les libelles a11y porteraient « {{label}} ».
@@ -768,5 +780,78 @@ describe('EventPublishedShowcase — L20, TEMOIN POSITIF : iOS et web ne changen
     const text = renderedText(tree);
     expect(text).not.toContain('C’est enregistré');
     expect(text).not.toContain('Le téléchargement a échoué');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// D28 — LE TEMOIN D'ARRET : CHAQUE type d'evenement obtient une affiche, et on
+// SAIT laquelle. C'est ce bloc qui empechera le prochain type d'arriver avec
+// l'affiche d'un autre : ajouter un type au serveur sans l'ajouter ici laisse
+// le trou visible, et brancher un gabarit neuf sans le declarer au catalogue
+// devient rouge immediatement.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('D28 — chaque type d evenement obtient une affiche, et on sait laquelle', () => {
+  // Les 7 types servis par le serveur, mot pour mot (admin/src/data/event-types.json,
+  // lu le 2026-08-07). Les accents comptent : c'est ce que l'app recoit.
+  const TYPES_SERVEUR = [
+    "Détection / Séance d'essai",
+    'Entraînement',
+    'Stage',
+    'Tournoi',
+    'Match',
+    'Autre',
+    'Réservation',
+  ];
+
+  it.each(TYPES_SERVEUR)('« %s » : une affiche est generee, et son gabarit existe', async (
+    /** @type {string} */ typeName,
+  ) => {
+    const template = getEventShowcaseTemplate(typeName);
+
+    // ① Le gabarit choisi est CONNU de l'ecran. Un slug invente (ou une faute de
+    // frappe) retomberait en silence sur le repli dans EventPublishedShowcase :
+    // ici, il echoue.
+    expect(Object.keys(SHOWCASE_TEMPLATES)).toContain(template);
+
+    // ② Une affiche est REELLEMENT demandee au serveur, avec CE gabarit — pas
+    // avec celui qu'un repli aurait choisi a la place.
+    await renderScreen(eventParams({ template }));
+    expect(mockFetchRenderBase64).toHaveBeenCalledWith(expect.objectContaining({
+      format: 'post',
+      subjectId: 'evt-1',
+      subjectType: 'event',
+      template,
+    }));
+  });
+
+  // L'ETAT DU JOUR, ecrit noir sur blanc : un seul gabarit de sujet `event`
+  // existe. Ce test n'est pas un doublon du precedent — il FIGE le manque, pour
+  // que le jour ou le studio livre une affiche « match », son absence de
+  // branchement se voie ici plutot qu'a la recette.
+  it('AUJOURD HUI : la detection le demande, les 6 autres tombent sur le repli', () => {
+    expect(getEventShowcaseTemplate("Détection / Séance d'essai")).toBe('affiche-detection');
+    ['Entraînement', 'Stage', 'Tournoi', 'Match', 'Autre', 'Réservation'].forEach((typeName) => {
+      expect(getEventShowcaseTemplate(typeName)).toBe(EVENT_SHOWCASE_FALLBACK_TEMPLATE);
+    });
+  });
+
+  // ⛔ NE JAMAIS CASSER LA GENERATION : un type absent, vide, ou servi demain
+  // sous un nom que personne n'a prevu garde une affiche.
+  it('un type inconnu, vide ou absent garde une affiche (jamais d ecran vide)', () => {
+    [undefined, null, '', '   ', 'Barbecue du club'].forEach((typeName) => {
+      const template = getEventShowcaseTemplate(/** @type {any} */ (typeName));
+      expect(Object.keys(SHOWCASE_TEMPLATES)).toContain(template);
+    });
+  });
+
+  // Le TITRE est libre : « on cherche des joueurs pour la detection » saisi comme
+  // nom de match ne doit pas faire basculer de gabarit. Le type seul decide.
+  it('le gabarit se decide sur le TYPE, jamais sur le titre saisi', async () => {
+    const template = getEventShowcaseTemplate('Match');
+    await renderScreen(eventParams({
+      template,
+      titleText: 'Détection ouverte — viens montrer ce que tu vaux',
+    }));
+    expect(mockFetchRenderBase64).toHaveBeenCalledWith(expect.objectContaining({ template }));
   });
 });

@@ -280,6 +280,8 @@ jest.mock(
 /* eslint-enable global-require */
 
 // eslint-disable-next-line import/first
+import { getEventShowcaseTemplate } from '@/domains/visuals/eventShowcaseTemplate';
+// eslint-disable-next-line import/first
 import EventDetails from '../EventDetails';
 
 jest.setTimeout(30000);
@@ -916,12 +918,35 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
   // ⚠️ INVERSION VOLONTAIRE du « TEMOIN NEGATIF : aucun chemin vers l affiche » :
   // c'est la demande d'Adel. L'affiche existait deja, elle n'etait atteignable
   // que juste apres la creation (`navigation.reset` du recap du tunnel).
-  test('l affiche redevient atteignable, par la route EXISTANTE et son eventId', () => {
+  // ⚠️ MIS A JOUR le 2026-08-07 (D28), et le filet a fait exactement son travail :
+  // il est devenu ROUGE au moment ou l'ecran s'est mis a passer le gabarit.
+  // AVANT : `{ eventId }` seul — l'ecran d'affiche retombait alors sur son repli
+  // `params.template || 'affiche-detection'`, si bien que CET evenement (un
+  // « Entrainement », cf. buildEvent) recevait l'affiche de detection par
+  // ACCIDENT. Il la recoit toujours — c'est le repli assume tant qu'aucun
+  // gabarit d'entrainement n'existe — mais la valeur est desormais DECIDEE et
+  // elle voyage. Le resolveur est importe et non recopie : les deux ne peuvent
+  // pas diverger.
+  test('l affiche redevient atteignable, avec son eventId ET son gabarit', () => {
     const root = asOrganiser();
     press(root, "Gérer l'événement");
     press(root, "Voir l'affiche");
 
-    expect(mockNavigate).toHaveBeenCalledWith('EventPublishedShowcase', { eventId: 'event-1' });
+    expect(mockNavigate).toHaveBeenCalledWith('EventPublishedShowcase', {
+      eventId: 'event-1',
+      template: getEventShowcaseTemplate('Entrainement'),
+    });
+  });
+
+  // D28 — le gabarit suit le TYPE de l'evenement ouvert, pas une constante.
+  test('le gabarit passe est celui que le type de l evenement decide', () => {
+    const root = asOrganiser({ event: buildEvent({ type: { name: "Détection / Séance d'essai" } }) });
+    press(root, "Gérer l'événement");
+    press(root, "Voir l'affiche");
+
+    const [, params] = mockNavigate.mock.calls
+      .find((/** @type {any} */ call) => call[0] === 'EventPublishedShowcase');
+    expect(params.template).toBe(getEventShowcaseTemplate("Détection / Séance d'essai"));
   });
 
   test('aucune celebration rejouee : on consulte, on ne re-publie pas', () => {

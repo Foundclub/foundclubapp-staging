@@ -22,6 +22,7 @@ import {
   extractSubscriptionDecisionFromError,
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
+import { getEventShowcaseTemplate } from '@/domains/visuals/eventShowcaseTemplate';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -750,7 +751,15 @@ function EventWizardRecap({ navigation }) {
           },
         }, {
           name: RouteNames.EventPublishedShowcase,
-          params: { creationCelebration, eventId: firstCreatedId },
+          // D28 : le gabarit voyage avec l'evenement qu'on vient de publier.
+          // `state` est celui de la fermeture de rendu — le `dispatch RESET`
+          // ci-dessus vide le tunnel pour la PROCHAINE creation, il ne change
+          // pas cette valeur-ci.
+          params: {
+            creationCelebration,
+            eventId: firstCreatedId,
+            template: getEventShowcaseTemplate(state.type?.name),
+          },
         }],
       });
       if (firstCreatedItem) {
