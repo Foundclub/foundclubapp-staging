@@ -85,6 +85,50 @@ const delay = (durationMs) => new Promise((resolve) => {
   setTimeout(resolve, durationMs);
 });
 
+/**
+ * Les six caches devenus faux des qu'un evenement est cree.
+ * @type {string[][]}
+ */
+const CACHES_A_RAFRAICHIR = [
+  ['events'],
+  // Prefixe large : couvre ['planning','personal'] mais aussi les vues
+  // fullscreen, club et CM qui n'etaient jamais invalidees (planning perime
+  // pendant ~60 s).
+  ['planning'],
+  ['club-planning'],
+  ['pending-featured-requests'],
+  ['app-bootstrap'],
+  ['get-me'],
+];
+
+/**
+ * Rafraichit les six caches SANS retenir l'ecran.
+ *
+ * 🧨 Defaut trouve a la recette du 2026-08-07 — « appuyer sur Creer met un peu
+ * de temps ». Ce n'etait pas la creation : elle part deja a trois de front et
+ * montre sa progression. C'etait CECI, juste apres, en file indienne :
+ * six `await queryClient.invalidateQueries(...)` a la suite, chacun attendant
+ * la refetch de ses requetes actives avant de lancer le suivant. Pendant ces
+ * six allers-retours, l'ecran reste fige sur « c'est cree » sans rien montrer.
+ *
+ * Mesure du 07/08, avec chaque aller-retour double par 30 ms exactement :
+ * 235 ms entre l'appui et le changement d'ecran, dont 30 ms de creation reelle
+ * ⇒ 205 ms d'attente pure, et 157 ms rien qu'entre le depart de la premiere
+ * invalidation et celui de la derniere. Sur un reseau reel (150 a 300 ms par
+ * aller-retour), la meme file indienne coute entre 0,9 et 1,8 seconde.
+ *
+ * ⚠️ Ne pas attendre ne perd RIEN, et ce n'est pas un pari : `invalidateQueries`
+ * marque les requetes perimees de facon SYNCHRONE — seule la refetch est
+ * asynchrone. Et le `queryClient` est un singleton, il survit au demontage de
+ * cet ecran : la refetch se termine meme apres le changement de vue.
+ * @param {any} queryClient Le client de cache de l'application.
+ */
+const refreshCachesAfterEventCreation = (queryClient) => {
+  Promise.all(
+    CACHES_A_RAFRAICHIR.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+  ).catch(() => {});
+};
+
 const getCreatedEventSnapshot = (createdItem) => {
   if (createdItem?.response?.data?.documentId) {
     return createdItem.response.data;
@@ -648,14 +692,9 @@ function EventWizardRecap({ navigation }) {
       }
       : null;
     const featuredFailures = await requestFeaturedForCreatedEvents(created);
-    await queryClient.invalidateQueries({ queryKey: ['events'] });
-    // Prefixe large : couvre ['planning','personal'] mais aussi les vues fullscreen,
-    // club et CM qui n'etaient jamais invalidees (planning perime pendant ~60s).
-    await queryClient.invalidateQueries({ queryKey: ['planning'] });
-    await queryClient.invalidateQueries({ queryKey: ['club-planning'] });
-    await queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
-    await queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
-    await queryClient.invalidateQueries({ queryKey: ['get-me'] });
+    // Lance les six d'un coup et n'attend rien : voir le pourquoi chiffre sur
+    // `refreshCachesAfterEventCreation`.
+    refreshCachesAfterEventCreation(queryClient);
 
     const firstCreatedItem = created.find((item) => item.documentId === firstCreatedId) || null;
     const celebrationPayload = {
