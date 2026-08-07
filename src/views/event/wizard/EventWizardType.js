@@ -149,8 +149,16 @@ function EventWizardType({ navigation, route }) {
   // /friendly-matches/wizard/team), et `buildWebPath` deplie deja `{ screen }`
   // pour retomber dessus (`webRoutes.js:271`). Poser le garde-fou sur le
   // conteneur refuserait donc une destination qui existe sur le site.
+  //
+  // D24 — `entryOrigin` dit au tunnel amical QUI lui a ouvert la porte. Sans
+  // lui, publier l'annonce effacait bien le tunnel amical, mais laissait
+  // `EventStack` dessous, arrete sur CET ecran : le premier « Retour » depuis
+  // le detail de l'annonce retombait donc dans le tunnel Evenement (defaut ⑤
+  // de la recette du 2026-08-07). L'information VOYAGE, elle ne se devine pas
+  // en fouillant la pile — lecon L40-B.
   const handleOpenFriendlyMatchWizard = () => {
     navigation.navigate(RouteNames.FriendlyMatchWizardStack, {
+      params: { entryOrigin: RouteNames.EventStack },
       screen: RouteNames.FriendlyMatchWizardTeam,
     });
   };

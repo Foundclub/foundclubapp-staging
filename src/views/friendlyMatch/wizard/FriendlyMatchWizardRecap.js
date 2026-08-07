@@ -30,6 +30,22 @@ import {
 
 const logger = createLogger('friendly-match-wizard');
 
+/**
+ * Les tunnels qui ont le droit d ouvrir la porte du tunnel amical, et donc
+ * d etre effaces avec lui au moment de publier (defaut ⑤, recette du
+ * 2026-08-07).
+ *
+ * C est une LISTE FERMEE pour la meme raison que `RESUME_ROOT_ROUTES` dans
+ * SubscriptionSuccess : le nom doit etre une route du navigateur RACINE, seul
+ * niveau ou vit le tunnel amical. Un nom absent de cette liste est ignore —
+ * jamais d ecran invente, jamais de pile amputee au hasard.
+ *
+ * ⚠️ `popTo` sur un nom ABSENT de la pile REMPLACE l ecran courant par lui
+ * (StackRouter v7, cas `index === -1`) : filtrer n est donc pas une precaution
+ * de style, c est ce qui empeche de fabriquer un ecran qui n a jamais existe.
+ */
+const ENTRY_ORIGINS = new Set([RouteNames.EventStack]);
+
 /** Vers quel ecran renvoyer quand une etape est encore en defaut. */
 const STEP_ROUTES = {
   dates: RouteNames.FriendlyMatchWizardDates,
@@ -94,6 +110,8 @@ function FriendlyMatchWizardRecap({ navigation }) {
     setIsSubmitting(true);
     setSubmitErrorMessage('');
     try {
+      // Releve AVANT le RESET, qui efface le brouillon — origine comprise.
+      const entryOrigin = ENTRY_ORIGINS.has(state.entryOrigin) ? state.entryOrigin : '';
       const createdAd = await createFriendlyMatchAd(buildFriendlyMatchAdPayload(state));
       // Le brouillon est vide AVANT la navigation : revenir sur le tunnel ne
       // doit pas reproposer une annonce deja publiee.
@@ -103,6 +121,19 @@ function FriendlyMatchWizardRecap({ navigation }) {
         title: 'Annonce publiée',
         tone: 'success',
       });
+      // ⑤ — DEUX ordres, dans cet ordre, et chacun a sa raison.
+      //
+      // `replace` seul suffisait deja a effacer TOUT le tunnel amical : le nom
+      // vise n'appartient pas a cette pile, l'action remonte donc au navigateur
+      // racine, qui remplace le conteneur entier (mesure, pas deduit). Ce que
+      // `replace` ne pouvait pas savoir, c'est qu'un SECOND tunnel dormait en
+      // dessous quand on est entre par la porte du tunnel Evenement.
+      //
+      // `popTo(origine)` revient donc d'abord sur le tunnel qui nous a ouvert,
+      // et le `replace` qui suit l'efface a son tour. Resultat identique dans
+      // les deux chemins d'entree : le detail de l'annonce, et plus aucun
+      // tunnel derriere lui.
+      if (entryOrigin) navigation.popTo(entryOrigin);
       navigation.replace(RouteNames.FriendlyMatchAdDetails, {
         adId: createdAd?.documentId || createdAd?.id,
       });

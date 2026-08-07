@@ -342,8 +342,26 @@ describe('D09 — l ecran « Type d evenement », etat du 2026-08-06', () => {
     expect(gestes).toEqual([{
       geste: 'navigate',
       nom: RouteNames.FriendlyMatchWizardStack,
-      params: { screen: RouteNames.FriendlyMatchWizardTeam },
+      params: {
+        params: { entryOrigin: RouteNames.EventStack },
+        screen: RouteNames.FriendlyMatchWizardTeam,
+      },
     }]);
+  });
+
+  // COMPLETE PAR D24 — motif : defaut ⑤ de la recette du 2026-08-07. La porte
+  // laisse `EventStack` monte dessous, arrete sur CET ecran (c'est voulu, voir
+  // le test suivant). Mais quand l'annonce est PUBLIEE, ce tunnel-la n'a plus
+  // de raison d'exister : le premier « Retour » depuis le detail de l'annonce y
+  // retombait. Le tunnel amical ne peut pas le deviner sans fouiller la pile —
+  // la porte le lui DIT donc, et cette valeur est le seul moyen qu'elle a de le
+  // faire. La retirer rouvre le defaut sans qu'aucune autre porte le voie.
+  test('la porte se NOMME au tunnel amical, pour qu il sache quoi effacer apres', () => {
+    const { pressables } = afficherLEcran();
+
+    act(() => rangeePortant(pressables, 'Match amical').props.onPress());
+
+    expect(gestes[0].params.params).toEqual({ entryOrigin: RouteNames.EventStack });
   });
 
   // Le cas limite le plus serieux du lot : un aller sans retour serait un piege.

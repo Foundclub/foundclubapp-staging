@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -30,13 +30,23 @@ const getTeamKey = (team) => String(team?.documentId || team?.id || '').trim();
  * + `trainedTeams` (entraineur), la meme paire que la liste des annonces. Le
  * serveur revalide de toute facon avec `canManageTeam` (team/services/auth.ts) :
  * ce filtre est un confort, jamais la securite.
- * @param {{ navigation: any }} props
+ *
+ * D24 — c est aussi la porte d entree du tunnel, dans les DEUX chemins (League
+ * y arrive par l ecran initial de la pile, le tunnel Evenement le nomme). C est
+ * donc ici, et nulle part ailleurs, que l origine se releve pour le
+ * recapitulatif : les 6 etapes suivantes n ont pas a se la transmettre.
+ * @param {{ navigation: any, route?: any }} props
  * @returns {import('react').ReactElement}
  */
-function FriendlyMatchWizardTeam({ navigation }) {
+function FriendlyMatchWizardTeam({ navigation, route }) {
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { dispatch, state } = useFriendlyMatchWizard();
   const { userData } = /** @type {any} */ (useAuth());
+
+  const entryOrigin = route?.params?.entryOrigin;
+  useEffect(() => {
+    dispatch({ payload: entryOrigin, type: 'SET_ENTRY_ORIGIN' });
+  }, [dispatch, entryOrigin]);
 
   const managedTeams = useMemo(() => {
     const seen = new Set();

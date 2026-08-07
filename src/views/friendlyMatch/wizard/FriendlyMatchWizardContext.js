@@ -29,6 +29,14 @@ const createInitialState = () => ({
   candidateDates: [], // [{ date: 'AAAA-MM-JJ', start?: 'HH:MM', end?: 'HH:MM' }]
   category: null, // Category { documentId, name }
   description: '',
+  // D24 — la SEULE donnee de navigation du brouillon, et elle porte son nom :
+  // le tunnel amical s ouvre soit depuis League, soit par la PORTE du tunnel
+  // Evenement (D09). Publier doit effacer les DEUX tunnels ; sans cette valeur,
+  // le recapitulatif devrait fouiller la pile de navigation pour le deviner —
+  // ce qui casse au premier remaniement et ne se teste pas (lecon L40-B).
+  // ⚠️ Elle ne part JAMAIS au serveur : buildFriendlyMatchAdPayload liste ce
+  // qu il envoie, il ne recopie pas le brouillon.
+  entryOrigin: '',
   format: '', // Valeur du catalogue par sport, ou 'Autre'
   formatOther: '', // Le texte libre quand format === 'Autre'
   hostingPreference: '', // HOST | AWAY | BOTH — jamais pre-rempli (Q1)
@@ -112,6 +120,12 @@ function friendlyMatchWizardReducer(state, action) {
 
     case 'SET_DESCRIPTION':
       return { ...state, description: action.payload };
+
+    // Toujours ecrit, meme vide : sur le web le brouillon survit dans
+    // `sessionStorage`, et une origine gardee d une ouverture precedente ferait
+    // effacer un tunnel qui n a jamais ete ouvert.
+    case 'SET_ENTRY_ORIGIN':
+      return { ...state, entryOrigin: String(action.payload || '').trim() };
 
     case 'SET_FORMAT':
       return { ...state, format: action.payload };
