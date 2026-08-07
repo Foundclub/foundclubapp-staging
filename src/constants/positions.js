@@ -127,6 +127,30 @@ export function getPositionValuesForSport(sportName) {
 }
 
 /**
+ * Les postes enregistrés appartiennent-ils TOUS au sport donné ?
+ *
+ * D23 — un profil peut garder « Avant-centre » (football) après être passé au
+ * rugby : l'inscription sautait alors l'étape Poste « puisqu'un poste est déjà
+ * là », et laissait le profil incohérent sans aucun moyen de le corriger.
+ * Le champ `position` est une liste séparée par des virgules.
+ * @param {string} position - Poste(s) enregistré(s), séparés par des virgules.
+ * @param {string} sportName - Nom du sport (capitalisé ou non).
+ * @returns {boolean} Vrai si au moins un poste est enregistré et qu'ils sont tous du sport.
+ */
+export function positionsBelongToSport(position, sportName) {
+  const known = getPositionValuesForSport(sportName);
+  if (known.length === 0) return false;
+
+  const saved = String(position || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (saved.length === 0) return false;
+
+  return saved.every((item) => known.includes(item));
+}
+
+/**
  * Obtient des familles de postes pour un sport donné.
  * @param {string} sportName
  * @param {string[]} [availablePositions]

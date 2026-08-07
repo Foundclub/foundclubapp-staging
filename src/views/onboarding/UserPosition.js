@@ -20,7 +20,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { updateMe } from '@/services/auth/authService';
 
 // Import positions from centralized constants
-import { getPositionsForSport, SPORTS_WITH_POSITIONS } from '@/constants/positions';
+import { getPositionsForSport } from '@/constants/positions';
 
 /**
  * User position selection screen
@@ -47,12 +47,11 @@ function UserPosition({ navigation, route }) {
   // Get sport from route params (passed from UserSport) or fall back to userData
   const userSport = route?.params?.selectedSport || userData?.preferredSport;
 
-  // Get positions based on user's preferred sport
-  const positions = useMemo(() => {
-    const sportPositions = getPositionsForSport(userSport);
-    // Default to football if sport not found
-    return sportPositions.length > 0 ? sportPositions : getPositionsForSport('football');
-  }, [userSport]);
+  // Get positions based on user's preferred sport.
+  // D23 - le repli « liste du football » a ete retire : il montrait des postes
+  // de football a un rugbyman et, surtout, il masquait le cas « aucun sport »
+  // que le garde-fou ci-dessous doit voir.
+  const positions = useMemo(() => getPositionsForSport(userSport), [userSport]);
 
   useEffect(() => {
     const currentPositions = String(userData?.position || '')
@@ -65,14 +64,16 @@ function UserPosition({ navigation, route }) {
     }
   }, [userData?.position]);
 
-  // Check if we should skip this step
+  // D23 - L'ECRAN SE RETIRE LUI-MEME QUAND IL N'A RIEN A MONTRER.
+  // Deux cas : sport sans postes (comportement d'origine), et AUCUN sport -
+  // l'utilisateur a saute l'etape Sport. C'est ce garde-fou qui autorise
+  // l'etape a rester au programme tant que le sport n'est pas repondu, ce qui
+  // est la condition pour que `PrivateNavigator` la monte : sans elle, l'ecran
+  // Sport ne pouvait pas y naviguer et le poste etait saute pour les 5 sports.
   useEffect(() => {
-    const sport = userSport?.toLowerCase();
-    if (!userDataLoading && sport && !SPORTS_WITH_POSITIONS.includes(sport)) {
-      // Sport doesn't have positions, skip this step
-      navigation.navigate(getNextOnboardingRoute(RouteNames.UserPosition) || getPostOnboardingHomeRoute());
-    }
-  }, [getNextOnboardingRoute, getPostOnboardingHomeRoute, navigation, userDataLoading, userSport]);
+    if (userDataLoading || positions.length > 0) return;
+    navigation.navigate(getNextOnboardingRoute(RouteNames.UserPosition) || getPostOnboardingHomeRoute());
+  }, [getNextOnboardingRoute, getPostOnboardingHomeRoute, navigation, positions, userDataLoading]);
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,

@@ -379,6 +379,10 @@ describe('authUseCases', () => {
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
         RouteNames.UserSport,
+        // D23 (2) - « Poste » reste au programme tant que « Sport » est devant :
+        // sans elle ici, `PrivateNavigator` ne la monte pas et le tunnel la
+        // saute pour les 5 sports a postes.
+        RouteNames.UserPosition,
         RouteNames.UserPhysique,
         RouteNames.UserLevel,
         RouteNames.UserCategory,
@@ -505,13 +509,21 @@ describe('authUseCases', () => {
       expect(positionStep).toEqual({ canShow: true, index: 6, route: RouteNames.UserPosition });
     });
 
-    it('skips position step when preferred sport is not selected', () => {
+    // D23 (2) - CE TEST DISAIT L'INVERSE, ET IL FIGEAIT LE DEFAUT.
+    // Il exigeait `canShow: false` tant qu'aucun sport n'etait choisi. Or
+    // `PrivateNavigator` monte ses ecrans sur `canShow` : l'etape Poste
+    // n'existait donc pas dans le navigateur au moment ou l'ecran Sport
+    // voulait y aller, et le tunnel sautait le poste pour les 5 sports a
+    // postes. Tant que le sport est encore a repondre, on ne peut pas savoir :
+    // on garde l'etape, et l'ecran Poste se retire lui-meme s'il n'a rien a
+    // montrer. Detail complet dans `authUseCases.position.test.js`.
+    it('keeps position step reachable while the preferred sport is still unanswered', () => {
       const result = getOnboardingViews({
         role: { name: USER_ROLES.player },
       });
 
       const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
-      expect(positionStep).toEqual({ canShow: false, index: 6, route: RouteNames.UserPosition });
+      expect(positionStep).toEqual({ canShow: true, index: 6, route: RouteNames.UserPosition });
     });
 
     it('keeps club visibility step visible even with default isLookingForClub value', () => {

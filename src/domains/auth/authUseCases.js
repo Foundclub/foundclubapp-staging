@@ -8,7 +8,7 @@ import {
 import { RouteNames } from '@/navigation/routeNames';
 
 import { isBirthdateUnderParentalAge } from '@/constants/parentalDeclaration';
-import { sportHasPositions } from '@/constants/positions';
+import { positionsBelongToSport, sportHasPositions } from '@/constants/positions';
 
 export const USER_ROLES = /** @type {const} */({
   coach: 'Entraineur',
@@ -468,13 +468,23 @@ export const getOnboardingViews = ({
     }
     // Skip position if sport does not expose dedicated positions in the app.
     if (view.route === RouteNames.UserPosition) {
-      if (position) {
+      // D23 (a) - un poste deja enregistre ne se redemande pas, SAUF s'il ne
+      // peut pas appartenir au sport choisi : un « Avant-centre » garde apres
+      // un passage au rugby sautait l'etape et figeait un profil incoherent,
+      // sans aucun moyen de le corriger dans le tunnel.
+      if (position && positionsBelongToSport(position, preferredSport)) {
         return Object.assign(view, { canShow: false });
       }
-      // If user skipped preferred sport, do not show position selection.
-      if (!preferredSport) {
-        return Object.assign(view, { canShow: false });
-      }
+      // D23 (b) - LA CAUSE DU DEFAUT « Rugby saute l'etape Poste ».
+      // Cette porte disait « pas de sport ⇒ pas de postes ». Mais tant que
+      // l'utilisateur est SUR l'etape Sport, son profil n'a pas encore de
+      // sport : l'etape Poste sortait du programme, `PrivateNavigator` ne la
+      // montait donc PAS, et l'ecran Sport ne pouvait plus y aller (il
+      // retombait sur « Physique »). C'etait vrai pour les 5 sports a postes,
+      // pas seulement le rugby.
+      // On ne peut pas trancher avant que le sport soit repondu : on garde
+      // l'etape au programme, et c'est l'ecran Poste qui se retire a
+      // l'arrivee s'il n'a pas de sport a montrer - il sait deja le faire.
       // If sport is set but doesn't have positions, skip this step
       if (preferredSport && !sportHasPositions(preferredSport)) {
         return Object.assign(view, { canShow: false });

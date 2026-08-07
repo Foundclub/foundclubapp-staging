@@ -78,7 +78,8 @@ function UserSport({ navigation }) {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
 
       // Calculate next route based on the NEW sport, not the old userData
-      const tempUserData = { ...userData, preferredSport: selectedSport.trim() };
+      const chosenSport = selectedSport.trim();
+      const tempUserData = { ...userData, preferredSport: chosenSport };
       const views = getOnboardingViews(tempUserData);
 
       // Find current view index
@@ -99,7 +100,14 @@ function UserSport({ navigation }) {
       );
 
       if (nextRoute) {
-        navigation.navigate(nextRoute);
+        // D23 - le sport voyage EN PARAMETRE jusqu'a l'etape Poste.
+        // `UserPosition` sait deja le lire (`route.params.selectedSport`) mais
+        // personne ne le lui passait : il attendait que `get-me` soit
+        // rafraichi, ce qui n'arrive pas dans le meme tour de rendu.
+        navigation.navigate(
+          nextRoute,
+          nextRoute === RouteNames.UserPosition ? { selectedSport: chosenSport } : undefined,
+        );
       }
     },
   });
@@ -166,9 +174,16 @@ function UserSport({ navigation }) {
   };
 
   const handleSkip = () => {
+    // D23 - sauter le sport saute AUSSI le poste. L'etape Poste reste au
+    // programme tant que le sport n'est pas repondu (c'est ce qui la rend
+    // joignable quand un sport EST choisi) : sans ce saut, on la traverserait
+    // en clignotant, puisqu'elle se retire d'elle-meme faute de sport.
+    const afterSport = getNextOnboardingRoute(RouteNames.UserSport);
     const nextRoute = resolveAvailableRoute(
       navigation,
-      getNextOnboardingRoute(RouteNames.UserSport),
+      afterSport === RouteNames.UserPosition
+        ? getNextOnboardingRoute(RouteNames.UserPosition)
+        : afterSport,
       getPostOnboardingHomeRoute(),
     );
     if (nextRoute) {
