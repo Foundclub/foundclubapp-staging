@@ -1,5 +1,5 @@
 import {
-  AccessibilityInfo, Image, Text, TouchableOpacity,
+  AccessibilityInfo, Image, ScrollView, StyleSheet, Text, TouchableOpacity,
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -76,6 +76,17 @@ jest.mock('@/services/client', () => ({
 
 jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest.fn() }));
 
+// D20 (⑦) : l'ecran est enregistre en `headerShown: false` (EventStack.js:76 et
+// PrivateNavigator.js:649) — il dessine donc SOUS la barre d'etat. Les retraits
+// systeme sont figes ici a des valeurs d'iPhone a encoche : c'est le seul moyen
+// de constater par test que l'ecran les prend, ou non, en compte.
+const mockInsetsEncoche = {
+  bottom: 34, left: 0, right: 0, top: 47,
+};
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => mockInsetsEncoche,
+}));
+
 jest.mock('@/utils/logger/logger', () => ({
   createLogger: () => ({
     debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn(),
@@ -150,6 +161,23 @@ const clubParams = (extra = {}) => ({
 });
 
 /**
+ * Params du gabarit evenement — le flux reel d'apres publication (EventWizardRecap).
+ * C'est le SEUL sujet qui active « Envoyer dans une conversation » (chatShareEnabled).
+ * @param {Record<string, unknown>} [extra]
+ * @returns {Record<string, unknown>}
+ */
+const eventParams = (extra = {}) => ({ eventId: 'evt-1', ...extra });
+
+/**
+ * Style APLATI du conteneur de contenu du ScrollView (la ou vivent les marges).
+ * @param {any} tree
+ * @returns {Record<string, any>}
+ */
+const contentStyle = (tree) => StyleSheet.flatten(
+  tree.root.findByType(ScrollView).props.contentContainerStyle,
+) || {};
+
+/**
  * Premier noeud pressable portant ce libelle d'accessibilite.
  * @param {any} tree
  * @param {string} label
@@ -213,6 +241,91 @@ afterEach(() => {
     act(() => { mounted.unmount(); });
     mounted = null;
   }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// D20 — FILET. Ce bloc fige l'etat LIVRE des deux defauts d'Adel du 2026-08-07
+// AVANT correction. Chacun de ces tests doit devenir ROUGE quand le defaut est
+// corrige : il est alors INVERSE sur place, avec le motif ecrit a cote.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('D20 filet — ⑦ l ecran dessine sous la barre d etat', () => {
+  it('AVANT : aucune marge haute ne tient compte du retrait systeme (47 px)', async () => {
+    const tree = await renderScreen(eventParams());
+    // 20 = le `padding` fixe du conteneur. Rien n'y ajoute les 47 px de l'encoche,
+    // donc le titre « Ton evenement est en ligne » monte jusqu'a l'heure du telephone.
+    expect(contentStyle(tree).paddingTop).toBeUndefined();
+    expect(contentStyle(tree).padding).toBe(20);
+  });
+
+  it('AVANT : aucune marge basse ne tient compte de la barre gestuelle (34 px)', async () => {
+    const tree = await renderScreen(eventParams());
+    expect(contentStyle(tree).paddingBottom).toBeUndefined();
+  });
+});
+
+describe('D20 filet — ⑦ l ecran propose CINQ gestes, Adel en veut trois', () => {
+  it('AVANT : les 5 libelles d action sont a l ecran, tous au meme niveau', async () => {
+    const tree = await renderScreen(eventParams());
+    const labels = tree.root
+      .findAllByType(TouchableOpacity)
+      .map((/** @type {any} */ node) => node.props.accessibilityLabel);
+    expect(labels).toContain('Envoyer l’affiche');
+    expect(labels).toContain('Envoyer dans une conversation');
+    expect(labels).toContain('Version story 9:16');
+    expect(labels).toContain('Affiche A4 à imprimer');
+    expect(labels).toContain('Plus tard');
+  });
+
+  // Constat de code : EventPublishedShowcase.js l.453 passe
+  // `onSelectChat={() => setShareModalOpen(false)}`. Or ShareEventModal.js l.220
+  // delegue l'envoi au PARENT (`onSelectChat(chat.documentId)`). Sur CET ecran,
+  // choisir une conversation ne fait donc que refermer la fenetre.
+  it('AVANT : choisir une conversation n envoie RIEN — le geste est une impasse', async () => {
+    const tree = await renderScreen(eventParams());
+    const modal = tree.root.findAll(
+      (/** @type {any} */ node) => node.props && typeof node.props.onSelectChat === 'function',
+    )[0];
+    expect(modal).toBeTruthy();
+    await act(async () => { modal.props.onSelectChat('conv-42'); });
+    expect(mockDownloadAndShareRender).not.toHaveBeenCalled();
+    expect(mockShare).not.toHaveBeenCalled();
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('D20 filet — ⑥ ce que coute une fabrication d affiche', () => {
+  it('AVANT : le montage declenche 1 rendu serveur ET 1 requete evenement', async () => {
+    await renderScreen(eventParams());
+    expect(mockFetchRenderBase64).toHaveBeenCalledTimes(1);
+    // La 2e requete n'alimente QUE ShareEventModal (le geste impasse ci-dessus).
+    expect(mockClientGet).toHaveBeenCalledWith('/events/evt-1');
+  });
+
+  it('AVANT : revenir a un style DEJA VU le refabrique — aucun cache', async () => {
+    const tree = await renderScreen(clubParams());
+    expect(mockFetchRenderBase64).toHaveBeenCalledTimes(1); // ecusson
+    const chips = findVariantChips(tree);
+
+    // `findAll` rend le composite ET son hote pour chaque puce : le dernier noeud
+    // est la derniere variante (famille), le premier est la premiere (ecusson).
+    await act(async () => { chips[chips.length - 1].props.onPress(); }); // -> famille
+    await act(async () => { chips[0].props.onPress(); }); // <- retour a ecusson
+
+    // 3 rendus pour 2 affiches distinctes : le retour au style deja affiche
+    // repaie un aller-retour serveur complet.
+    expect(mockFetchRenderBase64).toHaveBeenCalledTimes(3);
+  });
+
+  it('AVANT : enregistrer le format DEJA affiche relance un rendu complet', async () => {
+    const tree = await renderScreen(clubParams());
+    expect(mockFetchRenderBase64).toHaveBeenCalledTimes(1);
+    await press(tree, 'Envoyer l’affiche');
+    // `downloadAndShareRender` refait `fetchRenderBase64` avec les MEMES
+    // parametres que l'apercu deja affiche (visualRender.native.js l.86).
+    expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
+      format: 'post', template: 'affiche-club', variant: 'ecusson',
+    }));
+  });
 });
 
 describe('EventPublishedShowcase — comportement livre (caracterisation E6)', () => {
