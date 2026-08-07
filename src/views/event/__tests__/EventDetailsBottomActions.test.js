@@ -580,20 +580,14 @@ describe('EventDetails — bas de page : etat LIVRE avant D21 (caracterisation)'
     expect(hasText(root, 'cotisation')).toBe(false);
   });
 
-  test('le menu « Gérer l evenement » est EN FLUX, il ne flotte pas', () => {
-    const root = asOrganiser();
-
-    expect(managePanelPosition(root)).not.toBe('absolute');
-  });
-
   test('replie, le menu tient dans 60 px declares', () => {
     const root = asOrganiser();
 
     expect(collapsedPanelHeight(root)).toBeLessThanOrEqual(60);
   });
 
-  test('la liste defilante ne reserve que 40 px sous son dernier bloc', () => {
-    const root = asOrganiser();
+  test('sans action d organisation, la liste ne reserve que 40 px', () => {
+    const root = mountScreen();
 
     expect(scrollContentStyle(root).paddingBottom).toBe(40);
   });
@@ -607,24 +601,6 @@ describe('EventDetails — bas de page : etat LIVRE avant D21 (caracterisation)'
       'EventPublishedShowcase',
       expect.anything(),
     );
-  });
-
-  test('TROU CONSTATE : une demande « a la une » a valider efface tout le menu', () => {
-    // Le pied d'ecran choisit ENTRE valider/refuser ET `renderActionButtons()` :
-    // tant qu'une demande attend, l'organisateur perd modifier, compo, annuler.
-    const root = mountScreen({
-      auth: {
-        canEditEvent: () => true,
-        canManageEvent: () => true,
-        userData: { documentId: 'user-1', role: { name: 'SuperAdmin' } },
-      },
-      event: buildEvent({
-        featuredRequestsSummary: { PUBLIC: { requestId: 'req-1', status: 'pending' } },
-      }),
-    });
-
-    expect(hasText(root, 'Valider')).toBe(true);
-    expect(bottomActionInventory(root)).toEqual([]);
   });
 });
 
@@ -684,5 +660,138 @@ describe('D21 ① — la cotisation est rangee dans le menu « Gérer l evenemen
     const root = mountScreen({ params: { eventCampaignCreationSuggested: true } });
 
     expect(bottomActionInventory(root)).toEqual([]);
+  });
+});
+
+describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () => {
+  // ⚠️ INVERSION VOLONTAIRE de la caracterisation « le menu est EN FLUX » :
+  // c'est la demande d'Adel — le menu prenait toute une bande en pied d'ecran
+  // « avec la marge autour », il flotte desormais en bas a droite.
+  test('le menu flotte : il est pose en position absolue, ancre en bas a droite', () => {
+    const root = asOrganiser();
+    const [layer] = root.findAll((/** @type {any} */ node) => (
+      flatStyle(node).position === 'absolute' && node.props?.pointerEvents === 'box-none'
+    ));
+
+    expect(managePanelPosition(root)).toBe('absolute');
+    expect(flatStyle(layer)).toMatchObject({ alignItems: 'flex-end', bottom: 16 });
+  });
+
+  test('les touches TRAVERSENT la couche flottante : elle ne bloque pas la liste', () => {
+    const root = asOrganiser();
+    const [layer] = root.findAll((/** @type {any} */ node) => (
+      flatStyle(node).position === 'absolute' && node.props?.pointerEvents === 'box-none'
+    ));
+
+    expect(layer).toBeTruthy();
+  });
+
+  // ⚠️ INVERSION VOLONTAIRE des 40 px : LE garde-fou du lot. Un bouton flottant
+  // recouvre le contenu ; sans cette reserve, le dernier participant passerait
+  // SOUS le bouton et on echangerait un defaut contre un pire.
+  test('la liste reserve la place du bouton flottant sous son dernier bloc', () => {
+    const root = asOrganiser();
+    const reserve = scrollContentStyle(root).paddingBottom;
+
+    // 46 px de pastille declaree + 16 px d'ecart bas = 62 px a couvrir.
+    expect(reserve).toBeGreaterThanOrEqual(collapsedPanelHeight(root) + 16);
+    expect(reserve).toBe(80);
+  });
+
+  test('le pied d ecran n est PAS recouvert : la couche vit au-dessus de la liste', () => {
+    // Les cotisations liees, les stats de match et les boutons de reponse vivent
+    // dans une bande SOEUR de la liste. La couche flottante est ancree dans le
+    // cadre de la liste : elle ne peut donc pas passer par-dessus cette bande.
+    const root = asOrganiser({
+      campaigns: [{
+        currency: 'EUR',
+        defaultAmountCents: 5000,
+        documentId: 'camp-1',
+        name: 'Cotisation U15',
+        status: 'draft',
+        totals: { total: 3 },
+      }],
+    });
+    const [layer] = root.findAll((/** @type {any} */ node) => (
+      flatStyle(node).position === 'absolute' && node.props?.pointerEvents === 'box-none'
+    ));
+    const [scroll] = root.findAll((/** @type {any} */ node) => Boolean(node.props?.refreshControl)
+      && Boolean(node.props?.contentContainerStyle));
+    const openButton = pressableWithText(root, 'Ouvrir');
+
+    const isUnder = (/** @type {any} */ node, /** @type {any} */ ancestor) => {
+      let current = node?.parent;
+      while (current) {
+        if (current === ancestor) return true;
+        current = current.parent;
+      }
+      return false;
+    };
+
+    // Le cadre qui porte la couche flottante contient la liste, et SEULEMENT
+    // elle : le bouton « Ouvrir » d'une campagne liee vit dans la bande soeur,
+    // donc hors de portee du bouton flottant.
+    const frame = layer.parent;
+    expect(isUnder(scroll, frame)).toBe(true);
+    expect(isUnder(openButton, frame)).toBe(false);
+  });
+
+  test('deplie : la grille de chips ne change pas — memes colonnes, un seul tap', () => {
+    const root = asOrganiser();
+    press(root, "Gérer l'événement");
+
+    const widths = byTestId(root, 'event-manage-chip')
+      .map((/** @type {any} */ node) => flatStyle(node).width);
+    expect(widths).toEqual(['48%', '48%', '48%', '48%']);
+
+    press(root, 'Modifier');
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('EventStack', {
+      params: { eventId: 'event-1' },
+      screen: 'EventEdit',
+    });
+  });
+
+  test('un seul menu sur un tournoi : les 5 chips vivent dans la couche flottante', () => {
+    const root = asOrganiser({ event: buildEvent({ type: { name: 'Tournoi' } }) });
+    press(root, "Gérer l'événement");
+
+    expect(byTestId(root, PANEL_ID)).toHaveLength(1);
+    expect(byTestId(root, 'event-manage-chip')).toHaveLength(5);
+    expect(hasText(root, 'Gérer le tournoi')).toBe(true);
+  });
+
+  // ⚠️ INVERSION VOLONTAIRE du « TROU CONSTATE » sur la demande a la une : la
+  // couche flottante ne depend plus du pied d'ecran, elle survit donc a la
+  // bascule valider/refuser. C'est un AJOUT, rien n'a ete retire.
+  test('une demande « a la une » a valider n efface plus le menu', () => {
+    const root = mountScreen({
+      auth: {
+        canEditEvent: () => true,
+        canManageEvent: () => true,
+        userData: { documentId: 'user-1', role: { name: 'SuperAdmin' } },
+      },
+      event: buildEvent({
+        featuredRequestsSummary: { PUBLIC: { requestId: 'req-1', status: 'pending' } },
+      }),
+    });
+
+    expect(hasText(root, 'Valider')).toBe(true);
+    expect(bottomActionInventory(root)).toEqual(['cancel', 'edit', 'featured', 'lineup']);
+  });
+
+  test('TEMOIN NEGATIF : aucune action, aucune couche flottante', () => {
+    const root = mountScreen();
+
+    expect(byTestId(root, PANEL_ID)).toHaveLength(0);
+    expect(root.findAll((/** @type {any} */ node) => node.props?.testID === 'event-manage-sheet'))
+      .toHaveLength(0);
+  });
+
+  test('replie : aucune chip rendue — la couche ne coute que la pastille', () => {
+    const root = asOrganiser();
+
+    expect(byTestId(root, 'event-manage-chip')).toHaveLength(0);
+    expect(hasText(root, "Gérer l'événement")).toBe(true);
   });
 });
