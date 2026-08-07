@@ -302,6 +302,17 @@ function HistoryWizardClub({ navigation, route }) {
     }
   };
 
+  // D23 (defaut ③ de la recette du 07/08) — LE CLUB CHOISI SE RETIRE.
+  // Une fois un club selectionne, la liste de resultats disparaissait
+  // (`!hasSelectedClub`) et la carte du club retenu etait rendue SANS
+  // `onPress` : `ClubSearchResultCard` se met alors en `disabled`. Il ne
+  // restait qu'un chemin, invisible : retaper dans le champ de recherche.
+  // Une faute de frappe devenait definitive dans le tunnel.
+  const handleClearClubSelection = () => {
+    dispatch({ type: 'CLEAR_CLUB_SELECTION' });
+    setSearchQuery('');
+  };
+
   const handleNext = () => {
     if (showCustomInput) {
       const value = customClubName.trim();
@@ -486,11 +497,30 @@ function HistoryWizardClub({ navigation, route }) {
               ) : null}
 
               {selectedClubCard ? (
-                <ClubSearchResultCard
-                  isMultisport={Boolean(state.multisportClub)}
-                  isSelected
-                  item={selectedClubCard}
-                />
+                <View style={[Spaces.gap[8]]}>
+                  <ClubSearchResultCard
+                    isMultisport={Boolean(state.multisportClub)}
+                    isSelected
+                    item={selectedClubCard}
+                    onPress={handleClearClubSelection}
+                  />
+                  {/*
+                    Le lien double la carte : une carte qu'il faut deviner
+                    tapable est le meme defaut sous une autre forme.
+                  */}
+                  <TouchableOpacity
+                    accessibilityHint={t(
+                      'historyWizard.club.clearSelectionHint',
+                      'Retire le club retenu et rouvre la recherche.',
+                    )}
+                    accessibilityRole="button"
+                    onPress={handleClearClubSelection}
+                  >
+                    <Text style={[Fonts.p2, { color: Colors.primary500, textAlign: 'center' }]}>
+                      {t('historyWizard.club.clearSelection', 'Changer de club')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               ) : null}
 
               <TouchableOpacity onPress={handleOpenCustomInput}>
