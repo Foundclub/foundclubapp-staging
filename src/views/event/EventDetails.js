@@ -3660,10 +3660,14 @@ function EventDetails({ navigation, route }) {
   });
   const hasManageActions = manageChips.length > 0;
 
+  // ⚠️ PAS de `overflow: 'hidden'` ici, contrairement au panneau d'avant D21 :
+  // sur iOS il pose `masksToBounds` et CLIPPE l'ombre du meme calque — la
+  // surface cesse alors de paraitre flottante, en silence et sur la seule
+  // plateforme de recette. Rien ne deborde de toute facon : les chips sont
+  // rentrees de 16 px, plus que la coupe des coins arrondis.
   const manageSurfaceStyle = {
     backgroundColor: withAlpha(Colors.primary900, 0.96),
     borderColor: withAlpha(Colors.primary500, 0.3),
-    overflow: 'hidden',
   };
 
   /**
