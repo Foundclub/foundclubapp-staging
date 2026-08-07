@@ -102,10 +102,13 @@ jest.mock('@/components/molecules/input/Input', () => function InputMock() {
   return null;
 });
 
+// La vraie feuille tire @gorhom/bottom-sheet, BlurView et le contexte de demarrage :
+// hors sujet ici. Le double rend ses enfants QUAND ELLE EST OUVERTE — c'est
+// justement ce qu'on veut observer (le choix de format et son ordre).
 jest.mock(
-  '@/components/organisms/shareEventModal/ShareEventModal',
-  () => function ShareEventModalMock() {
-    return null;
+  '@/components/molecules/bottomModal/BottomModal',
+  () => function BottomModalMock(/** @type {any} */ props) {
+    return props.isVisible ? props.children : null;
   },
 );
 
@@ -204,6 +207,13 @@ const press = async (tree, label) => {
 };
 
 /**
+ * Ouvre le choix de format (D20) : c'est le bouton principal de l'ecran.
+ * @param {any} tree
+ * @returns {Promise<void>}
+ */
+const openFormatSheet = (tree) => press(tree, 'Enregistrer l’image');
+
+/**
  * Puces de style (accessibilityRole radio) reellement pressables.
  * @param {any} tree
  * @returns {any[]}
@@ -225,6 +235,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSkeletonProps.length = 0;
   mockCapability = 'share-sheet';
+  // Un test met les retraits a zero (temoin negatif) : on les remet a l'encoche.
+  mockInsetsEncoche.bottom = 34;
+  mockInsetsEncoche.top = 47;
   mockFetchRenderBase64.mockResolvedValue({ base64: 'QUJD', contentType: 'image/png' });
   mockDownloadAndShareRender.mockResolvedValue({
     fileUri: 'file:///cache/affiche.png',
@@ -248,48 +261,105 @@ afterEach(() => {
 // AVANT correction. Chacun de ces tests doit devenir ROUGE quand le defaut est
 // corrige : il est alors INVERSE sur place, avec le motif ecrit a cote.
 // ─────────────────────────────────────────────────────────────────────────────
-describe('D20 filet — ⑦ l ecran dessine sous la barre d etat', () => {
-  it('AVANT : aucune marge haute ne tient compte du retrait systeme (47 px)', async () => {
+describe('D20 — ⑦ l ecran reserve la barre d etat et la barre gestuelle', () => {
+  // INVERSE le 2026-08-07. Motif : l'ecran est enregistre `headerShown: false`,
+  // rien au-dessus de lui ne reserve la barre d'etat — le titre chevauchait
+  // l'heure du telephone (capture d'Adel). Il applique desormais les retraits
+  // systeme, comme le gabarit maison ScreenContainer (`insets.top`).
+  it('la marge haute vaut la marge d ecran PLUS le retrait systeme', async () => {
     const tree = await renderScreen(eventParams());
-    // 20 = le `padding` fixe du conteneur. Rien n'y ajoute les 47 px de l'encoche,
-    // donc le titre « Ton evenement est en ligne » monte jusqu'a l'heure du telephone.
-    expect(contentStyle(tree).paddingTop).toBeUndefined();
-    expect(contentStyle(tree).padding).toBe(20);
+    expect(contentStyle(tree).paddingTop).toBe(20 + 47);
   });
 
-  it('AVANT : aucune marge basse ne tient compte de la barre gestuelle (34 px)', async () => {
+  it('la marge basse vaut la marge d ecran PLUS la barre gestuelle', async () => {
     const tree = await renderScreen(eventParams());
-    expect(contentStyle(tree).paddingBottom).toBeUndefined();
+    expect(contentStyle(tree).paddingBottom).toBe(20 + 34);
+  });
+
+  // TEMOIN NEGATIF : sans retrait systeme (Android sans encoche, web), l'ecran
+  // ne doit pas fabriquer d'espace vide — la marge reste celle du gabarit.
+  it('sans retrait systeme, la marge reste celle de l ecran (aucun trou)', async () => {
+    mockInsetsEncoche.bottom = 0;
+    mockInsetsEncoche.top = 0;
+    const tree = await renderScreen(eventParams());
+    expect(contentStyle(tree).paddingTop).toBe(20);
+    expect(contentStyle(tree).paddingBottom).toBe(20);
   });
 });
 
-describe('D20 filet — ⑦ l ecran propose CINQ gestes, Adel en veut trois', () => {
-  it('AVANT : les 5 libelles d action sont a l ecran, tous au meme niveau', async () => {
+describe('D20 — ⑦ l ecran propose TROIS gestes, dans l ordre voulu par Adel', () => {
+  // INVERSE le 2026-08-07 (decision d'Adel). AVANT : 5 gestes au meme niveau.
+  it('exactement 3 gestes a l ecran : enregistrer, partager, plus tard', async () => {
     const tree = await renderScreen(eventParams());
     const labels = tree.root
       .findAllByType(TouchableOpacity)
-      .map((/** @type {any} */ node) => node.props.accessibilityLabel);
-    expect(labels).toContain('Envoyer l’affiche');
-    expect(labels).toContain('Envoyer dans une conversation');
-    expect(labels).toContain('Version story 9:16');
-    expect(labels).toContain('Affiche A4 à imprimer');
-    expect(labels).toContain('Plus tard');
+      .map((/** @type {any} */ node) => node.props.accessibilityLabel)
+      .filter((/** @type {any} */ label) => label && label !== 'Personnaliser le texte'
+        && !String(label).startsWith('Choisir le style'));
+    expect(labels).toEqual(['Enregistrer l’image', 'Partager l’affiche', 'Plus tard']);
   });
 
-  // Constat de code : EventPublishedShowcase.js l.453 passe
-  // `onSelectChat={() => setShareModalOpen(false)}`. Or ShareEventModal.js l.220
-  // delegue l'envoi au PARENT (`onSelectChat(chat.documentId)`). Sur CET ecran,
-  // choisir une conversation ne fait donc que refermer la fenetre.
-  it('AVANT : choisir une conversation n envoie RIEN — le geste est une impasse', async () => {
+  // SUPPRIME avec son sujet, motif ecrit ici : « Envoyer dans une conversation »
+  // etait deja une IMPASSE sur cet ecran (l'ecran passait un onSelectChat qui ne
+  // faisait que refermer la fenetre, alors que ShareEventModal.js:220 delegue
+  // l'envoi au parent). Le geste QUI MARCHE survit sur EventDetails :
+  // EventParticipants.js:615 (icone de partage) -> EventDetails.js:5413
+  // <ShareEventModal onSelectChat={handleShareEventInChat}>, et « Plus tard »
+  // depose justement l'utilisateur sur cet ecran (pile posee par EventWizardRecap).
+  it('« Envoyer dans une conversation » a quitte cet ecran', async () => {
     const tree = await renderScreen(eventParams());
-    const modal = tree.root.findAll(
+    expect(renderedText(tree)).not.toContain('Envoyer dans une conversation');
+    expect(tree.root.findAll(
       (/** @type {any} */ node) => node.props && typeof node.props.onSelectChat === 'function',
-    )[0];
-    expect(modal).toBeTruthy();
-    await act(async () => { modal.props.onSelectChat('conv-42'); });
-    expect(mockDownloadAndShareRender).not.toHaveBeenCalled();
-    expect(mockShare).not.toHaveBeenCalled();
-    expect(navigation.navigate).not.toHaveBeenCalled();
+    )).toHaveLength(0);
+  });
+
+  it('les formats ne sont plus a l ecran : ils vivent dans le choix de format', async () => {
+    const tree = await renderScreen(eventParams());
+    expect(renderedText(tree)).not.toContain('9:16');
+    expect(renderedText(tree)).not.toContain('A4');
+
+    await openFormatSheet(tree);
+    const text = renderedText(tree);
+    expect(text).toContain('Dans mes photos');
+    expect(text).toContain('9:16');
+    expect(text).toContain('A4');
+  });
+
+  // La demande d'Adel, mot pour mot : « le premier propose est l'enregistrement
+  // dans les photos du telephone ».
+  it('le PREMIER format propose est l enregistrement dans les photos', async () => {
+    const FORMATS = ['Affiche A4 à imprimer', 'Dans mes photos', 'Version story 9:16'];
+    const tree = await renderScreen(eventParams());
+    await openFormatSheet(tree);
+    const labels = tree.root
+      .findAllByType(TouchableOpacity)
+      .map((/** @type {any} */ node) => node.props.accessibilityLabel)
+      .filter((/** @type {any} */ label) => FORMATS.includes(label));
+    // L'ORDRE compte : c'est la demande d'Adel, mot pour mot.
+    expect(labels).toEqual(['Dans mes photos', 'Version story 9:16', 'Affiche A4 à imprimer']);
+  });
+
+  it('« Dans mes photos » enregistre l image TELLE QU AFFICHEE (post 4:5)', async () => {
+    const tree = await renderScreen(clubParams());
+    await openFormatSheet(tree);
+    await press(tree, 'Dans mes photos');
+    expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
+      format: 'post', subjectId: 'club-1', template: 'affiche-club', variant: 'ecusson',
+    }));
+    // Enregistrer, ce n'est pas partager : aucun texte de partage n'accompagne
+    // le fichier (le lien voyage avec « Partager l'affiche », pas ici).
+    expect(mockDownloadAndShareRender.mock.calls[0][0].message).toBeUndefined();
+  });
+
+  // Le choix de format masquerait l'indicateur d'attente et le message de
+  // resultat : il se referme des que le travail demarre.
+  it('choisir un format referme la feuille pour laisser voir l attente', async () => {
+    const tree = await renderScreen(clubParams());
+    await openFormatSheet(tree);
+    expect(renderedText(tree)).toContain('Dans mes photos');
+    await press(tree, 'Version story 9:16');
+    expect(renderedText(tree)).not.toContain('Dans mes photos');
   });
 });
 
@@ -319,7 +389,7 @@ describe('D20 filet — ⑥ ce que coute une fabrication d affiche', () => {
   it('AVANT : enregistrer le format DEJA affiche relance un rendu complet', async () => {
     const tree = await renderScreen(clubParams());
     expect(mockFetchRenderBase64).toHaveBeenCalledTimes(1);
-    await press(tree, 'Envoyer l’affiche');
+    await press(tree, 'Partager l’affiche');
     // `downloadAndShareRender` refait `fetchRenderBase64` avec les MEMES
     // parametres que l'apercu deja affiche (visualRender.native.js l.86).
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
@@ -349,8 +419,11 @@ describe('EventPublishedShowcase — comportement livre (caracterisation E6)', (
     }));
   });
 
+  // D20 : les deux formats ont demenage dans le choix de format. Ce qu'ils
+  // ENVOIENT n'a pas change d'un octet — c'est le temoin de non-regression.
   it('« Version story 9:16 » envoie le PNG 9:16 (temoin de non-regression)', async () => {
     const tree = await renderScreen(clubParams());
+    await openFormatSheet(tree);
     await press(tree, 'Version story 9:16');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       format: 'story',
@@ -362,6 +435,7 @@ describe('EventPublishedShowcase — comportement livre (caracterisation E6)', (
 
   it('« Affiche A4 a imprimer » envoie le PDF A4 (temoin de non-regression)', async () => {
     const tree = await renderScreen(clubParams());
+    await openFormatSheet(tree);
     await press(tree, 'Affiche A4 à imprimer');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       format: 'a4',
@@ -396,7 +470,7 @@ describe('EventPublishedShowcase — L16, le bouton principal envoie l affiche',
   // page du club (SharePlatform.share), jamais l'affiche. Il envoie le FICHIER.
   it("envoie le FICHIER de l'affiche au format affiche (post 4:5), pas un lien", async () => {
     const tree = await renderScreen(clubParams());
-    await press(tree, 'Envoyer l’affiche');
+    await press(tree, 'Partager l’affiche');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       format: 'post',
       subjectId: 'club-1',
@@ -409,7 +483,7 @@ describe('EventPublishedShowcase — L16, le bouton principal envoie l affiche',
 
   it('joint le lien du club dans le message du meme partage', async () => {
     const tree = await renderScreen(clubParams());
-    await press(tree, 'Envoyer l’affiche');
+    await press(tree, 'Partager l’affiche');
     const { message } = mockDownloadAndShareRender.mock.calls[0][0];
     expect(message).toContain(CLUB_URL);
     expect(message).toContain('Viens nous rejoindre au club !');
@@ -418,25 +492,28 @@ describe('EventPublishedShowcase — L16, le bouton principal envoie l affiche',
   // Ancien defaut : `if (!shareUrl) return;` rendait le bouton MUET, sans message.
   it('sans lien a joindre, il envoie quand meme l affiche (jamais un bouton muet)', async () => {
     const tree = await renderScreen(clubParams({ shareUrl: undefined }));
-    await press(tree, 'Envoyer l’affiche');
+    await press(tree, 'Partager l’affiche');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       format: 'post',
       subjectId: 'club-1',
     }));
   });
 
-  it('tant qu aucune affiche n existe, le bouton est GRISE et non muet', async () => {
+  it('tant qu aucune affiche n existe, les DEUX boutons sont GRISES et non muets', async () => {
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
     const tree = await renderScreen(clubParams());
-    const node = findPressable(tree, 'Envoyer l’affiche');
-    expect(node.props.disabled).toBe(true);
-    expect(node.props.accessibilityState.disabled).toBe(true);
+    ['Enregistrer l’image', 'Partager l’affiche'].forEach((label) => {
+      const node = findPressable(tree, label);
+      expect(node.props.disabled).toBe(true);
+      expect(node.props.accessibilityState.disabled).toBe(true);
+    });
   });
 
   it('chaque bouton dit ce qu on obtient, et que l image est enregistrable', async () => {
     const tree = await renderScreen(clubParams());
+    expect(renderedText(tree)).toContain('enregistrer');
+    await openFormatSheet(tree);
     const text = renderedText(tree);
-    expect(text).toContain('enregistrer');
     expect(text).toContain('9:16');
     expect(text).toContain('A4');
   });
@@ -480,20 +557,31 @@ describe('EventPublishedShowcase — L16, le chargement montre la forme de l aff
 });
 
 describe('EventPublishedShowcase — hierarchie et etats', () => {
-  it('un seul bouton principal, et les deux formats lui sont subordonnes', async () => {
+  // INVERSE le 2026-08-07 (D20). AVANT : les 2 formats etaient a l'ecran, sous le
+  // bouton principal. Ils sont maintenant DANS le choix de format — la hierarchie
+  // n'a pas disparu, elle a change de niveau.
+  it('un seul bouton principal, et les deux formats sont dans son choix', async () => {
     const tree = await renderScreen(clubParams());
     const labels = tree.root
       .findAllByType(TouchableOpacity)
       .map((/** @type {any} */ node) => node.props.accessibilityLabel);
-    expect(labels).toContain('Envoyer l’affiche');
-    expect(labels).toContain('Version story 9:16');
-    expect(labels).toContain('Affiche A4 à imprimer');
+    expect(labels).toContain('Enregistrer l’image');
+    expect(labels).toContain('Partager l’affiche');
     expect(labels).toContain('Plus tard');
+    expect(labels).not.toContain('Version story 9:16');
+
+    await openFormatSheet(tree);
+    const dansLaFeuille = tree.root
+      .findAllByType(TouchableOpacity)
+      .map((/** @type {any} */ node) => node.props.accessibilityLabel);
+    expect(dansLaFeuille).toContain('Version story 9:16');
+    expect(dansLaFeuille).toContain('Affiche A4 à imprimer');
   });
 
   it('un echec de partage se dit a l ecran', async () => {
     mockDownloadAndShareRender.mockRejectedValue(new Error('reseau'));
     const tree = await renderScreen(clubParams());
+    await openFormatSheet(tree);
     await press(tree, 'Version story 9:16');
     expect(renderedText(tree)).toContain('Le téléchargement a échoué');
     expect(tree.root.findAllByType(Text).length).toBeGreaterThan(0);
@@ -505,18 +593,23 @@ describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
     mockCapability = 'save-then-open';
   });
 
-  it('le bouton principal annonce l ENREGISTREMENT, pas un envoi qui n arrive pas', async () => {
+  // INVERSE le 2026-08-07 (D20). AVANT : le LIBELLE du bouton principal changeait
+  // (« Enregistrer l'affiche » sur Android). Les libelles sont maintenant fixes —
+  // Adel les a decides. L'honnetete L20 n'a pas disparu : elle est passee dans la
+  // LIGNE D'EXPLICATION, qui dit toujours ce que la plateforme fait vraiment.
+  it('l explication annonce l ENREGISTREMENT, pas un envoi qui n arrive pas', async () => {
     const tree = await renderScreen(clubParams());
     const labels = tree.root
       .findAllByType(TouchableOpacity)
       .map((/** @type {any} */ node) => node.props.accessibilityLabel);
-    expect(labels).toContain('Enregistrer l’affiche');
-    expect(labels).not.toContain('Envoyer l’affiche');
+    expect(labels).toContain('Partager l’affiche');
     expect(renderedText(tree)).toContain('galerie photo');
+    expect(renderedText(tree)).not.toContain('Dans la fenêtre de partage');
   });
 
   it('les formats story et A4 disent OU le fichier atterrit', async () => {
     const tree = await renderScreen(clubParams());
+    await openFormatSheet(tree);
     const text = renderedText(tree);
     expect(text).toContain('enregistrée dans ta galerie');
     expect(text).toContain('enregistré dans tes téléchargements');
@@ -525,7 +618,8 @@ describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
   // Sans titre de selecteur, Android ouvre l application par defaut : plus de choix.
   it('le selecteur d application est titre', async () => {
     const tree = await renderScreen(clubParams());
-    await press(tree, 'Enregistrer l’affiche');
+    await openFormatSheet(tree);
+    await press(tree, 'Dans mes photos');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       dialogTitle: 'Ouvrir l’affiche avec…',
       format: 'post',
@@ -538,7 +632,8 @@ describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
       fileUri: 'file:///cache/affiche.png', opened: true, outcome: 'gallery',
     });
     const tree = await renderScreen(clubParams());
-    await press(tree, 'Enregistrer l’affiche');
+    await openFormatSheet(tree);
+    await press(tree, 'Dans mes photos');
     expect(renderedText(tree)).toContain('C’est enregistré dans ta galerie photo.');
   });
 
@@ -547,6 +642,7 @@ describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
       fileUri: 'file:///cache/affiche.pdf', opened: false, outcome: 'downloads',
     });
     const tree = await renderScreen(clubParams());
+    await openFormatSheet(tree);
     await press(tree, 'Affiche A4 à imprimer');
     expect(renderedText(tree)).toContain('C’est enregistré dans tes téléchargements.');
   });
@@ -561,7 +657,7 @@ describe('EventPublishedShowcase — L20, un refus parle et nomme sa cause', () 
     const refus = Object.assign(new Error('permission_denied'), { reason: 'permission_denied' });
     mockDownloadAndShareRender.mockRejectedValue(refus);
     const tree = await renderScreen(clubParams());
-    await press(tree, 'Enregistrer l’affiche');
+    await press(tree, 'Partager l’affiche');
     const text = renderedText(tree);
     expect(text).toContain('n’a pas le droit d’enregistrer');
     expect(text).not.toContain('Vérifie ta connexion');
@@ -571,7 +667,7 @@ describe('EventPublishedShowcase — L20, un refus parle et nomme sa cause', () 
     const echec = Object.assign(new Error('save_failed'), { reason: 'save_failed' });
     mockDownloadAndShareRender.mockRejectedValue(echec);
     const tree = await renderScreen(clubParams());
-    await press(tree, 'Enregistrer l’affiche');
+    await press(tree, 'Partager l’affiche');
     const text = renderedText(tree);
     expect(text).toContain('trop peu de place');
     expect(text).not.toContain('Vérifie ta connexion');
@@ -580,20 +676,20 @@ describe('EventPublishedShowcase — L20, un refus parle et nomme sa cause', () 
   it('cause inconnue : le message generique reste (jamais de silence)', async () => {
     mockDownloadAndShareRender.mockRejectedValue(new Error('reseau'));
     const tree = await renderScreen(clubParams());
-    await press(tree, 'Enregistrer l’affiche');
+    await press(tree, 'Partager l’affiche');
     expect(renderedText(tree)).toContain('Le téléchargement a échoué');
   });
 
   it('apres un echec, un succes efface le message d erreur', async () => {
     mockDownloadAndShareRender.mockRejectedValueOnce(new Error('reseau'));
     const tree = await renderScreen(clubParams());
-    await press(tree, 'Enregistrer l’affiche');
+    await press(tree, 'Partager l’affiche');
     expect(renderedText(tree)).toContain('Le téléchargement a échoué');
 
     mockDownloadAndShareRender.mockResolvedValue({
       fileUri: 'file:///cache/affiche.png', opened: true, outcome: 'gallery',
     });
-    await press(tree, 'Enregistrer l’affiche');
+    await press(tree, 'Partager l’affiche');
     const text = renderedText(tree);
     expect(text).not.toContain('Le téléchargement a échoué');
     expect(text).toContain('C’est enregistré dans ta galerie photo.');
@@ -601,19 +697,22 @@ describe('EventPublishedShowcase — L20, un refus parle et nomme sa cause', () 
 });
 
 describe('EventPublishedShowcase — L20, TEMOIN POSITIF : iOS et web ne changent pas', () => {
-  it('le bouton principal reste « Envoyer l affiche », fenetre de partage', async () => {
+  // INVERSE le 2026-08-07 (D20) : le libelle ne depend plus de la plateforme,
+  // c'est l'EXPLICATION qui distingue iOS/web (fenetre de partage) d'Android
+  // (galerie). Le contrat L20 tient toujours : rien ne promet un envoi ailleurs.
+  it('sur iOS et web, l explication parle de la fenetre de partage', async () => {
     const tree = await renderScreen(clubParams());
     const labels = tree.root
       .findAllByType(TouchableOpacity)
       .map((/** @type {any} */ node) => node.props.accessibilityLabel);
-    expect(labels).toContain('Envoyer l’affiche');
-    expect(labels).not.toContain('Enregistrer l’affiche');
+    expect(labels).toContain('Partager l’affiche');
     expect(renderedText(tree)).toContain('Dans la fenêtre de partage');
+    expect(renderedText(tree)).not.toContain('galerie photo');
   });
 
   it('la feuille de partage etant son propre retour, aucun message ne s ajoute', async () => {
     const tree = await renderScreen(clubParams());
-    await press(tree, 'Envoyer l’affiche');
+    await press(tree, 'Partager l’affiche');
     const text = renderedText(tree);
     expect(text).not.toContain('C’est enregistré');
     expect(text).not.toContain('Le téléchargement a échoué');
@@ -624,7 +723,7 @@ describe('EventPublishedShowcase — L20, TEMOIN POSITIF : iOS et web ne changen
   it('web : une chaine en retour ne produit ni message ni erreur', async () => {
     mockDownloadAndShareRender.mockResolvedValue('blob:https://test.foundclub/abc');
     const tree = await renderScreen(clubParams());
-    await press(tree, 'Envoyer l’affiche');
+    await press(tree, 'Partager l’affiche');
     const text = renderedText(tree);
     expect(text).not.toContain('C’est enregistré');
     expect(text).not.toContain('Le téléchargement a échoué');

@@ -21,13 +21,14 @@ import {
   AccessibilityInfo, ActivityIndicator, Image, KeyboardAvoidingView, Platform,
   ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useVisualShowcase, { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEventShowcase';
 import useTheme from '@/theme/themeContext';
 
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
-import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 
@@ -66,16 +67,22 @@ export default function EventPublishedShowcase({ navigation, route }) {
   const subjectType = params.subjectType || templateConfig.subjectType;
   const subjectId = params.subjectId ?? eventId;
   const editableFields = editableFieldsParam || templateConfig.editableFields;
-  // Partage « dans une conversation » (ShareEventModal) réservé à l'événement : pas
-  // d'objet chat-partageable pour club/annonce en V1. Défaut = event ⇒ true.
-  const chatShareEnabled = params.chatShareEnabled ?? (subjectType === 'event');
 
-  const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [busyAction, setBusyAction] = useState(null); // 'visual' | 'story' | 'poster' | null
+  // D20 : le choix de format vit dans une feuille, pas en pile de boutons.
+  // 'save' = enregistrer l'image telle qu'affichée · 'story' · 'poster' · 'share'.
+  const [formatSheetOpen, setFormatSheetOpen] = useState(false);
+  const [busyAction, setBusyAction] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [downloadError, setDownloadError] = useState(null);
   const [downloadNotice, setDownloadNotice] = useState(null);
   const reduceMotion = useReduceMotion();
+
+  // D20 (⑦) : l'écran est enregistré `headerShown: false` (EventStack.js,
+  // PrivateNavigator.js) — rien au-dessus de lui ne réserve la barre d'état, il
+  // doit donc le faire lui-même. Même motif que ScreenContainer (le gabarit
+  // maison) : `headerHeightNative || insets.top`, ici sans en-tête natif possible.
+  // Un nombre en dur casserait d'un modèle de téléphone à l'autre.
+  const insets = useSafeAreaInsets();
 
   // CE QUI VA SE PASSER quand on presse, décidé une seule fois dans la couche
   // plateforme (fileShareContract). L'écran n'interroge PAS Platform.OS pour ça :
@@ -91,7 +98,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
   const previewWidth = Math.max(200, Math.min(windowWidth - 40, Math.round(windowHeight * 0.5)));
 
   const {
-    downloadPoster, downloadStory, error, event, isLoading, overrides, previewUri,
+    downloadPoster, downloadStory, error, isLoading, overrides, previewUri,
     resetOverrides, retry, setOverride, setVariant, shareVisual, variant, variants,
   } = useVisualShowcase({
     eventId, subjectId, subjectType, template, variants: variantsParam,
@@ -173,6 +180,10 @@ export default function EventPublishedShowcase({ navigation, route }) {
   // useEventShowcase.shareFile journalise puis RE-LEVE l'erreur : sans ce catch, un
   // telechargement echoue en silence (spinner qui s'arrete, aucun retour a l'ecran).
   const runDownload = async (key, fn) => {
+    // La feuille se referme AVANT le travail : l'attente (indicateur) et son
+    // résultat (« C'est enregistré dans ta galerie ») se lisent sur l'écran, pas
+    // derrière un panneau qui les masque.
+    setFormatSheetOpen(false);
     setBusyAction(key);
     setDownloadError(null);
     setDownloadNotice(null);
@@ -215,7 +226,13 @@ export default function EventPublishedShowcase({ navigation, route }) {
       keyboardVerticalOffset={100}
       style={styles.flex}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.container, {
+          paddingBottom: SCREEN_PADDING + insets.bottom,
+          paddingTop: SCREEN_PADDING + insets.top,
+        }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>{titleText}</Text>
         <Text style={styles.subtitle}>{subtitleText}</Text>
 
@@ -346,13 +363,31 @@ export default function EventPublishedShowcase({ navigation, route }) {
         </View>
 
         <View style={styles.actions}>
-          {/* Geste PRINCIPAL : il traite le FICHIER de l'affiche (format affiché),
-              le lien voyage dans le message. Un seul bouton plein à l'écran.
-              Le libellé annonce ce que la plateforme sait vraiment faire : envoyer
-              (iOS / web) ou enregistrer puis proposer une application (Android). */}
+          {/* D20 (⑦) — TROIS gestes, dans l'ordre décidé par Adel le 2026-08-07 :
+              enregistrer (qui ouvre le choix de format), partager, plus tard.
+              Les formats ne sont plus des boutons empilés : ils vivent dans la
+              feuille ci-dessous, dont la PREMIÈRE entrée est l'enregistrement
+              dans les photos du téléphone. */}
           <ShowcaseAction
-            busy={busyAction === 'visual'}
+            busy={busyAction === 'save' || busyAction === 'story' || busyAction === 'poster'}
             busyColor={Colors.primary900}
+            disabled={busyAction != null || posterUnavailable}
+            hint={t(
+              'showcase.saveImageHint',
+              'Tu choisis le format : dans tes photos, en story, ou en affiche à imprimer.',
+            )}
+            label={t('showcase.saveImage', 'Enregistrer l’image')}
+            onPress={() => setFormatSheetOpen(true)}
+            styles={styles}
+            variant="primary"
+          />
+
+          {/* Le partage système. Le libellé reste « Partager », mais la ligne
+              d'explication dit ce que la plateforme fait VRAIMENT (leçon L20 :
+              sur Android le fichier est enregistré puis ouvert, pas envoyé). */}
+          <ShowcaseAction
+            busy={busyAction === 'share'}
+            busyColor={Colors.primary500}
             disabled={busyAction != null || posterUnavailable}
             hint={saveThenOpen
               ? t(
@@ -365,58 +400,10 @@ export default function EventPublishedShowcase({ navigation, route }) {
                 'L’image part telle que tu la vois. Dans la fenêtre de partage, '
                 + 'tu peux aussi l’enregistrer dans ton téléphone.',
               )}
-            label={saveThenOpen
-              ? t('showcase.save', 'Enregistrer l’affiche')
-              : t('showcase.share', 'Envoyer l’affiche')}
-            onPress={() => runDownload('visual', () => shareVisual(shareMessage, chooserTitle))}
+            label={t('showcase.sharePoster', 'Partager l’affiche')}
+            onPress={() => runDownload('share', () => shareVisual(shareMessage, chooserTitle))}
             styles={styles}
-            variant="primary"
-          />
-
-          {chatShareEnabled ? (
-            <ShowcaseAction
-              busyColor={Colors.primary500}
-              disabled={busyAction != null}
-              hint={t('showcase.sendInChatHint', 'Directement dans une discussion FoundClub.')}
-              label={t('showcase.sendInChat', 'Envoyer dans une conversation')}
-              onPress={() => setShareModalOpen(true)}
-              styles={styles}
-              variant="secondary"
-            />
-          ) : null}
-
-          <ShowcaseAction
-            busy={busyAction === 'story'}
-            busyColor={Colors.primary500}
-            disabled={busyAction != null}
-            hint={saveThenOpen
-              ? t(
-                'showcase.storyHintSave',
-                'Image verticale plein écran, enregistrée dans ta galerie, '
-                + 'pour Instagram, WhatsApp ou Snap.',
-              )
-              : t(
-                'showcase.storyHint',
-                'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
-              )}
-            label={t('showcase.story', 'Version story 9:16')}
-            onPress={() => runDownload('story', () => downloadStory(chooserTitle))}
-            styles={styles}
-          />
-          <ShowcaseAction
-            busy={busyAction === 'poster'}
-            busyColor={Colors.primary500}
-            disabled={busyAction != null}
-            hint={saveThenOpen
-              ? t(
-                'showcase.posterHintSave',
-                'Fichier PDF enregistré dans tes téléchargements, '
-                + 'prêt pour l’imprimante du club.',
-              )
-              : t('showcase.posterHint', 'Fichier PDF, prêt pour l’imprimante du club.')}
-            label={t('showcase.poster', 'Affiche A4 à imprimer')}
-            onPress={() => runDownload('poster', () => downloadPoster(chooserTitle))}
-            styles={styles}
+            variant="secondary"
           />
 
           {downloadNotice ? (
@@ -445,14 +432,65 @@ export default function EventPublishedShowcase({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        {chatShareEnabled ? (
-          <ShareEventModal
-            event={event}
-            isVisible={shareModalOpen}
-            onClose={() => setShareModalOpen(false)}
-            onSelectChat={() => setShareModalOpen(false)}
-          />
-        ) : null}
+        {/* Le choix de format. `BottomModal` est le gabarit maison des feuilles
+            de l'app (24 écrans l'utilisent) : il gère déjà le retrait bas et la
+            fermeture au glissé. PREMIÈRE entrée = les photos du téléphone. */}
+        <BottomModal
+          close={() => setFormatSheetOpen(false)}
+          isVisible={formatSheetOpen}
+          snapPoints={['52%']}
+        >
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>
+              {t('showcase.chooseFormat', 'Sous quel format ?')}
+            </Text>
+
+            <ShowcaseAction
+              busyColor={Colors.primary900}
+              hint={saveThenOpen
+                ? t(
+                  'showcase.saveHint',
+                  'Elle part dans ta galerie photo, telle que tu la vois. '
+                  + 'Tu choisis ensuite l’application qui l’ouvre.',
+                )
+                : t(
+                  'showcase.saveToPhotosHintSheet',
+                  'La fenêtre de partage s’ouvre : choisis « Enregistrer l’image ».',
+                )}
+              label={t('showcase.saveToPhotos', 'Dans mes photos')}
+              onPress={() => runDownload('save', () => shareVisual(undefined, chooserTitle))}
+              styles={styles}
+              variant="primary"
+            />
+            <ShowcaseAction
+              hint={saveThenOpen
+                ? t(
+                  'showcase.storyHintSave',
+                  'Image verticale plein écran, enregistrée dans ta galerie, '
+                  + 'pour Instagram, WhatsApp ou Snap.',
+                )
+                : t(
+                  'showcase.storyHint',
+                  'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
+                )}
+              label={t('showcase.story', 'Version story 9:16')}
+              onPress={() => runDownload('story', () => downloadStory(chooserTitle))}
+              styles={styles}
+            />
+            <ShowcaseAction
+              hint={saveThenOpen
+                ? t(
+                  'showcase.posterHintSave',
+                  'Fichier PDF enregistré dans tes téléchargements, '
+                  + 'prêt pour l’imprimante du club.',
+                )
+                : t('showcase.posterHint', 'Fichier PDF, prêt pour l’imprimante du club.')}
+              label={t('showcase.poster', 'Affiche A4 à imprimer')}
+              onPress={() => runDownload('poster', () => downloadPoster(chooserTitle))}
+              styles={styles}
+            />
+          </View>
+        </BottomModal>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -531,12 +569,18 @@ function ShowcaseAction({
   );
 }
 
+/**
+ * Marge de l'écran. Nommée parce qu'elle est utilisée DEUX fois : dans la feuille
+ * de style, et additionnée aux retraits système (`insets`) au rendu.
+ */
+const SCREEN_PADDING = 20;
+
 const makeStyles = (Colors) => StyleSheet.create({
   actions: { gap: 10 },
   // Opacité 0.5 : la cible reste lisible mais visiblement hors service (Material).
   btnDisabled: { opacity: 0.5 },
   container: {
-    backgroundColor: Colors.primary900, flexGrow: 1, gap: 16, padding: 20,
+    backgroundColor: Colors.primary900, flexGrow: 1, gap: 16, padding: SCREEN_PADDING,
   },
   // error300 sur fond sombre primary900 : ~8:1 (AA).
   downloadErrorText: {
@@ -658,6 +702,11 @@ const makeStyles = (Colors) => StyleSheet.create({
   },
   // Sur fond sombre primary900 : primary500 = ~7,3:1.
   secondaryBtnText: { color: Colors.primary500, fontWeight: '700' },
+  sheet: { gap: 12, paddingBottom: 8 },
+  // Sur le fond de feuille (primary700, BottomModal.js l.261) : neutral00 = maximal.
+  sheetTitle: {
+    color: Colors.neutral00, fontSize: 18, fontWeight: '800', marginBottom: 4,
+  },
   // Ossature de l'affiche : blocs primary700 sur le cadre primary800 — visibles
   // meme fige, quand « reduire les animations » coupe le balayage.
   skeletonBadge: {
