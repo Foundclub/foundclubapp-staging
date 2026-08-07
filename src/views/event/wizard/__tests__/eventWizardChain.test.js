@@ -7,6 +7,11 @@ import EventWizardAccess from '../EventWizardAccess';
 import { EventWizardProvider, useEventWizard } from '../EventWizardContext';
 import EventWizardDescription from '../EventWizardDescription';
 import EventWizardDetectionSlots from '../EventWizardDetectionSlots';
+import {
+  getEventWizardExitRoute,
+  getEventWizardNextRoute,
+  getEventWizardStepRoutes,
+} from '../eventWizardDetectionUtils';
 import EventWizardInvites from '../EventWizardInvites';
 import EventWizardLocation from '../EventWizardLocation';
 import EventWizardLogistics from '../EventWizardLogistics';
@@ -17,11 +22,6 @@ import EventWizardTeam from '../EventWizardTeam';
 import EventWizardTournamentSettings from '../EventWizardTournamentSettings';
 import EventWizardTournamentStructure from '../EventWizardTournamentStructure';
 import EventWizardType from '../EventWizardType';
-import {
-  getEventWizardExitRoute,
-  getEventWizardNextRoute,
-  getEventWizardStepRoutes,
-} from '../eventWizardDetectionUtils';
 
 // Filet D08 (E6) — moitie TRANSITIONS. La moitie NUMEROS vit dans
 // `eventWizardDetectionUtils.test.js`.
@@ -288,11 +288,11 @@ const ECRANS = {
   [RouteNames.EventWizardLocation]: EventWizardLocation,
   [RouteNames.EventWizardLogistics]: EventWizardLogistics,
   [RouteNames.EventWizardParticipants]: EventWizardParticipants,
+  [RouteNames.EventWizardRecap]: EventWizardRecap,
   [RouteNames.EventWizardStageProgram]: EventWizardStageProgram,
   [RouteNames.EventWizardTeam]: EventWizardTeam,
   [RouteNames.EventWizardTournamentSettings]: EventWizardTournamentSettings,
   [RouteNames.EventWizardTournamentStructure]: EventWizardTournamentStructure,
-  [RouteNames.EventWizardRecap]: EventWizardRecap,
   [RouteNames.EventWizardType]: EventWizardType,
 };
 

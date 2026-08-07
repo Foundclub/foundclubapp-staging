@@ -40,10 +40,6 @@ const LATENCE_RESEAU = 30;
 /** Le nombre de caches que l'ecran rafraichit apres une creation reussie. */
 const NOMBRE_DE_CACHES = 6;
 
-const attendre = (/** @type {number} */ duree) => new Promise((resoudre) => {
-  setTimeout(resoudre, duree);
-});
-
 const maintenant = () => Date.now() - mockChrono.depart;
 
 jest.mock('react-i18next', () => ({
