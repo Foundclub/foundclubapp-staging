@@ -420,12 +420,18 @@ const bottomActionInventory = (/** @type {any} */ root) => {
     .map((/** @type {any} */ node) => textOf(node))
     .filter(Boolean);
   const found = new Set();
+  // La comparaison ignore la casse : un repere sensible a la majuscule casse au
+  // premier renommage (« …de cotisation » -> « Cotisation »), et un inventaire
+  // vide se lit alors comme une action disparue.
   const collect = (/** @type {string} */ needle, /** @type {string} */ key) => {
-    if (labels.some((/** @type {string} */ value) => value.includes(needle))) found.add(key);
+    const target = needle.toLowerCase();
+    if (labels.some((/** @type {string} */ value) => value.toLowerCase().includes(target))) {
+      found.add(key);
+    }
   };
 
   // « cotisation » est le repere qui traverse le raccourcissement du libelle :
-  // il attrape « Preparer la campagne de cotisation » comme « Preparer la cotisation ».
+  // il attrape « Preparer la campagne de cotisation » comme « Cotisation ».
   collect('cotisation', 'campaign');
   collect('Créer une autre campagne', 'campaign-more');
   collect('Ouvrir', 'campaign-open');
@@ -437,6 +443,26 @@ const bottomActionInventory = (/** @type {any} */ root) => {
   collect('Réglages tournoi', 'tournamentSettings');
 
   return [...found].sort();
+};
+
+const lastAlert = () => {
+  const { calls } = /** @type {any} */ (Alert.alert).mock;
+  return calls.length ? calls[calls.length - 1] : null;
+};
+
+const alertOptionLabels = () => {
+  const call = lastAlert();
+  if (!call || !Array.isArray(call[2])) return [];
+  return call[2].map((/** @type {any} */ option) => option.text);
+};
+
+const pressAlertOption = (/** @type {string} */ label) => {
+  const call = lastAlert();
+  const option = (call?.[2] || []).find((/** @type {any} */ item) => item.text === label);
+  if (!option) throw new Error(`L'alerte ne propose pas « ${label} »`);
+  act(() => {
+    option.onPress?.();
+  });
 };
 
 const byTestId = (/** @type {any} */ root, /** @type {string} */ id) => root
@@ -623,20 +649,33 @@ describe('D21 ① — la cotisation est rangee dans le menu « Gérer l evenemen
   test('le geste n est plus sur la page : il faut ouvrir le menu pour l atteindre', () => {
     const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
 
-    expect(pressableWithText(root, 'cotisation')).toBeUndefined();
+    expect(pressableWithText(root, 'Cotisation')).toBeUndefined();
     press(root, "Gérer l'événement");
-    expect(pressableWithText(root, 'Préparer la cotisation')).toBeTruthy();
+    expect(pressableWithText(root, 'Cotisation')).toBeTruthy();
   });
 
   test('le nom raccourci ouvre le MEME reglage de campagne, en un seul tap', () => {
     const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
     press(root, "Gérer l'événement");
-    press(root, 'Préparer la cotisation');
+    press(root, 'Cotisation');
 
     expect(mockNavigate).toHaveBeenCalledWith('ClubStack', {
       params: expect.objectContaining({ clubId: CLUB_ID, createNew: true, eventId: 'event-1' }),
       screen: 'ClubLicenseCampaignSettings',
     });
+  });
+
+  // ⛔ DECISION D'ADEL du 2026-08-07 : UN SEUL libelle. Le couple
+  // « Preparer la campagne de cotisation » / « Creer une campagne de
+  // cotisation » a disparu de l'ecran, dans tous ses etats.
+  test('UN SEUL libelle : ni « Préparer… » ni « Créer une… » ne subsistent', () => {
+    const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
+    press(root, "Gérer l'événement");
+
+    expect(hasText(root, 'Cotisation')).toBe(true);
+    expect(hasText(root, 'Préparer')).toBe(false);
+    expect(hasText(root, 'Créer une campagne de cotisation')).toBe(false);
+    expect(hasText(root, 'campagne de cotisation')).toBe(false);
   });
 
   // ⚠️ INVERSION VOLONTAIRE du « TROU CONSTATE » tournoi : la chip vit dans le
@@ -672,6 +711,63 @@ describe('D21 ① — la cotisation est rangee dans le menu « Gérer l evenemen
     const root = mountScreen({ params: { eventCampaignCreationSuggested: true } });
 
     expect(bottomActionInventory(root)).toEqual([]);
+  });
+});
+
+describe('D21 ① — un seul mot, mais AUCUN comportement fondu', () => {
+  const CAMPAIGN = {
+    currency: 'EUR',
+    defaultAmountCents: 5000,
+    documentId: 'camp-1',
+    name: 'Cotisation U15',
+    status: 'draft',
+    totals: { total: 3 },
+  };
+  const AVERTISSEMENT_DEJA_LIEE = 'Cet événement a déjà une campagne de cotisation. '
+    + 'Crée-en une autre seulement si tu veux un paiement distinct.';
+
+  // GARDE-FOU 2 — « Seul le TEXTE du bouton est unifié ». L'action, elle, se
+  // comporte toujours differemment selon qu'une campagne existe : les deux
+  // chemins sont exerces ici, cote a cote.
+  test('SANS campagne existante : l action ouvre directement le reglage', () => {
+    const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
+    press(root, "Gérer l'événement");
+    press(root, 'Cotisation');
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('ClubStack', {
+      params: expect.objectContaining({ clubId: CLUB_ID, createNew: true, eventId: 'event-1' }),
+      screen: 'ClubLicenseCampaignSettings',
+    });
+  });
+
+  // GARDE-FOU 1 — OU EST PASSEE L'INFORMATION « une campagne existe deja ».
+  // Elle n'a pas disparu avec le libelle : elle est portee par L'ACTION, qui
+  // previent AVANT de creer, et ne navigue qu'apres un oui explicite.
+  test('AVEC campagne existante : l action previent d abord, et ne navigue pas', () => {
+    const root = asClubManager({ campaigns: [CAMPAIGN] });
+    press(root, 'Créer une autre campagne');
+
+    expect(lastAlert()[0]).toBe('Campagne déjà liée');
+    expect(lastAlert()[1]).toBe(AVERTISSEMENT_DEJA_LIEE);
+    expect(alertOptionLabels()).toEqual(['Annuler', 'Créer quand même']);
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    pressAlertOption('Créer quand même');
+    expect(mockNavigate).toHaveBeenCalledWith('ClubStack', {
+      params: expect.objectContaining({ clubId: CLUB_ID, createNew: true, eventId: 'event-1' }),
+      screen: 'ClubLicenseCampaignSettings',
+    });
+  });
+
+  // GARDE-FOU 1, deuxieme endroit ou l'information reste visible : la page
+  // elle-meme nomme les campagnes deja rattachees a l'evenement.
+  test('AVEC campagne existante : la page le DIT, en toutes lettres', () => {
+    const root = asClubManager({ campaigns: [CAMPAIGN] });
+
+    expect(hasText(root, 'Cotisations liées')).toBe(true);
+    expect(hasText(root, 'Campagnes de paiement rattachées à cet événement.')).toBe(true);
+    expect(hasText(root, 'Cotisation U15')).toBe(true);
   });
 });
 

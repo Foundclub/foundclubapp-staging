@@ -3614,16 +3614,27 @@ function EventDetails({ navigation, route }) {
     }
 
     // D21 ① : le geste « campagne de cotisation » quitte le bas de page pour ce
-    // menu. Les conditions sont REPRISES TELLES QUELLES du bloc d'ou il vient
-    // (`renderEventLicenseCampaignActions`) : c'est un deplacement, pas un
-    // elargissement de droits.
-    // ⚠️ DEUX libelles, et c'est volontaire : « preparer » dit que l'app le
-    // SUGGERE juste apres la creation de l'evenement, « creer » dit qu'il n'y a
-    // rien et qu'on peut en faire une. Un seul mot perdrait ce sens.
-    // 📌 MESURE D21 : la seconde branche est aujourd'hui INJOIGNABLE — la garde
-    // du bloc rend `null` quand rien n'est suggere et qu'aucune campagne
-    // n'existe. Elle est conservee telle quelle : retirer une branche est une
-    // decision produit, pas une decision d'agent.
+    // menu. Les conditions de visibilite sont REPRISES TELLES QUELLES du bloc
+    // d'ou il vient (`renderEventLicenseCampaignActions`) : c'est un
+    // deplacement, pas un elargissement de droits.
+    //
+    // UN SEUL libelle — decision d'Adel du 2026-08-07. Il remplace le couple
+    // « Preparer la campagne de cotisation » / « Creer une campagne de
+    // cotisation ». Un nom, pas un verbe, et c'est ce qui le rend vrai dans
+    // TOUS les etats : l'action n'ouvre pas toujours directement la creation,
+    // elle previent d'abord quand une campagne existe deja.
+    //
+    // ⛔ AUCUNE INFORMATION PERDUE, elle a seulement change de place :
+    //   - « l'app te le suggere maintenant » etait porte par le verbe
+    //     « preparer » ; c'est desormais la PRESENCE de l'entree qui le dit —
+    //     elle n'apparait que lorsque le tunnel de creation l'a suggeree ;
+    //   - « cet evenement a deja une campagne » est porte par l'action
+    //     elle-meme (`openEventLicenseCampaignSettings`, l. ~2543 : « Crée-en
+    //     une autre seulement si tu veux un paiement distinct ») ET par le bloc
+    //     « Cotisations liées » de la page. Les deux sont intacts.
+    // ⛔ SEUL LE TEXTE est unifie : le code se comporte toujours differemment
+    //    selon qu'une campagne existe — avertissement d'abord, navigation
+    //    ensuite. Fige par test.
     if (canManageEventLicenseCampaigns
       && (eventCampaignCreationSuggested || eventLicenseCampaigns.length > 0)
       && !eventLicenseCampaignsQuery.isLoading
@@ -3631,9 +3642,7 @@ function EventDetails({ navigation, route }) {
       chips.push({
         icon: 'euroCircle',
         key: 'licenseCampaign',
-        label: eventCampaignCreationSuggested
-          ? t('eventDetails.managePanel.campaignPrepare', 'Préparer la cotisation')
-          : t('eventDetails.managePanel.campaignCreate', 'Créer une cotisation'),
+        label: t('eventDetails.managePanel.campaign', 'Cotisation'),
         onPress: openEventLicenseCampaignSettings,
       });
     }
