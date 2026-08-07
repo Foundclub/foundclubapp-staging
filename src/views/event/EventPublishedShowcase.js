@@ -6,11 +6,20 @@
  * d'une détection / séance d'essai (câblé dans EventWizardRecap — voir diffs/app-EventWizardRecap.patch).
  *
  * Réutilise les patterns EXISTANTS de l'app :
- *   - useTheme (Colors.primary500 / Colors.primary700) — comme ShareEventModal
- *   - ShareEventModal (envoi dans une conversation) + SharePlatform (partage natif)
+ *   - useTheme (Colors.primary500 / Colors.primary700)
+ *   - BottomModal (le gabarit maison des feuilles) pour le choix de format
+ *   - useSafeAreaInsets, comme ScreenContainer : l'écran est `headerShown: false`
  *   - buildShareMessageWithUrl / buildPublicEventUrl (@/utils/shareLinks)
  *   - celebrate() pour rejouer la célébration de création
  * L'aperçu + les téléchargements passent par useEventShowcase (endpoint render serveur).
+ *
+ * D20 (2026-08-07) — TROIS gestes, décidés par Adel : « Enregistrer l'image »
+ * (qui ouvre le choix de format, photos du téléphone en premier), « Partager
+ * l'affiche » (partage système), « Plus tard ».
+ * ⚠️ `ShareEventModal` a quitté cet écran : il y était une IMPASSE (l'écran
+ * passait un `onSelectChat` qui ne faisait que refermer la fenêtre, alors que
+ * ShareEventModal délègue l'envoi au parent). Le geste qui MARCHE vit sur
+ * EventDetails — et « Plus tard » y ramène.
  *
  * NOTE : imports `@/...` résolus dans app/. Non exécuté ici (câblage app).
  */
@@ -431,67 +440,68 @@ export default function EventPublishedShowcase({ navigation, route }) {
             <Text style={styles.later}>{t('showcase.later', 'Plus tard')}</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Le choix de format. `BottomModal` est le gabarit maison des feuilles
-            de l'app (24 écrans l'utilisent) : il gère déjà le retrait bas et la
-            fermeture au glissé. PREMIÈRE entrée = les photos du téléphone. */}
-        <BottomModal
-          close={() => setFormatSheetOpen(false)}
-          isVisible={formatSheetOpen}
-          snapPoints={['52%']}
-        >
-          <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>
-              {t('showcase.chooseFormat', 'Sous quel format ?')}
-            </Text>
-
-            <ShowcaseAction
-              busyColor={Colors.primary900}
-              hint={saveThenOpen
-                ? t(
-                  'showcase.saveHint',
-                  'Elle part dans ta galerie photo, telle que tu la vois. '
-                  + 'Tu choisis ensuite l’application qui l’ouvre.',
-                )
-                : t(
-                  'showcase.saveToPhotosHintSheet',
-                  'La fenêtre de partage s’ouvre : choisis « Enregistrer l’image ».',
-                )}
-              label={t('showcase.saveToPhotos', 'Dans mes photos')}
-              onPress={() => runDownload('save', () => shareVisual(undefined, chooserTitle))}
-              styles={styles}
-              variant="primary"
-            />
-            <ShowcaseAction
-              hint={saveThenOpen
-                ? t(
-                  'showcase.storyHintSave',
-                  'Image verticale plein écran, enregistrée dans ta galerie, '
-                  + 'pour Instagram, WhatsApp ou Snap.',
-                )
-                : t(
-                  'showcase.storyHint',
-                  'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
-                )}
-              label={t('showcase.story', 'Version story 9:16')}
-              onPress={() => runDownload('story', () => downloadStory(chooserTitle))}
-              styles={styles}
-            />
-            <ShowcaseAction
-              hint={saveThenOpen
-                ? t(
-                  'showcase.posterHintSave',
-                  'Fichier PDF enregistré dans tes téléchargements, '
-                  + 'prêt pour l’imprimante du club.',
-                )
-                : t('showcase.posterHint', 'Fichier PDF, prêt pour l’imprimante du club.')}
-              label={t('showcase.poster', 'Affiche A4 à imprimer')}
-              onPress={() => runDownload('poster', () => downloadPoster(chooserTitle))}
-              styles={styles}
-            />
-          </View>
-        </BottomModal>
       </ScrollView>
+
+      {/* Le choix de format, FRÈRE du ScrollView et non son contenu — une feuille
+          n'est pas de la matière à faire défiler. `BottomModal` est le gabarit
+          maison des feuilles de l'app (24 écrans l'utilisent) : il gère déjà le
+          retrait bas et la fermeture au glissé. PREMIÈRE entrée = les photos. */}
+      <BottomModal
+        close={() => setFormatSheetOpen(false)}
+        isVisible={formatSheetOpen}
+        snapPoints={['52%']}
+      >
+        <View style={styles.sheet}>
+          <Text style={styles.sheetTitle}>
+            {t('showcase.chooseFormat', 'Sous quel format ?')}
+          </Text>
+
+          <ShowcaseAction
+            busyColor={Colors.primary900}
+            hint={saveThenOpen
+              ? t(
+                'showcase.saveHint',
+                'Elle part dans ta galerie photo, telle que tu la vois. '
+                + 'Tu choisis ensuite l’application qui l’ouvre.',
+              )
+              : t(
+                'showcase.saveToPhotosHintSheet',
+                'La fenêtre de partage s’ouvre : choisis « Enregistrer l’image ».',
+              )}
+            label={t('showcase.saveToPhotos', 'Dans mes photos')}
+            onPress={() => runDownload('save', () => shareVisual(undefined, chooserTitle))}
+            styles={styles}
+            variant="primary"
+          />
+          <ShowcaseAction
+            hint={saveThenOpen
+              ? t(
+                'showcase.storyHintSave',
+                'Image verticale plein écran, enregistrée dans ta galerie, '
+                + 'pour Instagram, WhatsApp ou Snap.',
+              )
+              : t(
+                'showcase.storyHint',
+                'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
+              )}
+            label={t('showcase.story', 'Version story 9:16')}
+            onPress={() => runDownload('story', () => downloadStory(chooserTitle))}
+            styles={styles}
+          />
+          <ShowcaseAction
+            hint={saveThenOpen
+              ? t(
+                'showcase.posterHintSave',
+                'Fichier PDF enregistré dans tes téléchargements, '
+                + 'prêt pour l’imprimante du club.',
+              )
+              : t('showcase.posterHint', 'Fichier PDF, prêt pour l’imprimante du club.')}
+            label={t('showcase.poster', 'Affiche A4 à imprimer')}
+            onPress={() => runDownload('poster', () => downloadPoster(chooserTitle))}
+            styles={styles}
+          />
+        </View>
+      </BottomModal>
     </KeyboardAvoidingView>
   );
 }
