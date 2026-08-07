@@ -127,6 +127,18 @@ jest.mock('@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSh
   return null;
 });
 
+// D26 : le tunnel ouvre desormais des feuilles. `BottomModal` tire
+// `@gorhom/bottom-sheet`, qui tire `react-native-gesture-handler`, que Jest ne
+// sait pas transformer — la suite tombe AVANT le premier rendu. Le hub la
+// doublait deja pour la meme raison.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock() {
+  return null;
+});
+
+jest.mock('@/components/molecules/inputStepper/InputStepper', () => function InputStepperMock() {
+  return null;
+});
+
 jest.mock('@/components/molecules/dateTimeSelector/DateTimeSelector', () => function DateTimeSelectorMock() {
   return null;
 });
@@ -274,7 +286,29 @@ const listerTitresDesEtapes = (campagne) => {
   return titres;
 };
 
-describe('ClubLicenseCampaignSettings — la machine a etapes (filet E6, avant D19)', () => {
+// ═══════════════════════════════════════════════════════════════════════════
+// D26 — CE QUE CE FICHIER DECRIT A CHANGE, ET VOICI POURQUOI, POUR CHAQUE LIGNE
+//
+// Le filet ci-dessus a ete ecrit AVANT la refonte pour epingler la machine a
+// etapes telle qu'elle etait : 13 au minimum, 17 sur une campagne neuve, 22 au
+// maximum, et un denominateur qui bougeait sous les yeux du dirigeant.
+//
+// D26 remplace ce tableau construit par empilements conditionnels par une
+// CONSTANTE de 6 entrees. Les assertions qui mesuraient la variation n'ont donc
+// plus d'objet : elles sont remplacees par leur contraire exact — l'INVARIANCE —
+// et c'est le meme point d'observation qui la mesure (`stepCount` passe a
+// `WizardStepLayout`, aucun pixel, aucune profondeur d'arbre).
+//
+// ⛔ CE QUI N'EST PAS TOUCHE, et c'est volontaire : les deux tests sur le blocage
+// de « Moyens de paiement ». Ils decrivent une VALIDATION, pas une longueur. La
+// regle survit a la refonte — elle a seulement change d'etape.
+//
+// 📌 Ce que les nouveaux tests protegent, et que les anciens ne pouvaient pas :
+// qu'aucun interrupteur du tunnel ne puisse plus rallonger le tunnel. C'est
+// exactement le defaut de recette d'Adel du 2026-08-07.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('ClubLicenseCampaignSettings — la machine a etapes (D26 : 6 etapes fixes)', () => {
   /** @type {any} */
   let alerteEspionnee;
 
@@ -290,124 +324,78 @@ describe('ClubLicenseCampaignSettings — la machine a etapes (filet E6, avant D
   });
 
   describe('la longueur de la liste', () => {
-    it('compte 13 etapes quand les 4 interrupteurs sont fermes — c est le socle', () => {
-      expect(compterEtapes(campagneToutFerme)).toBe(13);
+    // AVANT D26 : 13 avec les 4 interrupteurs fermes, 22 avec les 4 ouverts.
+    it('compte 6 etapes quand les 4 interrupteurs sont fermes', () => {
+      expect(compterEtapes(campagneToutFerme)).toBe(6);
     });
 
-    it('compte 22 etapes quand les 4 interrupteurs sont ouverts — c est le maximum', () => {
-      expect(compterEtapes(campagneToutOuvert)).toBe(22);
+    it('compte 6 etapes quand les 4 interrupteurs sont ouverts', () => {
+      expect(compterEtapes(campagneToutOuvert)).toBe(6);
     });
   });
 
-  describe('ce que chaque interrupteur ajoute au denominateur', () => {
-    it('le paiement fractionne ajoute 3 etapes', () => {
-      expect(compterEtapes(campagneAvecFractionnement) - compterEtapes(campagneToutFerme)).toBe(3);
-    });
-
-    it('un moyen de paiement hors ligne ajoute 1 etape', () => {
-      expect(
-        compterEtapes(campagneAvecConsignesHorsLigne) - compterEtapes(campagneToutFerme),
-      ).toBe(1);
-    });
-
-    it('un moyen de paiement en ligne ajoute 2 etapes', () => {
-      expect(compterEtapes(campagneAvecPaiementEnLigne) - compterEtapes(campagneToutFerme)).toBe(2);
-    });
-
-    it('les relances automatiques ajoutent 3 etapes', () => {
-      expect(compterEtapes(campagneAvecRelances) - compterEtapes(campagneToutFerme)).toBe(3);
-    });
-
-    it('les 4 ajouts se cumulent exactement : 13 + 3 + 1 + 2 + 3 = 22', () => {
-      const socle = compterEtapes(campagneToutFerme);
-      const ajouts = [
-        campagneAvecFractionnement,
-        campagneAvecConsignesHorsLigne,
-        campagneAvecPaiementEnLigne,
-        campagneAvecRelances,
-      ].reduce((total, campagne) => total + (compterEtapes(campagne) - socle), 0);
-
-      expect(socle + ajouts).toBe(compterEtapes(campagneToutOuvert));
+  describe('ce que chaque interrupteur ajoute au denominateur : PLUS RIEN', () => {
+    // AVANT D26, ces memes campagnes ajoutaient respectivement 3, 1, 2 et 3
+    // etapes. C'est le coeur du lot : les options ont quitte la barre de
+    // progression pour des feuilles, elles ne rallongent plus le chemin.
+    it.each([
+      ['le paiement fractionne', campagneAvecFractionnement],
+      ['un moyen de paiement hors ligne', campagneAvecConsignesHorsLigne],
+      ['un moyen de paiement en ligne', campagneAvecPaiementEnLigne],
+      ['les relances automatiques', campagneAvecRelances],
+    ])('%s n ajoute aucune etape', (_libelle, campagne) => {
+      expect(compterEtapes(campagne) - compterEtapes(campagneToutFerme)).toBe(0);
     });
   });
 
   describe('ce que voit un dirigeant qui cree une campagne neuve', () => {
-    // Ce test est la surprise du lot : le socle est bien de 13 etapes, mais
-    // PERSONNE ne le voit. Les valeurs par defaut du tunnel ouvrent deux
-    // interrupteurs sans rien demander — `defaultPaymentModes` active virement,
-    // especes et cheque (l. 276-284), et `normalizeReminderAutomation` rend
-    // `enabled: true` quand la campagne ne dit rien (l. 266).
-    it('voit un tunnel plus long que le socle, sans avoir touche a un seul interrupteur', () => {
-      const socle = compterEtapes(campagneToutFerme);
-      const campagneNeuve = compterEtapes(null);
-
-      expect(campagneNeuve).toBeGreaterThan(socle);
+    // AVANT D26 : 17 etapes, alors que le socle en annoncait 13. Les valeurs par
+    // defaut ouvraient deux interrupteurs sans rien demander, et personne ne
+    // voyait jamais le socle. Un total constant supprime la question.
+    it('voit exactement le meme tunnel que n importe quelle autre campagne', () => {
+      expect(compterEtapes(null)).toBe(compterEtapes(campagneToutFerme));
     });
 
-    it('voit exactement 17 etapes : le socle + les consignes hors ligne + les relances', () => {
-      expect(compterEtapes(null)).toBe(17);
+    it('voit 6 etapes', () => {
+      expect(compterEtapes(null)).toBe(6);
     });
   });
 
   describe('l ordre des etapes', () => {
-    it('deroule le plus court tunnel FRANCHISSABLE dans cet ordre exact', () => {
-      expect(listerTitresDesEtapes(campagneAvecConsignesHorsLigne)).toEqual([
-        'Nom',
-        'Description',
-        'Periode',
-        'Public concerne',
-        'Prix',
-        'Tarifs speciaux',
-        'Paiement fractionne',
-        'Moyens de paiement',
-        'Consignes',
-        'Documents',
-        'Retard',
-        'Relances auto',
-        'Note interne',
-        'Recap',
-      ]);
+    // AVANT D26 : deux listes differentes selon les interrupteurs (14 titres
+    // dans un cas, 22 dans l'autre), avec 8 etapes conditionnelles inserees au
+    // milieu. Il n'y a plus qu'une liste, et elle ne depend de rien.
+    const LES_SIX = [
+      'Identité',
+      'Public & tarif',
+      'Paiement',
+      'Documents',
+      'Relances',
+      'Récapitulatif',
+    ];
+
+    it('deroule les 6 memes titres, dans cet ordre, quels que soient les interrupteurs', () => {
+      expect(listerTitresDesEtapes(campagneAvecConsignesHorsLigne)).toEqual(LES_SIX);
+      expect(listerTitresDesEtapes(campagneToutOuvert)).toEqual(LES_SIX);
     });
 
-    it('insere les 8 etapes conditionnelles a leur place, sans deplacer le socle', () => {
-      expect(listerTitresDesEtapes(campagneToutOuvert)).toEqual([
-        'Nom',
-        'Description',
-        'Periode',
-        'Public concerne',
-        'Prix',
-        'Tarifs speciaux',
-        'Paiement fractionne',
-        'Nombre d échéances',
-        'Options d échéancier',
-        'Echeances',
-        'Moyens de paiement',
-        'Consignes',
-        'Encaissement',
-        'Paiement en ligne',
-        'Documents',
-        'Retard',
-        'Relances auto',
-        'Statuts à relancer',
-        'Cadence de relance',
-        'Message',
-        'Note interne',
-        'Recap',
-      ]);
+    it('titre la premiere etape « Nouvelle campagne » a la creation', () => {
+      // Nuance voulue : `campaignId` absent = creation. Une campagne relue porte
+      // « Identité », parce qu'elle n'est plus nouvelle.
+      expect(listerTitresDesEtapes(null)[0]).toBe('Nouvelle campagne');
     });
   });
 
-  describe('le socle de 13 etapes existe dans la liste, mais personne ne peut le traverser', () => {
-    // Trouvaille du filet, mesuree et non deduite : le socle est bien la forme
-    // la plus courte que la LISTE puisse prendre, mais le dirigeant ne peut
-    // jamais le parcourir. L'etape « Moyens de paiement » refuse d'avancer tant
-    // qu'aucun moyen n'est actif (l. 2039), et fermer les 4 interrupteurs
-    // implique justement de les avoir tous fermes.
-    it('bloque a « Moyens de paiement » et n atteint jamais le recapitulatif', () => {
+  describe('les regles de validation ont survecu au raccourcissement', () => {
+    // ⛔ CES DEUX TESTS NE SONT PAS INVERSES. Ils decrivent une VALIDATION, pas
+    // une longueur : sans moyen de paiement actif, le tunnel refuse d'avancer.
+    // La regle a seulement change d'etape — de « Moyens de paiement » a
+    // « Paiement ». Un tunnel plus court ne doit pas etre un tunnel plus laxiste.
+    it('bloque a « Paiement » et n atteint jamais le recapitulatif', () => {
       const titres = listerTitresDesEtapes(campagneToutFerme);
 
-      expect(titres[titres.length - 1]).toBe('Moyens de paiement');
-      expect(titres).not.toContain('Recap');
+      expect(titres[titres.length - 1]).toBe('Paiement');
+      expect(titres).not.toContain('Récapitulatif');
     });
 
     it('previent le dirigeant par une alerte « Paiement manquant »', () => {
@@ -420,16 +408,16 @@ describe('ClubLicenseCampaignSettings — la machine a etapes (filet E6, avant D
     });
   });
 
-  describe('le denominateur du « n/N » bouge sous les yeux du dirigeant', () => {
-    // C'est le defaut que D19 repare. Le tunnel annonce « etape n/N » alors que
-    // N depend d'interrupteurs situes DANS le tunnel : le dirigeant voit son
-    // total changer en cours de route, sans avoir recule d'une seule etape.
-    it('affiche deux totaux differents pour deux campagnes identiques a un interrupteur pres', () => {
-      expect(compterEtapes(campagneAvecRelances)).not.toBe(compterEtapes(campagneToutFerme));
+  describe('le denominateur du « n/N » ne bouge plus sous les yeux du dirigeant', () => {
+    // C'EST LE DEFAUT QUE D26 REPARE, et ces deux tests sont sa preuve. Avant, le
+    // total changeait des qu'on basculait un interrupteur situe DANS le tunnel :
+    // « etape 8/16 » devenait « 8/19 » sans avoir recule d'une seule etape.
+    it('affiche le meme total pour deux campagnes qui different d un interrupteur', () => {
+      expect(compterEtapes(campagneAvecRelances)).toBe(compterEtapes(campagneToutFerme));
     });
 
-    it('ecarte le plus court du plus long de 9 etapes', () => {
-      expect(compterEtapes(campagneToutOuvert) - compterEtapes(campagneToutFerme)).toBe(9);
+    it('n ecarte plus le plus court du plus long : l ecart est de 0', () => {
+      expect(compterEtapes(campagneToutOuvert) - compterEtapes(campagneToutFerme)).toBe(0);
     });
   });
 });

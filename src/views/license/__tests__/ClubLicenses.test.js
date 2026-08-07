@@ -106,6 +106,14 @@ jest.mock('@/services/auth/authService', () => ({
   switchManagedClub: jest.fn(),
 }));
 
+// D26 : le hub porte desormais la feuille « Réglages du club — HelloAsso ».
+// ⛔ Meme regle que partout : jamais `requireActual` sur un service. Celui-ci
+// tire `celebrationRuntime`, qui lit un catalogue au chargement du module et
+// fait tomber la suite AVANT le premier rendu.
+jest.mock('@/services/license/licenseService', () => ({
+  connectLicenseHelloAsso: jest.fn(),
+}));
+
 jest.mock('@/components/templates/ScreenContainer', () => function ScreenContainerMock({ children }) {
   return children;
 });
