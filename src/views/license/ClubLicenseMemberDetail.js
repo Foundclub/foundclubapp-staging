@@ -1,4 +1,4 @@
-/* eslint-disable import/order, perfectionist/sort-imports */
+/* eslint-disable perfectionist/sort-imports */
 import { useCallback, useMemo, useState } from 'react';
 import {
   Alert, Pressable, ScrollView, Text, TextInput, View,
@@ -396,7 +396,7 @@ function ClubLicenseMemberDetail({ route }) {
     return (
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
         <LicenseEmptyState
-          action={<Button onPress={retryData} title="Reessayer" variant="Secondary" />}
+          action={<Button onPress={retryData} title="Réessayer" variant="Secondary" />}
           description="Impossible de charger cette fiche cotisation pour le moment."
           title="Fiche indisponible"
         />

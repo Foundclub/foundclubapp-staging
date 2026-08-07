@@ -58,14 +58,16 @@ export const licenseStatusLabels = {
   webhook_stale: 'Webhook à vérifier',
 };
 
+// ⛔ Les CLES sont les valeurs de `paymentModes` en base. Seuls les LIBELLES
+// changent ici, pour porter leurs accents (defaut de recette du 2026-08-07).
 export const paymentModeLabels = {
   bank_transfer: 'Virement',
   card_physical: 'Carte au club',
-  cash: 'Especes',
-  check: 'Cheque',
+  cash: 'Espèces',
+  check: 'Chèque',
   custom: 'Autre moyen',
   external_link: 'Lien externe club',
-  helloasso: 'HelloAsso intègre',
+  helloasso: 'HelloAsso',
   stripe: 'Carte en ligne',
 };
 
@@ -84,6 +86,43 @@ export const formatLicenseMoney = (value = 0, currency = 'EUR') => new Intl.Numb
 }).format((Number(value) || 0) / 100);
 
 export const getInstallmentOrder = (installment = {}) => installment.installmentOrder || installment.order || 1;
+
+// ── HelloAsso ──────────────────────────────────────────────────────────────
+// D26 : ces 4 fonctions vivaient dans le tunnel de campagne. Elles en sortent
+// parce que la connexion HelloAsso est un reglage de CLUB, pas de campagne — la
+// charge utile envoyee au serveur porte un `clubId`, jamais un `campaignId`.
+// Le tunnel n'en garde que la LECTURE (« Compte du club connecté ✓ ») ; le
+// formulaire vit desormais dans une feuille du hub des Cotisations.
+
+const helloAssoReadyStates = new Set(['ready', 'webhook_pending', 'webhook_stale']);
+
+export const getHelloAssoSnapshot = (campaign) => campaign?.paymentProviderSnapshot?.helloasso || null;
+
+export const isHelloAssoReadyForCampaign = (snapshot) => helloAssoReadyStates
+  .has(String(snapshot?.readiness || '').trim());
+
+export const createHelloAssoDraft = (snapshot) => ({
+  clientId: '',
+  clientSecret: '',
+  environment: snapshot?.environment || 'production',
+  organizationSlug: snapshot?.organizationSlug || '',
+});
+
+export const describeHelloAssoReadiness = (snapshot) => {
+  const readiness = String(snapshot?.readiness || '').trim();
+  return {
+    checkout_failed: 'Le test de checkout HelloAsso a échoué. Vérifie le slug organisation et les droits API.',
+    credentials_missing: 'Renseigne le slug, le client id et le client secret avant publication.',
+    disabled: 'HelloAsso est désactivé pour ce scope.',
+    oauth_failed: 'OAuth HelloAsso en erreur. Vérifie le client id et le client secret.',
+    pending: 'La configuration HelloAsso existe, mais elle n a pas encore été vérifiée.',
+    ready: 'Connexion HelloAsso validée. La campagne peut utiliser le paiement in-app.',
+    webhook_pending: 'Connexion validée. Le premier paiement doit encore confirmer le webhook.',
+    webhook_stale: 'Connexion validée, mais aucun webhook récent n a été vu. Un test de paiement est recommandé.',
+  }[readiness] || (readiness
+    ? 'La configuration HelloAsso demande une vérification supplémentaire.'
+    : 'La connexion HelloAsso n est pas encore configurée pour ce club.');
+};
 
 export const normalizePaymentModes = (raw = {}) => {
   const modes = raw || {};
@@ -284,7 +323,7 @@ export function LicenseInstallmentList({ currency = 'EUR', installments = [] }) 
               }}
               >
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  Echeance
+                  Échéance
                   {' '}
                   {getInstallmentOrder(installment)}
                 </Text>

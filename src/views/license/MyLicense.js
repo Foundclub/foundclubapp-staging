@@ -256,7 +256,7 @@ function MyLicense({ navigation, route }) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
         <LicenseEmptyState
-          action={<Button onPress={() => { query.refetch(); if (routeAssignmentId) assignmentQuery.refetch(); }} title="Reessayer" variant="Secondary" />}
+          action={<Button onPress={() => { query.refetch(); if (routeAssignmentId) assignmentQuery.refetch(); }} title="Réessayer" variant="Secondary" />}
           description="Impossible de charger ta cotisation pour le moment."
           title="Cotisation indisponible"
         />

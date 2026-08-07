@@ -84,7 +84,7 @@ function LicenseCheckoutStatus({ navigation, route }) {
         </View>
         {paymentQuery.isError ? (
           <LicenseEmptyState
-            action={<Button onPress={paymentQuery.refetch} title="Reessayer" variant="Secondary" />}
+            action={<Button onPress={paymentQuery.refetch} title="Réessayer" variant="Secondary" />}
             description="Impossible de vérifier le statut du paiement pour le moment."
             title="Statut indisponible"
           />

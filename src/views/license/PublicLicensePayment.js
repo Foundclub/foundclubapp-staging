@@ -170,7 +170,7 @@ function PublicLicensePayment({ route }) {
     return (
       <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
         <LicenseEmptyState
-          action={<Button onPress={query.refetch} title="Reessayer" variant="Secondary" />}
+          action={<Button onPress={query.refetch} title="Réessayer" variant="Secondary" />}
           description="Impossible de charger ce lien de paiement pour le moment."
           title="Paiement indisponible"
         />

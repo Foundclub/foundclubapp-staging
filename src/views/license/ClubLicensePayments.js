@@ -231,7 +231,7 @@ function ClubLicensePayments({ navigation, route }) {
         ) : null}
         {!isLoading && hasError ? (
           <LicenseEmptyState
-            action={<Button onPress={retryData} title="Reessayer" variant="Secondary" />}
+            action={<Button onPress={retryData} title="Réessayer" variant="Secondary" />}
             description="Impossible de charger les paiements à valider."
             title="Paiements indisponibles"
           />
