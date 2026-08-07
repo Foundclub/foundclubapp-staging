@@ -514,6 +514,37 @@ export const getOnboardingViews = ({
 };
 
 /**
+ * LE SAS D'ARRIVÉE — quelle route après la dernière étape comptée ?
+ *
+ * D16 : `Welcome` n'est plus une étape numérotée des parcours joueur,
+ * entraîneur et dirigeant (décision Adel du 2026-08-06 : « Bienvenue sort du
+ * COMPTEUR mais n'est PAS supprimé »). Il reste l'écran qui lance le tour
+ * guidé et montre les trois offres, et il se rejoint ICI, en sortie de tunnel.
+ *
+ * D23 : cette décision vivait à l'intérieur de `useAuth`, donc hors de portée
+ * d'un test. Elle est extraite telle quelle — même ordre, mêmes sorties — pour
+ * que « Welcome est bien ATTEINT en fin de parcours » soit une chose qu'on
+ * mesure, et non qu'on suppose.
+ * @param {object} params - Les entrées de la décision.
+ * @param {boolean} params.hasSeenWelcome - L'écran a déjà été vu par cet utilisateur.
+ * @param {string} [params.userDocumentId] - L'identifiant de l'utilisateur.
+ * @param {{ canShow: boolean, index: number, route: string }[]} [params.views] - Le parcours.
+ * @returns {string | undefined} La route du sas, ou `undefined` s'il n'y a pas de sas.
+ */
+export const resolveOnboardingExitRoute = ({ hasSeenWelcome, userDocumentId, views }) => {
+  // Tunnel déjà fini (`views` vide) : on ne repousse personne vers l'accueil
+  // des inscrits. Un utilisateur qui revient n'a rien à y faire.
+  if (!Array.isArray(views) || views.length === 0) return undefined;
+  // `superAdmin` et le parcours `new` gardent `Welcome` comme étape numérotée :
+  // ils y sont déjà passés par la voie normale.
+  if (views.some((view) => view.route === RouteNames.Welcome)) return undefined;
+  if (!userDocumentId) return undefined;
+  if (hasSeenWelcome) return undefined;
+
+  return RouteNames.Welcome;
+};
+
+/**
  * Mark onboarding as completed for a user
  * This should be called when the user finishes or skips the last onboarding step
  * @param {string} documentId - The user's document ID

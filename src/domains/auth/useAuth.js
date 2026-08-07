@@ -53,6 +53,7 @@ import {
   getUserRoleKey,
   hasClubAccess as hasClubAccessForUser,
   profileFieldToDisplay,
+  resolveOnboardingExitRoute,
   USER_ROLES,
 } from './authUseCases';
 
@@ -560,19 +561,18 @@ const useAuth = () => {
     // ferait boucler l'ecran sur lui-meme. `Welcome` n'appelle jamais
     // `getNextOnboardingRoute` - la boucle est donc impossible par
     // construction, pas par precaution.
-    const views = onboardingViews?.views;
-    // Tunnel deja fini (`views` vide) : on ne repousse personne vers l'accueil
-    // des inscrits. Un utilisateur qui revient n'a rien a y faire.
-    if (!Array.isArray(views) || views.length === 0) return undefined;
-    // `superAdmin` et le parcours `new` gardent `Welcome` comme etape
-    // numerotee : ils y sont deja passes par la voie normale.
-    if (views.some((view) => view.route === RouteNames.Welcome)) return undefined;
-
+    //
+    // D23 - la decision elle-meme vit desormais dans `resolveOnboardingExitRoute`
+    // (`authUseCases.js`), ou elle est TESTABLE : « Welcome est atteint en
+    // sortie de tunnel » etait suppose, il est maintenant mesure.
     const onboardingUserId = userData?.documentId;
-    if (!onboardingUserId) return undefined;
-    if (storage.getBoolean(`hasSeenWelcome_${onboardingUserId}`)) return undefined;
-
-    return RouteNames.Welcome;
+    return resolveOnboardingExitRoute({
+      hasSeenWelcome: Boolean(
+        onboardingUserId && storage.getBoolean(`hasSeenWelcome_${onboardingUserId}`),
+      ),
+      userDocumentId: onboardingUserId,
+      views: onboardingViews?.views,
+    });
   }, [onboardingViews, userData?.documentId]);
 
   const getPostOnboardingHomeRoute = useCallback(

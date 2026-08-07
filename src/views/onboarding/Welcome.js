@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Platform, ScrollView, Text, View,
@@ -49,53 +48,21 @@ function Welcome({ navigation }) {
   // Seuls coach et dirigeant demarrent le tour guide v2 (joueur = tour leger a venir).
   const shouldOfferGuidedTour = roleKey === 'coach' || roleKey === 'president';
 
-  // C10 / décision D2 : le tour guidé se lance AUTOMATIQUEMENT à la création de
-  // compte, sans clic (depuis Welcome). Le « passer l'étape » reste géré par
-  // étape dans le bandeau du tour ; on ne propose jamais de saut global. Un
-  // drapeau MMKV garantit un seul auto-lancement (à la création), pas à chaque
-  // visite ; les boutons ci-dessous restent comme repli si l'auto-lancement a
-  // déjà eu lieu ou si aucun script de tour n'existe pour le rôle.
-  const hasAutoStartedTourRef = useRef(false);
-  useEffect(() => {
-    if (hasAutoStartedTourRef.current) return;
-    if (userDataLoading || userDataError) return;
-
-    const tourProfileKey = (() => {
-      if (roleKey === 'president') return 'president';
-      if (roleKey === 'coach') return 'coach';
-      if (roleKey === 'player') return 'player';
-      return null;
-    })();
-    if (!tourProfileKey) return;
-
-    const userId = auth?.user?.documentId;
-    const autoStartKey = userId ? `hasAutoStartedTour_${userId}` : null;
-    if (autoStartKey && storage.getBoolean(autoStartKey)) return;
-
-    hasAutoStartedTourRef.current = true;
-
-    if (userId) {
-      storage.set(`hasSeenWelcome_${userId}`, true);
-      markOnboardingComplete(userId);
-      if (autoStartKey) storage.set(autoStartKey, true);
-    }
-
-    const started = startTour(tourProfileKey);
-    if (!started) {
-      navigation.reset({
-        index: 0,
-        routes: [{ name: getPostOnboardingHomeRoute() }],
-      });
-    }
-  }, [
-    auth?.user?.documentId,
-    getPostOnboardingHomeRoute,
-    navigation,
-    roleKey,
-    startTour,
-    userDataError,
-    userDataLoading,
-  ]);
+  // D23 — défaut ⑤ de la recette du 2026-08-07 : « l'écran de bienvenue se
+  // saute tout seul ».
+  //
+  // CE QUI ÉTAIT ICI : un `useEffect` qui, AU MONTAGE, marquait l'écran comme
+  // vu, terminait l'onboarding et lançait le tour guidé (décision C10/D2 :
+  // « le tour se lance automatiquement, sans clic »). Résultat : l'écran
+  // partait avant d'être lu, et le drapeau `hasSeenWelcome_` posé au passage
+  // le rendait DÉFINITIVEMENT injoignable — `getNextOnboardingRoute` s'arrête
+  // dessus.
+  //
+  // La décision d'Adel du 2026-08-06 dit l'inverse, mot pour mot :
+  // « Bienvenue sort du COMPTEUR mais n'est PAS supprimé. » Il doit arriver à
+  // la fin, sans numéro d'étape, montrer les offres et LANCER le tour guidé —
+  // depuis son bouton, qui appelle `startTour` juste en dessous. L'auto-départ
+  // est donc retiré : c'est la seule chose qui l'empêchait d'être vu.
 
   // Les quotas gratuits sont des constantes produit : des puces statiques evitent l'etat
   // "resume pas encore charge" qui affichait un texte vague au moment le plus vendeur.
