@@ -26,6 +26,7 @@ const mockGetNextOnboardingRoute = jest.fn();
 const mockUseGetClubs = jest.fn();
 const mockUseGetTeams = jest.fn();
 const mockRequestLocation = jest.fn();
+const mockCanUseGeolocation = jest.fn(() => true);
 const mockRoleKey = { current: 'player' };
 
 jest.mock('@tanstack/react-query', () => ({
@@ -125,7 +126,12 @@ jest.mock('@/services/activity/activityQueries', () => ({
   useGetActivities: () => ({ data: [{ documentId: 'act-foot', name: 'Football' }] }),
 }));
 
+// D23 ④ — `canUseSearchMapGeolocation` dit si l'appareil expose seulement une
+// API de géolocalisation. Sur natif, React Native 0.78 ne définit PAS
+// `navigator.geolocation` (aucun `setUpGeolocation`, aucun paquet installé) :
+// elle rend donc `false`, et « Autour de moi » ne peut pas aboutir.
 jest.mock('@/platform/maps/searchMapGeolocation', () => ({
+  canUseSearchMapGeolocation: () => mockCanUseGeolocation(),
   requestCurrentSearchMapLocation: () => mockRequestLocation(),
 }));
 
@@ -259,6 +265,7 @@ beforeEach(() => {
   mockUseGetClubs.mockReturnValue(queryWith(CLUBS));
   mockUseGetTeams.mockReturnValue(emptyQuery);
   mockRequestLocation.mockResolvedValue(null);
+  mockCanUseGeolocation.mockReturnValue(true);
 });
 
 afterEach(() => {
@@ -440,6 +447,71 @@ describe('UserAffiliationGuide — refonte 6b', () => {
     const texts = collectTexts(rendered.tree);
     expect(texts).toContain('SUGGESTIONS');
     expect(texts).toContain('FC Fuveau');
+  });
+
+  // D23 — défaut ④ de la recette du 2026-08-07 : « le bouton autour de moi ne
+  // marche pas ». Il ne plantait pas : il ne DISAIT rien. Le `null` était avalé
+  // et l'écran ne bougeait pas d'un pixel — impossible de distinguer « ça
+  // charge », « c'est refusé » et « c'est cassé ».
+  describe('D23 ④ — « Autour de moi » répond toujours quelque chose', () => {
+    const pressNearby = async (rendered) => {
+      await act(async () => {
+        const chip = rendered.tree.root.findAll(
+          (node) => node.props?.accessibilityLabel === 'Autour de moi'
+            && typeof node.props?.onPress === 'function',
+        )[0];
+        await chip.props.onPress();
+      });
+    };
+
+    const notice = (rendered) => rendered.tree.root
+      .findAll((node) => node.props?.testID === AFFILIATION_TEST_IDS.nearbyNotice)[0];
+
+    it('refus : un message le dit, au lieu d`un bouton qui a l`air inerte', async () => {
+      mockRequestLocation.mockResolvedValue(null);
+      const rendered = renderScreen();
+      expect(notice(rendered)).toBeUndefined();
+
+      await pressNearby(rendered);
+
+      expect(collectTexts(rendered.tree)).toMatch(/Localisation refusée/);
+      expect(notice(rendered)).toBeDefined();
+    });
+
+    it('appareil sans géolocalisation : message dédié, et AUCUNE permission demandée', async () => {
+      // Sur natif, React Native 0.78 ne définit pas `navigator.geolocation` :
+      // c'est le cas réel de l'application. Réclamer la permission Android
+      // qu'on ne saurait pas exploiter serait un second mensonge.
+      mockCanUseGeolocation.mockReturnValue(false);
+      const rendered = renderScreen();
+
+      await pressNearby(rendered);
+
+      expect(collectTexts(rendered.tree)).toMatch(/n'est pas disponible sur cet appareil/);
+      expect(mockRequestLocation).not.toHaveBeenCalled();
+    });
+
+    it('position obtenue : aucun message, la liste parle d`elle-même', async () => {
+      mockRequestLocation.mockResolvedValue({ lat: 43.3, lng: 5.37 });
+      const rendered = renderScreen();
+
+      await pressNearby(rendered);
+
+      expect(notice(rendered)).toBeUndefined();
+      expect(collectTexts(rendered.tree)).toContain('PRÈS DE CHEZ TOI');
+    });
+
+    it('le message s`efface dès que la position finit par arriver', async () => {
+      mockRequestLocation.mockResolvedValue(null);
+      const rendered = renderScreen();
+      await pressNearby(rendered);
+      expect(notice(rendered)).toBeDefined();
+
+      mockRequestLocation.mockResolvedValue({ lat: 43.3, lng: 5.37 });
+      await pressNearby(rendered);
+
+      expect(notice(rendered)).toBeUndefined();
+    });
   });
 
   it('la chip sport est pré-remplie avec le sport du profil et filtre la requête', () => {

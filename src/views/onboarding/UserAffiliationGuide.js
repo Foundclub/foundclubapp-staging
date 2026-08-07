@@ -46,7 +46,10 @@ import { createClubRequest } from '@/services/clubRequest/clubRequestService';
 import { useGetTeams } from '@/services/team/teamQueries';
 
 import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
-import { requestCurrentSearchMapLocation } from '@/platform/maps/searchMapGeolocation';
+import {
+  canUseSearchMapGeolocation,
+  requestCurrentSearchMapLocation,
+} from '@/platform/maps/searchMapGeolocation';
 
 const DEBOUNCE_MS = 300;
 const RESULT_CARD_MIN_HEIGHT = 96;
@@ -63,6 +66,8 @@ const EARTH_RADIUS_KM = 6371;
 // avec le design, pas ces identifiants — le test caractérisant vise la CIBLE
 // (sauter l'étape, chercher, signaler un club absent), jamais le mot affiché.
 export const AFFILIATION_TEST_IDS = Object.freeze({
+  // D23 ④ : la réponse visible de « Autour de moi » quand il ne peut pas aboutir.
+  nearbyNotice: 'onboarding-affiliation-nearby-notice',
   notFound: 'onboarding-affiliation-not-found',
   search: 'onboarding-affiliation-search',
   skip: 'onboarding-affiliation-skip',
@@ -520,10 +525,24 @@ function UserAffiliationGuideContent({ navigation, route }) {
   // « Autour de moi ». requestCurrentSearchMapLocation ne lève jamais : refus,
   // absence de capteur ou web sans HTTPS renvoient null. On dégrade en
   // SUGGESTIONS au lieu de planter (contrainte web du handoff).
+  //
+  // D23 (défaut ④ de la recette du 07/08 : « le bouton ne fait rien ») — le
+  // `null` était avalé en silence : l'écran ne bougeait pas d'un pixel, et
+  // l'utilisateur ne pouvait pas savoir si ça chargeait, si c'était refusé ou
+  // si c'était cassé. Deux issues sont désormais DITES à l'écran :
+  //   `unavailable` : l'appareil n'expose aucune géolocalisation ;
+  //   `denied`      : elle existe mais n'a rien rendu (refus, capteur muet).
+  // On mesure la disponibilité AVANT de demander la permission Android : ne
+  // jamais réclamer une autorisation qu'on ne saurait pas exploiter.
   const handleUseMyLocation = useCallback(async () => {
     if (userPosition) {
       setUserPosition(null);
       setGeoStatus('idle');
+      return;
+    }
+
+    if (!canUseSearchMapGeolocation()) {
+      setGeoStatus('unavailable');
       return;
     }
 
@@ -1158,6 +1177,23 @@ function UserAffiliationGuideContent({ navigation, route }) {
   );
 
   const isNearbyActive = Boolean(userPosition);
+  // D23 ④ — ce que « Autour de moi » RÉPOND quand il ne peut pas aboutir. Sans
+  // ce texte, le bouton ment : il a l'air inerte alors qu'il a travaillé.
+  const nearbyNotice = (() => {
+    if (geoStatus === 'unavailable') {
+      return t(
+        'onboardingAffiliation.feedback.nearbyUnavailable',
+        'La localisation n\'est pas disponible sur cet appareil. La liste reste triée par suggestions.',
+      );
+    }
+    if (geoStatus === 'denied') {
+      return t(
+        'onboardingAffiliation.feedback.nearbyDenied',
+        'Localisation refusée : la liste reste triée par suggestions. Tu peux l\'autoriser dans les réglages de ton téléphone.',
+      );
+    }
+    return null;
+  })();
   const quickChips = (
     <View style={styles.chipsRow}>
       <TouchableOpacity
@@ -1367,6 +1403,16 @@ function UserAffiliationGuideContent({ navigation, route }) {
         {searchField}
 
         {isClubFlow ? quickChips : null}
+
+        {isClubFlow && nearbyNotice ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[Fonts.p3, { color: Colors.neutral300 }]}
+            testID={AFFILIATION_TEST_IDS.nearbyNotice}
+          >
+            {nearbyNotice}
+          </Text>
+        ) : null}
 
         <Text style={[styles.sectionLabel, { color: Colors.neutral500 }]}>
           {sectionLabel}
