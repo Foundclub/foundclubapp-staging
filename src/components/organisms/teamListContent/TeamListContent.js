@@ -22,6 +22,7 @@ import {
   getSubscriptionEntryPointLock,
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
+import { isMyTeam } from '@/domains/team/teamMembership';
 import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -227,22 +228,18 @@ function TeamListContent({
     return classicData?.pages?.flatMap((page) => page?.data || [])?.filter(Boolean) || [];
   }, [classicData, leagueData, isLeagueMode]);
 
-  const myTeamIds = useMemo(() => new Set(
-    [
-      ...(Array.isArray(userData?.myTeams) ? userData.myTeams : []),
-      ...(Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : []),
-    ]
-      .map((team) => String(team?.documentId || '').trim())
-      .filter(Boolean),
-  ), [userData?.myTeams, userData?.trainedTeams]);
-
+  // D25 ① — « mes equipes » se lisait UNIQUEMENT dans le profil du compte, servi
+  // depuis un cache serveur qu'aucune ecriture d'equipe ne purge : l'equipe
+  // qu'on venait de creer s'affichait sous « Les autres equipes du club »
+  // pendant plusieurs minutes. Le juge partage ecoute AUSSI l'equipe elle-meme,
+  // qui arrive fraiche avec `GET /teams` — voir domains/team/teamMembership.js.
   const scopedClassicTeams = useMemo(() => {
     if (isLeagueMode || !showOnlyMyTeams) {
       return teams;
     }
 
-    return teams.filter((team) => myTeamIds.has(String(team?.documentId || '').trim()));
-  }, [isLeagueMode, myTeamIds, showOnlyMyTeams, teams]);
+    return teams.filter((team) => isMyTeam(team, userData));
+  }, [isLeagueMode, showOnlyMyTeams, teams, userData]);
 
   const isLoadingTeams = isLeagueMode
     ? isLoadingLeague
@@ -323,11 +320,10 @@ function TeamListContent({
       }));
 
     scopedClassicTeams.forEach((/** @type {Team} */ team) => {
-      const teamDocumentId = String(team?.documentId || '').trim();
-      const isMyTeam = teamDocumentId && myTeamIds.has(teamDocumentId);
+      const isTeamMine = isMyTeam(team, userData);
       const isPending = pending.some((/** @type {PendingTeam} */ p) => p.documentId === team.documentId);
 
-      if (isMyTeam) {
+      if (isTeamMine) {
         my.push(team);
       } else if (!showOnlyMyTeams && !isPending) {
         other.push(team);
@@ -340,7 +336,7 @@ function TeamListContent({
       otherTeams: sortTeamsForDisplay(other),
       pendingTeams: sortTeamsForDisplay([...pending, ...pendingClubs]),
     };
-  }, [invitedLeagueData, isLeagueMode, myTeamIds, pendingLeagueData, scopedClassicTeams, showOnlyMyTeams, teams, userData]);
+  }, [invitedLeagueData, isLeagueMode, pendingLeagueData, scopedClassicTeams, showOnlyMyTeams, teams, userData]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {

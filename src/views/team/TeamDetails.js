@@ -29,6 +29,7 @@ import {
   extractSubscriptionDecisionFromError,
   hasActiveClubOffer,
 } from '@/domains/subscription/subscriptionDecision';
+import { isMyTeam as isMyTeamJudge } from '@/domains/team/teamMembership';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -127,13 +128,6 @@ function TeamDetails({ navigation, route }) {
       ...extraParams,
     });
   }, [navigation, teamId]);
-  const isMyTeam = useMemo(
-    () => {
-      const allMyTeams = (currentUser?.myTeams || [])?.concat(currentUser?.trainedTeams || []);
-      return !!allMyTeams?.some((/** @type {Team} */ item) => item.documentId === teamId);
-    },
-    [currentUser?.trainedTeams, currentUser?.myTeams, teamId],
-  );
   const currentUserTeamSummary = useMemo(() => {
     const allMyTeams = [
       ...(Array.isArray(currentUser?.myTeams) ? currentUser.myTeams : []),
@@ -147,6 +141,15 @@ function TeamDetails({ navigation, route }) {
     data: rawTeam, error, isFetching, isLoading, refetch,
   } = useGetTeam(teamId || '');
   const team = /** @type {any} */ (rawTeam);
+  // D25 ① — cette decision se lisait UNIQUEMENT dans le profil du compte, que
+  // le serveur sert depuis un cache de 60 s a 4 min qu'aucune ecriture d'equipe
+  // ne purge. Resultat : apres avoir cree son equipe, on se voyait entraineur
+  // dans les membres (source fraiche) sans pouvoir agir dessus (source perimee).
+  // Le juge partage ecoute les deux — voir domains/team/teamMembership.js.
+  const isMyTeam = useMemo(
+    () => isMyTeamJudge(team || teamId, currentUser),
+    [currentUser, team, teamId],
+  );
   const { data: rawClubData, refetch: refetchClubData } = useGetClub(team?.club?.documentId || '');
   const clubData = /** @type {any} */ (rawClubData);
   const { data: rawTeamStatsData, isLoading: isTeamStatsLoading, refetch: refetchTeamStats } = useGetTeamStats(

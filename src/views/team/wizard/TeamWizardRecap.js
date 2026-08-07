@@ -35,6 +35,40 @@ import { createTeam } from '@/services/team/teamService';
 import { useAppMode } from '@/context/AppModeContext';
 
 /**
+ * Les trois caches devenus faux des qu'une equipe est creee.
+ * @type {string[][]}
+ */
+const CACHES_A_RAFRAICHIR = [
+  ['teams'],
+  ['get-me'],
+  ['app-bootstrap'],
+];
+
+/**
+ * Rafraichit les trois caches SANS retenir l'ecran.
+ *
+ * 🧨 Meme defaut que la creation d'evenement (lot D19), et meme correctif : les
+ * trois `await queryClient.invalidateQueries(...)` partaient EN FILE INDIENNE,
+ * chacun attendant la refetch du precedent avant de lancer le suivant. Sur un
+ * reseau reel (150 a 300 ms par aller-retour), ca fige l'ecran de 0,45 a 0,9 s
+ * apres l'appui sur « Creer l'equipe », sans rien montrer — c'est le « c'est
+ * long parfois quand il cree pour s'afficher comme tel » de la recette du
+ * 2026-08-07.
+ *
+ * ⚠️ Ne pas attendre ne perd RIEN : `invalidateQueries` marque les requetes
+ * perimees de facon SYNCHRONE, seule la refetch est asynchrone. Et le
+ * `queryClient` est un singleton : la refetch se termine meme apres que cet
+ * ecran a disparu.
+ * @param {any} queryClient Le client de cache de l'application.
+ * @returns {void}
+ */
+const refreshCachesAfterTeamCreation = (queryClient) => {
+  Promise.all(
+    CACHES_A_RAFRAICHIR.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+  ).catch(() => {});
+};
+
+/**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  * @returns {import('react').ReactElement}
  */
@@ -100,11 +134,9 @@ function TeamWizardRecap({ navigation }) {
         : t('APIerrors.unknown');
       Alert.alert(t('common.error', 'Erreur'), message);
     },
-    onSuccess: async () => {
+    onSuccess: () => {
       emitGuidanceAction('team.created');
-      await queryClient.invalidateQueries({ queryKey: ['teams'] });
-      await queryClient.invalidateQueries({ queryKey: ['get-me'] });
-      await queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
+      refreshCachesAfterTeamCreation(queryClient);
       const targetClubId = selectedOverview.clubId;
       dispatch({ type: 'RESET' });
       const rootRoute = isGold ? RouteNames.LeagueHomeTab : RouteNames.HomeTab;

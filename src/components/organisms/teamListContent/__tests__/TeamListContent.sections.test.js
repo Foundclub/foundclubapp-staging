@@ -644,4 +644,53 @@ describe('TeamListContent — les 4 sections (filet E6)', () => {
       EQUIPES_ENTRAINEES.forEach(({ name }) => expect(rendu).toContain(name));
     });
   });
+
+  describe('D25 ① — l equipe qu on vient de creer est MIENNE tout de suite', () => {
+    // Le profil est celui d'AVANT la creation : le serveur le sert depuis un
+    // cache memoire qu'aucune ecriture d'equipe ne purge (30 s a 4 min). C'est
+    // ce que l'app recevait, et croyait sur parole.
+    const PROFIL_PERIME = {
+      ...UTILISATEUR,
+      clubMembershipRequests: [],
+      myTeams: [],
+      teamMembershipRequests: [],
+      trainedTeams: [],
+    };
+
+    // L'equipe, elle, arrive fraiche avec `GET /teams` : le serveur y rend
+    // `trainers`, et j'y suis.
+    const EQUIPE_TOUTE_NEUVE = {
+      activities: [{ name: 'Football' }],
+      club: CLUB_SANS_SPONSOR,
+      documentId: 't-neuve',
+      name: 'U15 Filles',
+      players: [],
+      section: { name: 'Feminine' },
+      trainers: [{ documentId: 'u-1' }],
+    };
+
+    it('la classe sous « Mes equipes », pas sous « Autres equipes »', async () => {
+      const tree = await renderList({
+        auth: { userData: PROFIL_PERIME },
+        teams: [EQUIPE_TOUTE_NEUVE],
+      });
+      const rendu = allText(tree);
+
+      expect(rendu).toContain('Mes équipes');
+      expect(rendu).toContain('U15 Filles');
+      expect(rendu).not.toContain('Autres équipes');
+    });
+
+    it('laisse bien sous « Autres equipes » celle d un autre entraineur', async () => {
+      const tree = await renderList({
+        auth: { userData: PROFIL_PERIME },
+        teams: [EQUIPE_TOUTE_NEUVE, TEAM_AUTRE],
+      });
+      const rendu = allText(tree);
+
+      expect(rendu).toContain('Autres équipes');
+      expect(findCard(tree, 'U13 Rugby')).toBeDefined();
+      expect(rendu).toContain('U15 Filles');
+    });
+  });
 });

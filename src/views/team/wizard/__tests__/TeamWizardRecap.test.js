@@ -305,27 +305,35 @@ describe('D25 — etape 8/8 « Recapitulatif »', () => {
 
     creerLEquipe();
     await laisserRespirer();
-    // Les invalidations en attente sont debloquees une a une.
-    for (let index = 0; index < 6 && mockCache.terminer.length > 0; index += 1) {
-      // eslint-disable-next-line no-await-in-loop
-      await act(async () => { mockCache.terminer.shift()?.(); await Promise.resolve(); });
-    }
 
     expect(mockCache.clefs).toEqual(
       expect.arrayContaining(['teams', 'get-me', 'app-bootstrap']),
     );
   });
 
-  test('DEFAUT ① — les rafraichissements partent EN FILE INDIENNE', async () => {
+  test('D25 ① — les trois rafraichissements partent DE FRONT, pas en file indienne', async () => {
     afficherLEcran();
     mockReponse.team = { documentId: 'eq-neuve', name: 'U15 Filles' };
 
     creerLEquipe();
     await laisserRespirer();
 
-    // Une seule invalidation est partie : les deux suivantes attendent que
-    // celle-ci ait fini son aller-retour reseau.
-    expect(mockCache.clefs).toEqual(['teams']);
+    // Les trois sont parties alors qu'AUCUNE n'a encore repondu : personne
+    // n'attend l'aller-retour du voisin.
+    expect(mockCache.clefs).toHaveLength(3);
+    expect(mockCache.terminer).toHaveLength(3);
+  });
+
+  test('D25 ① — l ecran change de vue SANS attendre les rafraichissements', async () => {
+    afficherLEcran();
+    mockReponse.team = { documentId: 'eq-neuve', name: 'U15 Filles' };
+
+    creerLEquipe();
+    await laisserRespirer();
+
+    // Aucune invalidation n'a repondu, et pourtant la navigation est deja faite.
+    expect(mockCache.terminer).toHaveLength(3);
+    expect(racine.reset).toHaveBeenCalledTimes(1);
   });
 
   test('un refus de quota ouvre le mur payant existant, sans alerte', async () => {
