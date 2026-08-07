@@ -20,7 +20,6 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.UserSection]: '/onboarding/section',
   [RouteNames.UserLevel]: '/onboarding/level',
   [RouteNames.UserCategory]: '/onboarding/category',
-  [RouteNames.UserBirthdate]: '/onboarding/birthdate',
   [RouteNames.UserParentalDeclaration]: '/onboarding/parental-declaration',
   [RouteNames.UserAvatar]: '/onboarding/avatar',
   [RouteNames.UserAddress]: '/onboarding/address',

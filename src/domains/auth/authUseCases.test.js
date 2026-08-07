@@ -770,12 +770,34 @@ describe('authUseCases', () => {
         },
       );
 
-      // La date de naissance n'a plus d'etape a elle : l'ecran fusionne l'a
-      // absorbee. Aucun parcours ne doit la faire reapparaitre.
-      it.each(PARCOURS)('role $roleName : plus aucune etape date de naissance separee', ({ roleName }) => {
-        const result = getOnboardingViews({ role: { name: roleName } });
+      // D22 - CE QUI REMPLACE L'ANCIENNE ASSERTION, ET POURQUOI.
+      //
+      // Ici vivait `not.toContain(RouteNames.UserBirthdate)`. Elle avait fait
+      // son travail : elle a prouve que l'ecran `UserBirthdate` etait orphelin
+      // sur les 5 parcours, ce qui a permis de le supprimer (lot D22). Mais la
+      // garder apres la suppression de la clef l'aurait transformee en zombie
+      // vert : `RouteNames.UserBirthdate` vaut desormais `undefined`, et
+      // `not.toContain(undefined)` passe TOUJOURS - elle ne testerait plus rien.
+      //
+      // Le piege est general, et la liste ordonnee epinglee plus haut ne le
+      // rattrape PAS : `PARCOURS` et le code de production lisent le MEME objet
+      // `RouteNames`. Si une clef disparait, les deux cotes deviennent
+      // `undefined` en meme temps et `toEqual` reste vert sur un parcours casse.
+      //
+      // D'ou cette assertion-ci, qui elle ne peut pas devenir muette : toute
+      // route rendue doit etre une valeur DECLAREE de `routeNames.js`. Elle
+      // tombe des qu'un parcours emet `undefined` - c'est-a-dire des qu'une
+      // clef de route est supprimee sans que le parcours suive.
+      const ROUTES_DECLAREES = Object.values(RouteNames);
 
-        expect(result.views.map((view) => view.route)).not.toContain(RouteNames.UserBirthdate);
+      it.each(PARCOURS)('role $roleName : aucune route inconnue dans le parcours', ({ roleName }) => {
+        const result = getOnboardingViews({ role: { name: roleName } });
+        const routes = result.views.map((view) => view.route);
+
+        expect(routes.length).toBeGreaterThan(0);
+        routes.forEach((route) => {
+          expect(ROUTES_DECLAREES).toContain(route);
+        });
       });
 
       // D16 - LES DEUX ETAPES NEUVES N'APPARTIENNENT QU'A UN SEUL PARCOURS.

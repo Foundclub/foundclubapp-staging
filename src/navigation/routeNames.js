@@ -187,7 +187,6 @@ export const RouteNames = /** @type {const} */ ({
   UserAddress: 'UserAddress',
   UserAffiliationGuide: 'UserAffiliationGuide',
   UserAvatar: 'UserAvatar',
-  UserBirthdate: 'UserBirthdate',
   UserCategory: 'UserCategory',
   UserClubSearch: 'UserClubSearch',
   UserDetails: 'UserDetails',

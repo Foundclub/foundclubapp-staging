@@ -16,7 +16,6 @@ import { HistoryWizardProvider } from '@/views/historyWizard/HistoryWizardContex
 import UserAddress from '@/views/onboarding/UserAddress';
 import UserAffiliationGuide from '@/views/onboarding/UserAffiliationGuide';
 import UserAvatar from '@/views/onboarding/UserAvatar';
-import UserBirthdate from '@/views/onboarding/UserBirthdate';
 import UserCategory from '@/views/onboarding/UserCategory';
 import UserClubSearch from '@/views/onboarding/UserClubSearch';
 import UserLevel from '@/views/onboarding/UserLevel';
@@ -747,20 +746,6 @@ function PrivateNavigator() {
               headerTitle: () => renderStepper(RouteNames.UserSection),
               headerTitleAlign: 'left',
 
-            }}
-          />
-        ) : null}
-
-        {canShowView(RouteNames.UserBirthdate) ? (
-          <Stack.Screen
-            component={UserBirthdate}
-            key={onboardingViews?.totalViews}
-            name={RouteNames.UserBirthdate}
-            options={{
-              ...commonOptions,
-              headerRight: () => renderStepperIndicator(RouteNames.UserBirthdate),
-              headerTitle: () => renderStepper(RouteNames.UserBirthdate),
-              headerTitleAlign: 'left',
             }}
           />
         ) : null}

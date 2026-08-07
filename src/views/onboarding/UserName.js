@@ -28,7 +28,9 @@ import { isBirthdateUnderParentalAge } from '@/constants/parentalDeclaration';
 
 // D15 - ECRAN FUSIONNE « Qui es-tu ? ».
 // Prenom, nom et date de naissance tenaient sur DEUX etapes (UserName puis
-// UserBirthdate). Ils tiennent desormais sur celle-ci. Le dirigeant, lui, n'a
+// l'ancien ecran `UserBirthdate`, supprime par D22 une fois prouve qu'aucun
+// parcours ne l'atteignait plus). Ils tiennent desormais sur celle-ci. Le
+// dirigeant, lui, n'a
 // jamais eu d'etape date de naissance : il ne voit que prenom + nom, et c'est sa
 // seule etape obligatoire.
 //
@@ -62,8 +64,9 @@ const nameFields = {
   lastname: Joi.string().required(),
 };
 
-// Regles reprises telles quelles de l'ancien UserBirthdate.js : bornes jour /
-// mois / annee, puis controle que la date existe reellement (31 fevrier refuse).
+// Regles reprises telles quelles de l'ancien UserBirthdate.js (fichier supprime
+// par D22 ; ces lignes en sont la seule survivance) : bornes jour / mois /
+// annee, puis controle que la date existe reellement (31 fevrier refuse).
 const birthdateFields = {
   day: Joi.string()
     .pattern(/^\d{2}$/)
