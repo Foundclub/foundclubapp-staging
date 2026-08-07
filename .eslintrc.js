@@ -102,7 +102,13 @@ module.exports = {
   settings: {
     'import/resolver': {
       alias: {
-        extensions: ['.js', '.jsx', '.json'],
+        // `.native.js` / `.web.js` ajoutées le 2026-08-07 (D30). Sans elles, le
+        // résolveur d'ESLint ne voit AUCUN des modules résolus par plateforme —
+        // le motif que `@/platform/device`, `@/platform/maps` et compagnie
+        // utilisent depuis toujours. Chacun de ces `index.js` payait deux
+        // erreurs gelées (`import/no-unresolved` + `import/extensions`) pour un
+        // import parfaitement valide côté Metro et côté Vite.
+        extensions: ['.js', '.jsx', '.json', '.native.js', '.web.js'],
         map: [
           ['@', './src'],
         ],

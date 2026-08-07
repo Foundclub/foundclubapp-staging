@@ -1,4 +1,20 @@
-import { PermissionsAndroid, Platform } from 'react-native';
+import {
+  ensureSearchMapGeolocationPermission,
+  getCurrentSearchMapPosition,
+  isSearchMapGeolocationSupported,
+} from './searchMapGeolocationSource';
+
+// D30 — « Autour de moi » localise vraiment.
+//
+// Ce fichier garde TOUTE l'orchestration écrite par D23 : on ne demande jamais
+// une autorisation qu'on ne saurait pas exploiter, et aucun chemin d'échec ne
+// lève — refus, capteur muet, coordonnées absurdes rendent `null`, ce que
+// l'écran traduit par le message de repli plutôt que par de l'inertie.
+//
+// Ce qui change : la SOURCE de la position est résolue par plateforme
+// (`searchMapGeolocationSource.native.js` / `.web.js`), comme `@/platform/device`.
+// Le web garde `navigator.geolocation`, le natif utilise le module natif — et
+// le bundle du site n'importe jamais la dépendance native.
 
 const DEFAULT_GEOLOCATION_OPTIONS = Object.freeze({
   enableHighAccuracy: true,
@@ -6,47 +22,15 @@ const DEFAULT_GEOLOCATION_OPTIONS = Object.freeze({
   timeout: 10000,
 });
 
-const getNavigatorGeolocation = () => {
-  const candidates = [
-    typeof navigator !== 'undefined' ? navigator : null,
-    global?.navigator || null,
-  ];
+// Filet de sécurité, et il couvre un blocage RÉEL, pas une hypothèse : si le
+// module natif n'est pas lié, le paquet lève à l'intérieur d'une fonction
+// `async` dont son propre wrapper jette la promesse. Aucun des deux rappels ne
+// part alors, et l'écran resterait sur « … » indéfiniment. On borne donc
+// l'attente juste au-delà du délai demandé : au pire, on retombe sur les
+// suggestions.
+const SAFETY_NET_MS = DEFAULT_GEOLOCATION_OPTIONS.timeout + 2000;
 
-  return candidates.find(
-    (candidate) => (
-      candidate?.geolocation
-      && typeof candidate.geolocation.getCurrentPosition === 'function'
-    ),
-  )?.geolocation || null;
-};
-
-const requestNativeLocationPermission = async () => {
-  if (Platform.OS !== 'android') {
-    return true;
-  }
-
-  const alreadyGranted = await PermissionsAndroid.check(
-    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-  );
-  if (alreadyGranted) {
-    return true;
-  }
-
-  const granted = await PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-    {
-      buttonNegative: 'Annuler',
-      buttonNeutral: 'Plus tard',
-      buttonPositive: 'Autoriser',
-      message: 'Nous avons besoin de ta position pour afficher les résultats autour de toi.',
-      title: 'Permission de localisation',
-    },
-  );
-
-  return granted === PermissionsAndroid.RESULTS.GRANTED;
-};
-
-export const canUseSearchMapGeolocation = () => Boolean(getNavigatorGeolocation());
+export const canUseSearchMapGeolocation = () => isSearchMapGeolocationSupported();
 
 /**
  * Request the current device position for the search map.
@@ -55,34 +39,53 @@ export const canUseSearchMapGeolocation = () => Boolean(getNavigatorGeolocation(
  */
 export const requestCurrentSearchMapLocation = async () => {
   try {
-    const hasPermission = await requestNativeLocationPermission();
+    if (!isSearchMapGeolocationSupported()) {
+      return null;
+    }
+
+    const hasPermission = await ensureSearchMapGeolocationPermission();
     if (!hasPermission) {
       return null;
     }
 
-    const geolocationApi = getNavigatorGeolocation();
-    if (!geolocationApi) {
-      return null;
-    }
-
     return await new Promise((resolve) => {
-      geolocationApi.getCurrentPosition(
-        (position) => {
-          const lat = position?.coords?.latitude;
-          const lng = position?.coords?.longitude;
+      let settled = false;
+      /** @type {any} */
+      let safetyNet;
 
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            resolve(null);
-            return;
-          }
+      const settle = (/** @type {{ lat: number, lng: number } | null} */ value) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(safetyNet);
+        resolve(value);
+      };
 
-          resolve({ lat, lng });
-        },
-        () => {
-          resolve(null);
-        },
-        DEFAULT_GEOLOCATION_OPTIONS,
-      );
+      safetyNet = setTimeout(() => settle(null), SAFETY_NET_MS);
+
+      // Le `try` sert à ANNULER le minuteur quand la source lève : sans lui, la
+      // promesse serait bien rejetée puis rattrapée plus bas, mais le minuteur
+      // survivrait 12 secondes pour rien.
+      try {
+        getCurrentSearchMapPosition(
+          (/** @type {any} */ position) => {
+            const lat = position?.coords?.latitude;
+            const lng = position?.coords?.longitude;
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+              settle(null);
+              return;
+            }
+
+            settle({ lat, lng });
+          },
+          () => settle(null),
+          DEFAULT_GEOLOCATION_OPTIONS,
+        );
+      } catch (error) {
+        settle(null);
+      }
     });
   } catch (error) {
     return null;

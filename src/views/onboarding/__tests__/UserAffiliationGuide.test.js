@@ -512,6 +512,77 @@ describe('UserAffiliationGuide — refonte 6b', () => {
 
       expect(notice(rendered)).toBeUndefined();
     });
+
+    // D30 — LE TÉMOIN D'ARRÊT. Les tests de D23 ci-dessus prouvent que le bouton
+    // RÉPOND ; aucun ne prouve qu'il SERT à quelque chose. Celui-ci mesure la
+    // seule chose qu'Adel a demandée : « les clubs les plus proches remontent ».
+    //
+    // Le serveur ne trie pas : `/clubs` filtre par cellule geohash, et l'écran
+    // ordonne ensuite sur `address.lat/lng`. C'est donc bien ici que ça se voit.
+    const clubOrder = (rendered) => [...new Set(
+      rendered.tree.root
+        .findAll((node) => typeof node.props?.item?.name === 'string')
+        .map((node) => node.props.item.name),
+    )];
+
+    const CLUBS_LOIN_D_ABORD = [
+      {
+        address: { lat: 48.8566, lng: 2.3522 }, documentId: 'c-paris', id: 10, name: 'Paris Nord',
+      },
+      {
+        address: { lat: 43.2965, lng: 5.3698 }, documentId: 'c-mars', id: 11, name: 'Marseille Sud',
+      },
+    ];
+
+    it('position obtenue : les clubs remontent TRIÉS PAR DISTANCE', async () => {
+      mockUseGetClubs.mockReturnValue(queryWith(CLUBS_LOIN_D_ABORD));
+      const rendered = renderScreen();
+      // Sans position, l'ordre est celui du serveur : Paris d'abord.
+      expect(clubOrder(rendered)).toEqual(['Paris Nord', 'Marseille Sud']);
+
+      // Position simulée à Marseille : le plus proche doit passer devant.
+      mockRequestLocation.mockResolvedValue({ lat: 43.3, lng: 5.37 });
+      await pressNearby(rendered);
+
+      expect(clubOrder(rendered)).toEqual(['Marseille Sud', 'Paris Nord']);
+    });
+
+    it('un club sans coordonnées reste affiché, en fin de liste', async () => {
+      // Il ne DISPARAÎT pas : un club mal géocodé resterait introuvable, et
+      // c'est exactement le bug que « Autour de moi » est censé réparer.
+      mockUseGetClubs.mockReturnValue(queryWith([
+        {
+          address: { lat: 48.8566, lng: 2.3522 }, documentId: 'c-p', id: 20, name: 'Paris Nord',
+        },
+        {
+          addressDetails: 'adresse inconnue', documentId: 'c-x', id: 21, name: 'Club Sans Adresse',
+        },
+        {
+          address: { lat: 43.2965, lng: 5.3698 }, documentId: 'c-m', id: 22, name: 'Marseille Sud',
+        },
+      ]));
+      const rendered = renderScreen();
+
+      mockRequestLocation.mockResolvedValue({ lat: 43.3, lng: 5.37 });
+      await pressNearby(rendered);
+
+      expect(clubOrder(rendered)).toEqual(['Marseille Sud', 'Paris Nord', 'Club Sans Adresse']);
+    });
+
+    it('la position est envoyée au serveur comme cellule geohash, jamais brute', async () => {
+      // Aucune position stockée ni transmise ailleurs que dans la requête de
+      // recherche : ce que le serveur reçoit est une CELLULE, pas un point.
+      const rendered = renderScreen();
+      mockRequestLocation.mockResolvedValue({ lat: 43.3, lng: 5.37 });
+
+      await pressNearby(rendered);
+
+      const derniersParams = mockUseGetClubs.mock.calls.at(-1)[0];
+      expect(typeof derniersParams.geohash).toBe('string');
+      expect(derniersParams.geohash.length).toBeGreaterThan(0);
+      expect(derniersParams.lat).toBeUndefined();
+      expect(derniersParams.lng).toBeUndefined();
+    });
   });
 
   it('la chip sport est pré-remplie avec le sport du profil et filtre la requête', () => {
