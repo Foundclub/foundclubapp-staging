@@ -16,6 +16,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardParticipantsStepIndex,
   getEventWizardStepCount,
@@ -66,8 +67,9 @@ const isTrainingTypeName = (typeName = '') => {
  *
  * @param root0
  * @param root0.navigation
+ * @param root0.route
  */
-function EventWizardParticipants({ navigation }) {
+function EventWizardParticipants({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -239,7 +241,10 @@ function EventWizardParticipants({ navigation }) {
       type: 'SET_PARTICIPANTS',
     });
 
-    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardParticipants, state));
+    navigation.navigate(getEventWizardExitRoute(
+      getEventWizardNextRoute(RouteNames.EventWizardParticipants, state),
+      route?.params,
+    ));
   };
 
   useEffect(() => {

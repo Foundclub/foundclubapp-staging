@@ -23,6 +23,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardStageProgramStepIndex,
   getEventWizardStepCount,
@@ -108,7 +109,7 @@ const serializeStageSchedule = (stageDays = []) => stageDays.map((day) => ({
   startTime: new Date(day.startTime),
 }));
 
-function EventWizardStageProgram({ navigation }) {
+function EventWizardStageProgram({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -308,11 +309,12 @@ function EventWizardStageProgram({ navigation }) {
       payload: nextPayload,
       type: 'SET_STAGE_PROGRAM',
     });
-    navigation.navigate(
+    navigation.navigate(getEventWizardExitRoute(
       shouldSkipEventWizardLocationStep(nextWizardState)
         ? RouteNames.EventWizardTournamentSettings
         : getEventWizardNextRoute(RouteNames.EventWizardStageProgram, nextWizardState),
-    );
+      route?.params,
+    ));
   };
 
   const cardSurfaceStyle = {

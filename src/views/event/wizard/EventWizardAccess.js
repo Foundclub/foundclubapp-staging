@@ -14,6 +14,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardAccessStepIndex,
+  getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardStepCount,
   isTournamentEventType,
@@ -93,8 +94,9 @@ function ChoiceHint({ children }) {
  *
  * @param root0
  * @param root0.navigation
+ * @param root0.route
  */
-function EventWizardAccess({ navigation }) {
+function EventWizardAccess({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -185,7 +187,10 @@ function EventWizardAccess({ navigation }) {
       });
     }
 
-    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardAccess, projectedState));
+    navigation.navigate(getEventWizardExitRoute(
+      getEventWizardNextRoute(RouteNames.EventWizardAccess, projectedState),
+      route?.params,
+    ));
   };
 
   return (

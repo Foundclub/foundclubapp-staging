@@ -11,6 +11,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardDescriptionStepIndex,
+  getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardStepCount,
 } from './eventWizardDetectionUtils';
@@ -19,8 +20,9 @@ import {
  *
  * @param root0
  * @param root0.navigation
+ * @param root0.route
  */
-function EventWizardDescription({ navigation }) {
+function EventWizardDescription({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -41,7 +43,10 @@ function EventWizardDescription({ navigation }) {
       payload: { description },
       type: 'SET_META',
     });
-    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardDescription, state));
+    navigation.navigate(getEventWizardExitRoute(
+      getEventWizardNextRoute(RouteNames.EventWizardDescription, state),
+      route?.params,
+    ));
   };
 
   return (

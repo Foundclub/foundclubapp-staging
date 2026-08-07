@@ -18,6 +18,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { getPositionValuesForSport } from '@/constants/positions';
 import {
   getEventWizardDetectionSlotsStepIndex,
+  getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardSportName,
   getEventWizardStepCount,
@@ -38,10 +39,10 @@ const normalizeSlots = (slots = []) => (
 );
 
 /**
- * @param {{ navigation: any }} props
+ * @param {{ navigation: any, route: any }} props
  * @returns {import('react').ReactElement}
  */
-function EventWizardDetectionSlots({ navigation }) {
+function EventWizardDetectionSlots({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -151,7 +152,10 @@ function EventWizardDetectionSlots({ navigation }) {
       payload: isEnabled ? normalizeSlots(slots) : [],
       type: 'SET_DETECTION_SLOTS',
     });
-    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardDetectionSlots, state));
+    navigation.navigate(getEventWizardExitRoute(
+      getEventWizardNextRoute(RouteNames.EventWizardDetectionSlots, state),
+      route?.params,
+    ));
   };
 
   return (

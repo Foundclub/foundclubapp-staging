@@ -22,6 +22,7 @@ import { useGetEventTypes } from '@/services/event/eventQueries';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardStepCount,
   normalizeTypeLabel,
@@ -116,7 +117,19 @@ function EventWizardType({ navigation, route }) {
     dispatch({ payload: type, type: 'SET_TYPE' });
     // Le type vient d'etre choisi : c'est lui qui decide de la suite du
     // parcours, on interroge donc la chaine sur l'etat PROJETE.
-    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardType, { ...state, type }));
+    const nextRoute = getEventWizardNextRoute(RouteNames.EventWizardType, { ...state, type });
+    // 🧨 D19 — SEUL ECRAN DU TUNNEL OU LE BILLET DE RETOUR EST CONDITIONNEL, et
+    // ce n'est pas une prudence de principe : changer le type change la CHAINE
+    // elle-meme (un stage gagne son programme, une detection ses postes, un
+    // tournoi ses deux ecrans). Revenir droit au recapitulatif laisserait ces
+    // etapes-la jamais remplies. Type inchange = geste blanc, on rend la main
+    // au recap ; type change = on repart dans le tunnel, comme aujourd'hui.
+    const isSameType = Boolean(type?.documentId)
+      && state?.type?.documentId === type.documentId;
+
+    navigation.navigate(
+      isSameType ? getEventWizardExitRoute(nextRoute, route?.params) : nextRoute,
+    );
   };
 
   // Decision d'Adel du 2026-08-06 : « Match amical » n'est pas un type

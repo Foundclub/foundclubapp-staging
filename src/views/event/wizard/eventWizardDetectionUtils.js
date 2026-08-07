@@ -160,6 +160,43 @@ export const getEventWizardStepCount = (/** @type {any} */ state = {}) => (
   getEventWizardStepRoutes(state).length
 );
 
+/**
+ * LE BILLET DE RETOUR, pose par le recapitulatif sur l'etape qu'il ouvre.
+ *
+ * 🧨 Defaut trouve a la recette du 2026-08-07 : depuis le recapitulatif,
+ * « modifier » ouvrait bien la bonne etape, mais il fallait ensuite RETRAVERSER
+ * toutes les suivantes au lieu de revenir au recap. Le recap naviguait en
+ * aveugle — `navigate(EventWizardXxx)` sans aucun parametre — donc l'etape ne
+ * pouvait pas savoir d'ou elle avait ete ouverte : elle enchainait normalement.
+ *
+ * ⛔ L'information voyage en PARAMETRE, jamais en inspectant la pile de
+ * navigation : une pile s'inspecte mal, se teste encore plus mal, et casse au
+ * premier remaniement (lecon du lot L40-B, deja payee).
+ * @type {{ returnTo: string }}
+ */
+export const EVENT_WIZARD_RETURN_TO_RECAP = { returnTo: RouteNames.EventWizardRecap };
+
+/**
+ * Ou mene « Suivant », une fois pris en compte le billet de retour.
+ *
+ * Se lit « la ou tu serais alle, SAUF si le recap t'a ouvert ». C'est pour ca
+ * qu'elle prend la destination deja calculee plutot que de la recalculer : les
+ * etapes ne visent pas toutes `getEventWizardNextRoute` — le stage saute vers
+ * les reglages de tournoi, la logistique multi-jours saute vers le lieu — et
+ * ces sauts doivent honorer le retour eux aussi.
+ *
+ * ⚠️ SANS le parametre, elle rend exactement la destination qu'on lui passe :
+ * un tunnel ouvert normalement ne change donc rien du tout.
+ * @param {string} nextRouteName La destination prevue par la chaine.
+ * @param {any} [routeParams] Les parametres de l'ecran courant (`route.params`).
+ * @returns {string} La destination effective.
+ */
+export const getEventWizardExitRoute = (nextRouteName, routeParams = {}) => (
+  routeParams?.returnTo === RouteNames.EventWizardRecap
+    ? RouteNames.EventWizardRecap
+    : nextRouteName
+);
+
 export const getEventWizardLogisticsStepIndex = (/** @type {any} */ state = {}) => (
   getEventWizardStepIndex(RouteNames.EventWizardLogistics, state)
 );

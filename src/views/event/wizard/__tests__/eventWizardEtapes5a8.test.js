@@ -223,6 +223,16 @@ const pressableQuiPorte = (arbre, texte) => {
 };
 
 /**
+ * Les ecrans atteints par une doublure de navigation, quel que soit le verbe.
+ * @param {any} nav La doublure de navigation.
+ * @returns {string[]} Les noms de route atteints, dans l'ordre.
+ */
+const destinationsDe = (nav) => [
+  ...nav.navigate.mock.calls,
+  ...nav.push.mock.calls,
+].map((/** @type {any[]} */ appel) => appel[0]);
+
+/**
  * Le dernier jeu de proprietes recu par le gabarit d'etape.
  * @returns {any} Les proprietes du dernier rendu.
  */
@@ -249,6 +259,11 @@ const monter = (Ecran, etatSeme = {}, navigation = {}) => {
     canGoBack: () => true,
     goBack: jest.fn(),
     navigate: jest.fn(),
+    // D19 — le Recap ouvre ses etapes avec `push` : il EMPILE au-dessus de lui
+    // au lieu d'y retourner en depilant, ce qui detruisait le Recap et obligeait
+    // a retraverser tout le tunnel. Les filets ci-dessous mesurent les ecrans
+    // JOIGNABLES, pas le verbe : d'ou `destinationsDe`, qui lit les deux.
+    push: jest.fn(),
     replace: jest.fn(),
     reset: jest.fn(),
     ...navigation,
@@ -706,9 +721,7 @@ describe('D10 — etape 8 · Recapitulatif', () => {
         });
       });
 
-      const destinations = [...new Set(
-        nav.navigate.mock.calls.map((/** @type {any[]} */ appel) => appel[0]),
-      )];
+      const destinations = [...new Set(destinationsDe(nav))];
       demonter();
       return destinations;
     };
@@ -772,8 +785,7 @@ describe('D10 — etape 8 · Recapitulatif', () => {
       });
     });
 
-    expect(nav.navigate.mock.calls.map((/** @type {any[]} */ appel) => appel[0]))
-      .toContain(RouteNames.EventWizardInvites);
+    expect(destinationsDe(nav)).toContain(RouteNames.EventWizardInvites);
     // Et la porte est NOMMEE : un lien atteignable mais anonyme ne sert personne.
     expect(contenuDe(arbre)).toContain('Invitations');
     demonter();
@@ -863,8 +875,7 @@ describe('D10 — etape 8 · Recapitulatif', () => {
       });
     });
 
-    expect(nav.navigate.mock.calls.map((/** @type {any[]} */ appel) => appel[0]))
-      .toContain(RouteNames.EventWizardLocation);
+    expect(destinationsDe(nav)).toContain(RouteNames.EventWizardLocation);
     demonter();
   });
 
@@ -880,7 +891,7 @@ describe('D10 — etape 8 · Recapitulatif', () => {
       pressableQuiPorte(arbre, '+ Ajouter une description').props.onPress();
     });
 
-    expect(nav.navigate).toHaveBeenCalledWith(RouteNames.EventWizardDescription);
+    expect(destinationsDe(nav)).toContain(RouteNames.EventWizardDescription);
     demonter();
   });
 

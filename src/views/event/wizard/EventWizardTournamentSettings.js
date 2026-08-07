@@ -17,6 +17,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { createTournamentDesignSystem } from '../tournamentDesignSystem';
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardStepCount,
   getEventWizardTournamentSettingsStepIndex,
@@ -33,8 +34,9 @@ const parseOptionalInteger = (value) => {
  *
  * @param root0
  * @param root0.navigation
+ * @param root0.route
  */
-function EventWizardTournamentSettings({ navigation }) {
+function EventWizardTournamentSettings({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -101,7 +103,10 @@ function EventWizardTournamentSettings({ navigation }) {
       },
       type: 'SET_TOURNAMENT_SETTINGS',
     });
-    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardTournamentSettings, state));
+    navigation.navigate(getEventWizardExitRoute(
+      getEventWizardNextRoute(RouteNames.EventWizardTournamentSettings, state),
+      route?.params,
+    ));
   };
 
   const renderRegistrationModeCard = (mode, title, subtitle) => {

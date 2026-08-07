@@ -44,6 +44,7 @@ import {
 import EventTasksEditor from '../components/EventTasksEditor';
 import { useEventWizard } from './EventWizardContext';
 import {
+  EVENT_WIZARD_RETURN_TO_RECAP,
   getEventWizardRecapStepIndex,
   getEventWizardStepCount,
   hasCompletePerDayLocations,
@@ -570,6 +571,31 @@ function EventWizardRecap({ navigation }) {
     </TouchableOpacity>
   );
 
+  /**
+   * Ouvrir une etape depuis le recapitulatif — EN L'EMPILANT, pas en y
+   * retournant.
+   *
+   * 🧨 Defaut trouve a la recette du 2026-08-07 : « modifier » ouvrait bien la
+   * bonne etape, mais une fois la correction faite il fallait RETRAVERSER
+   * toutes les etapes suivantes. Deux causes cumulees, et il fallait les deux :
+   *
+   *  1. `navigate` vers un ecran DEJA present dans la pile y revient en
+   *     DEPILANT. Le recapitulatif — qui est tout en haut — etait donc detruit :
+   *     il n'y avait plus rien ou revenir, l'etape ne pouvait qu'enchainer.
+   *  2. l'etape ne recevait AUCUN parametre. Meme si le recap avait survecu,
+   *     elle n'aurait pas su qu'elle avait ete ouverte depuis lui.
+   *
+   * `push` empile une nouvelle copie de l'etape AU-DESSUS du recapitulatif, qui
+   * reste en dessous. C'est ce qui rend le retour arriere physique coherent
+   * — fleche d'en-tete ET geste iOS — sans une seule ligne dans les etapes :
+   * leur `goBack` retombe naturellement sur le recap. Le billet de retour, lui,
+   * ne sert plus qu'a « Suivant ».
+   * @param {string} routeName L'etape a ouvrir.
+   */
+  const openStepFromRecap = (routeName) => {
+    navigation.push(routeName, EVENT_WIZARD_RETURN_TO_RECAP);
+  };
+
   const runCreateBatch = async (payloads) => {
     const result = await createEventsWithConcurrency(payloads, {
       concurrency: CREATE_EVENT_BATCH_CONCURRENCY,
@@ -960,7 +986,7 @@ function EventWizardRecap({ navigation }) {
               <Text style={[Fonts.h4, Fonts.neutral00]}>
                 {t('eventWizard.recap.organizationTitle', 'Organisation')}
               </Text>
-              <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardType)}>
+              <TouchableOpacity onPress={() => openStepFromRecap(RouteNames.EventWizardType)}>
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
               </TouchableOpacity>
             </View>
@@ -1011,7 +1037,7 @@ function EventWizardRecap({ navigation }) {
               </Text>
               <TouchableOpacity
                 accessibilityRole="button"
-                onPress={() => navigation.navigate(
+                onPress={() => openStepFromRecap(
                   isMultiDayProgram && !isTournament
                     ? RouteNames.EventWizardStageProgram
                     : RouteNames.EventWizardLogistics,
@@ -1121,7 +1147,7 @@ function EventWizardRecap({ navigation }) {
                 </Text>
                 <TouchableOpacity
                   accessibilityRole="button"
-                  onPress={() => navigation.navigate(RouteNames.EventWizardLocation)}
+                  onPress={() => openStepFromRecap(RouteNames.EventWizardLocation)}
                 >
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>
                     {t('eventWizard.recap.actions.edit')}
@@ -1138,7 +1164,7 @@ function EventWizardRecap({ navigation }) {
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
                 <Text style={[Fonts.h4, Fonts.neutral00]}>Paramètres tournoi</Text>
-                <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardTournamentSettings)}>
+                <TouchableOpacity onPress={() => openStepFromRecap(RouteNames.EventWizardTournamentSettings)}>
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
                 </TouchableOpacity>
               </View>
@@ -1170,7 +1196,7 @@ function EventWizardRecap({ navigation }) {
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
                 <Text style={[Fonts.h4, Fonts.neutral00]}>Structure du tournoi</Text>
-                <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardTournamentStructure)}>
+                <TouchableOpacity onPress={() => openStepFromRecap(RouteNames.EventWizardTournamentStructure)}>
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
                 </TouchableOpacity>
               </View>
@@ -1210,7 +1236,7 @@ function EventWizardRecap({ navigation }) {
                 {t('eventWizard.recap.participationTitle', 'Participation')}
               </Text>
               <TouchableOpacity
-                onPress={() => navigation.navigate(
+                onPress={() => openStepFromRecap(
                   shouldSkipParticipantsStep
                     ? RouteNames.EventWizardAccess
                     : RouteNames.EventWizardParticipants,
@@ -1302,7 +1328,7 @@ function EventWizardRecap({ navigation }) {
                 <Text style={[Fonts.h4, Fonts.neutral00]}>
                   {t('eventWizard.steps.detectionSlots.title', 'Postes recherches')}
                 </Text>
-                <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardDetectionSlots)}>
+                <TouchableOpacity onPress={() => openStepFromRecap(RouteNames.EventWizardDetectionSlots)}>
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
                 </TouchableOpacity>
               </View>
@@ -1346,7 +1372,7 @@ function EventWizardRecap({ navigation }) {
               {state.description ? (
                 <TouchableOpacity
                   accessibilityRole="button"
-                  onPress={() => navigation.navigate(RouteNames.EventWizardDescription)}
+                  onPress={() => openStepFromRecap(RouteNames.EventWizardDescription)}
                 >
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>
                     {t('eventWizard.recap.actions.edit')}
@@ -1364,7 +1390,7 @@ function EventWizardRecap({ navigation }) {
             ) : (
               <TouchableOpacity
                 accessibilityRole="button"
-                onPress={() => navigation.navigate(RouteNames.EventWizardDescription)}
+                onPress={() => openStepFromRecap(RouteNames.EventWizardDescription)}
                 style={[
                   ApplicationStyle.card,
                   Alignments.alignCenter,
@@ -1403,7 +1429,7 @@ function EventWizardRecap({ navigation }) {
             {renderAdvancedRow({
               isFirst: true,
               label: t('eventWizard.recap.advanced.invites', 'Invitations'),
-              onPress: () => navigation.navigate(RouteNames.EventWizardInvites),
+              onPress: () => openStepFromRecap(RouteNames.EventWizardInvites),
               value: invitesSummary,
             })}
             {renderAdvancedRow({

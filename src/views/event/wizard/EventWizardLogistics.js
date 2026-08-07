@@ -26,6 +26,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardExitRoute,
   getEventWizardLogisticsStepIndex,
   getEventWizardNextRoute,
   getEventWizardStepCount,
@@ -267,8 +268,9 @@ const buildTournamentDayState = ({
  *
  * @param root0
  * @param root0.navigation
+ * @param root0.route
  */
-function EventWizardLogistics({ navigation }) {
+function EventWizardLogistics({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -689,7 +691,9 @@ function EventWizardLogistics({ navigation }) {
         type: 'SET_LOGISTICS',
       });
 
-      navigation.navigate(RouteNames.EventWizardLocation);
+      navigation.navigate(
+        getEventWizardExitRoute(RouteNames.EventWizardLocation, route?.params),
+      );
       return;
     }
 
@@ -779,9 +783,10 @@ function EventWizardLogistics({ navigation }) {
       type: 'SET_LOGISTICS',
     });
 
-    navigation.navigate(
+    navigation.navigate(getEventWizardExitRoute(
       getEventWizardNextRoute(RouteNames.EventWizardLogistics, projectedWizardState),
-    );
+      route?.params,
+    ));
   };
 
   const showSingleDateTimeFields = !(isTournament && isMultiDayTournament);

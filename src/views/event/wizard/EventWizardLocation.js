@@ -13,6 +13,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardExitRoute,
   getEventWizardLocationStepIndex,
   getEventWizardNextRoute,
   getEventWizardStepCount,
@@ -36,8 +37,9 @@ const buildDateTimeIso = (baseDate, timeValue) => {
  *
  * @param root0
  * @param root0.navigation
+ * @param root0.route
  */
-function EventWizardLocation({ navigation }) {
+function EventWizardLocation({ navigation, route }) {
   const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
   const { userData } = useAuth();
@@ -74,7 +76,10 @@ function EventWizardLocation({ navigation }) {
       payload: { facility: facilityId, location },
       type: 'SET_LOCATION',
     });
-    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardLocation, state));
+    navigation.navigate(getEventWizardExitRoute(
+      getEventWizardNextRoute(RouteNames.EventWizardLocation, state),
+      route?.params,
+    ));
   };
 
   const handleAddFacility = () => {

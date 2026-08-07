@@ -16,6 +16,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { createTournamentDesignSystem } from '../tournamentDesignSystem';
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardStepCount,
   getEventWizardTournamentStructureStepIndex,
@@ -74,8 +75,9 @@ const parseOptionalInteger = (value, fallback = null) => {
  *
  * @param root0
  * @param root0.navigation
+ * @param root0.route
  */
-function EventWizardTournamentStructure({ navigation }) {
+function EventWizardTournamentStructure({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -135,7 +137,10 @@ function EventWizardTournamentStructure({ navigation }) {
       },
       type: 'SET_TOURNAMENT_STRUCTURE',
     });
-    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardTournamentStructure, state));
+    navigation.navigate(getEventWizardExitRoute(
+      getEventWizardNextRoute(RouteNames.EventWizardTournamentStructure, state),
+      route?.params,
+    ));
   };
 
   const renderChoiceCard = (option, selectedValue, onPress) => {

@@ -17,6 +17,11 @@ import EventWizardTeam from '../EventWizardTeam';
 import EventWizardTournamentSettings from '../EventWizardTournamentSettings';
 import EventWizardTournamentStructure from '../EventWizardTournamentStructure';
 import EventWizardType from '../EventWizardType';
+import {
+  getEventWizardExitRoute,
+  getEventWizardNextRoute,
+  getEventWizardStepRoutes,
+} from '../eventWizardDetectionUtils';
 
 // Filet D08 (E6) — moitie TRANSITIONS. La moitie NUMEROS vit dans
 // `eventWizardDetectionUtils.test.js`.
@@ -353,6 +358,11 @@ const marcherDansLeTunnel = ({ avantDeMarcher, nomDuType }) => {
   const navigation = {
     goBack: () => {},
     navigate: (/** @type {string} */ nom) => destinations.push(nom),
+    // D19 — le Recap ouvre desormais ses etapes avec `push` (il EMPILE
+    // au-dessus de lui au lieu d'y retourner en depilant). Ce filet mesure les
+    // ecrans JOIGNABLES, pas le verbe employe : la doublure enregistre donc les
+    // trois verbes de la meme facon.
+    push: (/** @type {string} */ nom) => destinations.push(nom),
     replace: (/** @type {string} */ nom) => destinations.push(nom),
     setParams: () => {},
   };
@@ -473,6 +483,11 @@ const destinationsDesLiensModifier = () => {
   const navigation = {
     goBack: () => {},
     navigate: (/** @type {string} */ nom) => destinations.push(nom),
+    // D19 — le Recap ouvre desormais ses etapes avec `push` (il EMPILE
+    // au-dessus de lui au lieu d'y retourner en depilant). Ce filet mesure les
+    // ecrans JOIGNABLES, pas le verbe employe : la doublure enregistre donc les
+    // trois verbes de la meme facon.
+    push: (/** @type {string} */ nom) => destinations.push(nom),
     replace: (/** @type {string} */ nom) => destinations.push(nom),
     setParams: () => {},
   };
@@ -665,5 +680,231 @@ describe('D08 — les positions annoncees a l ecran suivent la chaine reelle', (
       // sous forme de chaine pour que l'echec nomme l'ecran fautif.
       expect(`${route}=${positions[route]}`).toBe(`${route}=${rang + 1}`);
     });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// D19 — « MODIFIER » DEPUIS LE RECAPITULATIF DOIT RAMENER AU RECAPITULATIF
+//
+// Defaut trouve a la recette du 2026-08-07 : depuis le recapitulatif,
+// « modifier » ouvrait bien la bonne etape, mais une fois la correction faite il
+// fallait RETRAVERSER toutes les etapes suivantes. Le filet D08 ci-dessus ne
+// pouvait pas le voir : il ne marche que dans le sens du tunnel, jamais depuis
+// le recap.
+//
+// Les deux temoins du lot vivent ici, et ils sont indissociables :
+//   ① depuis le recap, l'etape N ramene AU RECAP ;
+//   ② en tunnel normal, l'etape N mene TOUJOURS a N+1 — le comportement
+//      d'aujourd'hui, fige pour que la correction ne le deplace pas.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const TYPE_MATCH = { documentId: 'type-match', name: 'Match' };
+const TYPE_TOURNOI = { documentId: 'type-tournoi', name: 'Tournoi' };
+const TYPE_DETECTION = { documentId: 'type-detection', name: 'Detection' };
+const EQUIPE_A_POSTES = mockDonnees.equipes[0];
+
+/**
+ * Ouvre UNE etape seule, appuie sur son « Suivant », et rend la destination.
+ * @param {object} options Parametres de l'ouverture.
+ * @param {boolean} [options.avecBilletDeRetour] L'etape est-elle ouverte depuis le recap ?
+ * @param {any} options.etatSeme Etat du tunnel au moment de l'ouverture.
+ * @param {string} options.route L'etape a ouvrir.
+ * @returns {string} La destination atteinte.
+ */
+const sortieDeLEtape = ({ avecBilletDeRetour, etatSeme, route }) => {
+  /** @type {string[]} */
+  const destinations = [];
+  const navigation = {
+    goBack: () => {},
+    navigate: (/** @type {string} */ nom) => destinations.push(nom),
+    push: (/** @type {string} */ nom) => destinations.push(nom),
+    replace: (/** @type {string} */ nom) => destinations.push(nom),
+    setParams: () => {},
+  };
+
+  mockAffichage.rendreLeContenu = false;
+  mockProprietesDuGabarit.length = 0;
+
+  const rendre = (/** @type {any} */ contenu) => createElement(
+    EventWizardProvider,
+    null,
+    createElement(PriseDeCourant),
+    contenu,
+  );
+
+  /** @type {any} */
+  let arbre;
+  // Deux temps, et l'ordre compte : chaque ecran lit l'etat du tunnel dans le
+  // `useState` de son PREMIER rendu. Semer apres coup ne changerait rien.
+  act(() => { arbre = renderer.create(rendre(null)); });
+  act(() => semer({ payload: etatSeme, type: 'SET_META' }));
+  act(() => arbre.update(rendre(createElement(ECRANS[route], {
+    navigation,
+    route: { params: avecBilletDeRetour ? { returnTo: RouteNames.EventWizardRecap } : {} },
+  }))));
+
+  const gabarit = mockProprietesDuGabarit[mockProprietesDuGabarit.length - 1];
+  if (typeof gabarit?.onNext !== 'function') {
+    throw new Error(`${route} n'expose pas de « Suivant »`);
+  }
+  act(() => gabarit.onNext());
+  act(() => arbre.unmount());
+
+  if (destinations.length === 0) throw new Error(`${route} n'a navigue nulle part`);
+  return destinations[0];
+};
+
+/** Une etape joignable depuis le recap, avec l'etat qui la met dans la chaine. */
+const ETAPES_JOIGNABLES_DEPUIS_LE_RECAP = [
+  [RouteNames.EventWizardLogistics, { team: EQUIPE_A_POSTES, type: TYPE_MATCH }],
+  [RouteNames.EventWizardLocation, { team: EQUIPE_A_POSTES, type: TYPE_MATCH }],
+  [RouteNames.EventWizardParticipants, { team: EQUIPE_A_POSTES, type: TYPE_MATCH }],
+  [RouteNames.EventWizardAccess, { team: EQUIPE_A_POSTES, type: TYPE_MATCH }],
+  [RouteNames.EventWizardDescription, { team: EQUIPE_A_POSTES, type: TYPE_MATCH }],
+  [RouteNames.EventWizardTournamentSettings, { team: EQUIPE_A_POSTES, type: TYPE_TOURNOI }],
+  [RouteNames.EventWizardTournamentStructure, { team: EQUIPE_A_POSTES, type: TYPE_TOURNOI }],
+  [RouteNames.EventWizardDetectionSlots, { team: EQUIPE_A_POSTES, type: TYPE_DETECTION }],
+];
+
+describe('D19 — temoin ① depuis le recap, l etape ramene AU RECAP', () => {
+  test.each(ETAPES_JOIGNABLES_DEPUIS_LE_RECAP)(
+    '%s ouverte depuis le recap y revient',
+    (route, etatSeme) => {
+      expect(sortieDeLEtape({ avecBilletDeRetour: true, etatSeme, route }))
+        .toBe(RouteNames.EventWizardRecap);
+    },
+  );
+});
+
+describe('D19 — temoin ② en tunnel normal, l etape mene TOUJOURS a la suivante', () => {
+  // Le garde-fou du lot : sans le billet de retour, RIEN ne doit changer. La
+  // destination attendue n'est pas ecrite en dur — elle est demandee a la chaine
+  // elle-meme, la seule source de verite du tunnel depuis D08.
+  test.each(ETAPES_JOIGNABLES_DEPUIS_LE_RECAP)(
+    '%s ouverte normalement suit la chaine',
+    (route, etatSeme) => {
+      const attendue = getEventWizardNextRoute(route, etatSeme);
+
+      expect(sortieDeLEtape({ avecBilletDeRetour: false, etatSeme, route })).toBe(attendue);
+    },
+  );
+
+  // ⚠️ Ce que le temoin ② ne peut pas distinguer, et il faut le dire :
+  // `EventWizardDescription` est la DERNIERE etape avant le recap. Sa
+  // destination normale EST le recap, avec ou sans billet. Le cas reste dans le
+  // tableau pour ne pas etre oublie, mais c'est le balayage de la regle pure
+  // ci-dessous qui le couvre vraiment.
+  test('la description mene au recap dans les deux cas — cas indistinguable, assume', () => {
+    const etatSeme = { team: EQUIPE_A_POSTES, type: TYPE_MATCH };
+
+    expect(getEventWizardNextRoute(RouteNames.EventWizardDescription, etatSeme))
+      .toBe(RouteNames.EventWizardRecap);
+  });
+});
+
+describe('D19 — la regle de retour, prise a part', () => {
+  // La regle est une fonction pure : on peut donc la balayer sur TOUTES les
+  // etapes du tunnel, y compris celles que les tests montes ci-dessus ne
+  // savent pas piloter (le programme de stage exige des journees saisies).
+  const TOUTES_LES_ETAPES = getEventWizardStepRoutes({
+    team: EQUIPE_A_POSTES,
+    type: TYPE_TOURNOI,
+  }).concat(RouteNames.EventWizardStageProgram, RouteNames.EventWizardDetectionSlots);
+
+  test('avec le billet, toute etape ramene au recap', () => {
+    TOUTES_LES_ETAPES.forEach((route) => {
+      const suivante = getEventWizardNextRoute(route, { type: TYPE_TOURNOI });
+      const atteinte = getEventWizardExitRoute(
+        suivante,
+        { returnTo: RouteNames.EventWizardRecap },
+      );
+
+      expect(`${route} -> ${atteinte}`).toBe(`${route} -> ${RouteNames.EventWizardRecap}`);
+    });
+  });
+
+  test('sans le billet, elle rend EXACTEMENT la destination qu on lui passe', () => {
+    TOUTES_LES_ETAPES.forEach((route) => {
+      const suivante = getEventWizardNextRoute(route, { type: TYPE_TOURNOI });
+
+      expect(`${route} -> ${getEventWizardExitRoute(suivante, {})}`)
+        .toBe(`${route} -> ${suivante}`);
+      expect(getEventWizardExitRoute(suivante, undefined)).toBe(suivante);
+    });
+  });
+
+  // ⛔ Le billet ne s'invente pas : un parametre etranger ne doit pas detourner
+  // le tunnel. C'est ce qui empeche une URL bricolee de couper des etapes sur
+  // le site.
+  test('un parametre etranger ne detourne rien', () => {
+    expect(getEventWizardExitRoute(RouteNames.EventWizardLocation, { returnTo: 'AutreEcran' }))
+      .toBe(RouteNames.EventWizardLocation);
+    expect(getEventWizardExitRoute(RouteNames.EventWizardLocation, { startTutorial: true }))
+      .toBe(RouteNames.EventWizardLocation);
+  });
+});
+
+describe('D19 — le premier ecran est le SEUL a poser une condition', () => {
+  /**
+   * Choisit un type sur le 1er ecran, ouvert depuis le recap, et rend la
+   * destination atteinte.
+   * @param {object} options Parametres du choix.
+   * @param {string} options.typeChoisi Le nom du type sur lequel on appuie.
+   * @param {any} options.typeDeja Le type deja enregistre dans le tunnel.
+   * @returns {string} La destination atteinte.
+   */
+  const choisirUnType = ({ typeChoisi, typeDeja }) => {
+    /** @type {string[]} */
+    const destinations = [];
+    const navigation = {
+      goBack: () => {},
+      navigate: (/** @type {string} */ nom) => destinations.push(nom),
+      push: (/** @type {string} */ nom) => destinations.push(nom),
+      replace: (/** @type {string} */ nom) => destinations.push(nom),
+      setParams: () => {},
+    };
+
+    mockAffichage.rendreLeContenu = true;
+    mockProprietesDuGabarit.length = 0;
+
+    const rendre = (/** @type {any} */ contenu) => createElement(
+      EventWizardProvider,
+      null,
+      createElement(PriseDeCourant),
+      contenu,
+    );
+
+    /** @type {any} */
+    let arbre;
+    act(() => { arbre = renderer.create(rendre(null)); });
+    act(() => semer({ payload: { team: EQUIPE_A_POSTES, type: typeDeja }, type: 'SET_META' }));
+    act(() => arbre.update(rendre(createElement(ECRANS[RouteNames.EventWizardType], {
+      navigation,
+      route: { params: { returnTo: RouteNames.EventWizardRecap } },
+    }))));
+
+    const pressables = arbre.root.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function',
+      { deep: true },
+    );
+    const cible = pressables.find((noeud) => textesSous(noeud).includes(typeChoisi));
+    if (!cible) throw new Error(`aucune rangee « ${typeChoisi} »`);
+    act(() => cible.props.onPress());
+    act(() => arbre.unmount());
+
+    return destinations[0];
+  };
+
+  test('reappuyer sur le MEME type est un geste blanc : on rend la main au recap', () => {
+    expect(choisirUnType({ typeChoisi: 'Match', typeDeja: TYPE_MATCH }))
+      .toBe(RouteNames.EventWizardRecap);
+  });
+
+  // Le cas limite qui justifie la condition : changer le type change la CHAINE
+  // (un stage gagne son programme, une detection ses postes). Revenir droit au
+  // recap laisserait ces etapes-la jamais remplies.
+  test('CHANGER de type repart dans le tunnel, meme ouvert depuis le recap', () => {
+    expect(choisirUnType({ typeChoisi: 'Tournoi', typeDeja: TYPE_MATCH }))
+      .toBe(RouteNames.EventWizardTeam);
   });
 });
