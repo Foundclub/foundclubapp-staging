@@ -14,7 +14,9 @@ import { extractSubscriptionDecisionFromError } from '@/domains/subscription/sub
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
+import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -36,7 +38,6 @@ import {
   useLicenseCampaign,
   useLicenseMutation,
 } from '@/services/license/licenseQueries';
-import { connectLicenseHelloAsso } from '@/services/license/licenseService';
 import { useGetSections } from '@/services/section/sectionQueries';
 
 import {
@@ -44,11 +45,13 @@ import {
   buildEventTargetConfig,
 } from './eventCampaignDefaults';
 import {
-  LicenseCard,
+  describeHelloAssoReadiness,
+  formatLicenseMoney,
+  getHelloAssoSnapshot,
+  isHelloAssoReadyForCampaign,
   LicenseEmptyState,
   licenseRadius,
   licenseSpacing,
-  LicenseStatusChip,
   normalizePaymentModes,
   paymentModeLabels,
 } from './licenseDesignSystem';
@@ -74,18 +77,88 @@ const clampDateToBounds = (date, minimumDate, maximumDate) => {
   if (maximum && date.getTime() > maximum.getTime()) return maximum;
   return date;
 };
+// ⛔ Les CLES sont les chaines deja en base : elles ne bougent pas. Seuls les
+// libelles changent, et uniquement pour porter leurs accents (defaut de recette
+// du 2026-08-07 : le recapitulatif affichait « pending, partial, overdue »).
 const reminderStatusOptions = [
-  { key: 'pending', label: 'A payer' },
-  { key: 'partial', label: 'Paiement partiel' },
+  { key: 'pending', label: 'À payer' },
+  { key: 'partial', label: 'Partiel' },
   { key: 'overdue', label: 'En retard' },
-  { key: 'manual_review', label: 'En attente de validation' },
+  { key: 'manual_review', label: 'À valider' },
 ];
 const installmentFrequencyOptions = [
-  { key: 'weekly', label: 'Hebdo' },
+  { key: 'weekly', label: 'Hebdomadaire' },
   { key: 'monthly', label: 'Mensuelle' },
   { key: 'quarterly', label: 'Trimestrielle' },
   { key: 'custom', label: 'Libre' },
 ];
+const installmentFrequencyMonthStep = {
+  custom: 1, monthly: 1, quarterly: 3, weekly: 0,
+};
+
+/**
+ * Repartit un montant en N echeances SANS jamais perdre ni inventer un centime.
+ *
+ * 100 € en 3 fois donne 33,34 + 33,33 + 33,33 : le reste de la division entiere
+ * est verse sur les PREMIERES echeances, jamais lisse. La somme des lignes est
+ * donc egale au montant, par construction et pas par chance.
+ * @param {number} totalCents - Montant total de la campagne, en centimes.
+ * @param {number} count - Nombre d'echeances voulu.
+ * @returns {number[]} Les montants, en centimes, dans l'ordre.
+ */
+const splitAmountIntoInstallments = (totalCents, count) => {
+  const safeCount = Math.max(1, Math.floor(Number(count) || 1));
+  const safeTotal = Math.max(0, Math.round(Number(totalCents) || 0));
+  const base = Math.floor(safeTotal / safeCount);
+  const remainder = safeTotal - (base * safeCount);
+  return Array.from({ length: safeCount }, (_, index) => base + (index < remainder ? 1 : 0));
+};
+
+/**
+ * Decale une date ISO de N periodes, selon la frequence choisie.
+ * @param {string} isoDate - Date de depart, format `yyyy-MM-dd`.
+ * @param {string} frequency - Cle de `installmentFrequencyOptions`.
+ * @param {number} periodIndex - Rang de l'echeance, a partir de 0.
+ * @returns {string} La date decalee, ou une chaine vide si la date de depart est invalide.
+ */
+const shiftDateByFrequency = (isoDate, frequency, periodIndex) => {
+  const parsed = parseIsoDateValue(isoDate);
+  if (!parsed) return '';
+  const shifted = new Date(parsed.getTime());
+  if (frequency === 'weekly') {
+    shifted.setDate(shifted.getDate() + (7 * periodIndex));
+  } else {
+    const monthStep = installmentFrequencyMonthStep[frequency] ?? 1;
+    shifted.setMonth(shifted.getMonth() + (monthStep * periodIndex));
+  }
+  return format(shifted, 'yyyy-MM-dd');
+};
+
+/**
+ * Fabrique l'echeancier COMPLET a partir du montant, du nombre et de la frequence.
+ *
+ * D26 : le dirigeant ne resaisit plus « 1, 2, 3 » a la main. Il donne un nombre,
+ * l'app produit les lignes. La saisie manuelle reste possible dans la feuille
+ * « Ajuster » — mais elle part d'un echeancier deja juste.
+ * @param {object} root0
+ * @param {number} root0.totalCents
+ * @param {number} root0.count
+ * @param {string} root0.frequency
+ * @param {string} root0.startDate
+ * @returns {{amount: string, dueDate: string, frequency: string, label: string, localId: string}[]}
+ */
+const generateInstallmentSchedule = ({
+  count, frequency, startDate, totalCents,
+}) => {
+  const safeCount = Math.max(1, Math.floor(Number(count) || 1));
+  return splitAmountIntoInstallments(totalCents, safeCount).map((amountCents, index) => ({
+    amount: centsToEuro(amountCents),
+    dueDate: shiftDateByFrequency(startDate, frequency, index),
+    frequency,
+    label: `${index + 1}/${safeCount}`,
+    localId: `generated-${index + 1}`,
+  }));
+};
 const currencyOptions = [
   { key: 'EUR', label: 'EUR €' },
   { key: 'USD', label: 'USD $' },
@@ -94,170 +167,63 @@ const currencyOptions = [
 ];
 const campaignTypeOptions = [
   { key: 'license', label: 'Licence' },
-  { key: 'membership', label: 'Adhesion' },
-  { key: 'equipment', label: 'Equipement' },
+  { key: 'membership', label: 'Adhésion' },
+  { key: 'equipment', label: 'Équipement' },
   { key: 'internship', label: 'Stage' },
   { key: 'tournament', label: 'Tournoi' },
   { key: 'other', label: 'Autre' },
 ];
 const licenseRoleFilterKeys = ['player', 'coach', 'president'];
-const licenseCampaignWizardStepCatalog = {
-  amount: {
-    key: 'amount',
-    subtitle: 'Définis le prix par défaut applique aux membres concernés.',
-    title: 'Prix',
+/**
+ * Les 6 etapes du tunnel de campagne — lot D26.
+ *
+ * ⚠️ CE TABLEAU EST UNE CONSTANTE, ET C'EST TOUT LE LOT.
+ * Avant D26 il etait construit par empilements conditionnels : le DENOMINATEUR
+ * du « Étape n/N » changeait sous les yeux du dirigeant des qu'il basculait un
+ * interrupteur situe DANS le tunnel (mesure du filet D18 : 13 au minimum, 17 sur
+ * une campagne neuve, 22 au maximum — « 8/16 » devenait « 8/19 » sans reculer).
+ * Une longueur constante ne peut plus mentir.
+ *
+ * Les 16 anciennes etapes qui sortent de la barre ne sont PAS supprimees : elles
+ * deviennent une feuille ou une ligne d'« Options avancées ». Une etape retiree
+ * sans destination, c'est du reglage devenu injoignable — le motif exact de la
+ * regression la plus chere du projet.
+ * @type {{key: string, subtitle: string, title: string}[]}
+ */
+const licenseCampaignWizardSteps = [
+  {
+    key: 'identity',
+    subtitle: 'Nom, type et saison — le reste a des défauts sûrs.',
+    title: 'Identité',
   },
-  description: {
-    key: 'description',
-    subtitle: 'Rédigé le texte visible par les membres dans leur espace cotisation.',
-    title: 'Description',
+  {
+    key: 'audience',
+    subtitle: 'Qui paie, et combien. Le montant est obligatoire.',
+    title: 'Public & tarif',
   },
-  documents: {
+  {
+    key: 'payment',
+    subtitle: 'Comment les membres peuvent régler.',
+    title: 'Paiement',
+  },
+  {
     key: 'documents',
-    subtitle: 'Ajoute les pièces à fournir pour compléter le dossier.',
+    subtitle: 'Les pièces à fournir. Étape facultative.',
     title: 'Documents',
   },
-  endDate: {
-    key: 'endDate',
-    subtitle: 'Choisis la date de fin de la campagne.',
-    title: 'Date de fin',
+  {
+    key: 'reminders',
+    subtitle: 'On relance tant que ce n est pas payé.',
+    title: 'Relances',
   },
-  installmentsOptions: {
-    key: 'installmentsOptions',
-    subtitle: 'Ajuste les options avancées du paiement fractionne.',
-    title: 'Options d échéancier',
-  },
-  installmentsSchedule: {
-    key: 'installmentsSchedule',
-    subtitle: 'Renseigne chaque échéance avec son libellé, son montant et sa date limite.',
-    title: 'Echeances',
-  },
-  installmentsSetup: {
-    key: 'installmentsSetup',
-    subtitle: 'Choisis le nombre d échéances et leur fréquence.',
-    title: 'Nombre d échéances',
-  },
-  installmentsToggle: {
-    key: 'installmentsToggle',
-    subtitle: 'Décide si la campagne autorise le paiement en plusieurs fois.',
-    title: 'Paiement fractionne',
-  },
-  internalNote: {
-    key: 'internalNote',
-    subtitle: 'Ajoute si besoin une note uniquement visible en gestion.',
-    title: 'Note interne',
-  },
-  name: {
-    key: 'name',
-    subtitle: 'Donne un nom clair à la campagne de cotisation.',
-    title: 'Nom',
-  },
-  overdueDate: {
-    key: 'overdueDate',
-    subtitle: 'Choisis à partir de quand un dossier passe officiellement en retard.',
-    title: 'Retard',
-  },
-  paymentInstructions: {
-    key: 'paymentInstructions',
-    subtitle: 'Précise les consignes liées aux moyens de paiement actives.',
-    title: 'Consignes',
-  },
-  paymentMethods: {
-    key: 'paymentMethods',
-    subtitle: 'Active les moyens de paiement proposes aux membres.',
-    title: 'Moyens de paiement',
-  },
-  paymentOnline: {
-    key: 'paymentOnline',
-    subtitle: 'Configure le lien externe du club ou la connexion HelloAsso.',
-    title: 'Paiement en ligne',
-  },
-  paymentOwner: {
-    key: 'paymentOwner',
-    subtitle: 'Choisis qui encaisse les paiements en ligne.',
-    title: 'Encaissement',
-  },
-  period: {
-    key: 'period',
-    subtitle: 'Définis la période de la campagne puis confirme la saison détectée pour ton club.',
-    title: 'Periode',
-  },
-  pricingRules: {
-    key: 'pricingRules',
-    subtitle: 'Ajoute les exceptions de tarif par rôle, équipe, catégorie, section ou niveau.',
-    title: 'Tarifs speciaux',
-  },
-  reminderMessage: {
-    key: 'reminderMessage',
-    subtitle: 'Rédigé le message utilise dans les relances automatiques.',
-    title: 'Message',
-  },
-  reminderStatuses: {
-    key: 'reminderStatuses',
-    subtitle: 'Choisis quels dossiers doivent recevoir des relances.',
-    title: 'Statuts à relancer',
-  },
-  reminderTiming: {
-    key: 'reminderTiming',
-    subtitle: 'Règle la cadence des relances avant et après l échéance.',
-    title: 'Cadence de relance',
-  },
-  reminderToggle: {
-    key: 'reminderToggle',
-    subtitle: 'Active ou non les relances automatiques sur la campagne.',
-    title: 'Relances auto',
-  },
-  review: {
+  {
     key: 'review',
-    subtitle: 'Vérifie l ensemble avant d enregistrer, programmer ou ouvrir la campagne.',
-    title: 'Recap',
+    subtitle: 'Relis, corrige, puis ouvre — tout reste modifiable après.',
+    title: 'Récapitulatif',
   },
-  season: {
-    key: 'season',
-    subtitle: 'On détecte une saison à partir des dates, puis tu peux la confirmer ou l ajuster selon le fonctionnement du club.',
-    title: 'Saison',
-  },
-  startDate: {
-    key: 'startDate',
-    subtitle: 'Choisis la date de début de la campagne.',
-    title: 'Date de début',
-  },
-  targetCategories: {
-    key: 'targetCategories',
-    subtitle: 'Filtre la campagne par catégorie si besoin.',
-    title: 'Categories',
-  },
-  targetLevels: {
-    key: 'targetLevels',
-    subtitle: 'Ajoute un filtre par niveau si nécessaire.',
-    title: 'Niveaux',
-  },
-  targetMode: {
-    key: 'targetMode',
-    subtitle: 'Décide si la campagne concerne tout le club ou sélectionne directement les profils vises.',
-    title: 'Public concerne',
-  },
-  targetRoles: {
-    key: 'targetRoles',
-    subtitle: 'Filtre les membres par rôle.',
-    title: 'Roles',
-  },
-  targetSections: {
-    key: 'targetSections',
-    subtitle: 'Filtre les membres par section.',
-    title: 'Sections',
-  },
-  targetTeams: {
-    key: 'targetTeams',
-    subtitle: 'Filtre les membres par équipe.',
-    title: 'Equipes',
-  },
-  type: {
-    key: 'type',
-    subtitle: 'Choisis le type de campagne: licence, adhésion, équipement ou autre.',
-    title: 'Type',
-  },
-};
+];
+const licenseCampaignWizardStepIndex = licenseCampaignWizardSteps
+  .reduce((accumulator, step, index) => ({ ...accumulator, [step.key]: index }), {});
 const normalizeReminderAutomation = (campaign) => {
   const automation = campaign?.reminderAutomation || {};
   return {
@@ -281,49 +247,6 @@ const defaultPaymentModes = {
   external_link: false,
   helloasso: false,
   stripe: false,
-};
-const helloAssoReadyStates = new Set(['ready', 'webhook_pending', 'webhook_stale']);
-const getHelloAssoSnapshot = (campaign) => campaign?.paymentProviderSnapshot?.helloasso || null;
-const createHelloAssoDraft = (campaign) => {
-  const snapshot = getHelloAssoSnapshot(campaign);
-  return {
-    clientId: '',
-    clientSecret: '',
-    environment: snapshot?.environment || 'production',
-    organizationSlug: snapshot?.organizationSlug || '',
-  };
-};
-const isHelloAssoReadyForCampaign = (snapshot) => helloAssoReadyStates.has(String(snapshot?.readiness || '').trim());
-const describeHelloAssoReadiness = (snapshot) => {
-  const readiness = String(snapshot?.readiness || '').trim();
-  if (!readiness) {
-    return 'La connexion HelloAsso n est pas encore configuree pour cette campagne.';
-  }
-  if (readiness === 'ready') {
-    return 'Connexion HelloAsso validée. La campagne peut utiliser le paiement in-app.';
-  }
-  if (readiness === 'webhook_pending') {
-    return 'Connexion validée. Le premier paiement doit encore confirmer le webhook.';
-  }
-  if (readiness === 'webhook_stale') {
-    return 'Connexion validée, mais aucun webhook récent n a été vu. Un test de paiement est recommandé.';
-  }
-  if (readiness === 'oauth_failed') {
-    return 'OAuth HelloAsso en erreur. Vérifie le client id et le client secret.';
-  }
-  if (readiness === 'checkout_failed') {
-    return 'Le test de checkout HelloAsso a échoué. Vérifie le slug organisation et les droits API.';
-  }
-  if (readiness === 'credentials_missing') {
-    return 'Renseigne le slug, le client id et le client secret avant publication.';
-  }
-  if (readiness === 'disabled') {
-    return 'HelloAsso est désactivé pour ce scope.';
-  }
-  if (readiness === 'pending') {
-    return 'La configuration HelloAsso existe, mais elle n a pas encore été vérifiée.';
-  }
-  return 'La configuration HelloAsso demande une vérification supplémentaire.';
 };
 const createDocumentRequestDraft = (documentRequest = {}) => ({
   acceptedMimeTypesText: Array.isArray(documentRequest.acceptedMimeTypes)
@@ -469,21 +392,24 @@ const detectSeasonLabelFromDates = ({ endDate, startDate }) => {
     ? formatSeasonLabel(fallbackSeason.startYear, fallbackSeason.endYear)
     : '';
 };
-const buildSeasonLabelSuggestions = ({ detectedSeasonLabel, seasonLabel }) => {
-  const baseLabel = String(detectedSeasonLabel || seasonLabel || '').trim();
-  const match = baseLabel.match(/^(\d{4})\D+(\d{4})$/);
-  if (!match) {
-    return [...new Set([seasonLabel, detectedSeasonLabel].filter(Boolean).map((value) => String(value).trim()))];
-  }
-  const startYear = Number(match[1]);
-  const endYear = Number(match[2]);
-  return [...new Set([
-    formatSeasonLabel(startYear - 1, endYear - 1),
-    formatSeasonLabel(startYear, endYear),
-    formatSeasonLabel(startYear + 1, endYear + 1),
-    String(seasonLabel || '').trim(),
-  ].filter(Boolean))];
+/**
+ * La saison EN COURS, celle que le tunnel propose par defaut (capture `01`).
+ *
+ * Le brief est explicite : « pas d'autre saison proposée ». On ne montre donc
+ * plus une liste de saisons voisines, on montre celle-ci ou des dates libres.
+ * @returns {{endDate: string, label: string, startDate: string}}
+ */
+const getCurrentSeasonRange = () => {
+  const range = getSeasonRangeFromDate(new Date()) || { endYear: 0, startYear: 0 };
+  return {
+    endDate: `${range.endYear}-07-31`,
+    label: formatSeasonLabel(range.startYear, range.endYear),
+    startDate: `${range.startYear}-08-01`,
+  };
 };
+// ⛔ `buildSeasonLabelSuggestions` (saison precedente / suivante) est retire :
+// le brief est explicite, « pas d'autre saison proposée ». La saison en cours ou
+// des dates libres — rien entre les deux.
 const formatSeasonLabelForSuggestion = (value) => {
   const normalized = String(value || '').trim();
   if (!normalized) {
@@ -681,6 +607,29 @@ const pricingRuleLabels = {
   section: 'Section',
   team: 'Equipe',
 };
+// ⛔ Les CLES sont les valeurs de `USER_ROLES`, celles qui partent en base dans
+// `targetConfig.roles`. Seul le libelle affiche porte l'accent et le pluriel.
+const licenseTargetRolePills = [
+  { key: USER_ROLES.president, label: 'Dirigeants' },
+  { key: USER_ROLES.coach, label: 'Entraîneurs' },
+  { key: USER_ROLES.player, label: 'Joueurs' },
+];
+
+/**
+ * Resume une piece demandee en une ligne : « Obligatoire · validation manuelle ·
+ * avant le 30 sept. ». Les formats acceptes n'y figurent plus — ils sont geres
+ * automatiquement, les afficher n'aidait personne.
+ * @param {any} documentRequest
+ * @returns {string} La ligne de resume.
+ */
+const describeDocumentRequest = (documentRequest) => [
+  documentRequest.required !== false ? 'Obligatoire' : 'Facultatif',
+  documentRequest.requiresManualValidation !== false ? 'validation manuelle' : null,
+  documentRequest.requiresSignature === true ? 'signature' : null,
+  documentRequest.dueDate?.trim()
+    ? `avant le ${isoToPickerDateValue(documentRequest.dueDate)}`
+    : null,
+].filter(Boolean).join(' · ');
 const renderReminderPreview = ({
   campaignName,
   dueDate,
@@ -848,6 +797,246 @@ function PaymentModeToggle({ enabled, label, onChange }) {
       <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>{label}</Text>
       <Switch onValueChange={onChange} value={enabled} />
     </View>
+  );
+}
+
+/**
+ * Interrupteur avec sa ligne d'explication — grammaire des captures D26
+ * (`03-paiement`, `05-relances`). Cible tactile portee par le `Switch` lui-meme.
+ * @param {object} root0
+ * @param {boolean} root0.enabled
+ * @param {string} root0.label
+ * @param {string} [root0.hint] - Ligne grise sous le libelle.
+ * @param {(value: boolean) => void} root0.onChange
+ * @returns {import('react').ReactElement}
+ */
+function SwitchRow({
+  enabled, hint, label, onChange,
+}) {
+  const { Alignments, Fonts, Spaces } = useTheme();
+
+  return (
+    <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+      <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{label}</Text>
+        {hint ? <Text style={[Fonts.p3, Fonts.neutral200]}>{hint}</Text> : null}
+      </View>
+      <Switch onValueChange={onChange} value={enabled} />
+    </View>
+  );
+}
+
+/**
+ * Rangee-valeur de 56 pt qui ouvre une feuille — c'est ce qui remplace les 16
+ * etapes retirees de la barre de progression. La valeur de droite dit ce qui est
+ * deja rempli, pour qu'on sache s'il faut l'ouvrir SANS l'ouvrir.
+ * @param {object} root0
+ * @param {string} root0.label
+ * @param {string} root0.value
+ * @param {() => void} root0.onPress
+ * @returns {import('react').ReactElement}
+ */
+function ValueRow({ label, onPress, value }) {
+  const {
+    Alignments, Colors, Fonts,
+  } = useTheme();
+
+  return (
+    <Pressable
+      accessibilityHint={value}
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, {
+        borderColor: `${Colors.primary500}33`,
+        borderRadius: licenseRadius.card,
+        borderWidth: 1,
+        minHeight: 56,
+        paddingHorizontal: licenseSpacing.cardPadding,
+        paddingVertical: 12,
+      }]}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, paddingRight: 12 }]}>{label}</Text>
+      <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300, { maxWidth: 150 }]}>{value}</Text>
+      <Text style={[Fonts.p2Bold, { color: Colors.primary500, paddingLeft: 8 }]}>›</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Rangee a cocher, bord 1,5 px en selection — grammaire des captures `02b`/`02c`.
+ * @param {object} root0
+ * @param {string} root0.label
+ * @param {string} [root0.hint]
+ * @param {boolean} root0.selected
+ * @param {() => void} root0.onPress
+ * @returns {import('react').ReactElement}
+ */
+function CheckRow({
+  hint, label, onPress, selected,
+}) {
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: selected }}
+      onPress={onPress}
+      style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, {
+        borderColor: selected ? Colors.primary500 : `${Colors.primary500}33`,
+        borderRadius: licenseRadius.card,
+        borderWidth: selected ? 1.5 : 1,
+        minHeight: 52,
+        paddingHorizontal: licenseSpacing.cardPadding,
+        paddingVertical: 12,
+      }]}
+    >
+      <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
+        <Text style={[Fonts.p2Bold, selected ? Fonts.neutral00 : Fonts.neutral100]}>{label}</Text>
+        {hint ? <Text style={[Fonts.p3, Fonts.neutral300]}>{hint}</Text> : null}
+      </View>
+      <Text style={[Fonts.p2Bold, { color: selected ? Colors.primary500 : Colors.neutral300 }]}>
+        {selected ? '✓' : ''}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Bascule a deux choix, style « Saison 2026-2027 / Dates libres » (capture `01`).
+ * @param {object} root0
+ * @param {{key: string, label: string}[]} root0.options
+ * @param {string} root0.selectedKey
+ * @param {(key: string) => void} root0.onSelect
+ * @returns {import('react').ReactElement}
+ */
+function SegmentedPair({ onSelect, options, selectedKey }) {
+  const { Alignments, Colors, Fonts } = useTheme();
+
+  return (
+    <View style={[Alignments.row, {
+      backgroundColor: Colors.primary800,
+      borderColor: `${Colors.primary500}33`,
+      borderRadius: licenseRadius.pill,
+      borderWidth: 1,
+      padding: 4,
+    }]}
+    >
+      {options.map((option) => {
+        const selected = option.key === selectedKey;
+        return (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            key={option.key}
+            onPress={() => onSelect(option.key)}
+            style={{
+              alignItems: 'center',
+              backgroundColor: selected ? Colors.primary500 : 'transparent',
+              borderRadius: licenseRadius.pill,
+              flex: 1,
+              justifyContent: 'center',
+              minHeight: 44,
+              paddingHorizontal: 12,
+            }}
+          >
+            <Text
+              numberOfLines={1}
+              style={[Fonts.p3Bold, selected ? Fonts.neutral900 : Fonts.neutral200]}
+            >
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * Ligne « libelle a gauche, valeur a droite » du recapitulatif (capture `06`).
+ * @param {object} root0
+ * @param {string} root0.label
+ * @param {string} root0.value
+ * @returns {import('react').ReactElement}
+ */
+function SummaryLine({ label, value }) {
+  const { Alignments, Fonts } = useTheme();
+
+  return (
+    <View style={[Alignments.row, Alignments.justifySpaceBetween, { alignItems: 'flex-start' }]}>
+      <Text style={[Fonts.p3, Fonts.neutral200, { paddingRight: 12 }]}>{label}</Text>
+      <Text style={[Fonts.p3Bold, Fonts.neutral00, Fonts.textRight, { flex: 1 }]}>{value}</Text>
+    </View>
+  );
+}
+
+/**
+ * Entete de section du recapitulatif, avec son lien « Modifier » qui RENVOIE a
+ * l'etape concernee. C'est ce qui rend acceptable un tunnel court : on relit
+ * tout au meme endroit et on repart corriger d'un geste.
+ * @param {object} root0
+ * @param {string} root0.title
+ * @param {() => void} root0.onEdit
+ * @returns {import('react').ReactElement}
+ */
+function ReviewSectionHeader({ onEdit, title }) {
+  const { Alignments, Colors, Fonts } = useTheme();
+
+  return (
+    <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+      <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, paddingRight: 12 }]}>{title}</Text>
+      <Pressable
+        accessibilityLabel={`Modifier ${title}`}
+        accessibilityRole="button"
+        hitSlop={{
+          bottom: 12, left: 12, right: 12, top: 12,
+        }}
+        onPress={onEdit}
+      >
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Modifier</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/**
+ * Feuille standard du lot : poignee, titre 18/900, contenu, CTA plein +
+ * « Annuler » en texte. C'est la SEULE forme de feuille du tunnel — les 8 du
+ * pack de design passent toutes par ici.
+ * @param {object} root0
+ * @param {import('react').ReactNode} root0.children
+ * @param {() => void} root0.close
+ * @param {boolean} root0.isVisible
+ * @param {string} root0.title
+ * @param {string} [root0.confirmLabel]
+ * @param {string} [root0.snapPoint]
+ * @returns {import('react').ReactElement}
+ */
+function WizardSheet({
+  children, close, confirmLabel = 'Terminé', isVisible, snapPoint = '70%', title,
+}) {
+  const { Fonts, Spaces } = useTheme();
+
+  return (
+    <BottomModal close={close} isVisible={isVisible} snapPoints={[snapPoint]}>
+      <View style={Spaces.gap[16]}>
+        <Text style={[Fonts.h4Black, Fonts.neutral00]}>{title}</Text>
+        {children}
+        <View style={Spaces.gap[8]}>
+          <Button onPress={close} title={confirmLabel} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={close}
+            style={{ alignItems: 'center', minHeight: 44, justifyContent: 'center' }}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral300]}>Annuler</Text>
+          </Pressable>
+        </View>
+      </View>
+    </BottomModal>
   );
 }
 
@@ -1271,7 +1460,6 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const [externalUrl, setExternalUrl] = useState(campaign?.externalPaymentUrl || '');
   const [paymentModes, setPaymentModes] = useState({ ...defaultPaymentModes, ...normalizePaymentModes(campaign?.paymentModes) });
   const [paymentOwner, setPaymentOwner] = useState(campaign?.paymentOwner || 'section');
-  const [helloAssoConfig, setHelloAssoConfig] = useState(() => createHelloAssoDraft(campaign));
   const [helloAssoSnapshot, setHelloAssoSnapshot] = useState(() => getHelloAssoSnapshot(campaign));
   const [bankTransferInstructions, setBankTransferInstructions] = useState(campaign?.bankTransferInstructions || '');
   const [cashInstructions, setCashInstructions] = useState(campaign?.cashInstructions || '');
@@ -1295,6 +1483,22 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const [reminderStartDate, setReminderStartDate] = useState(initialAutomation.startDate);
   const [reminderTargetStatuses, setReminderTargetStatuses] = useState(initialAutomation.targetStatuses);
   const [wizardStepIndex, setWizardStepIndex] = useState(0);
+  // Une seule feuille ouverte a la fois : `null`, ou la cle de la feuille.
+  // Les 8 feuilles du pack de design remplacent les 16 etapes retirees.
+  const [openSheet, setOpenSheet] = useState(/** @type {string | null} */ (null));
+  const [editedPricingRuleId, setEditedPricingRuleId] = useState(/** @type {string | null} */ (null));
+  const [editedDocumentRequestId, setEditedDocumentRequestId] = useState(
+    /** @type {string | null} */ (null),
+  );
+  const currentSeason = useMemo(() => getCurrentSeasonRange(), []);
+  // « Saison en cours » ou « Dates libres » : deduit des dates DEJA enregistrees,
+  // pour qu'une campagne existante rouvre sur le bon choix sans rien deviner.
+  const [periodMode, setPeriodMode] = useState(() => (
+    !campaign || (campaign.startDate === currentSeason.startDate
+      && campaign.endDate === currentSeason.endDate)
+      ? 'season'
+      : 'custom'
+  ));
   const allowScreenExitRef = useRef(false);
   const isEventParticipantTarget = /** @type {any} */ (targetConfig).source === 'event_participants';
 
@@ -1342,7 +1546,6 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     setExternalUrl(campaign.externalPaymentUrl || '');
     setPaymentModes({ ...defaultPaymentModes, ...normalizePaymentModes(campaign.paymentModes) });
     setPaymentOwner(campaign.paymentOwner || 'section');
-    setHelloAssoConfig(createHelloAssoDraft(campaign));
     setHelloAssoSnapshot(getHelloAssoSnapshot(campaign));
     setBankTransferInstructions(campaign.bankTransferInstructions || '');
     setCashInstructions(campaign.cashInstructions || '');
@@ -1370,10 +1573,6 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     )));
   }, []);
 
-  const addDocumentRequest = useCallback(() => {
-    setDocumentRequests((currentItems) => [...currentItems, createDocumentRequestDraft()]);
-  }, []);
-
   const removeDocumentRequest = useCallback((localId) => {
     setDocumentRequests((currentItems) => {
       const target = currentItems.find((item) => item.localId === localId);
@@ -1393,10 +1592,6 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     setPricingRules((currentItems) => currentItems.map((item) => (
       item.localId === localId ? { ...item, ...patch } : item
     )));
-  }, []);
-
-  const addPricingRule = useCallback(() => {
-    setPricingRules((currentItems) => [...currentItems, createPricingRuleDraft()]);
   }, []);
 
   const removePricingRule = useCallback((localId) => {
@@ -1420,27 +1615,30 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     }));
   }, []);
 
-  const updateInstallment = useCallback((localId, patch) => {
-    setInstallmentSchedule((currentItems) => currentItems.map((item) => (
-      item.localId === localId ? { ...item, ...patch } : item
-    )));
-  }, []);
-
+  // ⛔ L'effet qui completait l'echeancier avec des lignes VIDES libellees « 1 »,
+  // « 2 », « 3 » est retire : c'est exactement la resaisie manuelle que D26
+  // supprime. Le nombre d'echeances passe desormais par
+  // `handleInstallmentCountChange`, qui REGENERE les lignes avec leurs montants.
+  //
+  // Ce qui reste ici soigne l'HERITAGE : les campagnes deja en base portent
+  // justement ces lignes vides, creees par l'ancien effet. Sans montant, elles
+  // partent au serveur avec `amountCents: null`. On ne les remplit qu'a cette
+  // condition — un echeancier saisi a la main n'est jamais ecrase.
   useEffect(() => {
     if (!allowInstallments) return;
-    const desiredCount = Math.max(1, Number(installmentCount) || 1);
     setInstallmentSchedule((currentItems) => {
-      const nextItems = currentItems.slice(0, desiredCount);
-      while (nextItems.length < desiredCount) {
-        nextItems.push(createInstallmentDraft({}, nextItems.length));
-      }
-      return nextItems.map((item, index) => ({
-        ...item,
-        frequency: item.frequency || installmentFrequency || 'monthly',
-        label: item.label || `${index + 1}`,
-      }));
+      const expectedCount = Math.max(1, Number(installmentCount) || 1);
+      const isIncomplete = currentItems.length < expectedCount
+        || currentItems.slice(0, expectedCount).some((item) => !item.amount?.trim());
+      if (!isIncomplete) return currentItems;
+      return generateInstallmentSchedule({
+        count: expectedCount,
+        frequency: installmentFrequency,
+        startDate,
+        totalCents: euroToCents(amount),
+      });
     });
-  }, [allowInstallments, installmentCount, installmentFrequency]);
+  }, [allowInstallments, amount, installmentCount, installmentFrequency, startDate]);
 
   const enabledPaymentModeLabels = useMemo(() => Object.entries(paymentModes)
     .filter(([, enabled]) => enabled)
@@ -1456,6 +1654,80 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       label: item.label.trim() || `${index + 1}/${desiredCount}`,
     }));
   }, [allowInstallments, installmentCount, installmentFrequency, installmentSchedule]);
+  // L'echeancier GENERE : montant divise par N, arrondi au centime, somme exacte.
+  // Il est recalcule a chaque changement de montant / nombre / frequence tant que
+  // le dirigeant n'a pas repris la main dans la feuille « Ajuster ».
+  const generatedInstallmentSchedule = useMemo(() => generateInstallmentSchedule({
+    count: installmentCount,
+    frequency: installmentFrequency,
+    startDate,
+    totalCents: euroToCents(amount),
+  }), [amount, installmentCount, installmentFrequency, startDate]);
+  // Ce que le dirigeant VOIT dans la feuille : l'echeancier reellement enregistre,
+  // jamais un apercu theorique. Une campagne ancienne peut porter des montants
+  // saisis a la main — les remplacer d'office par le calcul serait un mensonge.
+  const visibleInstallmentSchedule = useMemo(() => (
+    installmentSchedule.slice(0, Math.max(1, Number(installmentCount) || 1))
+  ), [installmentCount, installmentSchedule]);
+  const installmentSummaryText = useMemo(() => {
+    if (!allowInstallments) return 'Paiement en une fois';
+    const firstAmountCents = euroToCents(visibleInstallmentSchedule[0]?.amount || '0');
+    const frequencyLabel = installmentFrequencyOptions
+      .find((option) => option.key === installmentFrequency)?.label || 'Mensuelle';
+    return [
+      `${visibleInstallmentSchedule.length} × ${formatLicenseMoney(firstAmountCents, currency)}`,
+      String(frequencyLabel).toLowerCase(),
+      'généré automatiquement',
+    ].join(' · ');
+  }, [allowInstallments, currency, installmentFrequency, visibleInstallmentSchedule]);
+  const filledPaymentInstructionCount = useMemo(() => [
+    paymentModes.bank_transfer && bankTransferInstructions.trim(),
+    paymentModes.cash && cashInstructions.trim(),
+    paymentModes.check && checkInstructions.trim(),
+    paymentModes.card_physical && cardPhysicalInstructions.trim(),
+  ].filter(Boolean).length, [
+    bankTransferInstructions,
+    cardPhysicalInstructions,
+    cashInstructions,
+    checkInstructions,
+    paymentModes.bank_transfer,
+    paymentModes.card_physical,
+    paymentModes.cash,
+    paymentModes.check,
+  ]);
+  // Les statuts EN FRANCAIS, jamais « pending, partial, overdue » : c'est le
+  // libelle qui est traduit, la cle enregistree ne bouge pas d'un caractere.
+  const reminderStatusSummary = useMemo(() => (
+    reminderStatusOptions
+      .filter((option) => reminderTargetStatuses.includes(option.key))
+      .map((option) => option.label)
+      .join(' · ') || 'Aucun statut'
+  ), [reminderTargetStatuses]);
+  // Les personnes reellement touchees, comptees sur la liste du club — pas une
+  // estimation. Le compteur de la maquette (« 2 personnes concernées ») exige un
+  // chiffre vrai, sinon il ne vaut pas mieux que le « 0 rôle(s), 0 équipe(s) »
+  // qu'il remplace.
+  const countMembersForRoles = useCallback((roleLabels) => {
+    if (!roleLabels.length) return 0;
+    return clubMembers.filter((member) => {
+      const rawRoleName = String(member?.role?.name || member?.role?.type || '').trim();
+      if (!rawRoleName) return false;
+      const canonicalRoleLabel = USER_ROLES[getUserRoleKey(rawRoleName)] || rawRoleName;
+      return roleLabels.includes(canonicalRoleLabel);
+    }).length;
+  }, [clubMembers]);
+  const concernedMemberCount = useMemo(() => {
+    if (targetConfig.includeAllMembers) return clubMembers.length;
+    return countMembersForRoles(targetConfig.roles);
+  }, [clubMembers.length, countMembersForRoles, targetConfig.includeAllMembers, targetConfig.roles]);
+  // Un filtre par categorie / section / niveau ne figure dans AUCUNE des 16
+  // captures. On ne le retire pas pour autant : une campagne qui en porte un
+  // deja doit pouvoir le modifier, sinon l'ecran ment sur ce qui est enregistre.
+  const hasLegacyTargetFilters = Boolean(
+    targetConfig.categoryIds.length
+    || targetConfig.sectionIds.length
+    || targetConfig.levelIds.length,
+  );
   const campaignStartDateValue = useMemo(() => parseIsoDateValue(startDate), [startDate]);
   const maximumCampaignStartDate = useMemo(() => parseIsoDateValue(endDate), [endDate]);
   const minimumCampaignEndDate = useMemo(() => parseIsoDateValue(startDate), [startDate]);
@@ -1463,10 +1735,6 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     endDate,
     startDate,
   }), [endDate, startDate]);
-  const seasonLabelSuggestions = useMemo(() => buildSeasonLabelSuggestions({
-    detectedSeasonLabel,
-    seasonLabel,
-  }), [detectedSeasonLabel, seasonLabel]);
 
   useEffect(() => {
     if (!seasonLabelManuallyEdited && detectedSeasonLabel) {
@@ -1492,14 +1760,6 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     seasonLabel,
     type,
   }), [seasonLabel, type]);
-  const selectedReminderStatusOptions = useMemo(
-    () => reminderStatusOptions.filter((option) => reminderTargetStatuses.includes(option.key)),
-    [reminderTargetStatuses],
-  );
-  const availableReminderStatusOptions = useMemo(
-    () => reminderStatusOptions.filter((option) => !reminderTargetStatuses.includes(option.key)),
-    [reminderTargetStatuses],
-  );
 
   useEffect(() => {
     if (!nameAutoManaged) return;
@@ -1515,95 +1775,41 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     || paymentModes.check
     || paymentModes.card_physical,
   );
-  const hasOnlinePaymentStep = Boolean(
-    paymentModes.external_link
-    || paymentModes.helloasso,
-  );
-  const licenseCampaignWizardSteps = useMemo(() => {
-    const steps = [
-      licenseCampaignWizardStepCatalog.name,
-      licenseCampaignWizardStepCatalog.description,
-      licenseCampaignWizardStepCatalog.period,
-      licenseCampaignWizardStepCatalog.targetMode,
-      licenseCampaignWizardStepCatalog.amount,
-      licenseCampaignWizardStepCatalog.pricingRules,
-      licenseCampaignWizardStepCatalog.installmentsToggle,
-    ];
-
-    if (allowInstallments) {
-      steps.push(
-        licenseCampaignWizardStepCatalog.installmentsSetup,
-        licenseCampaignWizardStepCatalog.installmentsOptions,
-        licenseCampaignWizardStepCatalog.installmentsSchedule,
-      );
-    }
-
-    steps.push(
-      licenseCampaignWizardStepCatalog.paymentMethods,
-    );
-
-    if (hasOfflineInstructions) {
-      steps.push(licenseCampaignWizardStepCatalog.paymentInstructions);
-    }
-
-    if (hasOnlinePaymentStep) {
-      steps.push(
-        licenseCampaignWizardStepCatalog.paymentOwner,
-        licenseCampaignWizardStepCatalog.paymentOnline,
-      );
-    }
-
-    steps.push(
-      licenseCampaignWizardStepCatalog.documents,
-      licenseCampaignWizardStepCatalog.overdueDate,
-      licenseCampaignWizardStepCatalog.reminderToggle,
-    );
-
-    if (autoReminderEnabled) {
-      steps.push(
-        licenseCampaignWizardStepCatalog.reminderStatuses,
-        licenseCampaignWizardStepCatalog.reminderTiming,
-        licenseCampaignWizardStepCatalog.reminderMessage,
-      );
-    }
-
-    steps.push(
-      licenseCampaignWizardStepCatalog.internalNote,
-      licenseCampaignWizardStepCatalog.review,
-    );
-    return steps;
-  }, [
-    allowInstallments,
-    autoReminderEnabled,
-    hasOfflineInstructions,
-    hasOnlinePaymentStep,
-  ]);
   const canPublishFromWizard = !campaign?.status || campaign?.status === 'draft';
   const publishTargetStatus = useMemo(
     () => (startDate && startDate > todayIsoDateValue ? 'scheduled' : 'active'),
     [startDate, todayIsoDateValue],
   );
-  const publishActionLabel = publishTargetStatus === 'scheduled' ? 'Programmer' : 'Ouvrir maintenant';
-  const activeWizardStep = licenseCampaignWizardSteps[wizardStepIndex] || licenseCampaignWizardSteps[0];
+  const activeWizardStep = licenseCampaignWizardSteps[wizardStepIndex]
+    || licenseCampaignWizardSteps[0];
   const wizardStepCount = licenseCampaignWizardSteps.length;
+  // La maquette titre la premiere etape « Nouvelle campagne » : c'est vrai a la
+  // creation, faux quand le dirigeant revient modifier une campagne existante.
+  const activeWizardStepTitle = activeWizardStep.key === 'identity' && !campaignId
+    ? 'Nouvelle campagne'
+    : activeWizardStep.title;
+  const isOnLastWizardStep = wizardStepIndex >= wizardStepCount - 1;
+  // Sur la derniere etape, le bouton du bas OUVRE la campagne et le lien texte
+  // sous lui l'enregistre en brouillon (capture `06`). Avant D26, la seule action
+  // du bas etait « Enregistrer le brouillon » et « Ouvrir » etait un bouton perdu
+  // dans le contenu, au-dessus du pli.
   const finalSaveLabel = useMemo(() => {
-    if (wizardStepIndex < wizardStepCount - 1) return 'Suivant';
-    return canPublishFromWizard ? 'Enregistrer le brouillon' : 'Enregistrer';
-  }, [canPublishFromWizard, wizardStepCount, wizardStepIndex]);
-  const effectiveHelloAssoSnapshot = helloAssoSnapshot || getHelloAssoSnapshot(campaign);
-  const helloAssoScopePayload = useMemo(() => {
-    if (paymentOwner === 'multisport') {
-      const multisportClubId = club?.parentMultisport?.documentId || club?.parentMultisport?.id || null;
-      return multisportClubId ? { multisportClubId } : null;
+    if (!isOnLastWizardStep) return 'Suivant';
+    if (!canPublishFromWizard) return 'Enregistrer';
+    return publishTargetStatus === 'scheduled' ? 'Programmer la campagne' : 'Ouvrir la campagne';
+  }, [canPublishFromWizard, isOnLastWizardStep, publishTargetStatus]);
+  const wizardSkipLabel = useMemo(() => {
+    if (isOnLastWizardStep) {
+      return canPublishFromWizard ? 'Enregistrer en brouillon' : '';
     }
-    return clubId ? { clubId } : null;
-  }, [club?.parentMultisport?.documentId, club?.parentMultisport?.id, clubId, paymentOwner]);
+    return activeWizardStep.key === 'documents' ? 'Passer cette étape' : '';
+  }, [activeWizardStep.key, canPublishFromWizard, isOnLastWizardStep]);
+  // Le tunnel ne fait plus que LIRE l'etat de la connexion HelloAsso du club.
+  // Le formulaire (slug, client id, client secret) vit dans le hub — D26,
+  // decision 4 : ce reglage porte un `clubId`, jamais un `campaignId`.
+  const effectiveHelloAssoSnapshot = helloAssoSnapshot || getHelloAssoSnapshot(campaign);
   const helloAssoIsPublishReady = isHelloAssoReadyForCampaign(effectiveHelloAssoSnapshot);
   const helloAssoStatusMessage = describeHelloAssoReadiness(effectiveHelloAssoSnapshot);
-
-  useEffect(() => {
-    setWizardStepIndex((currentIndex) => Math.min(currentIndex, Math.max(licenseCampaignWizardSteps.length - 1, 0)));
-  }, [licenseCampaignWizardSteps.length]);
 
   const saveMutation = useLicenseMutation(async (persistOptions = {}) => {
     const frequencyDays = Math.max(3, Number(reminderFrequencyDays) || 14);
@@ -1698,51 +1904,6 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   }, []);
 
   const providerMutation = useLicenseMutation(async () => true, campaignId);
-  const helloAssoMutation = useLicenseMutation(async () => {
-    if (!helloAssoScopePayload) {
-      throw new Error('Le scope HelloAsso est incomplet. Vérifie le club ou le multisport choisi.');
-    }
-    return connectLicenseHelloAsso({
-      ...helloAssoScopePayload,
-      clientId: helloAssoConfig.clientId,
-      clientSecret: helloAssoConfig.clientSecret,
-      environment: helloAssoConfig.environment,
-      organizationSlug: helloAssoConfig.organizationSlug,
-    });
-  }, campaignId);
-  const handleHelloAssoFieldChange = useCallback((key, value) => {
-    setHelloAssoConfig((currentConfig) => ({
-      ...currentConfig,
-      [key]: value,
-    }));
-  }, []);
-  const verifyHelloAssoConnection = useCallback(() => {
-    if (paymentOwner === 'multisport' && !club?.parentMultisport) {
-      Alert.alert('Multisport requis', 'Ce club n est rattaché a aucun multisport. Garde un encaissement section ou configure le multisport d abord.');
-      return;
-    }
-    helloAssoMutation.mutate(undefined, {
-      onError: (error) => {
-        Alert.alert('Vérification HelloAsso impossible', error?.message || 'La vérification HelloAsso a échoué.');
-      },
-      onSuccess: (result) => {
-        setHelloAssoSnapshot(result?.snapshot || null);
-        setHelloAssoConfig((currentConfig) => ({
-          ...currentConfig,
-          clientId: '',
-          clientSecret: '',
-          environment: result?.snapshot?.environment || currentConfig.environment,
-          organizationSlug: result?.snapshot?.organizationSlug || currentConfig.organizationSlug,
-        }));
-        Alert.alert(
-          result?.readiness === 'ready' || result?.readiness === 'webhook_pending' || result?.readiness === 'webhook_stale'
-            ? 'HelloAsso prêt'
-            : 'HelloAsso à vérifier',
-          describeHelloAssoReadiness(result?.snapshot),
-        );
-      },
-    });
-  }, [club?.parentMultisport, helloAssoMutation, paymentOwner]);
   const syncSavedCampaignParams = useCallback((savedCampaignId) => {
     if (!savedCampaignId) return;
     navigation.setParams({
@@ -1910,11 +2071,6 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     }
   }, [campaignNameSuggestions, name, nameAutoManaged]);
 
-  const handleSuggestedNamePress = useCallback((suggestion) => {
-    setName(suggestion);
-    setNameAutoManaged(true);
-  }, []);
-
   const handleDescriptionSuggestionPress = useCallback((suggestion) => {
     const trimmedDescription = String(description || '').trim();
     const trimmedSuggestion = String(suggestion || '').trim();
@@ -1935,12 +2091,21 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     navigation.goBack();
   }, [navigation]);
 
+  // D26 : les memes controles qu'avant, regroupes sous les 6 nouvelles cles.
+  // AUCUN n'est retire — c'est ce qui garantit qu'un tunnel plus court n'est pas
+  // un tunnel plus permissif. `review` les rejoue tous : une regle cassee dans
+  // une feuille ne peut pas se faufiler jusqu'a l'ouverture de la campagne.
   const getWizardStepError = useCallback((stepKey) => {
-    if (stepKey === 'name' && !String(name || '').trim()) {
-      return { message: 'Donne un nom à la campagne avant de continuer.', title: 'Nom manquant' };
-    }
+    const checksIdentity = stepKey === 'identity' || stepKey === 'review';
+    const checksAudience = stepKey === 'audience' || stepKey === 'review';
+    const checksPayment = stepKey === 'payment' || stepKey === 'review';
+    const checksDocuments = stepKey === 'documents' || stepKey === 'review';
+    const checksReminders = stepKey === 'reminders' || stepKey === 'review';
 
-    if (stepKey === 'period') {
+    if (checksIdentity) {
+      if (!String(name || '').trim()) {
+        return { message: 'Donne un nom à la campagne avant de continuer.', title: 'Nom manquant' };
+      }
       if (!startDate) {
         return { message: 'Sélectionne une date de début.', title: 'Date manquante' };
       }
@@ -1950,34 +2115,32 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       const parsedStartDate = parseIsoDateValue(startDate);
       const parsedEndDate = parseIsoDateValue(endDate);
       if (parsedStartDate && parsedEndDate && parsedStartDate.getTime() > parsedEndDate.getTime()) {
-        return { message: 'La date de fin doit être egale ou postérieure à la date de début.', title: 'Période invalide' };
+        return { message: 'La date de fin doit être égale ou postérieure à la date de début.', title: 'Période invalide' };
       }
       if (!String(seasonLabel || '').trim()) {
         return { message: 'Renseigne la saison de la campagne.', title: 'Saison manquante' };
       }
     }
 
-    if (stepKey === 'amount' && euroToCents(amount) <= 0) {
-      return { message: 'Le prix par défaut doit être supérieur a 0 EUR.', title: 'Montant invalide' };
-    }
-
-    if (stepKey === 'targetMode' && !targetConfig.includeAllMembers && !isEventParticipantTarget) {
-      const hasAtLeastOneFilter = Boolean(
-        targetConfig.roles.length
-        || targetConfig.teamIds.length
-        || targetConfig.categoryIds.length
-        || targetConfig.sectionIds.length
-        || targetConfig.levelIds.length,
-      );
-      if (!hasAtLeastOneFilter) {
-        return {
-          message: 'Choisis au moins un filtre ou repasse la campagne sur tout le club.',
-          title: 'Cible incomplète',
-        };
+    if (checksAudience) {
+      if (euroToCents(amount) <= 0) {
+        return { message: 'Le montant par membre doit être supérieur à 0.', title: 'Montant obligatoire' };
       }
-    }
-
-    if (stepKey === 'pricingRules' || stepKey === 'review') {
+      if (!targetConfig.includeAllMembers && !isEventParticipantTarget) {
+        const hasAtLeastOneFilter = Boolean(
+          targetConfig.roles.length
+          || targetConfig.teamIds.length
+          || targetConfig.categoryIds.length
+          || targetConfig.sectionIds.length
+          || targetConfig.levelIds.length,
+        );
+        if (!hasAtLeastOneFilter) {
+          return {
+            message: 'Choisis au moins un rôle ou une équipe, ou repasse la campagne sur tout le club.',
+            title: 'Cible incomplète',
+          };
+        }
+      }
       const invalidPricingRule = pricingRules.find((item) => (
         (!item.isWaiver && !item.amount.trim())
         || (item.ruleType === 'role' && !item.roleName)
@@ -1988,13 +2151,40 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       ));
       if (invalidPricingRule) {
         return {
-          message: 'Complète ou retire chaque règle tarifaire avant de continuer.',
-          title: 'Règle tarifaire incomplète',
+          message: 'Complète ou retire chaque tarif spécial avant de continuer.',
+          title: 'Tarif spécial incomplet',
         };
       }
     }
 
-    if (stepKey === 'documents' || stepKey === 'review') {
+    if (checksPayment) {
+      if (enabledPaymentModeLabels.length === 0) {
+        return {
+          message: 'Active au moins un moyen de paiement avant de terminer le tunnel.',
+          title: 'Paiement manquant',
+        };
+      }
+      if (allowInstallments && (Number(installmentCount) || 0) < 1) {
+        return {
+          message: 'Le nombre d échéances doit être supérieur ou égal à 1.',
+          title: 'Échéancier invalide',
+        };
+      }
+      if (paymentModes.external_link && !String(externalUrl || '').trim()) {
+        return {
+          message: 'Ajoute le lien externe du club avant de continuer.',
+          title: 'Lien manquant',
+        };
+      }
+      if (paymentModes.helloasso && !helloAssoIsPublishReady) {
+        return {
+          message: helloAssoStatusMessage,
+          title: 'HelloAsso non prêt',
+        };
+      }
+    }
+
+    if (checksDocuments) {
       const invalidDocumentRequest = documentRequests.find((item) => (
         !item.name.trim()
         && (
@@ -2008,52 +2198,16 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       ));
       if (invalidDocumentRequest) {
         return {
-          message: 'Chaque document commence par un nom. Vide completement les brouillons inutilises ou renseigne leur nom.',
+          message: 'Chaque document commence par un nom. Vide complètement les brouillons inutilisés ou renseigne leur nom.',
           title: 'Document incomplet',
         };
       }
-      if ((stepKey === 'reminderStatuses' || stepKey === 'review') && autoReminderEnabled && reminderTargetStatuses.length === 0) {
-        return {
-          message: 'Choisis au moins un statut à relancer automatiquement.',
-          title: 'Relances incomplètes',
-        };
-      }
     }
 
-    if ((stepKey === 'reminderStatuses' || stepKey === 'review') && autoReminderEnabled && reminderTargetStatuses.length === 0) {
+    if (checksReminders && autoReminderEnabled && reminderTargetStatuses.length === 0) {
       return {
         message: 'Choisis au moins un statut à relancer automatiquement.',
         title: 'Relances incomplètes',
-      };
-    }
-
-    if ((stepKey === 'installmentsSetup' || stepKey === 'review') && allowInstallments) {
-      if ((Number(installmentCount) || 0) < 1) {
-        return {
-          message: 'Le nombre d échéances doit être supérieur ou egal a 1.',
-          title: 'Échéancier invalide',
-        };
-      }
-    }
-
-    if ((stepKey === 'paymentMethods' || stepKey === 'review') && enabledPaymentModeLabels.length === 0) {
-      return {
-        message: 'Active au moins un moyen de paiement avant de terminer le tunnel.',
-        title: 'Paiement manquant',
-      };
-    }
-
-    if ((stepKey === 'paymentOnline' || stepKey === 'review') && paymentModes.external_link && !String(externalUrl || '').trim()) {
-      return {
-        message: 'Ajoute le lien externe du club avant de continuer.',
-        title: 'Lien manquant',
-      };
-    }
-
-    if ((stepKey === 'paymentOnline' || stepKey === 'review') && paymentModes.helloasso && !helloAssoIsPublishReady) {
-      return {
-        message: helloAssoStatusMessage,
-        title: 'HelloAsso non prêt',
       };
     }
 
@@ -2100,13 +2254,134 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       return;
     }
     if (wizardStepIndex >= wizardStepCount - 1) {
+      if (canPublishFromWizard) publishCampaign();
+      else save();
+      return;
+    }
+    setWizardStepIndex((currentIndex) => Math.min(wizardStepCount - 1, currentIndex + 1));
+  }, [
+    activeWizardStep.key,
+    canPublishFromWizard,
+    getWizardStepError,
+    publishCampaign,
+    save,
+    wizardStepCount,
+    wizardStepIndex,
+  ]);
+
+  // Le lien texte sous le bouton principal : « Enregistrer en brouillon » a la
+  // derniere etape, « Passer cette étape » sur les Documents (etape facultative).
+  const handleWizardSkip = useCallback(() => {
+    if (wizardStepIndex >= wizardStepCount - 1) {
       save();
       return;
     }
     setWizardStepIndex((currentIndex) => Math.min(wizardStepCount - 1, currentIndex + 1));
-  }, [activeWizardStep.key, getWizardStepError, save, wizardStepCount, wizardStepIndex]);
+  }, [save, wizardStepCount, wizardStepIndex]);
 
-  const isWizardNextDisabled = activeWizardStep.key === 'name' && !String(name || '').trim();
+  const isWizardNextDisabled = activeWizardStep.key === 'identity' && !String(name || '').trim();
+  const goToWizardStep = useCallback((stepKey) => {
+    const nextIndex = licenseCampaignWizardStepIndex[stepKey];
+    if (nextIndex === undefined) return;
+    setWizardStepIndex(nextIndex);
+  }, []);
+  const applyPeriodMode = useCallback((mode) => {
+    setPeriodMode(mode);
+    if (mode !== 'season') return;
+    setStartDate(currentSeason.startDate);
+    setEndDate(currentSeason.endDate);
+    setSeasonLabel(currentSeason.label);
+    setSeasonLabelManuallyEdited(false);
+  }, [currentSeason.endDate, currentSeason.label, currentSeason.startDate]);
+  // Le role cible : une pilule a la fois dans la maquette, mais `targetConfig.roles`
+  // reste un TABLEAU en base. On ne change pas la donnee, on change la saisie.
+  const selectedTargetRole = targetConfig.roles[0] || '';
+  const applyTargetRole = useCallback((roleLabel) => {
+    setTargetConfig((current) => ({
+      ...current,
+      includeAllMembers: false,
+      roles: [roleLabel],
+      teamIds: roleLabel === USER_ROLES.player ? current.teamIds : [],
+    }));
+  }, []);
+  // L'echeancier genere remplace la saisie manuelle « 1, 2, 3 » : on le pose en
+  // etat des que le dirigeant ouvre le fractionnement ou change un parametre.
+  const applyGeneratedInstallments = useCallback(() => {
+    setInstallmentSchedule(generatedInstallmentSchedule.map((item) => ({ ...item })));
+  }, [generatedInstallmentSchedule]);
+  // Creer PUIS ouvrir la feuille sur l'element cree : sans le brouillon en main,
+  // la feuille s'ouvrirait sur `undefined` et le dirigeant taperait dans le vide.
+  const addPricingRuleAndEdit = useCallback(() => {
+    const draft = createPricingRuleDraft();
+    setPricingRules((currentItems) => [...currentItems, draft]);
+    setEditedPricingRuleId(draft.localId);
+    setOpenSheet('pricingRule');
+  }, []);
+  const addDocumentRequestAndEdit = useCallback(() => {
+    const draft = createDocumentRequestDraft();
+    setDocumentRequests((currentItems) => [...currentItems, draft]);
+    setEditedDocumentRequestId(draft.localId);
+    setOpenSheet('documentRequest');
+  }, []);
+  const closeSheet = useCallback(() => {
+    setOpenSheet(null);
+    setEditedPricingRuleId(null);
+    setEditedDocumentRequestId(null);
+  }, []);
+  // Le nombre d'echeances et la frequence REGENERENT l'echeancier : c'est tout
+  // l'objet du lot. Sans ce rappel, changer « 3 » en « 4 » laisserait la 4e ligne
+  // vide et la somme ne ferait plus le montant.
+  const handleInstallmentCountChange = useCallback((delta) => {
+    setInstallmentCount((current) => {
+      const nextCount = Math.min(12, Math.max(1, (Number(current) || 1) + delta));
+      setInstallmentSchedule(generateInstallmentSchedule({
+        count: nextCount,
+        frequency: installmentFrequency,
+        startDate,
+        totalCents: euroToCents(amount),
+      }));
+      return String(nextCount);
+    });
+  }, [amount, installmentFrequency, startDate]);
+  const handleInstallmentFrequencyChange = useCallback((nextFrequency) => {
+    setInstallmentFrequency(nextFrequency);
+    setInstallmentSchedule(generateInstallmentSchedule({
+      count: installmentCount,
+      frequency: nextFrequency,
+      startDate,
+      totalCents: euroToCents(amount),
+    }));
+  }, [amount, installmentCount, startDate]);
+  const shiftReminderFrequency = useCallback((delta) => {
+    setReminderFrequencyDays((current) => (
+      String(Math.min(90, Math.max(3, (Number(current) || 14) + delta)))
+    ));
+  }, []);
+  const shiftReminderMaxCount = useCallback((delta) => {
+    setReminderMaxCount((current) => (
+      String(Math.min(20, Math.max(1, (Number(current) || 5) + delta)))
+    ));
+  }, []);
+  const campaignTypeLabel = campaignTypeOptions
+    .find((option) => option.key === type)?.label || 'Autre';
+  const reviewAudienceLabel = useMemo(() => {
+    if (isEventParticipantTarget) return 'Participants de l événement';
+    const suffix = concernedMemberCount > 1
+      ? `${concernedMemberCount} membres`
+      : `${concernedMemberCount} membre`;
+    if (targetConfig.includeAllMembers) return `Tout le club · ${suffix}`;
+    const rolePill = licenseTargetRolePills.find((pill) => pill.key === selectedTargetRole);
+    if (selectedTargetRole === USER_ROLES.player) {
+      return `Joueurs · ${targetConfig.teamIds.length} équipe(s)`;
+    }
+    return `${rolePill?.label || 'Sélection'} · ${suffix}`;
+  }, [
+    concernedMemberCount,
+    isEventParticipantTarget,
+    selectedTargetRole,
+    targetConfig.includeAllMembers,
+    targetConfig.teamIds.length,
+  ]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (event) => {
@@ -2141,7 +2416,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     return (
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
         <LicenseEmptyState
-          action={<Button onPress={retryCampaign} title="Reessayer" variant="Secondary" />}
+          action={<Button onPress={retryCampaign} title="Réessayer" variant="Secondary" />}
           description="Impossible de charger la campagne. Le formulaire n est pas ouvert pour éviter d ecraser ses paramètres."
           title="Paramètres indisponibles"
         />
@@ -2163,50 +2438,40 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     paddingHorizontal: licenseSpacing.cardPadding,
     paddingVertical: licenseSpacing.cardPadding,
   }];
-  const targetFilterParts = [
-    `${targetConfig.roles.length} rôle(s)`,
-    `${targetConfig.teamIds.length} équipe(s)`,
-    `${targetConfig.categoryIds.length} catégorie(s)`,
-    `${targetConfig.sectionIds.length} section(s)`,
-    `${targetConfig.levelIds.length} niveau(x)`,
-  ];
-  const filteredTargetSummary = `${targetFilterParts.join(', ')} filtres.`;
-  const reviewFilteredTargetSummary = `${targetFilterParts.join(', ')}.`;
-  let targetModeSummaryText = filteredTargetSummary;
-  if (isEventParticipantTarget) {
-    targetModeSummaryText = [
-      'Cible verrouillée sur les participants acceptes',
-      'de l événement.',
-    ].join(' ');
-  } else if (targetConfig.includeAllMembers) {
-    targetModeSummaryText = 'La campagne concernera tout le club.';
-  }
-  let reviewTargetSummaryText = reviewFilteredTargetSummary;
-  if (isEventParticipantTarget) {
-    reviewTargetSummaryText = [
-      'Les participants acceptes de l événement recevront',
-      'cette cotisation.',
-    ].join(' ');
-  } else if (targetConfig.includeAllMembers) {
-    reviewTargetSummaryText = 'Tous les membres du club seront pris en compte.';
-  }
+  // Ne subsiste que la phrase du ciblage verrouille sur un evenement : les
+  // « 0 rôle(s), 0 équipe(s), 0 catégorie(s)… » sont remplaces par un compte de
+  // personnes reel (`concernedMemberCount`), lisible sans decodeur.
+  const targetModeSummaryText = isEventParticipantTarget
+    ? 'Cible verrouillée sur les participants acceptés de l événement.'
+    : 'La campagne concernera tout le club.';
+
+  const dashedTileStyle = {
+    alignItems: 'center',
+    borderColor: `${Colors.primary500}66`,
+    borderRadius: licenseRadius.card,
+    borderStyle: /** @type {any} */ ('dashed'),
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: licenseSpacing.cardPadding,
+  };
+  const editedPricingRule = pricingRules.find((item) => item.localId === editedPricingRuleId);
+  const editedDocumentRequest = documentRequests
+    .find((item) => item.localId === editedDocumentRequestId);
+  const currentSeasonOptionLabel = `Saison ${currentSeason.label}`;
+  const describePricingRule = (rule) => {
+    const scopeLabel = rule.roleName || rule.teamKey || rule.categoryKey
+      || rule.sectionKey || rule.levelKey || pricingRuleLabels[rule.ruleType] || 'Cible';
+    return `${rule.label?.trim() || 'Tarif spécial'} · ${scopeLabel}`;
+  };
 
   let stepContent = null;
 
-  if (activeWizardStep.key === 'name') {
+  if (activeWizardStep.key === 'identity') {
     stepContent = (
-      <View style={primaryStepCardStyle}>
-        <Field
-          label="Nom de la campagne"
-          onChangeText={handleNameChange}
-          placeholder={campaignNameSuggestions[0] || 'Cotisation licences 2026/2027'}
-          value={name}
-        />
-        <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>Type de campagne</Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            Le nom se remplit automatiquement selon le type choisi. Tu peux ensuite le modifier.
-          </Text>
+      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+        <View style={primaryStepCardStyle}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>TYPE</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {campaignTypeOptions.map((option) => (
               <SelectionChip
@@ -2217,161 +2482,96 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
               />
             ))}
           </View>
-        </View>
-        <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>Noms proposes</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {campaignNameSuggestions.map((suggestion) => (
-              <SelectionChip
-                key={suggestion}
-                label={suggestion}
-                onPress={() => handleSuggestedNamePress(suggestion)}
-                selected={String(name || '').trim() === suggestion}
-              />
-            ))}
-          </View>
-        </View>
-      </View>
-    );
-  } else if (activeWizardStep.key === 'description') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <Field label="Description visible" multiline onChangeText={setDescription} placeholder="Informations visibles par les membres" value={description} />
-        <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Modèles proposes</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Choisis un modèle pour pre-remplir le texte, puis ajuste-le si besoin. Appuie une deuxième fois pour le retirer.
-          </Text>
-          <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
-            {campaignDescriptionSuggestions.map((suggestion, index) => (
-              <SuggestionCard
-                description={suggestion}
-                key={suggestion}
-                onPress={() => handleDescriptionSuggestionPress(suggestion)}
-                selected={String(description || '').trim() === suggestion}
-                title={`Modèle ${index + 1}`}
-              />
-            ))}
-          </View>
-        </View>
-      </View>
-    );
-  } else if (activeWizardStep.key === 'period') {
-    stepContent = (
-      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
-        <View style={primaryStepCardStyle}>
-          <DateField
-            label="Date de début"
-            maximumDate={maximumCampaignStartDate}
-            onChange={setStartDate}
-            value={startDate}
-          />
-          <DateField
-            label="Date de fin"
-            minimumDate={minimumCampaignEndDate}
-            onChange={setEndDate}
-            value={endDate}
-          />
-        </View>
-        <View style={secondaryStepCardStyle}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Saison détectée</Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {detectedSeasonLabel
-              ? `A partir des dates, on détecte plutot la saison ${detectedSeasonLabel}.`
-              : 'Choisis d abord les dates, puis confirme la saison détectée.'}
-          </Text>
           <Field
-            label="Saison à conserver"
-            onChangeText={(value) => {
-              setSeasonLabelManuallyEdited(true);
-              setSeasonLabel(value);
-            }}
-            placeholder={detectedSeasonLabel || '2026-2027'}
-            value={seasonLabel}
+            label="Nom"
+            onChangeText={handleNameChange}
+            placeholder={campaignNameSuggestions[0] || 'Cotisation licences 2026/2027'}
+            value={name}
           />
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            Tu peux garder la saison détectée ou la modifier si ton club bascule plutot en aout, septembre ou selon une logique interne.
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            Pré-rempli selon le type — modifiable librement.
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {seasonLabelSuggestions.map((suggestion) => (
-              <SelectionChip
-                key={suggestion}
-                label={suggestion}
-                onPress={() => {
-                  setSeasonLabel(suggestion);
-                  setSeasonLabelManuallyEdited(suggestion !== detectedSeasonLabel);
-                }}
-                selected={String(seasonLabel || '').trim() === suggestion}
-              />
-            ))}
-          </View>
-          {detectedSeasonLabel ? (
-            <Button
-              onPress={() => {
-                setSeasonLabel(detectedSeasonLabel);
-                setSeasonLabelManuallyEdited(false);
-              }}
-              title={`Utiliser ${detectedSeasonLabel}`}
-              variant="Secondary"
-            />
-          ) : null}
         </View>
-      </View>
-    );
-  } else if (activeWizardStep.key === 'amount') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <AmountField
-          amount={amount}
-          currency={currency}
-          onAmountChange={setAmount}
-          onCurrencyChange={setCurrency}
+
+        <View style={primaryStepCardStyle}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>PÉRIODE</Text>
+          <SegmentedPair
+            onSelect={applyPeriodMode}
+            options={[
+              { key: 'season', label: currentSeasonOptionLabel },
+              { key: 'custom', label: 'Dates libres' },
+            ]}
+            selectedKey={periodMode}
+          />
+          {periodMode === 'season' ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              Saison actuelle détectée — proposée par défaut.
+            </Text>
+          ) : (
+            <>
+              <DateField
+                label="Date de début"
+                maximumDate={maximumCampaignStartDate}
+                onChange={setStartDate}
+                value={startDate}
+              />
+              <DateField
+                label="Date de fin"
+                minimumDate={minimumCampaignEndDate}
+                onChange={setEndDate}
+                value={endDate}
+              />
+              <Field
+                label="Saison à conserver"
+                onChangeText={(value) => {
+                  setSeasonLabelManuallyEdited(true);
+                  setSeasonLabel(value);
+                }}
+                placeholder={detectedSeasonLabel || currentSeason.label}
+                value={seasonLabel}
+              />
+            </>
+          )}
+        </View>
+
+        <ValueRow
+          label="Description visible"
+          onPress={() => setOpenSheet('description')}
+          value={description.trim() ? 'Renseignée' : 'À remplir'}
         />
       </View>
     );
-  } else if (activeWizardStep.key === 'internalNote') {
+  } else if (activeWizardStep.key === 'audience') {
     stepContent = (
-      <View style={primaryStepCardStyle}>
-        <Field label="Note interne dirigeants" multiline onChangeText={setInternalNote} placeholder="Visible uniquement en gestion" value={internalNote} />
-        <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Notes internes proposees</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Choisis une base utile pour le suivi staff. Appuie une deuxième fois pour la retirer.
+      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+        <View style={primaryStepCardStyle}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+            {`MONTANT PAR MEMBRE (${currency})`}
           </Text>
-          <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
-            {internalNoteSuggestions.map((suggestion, index) => (
-              <SuggestionCard
-                description={suggestion}
-                key={suggestion}
-                onPress={() => handleInternalNoteSuggestionPress(suggestion)}
-                selected={String(internalNote || '').trim() === suggestion}
-                title={`Note ${index + 1}`}
-              />
-            ))}
-          </View>
+          <AmountField
+            amount={amount}
+            currency={currency}
+            onAmountChange={setAmount}
+            onCurrencyChange={setCurrency}
+          />
         </View>
-      </View>
-    );
-  } else if (activeWizardStep.key === 'targetMode') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
+
         {isEventParticipantTarget ? (
-          <View style={[Spaces.gap[8]]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Participants acceptes de l événement</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Cette campagne est rattachee a un événement. Les affectations seront générées pour les participants acceptes, y compris les participants externes.
+          <View style={primaryStepCardStyle}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              Participants acceptés de l événement
             </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>{targetModeSummaryText}</Text>
           </View>
         ) : (
-          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-            <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Tous les membres du club</Text>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Active ce choix si la campagne concerne tout le club. Sinon, sélectionne directement les profils vises.
-              </Text>
-            </View>
-            <Switch
-              onValueChange={(enabled) => setTargetConfig((current) => ({
+          <View style={primaryStepCardStyle}>
+            <SwitchRow
+              enabled={targetConfig.includeAllMembers}
+              hint={concernedMemberCount > 1
+                ? `${concernedMemberCount} membres concernés aujourd hui`
+                : `${concernedMemberCount} membre concerné aujourd hui`}
+              label="Tout le club"
+              onChange={(enabled) => setTargetConfig((current) => ({
                 ...current,
                 categoryIds: enabled ? [] : current.categoryIds,
                 includeAllMembers: enabled,
@@ -2380,216 +2580,540 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
                 sectionIds: enabled ? [] : current.sectionIds,
                 teamIds: enabled ? [] : current.teamIds,
               }))}
-              value={targetConfig.includeAllMembers}
             />
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              Désactive pour cibler un rôle : dirigeants, entraîneurs, ou joueurs par équipes.
+            </Text>
+
+            {!targetConfig.includeAllMembers ? (
+              <>
+                <Text style={[Fonts.p3Bold, Fonts.neutral200]}>RÔLE CONCERNÉ</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {licenseTargetRolePills.map((pill) => (
+                    <SelectionChip
+                      key={pill.key}
+                      label={pill.label}
+                      onPress={() => applyTargetRole(pill.key)}
+                      selected={selectedTargetRole === pill.key}
+                    />
+                  ))}
+                </View>
+
+                {selectedTargetRole === USER_ROLES.player ? (
+                  <>
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                      {`${targetConfig.teamIds.length} équipe(s) cochée(s).`}
+                    </Text>
+                    {teamOptions.map((team) => (
+                      <CheckRow
+                        key={team.key}
+                        label={team.label}
+                        onPress={() => toggleTargetValue('teamIds', team.key)}
+                        selected={targetConfig.teamIds.includes(team.key)}
+                      />
+                    ))}
+                    {!teamOptions.length ? (
+                      <Text style={[Fonts.p3, Fonts.neutral300]}>
+                        Aucune équipe dans ce club pour le moment.
+                      </Text>
+                    ) : null}
+                  </>
+                ) : null}
+
+                {selectedTargetRole && selectedTargetRole !== USER_ROLES.player ? (
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {concernedMemberCount > 1
+                      ? `${concernedMemberCount} personnes concernées.`
+                      : `${concernedMemberCount} personne concernée.`}
+                    {' '}
+                    La sélection personne par personne demande une évolution du serveur :
+                    tout le rôle est concerné pour l instant.
+                  </Text>
+                ) : null}
+
+                {hasLegacyTargetFilters ? (
+                  <View style={secondaryStepCardStyle}>
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Filtres avancés</Text>
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                      Cette campagne utilise des filtres qui ne sont plus proposés aux
+                      nouvelles campagnes. Ils restent modifiables ici.
+                    </Text>
+                    <SelectionGroup
+                      items={categoryOptions}
+                      label="Categories"
+                      onToggle={(value) => toggleTargetValue('categoryIds', value)}
+                      selectedKeys={targetConfig.categoryIds}
+                    />
+                    <SelectionGroup
+                      items={sectionOptions}
+                      label="Sections"
+                      onToggle={(value) => toggleTargetValue('sectionIds', value)}
+                      selectedKeys={targetConfig.sectionIds}
+                    />
+                    <SelectionGroup
+                      items={levelOptions}
+                      label="Niveaux"
+                      onToggle={(value) => toggleTargetValue('levelIds', value)}
+                      selectedKeys={targetConfig.levelIds}
+                    />
+                  </View>
+                ) : null}
+              </>
+            ) : null}
           </View>
         )}
-        {!targetConfig.includeAllMembers && !isEventParticipantTarget ? (
-          <>
-            <SelectionGroup
-              description="Laisse vide si tu ne veux pas filtrer par rôle."
-              items={roleOptions}
-              label="Roles"
-              onToggle={(value) => toggleTargetValue('roles', value, true)}
-              selectedKeys={targetConfig.roles}
+
+        <View style={primaryStepCardStyle}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+            {pricingRules.length === 1
+              ? 'TARIFS SPÉCIAUX · 1 RÈGLE'
+              : `TARIFS SPÉCIAUX · ${pricingRules.length} RÈGLES`}
+          </Text>
+          {pricingRules.map((rule) => (
+            <ValueRow
+              key={rule.localId}
+              label={describePricingRule(rule)}
+              onPress={() => {
+                setEditedPricingRuleId(rule.localId);
+                setOpenSheet('pricingRule');
+              }}
+              value={rule.isWaiver
+                ? 'Exemption'
+                : `${rule.amount || '0'} ${currency}`}
             />
-            <SelectionGroup
-              items={teamOptions}
-              label="Equipes"
-              onToggle={(value) => toggleTargetValue('teamIds', value)}
-              selectedKeys={targetConfig.teamIds}
-            />
-            <SelectionGroup
-              items={categoryOptions}
-              label="Categories"
-              onToggle={(value) => toggleTargetValue('categoryIds', value)}
-              selectedKeys={targetConfig.categoryIds}
-            />
-            <SelectionGroup
-              items={sectionOptions}
-              label="Sections"
-              onToggle={(value) => toggleTargetValue('sectionIds', value)}
-              selectedKeys={targetConfig.sectionIds}
-            />
-            <SelectionGroup
-              items={levelOptions}
-              label="Niveaux"
-              onToggle={(value) => toggleTargetValue('levelIds', value)}
-              selectedKeys={targetConfig.levelIds}
-            />
-          </>
-        ) : null}
-        <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {targetModeSummaryText}
-        </Text>
+          ))}
+          <Pressable
+            accessibilityRole="button"
+            onPress={addPricingRuleAndEdit}
+            style={dashedTileStyle}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>+ Ajouter une règle</Text>
+          </Pressable>
+        </View>
       </View>
     );
-  } else if (activeWizardStep.key === 'pricingRules') {
+  } else if (activeWizardStep.key === 'payment') {
     stepContent = (
-      <View style={primaryStepCardStyle}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Règles de prix</Text>
+      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+        <View style={primaryStepCardStyle}>
+          <SwitchRow
+            enabled={paymentModes.helloasso}
+            hint={helloAssoIsPublishReady
+              ? 'Compte du club connecté ✓ — géré dans Réglages du club'
+              : 'À connecter dans Réglages du club, depuis l écran Cotisations'}
+            label="HelloAsso (en ligne)"
+            onChange={() => togglePaymentMode('helloasso')}
+          />
+          <SwitchRow
+            enabled={paymentModes.bank_transfer}
+            label={paymentModeLabels.bank_transfer}
+            onChange={() => togglePaymentMode('bank_transfer')}
+          />
+          <SwitchRow
+            enabled={paymentModes.cash}
+            label="Espèces"
+            onChange={() => togglePaymentMode('cash')}
+          />
+          <SwitchRow
+            enabled={paymentModes.check}
+            label="Chèque"
+            onChange={() => togglePaymentMode('check')}
+          />
+          <SwitchRow
+            enabled={paymentModes.card_physical}
+            label={paymentModeLabels.card_physical}
+            onChange={() => togglePaymentMode('card_physical')}
+          />
+          <SwitchRow
+            enabled={paymentModes.external_link}
+            hint="Le club encaisse sur sa propre page de paiement."
+            label="Lien externe du club"
+            onChange={() => togglePaymentMode('external_link')}
+          />
+          {paymentModes.external_link ? (
+            <Field
+              label="Lien externe du club"
+              onChangeText={setExternalUrl}
+              placeholder="https://..."
+              value={externalUrl}
+            />
+          ) : null}
+        </View>
+
+        {hasOfflineInstructions ? (
+          <ValueRow
+            label="Consignes de paiement"
+            onPress={() => setOpenSheet('paymentInstructions')}
+            value={filledPaymentInstructionCount
+              ? `${filledPaymentInstructionCount} renseignée(s)`
+              : 'À remplir'}
+          />
+        ) : null}
+
+        <View style={primaryStepCardStyle}>
+          <SwitchRow
+            enabled={allowInstallments}
+            hint={allowInstallments ? installmentSummaryText : undefined}
+            label="Paiement en plusieurs fois"
+            onChange={(enabled) => {
+              setAllowInstallments(enabled);
+              if (enabled) applyGeneratedInstallments();
+            }}
+          />
+        </View>
+
+        {allowInstallments ? (
+          <ValueRow
+            label="Ajuster l échéancier"
+            onPress={() => setOpenSheet('installments')}
+            value={visibleInstallmentSchedule.length === 1
+              ? '1 échéance'
+              : `${visibleInstallmentSchedule.length} échéances`}
+          />
+        ) : null}
+      </View>
+    );
+  } else if (activeWizardStep.key === 'documents') {
+    const namedDocumentRequests = documentRequests.filter((item) => item.name.trim());
+    stepContent = (
+      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+        {namedDocumentRequests.map((item) => (
+          <ValueRow
+            key={item.localId}
+            label={item.name}
+            onPress={() => {
+              setEditedDocumentRequestId(item.localId);
+              setOpenSheet('documentRequest');
+            }}
+            value={describeDocumentRequest(item)}
+          />
+        ))}
+        {!namedDocumentRequests.length ? (
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            Aucun document demandé. Cette étape est facultative.
+          </Text>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          onPress={addDocumentRequestAndEdit}
+          style={dashedTileStyle}
+        >
+          <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+            + Demander un document
+          </Text>
+        </Pressable>
+      </View>
+    );
+  } else if (activeWizardStep.key === 'reminders') {
+    stepContent = (
+      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+        <View style={primaryStepCardStyle}>
+          <SwitchRow
+            enabled={autoReminderEnabled}
+            hint="Arrêt dès que c est payé."
+            label="Relancer automatiquement"
+            onChange={setAutoReminderEnabled}
+          />
+        </View>
+
+        {autoReminderEnabled ? (
+          <>
+            <View style={primaryStepCardStyle}>
+              <SummaryLine
+                label="Cadence"
+                value={`Tous les ${reminderFrequencyDays || 14} jours · ${reminderMaxCount || 5} max`}
+              />
+              <SummaryLine label="Statuts" value={reminderStatusSummary} />
+              <SummaryLine
+                label="Première"
+                value={reminderBeforeDueDays
+                  ? `${reminderBeforeDueDays} jours avant l échéance`
+                  : 'Le jour de l échéance'}
+              />
+            </View>
+
+            <ValueRow
+              label="Ajuster la cadence"
+              onPress={() => setOpenSheet('reminderTiming')}
+              value="Modifier"
+            />
+
+            <View style={primaryStepCardStyle}>
+              <Field
+                label="Message de relance"
+                multiline
+                onChangeText={setReminderMessage}
+                placeholder="Rappel: ta cotisation reste à régler."
+                value={reminderMessage}
+              />
+            </View>
+            <View style={secondaryStepCardStyle}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aperçu du message</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>{reminderPreviewMessage}</Text>
+            </View>
+          </>
+        ) : null}
+      </View>
+    );
+  } else if (activeWizardStep.key === 'review') {
+    stepContent = (
+      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+        <View style={primaryStepCardStyle}>
+          <ReviewSectionHeader onEdit={() => goToWizardStep('identity')} title="Identité" />
+          <SummaryLine label="Nom" value={name || 'À renseigner'} />
+          <SummaryLine label="Type" value={campaignTypeLabel} />
+          <SummaryLine
+            label="Période"
+            value={periodMode === 'season'
+              ? currentSeasonOptionLabel
+              : `${isoToPickerDateValue(startDate)} → ${isoToPickerDateValue(endDate)}`}
+          />
+        </View>
+
+        <View style={primaryStepCardStyle}>
+          <ReviewSectionHeader onEdit={() => goToWizardStep('audience')} title="Public & tarif" />
+          <SummaryLine label="Public" value={reviewAudienceLabel} />
+          <SummaryLine
+            label="Montant"
+            value={`${formatLicenseMoney(euroToCents(amount), currency)} par membre`}
+          />
+          <SummaryLine
+            label="Tarifs spéciaux"
+            value={pricingRules.length
+              ? `${pricingRules.length} règle(s)`
+              : 'Prix unique'}
+          />
+        </View>
+
+        <View style={primaryStepCardStyle}>
+          <ReviewSectionHeader onEdit={() => goToWizardStep('payment')} title="Paiement" />
+          <SummaryLine
+            label="Moyens"
+            value={enabledPaymentModeLabels.join(' · ') || 'Aucun moyen actif'}
+          />
+          <SummaryLine label="Échéancier" value={installmentSummaryText} />
+          <SummaryLine
+            label="Consignes"
+            value={filledPaymentInstructionCount
+              ? `${filledPaymentInstructionCount} renseignée(s)`
+              : 'Aucune'}
+          />
+        </View>
+
+        <View style={primaryStepCardStyle}>
+          <ReviewSectionHeader onEdit={() => goToWizardStep('documents')} title="Documents" />
+          <SummaryLine
+            label="Pièces demandées"
+            value={documentRequests.filter((item) => item.name.trim()).length
+              ? `${documentRequests.filter((item) => item.name.trim()).length} document(s)`
+              : 'Aucun'}
+          />
+        </View>
+
+        <View style={primaryStepCardStyle}>
+          <ReviewSectionHeader onEdit={() => goToWizardStep('reminders')} title="Relances" />
+          <SummaryLine
+            label="Relances auto"
+            value={autoReminderEnabled ? 'Activées' : 'Désactivées'}
+          />
+          {autoReminderEnabled ? (
+            <SummaryLine label="Statuts" value={reminderStatusSummary} />
+          ) : null}
+        </View>
+
+        <View style={secondaryStepCardStyle}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Options avancées</Text>
+          <ValueRow
+            label="Note interne"
+            onPress={() => setOpenSheet('internalNote')}
+            value={internalNote.trim() ? 'Renseignée' : 'Aucune'}
+          />
+          <SwitchRow
+            enabled={paymentOwner === 'multisport'}
+            hint="Les paiements en ligne passent par le compte central du multisport."
+            label="Encaissement multisport"
+            onChange={(enabled) => setPaymentOwner(enabled ? 'multisport' : 'section')}
+          />
+          {paymentOwner === 'multisport' && !club?.parentMultisport ? (
+            <Text style={[Fonts.p3, { color: Colors.warning500 }]}>
+              Aucun multisport parent n est rattaché à ce club. Le paiement central ne
+              pourra pas être validé.
+            </Text>
+          ) : null}
+          <DateField
+            label="Programmer l ouverture (optionnel)"
+            onChange={setStartDate}
+            value={startDate}
+          />
+          <DateField
+            label="Marquer en retard après le (optionnel)"
+            minimumDate={campaignStartDateValue}
+            onChange={setOverdueAfterDate}
+            value={overdueAfterDate}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <WizardStepLayout
+        collapsibleHeader
+        headerVariant="focus"
+        isNextDisabled={isWizardNextDisabled}
+        isNextLoading={saveMutation.isPending}
+        nextLabel={finalSaveLabel}
+        onBack={handleWizardBack}
+        onNext={handleWizardNext}
+        onSkip={handleWizardSkip}
+        showSkip={Boolean(wizardSkipLabel)}
+        skipLabel={wizardSkipLabel}
+        stepCount={wizardStepCount}
+        stepIndex={wizardStepIndex + 1}
+        subtitle={activeWizardStep.subtitle}
+        title={activeWizardStepTitle}
+      >
+        <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+          {stepContent}
+
+          <View style={{ paddingBottom: Math.max(insets.bottom + 8, 16) }} />
+        </View>
+      </WizardStepLayout>
+
+      <WizardSheet
+        close={closeSheet}
+        isVisible={openSheet === 'description'}
+        title="Description visible"
+      >
+        <Field
+          label="Texte visible par les membres"
+          multiline
+          onChangeText={setDescription}
+          placeholder="Informations visibles par les membres"
+          value={description}
+        />
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          Le prix par défaut reste la base. Ajoute ici les exceptions par rôle, équipe, catégorie, section ou niveau.
+          Choisis un modèle pour pré-remplir le texte, puis ajuste-le. Appuie une
+          deuxième fois pour le retirer.
         </Text>
-        {pricingRules.length ? pricingRules.map((item) => (
+        {campaignDescriptionSuggestions.map((suggestion, index) => (
+          <SuggestionCard
+            description={suggestion}
+            key={suggestion}
+            onPress={() => handleDescriptionSuggestionPress(suggestion)}
+            selected={String(description || '').trim() === suggestion}
+            title={`Modèle ${index + 1}`}
+          />
+        ))}
+      </WizardSheet>
+
+      <WizardSheet
+        close={closeSheet}
+        isVisible={openSheet === 'pricingRule'}
+        snapPoint="86%"
+        title="Tarif spécial"
+      >
+        {editedPricingRule ? (
           <PricingRuleEditor
             categoryOptions={categoryOptions}
-            item={item}
-            key={item.localId}
+            item={editedPricingRule}
             levelOptions={levelOptions}
-            onChange={(patch) => updatePricingRule(item.localId, patch)}
-            onRemove={() => removePricingRule(item.localId)}
+            onChange={(patch) => updatePricingRule(editedPricingRule.localId, patch)}
+            onRemove={() => {
+              removePricingRule(editedPricingRule.localId);
+              closeSheet();
+            }}
             roleOptions={roleOptions}
             sectionOptions={sectionOptions}
             teamOptions={teamOptions}
           />
-        )) : <Text style={[Fonts.p3, Fonts.neutral300]}>Aucune règle supplémentaire. Le prix par défaut sera applique à tous.</Text>}
-        <Button onPress={addPricingRule} title="Ajouter une règle tarifaire" variant="Secondary" />
-      </View>
-    );
-  } else if (activeWizardStep.key === 'reminderToggle') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-          <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Activer les relances automatiques</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>Relance les membres tant que leur cotisation reste à payer.</Text>
-          </View>
-          <Switch onValueChange={setAutoReminderEnabled} value={autoReminderEnabled} />
-        </View>
-      </View>
-    );
-  } else if (activeWizardStep.key === 'reminderTiming') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <Field label="Fréquence de relance (jours)" onChangeText={setReminderFrequencyDays} placeholder="14" value={reminderFrequencyDays} />
-        <Field label="Nombre maximum de relances" onChangeText={setReminderMaxCount} placeholder="5" value={reminderMaxCount} />
-        <DateField
-          label="Première relance à partir du (optionnel)"
-          minimumDate={campaignStartDateValue}
-          onChange={setReminderStartDate}
-          value={reminderStartDate}
-        />
-        <Field label="Commencer X jours avant l échéance" onChangeText={setReminderBeforeDueDays} placeholder="5" value={reminderBeforeDueDays} />
-        <Field label="Reprendre X jours après l échéance" onChangeText={setReminderAfterDueDays} placeholder="7" value={reminderAfterDueDays} />
-        <PaymentModeToggle enabled={reminderOnDueDate} label="Relance le jour de l échéance" onChange={setReminderOnDueDate} />
-      </View>
-    );
-  } else if (activeWizardStep.key === 'reminderStatuses') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <View style={Spaces.gap[12]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Statuts cibles</Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            Choisis les dossiers à relancer automatiquement. Appuie sur un statut ajouté pour le retirer.
-          </Text>
-        </View>
-        <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Statuts ajoutes</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {selectedReminderStatusOptions.map((item) => (
-              <SelectionChip
-                key={item.key}
-                label={item.label}
-                onPress={() => handleReminderStatusToggle(item.key)}
-                selected
-              />
-            ))}
-          </View>
-          {!selectedReminderStatusOptions.length ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>Aucun statut ajouté pour le moment.</Text>
-          ) : null}
-        </View>
-        <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Ajouter un statut</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {availableReminderStatusOptions.map((item) => (
-              <SelectionChip
-                key={item.key}
-                label={`+ ${item.label}`}
-                onPress={() => handleReminderStatusToggle(item.key)}
-                selected={false}
-              />
-            ))}
-          </View>
-          {!availableReminderStatusOptions.length ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>Tous les statuts disponibles sont déjà ajoutes.</Text>
-          ) : null}
-        </View>
-      </View>
-    );
-  } else if (activeWizardStep.key === 'reminderMessage') {
-    stepContent = (
-      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
-        <View style={primaryStepCardStyle}>
-          <Field label="Message de relance" onChangeText={setReminderMessage} placeholder="Rappel: ta cotisation reste à régler." value={reminderMessage} />
-        </View>
-        <View style={secondaryStepCardStyle}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aperçu du message</Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>{reminderPreviewMessage}</Text>
-        </View>
-      </View>
-    );
-  } else if (activeWizardStep.key === 'overdueDate') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <DateField
-          label="Marquer en retard après le (optionnel)"
-          minimumDate={campaignStartDateValue}
-          onChange={setOverdueAfterDate}
-          value={overdueAfterDate}
-        />
-        <Text style={[Fonts.p3, Fonts.neutral300]}>
-          Sans date, les membres restent en attente et peuvent quand même être relances.
-        </Text>
-      </View>
-    );
-  } else if (activeWizardStep.key === 'documents') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Documents à fournir</Text>
-        <Text style={[Fonts.p3, Fonts.neutral200]}>
-          Ajoute chaque pièce demandée aux membres avec ses propres règles.
-        </Text>
-        {documentRequests.map((item) => (
-          <DocumentRequestEditor
-            canRemove={documentRequests.length > 1 || Boolean(item.documentId)}
-            item={item}
-            key={item.localId}
-            onChange={(patch) => updateDocumentRequest(item.localId, patch)}
-            onRemove={() => removeDocumentRequest(item.localId)}
+        ) : null}
+      </WizardSheet>
+
+      <WizardSheet
+        close={closeSheet}
+        isVisible={openSheet === 'paymentInstructions'}
+        snapPoint="86%"
+        title="Consignes de paiement"
+      >
+        {paymentModes.bank_transfer ? (
+          <Field
+            label="Virement"
+            multiline
+            onChangeText={setBankTransferInstructions}
+            placeholder="IBAN, référence à indiquer..."
+            value={bankTransferInstructions}
           />
-        ))}
-        <Button onPress={addDocumentRequest} title="Ajouter un document" variant="Secondary" />
-      </View>
-    );
-  } else if (activeWizardStep.key === 'installmentsToggle') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-          <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Autoriser le paiement en plusieurs fois</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>Génère automatiquement des échéances pour la campagne.</Text>
-          </View>
-          <Switch onValueChange={setAllowInstallments} value={allowInstallments} />
-        </View>
-      </View>
-    );
-  } else if (activeWizardStep.key === 'installmentsSetup') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <Field label="Nombre d'échéances" onChangeText={setInstallmentCount} placeholder="3" value={installmentCount} />
+        ) : null}
+        {paymentModes.cash ? (
+          <Field
+            label="Espèces"
+            multiline
+            onChangeText={setCashInstructions}
+            placeholder="Lieu, horaires, personne à contacter..."
+            value={cashInstructions}
+          />
+        ) : null}
+        {paymentModes.check ? (
+          <Field
+            label="Chèque"
+            multiline
+            onChangeText={setCheckInstructions}
+            placeholder="Ordre, dépôt, référence..."
+            value={checkInstructions}
+          />
+        ) : null}
+        {paymentModes.card_physical ? (
+          <Field
+            label="Carte au club"
+            multiline
+            onChangeText={setCardPhysicalInstructions}
+            placeholder="Terminal, permanences..."
+            value={cardPhysicalInstructions}
+          />
+        ) : null}
+      </WizardSheet>
+
+      <WizardSheet
+        close={closeSheet}
+        isVisible={openSheet === 'installments'}
+        snapPoint="86%"
+        title="Ajuster l échéancier"
+      >
+        <InputStepper
+          label="Nombre d échéances"
+          max={12}
+          min={1}
+          onDecrement={() => handleInstallmentCountChange(-1)}
+          onIncrement={() => handleInstallmentCountChange(1)}
+          value={Number(installmentCount) || 1}
+        />
         <SelectionGroup
           items={installmentFrequencyOptions}
-          label="Frequence"
-          onToggle={(value) => setInstallmentFrequency(value)}
+          label="Fréquence"
+          onToggle={handleInstallmentFrequencyChange}
           selectedKeys={[installmentFrequency]}
         />
-      </View>
-    );
-  } else if (activeWizardStep.key === 'installmentsOptions') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
+        <View style={secondaryStepCardStyle}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aperçu de l échéancier</Text>
+          {visibleInstallmentSchedule.map((line, index) => (
+            <SummaryLine
+              key={line.localId || `installment-${index}`}
+              label={`${line.label || `${index + 1}`}${line.dueDate ? ` · ${isoToPickerDateValue(line.dueDate)}` : ''}`}
+              value={`${line.amount || '0,00'} ${currency}`}
+            />
+          ))}
+          <SummaryLine
+            label="Total"
+            value={formatLicenseMoney(euroToCents(amount), currency)}
+          />
+          <Button
+            onPress={applyGeneratedInstallments}
+            title="Régénérer depuis le montant"
+            variant="Secondary"
+          />
+        </View>
         <PaymentModeToggle
           enabled={memberInstallmentChoiceAllowed}
           label="Le membre choisit son nombre d échéances"
@@ -2605,231 +3129,113 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           label="Paiement en ligne obligatoire"
           onChange={setOnlinePaymentRequired}
         />
-      </View>
-    );
-  } else if (activeWizardStep.key === 'installmentsSchedule') {
-    stepContent = (
-      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
-        {normalizedInstallmentSchedule.map((item, index) => (
-          <View
-            key={installmentSchedule[index]?.localId || `installment-${index}`}
-            style={secondaryStepCardStyle}
-          >
-            <Field
-              label={`Libellé échéance ${index + 1}`}
-              onChangeText={(value) => updateInstallment(installmentSchedule[index]?.localId, { label: value })}
-              placeholder={`Paiement ${index + 1}`}
-              value={installmentSchedule[index]?.label || ''}
-            />
-            <Field
-              label="Montant cible (EUR)"
-              onChangeText={(value) => updateInstallment(installmentSchedule[index]?.localId, { amount: value })}
-              placeholder="60"
-              value={installmentSchedule[index]?.amount || ''}
-            />
-            <DateField
-              label="Date limite"
-              minimumDate={campaignStartDateValue}
-              onChange={(value) => updateInstallment(installmentSchedule[index]?.localId, { dueDate: value })}
-              value={installmentSchedule[index]?.dueDate || ''}
-            />
-          </View>
-        ))}
-      </View>
-    );
-  } else if (activeWizardStep.key === 'paymentOwner') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-          <View style={[Spaces.gap[4], { flex: 1, paddingRight: 16 }]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Encaissement multisport</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Active si les paiements en ligne doivent utiliser le compte central du club multisport.
-            </Text>
-          </View>
-          <Switch
-            onValueChange={(enabled) => setPaymentOwner(enabled ? 'multisport' : 'section')}
-            value={paymentOwner === 'multisport'}
-          />
-        </View>
-        {paymentOwner === 'multisport' && !club?.parentMultisport ? (
-          <Text style={[Fonts.p3, { color: Colors.warning500 }]}>
-            Aucun multisport parent n est rattaché à ce club. Le paiement central ne pourra pas être valide.
-          </Text>
-        ) : null}
-      </View>
-    );
-  } else if (activeWizardStep.key === 'paymentMethods') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        <PaymentModeToggle enabled={paymentModes.bank_transfer} label={paymentModeLabels.bank_transfer} onChange={() => togglePaymentMode('bank_transfer')} />
-        <PaymentModeToggle enabled={paymentModes.cash} label={paymentModeLabels.cash} onChange={() => togglePaymentMode('cash')} />
-        <PaymentModeToggle enabled={paymentModes.check} label={paymentModeLabels.check} onChange={() => togglePaymentMode('check')} />
-        <PaymentModeToggle enabled={paymentModes.card_physical} label={paymentModeLabels.card_physical} onChange={() => togglePaymentMode('card_physical')} />
-        <PaymentModeToggle enabled={paymentModes.external_link} label={paymentModeLabels.external_link} onChange={() => togglePaymentMode('external_link')} />
-        <PaymentModeToggle enabled={paymentModes.helloasso} label={paymentModeLabels.helloasso} onChange={() => togglePaymentMode('helloasso')} />
-      </View>
-    );
-  } else if (activeWizardStep.key === 'paymentInstructions') {
-    stepContent = (
-      <View style={primaryStepCardStyle}>
-        {paymentModes.bank_transfer ? <Field label="Instructions virement" multiline onChangeText={setBankTransferInstructions} placeholder="IBAN, référence à indiquer..." value={bankTransferInstructions} /> : null}
-        {paymentModes.cash ? <Field label="Instructions especes" multiline onChangeText={setCashInstructions} placeholder="Lieu, horaires, personne à contacter..." value={cashInstructions} /> : null}
-        {paymentModes.check ? <Field label="Instructions chèque" multiline onChangeText={setCheckInstructions} placeholder="Ordre, dépôt, référence..." value={checkInstructions} /> : null}
-        {paymentModes.card_physical ? <Field label="Instructions carte au club" multiline onChangeText={setCardPhysicalInstructions} placeholder="Terminal, permanences..." value={cardPhysicalInstructions} /> : null}
-      </View>
-    );
-  } else if (activeWizardStep.key === 'paymentOnline') {
-    stepContent = (
-      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
-        {paymentModes.external_link ? (
-          <View style={primaryStepCardStyle}>
-            <Field label="Lien externe du club" onChangeText={setExternalUrl} placeholder="https://..." value={externalUrl} />
-          </View>
-        ) : null}
-        {paymentModes.helloasso ? (
-          <LicenseCard>
-            <View style={Spaces.gap[12]}>
-              <View style={Spaces.gap[4]}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>HelloAsso intègre</Text>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Le club configure directement son organisation HelloAsso. Aucun lien manuel n est demande pour ce mode.
-                </Text>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Checklist: choisis le scope, renseigne le slug organisation, ajoute le client id et le client secret, verifie la connexion, puis fais un paiement test avant publication.
-                </Text>
-              </View>
-              <LicenseStatusChip status={effectiveHelloAssoSnapshot?.readiness || 'not_configured'} />
-              <Text style={[Fonts.p3, Fonts.neutral200]}>{helloAssoStatusMessage}</Text>
-              <Field
-                label="Slug organisation"
-                onChangeText={(value) => handleHelloAssoFieldChange('organizationSlug', value)}
-                placeholder="mon-club"
-                value={helloAssoConfig.organizationSlug}
-              />
-              <Field
-                label="Environnement"
-                onChangeText={(value) => handleHelloAssoFieldChange('environment', value)}
-                placeholder="production ou sandbox"
-                value={helloAssoConfig.environment}
-              />
-              <Field
-                label="Client id"
-                onChangeText={(value) => handleHelloAssoFieldChange('clientId', value)}
-                placeholder={effectiveHelloAssoSnapshot?.clientIdConfigured ? 'Laisser vide pour conserver l identifiant actuel' : 'Renseigne le client id'}
-                value={helloAssoConfig.clientId}
-              />
-              <Field
-                label="Client secret"
-                onChangeText={(value) => handleHelloAssoFieldChange('clientSecret', value)}
-                placeholder={effectiveHelloAssoSnapshot?.clientSecretConfigured ? 'Laisser vide pour conserver le secret actuel' : 'Renseigne le client secret'}
-                value={helloAssoConfig.clientSecret}
-              />
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Scope actif:
-                {' '}
-                {paymentOwner === 'multisport' ? 'multisport' : 'section'}
-              </Text>
-              {effectiveHelloAssoSnapshot?.validation?.checkoutValidatedAt ? (
-                <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Derniere verification:
-                  {' '}
-                  {effectiveHelloAssoSnapshot.validation.checkoutValidatedAt.slice(0, 19).replace('T', ' ')}
-                </Text>
-              ) : null}
-              <Button
-                isLoading={helloAssoMutation.isPending}
-                onPress={verifyHelloAssoConnection}
-                title="Vérifier la connexion"
-                variant="Secondary"
-              />
-            </View>
-          </LicenseCard>
-        ) : null}
-      </View>
-    );
-  } else if (activeWizardStep.key === 'review') {
-    stepContent = (
-      <View style={Spaces.gap[licenseSpacing.sectionGap]}>
-        <View style={primaryStepCardStyle}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Vérification avant lancement</Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {reviewTargetSummaryText}
-          </Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {enabledPaymentModeLabels.length
-              ? `Paiements actives: ${enabledPaymentModeLabels.join(', ')}.`
-              : 'Aucun moyen de paiement active.'}
-          </Text>
-          {paymentModes.helloasso ? (
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              HelloAsso:
-              {' '}
-              {helloAssoStatusMessage}
-            </Text>
-          ) : null}
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {allowInstallments
-              ? `${normalizedInstallmentSchedule.length} échéance(s) configuree(s) en mode ${installmentFrequency}.`
-              : 'Paiement en une seule fois.'}
-          </Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {(documentRequests.filter((item) => item.name.trim()).length)}
-            {' document(s) demandes et '}
-            {pricingRules.length}
-            {' règle(s) tarifaire(s) supplémentaire(s).'}
-          </Text>
-          {autoReminderEnabled ? (
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Relances auto: tous les
-              {' '}
-              {reminderFrequencyDays}
-              {' '}
-              jour(s), max
-              {' '}
-              {reminderMaxCount}
-              , statuts
-              {' '}
-              {reminderTargetStatuses.join(', ')}
-              .
-            </Text>
-          ) : (
-            <Text style={[Fonts.p3, Fonts.neutral200]}>Relances automatiques désactivées.</Text>
-          )}
-        </View>
+      </WizardSheet>
 
-        {canPublishFromWizard ? (
-          <Button
-            isLoading={saveMutation.isPending}
-            onPress={publishCampaign}
-            title={publishActionLabel}
-          />
-        ) : null}
-      </View>
-    );
-  }
-
-  return (
-    <>
-      <WizardStepLayout
-        collapsibleHeader
-        isNextDisabled={isWizardNextDisabled}
-        isNextLoading={saveMutation.isPending}
-        nextLabel={finalSaveLabel}
-        onBack={handleWizardBack}
-        onClose={exitWizardScreen}
-        onNext={handleWizardNext}
-        stepCount={wizardStepCount}
-        stepIndex={wizardStepIndex + 1}
-        subtitle={activeWizardStep.subtitle}
-        title={activeWizardStep.title}
+      <WizardSheet
+        close={closeSheet}
+        isVisible={openSheet === 'documentRequest'}
+        snapPoint="86%"
+        title="Document demandé"
       >
-        <View style={Spaces.gap[licenseSpacing.sectionGap]}>
-          {stepContent}
+        {editedDocumentRequest ? (
+          <DocumentRequestEditor
+            canRemove
+            item={editedDocumentRequest}
+            onChange={(patch) => updateDocumentRequest(editedDocumentRequest.localId, patch)}
+            onRemove={() => {
+              removeDocumentRequest(editedDocumentRequest.localId);
+              closeSheet();
+            }}
+          />
+        ) : null}
+      </WizardSheet>
 
-          <View style={{ paddingBottom: Math.max(insets.bottom + 8, 16) }} />
+      <WizardSheet
+        close={closeSheet}
+        isVisible={openSheet === 'reminderTiming'}
+        snapPoint="86%"
+        title="Ajuster la cadence"
+      >
+        <View style={[Alignments.row, Spaces.gap[12]]}>
+          <View style={{ flex: 1 }}>
+            <InputStepper
+              label="Tous les (jours)"
+              max={90}
+              min={3}
+              onDecrement={() => shiftReminderFrequency(-1)}
+              onIncrement={() => shiftReminderFrequency(1)}
+              value={Number(reminderFrequencyDays) || 14}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <InputStepper
+              label="Maximum"
+              max={20}
+              min={1}
+              onDecrement={() => shiftReminderMaxCount(-1)}
+              onIncrement={() => shiftReminderMaxCount(1)}
+              value={Number(reminderMaxCount) || 5}
+            />
+          </View>
         </View>
-      </WizardStepLayout>
+        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>STATUTS À RELANCER</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {reminderStatusOptions.map((item) => (
+            <SelectionChip
+              key={item.key}
+              label={item.label}
+              onPress={() => handleReminderStatusToggle(item.key)}
+              selected={reminderTargetStatuses.includes(item.key)}
+            />
+          ))}
+        </View>
+        <Field
+          label="Commencer X jours avant l échéance"
+          onChangeText={setReminderBeforeDueDays}
+          placeholder="5"
+          value={reminderBeforeDueDays}
+        />
+        <Field
+          label="Reprendre X jours après l échéance"
+          onChangeText={setReminderAfterDueDays}
+          placeholder="7"
+          value={reminderAfterDueDays}
+        />
+        <PaymentModeToggle
+          enabled={reminderOnDueDate}
+          label="Relance le jour de l échéance"
+          onChange={setReminderOnDueDate}
+        />
+        <DateField
+          label="Première relance à partir du (optionnel)"
+          minimumDate={campaignStartDateValue}
+          onChange={setReminderStartDate}
+          value={reminderStartDate}
+        />
+      </WizardSheet>
+
+      <WizardSheet
+        close={closeSheet}
+        isVisible={openSheet === 'internalNote'}
+        title="Note interne"
+      >
+        <Field
+          label="Visible uniquement en gestion"
+          multiline
+          onChangeText={setInternalNote}
+          placeholder="Visible uniquement en gestion"
+          value={internalNote}
+        />
+        {internalNoteSuggestions.map((suggestion, index) => (
+          <SuggestionCard
+            description={suggestion}
+            key={suggestion}
+            onPress={() => handleInternalNoteSuggestionPress(suggestion)}
+            selected={String(internalNote || '').trim() === suggestion}
+            title={`Note ${index + 1}`}
+          />
+        ))}
+      </WizardSheet>
 
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
