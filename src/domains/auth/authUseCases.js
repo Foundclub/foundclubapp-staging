@@ -353,7 +353,14 @@ export const getOnboardingViews = ({
             index: needsParentalDeclaration ? 5 : 4,
             route: RouteNames.UserAffiliationGuide,
           },
-          { canShow: true, index: needsParentalDeclaration ? 6 : 5, route: RouteNames.Welcome },
+          // D16 - la branche staff se dedouble ICI : l'entraineur declare les
+          // equipes qu'il entraine, le dirigeant s'arrete au club (il le
+          // couvre en entier). `Welcome` n'est plus une etape comptee.
+          {
+            canShow: !hasTeamAffiliation,
+            index: needsParentalDeclaration ? 6 : 5,
+            route: RouteNames.UserTrainedTeams,
+          },
         ];
       case 'player':
         return [
@@ -377,14 +384,25 @@ export const getOnboardingViews = ({
             index: needsParentalDeclaration ? 13 : 12,
             route: RouteNames.UserAffiliationGuide,
           },
-          { canShow: true, index: needsParentalDeclaration ? 14 : 13, route: RouteNames.Welcome },
+          // D16 - « Equipe (demande envoyee au coach) ». Elle suit le club :
+          // on ne peut pas choisir une equipe avant le club qui la contient.
+          // `Welcome` n'est plus une etape comptee.
+          {
+            canShow: !hasTeamAffiliation,
+            index: needsParentalDeclaration ? 14 : 13,
+            route: RouteNames.UserTeamAffiliation,
+          },
         ];
       case 'president':
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
-          { canShow: true, index: 2, route: RouteNames.UserAvatar },
-          { canShow: shouldShowAffiliationGuide, index: 3, route: RouteNames.UserAffiliationGuide },
-          { canShow: true, index: 4, route: RouteNames.Welcome },
+          // D16 - « Ville ». Elle alimente les suggestions de club
+          // (« PRES DE CHEZ TOI ») : elle doit donc arriver AVANT l'etape
+          // club, sinon son ajout n'a aucun interet. `Welcome` n'est plus
+          // une etape comptee.
+          { canShow: true, index: 2, route: RouteNames.UserAddress },
+          { canShow: true, index: 3, route: RouteNames.UserAvatar },
+          { canShow: shouldShowAffiliationGuide, index: 4, route: RouteNames.UserAffiliationGuide },
         ];
       case 'superAdmin':
         return [

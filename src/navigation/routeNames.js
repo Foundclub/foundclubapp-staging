@@ -200,6 +200,10 @@ export const RouteNames = /** @type {const} */ ({
   UserSection: 'UserSection',
   UserSport: 'UserSport',
   UserSportHistory: 'UserSportHistory',
+  // D16 - les deux etapes d'affiliation a une EQUIPE. Elles suivent l'etape
+  // club et reutilisent la plomberie `team-membership-request` existante.
+  UserTeamAffiliation: 'UserTeamAffiliation',
+  UserTrainedTeams: 'UserTrainedTeams',
   VisualShowcase: 'VisualShowcase',
   Welcome: 'Welcome',
   // Stacks

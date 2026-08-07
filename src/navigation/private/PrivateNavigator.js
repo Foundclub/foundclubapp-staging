@@ -28,6 +28,7 @@ import UserType from '@/views/onboarding/UserRole';
 import UserSection from '@/views/onboarding/UserSection';
 import UserSport from '@/views/onboarding/UserSport';
 import UserSportHistory from '@/views/onboarding/UserSportHistory';
+import UserTrainedTeams from '@/views/onboarding/UserTrainedTeams';
 import Welcome from '@/views/onboarding/Welcome';
 
 import { commonOptions } from '@/navigation/commonOptions';
@@ -918,20 +919,57 @@ function PrivateNavigator() {
           />
         ) : null}
 
-        {canShowView(RouteNames.Welcome) ? (
+        {canShowView(RouteNames.UserTeamAffiliation) ? (
           <Stack.Screen
-            component={Welcome}
+            component={UserAffiliationGuide}
             key={onboardingViews?.totalViews}
-            name={RouteNames.Welcome}
+            name={RouteNames.UserTeamAffiliation}
             options={{
               ...commonOptions,
-              headerRight: () => renderStepperIndicator(RouteNames.Welcome),
-              headerTitle: () => renderStepper(RouteNames.Welcome),
+              headerRight: () => renderStepperIndicator(RouteNames.UserTeamAffiliation),
+              headerTitle: () => renderStepper(RouteNames.UserTeamAffiliation),
               headerTitleAlign: 'left',
-
             }}
           />
         ) : null}
+
+        {canShowView(RouteNames.UserTrainedTeams) ? (
+          <Stack.Screen
+            component={UserTrainedTeams}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserTrainedTeams}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserTrainedTeams),
+              headerTitle: () => renderStepper(RouteNames.UserTrainedTeams),
+              headerTitleAlign: 'left',
+            }}
+          />
+        ) : null}
+
+        {/*
+          D16 - MONTE SANS CONDITION, ET C'EST VOULU.
+          `Welcome` n'est plus une etape comptee des parcours joueur,
+          entraineur et dirigeant : `canShowView` rendrait `false` et l'ecran
+          deviendrait INJOIGNABLE - avec lui le tour guide, les trois cartes
+          d'offre et l'URL web `/onboarding/welcome`. C'est exactement le motif
+          d'ecran orphelin que R2 designe comme la regression la plus chere du
+          projet. `getNextOnboardingRoute` l'atteint en sortie de tunnel ; son
+          entete ne montre rien tant qu'il n'est dans aucun parcours
+          (`renderStepperIndicator` rend `null` quand `stepNumber` vaut 0).
+        */}
+        <Stack.Screen
+          component={Welcome}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.Welcome}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.Welcome),
+            headerTitle: () => renderStepper(RouteNames.Welcome),
+            headerTitleAlign: 'left',
+
+          }}
+        />
 
       </Stack.Navigator>
     </HistoryWizardProvider>

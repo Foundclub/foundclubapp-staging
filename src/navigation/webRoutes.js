@@ -26,6 +26,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.UserAddress]: '/onboarding/address',
   [RouteNames.UserClubSearch]: '/onboarding/club-search',
   [RouteNames.UserAffiliationGuide]: '/onboarding/affiliation-guide',
+  // D16 - les deux etapes d'affiliation a une equipe.
+  [RouteNames.UserTeamAffiliation]: '/onboarding/team-affiliation',
+  [RouteNames.UserTrainedTeams]: '/onboarding/trained-teams',
   [RouteNames.UserPosition]: '/onboarding/position',
   [RouteNames.UserPhysique]: '/onboarding/physique',
   [RouteNames.UserSportHistory]: '/onboarding/sport-history',

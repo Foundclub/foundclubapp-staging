@@ -1826,6 +1826,7 @@ export default {
       retry: 'Réessayer',
     },
     subtitleClub: 'On personnalise ton accueil, ton planning et tes annonces autour de ton club.',
+    subtitleClubCoach: 'Retrouve ton club pour y déclarer les équipes que tu entraînes.',
     subtitleClubSelection: 'Recherche puis sélectionne ton club pour voir ses équipes.',
     subtitleClubStaff: 'Retrouve ton club pour le gérer sur FoundClub.',
     subtitleTeam: 'Recherche ton équipe puis ouvre sa fiche pour envoyer ta demande.',

@@ -30,6 +30,12 @@ const TEXTES_ATTENDUS = {
   'onboardingAffiliation.sections.suggestions': 'SUGGESTIONS',
   'onboardingAffiliation.sections.teams': 'ÉQUIPES',
   'onboardingAffiliation.subtitleClub': 'On personnalise ton accueil, ton planning et tes annonces autour de ton club.',
+  // D16 - `subtitleClubStaff` etait PARTAGEE coach + dirigeant. Son texte
+  // (« pour le gerer ») ne decrit que le dirigeant : l'entraineur ne gere pas
+  // le club, il y entraine des equipes. La cle historique reste verrouillee au
+  // mot pres ci-dessous, et le coach recoit la sienne - aucune assertion
+  // supprimee, une ajoutee.
+  'onboardingAffiliation.subtitleClubCoach': 'Retrouve ton club pour y déclarer les équipes que tu entraînes.',
   'onboardingAffiliation.subtitleClubStaff': 'Retrouve ton club pour le gérer sur FoundClub.',
   'onboardingAffiliation.titleClub': 'Trouve ton club',
 };

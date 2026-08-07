@@ -192,10 +192,10 @@ const getTeamCardMeta = (item, fallbackLabel) => (
 );
 
 /**
- * @param {{ navigation: any }} props
+ * @param {{ navigation: any, route?: any }} props
  * @returns {import('react').ReactElement}
  */
-function UserAffiliationGuideContent({ navigation }) {
+function UserAffiliationGuideContent({ navigation, route }) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
@@ -219,8 +219,18 @@ function UserAffiliationGuideContent({ navigation }) {
   const isStaffAffiliationFlow = roleKey === 'coach' || roleKey === 'president';
   const isPlayerAffiliationFlow = roleKey === 'player';
 
-  const [selectedClub, setSelectedClub] = useState(null);
-  const isClubFlow = isStaffAffiliationFlow || (isPlayerAffiliationFlow && !selectedClub?.documentId);
+  // D16 - CE COMPOSANT SERT DESORMAIS DEUX ETAPES COMPTEES.
+  // « Trouve ton club » (`UserAffiliationGuide`) et « Trouve ton equipe »
+  // (`UserTeamAffiliation`) montent le MEME ecran : la recherche, les cartes,
+  // la pagination et le formulaire « je ne trouve pas » sont identiques. Seule
+  // la route montee tranche la phase - c'est ce qui permet de compter l'etape
+  // equipe a part sans dupliquer 700 lignes.
+  const currentRouteName = route?.name || RouteNames.UserAffiliationGuide;
+  const isTeamStep = currentRouteName === RouteNames.UserTeamAffiliation;
+
+  const [selectedClub, setSelectedClub] = useState(route?.params?.club ?? null);
+  const isClubFlow = !isTeamStep
+    && (isStaffAffiliationFlow || (isPlayerAffiliationFlow && !selectedClub?.documentId));
   const isPlayerClubSelectionStep = isClubFlow && !isStaffAffiliationFlow;
   const roleTargetLabel = isClubFlow
     ? t('onboardingAffiliation.common.roleTargetClub', 'club')
@@ -364,7 +374,10 @@ function UserAffiliationGuideContent({ navigation }) {
   });
 
   const handleContinueLater = useCallback(() => {
-    const nextRoute = getNextOnboardingRoute(RouteNames.UserAffiliationGuide);
+    // D16 - « Passer » doit repartir de l'etape REELLEMENT montee : depuis
+    // l'etape equipe, passer par `UserAffiliationGuide` renverrait le joueur
+    // sur le club qu'il vient de choisir.
+    const nextRoute = getNextOnboardingRoute(currentRouteName);
     if (nextRoute) {
       navigation.navigate(nextRoute);
       return;
@@ -375,7 +388,13 @@ function UserAffiliationGuideContent({ navigation }) {
       index: 0,
       routes: [{ name: getPostOnboardingHomeRoute() }],
     });
-  }, [getNextOnboardingRoute, getPostOnboardingHomeRoute, navigation, userData?.documentId]);
+  }, [
+    currentRouteName,
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    navigation,
+    userData?.documentId,
+  ]);
 
   // Header : bouton retour rond (headerBackImage de commonOptions, inchangé).
   //
@@ -385,7 +404,7 @@ function UserAffiliationGuideContent({ navigation }) {
   // seule progression, identique partout. « Passer » reste à droite, à côté du
   // compteur.
   const stepNumber = onboardingViews?.views
-    ?.find((view) => view.route === RouteNames.UserAffiliationGuide)?.index || 0;
+    ?.find((view) => view.route === currentRouteName)?.index || 0;
   const onboardingTotalViews = onboardingViews?.totalViews || 0;
   const skipLabel = t('onboardingAffiliation.actions.skip', 'Passer');
   const skipHint = t(
@@ -435,9 +454,21 @@ function UserAffiliationGuideContent({ navigation }) {
           screen: RouteNames.Club,
         });
       } else {
+        // D16 - LE CLUB CHOISI OUVRE L'ETAPE SUIVANTE, il ne bascule plus la
+        // phase en place : c'est ce qui fait de « Equipe » une etape comptee
+        // a part (11 -> 12 chez le joueur). Le club voyage en parametre, car
+        // a ce stade le joueur n'a rejoint AUCUN club - rien ne le persiste.
+        //
+        // Repli deliberé : si l'etape equipe n'est pas au programme (joueur
+        // deja dans une equipe, donc `canShow` faux et ecran non monte), on
+        // garde l'ancien comportement en place plutot que de naviguer vers
+        // une route absente.
         setSelectedClub(item);
         setSearchValue('');
         setDebouncedSearch('');
+        if (getNextOnboardingRoute(currentRouteName) === RouteNames.UserTeamAffiliation) {
+          navigation.navigate(RouteNames.UserTeamAffiliation, { club: item });
+        }
       }
       return;
     }
@@ -449,7 +480,13 @@ function UserAffiliationGuideContent({ navigation }) {
       },
       screen: RouteNames.TeamDetails,
     });
-  }, [isClubFlow, isStaffAffiliationFlow, navigation]);
+  }, [
+    currentRouteName,
+    getNextOnboardingRoute,
+    isClubFlow,
+    isStaffAffiliationFlow,
+    navigation,
+  ]);
 
   const handleResetSelectedClub = useCallback(() => {
     setSelectedClub(null);
@@ -530,7 +567,7 @@ function UserAffiliationGuideContent({ navigation }) {
         clubId: selectedClubId,
         currentQuery: searchValue.trim(),
         role: roleName,
-        screen: RouteNames.UserAffiliationGuide,
+        screen: currentRouteName,
         target: roleTargetLabel,
       },
       source: 'onboarding',
@@ -576,7 +613,7 @@ function UserAffiliationGuideContent({ navigation }) {
         currentQuery: searchValue.trim(),
         reason: 'team_not_created',
         role: roleName,
-        screen: RouteNames.UserAffiliationGuide,
+        screen: currentRouteName,
         target: roleTargetLabel,
       },
       source: 'onboarding',
@@ -990,6 +1027,17 @@ function UserAffiliationGuideContent({ navigation }) {
       return t(
         'onboardingAffiliation.subtitleTeamFromClub',
         'Recherche ton équipe dans le club sélectionné puis ouvre sa fiche pour envoyer ta demande.',
+      );
+    }
+    // D16 - `subtitleClubStaff` etait une cle PARTAGEE coach + dirigeant, et
+    // son texte (« pour le gerer ») ne decrit que le dirigeant : l'entraineur,
+    // lui, ne gere pas le club, il y entraine des equipes. On lui donne sa
+    // propre cle et on laisse l'ancienne intacte - son test la verrouille au
+    // mot pres, et c'est le dirigeant qui la garde.
+    if (roleKey === 'coach') {
+      return t(
+        'onboardingAffiliation.subtitleClubCoach',
+        'Retrouve ton club pour y déclarer les équipes que tu entraînes.',
       );
     }
     if (isStaffAffiliationFlow) {
@@ -1575,16 +1623,16 @@ const styles = StyleSheet.create({
 });
 
 /**
- * @param {{ navigation: any }} props
+ * @param {{ navigation: any, route?: any }} props
  * @returns {import('react').ReactElement}
  */
-function UserAffiliationGuide({ navigation }) {
+function UserAffiliationGuide({ navigation, route }) {
   const { userData } = useAuth();
   const flowId = `${AFFILIATION_TUTORIAL_FLOW_PREFIX}:${userData?.documentId || 'anonymous'}`;
 
   return (
     <OnboardingProvider flowId={flowId}>
-      <UserAffiliationGuideContent navigation={navigation} />
+      <UserAffiliationGuideContent navigation={navigation} route={route} />
     </OnboardingProvider>
   );
 }

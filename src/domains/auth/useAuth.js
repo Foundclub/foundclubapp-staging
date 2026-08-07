@@ -543,10 +543,37 @@ const useAuth = () => {
     const currentIndex = onboardingViews?.views?.find(
       (view) => view.route === currentRoute,
     )?.index || 0;
-    return onboardingViews?.views?.find(
+    const nextRoute = onboardingViews?.views?.find(
       (view) => view.canShow && view.index > currentIndex,
     )?.route;
-  }, [onboardingViews]);
+    if (nextRoute) return nextRoute;
+
+    // D16 - LE SAS D'ARRIVEE.
+    //
+    // `Welcome` n'est plus une etape COMPTEE des parcours joueur, entraineur
+    // et dirigeant (decision Adel du 2026-08-06) - mais il n'est pas
+    // supprime : il reste l'ecran qui lance le tour guide et montre les trois
+    // offres. Il est donc rebranche ici, en SORTIE de tunnel.
+    //
+    // Pourquoi ici et pas dans `getPostOnboardingHomeRoute` : `Welcome.js`
+    // appelle cette derniere pour PARTIR (l. 87, 196, 207). L'y brancher
+    // ferait boucler l'ecran sur lui-meme. `Welcome` n'appelle jamais
+    // `getNextOnboardingRoute` - la boucle est donc impossible par
+    // construction, pas par precaution.
+    const views = onboardingViews?.views;
+    // Tunnel deja fini (`views` vide) : on ne repousse personne vers l'accueil
+    // des inscrits. Un utilisateur qui revient n'a rien a y faire.
+    if (!Array.isArray(views) || views.length === 0) return undefined;
+    // `superAdmin` et le parcours `new` gardent `Welcome` comme etape
+    // numerotee : ils y sont deja passes par la voie normale.
+    if (views.some((view) => view.route === RouteNames.Welcome)) return undefined;
+
+    const onboardingUserId = userData?.documentId;
+    if (!onboardingUserId) return undefined;
+    if (storage.getBoolean(`hasSeenWelcome_${onboardingUserId}`)) return undefined;
+
+    return RouteNames.Welcome;
+  }, [onboardingViews, userData?.documentId]);
 
   const getPostOnboardingHomeRoute = useCallback(
     () => (isGold ? RouteNames.LeagueHomeTab : RouteNames.HomeTab),

@@ -287,7 +287,8 @@ describe('authUseCases', () => {
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
         RouteNames.UserAffiliationGuide,
-        RouteNames.Welcome,
+        // D16 - `Welcome` a quitte le compteur, « Equipes entrainees » l'a remplace.
+        RouteNames.UserTrainedTeams,
       ]);
     });
 
@@ -301,7 +302,7 @@ describe('authUseCases', () => {
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
         RouteNames.UserAffiliationGuide,
-        RouteNames.Welcome,
+        RouteNames.UserTrainedTeams,
       ]);
     });
 
@@ -384,7 +385,8 @@ describe('authUseCases', () => {
         RouteNames.UserSportHistory,
         RouteNames.UserClubSearch,
         RouteNames.UserAffiliationGuide,
-        RouteNames.Welcome,
+        // D16 - `Welcome` a quitte le compteur, « Equipe » l'a remplace.
+        RouteNames.UserTeamAffiliation,
       ]);
     });
 
@@ -407,7 +409,7 @@ describe('authUseCases', () => {
         RouteNames.UserSportHistory,
         RouteNames.UserClubSearch,
         RouteNames.UserAffiliationGuide,
-        RouteNames.Welcome,
+        RouteNames.UserTeamAffiliation,
       ]);
     });
 
@@ -419,9 +421,12 @@ describe('authUseCases', () => {
       expect(result.totalViews).toBe(4);
       expect(result.views.map((v) => v.route)).toEqual([
         RouteNames.UserName,
+        // D16 - la ville entre AVANT le club (elle alimente ses suggestions),
+        // et `Welcome` a quitte le compteur : le total reste 4, mais ce ne
+        // sont plus les memes 4 etapes.
+        RouteNames.UserAddress,
         RouteNames.UserAvatar,
         RouteNames.UserAffiliationGuide,
-        RouteNames.Welcome,
       ]);
     });
 
@@ -523,7 +528,10 @@ describe('authUseCases', () => {
       });
     });
 
-    it('returns welcome-only view when coach fields are already completed', () => {
+    // D16 - ce test s'appelait « welcome-only ». `Welcome` n'etant plus une
+    // etape comptee, la derniere marche d'un entraineur deja complet est
+    // desormais « Equipes entrainees » : il a un club, mais aucune equipe.
+    it('returns trained-teams-only view when coach fields are already completed', () => {
       const result = getOnboardingViews({
         address: { label: 'Paris', value: '2.35|48.85' },
         avatar: 'avatar.jpg',
@@ -536,7 +544,7 @@ describe('authUseCases', () => {
 
       expect(result.totalViews).toBe(5);
       const visibleRoutes = result.views.filter((v) => v.canShow).map((v) => v.route);
-      expect(visibleRoutes).toEqual([RouteNames.Welcome]);
+      expect(visibleRoutes).toEqual([RouteNames.UserTrainedTeams]);
     });
 
     it('hides affiliation guide for coach when already affiliated to a club', () => {
@@ -562,7 +570,9 @@ describe('authUseCases', () => {
       const affiliationStep = result.views.find((v) => v.route === RouteNames.UserAffiliationGuide);
       expect(affiliationStep).toEqual({
         canShow: false,
-        index: 3,
+        // D16 - l'etape club recule d'un cran chez le dirigeant : la ville
+        // vient de s'inserer devant elle.
+        index: 4,
         route: RouteNames.UserAffiliationGuide,
       });
     });
@@ -597,6 +607,17 @@ describe('authUseCases', () => {
       // Sous le seuil parental (15 ans) tant que la suite tourne avant 2033.
       const BIRTHDATE_MINEUR = '2018-05-14';
 
+      // D16 - LES TROIS PARCOURS PRENNENT LEUR FORME FINALE.
+      //
+      // `Welcome` quitte le COMPTEUR des trois parcours pilotes (joueur,
+      // entraineur, dirigeant) - decision Adel du 2026-08-06. Il n'est PAS
+      // supprime : l'ecran reste monte et atteignable, il redevient le sas
+      // d'arrivee (tour guide + cartes d'offre). Il cesse seulement d'etre
+      // une etape numerotee de l'inscription.
+      //
+      // `superAdmin` et le parcours `new` gardent `Welcome` dans leur liste :
+      // le premier est hors pack, le second a ete explicitement laisse tel
+      // quel (decision n3). C'est une asymetrie assumee, pas un oubli.
       const PARCOURS = [
         {
           roleName: USER_ROLES.player,
@@ -613,7 +634,8 @@ describe('authUseCases', () => {
             RouteNames.UserSportHistory,
             RouteNames.UserClubSearch,
             RouteNames.UserAffiliationGuide,
-            RouteNames.Welcome,
+            // D16 - « Equipe (demande envoyee au coach) », juste apres le club.
+            RouteNames.UserTeamAffiliation,
           ],
           totalViews: 13,
           totalViewsMineur: 14,
@@ -625,7 +647,8 @@ describe('authUseCases', () => {
             RouteNames.UserAddress,
             RouteNames.UserAvatar,
             RouteNames.UserAffiliationGuide,
-            RouteNames.Welcome,
+            // D16 - « Equipes entrainees », la ou la branche staff se dedouble.
+            RouteNames.UserTrainedTeams,
           ],
           totalViews: 5,
           totalViewsMineur: 6,
@@ -634,9 +657,11 @@ describe('authUseCases', () => {
           roleName: USER_ROLES.president,
           routes: [
             RouteNames.UserName,
+            // D16 - « Ville » : elle alimente les suggestions de club, elle
+            // doit donc arriver AVANT l'etape club.
+            RouteNames.UserAddress,
             RouteNames.UserAvatar,
             RouteNames.UserAffiliationGuide,
-            RouteNames.Welcome,
           ],
           // Le dirigeant n'a pas d'etape date de naissance : pas de
           // declaration parentale possible, le total ne bouge pas.
@@ -751,6 +776,79 @@ describe('authUseCases', () => {
         const result = getOnboardingViews({ role: { name: roleName } });
 
         expect(result.views.map((view) => view.route)).not.toContain(RouteNames.UserBirthdate);
+      });
+
+      // D16 - LES DEUX ETAPES NEUVES N'APPARTIENNENT QU'A UN SEUL PARCOURS.
+      // C'est la seule chose qui empeche « Equipes entrainees » de se glisser
+      // chez un joueur (qui n'entraine rien) ou « Equipe » chez un dirigeant
+      // (qui couvre deja tout le club).
+      const PARCOURS_AVEC = (route) => PARCOURS
+        .filter((parcours) => parcours.routes.includes(route))
+        .map((parcours) => parcours.roleName);
+
+      it('l etape « Equipe » n existe que dans le parcours joueur', () => {
+        expect(PARCOURS_AVEC(RouteNames.UserTeamAffiliation)).toEqual([USER_ROLES.player]);
+
+        PARCOURS.forEach(({ roleName, routes }) => {
+          const result = getOnboardingViews({ role: { name: roleName } });
+          expect(result.views.map((view) => view.route).includes(RouteNames.UserTeamAffiliation))
+            .toBe(routes.includes(RouteNames.UserTeamAffiliation));
+        });
+      });
+
+      it('l etape « Equipes entrainees » n existe que dans le parcours entraineur', () => {
+        expect(PARCOURS_AVEC(RouteNames.UserTrainedTeams)).toEqual([USER_ROLES.coach]);
+
+        PARCOURS.forEach(({ roleName, routes }) => {
+          const result = getOnboardingViews({ role: { name: roleName } });
+          expect(result.views.map((view) => view.route).includes(RouteNames.UserTrainedTeams))
+            .toBe(routes.includes(RouteNames.UserTrainedTeams));
+        });
+      });
+
+      // D16 - `Welcome` sort du COMPTEUR des trois parcours pilotes, et
+      // seulement d'eux. Ce test est le garde-fou de la decision d'Adel : il
+      // tombe aussi bien si on oublie de le sortir que si on le supprime
+      // partout (ce qui casserait le parcours superAdmin).
+      it('« Bienvenue » n est plus une etape comptee du joueur, de l entraineur ni du dirigeant', () => {
+        [USER_ROLES.player, USER_ROLES.coach, USER_ROLES.president].forEach((roleName) => {
+          const result = getOnboardingViews({ role: { name: roleName } });
+          expect(result.views.map((view) => view.route)).not.toContain(RouteNames.Welcome);
+        });
+      });
+
+      it('« Bienvenue » reste une etape comptee du superAdmin et du parcours new', () => {
+        [USER_ROLES.superAdmin, USER_ROLES.new].forEach((roleName) => {
+          const result = getOnboardingViews({ role: { name: roleName } });
+          expect(result.views.map((view) => view.route)).toContain(RouteNames.Welcome);
+        });
+      });
+
+      // D16 - L'ETAPE EQUIPE DU JOUEUR SUIT LE CLUB, elle ne le precede pas :
+      // on ne peut pas demander une equipe avant d'avoir choisi le club qui la
+      // contient. Un test d'ordre, parce que la liste ordonnee ci-dessus
+      // passerait encore si les deux etaient interverties dans les DEUX.
+      it('l etape « Equipe » arrive juste apres l etape club', () => {
+        const routes = getOnboardingViews({ role: { name: USER_ROLES.player } })
+          .views.map((view) => view.route);
+        const indexClub = routes.indexOf(RouteNames.UserAffiliationGuide);
+        const indexEquipe = routes.indexOf(RouteNames.UserTeamAffiliation);
+
+        expect(indexClub).toBeGreaterThan(-1);
+        expect(indexEquipe).toBe(indexClub + 1);
+      });
+
+      // D16 - LA VILLE DU DIRIGEANT ALIMENTE LES SUGGESTIONS DE CLUB.
+      // Si elle passait apres l'etape club, elle n'aurait aucun interet : la
+      // justification meme de son ajout est qu'elle arrive AVANT.
+      it('la ville du dirigeant est demandee avant l etape club', () => {
+        const routes = getOnboardingViews({ role: { name: USER_ROLES.president } })
+          .views.map((view) => view.route);
+        const indexVille = routes.indexOf(RouteNames.UserAddress);
+        const indexClub = routes.indexOf(RouteNames.UserAffiliationGuide);
+
+        expect(indexVille).toBeGreaterThan(-1);
+        expect(indexVille).toBeLessThan(indexClub);
       });
     });
   });
