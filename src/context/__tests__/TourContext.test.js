@@ -160,6 +160,71 @@ describe('TourContext — étape suivante (validation manuelle)', () => {
   });
 });
 
+// D23 — défaut ⑥ de la recette du 2026-08-07, mots d'Adel : « à la fin du tour
+// guidé je me suis retrouvé bloqué dans les onglets rechercher sans pouvoir
+// aller à l'accueil ».
+//
+// CAUSE : le tour s'éteignait SUR PLACE. Il ne naviguait nulle part, et le
+// piège n'est pas là où on le croit : l'onglet « Accueil » (`RouteNames.Search`)
+// héberge tout le `SearchStack`, et le hub de recherche s'EMPILE dessus. Une
+// étape qui y navigue (`player_participation` → `SearchHub`) laisse donc
+// l'onglet garé sur « Rechercher » — et rappuyer sur un onglet déjà actif ne
+// ramène pas à l'accueil. Le test ci-dessus voyait bien la fin du tour, mais
+// n'a JAMAIS regardé où l'utilisateur atterrissait.
+describe('TourContext — la fin du tour raccompagne à l`accueil (D23 ⑥)', () => {
+  // Le nombre d'etapes se LIT dans le profil : un tour qui grandit ne doit pas
+  // rendre ce filet faussement vert en s'arretant avant la fin.
+  const sauterUneEtape = () => {
+    act(() => { tour.completeCurrentStep({ skipped: true }); });
+    act(() => jest.advanceTimersByTime(150));
+  };
+
+  const allerJusquALaDerniereEtape = (profileKey) => {
+    act(() => { tour.startTour(profileKey); });
+    const derniereEtape = tour.totalSteps - 1;
+    while (tour.stepIndex < derniereEtape) sauterUneEtape();
+    expect(tour.stepIndex).toBe(derniereEtape);
+  };
+
+  it('joueur : après la dernière étape, on repart sur l`accueil, pas sur Rechercher', () => {
+    renderProvider();
+    allerJusquALaDerniereEtape('player');
+    // L'étape 2 du tour joueur a empilé le hub de recherche sur l'onglet
+    // Accueil : c'est exactement l'état dans lequel Adel s'est retrouvé.
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.SearchHub, { activeType: 'events' });
+    mockNavigate.mockClear();
+
+    act(() => { tour.completeCurrentStep(); });
+    act(() => jest.advanceTimersByTime(1800));
+
+    expect(tour.isTourActive).toBe(false);
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+  });
+
+  it('entraîneur : même retour à l`accueil depuis la dernière étape', () => {
+    renderProvider();
+    allerJusquALaDerniereEtape('coach');
+    mockNavigate.mockClear();
+
+    act(() => { tour.completeCurrentStep(); });
+    act(() => jest.advanceTimersByTime(1800));
+
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+  });
+
+  it('le retour n`a lieu qu`à la FIN : une étape intermédiaire suit sa cible', () => {
+    renderProvider();
+    act(() => { tour.startTour('player'); });
+    mockNavigate.mockClear();
+
+    act(() => { tour.completeCurrentStep(); });
+    act(() => jest.advanceTimersByTime(1800));
+
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.SearchHub, { activeType: 'events' });
+    expect(mockNavigate).not.toHaveBeenCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+  });
+});
+
 describe('TourContext — validation par signal (bus guidance)', () => {
   it("le signal attendu valide l'étape ; un autre signal ne fait rien", () => {
     renderProvider();

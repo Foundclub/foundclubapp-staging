@@ -40,6 +40,18 @@ const homeTarget = {
   params: { screen: 'SearchHome' },
   routeName: RouteNames.HomeTab,
 };
+
+/**
+ * L'ACCUEIL, la ou le tour raccompagne l'utilisateur quand il se termine.
+ *
+ * D23 (defaut ⑥) — l'onglet « Accueil » heberge tout le `SearchStack` : le hub
+ * de recherche s'EMPILE dessus. Une etape qui y navigue (par exemple
+ * `player_participation`) laisse donc l'onglet gare sur « Rechercher ». Sans
+ * ce retour explicite, la fin du tour abandonnait l'utilisateur la, sans
+ * chemin evident vers l'accueil. `navigate` vers un ecran deja empile y revient
+ * en DEPILANT : c'est exactement ce qu'il faut ici.
+ */
+export const TOUR_HOME_TARGET = homeTarget;
 const teamWizardTarget = {
   params: (/** @type {any} */ context) => ({
     params: { clubId: context?.userData?.club?.documentId },

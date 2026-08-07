@@ -11,7 +11,7 @@ import { Platform } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
-import { getTourProfile } from '@/domains/tour/tourCatalog';
+import { getTourProfile, TOUR_HOME_TARGET } from '@/domains/tour/tourCatalog';
 import { storage } from '@/store/appContext';
 
 import { navigate as navigateRoot } from '@/navigation/navigationService';
@@ -174,6 +174,14 @@ export function TourProvider({ children }) {
       if (isLastStep) {
         setTourState(null);
         persist(null);
+        // D23 (defaut ⑥ de la recette du 07/08 : « a la fin du tour guide je me
+        // suis retrouve bloque dans les onglets rechercher sans pouvoir aller a
+        // l'accueil »). Le tour s'eteignait SUR PLACE, en laissant
+        // l'utilisateur sur l'ecran de la derniere etape — et surtout en
+        // laissant l'onglet « Accueil » gare sur le hub de recherche, qui s'y
+        // empile (`SearchStack`). On raccompagne donc a l'accueil : `navigate`
+        // vers un ecran deja empile y revient en DEPILANT.
+        navigateToTarget(TOUR_HOME_TARGET, { userData });
         return;
       }
       const nextState = {
@@ -186,7 +194,7 @@ export function TourProvider({ children }) {
       persist(nextState);
       goToStep(nextState, nextState.stepIndex);
     }, options.skipped ? 150 : SUCCESS_DISPLAY_MS);
-  }, [goToStep, persist]);
+  }, [goToStep, persist, userData]);
 
   const resumeTour = useCallback(() => {
     const { current } = tourStateRef;
