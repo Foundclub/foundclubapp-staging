@@ -3,6 +3,7 @@ import {
   getSlotLabel,
   toAgreedInstant,
   toIsoDay,
+  toPickerDay,
   toReadableDay,
   toShortDay,
 } from './friendlyMatchDateLabels';
@@ -16,6 +17,20 @@ describe('friendlyMatchDateLabels', () => {
     expect(toIsoDay('demain')).toBe('');
     expect(toIsoDay('')).toBe('');
     expect(toIsoDay(null)).toBe('');
+  });
+
+  // D24 : le chemin du retour. Il sert a remettre un creneau deja pose dans le
+  // formulaire pour lui donner son horaire — sans lui, l heure etait impossible
+  // a ajouter apres coup.
+  test('un jour deja pose retourne dans le selecteur, et l aller-retour est neutre', () => {
+    expect(toPickerDay('2099-05-12')).toBe('12/05/2099');
+    expect(toPickerDay('2099-05-12T18:30:00.000Z')).toBe('12/05/2099');
+    expect(toIsoDay(toPickerDay('2099-05-12'))).toBe('2099-05-12');
+  });
+
+  test('un jour illisible ne remplit pas le selecteur avec n importe quoi', () => {
+    expect(toPickerDay('pas une date')).toBe('');
+    expect(toPickerDay(null)).toBe('');
   });
 
   test('une date ISO complete est coupee au jour', () => {

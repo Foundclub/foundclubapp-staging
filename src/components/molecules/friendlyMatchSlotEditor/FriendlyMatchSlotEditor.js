@@ -10,6 +10,7 @@ import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerIn
 import {
   getSlotHoursLabel,
   toIsoDay,
+  toPickerDay,
   toReadableDay,
 } from '@/views/friendlyMatch/friendlyMatchDateLabels';
 
@@ -47,6 +48,29 @@ function FriendlyMatchSlotEditor({
   const [addError, setAddError] = useState('');
 
   const safeSlots = Array.isArray(slots) ? slots : [];
+  // Le jour en cours de saisie est-il DEJA pose ? L appelant remplace un creneau
+  // du meme jour au lieu d en empiler un second : le bouton doit donc dire
+  // « mettre a jour », sinon l appui ressemble a un doublon.
+  const isEditingExistingDay = safeSlots.some(
+    (/** @type {any} */ slot) => slot?.date === toIsoDay(dayValue),
+  );
+
+  /**
+   * Remet un creneau deja pose dans le formulaire, pour le corriger.
+   *
+   * 🧨 Defaut ⑥ de la recette du 2026-08-07 — « on ne peut pas ajouter d heure
+   * dans le tunnel ». Une fois la date ajoutee, le formulaire se vidait : il n y
+   * avait plus AUCUN chemin pour attacher un horaire au creneau pose, ni pour
+   * corriger celui d un autre jour. La croix ne savait que supprimer.
+   * @param {any} slot
+   * @returns {void}
+   */
+  const handleEdit = (slot) => {
+    setDayValue(toPickerDay(slot?.date));
+    setStartValue(slot?.start || '');
+    setEndValue(slot?.end || '');
+    setAddError('');
+  };
 
   const handleAdd = () => {
     const isoDay = toIsoDay(dayValue);
@@ -101,10 +125,13 @@ function FriendlyMatchSlotEditor({
         </View>
       </View>
 
+      {/* ⛔ PAS de `disabled` : sans date, ce bouton etait GRIS ET MUET, et le
+          message « Choisis d abord une date. » que handleAdd sait produire etait
+          du code inatteignable. Un bouton vivant qui explique vaut mieux qu un
+          bouton mort qui laisse deviner. */}
       <Button
-        disabled={!dayValue}
         onPress={handleAdd}
-        title="Ajouter cette date"
+        title={isEditingExistingDay ? 'Mettre à jour cette date' : 'Ajouter cette date'}
         variant="Secondary"
       />
 
@@ -119,8 +146,12 @@ function FriendlyMatchSlotEditor({
           </Text>
 
           {safeSlots.map((/** @type {any} */ slot) => (
-            <View
+            <TouchableOpacity
+              accessibilityHint="Remet cette date dans le formulaire pour changer son horaire"
+              accessibilityLabel={`${toReadableDay(slot.date)}, ${getSlotHoursLabel(slot)}`}
+              accessibilityRole="button"
               key={slot.date}
+              onPress={() => handleEdit(slot)}
               style={[
                 Alignments.row,
                 Alignments.alignCenter,
@@ -131,6 +162,7 @@ function FriendlyMatchSlotEditor({
                   borderColor: withAlpha(Colors.primary500, 0.15),
                   borderRadius: 12,
                   borderWidth: 1,
+                  minHeight: 44,
                 },
               ]}
             >
@@ -143,6 +175,13 @@ function FriendlyMatchSlotEditor({
                 </Text>
               </View>
 
+              {/* Le mot « Modifier » et pas seulement un chevron : c est le meme
+                  vocabulaire que les rangees du recapitulatif, et il dit ce que
+                  l appui va faire. */}
+              <Text style={[Fonts.p4, Spaces.marginRight[8], { color: Colors.primary500 }]}>
+                Modifier
+              </Text>
+
               <TouchableOpacity
                 accessibilityLabel={`Retirer la date du ${toReadableDay(slot.date)}`}
                 accessibilityRole="button"
@@ -153,7 +192,7 @@ function FriendlyMatchSlotEditor({
               >
                 <Text style={[Fonts.p1Bold, { color: Colors.neutral300 }]}>✕</Text>
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}

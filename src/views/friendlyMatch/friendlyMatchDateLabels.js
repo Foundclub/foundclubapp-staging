@@ -27,6 +27,19 @@ export const toIsoDay = (pickerValue) => {
 };
 
 /**
+ * Le chemin inverse : « 2099-05-12 » -> « 12/05/2099 ». Il sert a REMETTRE un
+ * creneau deja pose dans le formulaire de saisie, pour le corriger. Ecrire la
+ * conversion a l envers ailleurs qu ici la ferait diverger de `toIsoDay` au
+ * premier changement de format.
+ * @param {any} isoDay
+ * @returns {string}
+ */
+export const toPickerDay = (isoDay) => {
+  const parsed = parse(String(isoDay || '').slice(0, 10), ISO_DAY_FORMAT, new Date());
+  return isValid(parsed) ? formatDate(parsed, PICKER_DATE_FORMAT) : '';
+};
+
+/**
  * « 2099-05-12 » -> « mardi 12 mai ». Une valeur ISO complete (avec heure) est
  * coupee au jour. Une valeur illisible est rendue telle quelle plutot que vide :
  * afficher la donnee brute vaut mieux qu afficher un trou.
