@@ -3,8 +3,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -112,92 +110,93 @@ function UserPhysique({ navigation }) {
         Alignments.fill,
       ]}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={100}
-        style={[Alignments.fill]}
+      {/*
+        D23 — l'evitement de clavier vit dans `FormScreenContainer`
+        (`keyboardAvoiding` y est vrai par defaut). Le KeyboardAvoidingView qui
+        etait ici en ajoutait un SECOND, avec un decalage de 100 ecrit en dur :
+        les deux se compensaient l'un l'autre et le bouton « Continuer » passait
+        sous le clavier. Un seul evitement, et il se calcule.
+      */}
+      <ScrollView
+        contentContainerStyle={[
+          Alignments.justifySpaceBetween,
+          { flexGrow: 1 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={[
-            Alignments.justifySpaceBetween,
-            { flexGrow: 1 },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[Spaces.gap[40]]}>
-            <View style={[Spaces.gap[16]]}>
-              <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-                {t('onboarding.physique.title', 'Ton physique')}
-              </Text>
-              <Text style={[Fonts.p1, Fonts.neutral00]}>
-                {t('onboarding.physique.subtitle', 'Ces informations aident les recruteurs')}
-              </Text>
-            </View>
-
-            <View style={[Spaces.gap[24]]}>
-              <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Taille (cm)</Text>
-                <TextInput
-                  keyboardType="numeric"
-                  maxLength={3}
-                  onChangeText={setHeight}
-                  placeholder="Ex: 180"
-                  placeholderTextColor={Colors.neutral500}
-                  returnKeyType="next"
-                  style={[
-                    Fonts.p1,
-                    Spaces.padding[16],
-                    {
-                      backgroundColor: Colors.neutral800,
-                      borderColor: Colors.neutral700,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      color: Colors.neutral00,
-                    },
-                  ]}
-                  value={height}
-                />
-              </View>
-
-              <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Poids (kg)</Text>
-                <TextInput
-                  keyboardType="numeric"
-                  maxLength={3}
-                  onChangeText={setWeight}
-                  placeholder="Ex: 75"
-                  placeholderTextColor={Colors.neutral500}
-                  returnKeyType="done"
-                  style={[
-                    Fonts.p1,
-                    Spaces.padding[16],
-                    {
-                      backgroundColor: Colors.neutral800,
-                      borderColor: Colors.neutral700,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      color: Colors.neutral00,
-                    },
-                  ]}
-                  value={weight}
-                />
-              </View>
-            </View>
+        <View style={[Spaces.gap[40]]}>
+          <View style={[Spaces.gap[16]]}>
+            <Text style={[Fonts.h2Black, Fonts.neutral00]}>
+              {t('onboarding.physique.title', 'Ton physique')}
+            </Text>
+            <Text style={[Fonts.p1, Fonts.neutral00]}>
+              {t('onboarding.physique.subtitle', 'Ces informations aident les recruteurs')}
+            </Text>
           </View>
 
-          <View style={[Spaces.gap[16], Spaces.marginTop[24]]}>
-            <Button
-              disabled={!isValid}
-              isLoading={updateUserMutation.isPending}
-              onPress={handleNext}
-              title={t('common.actions.next', 'Continuer')}
-              variant="Primary"
-            />
-            <OnboardingSkipLink onPress={handleSkip} />
+          <View style={[Spaces.gap[24]]}>
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Taille (cm)</Text>
+              <TextInput
+                keyboardType="numeric"
+                maxLength={3}
+                onChangeText={setHeight}
+                placeholder="Ex: 180"
+                placeholderTextColor={Colors.neutral500}
+                returnKeyType="next"
+                style={[
+                  Fonts.p1,
+                  Spaces.padding[16],
+                  {
+                    backgroundColor: Colors.neutral800,
+                    borderColor: Colors.neutral700,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    color: Colors.neutral00,
+                  },
+                ]}
+                value={height}
+              />
+            </View>
+
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Poids (kg)</Text>
+              <TextInput
+                keyboardType="numeric"
+                maxLength={3}
+                onChangeText={setWeight}
+                placeholder="Ex: 75"
+                placeholderTextColor={Colors.neutral500}
+                returnKeyType="done"
+                style={[
+                  Fonts.p1,
+                  Spaces.padding[16],
+                  {
+                    backgroundColor: Colors.neutral800,
+                    borderColor: Colors.neutral700,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    color: Colors.neutral00,
+                  },
+                ]}
+                value={weight}
+              />
+            </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+
+        <View style={[Spaces.gap[16], Spaces.marginTop[24]]}>
+          <Button
+            disabled={!isValid}
+            isLoading={updateUserMutation.isPending}
+            onPress={handleNext}
+            title={t('common.actions.next', 'Continuer')}
+            variant="Primary"
+          />
+          <OnboardingSkipLink onPress={handleSkip} />
+        </View>
+      </ScrollView>
     </FormScreenContainer>
   );
 }

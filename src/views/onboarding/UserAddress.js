@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, KeyboardAvoidingView, Platform, Text, View,
+  Alert, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -120,42 +120,36 @@ function UserAddress({ navigation }) {
         Alignments.fill,
       ]}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={110}
-        style={[Alignments.justifySpaceBetween, Alignments.fill]}
-      >
-        <View style={[Spaces.gap[40]]}>
-          <View style={[Spaces.gap[16]]}>
-            <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-              {t('profile.titles.address', 'Où habites-tu ?')}
-            </Text>
-            <Text style={[Fonts.p1, Fonts.neutral00]}>
-              {t('profile.subtitles.address', 'Renseigne ta ville ou ton code postal')}
-            </Text>
-          </View>
-
-          <View style={[Spaces.gap[16]]}>
-            <AutocompleteAddressInput
-              address={address}
-              label={t('profile.fields.city.label', 'Ville')}
-              placeholder={t('profile.fields.city.placeholder', 'Rechercher une ville')}
-              setAddress={setAddress}
-            />
-          </View>
+      <View style={[Spaces.gap[40]]}>
+        <View style={[Spaces.gap[16]]}>
+          <Text style={[Fonts.h2Black, Fonts.neutral00]}>
+            {t('profile.titles.address', 'Où habites-tu ?')}
+          </Text>
+          <Text style={[Fonts.p1, Fonts.neutral00]}>
+            {t('profile.subtitles.address', 'Renseigne ta ville ou ton code postal')}
+          </Text>
         </View>
 
         <View style={[Spaces.gap[16]]}>
-          <Button
-            disabled={!address || updateUserMutation.isPending}
-            isLoading={updateUserMutation.isPending}
-            onPress={handleNext}
-            title={t('common.actions.next', 'Continuer')}
-            variant="Primary"
+          <AutocompleteAddressInput
+            address={address}
+            label={t('profile.fields.city.label', 'Ville')}
+            placeholder={t('profile.fields.city.placeholder', 'Rechercher une ville')}
+            setAddress={setAddress}
           />
-          <OnboardingSkipLink onPress={handleSkip} />
         </View>
-      </KeyboardAvoidingView>
+      </View>
+
+      <View style={[Spaces.gap[16]]}>
+        <Button
+          disabled={!address || updateUserMutation.isPending}
+          isLoading={updateUserMutation.isPending}
+          onPress={handleNext}
+          title={t('common.actions.next', 'Continuer')}
+          variant="Primary"
+        />
+        <OnboardingSkipLink onPress={handleSkip} />
+      </View>
     </FormScreenContainer>
   );
 }

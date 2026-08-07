@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, KeyboardAvoidingView, Platform, ScrollView, Text, View,
+  Image, Platform, ScrollView, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -82,101 +82,95 @@ function Login({ navigation }) {
       ]}
       desktopAlignment={Platform.OS === 'web' ? 'top' : 'center'}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={30}
-        style={Alignments.fill}
+      <ScrollView
+        contentContainerStyle={[
+          Alignments.grow1,
+          {
+            paddingBottom: insets.bottom + 24,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={[
-            Alignments.grow1,
-            {
-              paddingBottom: insets.bottom + 24,
-            },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[Spaces.gap[32], Alignments.fill]}>
-            <View style={Spaces.gap[24]}>
-              <View style={Alignments.alignCenter}>
-                {renderBrandLogo()}
-              </View>
-              <View style={[Spaces.gap[16], Alignments.fullWidth]}>
-                <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('login.title')}</Text>
-                <Text style={[Fonts.p1, Fonts.neutral00]}>{t('login.subtitle')}</Text>
-              </View>
+        <View style={[Spaces.gap[32], Alignments.fill]}>
+          <View style={Spaces.gap[24]}>
+            <View style={Alignments.alignCenter}>
+              {renderBrandLogo()}
             </View>
-            {isAddingAccount && (
-              <Button
-                onPress={cancelAddAccount}
-                style={Alignments.selfStart}
-                title={t('common.actions.cancel')}
-                variant="SecondaryLight"
+            <View style={[Spaces.gap[16], Alignments.fullWidth]}>
+              <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('login.title')}</Text>
+              <Text style={[Fonts.p1, Fonts.neutral00]}>{t('login.subtitle')}</Text>
+            </View>
+          </View>
+          {isAddingAccount && (
+            <Button
+              onPress={cancelAddAccount}
+              style={Alignments.selfStart}
+              title={t('common.actions.cancel')}
+              variant="SecondaryLight"
+            />
+          )}
+          {canShowCodeButton
+            ? (
+              <OTPForm
+                confirm={confirm}
+                isLoading={isLoading}
+                loginMutation={loginMutation}
+                onResend={() => otpMutation.mutate(phone)}
+                phoneNumber={phone}
+              />
+            )
+            : (
+              <PhoneForm
+                isLoading={isLoading}
+                onSubmit={handleFormSubmit}
               />
             )}
-            {canShowCodeButton
-              ? (
-                <OTPForm
-                  confirm={confirm}
-                  isLoading={isLoading}
-                  loginMutation={loginMutation}
-                  onResend={() => otpMutation.mutate(phone)}
-                  phoneNumber={phone}
-                />
-              )
-              : (
-                <PhoneForm
-                  isLoading={isLoading}
-                  onSubmit={handleFormSubmit}
-                />
-              )}
-            {canShowCodeButton && isWebBypassEnabled ? (
-              <Text style={[Fonts.p2, Fonts.neutral300]}>
-                Mode local actif : n importe quel code a 6 chiffres fonctionne.
-              </Text>
-            ) : null}
-            {authErrorMessage ? (
-              <Text style={[Fonts.p2, Fonts.error300]}>
-                {authErrorMessage}
-              </Text>
-            ) : null}
-            {canShowCodeButton ? null : (
-              <View style={[Spaces.gap[16], Spaces.paddingTop[8]]}>
+          {canShowCodeButton && isWebBypassEnabled ? (
+            <Text style={[Fonts.p2, Fonts.neutral300]}>
+              Mode local actif : n importe quel code a 6 chiffres fonctionne.
+            </Text>
+          ) : null}
+          {authErrorMessage ? (
+            <Text style={[Fonts.p2, Fonts.error300]}>
+              {authErrorMessage}
+            </Text>
+          ) : null}
+          {canShowCodeButton ? null : (
+            <View style={[Spaces.gap[16], Spaces.paddingTop[8]]}>
+              <View style={[
+                Alignments.alignCenter,
+                Alignments.row,
+                Spaces.gap[16],
+              ]}
+              >
                 <View style={[
-                  Alignments.alignCenter,
-                  Alignments.row,
-                  Spaces.gap[16],
+                  Alignments.fill,
+                  ApplicationStyle.separator,
+                  ApplicationStyle.backgroundColor.neutral500,
                 ]}
-                >
-                  <View style={[
-                    Alignments.fill,
-                    ApplicationStyle.separator,
-                    ApplicationStyle.backgroundColor.neutral500,
-                  ]}
-                  />
-                  <Text style={[Fonts.p1Bold, Fonts.neutral400]}>
-                    {t('login.or').toUpperCase()}
-                  </Text>
-                  <View style={[
-                    Alignments.fill,
-                    ApplicationStyle.separator,
-                    ApplicationStyle.backgroundColor.neutral500,
-                  ]}
-                  />
-                </View>
-                <Button
-                  disabled={otpMutation.isPending}
-                  onPress={handleGoToRegister}
-                  style={Alignments.fullWidth}
-                  title={t('login.actions.register')}
-                  variant="Secondary"
+                />
+                <Text style={[Fonts.p1Bold, Fonts.neutral400]}>
+                  {t('login.or').toUpperCase()}
+                </Text>
+                <View style={[
+                  Alignments.fill,
+                  ApplicationStyle.separator,
+                  ApplicationStyle.backgroundColor.neutral500,
+                ]}
                 />
               </View>
-            )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              <Button
+                disabled={otpMutation.isPending}
+                onPress={handleGoToRegister}
+                style={Alignments.fullWidth}
+                title={t('login.actions.register')}
+                variant="Secondary"
+              />
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </FormScreenContainer>
   );
 }

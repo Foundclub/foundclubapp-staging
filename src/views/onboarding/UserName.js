@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, KeyboardAvoidingView, Platform, Text, View,
+  Alert, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -245,188 +245,183 @@ function UserName({ navigation }) {
       contentContainerStyle={[
         Spaces.paddingVertical[24],
         { marginBottom: insets.bottom },
-
+        // D23 — reprises telles quelles du KeyboardAvoidingView imbrique qui
+        // vivait ici : c'etait le SECOND de l'ecran (le conteneur en monte deja
+        // un) et il portait un decalage de 110 ecrit en dur.
+        Alignments.justifySpaceBetween,
+        Alignments.fill,
       ]}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={110}
-        style={[
-          Alignments.justifySpaceBetween,
-          Alignments.fill,
-        ]}
-      >
-        <View style={[Spaces.gap[40]]}>
-          <View style={[Spaces.gap[16]]}>
-            <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-              {t('profile.titles.identity', 'Qui es-tu ?')}
-            </Text>
-            <Text style={[Fonts.p1, Fonts.neutral00]}>
-              {isPresident
-                ? t(
-                  'profile.subtitles.identityPresident',
-                  'La seule étape obligatoire du parcours dirigeant.',
-                )
-                : t('profile.subtitles.identity', 'Renseigne ton nom, ton prénom et ta date de naissance.')}
-            </Text>
-          </View>
-
-          <View style={[Spaces.gap[24]]}>
-            <Controller
-              control={control}
-              name="firstname"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <Input
-                  enterKeyHint="next"
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('profile.fields.firstname.label')}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  onSubmitEditing={() => setFocus('lastname')}
-                  placeholder={t('profile.fields.firstname.placeholder')}
-                  ref={ref}
-                  value={value}
-                />
-              )}
-            />
-            <Controller
-              control={control}
-              name="lastname"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <Input
-                  enterKeyHint={collectsBirthdate ? 'next' : 'done'}
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('profile.fields.lastname.label')}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  onSubmitEditing={() => collectsBirthdate && setFocus('day')}
-                  placeholder={t('profile.fields.lastname.placeholder')}
-                  ref={ref}
-                  value={value}
-                />
-              )}
-            />
-
-            {collectsBirthdate ? (
-              <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p2, Fonts.neutral00]}>
-                  {t('profile.fields.birthdate.label', 'Date de naissance')}
-                </Text>
-                <View style={[
-                  Alignments.row,
-                  Alignments.alignEnd,
-                  Alignments.justifyCenter,
-                  Spaces.gap[16]]}
-                >
-                  <Controller
-                    control={control}
-                    name="day"
-                    render={({
-                      field: {
-                        name, onBlur, onChange, ref, value,
-                      },
-                    }) => (
-                      <Input
-                        enterKeyHint="next"
-                        error={getFieldError({ errors: formErrors, fieldName: name }) ? ' ' : undefined}
-                        inputMode="numeric"
-                        keyboardType="number-pad"
-                        maxLength={2}
-                        onBlur={onBlur}
-                        onChangeText={(text) => {
-                          onChange(text);
-                          if (text.length === 2) {
-                            setFocus('month');
-                          }
-                        }}
-                        onSubmitEditing={() => setFocus('month')}
-                        placeholder="JJ"
-                        ref={ref}
-                        value={value}
-                        wrapperStyle={{ width: 60 }}
-                      />
-                    )}
-                  />
-                  <Text style={[Fonts.h1Bold, Fonts.neutral00, Spaces.paddingHorizontal[4]]}>
-                    /
-                  </Text>
-                  <Controller
-                    control={control}
-                    name="month"
-                    render={({
-                      field: {
-                        name, onBlur, onChange, ref, value,
-                      },
-                    }) => (
-                      <Input
-                        enterKeyHint="next"
-                        error={getFieldError({ errors: formErrors, fieldName: name }) ? ' ' : undefined}
-                        inputMode="numeric"
-                        keyboardType="number-pad"
-                        maxLength={2}
-                        onBlur={onBlur}
-                        onChangeText={(text) => {
-                          onChange(text);
-                          if (text.length === 2) {
-                            setFocus('year');
-                          }
-                        }}
-                        onSubmitEditing={() => setFocus('year')}
-                        placeholder="MM"
-                        ref={ref}
-                        value={value}
-                        wrapperStyle={{ width: 60 }}
-                      />
-                    )}
-                  />
-                  <Text style={[Fonts.h1Bold, Fonts.neutral00, Spaces.paddingHorizontal[4]]}>
-                    /
-                  </Text>
-                  <Controller
-                    control={control}
-                    name="year"
-                    render={({
-                      field: {
-                        name, onBlur, onChange, ref, value,
-                      },
-                    }) => (
-                      <Input
-                        enterKeyHint="done"
-                        error={getFieldError({ errors: formErrors, fieldName: name }) ? ' ' : undefined}
-                        inputMode="numeric"
-                        keyboardType="number-pad"
-                        maxLength={4}
-                        onBlur={onBlur}
-                        onChangeText={onChange}
-                        placeholder="AAAA"
-                        ref={ref}
-                        value={value}
-                        wrapperStyle={{ width: 80 }}
-                      />
-                    )}
-                  />
-                </View>
-              </View>
-            ) : null}
-          </View>
+      <View style={[Spaces.gap[40]]}>
+        <View style={[Spaces.gap[16]]}>
+          <Text style={[Fonts.h2Black, Fonts.neutral00]}>
+            {t('profile.titles.identity', 'Qui es-tu ?')}
+          </Text>
+          <Text style={[Fonts.p1, Fonts.neutral00]}>
+            {isPresident
+              ? t(
+                'profile.subtitles.identityPresident',
+                'La seule étape obligatoire du parcours dirigeant.',
+              )
+              : t('profile.subtitles.identity', 'Renseigne ton nom, ton prénom et ta date de naissance.')}
+          </Text>
         </View>
 
-        <Button
-          disabled={!!Object.keys(formErrors).length}
-          isLoading={updateUserMutation.isPending}
-          onPress={handleSubmit(handleFormSubmit)}
-          title={t('profile.actions.save')}
-          variant="Primary"
-        />
-      </KeyboardAvoidingView>
+        <View style={[Spaces.gap[24]]}>
+          <Controller
+            control={control}
+            name="firstname"
+            render={({
+              field: {
+                name, onBlur, onChange, ref, value,
+              },
+            }) => (
+              <Input
+                enterKeyHint="next"
+                error={getFieldError({ errors: formErrors, fieldName: name })}
+                label={t('profile.fields.firstname.label')}
+                onBlur={onBlur}
+                onChangeText={onChange}
+                onSubmitEditing={() => setFocus('lastname')}
+                placeholder={t('profile.fields.firstname.placeholder')}
+                ref={ref}
+                value={value}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="lastname"
+            render={({
+              field: {
+                name, onBlur, onChange, ref, value,
+              },
+            }) => (
+              <Input
+                enterKeyHint={collectsBirthdate ? 'next' : 'done'}
+                error={getFieldError({ errors: formErrors, fieldName: name })}
+                label={t('profile.fields.lastname.label')}
+                onBlur={onBlur}
+                onChangeText={onChange}
+                onSubmitEditing={() => collectsBirthdate && setFocus('day')}
+                placeholder={t('profile.fields.lastname.placeholder')}
+                ref={ref}
+                value={value}
+              />
+            )}
+          />
+
+          {collectsBirthdate ? (
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p2, Fonts.neutral00]}>
+                {t('profile.fields.birthdate.label', 'Date de naissance')}
+              </Text>
+              <View style={[
+                Alignments.row,
+                Alignments.alignEnd,
+                Alignments.justifyCenter,
+                Spaces.gap[16]]}
+              >
+                <Controller
+                  control={control}
+                  name="day"
+                  render={({
+                    field: {
+                      name, onBlur, onChange, ref, value,
+                    },
+                  }) => (
+                    <Input
+                      enterKeyHint="next"
+                      error={getFieldError({ errors: formErrors, fieldName: name }) ? ' ' : undefined}
+                      inputMode="numeric"
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      onBlur={onBlur}
+                      onChangeText={(text) => {
+                        onChange(text);
+                        if (text.length === 2) {
+                          setFocus('month');
+                        }
+                      }}
+                      onSubmitEditing={() => setFocus('month')}
+                      placeholder="JJ"
+                      ref={ref}
+                      value={value}
+                      wrapperStyle={{ width: 60 }}
+                    />
+                  )}
+                />
+                <Text style={[Fonts.h1Bold, Fonts.neutral00, Spaces.paddingHorizontal[4]]}>
+                  /
+                </Text>
+                <Controller
+                  control={control}
+                  name="month"
+                  render={({
+                    field: {
+                      name, onBlur, onChange, ref, value,
+                    },
+                  }) => (
+                    <Input
+                      enterKeyHint="next"
+                      error={getFieldError({ errors: formErrors, fieldName: name }) ? ' ' : undefined}
+                      inputMode="numeric"
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      onBlur={onBlur}
+                      onChangeText={(text) => {
+                        onChange(text);
+                        if (text.length === 2) {
+                          setFocus('year');
+                        }
+                      }}
+                      onSubmitEditing={() => setFocus('year')}
+                      placeholder="MM"
+                      ref={ref}
+                      value={value}
+                      wrapperStyle={{ width: 60 }}
+                    />
+                  )}
+                />
+                <Text style={[Fonts.h1Bold, Fonts.neutral00, Spaces.paddingHorizontal[4]]}>
+                  /
+                </Text>
+                <Controller
+                  control={control}
+                  name="year"
+                  render={({
+                    field: {
+                      name, onBlur, onChange, ref, value,
+                    },
+                  }) => (
+                    <Input
+                      enterKeyHint="done"
+                      error={getFieldError({ errors: formErrors, fieldName: name }) ? ' ' : undefined}
+                      inputMode="numeric"
+                      keyboardType="number-pad"
+                      maxLength={4}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      placeholder="AAAA"
+                      ref={ref}
+                      value={value}
+                      wrapperStyle={{ width: 80 }}
+                    />
+                  )}
+                />
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </View>
+
+      <Button
+        disabled={!!Object.keys(formErrors).length}
+        isLoading={updateUserMutation.isPending}
+        onPress={handleSubmit(handleFormSubmit)}
+        title={t('profile.actions.save')}
+        variant="Primary"
+      />
     </FormScreenContainer>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, KeyboardAvoidingView, Platform, ScrollView, Text, View,
+  Image, Platform, ScrollView, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -69,55 +69,49 @@ function Register() {
       ]}
       desktopAlignment={Platform.OS === 'web' ? 'top' : 'center'}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={30}
-        style={Alignments.fill}
+      <ScrollView
+        contentContainerStyle={[
+          Alignments.grow1,
+          {
+            paddingBottom: insets.bottom + 24,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={[
-            Alignments.grow1,
-            {
-              paddingBottom: insets.bottom + 24,
-            },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[Spaces.gap[32], Alignments.fill]}>
-            <View style={Spaces.gap[24]}>
-              <View style={Alignments.alignCenter}>
-                {renderBrandLogo()}
-              </View>
-              <View style={[Spaces.gap[16], Alignments.fullWidth]}>
-                <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('register.title')}</Text>
-                <Text style={[Fonts.p1, Fonts.neutral00]}>{t('register.subtitle')}</Text>
-              </View>
+        <View style={[Spaces.gap[32], Alignments.fill]}>
+          <View style={Spaces.gap[24]}>
+            <View style={Alignments.alignCenter}>
+              {renderBrandLogo()}
             </View>
-            {canShowCodeButton
-              ? (
-                <OTPForm
-                  confirm={confirm}
-                  isLoading={isLoading}
-                  loginMutation={loginMutation}
-                  onResend={() => otpMutation.mutate(phone)}
-                  phoneNumber={phone}
-                />
-              )
-              : (
-                <PhoneForm
-                  isLoading={isLoading}
-                  onSubmit={handleFormSubmit}
-                />
-              )}
-            {authErrorMessage ? (
-              <Text style={[Fonts.p2, Fonts.error300]}>
-                {authErrorMessage}
-              </Text>
-            ) : null}
+            <View style={[Spaces.gap[16], Alignments.fullWidth]}>
+              <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('register.title')}</Text>
+              <Text style={[Fonts.p1, Fonts.neutral00]}>{t('register.subtitle')}</Text>
+            </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          {canShowCodeButton
+            ? (
+              <OTPForm
+                confirm={confirm}
+                isLoading={isLoading}
+                loginMutation={loginMutation}
+                onResend={() => otpMutation.mutate(phone)}
+                phoneNumber={phone}
+              />
+            )
+            : (
+              <PhoneForm
+                isLoading={isLoading}
+                onSubmit={handleFormSubmit}
+              />
+            )}
+          {authErrorMessage ? (
+            <Text style={[Fonts.p2, Fonts.error300]}>
+              {authErrorMessage}
+            </Text>
+          ) : null}
+        </View>
+      </ScrollView>
     </FormScreenContainer>
   );
 }

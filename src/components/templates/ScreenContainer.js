@@ -106,12 +106,27 @@ function ScreenContainer({
 
   // C06 — quand le clavier s'ouvre, le champ actif doit rester visible : les
   // conteneurs de formulaire (FormScreenContainer) activent `keyboardAvoiding`
-  // pour remonter le contenu au-dessus du clavier. `keyboardVerticalOffset`
-  // compense la hauteur de l'en-tete natif deja mesuree plus haut.
+  // pour remonter le contenu au-dessus du clavier.
+  //
+  // D23 (defaut ① de la recette du 07/08) — CET EVITEMENT EST LE SEUL DE
+  // L'ECRAN, et ses deux valeurs se CALCULENT, elles ne se reglent pas :
+  // 1. `behavior` valait `undefined` sur Android : React Native rend alors un
+  //    simple <View> qui ne fait STRICTEMENT rien, et le `windowSoftInputMode=
+  //    "adjustResize"` du manifeste n'agit plus depuis qu'Android 15 impose le
+  //    bord-a-bord (targetSdk 35). Le clavier recouvrait donc le bouton bas.
+  //    Les 19 autres KeyboardAvoidingView du depot passent 'height' : on
+  //    s'aligne sur le motif maison plutot que d'en inventer un.
+  // 2. `keyboardVerticalOffset` compense un decalage GEOMETRIQUE : React Native
+  //    compare la hauteur de cette vue, mesuree PAR RAPPORT A SON PARENT, a la
+  //    position ECRAN du clavier. Le parent applique deja `paddingTop`
+  //    ci-dessus (l'en-tete est transparent, cf. `commonOptions`) — c'est
+  //    exactement ce decalage-la qu'il faut rendre. Toute valeur ecrite en dur
+  //    (110, 100, 30...) est ce meme calcul, fige sur UN modele de telephone.
+  const keyboardTopOffset = containerSpaces.paddingTop || 0;
   const body = keyboardAvoiding ? (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeightNative : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={keyboardTopOffset}
       style={Alignments.fill}
     >
       <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
