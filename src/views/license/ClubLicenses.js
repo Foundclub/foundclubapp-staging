@@ -37,14 +37,60 @@ import {
   useLicenseMutation,
   useLicensePaymentReviews,
 } from '@/services/license/licenseQueries';
+import { connectLicenseHelloAsso } from '@/services/license/licenseService';
 
 import {
+  createHelloAssoDraft,
+  describeHelloAssoReadiness,
+  getHelloAssoSnapshot,
+  isHelloAssoReadyForCampaign,
   LicenseEmptyState,
   licenseRadius,
   licenseSpacing,
+  LicenseStatusChip,
   paymentModeLabels,
 } from './licenseDesignSystem';
 import MyLicense from './MyLicense';
+
+/**
+ * Champ texte de la feuille HelloAsso — meme grammaire que les champs du tunnel
+ * (bord 1 px, 52 pt), sans dependre du tunnel : le hub ne l'importe pas.
+ * @param {object} root0
+ * @param {string} root0.label
+ * @param {(value: string) => void} root0.onChangeText
+ * @param {string} root0.placeholder
+ * @param {string} root0.value
+ * @returns {import('react').ReactElement}
+ */
+function HelloAssoField({
+  label, onChangeText, placeholder, value,
+}) {
+  const {
+    Colors, Fonts, Spaces,
+  } = useTheme();
+
+  return (
+    <View style={Spaces.gap[8]}>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>{label}</Text>
+      <TextInput
+        autoCapitalize="none"
+        autoCorrect={false}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={Colors.neutral300}
+        style={[Fonts.p2, Fonts.neutral00, {
+          borderColor: withAlpha(Colors.primary500, 0.2),
+          borderRadius: licenseRadius.card,
+          borderWidth: 1,
+          minHeight: 52,
+          paddingHorizontal: licenseSpacing.cardPadding,
+          paddingVertical: 12,
+        }]}
+        value={value}
+      />
+    </View>
+  );
+}
 
 const money = (value = 0, currency = 'EUR') => new Intl.NumberFormat('fr-FR', { currency, style: 'currency' }).format((value || 0) / 100);
 const statusLabel = {
@@ -643,21 +689,12 @@ function AssignmentSignalCard({
  * @param {string} props.label
  * @param {string} props.value
  * @param {string} props.valueColor
+ * @param props.isSelected
+ * @param props.item
+ * @param props.onOpenActions
+ * @param props.onPress
  * @returns {import('react').ReactElement}
  */
-function CampaignCardRow({ label, value, valueColor }) {
-  const { Fonts } = useTheme();
-  return (
-    <View style={{
-      alignItems: 'baseline', flexDirection: 'row', gap: licenseSpacing.actionGap, justifyContent: 'space-between',
-    }}
-    >
-      <Text style={[Fonts.p3, Fonts.neutral200]}>{label}</Text>
-      <Text style={[Fonts.p3Bold, { color: valueColor, flexShrink: 1, textAlign: 'right' }]}>{value}</Text>
-    </View>
-  );
-}
-
 function CampaignCard({
   isSelected = false,
   item,
@@ -788,6 +825,26 @@ function CampaignCard({
           <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>…</Text>
         </Pressable>
       </View>
+    </View>
+  );
+}
+
+/**
+ *
+ * @param root0
+ * @param root0.label
+ * @param root0.value
+ * @param root0.valueColor
+ */
+function CampaignCardRow({ label, value, valueColor }) {
+  const { Fonts } = useTheme();
+  return (
+    <View style={{
+      alignItems: 'baseline', flexDirection: 'row', gap: licenseSpacing.actionGap, justifyContent: 'space-between',
+    }}
+    >
+      <Text style={[Fonts.p3, Fonts.neutral200]}>{label}</Text>
+      <Text style={[Fonts.p3Bold, { color: valueColor, flexShrink: 1, textAlign: 'right' }]}>{value}</Text>
     </View>
   );
 }
@@ -929,6 +986,9 @@ function ClubLicenses({ navigation, route }) {
   // Campagne dont la feuille « … » est ouverte, ou `null`. C'est elle qui
   // remplace les boutons secondaires tronques de l'ancienne carte.
   const [campaignActionsFor, setCampaignActionsFor] = useState(null);
+  const [isHelloAssoSheetOpen, setIsHelloAssoSheetOpen] = useState(false);
+  const [helloAssoConfig, setHelloAssoConfig] = useState(() => createHelloAssoDraft(null));
+  const [helloAssoSnapshot, setHelloAssoSnapshot] = useState(null);
   const [memberFilters, setMemberFilters] = useState({ ...emptyMemberFilters });
   const [membersSectionOffset, setMembersSectionOffset] = useState(null);
   const [shouldAutoScrollMembers, setShouldAutoScrollMembers] = useState(routeAutoScrollToMembers);
@@ -974,6 +1034,48 @@ function ClubLicenses({ navigation, route }) {
   const duplicateMutation = useLicenseMutation(({ id, payload }) => duplicateLicenseCampaign(id, payload), campaignId);
   const transitionMutation = useLicenseMutation(({ action, id }) => transitionLicenseCampaign(id, action), campaignId);
   const deleteMutation = useLicenseMutation((id) => deleteDraftLicenseCampaign(id), campaignId);
+
+  // ── HelloAsso au niveau CLUB (D26, decision 4) ────────────────────────────
+  // ⚠️ L'app n'a pas d'appel qui lise la connexion du club seule : le seul
+  // cliche disponible est celui que le serveur recopie sur la campagne
+  // (`paymentProviderSnapshot.helloasso`). On le lit donc depuis la campagne
+  // courante — c'est la meme connexion, vue par la fenetre qui existe.
+  const clubHelloAssoSnapshot = helloAssoSnapshot || getHelloAssoSnapshot(campaign);
+  const helloAssoMutation = useLicenseMutation(() => connectLicenseHelloAsso({
+    clientId: helloAssoConfig.clientId,
+    clientSecret: helloAssoConfig.clientSecret,
+    clubId,
+    environment: helloAssoConfig.environment,
+    organizationSlug: helloAssoConfig.organizationSlug,
+  }), campaignId);
+  const handleHelloAssoFieldChange = useCallback((key, value) => {
+    setHelloAssoConfig((currentConfig) => ({ ...currentConfig, [key]: value }));
+  }, []);
+  const verifyClubHelloAssoConnection = useCallback(() => {
+    helloAssoMutation.mutate(undefined, {
+      onError: (error) => {
+        Alert.alert(
+          'Vérification HelloAsso impossible',
+          error?.message || 'La vérification HelloAsso a échoué.',
+        );
+      },
+      onSuccess: (result) => {
+        setHelloAssoSnapshot(result?.snapshot || null);
+        // On ne garde JAMAIS le secret en memoire apres l'envoi.
+        setHelloAssoConfig((currentConfig) => ({
+          ...currentConfig,
+          clientId: '',
+          clientSecret: '',
+          environment: result?.snapshot?.environment || currentConfig.environment,
+          organizationSlug: result?.snapshot?.organizationSlug || currentConfig.organizationSlug,
+        }));
+        Alert.alert(
+          isHelloAssoReadyForCampaign(result?.snapshot) ? 'HelloAsso prêt' : 'HelloAsso à vérifier',
+          describeHelloAssoReadiness(result?.snapshot),
+        );
+      },
+    });
+  }, [helloAssoMutation]);
 
   const overviewTotals = useMemo(() => campaigns.reduce((accumulator, item) => {
     const itemTotals = item?.totals || {};
@@ -2102,6 +2204,36 @@ function ClubLicenses({ navigation, route }) {
               <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>+ Nouvelle campagne</Text>
             </Pressable>
           )}
+          {/*
+            D26 : la connexion HelloAsso est un reglage de CLUB — la charge
+            envoyee au serveur porte un `clubId`, jamais un `campaignId`. Elle
+            sort donc du tunnel de campagne, ou elle etait redemandee a chaque
+            creation, et vient ici : une fois pour toutes.
+          */}
+          <Pressable
+            accessibilityHint="Connecte le compte HelloAsso du club, une fois pour toutes."
+            accessibilityLabel="Réglages du club — HelloAsso"
+            accessibilityRole="button"
+            onPress={() => setIsHelloAssoSheetOpen(true)}
+            style={{
+              alignItems: 'center',
+              borderColor: withAlpha(Colors.primary500, 0.2),
+              borderRadius: licenseRadius.card,
+              borderWidth: 1,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              minHeight: 56,
+              paddingHorizontal: licenseSpacing.cardPadding,
+              paddingVertical: 12,
+            }}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, paddingRight: 12 }]}>
+              Réglages du club — HelloAsso
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {isHelloAssoReadyForCampaign(clubHelloAssoSnapshot) ? 'Connecté ✓' : 'À connecter'}
+            </Text>
+          </Pressable>
           {campaign ? (
             <Button
               isLoading={transitionMutation.isPending}
@@ -2176,6 +2308,64 @@ function ClubLicenses({ navigation, route }) {
    * campagne que le dirigeant devait deviner.
    * @returns {import('react').ReactElement | null}
    */
+  const renderHelloAssoSettingsSheet = () => {
+    if (!isHelloAssoSheetOpen) return null;
+
+    const fermer = () => setIsHelloAssoSheetOpen(false);
+
+    return (
+      <BottomModal close={fermer} isVisible snapPoints={['86%']}>
+        <View style={Spaces.gap[16]}>
+          <View style={Spaces.gap[4]}>
+            <Text style={[Fonts.h4Black, Fonts.neutral00]}>Réglages du club — HelloAsso</Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              À renseigner une seule fois pour le club. Toutes les campagnes s y
+              connectent ensuite d un simple interrupteur.
+            </Text>
+          </View>
+          <LicenseStatusChip status={clubHelloAssoSnapshot?.readiness || 'not_configured'} />
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {describeHelloAssoReadiness(clubHelloAssoSnapshot)}
+          </Text>
+          <HelloAssoField
+            label="Slug organisation"
+            onChangeText={(value) => handleHelloAssoFieldChange('organizationSlug', value)}
+            placeholder="mon-club"
+            value={helloAssoConfig.organizationSlug}
+          />
+          <HelloAssoField
+            label="Environnement"
+            onChangeText={(value) => handleHelloAssoFieldChange('environment', value)}
+            placeholder="production ou sandbox"
+            value={helloAssoConfig.environment}
+          />
+          <HelloAssoField
+            label="Client id"
+            onChangeText={(value) => handleHelloAssoFieldChange('clientId', value)}
+            placeholder={clubHelloAssoSnapshot?.clientIdConfigured
+              ? 'Laisser vide pour conserver l identifiant actuel'
+              : 'Renseigne le client id'}
+            value={helloAssoConfig.clientId}
+          />
+          <HelloAssoField
+            label="Client secret"
+            onChangeText={(value) => handleHelloAssoFieldChange('clientSecret', value)}
+            placeholder={clubHelloAssoSnapshot?.clientSecretConfigured
+              ? 'Laisser vide pour conserver le secret actuel'
+              : 'Renseigne le client secret'}
+            value={helloAssoConfig.clientSecret}
+          />
+          <Button
+            isLoading={helloAssoMutation.isPending}
+            onPress={verifyClubHelloAssoConnection}
+            title="Vérifier la connexion"
+          />
+          <Button onPress={fermer} title="Fermer" variant="Secondary" />
+        </View>
+      </BottomModal>
+    );
+  };
+
   const renderCampaignActionsSheet = () => {
     if (!campaignActionsFor) return null;
 
@@ -2337,6 +2527,7 @@ function ClubLicenses({ navigation, route }) {
         />
         {renderMemberFilterModal()}
         {renderCampaignActionsSheet()}
+        {renderHelloAssoSettingsSheet()}
       </ScreenContainer>
     );
   }
@@ -2382,6 +2573,7 @@ function ClubLicenses({ navigation, route }) {
         ) : null}
       </View>
       {renderCampaignActionsSheet()}
+      {renderHelloAssoSettingsSheet()}
     </ScreenContainer>
   );
 }
