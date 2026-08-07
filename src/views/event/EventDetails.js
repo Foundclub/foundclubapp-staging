@@ -47,6 +47,7 @@ import ReportEventModal from '@/components/organisms/reportEventModal/ReportEven
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { hasRouteInNavigationTree } from '@/navigation/navigationAvailability';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -2040,6 +2041,17 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId });
   }, [eventId, navigation]);
 
+  // D21 ③ : l'affiche de l'evenement EXISTE (`EventPublishedShowcase`), mais
+  // elle n'etait atteignable QUE juste apres la creation — le recap du tunnel
+  // l'empile derriere le detail par un `navigation.reset`, et une fois fermee
+  // plus rien n'y ramenait. On rouvre EXACTEMENT le meme chemin : meme route,
+  // meme parametre `eventId`. Seule la celebration de creation est omise —
+  // rejouer des confettis sur une simple consultation serait un mensonge.
+  const handleOpenEventPoster = useCallback(() => {
+    if (!eventId) return;
+    navigation.navigate(RouteNames.EventPublishedShowcase, { eventId });
+  }, [eventId, navigation]);
+
   // @ts-ignore: FIXME: Baseline TS regression
   const handleRespondTournamentPresence = useCallback((status) => {
     if (!currentUserTournamentTeam?.documentId) return;
@@ -3582,6 +3594,22 @@ function EventDetails({ navigation, route }) {
         key: 'tournamentSettings',
         label: t('eventDetails.managePanel.tournamentSettings', 'Réglages tournoi'),
         onPress: handleOpenTournamentSettings,
+      });
+    }
+
+    // D21 ③ : le point d'entree vers l'affiche. Meme motif que ClubDetails et
+    // RecruitmentAdDetails, qui ouvrent deja leur propre affiche depuis leur
+    // ecran de detail, reserve au proprietaire.
+    // ⚠️ Il ne s'affiche QUE la ou la route est reellement enregistree : depuis
+    // la pile PUBLIQUE, `EventPublishedShowcase` n'existe pas, et le bouton y
+    // serait muet — un bouton qui ne fait rien est pire que pas de bouton.
+    if (canEdit && eventId
+      && hasRouteInNavigationTree(navigation, RouteNames.EventPublishedShowcase)) {
+      chips.push({
+        icon: 'camera',
+        key: 'poster',
+        label: t('eventDetails.managePanel.poster', "Voir l'affiche"),
+        onPress: handleOpenEventPoster,
       });
     }
 

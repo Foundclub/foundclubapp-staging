@@ -395,7 +395,14 @@ const press = (/** @type {any} */ root, /** @type {string} */ label) => {
   });
 };
 
+// Idempotent A DESSEIN : le toggle du menu bascule dans les deux sens, donc un
+// helper naif REFERME le menu au deuxieme appel et rend une liste vide qui se
+// lit comme une regression. On ne presse que si les chips ne sont pas deja la.
 const openManagePanel = (/** @type {any} */ root) => {
+  const alreadyOpen = root
+    .findAll((/** @type {any} */ node) => node.props?.testID === 'event-manage-chip')
+    .length > 0;
+  if (alreadyOpen) return;
   if (pressableWithText(root, "Gérer l'événement")) press(root, "Gérer l'événement");
 };
 
@@ -524,12 +531,14 @@ afterEach(() => {
 });
 
 describe('EventDetails — bas de page : ce qui est atteignable (invariant D21)', () => {
-  test('organisateur, campagne suggeree : les 5 actions restent atteignables', () => {
+  test('organisateur, campagne suggeree : les 5 actions livrees restent atteignables', () => {
     const root = asOrganiser({ params: { eventCampaignCreationSuggested: true } });
+    const inventory = bottomActionInventory(root);
 
-    expect(bottomActionInventory(root)).toEqual([
-      'campaign', 'cancel', 'edit', 'featured', 'lineup',
-    ]);
+    // Les 5 gestes qui existaient avant D21 : aucun n'a disparu.
+    ['campaign', 'cancel', 'edit', 'featured', 'lineup'].forEach((key) => {
+      expect(inventory).toContain(key);
+    });
   });
 
   test('dirigeant sans droit sur l evenement : la cotisation reste son seul geste', () => {
@@ -592,8 +601,11 @@ describe('EventDetails — bas de page : etat LIVRE avant D21 (caracterisation)'
     expect(scrollContentStyle(root).paddingBottom).toBe(40);
   });
 
-  test('TEMOIN NEGATIF : aucun chemin vers l affiche depuis le detail', () => {
-    const root = asOrganiser();
+  test('TEMOIN NEGATIF : hors de la pile evenement, aucun chemin vers l affiche', () => {
+    // C'etait l'etat de TOUT l'ecran avant D21 : l'affiche n'etait atteignable
+    // que juste apres la creation. C'est aujourd'hui l'etat de la seule pile
+    // PUBLIQUE, ou la route `EventPublishedShowcase` n'est pas enregistree.
+    const root = asOrganiser({ routeNames: ['EventDetails', 'EventEdit'] });
     openManagePanel(root);
 
     expect(pressableWithText(root, 'affiche')).toBeUndefined();
@@ -742,7 +754,9 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
 
     const widths = byTestId(root, 'event-manage-chip')
       .map((/** @type {any} */ node) => flatStyle(node).width);
-    expect(widths).toEqual(['48%', '48%', '48%', '48%']);
+    // Une chip orpheline en fin de grille prend toute la largeur : regle
+    // inchangee, seul le nombre de chips a bouge (D21 ③ ajoute « Voir l'affiche »).
+    expect(widths).toEqual(['48%', '48%', '48%', '48%', '100%']);
 
     press(root, 'Modifier');
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -752,13 +766,17 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
     });
   });
 
-  test('un seul menu sur un tournoi : les 5 chips vivent dans la couche flottante', () => {
+  test('un seul menu sur un tournoi : les chips vivent dans la couche flottante', () => {
     const root = asOrganiser({ event: buildEvent({ type: { name: 'Tournoi' } }) });
     press(root, "Gérer l'événement");
 
+    // Avant D21, un tournoi rendait DEUX panneaux (celui du bloc tournoi et
+    // celui du pied d'ecran). Il n'y en a plus qu'un.
     expect(byTestId(root, PANEL_ID)).toHaveLength(1);
-    expect(byTestId(root, 'event-manage-chip')).toHaveLength(5);
     expect(hasText(root, 'Gérer le tournoi')).toBe(true);
+    ['Modifier', 'À la une', 'Compo', 'Réglages tournoi', 'Annuler'].forEach((label) => {
+      expect(pressableWithText(root, label)).toBeTruthy();
+    });
   });
 
   // ⚠️ INVERSION VOLONTAIRE du « TROU CONSTATE » sur la demande a la une : la
@@ -777,7 +795,9 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
     });
 
     expect(hasText(root, 'Valider')).toBe(true);
-    expect(bottomActionInventory(root)).toEqual(['cancel', 'edit', 'featured', 'lineup']);
+    expect(bottomActionInventory(root)).toEqual([
+      'cancel', 'edit', 'featured', 'lineup', 'poster',
+    ]);
   });
 
   test('TEMOIN NEGATIF : aucune action, aucune couche flottante', () => {
@@ -793,5 +813,50 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
 
     expect(byTestId(root, 'event-manage-chip')).toHaveLength(0);
     expect(hasText(root, "Gérer l'événement")).toBe(true);
+  });
+});
+
+describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
+  // ⚠️ INVERSION VOLONTAIRE du « TEMOIN NEGATIF : aucun chemin vers l affiche » :
+  // c'est la demande d'Adel. L'affiche existait deja, elle n'etait atteignable
+  // que juste apres la creation (`navigation.reset` du recap du tunnel).
+  test('l affiche redevient atteignable, par la route EXISTANTE et son eventId', () => {
+    const root = asOrganiser();
+    press(root, "Gérer l'événement");
+    press(root, "Voir l'affiche");
+
+    expect(mockNavigate).toHaveBeenCalledWith('EventPublishedShowcase', { eventId: 'event-1' });
+  });
+
+  test('aucune celebration rejouee : on consulte, on ne re-publie pas', () => {
+    const root = asOrganiser();
+    press(root, "Gérer l'événement");
+    press(root, "Voir l'affiche");
+
+    const [, params] = mockNavigate.mock.calls
+      .find((/** @type {any} */ call) => call[0] === 'EventPublishedShowcase');
+    expect(params).not.toHaveProperty('creationCelebration');
+  });
+
+  test('TEMOIN NEGATIF : un participant n a pas d entree vers l affiche', () => {
+    const root = mountScreen();
+
+    expect(bottomActionInventory(root)).not.toContain('poster');
+  });
+
+  test('TEMOIN NEGATIF : un dirigeant sans droit sur l evenement non plus', () => {
+    const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
+
+    expect(bottomActionInventory(root)).toEqual(['campaign']);
+  });
+
+  test('TEMOIN NEGATIF : la ou la route n existe pas, aucune chip muette', () => {
+    // Le meme organisateur, mais dans un arbre de navigation ou
+    // `EventPublishedShowcase` n'est pas enregistree (pile publique).
+    const root = asOrganiser({ routeNames: ['EventDetails', 'EventEdit'] });
+    const inventory = bottomActionInventory(root);
+
+    expect(inventory).not.toContain('poster');
+    expect(inventory).toContain('edit');
   });
 });
