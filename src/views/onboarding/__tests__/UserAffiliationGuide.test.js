@@ -612,3 +612,87 @@ describe('UserAffiliationGuide — refonte 6b', () => {
     ).length).toBeGreaterThan(0);
   });
 });
+
+// D23 — défaut ⑦ de la recette du 2026-08-07, mots d'Adel : « c'est bizarre de
+// proposer l'étape trouve ton équipe si on a skip l'étape trouve ton club ».
+//
+// Ce n'est pas qu'une question de cohérence, et c'est la MESURE qui le dit :
+// à ce stade du tunnel le club n'est persisté nulle part, il VOYAGE EN
+// PARAMÈTRE (`navigation.navigate(UserTeamAffiliation, { club })`). Sans club,
+// l'étape équipe interroge donc `useGetTeams({ clubId: undefined })` — et
+// `teamService.buildClubFilter` ne pose alors AUCUN filtre : le serveur renvoie
+// TOUTES les équipes. On demanderait au joueur de choisir son équipe parmi
+// toutes celles de France. L'étape n'est pas « bizarre », elle est vide de sens.
+describe('D23 ⑦ — sauter le club saute l\'équipe', () => {
+  const machineAEtapes = () => {
+    mockGetNextOnboardingRoute.mockImplementation((/** @type {string} */ route) => {
+      if (route === RouteNames.UserAffiliationGuide) return RouteNames.UserTeamAffiliation;
+      if (route === RouteNames.UserTeamAffiliation) return RouteNames.Welcome;
+      return undefined;
+    });
+  };
+
+  // Même harnais que `renderScreen`, mais monté SOUS la route « équipe » : cet
+  // écran sert les deux étapes, et c'est la route montée qui tranche la phase.
+  const renderTeamStep = () => {
+    /** @type {Record<string, any>} */
+    const headerOptions = {};
+    const navigation = {
+      navigate: jest.fn(),
+      reset: jest.fn(),
+      setOptions: (/** @type {Record<string, any>} */ options) => Object.assign(
+        headerOptions,
+        options,
+      ),
+    };
+
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <UserAffiliationGuide
+          navigation={/** @type {any} */ (navigation)}
+          route={/** @type {any} */ ({ name: RouteNames.UserTeamAffiliation })}
+        />,
+      );
+    });
+
+    const headerNodes = () => ['headerTitle', 'headerRight', 'headerLeft']
+      .map((slot) => (typeof headerOptions[slot] === 'function' ? headerOptions[slot]() : null))
+      .filter(Boolean)
+      .map((element) => {
+        let headerTree;
+        act(() => { headerTree = renderer.create(element); });
+        return headerTree;
+      });
+
+    return { headerNodes, navigation, tree };
+  };
+
+  it('« Passer » sur le club enjambe l\'étape équipe et va droit au sas', () => {
+    machineAEtapes();
+    const rendered = renderScreen();
+
+    pressHandle(rendered, AFFILIATION_TEST_IDS.skip);
+
+    expect(rendered.navigation.navigate).not.toHaveBeenCalledWith(RouteNames.UserTeamAffiliation);
+    expect(rendered.navigation.navigate).toHaveBeenCalledWith(RouteNames.Welcome);
+  });
+
+  it('depuis l\'étape équipe, « Passer » suit la machine à étapes sans rien enjamber', () => {
+    machineAEtapes();
+    const rendered = renderTeamStep();
+
+    pressHandle(rendered, AFFILIATION_TEST_IDS.skip);
+
+    expect(mockGetNextOnboardingRoute).toHaveBeenCalledWith(RouteNames.UserTeamAffiliation);
+    expect(rendered.navigation.navigate).toHaveBeenCalledWith(RouteNames.Welcome);
+  });
+
+  it('la mesure qui justifie le saut : sans club, la liste d\'équipes n\'est filtrée par RIEN', () => {
+    machineAEtapes();
+    renderTeamStep();
+
+    const derniersParametres = mockUseGetTeams.mock.calls.at(-1)[0];
+    expect(derniersParametres.clubId).toBeUndefined();
+  });
+});

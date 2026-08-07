@@ -383,8 +383,24 @@ function UserAffiliationGuideContent({ navigation, route }) {
     // l'etape equipe, passer par `UserAffiliationGuide` renverrait le joueur
     // sur le club qu'il vient de choisir.
     const nextRoute = getNextOnboardingRoute(currentRouteName);
-    if (nextRoute) {
-      navigation.navigate(nextRoute);
+
+    // D23 (defaut ⑦ de la recette du 07/08 : « c'est bizarre de proposer
+    // l'etape trouve ton equipe si on a skip l'etape trouve ton club »).
+    // Ce n'est pas qu'une question de coherence : le club VOYAGE EN PARAMETRE
+    // (rien ne le persiste a ce stade), donc sans club l'etape equipe
+    // interroge `useGetTeams({ clubId: undefined })`. Mesure faite dans
+    // `teamService.buildClubFilter` : un `clubId` absent ne pose AUCUN filtre
+    // - le serveur renvoie alors TOUTES les equipes, page par page. On
+    // demanderait au joueur de choisir son equipe parmi toutes celles de
+    // France. Sauter le club saute donc l'equipe avec lui.
+    const skipsTeamStep = nextRoute === RouteNames.UserTeamAffiliation
+      && !selectedClub?.documentId;
+    const resolvedRoute = skipsTeamStep
+      ? getNextOnboardingRoute(RouteNames.UserTeamAffiliation)
+      : nextRoute;
+
+    if (resolvedRoute) {
+      navigation.navigate(resolvedRoute);
       return;
     }
 
@@ -398,6 +414,7 @@ function UserAffiliationGuideContent({ navigation, route }) {
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
     navigation,
+    selectedClub?.documentId,
     userData?.documentId,
   ]);
 
