@@ -28,12 +28,12 @@ import {
 } from './eventWizardDetectionUtils';
 
 /**
- * La ligne de description de chaque type, indexee sur le nom NORMALISE que rend
- * le serveur (`admin/src/data/event-types.json`).
+ * La ligne de description de chaque type, indexee sur un MOTIF contenu dans le
+ * nom normalise que rend le serveur (`admin/src/data/event-types.json`).
  *
- * ⛔ Ce n'est PAS une table de renommage : la cle est le nom enregistre, le
- * libelle affiche reste celui du serveur. Un type inconnu de cette table
- * s'affiche sans description plutot que de disparaitre.
+ * ⛔ Ce n'est PAS une table de renommage : le libelle affiche reste celui du
+ * serveur. Un type qui ne contient aucun de ces motifs s'affiche sans
+ * description plutot que de disparaitre.
  * @type {Record<string, string>}
  */
 const DESCRIPTIONS_PAR_TYPE = {
@@ -44,6 +44,28 @@ const DESCRIPTIONS_PAR_TYPE = {
   reservation: "Bloque un créneau d'installation",
   stage: 'Plusieurs séances sur plusieurs jours',
   tournoi: 'Plusieurs équipes sur une ou plusieurs journées',
+};
+
+/**
+ * La description d'un type, lue par CONTENANCE et non par egalite stricte.
+ *
+ * 🧨 C'est ici qu'etait le defaut trouve a la recette du 2026-08-07 : le serveur
+ * sert « Détection / Séance d'essai », que `normalizeTypeLabel` rend
+ * « detection / seance d'essai ». La lecture par cle exacte
+ * (`DESCRIPTIONS_PAR_TYPE[normalise]`) rendait donc `undefined`, et le repli
+ * `|| ''` affichait une rangee NUE — sans erreur, sans trace. Les six autres
+ * types, dont le nom normalise valait exactement leur cle, s'affichaient bien :
+ * c'est ce qui rendait le trou invisible.
+ *
+ * La contenance n'est pas un choix neuf : c'est deja ainsi que tout le tunnel
+ * reconnait un type (`isDetectionEventType` et ses trois soeurs, dans
+ * `eventWizardDetectionUtils.js`, et le grisage de « Reservation » plus bas).
+ * @param {string} normalized Nom du type, deja passe par `normalizeTypeLabel`.
+ * @returns {string} La description, ou une chaine vide si aucun motif ne colle.
+ */
+const getTypeDescription = (normalized) => {
+  const motif = Object.keys(DESCRIPTIONS_PAR_TYPE).find((cle) => normalized.includes(cle));
+  return motif ? DESCRIPTIONS_PAR_TYPE[motif] : '';
 };
 
 /** La rangee « Match amical » : une PORTE vers le tunnel League, pas un type. */
@@ -149,7 +171,7 @@ function EventWizardType({ navigation, route }) {
     (eventTypes || []).forEach((type) => {
       const normalized = normalizeTypeLabel(type?.name);
       rows.push({
-        description: DESCRIPTIONS_PAR_TYPE[normalized] || '',
+        description: getTypeDescription(normalized),
         // Le pack grise « Reservation » : la capacite existe cote serveur, mais
         // elle n'est pas ouverte au public. Le code de reservation de l'etape 3
         // n'est pas supprime, seule cette porte est fermee.

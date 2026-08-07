@@ -202,6 +202,18 @@ const rangeePortant = (pressables, libelle) => pressables.find(
   (noeud) => textesSous(noeud).includes(libelle),
 );
 
+/**
+ * TOUTES les rangees de choix, y compris celles qui sont grisees — un pressable
+ * desactive n'a plus d'`onPress`, il echapperait donc a `rangeePortant`.
+ * On les reconnait a leur marqueur de selection, que seules elles portent.
+ * @returns {any[]} Les rangees, dans l'ordre d'affichage.
+ */
+const rangeesDeType = () => arbre.root.findAll(
+  (/** @type {any} */ noeud) => noeud.props?.accessibilityState
+    && typeof noeud.props.accessibilityState.selected === 'boolean',
+  { deep: true },
+);
+
 afterEach(() => {
   if (arbre) act(() => arbre.unmount());
   arbre = null;
@@ -257,6 +269,40 @@ describe('D09 — l ecran « Type d evenement », etat du 2026-08-06', () => {
     expect(textesSous(rangeePortant(pressables, 'Entraînement'))).toEqual([
       'Entraînement',
       'Séance classique pour ton équipe',
+    ]);
+  });
+
+  // 🧨 D19 — LE FILET QUI MANQUAIT, et qui aurait attrape le defaut du 07/08.
+  // Les deux attentes ci-dessus ne citaient que « Tournoi » et « Entrainement »,
+  // dont le nom normalise vaut EXACTEMENT leur cle. « Détection / Séance
+  // d'essai » se normalise en « detection / seance d'essai » : la lecture par
+  // cle exacte rendait `undefined`, le repli `|| ''` affichait une rangee nue,
+  // et rien ne rougissait. Ce test-ci n'epingle aucun type en particulier — il
+  // interdit qu'UN SEUL arrive nu, aujourd'hui comme au prochain type ajoute.
+  test('AUCUN type propose n arrive nu : chaque rangee porte sa description', () => {
+    afficherLEcran();
+
+    // `findAll` rend la rangee ET les couches internes du pressable : le meme
+    // titre revient donc plusieurs fois. On dedoublonne, sinon la sortie d'echec
+    // repete sept fois le meme coupable.
+    const rangeesNues = [...new Set(
+      rangeesDeType()
+        .map((rangee) => textesSous(rangee).filter((texte) => texte !== 'Bientôt disponible'))
+        .filter((lus) => lus.length < 2)
+        .map((lus) => lus[0]),
+    )];
+
+    expect(rangeesNues).toEqual([]);
+  });
+
+  // Le meme defaut, epingle par son nom : si la normalisation du serveur change,
+  // c'est ce test-ci qui dira LEQUEL est retombe.
+  test('« Détection / Séance d essai » porte la sienne, malgre son nom compose', () => {
+    const { pressables } = afficherLEcran();
+
+    expect(textesSous(rangeePortant(pressables, "Détection / Séance d'essai"))).toEqual([
+      "Détection / Séance d'essai",
+      'Ouvre ton équipe à de nouveaux joueurs',
     ]);
   });
 
