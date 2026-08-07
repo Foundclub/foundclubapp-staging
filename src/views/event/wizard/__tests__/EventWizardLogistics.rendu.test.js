@@ -147,6 +147,23 @@ const textesSous = (noeud) => {
   return sortie;
 };
 
+/**
+ * Les textes d'un MORCEAU de la feuille (entete, contenu, pied), rendu SEUL.
+ * C'est ce qui permet d'affirmer « ce bouton est dans le pied FIXE », et pas
+ * seulement « ce bouton est quelque part dans la feuille » — la distinction
+ * fait tout : seul le pied fixe reste a l'ecran quand le contenu deborde.
+ * @param {any} element Un morceau de la feuille.
+ * @returns {string[]} Les textes portes par ce morceau.
+ */
+const textesDuMorceau = (element) => {
+  /** @type {any} */
+  let sousArbre;
+  act(() => { sousArbre = renderer.create(element); });
+  const lus = textesSous(sousArbre.root);
+  act(() => sousArbre.unmount());
+  return lus;
+};
+
 /** Le dispatch du tunnel, capte pour semer le type d'evenement. */
 let semer = () => {};
 
@@ -285,6 +302,48 @@ describe('D09 — l ecran « Logistique », etat du 2026-08-06', () => {
     expect(textes).toContain('eventEdit.fields.recurrenceEndDate.label');
     expect(textes).toContain('Appliquer');
     expect(textes).toContain('Ne pas répéter');
+  });
+
+  // 🧨 D19 — LE FILET QUI MANQUAIT. A la recette du 07/08, cette feuille « ne
+  // defile pas jusqu'en bas » et « ses boutons sont inatteignables ». Les tests
+  // ci-dessus la trouvaient pourtant complete : ils lisent le CONTENU, jamais
+  // la place que ce contenu recevra a l'ecran.
+  //
+  // La cause est une soustraction. `BottomModal` a deux mises en page, et c'est
+  // `snapPoints` qui choisit. Sans lui, la seule zone defilante est plafonnee a
+  // 70 % de la hauteur d'ECRAN dans un conteneur SANS flex : entete et pied
+  // s'empilent PAR-DESSUS. Sur un iPhone 14 : 64 + 0,7 x 844 + 162 = 816,8 pt
+  // pour une feuille qui ne peut pas depasser 844 - (47 + 20) = 777 pt. Le pied
+  // — hors zone defilante — sort donc par le bas, et rien ne l'y ramene.
+  //
+  // ⚠️ Jest ne mesure aucun pixel. Ce test epingle la CONTRAINTE qui decide de
+  // la mise en page, pas le rendu. C'est exactement ce qui manquait : la
+  // contrainte etait absente, et aucun test ne le disait.
+  test('la feuille « Répéter » declare une hauteur BORNEE, et son contenu defile', () => {
+    afficherLEcran();
+
+    ouvrirLaFeuille();
+    const feuille = mockFeuilles[mockFeuilles.length - 1];
+
+    expect(Array.isArray(feuille.snapPoints)).toBe(true);
+    expect(feuille.snapPoints.length).toBeGreaterThan(0);
+    // `scrollable` vaut `true` par defaut : ce qu'on interdit, c'est de le
+    // couper — une feuille bornee dont le contenu ne defile pas serait pire.
+    expect(feuille.scrollable).not.toBe(false);
+  });
+
+  // Le second morceau de l'invariant : une hauteur bornee ne sert a rien si les
+  // boutons partent dans le contenu defilant. Ils doivent vivre dans le PIED,
+  // le seul endroit que `BottomModal` garde a l'ecran.
+  test('ses deux actions vivent dans le pied FIXE, jamais dans le contenu defilant', () => {
+    afficherLEcran();
+
+    ouvrirLaFeuille();
+    const feuille = mockFeuilles[mockFeuilles.length - 1];
+
+    expect(textesDuMorceau(feuille.footerComponent)).toEqual(['Appliquer', 'Ne pas répéter']);
+    expect(textesDuMorceau(feuille.children)).not.toContain('Appliquer');
+    expect(textesDuMorceau(feuille.children)).not.toContain('Ne pas répéter');
   });
 
   // Le cas limite qui vaut le brouillon : sortir sans « Appliquer » ne doit

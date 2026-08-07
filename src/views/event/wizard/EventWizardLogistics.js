@@ -35,6 +35,39 @@ import {
 const DATE_INPUT_FORMAT = 'dd/MM/yyyy';
 const TIME_INPUT_FORMAT = 'HH:mm';
 
+/**
+ * 🧨 LA HAUTEUR DE LA FEUILLE « REPETER », ET POURQUOI ELLE EST OBLIGATOIRE.
+ *
+ * Defaut trouve a la recette du 2026-08-07 : la feuille « ne defile pas jusqu'en
+ * bas » et « ses boutons sont inatteignables » ⇒ la recurrence est inutilisable
+ * sur un vrai telephone. Ce n'est pas une impression, c'est une soustraction.
+ *
+ * `BottomModal` a DEUX mises en page, et c'est `snapPoints` qui choisit.
+ *  - SANS `snapPoints` : la feuille se dimensionne sur son contenu, et sa seule
+ *    zone defilante est plafonnee a 70 % de la hauteur d'ECRAN
+ *    (`BottomModal.js:322`) dans un conteneur SANS flex. L'entete et le pied
+ *    s'empilent PAR-DESSUS ce plafond, ils ne s'y taillent pas une place.
+ *  - AVEC `snapPoints` : conteneur et zone defilante passent en `flex: 1`
+ *    (`BottomModal.js:298` et `:322`). La zone defilante prend exactement ce
+ *    que l'entete et le pied lui laissent. Le pied reste donc toujours a
+ *    l'ecran, quel que soit le contenu.
+ *
+ * Le calcul qui condamne la premiere mise en page, sur un iPhone 14
+ * (ecran 844 pt, encoche 47) : la feuille ne peut pas depasser
+ * 844 - (47 + 20) = 777 pt (`topInset`, `BottomModal.js:274`), or
+ * entete 64 + zone defilante 0,7 x 844 = 590,8 + pied 162 = 816,8 pt.
+ * Des que le contenu reclame plus de 777 - 64 - 162 = 551 pt, le pied — qui
+ * n'est PAS dans la zone defilante — passe sous le bord bas de la feuille, et
+ * AUCUN defilement ne peut l'y ramener. La feuille de recurrence (frequence,
+ * cadence, jours, deux dates) depasse ce seuil.
+ *
+ * ⛔ `BottomModal` est utilise par 70 fichiers, dont les feuilles payantes : on
+ * ne le modifie pas. On utilise la mise en page qu'il prevoit deja pour ce cas,
+ * comme le font deja une quarantaine de feuilles de ce depot.
+ * @type {string[]}
+ */
+const RECURRENCE_SHEET_SNAP_POINTS = ['90%'];
+
 const toDateInputText = (dateValue) => format(dateValue, DATE_INPUT_FORMAT);
 const toTimeInputText = (dateValue) => format(dateValue, TIME_INPUT_FORMAT);
 
@@ -1108,6 +1141,7 @@ function EventWizardLogistics({ navigation }) {
               </Text>
             )}
             isVisible={isRecurrenceSheetOpen}
+            snapPoints={RECURRENCE_SHEET_SNAP_POINTS}
           >
             <View style={[Spaces.gap[16]]}>
               <View style={[Spaces.gap[8]]}>
