@@ -514,6 +514,65 @@ export const getOnboardingViews = ({
 };
 
 /**
+ * L'ÉTAPE SUIVANTE — le cœur de `useAuth.getNextOnboardingRoute`.
+ *
+ * D33 : extrait tel quel du hook (même recherche, même ordre, mêmes sorties),
+ * pour la même raison que D23 avait extrait `resolveOnboardingExitRoute` : la
+ * décision vivait dans un `useCallback`, donc hors de portée d'un test. Le
+ * trajet complet du tunnel — club → équipe → sas — se mesure maintenant sans
+ * monter un seul écran.
+ * @param {object} params - Les entrées de la décision.
+ * @param {string} params.currentRoute - L'étape d'où l'on part.
+ * @param {{ canShow: boolean, index: number, route: string }[]} [params.views] - Le parcours.
+ * @returns {string | undefined} L'étape suivante affichable, ou `undefined` s'il n'y en a plus.
+ */
+export const resolveNextOnboardingRoute = ({ currentRoute, views }) => {
+  const currentIndex = views?.find((view) => view.route === currentRoute)?.index || 0;
+  return views?.find((view) => view.canShow && view.index > currentIndex)?.route;
+};
+
+/**
+ * Les étapes du tunnel qui envoient vers un écran EXTÉRIEUR au tunnel
+ * (fiche de club, fiche d'équipe, tunnel de création de club) et attendent
+ * qu'on leur rende la main. Sert de liste blanche à
+ * `resolveAffiliationOriginRoute` — voir sa documentation.
+ */
+const AFFILIATION_ORIGIN_ROUTES = [
+  RouteNames.UserAffiliationGuide,
+  RouteNames.UserTeamAffiliation,
+];
+
+/**
+ * DE QUELLE ÉTAPE VIENT-ON ? — la question que D33 a corrigée.
+ *
+ * Une affiliation s'envoie depuis un écran qui n'est PAS dans le tunnel (la
+ * fiche d'équipe, la fiche de club). Pour reprendre le tunnel au bon endroit,
+ * cet écran doit savoir de quelle étape il a été ouvert. Avant D33 il le
+ * SUPPOSAIT : `UserAffiliationGuide`, l'étape club, écrite en dur. C'était vrai
+ * avant D16, quand un seul écran portait les deux phases ; depuis que l'équipe
+ * est une étape comptée à part, la suite de l'étape club EST l'étape équipe —
+ * donc envoyer sa demande d'équipe reposait le joueur sur « Trouve ton équipe »
+ * (recette d'Adel du 2026-08-07, capture « étape 13/13 »).
+ *
+ * Le repli sur l'étape club n'est pas une précaution : c'est le comportement
+ * EXACT d'avant D33, que `ClubDetails` et `ClubWizardRecap` gardent sans rien
+ * passer — l'étape club est bien la leur.
+ *
+ * La liste blanche, elle, garde une frontière de confiance : ce paramètre
+ * arrive par la navigation. Une valeur inconnue donnerait `currentIndex = 0` à
+ * `resolveNextOnboardingRoute`, qui rendrait alors la PREMIÈRE étape du
+ * parcours — le tunnel entier recommencerait au lieu de se terminer.
+ * @param {{ onboardingOriginRoute?: string } | undefined} routeParams - Les paramètres de navigation.
+ * @returns {string} L'étape d'où reprendre le tunnel.
+ */
+export const resolveAffiliationOriginRoute = (routeParams) => {
+  const originRoute = routeParams?.onboardingOriginRoute;
+  return AFFILIATION_ORIGIN_ROUTES.includes(originRoute)
+    ? originRoute
+    : RouteNames.UserAffiliationGuide;
+};
+
+/**
  * LE SAS D'ARRIVÉE — quelle route après la dernière étape comptée ?
  *
  * D16 : `Welcome` n'est plus une étape numérotée des parcours joueur,

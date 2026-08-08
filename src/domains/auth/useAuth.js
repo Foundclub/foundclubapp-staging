@@ -53,6 +53,7 @@ import {
   getUserRoleKey,
   hasClubAccess as hasClubAccessForUser,
   profileFieldToDisplay,
+  resolveNextOnboardingRoute,
   resolveOnboardingExitRoute,
   USER_ROLES,
 } from './authUseCases';
@@ -541,12 +542,13 @@ const useAuth = () => {
   };
 
   const getNextOnboardingRoute = useCallback((/** @type {string} */currentRoute) => {
-    const currentIndex = onboardingViews?.views?.find(
-      (view) => view.route === currentRoute,
-    )?.index || 0;
-    const nextRoute = onboardingViews?.views?.find(
-      (view) => view.canShow && view.index > currentIndex,
-    )?.route;
+    // D33 - la recherche elle-meme vit desormais dans `resolveNextOnboardingRoute`
+    // (`authUseCases.js`), ou elle est TESTABLE : le trajet club -> equipe -> sas
+    // se mesure sans monter un ecran. Meme code, meme ordre, memes sorties.
+    const nextRoute = resolveNextOnboardingRoute({
+      currentRoute,
+      views: onboardingViews?.views,
+    });
     if (nextRoute) return nextRoute;
 
     // D16 - LE SAS D'ARRIVEE.

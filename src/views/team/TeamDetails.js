@@ -20,6 +20,7 @@ import {
 
 import {
   markOnboardingComplete,
+  resolveAffiliationOriginRoute,
   USER_ROLES,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -94,6 +95,10 @@ function TeamDetails({ navigation, route }) {
     assignmentTrainerName,
     fromOnboardingAffiliation = false,
     invite,
+    // D33 - l'etape du tunnel d'ou cette fiche a ete ouverte. Absente pour tous
+    // les autres appelants : `resolveAffiliationOriginRoute` retombe alors sur
+    // l'etape club, le comportement d'avant D33.
+    onboardingOriginRoute,
     openExternalSourceSetup = false,
     teamId,
   } = route?.params ?? {};
@@ -556,7 +561,14 @@ function TeamDetails({ navigation, route }) {
 
     const parentNavigation = navigation.getParent?.();
     const onboardingNavigation = /** @type {any} */ (parentNavigation || navigation);
-    const nextRoute = getNextOnboardingRoute(RouteNames.UserAffiliationGuide);
+    // D33 - on reprend le tunnel a l'etape D'OU L'ON VIENT, plus a l'etape club
+    // supposee. Sans ca, un joueur qui vient d'envoyer sa demande d'equipe
+    // etait repose sur « Trouve ton equipe » : la suite de l'etape club, c'est
+    // l'etape equipe. Repli sur l'etape club quand rien n'est passe - c'est le
+    // cas des fiches de club, ou l'etape club est bien celle d'origine.
+    const nextRoute = getNextOnboardingRoute(
+      resolveAffiliationOriginRoute({ onboardingOriginRoute }),
+    );
     if (nextRoute) {
       onboardingNavigation.navigate(nextRoute);
       return;
@@ -573,6 +585,7 @@ function TeamDetails({ navigation, route }) {
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
     navigation,
+    onboardingOriginRoute,
   ]);
 
   const createTeamMembershipRequestMutation = /** @type {any} */ (useMutation({

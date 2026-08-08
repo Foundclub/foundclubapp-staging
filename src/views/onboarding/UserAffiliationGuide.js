@@ -495,9 +495,16 @@ function UserAffiliationGuideContent({ navigation, route }) {
       return;
     }
 
+    // D33 - LA FICHE D'EQUIPE DOIT SAVOIR D'OU ON VIENT.
+    // C'est elle qui reprend le tunnel apres l'envoi de la demande, et elle le
+    // reprenait depuis l'etape CLUB, ecrite en dur : la suite de l'etape club
+    // etant l'etape equipe, elle reposait le joueur sur « Trouve ton equipe »
+    // alors qu'il venait de faire sa demande. On lui passe l'etape REELLEMENT
+    // montee - la meme que celle qui pilote deja « Passer » juste au-dessus.
     navigation.navigate(RouteNames.TeamStack, {
       params: {
         fromOnboardingAffiliation: true,
+        onboardingOriginRoute: currentRouteName,
         teamId: item.documentId,
       },
       screen: RouteNames.TeamDetails,

@@ -766,4 +766,79 @@ describe('D23 ⑦ — sauter le club saute l\'équipe', () => {
     const derniersParametres = mockUseGetTeams.mock.calls.at(-1)[0];
     expect(derniersParametres.clubId).toBeUndefined();
   });
+
+  // D33 — recette d'Adel du 2026-08-07 : « Cette étape ne sert à rien, car juste
+  // avant j'ai déjà fait la demande pour rejoindre une équipe. »
+  //
+  // LA FICHE D'ÉQUIPE EST CELLE QUI REPREND LE TUNNEL après l'envoi de la
+  // demande, et elle le reprenait depuis l'étape CLUB, écrite en dur
+  // (`TeamDetails.handleGoToNextOnboardingStep`). Comme la suite de l'étape club
+  // EST l'étape équipe, envoyer sa demande reposait le joueur sur
+  // « Trouve ton équipe », étape 13/13. C'est ce paramètre-ci qui coupe la
+  // boucle : il dit à la fiche d'où elle a été ouverte.
+  //
+  // Ce test-ci prouve le CÂBLAGE ; le trajet qui en découle (équipe → sas) est
+  // mesuré de bout en bout dans `authUseCases.affiliation.test.js`.
+  const TEAMS = [{ documentId: 'team-1', id: 1, name: 'U15 Honneur' }];
+
+  const pressTeamCard = (/** @type {any} */ rendered) => {
+    const card = rendered.tree.root.findAll(
+      (/** @type {any} */ node) => node.props?.accessibilityLabel
+        === "Ouvrir la fiche de l'équipe U15 Honneur",
+    )[0];
+    expect(card).toBeDefined();
+    act(() => { card.props.onPress(); });
+  };
+
+  it('depuis l\'étape équipe, la fiche d\'équipe reçoit l\'étape ÉQUIPE comme origine', () => {
+    machineAEtapes();
+    mockUseGetTeams.mockReturnValue(queryWith(TEAMS));
+    const rendered = renderTeamStep();
+
+    pressTeamCard(rendered);
+
+    expect(rendered.navigation.navigate).toHaveBeenCalledWith(RouteNames.TeamStack, {
+      params: {
+        fromOnboardingAffiliation: true,
+        onboardingOriginRoute: RouteNames.UserTeamAffiliation,
+        teamId: 'team-1',
+      },
+      screen: RouteNames.TeamDetails,
+    });
+  });
+
+  // Le repli hérité : quand l'étape équipe n'est PAS au programme, le joueur
+  // choisit son équipe sans quitter l'écran club. L'origine est alors bien
+  // l'étape club — c'est le comportement d'avant D33, on le fige pour qu'il le
+  // reste.
+  it('depuis l\'étape club en repli, l\'origine reste l\'étape CLUB', () => {
+    mockGetNextOnboardingRoute.mockReturnValue(RouteNames.Welcome);
+    mockUseGetTeams.mockReturnValue(queryWith(TEAMS));
+
+    /** @type {any} */
+    const navigation = { navigate: jest.fn(), reset: jest.fn(), setOptions: jest.fn() };
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <UserAffiliationGuide
+          navigation={navigation}
+          route={/** @type {any} */ ({
+            name: RouteNames.UserAffiliationGuide,
+            params: { club: { documentId: 'club-1', name: 'FC Fuveau' } },
+          })}
+        />,
+      );
+    });
+
+    pressTeamCard({ tree });
+
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.TeamStack, {
+      params: {
+        fromOnboardingAffiliation: true,
+        onboardingOriginRoute: RouteNames.UserAffiliationGuide,
+        teamId: 'team-1',
+      },
+      screen: RouteNames.TeamDetails,
+    });
+  });
 });
