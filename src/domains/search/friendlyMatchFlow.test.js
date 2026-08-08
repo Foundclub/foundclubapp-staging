@@ -108,8 +108,10 @@ describe('friendlyMatchFlow — regle « qui recoit » (§3.3, Q1)', () => {
   it('donne a chaque etat de lieu son tag court ET son icone', () => {
     expect(getHostingTag({ hostingPreference: 'HOST' }))
       .toEqual({ iconKey: 'stadium', label: 'Reçoit', tone: 'host' });
+    // D41 ③ : `running` (un coureur) est devenu `arrow` sur l arbitrage d Adel
+    // du 2026-08-08. Le LIBELLE, lui, n a pas bouge d un caractere.
     expect(getHostingTag({ hostingPreference: 'AWAY' }))
-      .toEqual({ iconKey: 'running', label: 'Se déplace', tone: 'away' });
+      .toEqual({ iconKey: 'arrow', label: 'Se déplace', tone: 'away' });
     expect(getHostingTag({ hostingPreference: 'BOTH' }))
       .toEqual({ iconKey: 'switch', label: 'Reçoit ou se déplace', tone: 'both' });
   });

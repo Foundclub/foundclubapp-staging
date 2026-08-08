@@ -72,6 +72,9 @@ jest.mock('@/theme/themeContext', () => {
         arrowLeft: 'icone-fleche-gauche',
         arrowRight: 'icone-fleche-droite',
         check: 'icone-coche',
+        // Le coureur reste dans le jeu d'icones du mock EXPRES, alors que D41 ③
+        // ne l'utilise plus : s'il revenait, il apparaitrait dans le temoin
+        // « donne a chaque etat son icone propre » au lieu de rendre undefined.
         running: 'icone-coureur',
         stadium: 'icone-stade',
       },
@@ -188,6 +191,27 @@ const textesSous = (composant) => {
     if (noeud && Array.isArray(noeud.children)) noeud.children.forEach(parcourir);
   };
   parcourir(composant);
+  return sortie;
+};
+
+/**
+ * Les sources d'image rendues sous un noeud, dans l'ordre du dessin.
+ * @param {any} noeud Un noeud d'affichage.
+ * @returns {string[]} Les sources trouvees dessous.
+ */
+const sourcesSous = (noeud) => {
+  /** @type {string[]} */
+  const sortie = [];
+  const parcourir = (/** @type {any} */ courant) => {
+    if (!courant || typeof courant !== 'object') return;
+    if (Array.isArray(courant)) {
+      courant.forEach(parcourir);
+      return;
+    }
+    if (typeof courant.props?.source === 'string') sortie.push(courant.props.source);
+    (courant.children || []).forEach(parcourir);
+  };
+  parcourir(noeud);
   return sortie;
 };
 
@@ -313,15 +337,22 @@ describe('Etape 2/7 « Tu peux recevoir ? » — CE QUE D07 AJOUTE', () => {
   });
 
   // Une icone par etat, deduite de la donnee et jamais d'un texte : stade pour
-  // « je recois », coureur pour « je me deplace », double fleche pour « les deux ».
+  // « je recois », fleche pour « je me deplace », double fleche pour « les deux ».
+  //
+  // 🔄 D41 ③ — « je me deplace » portait un COUREUR jusqu'au 2026-08-08 : il dit
+  // « athletisme », pas « on va chez l'adversaire ». Adel a tranche pour une
+  // fleche. L'assertion est carte par carte, et pas sur l'ensemble : c'est ce
+  // qui prouve qu'une fleche seule ne se confond pas avec les deux empilees,
+  // et que le coureur a bien disparu (il apparaitrait dans le tableau).
   it('donne a chaque etat son icone propre', () => {
     const arbre = rendre();
-    const sources = noeudsAffiches(arbre, (noeud) => typeof noeud.props?.source === 'string')
-      .map((noeud) => noeud.props.source);
-    expect(sources).toContain('icone-stade');
-    expect(sources).toContain('icone-coureur');
-    expect(sources).toContain('icone-fleche-droite');
-    expect(sources).toContain('icone-fleche-gauche');
+    const cartes = noeudsAffiches(arbre, (noeud) => noeud.props?.accessibilityRole === 'radio');
+
+    expect(cartes.map(sourcesSous)).toEqual([
+      ['icone-stade'],
+      ['icone-fleche-droite'],
+      ['icone-fleche-droite', 'icone-fleche-gauche'],
+    ]);
   });
 
   // Selection = bord cyan 1,5 + fond cyan 8 % + coche a droite. Le fond passe

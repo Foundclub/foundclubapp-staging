@@ -208,7 +208,10 @@ export const getHostingSummary = (ad) => {
  * @type {Record<'away' | 'both' | 'host' | 'unknown', {iconKey: string, label: string}>}
  */
 const HOSTING_TAG_BY_TONE = {
-  away: { iconKey: 'running', label: 'Se déplace' },
+  // D41 ③ — une fleche, plus un coureur : les DEUX surfaces qui affichent cet
+  // etat (la carte-option du tunnel et le tag de chaque annonce) lisent cette
+  // seule table, donc elles changent forcement ensemble.
+  away: { iconKey: 'arrow', label: 'Se déplace' },
   both: { iconKey: 'switch', label: 'Reçoit ou se déplace' },
   host: { iconKey: 'stadium', label: 'Reçoit' },
   // Pas d icone : inventer un pictogramme pour « on ne sait pas » ferait croire

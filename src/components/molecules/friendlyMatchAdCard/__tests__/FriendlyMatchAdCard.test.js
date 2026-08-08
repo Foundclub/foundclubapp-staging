@@ -378,6 +378,9 @@ describe('Carte d annonce amicale — CE QUE D07 CHANGE', () => {
       .toBeLessThan(affiches.indexOf('Reçoit'));
   });
 
+  // D41 ③ — « Se deplace » porte une FLECHE, plus un coureur (arbitrage Adel du
+  // 2026-08-08). La derniere ligne est la moitie qui compte : le coureur doit
+  // avoir disparu des DEUX surfaces, pas seulement de l une.
   it('donne au tag lieu son icone, en plus de son libelle', () => {
     const sources = (preference) => noeudsAffiches(
       rendre({ ad: annonce({ hostingPreference: preference }) }),
@@ -385,9 +388,23 @@ describe('Carte d annonce amicale — CE QUE D07 CHANGE', () => {
     ).map((noeud) => noeud.props.source);
 
     expect(sources('HOST')).toContain('icone-stade');
-    expect(sources('AWAY')).toContain('icone-coureur');
+    expect(sources('AWAY')).toContain('icone-fleche-droite');
     expect(sources('BOTH')).toContain('icone-fleche-droite');
     expect(sources('BOTH')).toContain('icone-fleche-gauche');
+    expect(sources('AWAY')).not.toContain('icone-coureur');
+  });
+
+  // Une fleche contre deux fleches empilees : c est ce qui empeche « Se
+  // deplace » et « Recoit ou se deplace » de se confondre depuis qu ils
+  // partagent le meme dessin.
+  it('distingue « Se deplace » de « Les deux » par le NOMBRE de fleches', () => {
+    const fleches = (preference) => noeudsAffiches(
+      rendre({ ad: annonce({ hostingPreference: preference }) }),
+      (noeud) => String(noeud.props?.source || '').startsWith('icone-fleche'),
+    ).length;
+
+    expect(fleches('AWAY')).toBe(1);
+    expect(fleches('BOTH')).toBe(2);
   });
 
   it('rend le tag en contour, pas en banniere pleine largeur', () => {

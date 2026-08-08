@@ -51,7 +51,9 @@ const HOSTING_OPTIONS = [
   {
     consequence: 'Tu joues chez l’adversaire.',
     consequenceKey: 'friendlyMatch.wizard.hosting.options.away.consequence',
-    iconKey: 'running',
+    // D41 ③ — une fleche, plus un coureur. Meme cle que le tag d annonce
+    // (friendlyMatchFlow.js) : les deux surfaces ne peuvent pas diverger.
+    iconKey: 'arrow',
     label: 'Je me déplace',
     labelKey: 'friendlyMatch.wizard.hosting.options.away.label',
     value: 'AWAY',
