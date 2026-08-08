@@ -21,6 +21,11 @@ import useTheme from '@/theme/themeContext';
 
 import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
 
+// Durée au-delà de laquelle une fermeture reçue n'est plus attribuable à
+// l'animation de sortie qu'on vient d'interrompre. Calée sur la même échelle
+// que la reprise de présentation ci-dessous (260 ms), avec de la marge.
+const STALE_DISMISS_WINDOW_MS = 400;
+
 /**
  * Bottom modal component using @gorhom/bottom-sheet.
  * @param {object} props - Component props
@@ -80,6 +85,12 @@ function BottomModal({
   const visibilityRef = useRef(false);
   const sheetStateRef = useRef('hidden');
   const presentRecoveryTimerRef = useRef(0);
+  // Fenêtre pendant laquelle un `onDismiss` reçu est PÉRIMÉ : il appartient à
+  // l'animation de sortie qu'on vient d'interrompre en représentant la feuille.
+  // Au-delà, une fermeture vient de l'utilisateur (glissement vers le bas) et
+  // doit être propagée — d'où une borne de temps plutôt qu'un drapeau, qui
+  // resterait armé si la bibliothèque n'émettait jamais la fermeture périmée.
+  const staleDismissUntilRef = useRef(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [shouldRender, setShouldRender] = useState(Boolean(isVisible));
   const insets = useSafeAreaInsets();
@@ -103,7 +114,17 @@ function BottomModal({
     if (!modalRef.current) return;
     if (isVisible && !canPresentDuringStartup) return;
 
-    if (isVisible && sheetStateRef.current === 'hidden') {
+    // `dismissing` compte comme rouvrable : la fermeture précédente est encore
+    // en vol et son `onDismiss` peut mettre plusieurs centaines de millisecondes
+    // à revenir. Exiger `hidden` faisait perdre en silence tout appui donné
+    // pendant ce délai — la feuille ne se rouvrait jamais.
+    const dejaPresentee = sheetStateRef.current === 'presenting'
+      || sheetStateRef.current === 'visible';
+
+    if (isVisible && !dejaPresentee) {
+      if (sheetStateRef.current === 'dismissing') {
+        staleDismissUntilRef.current = Date.now() + STALE_DISMISS_WINDOW_MS;
+      }
       visibilityRef.current = true;
       sheetStateRef.current = 'presenting';
       modalRef.current.present();
@@ -178,6 +199,17 @@ function BottomModal({
 
   const handleDismiss = useCallback(() => {
     if (!visibilityRef.current) return;
+    // Fermeture périmée : la feuille a déjà été représentée, la propager
+    // rappellerait `close` et annulerait l'ouverture demandée.
+    if (Date.now() < staleDismissUntilRef.current) {
+      staleDismissUntilRef.current = 0;
+      // Cette fermeture a pu retirer la feuille pour de bon : on redemande la
+      // présentation. L'appel est idempotent, et il interdit le seul état dont
+      // l'utilisateur ne pourrait pas sortir — ouvert côté code, fermé à l'écran.
+      modalRef.current?.present();
+      return;
+    }
+    staleDismissUntilRef.current = 0;
     visibilityRef.current = false;
     sheetStateRef.current = 'hidden';
     setShouldRender(false);
