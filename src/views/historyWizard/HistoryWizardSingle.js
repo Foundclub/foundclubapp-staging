@@ -349,6 +349,19 @@ function HistoryWizardSingle({ navigation, route }) {
     }
   };
 
+  // D40 marche 1 — LE CLUB CHOISI SE RETIRE, sur l'ecran du TELEPHONE.
+  // D23 (`99467f9`) avait corrige le meme defaut dans `HistoryWizardClub.js`,
+  // qui est la copie WEB : le bloc fautif etait reste ici, caractere pour
+  // caractere. Une fois un club selectionne, la liste de resultats disparait
+  // (`!hasSelectedClub`) et la carte du club retenu etait rendue SANS `onPress`
+  // : `ClubSearchResultCard` se met alors en `disabled`. Il ne restait qu'un
+  // chemin, invisible : retaper dans le champ de recherche. Une faute de frappe
+  // devenait definitive.
+  const handleClearClubSelection = () => {
+    dispatch({ type: 'CLEAR_CLUB_SELECTION' });
+    setSearchQuery('');
+  };
+
   // ----- Handlers catégorie / niveau -----
   const handleSelectCategory = (/** @type {any} */ category) => {
     if (isEditing) {
@@ -637,11 +650,30 @@ function HistoryWizardSingle({ navigation, route }) {
                   ) : null}
 
                   {selectedClubCard ? (
-                    <ClubSearchResultCard
-                      isMultisport={Boolean(state.multisportClub)}
-                      isSelected
-                      item={selectedClubCard}
-                    />
+                    <View style={[Spaces.gap[8]]}>
+                      <ClubSearchResultCard
+                        isMultisport={Boolean(state.multisportClub)}
+                        isSelected
+                        item={selectedClubCard}
+                        onPress={handleClearClubSelection}
+                      />
+                      {/*
+                        Le lien double la carte : une carte qu'il faut deviner
+                        tapable est le meme defaut sous une autre forme.
+                      */}
+                      <TouchableOpacity
+                        accessibilityHint={t(
+                          'historyWizard.club.clearSelectionHint',
+                          'Retire le club retenu et rouvre la recherche.',
+                        )}
+                        accessibilityRole="button"
+                        onPress={handleClearClubSelection}
+                      >
+                        <Text style={[Fonts.p2, { color: Colors.primary500, textAlign: 'center' }]}>
+                          {t('historyWizard.club.clearSelection', 'Changer de club')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   ) : null}
 
                   <TouchableOpacity
