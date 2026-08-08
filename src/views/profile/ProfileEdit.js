@@ -11,7 +11,6 @@ import { ScrollView } from 'react-native-gesture-handler';
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
-import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -23,6 +22,11 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import {
+  buildProfileFormValues,
+  defaultValues,
+  profileSchema,
+} from '@/views/profile/profileFormContract';
 
 import { updateMe } from '@/services/auth/authService';
 import { useGetLevels } from '@/services/level/levelQueries';
@@ -36,61 +40,9 @@ import {
 } from '@/constants/parentalDeclaration';
 import { getPositionsForSport } from '@/constants/positions';
 
-const defaultValues = {
-  address: null,
-  bestLevel: '',
-  birthdate: '',
-  category: '',
-  firstname: '',
-  height: '',
-  isLookingForClub: false,
-  jerseyNumber: '',
-  lastname: '',
-  nationality: '',
-  phoneNumber: '',
-  position: '',
-  preferredSport: '',
-  section: '',
-  weight: '',
-};
-
 // Champs specifiques carte de collection : forces en plus du gating par role
 // quand l'edition est ouverte depuis la carte (source: 'player_card').
 const CARD_EXTRA_FIELDS = ['position', 'preferredSport', 'nationality', 'jerseyNumber', 'isLookingForClub'];
-
-const buildProfileFormValues = (userData, formatBirthdateToDisplay) => ({
-  ...defaultValues,
-  ...userData,
-  address: userData?.address || null,
-  bestLevel: userData?.bestLevel || '',
-  birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
-  category: userData?.category || '',
-  height: userData?.height ? String(userData.height) : '',
-  jerseyNumber: userData?.jerseyNumber != null ? String(userData.jerseyNumber) : '',
-  nationality: userData?.nationality || '',
-  preferredSport: userData?.preferredSport || '',
-  section: userData?.section?.documentId || '',
-  weight: userData?.weight ? String(userData.weight) : '',
-});
-
-const profileSchema = Joi.object({
-  address: Joi.object().allow(null).optional(),
-  bestLevel: Joi.string().allow(null, '').optional(),
-  birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
-  category: Joi.string().allow(null, '').optional(),
-  documentId: Joi.string().allow(null, '').optional(),
-  firstname: Joi.string().required(),
-  height: Joi.string().allow(null, '').optional(),
-  isLookingForClub: Joi.boolean().optional(),
-  jerseyNumber: Joi.string().pattern(/^([0-9]{1,2})?$/).allow('').optional(),
-  lastname: Joi.string().required(),
-  nationality: Joi.string().allow(null, '').optional(),
-  phoneNumber: Joi.string(),
-  position: Joi.string().allow(null, '').optional(),
-  preferredSport: Joi.string().allow(null, '').optional(),
-  section: Joi.string().allow(null, '').optional(),
-  weight: Joi.string().allow(null, '').optional(),
-}).unknown(true);
 
 /**
  * Profile edit screen component. Allows users to edit their profile information.
