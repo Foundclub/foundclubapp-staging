@@ -8,8 +8,8 @@
  * TODO(nav-orphelins) ECRANS ORPHELINS — composants d'ecran ecrits mais qu'AUCUNE route
  * n'expose. Les cabler ou les jeter est un arbitrage produit, pas une correction technique :
  * ils sont conserves tels quels et listes ici pour ne plus etre invisibles.
- *   - views/historyWizard/HistoryWizardClubScreen.js  (le tunnel monte HistoryWizardClub
- *     depuis un autre composant ; ce fichier-ci n'est monte nulle part)
+ *   (D40, 2026-08-08 : `HistoryWizardClubScreen.js` a quitte cette liste — supprime
+ *   avec le tunnel en 5 pages, `grep` a 0 appelant dans `app` comme dans `web`.)
  *   - views/league/standings/LeagueStandings.js       (orphelin depuis la suppression de
  *     l'onglet classement — cf. `LeagueStandingsTab` retire ci-dessus)
  *   - views/profile/PlayerCardGallery.js
@@ -238,12 +238,12 @@ export const RouteNames = /** @type {const} */ ({
   TournamentSettingsEdit: 'TournamentSettingsEdit',
   TournamentTeamDetails: 'TournamentTeamDetails',
 
-  // History Wizard
+  // History Wizard — D40 : UNE seule feuille, sur le telephone comme sur le site.
+  // Les 4 noms du tunnel web en 5 pages (`HistoryWizardClub`, `…Level`, `…Period`,
+  // `…Recap`) ont ete retires : leurs seuls appelants etaient les ecrans du tunnel
+  // eux-memes, supprimes avec eux. Ce nom-ci est conserve tel quel — il porte
+  // l'URL `/profile/history/category` et les 8 `navigate()` de l'app.
   HistoryWizardCategory: 'HistoryWizardCategory',
-  HistoryWizardClub: 'HistoryWizardClub',
-  HistoryWizardLevel: 'HistoryWizardLevel',
-  HistoryWizardPeriod: 'HistoryWizardPeriod',
-  HistoryWizardRecap: 'HistoryWizardRecap',
 
   // Tactical
   TacticalBoardV2: 'TacticalBoardV2',

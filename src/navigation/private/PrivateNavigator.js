@@ -472,38 +472,6 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
-          getComponent={() => require('@/views/historyWizard/HistoryWizardClub').default}
-          name={RouteNames.HistoryWizardClub}
-          options={{
-            ...commonOptions,
-            headerTitle: 'Ajouter une expérience',
-          }}
-        />
-        <Stack.Screen
-          getComponent={() => require('@/views/historyWizard/HistoryWizardPeriod').default}
-          name={RouteNames.HistoryWizardPeriod}
-          options={{
-            ...commonOptions,
-            headerTitle: 'Ajouter une expérience',
-          }}
-        />
-        <Stack.Screen
-          getComponent={() => require('@/views/historyWizard/HistoryWizardLevel').default}
-          name={RouteNames.HistoryWizardLevel}
-          options={{
-            ...commonOptions,
-            headerTitle: 'Ajouter une expérience',
-          }}
-        />
-        <Stack.Screen
-          getComponent={() => require('@/views/historyWizard/HistoryWizardRecap').default}
-          name={RouteNames.HistoryWizardRecap}
-          options={{
-            ...commonOptions,
-            headerTitle: 'Ajouter une expérience',
-          }}
-        />
-        <Stack.Screen
           getComponent={() => require('@/views/Conversation').default}
           name={RouteNames.Conversation}
           options={{
