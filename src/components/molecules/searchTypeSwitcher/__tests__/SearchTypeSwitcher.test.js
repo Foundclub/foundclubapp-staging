@@ -17,6 +17,9 @@ import SearchTypeSwitcher from '../SearchTypeSwitcher';
 // un dock casse ne se voit pas dans un arbre monte sans son navigateur. Ce que
 // ces lignes verrouillent, c'est « quels marches existent, dans quel ordre, et
 // quelle cle part quand on appuie ».
+//
+// Deux etages : ce qui ne doit pas bouger, puis ce que D35 change. Le premier
+// etage etait deja vert AVANT le lot.
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -41,9 +44,32 @@ jest.mock('@/theme/themeContext', () => {
       Alignments: alignements,
       Colors: couleurs,
       Fonts: genererPolices(couleurs),
-      Images: {},
+      Images: {
+        calendar: 'image-calendar',
+        flag: 'image-flag',
+        shield: 'image-shield',
+        stadium: 'image-stadium',
+        users: 'image-users',
+      },
       Spaces: espaces,
     }),
+  };
+});
+
+// La feuille est doublee, pas simulee : elle rend son contenu UNIQUEMENT quand
+// on la demande. C'est ce qui permet de prouver « l'appui explique au lieu
+// d'activer » sans dependre de @gorhom/bottom-sheet.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  const reactActuel = jest.requireActual('react');
+  const { Text: TexteRN, View: VueRN } = jest.requireActual('react-native');
+  return function FeuilleMock(/** @type {any} */ props) {
+    if (!props.isVisible) return null;
+    return reactActuel.createElement(
+      VueRN,
+      null,
+      reactActuel.createElement(TexteRN, null, 'temoin-feuille-ouverte'),
+      props.children,
+    );
   };
 });
 
@@ -54,6 +80,9 @@ const MARCHES_ATTENDUS = [
   ['recruitment', 'Recrutement'],
   ['amicaux', 'Matchs amicaux'],
 ];
+
+// Les quatre marches reellement ouverts : eux seuls changent la categorie.
+const MARCHES_OUVERTS = MARCHES_ATTENDUS.filter(([cle]) => cle !== 'reservations');
 
 /**
  * Rend le dock.
@@ -77,31 +106,55 @@ const rendre = (props = {}) => {
 };
 
 /**
- * Les pastilles du dock, dans l'ordre du rendu, reperees par leur role de
- * bouton — pas par la forme de l'arbre, qui change avec le design.
+ * Les pastilles du dock, dans l'ordre du rendu, reperees par leur role d'onglet
+ * — pas par la forme de l'arbre, qui change avec le design.
  * @param {any} arbre L'arbre rendu.
- * @returns {any[]} Les noeuds pressables.
+ * @returns {any[]} Les noeuds pressables du dock.
  */
 const pastilles = (arbre) => {
-  const estPressable = (/** @type {any} */ noeud) => noeud?.props?.accessibilityRole === 'button'
+  const estPastille = (/** @type {any} */ noeud) => noeud?.props?.accessibilityRole === 'tab'
     && typeof noeud.props?.onPress === 'function';
 
-  // Un pressable se presente DEUX fois : le composant, puis la vue hote qu'il
-  // rend. On ne garde que le plus exterieur — sinon le dock parait compter le
+  // Une pastille se presente DEUX fois : le composant, puis la vue hote qu'il
+  // rend. On ne garde que la plus exterieure — sinon le dock parait compter le
   // double, et le decompte est precisement ce que ce filet protege.
-  const aUnAncetrePressable = (/** @type {any} */ noeud) => {
+  const aUnAncetrePastille = (/** @type {any} */ noeud) => {
     for (let parent = noeud.parent; parent; parent = parent.parent) {
-      if (estPressable(parent)) return true;
+      if (estPastille(parent)) return true;
     }
     return false;
   };
 
   return arbre.root
-    .findAll(estPressable, { deep: true })
-    .filter((/** @type {any} */ noeud) => !aUnAncetrePressable(noeud));
+    .findAll(estPastille, { deep: true })
+    .filter((/** @type {any} */ noeud) => !aUnAncetrePastille(noeud));
 };
 
-describe('Dock des marches — LA LISTE ET LES CIBLES', () => {
+/**
+ * Tous les textes reellement affiches, dans l'ordre du rendu.
+ * @param {any} arbre L'arbre rendu.
+ * @returns {string[]} Les textes affiches.
+ */
+const textesVisibles = (arbre) => {
+  /** @type {string[]} */
+  const sortie = [];
+  const parcourir = (/** @type {any} */ noeud) => {
+    if (noeud === null || noeud === undefined || typeof noeud === 'boolean') return;
+    if (typeof noeud === 'string' || typeof noeud === 'number') {
+      sortie.push(String(noeud));
+      return;
+    }
+    if (Array.isArray(noeud)) {
+      noeud.forEach(parcourir);
+      return;
+    }
+    parcourir(noeud.children);
+  };
+  parcourir(arbre.toJSON());
+  return sortie;
+};
+
+describe('Dock des marches — CE QUI NE DOIT PAS BOUGER', () => {
   it('propose exactement 5 marches', () => {
     expect(pastilles(rendre().arbre)).toHaveLength(MARCHES_ATTENDUS.length);
   });
@@ -112,7 +165,7 @@ describe('Dock des marches — LA LISTE ET LES CIBLES', () => {
     expect(libelles).toEqual(MARCHES_ATTENDUS.map(([, libelle]) => libelle));
   });
 
-  it.each(MARCHES_ATTENDUS)('appuyer sur %s demande bien ce marche', (cle) => {
+  it.each(MARCHES_OUVERTS)('appuyer sur %s demande bien ce marche', (cle) => {
     const { arbre, onTypeChange } = rendre({ activeType: 'events' });
     const rang = MARCHES_ATTENDUS.findIndex(([candidate]) => candidate === cle);
 
@@ -131,5 +184,77 @@ describe('Dock des marches — LA LISTE ET LES CIBLES', () => {
 
   it('ne demande aucun changement au simple rendu', () => {
     expect(rendre().onTypeChange).not.toHaveBeenCalled();
+  });
+
+  // Le marche non ouvert RESTE dans le dock : la case « Reservations » de
+  // l'Accueil navigue encore vers lui, et SearchHubScreen sait toujours
+  // l'afficher. Le retirer casserait cet appelant.
+  it('garde le marche Reservations dans la liste', () => {
+    const cles = pastilles(rendre().arbre)
+      .map((/** @type {any} */ noeud) => noeud.props.accessibilityLabel);
+    expect(cles).toContain('Réservations');
+  });
+});
+
+describe('Dock des marches — CE QUE D35 CHANGE', () => {
+  // Definition of done du pack : « dock (role onglet + etat) » annonce a
+  // VoiceOver / TalkBack. C'etait `button` avant le lot.
+  it('annonce chaque marche comme un ONGLET, dans une liste d onglets', () => {
+    const { arbre } = rendre();
+    expect(pastilles(arbre)).toHaveLength(MARCHES_ATTENDUS.length);
+    expect(arbre.root.findAll(
+      (/** @type {any} */ noeud) => noeud?.props?.accessibilityRole === 'tablist',
+      { deep: true },
+    ).length).toBeGreaterThan(0);
+  });
+
+  // Le coeur du geste : « le tap n'active PAS la categorie ». Une liste vide de
+  // creneaux se lirait comme une panne ; la feuille dit pourquoi il n'y a rien.
+  it('appuyer sur Reservations n active PAS le marche', () => {
+    const { arbre, onTypeChange } = rendre({ activeType: 'events' });
+    const rang = MARCHES_ATTENDUS.findIndex(([cle]) => cle === 'reservations');
+
+    act(() => {
+      pastilles(arbre)[rang].props.onPress();
+    });
+
+    expect(onTypeChange).not.toHaveBeenCalled();
+  });
+
+  it('appuyer sur Reservations ouvre la feuille « Bientot disponible ! »', () => {
+    const { arbre } = rendre({ activeType: 'events' });
+    const rang = MARCHES_ATTENDUS.findIndex(([cle]) => cle === 'reservations');
+
+    expect(textesVisibles(arbre)).not.toContain('temoin-feuille-ouverte');
+
+    act(() => {
+      pastilles(arbre)[rang].props.onPress();
+    });
+
+    const affiches = textesVisibles(arbre);
+    expect(affiches).toContain('temoin-feuille-ouverte');
+    expect(affiches).toContain('Bientôt disponible !');
+    expect(affiches).toContain('Compris');
+  });
+
+  it('« Compris » referme la feuille', () => {
+    const { arbre } = rendre({ activeType: 'events' });
+    const rang = MARCHES_ATTENDUS.findIndex(([cle]) => cle === 'reservations');
+
+    act(() => {
+      pastilles(arbre)[rang].props.onPress();
+    });
+
+    const compris = arbre.root.find((/** @type {any} */ noeud) => (
+      noeud?.props?.accessibilityRole === 'button'
+      && typeof noeud.props?.onPress === 'function'
+      && typeof noeud.type !== 'string'
+    ));
+
+    act(() => {
+      compris.props.onPress();
+    });
+
+    expect(textesVisibles(arbre)).not.toContain('temoin-feuille-ouverte');
   });
 });
