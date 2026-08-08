@@ -2,6 +2,7 @@ import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
+
 import { leaveClub } from '@/services/auth/authService';
 import { updateClub } from '@/services/club/clubService';
 
