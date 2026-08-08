@@ -1263,10 +1263,14 @@ function HomeHubContent({ auth, navigation, route }) {
     navigation.navigate(RouteNames.AdWizardStack);
   }, [addAdLock, isPublishingGovernedBlocked, navigation, showBanner, t]);
 
+  // Lot D35, §4 du pack : « Mes annonces » devient « Mes activites ». Un seul
+  // point de changement — les DEUX cases de l accueil (branche president et
+  // branche entraineur) passent par ce rappel.
+  // Les sous-onglets de gestion de Recrutement RESTENT en place : tant que
+  // « Mes activites » n a pas passe la recette emulateur, retirer l ancien
+  // chemin priverait d acces sans filet.
   const handleOpenMyRecruitmentAds = useCallback(() => {
-    navigation.navigate(RouteNames.SearchRecruitment, {
-      initialRecruitmentTab: 'annonces',
-    });
+    navigation.navigate(RouteNames.MyActivities);
   }, [navigation]);
 
   const handleOpenClubLicenses = useCallback(() => {
@@ -1547,9 +1551,9 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'running',
           key: 'manage-my-ads',
           onPress: handleOpenMyRecruitmentAds,
-          subtitle: t('homeHub.cards.manage.myAds.subtitle', 'Consulte et gère tes annonces.'),
+          subtitle: t('homeHub.cards.manage.myAds.subtitle', 'Tes offres, tes matchs et les réponses reçues.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.myAds.title', 'Mes annonces'),
+          title: t('homeHub.cards.manage.myAds.title', 'Mes activités'),
           tutorial: makeTutorial(
             'manageMyAds',
             6,
@@ -1660,9 +1664,9 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'running',
           key: 'manage-my-ads',
           onPress: handleOpenMyRecruitmentAds,
-          subtitle: t('homeHub.cards.manage.myAds.subtitle', 'Consulte et gère tes annonces.'),
+          subtitle: t('homeHub.cards.manage.myAds.subtitle', 'Tes offres, tes matchs et les réponses reçues.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.myAds.title', 'Mes annonces'),
+          title: t('homeHub.cards.manage.myAds.title', 'Mes activités'),
           tutorial: makeTutorial(
             'manageMyAds',
             6,

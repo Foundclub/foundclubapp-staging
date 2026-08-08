@@ -50,6 +50,10 @@ function SearchStack() {
         getComponent={() => require('@/views/license/LicenseCheckoutStatus').default}
         name={RouteNames.LicenseCheckoutStatus}
       />
+      <Stack.Screen
+        getComponent={() => require('@/views/search/MyActivitiesScreen').default}
+        name={RouteNames.MyActivities}
+      />
     </Stack.Navigator>
   );
 }

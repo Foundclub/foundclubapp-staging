@@ -133,6 +133,9 @@ export const RouteNames = /** @type {const} */ ({
   ReservationDetails: 'ReservationDetails',
   ReservationEdit: 'ReservationEdit',
   ReservationFilters: 'ReservationFilters',
+  // « Mes activites » (lot D35) : on publie depuis Rechercher, on gere ici.
+  // Vit dans SearchStack, a cote de l accueil du membre connecte.
+  MyActivities: 'MyActivities',
   Search: 'Search',
   SearchAlerts: 'SearchAlerts',
   SearchClubs: 'SearchClubs',

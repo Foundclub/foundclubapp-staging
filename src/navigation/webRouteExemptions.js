@@ -56,6 +56,17 @@ const MOBILE_ONLY_SCREENS = {
   [RouteNames.AuthStackPlanning]:
     'Onglet-leurre public : déclenche le tunnel de connexion, ne monte aucun écran',
 
+  // --- Ecrit, monte cote app, pas encore route cote web ---
+  // TODO(web) « Mes activites » (lot D35) DOIT exister sur le web : c est un
+  // ecran de gestion, pas un capteur. Il n est pas exempte par principe mais
+  // par sequencement — l enregistrer cote app ferait passer check:routes au
+  // rouge tant que web/src/routes/screenRegistry.tsx ne porte pas son entree,
+  // et ce fichier vit dans l autre depot. A retirer d ici DES QUE le registre
+  // web declare MyActivities (une ligne), puis ajouter son motif dans
+  // webRoutes.js.
+  [RouteNames.MyActivities]:
+    'TODO(web) ecran de gestion ecrit et monte cote app ; attend son entree dans web/src/routes/screenRegistry.tsx',
+
   // --- Alias interne de navigateur ---
   // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le
   // 2026-07-19 ce nom est declare dans routeNames.js (il etait une chaine en dur) ; sa
