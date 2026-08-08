@@ -86,6 +86,9 @@ function Profile({ navigation, route }) {
     || currentRoleKey === 'president'
     || currentRoleKey === 'superAdmin';
   const isSuperAdmin = currentRoleKey === 'superAdmin';
+  // D39 — les roles dont la page profil est deja editable (« voir = modifier »).
+  // Meme juge que partout : `getUserRoleKey`, jamais une seconde regle.
+  const hasEditableProfilePage = currentRoleKey === 'player' || currentRoleKey === 'coach';
   const multisportClubs = useMemo(
     () => userData?.multisportClubs || [],
     [userData?.multisportClubs],
@@ -563,9 +566,15 @@ function Profile({ navigation, route }) {
     {
       icon: Images.users, key: 'view', label: t('profile.actions.view'), onPress: handleViewProfile,
     },
-    {
+    // D39 — LA FUSION, cote menu. Le pack demande que « Infos profil » et
+    // « Modifier mes informations » ne fassent plus qu'une entree pour un
+    // joueur ou un entraineur : leur page profil EST editable, une seconde
+    // rangee menerait au meme endroit sous un autre nom. Le dirigeant, lui,
+    // garde les deux : son ecran D06 edite champ par champ et le crayon de sa
+    // carte identite mene toujours a `ProfileEdit`.
+    ...(hasEditableProfilePage ? [] : [{
       icon: Images.edit, key: 'edit', label: t('profile.actions.edit'), onPress: handleEditUser,
-    },
+    }]),
     ...(canManageClub ? [{
       icon: Images.shield, key: 'manageClub', label: t('profile.actions.manageClub'), onPress: handleOpenClub,
     }] : []),
