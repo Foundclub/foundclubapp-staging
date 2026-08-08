@@ -180,11 +180,18 @@ jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => {
   };
 });
 
+// La doublure GARDE ses proprietes : D40 verifie ou renvoie le bouton
+// « + Ajouter » de la liste, et ca ne se lit pas dans le texte rendu.
+const propsSectionHistorique = { current: /** @type {any} */ (null) };
+
 jest.mock('@/components/organisms/userHistorySection/UserHistorySection', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: () => <TexteRN>SECTION HISTORIQUE SPORTIF</TexteRN>,
+    default: (/** @type {any} */ props) => {
+      propsSectionHistorique.current = props;
+      return <TexteRN>SECTION HISTORIQUE SPORTIF</TexteRN>;
+    },
   };
 });
 
@@ -272,6 +279,40 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockFetchedUser = undefined;
   mockPersonalStats = undefined;
+  propsSectionHistorique.current = null;
+});
+
+describe('UserDetails — la liste d\'experiences renvoie SUR la liste (D40 marche 3)', () => {
+  // Le bouton « + Ajouter une experience » et le crayon vivent DANS la liste
+  // (`UserHistorySection`). Ils annoncaient `Profile` comme route de retour :
+  // on ajoutait depuis sa liste, et on atterrissait ailleurs. Il fallait
+  // retraverser pour en ajouter une seconde — l'aller-retour que le motif
+  // LinkedIn supprime.
+  it('« + Ajouter » annonce la LISTE comme route de retour, pas le profil', async () => {
+    await rendre(dirigeantConnecte, { preview: true });
+
+    const { onAddPress } = propsSectionHistorique.current;
+    expect(onAddPress).toBeDefined();
+
+    onAddPress();
+    expect(mockNavigate).toHaveBeenCalledWith('HistoryWizardCategory', {
+      resetContext: true,
+      returnRoute: 'UserDetails',
+    });
+  });
+
+  it('modifier une ligne revient AUSSI sur la liste', async () => {
+    await rendre(dirigeantConnecte, { preview: true });
+
+    const { onEditPress } = propsSectionHistorique.current;
+    expect(onEditPress).toBeDefined();
+
+    onEditPress({ documentId: 'histo-1' });
+    expect(mockNavigate).toHaveBeenCalledWith('HistoryWizardCategory', {
+      editingEntry: { documentId: 'histo-1' },
+      returnRoute: 'UserDetails',
+    });
+  });
 });
 
 describe('UserDetails — profil d\'AUTRUI : le garde-fou que D06 ne doit pas casser', () => {

@@ -969,11 +969,15 @@ function UserDetails({ navigation, route }) {
           <UserHistorySection
             bestLevel={bestLevelValue || undefined}
             isOwnProfile={isSelfProfile}
+            // D40 marche 3 — ces deux boutons vivent DANS la liste : ils
+            // doivent y ramener. Ils annoncaient `Profile`, donc on ajoutait
+            // depuis sa liste et on atterrissait ailleurs — il fallait
+            // retraverser pour en ajouter une seconde.
             onAddPress={
               isSelfProfile
                 ? () => navigation.navigate(RouteNames.HistoryWizardCategory, {
                   resetContext: true,
-                  returnRoute: RouteNames.Profile,
+                  returnRoute: RouteNames.UserDetails,
                 })
                 : undefined
             }
@@ -981,7 +985,7 @@ function UserDetails({ navigation, route }) {
               isSelfProfile
                 ? (entry) => navigation.navigate(RouteNames.HistoryWizardCategory, {
                   editingEntry: entry,
-                  returnRoute: RouteNames.Profile,
+                  returnRoute: RouteNames.UserDetails,
                 })
                 : undefined
             }

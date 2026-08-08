@@ -27,8 +27,6 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
-import { RouteNames } from '@/navigation/routeNames';
-
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetClubs, useSearchClubs as useLegacySearchClubs } from '@/services/club/clubQueries';
@@ -419,6 +417,11 @@ function HistoryWizardSingle({ navigation, route }) {
     }));
   };
 
+  // D40 marche 3 — LA FEUILLE SE REFERME SUR CE QU'IL Y AVAIT DESSOUS.
+  // Avant, faute de route de retour annoncee, on faisait `navigation.reset()`
+  // vers le profil : la pile etait ECRASEE et l'utilisateur expedie ailleurs
+  // que la ou il avait tape « + Ajouter ». Refermer, c'est le motif LinkedIn :
+  // on retrouve sa liste, avec la ligne neuve dessus.
   const handleSuccess = () => {
     dispatch({ type: 'RESET' });
 
@@ -427,10 +430,7 @@ function HistoryWizardSingle({ navigation, route }) {
       return;
     }
 
-    navigation.reset({
-      index: 0,
-      routes: [{ name: RouteNames.Profile }],
-    });
+    navigation.goBack();
   };
 
   const handleSubmit = async () => {

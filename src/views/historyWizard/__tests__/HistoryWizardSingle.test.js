@@ -239,3 +239,28 @@ describe('HistoryWizardSingle — retirer le club retenu (D40 marche 1)', () => 
     expect(pressableParTexte(tree, 'Changer de club')).toBeUndefined();
   });
 });
+
+describe('HistoryWizardSingle — apres un ajout, la feuille se REFERME (D40 marche 3)', () => {
+  it('sans route de retour annoncee, on referme sur ce qu il y avait dessous', async () => {
+    mockState.current = { ...etatVierge(), club: CLUB };
+    const { navigation, tree } = rendre();
+
+    await act(async () => { pressableParTexte(tree, 'Valider').props.onPress(); });
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    // C'ETAIT LE DEFAUT : `navigation.reset()` ECRASAIT la pile pour expedier
+    // l'utilisateur au profil. On perdait de vue la liste d'ou l'on venait.
+    expect(navigation.reset).not.toHaveBeenCalled();
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('une route de retour annoncee reste prioritaire (etape 10, accueil)', async () => {
+    mockState.current = { ...etatVierge(), club: CLUB, returnRoute: 'UserSportHistory' };
+    const { navigation, tree } = rendre();
+
+    await act(async () => { pressableParTexte(tree, 'Valider').props.onPress(); });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('UserSportHistory');
+    expect(navigation.reset).not.toHaveBeenCalled();
+  });
+});
