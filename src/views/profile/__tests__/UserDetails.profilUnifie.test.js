@@ -31,6 +31,11 @@ const mockUpdateMe = jest.fn();
 jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
   return {
+    // D39 — `UserDetails` tire desormais le contrat de formulaire, qui tire
+    // `@/theme/strings` pour Joi, et ce module amorce i18next au chargement.
+    // Sans cette doublure la suite ne se charge plus du tout. Meme ligne que
+    // dans `ProfileEdit.caracterisation.test.js`.
+    initReactI18next: { init: () => {}, type: '3rdParty' },
     useTranslation: () => ({
       t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
         const valeur = String(cle || '').split('.').reduce(
@@ -101,6 +106,22 @@ jest.mock('@/services/matchStats/matchStatsQueries', () => ({
 jest.mock('@/services/userHistory/userHistoryQueries', () => ({
   useGetMyHistories: () => ({ refetch: jest.fn() }),
   useGetUserHistories: () => ({ refetch: jest.fn() }),
+}));
+
+// D39 — l'ecran joueur/entraineur charge les niveaux et les sections. Ces
+// modules descendent vers le client HTTP, qui EXIGE `API_URL` au chargement et
+// jette sinon : sans doublure, la suite ne se charge pas du tout.
+jest.mock('@/services/level/levelQueries', () => ({
+  useGetLevels: () => ({ data: [] }),
+}));
+
+jest.mock('@/services/section/sectionQueries', () => ({
+  useGetSections: () => ({ data: [] }),
+}));
+
+jest.mock('@/domains/places/usePlaces', () => ({
+  __esModule: true,
+  default: () => ({ getGeohashForPointAndRadius: () => 'geohash-test' }),
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -217,6 +238,27 @@ jest.mock('@/components/organisms/autocompleteAddressInput/autocompleteAddressIn
   };
 });
 
+// D39 — l'ecran joueur/entraineur tire `AutocompleteSelect` et `SelectAvatar`,
+// qui descendent tous deux vers `react-native-bouncy-checkbox` (ESM pur, hors
+// `transformIgnorePatterns`). Sans ces doublures la suite ne se charge pas.
+jest.mock('@/components/molecules/autocompleteSelect/AutocompleteSelect', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ proprietes) => (
+      <TexteRN>{`CHAMP:${proprietes.label ?? ''}`}</TexteRN>
+    ),
+  };
+});
+
+jest.mock('@/components/molecules/selectAvatar/SelectAvatar', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: () => <TexteRN>SELECTEUR AVATAR</TexteRN>,
+  };
+});
+
 jest.mock('@/components/molecules/input/Input', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   return {
@@ -321,6 +363,9 @@ const dirigeant = {
  */
 const rendre = async (utilisateurCourant, parametresRoute = {}) => {
   mockAuthValue = {
+    // D39 — l'ecran joueur/entraineur derive l'age de la date de naissance.
+    formatBirthdateToDisplay: (/** @type {string} */ valeur) => String(valeur || ''),
+    formatBirthdateToSend: (/** @type {string} */ valeur) => String(valeur || ''),
     getAuthTokens: () => ({ token: 'jeton-test' }),
     isCurrentClubVerified: utilisateurCourant?.club?.clubVerified === true,
     refetchUserData: jest.fn(),
@@ -555,10 +600,34 @@ describe('D06 · regle 3 — les champs JOUEUR disparaissent pour un dirigeant',
     expect(texte).not.toContain('Retours du coach');
   });
 
-  // Un joueur qui regarde SON profil garde sa fiche complete : l'ecran unifie
-  // est un ecran de DIRIGEANT. Lui appliquer la meme soustraction lui retirerait
-  // ses stats, ses retours du coach et ses equipes — une perte, pas un gain.
-  it('les CONSERVE pour un profil joueur, avec ses stats et ses retours du coach', async () => {
+  // ⚠️ LES DEUX TESTS SUIVANTS ONT ETE INVERSES PAR LE LOT D39, VOLONTAIREMENT.
+  //
+  // Ce qu'ils exigeaient jusqu'au 2026-08-08 : « un joueur ou un entraineur qui
+  // regarde son propre profil garde la fiche actuelle, avec ses stats, ses
+  // retours du coach et ses equipes ». La raison etait juste : le pack de D06
+  // ne montrait AUCUNE destination a ces trois blocs, donc les faire entrer
+  // dans l'ecran unifie les aurait effaces. Une perte, pas une refonte.
+  //
+  // Ce qui a change : le pack « Profils JOUEUR & ENTRAINEUR »
+  // (`claude design/export/design_handoff_profils_joueur_entraineur/`) leur
+  // DONNE une destination, capture a l'appui —
+  //   · les stats -> la rangee compacte a 6 valeurs (`captures_profil_joueur/01a`)
+  //   · les retours du coach et les equipes -> les rangees 52 pt de « Suivi »
+  //     (`captures_profil_joueur/01c`)
+  // — et il pose la regle d'or qui commande le reste : « le contenu vient du
+  // ROLE du compte — aucun bloc joueur atteignable sur un profil coach, et
+  // inversement ». C'est cette derniere phrase qui retire les stats de match au
+  // COACH : chez lui elles affichaient 0 partout, c'etait un heritage joueur.
+  //
+  // ⛔ La regle 3 elle-meme n'est PAS abandonnee : les trois tests ci-dessus
+  // (le dirigeant ne voit ni taille, ni poids, ni poste, ni stats) restent
+  // intacts et verts. Ce qui change, c'est que joueur et entraineur ont
+  // desormais CHACUN leur propre soustraction, au lieu de n'en avoir aucune.
+  //
+  // Le detail du contenu de ces deux ecrans se prouve dans
+  // `SelfProfilePlayerCoach.test.js` ; ici on ne fige que l'AIGUILLAGE et
+  // l'absence de perte.
+  it('donne au JOUEUR sa page editable, sans rien perdre de D06', async () => {
     const arbre = await rendre({
       ...dirigeant,
       height: '1.80',
@@ -570,20 +639,25 @@ describe('D06 · regle 3 — les champs JOUEUR disparaissent pour un dirigeant',
     });
     const texte = texteVisible(arbre);
 
+    // Les champs joueur restent, a leur place du pack.
     expect(texte).toContain('Taille');
     expect(texte).toContain('Poids');
     expect(texte).toContain('Poste');
-    expect(texte).toContain('Stats de match');
+    // Les trois blocs que D06 protegeait ont chacun leur destination.
+    expect(texte).toContain('Matchs');
     expect(texte).toContain('Retours du coach');
-    expect(texte).toContain('Seniors B');
+    expect(texte).toContain('Mes équipes');
   });
 
-  it('les CONSERVE pour un entraineur', async () => {
+  it('retire au COACH les blocs joueur, stats de match comprises', async () => {
     const arbre = await rendre({ ...dirigeant, role: { name: 'Entraineur' } });
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('Stats de match');
-    expect(texte).toContain('Seniors A');
+    expect(texte).not.toContain('Matchs');
+    expect(texte).not.toContain('Retours du coach');
+    expect(texte).not.toContain('Poste');
+    // Ce qui lui revient, en revanche, est bien la.
+    expect(texte).toContain('Équipes entraînées');
   });
 });
 

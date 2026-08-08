@@ -37,6 +37,10 @@ const mockNavigate = jest.fn();
 jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
   return {
+    // D39 — `UserDetails` tire desormais le contrat de formulaire, qui tire
+    // `@/theme/strings` pour Joi, et ce module amorce i18next au chargement.
+    // Sans cette doublure la suite ne se charge plus du tout.
+    initReactI18next: { init: () => {}, type: '3rdParty' },
     useTranslation: () => ({
       t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
         const valeur = String(cle || '').split('.').reduce(
@@ -113,6 +117,16 @@ jest.mock('@/views/profile/SelfProfileUnified', () => {
   return {
     __esModule: true,
     default: () => <TexteRN>ECRAN PROFIL UNIFIE</TexteRN>,
+  };
+});
+
+// D39 — meme raison, pour l'ecran joueur/entraineur. Ce fichier caracterise
+// l'AIGUILLAGE de `UserDetails`, pas le contenu des ecrans qu'il delegue.
+jest.mock('@/views/profile/SelfProfilePlayerCoach', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: () => <TexteRN>ECRAN PROFIL JOUEUR OU ENTRAINEUR</TexteRN>,
   };
 });
 
