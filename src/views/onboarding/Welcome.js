@@ -213,6 +213,10 @@ function Welcome({ navigation }) {
   return (
     <FormScreenContainer
       bgImage="bg2"
+      // D31 ⑤ — l'écran pose LUI-MÊME le retrait bas (`marginBottom` ci-dessous).
+      // Sans ce mode, le conteneur en ajoutait un SECOND : `insets.bottom` était
+      // compté deux fois, soit ~34 pt de vide sous le bouton du bas.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Spaces.padding[24],
         Alignments.justifySpaceBetween,

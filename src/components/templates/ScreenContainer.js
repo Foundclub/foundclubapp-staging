@@ -116,17 +116,26 @@ function ScreenContainer({
   //    bord-a-bord (targetSdk 35). Le clavier recouvrait donc le bouton bas.
   //    Les 19 autres KeyboardAvoidingView du depot passent 'height' : on
   //    s'aligne sur le motif maison plutot que d'en inventer un.
-  // 2. `keyboardVerticalOffset` compense un decalage GEOMETRIQUE : React Native
-  //    compare la hauteur de cette vue, mesuree PAR RAPPORT A SON PARENT, a la
-  //    position ECRAN du clavier. Le parent applique deja `paddingTop`
-  //    ci-dessus (l'en-tete est transparent, cf. `commonOptions`) — c'est
-  //    exactement ce decalage-la qu'il faut rendre. Toute valeur ecrite en dur
-  //    (110, 100, 30...) est ce meme calcul, fige sur UN modele de telephone.
-  const keyboardTopOffset = containerSpaces.paddingTop || 0;
+  // 2. `keyboardVerticalOffset` compense un decalage GEOMETRIQUE, et D31 a
+  //    mesure qu'il vaut ZERO ICI. La regle, lue dans le code de React Native
+  //    (`KeyboardAvoidingView.js`, `_relativeKeyboardHeight`) : il compare
+  //    `frame.y + frame.height` — la position de CETTE vue DANS SON PARENT — a
+  //    `keyboardFrame.screenY`, une position ECRAN. L'offset doit donc valoir
+  //    la position ECRAN DU PARENT, pas la marge que le parent applique.
+  //    Or le parent est ici l'`ImageBackground`/`LinearGradient` plein ecran,
+  //    dont l'origine est a l'ecran 0 (l'en-tete est transparent, cf.
+  //    `commonOptions`) : `frame.y` VAUT DEJA le `paddingTop` ci-dessus, parce
+  //    que Yoga positionne l'enfant a l'interieur de la marge du parent.
+  //    Rendre `paddingTop` une seconde fois retranchait donc cette hauteur au
+  //    contenu : l'ecran de connexion se retractait de ~96 pt de trop, le logo
+  //    disparaissait et le titre remontait (defaut ④ de la recette du 07/08).
+  //    `WizardStepLayout` passe `0` pour la meme raison.
+  //    Toute valeur ecrite en dur (110, 100, 30...) est ce meme calcul, fige
+  //    sur UN modele de telephone.
   const body = keyboardAvoiding ? (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={keyboardTopOffset}
+      keyboardVerticalOffset={0}
       style={Alignments.fill}
     >
       <View style={[Alignments.grow1, ...safeContentContainerStyle]}>

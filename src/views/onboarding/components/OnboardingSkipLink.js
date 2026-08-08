@@ -35,11 +35,17 @@ function OnboardingSkipLink({ hint, label, onPress }) {
       accessibilityHint={accessibilityHint}
       accessibilityLabel={visibleLabel}
       accessibilityRole="button"
-      // La cible rendue fait 32 pt de haut (14 pt de texte + 2 x 8 pt) : le
-      // hitSlop la complete jusqu'aux 44 pt exiges.
-      hitSlop={ApplicationStyle.hitSlop?.min44From32}
+      // D31 ⑤ — « le padding du bouton Continuer / Passer cette etape est trop
+      // grand, il faut reduire au maximum » (recette du 07/08 au soir).
+      // La marge verticale passe de 8 a 4 pt : la cible RENDUE fait donc 24 pt
+      // (16 pt de texte + 2 x 4) au lieu de 32.
+      // ⛔ « Au maximum » s'arrete ici, et c'est mesure : le hitSlop suit et
+      // passe a `min44From24` (+10 pt de chaque cote), ce qui ramene la cible
+      // TACTILE a exactement 44 pt. Descendre plus bas la ferait passer sous le
+      // plancher d'accessibilite du projet (`MIN_TOUCH_TARGET`).
+      hitSlop={ApplicationStyle.hitSlop?.min44From24}
       onPress={onPress}
-      style={[Spaces.paddingHorizontal[16], Spaces.paddingVertical[8]]}
+      style={[Spaces.paddingHorizontal[16], Spaces.paddingVertical[4]]}
       testID="onboarding-skip-link"
     >
       <Text style={[styles.label, { color: Colors.primary500 }]}>{visibleLabel}</Text>

@@ -23,6 +23,8 @@ let mockAuthValue;
 let mockFetchedUser;
 /** @type {any[]} */
 let mockChampsSheet = [];
+/** @type {any} */
+let mockProprietesFeuille = null;
 const mockNavigate = jest.fn();
 const mockUpdateMe = jest.fn();
 
@@ -194,9 +196,10 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
   const { View } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { children, isVisible }) => (
-      isVisible ? <View>{children}</View> : null
-    ),
+    default: (/** @type {any} */ proprietes) => {
+      mockProprietesFeuille = proprietes;
+      return proprietes.isVisible ? <View>{proprietes.children}</View> : null;
+    },
   };
 });
 
@@ -347,6 +350,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockFetchedUser = undefined;
   mockChampsSheet = [];
+  mockProprietesFeuille = null;
 });
 
 describe('D06 · regle 1 — un champ vide propose « Ajouter »', () => {
@@ -433,6 +437,96 @@ describe('D06 · regle 2 — edition en place, un champ a la fois', () => {
     const arbre = await rendre(dirigeant);
 
     expect(texteVisible(arbre)).not.toContain('Continuer');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D31 — les trois defauts de la recette du 2026-08-07 au soir sur cet ecran.
+// ---------------------------------------------------------------------------
+
+describe('D31 ① — la feuille d`edition doit pouvoir remonter au-dessus du clavier', () => {
+  it('demande a Android le mode qui laisse la bibliotheque deplacer la feuille', async () => {
+    const arbre = await rendre(dirigeant);
+    await appuyerSur(arbre, 'Email');
+
+    // `adjustResize` (le defaut de BottomModal) fait renoncer @gorhom a tout
+    // deplacement sur Android, et Android 15 ne redimensionne plus la fenetre
+    // a sa place : personne ne remontait la feuille.
+    expect(mockProprietesFeuille.androidKeyboardInputMode).toBe('adjustPan');
+  });
+
+  it('n`impose RIEN a iOS : le comportement clavier reste celui par defaut', async () => {
+    const arbre = await rendre(dirigeant);
+    await appuyerSur(arbre, 'Email');
+
+    // Le correctif passe par `android_keyboardInputMode`, ignore sur iOS ou le
+    // mode `interactive` fonctionne deja. Toucher `keyboardBehavior` aurait au
+    // contraire supprime l'evitement qui marche la-bas.
+    expect(mockProprietesFeuille.keyboardBehavior).toBeUndefined();
+  });
+});
+
+describe('D31 ② — le nom du champ n`est plus ecrit deux fois', () => {
+  it('le champ texte ne reprend plus le libelle deja porte par le titre', async () => {
+    const arbre = await rendre(dirigeant);
+
+    await appuyerSur(arbre, 'Email');
+
+    // La doublure rend « CHAMP:<label> » : le libelle du champ doit etre vide.
+    expect(texteVisible(arbre)).toContain('CHAMP:');
+    expect(texteVisible(arbre)).not.toContain('CHAMP:Email');
+    expect(mockChampsSheet[0].label).toBeUndefined();
+  });
+
+  it('mais le champ garde un NOM ACCESSIBLE : l`etiquette part, pas l`accessibilite', async () => {
+    const arbre = await rendre(dirigeant);
+
+    await appuyerSur(arbre, 'Email');
+
+    expect(mockChampsSheet[0].accessibilityLabel).toBe('Email');
+  });
+
+  it('le titre de la feuille, lui, reste : c`est lui qui dit ce qu`on edite', async () => {
+    const arbre = await rendre(dirigeant);
+
+    await appuyerSur(arbre, 'Email');
+
+    expect(texteExact(arbre, 'Email')).toBeDefined();
+  });
+
+  it('meme regle sur la ligne Ville, dont le placeholder porte le nom accessible', async () => {
+    const arbre = await rendre(dirigeant);
+
+    await appuyerSur(arbre, 'Ville');
+
+    expect(texteVisible(arbre)).not.toContain('ADRESSE:Ville');
+    expect(mockChampsSheet[0].label).toBeUndefined();
+    expect(mockChampsSheet[0].placeholder).toBe('Rechercher une ville');
+  });
+});
+
+describe('D31 ③ — la MESURE : la feuille « Ville » s`ouvre-t-elle depuis cet ecran ?', () => {
+  // Adel : « l'onglet ville ne s'ouvre pas pour modifier ». Le prompt demandait
+  // de trancher entre « la feuille ne s'ouvre pas » (ce lot) et « elle s'ouvre
+  // et la recherche a l'interieur ne repond pas » (lot D32). Ces deux tests
+  // sont la mesure : ils prouvent que la MOITIE portee par cet ecran fonctionne.
+  it('la rangee Ville est bien pressable et ouvre la feuille', async () => {
+    const arbre = await rendre(dirigeant);
+
+    expect(mockProprietesFeuille.isVisible).toBe(false);
+    await appuyerSur(arbre, 'Ville');
+
+    expect(mockProprietesFeuille.isVisible).toBe(true);
+  });
+
+  it('et la feuille monte bien le champ de recherche d`adresse, pas un champ texte', async () => {
+    const arbre = await rendre(dirigeant);
+
+    await appuyerSur(arbre, 'Ville');
+
+    expect(texteVisible(arbre)).toContain('ADRESSE:');
+    expect(texteVisible(arbre)).toContain('Enregistrer');
+    expect(mockChampsSheet).toHaveLength(1);
   });
 });
 

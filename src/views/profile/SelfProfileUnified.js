@@ -686,6 +686,22 @@ function SelfProfileUnified({ navigation }) {
       </ScrollView>
 
       <BottomModal
+        // D31 ① — « le clavier passe au-dessus du champ, je ne vois pas ce que
+        // j'ecris » (recette du 07/08 au soir). La feuille ne remontait pas, et
+        // la cause est un enchainement de DEUX renoncements :
+        //   1. `@gorhom/bottom-sheet` refuse deliberement de deplacer la feuille
+        //      quand la plateforme est Android ET le mode `adjustResize`
+        //      (`BottomSheet.tsx`, l.826-839 pour la position, l.1656-1673 qui
+        //      force `heightWithinContainer = 0`). Il fait confiance a Android
+        //      pour redimensionner la fenetre a sa place.
+        //   2. Or `adjustResize` n'agit plus depuis qu'Android 15 impose le
+        //      bord-a-bord (targetSdk 35) — exactement ce que D23 avait mesure
+        //      sur les ecrans du tunnel.
+        // Personne ne remontait donc la feuille. En demandant `adjustPan`, on
+        // rend la main a l'evitement que la bibliotheque sait deja faire.
+        // ⚠️ Prop ANDROID uniquement (`android_keyboardInputMode`) : iOS, ou le
+        // mode `interactive` fonctionne deja, n'est pas touche.
+        androidKeyboardInputMode="adjustPan"
         close={() => setEditedField(null)}
         hideCloseButton
         isVisible={Boolean(editedField)}
@@ -693,20 +709,28 @@ function SelfProfileUnified({ navigation }) {
       >
         {editedField ? (
           <View style={[Spaces.gap[16], Spaces.paddingVertical[16]]}>
+            {/*
+              D31 ② — le titre de la feuille dit ce qu'on edite. Le champ etant
+              SEUL en dessous, lui redonner le meme mot affichait « Ville »,
+              « Email », « Sport de preference »... DEUX FOIS de suite.
+              Le libelle visible part, jamais le nom accessible : `Input` le
+              reprend en `accessibilityLabel`, et la ligne d'adresse annonce son
+              placeholder « Rechercher une ville », rendu en clair par
+              `AutocompleteSelect` tant qu'aucune ville n'est choisie.
+            */}
             <Text style={[Fonts.p1Bold, Fonts.neutral00, { fontSize: 17 }]}>
               {editedField.label}
             </Text>
             {editedField.kind === 'address' ? (
               <AutocompleteAddressInput
                 address={draftValue}
-                label={editedField.label}
                 placeholder={t('profile.fields.city.placeholder', 'Rechercher une ville')}
                 setAddress={setDraftValue}
               />
             ) : (
               <Input
+                accessibilityLabel={editedField.label}
                 keyboardType={editedField.keyboardType}
-                label={editedField.label}
                 onChangeText={setDraftValue}
                 value={String(draftValue ?? '')}
               />
