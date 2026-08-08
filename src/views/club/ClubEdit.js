@@ -434,6 +434,9 @@ function ClubEdit({ navigation, route }) {
                 )}
               />
 
+              <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                {t('clubEdit.publicMembers.title', 'Visibilité des membres')}
+              </Text>
               <View
                 style={[
                   ApplicationStyle.card,
@@ -446,10 +449,13 @@ function ClubEdit({ navigation, route }) {
                   },
                 ]}
               >
+                {/* D34 ecran 02 : le LIBELLE de l'interrupteur passe AVANT sa */}
+                {/* description. On lisait « Visibilite des membres », une phrase */}
+                {/* d'explication, l'interrupteur, PUIS seulement ce qu'il fait. */}
                 <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                      {t('clubEdit.publicMembers.title', 'Visibilité des membres')}
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                      {t('clubEdit.publicMembers.switchLabel', 'Afficher les membres publiquement')}
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
                       {t(
@@ -463,6 +469,11 @@ function ClubEdit({ navigation, route }) {
                     name="clubMembersPublicVisibility"
                     render={({ field: { onChange, value } }) => (
                       <Switch
+                        accessibilityLabel={t(
+                          'clubEdit.publicMembers.switchLabel',
+                          'Afficher les membres publiquement',
+                        )}
+                        accessibilityRole="switch"
                         onValueChange={onChange}
                         thumbColor={value ? Colors.primary500 : Colors.neutral300}
                         trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
@@ -471,24 +482,14 @@ function ClubEdit({ navigation, route }) {
                     )}
                   />
                 </View>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                  {t('clubEdit.publicMembers.switchLabel', 'Afficher les membres publiquement')}
-                </Text>
               </View>
 
-              <View
-                style={[
-                  ApplicationStyle.card,
-                  Spaces.padding[16],
-                  Spaces.gap[12],
-                  {
-                    backgroundColor: 'rgba(4, 31, 44, 0.82)',
-                    borderColor: withAlpha(Colors.primary500, 0.24),
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+              {/* D34 ecran 02 : « jamais de carte dans une carte ». Les deux */}
+              {/* rangees-radio portent DEJA leur propre bordure ; la carte qui */}
+              {/* les enfermait dessinait donc une seconde bordure autour. Le */}
+              {/* titre et son explication deviennent une etiquette de groupe. */}
+              <View style={[Spaces.gap[12]]}>
+                <Text style={[Fonts.p3Bold, Fonts.primary200]}>
                   {t('clubEdit.membership.title', "Demandes d'adhésion aux équipes")}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -507,6 +508,9 @@ function ClubEdit({ navigation, route }) {
 
                         return (
                           <TouchableOpacity
+                            accessibilityLabel={`${option.label}. ${option.description}`}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: isSelected }}
                             activeOpacity={0.9}
                             key={option.value}
                             onPress={() => onChange(option.value)}
