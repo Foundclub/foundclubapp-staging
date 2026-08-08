@@ -105,6 +105,9 @@ jest.mock('../FriendlyMatchWizardContext', () => ({
 }));
 
 const polices = require('@/theme/fonts').default(require('@/theme/colors').default());
+// Charge ici, et pas dans le `describe` : un require() hors du premier niveau
+// est une erreur `global-require`, que le cliquet de lint compte.
+const catalogueFr = require('@/theme/strings/translations/fr').default;
 
 /**
  * Rend l'etape avec un choix deja fait, ou aucun.
@@ -414,8 +417,6 @@ describe('Etape 2/7 « Tu peux recevoir ? » — CE QUE D07 AJOUTE', () => {
 // puisque le repli porte le meme texte. Ceux-ci prouvent l'autre moitie : la
 // clef EXISTE dans `fr.js`, et elle y porte le texte au caractere pres.
 describe('D41 ② — la copy de l etape vit dans fr.js, mot pour mot', () => {
-  const catalogue = require('@/theme/strings/translations/fr').default;
-
   /**
    * Lit une clef pointee dans le catalogue francais.
    * @param {string} cle La clef, segments separes par des points.
@@ -423,7 +424,7 @@ describe('D41 ② — la copy de l etape vit dans fr.js, mot pour mot', () => {
    */
   const lireDansFr = (cle) => cle
     .split('.')
-    .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
+    .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogueFr);
 
   const RACINE = 'friendlyMatch.wizard.hosting';
   const LIGNE_INFO = 'Seules les équipes compatibles avec ton choix verront ton annonce'

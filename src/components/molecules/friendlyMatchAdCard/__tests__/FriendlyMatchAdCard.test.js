@@ -107,6 +107,9 @@ jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => {
 });
 
 const polices = require('@/theme/fonts').default(require('@/theme/colors').default());
+// Charge ici, et pas dans le `describe` : un require() hors du premier niveau
+// est une erreur `global-require`, que le cliquet de lint compte.
+const catalogueFr = require('@/theme/strings/translations/fr').default;
 
 /**
  * Une annonce complete, telle que le service la rend.
@@ -535,10 +538,8 @@ describe('Carte d annonce amicale — CE QUE D07 CHANGE', () => {
 // copy EXISTE dans `fr.js`, au caractere pres. `toEqual` sur le sous-arbre
 // entier attrape aussi bien une clef oubliee qu'une clef reformulee.
 describe('D41 ② — la copy de la carte vit dans fr.js, mot pour mot', () => {
-  const catalogue = require('@/theme/strings/translations/fr').default;
-
   it('porte les 28 textes de la carte, sans en reformuler un seul', () => {
-    expect(catalogue.friendlyMatch.adCard).toEqual({
+    expect(catalogueFr.friendlyMatch.adCard).toEqual({
       accessibilityHint: 'Ouvrir le détail de l\'annonce',
       accessibilityLabelPrefix: 'Match amical',
       applications: '{{total}} proposition{{plural}}',
