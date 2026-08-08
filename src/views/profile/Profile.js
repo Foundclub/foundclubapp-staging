@@ -86,9 +86,14 @@ function Profile({ navigation, route }) {
     || currentRoleKey === 'president'
     || currentRoleKey === 'superAdmin';
   const isSuperAdmin = currentRoleKey === 'superAdmin';
-  // D39 — les roles dont la page profil est deja editable (« voir = modifier »).
-  // Meme juge que partout : `getUserRoleKey`, jamais une seconde regle.
-  const hasEditableProfilePage = currentRoleKey === 'player' || currentRoleKey === 'coach';
+  // D39 puis D41 — les roles dont la page profil est deja editable
+  // (« voir = modifier »). Meme juge que partout : `getUserRoleKey`, jamais une
+  // seconde regle. Le dirigeant a rejoint la liste le 2026-08-08 : sa page D06
+  // edite champ par champ depuis le 5 aout, donc sa seconde rangee de menu
+  // menait au meme sujet par un AUTRE formulaire.
+  const hasEditableProfilePage = currentRoleKey === 'player'
+    || currentRoleKey === 'coach'
+    || currentRoleKey === 'president';
   const multisportClubs = useMemo(
     () => userData?.multisportClubs || [],
     [userData?.multisportClubs],
@@ -566,12 +571,14 @@ function Profile({ navigation, route }) {
     {
       icon: Images.users, key: 'view', label: t('profile.actions.view'), onPress: handleViewProfile,
     },
-    // D39 — LA FUSION, cote menu. Le pack demande que « Infos profil » et
-    // « Modifier mes informations » ne fassent plus qu'une entree pour un
-    // joueur ou un entraineur : leur page profil EST editable, une seconde
-    // rangee menerait au meme endroit sous un autre nom. Le dirigeant, lui,
-    // garde les deux : son ecran D06 edite champ par champ et le crayon de sa
-    // carte identite mene toujours a `ProfileEdit`.
+    // D39 puis D41 — LA FUSION, cote menu. Le pack demande que « Infos profil »
+    // et « Modifier mes informations » ne fassent plus qu'une entree : quand la
+    // page profil EST editable, une seconde rangee mene au meme endroit sous un
+    // autre nom. D39 l'a fait pour le joueur et l'entraineur ; D41 termine par
+    // le DIRIGEANT (arbitrage Adel du 2026-08-08, option A de l'audit D38), pour
+    // qui le crayon de la carte identite devient le seul acces au formulaire.
+    // ⛔ `ProfileEdit` reste debout : il garde ses autres points d'entree, son
+    // URL web `/profile/edit`, et cette rangee-ci pour les comptes sans role.
     ...(hasEditableProfilePage ? [] : [{
       icon: Images.edit, key: 'edit', label: t('profile.actions.edit'), onPress: handleEditUser,
     }]),
