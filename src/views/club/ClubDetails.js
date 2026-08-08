@@ -185,7 +185,9 @@ function ClubDetails({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { getClubInitials } = useClub();
   const isAuthenticated = Boolean(userData?.documentId);
-  const [selectedTab, setSelectedTab] = useState('infos');
+  const [selectedTab, setSelectedTab] = useState(
+    route?.params?.planningFacilityId ? 'planning' : 'infos',
+  );
   const [joinRequestPending, setJoinRequestPending] = useState(false);
   const [isEditingActivities, setIsEditingActivities] = useState(false);
   const [isAddActivityModalVisible, setIsAddActivityModalVisible] = useState(false);
@@ -200,10 +202,13 @@ function ClubDetails({ navigation, route }) {
     /** @type {string[]} */
     ([]),
   );
+  // D34 ecran 03 : « Voir le planning » depuis la liste des installations
+  // revient ICI avec l'installation a selectionner. Le planning du club est un
+  // onglet de cet ecran, pas une route : on le pilote donc par parametre.
   const [planningSelection, setPlanningSelection] = useState({
-    facilityId: null,
+    facilityId: route?.params?.planningFacilityId || null,
     nonce: 0,
-    scope: 'club',
+    scope: route?.params?.planningScope || 'club',
   });
 
   const handleGoToNextOnboardingStep = useCallback(() => {

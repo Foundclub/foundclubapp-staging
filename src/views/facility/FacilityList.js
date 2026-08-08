@@ -15,6 +15,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -56,6 +57,10 @@ const getAddressCoordinates = (address) => {
 };
 
 const getListSubtitle = (count) => `${count} ${(count === 0 || count > 1) ? 'installations' : 'installation'}`;
+
+// D34 ecran 03 : la couleur du planning devient un LISERE, plus un habillage.
+// 4 pt est la valeur du pack, nommee ici pour qu'on sache pourquoi elle existe.
+const FACILITY_ACCENT_WIDTH = 4;
 
 const getFacilityKey = (item, index) => (item.documentId || item.id?.toString() || `${item?.name || 'facility'}-${index}`);
 
@@ -156,6 +161,21 @@ function FacilityList() {
       cmId: resolvedCmId,
     });
   }, [contextClubId, navigation, resolvedCmId]);
+
+  // D34 ecran 03 : « Voir le planning » n'ouvre PAS un ecran neuf — le planning
+  // du club est un onglet de `ClubDetails` (hors lot). On y revient donc en
+  // passant l'installation a selectionner en parametre de route, plutot que
+  // d'ajouter une route pour un ecran qui existe deja ailleurs.
+  const handleOpenPlanning = useCallback((facility) => {
+    const facilityId = facility?.documentId || facility?.id;
+    if (!facilityId) return;
+
+    navigation.navigate(RouteNames.Club, {
+      clubId: contextClubId,
+      planningFacilityId: facilityId,
+      planningScope: facility?.isShared ? 'shared' : 'club',
+    });
+  }, [contextClubId, navigation]);
 
   const handleOpenFacilityMap = useCallback((facility) => {
     const addressLabel = getAddressLabel(facility?.address, '').trim() || facility?.name || '';
@@ -266,8 +286,15 @@ function FacilityList() {
     );
     const hasAddress = Boolean(getAddressLabel(item?.address, '').trim());
     const planningColor = resolveFacilityPlanningColor(item);
-    const cardTintColor = `${planningColor}22`;
     const isEditable = !item?.isReadOnly;
+    // D34 ecran 03 : le type, la capacite et l'adresse tenaient sur trois
+    // lignes (deux chips + une ligne d'adresse). Ils tiennent desormais sur une
+    // seule meta, comme « Terrain · 1 equipe simultanee · 21 rue Fortia ».
+    const metaLabel = [
+      item?.type || t('facilityList.defaults.unknownType', 'Type inconnu'),
+      capacityLabel,
+      hasAddress ? addressLabel : null,
+    ].filter(Boolean).join(' · ');
     const sharedOwnerLabel = item?.ownerName || t('facilityList.badges.multisport', 'Multisport');
     const conflictMode = getFacilityConflictMode(item);
     const accessibilityEditLabel = t(
@@ -282,8 +309,10 @@ function FacilityList() {
           Spaces.padding[16],
           Spaces.gap[12],
           {
-            backgroundColor: cardTintColor,
-            borderColor: planningColor,
+            backgroundColor: withAlpha(Colors.primary800, 0.6),
+            borderColor: withAlpha(Colors.neutral00, 0.13),
+            borderLeftColor: planningColor,
+            borderLeftWidth: FACILITY_ACCENT_WIDTH,
             borderWidth: 1,
             marginBottom: 12,
             overflow: 'hidden',
@@ -291,18 +320,6 @@ function FacilityList() {
           },
         ]}
       >
-        <View
-          style={{
-            backgroundColor: planningColor,
-            borderBottomRightRadius: 8,
-            borderTopRightRadius: 8,
-            height: '100%',
-            left: 0,
-            position: 'absolute',
-            top: 0,
-            width: 4,
-          }}
-        />
         <TouchableOpacity
           accessibilityLabel={isEditable ? accessibilityEditLabel : undefined}
           accessibilityRole={isEditable ? 'button' : undefined}
@@ -315,72 +332,80 @@ function FacilityList() {
             style={[
               Alignments.row,
               Alignments.alignCenter,
-              Alignments.justifySpaceBetween,
-              Spaces.gap[8],
+              Spaces.gap[12],
             ]}
           >
-            <Text
-              numberOfLines={2}
-              style={[
-                Fonts.h4Black,
-                Fonts.neutral00,
-                { flex: 1 },
-              ]}
-            >
-              {item?.name || t('facilityList.defaults.facilityName', 'Installation')}
-            </Text>
-            {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.multisport', 'Multisport'), 'warning') : null}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text
+                numberOfLines={1}
+                style={[Fonts.p1Black, Fonts.neutral00]}
+              >
+                {item?.name || t('facilityList.defaults.facilityName', 'Installation')}
+              </Text>
+              <Text
+                numberOfLines={2}
+                style={[Fonts.p3, Fonts.neutral400, Spaces.marginTop[4]]}
+              >
+                {metaLabel}
+              </Text>
+            </View>
+            {/* La couleur du planning se lit en pastille ETIQUETEE, pas en */}
+            {/* habillage de la carte : rouge = erreur, jamais decoration. */}
+            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+              <View
+                style={{
+                  backgroundColor: planningColor || Colors.primary500,
+                  borderColor: withAlpha(Colors.neutral00, 0.4),
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  height: 12,
+                  width: 12,
+                }}
+              />
+              <Text style={[Fonts.p3Bold, Fonts.neutral400]}>
+                {t('facilityList.labels.planning', 'Planning')}
+              </Text>
+            </View>
           </View>
 
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, Spaces.gap[8]]}>
-            {renderMetaChip(capacityLabel, 'primary')}
-            {renderMetaChip(item?.type || t('facilityList.defaults.unknownType', 'Type inconnu'), 'neutral')}
             {renderMetaChip(
               conflictMode === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY
-                ? t('facilityList.badges.overflowAllowed', 'Autorise et notifier')
-                : t('facilityList.badges.overflowBlocked', 'Demande en attente'),
-              conflictMode === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY ? 'primary' : 'warning',
+                ? t('facilityList.badges.overflowAllowed', 'Conflits : autoriser et notifier')
+                : t('facilityList.badges.overflowBlocked', 'Conflits : demande à valider'),
+              'neutral',
             )}
-            {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.shared', 'Partagee'), 'primary') : null}
+            {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.shared', 'Partagée'), 'neutral') : null}
+            {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.multisport', 'Multisport'), 'warning') : null}
           </View>
+        </TouchableOpacity>
 
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-            <View
-              style={{
-                backgroundColor: planningColor || Colors.primary500,
-                borderColor: `${Colors.neutral00}66`,
-                borderRadius: 999,
-                borderWidth: 1,
-                height: 12,
-                width: 12,
-              }}
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+          <View style={{ flex: 1 }}>
+            <Button
+              onPress={() => handleOpenPlanning(item)}
+              title={t('facilityList.actions.openPlanning', 'Voir le planning')}
+              variant="Primary"
             />
-            <Text style={[Fonts.p3, Fonts.primary100]}>
-              {t('facilityList.labels.planningColor', 'Couleur planning')}
-            </Text>
           </View>
+          {isEditable ? (
+            <Button
+              onPress={() => handleEdit(item)}
+              title={t('common.actions.edit', 'Modifier')}
+              variant="Secondary"
+            />
+          ) : null}
+        </View>
 
+        {hasAddress ? (
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
             <Image
               source={Images.pin}
               style={[
                 ApplicationStyle.icon16,
                 ApplicationStyle.tintColor.primary200,
-                { marginTop: 1 },
               ]}
             />
-            <Text
-              numberOfLines={2}
-              style={[
-                Fonts.p2,
-                Fonts.primary100,
-                { flex: 1 },
-              ]}
-            >
-              {addressLabel}
-            </Text>
-          </View>
-          {hasAddress ? (
             <Button
               onPress={() => handleOpenFacilityMap(item)}
               size="small"
@@ -388,8 +413,8 @@ function FacilityList() {
               title={t('common.actions.openInGps', 'Ouvrir dans le GPS')}
               variant="Secondary"
             />
-          ) : null}
-        </TouchableOpacity>
+          </View>
+        ) : null}
 
         {item?.isReadOnly ? (
           <View style={[Spaces.gap[4]]}>
@@ -423,7 +448,6 @@ function FacilityList() {
   }, [
     Alignments.alignCenter,
     Alignments.justifyEnd,
-    Alignments.justifySpaceBetween,
     Alignments.row,
     Alignments.wrap,
     ApplicationStyle.borderRadius24,
@@ -432,18 +456,21 @@ function FacilityList() {
     Colors.error500,
     Colors.neutral00,
     Colors.primary500,
-    Fonts.h4Black,
+    Colors.primary800,
     Fonts.neutral00,
     Fonts.neutral300,
-    Fonts.p2,
-    Fonts.primary100,
+    Fonts.neutral400,
+    Fonts.p1Black,
     Fonts.p3,
+    Fonts.p3Bold,
     Images.pin,
     Spaces.gap,
+    Spaces.marginTop,
     Spaces.padding,
     handleDelete,
     handleEdit,
     handleOpenFacilityMap,
+    handleOpenPlanning,
     renderMetaChip,
     t,
   ]);
@@ -476,6 +503,31 @@ function FacilityList() {
           title={t('facilityList.empty.title', 'Aucune installation')}
         />
       )}
+      ListFooterComponent={facilities.length > 0 ? (
+        <TouchableOpacity
+          accessibilityLabel={t('facilityList.empty.action', 'Ajouter une installation')}
+          accessibilityRole="button"
+          disabled={isMissingContext}
+          onPress={handleCreate}
+          style={[
+            Alignments.alignCenter,
+            Alignments.justifyCenter,
+            Spaces.marginTop[12],
+            {
+              backgroundColor: withAlpha(Colors.primary500, 0.06),
+              borderColor: withAlpha(Colors.primary500, 0.4),
+              borderRadius: 16,
+              borderStyle: 'dashed',
+              borderWidth: 1.5,
+              minHeight: 52,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+            {`+ ${t('facilityList.empty.action', 'Ajouter une installation')}`}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
       refreshControl={(
         <RefreshControl
           colors={[Colors.primary500]}
@@ -554,14 +606,8 @@ function FacilityList() {
             {getListSubtitle(facilities.length)}
           </Text>
         </View>
-        <Button
-          disabled={isMissingContext}
-          icon="plus"
-          onPress={handleCreate}
-          size="small"
-          title={t('facilityList.actions.add', 'Ajouter')}
-          variant="Primary"
-        />
+        {/* D34 : une SEULE grammaire d'ajout — le bouton plein de l'en-tete a */}
+        {/* laisse la place au pointille en pied de liste (ListFooterComponent). */}
       </View>
 
       {content}

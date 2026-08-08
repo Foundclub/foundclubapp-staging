@@ -185,6 +185,14 @@ const INSTALLATION_PARTAGEE = {
   type: 'Gymnase',
 };
 
+// `SectionList` planifie ses lots via un `Batchinator` qui appelle
+// `InteractionManager` sur un `setTimeout`. Si l'arbre survit a la fin du test,
+// ce minuteur se declenche APRES le demontage de l'environnement Jest et fait
+// tomber le processus entier — sans rapport avec le code teste. On demonte
+// donc explicitement tout ce qu'on a monte.
+/** @type {any[]} */
+const arbresMontes = [];
+
 /**
  * Rend l'ecran et retourne son arbre.
  * @returns {any} L'arbre rendu.
@@ -195,6 +203,7 @@ const rendre = () => {
   act(() => {
     arbre = renderer.create(<FacilityList />);
   });
+  arbresMontes.push(arbre);
   return arbre;
 };
 
@@ -267,6 +276,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  act(() => {
+    arbresMontes.splice(0).forEach((arbre) => arbre.unmount());
+  });
   jest.restoreAllMocks();
 });
 
