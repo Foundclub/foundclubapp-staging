@@ -109,6 +109,11 @@ const getTeamMetaValue = (value) => {
   return '';
 };
 
+// D34 ecran 11 : le pack reprochait a cet ecran d'afficher « Masculine · Senior »
+// partout. La MESURE dit le contraire : la meta est composee de la section, de
+// la categorie et du niveau REELS de chaque equipe, et ce depuis le 2026-03-17
+// (f95c04e). Le seul ecart avec le pack etait le separateur — une barre au lieu
+// du point median. C'est lui qui change ici, rien d'autre.
 const getTeamMetaSummary = (team) => (
   [
     getTeamMetaValue(team?.section),
@@ -116,7 +121,7 @@ const getTeamMetaSummary = (team) => (
     getTeamMetaValue(team?.level),
   ]
     .filter(Boolean)
-    .join(' | ')
+    .join(' · ')
 );
 
 const getTeamIdentity = (team) => String(team?.documentId || team?.id || '').trim();
@@ -638,6 +643,15 @@ function ClubDetails({ navigation, route }) {
       navigation.navigate(RouteNames.AddSponsor, { clubId });
     }
   };
+
+  // D34 ecran 11 : meme point d'entree que `AssignCoachTeams` — le tunnel de
+  // creation d'equipe vit dans l'autre stack, on ne le reecrit pas.
+  const handleCreateTeam = useCallback(() => {
+    navigation.navigate(RouteNames.TeamStack, {
+      params: { clubId },
+      screen: RouteNames.TeamWizardName,
+    });
+  }, [clubId, navigation]);
 
   const handleEditClub = useCallback(() => {
     try {
@@ -2312,7 +2326,10 @@ function ClubDetails({ navigation, route }) {
               )}
 
               {/* teams */}
-              {sortedClubTeams.length ? (
+              {/* D34 ecran 11 : la section apparait aussi quand le club n'a */}
+              {/* AUCUNE equipe, sinon un dirigeant qui debute n'a nulle part */}
+              {/* ou en creer une depuis son club. */}
+              {sortedClubTeams.length || canEdit ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
@@ -2374,10 +2391,35 @@ function ClubDetails({ navigation, route }) {
                               </View>
                             </View>
                           </View>
-
+                          {/* D34 ecran 11 : la rangee ouvre la fiche equipe — */}
+                          {/* le chevron le DIT, au lieu de le laisser deviner. */}
+                          <Text style={[Fonts.p1, Fonts.neutral600]}>›</Text>
                         </TouchableOpacity>
                       ))
                     }
+                    {canEdit ? (
+                      <TouchableOpacity
+                        accessibilityLabel={t('clubDetails.actions.createTeam', 'Créer une équipe')}
+                        accessibilityRole="button"
+                        onPress={handleCreateTeam}
+                        style={[
+                          Alignments.alignCenter,
+                          Alignments.justifyCenter,
+                          {
+                            backgroundColor: withAlpha(Colors.primary500, 0.06),
+                            borderColor: withAlpha(Colors.primary500, 0.4),
+                            borderRadius: 16,
+                            borderStyle: 'dashed',
+                            borderWidth: 1.5,
+                            minHeight: 52,
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                          {`+ ${t('clubDetails.actions.createTeam', 'Créer une équipe')}`}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                 </View>
               ) : null}

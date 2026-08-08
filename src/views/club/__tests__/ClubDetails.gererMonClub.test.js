@@ -101,7 +101,9 @@ jest.mock('@/domains/auth/useAuth', () => ({
   default: () => ({
     activeClubId: 'club-1',
     canContactAdmin: () => false,
-    canEditClub: () => true,
+    // `canEditClub` suit l'acces au club, comme dans le vrai `useAuth` : sans
+    // ca, un joueur de passage passerait pour un dirigeant.
+    canEditClub: (/** @type {string} */ id) => mockHasClubAccess(id),
     canJoinClub: () => false,
     clubs: [{ documentId: 'club-1' }],
     getNextOnboardingRoute: () => null,
@@ -564,5 +566,36 @@ describe('ClubDetails — l espace club du dirigeant (fige avant la refonte D34)
     });
 
     expect(mockNavigation.navigate).toHaveBeenCalled();
+  });
+});
+
+// Ce bloc-ci decrit ce que D34 AJOUTE : il ne passe donc pas sur la source
+// d'origine, contrairement au bloc ci-dessus. Il est ici parce qu'un point
+// d'entree de navigation casse en silence — rien d'autre ne le surveille.
+describe('ClubDetails — ce que D34 ajoute a l espace du dirigeant', () => {
+  it('ouvre le tunnel de creation d equipe depuis la section Equipes', () => {
+    const arbre = monter();
+
+    act(() => {
+      pressableAvecTexte(arbre, 'Créer une équipe').props.onPress();
+    });
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith(
+      'TeamStack',
+      { params: { clubId: 'club-1' }, screen: 'TeamWizardName' },
+    );
+  });
+
+  it('propose quand meme de creer une equipe a un club qui n en a aucune', () => {
+    mockClubQuery.data = { ...CLUB, teams: [] };
+
+    expect(pressableAvecTexte(monter(), 'Créer une équipe')).toBeDefined();
+  });
+
+  it('ne propose PAS de creer une equipe a qui ne dirige pas le club', () => {
+    mockHasClubAccess.mockReturnValue(false);
+    mockUserData = { documentId: 'u-9', role: { name: 'player' }, trainedTeams: [] };
+
+    expect(pressableAvecTexte(monter(), 'Créer une équipe')).toBeUndefined();
   });
 });
