@@ -176,7 +176,7 @@ describe('FriendlyMatchListContent — qui voit quoi (Q12)', () => {
     expect(rendered).toContain('Club des Annonceurs');
     // Reserve au staff : ni sous-onglets de gestion, ni bouton de publication.
     expect(rendered).not.toContain('Mes annonces');
-    expect(rendered).not.toContain('+ Publier une annonce');
+    expect(rendered).not.toContain('+ Créer un match amical');
     // La carte le dit en toutes lettres au lieu de laisser un bouton mort.
     expect(rendered).toContain('Réservé aux entraîneurs et dirigeants');
   });
@@ -189,7 +189,7 @@ describe('FriendlyMatchListContent — qui voit quoi (Q12)', () => {
     expect(rendered).toContain('Annonces');
     expect(rendered).toContain('Mes annonces');
     expect(rendered).toContain('Mes propositions');
-    expect(rendered).toContain('+ Publier une annonce');
+    expect(rendered).toContain('+ Créer un match amical');
     expect(rendered).toContain('Proposer un match');
   });
 
@@ -199,7 +199,7 @@ describe('FriendlyMatchListContent — qui voit quoi (Q12)', () => {
 
     expect(rendered).toContain('Mes annonces');
     expect(rendered).toContain('Mes propositions');
-    expect(rendered).toContain('+ Publier une annonce');
+    expect(rendered).toContain('+ Créer un match amical');
   });
 
   it('traite un JOUEUR connecte comme un visiteur : il lit, il ne repond pas', async () => {
@@ -241,10 +241,10 @@ describe('FriendlyMatchListContent — les boutons mènent quelque part (L5)', (
     { deep: true },
   )[0];
 
-  it('« + Publier une annonce » ouvre le tunnel de création', async () => {
+  it('« + Creer un match amical » ouvre le tunnel de création', async () => {
     const tree = await renderFor({ documentId: 'u-1', role: { name: 'Entraineur' } });
 
-    const publishButton = findByLabel(tree, 'Publier une annonce de match amical');
+    const publishButton = findByLabel(tree, 'Créer un match amical');
     expect(publishButton).toBeDefined();
 
     await act(async () => { publishButton.props.onPress(); });
@@ -255,7 +255,7 @@ describe('FriendlyMatchListContent — les boutons mènent quelque part (L5)', (
   it('appuyer sur une annonce ouvre son détail, avec le bon identifiant', async () => {
     const tree = await renderFor({ documentId: 'u-1', role: { name: 'Entraineur' } });
 
-    const card = findByLabel(tree, 'Publier une annonce de match amical');
+    const card = findByLabel(tree, 'Créer un match amical');
     expect(card).toBeDefined();
 
     // La carte transmet l'annonce a onPress : on rejoue ce contrat.

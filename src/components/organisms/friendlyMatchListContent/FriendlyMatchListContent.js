@@ -365,7 +365,7 @@ function FriendlyMatchListContent({
 
       {canPublish && activeTab !== 'candidatures' ? (
         <TouchableOpacity
-          accessibilityLabel="Publier une annonce de match amical"
+          accessibilityLabel="Créer un match amical"
           accessibilityRole="button"
           onPress={handlePublishPress}
           style={[Spaces.padding[16], {
@@ -375,8 +375,13 @@ function FriendlyMatchListContent({
             minHeight: 44,
           }]}
         >
+          {/*
+            Les mots du pack : sur ce marche on CREE UN MATCH AMICAL et on
+            ENVOIE UNE PROPOSITION. « Annonce » disparait — il designait a la
+            fois l offre de recrutement, le match propose et la candidature.
+          */}
           <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
-            + Publier une annonce
+            + Créer un match amical
           </Text>
         </TouchableOpacity>
       ) : null}

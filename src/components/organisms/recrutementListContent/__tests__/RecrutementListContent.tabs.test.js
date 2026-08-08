@@ -371,6 +371,21 @@ describe('RecrutementListContent — ce que chaque onglet affiche (relevé L35)'
     expect(mockGetMyRecruitmentAds).not.toHaveBeenCalled();
   });
 
+  // D35 : « on publie depuis Rechercher ». Avant ce lot, le seul bouton de
+  // publication vivait dans « Mes annonces » — un onglet de GESTION. Un
+  // dirigeant qui parcourait les profils n'avait aucun moyen de publier.
+  it('Profils : le dirigeant peut publier une offre sans changer d onglet', async () => {
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'profils' });
+
+    expect(texteVisible(tree)).toContain('+ Publier une offre');
+  });
+
+  it('Profils : un joueur n a PAS de bouton de publication', async () => {
+    const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
+
+    expect(texteVisible(tree)).not.toContain('+ Publier une offre');
+  });
+
   it('Opportunités : les annonces publiques, triées « compatibles » d abord', async () => {
     const tree = await rendrePour(DIRIGEANT, { initialTab: 'profils' });
     await appuyerSur(tree, 'Opportunités');
@@ -387,7 +402,8 @@ describe('RecrutementListContent — ce que chaque onglet affiche (relevé L35)'
     const rendu = texteVisible(tree);
 
     expect(rendu).toContain('Consulte et gère les annonces publiées pour tes équipes.');
-    expect(rendu).toContain('+ Créer une annonce');
+    // D35 : le pack retire le mot « annonce » de ce marche — on publie une OFFRE.
+    expect(rendu).toContain('+ Publier une offre');
     expect(rendu).toContain('Club des Dirigeants');
     expect(mockGetMyRecruitmentAds).toHaveBeenCalled();
   });

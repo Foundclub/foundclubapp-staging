@@ -823,6 +823,34 @@ function RecrutementListContent({
     />
   );
 
+  // Le bouton de publication, ecrit UNE fois et pose a DEUX endroits : sur
+  // l onglet d exploration (« Profils »), ou le pack le veut — on publie depuis
+  // Rechercher — et dans l en-tete de « Mes annonces », ou il vivait seul.
+  // Les mots viennent du pack : dans ce lot on publie une OFFRE, jamais une
+  // « annonce » (le meme mot couvrait trois objets differents).
+  const renderPublishOfferCta = () => (
+    <TouchableOpacity
+      accessibilityLabel="Publier une offre de recrutement"
+      accessibilityRole="button"
+      onPress={() => {
+        nav.navigate(RouteNames.AdWizardStack);
+      }}
+      style={[
+        Spaces.padding[16],
+        {
+          alignItems: 'center',
+          backgroundColor: Colors.primary500,
+          borderRadius: 12,
+          minHeight: 44,
+        },
+      ]}
+    >
+      <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
+        + Publier une offre
+      </Text>
+    </TouchableOpacity>
+  );
+
   // Render content for Coach - Annonces tab
   const renderAnnoncesContent = () => {
     const annoncesHeader = (
@@ -844,23 +872,7 @@ function RecrutementListContent({
           </Text>
         </View>
         {renderAudienceTypeTabs()}
-        <TouchableOpacity
-          onPress={() => {
-            nav.navigate(RouteNames.AdWizardStack);
-          }}
-          style={[
-            Spaces.padding[16],
-            {
-              alignItems: 'center',
-              backgroundColor: Colors.primary500,
-              borderRadius: 12,
-            },
-          ]}
-        >
-          <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
-            + Créer une annonce
-          </Text>
-        </TouchableOpacity>
+        {renderPublishOfferCta()}
         <View style={[Spaces.marginTop[16]]}>
           <SearchComponent
             filterNumber={adFiltersCount}
@@ -1348,12 +1360,19 @@ function RecrutementListContent({
         <View style={{ flex: 1 }}>
           {renderCoachTabs()}
           {activeTab === 'profils' ? (
-            <RecruitmentProfilesList
-              bottomPadding={140}
-              onUserPress={handleUserCardPress}
-              refreshSignal={refreshSignal}
-              screenActive={screenActive && activeTab === 'profils'}
-            />
+            // Le pack pose le CTA SOUS la liste (capture 01). Il n y montre que
+            // deux profils ; avec une vraie liste, un bouton place a la fin du
+            // defilement serait introuvable. Il est donc pose sous la liste
+            // mais HORS d elle : toujours a l ecran, a la place dessinee.
+            <View style={{ flex: 1 }}>
+              <RecruitmentProfilesList
+                bottomPadding={140}
+                onUserPress={handleUserCardPress}
+                refreshSignal={refreshSignal}
+                screenActive={screenActive && activeTab === 'profils'}
+              />
+              {renderPublishOfferCta()}
+            </View>
           ) : null}
           {activeTab === 'annonces' ? renderAnnoncesContent() : null}
           {activeTab === 'opportunites' ? renderPlayerContent() : null}
