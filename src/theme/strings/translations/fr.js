@@ -1207,6 +1207,77 @@ export default {
     },
     sharedOwnerHint: 'Installation partagée du multisport {{ownerName}}. Lecture seule côté club.',
   },
+  // LOT D41 ② — la copy des chantiers B (tunnel amical, etape 2/7) et C (carte
+  // d'annonce) descend ici. Elle etait ecrite en chaines litterales dans le JSX :
+  // rien n'etait traduisible, et corriger une faute demandait de toucher le code.
+  // ⛔ CE BLOC NE REFORMULE RIEN. Chaque valeur est le texte deja affiche, mot
+  // pour mot, apostrophes typographiques comprises. Un rapatriement qui change
+  // un mot n'est plus un rapatriement.
+  // ⚠️ Les seules interpolations sont des NOMBRES ({{total}}, {{km}}) et une
+  // heure validee par regex ({{start}}) : i18next echappe les valeurs interpolees
+  // (&, ', <, >), donc un nom de club ou une ville ne passe JAMAIS par {{...}} —
+  // « L'Étoile » y deviendrait « L&#39;Étoile ». Ces valeurs restent assemblees
+  // en JS, autour du fragment traduit.
+  friendlyMatch: {
+    adCard: {
+      accessibilityHint: 'Ouvrir le détail de l\'annonce',
+      accessibilityLabelPrefix: 'Match amical',
+      applications: '{{total}} proposition{{plural}}',
+      cta: {
+        apply: 'Proposer un match',
+        applying: 'Envoi...',
+        closed: 'Annonce clôturée',
+        confirmed: 'Match confirmé',
+        declined: 'Proposition refusée',
+        matched: 'Adversaire trouvé',
+        pending: 'Proposition envoyée',
+        staffOnly: 'Réservé aux entraîneurs et dirigeants',
+      },
+      distance: 'à {{km}} km',
+      edit: 'Modifier',
+      editAd: 'Modifier l’annonce',
+      fallback: {
+        category: 'Catégorie libre',
+        club: 'Club inconnu',
+        dates: 'Dates à convenir',
+        format: 'Format à convenir',
+        level: 'Niveau libre',
+        place: 'Lieu non précisé',
+        sport: 'Football',
+        time: 'Heure à convenir',
+      },
+      seeApplications: 'Voir les {{total}} proposition{{plural}}',
+      status: {
+        closed: 'Clôturée',
+        matched: 'Match trouvé',
+        online: 'En ligne',
+      },
+      timeFrom: 'dès {{start}}',
+      view: 'Voir',
+    },
+    wizard: {
+      hosting: {
+        info: 'Seules les équipes compatibles avec ton choix verront ton annonce'
+          + ' — les autres ne la voient pas.',
+        options: {
+          away: {
+            consequence: 'Tu joues chez l’adversaire.',
+            label: 'Je me déplace',
+          },
+          both: {
+            consequence: 'Ton annonce touche le plus d’équipes.',
+            label: 'Les deux',
+          },
+          host: {
+            consequence: 'Le match se jouera sur ton terrain.',
+            label: 'Je reçois',
+          },
+        },
+        subtitle: 'C’est ce qui décide où le match se jouera.',
+        title: 'Tu peux recevoir ?',
+      },
+    },
+  },
   home: {
     fields: {
       type: {

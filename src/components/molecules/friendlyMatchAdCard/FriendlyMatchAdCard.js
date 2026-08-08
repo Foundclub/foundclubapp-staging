@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image,
   ImageBackground,
@@ -39,6 +40,14 @@ import CARD_BACKGROUND from '@/assets/background-card-event/card-match.png';
  * ⚠️ Cette carte ne porte AUCUN litteral de couleur : tout passe par les jetons
  * du theme et withAlpha(). RecruitmentAdCard vit dans l allowlist d exceptions ;
  * ce fichier n a aucune raison d y entrer.
+ *
+ * 🗣️ LOT D41 ② — elle ne porte plus non plus de texte litteral : tout passe par
+ * `t(cle, 'repli')`, le repli etant le texte deja affiche, mot pour mot. Une
+ * regle sans exception, plus simple a tenir qu une liste de cas.
+ * ⚠️ Seuls des NOMBRES et une heure validee par regex traversent `{{...}}` :
+ * i18next echappe les valeurs interpolees, donc un nom de club ou une ville s y
+ * transformerait (« L'Étoile » → « L&#39;Étoile »). Ces valeurs-la restent
+ * assemblees en JS, autour du fragment traduit.
  * @param {object} props
  * @param {any} props.ad
  * @param {boolean} [props.canApply]
@@ -61,6 +70,7 @@ function FriendlyMatchAdCard({
   onPress,
 }) {
   const { Colors, Fonts, Images } = /** @type {any} */ (useTheme());
+  const { t } = useTranslation();
 
   // Les teintes sont calculees ici, et volontairement pas en ligne dans le
   // rendu : `verify:theme-contract` signale toute encre claire ecrite a moins
@@ -84,13 +94,18 @@ function FriendlyMatchAdCard({
 
   const team = ad?.team;
   const club = team?.club;
-  const clubName = club?.name || team?.name || 'Club inconnu';
+  const clubName = club?.name
+    || team?.name
+    || t('friendlyMatch.adCard.fallback.club', 'Club inconnu');
   const clubLogo = getImageUrl(club?.logo?.url);
-  const categoryName = ad?.category?.name || 'Catégorie libre';
+  const categoryName = ad?.category?.name
+    || t('friendlyMatch.adCard.fallback.category', 'Catégorie libre');
   const sectionName = ad?.section?.name || '';
-  const levelName = ad?.level?.name || 'Niveau libre';
-  const formatLabel = ad?.format || 'Format à convenir';
-  const sportName = ad?.activity?.name || team?.sport || 'Football';
+  const levelName = ad?.level?.name || t('friendlyMatch.adCard.fallback.level', 'Niveau libre');
+  const formatLabel = ad?.format || t('friendlyMatch.adCard.fallback.format', 'Format à convenir');
+  const sportName = ad?.activity?.name
+    || team?.sport
+    || t('friendlyMatch.adCard.fallback.sport', 'Football');
   const hostingTag = getHostingTag(ad);
   const isOpen = ad?.status === 'open' && ad?.isActive !== false;
 
@@ -110,55 +125,80 @@ function FriendlyMatchAdCard({
       formatDateWithDayPrefix(new Date(`${firstSlot.date}T12:00:00`)),
       extraSlotsCount > 0 ? `+${extraSlotsCount}` : '',
     ].filter(Boolean).join(' ')
-    : 'Dates à convenir';
+    : t('friendlyMatch.adCard.fallback.dates', 'Dates à convenir');
 
-  let timeLabel = 'Heure à convenir';
+  let timeLabel = t('friendlyMatch.adCard.fallback.time', 'Heure à convenir');
   if (firstSlot?.start && firstSlot?.end) timeLabel = `${firstSlot.start}-${firstSlot.end}`;
-  else if (firstSlot?.start) timeLabel = `dès ${firstSlot.start}`;
+  // `start` est valide par regex `HH:MM` en amont (normalizeCandidateDates) :
+  // c est la seule donnee du fichier qui peut traverser une interpolation sans
+  // risquer l echappement HTML d i18next.
+  else if (firstSlot?.start) {
+    timeLabel = t('friendlyMatch.adCard.timeFrom', 'dès {{start}}', { start: firstSlot.start });
+  }
 
   const cityLabel = getShortAddress(ad?.city || ad?.location?.city || club?.city || '')
-    || 'Lieu non précisé';
-  const distanceLabel = Number.isFinite(distanceKm) && distanceKm !== null
-    ? `${cityLabel} · à ${Math.round(distanceKm)} km`
-    : cityLabel;
+    || t('friendlyMatch.adCard.fallback.place', 'Lieu non précisé');
+  // La ville reste HORS de l interpolation : elle vient de la base et i18next
+  // echapperait ses apostrophes. Seul le fragment « à N km » est traduit.
+  const distanceSuffix = Number.isFinite(distanceKm) && distanceKm !== null
+    ? t('friendlyMatch.adCard.distance', 'à {{km}} km', { km: Math.round(distanceKm) })
+    : '';
+  const distanceLabel = distanceSuffix ? `${cityLabel} · ${distanceSuffix}` : cityLabel;
 
   const applicationsCount = ad?.pendingApplicationsCount ?? ad?.applicationsCount ?? 0;
   const hasApplications = Number(applicationsCount) > 0;
   // Un seul pluriel pour les deux endroits qui comptent les propositions : le
   // pied de statut et le CTA. Ecrit deux fois, il s'accorde une fois sur deux
   // — c'est exactement ce que le filet a attrape (« Voir les 1 propositions »).
+  // Le « s » reste calcule en JS et voyage comme variable : la marque du pluriel
+  // francais n'a pas d'equivalent dans toutes les langues, et une clef par forme
+  // dupliquerait la branche que ce lot vient justement d'unifier.
   const applicationsPlural = applicationsCount > 1 ? 's' : '';
-  const applicationsLabel = `${applicationsCount} proposition${applicationsPlural}`;
+  const applicationsVars = { plural: applicationsPlural, total: applicationsCount };
+  const applicationsLabel = t(
+    'friendlyMatch.adCard.applications',
+    '{{total}} proposition{{plural}}',
+    applicationsVars,
+  );
+  // L annonce du lecteur d ecran assemble en JS le nom du club, la sous-ligne et
+  // l etat de lieu : trois valeurs qui viennent de la base. Seul son prefixe est
+  // une phrase, donc seul lui est traduit.
+  const adPrefix = t('friendlyMatch.adCard.accessibilityLabelPrefix', 'Match amical');
+  const openHint = t('friendlyMatch.adCard.accessibilityHint', 'Ouvrir le détail de l\'annonce');
   // Les deux actions du proprietaire ouvrent son annonce : c'est la que vivent
   // « Reposter avec de nouvelles dates » et « Annuler l'annonce »
   // (FriendlyMatchAdDetails.js:409-419). Pas de second chemin invente ici.
   const handleManage = () => onPress?.(ad);
 
-  let ctaLabel = 'Proposer un match';
+  let ctaLabel = t('friendlyMatch.adCard.cta.apply', 'Proposer un match');
   let isCtaInteractive = Boolean(onApply) && canApply && isOpen && !isApplying;
 
   if (!isOpen) {
-    ctaLabel = ad?.status === 'matched' ? 'Adversaire trouvé' : 'Annonce clôturée';
+    ctaLabel = ad?.status === 'matched'
+      ? t('friendlyMatch.adCard.cta.matched', 'Adversaire trouvé')
+      : t('friendlyMatch.adCard.cta.closed', 'Annonce clôturée');
     isCtaInteractive = false;
   } else if (myApplicationStatus === 'accepted') {
-    ctaLabel = 'Match confirmé';
+    ctaLabel = t('friendlyMatch.adCard.cta.confirmed', 'Match confirmé');
     isCtaInteractive = false;
   } else if (myApplicationStatus === 'pending') {
-    ctaLabel = 'Proposition envoyée';
+    ctaLabel = t('friendlyMatch.adCard.cta.pending', 'Proposition envoyée');
     isCtaInteractive = false;
   } else if (myApplicationStatus === 'declined') {
-    ctaLabel = 'Proposition refusée';
+    ctaLabel = t('friendlyMatch.adCard.cta.declined', 'Proposition refusée');
     isCtaInteractive = false;
   } else if (isApplying) {
-    ctaLabel = 'Envoi...';
+    ctaLabel = t('friendlyMatch.adCard.cta.applying', 'Envoi...');
   } else if (!canApply) {
-    ctaLabel = 'Réservé aux entraîneurs et dirigeants';
+    ctaLabel = t('friendlyMatch.adCard.cta.staffOnly', 'Réservé aux entraîneurs et dirigeants');
     isCtaInteractive = false;
   }
 
-  let ownerStatusLabel = 'Clôturée';
-  if (isOpen) ownerStatusLabel = 'En ligne';
-  else if (ad?.status === 'matched') ownerStatusLabel = 'Match trouvé';
+  let ownerStatusLabel = t('friendlyMatch.adCard.status.closed', 'Clôturée');
+  if (isOpen) ownerStatusLabel = t('friendlyMatch.adCard.status.online', 'En ligne');
+  else if (ad?.status === 'matched') {
+    ownerStatusLabel = t('friendlyMatch.adCard.status.matched', 'Match trouvé');
+  }
 
   /**
    * Un bouton de pied : plein par defaut, en contour sinon, toujours 44 pt.
@@ -241,8 +281,8 @@ function FriendlyMatchAdCard({
       />
 
       <Pressable
-        accessibilityHint="Ouvrir le détail de l'annonce"
-        accessibilityLabel={`Match amical, ${clubName}, ${subLine}, ${hostingTag.label}`}
+        accessibilityHint={openHint}
+        accessibilityLabel={`${adPrefix}, ${clubName}, ${subLine}, ${hostingTag.label}`}
         accessibilityRole="button"
         onPress={() => onPress?.(ad)}
         onPressIn={() => { scale.value = withTiming(0.985, { duration: 100 }); }}
@@ -320,25 +360,29 @@ function FriendlyMatchAdCard({
           {isOwner ? null : renderFooterButton({
             isCompact: true,
             isOutline: true,
-            label: 'Voir',
+            label: t('friendlyMatch.adCard.view', 'Voir'),
             onPressButton: () => onPress?.(ad),
           })}
 
           {/* A N ≥ 1, les propositions recues passent devant : c'est ce que le
               proprietaire vient faire. A N = 0, il n'y a rien a voir. */}
           {isOwner && hasApplications ? renderFooterButton({
-            label: `Voir les ${applicationsCount} proposition${applicationsPlural}`,
+            label: t(
+              'friendlyMatch.adCard.seeApplications',
+              'Voir les {{total}} proposition{{plural}}',
+              applicationsVars,
+            ),
             onPressButton: handleManage,
           }) : null}
           {isOwner && hasApplications ? renderFooterButton({
             isCompact: true,
             isOutline: true,
-            label: 'Modifier',
+            label: t('friendlyMatch.adCard.edit', 'Modifier'),
             onPressButton: handleManage,
           }) : null}
           {isOwner && !hasApplications ? renderFooterButton({
             isOutline: true,
-            label: 'Modifier l’annonce',
+            label: t('friendlyMatch.adCard.editAd', 'Modifier l’annonce'),
             onPressButton: handleManage,
           }) : null}
         </View>

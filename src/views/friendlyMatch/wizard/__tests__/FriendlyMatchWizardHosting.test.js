@@ -29,6 +29,26 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
+// LOT D41 ② — la copy de l'etape est descendue dans `fr.js`. Le mock resout dans
+// le VRAI catalogue, jamais un objet invente : les tests de texte ci-dessous
+// lisent donc ce que l'app affichera. Monter l'ecran sans ce mock tirerait
+// `@/theme/strings`, qui amorce i18next au chargement.
+jest.mock('react-i18next', () => {
+  const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
+
+  return {
+    useTranslation: () => ({
+      t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
+        const valeur = String(cle || '')
+          .split('.')
+          .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
+        if (typeof valeur === 'string') return valeur;
+        return typeof repli === 'string' ? repli : cle;
+      },
+    }),
+  };
+});
+
 // Le VRAI theme, sans le contexte React qui le porte. Un mock en Proxy rend les
 // echecs Jest illisibles (constat du lot paywall, 2026-08-02) et un objet
 // invente masquerait un jeton absent — or ce lot consomme justement les jetons
@@ -355,5 +375,40 @@ describe('Etape 2/7 « Tu peux recevoir ? » — CE QUE D07 AJOUTE', () => {
     ).pop();
     expect(style(libelle).fontSize).toBe(polices.p1Bold.fontSize);
     expect(style(libelle).fontFamily).toBe(polices.p1Bold.fontFamily);
+  });
+});
+
+// Le filet du rapatriement D41 ②. Les tests ci-dessus prouvent que le texte
+// AFFICHE n'a pas bouge — ils passeraient encore si toutes les clefs manquaient,
+// puisque le repli porte le meme texte. Ceux-ci prouvent l'autre moitie : la
+// clef EXISTE dans `fr.js`, et elle y porte le texte au caractere pres.
+describe('D41 ② — la copy de l etape vit dans fr.js, mot pour mot', () => {
+  const catalogue = require('@/theme/strings/translations/fr').default;
+
+  /**
+   * Lit une clef pointee dans le catalogue francais.
+   * @param {string} cle La clef, segments separes par des points.
+   * @returns {any} La valeur trouvee, ou undefined.
+   */
+  const lireDansFr = (cle) => cle
+    .split('.')
+    .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
+
+  const RACINE = 'friendlyMatch.wizard.hosting';
+  const LIGNE_INFO = 'Seules les équipes compatibles avec ton choix verront ton annonce'
+    + ' — les autres ne la voient pas.';
+
+  it.each([
+    [`${RACINE}.title`, 'Tu peux recevoir ?'],
+    [`${RACINE}.subtitle`, 'C’est ce qui décide où le match se jouera.'],
+    [`${RACINE}.options.host.label`, 'Je reçois'],
+    [`${RACINE}.options.host.consequence`, 'Le match se jouera sur ton terrain.'],
+    [`${RACINE}.options.away.label`, 'Je me déplace'],
+    [`${RACINE}.options.away.consequence`, 'Tu joues chez l’adversaire.'],
+    [`${RACINE}.options.both.label`, 'Les deux'],
+    [`${RACINE}.options.both.consequence`, 'Ton annonce touche le plus d’équipes.'],
+    [`${RACINE}.info`, LIGNE_INFO],
+  ])('%s porte le texte deja affiche', (cle, texte) => {
+    expect(lireDansFr(cle)).toBe(texte);
   });
 });

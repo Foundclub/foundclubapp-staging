@@ -20,6 +20,36 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
+// LOT D41 ② — la copy de la carte est descendue dans `fr.js`. Le mock resout
+// dans le VRAI catalogue et remplace les {{variables}} comme i18next : sans
+// l'interpolation, « Voir les {{total}} proposition{{plural}} » s'afficherait tel
+// quel et les temoins de pluriel de D07 decriraient un faux defaut.
+jest.mock('react-i18next', () => {
+  const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
+
+  return {
+    useTranslation: () => ({
+      t: (
+        /** @type {string} */ cle,
+        /** @type {any} */ repli,
+        /** @type {any} */ variables,
+      ) => {
+        const trouve = String(cle || '')
+          .split('.')
+          .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
+        let gabarit = cle;
+        if (typeof trouve === 'string') gabarit = trouve;
+        else if (typeof repli === 'string') gabarit = repli;
+        if (!variables) return gabarit;
+        return gabarit.replace(
+          /{{(\w+)}}/g,
+          (/** @type {any} */ _entier, /** @type {string} */ nom) => String(variables[nom] ?? ''),
+        );
+      },
+    }),
+  };
+});
+
 // react-native-reanimated est publie en ESM pur et n'est PAS dans
 // transformIgnorePatterns : sans ce mock, importer la carte suffit a faire
 // tomber la suite.
@@ -479,5 +509,53 @@ describe('Carte d annonce amicale — CE QUE D07 CHANGE', () => {
       .toBe(polices.p2Black.fontSize);
     expect(style(noeudDuTexte(arbre, 'Seniors B · Basketball · Sénior +18 · 5v5')).fontSize)
       .toBe(polices.small.fontSize);
+  });
+});
+
+// Le filet du rapatriement D41 ②. Les 38 tests ci-dessus prouvent que le texte
+// AFFICHE n'a pas bouge — ils passeraient encore si toutes les clefs manquaient,
+// puisque chaque repli porte le meme texte. Celui-ci prouve l'autre moitie : la
+// copy EXISTE dans `fr.js`, au caractere pres. `toEqual` sur le sous-arbre
+// entier attrape aussi bien une clef oubliee qu'une clef reformulee.
+describe('D41 ② — la copy de la carte vit dans fr.js, mot pour mot', () => {
+  const catalogue = require('@/theme/strings/translations/fr').default;
+
+  it('porte les 28 textes de la carte, sans en reformuler un seul', () => {
+    expect(catalogue.friendlyMatch.adCard).toEqual({
+      accessibilityHint: 'Ouvrir le détail de l\'annonce',
+      accessibilityLabelPrefix: 'Match amical',
+      applications: '{{total}} proposition{{plural}}',
+      cta: {
+        apply: 'Proposer un match',
+        applying: 'Envoi...',
+        closed: 'Annonce clôturée',
+        confirmed: 'Match confirmé',
+        declined: 'Proposition refusée',
+        matched: 'Adversaire trouvé',
+        pending: 'Proposition envoyée',
+        staffOnly: 'Réservé aux entraîneurs et dirigeants',
+      },
+      distance: 'à {{km}} km',
+      edit: 'Modifier',
+      editAd: 'Modifier l’annonce',
+      fallback: {
+        category: 'Catégorie libre',
+        club: 'Club inconnu',
+        dates: 'Dates à convenir',
+        format: 'Format à convenir',
+        level: 'Niveau libre',
+        place: 'Lieu non précisé',
+        sport: 'Football',
+        time: 'Heure à convenir',
+      },
+      seeApplications: 'Voir les {{total}} proposition{{plural}}',
+      status: {
+        closed: 'Clôturée',
+        matched: 'Match trouvé',
+        online: 'En ligne',
+      },
+      timeFrom: 'dès {{start}}',
+      view: 'Voir',
+    });
   });
 });

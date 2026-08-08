@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -32,24 +33,35 @@ import {
  * sous CHAQUE carte, AVANT le choix : c est ce qui permet de decider. Avant le
  * lot D07 elle n apparaissait que pour l option deja selectionnee, donc jamais
  * au moment ou elle servait.
+ *
+ * 🗣️ LOT D41 ② — `label` et `consequence` ne sont plus le texte affiche : ce
+ * sont les REPLIS de `labelKey` / `consequenceKey`, resolus a l affichage dans
+ * `fr.js`. Ils restent ici mot pour mot, apostrophes typographiques comprises,
+ * parce qu un repli qui reformule transforme un rapatriement en reecriture.
  */
 const HOSTING_OPTIONS = [
   {
     consequence: 'Le match se jouera sur ton terrain.',
+    consequenceKey: 'friendlyMatch.wizard.hosting.options.host.consequence',
     iconKey: 'stadium',
     label: 'Je reçois',
+    labelKey: 'friendlyMatch.wizard.hosting.options.host.label',
     value: 'HOST',
   },
   {
     consequence: 'Tu joues chez l’adversaire.',
+    consequenceKey: 'friendlyMatch.wizard.hosting.options.away.consequence',
     iconKey: 'running',
     label: 'Je me déplace',
+    labelKey: 'friendlyMatch.wizard.hosting.options.away.label',
     value: 'AWAY',
   },
   {
     consequence: 'Ton annonce touche le plus d’équipes.',
+    consequenceKey: 'friendlyMatch.wizard.hosting.options.both.consequence',
     iconKey: 'switch',
     label: 'Les deux',
+    labelKey: 'friendlyMatch.wizard.hosting.options.both.label',
     value: 'BOTH',
   },
 ];
@@ -68,8 +80,13 @@ function FriendlyMatchWizardHosting({ navigation }) {
     Alignments, Colors, Fonts, Images, Spaces,
   } = /** @type {any} */ (useTheme());
   const { dispatch, state } = useFriendlyMatchWizard();
+  const { t } = useTranslation();
 
   const issue = getFriendlyMatchWizardStepIssue('hosting', state);
+  const subtitle = t(
+    'friendlyMatch.wizard.hosting.subtitle',
+    'C’est ce qui décide où le match se jouera.',
+  );
 
   // Les fonds sont calcules AVANT le rendu, et volontairement pas en ligne :
   // `verify:theme-contract` signale toute encre claire ecrite a moins de 4
@@ -89,18 +106,20 @@ function FriendlyMatchWizardHosting({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.FriendlyMatchWizardDates)}
       stepCount={getFriendlyMatchWizardStepCount()}
       stepIndex={getFriendlyMatchWizardStepIndex('hosting')}
-      subtitle="C’est ce qui décide où le match se jouera."
-      title="Tu peux recevoir ?"
+      subtitle={subtitle}
+      title={t('friendlyMatch.wizard.hosting.title', 'Tu peux recevoir ?')}
     >
       <View style={[Spaces.gap[12]]}>
         {HOSTING_OPTIONS.map((option) => {
           const isSelected = state.hostingPreference === option.value;
+          const label = t(option.labelKey, option.label);
+          const consequence = t(option.consequenceKey, option.consequence);
           return (
             // `radio` et non `button` : les trois cartes forment UN choix unique.
             // Sans `accessibilityState`, un lecteur d ecran annonce trois
             // boutons sans jamais dire lequel est retenu — la couleur ne dit rien.
             <TouchableOpacity
-              accessibilityLabel={`${option.label}. ${option.consequence}`}
+              accessibilityLabel={`${label}. ${consequence}`}
               accessibilityRole="radio"
               accessibilityState={{ selected: isSelected }}
               key={option.value}
@@ -134,9 +153,9 @@ function FriendlyMatchWizardHosting({ navigation }) {
               </View>
 
               <View style={[Alignments.grow1]}>
-                <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{option.label}</Text>
+                <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{label}</Text>
                 <Text style={[Fonts.p3, Spaces.marginTop[4], { color: mutedInk }]}>
-                  {option.consequence}
+                  {consequence}
                 </Text>
               </View>
 
@@ -164,8 +183,11 @@ function FriendlyMatchWizardHosting({ navigation }) {
           i
         </Text>
         <Text style={[Fonts.small, Alignments.grow1, { color: mutedInk }]}>
-          Seules les équipes compatibles avec ton choix verront ton annonce — les
-          autres ne la voient pas.
+          {t(
+            'friendlyMatch.wizard.hosting.info',
+            'Seules les équipes compatibles avec ton choix verront ton annonce'
+            + ' — les autres ne la voient pas.',
+          )}
         </Text>
       </View>
     </WizardStepLayout>
