@@ -14,6 +14,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -65,6 +66,10 @@ import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 import { resolveClubDetailsActionMatrix } from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
+
+// D34 ecran 07 : la rangee partenaire du pack fait 56 pt de haut — assez pour
+// un logo rond de 38 et une corbeille de 40 sans les serrer.
+const SPONSOR_ROW_HEIGHT = 56;
 
 const getFacilityAddressLabel = (address) => {
   if (!address) return '';
@@ -2221,59 +2226,88 @@ function ClubDetails({ navigation, route }) {
                       />
                     ) : null}
                   </View>
-                  <ScrollView
-                    contentContainerStyle={[Spaces.gap[16]]}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
+                  {/* D34 ecran 07 : les partenaires defilaient horizontalement, */}
+                  {/* chacun surmonte d'une pastille ROUGE flottant sur son logo. */}
+                  {/* Le rouge est reserve a l'erreur et au destructif : il ne */}
+                  {/* peut pas servir de decoration sur chaque logo. On passe a */}
+                  {/* des rangees verticales, logo a gauche, nom au milieu, et */}
+                  {/* une corbeille GRISE alignee dans la rangee. */}
+                  <View
+                    style={[
+                      ApplicationStyle.borderRadius16,
+                      Spaces.paddingHorizontal[12],
+                      club?.sponsor?.length ? {
+                        backgroundColor: withAlpha(Colors.neutral00, 0.04),
+                        borderColor: withAlpha(Colors.neutral00, 0.09),
+                        borderWidth: 1,
+                      } : null,
+                    ]}
                   >
-                    {club?.sponsor?.map((/** @type {Sponsor} */ sponsor) => (
+                    {club?.sponsor?.map((/** @type {Sponsor} */ sponsor, sponsorIndex) => (
                       <View
                         key={sponsor.link}
-                        style={[Alignments.relative, Spaces.marginTop[8]]}
+                        style={[
+                          Alignments.row,
+                          Alignments.alignCenter,
+                          Spaces.gap[12],
+                          Spaces.paddingVertical[8],
+                          sponsorIndex ? {
+                            borderTopColor: withAlpha(Colors.neutral00, 0.07),
+                            borderTopWidth: 1,
+                          } : null,
+                          { minHeight: SPONSOR_ROW_HEIGHT },
+                        ]}
                       >
-                        {
-                          canEdit ? (
-                            <TouchableOpacity
-                              accessibilityLabel={t(
-                                'clubDetails.a11y.deleteSponsor',
-                                {
-                                  defaultValue: 'Supprimer le sponsor {{sponsorName}}',
-                                  sponsorName: sponsor.title,
-                                },
-                              )}
-                              accessibilityRole="button"
-                              hitSlop={{
-                                bottom: 8, left: 8, right: 8, top: 8,
-                              }}
-                              onPress={() => handleDeleteSponsor(sponsor)}
-                              style={[
-                                Alignments.absolute,
-                                ApplicationStyle.backgroundColor.error700,
-                                ApplicationStyle.borderRadius24,
-                                Spaces.padding[8],
-                                { right: -12, top: -8, zIndex: 1 },
-                              ]}
-                            >
-                              <Image
-                                source={Images.trash}
-                                style={[
-                                  ApplicationStyle.icon16,
-                                  ApplicationStyle.tintColor.neutral00]}
-                              />
-                            </TouchableOpacity>
-                          ) : null
-                        }
                         <SponsorLogoTile
-                          height={55}
+                          height={38}
                           imageUrl={sponsor?.logo?.url}
                           link={sponsor.link}
-                          title={sponsor.title}
-                          titleStyle={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, textAlign: 'center' }]}
-                          width={110}
+                          width={38}
                         />
+                        <Text
+                          numberOfLines={1}
+                          style={[Fonts.p2Bold, Fonts.neutral100, { flex: 1 }]}
+                        >
+                          {sponsor.title}
+                        </Text>
+                        {canEdit ? (
+                          <TouchableOpacity
+                            accessibilityLabel={t(
+                              'clubDetails.a11y.deleteSponsor',
+                              {
+                                defaultValue: 'Supprimer le sponsor {{sponsorName}}',
+                                sponsorName: sponsor.title,
+                              },
+                            )}
+                            accessibilityRole="button"
+                            hitSlop={{
+                              bottom: 8, left: 8, right: 8, top: 8,
+                            }}
+                            onPress={() => handleDeleteSponsor(sponsor)}
+                            style={[
+                              Alignments.alignCenter,
+                              Alignments.justifyCenter,
+                              {
+                                borderColor: withAlpha(Colors.neutral00, 0.2),
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                height: 40,
+                                width: 40,
+                              },
+                            ]}
+                          >
+                            <Image
+                              source={Images.trash}
+                              style={[
+                                ApplicationStyle.icon16,
+                                { tintColor: Colors.neutral400 },
+                              ]}
+                            />
+                          </TouchableOpacity>
+                        ) : null}
                       </View>
                     ))}
-                  </ScrollView>
+                  </View>
                 </View>
               )}
 
@@ -2524,6 +2558,34 @@ function ClubDetails({ navigation, route }) {
                   </View>
                 </View>
               ) : null}
+
+              {/* D34 ecran 01 : « Quitter le club » etait un bouton BORDE et */}
+              {/* COLLANT, rendu hors de la ScrollView — il barrait le bas de */}
+              {/* l'ecran en permanence. Le pack en fait un simple TEXTE centre */}
+              {/* tout en bas du contenu, qui defile avec le reste. La couleur */}
+              {/* est `error300`, le rouge doux reserve a ce seul endroit. */}
+              {showLeaveClubAction ? (
+                <TouchableOpacity
+                  accessibilityLabel={t('clubDetails.actions.leave', 'Quitter le club')}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: leaveClubMutation.isPending }}
+                  disabled={leaveClubMutation.isPending}
+                  hitSlop={{
+                    bottom: 12, left: 12, right: 12, top: 12,
+                  }}
+                  onPress={handleAskToLeaveClub}
+                  style={[
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    Spaces.marginTop[16],
+                    { minHeight: 48 },
+                  ]}
+                >
+                  <Text style={[Fonts.p2Bold, { color: Colors.error300 }]}>
+                    {t('clubDetails.actions.leave', 'Quitter le club')}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </>
           )}
         </WithDataWrapper>
@@ -2577,22 +2639,8 @@ function ClubDetails({ navigation, route }) {
           />
         ) : null
       }
-      {
-        showLeaveClubAction ? (
-          <Button
-            disabled={leaveClubMutation.isPending}
-            onPress={handleAskToLeaveClub}
-            style={[
-              Spaces.marginTop[12],
-              Spaces.marginBottom[24],
-              { backgroundColor: `${Colors.error500}12`, borderColor: Colors.error500 },
-            ]}
-            textStyle={{ color: Colors.error300 }}
-            title={t('clubDetails.actions.leave', 'Quitter le club')}
-            variant="Secondary"
-          />
-        ) : null
-      }
+      {/* D34 ecran 01 : « Quitter le club » a quitte ce pied collant — il vit */}
+      {/* desormais tout en bas du contenu qui defile, voir plus haut. */}
       <BottomModal
         close={handleCloseAddActivityModal}
         footerComponent={addActivitiesModalFooter}
