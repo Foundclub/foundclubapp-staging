@@ -10,7 +10,30 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
+import { capturePhoto, pickImage } from '@/platform/media';
 import { getImageUrl } from '@/utils/imageUrl';
+
+/**
+ * D36 — la capture C01 réécrit toujours la photo en PNG (`format: 'png'`).
+ * Sans ce recalage, la charge continuait d'annoncer le `image/jpeg` et le nom
+ * `.jpg` de la photo d'origine : l'app envoyait un PNG étiqueté JPEG, avec en
+ * prime la taille d'un fichier qui n'existait plus.
+ * @param {any} asset Asset rendu par la caméra.
+ * @param {string} uri Chemin du fichier produit par la capture.
+ * @returns {any} L'asset dé-miroité, décrit pour ce qu'il est.
+ */
+const decrireLaCapture = (asset, uri) => {
+  const nomSansExtension = String(asset?.fileName || 'avatar').replace(/\.[^./\\]+$/, '');
+
+  return {
+    ...asset,
+    fileName: `${nomSansExtension}.png`,
+    fileSize: undefined,
+    path: uri,
+    type: 'image/png',
+    uri,
+  };
+};
 
 /**
  * SelectAvatar component for selecting/updating user avatar
@@ -95,31 +118,45 @@ function SelectAvatar({
   };
 
   const handleResponse = (response) => {
-    if (response.didCancel) {
+    if (response?.didCancel) {
       return;
     }
-    if (response.errorCode) {
-      console.warn('ImagePicker Error:', response.errorMessage);
-      Alert.alert('Erreur', `Erreur lors de la sélection : ${response.errorMessage}`);
+    if (response?.errorCode) {
+      console.warn('ImagePicker Error:', response.errorCode, response.errorMessage);
+      // D36 : sur simulateur iOS, la bibliothèque rend `camera_unavailable`
+      // SANS `errorMessage` — le message affiché se terminait par « undefined ».
+      Alert.alert(
+        t('common.error'),
+        response.errorMessage
+          || t('profile.errors.photoUnavailable', "L'appareil photo n'est pas disponible."),
+      );
       return;
     }
 
-    if (response.assets && response.assets.length > 0) {
-      const asset = response.assets[0];
-      // Map to format expected by Upload Service (path, mime, filename)
-      const mappedImage = {
-        filename: asset.fileName,
-        height: asset.height,
-        mime: asset.type,
-        path: asset.uri,
-        size: asset.fileSize,
-        uri: asset.uri,
-        url: '', // Clear url to indicate new file
-        width: asset.width,
-      };
-      onAvatarSelected(mappedImage);
-      setIsModalVisible(false);
+    const asset = response?.assets?.[0];
+    if (!asset?.uri) {
+      // ⛔ D36 : ni photo, ni annulation, ni code d'erreur. Sans ce garde-fou,
+      // l'écran ne disait RIEN et l'utilisateur croyait avoir raté son geste.
+      Alert.alert(
+        t('common.error'),
+        t('profile.errors.photoNotRetrieved', "La photo n'a pas pu être récupérée. Réessaie."),
+      );
+      return;
     }
+
+    // Map to format expected by Upload Service (path, mime, filename)
+    const mappedImage = {
+      filename: asset.fileName,
+      height: asset.height,
+      mime: asset.type,
+      path: asset.uri,
+      size: asset.fileSize,
+      uri: asset.uri,
+      url: '', // Clear url to indicate new file
+      width: asset.width,
+    };
+    onAvatarSelected(mappedImage);
+    setIsModalVisible(false);
   };
 
   /**
@@ -137,17 +174,20 @@ function SelectAvatar({
     const width = asset.width || cropWidth || 1000;
     const height = asset.height || cropHeight || 1000;
     let settled = false;
+    /** @type {any} */
+    let minuterie = null;
     const finish = (uri) => {
       if (settled) return;
       settled = true;
+      if (minuterie) clearTimeout(minuterie);
       flipResolveRef.current = null;
       setFlipSource(null);
       // uri renseignée = capture réussie ; sinon repli sur l'original (miroir conservé).
-      resolve(uri ? { ...asset, path: uri, uri } : asset);
+      resolve(uri ? decrireLaCapture(asset, uri) : asset);
     };
     flipResolveRef.current = finish;
     // Garde-fou : si onLoad/capture ne répond pas, on retombe sur l'original.
-    setTimeout(() => finish(null), 4000);
+    minuterie = setTimeout(() => finish(null), 4000);
     setFlipSource({ height, uri: asset.uri, width });
   });
 
@@ -176,7 +216,6 @@ function SelectAvatar({
         return;
       }
 
-      const { launchCamera } = await import('react-native-image-picker');
       if (Platform.OS === 'android') {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.CAMERA,
@@ -194,7 +233,7 @@ function SelectAvatar({
         }
       }
 
-      const result = await launchCamera({
+      const result = await capturePhoto({
         // C01 : un avatar est un selfie -> caméra avant par défaut.
         cameraType: 'front',
         includeBase64: false,
@@ -227,8 +266,7 @@ function SelectAvatar({
         return;
       }
 
-      const { launchImageLibrary } = await import('react-native-image-picker');
-      const result = await launchImageLibrary({
+      const result = await pickImage({
         includeBase64: false,
         includeExtra: true,
         maxHeight: cropHeight || 1000,
@@ -246,7 +284,13 @@ function SelectAvatar({
   return (
     <>
       {/* C01 : vue cachée (hors écran) qui rend le selfie retourné puis le recapture.
-          collapsable=false pour rester dans la hiérarchie native (sinon capture vide). */}
+          collapsable=false pour rester dans la hiérarchie native (sinon capture vide).
+          ⚠️ D36 — HORS ÉCRAN, JAMAIS TRANSPARENT. `captureRef` photographie ce qui
+          est VISIBLE (RNViewShot.mm, drawViewHierarchyInRect) : une source à
+          `opacity: 0` rend une image entièrement vide, et la bibliothèque annonce
+          quand même un succès (son propre commentaire : « reports incorrect
+          success even though the image is blank »). La photo de la caméra était
+          alors remplacée par du vide — c'est ça, « la photo ne charge pas ». */}
       {flipSource ? (
         <View
           collapsable={false}
@@ -254,10 +298,9 @@ function SelectAvatar({
           ref={flipViewRef}
           style={{
             height: flipSource.height,
-            left: 0,
-            opacity: 0,
+            left: -10000,
             position: 'absolute',
-            top: 0,
+            top: -10000,
             width: flipSource.width,
           }}
         >
