@@ -621,6 +621,14 @@ export const markOnboardingComplete = (documentId) => {
  */
 export const profileFieldToDisplay = (role) => {
   switch (getUserRoleKey(role?.name)) {
+    // D39 — le contrat de role du pack « Profils joueur & entraineur » :
+    // « aucun bloc joueur atteignable sur un profil coach ». Le NUMERO DE
+    // MAILLOT en etait un (le pack le range explicitement dans les heritages
+    // joueur a supprimer) ; le SPORT DE PREFERENCE, lui, manquait alors que la
+    // vue publique coach l'affiche. Aucune donnee n'est effacee : le champ
+    // cesse d'etre montre, sa valeur reste en base.
+    // ⚠️ `ProfileEdit` reste ouvert au maillot depuis la carte de collection
+    // (`CARD_EXTRA_FIELDS`) : ce chemin-la n'est pas touche.
     case 'coach':
       return [
         'firstname',
@@ -629,7 +637,7 @@ export const profileFieldToDisplay = (role) => {
         'address',
         'avatar',
         'nationality',
-        'jerseyNumber',
+        'preferredSport',
       ];
     case 'player':
       return [
