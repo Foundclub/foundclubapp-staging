@@ -580,3 +580,398 @@ jobs:
           name: altool-upload-log
           path: ios/build/altool-upload.log
           if-no-files-found: ignore
+
+      # ══════════════════════════════════════════════════════════════════════════
+      # D52 — LA BUILD DOIT ARRIVER TOUTE SEULE CHEZ LES TESTEURS
+      #
+      # POURQUOI CES ETAPES EXISTENT. Le 2026-08-09, la 2.6.13 (941) est partie, ce
+      # workflow a rendu `success` (UPLOAD SUCCEEDED with no errors + Delivery UUID),
+      # et PERSONNE ne l'a vue dans TestFlight. Il manquait un dernier geste, fait a
+      # la main : rattacher la build a un groupe de testeurs. Le colis arrivait bien
+      # a l'entrepot, mais tant qu'on ne dit pas a qui le livrer il reste sur
+      # l'etagere -- et RIEN dans le journal ne permettait de s'en apercevoir.
+      #
+      # CE QU'ELLES NE FONT JAMAIS : faire echouer une build dont l'ENVOI a reussi.
+      # Un binaire correctement depose est un succes, meme si Apple traine ou si le
+      # groupe est ambigu. D'ou `continue-on-error: true` sur les trois etapes ET
+      # des scripts qui sortent toujours en 0 : ici on AVERTIT, on n'echoue pas.
+      #
+      # AUCUN SECRET NOUVEAU : on reutilise les trois deja installes plus haut
+      # (APPSTORE_KEY_ID, APPSTORE_ISSUER_ID, et le .p8 pose par l'etape
+      # « Install App Store Connect API key », dont le chemin est dans
+      # $APPSTORE_KEY_PATH). Le jeton JWT est signe par `openssl` et n'est JAMAIS
+      # imprime, pas plus que le contenu de la clef.
+      #
+      # REGLAGES — variables de depot GitHub (Settings > Secrets and variables >
+      # Actions > Variables). Toutes optionnelles, aucune n'est ecrite en dur dans
+      # le script :
+      #   vars.TESTFLIGHT_GROUP             nom EXACT du groupe de testeurs.
+      #                                     Vide = detection automatique : s'il
+      #                                     n'existe qu'UN seul groupe on le prend ;
+      #                                     s'il y en a plusieurs on NE DEVINE PAS,
+      #                                     on imprime la liste et on s'arrete la.
+      #   vars.TESTFLIGHT_MAX_WAIT_MINUTES  plafond d'attente, defaut 40 min.
+      #   vars.TESTFLIGHT_POLL_SECONDS      intervalle de sondage, defaut 60 s.
+      # ══════════════════════════════════════════════════════════════════════════
+
+      - name: Attendre qu Apple ait fini de traiter la build (TestFlight)
+        continue-on-error: true
+        shell: bash
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          TESTFLIGHT_MAX_WAIT_MINUTES: ${{ vars.TESTFLIGHT_MAX_WAIT_MINUTES || '40' }}
+          TESTFLIGHT_POLL_SECONDS: ${{ vars.TESTFLIGHT_POLL_SECONDS || '60' }}
+        run: |
+          set -uo pipefail
+
+          # Petit client App Store Connect, ecrit une fois et reutilise par les
+          # etapes suivantes. Bibliotheque standard Python + `openssl` uniquement :
+          # les deux sont deja utilises par ce workflow (cf. l'etape d'installation
+          # de la clef), donc AUCUNE dependance nouvelle a installer.
+          cat > "$RUNNER_TEMP/asc_client.py" <<'PY'
+          """Client minimal de l'API App Store Connect (stdlib + openssl)."""
+          import base64
+          import json
+          import os
+          import subprocess
+          import time
+          import urllib.error
+          import urllib.request
+
+          API_ROOT = "https://api.appstoreconnect.apple.com"
+
+
+          def _b64url(raw: bytes) -> str:
+              return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
+
+
+          def _der_to_jose(der: bytes) -> bytes:
+              """DER (SEQUENCE{INTEGER r, INTEGER s}) -> r||s sur 2x32 octets.
+
+              `openssl dgst -sign` rend une signature ECDSA au format DER ; JWS/ES256
+              exige les deux entiers bruts concatenes. Pas de PyJWT sur le runner,
+              donc on fait la conversion a la main -- c'est 15 lignes d'ASN.1 simple.
+              """
+              if not der or der[0] != 0x30:
+                  raise ValueError("signature ECDSA inattendue (SEQUENCE absente)")
+              index = 2
+              if der[1] & 0x80:
+                  index = 2 + (der[1] & 0x7F)
+              parts = []
+              for _ in range(2):
+                  if der[index] != 0x02:
+                      raise ValueError("signature ECDSA inattendue (INTEGER absent)")
+                  length = der[index + 1]
+                  value = der[index + 2:index + 2 + length]
+                  index += 2 + length
+                  parts.append(value.lstrip(b"\x00").rjust(32, b"\x00"))
+              return b"".join(parts)
+
+
+          def _token() -> str:
+              """Jeton JWT ES256, regenere a chaque appel (Apple plafonne sa duree a
+              20 min, or l'attente peut durer plus longtemps). Jamais imprime."""
+              header = {"alg": "ES256", "kid": os.environ["APPSTORE_KEY_ID"], "typ": "JWT"}
+              now = int(time.time())
+              payload = {
+                  "iss": os.environ["APPSTORE_ISSUER_ID"],
+                  "iat": now,
+                  "exp": now + 19 * 60,
+                  "aud": "appstoreconnect-v1",
+              }
+              signing_input = "{}.{}".format(
+                  _b64url(json.dumps(header, separators=(",", ":")).encode("utf-8")),
+                  _b64url(json.dumps(payload, separators=(",", ":")).encode("utf-8")),
+              )
+              signed = subprocess.run(
+                  ["openssl", "dgst", "-sha256", "-sign", os.environ["APPSTORE_KEY_PATH"]],
+                  input=signing_input.encode("ascii"),
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.PIPE,
+                  check=True,
+              )
+              return "{}.{}".format(signing_input, _b64url(_der_to_jose(signed.stdout)))
+
+
+          def request(method, path, body=None):
+              """Rend (code HTTP, corps JSON). Ne leve jamais sur une erreur reseau."""
+              url = path if path.startswith("http") else API_ROOT + path
+              data = json.dumps(body).encode("utf-8") if body is not None else None
+              req = urllib.request.Request(url, data=data, method=method)
+              req.add_header("Authorization", "Bearer " + _token())
+              if data is not None:
+                  req.add_header("Content-Type", "application/json")
+              try:
+                  with urllib.request.urlopen(req, timeout=60) as response:
+                      raw = response.read()
+                      return response.status, (json.loads(raw) if raw else {})
+              except urllib.error.HTTPError as exc:
+                  raw = exc.read()
+                  try:
+                      return exc.code, (json.loads(raw) if raw else {})
+                  except ValueError:
+                      return exc.code, {"raw": raw[:500].decode("utf-8", "replace")}
+              except Exception as exc:  # reseau, DNS, clef illisible...
+                  return 0, {"raw": "{}: {}".format(type(exc).__name__, exc)}
+
+
+          def detail(payload) -> str:
+              """Message d'erreur d'Apple, lisible et sans secret."""
+              errors = payload.get("errors") if isinstance(payload, dict) else None
+              if errors:
+                  return " | ".join(
+                      "{}: {}".format(e.get("title", "?"), e.get("detail", "")).strip()
+                      for e in errors
+                  )
+              return str(payload.get("raw", "")) if isinstance(payload, dict) else ""
+          PY
+
+          python3 - <<'PY'
+          import os
+          import sys
+          import time
+          from urllib.parse import urlencode
+
+          sys.path.insert(0, os.environ["RUNNER_TEMP"])
+          import asc_client as asc
+
+          version = os.environ["IOS_MARKETING_VERSION"]
+          build_number = os.environ["IOS_BUILD_NUMBER"]
+          bundle_id = os.environ["IOS_BUNDLE_ID"]
+          max_wait = int(os.environ.get("TESTFLIGHT_MAX_WAIT_MINUTES") or 40)
+          poll = int(os.environ.get("TESTFLIGHT_POLL_SECONDS") or 60)
+
+          ETIQUETTES = {
+              "VALID": "traitee",
+              "PROCESSING": "encore en traitement chez Apple",
+              "ABSENTE": "pas encore visible chez Apple",
+              "FAILED": "traitement en echec chez Apple",
+              "INVALID": "refusee par Apple",
+          }
+
+
+          def publier(cle, valeur):
+              with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+                  handle.write("{}={}\n".format(cle, valeur))
+
+
+          etiquette_version = "{} ({})".format(version, build_number)
+          publier("TESTFLIGHT_VERSION_LABEL", etiquette_version)
+          publier("TESTFLIGHT_STATE", "INCONNU")
+          publier("TESTFLIGHT_STATE_LABEL", "etat inconnu")
+
+          # 1. Retrouver l'app par son bundle id (deja connu du workflow).
+          status, payload = asc.request(
+              "GET", "/v1/apps?" + urlencode({"filter[bundleId]": bundle_id, "limit": "1"})
+          )
+          if status != 200 or not payload.get("data"):
+              print("::warning::App Store Connect ne rend pas l'app {} (HTTP {}). {} "
+                    "L'ENVOI DU BINAIRE, LUI, A REUSSI : rien n'est perdu, il reste a "
+                    "rattacher la build a un groupe de testeurs a la main."
+                    .format(bundle_id, status, asc.detail(payload)))
+              raise SystemExit(0)
+
+          app_id = payload["data"][0]["id"]
+          publier("TESTFLIGHT_APP_ID", app_id)
+          print("App Store Connect : {} -> app id {}".format(bundle_id, app_id))
+          print("Build recherchee : version {} / numero de build {} "
+                "(JAMAIS « la plus recente » : deux workflows peuvent se croiser)"
+                .format(version, build_number))
+          print("Plafond d'attente : {} min, sondage toutes les {} s".format(max_wait, poll))
+
+          # 2. Sonder CETTE build (version + numero), jamais la derniere arrivee.
+          requete = "/v1/builds?" + urlencode({
+              "filter[app]": app_id,
+              "filter[preReleaseVersion.version]": version,
+              "filter[version]": build_number,
+              "limit": "1",
+          })
+
+          depart = time.monotonic()
+          echeance = depart + max_wait * 60
+          etat, build_id = "ABSENTE", ""
+
+          while True:
+              status, payload = asc.request("GET", requete)
+              minutes = int((time.monotonic() - depart) / 60)
+              if status != 200:
+                  etat = "HTTP_{}".format(status)
+                  print("[TestFlight] t+{:>2} min | {} | appel API en echec ({}) {}"
+                        .format(minutes, etiquette_version, etat, asc.detail(payload)))
+              elif not payload.get("data"):
+                  etat = "ABSENTE"
+                  print("[TestFlight] t+{:>2} min | {} | pas encore enregistree chez Apple"
+                        .format(minutes, etiquette_version))
+              else:
+                  entree = payload["data"][0]
+                  build_id = str(entree.get("id", ""))
+                  etat = str(entree.get("attributes", {}).get("processingState") or "INCONNU")
+                  print("[TestFlight] t+{:>2} min | {} | {}"
+                        .format(minutes, etiquette_version, etat))
+                  if etat != "PROCESSING":
+                      break
+
+              if time.monotonic() + poll >= echeance:
+                  break
+              time.sleep(poll)
+
+          publier("TESTFLIGHT_STATE", etat)
+          publier("TESTFLIGHT_BUILD_ID", build_id)
+          publier("TESTFLIGHT_STATE_LABEL", ETIQUETTES.get(etat, "etat inconnu ({})".format(etat)))
+
+          if etat == "VALID":
+              print("Apple a fini : {} est traitee (build id {}).".format(etiquette_version, build_id))
+          elif etat in ("PROCESSING", "ABSENTE"):
+              print("::warning::Apple n'avait pas fini de traiter {} au bout de {} min "
+                    "(etat : {}). L'ENVOI A REUSSI et le binaire est bien chez Apple ; "
+                    "il ne manque que le rattachement au groupe de testeurs. Relever "
+                    "vars.TESTFLIGHT_MAX_WAIT_MINUTES, ou rattacher a la main dans "
+                    "App Store Connect."
+                    .format(etiquette_version, max_wait, etat))
+          else:
+              print("::warning::Apple rend l'etat '{}' pour {}. L'envoi a reussi, mais la "
+                    "build n'est pas distribuable en l'etat : regarder TestFlight."
+                    .format(etat, etiquette_version))
+          PY
+
+      - name: Distribuer la build au groupe de testeurs
+        continue-on-error: true
+        shell: bash
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          TESTFLIGHT_GROUP: ${{ vars.TESTFLIGHT_GROUP }}
+        run: |
+          set -uo pipefail
+          python3 - <<'PY'
+          import os
+          import sys
+          from urllib.parse import urlencode
+
+          sys.path.insert(0, os.environ["RUNNER_TEMP"])
+          import asc_client as asc
+
+
+          def publier(cle, valeur):
+              with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+                  handle.write("{}={}\n".format(cle, valeur))
+
+
+          etat = os.environ.get("TESTFLIGHT_STATE", "INCONNU")
+          build_id = os.environ.get("TESTFLIGHT_BUILD_ID", "")
+          app_id = os.environ.get("TESTFLIGHT_APP_ID", "")
+          voulu = (os.environ.get("TESTFLIGHT_GROUP") or "").strip()
+
+          # Defaut pessimiste : le temoin de fin de chaine ne dira « distribuee »
+          # que si un POST a reellement reussi.
+          publier("TESTFLIGHT_DISTRIBUTION", "non distribuee")
+
+          if etat != "VALID" or not build_id or not app_id:
+              print("::warning::Distribution non tentee : la build n'est pas au statut "
+                    "VALID (etat lu : {}). L'envoi du binaire reste un succes.".format(etat))
+              publier("TESTFLIGHT_DISTRIBUTION",
+                      "non distribuee (build non traitee : {})".format(etat))
+              raise SystemExit(0)
+
+          # 1. LIRE les groupes existants avant toute chose : le nom ne se devine pas.
+          status, payload = asc.request(
+              "GET", "/v1/betaGroups?" + urlencode({"filter[app]": app_id, "limit": "200"})
+          )
+          if status != 200:
+              print("::warning::Impossible de lire la liste des groupes de test "
+                    "(HTTP {}). {}".format(status, asc.detail(payload)))
+              publier("TESTFLIGHT_DISTRIBUTION",
+                      "non distribuee (liste des groupes illisible, HTTP {})".format(status))
+              raise SystemExit(0)
+
+          groupes = [
+              {
+                  "id": g.get("id", ""),
+                  "nom": str(g.get("attributes", {}).get("name") or ""),
+                  "interne": bool(g.get("attributes", {}).get("isInternalGroup")),
+              }
+              for g in payload.get("data", [])
+          ]
+
+          print("GROUPES DE TEST DECLARES SUR CETTE APP : {}".format(len(groupes)))
+          for g in groupes:
+              print("  - « {} »  ({})".format(g["nom"], "interne" if g["interne"] else "externe"))
+
+          # 2. Choisir. Un seul groupe -> on le prend. Plusieurs -> ON NE DEVINE PAS.
+          if not groupes:
+              print("::warning::Aucun groupe de test n'existe sur cette app. Creer un "
+                    "groupe dans App Store Connect (TestFlight > Groupes), puis "
+                    "renseigner vars.TESTFLIGHT_GROUP si vous en gardez plusieurs.")
+              publier("TESTFLIGHT_DISTRIBUTION", "non distribuee (aucun groupe n'existe)")
+              raise SystemExit(0)
+
+          if voulu:
+              choisis = [g for g in groupes if g["nom"] == voulu] or \
+                        [g for g in groupes if g["nom"].casefold() == voulu.casefold()]
+              if not choisis:
+                  print("::warning::Le groupe « {} » (vars.TESTFLIGHT_GROUP) n'existe pas "
+                        "sur cette app. Les noms reels sont listes juste au-dessus : "
+                        "rien n'a ete distribue, par prudence.".format(voulu))
+                  publier("TESTFLIGHT_DISTRIBUTION",
+                          "non distribuee (groupe « {} » introuvable)".format(voulu))
+                  raise SystemExit(0)
+              cible = choisis[0]
+              print("Groupe choisi par reglage (vars.TESTFLIGHT_GROUP) : « {} »".format(cible["nom"]))
+          elif len(groupes) == 1:
+              cible = groupes[0]
+              print("Un seul groupe existe : « {} ». C'est lui, sans ambiguite."
+                    .format(cible["nom"]))
+          else:
+              print("::warning::{} groupes de test existent et aucun n'est designe. "
+                    "Distribuer au mauvais groupe enverrait une version de recette a des "
+                    "gens qui ne l'attendent pas : RIEN N'A ETE DISTRIBUE. Choisir un nom "
+                    "dans la liste ci-dessus et le poser dans la variable de depot "
+                    "TESTFLIGHT_GROUP (Settings > Secrets and variables > Actions > "
+                    "Variables).".format(len(groupes)))
+              publier("TESTFLIGHT_DISTRIBUTION",
+                      "non distribuee ({} groupes possibles, aucun designe)".format(len(groupes)))
+              raise SystemExit(0)
+
+          # 3. Rattacher. 204 = c'est fait (« Add Builds to a Beta Group »).
+          status, payload = asc.request(
+              "POST",
+              "/v1/betaGroups/{}/relationships/builds".format(cible["id"]),
+              {"data": [{"type": "builds", "id": build_id}]},
+          )
+          if status in (200, 201, 204):
+              print("Build {} rattachee au groupe « {} » (HTTP {})."
+                    .format(build_id, cible["nom"], status))
+              publier("TESTFLIGHT_DISTRIBUTION",
+                      "distribuee au groupe « {} »".format(cible["nom"]))
+              if not cible["interne"]:
+                  print("::warning::« {} » est un groupe EXTERNE : Apple exige une "
+                        "Beta App Review avant que ces testeurs recoivent la build. "
+                        "Les groupes INTERNES, eux, la recoivent tout de suite."
+                        .format(cible["nom"]))
+          else:
+              print("::warning::Le rattachement au groupe « {} » a ete refuse (HTTP {}). {} "
+                    "L'envoi du binaire reste un succes ; le rattachement peut se faire "
+                    "a la main dans App Store Connect."
+                    .format(cible["nom"], status, asc.detail(payload)))
+              publier("TESTFLIGHT_DISTRIBUTION",
+                      "non distribuee (rattachement refuse, HTTP {})".format(status))
+          PY
+
+      - name: ETAT TESTFLIGHT (temoin de fin de chaine)
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          # Ce temoin s'imprime TOUJOURS, meme si les deux etapes precedentes ont
+          # renonce : c'est lui qu'on relit, au meme titre que « CIBLE API DU BUILD »,
+          # « PROJET FIREBASE DU BUILD » et « UPLOAD SUCCEEDED ».
+          ETIQUETTE="${TESTFLIGHT_VERSION_LABEL:-${IOS_MARKETING_VERSION} (${IOS_BUILD_NUMBER})}"
+          ETAT="${TESTFLIGHT_STATE_LABEL:-etat inconnu}"
+          DIFFUSION="${TESTFLIGHT_DISTRIBUTION:-non distribuee (etapes de distribution non executees)}"
+          LIGNE="ETAT TESTFLIGHT : ${ETIQUETTE} — ${ETAT} — ${DIFFUSION}"
+          echo "$LIGNE"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            echo "$LIGNE" >> "$GITHUB_STEP_SUMMARY"
+          fi
