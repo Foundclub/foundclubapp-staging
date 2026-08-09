@@ -41,10 +41,16 @@ jest.mock('react-native-linear-gradient', () => 'LinearGradient');
 jest.mock('@/theme/themeContext', () => {
   const styleLeaf = {};
   const makeRamp = () => new Proxy({}, { get: () => styleLeaf });
+  // D59 ② — `Colors` vient du VRAI module : le rail de progression lit des
+  // jetons nommes (`violet500` pour l'offre Club, `success500` pour l'etape
+  // acquise). Un Proxy rendrait n'importe quelle cle et laisserait passer une
+  // faute de frappe ; le vrai objet la fait tomber.
+  const { colors } = jest.requireActual('@/theme/colors');
   return {
     __esModule: true,
     default: () => ({
       Alignments: makeRamp(),
+      Colors: colors,
       Fonts: makeRamp(),
       Images: new Proxy({}, { get: () => 1 }),
       Spaces: new Proxy({}, { get: () => makeRamp() }),
@@ -158,8 +164,18 @@ describe('Welcome — l`ecran ne se saute plus tout seul (D23 ⑤)', () => {
     mockRole.current = 'president';
     const { tree } = rendre();
 
+    // D59 ② — CE TEST A CHANGE D'ANCRE, PAS D'INTENTION. Il verifiait les
+    // libelles « Gratuit / Équipe / Club », qui etaient les surtitres des trois
+    // cartes. Le pack les remplace par les etapes d'un chemin (« Aujourd'hui »,
+    // « Quand ton équipe grandit », « Quand ton club s'organise »).
+    // Les TITRES, eux, sont les memes avant et apres : ils disent « il y a bien
+    // trois offres » sans dependre de l'habillage.
     expect(textes(tree)).toEqual(
-      expect.arrayContaining(['Gratuit', 'Équipe', 'Club']),
+      expect.arrayContaining([
+        'Commence sans payer',
+        'Débloque tes équipes',
+        'Pilote tout le club',
+      ]),
     );
   });
 });
@@ -196,5 +212,77 @@ describe('Welcome — c`est LUI qui lance le tour guide, sur action (D23 ⑤)', 
       index: 0,
       routes: [{ name: 'HomeTab' }],
     });
+  });
+});
+
+// D59 ② — le chemin en 3 etapes (pack `pw-welcome2.jsx`, frame 12c).
+describe('Welcome — le chemin en 3 etapes remplace les 3 cartes (D59 ②)', () => {
+  /**
+   * Toutes les couleurs de fond posees par l'ecran, aplaties.
+   * @param {any} tree
+   * @returns {string[]}
+   */
+  const couleursDeFond = (tree) => JSON.stringify(tree.toJSON())
+    .split('"backgroundColor":"')
+    .slice(1)
+    .map((/** @type {string} */ morceau) => morceau.split('"')[0]);
+
+  it('les trois etapes sont nommees dans l ordre du chemin', () => {
+    mockRole.current = 'president';
+    const { tree } = rendre();
+    const rendus = textes(tree);
+
+    // C'est la narration du sous-titre qui devient la structure : un point de
+    // depart acquis, puis deux jalons.
+    expect(rendus).toEqual(expect.arrayContaining([
+      "Aujourd'hui",
+      'Quand ton équipe grandit',
+      "Quand ton club s'organise",
+    ]));
+    expect(rendus.indexOf("Aujourd'hui")).toBeLessThan(rendus.indexOf('Quand ton équipe grandit'));
+    expect(rendus.indexOf('Quand ton équipe grandit'))
+      .toBeLessThan(rendus.indexOf("Quand ton club s'organise"));
+  });
+
+  it('l etape Club est VIOLETTE, et il ne reste aucun vert d offre', () => {
+    const { colors } = jest.requireActual('@/theme/colors');
+    const { tree } = rendre();
+    const fonds = couleursDeFond(tree);
+
+    // ⛔ LE TEMOIN D'ARRET : `rgba(16,185,129,…)` etait un hex hors palette qui
+    // peignait l'offre Club en vert. Le vert appartient au registre succes.
+    expect(fonds.some((/** @type {string} */ f) => f.includes('16, 185, 129'))).toBe(false);
+    expect(fonds.some((/** @type {string} */ f) => f.includes('16,185,129'))).toBe(false);
+    // Violet du projet = `violet500` (#8567ff) -> rgba(133, 103, 255, 0.09).
+    expect(colors.violet500).toBe('#8567ff');
+    expect(fonds.some((/** @type {string} */ f) => f.includes('133, 103, 255'))).toBe(true);
+    // Et l'etape acquise garde le vert de succes : c'est SA place.
+    expect(fonds).toContain(colors.success500);
+  });
+
+  it('la coche des puces est l icone du DS, plus le glyphe texte', () => {
+    const { tree } = rendre();
+
+    expect(textes(tree)).not.toContain('✓');
+  });
+
+  it('la reassurance et le pont encadrent le bouton', () => {
+    const { tree } = rendre();
+    const rendus = textes(tree);
+
+    // La reassurance etait sous le pli : elle doit passer AVANT le bouton.
+    expect(rendus).toContain('Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.');
+    expect(rendus).toContain('Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin');
+    expect(rendus.indexOf('Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.'))
+      .toBeLessThan(rendus.indexOf('Démarrer le tour guidé'));
+    expect(rendus.indexOf('Démarrer le tour guidé'))
+      .toBeLessThan(rendus.indexOf('Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin'));
+  });
+
+  it('le pont parle du CLUB au dirigeant, pas de l equipe', () => {
+    mockRole.current = 'president';
+    const { tree } = rendre();
+
+    expect(textes(tree)).toContain('Gratuit · 2 min — tu configures ton club en chemin');
   });
 });
