@@ -660,6 +660,9 @@ export default {
       refuse: 'Refuser',
       remind: 'Relancer',
     },
+    compositionSource: {
+      defaultComposition: 'Composition type',
+    },
     fields: {
       description: 'À propos',
       participationRequests: 'Demandes de participation',
