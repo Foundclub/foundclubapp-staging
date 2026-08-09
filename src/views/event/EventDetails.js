@@ -3273,7 +3273,18 @@ function EventDetails({ navigation, route }) {
       });
     };
 
-    const hasAutoPresets = Array.isArray(staffCompositionPayload?.availablePresets)
+    // D44 — cette alerte propose de creer PLUSIEURS equipes automatiquement :
+    // c'est le systeme de la detection, pas celui d'un match (un match, c'est une
+    // equipe). `availablePresets` ne suffit pas a la declencher, parce que cette
+    // liste ne decrit QUE le sport — le football a 3 schemas, donc tout match de
+    // football sans composition voyait la question.
+    //
+    // Le predicat est `isDetectionEvent`, celui-la meme qui fabrique `eventKind`
+    // ligne 3197. Pas `!isMatchEvent` : un entrainement n'est ni l'un ni l'autre,
+    // il part donc avec `eventKind: 'match'`, et l'alerte lui aurait promis une
+    // creation automatique que le board refuse ensuite d'ouvrir.
+    const hasAutoPresets = isDetectionEvent
+      && Array.isArray(staffCompositionPayload?.availablePresets)
       && staffCompositionPayload.availablePresets.length > 0;
 
     if (!hasAutoPresets) {
@@ -3295,6 +3306,7 @@ function EventDetails({ navigation, route }) {
     compositionTeamId,
     eventId,
     getCompositionSourceLabel,
+    isDetectionEvent,
     isStaffCompositionFetching,
     openCompositionBoard,
     staffCompositionPayload,
