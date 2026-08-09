@@ -11,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
 
@@ -93,6 +94,22 @@ function UserSection({ navigation }) {
   const handleNext = () => {
     if (section && userData) {
       updateUserMutation.mutate({ section });
+    }
+  };
+
+  // D56 — l'etape est FACULTATIVE comme les autres marches du tunnel, mais
+  // elle n'offrait AUCUNE sortie : sans section choisie le bouton restait
+  // grise, et l'utilisateur ne pouvait plus avancer du tout. Le saut
+  // n'enregistre rien et emprunte la meme machine a etapes que
+  // l'enregistrement, replis compris.
+  const handleSkip = () => {
+    const nextRoute = resolveAvailableRoute(
+      navigation,
+      getNextOnboardingRoute(RouteNames.UserSection),
+      RouteNames.UserAddress,
+    );
+    if (nextRoute) {
+      navigation.navigate(nextRoute);
     }
   };
 
@@ -227,6 +244,7 @@ function UserSection({ navigation }) {
           title={t('profile.actions.save')}
           variant="Primary"
         />
+        <OnboardingSkipLink onPress={handleSkip} />
       </OnboardingStickyFooter>
     </FormScreenContainer>
   );
