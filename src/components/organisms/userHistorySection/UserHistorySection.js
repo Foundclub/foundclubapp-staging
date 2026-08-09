@@ -172,6 +172,35 @@ function UserHistorySection({
     );
   }
 
+  // D54 — L'UNIQUE grammaire d'ajout du pack : une carte pointillee CYAN.
+  // Elle remplace le bouton rond « + », et surtout elle est desormais rendue
+  // AUSSI en pied de liste : avant, elle n'existait que dans l'etat vide, donc
+  // des qu'on avait une experience le bouton rond etait le SEUL ajout possible.
+  // Retirer le rond sans elle aurait supprime la fonction, pas un doublon.
+  const bordureCartePointillee = {
+    borderColor: Colors.primary500,
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+  };
+
+  const carteAjoutPointillee = isOwnProfile ? (
+    <TouchableOpacity
+      onPress={() => onAddPress?.()}
+      style={[
+        Spaces.padding[16],
+        Alignments.alignCenter,
+        { backgroundColor: Colors.neutral800, ...bordureCartePointillee },
+      ]}
+    >
+      <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+        +
+        {' '}
+        {t('profile.history.add', 'Ajouter une expérience')}
+      </Text>
+    </TouchableOpacity>
+  ) : null;
+
   return (
     <View
       style={[
@@ -194,25 +223,10 @@ function UserHistorySection({
           </Text>
         </View>
 
-        {isOwnProfile ? (
-          <TouchableOpacity
-            onPress={() => onAddPress?.()}
-            style={{
-              alignItems: 'center',
-              backgroundColor: Colors.primary500,
-              borderRadius: 18,
-              height: 36,
-              justifyContent: 'center',
-              width: 36,
-            }}
-          >
-            <Image
-              resizeMode="contain"
-              source={Images.plus}
-              style={{ height: 14, tintColor: Colors.primary900, width: 14 }}
-            />
-          </TouchableOpacity>
-        ) : null}
+        {/* D54 — le bouton rond « + » a disparu : le pack ne veut QU'UNE
+            grammaire d'ajout, la carte pointillee cyan en pied de liste
+            (`carteAjoutPointillee`), qui est desormais rendue dans les deux
+            etats — liste vide ET liste remplie. */}
       </View>
 
       <View
@@ -249,34 +263,18 @@ function UserHistorySection({
       ) : null}
 
       {sortedHistories.length === 0 ? (
-        <View
-          style={[
-            Spaces.padding[16],
-            Alignments.alignCenter,
-            {
-              backgroundColor: Colors.neutral800,
-              borderColor: Colors.neutral700,
-              borderRadius: 12,
-              borderStyle: 'dashed',
-              borderWidth: 1,
-            },
-          ]}
-        >
+        <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.p1, Fonts.neutral00, { textAlign: 'center' }]}>
             {isOwnProfile
               ? t('profile.history.empty', 'Ajoute ton parcours sportif pour enrichir ton profil')
               : t('profile.history.emptyOther', 'Aucun historique renseigne')}
           </Text>
 
-          {isOwnProfile ? (
-            <TouchableOpacity onPress={() => onAddPress?.()} style={[Spaces.marginTop[14]]}>
-              <Text style={[Fonts.p1Bold, Fonts.primary500]}>
-                +
-                {' '}
-                {t('profile.history.add', 'Ajouter une expérience')}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
+          {/* D54 — la MEME carte qu'en pied de liste. L'ancienne version
+              enfermait la phrase et le lien dans un cadre pointille GRIS et
+              collait au lien un `Spaces.marginTop[14]` : 14 n'existe pas dans
+              la rampe, la marge etait donc perdue en silence. */}
+          {carteAjoutPointillee}
         </View>
       ) : (
         <View style={[Spaces.gap[16]]}>
@@ -393,6 +391,11 @@ function UserHistorySection({
               ) : null}
             </TouchableOpacity>
           ))}
+
+          {/* D54 — l'ajout EN PIED DE LISTE, ce qui manquait : sans lui, retirer
+              le bouton rond « + » aurait laisse un profil deja rempli sans
+              aucun moyen d'ajouter une experience de plus. */}
+          {carteAjoutPointillee}
         </View>
       )}
     </View>

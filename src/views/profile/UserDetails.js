@@ -388,6 +388,14 @@ function UserDetails({ navigation, route }) {
   const birthdate = parseDate(user?.birthdate);
   const age = birthdate ? differenceInYears(new Date(), birthdate) : null;
   const roleLabel = formatRoleLabel(user?.role?.name);
+  // D54 — le pack fait de la separation des roles un CONTRAT de recette : les
+  // blocs joueur (stats de match, poste, section, categorie, taille, poids)
+  // sont un « heritage joueur » qui ne doit JAMAIS etre atteignable sur un
+  // profil d'entraineur — un coach n'a ni poste ni taille de jeu, et les
+  // afficher publie des donnees qui ne le concernent pas.
+  // On coupe par le ROLE DU COMPTE REGARDE, jamais en supprimant les
+  // composants : ils servent toujours aux joueurs.
+  const showsPlayerBlocks = getUserRoleKey(user?.role?.type || user?.role?.name) === 'player';
   const sectionLabel = formatSectionLabel(user?.section?.name);
   const fallbackValue = t('userDetails.notSet', 'Non renseigné');
   const preferredSportValue = toTextLabel(user?.preferredSport);
@@ -485,10 +493,12 @@ function UserDetails({ navigation, route }) {
     return [
       { label: 'Matchs', value: matches },
       { label: 'Victoires', value: wins },
-      { label: 'Defaites', value: losses },
+      { label: 'Défaites', value: losses },
       { label: 'Minutes', value: minutes },
       { label: primaryLabel, value: primaryValue },
-      { label: 'Passes D', value: assists },
+      // D54 — le pack l'ecrit noir sur blanc : « Passes decisives », jamais
+      // « Passes D ». Un libelle systeme ne se tronque pas.
+      { label: 'Passes décisives', value: assists },
     ];
   }, [
     filteredSportSummary,
@@ -814,94 +824,99 @@ function UserDetails({ navigation, route }) {
             ) : null}
           </View>
 
-          <SectionCard
-            ApplicationStyle={ApplicationStyle}
-            Colors={Colors}
-            Fonts={Fonts}
-            Spaces={Spaces}
-            title="Stats de match"
-          >
-            <View style={[Spaces.gap[12]]}>
-              {shouldShowSportFilter ? (
-                <View style={[Spaces.gap[8]]}>
-                  <Text style={[Fonts.p4Bold, Fonts.primary100]}>Sport</Text>
-                  <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                    <TabButton
-                      isFocused={selectedStatsSport === 'all'}
-                      onPress={() => setSelectedStatsSport('all')}
-                      title="Tous"
-                    />
-                    {availableStatSports.map((sportKey) => (
+          {/* D54 — les stats de match sont un bloc JOUEUR : le pack les
+              range en « heritage joueur » et les interdit sur un profil
+              d'entraineur. Le composant reste, seul le rendu est coupe. */}
+          {showsPlayerBlocks ? (
+            <SectionCard
+              ApplicationStyle={ApplicationStyle}
+              Colors={Colors}
+              Fonts={Fonts}
+              Spaces={Spaces}
+              title="Stats de match"
+            >
+              <View style={[Spaces.gap[12]]}>
+                {shouldShowSportFilter ? (
+                  <View style={[Spaces.gap[8]]}>
+                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>Sport</Text>
+                    <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                       <TabButton
-                        isFocused={selectedStatsSport === sportKey}
-                        key={sportKey}
-                        onPress={() => {
-                          setSelectedStatsSport(sportKey);
-                          setSelectedStatsTeamKey('all');
-                        }}
-                        title={sportKey === 'basketball' ? 'Basket' : 'Football'}
+                        isFocused={selectedStatsSport === 'all'}
+                        onPress={() => setSelectedStatsSport('all')}
+                        title="Tous"
                       />
-                    ))}
-                  </View>
-                </View>
-              ) : null}
-
-              {availableStatTeams.length > 1 ? (
-                <View style={[Spaces.gap[8]]}>
-                  <Text style={[Fonts.p4Bold, Fonts.primary100]}>Équipe</Text>
-                  <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                    <TabButton
-                      isFocused={selectedStatsTeamKey === 'all'}
-                      onPress={() => setSelectedStatsTeamKey('all')}
-                      title="Toutes"
-                    />
-                    {availableStatTeams.map((teamOption) => (
-                      <TabButton
-                        isFocused={selectedStatsTeamKey === teamOption.key}
-                        key={teamOption.key}
-                        onPress={() => setSelectedStatsTeamKey(teamOption.key)}
-                        title={teamOption.label}
-                      />
-                    ))}
-                  </View>
-                </View>
-              ) : null}
-
-              {isPersonalStatsLoading ? (
-                <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des statistiques...</Text>
-              ) : (
-                <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
-                  {profileSummaryCards.map((stat) => (
-                    <View
-                      key={stat.label}
-                      style={[
-                        ApplicationStyle.card,
-                        Spaces.padding[12],
-                        Spaces.gap[8],
-                        {
-                          backgroundColor: `${Colors.primary700}BF`,
-                          borderColor: `${Colors.primary500}52`,
-                          marginBottom: 12,
-                          minHeight: isCompactScreen ? 92 : 98,
-                          width: '48%',
-                        },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary500,
-                          ApplicationStyle.borderRadius16,
-                          { height: 4, width: isCompactScreen ? 26 : 32 },
-                        ]}
-                      />
-                      <Text style={[Fonts.p4Bold, Fonts.primary100]}>{stat.label}</Text>
-                      <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{stat.value}</Text>
+                      {availableStatSports.map((sportKey) => (
+                        <TabButton
+                          isFocused={selectedStatsSport === sportKey}
+                          key={sportKey}
+                          onPress={() => {
+                            setSelectedStatsSport(sportKey);
+                            setSelectedStatsTeamKey('all');
+                          }}
+                          title={sportKey === 'basketball' ? 'Basket' : 'Football'}
+                        />
+                      ))}
                     </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </SectionCard>
+                  </View>
+                ) : null}
+
+                {availableStatTeams.length > 1 ? (
+                  <View style={[Spaces.gap[8]]}>
+                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>Équipe</Text>
+                    <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                      <TabButton
+                        isFocused={selectedStatsTeamKey === 'all'}
+                        onPress={() => setSelectedStatsTeamKey('all')}
+                        title="Toutes"
+                      />
+                      {availableStatTeams.map((teamOption) => (
+                        <TabButton
+                          isFocused={selectedStatsTeamKey === teamOption.key}
+                          key={teamOption.key}
+                          onPress={() => setSelectedStatsTeamKey(teamOption.key)}
+                          title={teamOption.label}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+
+                {isPersonalStatsLoading ? (
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des statistiques...</Text>
+                ) : (
+                  <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
+                    {profileSummaryCards.map((stat) => (
+                      <View
+                        key={stat.label}
+                        style={[
+                          ApplicationStyle.card,
+                          Spaces.padding[12],
+                          Spaces.gap[8],
+                          {
+                            backgroundColor: `${Colors.primary700}BF`,
+                            borderColor: `${Colors.primary500}52`,
+                            marginBottom: 12,
+                            minHeight: isCompactScreen ? 92 : 98,
+                            width: '48%',
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            ApplicationStyle.backgroundColor.primary500,
+                            ApplicationStyle.borderRadius16,
+                            { height: 4, width: isCompactScreen ? 26 : 32 },
+                          ]}
+                        />
+                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>{stat.label}</Text>
+                        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{stat.value}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </SectionCard>
+          ) : null}
 
           {/* Les retours du coach sont PRIVES : jamais sur une vue publique,
               donc jamais dans l'apercu non plus (pack, regle « vie privee »). */}
@@ -1021,37 +1036,47 @@ function UserDetails({ navigation, route }) {
                 Spaces={Spaces}
                 value={formatNullableValue(bestLevelValue, fallbackValue)}
               />
-              <InfoItem
-                Alignments={Alignments}
-                Colors={Colors}
-                compact={isCompactScreen}
-                Fonts={Fonts}
-                icon={Images.pin}
-                label={t('userDetails.fields.position', 'Poste')}
-                Spaces={Spaces}
-                value={formatNullableValue(user?.position, fallbackValue)}
-              />
-              <InfoItem
-                Alignments={Alignments}
-                Colors={Colors}
-                compact={isCompactScreen}
-                Fonts={Fonts}
-                icon={Images.users}
-                label={t('userDetails.fields.section', 'Section')}
-                Spaces={Spaces}
-                value={formatNullableValue(sectionLabel, fallbackValue)}
-              />
-              <InfoItem
-                Alignments={Alignments}
-                Colors={Colors}
-                compact={isCompactScreen}
-                Fonts={Fonts}
-                fullWidth
-                icon={Images.edit}
-                label={t('userDetails.fields.category', 'Catégorie')}
-                Spaces={Spaces}
-                value={formatNullableValue(user?.category, fallbackValue)}
-              />
+              {/* D54 — la grille du coach n'est pas vidée, elle est RESTREINTE :
+                  le pack lui laisse « Âge, Ville, Sport, Meilleur niveau » et
+                  lui retire poste / section / catégorie, qui n'ont pas de sens
+                  pour quelqu'un qui ne joue pas. */}
+              {showsPlayerBlocks ? (
+                <InfoItem
+                  Alignments={Alignments}
+                  Colors={Colors}
+                  compact={isCompactScreen}
+                  Fonts={Fonts}
+                  icon={Images.pin}
+                  label={t('userDetails.fields.position', 'Poste')}
+                  Spaces={Spaces}
+                  value={formatNullableValue(user?.position, fallbackValue)}
+                />
+              ) : null}
+              {showsPlayerBlocks ? (
+                <InfoItem
+                  Alignments={Alignments}
+                  Colors={Colors}
+                  compact={isCompactScreen}
+                  Fonts={Fonts}
+                  icon={Images.users}
+                  label={t('userDetails.fields.section', 'Section')}
+                  Spaces={Spaces}
+                  value={formatNullableValue(sectionLabel, fallbackValue)}
+                />
+              ) : null}
+              {showsPlayerBlocks ? (
+                <InfoItem
+                  Alignments={Alignments}
+                  Colors={Colors}
+                  compact={isCompactScreen}
+                  Fonts={Fonts}
+                  fullWidth
+                  icon={Images.edit}
+                  label={t('userDetails.fields.category', 'Catégorie')}
+                  Spaces={Spaces}
+                  value={formatNullableValue(user?.category, fallbackValue)}
+                />
+              ) : null}
             </View>
           </SectionCard>
 
@@ -1073,36 +1098,50 @@ function UserDetails({ navigation, route }) {
                 Spaces={Spaces}
                 value={age === null ? fallbackValue : `${age} ans`}
               />
-              <InfoItem
-                Alignments={Alignments}
-                Colors={Colors}
-                compact={isCompactScreen}
-                Fonts={Fonts}
-                icon={Images.calendar}
-                label={t('userDetails.fields.birthdate', 'Date de naissance')}
-                Spaces={Spaces}
-                value={birthdate ? format(birthdate, 'dd/MM/yyyy') : fallbackValue}
-              />
-              <InfoItem
-                Alignments={Alignments}
-                Colors={Colors}
-                compact={isCompactScreen}
-                Fonts={Fonts}
-                icon={Images.check}
-                label={t('userDetails.fields.height', 'Taille')}
-                Spaces={Spaces}
-                value={normalizeHeight(user?.height, fallbackValue)}
-              />
-              <InfoItem
-                Alignments={Alignments}
-                Colors={Colors}
-                compact={isCompactScreen}
-                Fonts={Fonts}
-                icon={Images.check}
-                label={t('userDetails.fields.weight', 'Poids')}
-                Spaces={Spaces}
-                value={normalizeWeight(user?.weight, fallbackValue)}
-              />
+              {/* D54 — LA DATE EXACTE NE SORT JAMAIS D'ICI. Cette page est la
+                  vue publique du profil (`PJPublic` / `PEPublic` du pack), et
+                  elle est aussi servie sur le WEB a `/users/:userId` : la date
+                  de naissance d'un MINEUR y serait lisible par n'importe qui.
+                  Le pack donne le remplacant et il est deja rendu juste
+                  au-dessus : « date de naissance exacte -> age seul ».
+                  Le garde-fou est `isOwnerView`, pas `isSelfProfile` : le
+                  premier retombe a faux en mode APERCU, le second non. */}
+              {isOwnerView ? (
+                <InfoItem
+                  Alignments={Alignments}
+                  Colors={Colors}
+                  compact={isCompactScreen}
+                  Fonts={Fonts}
+                  icon={Images.calendar}
+                  label={t('userDetails.fields.birthdate', 'Date de naissance')}
+                  Spaces={Spaces}
+                  value={birthdate ? format(birthdate, 'dd/MM/yyyy') : fallbackValue}
+                />
+              ) : null}
+              {showsPlayerBlocks ? (
+                <InfoItem
+                  Alignments={Alignments}
+                  Colors={Colors}
+                  compact={isCompactScreen}
+                  Fonts={Fonts}
+                  icon={Images.check}
+                  label={t('userDetails.fields.height', 'Taille')}
+                  Spaces={Spaces}
+                  value={normalizeHeight(user?.height, fallbackValue)}
+                />
+              ) : null}
+              {showsPlayerBlocks ? (
+                <InfoItem
+                  Alignments={Alignments}
+                  Colors={Colors}
+                  compact={isCompactScreen}
+                  Fonts={Fonts}
+                  icon={Images.check}
+                  label={t('userDetails.fields.weight', 'Poids')}
+                  Spaces={Spaces}
+                  value={normalizeWeight(user?.weight, fallbackValue)}
+                />
+              ) : null}
               <View
                 style={[
                   ApplicationStyle.separator,
@@ -1121,7 +1160,12 @@ function UserDetails({ navigation, route }) {
                 label={t('userDetails.fields.phone', 'Téléphone')}
                 Spaces={Spaces}
                 value={
-                  isSelfProfile
+                  /* D54 — `isOwnerView`, pas `isSelfProfile` : en APERCU on
+                     regarde SON PROPRE profil, donc `isSelfProfile` est vrai
+                     et le numero reapparaissait. Le bouton s'appelle « Voir
+                     mon profil comme les autres » — s'il montre plus que ce
+                     que voient les autres, il ment sur la vie privee. */
+                  isOwnerView
                     ? formatNullableValue(user?.phoneNumber, fallbackValue)
                     : t('userDetails.private', 'Privé')
                 }
@@ -1136,7 +1180,7 @@ function UserDetails({ navigation, route }) {
                 label={t('userDetails.fields.email', 'Email')}
                 Spaces={Spaces}
                 value={
-                  isSelfProfile
+                  isOwnerView
                     ? formatNullableValue(user?.email, fallbackValue)
                     : t('userDetails.private', 'Privé')
                 }
@@ -1151,7 +1195,7 @@ function UserDetails({ navigation, route }) {
                 label={t('userDetails.fields.address', 'Adresse')}
                 Spaces={Spaces}
                 value={
-                  isSelfProfile
+                  isOwnerView
                     ? formatNullableValue(addressLabel, fallbackValue)
                     : t('userDetails.private', 'Privé')
                 }
