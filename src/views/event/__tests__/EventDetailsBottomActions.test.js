@@ -473,6 +473,22 @@ const byTestId = (/** @type {any} */ root, /** @type {string} */ id) => root
 const flatStyle = (/** @type {any} */ node) => StyleSheet.flatten(node?.props?.style) || {};
 
 /**
+ * `node` descend-il de `ancestor` ? C'est la question qui remplace, depuis D53,
+ * la mesure d'une reserve en pixels : deux freres ne se recouvrent jamais.
+ * @param {any} node - Le noeud teste.
+ * @param {any} ancestor - L'ancetre suppose.
+ * @returns {boolean} - Vrai si `node` est un descendant strict de `ancestor`.
+ */
+const isUnder = (/** @type {any} */ node, /** @type {any} */ ancestor) => {
+  let current = node?.parent;
+  while (current) {
+    if (current === ancestor) return true;
+    current = current.parent;
+  }
+  return false;
+};
+
+/**
  * Le noeud qui PORTE la position du panneau : le panneau lui-meme avant D21,
  * la couche flottante qui l'enveloppe apres. On remonte donc la chaine des
  * ancetres jusqu'a trouver une position declaree.
@@ -623,10 +639,13 @@ describe('EventDetails — bas de page : etat LIVRE avant D21 (caracterisation)'
     expect(collapsedPanelHeight(root)).toBeLessThanOrEqual(60);
   });
 
-  test('sans action d organisation, la liste ne reserve que 40 px', () => {
+  // ⚠️ INVERSION VOLONTAIRE des 40 px (D53) : la liste reserve desormais 16 px,
+  // et surtout LE MEME NOMBRE avec ou sans actions d'organisation. Le menu ne
+  // flottant plus au-dessus d'elle, elle n'a plus rien a degager.
+  test('sans action d organisation, la liste ne reserve que son terminateur', () => {
     const root = mountScreen();
 
-    expect(scrollContentStyle(root).paddingBottom).toBe(40);
+    expect(scrollContentStyle(root).paddingBottom).toBe(16);
   });
 
   test('TEMOIN NEGATIF : hors de la pile evenement, aucun chemin vers l affiche', () => {
@@ -777,41 +796,87 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
   // ⚠️ INVERSION VOLONTAIRE de la caracterisation « le menu est EN FLUX » :
   // c'est la demande d'Adel — le menu prenait toute une bande en pied d'ecran
   // « avec la marge autour », il flotte desormais en bas a droite.
-  test('le menu flotte : il est pose en position absolue, ancre en bas a droite', () => {
+  // ⚠️ INVERSION VOLONTAIRE de D21 ② (D53), sur demande d'Adel : sur sa capture,
+  // le participant « Leo Diallo » etait a moitie cache sous le bouton. Le calcul
+  // de D21 etait pourtant juste — 46 px de pastille + 16 d'ecart = 62, couverts
+  // par 80. Ce qu'il ne pouvait pas couvrir, c'est le MILIEU de la liste :
+  // ancree au cadre, la pastille occupait ses 62 px du bas en permanence, et la
+  // liste des participants est suivie des stats, des avis et des compositions.
+  // Une marge en bas de liste ne protege pas le milieu d'une liste.
+  test('le menu ne flotte plus : aucune couche par-dessus la liste', () => {
     const root = asOrganiser();
-    const [layer] = root.findAll((/** @type {any} */ node) => (
+    const couches = root.findAll((/** @type {any} */ node) => (
       flatStyle(node).position === 'absolute' && node.props?.pointerEvents === 'box-none'
     ));
 
-    expect(managePanelPosition(root)).toBe('absolute');
-    expect(flatStyle(layer)).toMatchObject({ alignItems: 'flex-end', bottom: 16 });
+    // ⚠️ On compare des NOMBRES, jamais les noeuds eux-memes : un `toEqual([])`
+    // qui echoue fait serialiser tout l'arbre de cet ecran par Jest, et le
+    // processus meurt en OOM avant d'afficher la moindre ligne utile (mesure
+    // D53 : 4 Go de tas satures, aucun message). Un echec doit rester lisible.
+    expect(couches.length).toBe(0);
+    expect(managePanelPosition(root)).not.toBe('absolute');
   });
 
-  test('les touches TRAVERSENT la couche flottante : elle ne bloque pas la liste', () => {
+  test('le menu reste aligne a droite : c est une pastille, pas la bande d avant D21', () => {
+    // Le defaut que D21 avait corrige ne doit pas revenir : le menu ne reprend
+    // PAS toute une bande en pied d'ecran, il reste compact et cale a droite.
     const root = asOrganiser();
-    const [layer] = root.findAll((/** @type {any} */ node) => (
-      flatStyle(node).position === 'absolute' && node.props?.pointerEvents === 'box-none'
-    ));
+    const [enveloppe] = root.findAll(
+      (/** @type {any} */ node) => flatStyle(node).alignItems === 'flex-end'
+        && flatStyle(node).marginTop === 12,
+    );
 
-    expect(layer).toBeTruthy();
+    expect(enveloppe).toBeTruthy();
+    expect(isUnder(byTestId(root, 'event-manage-panel')[0], enveloppe)).toBe(true);
+    expect(collapsedPanelHeight(root)).toBeLessThanOrEqual(60);
   });
 
-  // ⚠️ INVERSION VOLONTAIRE des 40 px : LE garde-fou du lot. Un bouton flottant
-  // recouvre le contenu ; sans cette reserve, le dernier participant passerait
-  // SOUS le bouton et on echangerait un defaut contre un pire.
-  test('la liste reserve la place du bouton flottant sous son dernier bloc', () => {
+  // ⛔ LE GARDE-FOU DU LOT (D53), et il remplace la reserve de 80 px : plus rien
+  // ne peut recouvrir un participant, parce que le menu n'est plus AU-DESSUS de
+  // la liste mais APRES elle. C'est une propriete de structure, pas un nombre a
+  // regler — c'est ce qui la rend increvable la ou 80 px echouaient.
+  test('AUCUN participant ne peut etre recouvert : le menu suit la liste, il ne la surplombe pas', () => {
     const root = asOrganiser();
-    const reserve = scrollContentStyle(root).paddingBottom;
+    const [scroll] = root.findAll((/** @type {any} */ node) => Boolean(node.props?.refreshControl)
+      && Boolean(node.props?.contentContainerStyle));
+    const panneau = byTestId(root, 'event-manage-panel')[0];
 
-    // 46 px de pastille declaree + 16 px d'ecart bas = 62 px a couvrir.
-    expect(reserve).toBeGreaterThanOrEqual(collapsedPanelHeight(root) + 16);
-    expect(reserve).toBe(80);
+    // 1. Le menu n'est pas DANS la liste : il ne defile pas avec elle.
+    expect(isUnder(panneau, scroll)).toBe(false);
+    // 2. La liste n'est pas DANS le menu non plus : ce sont deux freres.
+    expect(isUnder(scroll, panneau)).toBe(false);
+    // 3. ⛔ ET IL EST EN FLUX. Sans cette ligne, le test reste VERT alors que le
+    //    menu surplombe la liste : deux freres se recouvrent tres bien quand
+    //    l'un est en absolu. C'est le seul controle qui distingue « pose apres »
+    //    de « pose par-dessus ». (Verifie en retablissant la couche de D21 :
+    //    les points 1, 2 et 4 restaient verts, celui-ci tombe.)
+    expect(managePanelPosition(root)).not.toBe('absolute');
+    // 4. Et le menu vient APRES la liste dans le meme cadre : en flux, donc il
+    //    repousse le contenu au lieu de le masquer.
+    const cadre = root.findAll((/** @type {any} */ node) => isUnder(scroll, node)
+      && isUnder(panneau, node)).pop();
+    // `findAll` parcourt en profondeur d'abord : l'ordre du tableau EST l'ordre
+    // de rendu, donc l'ordre d'empilement d'un conteneur en colonne.
+    const ordreDeRendu = cadre.findAll(() => true);
+    expect(ordreDeRendu.indexOf(panneau)).toBeGreaterThan(ordreDeRendu.indexOf(scroll));
   });
 
-  test('le pied d ecran n est PAS recouvert : la couche vit au-dessus de la liste', () => {
+  test('deplie, la grille de chips repousse la liste au lieu de la masquer', () => {
+    // Le pire cas de l'ancienne couche flottante : depliee, elle couvrait bien
+    // plus que les 80 px reserves. En flux, elle ne peut plus rien couvrir.
+    const root = asOrganiser();
+    press(root, "Gérer l'événement");
+    const [scroll] = root.findAll((/** @type {any} */ node) => Boolean(node.props?.refreshControl)
+      && Boolean(node.props?.contentContainerStyle));
+
+    expect(byTestId(root, 'event-manage-sheet')[0]).toBeTruthy();
+    expect(isUnder(byTestId(root, 'event-manage-sheet')[0], scroll)).toBe(false);
+  });
+
+  test('le pied d ecran garde sa bande a lui, distincte de la liste et du menu', () => {
     // Les cotisations liees, les stats de match et les boutons de reponse vivent
-    // dans une bande SOEUR de la liste. La couche flottante est ancree dans le
-    // cadre de la liste : elle ne peut donc pas passer par-dessus cette bande.
+    // dans une bande SOEUR. Elle n'a jamais ete recouverte et ne l'est toujours
+    // pas : le menu est ancre dans le cadre de la liste, pas dans le sien.
     const root = asOrganiser({
       campaigns: [{
         currency: 'EUR',
@@ -822,28 +887,14 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
         totals: { total: 3 },
       }],
     });
-    const [layer] = root.findAll((/** @type {any} */ node) => (
-      flatStyle(node).position === 'absolute' && node.props?.pointerEvents === 'box-none'
-    ));
     const [scroll] = root.findAll((/** @type {any} */ node) => Boolean(node.props?.refreshControl)
       && Boolean(node.props?.contentContainerStyle));
+    const panneau = byTestId(root, 'event-manage-panel')[0];
     const openButton = pressableWithText(root, 'Ouvrir');
 
-    const isUnder = (/** @type {any} */ node, /** @type {any} */ ancestor) => {
-      let current = node?.parent;
-      while (current) {
-        if (current === ancestor) return true;
-        current = current.parent;
-      }
-      return false;
-    };
-
-    // Le cadre qui porte la couche flottante contient la liste, et SEULEMENT
-    // elle : le bouton « Ouvrir » d'une campagne liee vit dans la bande soeur,
-    // donc hors de portee du bouton flottant.
-    const frame = layer.parent;
-    expect(isUnder(scroll, frame)).toBe(true);
-    expect(isUnder(openButton, frame)).toBe(false);
+    const cadre = root.findAll((/** @type {any} */ node) => isUnder(scroll, node)
+      && isUnder(panneau, node)).pop();
+    expect(isUnder(openButton, cadre)).toBe(false);
   });
 
   test('deplie : la grille de chips ne change pas — memes colonnes, un seul tap', () => {

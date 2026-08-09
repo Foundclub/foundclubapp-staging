@@ -37,9 +37,16 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+// Le retrait bas est PILOTABLE (D53) : le plancher systeme ne se prouve qu'en
+// faisant varier l'encoche. 34 est la valeur historique du fichier — tous les
+// tests ecrits avant D53 la retrouvent telle quelle. Le prefixe `mock` est
+// impose par Jest : lui seul autorise une fabrique a citer une variable
+// declaree en dehors d'elle.
+let mockRetraitBas = 34;
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({
-    bottom: 34, left: 0, right: 0, top: 59,
+    bottom: mockRetraitBas, left: 0, right: 0, top: 59,
   }),
 }));
 
@@ -261,9 +268,33 @@ const gouttiereDeBarre = (arbre) => noeudsAffiches(
   (noeud) => style(noeud).overflow === 'hidden',
 )[0];
 
+/**
+ * La liste defilante du gabarit. On la cherche sur l'arbre des COMPOSANTS et non
+ * sur celui des noeuds d'affichage : une ScrollView rend un hote qui ne reexpose
+ * pas `contentContainerStyle` tel quel. ⚠️ `contentContainerStyle` seul ne suffit
+ * PAS a la reconnaitre : le conteneur d'ecran mocke en recoit un lui aussi, et il
+ * arrive AVANT dans l'arbre. `keyboardShouldPersistTaps` n'appartient qu'a la
+ * liste. On prend le premier, le plus exterieur.
+ * @param {any} arbre
+ * @returns {any}
+ */
+const listeDefilante = (arbre) => arbre.root.findAll(
+  (/** @type {any} */ noeud) => Boolean(noeud.props?.contentContainerStyle)
+    && Boolean(noeud.props?.keyboardShouldPersistTaps),
+)[0];
+
+/**
+ * La marge basse que le gabarit demande au conteneur d'ecran, aplatie.
+ * @returns {number}
+ */
+const margeBasseDemandee = () => Number(
+  StyleSheet.flatten(propsDuConteneur[0].contentContainerStyle).paddingBottom,
+);
+
 beforeEach(() => {
   propsDuBouton.length = 0;
   propsDuConteneur.length = 0;
+  mockRetraitBas = 34;
 });
 
 describe("WizardStepLayout — l'en-tete", () => {
@@ -526,5 +557,61 @@ describe("WizardStepLayout — la grammaire 'focus' (packs de design 2026-08-05)
     expect(style(noeudDuTexte(arbre, "Quel type d'evenement ?")).fontFamily)
       .toBe(polices.h1.fontFamily);
     expect(style(pressableNomme(arbre, 'Retour')).width).toBe(40);
+  });
+});
+
+describe('WizardStepLayout — la marge basse (D53)', () => {
+  // Le defaut d'Adel : « padding en bas de l'ecran qu'il faut enlever dans le
+  // tunnel de creation d'evenements — c'est dans TOUS les ecrans. » Il y en a
+  // 52 : ce gabarit est la piece commune, et c'est LUI qui fabriquait le vide.
+  //
+  // Deux reserves, additionnees, faisaient 84 pt de vide hors encoche :
+  //   - sous le bouton principal : `insets.bottom + 28`  (28 pt de trop)
+  //   - entre le dernier bloc et le bouton : 40 (liste) + 16 (marge du bloc)
+  // Elles valent desormais `insets.bottom + 12` et 16 + 16.
+
+  it('sous le bouton principal : le retrait systeme, plus 12 pt et pas 28', () => {
+    rendre({ onNext: jest.fn() });
+
+    expect(margeBasseDemandee()).toBe(34 + 12);
+  });
+
+  it('entre le dernier bloc et le bouton : 16 pt de liste, pas 40', () => {
+    const arbre = rendre({ onNext: jest.fn() });
+
+    expect(StyleSheet.flatten(listeDefilante(arbre).props.contentContainerStyle))
+      .toMatchObject({ paddingBottom: 16 });
+  });
+
+  // ⛔ LE PLANCHER, ET IL N'EST PAS NEGOCIABLE. Descendre la reserve a zero
+  // rendrait le bouton principal intouchable sous la barre gestuelle : on
+  // echangerait un defaut contre un pire. Le test le prouve en faisant VARIER
+  // l'encoche — une valeur figee ne prouverait qu'un telephone.
+  it('quelle que soit l encoche, le bouton reste AU-DESSUS du retrait systeme', () => {
+    [0, 20, 34, 48].forEach((encoche) => {
+      propsDuConteneur.length = 0;
+      mockRetraitBas = encoche;
+      rendre({ onNext: jest.fn() });
+
+      expect(margeBasseDemandee()).toBeGreaterThan(encoche);
+    });
+  });
+
+  it('sur un telephone sans encoche, la reserve ne tombe pas a zero', () => {
+    // Android a barre de navigation classique : `insets.bottom` vaut 0. Sans
+    // les 12 pt, le bouton toucherait le bord de la dalle.
+    mockRetraitBas = 0;
+    rendre({ onNext: jest.fn() });
+
+    expect(margeBasseDemandee()).toBe(12);
+  });
+
+  it('le gabarit reste seul maitre de son retrait bas', () => {
+    // Invariant partage avec ScreenContainer.tour.test.js : si le conteneur
+    // reprenait son plancher, `insets.bottom` serait compte DEUX fois et le
+    // vide reviendrait par la porte de derriere.
+    rendre({ onNext: jest.fn() });
+
+    expect(propsDuConteneur[0].bottomInsetMode).toBe('edge-to-edge');
   });
 });

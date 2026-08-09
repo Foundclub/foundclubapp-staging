@@ -236,10 +236,17 @@ function WizardStepLayout({
       // (paddingBottom ci-dessous) : on renonce au plancher du conteneur pour ne
       // pas cumuler deux fois insets.bottom sous les boutons du wizard.
       bottomInsetMode="edge-to-edge"
+      // D53 — le vide sous le bouton principal, signale par Adel sur « TOUS les
+      // ecrans » du tunnel : 28 pt s'ajoutaient au retrait systeme, soit 62 pt
+      // de blanc sous le CTA sur un telephone a encoche. On garde 12 — le meme
+      // ecart que celui qui separe deja les deux boutons ci-dessous
+      // (`Spaces.gap[12]`), pour que le rythme du bas d'ecran soit le meme
+      // partout. ⛔ `insets.bottom` reste un PLANCHER, jamais une variable
+      // d'ajustement : sans lui le bouton passe sous la barre gestuelle.
       contentContainerStyle={[
         Alignments.fill,
         Alignments.justifySpaceBetween,
-        { paddingBottom: insets.bottom + 28 },
+        { paddingBottom: insets.bottom + 12 },
       ]}
       contentWidth={/** @type {any} */ ('readable')}
       responsivePadding
@@ -343,7 +350,12 @@ function WizardStepLayout({
 
           <ScrollView
             automaticallyAdjustKeyboardInsets
-            contentContainerStyle={[Spaces.paddingBottom[40]]}
+            // D53 — 40 pt ici + 16 pt de marge sur le bloc de boutons faisaient
+            // 56 pt de blanc entre le dernier champ et le CTA. 16 + 16 = 32, le
+            // meme ecart que celui qui separe deja deux sections dans l'app.
+            // Ce n'est pas une reserve de clavier : `automaticallyAdjustKeyboardInsets`
+            // s'en charge, et le CTA est un FRERE de la liste, jamais par-dessus.
+            contentContainerStyle={[Spaces.paddingBottom[16]]}
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             keyboardShouldPersistTaps="handled"
             onScroll={handleScroll}
