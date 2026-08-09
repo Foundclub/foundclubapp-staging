@@ -106,16 +106,11 @@ jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest
 
 jest.mock('@/platform/share', () => ({ share: jest.fn() }));
 
-// `@/utils/imageUrl` n'expose un DEFAUT que dans sa variante `.web.js` ; le
-// fichier sans suffixe n'a que l'export nomme. Vite resout bien la variante web
-// en production, mais Jest (preset react-native) prend le `.js` et le rendu
-// meurt sur « _imageUrl.default is not a function ». C'est la raison pour
-// laquelle aucun ecran `.web.js` n'avait de test jusqu'ici.
-jest.mock('@/utils/imageUrl', () => ({
-  __esModule: true,
-  default: (/** @type {string} */ url) => url || undefined,
-  getImageUrl: (/** @type {string} */ url) => url || undefined,
-}));
+// Ici vivait une doublure de `@/utils/imageUrl`, seule facon de monter cet ecran
+// tant que le module sans suffixe n'avait pas d'export par defaut. D49 la lui a
+// donne (`src/utils/imageUrl.js`), le VRAI module se charge, et la doublure a
+// ete retiree : ces 5 tests restent verts sans elle. Si cette suite redevient
+// rouge sur « _imageUrl.default is not a function », l'export a ete perdu.
 
 jest.mock('@/components/templates/ScreenContainer', () => {
   const react = jest.requireActual('react');
