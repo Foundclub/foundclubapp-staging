@@ -245,18 +245,35 @@ describe('Welcome — le chemin en 3 etapes remplace les 3 cartes (D59 ②)', ()
   });
 
   it('l etape Club est VIOLETTE, et il ne reste aucun vert d offre', () => {
-    const { colors } = jest.requireActual('@/theme/colors');
+    const { colors, withAlpha } = jest.requireActual('@/theme/colors');
     const { tree } = rendre();
     const fonds = couleursDeFond(tree);
 
-    // ⛔ LE TEMOIN D'ARRET : `rgba(16,185,129,…)` etait un hex hors palette qui
-    // peignait l'offre Club en vert. Le vert appartient au registre succes.
-    expect(fonds.some((/** @type {string} */ f) => f.includes('16, 185, 129'))).toBe(false);
-    expect(fonds.some((/** @type {string} */ f) => f.includes('16,185,129'))).toBe(false);
-    // Violet du projet = `violet500` (#8567ff) -> rgba(133, 103, 255, 0.09).
-    expect(colors.violet500).toBe('#8567ff');
-    expect(fonds.some((/** @type {string} */ f) => f.includes('133, 103, 255'))).toBe(true);
-    // Et l'etape acquise garde le vert de succes : c'est SA place.
+    // ⛔ LE TEMOIN D'ARRET. Il ne suffit pas de chercher l'ancien vert : ce test
+    // exige que CHAQUE fond pose par l'ecran vienne d'un jeton du theme. Un
+    // `rgba(16,185,129,…)` — l'emeraude hors palette qui peignait l'offre Club —
+    // n'est dans aucune de ces valeurs, donc il tombe, comme tomberait n'importe
+    // quelle couleur inventee plus tard.
+    //
+    // ⚠️ Aucun `#hex` litteral ici : `verify:theme-contract` SCANNE AUSSI LES
+    // TESTS, et un hex ecrit en dur fait tomber la porte.
+    const fondsAutorises = new Set([
+      colors.transparent, // pastilles des 2 etapes a venir
+      colors.success500, // pastille de l'etape acquise
+      colors.primary500, // point central de l'etape Equipe
+      colors.violet500, // point central de l'etape Club
+      withAlpha(colors.neutral00, 0.05), // carte Gratuit
+      withAlpha(colors.primary500, 0.09), // carte Equipe
+      withAlpha(colors.violet500, 0.09), // carte Club
+    ]);
+
+    expect(fonds.length).toBeGreaterThan(0);
+    fonds.forEach((/** @type {string} */ fond) => {
+      expect(fondsAutorises.has(fond)).toBe(true);
+    });
+    // Et le violet est bien POSE, pas seulement autorise.
+    expect(fonds).toContain(withAlpha(colors.violet500, 0.09));
+    // Le vert reste, mais a SA place : l'etape deja acquise.
     expect(fonds).toContain(colors.success500);
   });
 
