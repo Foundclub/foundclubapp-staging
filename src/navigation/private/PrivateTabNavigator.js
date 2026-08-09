@@ -137,7 +137,7 @@ function PrivateTabNavigator() {
             accessibilityLabel: t('menu.home', 'Accueil'),
             activeColor: Colors.primary500,
             bottomInset: insets.bottom,
-            icon: Images.search,
+            icon: Images.home,
             label: t('menu.home', 'Accueil'),
             renderTabBarIcon,
             visualLabel: t('menuDock.home', 'Accueil'),

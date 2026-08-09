@@ -31,6 +31,7 @@ export const images = {
   euroCircle: createAssetSource('../assets/icons/euro-circle.png'),
   filter: createAssetSource('../assets/icons/filter.png'),
   flag: createAssetSource('../assets/icons/flag.png'),
+  home: createAssetSource('../assets/icons/home.png'),
   phone: createAssetSource('../assets/icons/phone.png'),
   pin: createAssetSource('../assets/icons/pin.png'),
   plus: createAssetSource('../assets/icons/plus.png'),

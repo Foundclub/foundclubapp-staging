@@ -32,6 +32,7 @@ export const images = {
   euroCircle: require('../assets/icons/euro-circle.png'),
   filter: require('../assets/icons/filter.png'),
   flag: require('../assets/icons/flag.png'),
+  home: require('../assets/icons/home.png'),
   phone: require('../assets/icons/phone.png'),
   pin: require('../assets/icons/pin.png'),
   plus: require('../assets/icons/plus.png'),
