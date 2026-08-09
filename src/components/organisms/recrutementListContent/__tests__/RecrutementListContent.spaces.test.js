@@ -52,13 +52,17 @@ describe('RecrutementListContent — aucun espacement ne se perd en silence', ()
     expect(horsRampe).toEqual([]);
   });
 
-  it('les trois listes reservent bien de la place sous la derniere carte', () => {
-    // Le temoin de la panne d'origine : la 4e liste (les profils) passe sa
-    // reserve en NOMBRE (`bottomPadding={140}`) et fonctionnait donc, seule.
+  it('les deux listes reservent bien de la place sous la derniere carte', () => {
+    // Le temoin de la panne d'origine : la liste des profils passe sa reserve
+    // en NOMBRE (`bottomPadding={140}`) et fonctionnait donc, seule.
+    //
+    // D57 : elles etaient TROIS. « Mes annonces » a quitte cet ecran pour
+    // « Mes activites » — c'est un onglet de gestion, et Rechercher explore.
+    // Il ne reste donc que l'exploration et les candidatures.
     const reserves = appelsAuxEspaces()
       .filter(({ type }) => type === 'paddingBottom')
       .filter(({ cle }) => Number(sizes[cle]) >= 128);
 
-    expect(reserves).toHaveLength(3);
+    expect(reserves).toHaveLength(2);
   });
 });

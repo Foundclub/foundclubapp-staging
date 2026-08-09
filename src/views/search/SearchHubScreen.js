@@ -215,7 +215,6 @@ function SearchHubScreen({ navigation, route }) {
         initialTab={initialRecruitmentTab}
         refreshSignal={refreshSignals.recruitment}
         screenActive={activeType === 'recruitment'}
-        timestamp={route?.params?.timestamp}
       />
     );
   }, [
@@ -224,7 +223,6 @@ function SearchHubScreen({ navigation, route }) {
     initialRecruitmentTab,
     refreshSignals,
     route?.params?.initialFriendlyMatchTab,
-    route?.params?.timestamp,
   ]);
 
   return (
