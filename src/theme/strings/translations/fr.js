@@ -53,7 +53,7 @@ export default {
   },
   addSponsor: {
     actions: {
-      save: 'Ajouter',
+      save: 'Ajouter le partenaire',
     },
     fields: {
       link: {
@@ -65,6 +65,9 @@ export default {
         label: 'Nom du partenaire',
         placeholder: 'Nike',
       },
+    },
+    hints: {
+      visibility: 'Il apparaîtra sur les cartes équipe, les annonces et la page du club.',
     },
     title: 'Ajouter un partenaire',
   },

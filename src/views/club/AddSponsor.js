@@ -7,6 +7,7 @@ import {
   Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -26,6 +27,12 @@ const defaultValues = {
   link: '',
   title: '',
 };
+
+// D51 ecran 08 : la zone logo etait un apercu pleine largeur a ratio variable,
+// qui faisait sauter la page selon la forme de l'image deposee. Elle devient un
+// carre fixe de 104 pt — la taille du pack. SelectAvatar rend deja la camera
+// centree et le « + » cyan : seule sa boite change ici.
+const SPONSOR_LOGO_ZONE = 104;
 
 const addSponsorSchema = Joi.object({
   link: Joi.string().uri().allow('').optional(),
@@ -86,9 +93,9 @@ function AddSponsor({ navigation, route }) {
     (undefined),
   );
   const { t } = useTranslation();
-  const { Alignments, Fonts, Spaces } = useTheme();
-  const rawRatio = logo?.width && logo?.height ? logo.width / logo.height : 2;
-  const previewRatio = Math.min(Math.max(rawRatio, 0.7), 3.2);
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
 
   const {
     control,
@@ -212,16 +219,19 @@ function AddSponsor({ navigation, route }) {
               </Text>
               <SelectAvatar
                 containerStyle={{
-                  aspectRatio: previewRatio,
-                  maxHeight: 220,
-                  minHeight: 120,
-                  width: '100%',
+                  backgroundColor: withAlpha(Colors.primary800, 0.6),
+                  borderColor: withAlpha(Colors.primary500, 0.45),
+                  borderRadius: 20,
+                  borderStyle: 'dashed',
+                  borderWidth: 2,
+                  height: SPONSOR_LOGO_ZONE,
+                  width: SPONSOR_LOGO_ZONE,
                 }}
                 currentAvatar={logo}
                 imageResizeMode="contain"
                 imageStyle={{ height: '100%', width: '100%' }}
                 onAvatarSelected={setLogo}
-                size={80}
+                size={SPONSOR_LOGO_ZONE}
               />
             </View>
 
@@ -270,6 +280,12 @@ function AddSponsor({ navigation, route }) {
                 />
               )}
             />
+
+            {/* D51 : un dirigeant deposait un logo sans savoir ou il */}
+            {/* atterrissait. Il le decouvrait apres coup, sur une carte equipe. */}
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t('addSponsor.hints.visibility')}
+            </Text>
           </View>
         </ScrollView>
 
