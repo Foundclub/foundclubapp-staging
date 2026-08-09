@@ -7,7 +7,7 @@ import {
 import { useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
+import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useTheme from '@/theme/themeContext';
 
@@ -258,6 +258,12 @@ function EventDetails({ navigation, route }) {
   }, [compositionTeamId, event?.invitedTeams, event?.team]);
   const isReservation = normalizeTypeName(event?.type?.name).includes('reservation');
   const isTournamentEvent = normalizeTypeName(event?.type?.name).includes('tournoi');
+  // D48 : le board decide d'apres cette etiquette s'il propose les commandes de
+  // la detection (D44). Le telephone la transmet depuis EventDetails.js:3197 ;
+  // le site ne la calculait meme pas. On passe par le helper PARTAGE plutot que
+  // par le `normalizeTypeName` local — les deux normalisent a l'identique, mais
+  // seul le helper garantit que les deux surfaces resteront d'accord.
+  const isDetectionEvent = isDetectionEventType(event?.type?.name);
   const tournamentConfig = useMemo(
     () => event?.tournamentConfig || {},
     [event?.tournamentConfig],
@@ -388,7 +394,9 @@ function EventDetails({ navigation, route }) {
         editorSource: options.editorSource || null,
         editorSourceLabel: options.editorSourceLabel || null,
         eventId,
+        eventKind: isDetectionEvent ? 'detection' : 'match',
         eventName: compositionEventLabel,
+        eventTypeLabel: event?.type?.name || null,
         existingComposition: composition,
         multiTeamComposition: true,
         players: Array.isArray(options.players) ? options.players : (Array.isArray(staffCompositionPayload?.eligiblePlayers) ? staffCompositionPayload.eligiblePlayers : []),
@@ -448,7 +456,9 @@ function EventDetails({ navigation, route }) {
     compositionEventLabel,
     compositionSport,
     compositionTeamId,
+    event?.type?.name,
     eventId,
+    isDetectionEvent,
     isStaffCompositionFetching,
     navigation,
     staffCompositionPayload,
@@ -1277,7 +1287,9 @@ function EventDetails({ navigation, route }) {
                           editorSource: 'published',
                           editorSourceLabel: "Composition d'équipes publiée",
                           eventId,
+                          eventKind: isDetectionEvent ? 'detection' : 'match',
                           eventName: compositionEventLabel,
+                          eventTypeLabel: event?.type?.name || null,
                           existingComposition: convocationBranches[0]?.published || null,
                           multiTeamComposition: true,
                           readOnly: true,
