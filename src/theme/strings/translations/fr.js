@@ -1801,6 +1801,17 @@ export default {
     },
   },
   onboarding: {
+    clubSearch: {
+      editableLater: 'Modifiable à tout moment depuis Mon profil.',
+      privateHelp: 'Ton profil n\'apparaît dans aucune recherche '
+        + '— seuls tes coéquipiers te voient.',
+      privateLabel: 'Profil privé',
+      subtitle: 'Les clubs et entraîneurs peuvent-ils te trouver ?',
+      title: 'Visibilité de ton profil',
+      visibleHelp: 'Les clubs et entraîneurs peuvent te trouver '
+        + 'et te contacter pour te recruter.',
+      visibleLabel: 'Profil visible',
+    },
     optionalStepHint: 'Cette étape n\'est pas obligatoire, mais elle reste utile pour améliorer ton expérience FoundClub.',
   },
   onboardingAffiliation: {

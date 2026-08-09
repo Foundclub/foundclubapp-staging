@@ -19,6 +19,25 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
 
+// D56 — les deux pilules du pack, dans l'ordre de la maquette. La copy vit
+// dans `fr.js` ; le repli garde l'ecran lisible si la cle disparait.
+const VISIBILITY_OPTIONS = [
+  {
+    helpFallback: 'Les clubs et entraîneurs peuvent te trouver et te contacter pour te recruter.',
+    helpKey: 'onboarding.clubSearch.visibleHelp',
+    labelFallback: 'Profil visible',
+    labelKey: 'onboarding.clubSearch.visibleLabel',
+    value: true,
+  },
+  {
+    helpFallback: 'Ton profil n\'apparaît dans aucune recherche — seuls tes coéquipiers te voient.',
+    helpKey: 'onboarding.clubSearch.privateHelp',
+    labelFallback: 'Profil privé',
+    labelKey: 'onboarding.clubSearch.privateLabel',
+    value: false,
+  },
+];
+
 /**
  * User club search status screen
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
@@ -86,6 +105,8 @@ function UserClubSearch({ navigation }) {
     );
   }
 
+  const selectedOption = VISIBILITY_OPTIONS.find((option) => option.value === isLooking);
+
   const handleNext = () => {
     if (isLooking !== null && userData) {
       updateUserMutation.mutate({ isLookingForClub: isLooking });
@@ -124,66 +145,88 @@ function UserClubSearch({ navigation }) {
             {t('onboarding.clubSearch.title', 'Visibilité de ton profil')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {t('onboarding.clubSearch.subtitle', 'Souhaites-tu que les clubs et entraîneurs puissent voir ton profil ?')}
+            {t(
+              'onboarding.clubSearch.subtitle',
+              'Les clubs et entraîneurs peuvent-ils te trouver ?',
+            )}
           </Text>
         </View>
 
         <View style={[Spaces.gap[16]]}>
-          <TouchableOpacity
-            accessibilityRole="radio"
-            accessibilityState={{ checked: isLooking === true }}
-            onPress={() => setIsLooking(true)}
+          {/*
+            D56 — le pack remplace les deux gros pavés pictogrammes par DEUX
+            PILULES et une explication qui suit le choix. Les pictogrammes et
+            le jargon de transfert sont retires : le registre valide dit ce que
+            le reglage fait, il ne le decore pas.
+          */}
+          <View
             style={[
-              Spaces.padding[24],
-              Alignments.alignCenter,
+              Alignments.row,
+              Spaces.padding[4],
+              Spaces.gap[4],
               {
-                backgroundColor: isLooking === true ? `${Colors.primary500}20` : Colors.neutral800,
-                borderColor: isLooking === true ? Colors.primary500 : Colors.neutral700,
-                borderRadius: 16,
-                borderWidth: 2,
+                backgroundColor: Colors.neutral800,
+                borderColor: Colors.neutral700,
+                borderRadius: 999,
+                borderWidth: 1,
               },
             ]}
           >
-            {isLooking === true ? (
-              <Text importantForAccessibility="no" style={[Fonts.p1Bold, Fonts.primary500]}>
-                ✓
-              </Text>
-            ) : null}
-            <Text style={[Fonts.h3Bold, { color: isLooking === true ? Colors.primary500 : Colors.neutral00 }]}>
-              👁️ Oui, rendre mon profil visible
-            </Text>
-            <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-              Les clubs et entraîneurs pourront me contacter
-            </Text>
-          </TouchableOpacity>
+            {VISIBILITY_OPTIONS.map((option) => {
+              const isChecked = isLooking === option.value;
 
-          <TouchableOpacity
-            accessibilityRole="radio"
-            accessibilityState={{ checked: isLooking === false }}
-            onPress={() => setIsLooking(false)}
-            style={[
-              Spaces.padding[24],
-              Alignments.alignCenter,
-              {
-                backgroundColor: isLooking === false ? `${Colors.primary500}20` : Colors.neutral800,
-                borderColor: isLooking === false ? Colors.primary500 : Colors.neutral700,
-                borderRadius: 16,
-                borderWidth: 2,
-              },
-            ]}
-          >
-            {isLooking === false ? (
-              <Text importantForAccessibility="no" style={[Fonts.p1Bold, Fonts.primary500]}>
-                ✓
-              </Text>
-            ) : null}
-            <Text style={[Fonts.h3Bold, { color: isLooking === false ? Colors.primary500 : Colors.neutral00 }]}>
-              🔒 Non, garder mon profil privé
+              return (
+                <TouchableOpacity
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: isChecked }}
+                  key={option.labelKey}
+                  onPress={() => setIsLooking(option.value)}
+                  style={[
+                    Alignments.alignCenter,
+                    Spaces.paddingHorizontal[16],
+                    {
+                      backgroundColor: isChecked ? Colors.primary500 : 'transparent',
+                      borderRadius: 999,
+                      flex: 1,
+                      justifyContent: 'center',
+                      minHeight: 44,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      Fonts.p1Bold,
+                      { color: isChecked ? Colors.neutral900 : Colors.neutral00 },
+                    ]}
+                  >
+                    {t(option.labelKey, option.labelFallback)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Explication dynamique : elle change avec la pilule choisie. */}
+          {selectedOption ? (
+            <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+              {t(selectedOption.helpKey, selectedOption.helpFallback)}
             </Text>
-            <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-              Mon profil ne sera pas visible dans le mercato
+          ) : null}
+
+          <View style={[Alignments.row, Spaces.gap[8]]}>
+            <Text
+              importantForAccessibility="no"
+              style={[Fonts.p2, { color: Colors.neutral600 }]}
+            >
+              i
             </Text>
-          </TouchableOpacity>
+            <Text style={[Fonts.p2, { color: Colors.neutral600, flex: 1 }]}>
+              {t(
+                'onboarding.clubSearch.editableLater',
+                'Modifiable à tout moment depuis Mon profil.',
+              )}
+            </Text>
+          </View>
         </View>
       </View>
 
