@@ -247,3 +247,135 @@ describe('shouldOpenMultiTeamBoard', () => {
     })).toBe(false);
   });
 });
+
+// ============================================================================
+// D47 — la charge envoyee au serveur dit QUI est convoque.
+//
+// FILET (E6) d'abord : `buildDraftPayloadFromPack` est le seul point d'entree
+// des deux boutons (Sauvegarder, Publier). Avant d'y ajouter un champ, on fige
+// la forme exacte de ce qui part aujourd'hui — c'est ce qui prouvera qu'on a
+// ajoute UNE cle et deplace RIEN d'autre.
+// ============================================================================
+
+describe('D47 — la charge envoyee au serveur', () => {
+  const presets = [{
+    key: '4-4-2',
+    label: '4-4-2',
+    slots: [
+      {
+        key: 'gk', label: 'GB', positionX: 50, positionY: 12, preferredPositions: [],
+      },
+      {
+        key: 'st', label: 'BU', positionX: 50, positionY: 84, preferredPositions: [],
+      },
+    ],
+  }];
+
+  const packAvecUnPlace = () => normalizeMultiTeamPack({
+    mode: 'manual',
+    teams: [{
+      id: 'team_1',
+      name: 'Équipe 1',
+      placements: [{
+        playerId: 'p1', positionX: 50, positionY: 12, slotId: 'team_1:gk',
+      }],
+      presetKey: '4-4-2',
+    }],
+  }, { availablePresets: presets, sportContext: 'football' });
+
+  const CONVOQUES = [
+    { documentId: 'p1', firstname: 'Ana', lastname: 'Bern' },
+    { documentId: 'p2', firstname: 'Chloe', lastname: 'Diaz' },
+  ];
+
+  test('FILET — la charge porte exactement ces cles, ni plus ni moins', () => {
+    const payload = buildDraftPayloadFromPack(packAvecUnPlace(), CONVOQUES);
+
+    // Cette liste est le contrat avec le serveur (admin, sanitizeTeamPack). Une
+    // cle qui apparait ou disparait ici se voit, au lieu de partir en silence.
+    expect(Object.keys(payload).sort()).toEqual([
+      'manualPlayers',
+      'mode',
+      'placementMode',
+      'reservePlayerIds',
+      'schemaVersion',
+      'selectedPlayerIds',
+      'sportContext',
+      'teams',
+    ]);
+  });
+
+  test('FILET — les cles historiques gardent leur valeur d\'avant D47', () => {
+    const payload = buildDraftPayloadFromPack(packAvecUnPlace(), CONVOQUES);
+
+    expect(payload.schemaVersion).toBe(3);
+    expect(payload.mode).toBe('manual');
+    expect(payload.placementMode).toBe('slots');
+    expect(payload.sportContext).toBe('football');
+    expect(payload.manualPlayers).toEqual([]);
+    // p1 est sur le terrain, p2 reste en reserve : inchange par D47.
+    expect(payload.reservePlayerIds).toEqual(['p2']);
+    expect(payload.teams).toHaveLength(1);
+    expect(payload.teams[0].placements[0].playerId).toBe('p1');
+  });
+
+  test('TEMOIN — la liste des convoques part au serveur, place ou non', () => {
+    const payload = buildDraftPayloadFromPack(packAvecUnPlace(), CONVOQUES);
+
+    // p1 est sur le terrain, p2 sur le banc : les DEUX sont convoques.
+    expect(payload.selectedPlayerIds).toEqual(['p1', 'p2']);
+  });
+
+  test('TEMOIN — le champ vit a la RACINE du pack, jamais dans une equipe', () => {
+    // C'est le niveau que lit le serveur : `readSelectedPlayerIds(source)` dans
+    // admin/src/api/event/services/event-composition.ts, sur la racine du pack,
+    // exactement comme `manualPlayers` et `reservePlayerIds`. Avec plusieurs
+    // equipes (detection), la convocation reste UNE liste pour tout le pack.
+    const packDeuxEquipes = normalizeMultiTeamPack({
+      mode: 'manual',
+      teams: [
+        { id: 'team_1', name: 'Équipe 1', placements: [], presetKey: '4-4-2' },
+        { id: 'team_2', name: 'Équipe 2', placements: [], presetKey: '4-4-2' },
+      ],
+    }, { availablePresets: presets, sportContext: 'football' });
+
+    const payload = buildDraftPayloadFromPack(packDeuxEquipes, CONVOQUES);
+
+    expect(payload.selectedPlayerIds).toEqual(['p1', 'p2']);
+    expect(payload.teams).toHaveLength(2);
+    payload.teams.forEach((team) => {
+      expect(team.selectedPlayerIds).toBeUndefined();
+    });
+  });
+
+  test('TEMOIN — personne de convoque : un tableau VIDE part, jamais rien', () => {
+    // ⛔ Le coeur du lot. Cote serveur, ABSENT veut dire « composition anterieure
+    // a D43 : tout le monde est convoque » alors que VIDE veut dire « personne ».
+    // Sauter le champ ici rappellerait tout l'effectif.
+    const payload = buildDraftPayloadFromPack(packAvecUnPlace(), []);
+
+    expect(Object.prototype.hasOwnProperty.call(payload, 'selectedPlayerIds')).toBe(true);
+    expect(payload.selectedPlayerIds).toEqual([]);
+  });
+
+  test('TEMOIN — un joueur saisi a la main est dans la liste, pas a part', () => {
+    const packAvecManuel = normalizeMultiTeamPack({
+      manualPlayers: [{
+        documentId: 'manual_1754700000000',
+        firstname: 'Zoe',
+        id: 'manual_1754700000000',
+        isManual: true,
+        lastname: 'Roux',
+      }],
+      mode: 'manual',
+      teams: [{
+        id: 'team_1', name: 'Équipe 1', placements: [], presetKey: '4-4-2',
+      }],
+    }, { availablePresets: presets, sportContext: 'football' });
+
+    const payload = buildDraftPayloadFromPack(packAvecManuel, CONVOQUES);
+
+    expect(payload.selectedPlayerIds).toContain('manual_1754700000000');
+    expect(payload.selectedPlayerIds).toEqual(['p1', 'p2', 'manual_1754700000000']);
+  });
+});

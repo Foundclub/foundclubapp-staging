@@ -319,12 +319,29 @@ export const buildDraftPayloadFromPack = (pack, players = []) => {
     ...Array.from(playerMap.keys()).filter((playerId) => !assignedIds.has(playerId)),
   ]);
 
+  // D47 — QUI est convoque. `players` est deja la liste des joueurs coches au
+  // temps 1 (« Qui joue ? ») : le board en retire les ecartes avant d'appeler.
+  // `playerMap` y ajoute les joueurs saisis a la main, qui sont convoques comme
+  // les autres et voyagent dans la MEME liste, jamais dans un canal a part.
+  //
+  // ⛔ Le tableau part TOUJOURS, meme vide. Cote serveur (admin,
+  // event-composition.ts, readSelectedPlayerIds) le champ ABSENT veut dire
+  // « composition anterieure a D43 : tout le monde est convoque », alors qu'un
+  // tableau VIDE veut dire « personne de plus ». Sauter le champ pour dire
+  // « personne » rappellerait donc tout l'effectif.
+  //
+  // Il vit a la RACINE du pack, comme `manualPlayers` et `reservePlayerIds` :
+  // c'est la que le serveur le lit, et la convocation vaut pour tout le pack,
+  // y compris quand il porte plusieurs equipes (detection).
+  const selectedPlayerIds = Array.from(playerMap.keys());
+
   return {
     manualPlayers: Array.from(playerMap.values()).filter((player) => Boolean(player?.isManual)),
     mode: pack?.mode === 'auto' ? 'auto' : 'manual',
     placementMode: normalizePlacementMode(pack?.placementMode),
     reservePlayerIds,
     schemaVersion: 3,
+    selectedPlayerIds,
     sportContext: normalizeText(pack?.sportContext) || null,
     teams: (Array.isArray(pack?.teams) ? pack.teams : []).map((team, index) => ({
       id: normalizeText(team?.id) || `team_${index + 1}`,
