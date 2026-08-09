@@ -373,14 +373,28 @@ const arbresMontes = [];
  * Monte l'ecran.
  * @returns {any} L'arbre rendu.
  */
-const monter = () => {
+/**
+ * Monte l'ecran du club.
+ *
+ * Sans argument : le HUB du dirigeant (D50). Avec un nom de sous-page : cette
+ * sous-page. C'est le MEME ecran dans les deux cas — une sous-page s'atteint par
+ * le parametre de route `section`, l'idiome que D34 avait deja pose ici pour le
+ * planning plutot que d'ajouter une route.
+ * @param {string} [section] - La sous-page a ouvrir ; absent = le hub.
+ * @returns {any} L'arbre monte.
+ */
+const monter = (section) => {
+  const route = section
+    ? { ...mockRoute, params: { ...mockRoute.params, section } }
+    : mockRoute;
+
   /** @type {any} */
   let arbre;
   act(() => {
     arbre = renderer.create(
       <ClubDetails
         navigation={/** @type {any} */ (mockNavigation)}
-        route={/** @type {any} */ (mockRoute)}
+        route={/** @type {any} */ (route)}
       />,
     );
   });
@@ -441,6 +455,9 @@ beforeEach(() => {
     getState: jest.fn(() => ({ routeNames: [] })),
     goBack: jest.fn(),
     navigate: jest.fn(),
+    // D50 : les sous-pages du hub s'EMPILENT (`push`). C'est ce qui fait que le
+    // retour ramene au hub au lieu de quitter le club.
+    push: jest.fn(),
     setOptions: jest.fn(),
   };
   mockRoute = { params: { clubId: 'club-1' } };
@@ -456,16 +473,20 @@ afterEach(() => {
 });
 
 describe('ClubDetails — l espace club du dirigeant (fige avant la refonte D34)', () => {
+  // D50 : le nom reste sur la carte du hub ; les partenaires ont suivi leur
+  // section dans la sous-page « Partenaires ». Les DEUX assertions d'origine
+  // sont conservees, chacune la ou son contenu vit desormais.
   it('montre le nom du club et ses deux partenaires', () => {
-    const textes = texteDe(monter().root);
+    expect(texteDe(monter().root)).toContain('Stade Marseillais Université Club');
 
-    expect(textes).toContain('Stade Marseillais Université Club');
+    const textes = texteDe(monter('partners').root);
+
     expect(textes).toContain('Elseve');
     expect(textes).toContain('Mr le bricolage');
   });
 
   it('montre chaque equipe avec sa meta REELLE, pas une meta recopiee', () => {
-    const textes = texteDe(monter().root);
+    const textes = texteDe(monter('teams').root);
 
     expect(textes).toContain('U15 Filles');
     expect(textes).toContain('Seniors A');
@@ -479,7 +500,7 @@ describe('ClubDetails — l espace club du dirigeant (fige avant la refonte D34)
   });
 
   it('ouvre la fiche de l equipe au tap', () => {
-    const arbre = monter();
+    const arbre = monter('teams');
 
     act(() => {
       pressableAvecTexte(arbre, 'U15 Filles').props.onPress();
@@ -522,7 +543,7 @@ describe('ClubDetails — l espace club du dirigeant (fige avant la refonte D34)
   });
 
   it('demande confirmation avant de retirer un partenaire, et ne l envoie qu apres', () => {
-    const arbre = monter();
+    const arbre = monter('partners');
 
     act(() => {
       pressableAvecTexte(arbre, 'Supprimer le sponsor Elseve').props.onPress();
@@ -539,7 +560,7 @@ describe('ClubDetails — l espace club du dirigeant (fige avant la refonte D34)
   });
 
   it('ne retire QUE le partenaire vise, et garde l autre', () => {
-    const arbre = monter();
+    const arbre = monter('partners');
 
     act(() => {
       pressableAvecTexte(arbre, 'Supprimer le sponsor Elseve').props.onPress();
@@ -574,7 +595,7 @@ describe('ClubDetails — l espace club du dirigeant (fige avant la refonte D34)
 // d'entree de navigation casse en silence — rien d'autre ne le surveille.
 describe('ClubDetails — ce que D34 ajoute a l espace du dirigeant', () => {
   it('ouvre le tunnel de creation d equipe depuis la section Equipes', () => {
-    const arbre = monter();
+    const arbre = monter('teams');
 
     act(() => {
       pressableAvecTexte(arbre, 'Créer une équipe').props.onPress();
@@ -589,7 +610,7 @@ describe('ClubDetails — ce que D34 ajoute a l espace du dirigeant', () => {
   it('propose quand meme de creer une equipe a un club qui n en a aucune', () => {
     mockClubQuery.data = { ...CLUB, teams: [] };
 
-    expect(pressableAvecTexte(monter(), 'Créer une équipe')).toBeDefined();
+    expect(pressableAvecTexte(monter('teams'), 'Créer une équipe')).toBeDefined();
   });
 
   it('ne propose PAS de creer une equipe a qui ne dirige pas le club', () => {
@@ -597,5 +618,142 @@ describe('ClubDetails — ce que D34 ajoute a l espace du dirigeant', () => {
     mockUserData = { documentId: 'u-9', role: { name: 'player' }, trainedTeams: [] };
 
     expect(pressableAvecTexte(monter(), 'Créer une équipe')).toBeUndefined();
+  });
+});
+
+// D50 : la page-fleuve du dirigeant devient un hub a rangees. Ce bloc-ci
+// surveille ce que le hub AJOUTE ; le bloc du dessus continue de surveiller que
+// rien ne s'est perdu en chemin — les comportements ont demenage, aucun n'a
+// disparu.
+describe('ClubDetails — D50 : « Mon club » est un hub, plus une page-fleuve', () => {
+  it('montre les 5 rangees a gerer, chacune avec son VRAI compteur', () => {
+    const arbre = monter();
+
+    // Les compteurs se lisent sur la fixture, jamais sur une valeur ecrite en
+    // dur : 0 installation, 1 sport, 2 partenaires, 2 equipes. Le staff se
+    // compte sur `club.members` filtre par role — que cette fixture n'a pas —,
+    // et non sur `club.owner` : il annonce donc zero des deux cotes.
+    expect(pressableAvecTexte(arbre, 'Installations, 0')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Sports, 1')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Partenaires, 2')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Équipes, 2')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Staff, 0 dirigeant · 0 entraîneur')).toBeDefined();
+  });
+
+  it('suit le club quand il change : les compteurs ne sont pas ecrits en dur', () => {
+    mockClubQuery.data = {
+      ...CLUB,
+      activites: [],
+      members: [
+        { documentId: 'u-1', role: { name: 'president' } },
+        { documentId: 'u-2', role: { name: 'coach' } },
+        { documentId: 'u-3', role: { name: 'coach' } },
+      ],
+      sponsor: [],
+      teams: [CLUB.teams[0]],
+    };
+
+    const arbre = monter();
+
+    expect(pressableAvecTexte(arbre, 'Sports, 0')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Partenaires, 0')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Équipes, 1')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Staff, 1 dirigeant · 2 entraîneurs')).toBeDefined();
+  });
+
+  it('chaque rangee ouvre SA sous-page, EMPILEE pour que le retour ramene au hub', () => {
+    const arbre = monter();
+    const ouvrir = (/** @type {string} */ libelle) => {
+      act(() => {
+        pressableAvecTexte(arbre, libelle).props.onPress();
+      });
+    };
+
+    ouvrir('Sports, 1');
+    ouvrir('Partenaires, 2');
+    ouvrir('Équipes, 2');
+    ouvrir('Staff, 0 dirigeant · 0 entraîneur');
+
+    expect(/** @type {any} */ (mockNavigation.push).mock.calls.map(
+      (/** @type {any} */ appel) => appel[1].section,
+    )).toEqual(['sports', 'partners', 'teams', 'staff']);
+  });
+
+  it('et la sous-page ouverte ne montre QUE sa section', () => {
+    const textes = texteDe(monter('teams').root);
+
+    expect(textes).toContain('U15 Filles');
+    expect(textes).not.toContain('Elseve');
+  });
+
+  // Une sous-page est UNE rubrique du club, pas le club : elle ne rejoue ni sa
+  // carte d'identite, ni son affiche, ni la sortie du club.
+  it('une sous-page ne rejoue ni la carte du club, ni l affiche, ni « Quitter le club »', () => {
+    const arbre = monter('teams');
+
+    expect(texteDe(arbre.root)).not.toContain('Rejoindre le club');
+    expect(pressableAvecTexte(arbre, 'Quitter le club')).toBeUndefined();
+    expect(pressableAvecTexte(arbre, 'Modifier')).toBeUndefined();
+  });
+
+  // L'ecran de planning du club n'a AUCUNE route a lui : on n'y entrait que par
+  // l'onglet que ce lot retire. Cette rangee est donc le chemin qui le garde
+  // atteignable — `FacilityList` est le seul endroit d'ou « Voir le planning »
+  // sait revenir ici. Si elle casse, le planning devient inatteignable en
+  // silence.
+  it('la rangee Installations ouvre l ecran deja route, d ou l on rejoint le planning', () => {
+    const arbre = monter();
+
+    act(() => {
+      pressableAvecTexte(arbre, 'Installations, 0').props.onPress();
+    });
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith(
+      'FacilityList',
+      expect.objectContaining({ clubId: 'club-1' }),
+    );
+  });
+
+  it('la rangee Adhesions montre le reglage REEL du club', () => {
+    mockClubQuery.data = { ...CLUB, membershipRequestManagementMode: 'CLUB_OWNER_ONLY' };
+
+    expect(pressableAvecTexte(monter(), "Demandes d'adhésion, Dirigeant")).toBeDefined();
+  });
+
+  it('et retombe sur la delegation quand le club n a rien enregistre, comme le formulaire', () => {
+    expect(pressableAvecTexte(monter(), "Demandes d'adhésion, Délégation")).toBeDefined();
+  });
+
+  it('le hub ne deroule plus les sections sous la carte du club', () => {
+    const textes = texteDe(monter().root);
+
+    expect(textes).not.toContain('U15 Filles');
+    expect(textes).not.toContain('Elseve');
+    expect(textes).not.toContain('Handball');
+  });
+
+  it('« Quitter le club » reste tout en bas du hub, avec sa confirmation', () => {
+    const arbre = monter();
+
+    expect(pressableAvecTexte(arbre, 'Quitter le club')).toBeDefined();
+
+    act(() => {
+      pressableAvecTexte(arbre, 'Quitter le club').props.onPress();
+    });
+
+    expect(Alert.alert).toHaveBeenCalled();
+    expect(leaveClub).not.toHaveBeenCalled();
+  });
+
+  // Le pack ne decrit QUE l'espace du dirigeant. La page publique d'un club
+  // n'est pas un hub de gestion : elle doit continuer de tout derouler.
+  it('un visiteur garde la page complete du club', () => {
+    mockHasClubAccess.mockReturnValue(false);
+    mockUserData = { documentId: 'u-9', role: { name: 'player' }, trainedTeams: [] };
+
+    const textes = texteDe(monter().root);
+
+    expect(textes).toContain('U15 Filles');
+    expect(textes).toContain('Elseve');
   });
 });

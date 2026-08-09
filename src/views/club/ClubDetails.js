@@ -66,6 +66,7 @@ import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 import { resolveClubDetailsActionMatrix } from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
+import { ClubHubGroup, ClubHubRow } from './components/ClubHubRow';
 
 // D34 ecran 07 : la rangee partenaire du pack fait 56 pt de haut — assez pour
 // un logo rond de 38 et une corbeille de 40 sans les serrer.
@@ -660,6 +661,17 @@ function ClubDetails({ navigation, route }) {
       navigation.getParent()?.navigate(RouteNames.ClubEdit, { clubId });
     }
   }, [clubId, navigation]);
+
+  // D50 : la rangee « Installations » du hub ouvre l'ecran DEJA route, celui-la
+  // meme que visait le « + » de l'ancienne section. C'est aussi le seul endroit
+  // d'ou l'on rejoint le planning du club (D34) — la rangee est donc le chemin
+  // qui le garde atteignable une fois les onglets retires.
+  const handleOpenFacilityList = useCallback(() => {
+    navigation.navigate(RouteNames.FacilityList, {
+      clubId,
+      cmId: resolvedFacilityCmId,
+    });
+  }, [clubId, navigation, resolvedFacilityCmId]);
 
   const handleOpenClubPoster = useCallback(() => {
     if (!clubId) return;
@@ -1268,6 +1280,57 @@ function ClubDetails({ navigation, route }) {
   ]);
   const shouldShowSectionScopeToggle = hasParentMultisportClub && isMultisportAdmin;
 
+  // ---------------------------------------------------------------------------
+  // D50 — la page-fleuve du dirigeant devient un HUB.
+  //
+  // Les sections ne disparaissent pas : elles deviennent des SOUS-PAGES, ouvertes
+  // par le parametre de route `section`. C'est l'idiome que D34 a deja pose dans
+  // ce meme domaine pour le planning (`FacilityList` y revient par
+  // `planningFacilityId` « plutot que d'ajouter une route pour un ecran qui
+  // existe deja ailleurs »). Aucune route neuve n'est donc creee ici — ce qui met
+  // hors-jeu le piege le plus cher du projet (une route ajoutee dans `app` sans
+  // sa moitie dans `web/src/routes/screenRegistry.tsx`).
+  //
+  // Un VISITEUR garde la page complete : le pack ne decrit que l'espace du
+  // dirigeant, et la page publique d'un club n'est pas un hub de gestion.
+  const hubSection = route?.params?.section || null;
+  const isClubHub = canEdit && !hubSection && selectedTab !== 'planning';
+  const isClubSubPage = canEdit && Boolean(hubSection);
+  const showsClubSection = (sectionName) => !canEdit || hubSection === sectionName;
+
+  // Les compteurs se lisent sur les MEMES sources que les sections qu'ils
+  // annoncent : un compteur ecrit en dur ment des la premiere modification.
+  const clubSportsCount = club?.activites?.length || 0;
+  const clubSponsorsCount = club?.sponsor?.length || 0;
+  const clubStaffSummary = [
+    `${owners.length} ${owners.length > 1
+      ? t('clubDetails.hub.owners', 'dirigeants')
+      : t('clubDetails.hub.owner', 'dirigeant')}`,
+    `${coachs.length} ${coachs.length > 1
+      ? t('clubDetails.hub.coachs', 'entraîneurs')
+      : t('clubDetails.hub.coach', 'entraîneur')}`,
+  ].join(' · ');
+
+  // La rangee Adhesions affiche le reglage REEL de l'ecran « Modifier le club ».
+  // Le repli suit celui du formulaire (`ClubEdit`), qui retombe sur la delegation
+  // quand le club n'a encore rien enregistre — les deux ecrans doivent raconter
+  // la meme chose.
+  const clubMembershipModeLabel = club?.membershipRequestManagementMode === 'CLUB_OWNER_ONLY'
+    ? t('clubDetails.hub.membership.ownerOnly', 'Dirigeant')
+    : t('clubDetails.hub.membership.coachAllowed', 'Délégation');
+
+  const openClubHubSection = useCallback((sectionName) => {
+    // `push` empile une seconde instance de l'ecran : le retour ramene donc au
+    // hub. `navigate` se contenterait de changer les parametres de l'ecran
+    // courant, et le bouton retour quitterait le club.
+    const params = { clubId, section: sectionName };
+    if (typeof navigation.push === 'function') {
+      navigation.push(RouteNames.Club, params);
+      return;
+    }
+    navigation.navigate(RouteNames.Club, params);
+  }, [clubId, navigation]);
+
   const floatingClubActionsCount = [
     showPublicClaimLogin,
     showPlayerClubAction,
@@ -1804,130 +1867,135 @@ function ClubDetails({ navigation, route }) {
         <WithDataWrapper
           wrapperStyle={[Spaces.gap[32]]}
         >
-          <View style={[
-            ApplicationStyle.borderRadius24,
-            ApplicationStyle.backgroundColor.primary700,
-            Alignments.alignCenter,
-            Spaces.gap[16],
-            Spaces.paddingHorizontal[24],
-            Spaces.paddingBottom[40],
-            Spaces.marginTop[64],
-            { overflow: 'visible' },
-          ]}
-          >
-            {canEdit ? (
-              <TouchableOpacity
-                onPress={handleEditClub}
-                style={[
-                  Alignments.absolute,
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  Spaces.gap[8],
-                  { right: 16, top: 16, zIndex: 10 },
-                ]}
-              >
-                <Image
-                  source={Images.edit}
-                  style={[
-                    ApplicationStyle.icon20,
-                    ApplicationStyle.tintColor.primary500,
-                  ]}
-                />
-                <Text style={[Fonts.p1Bold, Fonts.primary500]}>
-                  {t('clubDetails.actions.editInfo') || 'Modifier'}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-            <View style={{ marginTop: -24, zIndex: 1 }}>
-              <ClubLogoMark
-                club={club}
-                logoStyle={[
-                  ApplicationStyle.borderWidth1,
-                  ApplicationStyle.borderColor.neutral00,
-                  ApplicationStyle.backgroundColor.neutral00,
-                  { borderRadius: 20 },
-                ]}
-                size={80}
-              />
-            </View>
+          {/* D50 : la carte d'identite du club appartient au HUB (et a la page
+              publique). Une sous-page n'est pas le club : elle est UNE de ses
+              rubriques, et l'en-tete de pile porte deja le retour. */}
+          {!isClubSubPage ? (
             <View style={[
-              Spaces.gap[4],
-              Alignments.alignCenter]}
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.backgroundColor.primary700,
+              Alignments.alignCenter,
+              Spaces.gap[16],
+              Spaces.paddingHorizontal[24],
+              Spaces.paddingBottom[40],
+              Spaces.marginTop[64],
+              { overflow: 'visible' },
+            ]}
             >
-              <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
-                {club?.name}
-              </Text>
-              <View
-                style={[
-                  ApplicationStyle.borderRadius24,
-                  Spaces.paddingVertical[4],
-                  Spaces.paddingHorizontal[12],
-                  {
-                    backgroundColor: clubCertificationPalette.backgroundColor,
-                    borderColor: clubCertificationPalette.borderColor,
-                    borderWidth: 1,
-                  },
-                ]}
+              {canEdit ? (
+                <TouchableOpacity
+                  onPress={handleEditClub}
+                  style={[
+                    Alignments.absolute,
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Spaces.gap[8],
+                    { right: 16, top: 16, zIndex: 10 },
+                  ]}
+                >
+                  <Image
+                    source={Images.edit}
+                    style={[
+                      ApplicationStyle.icon20,
+                      ApplicationStyle.tintColor.primary500,
+                    ]}
+                  />
+                  <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+                    {t('clubDetails.actions.editInfo') || 'Modifier'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              <View style={{ marginTop: -24, zIndex: 1 }}>
+                <ClubLogoMark
+                  club={club}
+                  logoStyle={[
+                    ApplicationStyle.borderWidth1,
+                    ApplicationStyle.borderColor.neutral00,
+                    ApplicationStyle.backgroundColor.neutral00,
+                    { borderRadius: 20 },
+                  ]}
+                  size={80}
+                />
+              </View>
+              <View style={[
+                Spaces.gap[4],
+                Alignments.alignCenter]}
               >
-                <Text style={[Fonts.p4Bold, { color: clubCertificationPalette.textColor }]}>
-                  {clubCertificationLabel}
+                <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
+                  {club?.name}
+                </Text>
+                <View
+                  style={[
+                    ApplicationStyle.borderRadius24,
+                    Spaces.paddingVertical[4],
+                    Spaces.paddingHorizontal[12],
+                    {
+                      backgroundColor: clubCertificationPalette.backgroundColor,
+                      borderColor: clubCertificationPalette.borderColor,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: clubCertificationPalette.textColor }]}>
+                    {clubCertificationLabel}
+                  </Text>
+                </View>
+                <Text style={[Fonts.p2, Fonts.primary100]}>
+                  {(() => {
+                    const parsedAddress = safeJsonParse(club?.addressDetails, null);
+                    return parsedAddress?.address || club?.addressDetails || '';
+                  })()}
                 </Text>
               </View>
-              <Text style={[Fonts.p2, Fonts.primary100]}>
-                {(() => {
-                  const parsedAddress = safeJsonParse(club?.addressDetails, null);
-                  return parsedAddress?.address || club?.addressDetails || '';
-                })()}
-              </Text>
-            </View>
-            <View style={[
-              Spaces.gap[4],
-              Alignments.alignCenter,
-              Spaces.paddingHorizontal[24]]}
-            >
-              {club?.phoneNumber ? (
-                <View style={[Alignments.row, Spaces.gap[4]]}>
-                  <Image source={Images.phone} style={[ApplicationStyle.icon20]} />
-                  <TouchableOpacity
-                    accessibilityLabel={t('clubDetails.a11y.callClub', {
-                      defaultValue: 'Appeler le club au {{phoneNumber}}',
-                      phoneNumber: club?.phoneNumber,
-                    })}
-                    accessibilityRole="link"
-                    onPress={() => { Linking.openURL(`tel:${club?.phoneNumber}`); }}
-                  >
-                    <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
-                      {club?.phoneNumber}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
-              {club?.email ? (
-                <View style={[
-                  Alignments.row, Spaces.gap[4]]}
-                >
-                  <Image source={Images.envelope} style={[ApplicationStyle.icon20]} />
-                  <TouchableOpacity
-                    accessibilityLabel={t('clubDetails.a11y.emailClub', {
-                      defaultValue: 'Envoyer un e-mail a {{email}}',
-                      email: club?.email,
-                    })}
-                    accessibilityRole="link"
-                    onPress={() => { Linking.openURL(`mailto:${club?.email}`); }}
-                  >
-                    <Text
-                      numberOfLines={1}
-                      style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}
+              <View style={[
+                Spaces.gap[4],
+                Alignments.alignCenter,
+                Spaces.paddingHorizontal[24]]}
+              >
+                {club?.phoneNumber ? (
+                  <View style={[Alignments.row, Spaces.gap[4]]}>
+                    <Image source={Images.phone} style={[ApplicationStyle.icon20]} />
+                    <TouchableOpacity
+                      accessibilityLabel={t('clubDetails.a11y.callClub', {
+                        defaultValue: 'Appeler le club au {{phoneNumber}}',
+                        phoneNumber: club?.phoneNumber,
+                      })}
+                      accessibilityRole="link"
+                      onPress={() => { Linking.openURL(`tel:${club?.phoneNumber}`); }}
                     >
-                      {club?.email}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
+                      <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
+                        {club?.phoneNumber}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+                {club?.email ? (
+                  <View style={[
+                    Alignments.row, Spaces.gap[4]]}
+                  >
+                    <Image source={Images.envelope} style={[ApplicationStyle.icon20]} />
+                    <TouchableOpacity
+                      accessibilityLabel={t('clubDetails.a11y.emailClub', {
+                        defaultValue: 'Envoyer un e-mail a {{email}}',
+                        email: club?.email,
+                      })}
+                      accessibilityRole="link"
+                      onPress={() => { Linking.openURL(`mailto:${club?.email}`); }}
+                    >
+                      <Text
+                        numberOfLines={1}
+                        style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}
+                      >
+                        {club?.email}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+              </View>
             </View>
-          </View>
+          ) : null}
 
-          {canEdit && clubId ? (
+          {canEdit && clubId && !isClubSubPage ? (
             <Button
               onPress={handleOpenClubPoster}
               title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}
@@ -1935,7 +2003,10 @@ function ClubDetails({ navigation, route }) {
             />
           ) : null}
 
-          {shouldShowSectionScopeToggle ? (
+          {/* D50 : la bascule de perimetre pilote le CONTENU des sections. Sur le
+              hub il n'y a pas de section a piloter : elle suit ses sections dans
+              les sous-pages. */}
+          {shouldShowSectionScopeToggle && !isClubHub ? (
             <View style={[Alignments.alignCenter, Spaces.marginTop[12]]}>
               <ClubScopeToggle
                 clubId={club?.documentId}
@@ -1944,14 +2015,70 @@ function ClubDetails({ navigation, route }) {
             </View>
           ) : null}
 
-          {/* Tabs */}
-          <View style={[Alignments.alignCenter]}>
-            <SegmentedControl
-              onChange={setSelectedTab}
-              options={tabs}
-              value={selectedTab}
-            />
-          </View>
+          {isClubHub ? (
+            <View style={[Spaces.gap[16]]}>
+              <ClubHubGroup label={t('clubDetails.hub.groups.manage', 'Gérer')}>
+                <ClubHubRow
+                  icon={Images.stadium}
+                  label={t('facilityList.title', 'Installations')}
+                  onPress={handleOpenFacilityList}
+                  value={facilitiesLoading ? '…' : String(facilities.length)}
+                />
+                <ClubHubRow
+                  divider
+                  icon={Images.trophy}
+                  label={t('clubDetails.titles.activities')}
+                  onPress={() => openClubHubSection('sports')}
+                  value={String(clubSportsCount)}
+                />
+                <ClubHubRow
+                  divider
+                  icon={Images.check}
+                  label={t('clubDetails.titles.sponsors')}
+                  onPress={() => openClubHubSection('partners')}
+                  value={String(clubSponsorsCount)}
+                />
+                <ClubHubRow
+                  divider
+                  icon={Images.shield}
+                  label={t('clubDetails.titles.teams')}
+                  onPress={() => openClubHubSection('teams')}
+                  value={String(sortedClubTeams.length)}
+                />
+                <ClubHubRow
+                  divider
+                  icon={Images.users}
+                  label={t('clubDetails.hub.rows.staff', 'Staff')}
+                  onPress={() => openClubHubSection('staff')}
+                  value={clubStaffSummary}
+                />
+              </ClubHubGroup>
+
+              <ClubHubGroup label={t('clubDetails.hub.groups.membership', 'Adhésions')}>
+                <ClubHubRow
+                  icon={Images.bell}
+                  label={t('clubDetails.hub.rows.membershipRequests', 'Demandes d\'adhésion')}
+                  onPress={handleEditClub}
+                  value={clubMembershipModeLabel}
+                />
+              </ClubHubGroup>
+            </View>
+          ) : null}
+
+          {/* D50 : les onglets « Informations / Planning » quittent l'espace du
+              dirigeant — son « Informations » EST le hub. Le planning du club
+              reste atteignable, par le seul autre chemin qui existe : la rangee
+              Installations ouvre `FacilityList`, d'ou « Voir le planning »
+              revient ici (D34, FacilityList.js). */}
+          {canEdit ? null : (
+            <View style={[Alignments.alignCenter]}>
+              <SegmentedControl
+                onChange={setSelectedTab}
+                options={tabs}
+                value={selectedTab}
+              />
+            </View>
+          )}
 
           {selectedTab === 'planning' ? (
             <ClubPlanning
@@ -1965,267 +2092,283 @@ function ClubDetails({ navigation, route }) {
           ) : (
             <>
               {/* Facilities */}
-              <View style={[Spaces.gap[16]]}>
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
-                  <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                    {t('facilityList.title', 'Installations')}
-                  </Text>
-                  {canEdit ? (
-                    <Button
-                      icon="plus"
-                      isOption
-                      onPress={() => navigation.navigate(RouteNames.FacilityList, {
-                        clubId,
-                        cmId: resolvedFacilityCmId,
-                      })}
-                      variant="Primary"
-                    />
-                  ) : null}
-                </View>
-
-                {facilitiesLoading ? (
-                  <Text style={[Fonts.p2, Fonts.primary100]}>
-                    {t('common.loading', 'Chargement...')}
-                  </Text>
-                ) : null}
-
-                {!facilitiesLoading && facilities.length === 0 ? (
-                  <Text style={[Fonts.p2, Fonts.primary100]}>
-                    {t('common.messages.noData', 'Aucune donnée disponible')}
-                  </Text>
-                ) : null}
-
-                {facilitySections.map((section) => (
-                  <View key={section.title} style={[Spaces.gap[12]]}>
-                    {facilitySections.length > 1 ? (
-                      <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-                        {section.title}
-                      </Text>
-                    ) : null}
-                    {section.data.map((/** @type {any} */ facility) => {
-                      const facilityId = facility?.documentId || facility?.id;
-                      const capacityChipLabel = getFacilityCapacityChipLabel(facility?.maxSlots, t);
-                      const typeLabel = facility?.type || t('facilityList.defaults.unknownType', 'Type inconnu');
-                      const addressLabel = getFacilityAddressLabel(facility?.address);
-                      const planningColor = resolveFacilityPlanningColor(facility);
-                      const canOpenFacilityEdit = Boolean(canEdit && facilityId && !facility?.isShared);
-                      const canOpenPlanning = Boolean(
-                        facilityId
-                        && (facility?.isShared ? canAccessSharedPlanning : isMember),
-                      );
-                      const handleOpenFacilityEdit = () => {
-                        navigation.navigate(RouteNames.FacilityForm, {
+              {/* D50 : cette section reste la page PUBLIQUE du club, pour un
+                  visiteur. Le dirigeant l'atteint par la rangee du hub, qui
+                  ouvre `FacilityList` — un ecran DEJA route, et le seul
+                  endroit d'ou « Voir le planning » sait revenir ici (D34). */}
+              {showsClubSection('facilities') ? (
+                <View style={[Spaces.gap[16]]}>
+                  <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
+                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                      {t('facilityList.title', 'Installations')}
+                    </Text>
+                    {canEdit ? (
+                      <Button
+                        icon="plus"
+                        isOption
+                        onPress={() => navigation.navigate(RouteNames.FacilityList, {
                           clubId,
                           cmId: resolvedFacilityCmId,
-                          facility,
-                        });
-                      };
-                      const handleOpenPlanning = () => {
-                        handleOpenFacilityPlanning(facility, facility?.isShared ? 'shared' : 'club');
-                      };
+                        })}
+                        variant="Primary"
+                      />
+                    ) : null}
+                  </View>
 
-                      return (
-                        <TouchableOpacity
-                          accessibilityLabel={canOpenFacilityEdit ? t(
-                            'facilityList.accessibility.editCard',
-                            `Modifier l'installation ${facility?.name || ''}`.trim(),
-                          ) : undefined}
-                          accessibilityRole={canOpenFacilityEdit ? 'button' : undefined}
-                          activeOpacity={canOpenFacilityEdit ? 0.9 : 1}
-                          disabled={!canOpenFacilityEdit}
-                          key={String(facilityId || facility?.name)}
-                          onPress={canOpenFacilityEdit ? handleOpenFacilityEdit : undefined}
-                          style={[
-                            ApplicationStyle.borderRadius24,
-                            { paddingHorizontal: 18, paddingVertical: 18 },
-                            Spaces.gap[12],
-                            {
-                              backgroundColor: `${planningColor}22`,
-                              borderColor: planningColor,
-                              borderWidth: 1,
-                              overflow: 'hidden',
-                              position: 'relative',
-                            },
-                          ]}
-                        >
-                          <View
-                            style={{
-                              backgroundColor: planningColor,
-                              borderBottomRightRadius: 8,
-                              borderTopRightRadius: 8,
-                              height: '100%',
-                              left: 0,
-                              position: 'absolute',
-                              top: 0,
-                              width: 4,
-                            }}
-                          />
-                          <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                            {facility?.name || 'Installation'}
-                          </Text>
-                          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+                  {facilitiesLoading ? (
+                    <Text style={[Fonts.p2, Fonts.primary100]}>
+                      {t('common.loading', 'Chargement...')}
+                    </Text>
+                  ) : null}
+
+                  {!facilitiesLoading && facilities.length === 0 ? (
+                    <Text style={[Fonts.p2, Fonts.primary100]}>
+                      {t('common.messages.noData', 'Aucune donnée disponible')}
+                    </Text>
+                  ) : null}
+
+                  {facilitySections.map((section) => (
+                    <View key={section.title} style={[Spaces.gap[12]]}>
+                      {facilitySections.length > 1 ? (
+                        <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                          {section.title}
+                        </Text>
+                      ) : null}
+                      {section.data.map((/** @type {any} */ facility) => {
+                        const facilityId = facility?.documentId || facility?.id;
+                        const capacityChipLabel = getFacilityCapacityChipLabel(
+                          facility?.maxSlots,
+                          t,
+                        );
+                        const typeLabel = facility?.type || t('facilityList.defaults.unknownType', 'Type inconnu');
+                        const addressLabel = getFacilityAddressLabel(facility?.address);
+                        const planningColor = resolveFacilityPlanningColor(facility);
+                        const canOpenFacilityEdit = Boolean(canEdit && facilityId && !facility?.isShared);
+                        const canOpenPlanning = Boolean(
+                          facilityId
+                          && (facility?.isShared ? canAccessSharedPlanning : isMember),
+                        );
+                        const handleOpenFacilityEdit = () => {
+                          navigation.navigate(RouteNames.FacilityForm, {
+                            clubId,
+                            cmId: resolvedFacilityCmId,
+                            facility,
+                          });
+                        };
+                        const handleOpenPlanning = () => {
+                          handleOpenFacilityPlanning(facility, facility?.isShared ? 'shared' : 'club');
+                        };
+
+                        return (
+                          <TouchableOpacity
+                            accessibilityLabel={canOpenFacilityEdit ? t(
+                              'facilityList.accessibility.editCard',
+                              `Modifier l'installation ${facility?.name || ''}`.trim(),
+                            ) : undefined}
+                            accessibilityRole={canOpenFacilityEdit ? 'button' : undefined}
+                            activeOpacity={canOpenFacilityEdit ? 0.9 : 1}
+                            disabled={!canOpenFacilityEdit}
+                            key={String(facilityId || facility?.name)}
+                            onPress={canOpenFacilityEdit ? handleOpenFacilityEdit : undefined}
+                            style={[
+                              ApplicationStyle.borderRadius24,
+                              { paddingHorizontal: 18, paddingVertical: 18 },
+                              Spaces.gap[12],
+                              {
+                                backgroundColor: `${planningColor}22`,
+                                borderColor: planningColor,
+                                borderWidth: 1,
+                                overflow: 'hidden',
+                                position: 'relative',
+                              },
+                            ]}
+                          >
                             <View
-                              style={[
-                                ApplicationStyle.borderRadius12,
-                                Spaces.paddingHorizontal[8],
-                                Spaces.paddingVertical[4],
-                                {
-                                  alignSelf: 'flex-start',
-                                  backgroundColor: `${planningColor}1F`,
-                                  borderColor: planningColor,
-                                  borderWidth: 1,
-                                },
-                              ]}
-                            >
-                              <Text style={[Fonts.p3Bold, { color: planningColor }]}>
-                                {capacityChipLabel}
-                              </Text>
-                            </View>
-                            <View
-                              style={[
-                                ApplicationStyle.borderRadius12,
-                                Spaces.paddingHorizontal[8],
-                                Spaces.paddingVertical[4],
-                                {
-                                  alignSelf: 'flex-start',
-                                  backgroundColor: Colors.neutral800,
-                                  borderColor: Colors.neutral500,
-                                  borderWidth: 1,
-                                },
-                              ]}
-                            >
-                              <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-                                {typeLabel}
-                              </Text>
-                            </View>
-                            {facility?.isShared ? (
-                              <>
-                                <View
-                                  style={[
-                                    ApplicationStyle.borderRadius12,
-                                    Spaces.paddingHorizontal[8],
-                                    Spaces.paddingVertical[4],
-                                    {
-                                      alignSelf: 'flex-start',
-                                      backgroundColor: `${Colors.primary500}1F`,
-                                      borderColor: Colors.primary500,
-                                      borderWidth: 1,
-                                    },
-                                  ]}
-                                >
-                                  <Text style={[Fonts.p3Bold, Fonts.primary300]}>
-                                    {t('facilityList.badges.shared', 'Partagee')}
-                                  </Text>
-                                </View>
-                                <View
-                                  style={[
-                                    ApplicationStyle.borderRadius12,
-                                    Spaces.paddingHorizontal[8],
-                                    Spaces.paddingVertical[4],
-                                    {
-                                      alignSelf: 'flex-start',
-                                      backgroundColor: `${Colors.warning500}1F`,
-                                      borderColor: Colors.warning500,
-                                      borderWidth: 1,
-                                    },
-                                  ]}
-                                >
-                                  <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
-                                    {t('facilityList.badges.multisport', 'Multisport')}
-                                  </Text>
-                                </View>
-                              </>
-                            ) : null}
-                          </View>
-                          {facility?.isShared ? (
-                            <Text style={[Fonts.p3, Fonts.neutral300]}>
-                              {t(
-                                'facilityList.sharedOwnerHint',
-                                'Installation partagée du multisport {{ownerName}}. Lecture seule cété club.',
-                                { ownerName: facility?.ownerName || t('facilityList.badges.multisport', 'Multisport') },
-                              )}
+                              style={{
+                                backgroundColor: planningColor,
+                                borderBottomRightRadius: 8,
+                                borderTopRightRadius: 8,
+                                height: '100%',
+                                left: 0,
+                                position: 'absolute',
+                                top: 0,
+                                width: 4,
+                              }}
+                            />
+                            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                              {facility?.name || 'Installation'}
                             </Text>
-                          ) : null}
-                          {addressLabel ? (
-                            <View
-                              style={[
-                                ApplicationStyle.borderRadius16,
-                                Spaces.padding[12],
-                                Spaces.gap[8],
-                                {
-                                  backgroundColor: `${Colors.primary900}BB`,
-                                  borderColor: `${Colors.primary500}2E`,
-                                  borderWidth: 1,
-                                },
-                              ]}
-                            >
-                              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                                <Image
-                                  source={Images.pin}
-                                  style={[
-                                    ApplicationStyle.icon16,
-                                    ApplicationStyle.tintColor.primary200,
-                                    { marginTop: 1 },
-                                  ]}
-                                />
-                                <Text numberOfLines={2} style={[Fonts.p2, Fonts.primary100, { flex: 1 }]}>
-                                  {addressLabel}
+                            <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+                              <View
+                                style={[
+                                  ApplicationStyle.borderRadius12,
+                                  Spaces.paddingHorizontal[8],
+                                  Spaces.paddingVertical[4],
+                                  {
+                                    alignSelf: 'flex-start',
+                                    backgroundColor: `${planningColor}1F`,
+                                    borderColor: planningColor,
+                                    borderWidth: 1,
+                                  },
+                                ]}
+                              >
+                                <Text style={[Fonts.p3Bold, { color: planningColor }]}>
+                                  {capacityChipLabel}
                                 </Text>
                               </View>
+                              <View
+                                style={[
+                                  ApplicationStyle.borderRadius12,
+                                  Spaces.paddingHorizontal[8],
+                                  Spaces.paddingVertical[4],
+                                  {
+                                    alignSelf: 'flex-start',
+                                    backgroundColor: Colors.neutral800,
+                                    borderColor: Colors.neutral500,
+                                    borderWidth: 1,
+                                  },
+                                ]}
+                              >
+                                <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+                                  {typeLabel}
+                                </Text>
+                              </View>
+                              {facility?.isShared ? (
+                                <>
+                                  <View
+                                    style={[
+                                      ApplicationStyle.borderRadius12,
+                                      Spaces.paddingHorizontal[8],
+                                      Spaces.paddingVertical[4],
+                                      {
+                                        alignSelf: 'flex-start',
+                                        backgroundColor: `${Colors.primary500}1F`,
+                                        borderColor: Colors.primary500,
+                                        borderWidth: 1,
+                                      },
+                                    ]}
+                                  >
+                                    <Text style={[Fonts.p3Bold, Fonts.primary300]}>
+                                      {t('facilityList.badges.shared', 'Partagee')}
+                                    </Text>
+                                  </View>
+                                  <View
+                                    style={[
+                                      ApplicationStyle.borderRadius12,
+                                      Spaces.paddingHorizontal[8],
+                                      Spaces.paddingVertical[4],
+                                      {
+                                        alignSelf: 'flex-start',
+                                        backgroundColor: `${Colors.warning500}1F`,
+                                        borderColor: Colors.warning500,
+                                        borderWidth: 1,
+                                      },
+                                    ]}
+                                  >
+                                    <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+                                      {t('facilityList.badges.multisport', 'Multisport')}
+                                    </Text>
+                                  </View>
+                                </>
+                              ) : null}
                             </View>
-                          ) : (
-                            <Text style={[Fonts.p2, Fonts.neutral300]}>
-                              {t('facilityList.defaults.addressMissing', 'Adresse non renseignée')}
-                            </Text>
-                          )}
-                          {(addressLabel || canOpenPlanning || canOpenFacilityEdit) ? (
-                            <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, Spaces.gap[8], { marginTop: 2 }]}>
-                              {addressLabel ? (
-                                <Button
-                                  onPress={() => handleOpenFacilityMap(facility)}
-                                  size="small"
-                                  title={t('common.actions.openInGps', 'Ouvrir dans le GPS')}
-                                  variant="Secondary"
-                                />
-                              ) : null}
-                              {canOpenPlanning ? (
-                                <Button
-                                  onPress={handleOpenPlanning}
-                                  size="small"
-                                  title={t('facilityList.actions.viewPlanning', 'Voir planning')}
-                                  variant={facility?.isShared ? 'Primary' : 'Secondary'}
-                                />
-                              ) : null}
-                              {canOpenFacilityEdit ? (
-                                <View style={{ marginLeft: 'auto' }}>
+                            {facility?.isShared ? (
+                              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                                {t(
+                                  'facilityList.sharedOwnerHint',
+                                  'Installation partagée du multisport {{ownerName}}. Lecture seule cété club.',
+                                  { ownerName: facility?.ownerName || t('facilityList.badges.multisport', 'Multisport') },
+                                )}
+                              </Text>
+                            ) : null}
+                            {addressLabel ? (
+                              <View
+                                style={[
+                                  ApplicationStyle.borderRadius16,
+                                  Spaces.padding[12],
+                                  Spaces.gap[8],
+                                  {
+                                    backgroundColor: `${Colors.primary900}BB`,
+                                    borderColor: `${Colors.primary500}2E`,
+                                    borderWidth: 1,
+                                  },
+                                ]}
+                              >
+                                <View
+                                  style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
+                                >
+                                  <Image
+                                    source={Images.pin}
+                                    style={[
+                                      ApplicationStyle.icon16,
+                                      ApplicationStyle.tintColor.primary200,
+                                      { marginTop: 1 },
+                                    ]}
+                                  />
+                                  <Text numberOfLines={2} style={[Fonts.p2, Fonts.primary100, { flex: 1 }]}>
+                                    {addressLabel}
+                                  </Text>
+                                </View>
+                              </View>
+                            ) : (
+                              <Text style={[Fonts.p2, Fonts.neutral300]}>
+                                {t(
+                                  'facilityList.defaults.addressMissing',
+                                  'Adresse non renseignée',
+                                )}
+                              </Text>
+                            )}
+                            {(addressLabel || canOpenPlanning || canOpenFacilityEdit) ? (
+                              <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, Spaces.gap[8], { marginTop: 2 }]}>
+                                {addressLabel ? (
                                   <Button
-                                    icon="edit"
-                                    onPress={handleOpenFacilityEdit}
+                                    onPress={() => handleOpenFacilityMap(facility)}
                                     size="small"
-                                    title={t('common.edit', 'Modifier')}
+                                    title={t('common.actions.openInGps', 'Ouvrir dans le GPS')}
                                     variant="Secondary"
                                   />
-                                </View>
-                              ) : null}
-                            </View>
-                          ) : null}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                ))}
-              </View>
+                                ) : null}
+                                {canOpenPlanning ? (
+                                  <Button
+                                    onPress={handleOpenPlanning}
+                                    size="small"
+                                    title={t('facilityList.actions.viewPlanning', 'Voir planning')}
+                                    variant={facility?.isShared ? 'Primary' : 'Secondary'}
+                                  />
+                                ) : null}
+                                {canOpenFacilityEdit ? (
+                                  <View style={{ marginLeft: 'auto' }}>
+                                    <Button
+                                      icon="edit"
+                                      onPress={handleOpenFacilityEdit}
+                                      size="small"
+                                      title={t('common.edit', 'Modifier')}
+                                      variant="Secondary"
+                                    />
+                                  </View>
+                                ) : null}
+                              </View>
+                            ) : null}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ))}
+                </View>
+              ) : null}
 
               {/* Activities */}
-              <View style={[Spaces.gap[16]]}>
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
-                  <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.activities')}</Text>
-                  {activitiesHeaderActions}
+              {showsClubSection('sports') ? (
+                <View style={[Spaces.gap[16]]}>
+                  <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
+                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.activities')}</Text>
+                    {activitiesHeaderActions}
+                  </View>
+                  {activitiesContent}
                 </View>
-                {activitiesContent}
-              </View>
+              ) : null}
               {/* Sponsors */}
-              {(club?.sponsor?.length || canEdit) && (
+              {showsClubSection('partners') && (club?.sponsor?.length || canEdit) && (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
@@ -2329,7 +2472,7 @@ function ClubDetails({ navigation, route }) {
               {/* D34 ecran 11 : la section apparait aussi quand le club n'a */}
               {/* AUCUNE equipe, sinon un dirigeant qui debute n'a nulle part */}
               {/* ou en creer une depuis son club. */}
-              {sortedClubTeams.length || canEdit ? (
+              {showsClubSection('teams') && (sortedClubTeams.length || canEdit) ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
@@ -2424,7 +2567,7 @@ function ClubDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {areClubMembersHidden ? (
+              {showsClubSection('staff') && areClubMembersHidden ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
                     <Text style={[Fonts.h4Black, Fonts.neutral00]}>
@@ -2454,7 +2597,7 @@ function ClubDetails({ navigation, route }) {
               ) : null}
 
               {/* Coachs */}
-              {coachs?.length || canEdit ? (
+              {showsClubSection('staff') && (coachs?.length || canEdit) ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
@@ -2535,7 +2678,7 @@ function ClubDetails({ navigation, route }) {
                 </View>
               ) : null}
               {/* president */}
-              {owners?.length || canEdit ? (
+              {showsClubSection('staff') && (owners?.length || canEdit) ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
@@ -2606,7 +2749,9 @@ function ClubDetails({ navigation, route }) {
               {/* l'ecran en permanence. Le pack en fait un simple TEXTE centre */}
               {/* tout en bas du contenu, qui defile avec le reste. La couleur */}
               {/* est `error300`, le rouge doux reserve a ce seul endroit. */}
-              {showLeaveClubAction ? (
+              {/* D50 : quitter le club se decide depuis le club, pas depuis une */}
+              {/* de ses rubriques — le texte reste donc au pied du HUB seul. */}
+              {showLeaveClubAction && !isClubSubPage ? (
                 <TouchableOpacity
                   accessibilityLabel={t('clubDetails.actions.leave', 'Quitter le club')}
                   accessibilityRole="button"
