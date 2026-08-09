@@ -2,7 +2,7 @@ export default {
   addCoach: {
     actions: {
       invite: 'Inviter',
-      save: 'Ajouter',
+      save: 'Envoyer l\'invitation',
     },
     alerts: {
       alreadyExist: {
@@ -24,7 +24,7 @@ export default {
     },
     fields: {
       birthdate: {
-        label: 'Date de naissance',
+        label: 'Date de naissance — optionnelle',
         placeholder: 'JJ/MM/AAAA',
       },
       firstname: {
@@ -36,9 +36,19 @@ export default {
         placeholder: 'Harne',
       },
       phoneNumber: {
-        label: 'Numéro de téléphone',
+        label: 'Numéro de téléphone — requis',
         placeholder: '+33612345678',
       },
+      role: {
+        label: 'Rôle',
+      },
+    },
+    hints: {
+      invitation: 'Une invitation SMS lui sera envoyée pour rejoindre le club.',
+    },
+    roles: {
+      manager: 'Dirigeant·e',
+      trainer: 'Entraîneur·e',
     },
     subtitles: {
       avatar: "Ajoute une photo de profil pour que l'on puisse reconnaître l'entraîneur·e facilement.",
