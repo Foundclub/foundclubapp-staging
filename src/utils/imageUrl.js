@@ -40,3 +40,13 @@ export const getImageUrl = (url) => {
   // Otherwise return as is
   return url;
 };
+
+// Porte de sortie identique a celle du jumeau `imageUrl.web.js` : les ecrans
+// `.web.js` importent ce module en DEFAUT. Vite resout bien la variante web en
+// production, mais Jest (preset react-native) prend ce fichier-ci, et sans cet
+// export tout rendu d'un ecran `.web.js` mourait sur
+// « (0, _imageUrl.default) is not a function ». Mesure D49 : 21 fichiers
+// importent ce module, 19 en NOMME et 2 en DEFAUT — `views/PollDetails.web.js`
+// et `views/event/EventDetails.web.js`. Ce sont ces deux ecrans-la que le mur
+// bloquait, pas les 40. L'export nomme reste : les 19 autres l'importent ainsi.
+export default getImageUrl;
