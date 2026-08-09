@@ -5,7 +5,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, KeyboardAvoidingView, Platform, ScrollView,
-  View,
+  Text, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -39,6 +39,22 @@ const defaultValues = {
   firstname: '',
   lastname: '',
   phoneNumber: '',
+};
+
+// D51 ecran 10 : les deux formulaires de staff etaient DEJA le meme composant,
+// mais le role etait impose par la route. Un dirigeant entre par la mauvaise
+// porte devait ressortir et recommencer. Le role devient un etat de l'ecran :
+// la route ne fait plus que choisir la valeur de depart.
+const STAFF_ROLES = {
+  MANAGER: 'manager',
+  TRAINER: 'trainer',
+};
+
+// Pilule de role : 44 pt de haut, libelle jamais tronque (« Entraineur·e » est
+// un libelle systeme, il ne s'abrege pas).
+const ROLE_PILL_STYLE = {
+  flex: 1,
+  minHeight: 44,
 };
 
 const addCoachSchema = Joi.object({
@@ -82,9 +98,14 @@ function AddCoach({ navigation, route }) {
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   const { t } = useTranslation();
-  const { Alignments, Spaces } = useTheme();
+  const { Alignments, Fonts, Spaces } = useTheme();
   const { formatBirthdateToDisplay, userData } = useAuth();
-  const isManagerMode = route?.name === RouteNames.AddClubManager || route?.params?.staffType === 'manager';
+  const openedAsManager = route?.name === RouteNames.AddClubManager
+    || route?.params?.staffType === STAFF_ROLES.MANAGER;
+  const [staffRole, setStaffRole] = useState(
+    openedAsManager ? STAFF_ROLES.MANAGER : STAFF_ROLES.TRAINER,
+  );
+  const isManagerMode = staffRole === STAFF_ROLES.MANAGER;
   const routeClubId = sanitizeRouteParam(route?.params?.clubId);
   const routeClubName = String(route?.params?.clubName || '').trim();
   const {
@@ -329,6 +350,31 @@ function AddCoach({ navigation, route }) {
               />
             </View>
 
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {t('addCoach.fields.role.label')}
+              </Text>
+              <View style={[Alignments.row, Spaces.gap[8]]}>
+                {[
+                  [STAFF_ROLES.MANAGER, t('addCoach.roles.manager')],
+                  [STAFF_ROLES.TRAINER, t('addCoach.roles.trainer')],
+                ].map(([roleValue, roleLabel]) => {
+                  const isActive = staffRole === roleValue;
+                  return (
+                    <Button
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isActive }}
+                      key={roleValue}
+                      onPress={() => setStaffRole(roleValue)}
+                      style={ROLE_PILL_STYLE}
+                      title={roleLabel}
+                      variant={isActive ? 'Primary' : 'SecondaryLight'}
+                    />
+                  );
+                })}
+              </View>
+            </View>
+
             <Controller
               control={control}
               name="phoneNumber"
@@ -339,7 +385,7 @@ function AddCoach({ navigation, route }) {
               }) => (
                 <PhoneInput
                   error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={`${t('profile.fields.phoneNumber.label')} *`}
+                  label={t('addCoach.fields.phoneNumber.label')}
                   onBlur={onBlur}
                   onChange={onChange}
                   ref={ref}
@@ -347,6 +393,12 @@ function AddCoach({ navigation, route }) {
                 />
               )}
             />
+
+            {/* Dit AVANT l'envoi ce que le numero declenche : sans cette ligne, */}
+            {/* le SMS partait sans que personne l'ait annonce. */}
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t('addCoach.hints.invitation')}
+            </Text>
             <Controller
               control={control}
               name="firstname"
@@ -358,11 +410,11 @@ function AddCoach({ navigation, route }) {
                 <Input
                   enterKeyHint="next"
                   error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('profile.fields.firstname.label')}
+                  label={t('addCoach.fields.firstname.label')}
                   onBlur={onBlur}
                   onChangeText={onChange}
                   onSubmitEditing={() => setFocus('lastname')}
-                  placeholder={t('profile.fields.firstname.placeholder')}
+                  placeholder={t('addCoach.fields.firstname.placeholder')}
                   ref={ref}
                   value={value}
                 />
@@ -379,11 +431,11 @@ function AddCoach({ navigation, route }) {
                 <Input
                   enterKeyHint="next"
                   error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('profile.fields.lastname.label')}
+                  label={t('addCoach.fields.lastname.label')}
                   onBlur={onBlur}
                   onChangeText={onChange}
                   onSubmitEditing={() => setFocus('birthdate')}
-                  placeholder={t('profile.fields.lastname.placeholder')}
+                  placeholder={t('addCoach.fields.lastname.placeholder')}
                   ref={ref}
                   value={value}
                 />
@@ -402,7 +454,7 @@ function AddCoach({ navigation, route }) {
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   inputMode="numeric"
                   keyboardType="number-pad"
-                  label={t('profile.fields.birthdate.label')}
+                  label={t('addCoach.fields.birthdate.label')}
                   maxLength={10}
                   onBlur={onBlur}
                   onChangeText={(text) => onChange(formatBirthdateToDisplay(text))}
@@ -419,7 +471,7 @@ function AddCoach({ navigation, route }) {
           disabled={!!Object.keys(formErrors).length}
           isLoading={createTrainerMutation.isPending}
           onPress={handleSubmit(handleFormSubmit)}
-          title={isManagerMode ? t('addClubManager.actions.save', 'Ajouter') : t('addCoach.actions.save')}
+          title={t('addCoach.actions.save')}
           variant="Primary"
         />
       </KeyboardAvoidingView>

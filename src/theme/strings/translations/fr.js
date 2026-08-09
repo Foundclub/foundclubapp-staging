@@ -2,7 +2,7 @@ export default {
   addCoach: {
     actions: {
       invite: 'Inviter',
-      save: 'Ajouter',
+      save: 'Envoyer l\'invitation',
     },
     alerts: {
       alreadyExist: {
@@ -24,7 +24,7 @@ export default {
     },
     fields: {
       birthdate: {
-        label: 'Date de naissance',
+        label: 'Date de naissance — optionnelle',
         placeholder: 'JJ/MM/AAAA',
       },
       firstname: {
@@ -36,9 +36,19 @@ export default {
         placeholder: 'Harne',
       },
       phoneNumber: {
-        label: 'Numéro de téléphone',
+        label: 'Numéro de téléphone — requis',
         placeholder: '+33612345678',
       },
+      role: {
+        label: 'Rôle',
+      },
+    },
+    hints: {
+      invitation: 'Une invitation SMS lui sera envoyée pour rejoindre le club.',
+    },
+    roles: {
+      manager: 'Dirigeant·e',
+      trainer: 'Entraîneur·e',
     },
     subtitles: {
       avatar: "Ajoute une photo de profil pour que l'on puisse reconnaître l'entraîneur·e facilement.",
@@ -53,7 +63,7 @@ export default {
   },
   addSponsor: {
     actions: {
-      save: 'Ajouter',
+      save: 'Ajouter le partenaire',
     },
     fields: {
       link: {
@@ -65,6 +75,9 @@ export default {
         label: 'Nom du partenaire',
         placeholder: 'Nike',
       },
+    },
+    hints: {
+      visibility: 'Il apparaîtra sur les cartes équipe, les annonces et la page du club.',
     },
     title: 'Ajouter un partenaire',
   },
@@ -1118,6 +1131,9 @@ export default {
     },
   },
   facilityForm: {
+    accessibility: {
+      planningColor: 'Couleur de planning',
+    },
     actions: {
       create: 'Créer',
       save: 'Enregistrer',
@@ -1133,7 +1149,7 @@ export default {
       },
       pending: {
         description: 'Le créneau passe en demande, un dirigeant valide avant confirmation.',
-        label: 'Demande en attente',
+        label: 'Demande à valider',
       },
     },
     defaults: {
@@ -1150,12 +1166,12 @@ export default {
       capacityConflictMode: 'Comportement en cas de conflit',
       name: 'Nom de l\'installation',
       planningColor: 'Couleur dans le planning',
-      type: 'Type',
+      type: 'Type — requis',
     },
     hints: {
       addressSelection: 'Sélectionne une adresse dans la liste pour activer le GPS.',
       gpsActive: '✓ GPS activé',
-      planningColor: 'Cette couleur apparaîtra dans le planning pour identifier rapidement l\'installation.',
+      planningColor: 'Elle sert à repérer l\'installation dans le planning — elle apparaît en pastille sur sa carte.',
     },
     placeholders: {
       address: 'Ex: 12 Rue du Stade...',

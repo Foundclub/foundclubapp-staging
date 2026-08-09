@@ -441,3 +441,36 @@ describe('FacilityList — ce que l ecran fait (fige avant la refonte D34)', () 
     expect(textesVisibles(arbre)).toContain('Impossible de charger les installations');
   });
 });
+
+// D51 ecran 03 : le type est requis a la creation depuis D2, mais des
+// installations anterieures peuvent encore ne pas en porter. Elles s'annoncaient
+// « Type inconnu » — un aveu de panne la ou il n'y a qu'un champ vide.
+describe('FacilityList — refonte D51 ecran 03', () => {
+  it('une installation sans type n annonce plus « Type inconnu »', () => {
+    mockFacilityContext.data = {
+      allFacilities: [{ ...INSTALLATION_CLUB, type: undefined }],
+      cmId: null,
+    };
+    const arbre = rendre();
+
+    expect(textesVisibles(arbre)).not.toContain('Type inconnu');
+  });
+
+  it('sans type, la meta garde la capacite et l adresse', () => {
+    mockFacilityContext.data = {
+      allFacilities: [{ ...INSTALLATION_CLUB, type: undefined }],
+      cmId: null,
+    };
+    const arbre = rendre();
+    const textes = textesVisibles(arbre);
+
+    expect(textes).toContain('1 équipe simultanée');
+    expect(textes).toContain('21 rue Fortia, Marseille');
+  });
+
+  it('avec un type, il reste en tete de la meta', () => {
+    const arbre = rendre();
+
+    expect(textesVisibles(arbre)).toContain('Terrain · 1 équipe simultanée');
+  });
+});

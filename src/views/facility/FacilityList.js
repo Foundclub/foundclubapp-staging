@@ -290,8 +290,11 @@ function FacilityList() {
     // D34 ecran 03 : le type, la capacite et l'adresse tenaient sur trois
     // lignes (deux chips + une ligne d'adresse). Ils tiennent desormais sur une
     // seule meta, comme « Terrain · 1 equipe simultanee · 21 rue Fortia ».
+    // D51 : le type est requis a la creation, mais des installations plus
+    // anciennes n'en portent pas. Le segment disparait alors, au lieu
+    // d'afficher un repli qui sonne comme une panne pour un simple champ vide.
     const metaLabel = [
-      item?.type || t('facilityList.defaults.unknownType', 'Type inconnu'),
+      item?.type,
       capacityLabel,
       hasAddress ? addressLabel : null,
     ].filter(Boolean).join(' · ');
