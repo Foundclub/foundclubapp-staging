@@ -1244,7 +1244,7 @@ function HomeHubContent({ auth, navigation, route }) {
       showBanner({
         body: t(
           'homeHub.alerts.nonPartnerCoachPublishingBlocked.adDescription',
-          "Ton club n'est pas encore certifié sur FoundClub. Un superadmin doit autoriser la publication avant de créer une annonce.",
+          "Ton club n'est pas encore certifié sur FoundClub. Un superadmin doit autoriser la publication avant de créer une offre.",
         ),
         title: t(
           'homeHub.alerts.nonPartnerCoachPublishingBlocked.title',
@@ -1530,14 +1530,14 @@ function HomeHubContent({ auth, navigation, route }) {
           premiumScope: addAdLock ? addAdLock.scope : teamCardPremiumScope,
           subtitle: addAdLock
             ? addAdLock.hint
-            : t('homeHub.cards.manage.addAd.subtitle', 'Publie une annonce de recrutement.'),
+            : t('homeHub.cards.manage.addAd.subtitle', 'Publie une offre de recrutement.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
+          title: t('homeHub.cards.manage.addAd.title', 'Publier une offre'),
           tutorial: makeTutorial(
             'manageAddAd',
             5,
-            'Ajouter une annonce',
-            'Publie une annonce de recrutement pour cibler des profils précis.',
+            'Publier une offre',
+            'Publie une offre de recrutement pour cibler des profils précis.',
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -1557,8 +1557,8 @@ function HomeHubContent({ auth, navigation, route }) {
           tutorial: makeTutorial(
             'manageMyAds',
             6,
-            'Mes annonces',
-            'Retrouve rapidement les annonces déjà publiées pour tes équipes.',
+            'Mes activités',
+            'Retrouve tes offres, tes matchs proposés et les réponses reçues.',
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -1643,14 +1643,14 @@ function HomeHubContent({ auth, navigation, route }) {
           premiumScope: addAdLock ? addAdLock.scope : teamCardPremiumScope,
           subtitle: addAdLock
             ? addAdLock.hint
-            : t('homeHub.cards.manage.addAd.subtitle', 'Publie une annonce de recrutement.'),
+            : t('homeHub.cards.manage.addAd.subtitle', 'Publie une offre de recrutement.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
+          title: t('homeHub.cards.manage.addAd.title', 'Publier une offre'),
           tutorial: makeTutorial(
             'manageAddAd',
             5,
-            'Ajouter une annonce',
-            'Publie une annonce de recrutement pour cibler des profils précis.',
+            'Publier une offre',
+            'Publie une offre de recrutement pour cibler des profils précis.',
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -1670,8 +1670,8 @@ function HomeHubContent({ auth, navigation, route }) {
           tutorial: makeTutorial(
             'manageMyAds',
             6,
-            'Mes annonces',
-            'Retrouve rapidement les annonces déjà publiées pour tes équipes.',
+            'Mes activités',
+            'Retrouve tes offres, tes matchs proposés et les réponses reçues.',
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -1801,8 +1801,8 @@ function HomeHubContent({ auth, navigation, route }) {
         tutorial: makeTutorial(
           'searchAds',
           14,
-          'Rechercher des annonces',
-          'Consulte les annonces de recrutement et les profils disponibles.',
+          'Rechercher des offres',
+          'Consulte les offres de recrutement des clubs.',
           {
             nextAction: 'scrollDown',
             nextLabel: scrollDownLabel,
@@ -2118,7 +2118,7 @@ function HomeHubContent({ auth, navigation, route }) {
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {governedPublishingBlockReason === 'requires_superadmin_authorization'
-                  ? "Ton club n'est pas encore certifié. Tu peux gérer ton organisation, mais un superadmin doit encore autoriser la publication des événements et des annonces."
+                  ? "Ton club n'est pas encore certifié. Tu peux gérer ton organisation, mais un superadmin doit encore autoriser la publication des événements et des offres."
                   : 'La publication est temporairement bloquée pour ce club non certifié.'}
               </Text>
             </View>
