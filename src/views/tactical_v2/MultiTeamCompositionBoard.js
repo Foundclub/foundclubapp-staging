@@ -278,6 +278,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     compositionIntent = null,
     editorSourceLabel = null,
     eventId,
+    eventKind = null,
     eventName = '',
     existingComposition = null,
     players = EMPTY_PARAM_LIST,
@@ -289,6 +290,19 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     teamName = '',
   } = params;
 
+  // D44 — un MATCH, c'est UNE equipe. Une DETECTION, c'est plusieurs equipes
+  // qu'on peut faire remplir automatiquement : deux systemes differents.
+  //
+  // `eventKind` ('match' | 'detection') descend depuis EventDetails et arrivait
+  // deja jusqu'ici — personne ne le lisait. Sans lui, la generation automatique
+  // et l'ajout d'equipe s'affichaient des que `availablePresets` n'etait pas
+  // vide, or cette liste ne parle QUE du sport (le football a 3 schemas). Tout
+  // match de football montrait donc les commandes de la detection.
+  //
+  // TYPE INCONNU = ON NE RETIRE RIEN. On ne cache que sur un 'match' DIT. Une
+  // commande de trop se voit et se corrige ; une commande absente enferme un
+  // coach sans qu'il puisse rien y faire depuis l'ecran.
+  const isSingleTeamEvent = eventKind === 'match';
   const availablePresets = useMemo(
     () => normalizeAvailablePresets(teamComposition?.availablePresets || availablePresetsParam),
     [availablePresetsParam, teamComposition?.availablePresets],
@@ -402,9 +416,13 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
   const [autoPresetKeys, setAutoPresetKeys] = useState(
     syncPresetKeys(Math.max(1, initialPack?.teams?.length || 1), availablePresets, initialPack?.teams?.map((team) => team?.presetKey)),
   );
+  // D44 : `isSingleTeamEvent` est teste ICI, a la source, et pas seulement sur le
+  // bouton. Un appelant qui demanderait « auto » sur un match ouvrirait sinon un
+  // panneau que plus rien ne permet de refermer.
   const [showAutoSetup, setShowAutoSetup] = useState(Boolean(
     !readOnly
       && canEdit
+      && !isSingleTeamEvent
       && compositionIntent === 'auto'
       && !teamComposition?.draft,
   ));
@@ -427,10 +445,11 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     setShowAutoSetup(Boolean(
       !readOnly
         && canEdit
+        && !isSingleTeamEvent
         && compositionIntent === 'auto'
         && !teamComposition?.draft,
     ));
-  }, [canEdit, compositionIntent, readOnly, teamComposition?.draft]);
+  }, [canEdit, compositionIntent, isSingleTeamEvent, readOnly, teamComposition?.draft]);
 
   // Tous les joueurs que l'ecran connait, convoques ou non : c'est la liste du
   // temps 1 (« Qui joue ? »).
@@ -1008,6 +1027,12 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
 
   const isPlayersStep = !readOnly && compositionStep === STEP_PLAYERS;
   const isFieldStep = readOnly || compositionStep === STEP_FIELD;
+  // D44 : sur un match on n'OFFRE plus de fabriquer une deuxieme equipe. Mais si
+  // la composition en compte deja plusieurs — enregistree avant ce lot, ou par
+  // une detection convertie — on garde le bouton : sans lui, un coach qui en
+  // retire une par megarde ne pourrait plus jamais la remettre.
+  const canAddTeam = !isSingleTeamEvent
+    || (Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0) > 1;
   const headerTitle = readOnly
     ? 'Composition d\'équipes'
     : (isPlayersStep ? 'Qui joue ?' : 'Où ils jouent');
@@ -1298,7 +1323,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                       title="Ajouter un joueur"
                       variant="Secondary"
                     />
-                    {availablePresets.length > 0 ? (
+                    {availablePresets.length > 0 && !isSingleTeamEvent ? (
                       <Button
                         disabled={isPublishing || isSaving}
                         onPress={() => setShowAutoSetup((current) => !current)}
@@ -1503,12 +1528,14 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                       title="Retour"
                       variant="Secondary"
                     />
-                    <Button
-                      disabled={isPublishing || isSaving}
-                      onPress={handleAddTeam}
-                      title="Ajouter une équipe"
-                      variant="Secondary"
-                    />
+                    {canAddTeam ? (
+                      <Button
+                        disabled={isPublishing || isSaving}
+                        onPress={handleAddTeam}
+                        title="Ajouter une équipe"
+                        variant="Secondary"
+                      />
+                    ) : null}
                     <Button
                       isLoading={isSaving}
                       onPress={handleSaveDraft}

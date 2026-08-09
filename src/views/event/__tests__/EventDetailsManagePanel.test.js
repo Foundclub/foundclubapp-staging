@@ -23,6 +23,7 @@ const mockNavigate = jest.fn();
 const mockPerfMark = jest.fn();
 const mockCancelEventMutate = jest.fn();
 const mockEventQuery = { data: null };
+const mockTeamCompositionQuery = { data: null };
 
 // `initReactI18next` doit rester le vrai : le graphe d'imports de l'ecran
 // initialise i18next au chargement, et un module indefini le fait exploser.
@@ -109,7 +110,10 @@ jest.mock('@/services/event/eventQueries', () => ({
   }),
   useGetEventAttendance: () => emptyQuery(),
   useGetEventConvocation: () => emptyQuery(),
-  useGetEventTeamComposition: () => emptyQuery(),
+  // D44 : la charge de composition decide a elle seule si l'ecran propose la
+  // creation automatique d'equipes. Elle reste `null` par defaut, donc tous les
+  // tests d'avant voient exactement ce qu'ils voyaient.
+  useGetEventTeamComposition: () => ({ ...emptyQuery(), data: mockTeamCompositionQuery.data }),
 }));
 
 jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
@@ -526,6 +530,7 @@ const asTournamentOrganiser = () => mountScreen({
 beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  mockTeamCompositionQuery.data = null;
   mounted = null;
 });
 
@@ -877,5 +882,116 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
     expect(hasText(root, 'DOUBLURE_EventReservationActions')).toBe(true);
     expect(byTestId(root, PANEL_ID)).toHaveLength(1);
     expect(pressableWithText(root, 'Actions événement')).toBeUndefined();
+  });
+});
+
+// ============================================================================
+// D44 — LE TYPE DE L'EVENEMENT COMMANDE LA COMPOSITION. Temoins ROUGES avant.
+//
+// Defaut mesure : l'alerte « Creation auto ou a la main » ne dependait que de
+// `availablePresets`, une liste qui ne parle QUE du sport (le football en a
+// trois : 4-3-3, 4-4-2, 4-2-3-1). Resultat : tout match de football sans
+// composition proposait de creer plusieurs equipes automatiquement — un systeme
+// qui n'a de sens que pour une detection.
+//
+// Le predicat retenu est `isDetectionEvent`, celui-la meme qui fabrique
+// `eventKind`. Prendre `!isMatchEvent` fabriquerait une incoherence : un
+// entrainement n'est ni un match ni une detection, il partirait donc avec
+// `eventKind: 'match'` — et l'alerte lui aurait promis une creation automatique
+// que le board refuse ensuite d'ouvrir.
+// ============================================================================
+
+describe('D44 — l alerte « creation auto » n appartient qu a la detection', () => {
+  const PRESETS_FOOTBALL = [
+    { key: '4-3-3', label: '4-3-3', slots: [] },
+    { key: '4-4-2', label: '4-4-2', slots: [] },
+    { key: '4-2-3-1', label: '4-2-3-1', slots: [] },
+  ];
+
+  const asOrganiserOf = (/** @type {string} */ typeName) => {
+    // Le sport a des schemas connus, et rien n'est encore compose : c'est
+    // exactement l'etat qui declenchait l'alerte sur tout match de football.
+    mockTeamCompositionQuery.data = {
+      availablePresets: PRESETS_FOOTBALL,
+      bootstrap: { composition: null, source: 'empty' },
+      draft: null,
+      eligiblePlayers: [],
+      published: null,
+    };
+
+    return mountScreen({
+      auth: {
+        canEditEvent: () => true,
+        canManageEvent: () => true,
+        userData: { documentId: 'user-1', role: { name: 'Entraineur' } },
+      },
+      event: buildEvent({ type: { name: typeName } }),
+    });
+  };
+
+  const pressCompo = (/** @type {any} */ root) => {
+    openManagePanel(root);
+    const lineup = pressableWithText(root, 'Compo') || pressableWithText(root, 'composition');
+    if (!lineup) throw new Error('L action de composition n est pas atteignable');
+    act(() => {
+      lineup.props.onPress();
+    });
+  };
+
+  const lastBoardParams = () => {
+    const call = [...mockNavigate.mock.calls].reverse()
+      .find((/** @type {any} */ entry) => entry[0] === 'TacticalBoardV2');
+    return call ? call[1] : null;
+  };
+
+  test('TEMOIN 1 — sur un MATCH, aucune alerte : la composition s ouvre directement', () => {
+    const root = asOrganiserOf('Match');
+    pressCompo(root);
+
+    expect(alertOptionLabels()).not.toContain('Création auto');
+    expect(lastBoardParams()).toBeTruthy();
+    expect(lastBoardParams().compositionIntent).toBe('manual');
+  });
+
+  test('TEMOIN 2 — sur une DETECTION, l alerte garde ses deux chemins', () => {
+    const root = asOrganiserOf('Detection');
+    pressCompo(root);
+
+    expect(alertOptionLabels()).toEqual(['Annuler', 'Création auto', 'Faire à la main']);
+
+    pressAlertOption('Création auto');
+    expect(lastBoardParams().compositionIntent).toBe('auto');
+    expect(lastBoardParams().eventKind).toBe('detection');
+  });
+
+  test('un ENTRAINEMENT n est pas une detection non plus : pas d alerte', () => {
+    const root = asOrganiserOf('Entrainement');
+    pressCompo(root);
+
+    expect(alertOptionLabels()).not.toContain('Création auto');
+    expect(lastBoardParams().compositionIntent).toBe('manual');
+  });
+
+  test('l etiquette de type descend jusqu au board, et elle dit la verite', () => {
+    const surMatch = asOrganiserOf('Match');
+    pressCompo(surMatch);
+    expect(lastBoardParams().eventKind).toBe('match');
+
+    act(() => {
+      mounted.unmount();
+      mounted = null;
+    });
+    mockNavigate.mockClear();
+
+    // Sur une detection, l'alerte s'interpose : c'est en choisissant un de ses
+    // deux chemins qu'on arrive au board. Ici « Faire a la main », pour prouver
+    // que l'etiquette est juste sur les DEUX chemins de l'alerte.
+    const surDetection = asOrganiserOf('Detection de joueurs');
+    pressCompo(surDetection);
+    expect(lastBoardParams()).toBeNull();
+
+    pressAlertOption('Faire à la main');
+    expect(lastBoardParams().eventKind).toBe('detection');
+    expect(lastBoardParams().compositionIntent).toBe('manual');
   });
 });

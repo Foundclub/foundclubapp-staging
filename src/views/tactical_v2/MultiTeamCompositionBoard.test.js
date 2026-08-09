@@ -632,3 +632,130 @@ describe('D42 — le board se stabilise (regression de boucle de rendus)', () =>
     expect(rendusDuDernierMontage()).toBeLessThan(10);
   });
 });
+
+// ============================================================================
+// D44 — UN MATCH N'EST PAS UNE DETECTION. Temoins d'arret du lot : ROUGES avant.
+//
+// Le type de l'evenement descend depuis EventDetails sous le nom `eventKind`
+// ('match' | 'detection'). Il arrivait jusqu'ici et PERSONNE ne le lisait :
+// `git grep eventKind` ne rendait que l'ANCIEN board. Consequence mesuree — un
+// match de football affichait « Generation auto » et « Ajouter une equipe »
+// parce que leur seule condition etait « ce sport a des schemas connus », ce qui
+// est vrai de tout match de football.
+//
+// ⛔ INVARIANT : la DETECTION ne perd rien, et une composition DEJA ENREGISTREE
+// reste affichable et modifiable, quel que soit le type.
+// ============================================================================
+
+const parametresMatch = (surcharge = {}) => parametresEdition({ eventKind: 'match', ...surcharge });
+const parametresDetection = (surcharge = {}) => parametresEdition({
+  eventKind: 'detection',
+  ...surcharge,
+});
+
+/** Une composition a DEUX equipes, telle que le serveur la rend une fois enregistree. */
+const COMPO_DEUX_EQUIPES = {
+  schemaVersion: 3,
+  teams: [
+    {
+      id: 'team_1', name: 'Groupe A', placements: [], presetKey: '4-4-2',
+    },
+    {
+      id: 'team_2', name: 'Groupe B', placements: [], presetKey: '4-4-2',
+    },
+  ],
+};
+
+describe('D44 — un MATCH ne montre plus les commandes de la DETECTION', () => {
+  test('TEMOIN 1 — sur un MATCH, ni « Generation auto » ni « Ajouter une equipe »', () => {
+    const arbre = monter(parametresMatch());
+
+    expect(estPressable(arbre, 'Génération auto')).toBe(false);
+
+    allerAuTerrain(arbre);
+    expect(estPressable(arbre, 'Ajouter une équipe')).toBe(false);
+  });
+
+  test('TEMOIN 2 — sur une DETECTION, les 4 commandes sont TOUTES la', () => {
+    const arbre = monter(parametresDetection());
+
+    expect(estPressable(arbre, 'Génération auto')).toBe(true);
+
+    allerAuTerrain(arbre);
+    expect(estPressable(arbre, 'Ajouter une équipe')).toBe(true);
+    expect(estPressable(arbre, 'Sauvegarder')).toBe(true);
+    expect(estPressable(arbre, 'Publier')).toBe(true);
+  });
+
+  test('TEMOIN 3 — une compo multi-equipes DEJA ENREGISTREE sur un match reste modifiable', () => {
+    const arbre = monter(parametresMatch({ existingComposition: COMPO_DEUX_EQUIPES }));
+    allerAuTerrain(arbre);
+    const rendu = texteRendu(arbre);
+
+    // AFFICHABLE : les deux equipes enregistrees sont rendues.
+    expect(rendu).toContain('Groupe A');
+    expect(rendu).toContain('Groupe B');
+
+    // MODIFIABLE : on peut retirer une equipe, changer son schema, et placer un
+    // joueur. Cacher le bouton qui CREE ne doit rien retirer de tout ca.
+    expect(estPressable(arbre, 'Suppr.')).toBe(true);
+    expect(estPressable(arbre, 'Sauvegarder')).toBe(true);
+    expect(estPressable(arbre, 'Publier')).toBe(true);
+    appuyerSur(arbre, 'Ana Bern');
+    appuyerSur(arbre, 'GB');
+    expect(texteRendu(arbre)).toContain('Ana Bern');
+
+    // PAS D'IMPASSE : la composition est deja multi-equipes, donc « Ajouter une
+    // equipe » reste offert. Sinon un coach qui en retire une par erreur ne
+    // pourrait plus jamais la remettre.
+    expect(estPressable(arbre, 'Ajouter une équipe')).toBe(true);
+  });
+
+  test('un MATCH garde tout le reste : convoquer, ajouter un joueur, avancer, enregistrer', () => {
+    const arbre = monter(parametresMatch());
+
+    expect(estPressable(arbre, 'Tout sélectionner')).toBe(true);
+    expect(estPressable(arbre, 'Effacer')).toBe(true);
+    expect(estPressable(arbre, 'Ajouter un joueur')).toBe(true);
+    expect(estPressable(arbre, 'Suivant')).toBe(true);
+
+    allerAuTerrain(arbre);
+    expect(estPressable(arbre, 'Sauvegarder')).toBe(true);
+    expect(estPressable(arbre, 'Publier')).toBe(true);
+    expect(estPressable(arbre, 'Retour')).toBe(true);
+  });
+
+  test('sur un MATCH, le panneau de generation reste ferme meme si on demande « auto »', () => {
+    const arbre = monter(parametresMatch({ compositionIntent: 'auto' }));
+
+    expect(texteRendu(arbre)).not.toContain('Génération automatique');
+    expect(estPressable(arbre, 'Générer le brouillon')).toBe(false);
+  });
+
+  test('sur une DETECTION, l\'appelant qui demande « auto » ouvre bien le panneau', () => {
+    const arbre = monter(parametresDetection({ compositionIntent: 'auto' }));
+
+    expect(texteRendu(arbre)).toContain('Génération automatique');
+    expect(estPressable(arbre, 'Générer le brouillon')).toBe(true);
+  });
+
+  test('TYPE INCONNU (vieux parametres, appelant muet) : rien ne disparait', () => {
+    // Le choix le plus sur : on ne retire une commande que sur un type DIT
+    // 'match'. Une commande de trop se voit et se corrige ; une commande absente
+    // laisse un coach sans issue, et c'est irrattrapable depuis l'ecran.
+    const arbre = monter(parametresEdition());
+    expect(parametresEdition().eventKind).toBeUndefined();
+
+    expect(estPressable(arbre, 'Génération auto')).toBe(true);
+    allerAuTerrain(arbre);
+    expect(estPressable(arbre, 'Ajouter une équipe')).toBe(true);
+  });
+
+  test('le board ne boucle pas davantage avec un type d\'evenement', () => {
+    monter(parametresMatch());
+    expect(rendusDuDernierMontage()).toBeLessThan(10);
+
+    monter(parametresDetection());
+    expect(rendusDuDernierMontage()).toBeLessThan(10);
+  });
+});
