@@ -4238,7 +4238,7 @@ function TeamDetails({ navigation, route }) {
                     { label: 'Matchs', value: performanceSummary.matches },
                     { label: 'Minutes', value: performanceSummary.minutesPlayed },
                     { label: performanceSummary.sport === 'basketball' ? 'Points' : 'Buts', value: performanceSummary.sport === 'basketball' ? performanceSummary.points : performanceSummary.goals },
-                    { label: 'Passes D', value: performanceSummary.assists },
+                    { label: 'Passes décisives', value: performanceSummary.assists },
                   ].map((stat) => (
                     <View
                       key={stat.label}
