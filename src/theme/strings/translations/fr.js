@@ -1118,6 +1118,9 @@ export default {
     },
   },
   facilityForm: {
+    accessibility: {
+      planningColor: 'Couleur de planning',
+    },
     actions: {
       create: 'Créer',
       save: 'Enregistrer',
@@ -1133,7 +1136,7 @@ export default {
       },
       pending: {
         description: 'Le créneau passe en demande, un dirigeant valide avant confirmation.',
-        label: 'Demande en attente',
+        label: 'Demande à valider',
       },
     },
     defaults: {
@@ -1150,12 +1153,12 @@ export default {
       capacityConflictMode: 'Comportement en cas de conflit',
       name: 'Nom de l\'installation',
       planningColor: 'Couleur dans le planning',
-      type: 'Type',
+      type: 'Type — requis',
     },
     hints: {
       addressSelection: 'Sélectionne une adresse dans la liste pour activer le GPS.',
       gpsActive: '✓ GPS activé',
-      planningColor: 'Cette couleur apparaîtra dans le planning pour identifier rapidement l\'installation.',
+      planningColor: 'Elle sert à repérer l\'installation dans le planning — elle apparaît en pastille sur sa carte.',
     },
     placeholders: {
       address: 'Ex: 12 Rue du Stade...',

@@ -461,12 +461,12 @@ describe('FacilityForm — valeurs envoyees par les 2 modes de conflit', () => {
       .toBe('allow_and_notify');
   });
 
-  it('retour sur « Demande en attente » : la valeur repasse a « pending_validation »', async () => {
+  it('retour sur « Demande à valider » : la valeur repasse a « pending_validation »', async () => {
     const arbre = await monterEcran();
     await remplirLeMinimumValide();
 
     await appuyerSur(arbre, 'notifier');
-    await appuyerSur(arbre, 'Demande en attente');
+    await appuyerSur(arbre, 'Demande à valider');
     await appuyerSur(arbre, 'Créer');
 
     expect(/** @type {any} */ (createFacility).mock.calls[0][0].capacityConflictMode)
@@ -620,13 +620,21 @@ describe('FacilityForm — refonte D2 « page resserree »', () => {
     expect(occurrences).toBe(1);
   });
 
-  it('l apercu garde ses 3 puces : capacite, type, mode de conflit', async () => {
+  // D2 avait fige l'apercu par `it('l apercu garde ses 3 puces')`, parce qu'a
+  // l'epoque il portait de l'information que le formulaire n'affichait pas.
+  // D51 supprime l'apercu : chaque reglage annonce desormais son propre etat,
+  // et repeter le tout en bas de page ne faisait qu'allonger l'ecran. Le test
+  // n'est pas retire, il est RETOURNE — il garde la meme surface d'observation.
+  it('l apercu redondant a disparu, les reglages parlent d eux-memes', async () => {
     const arbre = await monterEcran();
     const texte = texteDe(arbre.root);
 
-    expect(texte).toContain('1 équipe simultanée');
-    expect(texte).toContain('Terrain');
-    expect(texte).toContain('Demande en attente');
+    // Cette chaine n'existait QUE dans l'apercu : le pas-a-pas de capacite
+    // affiche le nombre seul, et son unite toujours au pluriel.
+    expect(texte).not.toContain('1 équipe simultanée');
+
+    expect(texte).toContain('Capacité');
+    expect(texte).toContain('Demande à valider');
   });
 
   it('la palette entiere reste proposee, ni couleur perdue ni couleur inventee', async () => {
@@ -641,5 +649,41 @@ describe('FacilityForm — refonte D2 « page resserree »', () => {
     );
 
     expect([...couleursProposees].sort()).toEqual([...FACILITY_PLANNING_PALETTE].sort());
+  });
+});
+
+describe('FacilityForm — refonte D51 ecran 04', () => {
+  it('le type annonce qu il est requis', async () => {
+    const arbre = await monterEcran();
+
+    expect(texteDe(arbre.root)).toContain('Type — requis');
+  });
+
+  it('le libelle du mode par defaut est complet, jamais abrege', async () => {
+    const arbre = await monterEcran();
+
+    expect(texteDe(arbre.root)).toContain('Demande à valider');
+    expect(texteDe(arbre.root)).not.toContain('Demande en attente');
+  });
+
+  it('la couleur dit a quoi elle sert', async () => {
+    const arbre = await monterEcran();
+
+    expect(texteDe(arbre.root)).toContain('repérer l\'installation dans le planning');
+  });
+
+  // Le vrai garde-fou contre le saut de mise en page : les DEUX modes portent
+  // une explication non vide. Une hauteur reservee ne sert a rien si l'un des
+  // deux etats laisse la place vide — c'est la bascule plein/vide qui fait
+  // sauter le formulaire, pas la difference de longueur entre deux phrases.
+  it('les deux modes affichent une explication : jamais de case vide', async () => {
+    const arbre = await monterEcran();
+    const texteAttente = texteDe(arbre.root);
+
+    expect(texteAttente).toContain('Le créneau passe en demande');
+
+    await appuyerSur(arbre, 'notifier');
+
+    expect(texteDe(arbre.root)).toContain('Le créneau reste confirmé');
   });
 });

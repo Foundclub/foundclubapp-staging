@@ -6,7 +6,6 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -76,15 +75,6 @@ const FACILITY_TYPES = [
   { label: 'Club House', value: 'Club House' },
 ];
 
-const getAddressLabel = (address) => {
-  if (!address) return 'Adresse non renseignée';
-  if (typeof address === 'string') return address;
-  if (typeof address === 'object') {
-    return address?.label || address?.description || 'Adresse non renseignée';
-  }
-  return 'Adresse non renseignée';
-};
-
 const getAddressCoordinates = (address) => {
   if (!address || typeof address !== 'object') return null;
 
@@ -126,14 +116,6 @@ const normalizeAddressPayload = (address) => {
   };
 };
 
-const getCapacityLabel = (value, t) => {
-  const teams = Number(value || 1);
-  const unit = teams > 1
-    ? t('facilityForm.capacity.teamPlural', 'équipes simultanées')
-    : t('facilityForm.capacity.teamSingular', 'équipe simultanée');
-  return `${teams} ${unit}`;
-};
-
 const sanitizeRouteParam = (value) => {
   const normalizedValue = String(value || '').trim();
   if (!normalizedValue || normalizedValue.startsWith(':')) {
@@ -149,7 +131,10 @@ const FACILITY_CONFLICT_MODE_OPTIONS = [
   {
     descriptionFallback: 'Le créneau passe en demande, un dirigeant valide avant confirmation.',
     descriptionKey: 'facilityForm.conflictModes.pending.description',
-    labelFallback: 'Demande en attente',
+    // D51 : « Demande en attente » decrivait l'etat du creneau, pas le choix
+    // qu'on fait. Le libelle dit maintenant ce que l'option DECLENCHE, et il
+    // est complet — un libelle systeme ne se tronque jamais.
+    labelFallback: 'Demande à valider',
     labelKey: 'facilityForm.conflictModes.pending.label',
     value: FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
   },
@@ -187,20 +172,27 @@ const STEPPER_VALUE_STYLE = {
   textAlign: /** @type {const} */ ('center'),
 };
 
-// 10 pastilles sur UNE ligne : 24 px est le plus grand diametre qui tienne sur
-// un ecran de 360 px une fois retires les marges et le liseret de selection.
+// D51 : 34 pt, la taille du pack. Les 10 pastilles ne tiennent alors PLUS sur
+// une ligne (34 x 10 = 340 pt pour 328 pt utiles sur un ecran de 360), donc
+// elles passent sur deux rangees — c'est ce que fait le mock de reference.
+// Le hitSlop porte la cible reelle a 44 pt sans grossir le rond.
 const PLANNING_SWATCH_STYLE = {
   alignItems: /** @type {const} */ ('center'),
   borderRadius: 999,
-  height: 24,
+  height: 34,
   justifyContent: /** @type {const} */ ('center'),
-  width: 24,
+  width: 34,
+};
+
+// 5 de marge sur chaque bord : 34 + 5 + 5 = 44 pt de cible effective.
+const PLANNING_SWATCH_HIT_SLOP = {
+  bottom: 5, left: 5, right: 5, top: 5,
 };
 
 const PLANNING_SWATCH_DOT_STYLE = {
   borderRadius: 999,
-  height: 8,
-  width: 8,
+  height: 12,
+  width: 12,
 };
 
 const TYPE_CHIP_STYLE = {
@@ -208,10 +200,11 @@ const TYPE_CHIP_STYLE = {
   paddingHorizontal: 12,
 };
 
-const PREVIEW_DOT_STYLE = {
-  borderRadius: 999,
-  height: 10,
-  width: 10,
+// 38 pt = deux lignes de p3. L'explication sous les pilules change de longueur
+// selon le mode choisi : sans plancher, tout ce qui suit remonte ou descend a
+// chaque bascule.
+const CONFLICT_HINT_STYLE = {
+  minHeight: 38,
 };
 
 /** @type {{ address: any, capacityConflictMode: string, maxSlots: number, name: string, planningColor: string, type: string }} */
@@ -231,7 +224,7 @@ const DEFAULT_FORM_VALUES = {
 function FacilityForm() {
   const { t } = useTranslation();
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
@@ -266,7 +259,6 @@ function FacilityForm() {
     handleSubmit,
     reset,
     setError,
-    watch,
   } = useForm({
     defaultValues: DEFAULT_FORM_VALUES,
     resolver: joiResolver(schema),
@@ -275,12 +267,10 @@ function FacilityForm() {
   const [loading, setLoading] = useState(false);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
-  const watchedName = watch('name');
-  const watchedType = watch('type');
-  const watchedAddress = watch('address');
-  const watchedMaxSlots = watch('maxSlots');
-  const watchedPlanningColor = watch('planningColor');
-  const watchedCapacityConflictMode = watch('capacityConflictMode');
+  // D51 : les 6 `watch()` sont partis avec l'apercu. Chaque reglage affiche
+  // desormais son propre etat depuis son Controller — plus rien a observer
+  // depuis l'exterieur du formulaire, donc plus de re-rendu global a chaque
+  // frappe dans le champ « Nom ».
   const isMissingCreateContext = !isEdit && !contextClubId && !contextCmId;
   const isFacilityNotFound = isEdit && !facilityLoading && !facilityError && !facility;
 
@@ -324,8 +314,10 @@ function FacilityForm() {
     'Couleur dans le planning',
   );
   const capacityUnitLabel = t('facilityForm.capacity.teamPlural', 'équipes simultanées');
-  const previewConflictOption = getConflictModeOption(watchedCapacityConflictMode);
-  const previewTypeLabel = watchedType || t('facilityForm.defaults.type', 'Type inconnu');
+  const planningColorHint = t(
+    'facilityForm.hints.planningColor',
+    'Elle sert à repérer l\'installation dans le planning — elle apparaît en pastille sur sa carte.',
+  );
 
   const handleSave = async (data) => {
     const facilityDocumentId = facility?.documentId || facility?.id || routedFacilityId;
@@ -396,46 +388,6 @@ function FacilityForm() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const renderMetaChip = (label, tone = 'primary') => {
-    const chipStyleByTone = {
-      neutral: {
-        backgroundColor: Colors.neutral800,
-        borderColor: Colors.neutral500,
-        textColor: Colors.neutral200,
-      },
-      primary: {
-        backgroundColor: `${Colors.primary500}1F`,
-        borderColor: Colors.primary500,
-        textColor: Colors.primary500,
-      },
-      warning: {
-        backgroundColor: `${Colors.warning500}1F`,
-        borderColor: Colors.warning500,
-        textColor: Colors.warning500,
-      },
-    };
-    const chipStyle = chipStyleByTone[tone] || chipStyleByTone.primary;
-
-    return (
-      <View
-        style={[
-          ApplicationStyle.borderRadius12,
-          Spaces.paddingHorizontal[8],
-          Spaces.paddingVertical[4],
-          {
-            backgroundColor: chipStyle.backgroundColor,
-            borderColor: chipStyle.borderColor,
-            borderWidth: 1,
-          },
-        ]}
-      >
-        <Text style={[Fonts.p3Bold, { color: chipStyle.textColor }]}>
-          {label}
-        </Text>
-      </View>
-    );
   };
 
   if (isEdit && facilityLoading && !facility) {
@@ -561,7 +513,7 @@ function FacilityForm() {
               render={({ field: { onChange, value } }) => (
                 <View style={[Spaces.gap[8]]}>
                   <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                    {t('facilityForm.fields.type', 'Type')}
+                    {t('facilityForm.fields.type', 'Type — requis')}
                   </Text>
                   <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
                     {FACILITY_TYPES.map((typeItem) => {
@@ -631,7 +583,16 @@ function FacilityForm() {
                       options={conflictModeOptions}
                       value={value}
                     />
-                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {/* Hauteur reservee : les deux explications ne font pas la */}
+                    {/* meme longueur, et sans plancher le formulaire sautait a */}
+                    {/* chaque bascule de pilule. 38 pt = 2 lignes de p3. */}
+                    <Text
+                      style={[
+                        Fonts.p3,
+                        Fonts.neutral300,
+                        CONFLICT_HINT_STYLE,
+                      ]}
+                    >
                       {t(activeOption.descriptionKey, activeOption.descriptionFallback)}
                     </Text>
                   </View>
@@ -713,14 +674,22 @@ function FacilityForm() {
                       style={[
                         Alignments.row,
                         Alignments.alignCenter,
-                        Alignments.justifySpaceBetween,
+                        Alignments.wrap,
+                        Spaces.gap[12],
                       ]}
                     >
                       {FACILITY_PLANNING_PALETTE.map((color) => {
                         const isSelected = selectedColor === color;
                         return (
                           <TouchableOpacity
+                            accessibilityLabel={t(
+                              'facilityForm.accessibility.planningColor',
+                              'Couleur de planning',
+                            )}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected: isSelected }}
                             activeOpacity={0.85}
+                            hitSlop={PLANNING_SWATCH_HIT_SLOP}
                             key={color}
                             onPress={() => onChange(color)}
                             style={[
@@ -746,6 +715,9 @@ function FacilityForm() {
                         );
                       })}
                     </View>
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                      {planningColorHint}
+                    </Text>
                     {errors.planningColor?.message ? (
                       <Text style={[Fonts.p3, Fonts.error700]}>
                         {t('facilityForm.errors.planningColorInvalid', errors.planningColor.message)}
@@ -757,61 +729,9 @@ function FacilityForm() {
             />
           </View>
 
-          <View
-            style={[
-              ApplicationStyle.backgroundColor.primary700,
-              ApplicationStyle.borderRadius16,
-              Spaces.padding[12],
-              Spaces.gap[8],
-              { borderColor: `${Colors.primary200}66`, borderWidth: 1 },
-            ]}
-          >
-            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-              <View
-                style={[
-                  PREVIEW_DOT_STYLE,
-                  {
-                    backgroundColor: isValidFacilityPlanningColor(watchedPlanningColor)
-                      ? String(watchedPlanningColor).toUpperCase()
-                      : FACILITY_PLANNING_PALETTE[0],
-                  },
-                ]}
-              />
-              <Text
-                numberOfLines={1}
-                style={[Fonts.p2Bold, Fonts.neutral00, Alignments.fill]}
-              >
-                {watchedName?.trim() || t('facilityForm.defaults.name', 'Nom de l\'installation')}
-              </Text>
-            </View>
-
-            <View style={[Alignments.row, Alignments.wrap, Spaces.gap[4]]}>
-              {renderMetaChip(getCapacityLabel(watchedMaxSlots, t), 'primary')}
-              {renderMetaChip(previewTypeLabel, 'neutral')}
-              {renderMetaChip(
-                t(previewConflictOption.labelKey, previewConflictOption.labelFallback),
-                watchedCapacityConflictMode === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY
-                  ? 'primary'
-                  : 'warning',
-              )}
-            </View>
-
-            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4]]}>
-              <Image
-                source={Images.pin}
-                style={[
-                  ApplicationStyle.icon16,
-                  ApplicationStyle.tintColor.primary200,
-                ]}
-              />
-              <Text
-                numberOfLines={1}
-                style={[Fonts.small, Fonts.primary100, Alignments.fill]}
-              >
-                {getAddressLabel(watchedAddress)}
-              </Text>
-            </View>
-          </View>
+          {/* D51 : l'apercu qui repetait nom, capacite, type, mode de conflit */}
+          {/* et adresse a ete retire. Chaque reglage annonce son propre etat */}
+          {/* juste au-dessus ; le redire en bas ne faisait qu'allonger la page. */}
 
           <View style={[Spaces.gap[4]]}>
             <Button
