@@ -368,14 +368,14 @@ function TacticalBoard() {
 
   let headerTitle = "Composition d'équipe";
   if (isTeamDefaultMode) {
-    headerTitle = "Favori d'équipe";
+    headerTitle = 'Composition type';
   } else if (readOnly) {
     headerTitle = 'Composition publiée';
   }
 
   let headerModeLabel = 'Édition';
   if (isTeamDefaultMode) {
-    headerModeLabel = "Favori d'équipe";
+    headerModeLabel = 'Composition type';
   } else if (readOnly) {
     headerModeLabel = 'Lecture seule';
   }
@@ -390,7 +390,7 @@ function TacticalBoard() {
   const totalPlayersCount = fieldPlayers.length + benchPlayers.length;
   let primaryActionTitle = "Publier la composition d'équipe";
   if (isTeamDefaultMode) {
-    primaryActionTitle = isSaving ? 'Enregistrement...' : 'Enregistrer le favori';
+    primaryActionTitle = isSaving ? 'Enregistrement...' : 'Enregistrer la composition type';
   } else if (isPublishing) {
     primaryActionTitle = 'Publication...';
   }
@@ -434,31 +434,31 @@ function TacticalBoard() {
   }
 
   const selectionSource = isTeamDefaultMode ? 'default_composition' : 'draft';
-  const selectionSourceLabel = isTeamDefaultMode ? "Favori d'équipe" : 'Brouillon';
+  const selectionSourceLabel = isTeamDefaultMode ? 'Composition type' : 'Brouillon';
   const saveDraftLabel = isSaving ? 'Sauvegarde...' : 'Sauvegarder ce brouillon';
-  const teamModelLabel = isTeamDefaultMode ? 'Enregistrer le favori' : 'Mettre cette composition en favori';
+  const teamModelLabel = isTeamDefaultMode ? 'Enregistrer la composition type' : 'Enregistrer comme composition type';
 
   const statusCard = useMemo(() => {
     if (isTeamDefaultMode) {
       if (compositionMeta?.composition?.updatedAt) {
         return {
           accent: Colors.primary500,
-          eyebrow: 'Favori actif',
+          eyebrow: 'Composition type active',
           lines: [
             `Dernière mise à jour le ${formatDateTime(compositionMeta.composition.updatedAt)}`,
-            'Tu peux le réutiliser comme base sur les prochains matchs.',
+            'Tu peux la réutiliser comme base sur les prochains matchs.',
           ],
-          title: 'Composition favorite enregistrée',
+          title: 'Composition type enregistrée',
         };
       }
 
       return {
         accent: Colors.primary300,
-        eyebrow: 'Favori',
+        eyebrow: 'Composition type',
         lines: [
-          'Place les joueurs sur le terrain puis enregistre ce favori pour répartir plus vite ensuite.',
+          'Place les joueurs sur le terrain puis enregistre cette composition type pour répartir plus vite ensuite.',
         ],
-        title: "Prépare un favori pour l'équipe",
+        title: "Prépare une composition type pour l'équipe",
       };
     }
 
@@ -958,7 +958,7 @@ function TacticalBoard() {
         queryClient.invalidateQueries({ queryKey: ['teamDefaultComposition', teamId] });
         queryClient.invalidateQueries({ queryKey: ['team', teamId] });
         if (showSuccess) {
-          Alert.alert('Succès', 'Composition favorite enregistrée.');
+          Alert.alert('Succès', 'Composition type enregistrée.');
         }
         return true;
       }
@@ -1005,9 +1005,9 @@ function TacticalBoard() {
   ]);
 
   const confirmExitWithUnsavedChanges = useCallback((onDiscard) => {
-    const saveLabel = isTeamDefaultMode ? 'Enregistrer le favori' : 'Sauvegarder le brouillon';
+    const saveLabel = isTeamDefaultMode ? 'Enregistrer la composition type' : 'Sauvegarder le brouillon';
     const message = isTeamDefaultMode
-      ? "Tu as des modifications non enregistrées sur le favori d'équipe. Tu peux l'enregistrer avant de quitter, ou fermer sans enregistrer."
+      ? "Tu as des modifications non enregistrées sur la composition type. Tu peux l'enregistrer avant de quitter, ou fermer sans enregistrer."
       : 'Tu as des modifications non enregistrées sur cette composition. Tu peux sauvegarder le brouillon avant de quitter, ou fermer sans enregistrer.';
 
     Alert.alert(
@@ -1101,9 +1101,9 @@ function TacticalBoard() {
       }
       queryClient.invalidateQueries({ queryKey: ['teamDefaultComposition', teamId] });
       queryClient.invalidateQueries({ queryKey: ['team', teamId] });
-      Alert.alert('Succès', "Cette composition a été enregistrée comme favori d'équipe.");
+      Alert.alert('Succès', 'Cette composition a été enregistrée comme composition type.');
     } catch (error) {
-      Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible d'enregistrer le favori d'équipe."));
+      Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible d'enregistrer la composition type."));
     } finally {
       setIsSaving(false);
     }
@@ -1116,8 +1116,8 @@ function TacticalBoard() {
     }
 
     Alert.alert(
-      'Retirer le favori',
-      "Cette action retire le favori d'équipe.",
+      'Retirer la composition type',
+      'Cette action retire la composition type de cette équipe.',
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -1129,9 +1129,9 @@ function TacticalBoard() {
               setBenchPlayers(poolPlayers.filter((player) => !(player?.isManual || String(player?.id || player?.documentId || '').startsWith('manual_'))));
               queryClient.invalidateQueries({ queryKey: ['teamDefaultComposition', teamId] });
               queryClient.invalidateQueries({ queryKey: ['team', teamId] });
-              Alert.alert('Succès', "Favori d'équipe supprimé.");
+              Alert.alert('Succès', 'Composition type supprimée.');
             } catch (error) {
-              Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible de supprimer le favori d'équipe."));
+              Alert.alert('Erreur', getCompositionErrorMessage(error, 'Impossible de supprimer la composition type.'));
             }
           },
           style: 'destructive',
@@ -1569,7 +1569,7 @@ function TacticalBoard() {
                       <Button
                         disabled={isSaving || isPublishing}
                         onPress={handleDeleteTeamDefault}
-                        title="Retirer le favori"
+                        title="Retirer la composition type"
                         variant="Secondary"
                       />
                     </View>
@@ -1582,7 +1582,7 @@ function TacticalBoard() {
                         Brouillon : garde tes changements prives pour {isDetectionEvent ? 'cette détection' : 'ce match'}, sans les publier.
                       </Text>
                       <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
-                        Favori d'equipe : reutilise cette composition comme base de depart sur les prochains evenements.
+                        Composition type : reutilise cette composition comme base de depart sur les prochains evenements.
                       </Text>
                     </View>
                   ) : null}

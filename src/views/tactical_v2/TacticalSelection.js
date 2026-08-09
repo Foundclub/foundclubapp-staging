@@ -147,7 +147,7 @@ function TacticalSelection() {
     //    de "Modifier les joueurs". Elle prime TOUJOURS sur le brouillon serveur,
     //    sinon la selection locale du coach serait ecrasee silencieusement par le fetch.
     // 2. A defaut, le brouillon serveur.
-    // 3. Sinon, la composition de bootstrap (favori d'equipe / dernier match).
+    // 3. Sinon, la composition de bootstrap (composition type / dernier match).
     const explicitComposition = (() => {
       if (existingCompositionParam && typeof existingCompositionParam === 'object') {
         if (existingCompositionParam?.schemaVersion === 2 && existingCompositionParam?.byTeam) {
@@ -230,11 +230,11 @@ function TacticalSelection() {
     && (isEventFetching || isCompositionFetching);
   const isTeamResolutionBlocked = !isTeamDefaultMode && Boolean(eventId) && !teamId && !isResolvingTeam;
   const sourceLabel = useMemo(() => {
-    if (isTeamDefaultMode) return "Favori d'équipe";
+    if (isTeamDefaultMode) return 'Composition type';
     if (teamCompositionPayload?.draft) return 'Brouillon';
     return editorSourceLabel
       || (editorSource === 'default_composition'
-        ? "Favori d'équipe"
+        ? 'Composition type'
         : editorSource === 'last_match'
           ? 'Dernier match'
           : null);
@@ -362,7 +362,7 @@ function TacticalSelection() {
   // Add manual player
   const handleAddManualPlayer = useCallback(() => {
     if (isTeamDefaultMode) {
-      Alert.alert('Indisponible', "Le favori d'équipe ne peut contenir que les joueurs de l'équipe.");
+      Alert.alert('Indisponible', "La composition type ne peut contenir que les joueurs de l'équipe.");
       return;
     }
 
@@ -633,7 +633,7 @@ function TacticalSelection() {
       <View style={styles.header}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
         <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
-          {isTeamDefaultMode ? "Favori d'équipe" : 'Sélection des joueurs'}
+          {isTeamDefaultMode ? 'Composition type' : 'Sélection des joueurs'}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -729,7 +729,7 @@ function TacticalSelection() {
         ) : null}
         {isTeamDefaultMode && isDefaultCompositionFetching ? (
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
-            Chargement du favori d'équipe...
+            Chargement de la composition type...
           </Text>
         ) : null}
         {isResolvingTeam ? (

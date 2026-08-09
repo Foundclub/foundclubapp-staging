@@ -2627,7 +2627,7 @@ function EventDetails({ navigation, route }) {
   const getCompositionSourceLabel = useCallback((source) => {
     switch (source) {
       case 'default_composition':
-        return "Favori d'équipe";
+        return t('eventDetails.compositionSource.defaultComposition', 'Composition type');
       case 'draft':
         return 'Brouillon';
       case 'last_match':
@@ -2637,7 +2637,7 @@ function EventDetails({ navigation, route }) {
       default:
         return 'Nouvelle composition';
     }
-  }, []);
+  }, [t]);
 
   const compositionTeamId = useMemo(() => {
     const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
