@@ -136,6 +136,69 @@ describe('D08 — getEventWizardStepCount : combien d etapes, par parcours', () 
   });
 });
 
+// ---------------------------------------------------------------------------
+// FILET D58 (E6) — LE COMPTEUR « Etape n/8 », TYPE PAR TYPE
+//
+// D58 fond les postes recherches dans l'etape Participants pour ramener la
+// detection a 8 etapes, comme le pack. Le tunnel est a geometrie variable : le
+// nombre d'etapes depend du type, du sport, et de la recurrence. Ce tableau
+// fige ce que la machine repond AUJOURD'HUI pour CHAQUE parcours, avant la
+// fusion. Apres elle, une seule ligne doit bouger — celle de la detection
+// simple sur un sport a postes, 9 → 8. Toute autre ligne qui change est une
+// regression, et c'est precisement ce que ce filet est la pour attraper.
+// ---------------------------------------------------------------------------
+
+/** Un sport absent de `SPORTS_WITH_POSITIONS` : sa detection n'a pas de postes. */
+const equipeSansPostes = { sport: { name: 'Petanque' } };
+
+const typeAutre = { name: 'Autre' };
+
+/** Une detection recurrente : les postes sont indisponibles, l'etape sautait deja. */
+const etatDetectionRecurrente = { ...etatDetectionAvecCreneaux, isRecurrent: true };
+
+/** Une detection sur un sport sans postes : rien a demander, l'etape sautait deja. */
+const etatDetectionSansPostes = { ...etatDetectionAvecCreneaux, team: equipeSansPostes };
+
+describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
+  test.each([
+    ['match officiel', { type: typeMatch }, 8],
+    ['entrainement ouvert', { type: typeEntrainement }, 8],
+    ['entrainement prive', etatEntrainementFerme, 7],
+    ['stage', { type: typeStage }, 8],
+    ['tournoi', { type: typeTournoi }, 10],
+    ['autre', { type: typeAutre }, 8],
+    ['detection recurrente', etatDetectionRecurrente, 8],
+    ['detection sans postes', etatDetectionSansPostes, 8],
+  ])('%s compte %i etapes, et la fusion D58 n y touche pas', (_nom, etat, attendu) => {
+    expect(getEventWizardStepCount(etat)).toBe(attendu);
+  });
+
+  // 🎯 LA SEULE LIGNE QUE D58 FERA BOUGER, et elle est ecrite ici a sa valeur
+  // D'AUJOURD'HUI. Le pack « Tunnel Evenement » du 2026-08-05 promet 8 etapes ;
+  // cette detection-la en compte 9 parce que les postes recherches forment
+  // encore un ecran a eux seuls. Mesure du 2026-08-10, avant la fusion.
+  test('la detection simple sur un sport a postes compte 9 etapes — AVANT la fusion', () => {
+    expect(getEventWizardStepCount(etatDetectionAvecCreneaux)).toBe(9);
+  });
+
+  test('le tournoi est le seul parcours a depasser 8 etapes', () => {
+    const parcoursA8Maximum = [
+      { type: typeMatch },
+      { type: typeEntrainement },
+      etatEntrainementFerme,
+      { type: typeStage },
+      { type: typeAutre },
+      etatDetectionRecurrente,
+      etatDetectionSansPostes,
+    ];
+
+    parcoursA8Maximum.forEach(
+      (etat) => expect(getEventWizardStepCount(etat)).toBeLessThanOrEqual(8),
+    );
+    expect(getEventWizardStepCount({ type: typeTournoi })).toBe(10);
+  });
+});
+
 describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
   test('l evenement simple traverse 8 ecrans, dans cet ordre', () => {
     expect(getEventWizardStepRoutes({ type: typeMatch })).toEqual([

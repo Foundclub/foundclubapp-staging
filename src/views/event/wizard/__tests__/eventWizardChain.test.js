@@ -67,6 +67,9 @@ const mockDonnees = {
     { documentId: 'type-detection', name: 'Detection' },
     { documentId: 'type-stage', name: 'Stage' },
     { documentId: 'type-tournoi', name: 'Tournoi' },
+    // Ajoute par D58 : le filet « un test par type » avait un trou, « Autre »
+    // n'etait traverse par aucun parcours.
+    { documentId: 'type-autre', name: 'Autre' },
   ],
 };
 
@@ -613,6 +616,51 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
       RouteNames.EventWizardRecap,
     ]);
     expect(chaine).not.toContain(RouteNames.EventWizardParticipants);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FILET D58 (E6) — moitie TRANSITIONS du « un test par type d evenement ».
+//
+// Le tableau des NUMEROS vit dans `eventWizardDetectionUtils.test.js`. Ici on
+// MARCHE vraiment dans le tunnel, type par type, et on releve le nombre
+// d'etapes annonce a l'ecran. Deux parcours n'etaient traverses par aucun test
+// avant ce lot : l'entrainement OUVERT (seul son jumeau prive l'etait) et
+// « Autre ». Mesure du 2026-08-10, avant la fusion des postes recherches.
+// ---------------------------------------------------------------------------
+describe('D58 — chaque type traverse son parcours, et annonce son compte', () => {
+  test.each([
+    ['Match', 8],
+    ['Entrainement', 8],
+    ['Stage', 8],
+    ['Tournoi', 10],
+    ['Autre', 8],
+  ])('un parcours %s annonce %i etapes de bout en bout', (nomDuType, attendu) => {
+    const marche = marcherDansLeTunnel({ nomDuType });
+
+    expect(totalAnnonceALaFin(marche)).toBe(attendu);
+    expect(marche.chaine[marche.chaine.length - 1]).toBe(RouteNames.EventWizardRecap);
+  });
+
+  test('un entrainement OUVERT garde son etape Participants', () => {
+    // Son jumeau ferme la saute (`shouldSkipEventWizardParticipantsStep`) : sans
+    // ce cas, rien ne distinguait « saute a bon escient » de « saute toujours ».
+    const { chaine } = marcherDansLeTunnel({ nomDuType: 'Entrainement' });
+
+    expect(chaine).toContain(RouteNames.EventWizardParticipants);
+  });
+
+  test('« Autre » suit exactement le parcours d un evenement standard', () => {
+    expect(marcherDansLeTunnel({ nomDuType: 'Autre' }).chaine).toEqual([
+      RouteNames.EventWizardType,
+      RouteNames.EventWizardTeam,
+      RouteNames.EventWizardLogistics,
+      RouteNames.EventWizardLocation,
+      RouteNames.EventWizardParticipants,
+      RouteNames.EventWizardAccess,
+      RouteNames.EventWizardDescription,
+      RouteNames.EventWizardRecap,
+    ]);
   });
 });
 
