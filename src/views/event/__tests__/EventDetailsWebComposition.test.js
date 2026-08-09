@@ -1,0 +1,314 @@
+import renderer, { act } from 'react-test-renderer';
+
+// D48 (E6) : EventDetails.web.js fait 1 754 lignes et n'avait AUCUN test.
+//
+// Ce que ce fichier verrouille, et pourquoi il existe :
+// `web` compile PHYSIQUEMENT les sources de `app` (vite.config.ts pointe
+// ../app/src), et un fichier `.web.js` REMPLACE son jumeau sans suffixe.
+// Aucune porte de `app` ne compare les deux ⇒ une divergence entre eux vit
+// indefiniment, en silence. C'est la 4e fois que ce motif coute un correctif
+// (D08, D22, D40, D48).
+//
+// Le lot D44 a fait lire au board l'etiquette `eventKind` pour qu'un match
+// cesse d'afficher les commandes de la detection. Le telephone la transmet
+// (EventDetails.js:3197) ; le site ne la calculait meme pas.
+//
+// La couture choisie est la CHARGE ENVOYEE AU BOARD, pas la forme de l'arbre :
+// c'est le seul contrat que le board lit, et il survit a tout redessin du site.
+// Les DEUX portes du site sont couvertes — « Gerer la composition d'equipes »
+// et « Voir la composition publiee » — parce que ne reparer que celle citee au
+// ticket laisserait un appelant frere casse.
+
+const mockNavigate = jest.fn();
+const mockUseAuth = jest.fn();
+const mockEventQuery = { data: null };
+const mockConvocationQuery = { data: null };
+
+jest.mock('@tanstack/react-query', () => ({
+  useMutation: (/** @type {any} */ options) => ({
+    isPending: false,
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    options,
+  }),
+  useQueryClient: () => ({
+    invalidateQueries: jest.fn(),
+    setQueryData: jest.fn(),
+  }),
+}));
+
+// Le theme est monte avec les VRAIS modules : un mock en Proxy rend les echecs
+// Jest illisibles (piege paye au lot paywall).
+jest.mock('@/theme/themeContext', () => {
+  const generateColors = jest.requireActual('@/theme/colors').default;
+  const generateFonts = jest.requireActual('@/theme/fonts').default;
+  const generateApplicationStyle = jest.requireActual('@/theme/applicationStyle').default;
+  const Alignments = jest.requireActual('@/theme/alignements').default;
+  const Spaces = jest.requireActual('@/theme/spaces').default;
+  const Colors = generateColors();
+  return {
+    __esModule: true,
+    default: () => ({
+      Alignments,
+      ApplicationStyle: generateApplicationStyle(Colors),
+      Colors,
+      Fonts: generateFonts(Colors),
+      Images: new Proxy({}, { get: () => 1 }),
+      scheme: 'dark',
+      Spaces,
+    }),
+  };
+});
+
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => mockUseAuth(),
+}));
+
+const emptyQuery = () => ({
+  data: null,
+  isFetching: false,
+  isLoading: false,
+  refetch: jest.fn(),
+});
+
+jest.mock('@/services/event/eventQueries', () => ({
+  useGetEvent: () => ({
+    data: mockEventQuery.data,
+    dataUpdatedAt: 1,
+    error: null,
+    isFetching: false,
+    isLoading: false,
+    refetch: jest.fn(),
+  }),
+  useGetEventConvocation: () => ({ ...emptyQuery(), data: mockConvocationQuery.data }),
+  useGetEventTeamComposition: () => emptyQuery(),
+}));
+
+jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
+  useGetEventParticipations: () => emptyQuery(),
+}));
+
+jest.mock('@/services/event/eventService', () => ({ updateEvent: jest.fn() }));
+
+jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
+  createEventParticipation: jest.fn(),
+  deleteEventParticipation: jest.fn(),
+}));
+
+jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
+  createCustomTournamentTeam: jest.fn(),
+  registerClubTeamToTournament: jest.fn(),
+  reviewTournamentTeamRegistration: jest.fn(),
+}));
+
+jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest.fn() }));
+
+jest.mock('@/platform/share', () => ({ share: jest.fn() }));
+
+// `@/utils/imageUrl` n'expose un DEFAUT que dans sa variante `.web.js` ; le
+// fichier sans suffixe n'a que l'export nomme. Vite resout bien la variante web
+// en production, mais Jest (preset react-native) prend le `.js` et le rendu
+// meurt sur « _imageUrl.default is not a function ». C'est la raison pour
+// laquelle aucun ecran `.web.js` n'avait de test jusqu'ici.
+jest.mock('@/utils/imageUrl', () => ({
+  __esModule: true,
+  default: (/** @type {string} */ url) => url || undefined,
+  getImageUrl: (/** @type {string} */ url) => url || undefined,
+}));
+
+jest.mock('@/components/templates/ScreenContainer', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function ScreenContainerDouble(/** @type {any} */ props) {
+    return react.createElement(rn.View, null, props.children);
+  };
+});
+
+// Une fabrique jest.mock est remontee en tete de fichier : elle ne peut donc pas
+// s'appuyer sur un import ESM, evalue trop tard.
+/* eslint-disable global-require */
+jest.mock(
+  '../components/EventTasksSection',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventTasksSection'),
+);
+jest.mock(
+  '../components/EventTeamAudiencesSection',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventTeamAudiencesSection'),
+);
+/* eslint-enable global-require */
+
+// eslint-disable-next-line import/first
+import EventDetailsWeb from '../EventDetails.web';
+
+// Le premier montage transpile tout le graphe d'imports de l'ecran : au-dela des
+// 5 s par defaut de Jest sur un poste froid, sans que rien ne soit casse.
+jest.setTimeout(30000);
+
+const CLUB_ID = 'club-1';
+const TEAM_ID = 'team-1';
+
+const buildEvent = (/** @type {any} */ overrides = {}) => ({
+  club: { documentId: CLUB_ID },
+  date: '2099-01-01T10:00:00.000Z',
+  documentId: 'event-1',
+  featuredRequests: [],
+  id: 1,
+  invitedTeams: [],
+  isActive: true,
+  name: 'Entrainement du mardi',
+  participations: [],
+  startTime: '10:00',
+  team: { club: { documentId: CLUB_ID }, documentId: TEAM_ID, name: 'U15' },
+  type: { name: 'Entrainement' },
+  ...overrides,
+});
+
+/** @type {any} */
+let mounted = null;
+
+const mountScreen = (/** @type {any} */ { convocation = null, event } = {}) => {
+  mockEventQuery.data = event === undefined ? buildEvent() : event;
+  mockConvocationQuery.data = convocation;
+  mockUseAuth.mockReturnValue({
+    canEditClub: () => true,
+    canEditEvent: () => true,
+    canManageEvent: () => true,
+    freeUsageSummary: null,
+    subscriptionAccessLevel: 'FREE',
+    userData: { documentId: 'user-1', role: { name: 'Dirigeant' } },
+  });
+
+  act(() => {
+    mounted = renderer.create(
+      <EventDetailsWeb
+        navigation={{
+          addListener: () => () => {},
+          goBack: jest.fn(),
+          navigate: mockNavigate,
+          setOptions: jest.fn(),
+        }}
+        route={{ params: { eventId: 'event-1' } }}
+      />,
+    );
+  });
+
+  return mounted.root;
+};
+
+const textOf = (/** @type {any} */ node) => {
+  const parts = [];
+  const walk = (/** @type {any} */ child) => {
+    if (child === null || child === undefined || child === false) return;
+    if (typeof child === 'string' || typeof child === 'number') {
+      parts.push(String(child));
+      return;
+    }
+    const children = child?.props?.children;
+    if (Array.isArray(children)) children.forEach(walk);
+    else walk(children);
+  };
+  walk(node);
+  return parts.join(' ').replace(/\s+/g, ' ').trim();
+};
+
+/**
+ * Le bouton du site qui PORTE ce libelle. Le rendu web emet de vrais `<button>`,
+ * donc on les cherche par type hote, pas par composant.
+ * @param {any} root - Racine du rendu.
+ * @param {string} label - Le libelle porte par le bouton.
+ * @returns {any} - Le bouton, ou undefined.
+ */
+const buttonWithText = (/** @type {any} */ root, /** @type {string} */ label) => root
+  .findAllByType('button')
+  .find((/** @type {any} */ node) => textOf(node).includes(label));
+
+const click = (/** @type {any} */ root, /** @type {string} */ label) => {
+  const node = buttonWithText(root, label);
+  if (!node) throw new Error(`Aucun bouton ne porte le libelle « ${label} »`);
+  act(() => {
+    node.props.onClick();
+  });
+};
+
+const lastBoardParams = () => {
+  const call = [...mockNavigate.mock.calls].reverse()
+    .find((/** @type {any} */ entry) => entry[0] === 'TacticalBoardV2');
+  return call ? call[1] : null;
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockEventQuery.data = null;
+  mockConvocationQuery.data = null;
+});
+
+afterEach(() => {
+  if (mounted) {
+    act(() => {
+      mounted.unmount();
+    });
+    mounted = null;
+  }
+});
+
+describe('le site ouvre la composition comme le telephone', () => {
+  test('« Gerer la composition d equipes » mene bien au board', () => {
+    const root = mountScreen();
+
+    click(root, "Gérer la composition d'équipes");
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'TacticalBoardV2',
+      expect.objectContaining({ eventId: 'event-1', teamId: TEAM_ID }),
+    );
+  });
+
+  test('un entrainement part avec eventKind « match »', () => {
+    const root = mountScreen();
+
+    click(root, "Gérer la composition d'équipes");
+
+    expect(lastBoardParams()).toEqual(
+      expect.objectContaining({ eventKind: 'match' }),
+    );
+  });
+
+  test('une detection part avec eventKind « detection »', () => {
+    const root = mountScreen({ event: buildEvent({ type: { name: 'Détection' } }) });
+
+    click(root, "Gérer la composition d'équipes");
+
+    expect(lastBoardParams()).toEqual(
+      expect.objectContaining({ eventKind: 'detection' }),
+    );
+  });
+
+  test('le libelle brut du type accompagne l etiquette', () => {
+    const root = mountScreen({ event: buildEvent({ type: { name: 'Détection' } }) });
+
+    click(root, "Gérer la composition d'équipes");
+
+    expect(lastBoardParams()).toEqual(
+      expect.objectContaining({ eventTypeLabel: 'Détection' }),
+    );
+  });
+
+  // La seconde porte du site. Ne reparer que la premiere laisserait un appelant
+  // frere casse — c'est exactement ce que la methode interdit.
+  test('« Voir la composition publiee » transmet la meme etiquette', () => {
+    const root = mountScreen({
+      convocation: {
+        published: { schemaVersion: 3, teams: [{ documentId: 'branch-1', placements: [] }] },
+        team: { documentId: TEAM_ID, name: 'U15' },
+      },
+      event: buildEvent({ type: { name: 'Détection' } }),
+    });
+
+    click(root, 'Voir la composition publiée');
+
+    expect(lastBoardParams()).toEqual(
+      expect.objectContaining({ eventKind: 'detection', readOnly: true }),
+    );
+  });
+});
