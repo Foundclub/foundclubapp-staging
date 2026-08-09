@@ -316,6 +316,8 @@ function EventWizardTeam({ navigation }) {
     <EventWizardTeamCard
       key={team.documentId}
       onPress={() => handleSelectTeam(team)}
+      // D58 — pack §2.2 : « Le sponsor n'apparait plus dans le tunnel. »
+      showSponsors={false}
       team={team}
     />
   );

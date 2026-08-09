@@ -22,6 +22,7 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
  * @param {boolean} [props.isSelected]
  * @param {string | null} [props.selectionSummary]
  * @param {boolean} [props.showSelectionIndicator]
+ * @param {boolean} [props.showSponsors] Affiche les sponsors du club (defaut : oui).
  * @returns {import('react').ReactElement}
  */
 function EventWizardTeamCard({
@@ -31,6 +32,13 @@ function EventWizardTeamCard({
   onPress,
   selectionSummary = null,
   showSelectionIndicator = false,
+  // D58 — le pack « Tunnel Evenement » (§2.2) retire les sponsors de l'etape
+  // « Equipe organisatrice ». ⚠️ Cette carte est PARTAGEE par 6 ecrans de 4
+  // tunnels differents (evenement, invitations, amical, recrutement) : le
+  // defaut reste donc « oui », et seul l'appelant concerne le coupe. Retirer
+  // les sponsors ici les ferait disparaitre du tunnel de recrutement, que le
+  // pack ne couvre pas.
+  showSponsors = true,
   team,
 }) {
   const { t } = useTranslation();
@@ -73,7 +81,9 @@ function EventWizardTeamCard({
     },
   ].filter((meta) => String(meta?.value || '').trim().length > 0);
 
-  const allSponsors = Array.isArray(team?.club?.sponsor) ? team.club.sponsor.filter(Boolean) : [];
+  const allSponsors = showSponsors && Array.isArray(team?.club?.sponsor)
+    ? team.club.sponsor.filter(Boolean)
+    : [];
   const sponsors = allSponsors.slice(0, 2);
   const logoFrameSize = 60;
   let selectionIndicatorNode = null;
