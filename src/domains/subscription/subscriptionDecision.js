@@ -699,6 +699,70 @@ export const getCoveredTeamCount = (entitlementsSummary, subscriptionSummary) =>
 ).size;
 
 /**
+ * L'entitlement par lequel QUELQU'UN D'AUTRE paie pour moi, ou `null`.
+ *
+ * 🔒 CE SELECTEUR REPOND A UNE QUESTION D'ARGENT : « puis-je dire a cette
+ * personne qu'elle n'a rien a payer ? ». Une reponse trop genereuse annonce la
+ * gratuite a quelqu'un qui devra payer. Les trois conditions ci-dessous sont
+ * donc cumulatives, et la plus stricte gagne :
+ *
+ *  1. le niveau d'acces est CONNU et n'est pas `FREE` — c'est le juge unique de
+ *     l'application (`getSubscriptionAccessLevel`) qui l'affirme, pas nous. Tant
+ *     que le bootstrap n'a pas repondu, on ne dit rien ;
+ *  2. la personne ne paie AUCUN plan elle-meme — sinon « tu n'as rien a payer »
+ *     serait faux : elle paie, justement ;
+ *  3. un entitlement est paye par quelqu'un d'AUTRE, et ce quelqu'un porte un
+ *     nom. Sans nom, pas de message : on ne peut pas expliquer d'ou vient la
+ *     couverture, donc on se tait.
+ *
+ * ⚠️ La portee d'une offre vient de l'ACHAT, jamais du cache d'abonnement :
+ * juste apres un achat, `subscriptionSummary` decrit encore l'ANCIEN etat. Ce
+ * selecteur ne sert donc qu'a EXPLIQUER une couverture deja etablie — jamais a
+ * decider d'un droit d'acces.
+ *
+ * Le meme calcul vit en ligne dans `views/profile/SubscriptionOverview.js`
+ * (page heros « deja couvert », handoff 7b). Il appartenait a une autre session
+ * le 2026-08-10 : le brancher ici est le pas suivant, il ne change rien au
+ * comportement.
+ * @param {object} params
+ * @param {any[]} params.entitlementsSummary
+ * @param {string | null | undefined} params.subscriptionAccessLevel
+ * @param {any} [params.subscriptionSummary]
+ * @param {string} [params.userDocumentId]
+ * @returns {any | null}
+ */
+export const getCoveringEntitlement = ({
+  entitlementsSummary,
+  subscriptionAccessLevel,
+  subscriptionSummary,
+  userDocumentId,
+}) => {
+  // 1. Le juge unique n'a pas encore parle, ou il dit « gratuit ».
+  if (!subscriptionAccessLevel || subscriptionAccessLevel === 'FREE') {
+    return null;
+  }
+
+  // 2. Cette personne paie quelque chose : ce n'est pas quelqu'un de couvert.
+  const activePlanCodes = normalizeDecisionArray(subscriptionSummary?.activePlanCodes);
+  if (activePlanCodes.length > 0) {
+    return null;
+  }
+
+  // 3. Un entitlement paye par un tiers NOMME.
+  const myDocumentId = String(userDocumentId || '').trim();
+  const candidates = normalizeDecisionArray(entitlementsSummary).filter((entry) => {
+    const payerDocumentId = String(entry?.paidBy?.documentId || '').trim();
+    return payerDocumentId
+      && payerDocumentId !== myDocumentId
+      && String(entry?.paidBy?.firstname || '').trim() !== '';
+  });
+
+  // Une couverture club porte plus loin qu'une couverture d'equipe : si les deux
+  // existent, c'est celle-la qu'il faut nommer.
+  return candidates.find((entry) => entry?.scopeType === 'CLUB') || candidates[0] || null;
+};
+
+/**
  * @param {any[]} freeUsageSummary
  * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [subscriptionAccessLevel]
  * @returns {Array<{ label: string; quotaType: string; remaining: number; total: number; used: number }>}
