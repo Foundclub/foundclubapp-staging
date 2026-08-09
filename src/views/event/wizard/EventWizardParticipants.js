@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -11,16 +12,20 @@ import useTheme from '@/theme/themeContext';
 
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import PositionSelectionList from '@/components/organisms/positionSelectionList/PositionSelectionList';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { getPositionValuesForSport } from '@/constants/positions';
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardParticipantsStepIndex,
+  getEventWizardSportName,
   getEventWizardStepCount,
   shouldExplainDetectionSlotsDisabled,
+  shouldOfferDetectionSlots,
   shouldSkipEventWizardParticipantsStep,
 } from './eventWizardDetectionUtils';
 
@@ -31,17 +36,32 @@ const CAPACITY_PRESETS = [8, 10, 12, 14, 18, 22];
 // « Capacite fixe » a 12, pas sur « Illimite ».
 const DEFAULT_CAPACITY = 12;
 
-// 🔴 CE QUE LE PACK DEMANDE ET QUE D10 NE FAIT PAS — mesure, pas oubli.
+// ✅ CE QUE D10 AVAIT SIGNALE, ET QUE D58 EXECUTE — 2026-08-10.
 //
-// La maquette 07 replie les postes recherches DANS cet ecran, derriere un
-// interrupteur, et sa legende dit mot pour mot : « L'ancien ecran 8/11
-// disparait ». Ce serait un CHANGEMENT D'ENCHAINEMENT : `EventWizardDetectionSlots`
-// est une etape a part entiere de la chaine ecrite par D08
-// (`eventWizardDetectionUtils.js` → `getEventWizardStepRoutes`), et c'est elle
-// qui met une detection a 9 etapes la ou le pack en montre 8.
-// Le prompt de ce lot l'interdit explicitement : « Aucun changement
-// d'enchainement. Si le design l'exige, D08 a rate quelque chose : signale-le,
-// ne le repare pas ici. » ⇒ signale, et les postes restent leur propre ecran.
+// D10 avait mesure l'ecart et s'etait interdit de le combler : la maquette 07
+// replie les postes recherches DANS cet ecran, derriere un interrupteur, et sa
+// legende dit mot pour mot « L'ancien ecran 8/11 disparait ». C'etait un
+// CHANGEMENT D'ENCHAINEMENT, que son prompt lui interdisait.
+//
+// Decision d'Adel du 2026-08-09 : « on fusionne ». `EventWizardDetectionSlots`
+// n'existe plus — ni ecran, ni route. Les postes sont la section ci-dessous,
+// derriere un interrupteur eteint par defaut (pack §2.5), et une detection
+// repasse de 9 a 8 etapes. La donnee, elle, n'a pas bouge : meme
+// `SET_DETECTION_SLOTS`, meme forme `[{ position, quantity }]`.
+
+/** Le plafond par poste, repris tel quel de l'ecran fusionne. */
+const MAX_SLOT_QUANTITY = 10;
+
+const normalizeSlots = (slots = []) => (
+  Array.isArray(slots)
+    ? slots
+      .filter((slot) => slot?.position && Number(slot?.quantity) > 0)
+      .map((slot) => ({
+        position: String(slot.position),
+        quantity: Math.max(1, Math.min(MAX_SLOT_QUANTITY, Number(slot.quantity) || 1)),
+      }))
+    : []
+);
 
 const clampParticipants = (value) => (
   Math.min(MAX_PARTICIPANTS, Math.max(MIN_PARTICIPANTS, value))
@@ -93,6 +113,12 @@ function EventWizardParticipants({ navigation, route }) {
   );
   const [totalPlayersValue, setTotalPlayersValue] = useState(state.totalPlayers || 5);
 
+  // D58 — les postes recherches, replies ici. L'interrupteur part allume si des
+  // postes sont deja saisis : revenir sur l'etape ne doit pas les cacher.
+  const initialSlots = useMemo(() => normalizeSlots(state.detectionSlots), [state.detectionSlots]);
+  const [areSlotsEnabled, setAreSlotsEnabled] = useState(initialSlots.length > 0);
+  const [slots, setSlots] = useState(initialSlots);
+
   const isReservation = useMemo(
     () => isReservationTypeName(state.type?.name),
     [state.type?.name],
@@ -129,6 +155,54 @@ function EventWizardParticipants({ navigation, route }) {
     totalPlayers: normalizedTotalPlayers,
   };
   const shouldShowDetectionDisabledHint = shouldExplainDetectionSlotsDisabled(projectedState);
+
+  // D58 — la section « Postes recherches ». Meme regle qu'a l'epoque de l'ecran
+  // separe : detection + sport a postes + non recurrent.
+  const shouldOfferSlots = shouldOfferDetectionSlots(projectedState);
+  const sportName = getEventWizardSportName(state);
+  const positions = useMemo(() => getPositionValuesForSport(sportName), [sportName]);
+  const slotsTotal = useMemo(
+    () => slots.reduce((sum, slot) => sum + Number(slot.quantity || 0), 0),
+    [slots],
+  );
+  const capacityLimit = normalizedCapacity;
+  const slotsExceedCapacity = (
+    shouldOfferSlots
+    && areSlotsEnabled
+    && capacityLimit !== null
+    && slotsTotal > capacityLimit
+  );
+
+  const getSlotQuantity = (position) => {
+    const slot = slots.find((item) => item.position === position);
+    return slot ? slot.quantity : 0;
+  };
+
+  const isSlotSelected = (position) => slots.some((item) => item.position === position);
+
+  const handleToggleSlotPosition = (position) => {
+    setSlots((current) => (
+      current.some((item) => item.position === position)
+        ? current.filter((item) => item.position !== position)
+        : [...current, { position, quantity: 1 }]
+    ));
+  };
+
+  const handleSlotQuantityChange = (position, delta) => {
+    setSlots((current) => current.map((item) => (
+      item.position === position
+        ? {
+          ...item,
+          quantity: Math.max(1, Math.min(MAX_SLOT_QUANTITY, item.quantity + delta)),
+        }
+        : item
+    )));
+  };
+
+  const handleSlotsEnabledChange = (nextEnabled) => {
+    setAreSlotsEnabled(nextEnabled);
+    if (!nextEnabled) setSlots([]);
+  };
 
   const hasInvalidPlayersConfig = (
     isReservation
@@ -239,6 +313,17 @@ function EventWizardParticipants({ navigation, route }) {
       type: 'SET_PARTICIPANTS',
     });
 
+    // D58 — l'enregistrement que faisait l'ecran fusionne, au meme format.
+    // ⛔ Uniquement quand la section est offerte : hors de ce cas l'ancien ecran
+    // n'etait pas traverse du tout, et ecrire ici effacerait des postes deja
+    // saisis (une detection qu'on repasse en recurrente, par exemple).
+    if (shouldOfferSlots) {
+      dispatch({
+        payload: areSlotsEnabled ? normalizeSlots(slots) : [],
+        type: 'SET_DETECTION_SLOTS',
+      });
+    }
+
     navigation.navigate(getEventWizardExitRoute(
       getEventWizardNextRoute(RouteNames.EventWizardParticipants, state),
       route?.params,
@@ -266,7 +351,7 @@ function EventWizardParticipants({ navigation, route }) {
   return (
     <WizardStepLayout
       headerVariant="focus"
-      isNextDisabled={hasInvalidPlayersConfig}
+      isNextDisabled={hasInvalidPlayersConfig || slotsExceedCapacity}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(projectedState)}
@@ -454,6 +539,112 @@ function EventWizardParticipants({ navigation, route }) {
               'Le nombre de joueurs attendus ne peut pas dépasser la capacité max.',
             )}
           </Text>
+        ) : null}
+
+        {/* D58 — « Postes recherches », replie ici derriere un interrupteur
+            (pack §2.5). Eteint par defaut : une detection se cree sans avoir a
+            repondre a cette question. */}
+        {shouldOfferSlots ? (
+          <View style={[Spaces.gap[12]]}>
+            <View
+              style={[
+                ApplicationStyle.card,
+                Alignments.row,
+                Alignments.alignCenter,
+                Alignments.justifySpaceBetween,
+                Spaces.padding[16],
+                Spaces.gap[12],
+                surfaceStyle,
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('eventWizard.steps.detectionSlots.title', 'Postes recherchés')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8], { lineHeight: 18 }]}>
+                  {t(
+                    'eventWizard.steps.detectionSlots.toggleHint',
+                    'Optionnel : les joueurs candidateront ensuite sur un poste précis.',
+                  )}
+                </Text>
+              </View>
+              <Switch
+                accessibilityLabel={t(
+                  'eventWizard.steps.detectionSlots.title',
+                  'Postes recherchés',
+                )}
+                accessibilityRole="switch"
+                onValueChange={handleSlotsEnabledChange}
+                thumbColor={areSlotsEnabled ? Colors.neutral00 : Colors.neutral300}
+                trackColor={{ false: 'rgba(255,255,255,0.16)', true: Colors.primary500 }}
+                value={areSlotsEnabled}
+              />
+            </View>
+
+            {areSlotsEnabled && positions.length > 0 ? (
+              <PositionSelectionList
+                getQuantity={getSlotQuantity}
+                isSelected={isSlotSelected}
+                onQuantityChange={handleSlotQuantityChange}
+                onToggle={handleToggleSlotPosition}
+                positions={positions}
+                selectedQuantityLabel={(quantity) => t(
+                  'eventWizard.steps.detectionSlots.positionSummary',
+                  '{{count}} place(s) sur ce poste',
+                  { count: quantity },
+                )}
+                selectedSectionTitle={t(
+                  'eventWizard.steps.detectionSlots.selectedSectionTitle',
+                  'Postes actifs',
+                )}
+                sportName={sportName}
+                unselectedActionLabel={t(
+                  'eventWizard.steps.detectionSlots.unselectedActionLabel',
+                  'Activer',
+                )}
+              />
+            ) : null}
+
+            {areSlotsEnabled && positions.length === 0 ? (
+              <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
+                {t(
+                  'eventWizard.steps.detectionSlots.emptyPositions',
+                  'Aucun poste n est actuellement défini pour ce sport.',
+                )}
+              </Text>
+            ) : null}
+
+            {/* Le compteur du pack : il dit ce qui reste libre, pas ce qui est
+                pris. Sans plafond, « sur 12 » n'aurait aucun sens. */}
+            {areSlotsEnabled && slotsTotal > 0 ? (
+              <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
+                {capacityLimit === null
+                  ? t(
+                    'eventWizard.steps.detectionSlots.slotsSummaryUnlimited',
+                    '{{count}} place(s) fléchée(s) sur un poste précis.',
+                    { count: slotsTotal },
+                  )
+                  : t(
+                    'eventWizard.steps.detectionSlots.slotsSummaryFixed',
+                    '{{count}} places fléchées sur {{capacity}} — les {{free}} autres restent libres.',
+                    {
+                      capacity: capacityLimit,
+                      count: slotsTotal,
+                      free: Math.max(0, capacityLimit - slotsTotal),
+                    },
+                  )}
+              </Text>
+            ) : null}
+
+            {slotsExceedCapacity ? (
+              <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+                {t(
+                  'eventWizard.steps.detectionSlots.capacityWarning',
+                  'Le total des places par poste dépasse la capacité de l événement.',
+                )}
+              </Text>
+            ) : null}
+          </View>
         ) : null}
 
         {shouldShowDetectionDisabledHint ? (

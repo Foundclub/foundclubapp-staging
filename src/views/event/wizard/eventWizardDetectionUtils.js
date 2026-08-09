@@ -62,7 +62,20 @@ export const getEventWizardSportName = (/** @type {any} */ state = {}) => (
   || ''
 );
 
-export const shouldShowDetectionSlotsStep = (/** @type {any} */ state = {}) => {
+/**
+ * Les postes recherches sont-ils proposes sur l'etape « Participants » ?
+ *
+ * 🔀 D58 — jusqu'au 2026-08-10 ce predicat decidait d'un ECRAN a part entiere,
+ * et c'est lui qui mettait une detection a 9 etapes la ou le pack « Tunnel
+ * Evenement » du 2026-08-05 en promet 8. Decision d'Adel du 2026-08-09 : on
+ * fusionne. Les postes sont desormais une SECTION de l'etape Participants,
+ * derriere un interrupteur (pack §2.5), et ce predicat decide de la section.
+ * Sa regle, elle, n'a pas bouge d'un iota : detection + sport a postes + non
+ * recurrent.
+ * @param {any} state Etat courant du tunnel.
+ * @returns {boolean} Vrai si la section « Postes recherches » doit etre offerte.
+ */
+export const shouldOfferDetectionSlots = (state = {}) => {
   if (isStageEventType(state?.type?.name)) return false;
   if (!isDetectionEventType(state?.type?.name)) return false;
   if (state?.isRecurrent) return false;
@@ -116,10 +129,6 @@ export const getEventWizardStepRoutes = (state = {}) => {
 
   if (!shouldSkipEventWizardParticipantsStep(state)) {
     routes.push(RouteNames.EventWizardParticipants);
-  }
-
-  if (shouldShowDetectionSlotsStep(state)) {
-    routes.push(RouteNames.EventWizardDetectionSlots);
   }
 
   routes.push(
@@ -219,10 +228,6 @@ export const getEventWizardParticipantsStepIndex = (/** @type {any} */ state = {
 
 export const getEventWizardStageProgramStepIndex = (/** @type {any} */ state = {}) => (
   getEventWizardStepIndex(RouteNames.EventWizardStageProgram, state)
-);
-
-export const getEventWizardDetectionSlotsStepIndex = (/** @type {any} */ state = {}) => (
-  getEventWizardStepIndex(RouteNames.EventWizardDetectionSlots, state)
 );
 
 /**

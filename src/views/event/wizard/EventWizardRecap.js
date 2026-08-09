@@ -1376,7 +1376,9 @@ function EventWizardRecap({ navigation }) {
                 <Text style={[Fonts.h4, Fonts.neutral00]}>
                   {t('eventWizard.steps.detectionSlots.title', 'Postes recherches')}
                 </Text>
-                <TouchableOpacity onPress={() => openStepFromRecap(RouteNames.EventWizardDetectionSlots)}>
+                {/* D58 — les postes sont une section de l'etape Participants
+                    depuis la fusion : c'est la que « Modifier » ramene. */}
+                <TouchableOpacity onPress={() => openStepFromRecap(RouteNames.EventWizardParticipants)}>
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
                 </TouchableOpacity>
               </View>

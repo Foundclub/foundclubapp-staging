@@ -415,8 +415,9 @@ describe('D10 — etape 5 · Participants', () => {
       dernierGabarit().onNext();
     });
 
-    // Football a des postes : apres Participants vient l ecran des postes.
-    expect(nav.navigate).toHaveBeenCalledWith(RouteNames.EventWizardDetectionSlots);
+    // D58 — les postes ne sont plus un ecran : apres Participants vient Acces,
+    // pour une detection comme pour un match.
+    expect(nav.navigate).toHaveBeenCalledWith(RouteNames.EventWizardAccess);
     demonter();
   });
 });
@@ -751,10 +752,12 @@ describe('D10 — etape 8 · Recapitulatif', () => {
     });
 
     it('les postes recherches gardent leur lien des qu il y en a', () => {
+      // D58 — le lien existe toujours, il mene desormais a l etape Participants
+      // ou les postes se replient. Le perdre rendrait la saisie incorrigeable.
       const etat = { ...ETAT_COMPLET, detectionSlots: [{ position: 'Gardien', quantity: 2 }] };
 
       expect(destinationsDuRecap(etat)).toEqual(expect.arrayContaining([
-        RouteNames.EventWizardDetectionSlots,
+        RouteNames.EventWizardParticipants,
       ]));
     });
 
