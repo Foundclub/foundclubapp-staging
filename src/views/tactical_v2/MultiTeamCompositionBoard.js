@@ -12,6 +12,7 @@ import {
 import {
   Alert,
   ImageBackground,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -55,6 +56,7 @@ import {
   buildDraftPayloadFromPack,
   buildPublishedBranchesFromPack,
   buildTeamEntryFromPreset,
+  getAssignedPlayerIdsFromPack,
   getCompositionPlayerId,
   getCompositionPlayerInitials,
   getCompositionPlayerLabel,
@@ -69,6 +71,30 @@ import {
 const FIELD_HEIGHT = 280;
 const FIELD_SLOT_WIDTH = 78;
 const FIELD_SLOT_HEIGHT = 52;
+
+// D42 — UNE SEULE liste vide, partagee par tous les parametres de route absents.
+//
+// Ce n'est pas une micro-optimisation, c'est un correctif : ecrire `= []` dans la
+// destructuration fabrique un tableau NEUF a chaque rendu. Ces tableaux sont des
+// dependances de useMemo qui alimentent `initialPack`, lui-meme dependance d'un
+// useEffect qui appelle `setDraftPack` : le pack changeait d'identite a chaque
+// rendu, donc l'effet re-tirait, donc l'ecran se re-rendait, sans fin.
+//
+// MESURE (sonde du 2026-08-08, compteur de rendus au montage) :
+//   - ni `availablePresets` ni `selectedPlayers` en params (ce qu'envoie
+//     EventDetails)                                        -> 402 rendus, jamais stable
+//   - `selectedPlayers` seul (ce qu'envoie TacticalSelection) -> 402 rendus, jamais stable
+//   - aucun preset du tout (sport sans formation)             -> 402 rendus, jamais stable
+//   - les deux fournis et stables                             -> 2 rendus
+// Aucun appelant ne fournit `availablePresets` : le fil JS etait donc sature sur
+// TOUS les chemins d'ouverture, ce qui gele les gestes (le glisser-deposer
+// compris) alors que l'ecran reste affiche.
+const EMPTY_PARAM_LIST = Object.freeze([]);
+
+// Les deux temps de la composition. Valeurs LOCALES a l'ecran : elles ne sont ni
+// enregistrees ni envoyees au serveur.
+const STEP_PLAYERS = 'players';
+const STEP_FIELD = 'field';
 
 const clampPercent = (value) => Math.max(0, Math.min(100, Number(value) || 0));
 
@@ -246,17 +272,17 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
   const { clubVerificationSummary, userData } = useAuth();
   const params = routeParams || route?.params || {};
   const {
-    aggregateBranches = [],
-    availablePresets: availablePresetsParam = [],
+    aggregateBranches = EMPTY_PARAM_LIST,
+    availablePresets: availablePresetsParam = EMPTY_PARAM_LIST,
     canEdit = false,
     compositionIntent = null,
     editorSourceLabel = null,
     eventId,
     eventName = '',
     existingComposition = null,
-    players = [],
+    players = EMPTY_PARAM_LIST,
     readOnly = false,
-    selectedPlayers = [],
+    selectedPlayers = EMPTY_PARAM_LIST,
     sport = 'football',
     teamComposition = null,
     teamId,
@@ -341,7 +367,33 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     return [];
   }, [aggregateBranches, existingComposition, params, readOnly, teamName]);
 
+  // D42 — la convocation deja enregistree, s'il y en a une.
+  //
+  // Le pack ne sait dire QUI est convoque que s'il a deja ete enregistre : ses
+  // `reservePlayerIds` et ses placements sont alors la liste exacte. Un pack
+  // vierge ne dit rien du tout -> personne n'est ecarte, tout le monde est
+  // convoque, ce qui est le comportement d'avant ce lot.
+  const initialExcludedPlayerIds = useMemo(() => {
+    const packPlayerIds = new Set([
+      ...(Array.isArray(initialPack?.reservePlayerIds) ? initialPack.reservePlayerIds : []),
+      ...getAssignedPlayerIdsFromPack(initialPack),
+    ]);
+    if (packPlayerIds.size === 0) return new Set();
+
+    return new Set(
+      editablePlayers
+        .map((player) => getCompositionPlayerId(player))
+        .filter((playerId) => playerId && !packPlayerIds.has(playerId)),
+    );
+  }, [editablePlayers, initialPack]);
+
   const [draftPack, setDraftPack] = useState(initialPack);
+  const [excludedPlayerIds, setExcludedPlayerIds] = useState(initialExcludedPlayerIds);
+  const [compositionStep, setCompositionStep] = useState(STEP_PLAYERS);
+  const [isManualPlayerModalVisible, setIsManualPlayerModalVisible] = useState(false);
+  const [manualFirstname, setManualFirstname] = useState('');
+  const [manualLastname, setManualLastname] = useState('');
+  const [manualNumber, setManualNumber] = useState('');
   const [selectedPlayerId, setSelectedPlayerId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -362,6 +414,10 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
   }, [initialPack]);
 
   useEffect(() => {
+    setExcludedPlayerIds(initialExcludedPlayerIds);
+  }, [initialExcludedPlayerIds]);
+
+  useEffect(() => {
     const nextTeamCount = Math.max(1, initialPack?.teams?.length || 1);
     setAutoTeamCount(nextTeamCount);
     setAutoPresetKeys(syncPresetKeys(nextTeamCount, availablePresets, initialPack?.teams?.map((team) => team?.presetKey)));
@@ -376,13 +432,22 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     ));
   }, [canEdit, compositionIntent, readOnly, teamComposition?.draft]);
 
-  const allPlayers = useMemo(
+  // Tous les joueurs que l'ecran connait, convoques ou non : c'est la liste du
+  // temps 1 (« Qui joue ? »).
+  const knownPlayers = useMemo(
     () => Array.from(buildCompositionPlayerMap([
       ...editablePlayers,
       ...(Array.isArray(draftPack?.manualPlayers) ? draftPack.manualPlayers : []),
       ...(Array.isArray(draftPack?.reserveSnapshotPlayers) ? draftPack.reserveSnapshotPlayers : []),
     ]).values()).sort(byLabel),
     [draftPack?.manualPlayers, draftPack?.reserveSnapshotPlayers, editablePlayers],
+  );
+  // Les convoques. Tout l'aval (banc, terrain, charge envoyee au serveur) ne
+  // travaille QUE sur eux : decocher un joueur au temps 1 le retire du banc, du
+  // terrain, et de `reservePlayerIds` a l'enregistrement.
+  const allPlayers = useMemo(
+    () => knownPlayers.filter((player) => !excludedPlayerIds.has(getCompositionPlayerId(player))),
+    [excludedPlayerIds, knownPlayers],
   );
   const playerMap = useMemo(() => buildCompositionPlayerMap(allPlayers), [allPlayers]);
   const reservePlayers = useMemo(
@@ -426,6 +491,102 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     if (readOnly || !playerId) return;
     setSelectedPlayerId((current) => (String(current || '') === String(playerId) ? '' : String(playerId)));
   }, [readOnly]);
+
+  // === TEMPS 1 — « Qui joue ? » : on convoque, on ecarte, on ajoute ===
+
+  const toggleConvokedPlayer = useCallback((playerId) => {
+    const targetPlayerId = String(playerId || '');
+    if (readOnly || !targetPlayerId) return;
+
+    const willBeExcluded = !excludedPlayerIds.has(targetPlayerId);
+    setExcludedPlayerIds((current) => {
+      const next = new Set(current);
+      if (willBeExcluded) next.add(targetPlayerId);
+      else next.delete(targetPlayerId);
+      return next;
+    });
+
+    if (!willBeExcluded) return;
+
+    // Un joueur ecarte quitte AUSSI le terrain : sinon son jeton resterait pose
+    // alors qu'il ne fait plus partie de la composition.
+    if (String(selectedPlayerId || '') === targetPlayerId) setSelectedPlayerId('');
+    updateDraftPack((currentPack) => ({
+      ...currentPack,
+      reservePlayerIds: (Array.isArray(currentPack?.reservePlayerIds) ? currentPack.reservePlayerIds : [])
+        .filter((entryId) => String(entryId || '') !== targetPlayerId),
+      teams: detachPlayerEverywhere(Array.isArray(currentPack?.teams) ? currentPack.teams : [], targetPlayerId),
+    }));
+  }, [detachPlayerEverywhere, excludedPlayerIds, readOnly, selectedPlayerId, updateDraftPack]);
+
+  const handleConvokeEveryone = useCallback(() => {
+    if (readOnly) return;
+    setExcludedPlayerIds(new Set());
+  }, [readOnly]);
+
+  const handleConvokeNobody = useCallback(() => {
+    if (readOnly) return;
+    setExcludedPlayerIds(new Set(
+      knownPlayers.map((player) => getCompositionPlayerId(player)).filter(Boolean),
+    ));
+    setSelectedPlayerId('');
+    updateDraftPack((currentPack) => ({
+      ...currentPack,
+      reservePlayerIds: [],
+      teams: (Array.isArray(currentPack?.teams) ? currentPack.teams : [])
+        .map((team) => ({ ...team, placements: [] })),
+    }));
+  }, [knownPlayers, readOnly, updateDraftPack]);
+
+  const handleAddManualPlayer = useCallback(() => {
+    const firstname = manualFirstname.trim();
+    const lastname = manualLastname.trim();
+    if (!firstname || !lastname) {
+      showAlert('Erreur', 'Prénom et nom requis.');
+      return;
+    }
+
+    // Meme forme que celle produite par TacticalSelection : un identifiant unique
+    // partage par `id` et `documentId`, marque `isManual`. C'est exactement ce
+    // que le serveur recoit deja par l'autre chemin, rien de neuf ne circule.
+    const manualPlayerId = `manual_${Date.now()}`;
+    updateDraftPack((currentPack) => ({
+      ...currentPack,
+      manualPlayers: [
+        ...(Array.isArray(currentPack?.manualPlayers) ? currentPack.manualPlayers : []),
+        {
+          avatar: null,
+          documentId: manualPlayerId,
+          firstname,
+          id: manualPlayerId,
+          isManual: true,
+          lastname,
+          number: manualNumber.trim() || undefined,
+        },
+      ],
+    }));
+    setExcludedPlayerIds((current) => {
+      const next = new Set(current);
+      next.delete(manualPlayerId);
+      return next;
+    });
+    setManualFirstname('');
+    setManualLastname('');
+    setManualNumber('');
+    setIsManualPlayerModalVisible(false);
+  }, [manualFirstname, manualLastname, manualNumber, updateDraftPack]);
+
+  const handleGoToField = useCallback(() => setCompositionStep(STEP_FIELD), []);
+  const handleGoToPlayers = useCallback(() => setCompositionStep(STEP_PLAYERS), []);
+  const handleHeaderBack = useCallback(() => {
+    // Au temps 2, la fleche de l'entete revient au temps 1 — elle ne quitte pas
+    // l'ecran, sinon la selection de joueurs serait perdue par surprise.
+    if (!readOnly && compositionStep === STEP_FIELD) {
+      setCompositionStep(STEP_PLAYERS);
+      return;
+    }
+    navigation.goBack();
+  }, [compositionStep, navigation, readOnly]);
 
   const handleSlotPress = useCallback((targetTeamId, targetSlotId) => {
     if (readOnly || !targetTeamId || !targetSlotId) return;
@@ -828,6 +989,9 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       }));
       setSelectedPlayerId('');
       setShowAutoSetup(false);
+      // La generation REMPLACE tout le pack : on emmene le coach voir le
+      // resultat sur le terrain, c'est la seule facon de le verifier.
+      setCompositionStep(STEP_FIELD);
       await invalidateQueries();
       showAlert('Succès', 'Brouillon génère automatiquement. Tu peux maintenant ajuster les équipes à la main.');
     } catch (error) {
@@ -842,9 +1006,14 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     }
   }, [autoPresetKeys, autoTeamCount, availablePresets, eventId, invalidateQueries, sport, teamId]);
 
-  const headerTitle = readOnly ? 'Composition d\'équipes' : 'Édition composition d\'équipes';
+  const isPlayersStep = !readOnly && compositionStep === STEP_PLAYERS;
+  const isFieldStep = readOnly || compositionStep === STEP_FIELD;
+  const headerTitle = readOnly
+    ? 'Composition d\'équipes'
+    : (isPlayersStep ? 'Qui joue ?' : 'Où ils jouent');
   const contextLabel = teamName || eventName || 'Evenement';
   const viewerBranchCount = resolvedReadOnlyBranches.length;
+  const convokedCount = allPlayers.length;
 
   return (
     <GestureHandlerRootView style={styles.rootFlex}>
@@ -855,7 +1024,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       >
         <View style={[styles.header, Spaces.paddingHorizontal[16]]}>
           <View style={styles.headerBackButtonContainer}>
-            <HeaderBackButton onPress={() => navigation.goBack()} />
+            <HeaderBackButton onPress={handleHeaderBack} />
           </View>
           <View style={styles.headerCenter}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00, styles.headerTitle]}>
@@ -865,6 +1034,13 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
               {contextLabel}
             </Text>
             <View style={styles.headerMetaRow}>
+              {!readOnly ? (
+                <View style={[styles.headerPill, { backgroundColor: `${Colors.gold500}18`, borderColor: `${Colors.gold500}55` }]}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
+                    {isPlayersStep ? 'Étape 1 sur 2' : 'Étape 2 sur 2'}
+                  </Text>
+                </View>
+              ) : null}
               <View style={[styles.headerPill, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}55` }]}>
                 <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
                   {readOnly ? 'Publication' : (draftPack?.mode === 'auto' ? 'Auto + manuel' : 'Manuel')}
@@ -1074,7 +1250,9 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   );
                 })}
               </>
-            ) : (
+            ) : null}
+
+            {isPlayersStep ? (
               <>
                 <View
                   style={[
@@ -1089,47 +1267,112 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     },
                   ]}
                 >
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Composition d'équipes</Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Qui joue ?</Text>
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
                     {showAutoSetup
                       ? "Choisis le nombre d'équipes et le preset de chacune, puis génère un brouillon."
-                      : "Sélectionne un joueur depuis les remplaçants, puis touche un poste pour l'attribuer. Touche un joueur déjà place pour le déplacer."}
+                      : "Coche les joueurs que tu convoques. Tu les placeras sur le terrain à l'étape suivante."}
                   </Text>
-                  <Text style={[Fonts.p3, Fonts.neutral300]}>
-                    Les postes encore libres peuvent rester vides: ils seront completes automatiquement quand de nouveaux joueurs acceptes arriveront.
+                  <Text style={[Fonts.p3, Fonts.primary100]}>
+                    {convokedCount}
+                    {' joueur(s) convoqué(s) sur '}
+                    {knownPlayers.length}
                   </Text>
 
                   <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
                     <Button
-                      isLoading={isSaving}
-                      onPress={handleSaveDraft}
-                      title="Sauvegarder"
+                      onPress={handleConvokeEveryone}
+                      size="sm"
+                      title="Tout sélectionner"
                       variant="Secondary"
                     />
                     <Button
-                      disabled={isSaving}
-                      isLoading={isPublishing}
-                      onPress={handlePublish}
-                      title="Publier"
-                      variant="Primary"
+                      onPress={handleConvokeNobody}
+                      size="sm"
+                      title="Effacer"
+                      variant="Secondary"
+                    />
+                    <Button
+                      onPress={() => setIsManualPlayerModalVisible(true)}
+                      size="sm"
+                      title="Ajouter un joueur"
+                      variant="Secondary"
                     />
                     {availablePresets.length > 0 ? (
                       <Button
                         disabled={isPublishing || isSaving}
                         onPress={() => setShowAutoSetup((current) => !current)}
+                        size="sm"
                         title={showAutoSetup ? 'Fermer auto' : 'Génération auto'}
                         variant="Secondary"
                       />
                     ) : null}
-                    {!showAutoSetup ? (
-                      <Button
-                        disabled={isPublishing || isSaving}
-                        onPress={handleAddTeam}
-                        title="Ajouter une équipe"
-                        variant="Secondary"
-                      />
-                    ) : null}
                   </View>
+                </View>
+
+                <View
+                  style={[
+                    ApplicationStyle.card,
+                    ApplicationStyle.borderRadius24,
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                    {
+                      backgroundColor: Colors.primary900,
+                      borderColor: `${Colors.neutral00}12`,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Joueurs disponibles</Text>
+                  {knownPlayers.length === 0 ? (
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                      Aucun joueur disponible pour le moment. Ajoute-les à la main avec « Ajouter un joueur », ou passe à la suite et laisse les postes libres.
+                    </Text>
+                  ) : (
+                    <View style={Spaces.gap[8]}>
+                      {knownPlayers.map((player) => {
+                        const convocationPlayerId = getCompositionPlayerId(player);
+                        const isConvoked = !excludedPlayerIds.has(convocationPlayerId);
+                        return (
+                          <TouchableOpacity
+                            accessibilityLabel={getCompositionPlayerLabel(player)}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: isConvoked }}
+                            activeOpacity={0.82}
+                            key={convocationPlayerId}
+                            onPress={() => toggleConvokedPlayer(convocationPlayerId)}
+                            style={[
+                              styles.listRow,
+                              {
+                                backgroundColor: isConvoked ? `${Colors.primary500}18` : Colors.neutral800,
+                                borderColor: isConvoked ? `${Colors.primary500}66` : `${Colors.neutral00}12`,
+                              },
+                            ]}
+                          >
+                            <View
+                              style={[
+                                styles.convocationMark,
+                                {
+                                  backgroundColor: isConvoked ? Colors.primary500 : 'transparent',
+                                  borderColor: isConvoked ? Colors.primary500 : Colors.neutral300,
+                                },
+                              ]}
+                            >
+                              <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>
+                                {isConvoked ? '✓' : ' '}
+                              </Text>
+                            </View>
+                            <Text style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1 }]}>
+                              {getCompositionPlayerLabel(player)}
+                            </Text>
+                            <Text style={[Fonts.p4, { color: isConvoked ? Colors.primary100 : Colors.neutral300 }]}>
+                              {isConvoked ? 'Convoqué' : 'Écarté'}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
 
                 {showAutoSetup ? (
@@ -1221,6 +1464,67 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   </View>
                 ) : null}
 
+                <Button
+                  disabled={isPublishing || isSaving}
+                  onPress={handleGoToField}
+                  title="Suivant"
+                  variant="Primary"
+                />
+              </>
+            ) : null}
+
+            {isFieldStep && !readOnly ? (
+              <>
+                <View
+                  style={[
+                    ApplicationStyle.card,
+                    ApplicationStyle.borderRadius24,
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                    {
+                      backgroundColor: Colors.primary900,
+                      borderColor: `${Colors.primary500}38`,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Où ils jouent</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral300]}>
+                    Fais glisser un joueur des remplaçants vers le terrain : appui long, puis tu le déposes où tu veux. Tu peux aussi le sélectionner puis toucher un poste.
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    Les postes encore libres peuvent rester vides: ils seront completes automatiquement quand de nouveaux joueurs acceptes arriveront.
+                  </Text>
+
+                  <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
+                    <Button
+                      disabled={isPublishing || isSaving}
+                      onPress={handleGoToPlayers}
+                      title="Retour"
+                      variant="Secondary"
+                    />
+                    <Button
+                      disabled={isPublishing || isSaving}
+                      onPress={handleAddTeam}
+                      title="Ajouter une équipe"
+                      variant="Secondary"
+                    />
+                    <Button
+                      isLoading={isSaving}
+                      onPress={handleSaveDraft}
+                      title="Sauvegarder"
+                      variant="Secondary"
+                    />
+                    <Button
+                      disabled={isSaving}
+                      isLoading={isPublishing}
+                      onPress={handlePublish}
+                      title="Publier"
+                      variant="Primary"
+                    />
+                  </View>
+                </View>
+
                 <View
                   style={[
                     ApplicationStyle.card,
@@ -1266,6 +1570,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                         const isSelected = String(selectedPlayerId || '') === String(playerId);
                         const chip = (
                           <TouchableOpacity
+                            accessibilityLabel={getCompositionPlayerLabel(player)}
                             activeOpacity={0.82}
                             onPress={() => handleReservePress(playerId)}
                             style={[
@@ -1391,9 +1696,58 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   </View>
                 ))}
               </>
-            )}
+            ) : null}
           </View>
         </ScrollView>
+        <Modal
+          animationType="fade"
+          onRequestClose={() => setIsManualPlayerModalVisible(false)}
+          transparent
+          visible={isManualPlayerModalVisible && !readOnly}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: Colors.neutral800 }]}>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00, styles.headerTitle]}>
+                Ajouter un joueur
+              </Text>
+              <TextInput
+                onChangeText={setManualFirstname}
+                placeholder="Prénom *"
+                placeholderTextColor={Colors.neutral300}
+                style={[styles.modalInput, { backgroundColor: Colors.neutral900, borderColor: `${Colors.neutral00}12`, color: Colors.neutral00 }]}
+                value={manualFirstname}
+              />
+              <TextInput
+                onChangeText={setManualLastname}
+                placeholder="Nom *"
+                placeholderTextColor={Colors.neutral300}
+                style={[styles.modalInput, { backgroundColor: Colors.neutral900, borderColor: `${Colors.neutral00}12`, color: Colors.neutral00 }]}
+                value={manualLastname}
+              />
+              <TextInput
+                keyboardType="number-pad"
+                maxLength={2}
+                onChangeText={setManualNumber}
+                placeholder="Numéro (optionnel)"
+                placeholderTextColor={Colors.neutral300}
+                style={[styles.modalInput, { backgroundColor: Colors.neutral900, borderColor: `${Colors.neutral00}12`, color: Colors.neutral00 }]}
+                value={manualNumber}
+              />
+              <View style={[Alignments.row, Spaces.gap[8]]}>
+                <Button
+                  onPress={() => setIsManualPlayerModalVisible(false)}
+                  title="Annuler"
+                  variant="Secondary"
+                />
+                <Button
+                  onPress={handleAddManualPlayer}
+                  title="Ajouter"
+                  variant="Primary"
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
         <SubscriptionPaywallSheet
           close={() => setSubscriptionPaywallDecision(null)}
           clubDocumentId={
@@ -1428,6 +1782,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  convocationMark: {
+    alignItems: 'center',
+    borderRadius: 7,
+    borderWidth: 2,
+    height: 24,
+    justifyContent: 'center',
+    width: 24,
+  },
+  modalContent: {
+    borderRadius: 20,
+    gap: 12,
+    maxWidth: 340,
+    padding: 24,
+    width: '100%',
+  },
+  modalInput: {
+    borderRadius: 10,
+    borderWidth: 1,
+    fontSize: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  modalOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
   },
   fieldSurface: {
     alignSelf: 'stretch',
