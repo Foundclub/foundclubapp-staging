@@ -178,8 +178,26 @@ describe('D09 — l ecran « Lieu », etat du 2026-08-06', () => {
       saturated: true,
     }));
 
+    // D58 — copy du pack §2.4, mot pour mot. L'ancienne phrase disait la meme
+    // chose en deux fois plus long, et melangeait cause et consequence.
     expect(textesSous(arbre.root)).toContain(
-      "Cette installation dépasse sa capacité sur ce créneau. L'événement sera créé en demande en attente jusqu'a validation d'un dirigeant.",
+      "Créneau complet sur cet horaire — l'événement partira en demande de validation au club.",
+    );
+  });
+
+  test('le cas « le club laisse passer » est annonce dans la MEME grammaire', () => {
+    // Il etait CYAN, or le pack reserve le cyan a la selection et a l'action :
+    // un creneau complet est un avertissement, donc orange.
+    afficherLEcran();
+
+    act(() => mockSelecteurs[0].onChange({ facilityId: 'inst-1', location: null }));
+    act(() => dernierGabarit() && mockSelecteurs[mockSelecteurs.length - 1].onOccupancyResolved({
+      allowsImmediateConfirmation: true,
+      saturated: true,
+    }));
+
+    expect(textesSous(arbre.root)).toContain(
+      "Créneau complet sur cet horaire — le club l'autorise quand même, l'événement reste confirmé.",
     );
   });
 });
