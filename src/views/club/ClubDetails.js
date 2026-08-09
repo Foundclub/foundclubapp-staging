@@ -1921,7 +1921,17 @@ function ClubDetails({ navigation, route }) {
                 Spaces.gap[4],
                 Alignments.alignCenter]}
               >
-                <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
+                {/* D50 : le pack veut le nom du club en capitales sur la carte.
+                    C'est une transformation de STYLE : le texte rendu reste le
+                    nom tel qu'il est en base, donc rien ne change pour un
+                    lecteur d'ecran ni pour une recherche. */}
+                <Text style={[
+                  Fonts.h3Black,
+                  Fonts.neutral00,
+                  Fonts.textCenter,
+                  { textTransform: 'uppercase' },
+                ]}
+                >
                   {club?.name}
                 </Text>
                 <View

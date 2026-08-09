@@ -387,6 +387,24 @@ describe('FacilityList — ce que l ecran fait (fige avant la refonte D34)', () 
     expect(textesVisibles(arbre).includes('multisport')).toBe(true);
   });
 
+  // D50 : depuis que le hub a retire les onglets de « Mon club », CE bouton est
+  // le SEUL chemin vers le planning du club — cet ecran-la n'a aucune route a
+  // lui, on n'y entre qu'en revenant sur `Club` avec `planningFacilityId`. Si
+  // ce point d'entree disparait, le planning devient inatteignable sans qu'une
+  // seule porte ne s'en apercoive : ce filet est la pour ca.
+  it('« Voir le planning » ramene sur le club avec l installation a selectionner', () => {
+    const arbre = rendre();
+
+    act(() => {
+      pressableAvecTexte(arbre, 'Voir le planning').props.onPress();
+    });
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith(
+      'Club',
+      { clubId: 'club-1', planningFacilityId: 'fac-1', planningScope: 'club' },
+    );
+  });
+
   it('ouvre la carte sur l adresse quand l installation en a une', async () => {
     const arbre = rendre();
 
