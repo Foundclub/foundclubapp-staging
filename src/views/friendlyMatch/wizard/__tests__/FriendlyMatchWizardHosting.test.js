@@ -29,6 +29,26 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
+// LOT D41 ② — la copy de l'etape est descendue dans `fr.js`. Le mock resout dans
+// le VRAI catalogue, jamais un objet invente : les tests de texte ci-dessous
+// lisent donc ce que l'app affichera. Monter l'ecran sans ce mock tirerait
+// `@/theme/strings`, qui amorce i18next au chargement.
+jest.mock('react-i18next', () => {
+  const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
+
+  return {
+    useTranslation: () => ({
+      t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
+        const valeur = String(cle || '')
+          .split('.')
+          .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
+        if (typeof valeur === 'string') return valeur;
+        return typeof repli === 'string' ? repli : cle;
+      },
+    }),
+  };
+});
+
 // Le VRAI theme, sans le contexte React qui le porte. Un mock en Proxy rend les
 // echecs Jest illisibles (constat du lot paywall, 2026-08-02) et un objet
 // invente masquerait un jeton absent — or ce lot consomme justement les jetons
@@ -52,6 +72,9 @@ jest.mock('@/theme/themeContext', () => {
         arrowLeft: 'icone-fleche-gauche',
         arrowRight: 'icone-fleche-droite',
         check: 'icone-coche',
+        // Le coureur reste dans le jeu d'icones du mock EXPRES, alors que D41 ③
+        // ne l'utilise plus : s'il revenait, il apparaitrait dans le temoin
+        // « donne a chaque etat son icone propre » au lieu de rendre undefined.
         running: 'icone-coureur',
         stadium: 'icone-stade',
       },
@@ -82,6 +105,9 @@ jest.mock('../FriendlyMatchWizardContext', () => ({
 }));
 
 const polices = require('@/theme/fonts').default(require('@/theme/colors').default());
+// Charge ici, et pas dans le `describe` : un require() hors du premier niveau
+// est une erreur `global-require`, que le cliquet de lint compte.
+const catalogueFr = require('@/theme/strings/translations/fr').default;
 
 /**
  * Rend l'etape avec un choix deja fait, ou aucun.
@@ -168,6 +194,27 @@ const textesSous = (composant) => {
     if (noeud && Array.isArray(noeud.children)) noeud.children.forEach(parcourir);
   };
   parcourir(composant);
+  return sortie;
+};
+
+/**
+ * Les sources d'image rendues sous un noeud, dans l'ordre du dessin.
+ * @param {any} noeud Un noeud d'affichage.
+ * @returns {string[]} Les sources trouvees dessous.
+ */
+const sourcesSous = (noeud) => {
+  /** @type {string[]} */
+  const sortie = [];
+  const parcourir = (/** @type {any} */ courant) => {
+    if (!courant || typeof courant !== 'object') return;
+    if (Array.isArray(courant)) {
+      courant.forEach(parcourir);
+      return;
+    }
+    if (typeof courant.props?.source === 'string') sortie.push(courant.props.source);
+    (courant.children || []).forEach(parcourir);
+  };
+  parcourir(noeud);
   return sortie;
 };
 
@@ -293,15 +340,22 @@ describe('Etape 2/7 « Tu peux recevoir ? » — CE QUE D07 AJOUTE', () => {
   });
 
   // Une icone par etat, deduite de la donnee et jamais d'un texte : stade pour
-  // « je recois », coureur pour « je me deplace », double fleche pour « les deux ».
+  // « je recois », fleche pour « je me deplace », double fleche pour « les deux ».
+  //
+  // 🔄 D41 ③ — « je me deplace » portait un COUREUR jusqu'au 2026-08-08 : il dit
+  // « athletisme », pas « on va chez l'adversaire ». Adel a tranche pour une
+  // fleche. L'assertion est carte par carte, et pas sur l'ensemble : c'est ce
+  // qui prouve qu'une fleche seule ne se confond pas avec les deux empilees,
+  // et que le coureur a bien disparu (il apparaitrait dans le tableau).
   it('donne a chaque etat son icone propre', () => {
     const arbre = rendre();
-    const sources = noeudsAffiches(arbre, (noeud) => typeof noeud.props?.source === 'string')
-      .map((noeud) => noeud.props.source);
-    expect(sources).toContain('icone-stade');
-    expect(sources).toContain('icone-coureur');
-    expect(sources).toContain('icone-fleche-droite');
-    expect(sources).toContain('icone-fleche-gauche');
+    const cartes = noeudsAffiches(arbre, (noeud) => noeud.props?.accessibilityRole === 'radio');
+
+    expect(cartes.map(sourcesSous)).toEqual([
+      ['icone-stade'],
+      ['icone-fleche-droite'],
+      ['icone-fleche-droite', 'icone-fleche-gauche'],
+    ]);
   });
 
   // Selection = bord cyan 1,5 + fond cyan 8 % + coche a droite. Le fond passe
@@ -355,5 +409,38 @@ describe('Etape 2/7 « Tu peux recevoir ? » — CE QUE D07 AJOUTE', () => {
     ).pop();
     expect(style(libelle).fontSize).toBe(polices.p1Bold.fontSize);
     expect(style(libelle).fontFamily).toBe(polices.p1Bold.fontFamily);
+  });
+});
+
+// Le filet du rapatriement D41 ②. Les tests ci-dessus prouvent que le texte
+// AFFICHE n'a pas bouge — ils passeraient encore si toutes les clefs manquaient,
+// puisque le repli porte le meme texte. Ceux-ci prouvent l'autre moitie : la
+// clef EXISTE dans `fr.js`, et elle y porte le texte au caractere pres.
+describe('D41 ② — la copy de l etape vit dans fr.js, mot pour mot', () => {
+  /**
+   * Lit une clef pointee dans le catalogue francais.
+   * @param {string} cle La clef, segments separes par des points.
+   * @returns {any} La valeur trouvee, ou undefined.
+   */
+  const lireDansFr = (cle) => cle
+    .split('.')
+    .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogueFr);
+
+  const RACINE = 'friendlyMatch.wizard.hosting';
+  const LIGNE_INFO = 'Seules les équipes compatibles avec ton choix verront ton annonce'
+    + ' — les autres ne la voient pas.';
+
+  it.each([
+    [`${RACINE}.title`, 'Tu peux recevoir ?'],
+    [`${RACINE}.subtitle`, 'C’est ce qui décide où le match se jouera.'],
+    [`${RACINE}.options.host.label`, 'Je reçois'],
+    [`${RACINE}.options.host.consequence`, 'Le match se jouera sur ton terrain.'],
+    [`${RACINE}.options.away.label`, 'Je me déplace'],
+    [`${RACINE}.options.away.consequence`, 'Tu joues chez l’adversaire.'],
+    [`${RACINE}.options.both.label`, 'Les deux'],
+    [`${RACINE}.options.both.consequence`, 'Ton annonce touche le plus d’équipes.'],
+    [`${RACINE}.info`, LIGNE_INFO],
+  ])('%s porte le texte deja affiche', (cle, texte) => {
+    expect(lireDansFr(cle)).toBe(texte);
   });
 });

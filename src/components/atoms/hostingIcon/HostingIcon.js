@@ -15,7 +15,7 @@ import useTheme from '@/theme/themeContext';
  * seule ne dit rien a qui ne la distingue pas.
  * @param {object} props
  * @param {string} props.color - Teinte appliquee au trait.
- * @param {string} props.iconKey - Cle getHostingTag : stadium, running, switch ou none.
+ * @param {string} props.iconKey - Cle getHostingTag : stadium, arrow, switch ou none.
  * @param {number} props.size - Cote du pictogramme, en points.
  * @returns {import('react').ReactElement | null}
  */
@@ -51,9 +51,18 @@ function HostingIcon({ color, iconKey, size }) {
     );
   }
 
+  // LOT D41 ③ — « Se deplace » portait `running`, un coureur : il dit
+  // « athletisme », pas « on va chez l adversaire ». Le pack demandait une
+  // voiture, que le depot n a pas ; Adel a tranche le 2026-08-08 pour une
+  // FLECHE, et elle existe deja (`arrowRight`, une fleche pleine a hampe, pas
+  // un chevron). Aucun fichier binaire ajoute.
+  // ⚠️ Elle partage son dessin avec « Les deux » (deux fleches empilees) : c est
+  // une fleche contre deux, la difference tient. Voie de sortie si elle ne
+  // suffit pas a l ecran : un PNG « voiture » et un PNG « ⇄ », et les deux
+  // substitutions de ce fichier tombent ensemble.
   return (
     <Image
-      source={iconKey === 'stadium' ? Images.stadium : Images.running}
+      source={iconKey === 'stadium' ? Images.stadium : Images.arrowRight}
       style={{
         height: size, resizeMode: 'contain', tintColor: color, width: size,
       }}
