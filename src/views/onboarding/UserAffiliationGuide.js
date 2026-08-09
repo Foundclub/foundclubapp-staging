@@ -1095,6 +1095,26 @@ function UserAffiliationGuideContent({ navigation, route }) {
     );
   })();
 
+  // D56 — le pack dirigeant annonce ICI ce qui va se passer APRES l'inscription.
+  // Sans cette ligne, le dirigeant touchait une carte club sans savoir que sa
+  // demande partait aux dirigeants deja en place, ni ce qui l'attendait quand
+  // le club n'en a aucun. Elle ne concerne que lui : l'entraineur, lui, envoie
+  // des demandes d'equipe a l'etape suivante.
+  const staffManagementNotice = isClubFlow && roleKey === 'president' ? (
+    <View style={[Alignments.row, Spaces.gap[8], Spaces.paddingTop[16]]}>
+      <Text importantForAccessibility="no" style={[Fonts.p2, { color: Colors.neutral600 }]}>
+        i
+      </Text>
+      <Text style={[Fonts.p2, { color: Colors.neutral600, flex: 1 }]}>
+        {t(
+          'onboardingAffiliation.staffManagementNotice',
+          'Ta demande de gestion sera envoyée aux dirigeants du club '
+          + '— s\'il n\'en a pas encore, tu pourras le revendiquer et le faire certifier.',
+        )}
+      </Text>
+    </View>
+  ) : null;
+
   const sectionLabel = (() => {
     if (!isClubFlow) return t('onboardingAffiliation.sections.teams', 'ÉQUIPES');
     if (debouncedSearch) return t('onboardingAffiliation.sections.results', 'RÉSULTATS');
@@ -1467,6 +1487,7 @@ function UserAffiliationGuideContent({ navigation, route }) {
                     </View>
                   ) : null}
                   {isPlayerTeamStepWithoutTeams ? null : addMyClubCard}
+                  {staffManagementNotice}
                 </View>
               )}
               onEndReached={handleEndReached}

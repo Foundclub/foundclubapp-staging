@@ -386,6 +386,26 @@ describe('UserAffiliationGuide — refonte 6b', () => {
       .toContain('Retrouve ton club pour le gérer sur FoundClub.');
   });
 
+  // D56 — le pack dirigeant annonce ce qui va se passer APRES l'inscription.
+  // La ligne manquait : le dirigeant touchait une carte club sans savoir a qui
+  // partait sa demande, ni ce qui l'attendait si le club n'avait aucun gestionnaire.
+  it('le dirigeant lit ce qui va se passer apres sa demande', () => {
+    const attendu = 'Ta demande de gestion sera envoyée aux dirigeants du club '
+      + '— s\'il n\'en a pas encore, tu pourras le revendiquer et le faire certifier.';
+
+    mockRoleKey.current = 'president';
+    expect(collectTexts(renderScreen().tree)).toContain(attendu);
+  });
+
+  it('cette ligne ne s\'affiche NI au joueur NI a l\'entraineur', () => {
+    const debut = 'Ta demande de gestion sera envoyée';
+
+    expect(collectTexts(renderScreen().tree)).not.toContain(debut);
+
+    mockRoleKey.current = 'coach';
+    expect(collectTexts(renderScreen().tree)).not.toContain(debut);
+  });
+
   it('le disclaimer « cette étape n\'est pas obligatoire » a disparu du pied', () => {
     const texts = collectTexts(renderScreen().tree);
     expect(texts).not.toContain('Continuer plus tard');

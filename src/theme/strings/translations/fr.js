@@ -1926,6 +1926,8 @@ export default {
       loading: 'Recherche en cours...',
       retry: 'Réessayer',
     },
+    staffManagementNotice: 'Ta demande de gestion sera envoyée aux dirigeants du club '
+      + '— s\'il n\'en a pas encore, tu pourras le revendiquer et le faire certifier.',
     subtitleClub: 'On personnalise ton accueil, ton planning et tes annonces autour de ton club.',
     subtitleClubCoach: 'Retrouve ton club pour y déclarer les équipes que tu entraînes.',
     subtitleClubSelection: 'Recherche puis sélectionne ton club pour voir ses équipes.',
