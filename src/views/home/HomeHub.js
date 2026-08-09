@@ -1811,6 +1811,23 @@ function HomeHubContent({ auth, navigation, route }) {
           },
         ),
       });
+
+      // D57 — LA PORTE QUI MANQUAIT. Le staff ouvre « Mes activites » depuis
+      // « Gerer mon club » (D35, §4 du pack), mais `manageSectionCards` rend `[]`
+      // des que le compte n'est ni entraineur ni president : un joueur n'avait
+      // AUCUN moyen d'atteindre ses propres candidatures, alors que l'ecran
+      // existe et porte pour lui l'onglet « Mes reponses ».
+      // Volontairement SANS `tutorial` : les deux cases voisines se tiennent par
+      // `nextTargetStepId`, et s'inserer au milieu de cette chaine la casserait.
+      cards.push({
+        accentColor: Colors.primary500,
+        icon: 'running',
+        key: 'search-my-activities',
+        onPress: () => navigation.navigate(RouteNames.MyActivities),
+        subtitle: t('homeHub.cards.search.myActivities.subtitle', 'Tes candidatures et leurs réponses.'),
+        subtitleLines: 2,
+        title: t('homeHub.cards.search.myActivities.title', 'Mes réponses'),
+      });
     }
 
     // Matchs amicaux : case A PART, bien distincte du recrutement (decision
