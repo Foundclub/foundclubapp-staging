@@ -570,6 +570,182 @@ describe('D42 — le temps 1 decide qui joue', () => {
   });
 });
 
+// ============================================================================
+// D47 — LES TEMOINS D'ARRET DU LOT. Rouges sur la source d'avant.
+//
+// D42 a donne au coach un temps 1 pour cocher qui joue. Mais la charge envoyee
+// au serveur ne portait PAS cette liste : le serveur remettait donc en reserve
+// tout joueur non place sur le terrain, et un joueur decoche recevait quand meme
+// sa convocation. La moitie serveur (D43) sait deja lire `selectedPlayerIds` ;
+// ce lot est le maillon qui l'envoie.
+// ============================================================================
+
+describe('D47 — l\'app dit au serveur qui est convoque', () => {
+  const CINQ_JOUEURS = [
+    { documentId: 'p1', firstname: 'Ana', lastname: 'Bern' },
+    { documentId: 'p2', firstname: 'Chloe', lastname: 'Diaz' },
+    { documentId: 'p3', firstname: 'Emma', lastname: 'Faure' },
+    { documentId: 'p4', firstname: 'Gaia', lastname: 'Hoche' },
+    { documentId: 'p5', firstname: 'Ines', lastname: 'Joli' },
+  ];
+
+  /** Sauvegarde depuis le temps 2 et rend la charge recue par le serveur. */
+  const sauvegarderEtLireLaCharge = async (arbre) => {
+    allerAuTerrain(arbre);
+    await act(async () => {
+      appuyerSur(arbre, 'Sauvegarder');
+    });
+    const [, charge] = saveEventCompositionDraft.mock.calls[0];
+    return charge.draft;
+  };
+
+  beforeEach(() => {
+    saveEventCompositionDraft.mockResolvedValue({ draft: null });
+  });
+
+  test('TEMOIN 1 — cocher 2 joueurs sur 5 : la charge porte exactement ces 2', async () => {
+    const arbre = monter(parametresEdition({ players: CINQ_JOUEURS }));
+
+    // On decoche 3 des 5 : il reste Ana Bern et Chloe Diaz.
+    appuyerSur(arbre, 'Emma Faure');
+    appuyerSur(arbre, 'Gaia Hoche');
+    appuyerSur(arbre, 'Ines Joli');
+
+    const draft = await sauvegarderEtLireLaCharge(arbre);
+
+    expect(draft.selectedPlayerIds).toEqual(['p1', 'p2']);
+  });
+
+  test('TEMOIN 2 — ne cocher personne : un tableau VIDE part, le champ n\'est pas absent', async () => {
+    // ⛔ ABSENT ≠ VIDE. Absent = « composition d'avant D43, tout le monde est
+    // convoque ». Sauter le champ pour dire « personne » rappellerait tout le
+    // monde — c'est exactement le defaut que ce lot ferme.
+    const arbre = monter(parametresEdition({ players: CINQ_JOUEURS }));
+
+    appuyerSur(arbre, 'Effacer');
+
+    const draft = await sauvegarderEtLireLaCharge(arbre);
+
+    expect(Object.prototype.hasOwnProperty.call(draft, 'selectedPlayerIds')).toBe(true);
+    expect(draft.selectedPlayerIds).toEqual([]);
+  });
+
+  test('TEMOIN 3 — un joueur ajoute a la main est dans la liste', async () => {
+    const arbre = monter(parametresEdition({ players: [] }));
+
+    appuyerSur(arbre, 'Ajouter un joueur');
+    const champs = arbre.root.findAll(
+      (noeud) => noeud.props?.placeholder && typeof noeud.props?.onChangeText === 'function',
+    );
+    act(() => {
+      champs.find((champ) => champ.props.placeholder.startsWith('Prénom')).props.onChangeText('Zoe');
+      champs.find((champ) => champ.props.placeholder.startsWith('Nom')).props.onChangeText('Roux');
+    });
+    appuyerSur(arbre, 'Ajouter');
+
+    const draft = await sauvegarderEtLireLaCharge(arbre);
+
+    expect(draft.selectedPlayerIds).toHaveLength(1);
+    expect(draft.selectedPlayerIds[0]).toMatch(/^manual_\d+$/);
+    // Meme identifiant que dans manualPlayers : un seul canal, pas deux.
+    expect(draft.selectedPlayerIds[0]).toBe(draft.manualPlayers[0].documentId);
+  });
+
+  test('TEMOIN 4 — rouvrir une compo SANS ce champ ne desinscrit personne', async () => {
+    // ⛔ Le seul geste destructeur possible dans ce lot. Une compo enregistree
+    // avant D43 n'a pas de `selectedPlayerIds` : le temps 1 doit se pre-cocher
+    // sur l'effectif, jamais sur une liste vide.
+    const arbre = monter(parametresEdition({
+      players: CINQ_JOUEURS,
+      teamComposition: {
+        availablePresets: [PRESET_442],
+        draft: {
+          manualPlayers: [],
+          mode: 'manual',
+          reservePlayerIds: ['p2', 'p3', 'p4', 'p5'],
+          schemaVersion: 3,
+          sportContext: 'football',
+          teams: [{
+            id: 'team_1',
+            name: 'Équipe 1',
+            placements: [{
+              playerId: 'p1', positionX: 50, positionY: 12, slotId: 'team_1:gk',
+            }],
+            presetKey: '4-4-2',
+          }],
+        },
+        published: null,
+      },
+    }));
+
+    // A l'ecran : les 5 sont coches, aucun « Écarté ».
+    expect(compter(arbre, 'Convoqué')).toBe(5);
+    expect(compter(arbre, 'Écarté')).toBe(0);
+
+    const draft = await sauvegarderEtLireLaCharge(arbre);
+
+    expect(draft.selectedPlayerIds).toEqual(['p1', 'p2', 'p3', 'p4', 'p5']);
+  });
+
+  test('TEMOIN 4 bis — une compo PUBLIEE sans ce champ ne desinscrit personne', async () => {
+    // Meme garde-fou, par l'autre porte d'entree : `teamComposition.published`
+    // sert de point de depart quand il n'y a pas de brouillon.
+    const arbre = monter(parametresEdition({
+      players: CINQ_JOUEURS,
+      teamComposition: {
+        availablePresets: [PRESET_442],
+        draft: null,
+        published: {
+          manualPlayers: [],
+          mode: 'manual',
+          reservePlayerIds: ['p2', 'p3', 'p4', 'p5'],
+          schemaVersion: 3,
+          sportContext: 'football',
+          teams: [{
+            id: 'team_1',
+            name: 'Équipe 1',
+            placements: [{
+              playerId: 'p1', positionX: 50, positionY: 12, slotId: 'team_1:gk',
+            }],
+            presetKey: '4-4-2',
+          }],
+        },
+      },
+    }));
+
+    expect(compter(arbre, 'Écarté')).toBe(0);
+
+    const draft = await sauvegarderEtLireLaCharge(arbre);
+
+    expect(draft.selectedPlayerIds).toEqual(['p1', 'p2', 'p3', 'p4', 'p5']);
+  });
+
+  test('TEMOIN 4 ter — une composition VIERGE convoque tout le monde', async () => {
+    const arbre = monter(parametresEdition({ players: CINQ_JOUEURS }));
+
+    const draft = await sauvegarderEtLireLaCharge(arbre);
+
+    expect(draft.selectedPlayerIds).toEqual(['p1', 'p2', 'p3', 'p4', 'p5']);
+  });
+
+  test('« Publier » envoie la meme liste que « Sauvegarder »', async () => {
+    // Publier passe par le MEME enregistrement avant de publier : la liste ne
+    // peut pas diverger entre les deux boutons.
+    publishEventConvocation.mockResolvedValue({ published: null });
+    const arbre = monter(parametresEdition({ players: CINQ_JOUEURS }));
+
+    appuyerSur(arbre, 'Ines Joli');
+    allerAuTerrain(arbre);
+    await act(async () => {
+      appuyerSur(arbre, 'Publier');
+    });
+
+    const [, charge] = saveEventCompositionDraft.mock.calls[0];
+    expect(charge.draft.selectedPlayerIds).toEqual(['p1', 'p2', 'p3', 'p4']);
+    expect(publishEventConvocation).toHaveBeenCalledWith('event-1', { teamId: 'team-1' });
+  });
+});
+
 describe('D42 — la consigne decrit le geste qui existe vraiment', () => {
   test('le temps 2 parle de GLISSER, plus seulement de toucher un poste', () => {
     const arbre = monter(parametresEdition());
