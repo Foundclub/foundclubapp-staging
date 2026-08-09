@@ -109,12 +109,21 @@ import {
 import SharePlatform from '@/platform/share';
 
 const EVENT_DETAILS_STALE_MS = 30_000;
-// D21 ② : place que la liste defilante reserve sous son dernier bloc quand le
-// menu « Gérer l'événement » flotte par-dessus. 46 px de pastille declaree
-// (rangee 44 + 2 bordures) + 16 px d'ecart bas = 62 ; on prend le barreau 80 de
-// la rampe, le premier au-dessus. Sans cette reserve, le dernier participant
-// passerait SOUS le bouton flottant : on echangerait un defaut contre un pire.
-const FLOATING_MANAGE_CLEARANCE = 80;
+// D53 — `FLOATING_MANAGE_CLEARANCE = 80` a disparu d'ici, et le motif est
+// geometrique, pas esthetique. D21 reservait 80 px sous le DERNIER bloc de la
+// liste pour que le menu flottant ne recouvre rien. Le calcul etait juste
+// (46 px de pastille + 16 px d'ecart = 62 <= 80) mais il ne protegeait QUE la
+// fin de la liste : la pastille etait ancree au cadre, pas au contenu, donc
+// elle occupait en permanence les 62 px du bas. Tout ce qui defilait dessous
+// passait derriere — et la liste des participants est rendue AU MILIEU du
+// defilement (`EventParticipants`, suivie des stats de match, des avis et des
+// compositions). C'est ce qui cachait a moitie « Leo Diallo ».
+//
+// ⛔ Aucune reserve, si grande soit-elle, ne corrige ca : une marge en bas de
+// liste ne protege pas le milieu d'une liste. Le menu est donc passe DANS LE
+// FLUX, sous la liste (voir `renderManagePanel`). Il ne peut plus rien
+// recouvrir, et il coute moins de hauteur qu'avant : 46 + 12 = 58 px au lieu
+// des 80 px reserves.
 const MIN_PARTICIPANTS = 1;
 const MAX_PARTICIPANTS = 200;
 const DEFAULT_EXTERNAL_PARTICIPANT_LIMIT = 3;
@@ -3700,31 +3709,25 @@ function EventDetails({ navigation, route }) {
   };
 
   /**
-   * D21 ② : le menu d'organisation ne reserve plus de bande en pied d'ecran —
-   * il FLOTTE en bas a droite, au-dessus de la liste. Replie il ne couvre
-   * qu'une pastille de 46 px declares, et la liste reserve cette place sous son
-   * dernier bloc (`FLOATING_MANAGE_CLEARANCE`) : rien ne devient inatteignable.
+   * D53 : le menu d'organisation ne flotte plus AU-DESSUS de la liste — il est
+   * pose DANS LE FLUX, juste sous elle, aligne a droite. Il garde donc la
+   * compacite voulue par D21 (une pastille de 46 px, pas la bande pleine
+   * largeur d'avant D21) sans jamais recouvrir un participant.
    *
-   * Motif repris de `SearchMapFab` (§1 bis barreau 2) : conteneur absolu en
-   * `pointerEvents="box-none"` pour que les touches traversent, ombre
-   * `shadow200`, ancrage bas-droite. La grille de chips, elle, ne change pas :
-   * meme 48 % / 100 %, memes handlers, un seul tap.
-   * @returns {any} - La couche flottante, ou null si aucune action n'est ouverte.
+   * Ce que ce changement supprime, et qu'aucune reserve ne pouvait corriger :
+   * ancre en absolu, le menu occupait en permanence les 62 px du bas du cadre,
+   * quel que soit l'endroit ou l'utilisateur avait defile.
+   *
+   * Consequence gratuite : deplie, la grille de chips repousse desormais la
+   * liste au lieu de la masquer. La grille elle-meme ne change pas — memes
+   * colonnes 48 % / 100 %, memes handlers, un seul tap.
+   * @returns {any} - Le bloc du menu, ou null si aucune action n'est ouverte.
    */
-  const renderFloatingManageLayer = () => {
+  const renderManagePanel = () => {
     if (!hasManageActions) return null;
 
     return (
-      <View
-        pointerEvents="box-none"
-        style={{
-          alignItems: 'flex-end',
-          bottom: 16,
-          left: 16,
-          position: 'absolute',
-          right: 16,
-        }}
-      >
+      <View style={[Spaces.marginTop[12], { alignItems: 'flex-end' }]}>
         {isEventActionsOpen ? (
           <View
             style={[
@@ -4533,21 +4536,26 @@ function EventDetails({ navigation, route }) {
   };
 
   return (
-    <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingBottom[32], Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
+    <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingBottom[12], Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
       <View style={[Spaces.gap[8], Alignments.alignCenter]}>
         <Tag style={{}} text={event?.type?.name?.toUpperCase() || ''} textStyle={Fonts.p2} />
       </View>
 
-      {/* D21 ② : la liste et la couche flottante partagent un meme cadre. Le
-          cadre prend exactement la place que la liste prenait seule (elle
-          grandit deja par `flexGrow`), et il donne au menu flottant un point
-          d'ancrage qui ne recouvre JAMAIS le pied d'ecran — ou vivent encore
-          les cotisations liees, les stats de match et les boutons de reponse. */}
+      {/* D53 : la liste et le menu d'organisation sont deux FRERES dans ce
+          cadre — la liste d'abord, le menu ensuite. La liste cede la place au
+          menu toute seule (`flexShrink: 1`, le style par defaut d'une
+          ScrollView verticale), donc le menu est toujours visible sans avoir a
+          defiler, et il ne recouvre rien. Le cadre les tient a l'ecart du pied
+          d'ecran, ou vivent les cotisations liees, les stats de match et les
+          boutons de reponse. */}
       <View style={Alignments.fill}>
         <ScrollView
           contentContainerStyle={[
             Spaces.gap[32],
-            { paddingBottom: hasManageActions ? FLOATING_MANAGE_CLEARANCE : 40 },
+            // D53 — la reserve n'a plus de bouton a degager : le menu est pose
+            // sous la liste, pas par-dessus. Il ne reste qu'un terminateur, le
+            // meme dans les deux cas (avec ou sans actions d'organisation).
+            Spaces.paddingBottom[16],
           ]}
           refreshControl={(
             <RefreshControl
@@ -5306,10 +5314,10 @@ function EventDetails({ navigation, route }) {
           </WithDataWrapper>
         </ScrollView>
 
-        {renderFloatingManageLayer()}
+        {renderManagePanel()}
       </View>
 
-      <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
+      <View style={[Spaces.gap[16]]}>
         {pendingFeaturedApproval?.requestId
           ? (
             <View style={[Alignments.row, Spaces.gap[16]]}>
