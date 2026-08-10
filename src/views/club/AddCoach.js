@@ -324,6 +324,10 @@ function AddCoach({ navigation, route }) {
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
+        // D63 : l ecran n avait AUCUNE marge laterale — champs, pilules de
+        // role et bouton touchaient les deux bords. Posee ici, elle vaut aussi
+        // pour le CTA, qui vit hors du defilement.
+        Spaces.paddingHorizontal[16],
       ]}
     >
       <KeyboardAvoidingView
@@ -467,13 +471,22 @@ function AddCoach({ navigation, route }) {
           </View>
         </ScrollView>
 
-        <Button
-          disabled={!!Object.keys(formErrors).length}
-          isLoading={createTrainerMutation.isPending}
-          onPress={handleSubmit(handleFormSubmit)}
-          title={t('addCoach.actions.save')}
-          variant="Primary"
-        />
+        <View style={[Spaces.gap[4]]}>
+          <Button
+            disabled={!!Object.keys(formErrors).length}
+            isLoading={createTrainerMutation.isPending}
+            onPress={handleSubmit(handleFormSubmit)}
+            title={t('addCoach.actions.save')}
+            variant="Primary"
+          />
+          {/* D63 : la maquette pose « Annuler » sous chacun de ses CTA. Sans */}
+          {/* lui, le seul retour en arriere etait la fleche de l en-tete. */}
+          <Button
+            onPress={() => navigation.goBack()}
+            title={t('common.cancel', 'Annuler')}
+            variant="Ghost"
+          />
+        </View>
       </KeyboardAvoidingView>
       {!isManagerMode ? (
         <TrainerInvitedModal
