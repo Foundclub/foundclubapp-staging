@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import PremiumBadge from '@/components/molecules/premiumBadge/PremiumBadge';
@@ -24,12 +25,26 @@ const DEFAULT_ILLUSTRATION_PLACEMENT = {
   width: 138,
 };
 
-const GHOST_ICON_PLACEMENT = {
-  bottom: -20,
-  height: 112,
-  right: -16,
-  width: 112,
-};
+// D59 ① — REPLI QUAND AUCUNE ILLUSTRATION N'EST FOURNIE.
+//
+// CE QUI ETAIT ICI : l'icone de la carte redessinee en geant (112 pt, opacite
+// 0.12), le « repli fantome » decrit par PROMPT_ACCUEIL.md §2. Deux defauts
+// mesures : (a) les icones sont des PNG de 96x96 px — les etirer a 112 pt les
+// rend flous des le x2, jusqu'a 3,5x d'agrandissement sur un ecran x3 ; (b)
+// AUCUNE carte du hub ne fournit d'illustration aujourd'hui, donc ce repli
+// etait le rendu REEL des 30 cartes, pas un cas de secours.
+//
+// A LA PLACE : un halo de la couleur d'accent, centre exactement la ou
+// l'illustration se poserait — deux disques concentriques dont l'alpha decroit,
+// ce qui imite la retombee d'un degrade radial sans LinearGradient ni asset.
+// Vectoriel par nature (aucun pixel a etirer), et purement issu du theme.
+// Le mecanisme `illustration` est INTACT : le jour ou une image arrive, elle
+// reprend sa place et le halo s'efface.
+const FALLBACK_GLOW_CENTER = { bottom: 43, right: 49 };
+const FALLBACK_GLOW_RINGS = [
+  { alpha: 0.07, size: 148 },
+  { alpha: 0.1, size: 88 },
+];
 
 /**
  * Home action card used by the HomeHub sections.
@@ -180,23 +195,23 @@ function HomeActionCard({
               width: resolvedIllustrationPlacement.width,
             }}
           />
-        ) : (
-          <Image
+        ) : FALLBACK_GLOW_RINGS.map((ring) => (
+          <View
             accessibilityElementsHidden
             importantForAccessibility="no"
-            resizeMode="contain"
-            source={Images[icon]}
+            key={ring.size}
+            pointerEvents="none"
             style={{
-              bottom: GHOST_ICON_PLACEMENT.bottom,
-              height: GHOST_ICON_PLACEMENT.height,
-              opacity: 0.12,
+              backgroundColor: withAlpha(resolvedAccentColor, ring.alpha),
+              borderRadius: ring.size / 2,
+              bottom: FALLBACK_GLOW_CENTER.bottom - (ring.size / 2),
+              height: ring.size,
               position: 'absolute',
-              right: GHOST_ICON_PLACEMENT.right,
-              width: GHOST_ICON_PLACEMENT.width,
+              right: FALLBACK_GLOW_CENTER.right - (ring.size / 2),
+              width: ring.size,
             }}
-            tintColor={resolvedAccentColor}
           />
-        )}
+        ))}
 
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, { position: 'relative', zIndex: 1 }]}>
           <View

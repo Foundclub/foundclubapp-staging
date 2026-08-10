@@ -1,10 +1,16 @@
 import { useNavigation } from '@react-navigation/native';
 import { useMemo } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import { getSubscriptionQuotaItem } from '@/domains/subscription/subscriptionDecision';
+import {
+  getCoveringEntitlement,
+  getSubscriptionQuotaItem,
+} from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -37,15 +43,19 @@ function SubscriptionQuotaBanner({
   resumeRouteParams = undefined,
 }) {
   const {
+    Alignments,
     ApplicationStyle,
     Colors,
     Fonts,
+    Images,
     Spaces,
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const {
+    entitlementsSummary,
     freeUsageSummary,
     subscriptionAccessLevel,
+    subscriptionSummary,
     userData,
   } = useAuth();
 
@@ -57,6 +67,17 @@ function SubscriptionQuotaBanner({
   const quotaItem = useMemo(
     () => getSubscriptionQuotaItem(freeUsageSummary, quotaType, subscriptionAccessLevel),
     [freeUsageSummary, quotaType, subscriptionAccessLevel],
+  );
+
+  // D59 ⑤ — « Deja couvert » : quelqu'un d'autre paie pour cette equipe / ce club.
+  const coveringEntitlement = useMemo(
+    () => getCoveringEntitlement({
+      entitlementsSummary,
+      subscriptionAccessLevel,
+      subscriptionSummary,
+      userDocumentId: userData?.documentId,
+    }),
+    [entitlementsSummary, subscriptionAccessLevel, subscriptionSummary, userData?.documentId],
   );
 
   if (!canShowSubscriptionQuota) {
@@ -74,6 +95,56 @@ function SubscriptionQuotaBanner({
   // connu (bootstrap en cours), on n'affiche aucun argument de vente.
   if (!subscriptionAccessLevel) {
     return null;
+  }
+
+  // D59 ⑤ — LE BANDEAU « DEJA COUVERT » (pack `pw-screens.jsx`, variante
+  // `covered` de `QuotaBanner`). Il se pose ICI, juste avant le silence : quand
+  // quelqu'un d'autre paie, `getSubscriptionQuotaItem` rend `null` et ce
+  // composant ne disait plus rien du tout. La personne entrait dans l'assistant
+  // sans savoir pourquoi plus aucun compteur ne s'affichait.
+  //
+  // 🔒 Il annonce que la personne n'a rien a payer : la condition vit dans
+  // `getCoveringEntitlement`, qui exige les TROIS a la fois — niveau d'acces
+  // connu et non gratuit, aucun plan paye par elle, et un tiers NOMME qui paie.
+  // Sans nom de payeur, pas de bandeau : on ne peut pas expliquer la couverture.
+  if (coveringEntitlement) {
+    const paidBy = coveringEntitlement?.paidBy || {};
+    const firstname = String(paidBy?.firstname || '').trim();
+    const lastnameInitial = String(paidBy?.lastname || '').trim().charAt(0).toUpperCase();
+    const displayName = lastnameInitial ? `${firstname} ${lastnameInitial}.` : firstname;
+    const scopeType = String(coveringEntitlement?.scopeType || '').trim().toUpperCase();
+    const isClubScope = scopeType === 'CLUB';
+    const offerName = isClubScope ? 'Club' : 'Équipe';
+    const coveredThing = isClubScope ? 'tout le club' : 'cette équipe';
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.card,
+          Spaces.padding[16],
+          Spaces.gap[8],
+          Spaces.marginBottom[16],
+          {
+            backgroundColor: withAlpha(Colors.success500, 0.08),
+            borderColor: withAlpha(Colors.success500, 0.35),
+          },
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 9 }]}>
+          <Image
+            source={Images.shield}
+            style={{ height: 16, width: 16 }}
+            tintColor={Colors.success500}
+          />
+          <Text style={[Fonts.p2Bold, { color: Colors.success500 }]}>
+            Déjà couvert — tu n&apos;as rien à payer
+          </Text>
+        </View>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {`${displayName} paie l'offre ${offerName} pour ${coveredThing}.`}
+        </Text>
+      </View>
+    );
   }
 
   if (!quotaItem) {

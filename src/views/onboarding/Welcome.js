@@ -11,6 +11,7 @@ import {
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { storage, useAppContext } from '@/store/appContext';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -28,7 +29,7 @@ import { useTour } from '@/context/TourContext';
 function Welcome({ navigation }) {
   // hooks
   const {
-    Alignments, Fonts, Images, Spaces,
+    Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -64,44 +65,65 @@ function Welcome({ navigation }) {
   // depuis son bouton, qui appelle `startTour` juste en dessous. L'auto-départ
   // est donc retiré : c'est la seule chose qui l'empêchait d'être vu.
 
-  // Les quotas gratuits sont des constantes produit : des puces statiques evitent l'etat
-  // "resume pas encore charge" qui affichait un texte vague au moment le plus vendeur.
-  const offerCards = [
+  // D59 ② — LE CHEMIN EN 3 ETAPES (pack `pw-welcome2.jsx`, frame 12c).
+  //
+  // CE QUI ETAIT ICI : trois cartes d'offres de meme poids, empilees. Deux
+  // defauts nommes par le pack : (a) la hierarchie etait plate alors que la
+  // personne EST en Gratuit — la promesse du sous-titre (« debloque la suite
+  // quand ton equipe grandit ») n'etait pas dessinee ; (b) la carte Club etait
+  // VERTE (`rgba(16,185,129)`, hex hors palette), alors que le code couleur des
+  // offres est cyan = Equipe / violet = Club, le vert etant reserve au registre
+  // succes et aux coches.
+  //
+  // Les quotas gratuits restent des constantes produit : des puces statiques
+  // evitent l'etat « resume pas encore charge », qui affichait un texte vague au
+  // moment le plus vendeur.
+  const progressionSteps = [
     {
-      borderColor: 'rgba(255,255,255,0.14)',
+      accentColor: Colors.success500,
+      borderColor: withAlpha(Colors.neutral00, 0.14),
       bullets: [
         t('welcome.subscription.free.bullet1', '1 équipe offerte'),
-        t('welcome.subscription.free.bullet2', '1 événement, 1 match et 1 annonce offerts'),
+        // « 1 match » est retire : un match EST un type d'evenement, l'annoncer
+        // a part survendait le quota gratuit.
+        t('welcome.subscription.free.bullet2', '1 événement et 1 annonce offerts'),
         t('welcome.subscription.free.bullet3', 'Chat illimité, pour toujours'),
       ],
-      eyebrow: t('welcome.subscription.free.eyebrow', 'Gratuit'),
-      fillColor: 'rgba(255,255,255,0.08)',
+      fillColor: withAlpha(Colors.neutral00, 0.05),
+      isReached: true,
       key: 'free',
+      kicker: t('welcome.subscription.free.kicker', "Aujourd'hui"),
+      kickerColor: Colors.success200,
       title: t('welcome.subscription.free.title', 'Commence sans payer'),
     },
     {
-      borderColor: 'rgba(1, 179, 244, 0.28)',
+      accentColor: Colors.primary500,
+      borderColor: withAlpha(Colors.primary500, 0.32),
       bullets: [
-        t('welcome.subscription.team.bullet1', 'Événements illimités'),
-        t('welcome.subscription.team.bullet2', 'Compositions et convocations'),
-        t('welcome.subscription.team.bullet3', 'Cotisations de ton équipe'),
+        t('welcome.subscription.team.bullet1', 'Événements et matchs illimités'),
+        t('welcome.subscription.team.bullet2', 'Convocations en 2 taps'),
+        t('welcome.subscription.team.bullet3', "Cotisation encaissée dans l'app"),
       ],
-      eyebrow: t('welcome.subscription.team.eyebrow', 'Équipe'),
-      fillColor: 'rgba(1, 179, 244, 0.1)',
+      fillColor: withAlpha(Colors.primary500, 0.09),
       key: 'team',
+      kicker: t('welcome.subscription.team.kicker', 'Quand ton équipe grandit'),
+      kickerColor: Colors.primary200,
       title: t('welcome.subscription.team.title', 'Débloque tes équipes'),
     },
     {
-      borderColor: 'rgba(16, 185, 129, 0.24)',
+      accentColor: Colors.violet500,
+      borderColor: withAlpha(Colors.violet500, 0.38),
       bullets: [
-        t('welcome.subscription.club.bullet1', 'Toutes tes équipes incluses'),
-        t('welcome.subscription.club.bullet2', 'Installations et planning du club'),
-        t('welcome.subscription.club.bullet3', 'Sponsors et partenaires du club'),
+        t('welcome.subscription.club.bullet1', 'Toutes les équipes du club incluses'),
+        t('welcome.subscription.club.bullet2', 'Installations et réservations'),
+        t('welcome.subscription.club.bullet3', 'Sponsors et canal de diffusion'),
       ],
-      eyebrow: t('welcome.subscription.club.eyebrow', 'Club'),
-      fillColor: 'rgba(16, 185, 129, 0.08)',
-      footnote: t('welcome.subscription.club.footnote', 'Réservée aux clubs vérifiés.'),
+      fillColor: withAlpha(Colors.violet500, 0.09),
+      footnote: t('welcome.subscription.club.footnote', 'Réservée aux clubs vérifiés'),
+      isLast: true,
       key: 'club',
+      kicker: t('welcome.subscription.club.kicker', "Quand ton club s'organise"),
+      kickerColor: Colors.violet200,
       title: t('welcome.subscription.club.title', 'Pilote tout le club'),
     },
   ];
@@ -174,39 +196,105 @@ function Welcome({ navigation }) {
     navigateAfterOnboarding(getPostOnboardingHomeRoute());
   };
 
-  const renderOfferCard = (card) => (
-    <View
-      key={card.key}
-      style={[
-        Spaces.padding[16],
-        Spaces.gap[8],
-        {
-          backgroundColor: card.fillColor,
-          borderColor: card.borderColor,
-          borderRadius: 20,
-          borderWidth: 1,
-        },
-      ]}
-    >
-      <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-        {card.eyebrow}
-      </Text>
-      <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-        {card.title}
-      </Text>
-      {card.bullets.map((bullet) => (
-        <View key={bullet} style={[Alignments.row, Spaces.gap[8]]}>
-          <Text style={[Fonts.p2Bold, Fonts.primary200]}>✓</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
-            {bullet}
-          </Text>
+  // Une etape du rail : la colonne de gauche porte la pastille et le trait qui
+  // relie a l'etape suivante, la carte porte le contenu. Seule la 1re est
+  // ACQUISE (pastille pleine + coche) : c'est ce contraste qui dessine un
+  // chemin plutot qu'un catalogue.
+  const renderProgressionStep = (step) => (
+    <View key={step.key} style={[Alignments.row, { columnGap: 12 }]}>
+      <View style={[Alignments.alignCenter, { width: 24 }]}>
+        <View
+          style={[
+            Alignments.alignCenter,
+            Alignments.justifyCenter,
+            {
+              backgroundColor: step.isReached ? step.accentColor : Colors.transparent,
+              borderColor: step.accentColor,
+              borderRadius: 11,
+              borderWidth: 2,
+              height: 22,
+              width: 22,
+            },
+          ]}
+        >
+          {step.isReached ? (
+            <Image
+              source={Images.check}
+              style={{ height: 11, width: 11 }}
+              tintColor={Colors.primary900}
+            />
+          ) : (
+            <View
+              style={{
+                backgroundColor: step.accentColor,
+                borderRadius: 3,
+                height: 6,
+                width: 6,
+              }}
+            />
+          )}
         </View>
-      ))}
-      {card.footnote ? (
-        <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {card.footnote}
+        {step.isLast ? null : (
+          <LinearGradient
+            colors={[withAlpha(Colors.neutral00, 0.22), withAlpha(Colors.neutral00, 0.07)]}
+            style={[Alignments.fill, { width: 2 }]}
+          />
+        )}
+      </View>
+      <View
+        style={[
+          Alignments.fill,
+          {
+            backgroundColor: step.fillColor,
+            borderColor: step.borderColor,
+            borderRadius: 16,
+            borderWidth: 1,
+            marginBottom: step.isLast ? 0 : 10,
+            paddingHorizontal: 13,
+            paddingVertical: 10,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            Fonts.p4Bold,
+            { color: step.kickerColor, letterSpacing: 1.3, textTransform: 'uppercase' },
+          ]}
+        >
+          {step.kicker}
         </Text>
-      ) : null}
+        <Text style={[Fonts.p1Black, Fonts.neutral00, { marginBottom: 6, marginTop: 2 }]}>
+          {step.title}
+        </Text>
+        <View style={[Spaces.gap[4]]}>
+          {step.bullets.map((bullet) => (
+            // La coche est l'icone du DS, plus le glyphe texte « ✓ » : lui seul
+            // garde sa forme quand la personne agrandit la taille du systeme.
+            <View key={bullet} style={[Alignments.row, { columnGap: 8 }]}>
+              <Image
+                source={Images.check}
+                style={{ height: 13, marginTop: 2, width: 13 }}
+                tintColor={Colors.success500}
+              />
+              <Text style={[Fonts.p3, Fonts.neutral100, Alignments.fill]}>
+                {bullet}
+              </Text>
+            </View>
+          ))}
+        </View>
+        {step.footnote ? (
+          <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 6, marginTop: 7 }]}>
+            <Image
+              source={Images.shield}
+              style={{ height: 11, width: 11 }}
+              tintColor={Colors.violet200}
+            />
+            <Text style={[Fonts.p4Bold, { color: Colors.violet200 }]}>
+              {step.footnote}
+            </Text>
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 
@@ -228,49 +316,44 @@ function Welcome({ navigation }) {
     >
       {canShowSubscriptionWelcome ? (
         <>
-          <View style={[Alignments.fill]}>
-            <ScrollView
-              contentContainerStyle={[Spaces.gap[24], Spaces.paddingBottom[24]]}
-              style={[Alignments.fill]}
-            >
-              <View style={[Spaces.gap[12]]}>
-                <Text style={[Fonts.h1Bold, Fonts.neutral00]}>
-                  {t('welcome.subscription.title', 'Bienvenue dans FoundClub')}
-                </Text>
-                <Text style={[Fonts.h4Bold, Fonts.neutral100]}>
-                  {t(
-                    roleKey === 'president'
-                      ? 'welcome.subscription.presidentSubtitle'
-                      : 'welcome.subscription.coachSubtitle',
-                    roleKey === 'president'
-                      ? 'Commence gratuitement. Débloque la suite quand ton club grandit.'
-                      : 'Commence gratuitement. Débloque la suite quand ton équipe grandit.',
-                  )}
-                </Text>
-              </View>
-              <View style={[Spaces.gap[16]]}>
-                {offerCards.map(renderOfferCard)}
-                <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  {t(
-                    'welcome.subscription.hint',
-                    'Tu retrouveras les offres à tout moment depuis ton profil.',
-                  )}
-                </Text>
-              </View>
-            </ScrollView>
-            <LinearGradient
-              colors={['rgba(0, 18, 24, 0)', 'rgba(0, 18, 24, 0.92)']}
-              pointerEvents="none"
-              style={{
-                bottom: 0,
-                height: 56,
-                left: 0,
-                position: 'absolute',
-                right: 0,
-              }}
-            />
+          {/* Titre HORS defilement : apres 6 etapes, il ne doit plus partir au
+              premier geste. Le sous-titre est degraisse (p2 au lieu de h4Bold) —
+              deux titres gras se concurrencaient. */}
+          <View style={[Spaces.gap[8]]}>
+            <Text style={[Fonts.h1Bold, Fonts.neutral00]}>
+              {t('welcome.subscription.title', 'Bienvenue dans FoundClub')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t(
+                roleKey === 'president'
+                  ? 'welcome.subscription.presidentSubtitle'
+                  : 'welcome.subscription.coachSubtitle',
+                roleKey === 'president'
+                  ? 'Commence gratuitement. Débloque la suite quand ton club grandit.'
+                  : 'Commence gratuitement. Débloque la suite quand ton équipe grandit.',
+              )}
+            </Text>
           </View>
-          <View style={[Spaces.gap[8], Spaces.paddingTop[12]]}>
+          {/* La cible est ZERO defilement : le ScrollView n'est qu'un filet pour
+              les petits gabarits, d'ou `flexGrow` + centrage. Le degrade de fondu
+              bas a ete retire, il voilait la carte Club. */}
+          <ScrollView
+            contentContainerStyle={[Alignments.justifyCenter, { flexGrow: 1 }]}
+            style={[Alignments.fill]}
+          >
+            <View style={[Spaces.paddingVertical[12]]}>
+              {progressionSteps.map(renderProgressionStep)}
+            </View>
+          </ScrollView>
+          <View style={[Spaces.gap[8]]}>
+            {/* Reassurance REMONTEE au-dessus du bouton : elle etait sous le pli,
+                donc invisible. */}
+            <Text style={[Fonts.p3, Fonts.neutral300, Fonts.textCenter]}>
+              {t(
+                'welcome.subscription.hint',
+                'Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.',
+              )}
+            </Text>
             {shouldOfferGuidedTour ? (
               // Tour guidé obligatoire (décision produit 2026-07-10) : pas d'option
               // « Passer » — le seul chemin de sortie est de démarrer le tour.
@@ -286,6 +369,18 @@ function Welcome({ navigation }) {
                 variant="Primary"
               />
             )}
+            {/* Pont sous le bouton : il desamorce un tour guide obligatoire en
+                disant ce qu'il coute (rien) et ce qu'il produit. */}
+            <Text style={[Fonts.p3Bold, Fonts.primary200, Fonts.textCenter]}>
+              {t(
+                roleKey === 'president'
+                  ? 'welcome.subscription.presidentBridge'
+                  : 'welcome.subscription.coachBridge',
+                roleKey === 'president'
+                  ? 'Gratuit · 2 min — tu configures ton club en chemin'
+                  : 'Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin',
+              )}
+            </Text>
           </View>
         </>
       ) : (

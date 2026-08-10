@@ -41,10 +41,16 @@ jest.mock('react-native-linear-gradient', () => 'LinearGradient');
 jest.mock('@/theme/themeContext', () => {
   const styleLeaf = {};
   const makeRamp = () => new Proxy({}, { get: () => styleLeaf });
+  // D59 ② — `Colors` vient du VRAI module : le rail de progression lit des
+  // jetons nommes (`violet500` pour l'offre Club, `success500` pour l'etape
+  // acquise). Un Proxy rendrait n'importe quelle cle et laisserait passer une
+  // faute de frappe ; le vrai objet la fait tomber.
+  const { colors } = jest.requireActual('@/theme/colors');
   return {
     __esModule: true,
     default: () => ({
       Alignments: makeRamp(),
+      Colors: colors,
       Fonts: makeRamp(),
       Images: new Proxy({}, { get: () => 1 }),
       Spaces: new Proxy({}, { get: () => makeRamp() }),
@@ -158,8 +164,18 @@ describe('Welcome — l`ecran ne se saute plus tout seul (D23 ⑤)', () => {
     mockRole.current = 'president';
     const { tree } = rendre();
 
+    // D59 ② — CE TEST A CHANGE D'ANCRE, PAS D'INTENTION. Il verifiait les
+    // libelles « Gratuit / Équipe / Club », qui etaient les surtitres des trois
+    // cartes. Le pack les remplace par les etapes d'un chemin (« Aujourd'hui »,
+    // « Quand ton équipe grandit », « Quand ton club s'organise »).
+    // Les TITRES, eux, sont les memes avant et apres : ils disent « il y a bien
+    // trois offres » sans dependre de l'habillage.
     expect(textes(tree)).toEqual(
-      expect.arrayContaining(['Gratuit', 'Équipe', 'Club']),
+      expect.arrayContaining([
+        'Commence sans payer',
+        'Débloque tes équipes',
+        'Pilote tout le club',
+      ]),
     );
   });
 });
@@ -196,5 +212,96 @@ describe('Welcome — c`est LUI qui lance le tour guide, sur action (D23 ⑤)', 
       index: 0,
       routes: [{ name: 'HomeTab' }],
     });
+  });
+});
+
+// D59 ② — le chemin en 3 etapes (pack `pw-welcome2.jsx`, frame 12c).
+describe('Welcome — le chemin en 3 etapes remplace les 3 cartes (D59 ②)', () => {
+  /**
+   * Toutes les couleurs de fond posees par l'ecran, aplaties.
+   * @param {any} tree
+   * @returns {string[]}
+   */
+  const couleursDeFond = (tree) => JSON.stringify(tree.toJSON())
+    .split('"backgroundColor":"')
+    .slice(1)
+    .map((/** @type {string} */ morceau) => morceau.split('"')[0]);
+
+  it('les trois etapes sont nommees dans l ordre du chemin', () => {
+    mockRole.current = 'president';
+    const { tree } = rendre();
+    const rendus = textes(tree);
+
+    // C'est la narration du sous-titre qui devient la structure : un point de
+    // depart acquis, puis deux jalons.
+    expect(rendus).toEqual(expect.arrayContaining([
+      "Aujourd'hui",
+      'Quand ton équipe grandit',
+      "Quand ton club s'organise",
+    ]));
+    expect(rendus.indexOf("Aujourd'hui")).toBeLessThan(rendus.indexOf('Quand ton équipe grandit'));
+    expect(rendus.indexOf('Quand ton équipe grandit'))
+      .toBeLessThan(rendus.indexOf("Quand ton club s'organise"));
+  });
+
+  it('l etape Club est VIOLETTE, et il ne reste aucun vert d offre', () => {
+    const { colors, withAlpha } = jest.requireActual('@/theme/colors');
+    const { tree } = rendre();
+    const fonds = couleursDeFond(tree);
+
+    // ⛔ LE TEMOIN D'ARRET. Il ne suffit pas de chercher l'ancien vert : ce test
+    // exige que CHAQUE fond pose par l'ecran vienne d'un jeton du theme. Un
+    // `rgba(16,185,129,…)` — l'emeraude hors palette qui peignait l'offre Club —
+    // n'est dans aucune de ces valeurs, donc il tombe, comme tomberait n'importe
+    // quelle couleur inventee plus tard.
+    //
+    // ⚠️ Aucun `#hex` litteral ici : `verify:theme-contract` SCANNE AUSSI LES
+    // TESTS, et un hex ecrit en dur fait tomber la porte.
+    const fondsAutorises = new Set([
+      colors.primary500, // point central de l'etape Equipe
+      colors.success500, // pastille de l'etape acquise
+      colors.transparent, // pastilles des 2 etapes a venir
+      colors.violet500, // point central de l'etape Club
+      withAlpha(colors.neutral00, 0.05), // carte Gratuit
+      withAlpha(colors.primary500, 0.09), // carte Equipe
+      withAlpha(colors.violet500, 0.09), // carte Club
+    ]);
+
+    expect(fonds.length).toBeGreaterThan(0);
+    fonds.forEach((/** @type {string} */ fond) => {
+      expect(fondsAutorises.has(fond)).toBe(true);
+    });
+    // Et le violet est bien POSE, pas seulement autorise.
+    expect(fonds).toContain(withAlpha(colors.violet500, 0.09));
+    // Le vert reste, mais a SA place : l'etape deja acquise.
+    expect(fonds).toContain(colors.success500);
+  });
+
+  it('la coche des puces est l icone du DS, plus le glyphe texte', () => {
+    const { tree } = rendre();
+
+    expect(textes(tree)).not.toContain('✓');
+  });
+
+  it('la reassurance et le pont encadrent le bouton', () => {
+    const reassurance = 'Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.';
+    const pont = 'Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin';
+    const { tree } = rendre();
+    const rendus = textes(tree);
+
+    // La reassurance etait sous le pli : elle doit passer AVANT le bouton.
+    expect(rendus).toContain(reassurance);
+    expect(rendus).toContain(pont);
+    expect(rendus.indexOf(reassurance))
+      .toBeLessThan(rendus.indexOf('Démarrer le tour guidé'));
+    expect(rendus.indexOf('Démarrer le tour guidé'))
+      .toBeLessThan(rendus.indexOf(pont));
+  });
+
+  it('le pont parle du CLUB au dirigeant, pas de l equipe', () => {
+    mockRole.current = 'president';
+    const { tree } = rendre();
+
+    expect(textes(tree)).toContain('Gratuit · 2 min — tu configures ton club en chemin');
   });
 });

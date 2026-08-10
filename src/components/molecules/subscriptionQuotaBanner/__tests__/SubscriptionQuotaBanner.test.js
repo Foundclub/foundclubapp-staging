@@ -45,15 +45,19 @@ jest.mock('@/theme/themeContext', () => {
   return {
     __esModule: true,
     default: () => ({
+      Alignments: anyScale(),
       ApplicationStyle: anyScale(),
       // Colors reste un objet PLAT : le composant interpole ses valeurs dans des
       // chaines (`${Colors.warning500}1F`), ce qu'un Proxy ne supporte pas.
       Colors: {
         neutral100: 'neutre-100',
         primary500: 'couleur-primaire',
+        success500: 'couleur-succes',
         warning500: 'couleur-alerte',
       },
       Fonts: anyScale(),
+      // Objet PLAT lui aussi : le bandeau « deja couvert » lit `Images.shield`.
+      Images: { shield: 'icone-bouclier' },
       Spaces: anyScale(),
     }),
   };
@@ -224,5 +228,108 @@ describe('SubscriptionQuotaBanner — on ne revend jamais du gratuit a un client
     });
 
     expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', { screen: 'SubscriptionOffers' });
+  });
+});
+
+// D59 ⑤ — LE BANDEAU « DEJA COUVERT » (pack `pw-screens.jsx`, variante
+// `covered`). C'est un message qui parle d'ARGENT : mal declenche, il annonce
+// la gratuite a quelqu'un qui devra payer. Les temoins negatifs ci-dessous
+// comptent donc autant que les positifs — ils bornent exactement les cas ou il
+// a le droit d'apparaitre.
+
+/**
+ * Un entitlement paye par quelqu'un d'autre que moi.
+ * @param {{ firstname?: string; lastname?: string; scopeType?: string }} [payeur]
+ * @returns {any[]}
+ */
+const couvertPar = ({ firstname = 'Karim', lastname = 'Diallo', scopeType = 'TEAM' } = {}) => [{
+  paidBy: { documentId: 'u-payeur', firstname, lastname },
+  scopeType,
+}];
+
+describe('SubscriptionQuotaBanner — « deja couvert » (D59 ⑤)', () => {
+  test('quand un tiers NOMME paie, le bandeau le dit et le nomme', async () => {
+    const texte = await renderTextFor({
+      entitlementsSummary: couvertPar(),
+      // Quelqu'un paie pour moi : le juge unique m'a deja passe en TEAM, donc
+      // aucun compteur gratuit ne s'affichait plus — le composant se taisait.
+      freeUsageSummary: eventUsage({ limit: 1, used: 0 }),
+      subscriptionAccessLevel: 'TEAM',
+      subscriptionSummary: { activePlanCodes: [] },
+    });
+
+    expect(texte).toContain("Déjà couvert — tu n'as rien à payer");
+    expect(texte).toContain('Karim D. paie l\'offre Équipe pour cette équipe.');
+  });
+
+  test('une couverture CLUB parle du club, pas de l equipe', async () => {
+    const texte = await renderTextFor({
+      entitlementsSummary: couvertPar({
+        firstname: 'Nadia', lastname: 'Benali', scopeType: 'CLUB',
+      }),
+      subscriptionAccessLevel: 'CLUB',
+      subscriptionSummary: { activePlanCodes: [] },
+    });
+
+    expect(texte).toContain('Nadia B. paie l\'offre Club pour tout le club.');
+  });
+
+  test('⛔ LE PAYEUR lui-meme ne voit PAS ce bandeau — il paie, justement', async () => {
+    const texte = await renderTextFor({
+      entitlementsSummary: [{
+        paidBy: { documentId: 'u-1', firstname: 'Moi', lastname: 'Meme' },
+        scopeType: 'TEAM',
+      }],
+      subscriptionAccessLevel: 'TEAM',
+      subscriptionSummary: { activePlanCodes: ['fc_team_2_monthly'] },
+      userData: PRESIDENT,
+    });
+
+    expect(texte).not.toContain('Déjà couvert');
+  });
+
+  test('⛔ un compte GRATUIT ne le voit JAMAIS, meme si un entitlement traine', async () => {
+    const texte = await renderTextFor({
+      entitlementsSummary: couvertPar(),
+      freeUsageSummary: eventUsage({ limit: 1, used: 0 }),
+      // Le juge unique dit « gratuit » : c'est lui qui tranche, pas la presence
+      // d'un entitlement. Annoncer la gratuite ici serait un mensonge d'argent.
+      subscriptionAccessLevel: 'FREE',
+      subscriptionSummary: { activePlanCodes: [] },
+    });
+
+    expect(texte).not.toContain('Déjà couvert');
+    expect(texte).toContain('il te reste 1 publication gratuite');
+  });
+
+  test('⛔ sans NOM de payeur, aucun bandeau : on ne sait pas expliquer', async () => {
+    const texte = await renderTextFor({
+      entitlementsSummary: [{ paidBy: { documentId: 'u-payeur' }, scopeType: 'TEAM' }],
+      subscriptionAccessLevel: 'TEAM',
+      subscriptionSummary: { activePlanCodes: [] },
+    });
+
+    expect(texte).not.toContain('Déjà couvert');
+  });
+
+  test('⛔ tant que le niveau d abonnement est inconnu, il se tait', async () => {
+    const texte = await renderTextFor({
+      entitlementsSummary: couvertPar(),
+      subscriptionAccessLevel: null,
+      subscriptionSummary: { activePlanCodes: [] },
+    });
+
+    expect(texte).not.toContain('Déjà couvert');
+  });
+
+  test('⛔ un joueur ne le voit pas non plus', async () => {
+    const texte = await renderTextFor({
+      entitlementsSummary: couvertPar(),
+      subscriptionAccessLevel: 'TEAM',
+      subscriptionSummary: { activePlanCodes: [] },
+      userData: JOUEUR,
+    });
+
+    expect(texte).not.toContain('Déjà couvert');
   });
 });
