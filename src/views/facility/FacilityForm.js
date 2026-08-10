@@ -577,8 +577,12 @@ function FacilityForm() {
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
                       {conflictModeFieldLabel}
                     </Text>
+                    {/* D63 : « Demande a valider » s'affichait « Demande a */}
+                    {/* valid... ». Ce sont des libelles SYSTEME — le pack les */}
+                    {/* veut entiers, l'ellipse est reservee aux donnees. */}
                     <SegmentedControl
                       centerContent
+                      fullLabels
                       onChange={onChange}
                       options={conflictModeOptions}
                       value={value}

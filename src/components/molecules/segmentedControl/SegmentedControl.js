@@ -28,10 +28,11 @@ import useTheme from '@/theme/themeContext';
  * @param {string} props.value
  * @param {(value: string) => void} props.onChange
  * @param {boolean} [props.centerContent]
+ * @param {boolean} [props.fullLabels] Libelles systeme : jamais tronques.
  * @returns {import('react').ReactElement}
  */
 function SegmentedControl({
-  centerContent = false, onChange, options, value,
+  centerContent = false, fullLabels = false, onChange, options, value,
 }) {
   const { Colors, Fonts } = useTheme();
   const isWeb = Platform.OS === 'web';
@@ -168,6 +169,12 @@ function SegmentedControl({
       textAlign: 'center',
       textAlignVertical: 'center',
     },
+    // D63 : opt-in. `flexShrink: 1` laissait le libelle se comprimer jusqu'a
+    // l'ellipse ; sur deux lignes il prend la place dont il a besoin. Les 15
+    // ecrans qui n'activent pas la prop gardent le bandeau d'une seule ligne.
+    segmentTextFull: {
+      flexShrink: 0,
+    },
     segmentTextSelected: {
       ...Fonts.p3Bold,
       // Encre foncee sur fond primary500 : neutral00 = 2,40:1 (echec WCAG AA),
@@ -212,9 +219,10 @@ function SegmentedControl({
         ]}
       >
         <Text
-          numberOfLines={1}
+          numberOfLines={fullLabels ? 2 : 1}
           style={[
             styles.segmentText,
+            fullLabels && styles.segmentTextFull,
             isSelected && styles.segmentTextSelected,
           ]}
         >

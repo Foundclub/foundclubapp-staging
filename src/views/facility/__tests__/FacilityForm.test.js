@@ -30,6 +30,8 @@ const mockInputProps = [];
 const mockAddressProps = [];
 /** @type {any[]} */
 const mockPaywallProps = [];
+/** @type {any[]} */
+const mockSegmentedProps = [];
 
 /** @type {any} */
 let mockNavigation;
@@ -152,7 +154,9 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
     View: VueRN,
   } = jest.requireActual('react-native');
 
-  return function SegmentedControlMock(/** @type {any} */ { onChange, options, value }) {
+  return function SegmentedControlMock(/** @type {any} */ props) {
+    const { onChange, options, value } = props;
+    mockSegmentedProps.push(props);
     return reactActuel.createElement(
       VueRN,
       null,
@@ -297,6 +301,7 @@ beforeEach(() => {
   mockInputProps.length = 0;
   mockAddressProps.length = 0;
   mockPaywallProps.length = 0;
+  mockSegmentedProps.length = 0;
 
   mockNavigation = { goBack: jest.fn(), navigate: jest.fn() };
   mockUserData = { club: { documentId: 'club-1' } };
@@ -686,4 +691,25 @@ describe('FacilityForm — refonte D51 ecran 04', () => {
 
     expect(texteDe(arbre.root)).toContain('Le créneau reste confirmé');
   });
+});
+
+// D63 : Adel a compare l'ecran a la maquette sur l'emulateur le 2026-08-10.
+// Les portes de D51 etaient toutes vertes, et pourtant l'ecran ne ressemblait
+// pas au dessin. Ce bloc mesure la FORME, pas le comportement.
+describe('FacilityForm — D63 : l ecart entre la maquette et l ecran', () => {
+  it('les deux libelles de conflit sont demandes ENTIERS au controle segmente', async () => {
+    // Le texte, lui, a toujours ete complet dans l'arbre — c'est `numberOfLines`
+    // qui coupait a l'ecran. Le seul temoin honnete est donc la consigne passee
+    // au composant partage, pas le texte rendu.
+    await monterEcran();
+
+    const controle = dernieresProps(mockSegmentedProps);
+
+    expect(controle.fullLabels).toBe(true);
+    expect(controle.options.map((/** @type {any} */ option) => option.label)).toEqual([
+      'Demande à valider',
+      'Autoriser et notifier',
+    ]);
+  });
+
 });
