@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
@@ -21,7 +20,6 @@ import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
@@ -194,7 +192,6 @@ function ClubDetails({ navigation, route }) {
   const { startClubChat } = useMessaging();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { getClubInitials } = useClub();
   const isAuthenticated = Boolean(userData?.documentId);
   const [selectedTab, setSelectedTab] = useState(
     route?.params?.planningFacilityId ? 'planning' : 'infos',
@@ -2507,10 +2504,11 @@ function ClubDetails({ navigation, route }) {
                             Spaces.gap[16]]}
                         >
                           <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
-                            <TeamShield
-                              initials={team?.name ? getClubInitials(team?.name) : ''}
+                            <ClubLogoMark
+                              club={team?.club || club}
                               isNeutral
-                              isSmall
+                              name={team?.club?.name || club?.name || team?.name}
+                              size={60}
                             />
                             <View style={{ flex: 1 }}>
                               <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
@@ -2685,6 +2683,19 @@ function ClubDetails({ navigation, route }) {
                       ))
                     }
                   </View>
+                  {/* D62 (recette Adel du 09/08) : ce bouton etait rendu HORS de la */}
+                  {/* ScrollView, colle en bas du hub — il masquait la rangee « Staff ». */}
+                  {/* Il ne disparait pas pour autant : `startClubChat` n'a AUCUN autre */}
+                  {/* appelant (useMessaging.js:1148), donc le retirer rendrait la */}
+                  {/* conversation du club impossible a ouvrir. Il redescend ici, dans le */}
+                  {/* flux qui defile, sous les entraineur·e·s qu'il contacte. */}
+                  {coachs?.length && canEdit ? (
+                    <Button
+                      onPress={handleStartChat}
+                      title={t('clubDetails.actions.contactTrainers')}
+                      variant="Primary"
+                    />
+                  ) : null}
                 </View>
               ) : null}
               {/* president */}
@@ -2826,16 +2837,8 @@ function ClubDetails({ navigation, route }) {
           />
         ) : null
       }
-      {
-        coachs?.length && canEdit ? (
-          <Button
-            onPress={handleStartChat}
-            style={Spaces.marginBottom[24]}
-            title={t('clubDetails.actions.contactTrainers')}
-            variant="Primary"
-          />
-        ) : null
-      }
+      {/* D62 : « Contacter les entraineur·e·s » a quitte ce pied collant a son */}
+      {/* tour — il vit desormais dans la sous-page Staff, voir plus haut. */}
       {/* D34 ecran 01 : « Quitter le club » a quitte ce pied collant — il vit */}
       {/* desormais tout en bas du contenu qui defile, voir plus haut. */}
       <BottomModal
@@ -3032,9 +3035,10 @@ function ClubDetails({ navigation, route }) {
                   ]}
                 >
                   <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
-                    <TeamShield
-                      initials={getClubInitials(teamItem?.name || '')}
-                      isSmall
+                    <ClubLogoMark
+                      club={teamItem?.club || club}
+                      name={teamItem?.club?.name || club?.name || teamItem?.name}
+                      size={60}
                     />
                     <View style={{ flex: 1 }}>
                       <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
@@ -3126,9 +3130,10 @@ function ClubDetails({ navigation, route }) {
                   ]}
                 >
                   <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
-                    <TeamShield
-                      initials={getClubInitials(teamItem?.name || '')}
-                      isSmall
+                    <ClubLogoMark
+                      club={teamItem?.club || club}
+                      name={teamItem?.club?.name || club?.name || teamItem?.name}
+                      size={60}
                     />
                     <View style={{ flex: 1 }}>
                       <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>

@@ -1,6 +1,8 @@
 import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
+
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 
 import { leaveClub } from '@/services/auth/authService';
@@ -32,6 +34,7 @@ let mockNavigation;
 let mockRoute;
 
 const mockHasClubAccess = jest.fn(() => true);
+const mockStartClubChat = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
@@ -56,6 +59,9 @@ jest.mock('@tanstack/react-query', () => ({
 // la cle brute et le libelle n'existerait pas a l'ecran. On ne recopie ici que
 // celles-la, avec leur valeur reelle de `fr.js`.
 const TRADUCTIONS_SANS_REPLI = {
+  // D62 : sans cette ligne, `contactTrainers` rendait sa cle brute — et les
+  // temoins qui figent sa DISPARITION du hub passaient a vide.
+  'clubDetails.actions.contactTrainers': 'Contacter les entraîneur·e·s',
   'clubDetails.actions.editInfo': 'Modifier',
   'clubDetails.titles.activities': 'Sports',
   'clubDetails.titles.coachs': 'Entraîneurs',
@@ -121,9 +127,13 @@ jest.mock('@/domains/club/useClub', () => ({
   default: () => ({ getClubInitials: (/** @type {string} */ nom) => String(nom || '').slice(0, 2) }),
 }));
 
+// D62 : la doublure rendait un `jest.fn()` NEUF a chaque appel — donc jamais
+// observable. Elle porte desormais une fonction stable : c'est elle qui prouve
+// que « Contacter les entraineur·e·s » ouvre toujours la conversation du club
+// depuis son nouvel emplacement.
 jest.mock('@/domains/messaging/useMessaging', () => ({
   __esModule: true,
-  default: () => ({ startClubChat: jest.fn() }),
+  default: () => ({ startClubChat: mockStartClubChat }),
 }));
 
 // Le VRAI theme, jamais un Proxy : un Proxy rend les echecs Jest illisibles.
@@ -755,5 +765,86 @@ describe('ClubDetails — D50 : « Mon club » est un hub, plus une page-fleuve'
 
     expect(textes).toContain('U15 Filles');
     expect(textes).toContain('Elseve');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D62 — les deux retours de recette d'Adel du 2026-08-09, sur l'emulateur.
+// ---------------------------------------------------------------------------
+
+describe('ClubDetails — D62 : « Contacter les entraineur·e·s » quitte le pied du hub', () => {
+  // Le bouton etait rendu HORS de la ScrollView, colle en bas et pleine largeur :
+  // sur la capture d'Adel, il recouvrait la 5e rangee « Staff ». Il ne disparait
+  // pas pour autant — `startClubChat` n'a AUCUN autre appelant dans l'app, donc
+  // le supprimer rendrait la conversation du club impossible a ouvrir.
+  const AVEC_ENTRAINEURS = {
+    ...CLUB,
+    members: [
+      {
+        documentId: 'u-1', firstname: 'Philippe', lastname: 'Courtoi', role: { name: 'president' },
+      },
+      {
+        documentId: 'u-7', firstname: 'Nadia', lastname: 'Berger', role: { name: 'coach' },
+      },
+    ],
+  };
+
+  it('ne le colle plus au bas du hub, meme quand le club a des entraineur·e·s', () => {
+    mockClubQuery.data = AVEC_ENTRAINEURS;
+
+    expect(pressableAvecTexte(monter(), 'Contacter les entraîneur·e·s')).toBeUndefined();
+  });
+
+  it('mais l offre dans la sous-page Staff, avec les entraineur·e·s qu il contacte', () => {
+    mockClubQuery.data = AVEC_ENTRAINEURS;
+
+    const arbre = monter('staff');
+
+    expect(texteDe(arbre.root)).toContain('Nadia');
+    expect(pressableAvecTexte(arbre, 'Contacter les entraîneur·e·s')).toBeDefined();
+  });
+
+  it('et depuis la, il ouvre toujours la conversation du club', async () => {
+    mockClubQuery.data = AVEC_ENTRAINEURS;
+    mockStartClubChat.mockResolvedValue({ documentId: 'chat-42' });
+
+    const arbre = monter('staff');
+
+    await act(async () => {
+      await pressableAvecTexte(arbre, 'Contacter les entraîneur·e·s').props.onPress();
+    });
+
+    expect(mockStartClubChat).toHaveBeenCalledWith('club-1');
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Conversation', { chatId: 'chat-42' });
+  });
+
+  it('ne l offre nulle part a un club sans entraineur·e', () => {
+    expect(pressableAvecTexte(monter(), 'Contacter les entraîneur·e·s')).toBeUndefined();
+    expect(pressableAvecTexte(monter('staff'), 'Contacter les entraîneur·e·s')).toBeUndefined();
+  });
+});
+
+describe('ClubDetails — D62 : les equipes portent le meme ecusson que partout ailleurs', () => {
+  // Adel : « manque de coherence avec l'affichage du logo des equipes avec le
+  // reste de l'app ». Mesure : la liste « Mes equipes » (TeamListContent) rend
+  // ses equipes par `ClubLogoMark` — le VRAI logo quand le club en a un, l'ecusson
+  // a initiales sinon — pendant que les rangees d'equipe de cet ecran rendaient
+  // `TeamShield` en direct, donc des initiales grises MEME quand un logo existe.
+  // Ce temoin fige le composant partage, pas un dessin.
+  const ecussons = (/** @type {any} */ arbre) => arbre.root.findAllByType(ClubLogoMark);
+
+  it('la sous-page Equipes rend un ecusson partage par equipe, jamais un dessin a la main', () => {
+    const rendus = ecussons(monter('teams'));
+
+    expect(rendus).toHaveLength(CLUB.teams.length);
+  });
+
+  it('et cet ecusson recoit le club, donc il affiche son logo quand il y en a un', () => {
+    mockClubQuery.data = { ...CLUB, logo: { url: '/uploads/smuc.png' } };
+
+    const [premier] = ecussons(monter('teams'));
+
+    expect(premier.props.club?.logo?.url).toBe('/uploads/smuc.png');
+    expect(premier.props.name).toBe('Stade Marseillais Université Club');
   });
 });

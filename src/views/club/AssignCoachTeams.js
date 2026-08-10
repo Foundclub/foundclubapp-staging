@@ -14,7 +14,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ClubStateView from '@/views/club/components/ClubStateView';
@@ -232,7 +232,11 @@ function AssignCoachTeams({ navigation, route }) {
         ]}
       >
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
-          <TeamShield initials={getTeamDisplayName(item).slice(0, 2).toUpperCase()} isSmall />
+          <ClubLogoMark
+            club={item?.club}
+            name={item?.club?.name || getTeamDisplayName(item)}
+            size={60}
+          />
           <View style={[Alignments.fill, Spaces.gap[4]]}>
             <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
               {getTeamDisplayName(item)}
