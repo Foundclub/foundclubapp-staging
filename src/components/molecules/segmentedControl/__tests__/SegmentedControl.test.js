@@ -103,10 +103,11 @@ const monter = (props = {}) => {
   act(() => {
     arbre = renderer.create(
       <SegmentedControl
+        centerContent={Boolean(props.centerContent)}
+        fullLabels={Boolean(props.fullLabels)}
         onChange={props.onChange || jest.fn()}
         options={props.options || MODES_DE_CONFLIT}
         value={props.value || MODES_DE_CONFLIT[0].value}
-        {...props}
       />,
     );
   });
