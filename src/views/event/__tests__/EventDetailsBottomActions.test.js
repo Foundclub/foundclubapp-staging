@@ -819,6 +819,11 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
   // ancree au cadre, la pastille occupait ses 62 px du bas en permanence, et la
   // liste des participants est suivie des stats, des avis et des compositions.
   // Une marge en bas de liste ne protege pas le milieu d'une liste.
+  // ⚠️ ET LE TITRE DE CE BLOC EST HISTORIQUE, PLUS DESCRIPTIF : il nomme le lot
+  // D21 ②, pas l'etat courant. Le menu NE FLOTTE PLUS depuis D53, et depuis D64
+  // il n'est meme plus en bas — il ouvre le contenu, sous la carte de
+  // l'evenement. Les tests ci-dessous disent l'etat vrai ; le titre dit d'ou il
+  // vient.
   test('le menu ne flotte plus : aucune couche par-dessus la liste', () => {
     const root = asOrganiser();
     const couches = root.findAll((/** @type {any} */ node) => (
