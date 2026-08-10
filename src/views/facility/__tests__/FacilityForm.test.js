@@ -771,4 +771,38 @@ describe('FacilityForm — D63 : l ecart entre la maquette et l ecran', () => {
     expect(texteDe(arbre.root)).toContain('Modifier l\'installation');
     expect(texteDe(arbre.root)).not.toContain('Mets à jour les informations');
   });
+
+  it('la capacite annonce son unite SOUS le nombre, et au singulier', async () => {
+    const arbre = await monterEcran();
+
+    expect(texteDe(arbre.root)).toContain('Capacité — équipes simultanées');
+    expect(texteDe(arbre.root)).toContain('équipe à la fois');
+  });
+
+  it('au-dela d une equipe, l unite passe au pluriel', async () => {
+    const arbre = await monterEcran();
+
+    await appuyerSur(arbre, '+');
+    await appuyerSur(arbre, '+');
+
+    expect(texteDe(arbre.root)).toContain('équipes à la fois');
+  });
+
+  it('les deux boutons du stepper atteignent la cible tactile de 44 pt', async () => {
+    // 30 pt a l ecran : le pack demande >= 44 pt, et la maquette les montre
+    // nettement plus grands que le texte qu ils encadrent.
+    await monterEcran();
+
+    // La doublure de Button ne transmet pas `style` au pressable : on lit donc
+    // les props recues, pas l arbre rendu.
+    const tailles = mockButtonProps
+      .filter((/** @type {any} */ props) => ['-', '+'].includes(props.title))
+      .map((/** @type {any} */ props) => aplatirStyle(props.style));
+
+    expect(tailles.length).toBeGreaterThanOrEqual(2);
+    tailles.forEach((/** @type {any} */ taille) => {
+      expect(taille.height).toBeGreaterThanOrEqual(44);
+      expect(taille.width).toBeGreaterThanOrEqual(44);
+    });
+  });
 });

@@ -158,17 +158,19 @@ const getConflictModeOption = (value) => (
   || FACILITY_CONFLICT_MODE_OPTIONS[0]
 );
 
-// Increment de capacite : carre de 30, assez large pour le pouce grace au
-// hitSlop du bouton, assez court pour tenir sur la meme ligne que le libelle.
+// D63 : 30 pt ne tenait que parce que le libelle occupait la meme ligne. La
+// maquette sort le libelle au-dessus, ce qui rend la rangee au nombre et a ses
+// deux boutons — assez de place pour la cible tactile de 44 pt du pack.
 const STEPPER_BUTTON_STYLE = {
-  borderRadius: 10,
-  height: 30,
+  borderRadius: 14,
+  height: 44,
   paddingHorizontal: 0,
-  width: 30,
+  width: 44,
 };
 
+// Le nombre occupe toute la place entre les deux boutons, avec son unite juste
+// dessous : c'est ce centrage qui fait lire « 1 equipe a la fois » d'un trait.
 const STEPPER_VALUE_STYLE = {
-  minWidth: 24,
   textAlign: /** @type {const} */ ('center'),
 };
 
@@ -307,7 +309,10 @@ function FacilityForm() {
     'facilityForm.fields.planningColor',
     'Couleur dans le planning',
   );
-  const capacityUnitLabel = t('facilityForm.capacity.teamPlural', 'équipes simultanées');
+  const capacityFieldLabel = t(
+    'facilityForm.fields.capacity',
+    'Capacité — équipes simultanées',
+  );
   const planningColorHint = t(
     'facilityForm.hints.planningColor',
     'Elle sert à repérer l\'installation dans le planning — elle apparaît en pastille sur sa carte.',
@@ -612,46 +617,54 @@ function FacilityForm() {
               render={({ field: { onChange, value } }) => {
                 const safeValue = Number(value || 1);
                 return (
-                  <View style={[Spaces.gap[4]]}>
+                  <View style={[Spaces.gap[8]]}>
+                    {/* D63 : le libelle partageait la ligne des boutons, qui */}
+                    {/* devaient donc rester a 30 pt. Sorti au-dessus comme */}
+                    {/* les autres groupes de l'ecran, il rend la rangee au */}
+                    {/* nombre — gros, centre, son unite juste dessous. */}
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {capacityFieldLabel}
+                    </Text>
                     <View
                       style={[
                         Alignments.row,
                         Alignments.alignCenter,
-                        Alignments.justifySpaceBetween,
                         ApplicationStyle.backgroundColor.primary900,
                         ApplicationStyle.borderRadius16,
                         Spaces.paddingHorizontal[12],
                         Spaces.paddingVertical[8],
+                        Spaces.gap[12],
                         { borderColor: `${Colors.primary500}55`, borderWidth: 1 },
                       ]}
                     >
+                      <Button
+                        onPress={() => onChange(Math.max(1, safeValue - 1))}
+                        size="small"
+                        style={STEPPER_BUTTON_STYLE}
+                        title="-"
+                        variant="Secondary"
+                      />
                       <View style={[Alignments.fill]}>
-                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                          {t('facilityForm.fields.capacity', 'Capacité')}
-                        </Text>
-                        <Text style={[Fonts.small, Fonts.neutral300]}>
-                          {capacityUnitLabel}
-                        </Text>
-                      </View>
-                      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
-                        <Button
-                          onPress={() => onChange(Math.max(1, safeValue - 1))}
-                          size="small"
-                          style={STEPPER_BUTTON_STYLE}
-                          title="-"
-                          variant="Secondary"
-                        />
-                        <Text style={[Fonts.p1Bold, Fonts.neutral00, STEPPER_VALUE_STYLE]}>
+                        <Text
+                          style={[Fonts.h4Black, Fonts.neutral00, STEPPER_VALUE_STYLE]}
+                        >
                           {safeValue}
                         </Text>
-                        <Button
-                          onPress={() => onChange(Math.min(10, safeValue + 1))}
-                          size="small"
-                          style={STEPPER_BUTTON_STYLE}
-                          title="+"
-                          variant="Secondary"
-                        />
+                        <Text
+                          style={[Fonts.small, Fonts.neutral300, STEPPER_VALUE_STYLE]}
+                        >
+                          {safeValue > 1
+                            ? t('facilityForm.capacity.plural', 'équipes à la fois')
+                            : t('facilityForm.capacity.singular', 'équipe à la fois')}
+                        </Text>
                       </View>
+                      <Button
+                        onPress={() => onChange(Math.min(10, safeValue + 1))}
+                        size="small"
+                        style={STEPPER_BUTTON_STYLE}
+                        title="+"
+                        variant="Primary"
+                      />
                     </View>
                     {errors.maxSlots?.message ? (
                       <Text style={[Fonts.p3, Fonts.error700]}>
