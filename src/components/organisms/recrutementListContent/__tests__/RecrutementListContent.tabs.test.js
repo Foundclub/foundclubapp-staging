@@ -65,6 +65,31 @@ jest.mock('react-native-reanimated', () => {
 
 jest.mock('react-native-linear-gradient', () => 'LinearGradient');
 
+// D57 : l'ecran porte desormais la feuille de filtres, donc BottomModal, donc
+// @gorhom/bottom-sheet — publie en ESM et hors transformIgnorePatterns. On garde
+// la seule chose qui compte ici : le contenu n'existe que si `isVisible`, ce qui
+// permet de voir depuis ce test si le bouton de filtres l'ouvre vraiment.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  // eslint-disable-next-line global-require
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children, isVisible }) => (
+      isVisible ? <View testID="sheet">{children}</View> : null
+    ),
+  };
+});
+
+jest.mock('@/services/activity/activityQueries', () => ({
+  useGetActivities: () => ({ data: [] }),
+}));
+jest.mock('@/services/category/categoryQueries', () => ({
+  useGetCategories: () => ({ data: [] }),
+}));
+jest.mock('@/services/level/levelQueries', () => ({
+  useGetLevels: () => ({ data: [] }),
+}));
+
 /** @type {any} */
 let mockUserData;
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -100,10 +125,19 @@ jest.mock('@/theme/themeContext', () => {
 // La valeur du contexte doit etre STABLE d'un rendu a l'autre : la rendre
 // neuve a chaque appel relance `fetchAdsForPlayer` (qui en depend) a chaque
 // rendu, et la suite tourne en boucle sans jamais rendre la main.
-jest.mock('@/store/appContext', () => {
-  const etatFige = [{ recruitmentAdFilters: {} }, () => {}];
-  return { useAppContext: () => etatFige };
-});
+let mockEtatApplicatif = [{ recruitmentAdFilters: {} }, () => {}];
+jest.mock('@/store/appContext', () => ({ useAppContext: () => mockEtatApplicatif }));
+
+/**
+ * Repose un etat applicatif FIGE portant ces filtres. La valeur doit rester la
+ * meme d'un rendu a l'autre : la rendre neuve a chaque appel relance
+ * `fetchAdsForPlayer` (qui en depend) sans fin.
+ * @param {any} recruitmentAdFilters Les filtres deja poses.
+ * @returns {void} Rien.
+ */
+const poserFiltres = (recruitmentAdFilters) => {
+  mockEtatApplicatif = [{ recruitmentAdFilters }, jest.fn()];
+};
 
 const mockGetRecruitmentAds = jest.fn();
 const mockGetMyRecruitmentAds = jest.fn();
@@ -142,11 +176,22 @@ jest.mock('@/services/search/searchQueries', () => ({
   ),
 }));
 
-// La barre de recherche partagee n'est pas l'objet de ce test.
+// La barre de recherche partagee n'est pas l'objet de ce test — mais son bouton
+// de filtres l'est depuis D57 : la doublure expose donc `openFilters` et le
+// compte de la pastille, et rien d'autre.
 jest.mock('@/components/organisms/searchComponent/searchComponent', () => {
   // eslint-disable-next-line global-require
-  const { View } = require('react-native');
-  return { __esModule: true, default: () => <View testID="search-bar" /> };
+  const { Text, TouchableOpacity, View } = require('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { filterNumber, openFilters }) => (
+      <View testID="search-bar">
+        <TouchableOpacity onPress={openFilters}>
+          <Text>{`Filtres ${filterNumber || 0}`}</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+  };
 });
 
 jest.mock('@/utils/performance/searchPerformance', () => ({ markSearchPerf: jest.fn() }));
@@ -314,6 +359,7 @@ const requeteProfils = (profils) => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  poserFiltres({});
   mockGetRecruitmentAds.mockResolvedValue({ data: [ANNONCE_PUBLIQUE], meta: {} });
   mockGetMyRecruitmentAds.mockResolvedValue([MON_ANNONCE]);
   mockGetMyApplications.mockResolvedValue([MA_CANDIDATURE]);
@@ -584,6 +630,43 @@ describe('RecrutementListContent — serveur injoignable (L42)', () => {
     expect(texteVisible(tree)).not.toContain(PANNE);
 
     journalErreur.mockRestore();
+  });
+});
+
+// D57 — le bouton de filtres et sa pastille MARCHAIENT DEJA ; ce qui manquait,
+// c'est ce qu'ils ouvraient. Ces temoins verifient la jonction, pas le dessin de
+// la feuille (celui-la vit dans RecruitmentFiltersSheet.test.js).
+describe('RecrutementListContent — le bouton de filtres ouvre la feuille', () => {
+  it('LE TEMOIN : la feuille n est pas la, le bouton l ouvre', async () => {
+    const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
+    expect(texteVisible(tree)).not.toContain('Voir les résultats');
+
+    await appuyerSur(tree, 'Filtres 0');
+
+    const rendu = texteVisible(tree);
+    expect(rendu).toContain('Filtrer');
+    expect(rendu).toContain('Voir les résultats');
+    expect(rendu).toContain('Réinitialiser');
+  });
+
+  it('la pastille compte les filtres posés, sans compter la recherche texte', async () => {
+    poserFiltres({ category: ['c-1'], city: 'Lyon', q: 'gardien' });
+
+    const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
+
+    // 2 et non 3 : `q` est la recherche texte, elle a deja sa propre barre.
+    expect(texteVisible(tree)).toContain('Filtres 2');
+  });
+
+  // Le profil se filtre cote CLIENT : il compte pour l'utilisateur, mais il ne
+  // doit pas declencher d'appel a la recherche serveur.
+  it('le profil choisi dans la feuille s ajoute à la pastille', async () => {
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'opportunites' });
+    expect(texteVisible(tree)).toContain('Filtres 0');
+
+    await appuyerSur(tree, 'Entraineurs');
+
+    expect(texteVisible(tree)).toContain('Filtres 1');
   });
 });
 

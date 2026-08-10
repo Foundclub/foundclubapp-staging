@@ -22,6 +22,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
 import RecruitmentAdCard from '@/components/molecules/recruitmentAdCard/RecruitmentAdCard';
+import RecruitmentFiltersSheet from '@/components/organisms/recruitmentFiltersSheet/RecruitmentFiltersSheet';
 import RecruitmentProfilesList from '@/components/organisms/recruitmentProfilesList/RecruitmentProfilesList';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 // Services
@@ -260,7 +261,7 @@ function RecrutementListContent({
   const nav = /** @type {any} */ (navigation);
   const { userData } = /** @type {any} */ (useAuth());
   const isAuthenticated = Boolean(userData?.documentId);
-  const [{ recruitmentAdFilters }] = /** @type {any} */ (useAppContext());
+  const [{ recruitmentAdFilters }, appDispatch] = /** @type {any} */ (useAppContext());
   const recruitmentMode = getRecruitmentRoleMode(userData);
   const isCoachOrAdmin = recruitmentMode === 'staff';
 
@@ -282,6 +283,7 @@ function RecrutementListContent({
   const [applyingAdId, setApplyingAdId] = useState('');
   const [adSearchValue, setAdSearchValue] = useState('');
   const [audienceFilter, setAudienceFilter] = useState('all');
+  const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
   const [showProfileMatchesOnly, setShowProfileMatchesOnly] = useState(false);
   const primaryQuerySignatureRef = useRef('');
   const firstResultsSignatureRef = useRef('');
@@ -290,6 +292,11 @@ function RecrutementListContent({
     [recruitmentAdFilters],
   );
   const hasAdFilters = adFiltersCount > 0;
+  // D57 — ce que la PASTILLE annonce, profil compris. Volontairement separe de
+  // `adFiltersCount` : celui-la decide d'aller interroger la recherche serveur,
+  // or le profil se filtre cote client. Les confondre ferait partir une requete
+  // de recherche pour un filtre que le serveur ne connait pas.
+  const badgeFiltersCount = adFiltersCount + (audienceFilter === 'all' ? 0 : 1);
 
   // La regle « quel onglet a-t-on le droit d'afficher », en UN SEUL endroit :
   // un visiteur non connecte n'a acces qu'aux annonces, un compte connecte a ce
@@ -1024,9 +1031,9 @@ function RecrutementListContent({
       ) : null}
       <View style={[Spaces.marginTop[16]]}>
         <SearchComponent
-          filterNumber={adFiltersCount}
+          filterNumber={badgeFiltersCount}
           handleSearchField={setAdSearchValue}
-          openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
+          openFilters={() => setFiltersSheetVisible(true)}
           placeholder="Rechercher une annonce..."
           searchDefaultValue={adSearchValue}
         />
@@ -1185,6 +1192,19 @@ function RecrutementListContent({
           {renderPlayerContent()}
         </View>
       )}
+
+      {/* D57 — la feuille que le bouton de filtres ouvre desormais. Le bouton et
+          sa pastille, eux, n'ont pas bouge : ils marchaient deja. */}
+      <RecruitmentFiltersSheet
+        audienceFilter={audienceFilter}
+        filters={recruitmentAdFilters}
+        isVisible={filtersSheetVisible}
+        onApply={(filtresChoisis, profilChoisi) => {
+          appDispatch({ payload: filtresChoisis, type: 'SET_RECRUITMENT_AD_FILTERS' });
+          setAudienceFilter(profilChoisi);
+        }}
+        onClose={() => setFiltersSheetVisible(false)}
+      />
     </View>
   );
 }
