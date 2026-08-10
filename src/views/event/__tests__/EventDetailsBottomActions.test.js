@@ -1114,6 +1114,30 @@ describe('D64 — le filet : deux invariants qui ne dependent pas de l endroit',
     expect(avecMenu).toBe(sansMenu);
   });
 
+  test('0, 1 ou 50 participants : le menu garde exactement la meme place', () => {
+    // C'EST LA PROPRIETE QUI FAIT DISPARAITRE LE VIDE. Avant D64, la place du
+    // menu dependait de la longueur de la page : plaque au bas d'un cadre plein
+    // ecran, il s'eloignait du contenu a mesure que la page etait courte. Pose
+    // dans le flux, il suit le contenu — donc plus rien a caler.
+    // ⚠️ Un arbre a la fois : on finit tout sur celui-ci avant de monter le
+    // suivant (mocks partages, cf. le temoin precedent).
+    [0, 1, 50].forEach((nombre) => {
+      const participations = Array.from({ length: nombre }, (_, index) => ({
+        documentId: `part-${index}`,
+        status: 'accepted',
+        user: { documentId: `joueur-${index}` },
+      }));
+      const root = asOrganiser({ event: buildEvent({ participations }) });
+      const panneau = byTestId(root, PANEL_ID)[0];
+      const ordreDeRendu = root.findAll(() => true);
+
+      expect(panneau).toBeTruthy();
+      expect(managePanelPosition(root)).not.toBe('absolute');
+      expect(ordreDeRendu.indexOf(panneau))
+        .toBeLessThan(ordreDeRendu.indexOf(participantsBlock(root)));
+    });
+  });
+
   test('rien ne finit sous la barre systeme : le plancher du conteneur est intact', () => {
     const root = asOrganiser();
     const [conteneur] = root.findAll(
