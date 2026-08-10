@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, ScrollView, Text, TouchableOpacity, View,
+  Alert, ScrollView, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
@@ -58,7 +59,7 @@ function UserSection({ navigation }) {
   // local state
   const [section, setSection] = useState(userData?.section?.documentId || '');
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -192,46 +193,22 @@ function UserSection({ navigation }) {
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
+          {/*
+            D56 — meme grammaire que l'ecran Statut : une rangee-radio de
+            56 pt avec un vrai bouton radio a droite. La coche « ✓ » en texte
+            disparait — elle n'annoncait rien aux lecteurs d'ecran, et la
+            rangee se declarait « bouton » au lieu de « radio ».
+          */}
           {(sections || []).map((sectionItem) => {
             const isSelected = section === sectionItem.documentId;
 
             return (
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityState={{ selected: isSelected }}
+              <OnboardingRadioRow
+                checked={isSelected}
                 key={sectionItem.documentId || sectionItem.name}
+                label={sectionItem.name}
                 onPress={() => handleSelection(sectionItem.documentId)}
-                style={[
-                  Spaces.padding[16],
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  Alignments.justifySpaceBetween,
-                  Spaces.gap[12],
-                  {
-                    backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
-                    borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                    borderRadius: 12,
-                    borderWidth: 2,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    Fonts.p1Bold,
-                    { color: isSelected ? Colors.primary500 : Colors.neutral00, flex: 1 },
-                  ]}
-                >
-                  {sectionItem.name}
-                </Text>
-                {isSelected ? (
-                  <Text
-                    importantForAccessibility="no"
-                    style={[Fonts.p1Bold, Fonts.primary500]}
-                  >
-                    ✓
-                  </Text>
-                ) : null}
-              </TouchableOpacity>
+              />
             );
           })}
         </ScrollView>
