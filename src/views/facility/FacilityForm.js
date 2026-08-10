@@ -293,12 +293,6 @@ function FacilityForm() {
     }
   }, [facility, isEdit, reset]);
 
-  const subtitle = useMemo(() => (
-    isEdit
-      ? t('facilityForm.subtitle.edit', 'Mets à jour les informations de cette installation.')
-      : t('facilityForm.subtitle.create', 'Configure une nouvelle installation pour ton club.')
-  ), [isEdit, t]);
-
   const conflictModeOptions = useMemo(() => FACILITY_CONFLICT_MODE_OPTIONS.map((option) => ({
     label: t(option.labelKey, option.labelFallback),
     value: option.value,
@@ -477,13 +471,15 @@ function FacilityForm() {
               ClubStack). En ajouter un second faisait deux fleches empilees —
               constate a l'ecran sur emulateur le 2026-08-05. */}
           <View>
+            {/* D63 : la maquette ne porte que le titre. Le sous-titre */}
+            {/* (« Configure une nouvelle installation pour ton club. ») */}
+            {/* redisait le titre en plus long, et poussait le premier champ */}
+            {/* vers le bas. Aucune clef de fr.js perdue : facilityForm.* n y */}
+            {/* figure pas, tout passait deja par les replis. */}
             <Text numberOfLines={1} style={[Fonts.h4Black, Fonts.neutral00]}>
               {isEdit
                 ? t('facilityForm.title.edit', 'Modifier l\'installation')
                 : t('facilityForm.title.create', 'Nouvelle installation')}
-            </Text>
-            <Text numberOfLines={1} style={[Fonts.p3, Fonts.primary100]}>
-              {subtitle}
             </Text>
           </View>
 

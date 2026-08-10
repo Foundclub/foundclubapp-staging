@@ -749,4 +749,26 @@ describe('FacilityForm — D63 : l ecart entre la maquette et l ecran', () => {
 
     expect(marges.length).toBeGreaterThan(0);
   });
+
+  it('le titre est seul : plus de sous-titre sous « Nouvelle installation »', async () => {
+    const arbre = await monterEcran();
+
+    expect(texteDe(arbre.root)).toContain('Nouvelle installation');
+    expect(texteDe(arbre.root)).not.toContain('Configure une nouvelle installation');
+  });
+
+  it('en modification aussi, le titre est seul', async () => {
+    const arbre = await monterEcran({
+      facility: {
+        address: ADRESSE_GEOCODEE,
+        documentId: 'fac-42',
+        name: 'Gymnase Nord',
+        type: 'Gymnase',
+      },
+      params: { facilityId: 'fac-42' },
+    });
+
+    expect(texteDe(arbre.root)).toContain('Modifier l\'installation');
+    expect(texteDe(arbre.root)).not.toContain('Mets à jour les informations');
+  });
 });
