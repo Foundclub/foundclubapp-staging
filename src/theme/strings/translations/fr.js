@@ -1801,7 +1801,29 @@ export default {
     },
   },
   onboarding: {
+    category: {
+      subtitle: 'La catégorie d\'âge dans laquelle tu joues cette saison.',
+      title: 'Ta catégorie ?',
+    },
+    clubSearch: {
+      editableLater: 'Modifiable à tout moment depuis Mon profil.',
+      privateHelp: 'Ton profil n\'apparaît dans aucune recherche '
+        + '— seuls tes coéquipiers te voient.',
+      privateLabel: 'Profil privé',
+      subtitle: 'Les clubs et entraîneurs peuvent-ils te trouver ?',
+      title: 'Visibilité de ton profil',
+      visibleHelp: 'Les clubs et entraîneurs peuvent te trouver '
+        + 'et te contacter pour te recruter.',
+      visibleLabel: 'Profil visible',
+    },
     optionalStepHint: 'Cette étape n\'est pas obligatoire, mais elle reste utile pour améliorer ton expérience FoundClub.',
+    physique: {
+      heightLabel: 'Taille (cm)',
+      privacyNotice: 'Visible uniquement si ton profil est public.',
+      subtitle: 'Facultatif — ces infos aident les recruteurs.',
+      title: 'Ton physique',
+      weightLabel: 'Poids (kg)',
+    },
   },
   onboardingAffiliation: {
     a11y: {
@@ -1905,6 +1927,8 @@ export default {
       teams: 'ÉQUIPES',
     },
     selectedClubLabel: 'Club sélectionné',
+    staffManagementNotice: 'Ta demande de gestion sera envoyée aux dirigeants du club '
+      + '— s\'il n\'en a pas encore, tu pourras le revendiquer et le faire certifier.',
     states: {
       emptyWithoutQueryClub: 'Aucun club à afficher pour le moment.',
       emptyWithoutQueryTeam: 'Aucune équipe à afficher pour le moment.',
@@ -2227,8 +2251,8 @@ export default {
       avatar: "Ajoute une photo de profil pour que l'on puisse te reconnaître facilement.",
       birthdate: 'Renseigne ta date de naissance.',
       name: 'Renseigne ton nom et prénom.',
-      section: 'Renseigne la catégorie de sexe dans laquelle tu évolues',
-      type: 'Renseigne ta fonction principale.',
+      section: 'Elle filtre les équipes et les annonces qui te concernent.',
+      type: 'Ta fonction principale — tu pourras en ajouter d\'autres plus tard.',
     },
     titles: {
       avatar: 'Une photo de profil ?',
@@ -2236,7 +2260,7 @@ export default {
       edit: 'Modifier mes informations',
       name: "Comment t'appelles-tu ?",
       profile: 'Mon compte',
-      section: 'Dans quelle section évolues-tu ?',
+      section: 'Dans quelle section joues-tu ?',
       type: 'Quel est ton statut ?',
     },
     updateError: 'Impossible d\'enregistrer ton profil pour le moment. Vérifie ta connexion et réessaie.',

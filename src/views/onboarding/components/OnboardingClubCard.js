@@ -9,6 +9,7 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
@@ -16,8 +17,12 @@ import { formatClubDistanceLabel, getShortAddress } from '@/utils/location';
 
 // Carte club COMPACTE du handoff onboarding 6b. C'est la carte 5a
 // (components/molecules/clubCard/ClubCard) resserrée pour l'étape onboarding :
-// mêmes blocs, cotes réduites, et SANS marquee sponsors — le handoff l'exclut
-// explicitement dans ce contexte.
+// mêmes blocs, cotes réduites, et SANS marquee sponsors — la ligne défilante
+// de la carte 5a n'a pas sa place ici.
+//
+// D56 — le sponsor, LUI, y a sa place, et le pack d'inscription le réclame
+// nommément : il s'affiche en ligne FIXE sous l'en-tête. C'est la seule
+// différence avec le handoff 6b d'origine.
 //
 // Chaque bloc ne s'affiche que si la donnée existe : la liste `/clubs` ne
 // charge aujourd'hui que logo + sponsors + champs scalaires (mesuré le
@@ -29,6 +34,23 @@ import { formatClubDistanceLabel, getShortAddress } from '@/utils/location';
 // partagés : le formateur de distance (`@/utils/location`) et l'enveloppe
 // dégradée (`ClubCardSurface`). Corriger l'un des deux côtés seulement rend
 // rouge `src/utils/clubDistanceLabel.test.js`.
+
+/**
+ * Sponsor mis en avant sur la carte, avec son libellé affichable.
+ * @param {any} item - Club affiché.
+ * @returns {{ label: string, logoUrl: string, sponsor: any } | null} - Sponsor, ou null.
+ */
+const resolveHighlightedSponsor = (item) => {
+  const sponsors = Array.isArray(item?.sponsor) ? item.sponsor : [];
+  const sponsor = sponsors[0];
+  if (!sponsor) return null;
+
+  const label = String(sponsor.title || sponsor.name || '').trim();
+  const logoUrl = sponsor.logo?.url || '';
+  if (!label && !logoUrl) return null;
+
+  return { label, logoUrl, sponsor };
+};
 
 /**
  * Libellés des sections sportives réellement chargées.
@@ -79,6 +101,7 @@ function OnboardingClubCard({
   const shortAddress = getShortAddress(item?.addressDetails || item?.address);
   const distanceLabel = formatClubDistanceLabel(distanceKm);
   const sectionLabels = resolveSectionLabels(item);
+  const highlightedSponsor = resolveHighlightedSponsor(item);
   const isRecruiting = Boolean(
     (Array.isArray(item?.recruitmentAds) && item.recruitmentAds.length > 0)
     || item?.isRecruiting,
@@ -180,7 +203,37 @@ function OnboardingClubCard({
           ) : null}
         </View>
 
-        {/* Rangée 2 — chips sections */}
+        {/*
+          D56 — le pack d'inscription demande le sponsor du club ICI : sous
+          l'en-tête, au-dessus des chips sports, sur « Trouve ton club » (les 3
+          parcours) et « Quel ancien club ? ». Ce n'est PAS le marquee de la
+          carte 5a — la carte compacte garde une ligne FIXE, sans animation.
+          ponytail: un seul sponsor est montré, le pack le décrit au singulier
+          et la carte n'a pas la place d'en aligner plusieurs. Sortie si la
+          recette en demande plus : passer à SponsorMarquee, déjà partagé.
+        */}
+        {highlightedSponsor ? (
+          <View style={styles.sponsorRow}>
+            <SponsorLogoTile
+              height={22}
+              imageUrl={highlightedSponsor.logoUrl}
+              showTitle={false}
+              title={highlightedSponsor.label}
+              width={22}
+            />
+            {highlightedSponsor.label ? (
+              <Text
+                ellipsizeMode="tail"
+                numberOfLines={1}
+                style={[styles.sponsorName, { color: Colors.neutral300 }]}
+              >
+                {highlightedSponsor.label}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Rangée 3 — chips sections */}
         {sectionLabels.length > 0 ? (
           <View style={styles.chipsRow}>
             {sectionLabels.map((label) => (
@@ -302,6 +355,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Bold',
     fontSize: 10.5,
     fontWeight: '700',
+  },
+  sponsorName: {
+    flexShrink: 1,
+    fontFamily: 'Montserrat-SemiBold',
+    fontSize: 10.5,
+    fontWeight: '600',
+  },
+  sponsorRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   statCell: {
     alignItems: 'center',

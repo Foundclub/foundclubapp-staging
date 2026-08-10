@@ -12,9 +12,9 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import TabButton from '@/components/atoms/tabButton/TabButton';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -169,23 +169,28 @@ function UserRole({ navigation }) {
           </Text>
         </View>
         <WithDataWrapper error={rolesError?.message} isLoading={rolesLoading}>
-          <View style={[Spaces.gap[24]]}>
-            <TabButton
-              isActive={role === playerRoleId}
+          {/*
+            D56 — la grammaire de selection du pack : trois rangees-radio
+            identiques. L'ancien `TabButton` remplissait la rangee choisie de
+            cyan et remplacait sa fleche par une CROIX — deux signes qui disent
+            « fermer », pas « choisi ». Il reste en place ailleurs dans l'app.
+          */}
+          <View style={[Spaces.gap[12]]}>
+            <OnboardingRadioRow
+              checked={Boolean(role) && role === playerRoleId}
+              label={t('profile.fields.types.player')}
               onPress={() => handleSelection(USER_ROLES.player)}
-              title={t('profile.fields.types.player')}
             />
-            <TabButton
-              isActive={role === coachRoleId}
+            <OnboardingRadioRow
+              checked={Boolean(role) && role === coachRoleId}
+              label={t('profile.fields.types.coach')}
               onPress={() => handleSelection(USER_ROLES.coach)}
-              title={t('profile.fields.types.coach')}
             />
-            <TabButton
-              isActive={role === presidentRoleId}
+            <OnboardingRadioRow
+              checked={Boolean(role) && role === presidentRoleId}
+              label={t('profile.fields.types.president')}
               onPress={() => handleSelection(USER_ROLES.president)}
-              title={t('profile.fields.types.president')}
             />
-
           </View>
         </WithDataWrapper>
       </ScrollView>

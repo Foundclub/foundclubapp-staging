@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, ScrollView, Text, TouchableOpacity, View,
+  Alert, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingChoiceChip from '@/views/onboarding/components/OnboardingChoiceChip';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
@@ -59,7 +60,7 @@ function UserCategory({ navigation }) {
     userDataLoading,
   } = useAuth();
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -148,7 +149,7 @@ function UserCategory({ navigation }) {
             {t('onboarding.category.title', 'Ta catégorie ?')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {t('onboarding.category.subtitle', "Dans quelle catégorie d'âge joues-tu ?")}
+            {t('onboarding.category.subtitle', 'La catégorie d\'âge dans laquelle tu joues cette saison.')}
           </Text>
         </View>
 
@@ -157,49 +158,22 @@ function UserCategory({ navigation }) {
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {CATEGORIES.map((category) => {
-              const isSelected = selectedCategories.includes(category.value);
-              return (
-                <TouchableOpacity
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: isSelected }}
-                  key={category.value}
-                  onPress={() => toggleCategory(category.value)}
-                  style={[
-                    Spaces.padding[12],
-                    Alignments.row,
-                    Alignments.justifyCenter,
-                    Spaces.gap[4],
-                    {
-                      alignItems: 'center',
-                      backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
-                      borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                      borderRadius: 12,
-                      borderWidth: 2,
-                      minWidth: 70,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      Fonts.p1Bold,
-                      { color: isSelected ? Colors.primary500 : Colors.neutral00 },
-                    ]}
-                  >
-                    {category.label}
-                  </Text>
-                  {isSelected ? (
-                    <Text
-                      importantForAccessibility="no"
-                      style={[Fonts.p3Bold, Fonts.primary500]}
-                    >
-                      ✓
-                    </Text>
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
+          {/*
+            D56 — la grille du pack : des chips de 48 pt qui SE REMPLISSENT de
+            cyan quand on les choisit. Avant, la chip choisie combinait un fond
+            cyan tres pale, un texte cyan et une coche « ✓ » — trois signaux
+            faibles la ou le pack en veut un seul, fort.
+          */}
+          <View style={[Alignments.row, styles.chipsGrid]}>
+            {CATEGORIES.map((category) => (
+              <OnboardingChoiceChip
+                checked={selectedCategories.includes(category.value)}
+                key={category.value}
+                label={category.label}
+                multi
+                onPress={() => toggleCategory(category.value)}
+              />
+            ))}
           </View>
         </ScrollView>
       </View>
@@ -217,5 +191,14 @@ function UserCategory({ navigation }) {
     </FormScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  // 12 et pas 10 : la rampe `Spaces` n'a PAS de palier 10, et un jeton absent
+  // rend `undefined` que React Native ignore en silence.
+  chipsGrid: {
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+});
 
 export default UserCategory;

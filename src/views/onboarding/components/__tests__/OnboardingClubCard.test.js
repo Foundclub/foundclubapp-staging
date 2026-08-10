@@ -3,6 +3,9 @@ import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SponsorMarquee, {
+  getActiveMarqueeCount,
+} from '@/components/molecules/sponsorMarquee/SponsorMarquee';
 
 import { formatClubDistanceLabel } from '@/utils/location';
 
@@ -140,11 +143,33 @@ describe('OnboardingClubCard — blocs conditionnels', () => {
     expect(texts).toContain('Annonces');
   });
 
-  it('pas de marquee sponsors dans ce contexte, même avec des sponsors', () => {
+  // D56 — ce cas disait « pas de marquee sponsors, même avec des sponsors »,
+  // et mesurait l'absence du NOM. Le pack d'inscription du 05/08 tranche
+  // l'inverse sur le fond : « ⚠️ SPONSORS — à ne pas oublier : ajoute le
+  // sponsor du club sur les cartes club des écrans Trouve ton club (3
+  // parcours) et Quel ancien club ? — les maquettes ne le montrent pas, mais
+  // il doit y figurer ». Ce qui reste vrai, et que les deux cas ci-dessous
+  // séparent enfin : le sponsor s'affiche, mais SANS la ligne défilante.
+  it('affiche le sponsor du club — logo et nom', () => {
+    const tree = renderCard({
+      item: {
+        ...baseClub,
+        sponsor: [{ documentId: 'sp-1', logo: { url: 'https://cdn/sp.png' }, name: 'Sponsor A' }],
+      },
+    });
+    expect(textsOf(tree)).toContain('Sponsor A');
+  });
+
+  it('sans sponsor, aucune rangée sponsor', () => {
+    expect(textsOf(renderCard({ item: baseClub }))).not.toContain('Sponsor A');
+  });
+
+  it('⛔ mais JAMAIS le marquee : la carte compacte ne fait rien défiler', () => {
     const tree = renderCard({
       item: { ...baseClub, sponsor: [{ documentId: 'sp-1', name: 'Sponsor A' }] },
     });
-    expect(textsOf(tree)).not.toContain('Sponsor A');
+    expect(tree.root.findAllByType(SponsorMarquee)).toHaveLength(0);
+    expect(getActiveMarqueeCount()).toBe(0);
   });
 
   it('toute la carte est cliquable, sans bouton dédié', () => {
