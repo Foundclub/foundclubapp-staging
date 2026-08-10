@@ -121,9 +121,22 @@ const EVENT_DETAILS_STALE_MS = 30_000;
 //
 // ⛔ Aucune reserve, si grande soit-elle, ne corrige ca : une marge en bas de
 // liste ne protege pas le milieu d'une liste. Le menu est donc passe DANS LE
-// FLUX, sous la liste (voir `renderManagePanel`). Il ne peut plus rien
-// recouvrir, et il coute moins de hauteur qu'avant : 46 + 12 = 58 px au lieu
-// des 80 px reserves.
+// FLUX. Il ne peut plus rien recouvrir, et il coute moins de hauteur qu'avant :
+// 46 + 12 = 58 px au lieu des 80 px reserves.
+//
+// D64 — et il a change d'ENDROIT, parce que le mettre en flux ne suffisait pas.
+// D53 le laissait en pied de cadre, sous la liste. Une ScrollView porte
+// `flexGrow: 1` : elle remplit le cadre meme quand son contenu est court, donc
+// le menu restait plaque en bas avec un grand vide au-dessus de lui — le « gros
+// bloc de padding » qu'Adel a vu a l'emulateur le 2026-08-10. Il est desormais
+// rendu EN TETE DU CONTENU, juste apres la carte de l'evenement, dans le meme
+// creneau que `renderTournamentActionsPanel` : c'est deja le creneau « ce que je
+// peux faire ici », on n'en invente pas un second. Plus rien a caler, donc plus
+// rien a reserver.
+//
+// 🧱 Trois lots ont tourne autour de ce bouton (D21 flottant, D53 en flux,
+// D64 en tete). Ce qu'ils ont appris : sa POSITION est le probleme, jamais la
+// taille d'une marge. Ne pas reintroduire de constante de degagement.
 const MIN_PARTICIPANTS = 1;
 const MAX_PARTICIPANTS = 200;
 const DEFAULT_EXTERNAL_PARTICIPANT_LIMIT = 3;
@@ -4350,11 +4363,12 @@ function EventDetails({ navigation, route }) {
       </View>
     ) : null;
 
-    // Ce qui n'est pas une action d'organisation reste en pied d'ecran. D21 ② :
-    // le menu, lui, a quitte ce bloc pour flotter — mais `hasManageActions`
-    // reste dans la condition, sinon un organisateur sans cotisation ni stats
-    // basculerait dans la branche du bas et recevrait les boutons de
-    // participation qu'il n'a jamais eus.
+    // Ce qui n'est pas une action d'organisation reste en pied d'ecran. Le menu,
+    // lui, a quitte ce bloc (D21 ② pour flotter, D53 pour redescendre en flux,
+    // D64 pour remonter en tete de contenu) — mais `hasManageActions` reste dans
+    // la condition, sinon un organisateur sans cotisation ni stats basculerait
+    // dans la branche du bas et recevrait les boutons de participation qu'il n'a
+    // jamais eus.
     if (hasManageActions || eventLicenseCampaignActionsNode || matchStatsNode) {
       return (
         <View style={[Spaces.gap[12]]}>
@@ -4541,19 +4555,22 @@ function EventDetails({ navigation, route }) {
         <Tag style={{}} text={event?.type?.name?.toUpperCase() || ''} textStyle={Fonts.p2} />
       </View>
 
-      {/* D53 : la liste et le menu d'organisation sont deux FRERES dans ce
-          cadre — la liste d'abord, le menu ensuite. La liste cede la place au
-          menu toute seule (`flexShrink: 1`, le style par defaut d'une
-          ScrollView verticale), donc le menu est toujours visible sans avoir a
-          defiler, et il ne recouvre rien. Le cadre les tient a l'ecart du pied
-          d'ecran, ou vivent les cotisations liees, les stats de match et les
-          boutons de reponse. */}
+      {/* D64 : ce cadre ne contient plus que la liste, et c'est le geste du lot.
+          D53 y tenait le menu d'organisation en SECOND enfant, colle au bas du
+          cadre. Or une ScrollView porte `flexGrow: 1` (son style de base dans
+          React Native) : elle occupe donc TOUT le cadre meme quand son contenu
+          est court, et le menu se retrouvait plaque en bas avec un grand vide
+          entre le dernier bloc et lui. C'est le « gros bloc de padding pour
+          caler Gerer l'evenement » signale par Adel le 2026-08-10.
+          Le cadre reste indispensable : c'est lui qui borne la hauteur de la
+          liste et garde le pied d'ecran (cotisations liees, stats de match,
+          boutons de reponse) sur sa propre bande. */}
       <View style={Alignments.fill}>
         <ScrollView
           contentContainerStyle={[
             Spaces.gap[32],
-            // D53 — la reserve n'a plus de bouton a degager : le menu est pose
-            // sous la liste, pas par-dessus. Il ne reste qu'un terminateur, le
+            // D53 — la reserve n'a plus de bouton a degager : plus rien ne
+            // flotte au-dessus de la liste. Il ne reste qu'un terminateur, le
             // meme dans les deux cas (avec ou sans actions d'organisation).
             Spaces.paddingBottom[16],
           ]}
@@ -4568,6 +4585,7 @@ function EventDetails({ navigation, route }) {
           <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
             <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
             {renderTournamentActionsPanel()}
+            {renderManagePanel()}
             <View style={[Spaces.gap[24]]}>
 
               {isStageParentEvent ? (
@@ -5313,8 +5331,6 @@ function EventDetails({ navigation, route }) {
             </View>
           </WithDataWrapper>
         </ScrollView>
-
-        {renderManagePanel()}
       </View>
 
       <View style={[Spaces.gap[16]]}>
