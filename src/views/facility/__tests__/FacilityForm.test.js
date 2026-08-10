@@ -1,4 +1,4 @@
-import { Alert, Text } from 'react-native';
+import { Alert, ScrollView, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
@@ -196,6 +196,17 @@ const aplatirTexte = (enfants) => {
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatirTexte(enfants?.props?.children);
   return String(enfants);
+};
+
+/**
+ * Aplati un style RN (tableau imbrique, valeurs fausses) en un seul objet.
+ * @param {any} style
+ * @returns {any}
+ */
+const aplatirStyle = (style) => {
+  if (Array.isArray(style)) return Object.assign({}, ...style.map(aplatirStyle));
+  if (!style || typeof style !== 'object') return {};
+  return style;
 };
 
 /**
@@ -712,4 +723,30 @@ describe('FacilityForm — D63 : l ecart entre la maquette et l ecran', () => {
     ]);
   });
 
+  it('le formulaire n est plus enferme dans une carte', async () => {
+    // « Jamais de carte dans une carte » : les rangees portent deja leur propre
+    // bordure. Un conteneur borde autour en faisait une seconde.
+    const arbre = await monterEcran();
+
+    const cartes = arbre.root.findAll((/** @type {any} */ noeud) => {
+      const style = aplatirStyle(noeud.props?.style);
+      return style.borderWidth === 1 && style.borderRadius === 24;
+    });
+
+    expect(cartes).toHaveLength(0);
+  });
+
+  it('le contenu garde une marge laterale une fois la carte partie', async () => {
+    // C est la carte qui donnait sa marge au formulaire. Sans elle, les champs
+    // viennent se coller aux deux bords — et le titre y etait DEJA colle,
+    // puisqu il vivait en dehors de la carte.
+    const arbre = await monterEcran();
+
+    const marges = arbre.root.findAllByType(ScrollView)
+      .map((/** @type {any} */ noeud) => aplatirStyle(noeud.props?.contentContainerStyle))
+      .map((/** @type {any} */ style) => style.paddingHorizontal)
+      .filter((/** @type {any} */ marge) => typeof marge === 'number' && marge > 0);
+
+    expect(marges.length).toBeGreaterThan(0);
+  });
 });

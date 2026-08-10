@@ -464,7 +464,11 @@ function FacilityForm() {
         style={[Alignments.fill]}
       >
         <ScrollView
-          contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[24]]}
+          contentContainerStyle={[
+            Spaces.gap[12],
+            Spaces.paddingHorizontal[16],
+            Spaces.paddingBottom[24],
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* Pas de bouton retour ici : le navigateur en pose deja un juste
@@ -483,13 +487,15 @@ function FacilityForm() {
             </Text>
           </View>
 
+          {/* D63 : ce conteneur etait une CARTE (fond, bordure, rayon 24) qui */}
+          {/* enfermait tout le formulaire. Or la rangee de capacite porte deja */}
+          {/* sa propre bordure : ca faisait une carte dans une carte, que le */}
+          {/* pack interdit. Il ne reste que le groupe d'espacement — la */}
+          {/* marge laterale est passee sur le defilement, ou elle aligne */}
+          {/* AUSSI le titre, qui vivait dehors et collait au bord. */}
           <View
             style={[
-              ApplicationStyle.backgroundColor.primary700,
-              ApplicationStyle.borderRadius24,
-              Spaces.padding[16],
               Spaces.gap[16],
-              { borderColor: `${Colors.primary500}33`, borderWidth: 1 },
             ]}
           >
             <Controller
