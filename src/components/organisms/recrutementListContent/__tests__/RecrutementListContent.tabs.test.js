@@ -4,8 +4,12 @@ import RecrutementListContent from '../RecrutementListContent';
 
 // L35 (E6) : RecrutementListContent.js fait 1 301 lignes, recruitmentFlow.js
 // porte toute la logique d'onglets par role, et NI L'UN NI L'AUTRE n'avait de
-// test. Ce fichier fige le comportement des sous-onglets « Profils /
-// Opportunites / Mes annonces / Candidatures » AVANT d'y toucher.
+// test. Ce fichier fige le comportement des sous-onglets AVANT d'y toucher.
+//
+// D57 : deux onglets de GESTION sont partis vers « Mes activites » — l'ecran
+// Rechercher explore, il ne gere plus. Cote staff il reste « Profils /
+// Opportunites / Candidatures », cote joueur plus aucun segmente. Les temoins
+// du retrait vivent ici, a cote de ceux qui figent ce qui reste.
 //
 // Il ne decrit AUCUN pixel : les onglets sont pilotes par le TEXTE VISIBLE
 // (« Opportunites », « Candidatures »...) et l'onglet actif se lit a une phrase
@@ -61,6 +65,31 @@ jest.mock('react-native-reanimated', () => {
 
 jest.mock('react-native-linear-gradient', () => 'LinearGradient');
 
+// D57 : l'ecran porte desormais la feuille de filtres, donc BottomModal, donc
+// @gorhom/bottom-sheet — publie en ESM et hors transformIgnorePatterns. On garde
+// la seule chose qui compte ici : le contenu n'existe que si `isVisible`, ce qui
+// permet de voir depuis ce test si le bouton de filtres l'ouvre vraiment.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  // eslint-disable-next-line global-require
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children, isVisible }) => (
+      isVisible ? <View testID="sheet">{children}</View> : null
+    ),
+  };
+});
+
+jest.mock('@/services/activity/activityQueries', () => ({
+  useGetActivities: () => ({ data: [] }),
+}));
+jest.mock('@/services/category/categoryQueries', () => ({
+  useGetCategories: () => ({ data: [] }),
+}));
+jest.mock('@/services/level/levelQueries', () => ({
+  useGetLevels: () => ({ data: [] }),
+}));
+
 /** @type {any} */
 let mockUserData;
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -96,10 +125,19 @@ jest.mock('@/theme/themeContext', () => {
 // La valeur du contexte doit etre STABLE d'un rendu a l'autre : la rendre
 // neuve a chaque appel relance `fetchAdsForPlayer` (qui en depend) a chaque
 // rendu, et la suite tourne en boucle sans jamais rendre la main.
-jest.mock('@/store/appContext', () => {
-  const etatFige = [{ recruitmentAdFilters: {} }, () => {}];
-  return { useAppContext: () => etatFige };
-});
+let mockEtatApplicatif = [{ recruitmentAdFilters: {} }, () => {}];
+jest.mock('@/store/appContext', () => ({ useAppContext: () => mockEtatApplicatif }));
+
+/**
+ * Repose un etat applicatif FIGE portant ces filtres. La valeur doit rester la
+ * meme d'un rendu a l'autre : la rendre neuve a chaque appel relance
+ * `fetchAdsForPlayer` (qui en depend) sans fin.
+ * @param {any} recruitmentAdFilters Les filtres deja poses.
+ * @returns {void} Rien.
+ */
+const poserFiltres = (recruitmentAdFilters) => {
+  mockEtatApplicatif = [{ recruitmentAdFilters }, jest.fn()];
+};
 
 const mockGetRecruitmentAds = jest.fn();
 const mockGetMyRecruitmentAds = jest.fn();
@@ -138,11 +176,22 @@ jest.mock('@/services/search/searchQueries', () => ({
   ),
 }));
 
-// La barre de recherche partagee n'est pas l'objet de ce test.
+// La barre de recherche partagee n'est pas l'objet de ce test — mais son bouton
+// de filtres l'est depuis D57 : la doublure expose donc `openFilters` et le
+// compte de la pastille, et rien d'autre.
 jest.mock('@/components/organisms/searchComponent/searchComponent', () => {
   // eslint-disable-next-line global-require
-  const { View } = require('react-native');
-  return { __esModule: true, default: () => <View testID="search-bar" /> };
+  const { Text, TouchableOpacity, View } = require('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { filterNumber, openFilters }) => (
+      <View testID="search-bar">
+        <TouchableOpacity onPress={openFilters}>
+          <Text>{`Filtres ${filterNumber || 0}`}</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+  };
 });
 
 jest.mock('@/utils/performance/searchPerformance', () => ({ markSearchPerf: jest.fn() }));
@@ -310,6 +359,7 @@ const requeteProfils = (profils) => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  poserFiltres({});
   mockGetRecruitmentAds.mockResolvedValue({ data: [ANNONCE_PUBLIQUE], meta: {} });
   mockGetMyRecruitmentAds.mockResolvedValue([MON_ANNONCE]);
   mockGetMyApplications.mockResolvedValue([MA_CANDIDATURE]);
@@ -327,11 +377,8 @@ describe('RecrutementListContent — on peut changer d onglet (L35)', () => {
     expect(ongletAffiche(tree)).toBe('opportunites');
   });
 
-  it('un Dirigeant atteint ses 4 onglets, dans n importe quel ordre', async () => {
+  it('un Dirigeant atteint ses 3 onglets, dans n importe quel ordre', async () => {
     const tree = await rendrePour(DIRIGEANT, { initialTab: 'profils' });
-
-    await appuyerSur(tree, 'Mes annonces');
-    expect(ongletAffiche(tree)).toBe('annonces');
 
     await appuyerSur(tree, 'Candidatures');
     expect(ongletAffiche(tree)).toBe('candidatures');
@@ -343,15 +390,15 @@ describe('RecrutementListContent — on peut changer d onglet (L35)', () => {
     expect(ongletAffiche(tree)).toBe('profils');
   });
 
-  it('un Joueur bascule entre ses 2 onglets, dans les deux sens', async () => {
+  // D57 : le joueur n'a plus qu'un marche a explorer ici. Ses candidatures ont
+  // demenage dans « Mes activites › Mes reponses », atteint depuis l'Accueil
+  // (HomeHub, case « Mes reponses »). Un segmente a un seul bouton ne choisit
+  // rien : il a disparu avec l'onglet.
+  it('un Joueur n a plus de segmente : il explore, il ne gere plus ici', async () => {
     const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
-    expect(ongletAffiche(tree)).toBe('opportunites');
 
-    await appuyerSur(tree, 'Mes candidatures');
-    expect(ongletAffiche(tree)).toBe('candidatures');
-
-    await appuyerSur(tree, 'Annonces');
     expect(ongletAffiche(tree)).toBe('opportunites');
+    expect(texteVisible(tree)).not.toContain('Mes candidatures');
   });
 });
 
@@ -397,15 +444,27 @@ describe('RecrutementListContent — ce que chaque onglet affiche (relevé L35)'
     expect(mockGetRecruitmentAds).toHaveBeenCalled();
   });
 
-  it('Mes annonces : les annonces de MES équipes, et le bouton pour en créer une', async () => {
-    const tree = await rendrePour(DIRIGEANT, { initialTab: 'annonces' });
+  // D57 — LE TEMOIN DU RETRAIT. « Mes annonces » etait un onglet de GESTION
+  // pose dans un ecran d'EXPLORATION. Il est repris par « Mes activites ›
+  // Publications », qui lit exactement la meme source (getMyRecruitmentAds).
+  // Ce qui compte ici : l'ecran ne le charge PLUS, donc plus personne ne paie
+  // une requete pour une liste que rien n'affiche.
+  it('« Mes annonces » a quitté cet écran, et sa liste n est plus chargée', async () => {
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'profils' });
     const rendu = texteVisible(tree);
 
-    expect(rendu).toContain('Consulte et gère les annonces publiées pour tes équipes.');
-    // D35 : le pack retire le mot « annonce » de ce marche — on publie une OFFRE.
-    expect(rendu).toContain('+ Publier une offre');
-    expect(rendu).toContain('Club des Dirigeants');
-    expect(mockGetMyRecruitmentAds).toHaveBeenCalled();
+    expect(rendu).not.toContain('Mes annonces');
+    expect(rendu).not.toContain('Consulte et gère les annonces publiées pour tes équipes.');
+    expect(mockGetMyRecruitmentAds).not.toHaveBeenCalled();
+  });
+
+  // Ce que le retrait ne devait PAS emporter : D35 avait deplace le bouton de
+  // publication sur l'onglet d'exploration justement pour qu'il survive a ce
+  // demenagement.
+  it('le dirigeant garde son bouton de publication, hors de tout onglet de gestion', async () => {
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'profils' });
+
+    expect(texteVisible(tree)).toContain('+ Publier une offre');
   });
 
   it('Candidatures : les annonces auxquelles j ai postulé', async () => {
@@ -429,9 +488,6 @@ describe('RecrutementListContent — ce que chaque onglet affiche (relevé L35)'
     await appuyerSur(tree, 'Opportunités');
     expect(texteVisible(tree)).toContain('Aucune annonce disponible pour le moment.');
 
-    await appuyerSur(tree, 'Mes annonces');
-    expect(texteVisible(tree)).toContain('Aucune annonce publiée pour tes équipes sur ce filtre');
-
     await appuyerSur(tree, 'Candidatures');
     expect(texteVisible(tree)).toContain('Tu n’as pas encore postulé à une annonce.');
   });
@@ -446,9 +502,7 @@ describe('RecrutementListContent — ce que chaque onglet affiche (relevé L35)'
     mockGetRecruitmentAds.mockRejectedValue(new Error('Network Error 500'));
     mockGetMyRecruitmentAds.mockRejectedValue(new Error('Network Error 500'));
 
-    const tree = await rendrePour(DIRIGEANT, { initialTab: 'annonces' });
-    expect(texteVisible(tree))
-      .not.toContain('Aucune annonce publiée pour tes équipes sur ce filtre');
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'profils' });
 
     await appuyerSur(tree, 'Opportunités');
     expect(texteVisible(tree)).not.toContain('Aucune annonce disponible pour le moment.');
@@ -488,14 +542,11 @@ describe('RecrutementListContent — serveur injoignable (L42)', () => {
     mockGetMyRecruitmentAds.mockRejectedValue(new Error('Network Error'));
     mockGetMyApplications.mockRejectedValue(new Error('Network Error'));
 
-    const tree = await rendrePour(DIRIGEANT, { initialTab: 'annonces' });
-    expect(texteVisible(tree)).toContain(PANNE);
-    expect(texteVisible(tree)).toContain('Réessayer');
-    expect(texteVisible(tree))
-      .not.toContain('Aucune annonce publiée pour tes équipes sur ce filtre');
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'profils' });
 
     await appuyerSur(tree, 'Opportunités');
     expect(texteVisible(tree)).toContain(PANNE);
+    expect(texteVisible(tree)).toContain('Réessayer');
     expect(texteVisible(tree)).not.toContain('Aucune annonce disponible pour le moment.');
 
     await appuyerSur(tree, 'Candidatures');
@@ -507,31 +558,31 @@ describe('RecrutementListContent — serveur injoignable (L42)', () => {
 
   it('le bouton « Réessayer » rappelle bien le chargement, et la liste revient', async () => {
     const journalErreur = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockGetMyRecruitmentAds.mockRejectedValue(new Error('Network Error'));
+    mockGetMyApplications.mockRejectedValue(new Error('Network Error'));
 
-    const tree = await rendrePour(DIRIGEANT, { initialTab: 'annonces' });
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'candidatures' });
     expect(texteVisible(tree)).toContain(PANNE);
 
     // Le serveur repond de nouveau : l'utilisateur ne doit pas avoir a quitter
     // l'ecran pour s'en apercevoir.
-    mockGetMyRecruitmentAds.mockResolvedValue([MON_ANNONCE]);
+    mockGetMyApplications.mockResolvedValue([MA_CANDIDATURE]);
     await appuyerSur(tree, 'Réessayer');
 
-    expect(texteVisible(tree)).toContain('Club des Dirigeants');
+    expect(texteVisible(tree)).toContain('Club Postule');
     expect(texteVisible(tree)).not.toContain(PANNE);
 
     journalErreur.mockRestore();
   });
 
-  // Les trois boutons partagent le meme repli mais PAS le meme rappel : c'est
+  // Les deux boutons partagent le meme repli mais PAS le meme rappel : c'est
   // exactement l'endroit ou une recopie se trompe de liste, sans que rien ne le
-  // dise. Les deux autres onglets sont donc verifies eux aussi.
+  // dise. Les deux onglets sont donc verifies chacun leur tour.
   it('le bouton de chaque onglet rappelle SA liste, pas celle du voisin', async () => {
     const journalErreur = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockGetRecruitmentAds.mockRejectedValue(new Error('Network Error'));
     mockGetMyApplications.mockRejectedValue(new Error('Network Error'));
 
-    const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'opportunites' });
     expect(texteVisible(tree)).toContain(PANNE);
 
     mockGetRecruitmentAds.mockResolvedValue({ data: [ANNONCE_PUBLIQUE], meta: {} });
@@ -539,7 +590,7 @@ describe('RecrutementListContent — serveur injoignable (L42)', () => {
     expect(texteVisible(tree)).toContain('Olympique Public');
     expect(texteVisible(tree)).not.toContain(PANNE);
 
-    await appuyerSur(tree, 'Mes candidatures');
+    await appuyerSur(tree, 'Candidatures');
     expect(texteVisible(tree)).toContain(PANNE);
 
     mockGetMyApplications.mockResolvedValue([MA_CANDIDATURE]);
@@ -582,11 +633,48 @@ describe('RecrutementListContent — serveur injoignable (L42)', () => {
   });
 });
 
+// D57 — le bouton de filtres et sa pastille MARCHAIENT DEJA ; ce qui manquait,
+// c'est ce qu'ils ouvraient. Ces temoins verifient la jonction, pas le dessin de
+// la feuille (celui-la vit dans RecruitmentFiltersSheet.test.js).
+describe('RecrutementListContent — le bouton de filtres ouvre la feuille', () => {
+  it('LE TEMOIN : la feuille n est pas la, le bouton l ouvre', async () => {
+    const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
+    expect(texteVisible(tree)).not.toContain('Voir les résultats');
+
+    await appuyerSur(tree, 'Filtres 0');
+
+    const rendu = texteVisible(tree);
+    expect(rendu).toContain('Filtrer');
+    expect(rendu).toContain('Voir les résultats');
+    expect(rendu).toContain('Réinitialiser');
+  });
+
+  it('la pastille compte les filtres posés, sans compter la recherche texte', async () => {
+    poserFiltres({ category: ['c-1'], city: 'Lyon', q: 'gardien' });
+
+    const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
+
+    // 2 et non 3 : `q` est la recherche texte, elle a deja sa propre barre.
+    expect(texteVisible(tree)).toContain('Filtres 2');
+  });
+
+  // Le profil se filtre cote CLIENT : il compte pour l'utilisateur, mais il ne
+  // doit pas declencher d'appel a la recherche serveur.
+  it('le profil choisi dans la feuille s ajoute à la pastille', async () => {
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'opportunites' });
+    expect(texteVisible(tree)).toContain('Filtres 0');
+
+    await appuyerSur(tree, 'Entraineurs');
+
+    expect(texteVisible(tree)).toContain('Filtres 1');
+  });
+});
+
 describe('RecrutementListContent — la demande externe d onglet (assistant de création)', () => {
   it('TEMOIN DE NON-REGRESSION : arriver avec initialTab ouvre CET onglet', async () => {
-    const tree = await rendrePour(DIRIGEANT, { initialTab: 'annonces' });
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'candidatures' });
 
-    expect(ongletAffiche(tree)).toBe('annonces');
+    expect(ongletAffiche(tree)).toBe('candidatures');
   });
 
   it('TEMOIN DE NON-REGRESSION : une demande NEUVE est honorée, même après un geste manuel', async () => {
@@ -594,14 +682,13 @@ describe('RecrutementListContent — la demande externe d onglet (assistant de c
     await appuyerSur(tree, 'Candidatures');
     expect(ongletAffiche(tree)).toBe('candidatures');
 
-    // L'assistant de creation d'annonce revient sur l'ecran en demandant
-    // « Mes annonces » : cette demande est NEUVE, elle doit passer devant le
-    // geste de l'utilisateur.
+    // Un ecran voisin renvoie ici en demandant « Opportunités » : cette demande
+    // est NEUVE, elle doit passer devant le geste de l'utilisateur.
     await act(async () => {
-      tree.update(<RecrutementListContent initialTab="annonces" />);
+      tree.update(<RecrutementListContent initialTab="opportunites" />);
     });
 
-    expect(ongletAffiche(tree)).toBe('annonces');
+    expect(ongletAffiche(tree)).toBe('opportunites');
   });
 
   it('une demande DEJA honorée ne réécrase pas le choix de l utilisateur', async () => {
@@ -634,18 +721,20 @@ describe('RecrutementListContent — personne n atteint un onglet interdit à so
     expect(texteVisible(tree)).not.toContain(MARQUEUR.profils);
   });
 
-  it('un Joueur n a que 2 boutons d onglet, le Dirigeant en a 4', async () => {
+  it('un Joueur n a AUCUN bouton d onglet, le Dirigeant en a 3', async () => {
     const treeJoueur = await rendrePour(JOUEUR, { initialTab: 'annonces' });
     const renduJoueur = texteVisible(treeJoueur);
-    expect(renduJoueur).toContain('Mes candidatures');
+    expect(renduJoueur).not.toContain('Mes candidatures');
     expect(renduJoueur).not.toContain('Opportunités');
+    expect(renduJoueur).not.toContain('Profils');
 
     const treeDirigeant = await rendrePour(DIRIGEANT, { initialTab: 'profils' });
     const renduDirigeant = texteVisible(treeDirigeant);
     expect(renduDirigeant).toContain('Profils');
     expect(renduDirigeant).toContain('Opportunités');
-    expect(renduDirigeant).toContain('Mes annonces');
     expect(renduDirigeant).toContain('Candidatures');
+    // D57 — celui qui a demenage dans « Mes activites ».
+    expect(renduDirigeant).not.toContain('Mes annonces');
   });
 
   it('un onglet devenu interdit est abandonné quand le rôle change', async () => {

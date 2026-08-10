@@ -76,7 +76,6 @@ function SearchRecruitmentScreen({ navigation, route }) {
         >
           <RecrutementListContent
             initialTab={initialRecruitmentTab}
-            timestamp={route?.params?.timestamp}
           />
         </OnboardingWrapper>
       </SearchScreenShell>

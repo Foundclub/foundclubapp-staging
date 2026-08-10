@@ -1,15 +1,24 @@
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 
+// D57 — Rechercher EXPLORE, « Mes activites » GERE. Deux onglets de gestion ont
+// donc quitte cette liste : « Mes annonces » (staff) est repris par
+// « Mes activites › Publications », et « Mes candidatures » (joueur) par
+// « Mes activites › Mes reponses » — les DEUX lisent exactement la meme source
+// que l'onglet retire (getMyRecruitmentAds et getMyApplications).
+//
+// ⛔ « candidatures » RESTE cote staff, et ce n'est pas un oubli : cet onglet
+// montre les offres auxquelles le dirigeant a LUI-MEME postule
+// (getMyApplications), or MyActivitiesScreen ne les charge JAMAIS pour un staff
+// — il lui montre les reponses RECUES. Le retirer supprimerait un acces sans
+// remplacant.
 export const STAFF_RECRUITMENT_TABS = /** @type {const} */ ([
   'profils',
-  'annonces',
   'opportunites',
   'candidatures',
 ]);
 
 export const PLAYER_RECRUITMENT_TABS = /** @type {const} */ ([
   'annonces',
-  'candidatures',
 ]);
 
 export const VALID_RECRUITMENT_TABS = /** @type {const} */ ([

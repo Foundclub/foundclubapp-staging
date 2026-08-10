@@ -70,7 +70,12 @@ function MyActivitiesScreen({ navigation }) {
   const isStaff = getRecruitmentRoleMode(userData) === 'staff';
   const managedTeamIds = useMemo(() => getManagedTeamIds(userData), [userData]);
 
-  const [activeTab, setActiveTab] = useState(TAB_PUBLICATIONS);
+  // D57 — un joueur ne publie NI offre NI match : les deux appels qui
+  // alimentent « Publications » lui rendent `[]` sans meme partir (voir
+  // `fetchActivities` plus bas). L'ouvrir sur cet onglet, c'est l'accueillir par
+  // un placard vide qui le restera. Il entre donc par « Mes reponses », le seul
+  // onglet qui le concerne — et c'est aussi la porte que lui ouvre l'Accueil.
+  const [activeTab, setActiveTab] = useState(isStaff ? TAB_PUBLICATIONS : TAB_RESPONSES);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [recruitmentAds, setRecruitmentAds] = useState(/** @type {any[]} */ ([]));

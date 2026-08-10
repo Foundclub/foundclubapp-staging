@@ -131,7 +131,6 @@ function HomeContent({ route }) {
         return (
           <RecrutementListContent
             initialTab={route.params?.initialRecruitmentTab}
-            timestamp={route.params?.timestamp}
           />
         );
       case 'reservations':

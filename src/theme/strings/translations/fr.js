@@ -1354,8 +1354,8 @@ export default {
       },
       manage: {
         addAd: {
-          subtitle: 'Publie une annonce de recrutement.',
-          title: 'Ajouter une annonce',
+          subtitle: 'Publie une offre de recrutement.',
+          title: 'Publier une offre',
         },
         addEvent: {
           subtitle: 'Crée un entraînement, un match\u2026',
@@ -1378,8 +1378,8 @@ export default {
           title: 'Gérer mon club',
         },
         myAds: {
-          subtitle: 'Consulte et gère tes annonces.',
-          title: 'Mes annonces',
+          subtitle: 'Tes offres, tes matchs et les réponses reçues.',
+          title: 'Mes activités',
         },
         requests: {
           subtitle: 'Traite les demandes de ton organisation.',
@@ -1432,7 +1432,7 @@ export default {
       },
       search: {
         ads: {
-          subtitle: 'Postuler aux annonces de recherche des équipes.',
+          subtitle: 'Postuler aux offres des équipes.',
           title: 'Recrutement',
         },
         amicaux: {

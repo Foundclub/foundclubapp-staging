@@ -22,6 +22,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
 import RecruitmentAdCard from '@/components/molecules/recruitmentAdCard/RecruitmentAdCard';
+import RecruitmentFiltersSheet from '@/components/organisms/recruitmentFiltersSheet/RecruitmentFiltersSheet';
 import RecruitmentProfilesList from '@/components/organisms/recruitmentProfilesList/RecruitmentProfilesList';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 // Services
@@ -32,7 +33,6 @@ import {
   buildDetectionApplicationStatusMap,
   filterVisibleRecruitmentAds,
   getMyApplications,
-  getMyRecruitmentAds,
   getRecruitmentAds,
   resolveRecruitmentAdApplicationState,
 } from '@/services/recruitment/recruitmentService';
@@ -213,37 +213,12 @@ const normalizeAudienceType = (/** @type {any} */ value) => (
   String(value || '').trim().toLowerCase() === 'coach' ? 'coach' : 'player'
 );
 
-const getManagedTeamKey = (/** @type {any} */ team) => String(team?.documentId || team?.id || '').trim();
 const getRecruitmentAdKey = (/** @type {any} */ ad) => String(ad?.documentId || ad?.id || '').trim();
 const normalizeTypeLabel = (/** @type {any} */ value = '') => String(value || '')
   .toLowerCase()
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
-
-const mergeManagedTeamSummary = (/** @type {any} */ previousTeam, /** @type {any} */ nextTeam) => ({
-  ...previousTeam,
-  ...nextTeam,
-  activities: nextTeam?.activities?.length ? nextTeam.activities : previousTeam?.activities,
-  category: nextTeam?.category || previousTeam?.category,
-  club: nextTeam?.club || previousTeam?.club,
-  level: nextTeam?.level || previousTeam?.level,
-  section: nextTeam?.section || previousTeam?.section,
-});
-
-const dedupeManagedTeams = (/** @type {any[]} */ teams) => {
-  const teamsByKey = new Map();
-
-  teams.forEach((/** @type {any} */ team) => {
-    const teamKey = getManagedTeamKey(team);
-    if (!teamKey) return;
-
-    const previousTeam = teamsByKey.get(teamKey);
-    teamsByKey.set(teamKey, previousTeam ? mergeManagedTeamSummary(previousTeam, team) : team);
-  });
-
-  return Array.from(teamsByKey.values());
-};
 
 // Ce que l'utilisateur lit quand une liste n'a PAS PU etre chargee — a ne pas
 // confondre avec « il n'y a rien a afficher ». Ecrit ici une seule fois : les
@@ -255,20 +230,20 @@ const UNREACHABLE_ACTION = 'Réessayer';
 /**
  * Recrutement List Content - Main component for recruitment marketplace
  * Shows different content based on user role:
- * - Coach/Dirigeant: TopTabs with "Profils" (search players) and "Annonces" (manage ads)
+ * - Coach/Dirigeant: TopTabs with "Profils", "Opportunites" and "Candidatures"
  * - Joueur: Smart feed of recruitment ads matching their profile
+ * D57 : ce composant EXPLORE. Ce qu'on gere (mes offres publiees, mes
+ * candidatures envoyees cote joueur) vit dans « Mes activites ».
  * @param {{
  *  initialTab?: 'profils' | 'annonces' | 'opportunites' | 'candidatures';
  *  refreshSignal?: number;
  *  screenActive?: boolean;
- *  timestamp?: number | string;
  * }} props
  */
 function RecrutementListContent({
   initialTab,
   refreshSignal = 0,
   screenActive = true,
-  timestamp,
 }) {
   const isWeb = Platform.OS === 'web';
   useTranslation();
@@ -286,17 +261,9 @@ function RecrutementListContent({
   const nav = /** @type {any} */ (navigation);
   const { userData } = /** @type {any} */ (useAuth());
   const isAuthenticated = Boolean(userData?.documentId);
-  const [{ recruitmentAdFilters }] = /** @type {any} */ (useAppContext());
+  const [{ recruitmentAdFilters }, appDispatch] = /** @type {any} */ (useAppContext());
   const recruitmentMode = getRecruitmentRoleMode(userData);
   const isCoachOrAdmin = recruitmentMode === 'staff';
-  const managedTeams = React.useMemo(() => dedupeManagedTeams([
-    ...(userData?.myTeams || []),
-    ...(userData?.trainedTeams || []),
-  ]), [userData?.myTeams, userData?.trainedTeams]);
-  const managedTeamIds = React.useMemo(
-    () => managedTeams.map((team) => getManagedTeamKey(team)).filter(Boolean),
-    [managedTeams],
-  );
 
   // State
   const [activeTab, setActiveTab] = useState(
@@ -306,18 +273,17 @@ function RecrutementListContent({
   // du montage : elle vient d'etre honoree par l'etat initial ci-dessus.
   const honoredInitialTabRef = useRef(initialTab);
   const [ads, setAds] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
-  const [myAds, setMyAds] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
   const [myApplications, setMyApplications] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
   // Un drapeau par liste, et rien de plus : « je n'ai pas pu charger » n'est pas
-  // « il n'y a rien », et les trois listes tombent en panne separement.
+  // « il n'y a rien », et les deux listes tombent en panne separement.
   const [adsUnreachable, setAdsUnreachable] = useState(false);
-  const [myAdsUnreachable, setMyAdsUnreachable] = useState(false);
   const [myApplicationsUnreachable, setMyApplicationsUnreachable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [applyingAdId, setApplyingAdId] = useState('');
   const [adSearchValue, setAdSearchValue] = useState('');
   const [audienceFilter, setAudienceFilter] = useState('all');
+  const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
   const [showProfileMatchesOnly, setShowProfileMatchesOnly] = useState(false);
   const primaryQuerySignatureRef = useRef('');
   const firstResultsSignatureRef = useRef('');
@@ -326,6 +292,11 @@ function RecrutementListContent({
     [recruitmentAdFilters],
   );
   const hasAdFilters = adFiltersCount > 0;
+  // D57 — ce que la PASTILLE annonce, profil compris. Volontairement separe de
+  // `adFiltersCount` : celui-la decide d'aller interroger la recherche serveur,
+  // or le profil se filtre cote client. Les confondre ferait partir une requete
+  // de recherche pour un filtre que le serveur ne connait pas.
+  const badgeFiltersCount = adFiltersCount + (audienceFilter === 'all' ? 0 : 1);
 
   // La regle « quel onglet a-t-on le droit d'afficher », en UN SEUL endroit :
   // un visiteur non connecte n'a acces qu'aux annonces, un compte connecte a ce
@@ -424,48 +395,6 @@ function RecrutementListContent({
     }
   }, [adsHasMore, adsLoadingMore, adsPage, fetchAdsForPlayer]);
 
-  // Fetch my ads (for coaches)
-  const fetchMyAds = useCallback(async (isRefresh = false) => {
-    if (!isCoachOrAdmin) return;
-    if (!isRefresh) setLoading(true);
-    try {
-      const searchTerm = adSearchValue?.trim();
-      const ownerFilters = managedTeamIds.length > 0
-        ? { teamIds: managedTeamIds }
-        : { authorDocumentId: userData?.documentId };
-      let data = [];
-      if ((searchTerm && searchTerm.length >= 2) || hasAdFilters) {
-        const response = await searchRecruitment({
-          ...ownerFilters,
-          ...recruitmentAdFilters,
-          includeInactive: true,
-          page: 1,
-          pageSize: 30,
-          ...(searchTerm && searchTerm.length >= 2 ? { q: searchTerm, sort: 'relevance' } : { sort: 'date' }),
-        });
-        data = filterVisibleRecruitmentAds(mapSearchPayload(response));
-      } else {
-        data = await getMyRecruitmentAds(ownerFilters);
-      }
-      setMyAds(data || []);
-      setMyAdsUnreachable(false);
-    } catch (error) {
-      console.error('[RecrutementListContent] Error fetching my ads:', error);
-      setMyAdsUnreachable(true);
-    } finally {
-      if (!isRefresh) setLoading(false);
-    }
-  }, [adSearchValue, hasAdFilters, isCoachOrAdmin, managedTeamIds, recruitmentAdFilters, userData?.documentId]);
-
-  // Handle forced refresh from navigation params (timestamp)
-  useEffect(() => {
-    if (!screenActive || !timestamp) return;
-    console.log('[RecrutementListContent] Forced refresh triggered by timestamp:', timestamp);
-    if (isCoachOrAdmin && activeTab === 'annonces') {
-      fetchMyAds(true);
-    }
-  }, [activeTab, fetchMyAds, isCoachOrAdmin, screenActive, timestamp]);
-
   // Fetch my applications (for players)
   const fetchMyApplications = useCallback(async (isRefresh = false) => {
     if (!userData?.documentId) {
@@ -511,9 +440,7 @@ function RecrutementListContent({
         return undefined;
       }
 
-      if (activeTab === 'annonces' && isCoachOrAdmin) {
-        fetchMyAds(true);
-      } else if (activeTab === 'candidatures') {
+      if (activeTab === 'candidatures') {
         fetchMyApplications(true);
       } else {
         fetchAdsForPlayer(1, false, true);
@@ -524,10 +451,8 @@ function RecrutementListContent({
     }, [
       activeTab,
       fetchAdsForPlayer,
-      fetchMyAds,
       fetchMyApplications,
       fetchMyApplicationsSilently,
-      isCoachOrAdmin,
       screenActive,
     ]),
   );
@@ -541,10 +466,6 @@ function RecrutementListContent({
     audienceFilter === 'all' || normalizeAudienceType(ad?.audienceType) === audienceFilter
   ), [audienceFilter]);
 
-  const filteredMyAds = useMemo(
-    () => myAds.filter((ad) => matchesAudienceFilter(ad)),
-    [matchesAudienceFilter, myAds],
-  );
   const filteredMyApplications = useMemo(
     () => myApplications.filter((ad) => matchesAudienceFilter(ad)),
     [matchesAudienceFilter, myApplications],
@@ -555,18 +476,13 @@ function RecrutementListContent({
     if (!screenActive) return;
     if (activeTab === 'profils') return;
 
-    if (activeTab === 'annonces' && isCoachOrAdmin) {
-      fetchMyAds();
-      return;
-    }
-
     if (activeTab === 'candidatures') {
       fetchMyApplications();
       return;
     }
 
     fetchAdsForPlayer(1, false);
-  }, [activeTab, fetchAdsForPlayer, fetchMyAds, fetchMyApplications, isCoachOrAdmin, screenActive]);
+  }, [activeTab, fetchAdsForPlayer, fetchMyApplications, screenActive]);
 
   const onRefresh = useCallback(async () => {
     if (!screenActive) return;
@@ -574,9 +490,7 @@ function RecrutementListContent({
     try {
       if (activeTab === 'profils') return;
 
-      if (activeTab === 'annonces' && isCoachOrAdmin) {
-        await fetchMyAds(true);
-      } else if (activeTab === 'candidatures') {
+      if (activeTab === 'candidatures') {
         await fetchMyApplications(true);
       } else {
         await fetchAdsForPlayer(1, false, true);
@@ -586,7 +500,7 @@ function RecrutementListContent({
     } finally {
       setRefreshing(false);
     }
-  }, [activeTab, isCoachOrAdmin, fetchMyAds, fetchMyApplications, fetchAdsForPlayer, screenActive]);
+  }, [activeTab, fetchMyApplications, fetchAdsForPlayer, screenActive]);
 
   useEffect(() => {
     if (!screenActive || !refreshSignal) return;
@@ -803,7 +717,6 @@ function RecrutementListContent({
     >
       {renderSegmentedTab('profils', 'Profils')}
       {renderSegmentedTab('opportunites', 'Opportunités')}
-      {renderSegmentedTab('annonces', 'Mes annonces')}
       {renderSegmentedTab('candidatures', 'Candidatures')}
     </View>
   );
@@ -851,87 +764,6 @@ function RecrutementListContent({
     </TouchableOpacity>
   );
 
-  // Render content for Coach - Annonces tab
-  const renderAnnoncesContent = () => {
-    const annoncesHeader = (
-      <View style={[Spaces.gap[12], Spaces.marginBottom[4]]}>
-        <View style={{
-          backgroundColor: recruitmentSurface,
-          borderColor: recruitmentBorderSoft,
-          borderRadius: 16,
-          borderWidth: 1,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-        }}
-        >
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-            Mes annonces
-          </Text>
-          <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 4 }]}>
-            Consulte et gère les annonces publiées pour tes équipes.
-          </Text>
-        </View>
-        {renderAudienceTypeTabs()}
-        {renderPublishOfferCta()}
-        <View style={[Spaces.marginTop[16]]}>
-          <SearchComponent
-            filterNumber={adFiltersCount}
-            handleSearchField={setAdSearchValue}
-            openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
-            placeholder="Rechercher dans mes annonces..."
-            searchDefaultValue={adSearchValue}
-          />
-          {adSearchValue?.trim()?.length >= 2 ? (
-            <Text style={[Fonts.p3, { color: Colors.primary500 }, Spaces.marginTop[8]]}>
-              Trie par pertinence
-            </Text>
-          ) : null}
-        </View>
-      </View>
-    );
-
-    return loading ? (
-      <Loader />
-    ) : (
-      <FlatList
-        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[160], { flexGrow: 1 }]}
-        data={filteredMyAds}
-        keyboardShouldPersistTaps="handled"
-        keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
-        ListEmptyComponent={myAdsUnreachable ? renderUnreachableState(() => fetchMyAds()) : (
-          <Text style={[Fonts.p1, Fonts.neutral500, { textAlign: 'center' }, Spaces.marginTop[24]]}>
-            {managedTeamIds.length > 0
-              ? 'Aucune annonce publiée pour tes équipes sur ce filtre'
-              : 'Aucune annonce créée sur ce filtre'}
-          </Text>
-        )}
-        ListHeaderComponent={annoncesHeader}
-        onRefresh={onRefresh}
-        refreshing={refreshing}
-        renderItem={({ item }) => {
-          const primaryReasonLabel = getMatchReasonLabel(item?.searchMeta?.matchReasons?.[0]);
-          return (
-            <View style={[Spaces.gap[8]]}>
-              {primaryReasonLabel ? (
-                <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
-                  {`Tri pertinence: ${primaryReasonLabel}`}
-                </Text>
-              ) : null}
-              <RecruitmentAdCard
-                ad={item}
-                detectionApplicationStatusByEvent={detectionApplicationStatusByEvent}
-                isOwner
-                onPress={(ad) => handleAdCardPress(ad, true)}
-              />
-            </View>
-          );
-        }}
-        showsVerticalScrollIndicator={false}
-        style={{ flex: 1 }}
-      />
-    );
-  };
-
   const hasProfileSignals = Boolean(
     userData?.preferredSport
     || userData?.section
@@ -964,10 +796,9 @@ function RecrutementListContent({
   const activeMode = isCoachOrAdmin ? `staff-${activeTab}` : `player-${activeTab}`;
   const activeResultCount = useMemo(() => {
     if (activeTab === 'profils') return 0;
-    if (activeTab === 'annonces' && isCoachOrAdmin) return filteredMyAds.length;
     if (activeTab === 'candidatures') return filteredMyApplications.length;
     return playerFeedItems.filter((item) => item.type === 'ad').length;
-  }, [activeTab, filteredMyAds.length, filteredMyApplications.length, isCoachOrAdmin, playerFeedItems]);
+  }, [activeTab, filteredMyApplications.length, playerFeedItems]);
 
   useEffect(() => {
     if (!screenActive) return;
@@ -1200,9 +1031,9 @@ function RecrutementListContent({
       ) : null}
       <View style={[Spaces.marginTop[16]]}>
         <SearchComponent
-          filterNumber={adFiltersCount}
+          filterNumber={badgeFiltersCount}
           handleSearchField={setAdSearchValue}
-          openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
+          openFilters={() => setFiltersSheetVisible(true)}
           placeholder="Rechercher une annonce..."
           searchDefaultValue={adSearchValue}
         />
@@ -1281,31 +1112,6 @@ function RecrutementListContent({
     )
   );
 
-  // Render Player Tabs
-  const renderPlayerTabs = () => {
-    if (!isAuthenticated) return null;
-
-    return (
-      <View style={[
-        Alignments.row,
-        Alignments.justifyCenter,
-        Spaces.marginBottom[24],
-        Spaces.gap[8],
-        {
-          backgroundColor: recruitmentSurfaceSoft,
-          borderColor: recruitmentBorderSoft,
-          borderRadius: 16,
-          borderWidth: 1,
-          padding: 5,
-        },
-      ]}
-      >
-        {renderSegmentedTab('annonces', 'Annonces')}
-        {renderSegmentedTab('candidatures', 'Mes candidatures')}
-      </View>
-    );
-  };
-
   // Render Applications Content
   const renderApplicationsContent = () => (
     loading ? (
@@ -1374,16 +1180,31 @@ function RecrutementListContent({
               {renderPublishOfferCta()}
             </View>
           ) : null}
-          {activeTab === 'annonces' ? renderAnnoncesContent() : null}
           {activeTab === 'opportunites' ? renderPlayerContent() : null}
           {activeTab === 'candidatures' ? renderApplicationsContent() : null}
         </View>
       ) : (
+        // D57 — le joueur n'a plus qu'un seul marche a explorer ici : ses
+        // candidatures ont demenage dans « Mes activites › Mes reponses ». Un
+        // segmente a un seul bouton ne choisit rien, il a donc disparu avec
+        // l'onglet.
         <View style={{ flex: 1 }}>
-          {renderPlayerTabs()}
-          {activeTab === 'candidatures' ? renderApplicationsContent() : renderPlayerContent()}
+          {renderPlayerContent()}
         </View>
       )}
+
+      {/* D57 — la feuille que le bouton de filtres ouvre desormais. Le bouton et
+          sa pastille, eux, n'ont pas bouge : ils marchaient deja. */}
+      <RecruitmentFiltersSheet
+        audienceFilter={audienceFilter}
+        filters={recruitmentAdFilters}
+        isVisible={filtersSheetVisible}
+        onApply={(filtresChoisis, profilChoisi) => {
+          appDispatch({ payload: filtresChoisis, type: 'SET_RECRUITMENT_AD_FILTERS' });
+          setAudienceFilter(profilChoisi);
+        }}
+        onClose={() => setFiltersSheetVisible(false)}
+      />
     </View>
   );
 }
