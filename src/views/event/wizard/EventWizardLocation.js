@@ -123,19 +123,24 @@ function EventWizardLocation({ navigation, route }) {
             )}
           </Text>
         ) : null}
+        {/* D58 — pack §2.4 : un conflit de creneau tient en UNE ligne orange,
+            et elle dit la CONSEQUENCE. Les deux cas restent distingues — le
+            club valide, ou le club laisse passer — mais dans la meme grammaire.
+            ⚠️ Orange des deux cotes : le second etait cyan, or le pack reserve
+            le cyan a la selection et a l'action. */}
         {requiresApproval ? (
           <Text style={[Fonts.p3, Fonts.warning500]}>
             {t(
               'eventWizard.steps.location.pendingValidationHint',
-              "Cette installation dépasse sa capacité sur ce créneau. L'événement sera créé en demande en attente jusqu'a validation d'un dirigeant.",
+              "Créneau complet sur cet horaire — l'événement partira en demande de validation au club.",
             )}
           </Text>
         ) : null}
         {allowsImmediateConfirmation ? (
-          <Text style={[Fonts.p3, Fonts.primary500]}>
+          <Text style={[Fonts.p3, Fonts.warning500]}>
             {t(
               'eventWizard.steps.location.allowAndNotifyHint',
-              "Cette installation dépasse sa capacité sur ce créneau, mais elle est configuree en 'Autorise et notifier'. L'événement restera confirme.",
+              "Créneau complet sur cet horaire — le club l'autorise quand même, l'événement reste confirmé.",
             )}
           </Text>
         ) : null}

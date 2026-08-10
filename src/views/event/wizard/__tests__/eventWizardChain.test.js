@@ -6,7 +6,6 @@ import { RouteNames } from '@/navigation/routeNames';
 import EventWizardAccess from '../EventWizardAccess';
 import { EventWizardProvider, useEventWizard } from '../EventWizardContext';
 import EventWizardDescription from '../EventWizardDescription';
-import EventWizardDetectionSlots from '../EventWizardDetectionSlots';
 import {
   getEventWizardExitRoute,
   getEventWizardNextRoute,
@@ -67,6 +66,9 @@ const mockDonnees = {
     { documentId: 'type-detection', name: 'Detection' },
     { documentId: 'type-stage', name: 'Stage' },
     { documentId: 'type-tournoi', name: 'Tournoi' },
+    // Ajoute par D58 : le filet « un test par type » avait un trou, « Autre »
+    // n'etait traverse par aucun parcours.
+    { documentId: 'type-autre', name: 'Autre' },
   ],
 };
 
@@ -283,7 +285,6 @@ jest.mock('@/components/atoms/button/Button', () => function BoutonMock(/** @typ
 const ECRANS = {
   [RouteNames.EventWizardAccess]: EventWizardAccess,
   [RouteNames.EventWizardDescription]: EventWizardDescription,
-  [RouteNames.EventWizardDetectionSlots]: EventWizardDetectionSlots,
   [RouteNames.EventWizardInvites]: EventWizardInvites,
   [RouteNames.EventWizardLocation]: EventWizardLocation,
   [RouteNames.EventWizardLogistics]: EventWizardLogistics,
@@ -575,7 +576,11 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
     expect(totalAnnonceALaFin(marche)).toBe(10);
   });
 
-  test('detection sur un sport a postes : 9 ecrans, creneaux inseres', () => {
+  test('detection sur un sport a postes : 8 ecrans, postes fondus dans Participants', () => {
+    // D58 (2026-08-10) — avant la fusion ce parcours en comptait 9 :
+    // `EventWizardDetectionSlots` s'inserait apres Participants. Les postes
+    // recherches sont desormais une SECTION de Participants, derriere un
+    // interrupteur, et la detection rejoint les 8 etapes promises par le pack.
     const marche = marcherDansLeTunnel({ nomDuType: 'Detection' });
     const { chaine } = marche;
 
@@ -585,12 +590,11 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
       RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
       RouteNames.EventWizardParticipants,
-      RouteNames.EventWizardDetectionSlots,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
-    expect(totalAnnonceALaFin(marche)).toBe(9);
+    expect(totalAnnonceALaFin(marche)).toBe(8);
   });
 
   test('entrainement prive : l ecran Participants est saute', () => {
@@ -616,6 +620,51 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// FILET D58 (E6) — moitie TRANSITIONS du « un test par type d evenement ».
+//
+// Le tableau des NUMEROS vit dans `eventWizardDetectionUtils.test.js`. Ici on
+// MARCHE vraiment dans le tunnel, type par type, et on releve le nombre
+// d'etapes annonce a l'ecran. Deux parcours n'etaient traverses par aucun test
+// avant ce lot : l'entrainement OUVERT (seul son jumeau prive l'etait) et
+// « Autre ». Mesure du 2026-08-10, avant la fusion des postes recherches.
+// ---------------------------------------------------------------------------
+describe('D58 — chaque type traverse son parcours, et annonce son compte', () => {
+  test.each([
+    ['Match', 8],
+    ['Entrainement', 8],
+    ['Stage', 8],
+    ['Tournoi', 10],
+    ['Autre', 8],
+  ])('un parcours %s annonce %i etapes de bout en bout', (nomDuType, attendu) => {
+    const marche = marcherDansLeTunnel({ nomDuType });
+
+    expect(totalAnnonceALaFin(marche)).toBe(attendu);
+    expect(marche.chaine[marche.chaine.length - 1]).toBe(RouteNames.EventWizardRecap);
+  });
+
+  test('un entrainement OUVERT garde son etape Participants', () => {
+    // Son jumeau ferme la saute (`shouldSkipEventWizardParticipantsStep`) : sans
+    // ce cas, rien ne distinguait « saute a bon escient » de « saute toujours ».
+    const { chaine } = marcherDansLeTunnel({ nomDuType: 'Entrainement' });
+
+    expect(chaine).toContain(RouteNames.EventWizardParticipants);
+  });
+
+  test('« Autre » suit exactement le parcours d un evenement standard', () => {
+    expect(marcherDansLeTunnel({ nomDuType: 'Autre' }).chaine).toEqual([
+      RouteNames.EventWizardType,
+      RouteNames.EventWizardTeam,
+      RouteNames.EventWizardLogistics,
+      RouteNames.EventWizardLocation,
+      RouteNames.EventWizardParticipants,
+      RouteNames.EventWizardAccess,
+      RouteNames.EventWizardDescription,
+      RouteNames.EventWizardRecap,
+    ]);
+  });
+});
+
 describe('D08 — le compteur du 1er ecran est calcule AVANT le choix du type', () => {
   // Bizarrerie mesuree le 2026-08-06, figee telle quelle : `EventWizardType`
   // calcule `stepCount` sur un etat dont `type` est encore nul. Il annonce donc
@@ -623,7 +672,9 @@ describe('D08 — le compteur du 1er ecran est calcule AVANT le choix du type', 
   // compte ne devient juste qu'a partir de l'ecran suivant.
   test.each([
     ['Tournoi', 10],
-    ['Detection', 9],
+    // D58 — la detection ne fait plus mentir le 1er ecran : il annonce 8, et le
+    // parcours en compte bien 8. Le tournoi reste le seul ecart.
+    ['Detection', 8],
   ])('parcours %s : le 1er ecran dit 8, la fin dit %i', (nomDuType, reel) => {
     const marche = marcherDansLeTunnel({ nomDuType });
 
@@ -643,7 +694,6 @@ describe('D08 — les ecrans hors chemin standard restent ATTEIGNABLES', () => {
     ['Stage', RouteNames.EventWizardStageProgram],
     ['Tournoi', RouteNames.EventWizardTournamentSettings],
     ['Tournoi', RouteNames.EventWizardTournamentStructure],
-    ['Detection', RouteNames.EventWizardDetectionSlots],
   ])('un parcours %s traverse %s', (nomDuType, ecran) => {
     expect(marcherDansLeTunnel({ nomDuType }).chaine).toContain(ecran);
   });
@@ -668,7 +718,7 @@ describe('D08 — les positions annoncees a l ecran suivent la chaine reelle', (
     ['Match', 8],
     ['Stage', 8],
     ['Tournoi', 10],
-    ['Detection', 9],
+    ['Detection', 8],
   ])('parcours %s : chaque ecran annonce sa place sur %i', (nomDuType, attendu) => {
     const marche = marcherDansLeTunnel({ nomDuType });
     const { chaine, positions } = marche;
@@ -763,7 +813,6 @@ const ETAPES_JOIGNABLES_DEPUIS_LE_RECAP = [
   [RouteNames.EventWizardDescription, { team: EQUIPE_A_POSTES, type: TYPE_MATCH }],
   [RouteNames.EventWizardTournamentSettings, { team: EQUIPE_A_POSTES, type: TYPE_TOURNOI }],
   [RouteNames.EventWizardTournamentStructure, { team: EQUIPE_A_POSTES, type: TYPE_TOURNOI }],
-  [RouteNames.EventWizardDetectionSlots, { team: EQUIPE_A_POSTES, type: TYPE_DETECTION }],
 ];
 
 describe('D19 — temoin ① depuis le recap, l etape ramene AU RECAP', () => {
@@ -809,7 +858,7 @@ describe('D19 — la regle de retour, prise a part', () => {
   const TOUTES_LES_ETAPES = getEventWizardStepRoutes({
     team: EQUIPE_A_POSTES,
     type: TYPE_TOURNOI,
-  }).concat(RouteNames.EventWizardStageProgram, RouteNames.EventWizardDetectionSlots);
+  }).concat(RouteNames.EventWizardStageProgram);
 
   test('avec le billet, toute etape ramene au recap', () => {
     TOUTES_LES_ETAPES.forEach((route) => {

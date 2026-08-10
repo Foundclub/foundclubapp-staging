@@ -222,7 +222,6 @@ export const RouteNames = /** @type {const} */ ({
   // apres avoir prouve par grep qu'aucun appelant ne subsistait.
   EventWizardAccess: 'EventWizardAccess',
   EventWizardDescription: 'EventWizardDescription',
-  EventWizardDetectionSlots: 'EventWizardDetectionSlots',
   EventWizardInvites: 'EventWizardInvites',
   EventWizardLocation: 'EventWizardLocation',
   EventWizardLogistics: 'EventWizardLogistics',

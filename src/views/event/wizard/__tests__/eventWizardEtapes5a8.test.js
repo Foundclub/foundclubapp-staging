@@ -408,6 +408,56 @@ describe('D10 — etape 5 · Participants', () => {
     demonter();
   });
 
+  // ---------------------------------------------------------------------
+  // D58 — LES POSTES RECHERCHES SONT ICI MAINTENANT.
+  // Sans ces trois controles, supprimer l ecran sans jamais reconstruire la
+  // section laisserait TOUS les autres tests verts : ils ne comptent que des
+  // etapes. C est le temoin « aucune saisie perdue ».
+  // ---------------------------------------------------------------------
+  it('offre les postes recherches, derriere un interrupteur eteint par defaut', () => {
+    const { arbre, demonter } = monter(EventWizardParticipants, ETAT_DETECTION);
+    const contenu = contenuDe(arbre);
+
+    expect(contenu).toContain('Postes recherchés');
+    // Eteint : la liste des postes du football n est pas encore la.
+    expect(contenu).not.toContain('Gardien');
+    demonter();
+  });
+
+  it('une saisie de postes deja faite REVIENT, interrupteur allume', () => {
+    const { arbre, demonter } = monter(EventWizardParticipants, {
+      ...ETAT_DETECTION,
+      detectionSlots: [{ position: 'Gardien', quantity: 2 }],
+    });
+    const contenu = contenuDe(arbre);
+
+    expect(contenu).toContain('Postes recherchés');
+    expect(contenu).toContain('Gardien');
+    demonter();
+  });
+
+  it('un match ne se voit PAS proposer de postes — la regle n a pas bouge', () => {
+    const { arbre, demonter } = monter(EventWizardParticipants, {
+      ...ETAT_DETECTION,
+      type: { documentId: 'type-match', name: 'Match' },
+    });
+
+    expect(contenuDe(arbre)).not.toContain('Postes recherchés');
+    demonter();
+  });
+
+  it('une detection RECURRENTE ne les propose pas non plus, et elle l explique', () => {
+    const { arbre, demonter } = monter(EventWizardParticipants, {
+      ...ETAT_DETECTION,
+      isRecurrent: true,
+    });
+    const contenu = contenuDe(arbre);
+
+    expect(contenu).not.toContain('Postes recherchés');
+    expect(contenu).toContain('Postes par détection indisponibles');
+    demonter();
+  });
+
   it('enregistre la capacite et part vers l ecran suivant', () => {
     const { demonter, nav } = monter(EventWizardParticipants, ETAT_DETECTION);
 
@@ -415,8 +465,9 @@ describe('D10 — etape 5 · Participants', () => {
       dernierGabarit().onNext();
     });
 
-    // Football a des postes : apres Participants vient l ecran des postes.
-    expect(nav.navigate).toHaveBeenCalledWith(RouteNames.EventWizardDetectionSlots);
+    // D58 — les postes ne sont plus un ecran : apres Participants vient Acces,
+    // pour une detection comme pour un match.
+    expect(nav.navigate).toHaveBeenCalledWith(RouteNames.EventWizardAccess);
     demonter();
   });
 });
@@ -658,6 +709,34 @@ describe('D10 — etape 8 · Recapitulatif', () => {
     demonter();
   });
 
+  // D58 — pack §2.8 : « La valeur ne repete jamais le label » (« Capacité →
+  // 12 joueurs », pas « Participants max: 12 »). Trois phrases repetaient leur
+  // propre titre ; ce test les tient toutes les trois.
+  it('aucune valeur du recap ne repete son propre label', () => {
+    const { arbre, demonter } = monter(EventWizardRecap, {
+      ...ETAT_COMPLET,
+      totalPlayers: 5,
+    });
+    const contenu = contenuDe(arbre);
+
+    expect(contenu).toContain('Capacité');
+    expect(contenu).toContain('12 joueurs');
+    expect(contenu).not.toContain('Participants max: 12');
+    expect(contenu).not.toContain('Joueurs attendus: 5');
+    expect(contenu).not.toContain('Validation: ');
+    demonter();
+  });
+
+  it('une capacite absente reste lisible, elle ne devient pas « Non renseigné joueurs »', () => {
+    const { arbre, demonter } = monter(EventWizardRecap, {
+      ...ETAT_COMPLET,
+      capacity: null,
+    });
+
+    expect(contenuDe(arbre)).not.toContain('joueurs');
+    demonter();
+  });
+
   it('regroupe les 3 options rares sous « Options avancees », valeurs comprises', () => {
     const { arbre, demonter } = monter(EventWizardRecap, ETAT_COMPLET);
     const contenu = contenuDe(arbre);
@@ -751,10 +830,12 @@ describe('D10 — etape 8 · Recapitulatif', () => {
     });
 
     it('les postes recherches gardent leur lien des qu il y en a', () => {
+      // D58 — le lien existe toujours, il mene desormais a l etape Participants
+      // ou les postes se replient. Le perdre rendrait la saisie incorrigeable.
       const etat = { ...ETAT_COMPLET, detectionSlots: [{ position: 'Gardien', quantity: 2 }] };
 
       expect(destinationsDuRecap(etat)).toEqual(expect.arrayContaining([
-        RouteNames.EventWizardDetectionSlots,
+        RouteNames.EventWizardParticipants,
       ]));
     });
 

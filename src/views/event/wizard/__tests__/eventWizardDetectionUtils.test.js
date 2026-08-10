@@ -2,7 +2,6 @@ import {
   getActiveStageScheduleDays,
   getEventWizardAccessStepIndex,
   getEventWizardDescriptionStepIndex,
-  getEventWizardDetectionSlotsStepIndex,
   getEventWizardLocationStepIndex,
   getEventWizardLogisticsStepIndex,
   getEventWizardParticipantsStepIndex,
@@ -21,7 +20,7 @@ import {
   isTrainingEventType,
   normalizeTypeLabel,
   shouldExplainDetectionSlotsDisabled,
-  shouldShowDetectionSlotsStep,
+  shouldOfferDetectionSlots,
   shouldSkipEventWizardLocationStep,
   shouldSkipEventWizardParticipantsStep,
 } from '../eventWizardDetectionUtils';
@@ -111,8 +110,9 @@ describe('D08 — getEventWizardStepCount : combien d etapes, par parcours', () 
     expect(getEventWizardStepCount({ type: typeTournoi })).toBe(10);
   });
 
-  test('un standard avec creneaux de detection compte 9 etapes', () => {
-    expect(getEventWizardStepCount(etatDetectionAvecCreneaux)).toBe(9);
+  test('une detection avec postes compte 8 etapes — D58 les a fondus', () => {
+    // Avant la fusion du 2026-08-10 : 9. Les postes recherches etaient un ecran.
+    expect(getEventWizardStepCount(etatDetectionAvecCreneaux)).toBe(8);
   });
 
   test('un standard dont l etape Participants est sautee compte 7 etapes', () => {
@@ -133,6 +133,70 @@ describe('D08 — getEventWizardStepCount : combien d etapes, par parcours', () 
   test('sans type du tout, la machine repond 8 comme pour un standard', () => {
     expect(getEventWizardStepCount()).toBe(8);
     expect(getEventWizardStepCount({})).toBe(8);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FILET D58 (E6) — LE COMPTEUR « Etape n/8 », TYPE PAR TYPE
+//
+// D58 fond les postes recherches dans l'etape Participants pour ramener la
+// detection a 8 etapes, comme le pack. Le tunnel est a geometrie variable : le
+// nombre d'etapes depend du type, du sport, et de la recurrence. Ce tableau
+// fige ce que la machine repond AUJOURD'HUI pour CHAQUE parcours, avant la
+// fusion. Apres elle, une seule ligne doit bouger — celle de la detection
+// simple sur un sport a postes, 9 → 8. Toute autre ligne qui change est une
+// regression, et c'est precisement ce que ce filet est la pour attraper.
+// ---------------------------------------------------------------------------
+
+/** Un sport absent de `SPORTS_WITH_POSITIONS` : sa detection n'a pas de postes. */
+const equipeSansPostes = { sport: { name: 'Petanque' } };
+
+const typeAutre = { name: 'Autre' };
+
+/** Une detection recurrente : les postes sont indisponibles, l'etape sautait deja. */
+const etatDetectionRecurrente = { ...etatDetectionAvecCreneaux, isRecurrent: true };
+
+/** Une detection sur un sport sans postes : rien a demander, l'etape sautait deja. */
+const etatDetectionSansPostes = { ...etatDetectionAvecCreneaux, team: equipeSansPostes };
+
+describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
+  test.each([
+    ['match officiel', { type: typeMatch }, 8],
+    ['entrainement ouvert', { type: typeEntrainement }, 8],
+    ['entrainement prive', etatEntrainementFerme, 7],
+    ['stage', { type: typeStage }, 8],
+    ['tournoi', { type: typeTournoi }, 10],
+    ['autre', { type: typeAutre }, 8],
+    ['detection recurrente', etatDetectionRecurrente, 8],
+    ['detection sans postes', etatDetectionSansPostes, 8],
+  ])('%s compte %i etapes, et la fusion D58 n y touche pas', (_nom, etat, attendu) => {
+    expect(getEventWizardStepCount(etat)).toBe(attendu);
+  });
+
+  // 🎯 LA SEULE LIGNE QUE D58 A FAIT BOUGER : 9 → 8. Le pack « Tunnel
+  // Evenement » du 2026-08-05 promet 8 etapes ; cette detection-la en comptait
+  // 9 parce que les postes recherches formaient un ecran a eux seuls. Les 8
+  // autres parcours ci-dessus n'ont pas bouge d'une etape.
+  test('la detection simple sur un sport a postes compte 8 etapes — APRES la fusion', () => {
+    expect(getEventWizardStepCount(etatDetectionAvecCreneaux)).toBe(8);
+  });
+
+  test('le tournoi est le seul parcours a depasser 8 etapes', () => {
+    const parcoursA8Maximum = [
+      { type: typeMatch },
+      { type: typeEntrainement },
+      etatEntrainementFerme,
+      { type: typeStage },
+      { type: typeAutre },
+      etatDetectionAvecCreneaux,
+      etatDetectionRecurrente,
+      etatDetectionSansPostes,
+    ];
+
+    parcoursA8Maximum.forEach(
+      (etat) => expect(getEventWizardStepCount(etat)).toBeLessThanOrEqual(8),
+    );
+    expect(getEventWizardStepCount({ type: typeTournoi })).toBe(10);
   });
 });
 
@@ -184,13 +248,10 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
 
   const attendu = {
     access: {
-      detection: 7, stage: 6, standard: 6, tournoi: 8,
+      detection: 6, stage: 6, standard: 6, tournoi: 8,
     },
     description: {
-      detection: 8, stage: 7, standard: 7, tournoi: 9,
-    },
-    detectionSlots: {
-      detection: 6, stage: 0, standard: 0, tournoi: 0,
+      detection: 7, stage: 7, standard: 7, tournoi: 9,
     },
     location: {
       detection: 4, stage: 4, standard: 4, tournoi: 4,
@@ -204,7 +265,7 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
       detection: 5, stage: 5, standard: 5, tournoi: 7,
     },
     recap: {
-      detection: 9, stage: 8, standard: 8, tournoi: 10,
+      detection: 8, stage: 8, standard: 8, tournoi: 10,
     },
     stageProgram: {
       detection: 0, stage: 3, standard: 0, tournoi: 0,
@@ -220,7 +281,6 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
   const fonctions = {
     access: getEventWizardAccessStepIndex,
     description: getEventWizardDescriptionStepIndex,
-    detectionSlots: getEventWizardDetectionSlotsStepIndex,
     location: getEventWizardLocationStepIndex,
     logistics: getEventWizardLogisticsStepIndex,
     participants: getEventWizardParticipantsStepIndex,
@@ -238,13 +298,13 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
     });
   });
 
-  test('les ecrans d avant les creneaux de detection gardent leur place', () => {
-    // Seuls les 3 ecrans de fin (acces, description, recap) decalent quand
-    // l'etape « creneaux » s'insere.
+  test('une detection est desormais alignee sur le parcours standard', () => {
+    // D58 — l'etape « creneaux » n'existe plus : plus rien ne s'insere, donc
+    // plus rien ne decale. Une detection et un match ont la MEME numerotation.
     expect(getEventWizardLogisticsStepIndex(etatDetectionAvecCreneaux)).toBe(3);
     expect(getEventWizardLocationStepIndex(etatDetectionAvecCreneaux)).toBe(4);
     expect(getEventWizardParticipantsStepIndex(etatDetectionAvecCreneaux)).toBe(5);
-    expect(getEventWizardAccessStepIndex(etatDetectionAvecCreneaux)).toBe(7);
+    expect(getEventWizardAccessStepIndex(etatDetectionAvecCreneaux)).toBe(6);
   });
 
   test('sauter Participants recule les 3 derniers ecrans d un cran', () => {
@@ -266,19 +326,19 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
 });
 
 describe('D08 — les 4 aiguillages de la machine', () => {
-  test('shouldShowDetectionSlotsStep exige : detection + sport a postes + non recurrent', () => {
-    expect(shouldShowDetectionSlotsStep(etatDetectionAvecCreneaux)).toBe(true);
-    expect(shouldShowDetectionSlotsStep({ ...etatDetectionAvecCreneaux, isRecurrent: true }))
+  test('shouldOfferDetectionSlots exige : detection + sport a postes + non recurrent', () => {
+    expect(shouldOfferDetectionSlots(etatDetectionAvecCreneaux)).toBe(true);
+    expect(shouldOfferDetectionSlots({ ...etatDetectionAvecCreneaux, isRecurrent: true }))
       .toBe(false);
-    expect(shouldShowDetectionSlotsStep({ ...etatDetectionAvecCreneaux, type: typeMatch }))
+    expect(shouldOfferDetectionSlots({ ...etatDetectionAvecCreneaux, type: typeMatch }))
       .toBe(false);
-    expect(shouldShowDetectionSlotsStep({
+    expect(shouldOfferDetectionSlots({
       ...etatDetectionAvecCreneaux,
       team: { sport: { name: 'Petanque' } },
     })).toBe(false);
     // Un stage sort AVANT le test « est-ce une detection » : un « Stage de
     // detection » n'aurait jamais l'etape creneaux.
-    expect(shouldShowDetectionSlotsStep({
+    expect(shouldOfferDetectionSlots({
       ...etatDetectionAvecCreneaux,
       type: { name: 'Stage de detection' },
     })).toBe(false);

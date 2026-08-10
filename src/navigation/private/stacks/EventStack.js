@@ -12,7 +12,6 @@ import TournamentTeamDetails from '@/views/event/TournamentTeamDetails';
 import EventWizardAccess from '@/views/event/wizard/EventWizardAccess';
 import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
 import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
-import EventWizardDetectionSlots from '@/views/event/wizard/EventWizardDetectionSlots';
 import EventWizardInvites from '@/views/event/wizard/EventWizardInvites';
 import EventWizardLocation from '@/views/event/wizard/EventWizardLocation';
 import EventWizardLogistics from '@/views/event/wizard/EventWizardLogistics';
@@ -189,11 +188,6 @@ function EventStack() {
         <Stack.Screen
           component={EventWizardParticipants}
           name={RouteNames.EventWizardParticipants}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          component={EventWizardDetectionSlots}
-          name={RouteNames.EventWizardDetectionSlots}
           options={{ headerShown: false }}
         />
         <Stack.Screen
