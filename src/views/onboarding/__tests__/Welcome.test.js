@@ -258,9 +258,9 @@ describe('Welcome — le chemin en 3 etapes remplace les 3 cartes (D59 ②)', ()
     // ⚠️ Aucun `#hex` litteral ici : `verify:theme-contract` SCANNE AUSSI LES
     // TESTS, et un hex ecrit en dur fait tomber la porte.
     const fondsAutorises = new Set([
-      colors.transparent, // pastilles des 2 etapes a venir
-      colors.success500, // pastille de l'etape acquise
       colors.primary500, // point central de l'etape Equipe
+      colors.success500, // pastille de l'etape acquise
+      colors.transparent, // pastilles des 2 etapes a venir
       colors.violet500, // point central de l'etape Club
       withAlpha(colors.neutral00, 0.05), // carte Gratuit
       withAlpha(colors.primary500, 0.09), // carte Equipe
@@ -284,16 +284,18 @@ describe('Welcome — le chemin en 3 etapes remplace les 3 cartes (D59 ②)', ()
   });
 
   it('la reassurance et le pont encadrent le bouton', () => {
+    const reassurance = 'Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.';
+    const pont = 'Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin';
     const { tree } = rendre();
     const rendus = textes(tree);
 
     // La reassurance etait sous le pli : elle doit passer AVANT le bouton.
-    expect(rendus).toContain('Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.');
-    expect(rendus).toContain('Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin');
-    expect(rendus.indexOf('Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.'))
+    expect(rendus).toContain(reassurance);
+    expect(rendus).toContain(pont);
+    expect(rendus.indexOf(reassurance))
       .toBeLessThan(rendus.indexOf('Démarrer le tour guidé'));
     expect(rendus.indexOf('Démarrer le tour guidé'))
-      .toBeLessThan(rendus.indexOf('Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin'));
+      .toBeLessThan(rendus.indexOf(pont));
   });
 
   it('le pont parle du CLUB au dirigeant, pas de l equipe', () => {

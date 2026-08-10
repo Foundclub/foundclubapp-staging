@@ -264,7 +264,9 @@ describe('SubscriptionQuotaBanner — « deja couvert » (D59 ⑤)', () => {
 
   test('une couverture CLUB parle du club, pas de l equipe', async () => {
     const texte = await renderTextFor({
-      entitlementsSummary: couvertPar({ firstname: 'Nadia', lastname: 'Benali', scopeType: 'CLUB' }),
+      entitlementsSummary: couvertPar({
+        firstname: 'Nadia', lastname: 'Benali', scopeType: 'CLUB',
+      }),
       subscriptionAccessLevel: 'CLUB',
       subscriptionSummary: { activePlanCodes: [] },
     });

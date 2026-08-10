@@ -160,7 +160,9 @@ describe('HomeActionCard â€” le repli quand aucune illustration n existe (D59 â‘
     // plutot qu'une pastille. Ils partagent donc le meme centre.
     expect(halos).toHaveLength(2);
     halos.forEach((/** @type {any} */ halo) => {
-      const { bottom, height, right, width } = halo.props.style;
+      const {
+        bottom, height, right, width,
+      } = halo.props.style;
       expect(height).toBe(width);
       expect(bottom + (height / 2)).toBe(43);
       expect(right + (width / 2)).toBe(49);
