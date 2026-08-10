@@ -265,6 +265,9 @@ function EventTasksEditor({
               min={1}
               onDecrement={() => setDraft((current) => ({ ...current, requiredCount: Math.max(1, Number(current.requiredCount || 1) - 1) }))}
               onIncrement={() => setDraft((current) => ({ ...current, requiredCount: Math.min(50, Number(current.requiredCount || 1) + 1) }))}
+              // D58 — pack §2.8 : le compteur de la fiche Tache prend le
+              // registre du tunnel. « Fini le stepper blanc. »
+              tone="tunnel"
               value={Number(draft.requiredCount || 1)}
             />
 
