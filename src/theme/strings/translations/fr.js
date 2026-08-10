@@ -1801,6 +1801,10 @@ export default {
     },
   },
   onboarding: {
+    category: {
+      subtitle: 'La catégorie d\'âge dans laquelle tu joues cette saison.',
+      title: 'Ta catégorie ?',
+    },
     clubSearch: {
       editableLater: 'Modifiable à tout moment depuis Mon profil.',
       privateHelp: 'Ton profil n\'apparaît dans aucune recherche '
