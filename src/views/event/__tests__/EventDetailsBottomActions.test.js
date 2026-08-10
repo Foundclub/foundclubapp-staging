@@ -1032,3 +1032,60 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
     expect(inventory).toContain('edit');
   });
 });
+
+// ── D64 — LE FILET, pose AVANT de deplacer le menu ──────────────────────────
+// Ces deux temoins ne disent RIEN de l'endroit ou le menu est pose : ils sont
+// verts avec le menu en pied de cadre (D53) comme en tete de contenu (D64).
+// C'est exactement ce qu'on demande a un filet — survivre au deplacement qu'il
+// protege, et ne tomber que si le deplacement casse quelque chose.
+describe('D64 — le filet : deux invariants qui ne dependent pas de l endroit', () => {
+  test('le panneau « Gerer l evenement » est atteignable, ou qu il soit pose', () => {
+    const root = asOrganiser();
+
+    expect(byTestId(root, PANEL_ID)[0]).toBeTruthy();
+
+    // Atteignable au DOIGT et au LECTEUR D'ECRAN : un role annonce, un libelle
+    // non vide, et une cible d'au moins 44 pt (le minimum tactile).
+    const bascule = pressableWithText(root, "Gérer l'événement");
+    expect(bascule).toBeTruthy();
+    expect(bascule.props.accessibilityRole).toBe('button');
+    expect(String(bascule.props.accessibilityLabel || '').length).toBeGreaterThan(0);
+    expect(Number(flatStyle(byTestId(root, PANEL_ROW_ID)[0]).height)).toBeGreaterThanOrEqual(44);
+
+    // Et il OUVRE : un seul appui suffit a faire apparaitre les chips.
+    press(root, "Gérer l'événement");
+    expect(byTestId(root, 'event-manage-chip').length).toBeGreaterThan(0);
+  });
+
+  // 🧨 DEUX ECRANS NE PEUVENT PAS COEXISTER DANS UN TEST DE CE FICHIER, et ca ne
+  // se voit pas : `mountScreen` ECRIT dans des mocks partages (`mockUseAuth`,
+  // `mockEventQuery`) et dans la variable `mounted`, unique. Monter un second
+  // ecran change donc l'identite lue par le PREMIER des qu'il se re-rend — un
+  // `press` sur l'organisateur le faisait relire l'auth du simple participant,
+  // le menu disparaissait, et l'echec accusait le code au lieu du montage.
+  // ⇒ On finit tout ce qu'on a a faire sur un arbre AVANT d'en monter un autre.
+  test('le dernier participant de la liste n est recouvert par rien', () => {
+    const organisateur = asOrganiser();
+
+    // 1. RIEN NE SURPLOMBE. Le menu est en flux, replie comme deplie : un frere
+    //    en flux repousse son voisin, il ne peut pas passer par-dessus.
+    expect(managePanelPosition(organisateur)).not.toBe('absolute');
+    press(organisateur, "Gérer l'événement");
+    expect(byTestId(organisateur, 'event-manage-sheet')[0]).toBeTruthy();
+    expect(managePanelPosition(organisateur)).not.toBe('absolute');
+
+    // 2. La liste des participants est bien rendue, et elle n'est pas rangee
+    //    DANS le menu : on ne l'a pas fait disparaitre en la deplacant.
+    expect(hasText(organisateur, 'DOUBLURE_EventParticipants')).toBe(true);
+
+    // 3. ET LA LISTE NE RESERVE RIEN POUR LE MENU : le meme terminateur, avec
+    //    ou sans actions d'organisation. C'est la disparition de la reserve
+    //    dite en COMPORTEMENT, pas en nom de constante — donc increvable a un
+    //    renommage. (Une reserve, par definition, ne s'applique que quand le
+    //    bouton existe : deux nombres egaux prouvent qu'il n'y en a plus.)
+    const avecMenu = scrollContentStyle(organisateur).paddingBottom;
+    const sansMenu = scrollContentStyle(mountScreen()).paddingBottom;
+
+    expect(avecMenu).toBe(sansMenu);
+  });
+});
