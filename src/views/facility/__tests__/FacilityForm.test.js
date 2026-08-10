@@ -173,6 +173,11 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   };
 });
 
+// Les VRAIES couleurs du theme, celles que l'ecran recoit : l'anneau de
+// selection se reconnait a sa teinte, pas a sa forme — toutes les pastilles
+// portent la meme enveloppe, seule la couleur du trait les distingue.
+const COULEURS = jest.requireActual('@/theme/colors').default();
+
 // Adresse telle que la rend reellement l'autocomplete BAN : les coordonnees
 // vivent dans `value`, sous la forme « lng|lat ».
 const ADRESSE_GEOCODEE = {
@@ -804,5 +809,49 @@ describe('FacilityForm — D63 : l ecart entre la maquette et l ecran', () => {
       expect(taille.height).toBeGreaterThanOrEqual(44);
       expect(taille.width).toBeGreaterThanOrEqual(44);
     });
+  });
+
+  it('la couleur choisie porte un anneau, et elle seule', async () => {
+    // La maquette entoure la pastille choisie d un anneau blanc detache du
+    // rond. A l ecran, la selection se lisait a une bordure de 2 pt collee au
+    // bord de la pastille — sur une pastille deja coloree, ca se voit mal.
+    const arbre = await monterEcran();
+
+    const anneaux = arbre.root.findAll((/** @type {any} */ noeud) => {
+      const style = aplatirStyle(noeud.props?.style);
+      return style.borderRadius === 999
+        && style.borderWidth >= 2
+        && style.backgroundColor === undefined
+        && style.borderColor === COULEURS.neutral00;
+    });
+
+    // 2 et non 1 : un noeud RN se compte deux fois dans l arbre rendu (le
+    // composite et son hote), comme le note deja le test de palette de D51.
+    expect(anneaux).toHaveLength(2);
+  });
+
+  it('changer de couleur deplace l anneau, sans en ajouter un second', async () => {
+    const arbre = await monterEcran();
+
+    const pastilles = arbre.root.findAll((/** @type {any} */ noeud) => (
+      typeof noeud.props?.onPress === 'function'
+      && FACILITY_PLANNING_PALETTE.includes(noeud.props?.style?.[1]?.backgroundColor)
+    ));
+
+    await act(async () => {
+      pastilles[pastilles.length - 1].props.onPress();
+    });
+
+    const anneaux = arbre.root.findAll((/** @type {any} */ noeud) => {
+      const style = aplatirStyle(noeud.props?.style);
+      return style.borderRadius === 999
+        && style.borderWidth >= 2
+        && style.backgroundColor === undefined
+        && style.borderColor === COULEURS.neutral00;
+    });
+
+    // 2 et non 1 : un noeud RN se compte deux fois dans l arbre rendu (le
+    // composite et son hote), comme le note deja le test de palette de D51.
+    expect(anneaux).toHaveLength(2);
   });
 });

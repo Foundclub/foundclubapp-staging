@@ -191,10 +191,15 @@ const PLANNING_SWATCH_HIT_SLOP = {
   bottom: 5, left: 5, right: 5, top: 5,
 };
 
-const PLANNING_SWATCH_DOT_STYLE = {
+// D63 : la maquette detache l'anneau du rond (un ecart sombre entre les deux).
+// C'est ce qui le rend lisible sur une pastille deja coloree, la ou une bordure
+// collee au bord se confondait avec elle. L'anneau est porte par une enveloppe
+// de meme encombrement pour TOUTES les pastilles, sinon la grille sauterait a
+// chaque changement de couleur : 34 + 2 x (3 d'ecart + 2 de trait) = 44 pt.
+const PLANNING_SWATCH_RING_STYLE = {
   borderRadius: 999,
-  height: 12,
-  width: 12,
+  borderWidth: 2,
+  padding: 3,
 };
 
 const TYPE_CHIP_STYLE = {
@@ -700,37 +705,37 @@ function FacilityForm() {
                       {FACILITY_PLANNING_PALETTE.map((color) => {
                         const isSelected = selectedColor === color;
                         return (
-                          <TouchableOpacity
-                            accessibilityLabel={t(
-                              'facilityForm.accessibility.planningColor',
-                              'Couleur de planning',
-                            )}
-                            accessibilityRole="radio"
-                            accessibilityState={{ selected: isSelected }}
-                            activeOpacity={0.85}
-                            hitSlop={PLANNING_SWATCH_HIT_SLOP}
+                          <View
                             key={color}
-                            onPress={() => onChange(color)}
                             style={[
-                              PLANNING_SWATCH_STYLE,
+                              PLANNING_SWATCH_RING_STYLE,
                               {
-                                backgroundColor: color,
                                 borderColor: isSelected
                                   ? Colors.neutral00
-                                  : `${Colors.neutral00}66`,
-                                borderWidth: isSelected ? 2 : 1,
+                                  : Colors.transparent,
                               },
                             ]}
                           >
-                            {isSelected ? (
-                              <View
-                                style={[
-                                  PLANNING_SWATCH_DOT_STYLE,
-                                  { backgroundColor: Colors.neutral00 },
-                                ]}
-                              />
-                            ) : null}
-                          </TouchableOpacity>
+                            <TouchableOpacity
+                              accessibilityLabel={t(
+                                'facilityForm.accessibility.planningColor',
+                                'Couleur de planning',
+                              )}
+                              accessibilityRole="radio"
+                              accessibilityState={{ selected: isSelected }}
+                              activeOpacity={0.85}
+                              hitSlop={PLANNING_SWATCH_HIT_SLOP}
+                              onPress={() => onChange(color)}
+                              style={[
+                                PLANNING_SWATCH_STYLE,
+                                {
+                                  backgroundColor: color,
+                                  borderColor: `${Colors.neutral00}66`,
+                                  borderWidth: 1,
+                                },
+                              ]}
+                            />
+                          </View>
                         );
                       })}
                     </View>
