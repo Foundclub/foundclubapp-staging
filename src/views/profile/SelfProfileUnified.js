@@ -14,7 +14,6 @@ import {
 
 import { getUserRoleKey, profileFieldToDisplay } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import usePlaces from '@/domains/places/usePlaces';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -75,10 +74,9 @@ const buildSurfaces = (Colors) => ({
   pencilBorder: withAlpha(Colors.primary500, 0.3),
   sectionBg: withAlpha(Colors.neutral00, 0.04),
   sectionBorder: withAlpha(Colors.neutral00, 0.09),
-  // Ecusson d'equipe : gris clair du pack, encre foncee. Les deux existent deja
-  // dans la palette (`neutral200`, `primary700`) — pas de hex neuf.
-  teamTile: Colors.neutral200,
-  teamTileInk: Colors.primary700,
+  // D65 — `teamTile` / `teamTileInk` retires avec la tuile carree a initiales
+  // qu'ils habillaient : les equipes portent desormais le meme blason que le
+  // reste de l'app (`ClubLogoMark`), qui tient ses couleurs du theme.
 });
 
 // La rampe `Spaces` s'arrete a 0/4/8/12/16/24/32/40/64/80/128/160 : 52 (hauteur
@@ -87,6 +85,9 @@ const buildSurfaces = (Colors) => ({
 const ROW_MIN_HEIGHT = 52;
 const ICON_TILE = 30;
 const AVATAR_SIZE = 64;
+// Cible tactile minimale, la meme valeur et pour la meme raison que dans
+// `SelfProfilePlayerCoach.js` : 44 n'est pas sur la rampe `Spaces` non plus.
+const TOUCH_TARGET = 44;
 
 /**
  * Lit un libelle de ville depuis l'adresse stockee (objet ou chaine JSON).
@@ -192,7 +193,6 @@ function SelfProfileUnified({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { getClubInitials } = useClub();
   const { getGeohashForPointAndRadius } = usePlaces();
   const {
     getAuthTokens,
@@ -570,6 +570,39 @@ function SelfProfileUnified({ navigation }) {
           ) : null}
         </View>
 
+        {/* D65 — « Voir mon profil comme les autres ». Le bouton existait pour
+            le joueur et l'entraineur (`SelfProfilePlayerCoach.js:629`) ; le
+            dirigeant, lui, n'avait AUCUN moyen de relire ce qu'il expose —
+            alors que D54 vient de retirer telephone et date de naissance des
+            pages publiques. On emprunte le mecanisme EXISTANT : `preview: true`
+            est le seul interrupteur, celui que `UserDetails` lit pour basculer
+            `isOwnerView` a faux. En inventer un second rouvrirait la fuite. */}
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => navigation.navigate(RouteNames.UserDetails, {
+            preview: true,
+            userId: userData?.documentId || userData?.id,
+          })}
+          style={{
+            alignItems: 'center',
+            borderColor: surfaces.pencilBorder,
+            borderRadius: 999,
+            borderWidth: 1,
+            flexDirection: 'row',
+            gap: 8,
+            justifyContent: 'center',
+            minHeight: TOUCH_TARGET,
+            paddingHorizontal: 16,
+          }}
+        >
+          <Text style={{
+            color: Colors.primary200, fontFamily: 'Montserrat-Bold', fontSize: 13.5,
+          }}
+          >
+            {t('profile.actions.previewPublic', 'Voir mon profil comme les autres')}
+          </Text>
+        </TouchableOpacity>
+
         {renderSection({ label: t('profile.sections.contact', 'Coordonnées'), rows: contactRows })}
         {renderSection({
           label: t('userDetails.sections.sport', 'Profil sportif'), rows: sportRows,
@@ -599,22 +632,19 @@ function SelfProfileUnified({ navigation }) {
                     paddingVertical: 8,
                   }}
                 >
-                  <View style={{
-                    alignItems: 'center',
-                    backgroundColor: surfaces.teamTile,
-                    borderRadius: 9,
-                    height: ICON_TILE,
-                    justifyContent: 'center',
-                    width: ICON_TILE,
-                  }}
-                  >
-                    <Text style={{
-                      color: surfaces.teamTileInk, fontFamily: 'Montserrat-Black', fontSize: 10,
-                    }}
-                    >
-                      {getClubInitials(team?.name || '')}
-                    </Text>
-                  </View>
+                  {/* D65 — la tuile carree a initiales etait une TROISIEME
+                      grammaire de blason, apres l'ecusson de `UserDetails` et
+                      le vrai logo de partout ailleurs. On prend celle du reste
+                      de l'app (`TeamListContent.js:540`) : le logo du club s'il
+                      existe, sinon les initiales sur l'ecusson. Le nom du CLUB
+                      passe avant celui de l'equipe — le blason represente le
+                      club, pas la categorie. */}
+                  <ClubLogoMark
+                    club={team?.club}
+                    isNeutral
+                    name={team?.club?.name || team?.name}
+                    size={ICON_TILE}
+                  />
                   <Text
                     numberOfLines={1}
                     style={{
