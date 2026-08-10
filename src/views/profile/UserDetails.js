@@ -21,13 +21,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import TabButton from '@/components/atoms/tabButton/TabButton';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -309,7 +307,6 @@ function UserDetails({ navigation, route }) {
     Images,
     Spaces,
   } = useTheme();
-  const { getClubInitials } = useClub();
   const {
     refetchUserData,
     USER_ROLES,
@@ -693,10 +690,17 @@ function UserDetails({ navigation, route }) {
       ]}
     >
       <View style={[Alignments.row, Spaces.gap[12], Alignments.alignCenter, { flex: 1 }]}>
-        <TeamShield
-          initials={team?.name ? getClubInitials(team?.name) : ''}
+        {/* D65 — le meme blason que partout ailleurs dans l'app : le VRAI logo
+            du club si l'equipe en a un, sinon les initiales sur l'ecusson.
+            `TeamShield` seul ne sait pas afficher d'image ; `ClubLogoMark`
+            arbitre entre les deux, et cet ecran l'utilisait DEJA cent lignes
+            plus bas pour le club de l'utilisateur (l. 797). Le nom sert au
+            repli : celui du CLUB d'abord, comme `TeamListContent.js:540`. */}
+        <ClubLogoMark
+          club={team?.club}
           isNeutral
-          isSmall
+          name={team?.club?.name || team?.name}
+          size={60}
         />
         <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
           {team?.name || fallbackValue}
