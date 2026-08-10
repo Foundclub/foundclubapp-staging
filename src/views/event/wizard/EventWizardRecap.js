@@ -466,6 +466,12 @@ function EventWizardRecap({ navigation }) {
   const externalValidationValue = trainingOpenConfig.externalParticipantValidationMode === 'auto'
     ? t('eventEdit.fields.validationMode.options.auto')
     : t('eventEdit.fields.validationMode.options.manual');
+  // D58 — la valeur seule, le label vit au-dessus (pack §2.8). Sans capacite
+  // saisie on retombe sur « Non renseigné » : « Non renseigné joueurs » n'aurait
+  // aucun sens.
+  const capacityValueLabel = state.capacity
+    ? t('eventWizard.recap.capacityValue', '{{count}} joueurs', { count: state.capacity })
+    : recapNotSet;
   const invitedCount = state.invitedTeams?.length || 0;
   const detectionSlots = Array.isArray(state.detectionSlots) ? state.detectionSlots : [];
   const detectionSlotsTotal = detectionSlots.reduce((sum, slot) => sum + Number(slot?.quantity || 0), 0);
@@ -1296,7 +1302,16 @@ function EventWizardRecap({ navigation }) {
 
             <View style={[Spaces.gap[8]]}>
               <View style={[Spaces.gap[4]]}>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.participants')}</Text>
+                {/* D58 — pack §2.8 : « La valeur ne repete jamais le label ».
+                    C'etait « Participants » surmontant « Participants max: 12 » ;
+                    c'est desormais l'exemple du pack, « Capacité → 12 joueurs ».
+                    ⚠️ Cles NEUVES a dessein : `sections.participants` et
+                    `recap.capacity` existent dans `fr.js`, qui gagne toujours
+                    sur le repli — les modifier la-bas compterait comme une
+                    suppression, que ce lot s'interdit. */}
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t('eventWizard.recap.capacityTitle', 'Capacité')}
+                </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
                   {isTraining
                     ? t(
@@ -1307,7 +1322,7 @@ function EventWizardRecap({ navigation }) {
                         ? 'Illimité en interne + quota externe'
                         : 'Capacité illimitée (entraînement prive)',
                     )
-                    : t('eventWizard.recap.capacity', { value: state.capacity ?? recapNotSet })}
+                    : capacityValueLabel}
                 </Text>
               </View>
               {(isReservation || (isTraining && !trainingOpenConfig.isOpenTraining)) ? (
@@ -1321,7 +1336,8 @@ function EventWizardRecap({ navigation }) {
                     )}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    {t('eventWizard.recap.totalPlayers', { value: state.totalPlayers ?? recapNotSet })}
+                    {/* D58 — le label « Joueurs attendus » est juste au-dessus. */}
+                    {`${state.totalPlayers ?? recapNotSet}`}
                   </Text>
                 </View>
               ) : null}
@@ -1340,9 +1356,12 @@ function EventWizardRecap({ navigation }) {
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.validation')}</Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {/* D58 — le label « Validation » est juste au-dessus. La
+                      variante entrainement garde son prefixe : « Membres
+                      internes » qualifie QUI valide, il ne repete pas le label. */}
                   {isTraining
                     ? t('eventWizard.recap.internalValidationMode', 'Membres internes: {{value}}', { value: validationValue })
-                    : t('eventWizard.recap.validationMode', { value: validationValue })}
+                    : validationValue}
                 </Text>
               </View>
               {isTraining

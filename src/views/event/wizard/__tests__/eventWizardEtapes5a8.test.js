@@ -659,6 +659,34 @@ describe('D10 — etape 8 · Recapitulatif', () => {
     demonter();
   });
 
+  // D58 — pack §2.8 : « La valeur ne repete jamais le label » (« Capacité →
+  // 12 joueurs », pas « Participants max: 12 »). Trois phrases repetaient leur
+  // propre titre ; ce test les tient toutes les trois.
+  it('aucune valeur du recap ne repete son propre label', () => {
+    const { arbre, demonter } = monter(EventWizardRecap, {
+      ...ETAT_COMPLET,
+      totalPlayers: 5,
+    });
+    const contenu = contenuDe(arbre);
+
+    expect(contenu).toContain('Capacité');
+    expect(contenu).toContain('12 joueurs');
+    expect(contenu).not.toContain('Participants max: 12');
+    expect(contenu).not.toContain('Joueurs attendus: 5');
+    expect(contenu).not.toContain('Validation: ');
+    demonter();
+  });
+
+  it('une capacite absente reste lisible, elle ne devient pas « Non renseigné joueurs »', () => {
+    const { arbre, demonter } = monter(EventWizardRecap, {
+      ...ETAT_COMPLET,
+      capacity: null,
+    });
+
+    expect(contenuDe(arbre)).not.toContain('joueurs');
+    demonter();
+  });
+
   it('regroupe les 3 options rares sous « Options avancees », valeurs comprises', () => {
     const { arbre, demonter } = monter(EventWizardRecap, ETAT_COMPLET);
     const contenu = contenuDe(arbre);
