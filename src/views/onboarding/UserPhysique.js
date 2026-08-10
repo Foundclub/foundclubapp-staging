@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -135,18 +136,20 @@ function UserPhysique({ navigation }) {
               {t('onboarding.physique.title', 'Ton physique')}
             </Text>
             <Text style={[Fonts.p1, Fonts.neutral00]}>
-              {t('onboarding.physique.subtitle', 'Ces informations aident les recruteurs')}
+              {t('onboarding.physique.subtitle', 'Facultatif — ces infos aident les recruteurs.')}
             </Text>
           </View>
 
           <View style={[Spaces.gap[24]]}>
             <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Taille (cm)</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00, styles.fieldLabel]}>
+                {t('onboarding.physique.heightLabel', 'Taille (cm)')}
+              </Text>
               <TextInput
                 keyboardType="numeric"
                 maxLength={3}
                 onChangeText={setHeight}
-                placeholder="Ex: 180"
+                placeholder="Ex : 180"
                 placeholderTextColor={Colors.neutral500}
                 returnKeyType="next"
                 style={[
@@ -165,12 +168,14 @@ function UserPhysique({ navigation }) {
             </View>
 
             <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Poids (kg)</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00, styles.fieldLabel]}>
+                {t('onboarding.physique.weightLabel', 'Poids (kg)')}
+              </Text>
               <TextInput
                 keyboardType="numeric"
                 maxLength={3}
                 onChangeText={setWeight}
-                placeholder="Ex: 75"
+                placeholder="Ex : 75"
                 placeholderTextColor={Colors.neutral500}
                 returnKeyType="done"
                 style={[
@@ -186,6 +191,28 @@ function UserPhysique({ navigation }) {
                 ]}
                 value={weight}
               />
+            </View>
+
+            {/*
+              D56 — taille et poids sont des donnees sensibles, et le pack
+              exige de les CONTEXTUALISER a l'endroit ou on les demande :
+              « la donnee sensible est contextualisee ». Sans cette ligne,
+              l'ecran demandait un physique sans jamais dire qui le verrait.
+              La reponse depend de l'etape Visibilite, juste apres.
+            */}
+            <View style={[Alignments.row, Spaces.gap[8]]}>
+              <Text
+                importantForAccessibility="no"
+                style={[Fonts.p2, { color: Colors.neutral600 }]}
+              >
+                i
+              </Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral600, flex: 1 }]}>
+                {t(
+                  'onboarding.physique.privacyNotice',
+                  'Visible uniquement si ton profil est public.',
+                )}
+              </Text>
             </View>
           </View>
         </View>
@@ -204,5 +231,15 @@ function UserPhysique({ navigation }) {
     </FormScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  // Le pack met les libelles de champ en capitales. `textTransform` plutot
+  // qu'une chaine en majuscules : les lecteurs d'ecran epellent parfois un mot
+  // ecrit tout en capitales, alors qu'ils lisent bien celui-ci.
+  fieldLabel: {
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+});
 
 export default UserPhysique;

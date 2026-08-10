@@ -1817,6 +1817,13 @@ export default {
       visibleLabel: 'Profil visible',
     },
     optionalStepHint: 'Cette étape n\'est pas obligatoire, mais elle reste utile pour améliorer ton expérience FoundClub.',
+    physique: {
+      heightLabel: 'Taille (cm)',
+      privacyNotice: 'Visible uniquement si ton profil est public.',
+      subtitle: 'Facultatif — ces infos aident les recruteurs.',
+      title: 'Ton physique',
+      weightLabel: 'Poids (kg)',
+    },
   },
   onboardingAffiliation: {
     a11y: {
@@ -1920,6 +1927,8 @@ export default {
       teams: 'ÉQUIPES',
     },
     selectedClubLabel: 'Club sélectionné',
+    staffManagementNotice: 'Ta demande de gestion sera envoyée aux dirigeants du club '
+      + '— s\'il n\'en a pas encore, tu pourras le revendiquer et le faire certifier.',
     states: {
       emptyWithoutQueryClub: 'Aucun club à afficher pour le moment.',
       emptyWithoutQueryTeam: 'Aucune équipe à afficher pour le moment.',
@@ -1930,8 +1939,6 @@ export default {
       loading: 'Recherche en cours...',
       retry: 'Réessayer',
     },
-    staffManagementNotice: 'Ta demande de gestion sera envoyée aux dirigeants du club '
-      + '— s\'il n\'en a pas encore, tu pourras le revendiquer et le faire certifier.',
     subtitleClub: 'On personnalise ton accueil, ton planning et tes annonces autour de ton club.',
     subtitleClubCoach: 'Retrouve ton club pour y déclarer les équipes que tu entraînes.',
     subtitleClubSelection: 'Recherche puis sélectionne ton club pour voir ses équipes.',
