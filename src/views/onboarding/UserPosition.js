@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, ScrollView, Text, TouchableOpacity, View,
+  Alert, ScrollView, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
@@ -38,7 +39,7 @@ function UserPosition({ navigation, route }) {
     userDataLoading,
   } = useAuth();
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -173,47 +174,20 @@ function UserPosition({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
-          {positions.map((position) => {
-            const isSelected = selectedPositions.includes(position.value);
-            return (
-              <TouchableOpacity
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: isSelected }}
-                key={position.value}
-                onPress={() => togglePosition(position.value)}
-                style={[
-                  Spaces.padding[16],
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  Alignments.justifySpaceBetween,
-                  Spaces.gap[12],
-                  {
-                    backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
-                    borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                    borderRadius: 12,
-                    borderWidth: 2,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    Fonts.p1Bold,
-                    { color: isSelected ? Colors.primary500 : Colors.neutral00, flex: 1 },
-                  ]}
-                >
-                  {position.label}
-                </Text>
-                {isSelected ? (
-                  <Text
-                    importantForAccessibility="no"
-                    style={[Fonts.p1Bold, Fonts.primary500]}
-                  >
-                    ✓
-                  </Text>
-                ) : null}
-              </TouchableOpacity>
-            );
-          })}
+          {/*
+            D56 — meme grammaire que les autres listes, en version A COCHER :
+            plusieurs postes sont possibles, le temoin est donc un CARRE et le
+            role annonce « case a cocher ». La coche en texte disparait.
+          */}
+          {positions.map((position) => (
+            <OnboardingRadioRow
+              checked={selectedPositions.includes(position.value)}
+              key={position.value}
+              label={position.label}
+              multi
+              onPress={() => togglePosition(position.value)}
+            />
+          ))}
         </ScrollView>
       </View>
 

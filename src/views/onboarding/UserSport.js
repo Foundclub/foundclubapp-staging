@@ -12,6 +12,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
@@ -283,49 +284,21 @@ function UserSport({ navigation }) {
                 {t('common.noResults', 'Aucun résultat')}
               </Text>
             ) : (
-              filteredActivities.map((activity) => {
-                const isSelected = selectedSport === activity.name;
-                return (
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isSelected }}
-                    key={activity.documentId || activity.id}
-                    onPress={() => setSelectedSport((currentSport) => (
-                      currentSport === activity.name ? null : activity.name
-                    ))}
-                    style={[
-                      Spaces.padding[16],
-                      Alignments.row,
-                      Alignments.alignCenter,
-                      Alignments.justifySpaceBetween,
-                      Spaces.gap[12],
-                      {
-                        backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
-                        borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                        borderRadius: 12,
-                        borderWidth: 2,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        Fonts.p1Bold,
-                        { color: isSelected ? Colors.primary500 : Colors.neutral00, flex: 1 },
-                      ]}
-                    >
-                      {formatActivityName(activity.name)}
-                    </Text>
-                    {isSelected ? (
-                      <Text
-                        importantForAccessibility="no"
-                        style={[Fonts.p1Bold, Fonts.primary500]}
-                      >
-                        ✓
-                      </Text>
-                    ) : null}
-                  </TouchableOpacity>
-                );
-              })
+              /*
+                D56 — meme grammaire que Statut, Section et Niveau : une
+                rangee-radio de 56 pt avec un vrai bouton radio. La coche en
+                texte disparait, et la rangee cesse de se declarer « bouton ».
+              */
+              filteredActivities.map((activity) => (
+                <OnboardingRadioRow
+                  checked={selectedSport === activity.name}
+                  key={activity.documentId || activity.id}
+                  label={formatActivityName(activity.name)}
+                  onPress={() => setSelectedSport((currentSport) => (
+                    currentSport === activity.name ? null : activity.name
+                  ))}
+                />
+              ))
             )}
           </ScrollView>
         )}

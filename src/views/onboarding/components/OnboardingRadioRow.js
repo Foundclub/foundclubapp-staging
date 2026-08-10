@@ -28,6 +28,7 @@ const ROW_MIN_HEIGHT = 56;
  * @param {boolean} props.checked - Rangee choisie.
  * @param {string} props.label - Libelle affiche.
  * @param {() => void} props.onPress - Selection de la rangee.
+ * @param {boolean} [props.multi] - Liste a choix multiple : case CARREE.
  * @param {string} [props.subtitle] - Precision facultative sous le libelle.
  * @param {string} [props.testID] - Identifiant de test.
  * @returns {import('react').ReactElement} La rangee.
@@ -35,6 +36,7 @@ const ROW_MIN_HEIGHT = 56;
 function OnboardingRadioRow({
   checked,
   label,
+  multi = false,
   onPress,
   subtitle = undefined,
   testID = undefined,
@@ -43,7 +45,10 @@ function OnboardingRadioRow({
 
   return (
     <TouchableOpacity
-      accessibilityRole="radio"
+      // Le pack distingue les deux : rond pour un choix unique, CARRE pour une
+      // liste a cocher. Le role suit la forme, sinon un lecteur d'ecran annonce
+      // « bouton radio » sur une liste ou plusieurs reponses sont possibles.
+      accessibilityRole={multi ? 'checkbox' : 'radio'}
       accessibilityState={{ checked }}
       onPress={onPress}
       style={[
@@ -71,16 +76,23 @@ function OnboardingRadioRow({
         ) : null}
       </View>
 
-      {/* Le bouton radio lui-meme : cercle vide, point plein quand choisi. */}
+      {/* Le temoin : cercle vide (choix unique) ou carre (liste a cocher). */}
       <View
         importantForAccessibility="no"
         style={[
           styles.radio,
+          multi ? styles.radioSquare : null,
           { borderColor: checked ? Colors.primary500 : Colors.neutral600 },
         ]}
       >
         {checked ? (
-          <View style={[styles.radioDot, { backgroundColor: Colors.primary500 }]} />
+          <View
+            style={[
+              styles.radioDot,
+              multi ? styles.radioDotSquare : null,
+              { backgroundColor: Colors.primary500 },
+            ]}
+          />
         ) : null}
       </View>
     </TouchableOpacity>
@@ -106,6 +118,12 @@ const styles = StyleSheet.create({
     borderRadius: RADIO_DOT_SIZE / 2,
     height: RADIO_DOT_SIZE,
     width: RADIO_DOT_SIZE,
+  },
+  radioDotSquare: {
+    borderRadius: 2,
+  },
+  radioSquare: {
+    borderRadius: 6,
   },
   row: {
     alignItems: 'center',

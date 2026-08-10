@@ -77,6 +77,22 @@ describe('OnboardingRadioRow — la grammaire de selection du pack (D56)', () =>
     expect(pastilles(rendre({ checked: true }))).toHaveLength(1);
   });
 
+  // Le pack : « rangees-radio ... (multi = cases a cocher CARREES) ». La forme
+  // et le role doivent bouger ensemble — un temoin carre annonce « radio »
+  // serait un mensonge pour un lecteur d'ecran.
+  it('en liste a cocher, le temoin devient CARRE et le role suit', () => {
+    const temoin = (/** @type {any} */ tree) => tree.root
+      .findAll((/** @type {any} */ node) => {
+        if (typeof node.type !== 'string') return false;
+        const style = StyleSheet.flatten(node.props?.style) || {};
+        return style.height === 24 && style.width === 24;
+      })[0];
+
+    expect(StyleSheet.flatten(temoin(rendre({})).props.style).borderRadius).toBe(12);
+    expect(StyleSheet.flatten(temoin(rendre({ multi: true })).props.style).borderRadius).toBe(6);
+    expect(rangee(rendre({ multi: true })).props.accessibilityRole).toBe('checkbox');
+  });
+
   it('⛔ la rangee ne descend jamais sous 56 pt', () => {
     const style = StyleSheet.flatten(rangee(rendre({})).props.style);
     expect(style.minHeight).toBeGreaterThanOrEqual(56);
