@@ -11,10 +11,10 @@ import HomeHeadBanner from '../HomeHeadBanner';
 // N'AFFICHE PAS : un bandeau sans contenu doit disparaitre ENTIEREMENT,
 // etiquette comprise. Un cadre vide ou un « rien a signaler » serait un defaut.
 //
-// ⚠️ A LIRE AVANT DE TOUCHER A CE FICHIER : aujourd'hui ce composant ne se
-// rend JAMAIS dans l'application, parce qu'aucun compteur n'a de source
-// (l'endpoint n'existe pas — cf. homeCounters.js). Ces tests sont donc la SEULE
-// preuve que le bandeau fonctionne, tant que le lot serveur n'est pas livre.
+// ⚠️ CETTE MISE EN GARDE A EXPIRE le 2026-08-12 (lot D78). Elle disait que ce
+// composant ne se rendait JAMAIS faute d'endpoint : `GET /app/home-summary` est
+// livre (D76) et l'accueil le lit. Le bandeau se rend donc pour de vrai, et ces
+// tests ne sont plus sa seule preuve — voir `views/home/__tests__/compteursAccueil`.
 
 jest.mock('@/theme/themeContext', () => {
   const { colors: vraiesCouleurs } = jest.requireActual('@/theme/colors');
