@@ -1923,7 +1923,12 @@ function LeagueMatchDetails({ navigation, route }) {
 
             <View style={styles.heroMatchupRow}>
               <View style={styles.heroTeamBlock}>
-                <TeamShield initials={String(match.team_a?.initials || match.team_a?.name || '?')} isGold size={68} />
+                <TeamShield
+                  imageUrl={match.team_a?.crest?.url}
+                  initials={String(match.team_a?.initials || match.team_a?.name || '?')}
+                  isGold
+                  size={68}
+                />
                 <Text numberOfLines={2} style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral00 }]}>
                   {match.team_a?.name || 'Équipe A'}
                 </Text>
@@ -1969,7 +1974,12 @@ function LeagueMatchDetails({ navigation, route }) {
                   </>
                 ) : (
                   <>
-                    <TeamShield initials={String(match.team_b?.initials || match.team_b?.name || '?')} isGold size={68} />
+                    <TeamShield
+                      imageUrl={match.team_b?.crest?.url}
+                      initials={String(match.team_b?.initials || match.team_b?.name || '?')}
+                      isGold
+                      size={68}
+                    />
                     <Text numberOfLines={2} style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral00 }]}>
                       {match.team_b?.name || 'Équipe B'}
                     </Text>

@@ -933,6 +933,7 @@ function EndMatchScreen() {
             <View style={styles.heroMatchupRow}>
               <View style={styles.heroTeamBlock}>
                 <TeamShield
+                  imageUrl={teamA?.crest?.url}
                   initials={String(teamA?.name?.substring(0, 2) || '?')}
                   isGold
                   size={60}
@@ -973,6 +974,7 @@ function EndMatchScreen() {
 
               <View style={styles.heroTeamBlock}>
                 <TeamShield
+                  imageUrl={teamB?.crest?.url}
                   initials={String(teamB?.name?.substring(0, 2) || '?')}
                   isGold
                   size={60}
@@ -1263,6 +1265,7 @@ function EndMatchScreen() {
                     ]}
                   >
                     <TeamShield
+                      imageUrl={teamA?.crest?.url}
                       initials={String(teamA?.name?.substring(0, 2) || '?')}
                       isGold
                       size={64}
@@ -1335,6 +1338,7 @@ function EndMatchScreen() {
                     ]}
                   >
                     <TeamShield
+                      imageUrl={teamB?.crest?.url}
                       initials={String(teamB?.name?.substring(0, 2) || '?')}
                       isGold
                       size={64}
