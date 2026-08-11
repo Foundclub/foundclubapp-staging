@@ -244,6 +244,12 @@ export const RouteNames = /** @type {const} */ ({
   // l'URL `/profile/history/category` et les 8 `navigate()` de l'app.
   HistoryWizardCategory: 'HistoryWizardCategory',
 
+  // Match — convocation (D77, pack composition ecrans 1 a 3).
+  // Coexiste avec `TacticalSelectionV2` : l'ancien parcours reste en place tant
+  // que les 17 ecrans du pack ne sont pas livres.
+  MatchCallUpManualPlayer: 'MatchCallUpManualPlayer',
+  MatchCallUpSelection: 'MatchCallUpSelection',
+
   // Tactical
   TacticalBoardV2: 'TacticalBoardV2',
   TacticalSelectionV2: 'TacticalSelectionV2',

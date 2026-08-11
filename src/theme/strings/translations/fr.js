@@ -1673,6 +1673,101 @@ export default {
     subtitle: 'Renseigne ton numéro de téléphone.',
     title: 'Connecte-toi',
   },
+  matchCallUp: {
+    manualPlayer: {
+      actions: {
+        cancel: 'Annuler',
+        submit: 'Ajouter au groupe',
+      },
+      errors: {
+        nameRequired: 'Prénom et nom requis.',
+      },
+      fields: {
+        firstname: {
+          label: 'Prénom',
+          placeholder: 'Yanis',
+        },
+        jerseyNumber: {
+          label: 'Numéro de maillot',
+          placeholder: '23',
+        },
+        lastname: {
+          label: 'Nom',
+          placeholder: 'Bertrand',
+        },
+        optional: 'Optionnel',
+        phone: {
+          label: 'Téléphone',
+          placeholder: '06 12 34 56 78',
+        },
+      },
+      intro: "Il apparaîtra sur la compo et dans la convocation comme les autres. Il ne pourra simplement pas répondre depuis l'app.",
+      sms: {
+        subtitle: 'Un lien vers la convocation, consultable sans compte.',
+        title: 'Le prévenir par SMS',
+      },
+      subtitle: "Il n'a pas l'app · {{teamName}}",
+      title: 'Ajouter un joueur',
+      warning: {
+        after: '. Ce sera à toi de le prévenir.',
+        before: 'Sans téléphone, {{firstname}} ne recevra',
+        fallbackName: 'ce joueur',
+        strong: 'aucune notification',
+      },
+    },
+    selection: {
+      addPlayer: {
+        subtitle: "Nom, prénom et numéro, pour un joueur sans l'app",
+        title: 'Ajouter un joueur',
+      },
+      alerts: {
+        noneSelected: {
+          message: 'Sélectionne au moins un joueur.',
+          title: 'Attention',
+        },
+      },
+      defaultEventType: 'Match',
+      empty: {
+        offApp: 'Aucun joueur hors app pour le moment.',
+        reinforcements: "Aucune autre équipe dans le club pour l'instant.",
+        search: 'Aucun résultat.',
+        squad: "Aucun joueur dans l'équipe.",
+      },
+      footer: {
+        calledUp_one: '{{count}} convoqué',
+        calledUp_other: '{{count}} convoqués',
+        extras: 'dont {{reinforcements}} renforts · {{offApp}} hors app',
+        next: 'Suivant',
+        split: '{{starters}} titulaires · {{bench}} sur le banc',
+      },
+      meta: {
+        number: 'N°{{number}}',
+        numberAndPosition: 'N°{{number}} · {{position}}',
+        positionToDefine: 'Poste à définir',
+      },
+      noSms: 'Pas de SMS — préviens-le toi-même',
+      offAppTag: 'Hors app',
+      progress: '{{current}}/{{total}}',
+      search: 'Rechercher un joueur',
+      sections: {
+        offApp: 'Déjà ajoutés · {{count}}',
+        reinforcements: 'Renforts du club · {{count}}',
+        squad: 'Effectif {{teamName}} · {{count}}',
+      },
+      tabs: {
+        offApp: 'Hors app',
+        others: 'Autres équipes',
+        squad: 'Mon équipe',
+      },
+      title: 'Convoqués',
+      unavailability: {
+        injury: 'Blessé',
+        licence: 'Licence non validée',
+        suspension_one: 'Suspendu {{count}} match',
+        suspension_other: 'Suspendu {{count}} matchs',
+      },
+    },
+  },
   menu: {
     chat: 'Messagerie',
     home: 'Accueil',

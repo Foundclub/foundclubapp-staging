@@ -22,6 +22,8 @@ import EventWizardTeam from '@/views/event/wizard/EventWizardTeam';
 import EventWizardTournamentSettings from '@/views/event/wizard/EventWizardTournamentSettings';
 import EventWizardTournamentStructure from '@/views/event/wizard/EventWizardTournamentStructure';
 import EventWizardType from '@/views/event/wizard/EventWizardType';
+import MatchCallUpManualPlayer from '@/views/matchCallUp/MatchCallUpManualPlayer';
+import MatchCallUpSelection from '@/views/matchCallUp/MatchCallUpSelection';
 import MatchStatsEditor from '@/views/matchStats/MatchStatsEditor';
 import PendingMatchStatsScreen from '@/views/matchStats/PendingMatchStatsScreen';
 import PlayerMatchResponseScreen from '@/views/matchStats/PlayerMatchResponseScreen';
@@ -109,6 +111,17 @@ function EventStack() {
             ...commonOptions,
             headerTitle: '',
           }}
+        />
+        {/* Match — convocation (D77) : ecrans 1 a 3 du pack composition. */}
+        <Stack.Screen
+          component={MatchCallUpSelection}
+          name={RouteNames.MatchCallUpSelection}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={MatchCallUpManualPlayer}
+          name={RouteNames.MatchCallUpManualPlayer}
+          options={{ headerShown: false }}
         />
         {/* Tactical V2 Screens */}
         <Stack.Screen
