@@ -408,7 +408,12 @@ function NextMatchCard({
         {/* Matchup */}
         <View style={styles.matchup}>
           <View style={styles.teamContainer}>
-            <TeamShield initials={myTeam.name?.substring(0, 2) || '??'} isGold size={50} />
+            <TeamShield
+              imageUrl={myTeam.crest?.url}
+              initials={myTeam.name?.substring(0, 2) || '??'}
+              isGold
+              size={50}
+            />
             <Text numberOfLines={1} style={styles.teamName}>{myTeam.name}</Text>
           </View>
           <Text style={styles.vsText}>VS</Text>

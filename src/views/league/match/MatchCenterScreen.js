@@ -1780,6 +1780,7 @@ function MatchCenterScreen() {
                   </Text>
                 ) : (
                   <TeamShield
+                    imageUrl={getSquadLogoUri(opponentDetails) || getSquadLogoUri(currentMatch?.team_b)}
                     initials={getSquadShieldInitials(opponentDetails?.name || currentMatch?.team_b?.name)}
                     isGold
                     size={56}
@@ -2219,6 +2220,7 @@ function MatchCenterScreen() {
                   </Text>
                 ) : (
                   <TeamShield
+                    imageUrl={getSquadLogoUri(opponentDetails) || getSquadLogoUri(currentMatch?.team_b)}
                     initials={getSquadShieldInitials(opponentDetails?.name || currentMatch?.team_b?.name)}
                     isGold
                     size={52}
