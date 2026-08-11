@@ -53,6 +53,13 @@ const FALLBACK_GLOW_RINGS = [
  * @param {string} props.subtitle
  * @param {() => void} props.onPress
  * @param {boolean} [props.disabled]
+ * @param {boolean} [props.hasAlert] - D72 : une action ATTEND la personne sur cette carte.
+ *   Rend un point rouge sur le glyphe, sans chiffre. Facultative : omise, la carte est
+ *   exactement celle d'avant le lot. ⛔ Jamais pour signaler une nouveaute, jamais sur un
+ *   conteneur, une action de creation, un reglage ou la section Compte (pack accueil §Regles).
+ * @param {number} [props.badgeCount] - D72 : compteur chiffre, `9+` au-dela de 9. Ne sert
+ *   qu'a la carte « A traiter » du super admin. Partout ailleurs on utilise `hasAlert`.
+ *   A zero ou absent, aucune pilule n'est rendue.
  * @param {keyof import('@/theme/types').AllImages} [props.icon]
  * @param {string} [props.accentColor]
  * @param {import('react-native').ImageSourcePropType} [props.illustration]
@@ -70,8 +77,10 @@ const FALLBACK_GLOW_RINGS = [
  */
 function HomeActionCard({
   accentColor,
+  badgeCount,
   disabled = false,
   emphasis = 'default',
+  hasAlert = false,
   highlighted = false,
   icon = 'search',
   illustration,
@@ -120,6 +129,15 @@ function HomeActionCard({
     ...DEFAULT_ILLUSTRATION_PLACEMENT,
     ...(illustrationPlacement || {}),
   };
+
+  // D72 — la pilule chiffree s'arrete a « 9+ » (pack accueil, tache 1). Au-dela
+  // elle s'elargirait et pousserait la pastille fleche hors de la carte.
+  // ⚠️ La capture `04-accueil-superadmin.png` montre « 14 » : le texte du pack et
+  // son image se contredisent. C'est le TEXTE qui est applique ici.
+  let badgeLabel = null;
+  if (typeof badgeCount === 'number' && badgeCount > 0) {
+    badgeLabel = badgeCount > 9 ? '9+' : String(badgeCount);
+  }
 
   return (
     <Pressable
@@ -221,6 +239,7 @@ function HomeActionCard({
               borderRadius: 12,
               height: 38,
               justifyContent: 'center',
+              position: 'relative',
               width: 38,
             }}
           >
@@ -229,7 +248,41 @@ function HomeActionCard({
               style={{ height: 18, width: 18 }}
               tintColor={resolvedAccentColor}
             />
+            {hasAlert ? (
+              <View
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                style={{
+                  backgroundColor: Colors.error500,
+                  borderColor: Colors.primary700,
+                  borderRadius: 5,
+                  borderWidth: 1.5,
+                  height: 10,
+                  position: 'absolute',
+                  right: -5,
+                  top: -3,
+                  width: 10,
+                }}
+              />
+            ) : null}
           </View>
+          {badgeLabel ? (
+            <View
+              style={{
+                alignItems: 'center',
+                backgroundColor: Colors.error500,
+                borderRadius: 12,
+                height: 24,
+                justifyContent: 'center',
+                marginLeft: 'auto',
+                marginRight: 8,
+                minWidth: 24,
+                paddingHorizontal: 7,
+              }}
+            >
+              <Text style={[Fonts.small, Fonts.neutral00, { fontWeight: '900' }]}>{badgeLabel}</Text>
+            </View>
+          ) : null}
           <View
             style={{
               alignItems: 'center',
