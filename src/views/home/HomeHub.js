@@ -23,9 +23,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
-  EMPTY_HOME_COUNTERS,
   formatBannerShortTime,
   formatBannerTitle,
+  normalizeHomeCounters,
   selectBannerLines,
   selectHomeAlerts,
   selectModerationTotal,
@@ -61,6 +61,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { useHomeSummary } from '@/services/home/homeSummaryQueries';
 
 import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 import { markBootStep } from '@/utils/performance/bootPerformance';
@@ -1504,18 +1506,24 @@ function HomeHubContent({ auth, navigation, route }) {
   // ⛔ UN SEUL appel, au focus de l'ecran — jamais un par carte : l'accueil en
   // porte jusqu'a 20.
   //
-  // 🔎 MESURE DU 2026-08-11 : `GET /app/home-summary` N'EXISTE PAS, ni dans
-  // `app` ni dans `admin`. Le seul appel deja fait au demarrage (`/app/bootstrap`)
-  // ne porte AUCUN des sept compteurs. Le pack tranche ce cas lui-meme : « cabler
-  // les compteurs deja disponibles, laisser les autres a 0 ». Aucun ne l'etant,
-  // tout vaut 0 ⇒ zero pastille, aucun bandeau, accueil identique a l'actuel.
-  // C'est le critere de recette 3, obtenu par construction plutot que par test.
+  // ✅ COUTURE FAITE LE 2026-08-12 (lot D78) : `GET /app/home-summary` existe
+  // depuis le lot serveur D76. Ce qui suit etait deja ecrit pour des valeurs non
+  // nulles — seule la SOURCE a change, pas une ligne d'affichage.
   //
-  // 🔌 LA COUTURE DU LOT SERVEUR TIENT EN DEUX LIGNES, ET ELLES SONT ICI :
-  //   const { data } = useQuery({ enabled: isFocused, queryFn: getHomeSummary, ... });
-  //   const homeCounters = normalizeHomeCounters(data);
-  // Tout ce qui suit est deja ecrit pour des valeurs non nulles.
-  const homeCounters = EMPTY_HOME_COUNTERS;
+  // 🛟 UN ECHEC NE BLOQUE RIEN : en cas de panne, `data` reste `undefined` et
+  // `normalizeHomeCounters` rend l'etat vide — donc exactement l'accueil d'avant
+  // le lot, sans bandeau ni pastille. Aucun ecran d'erreur, aucune roue infinie.
+  //
+  // ⛔ `reservations` restera a 0 tant qu'aucune table ne portera cette file :
+  // c'est une decision assumee de D76, pas un oubli de branchement.
+  const { data: homeSummary } = useHomeSummary({
+    enabled: isFocused && Boolean(userData?.documentId),
+  });
+  // ⚠️ Le memo n'est pas decoratif : `normalizeHomeCounters` fabrique un NOUVEL
+  // objet a chaque appel, et `homeCounters` est la dependance de cinq memos plus
+  // bas. Sans lui, tout l'ecran se recalculerait a chaque rendu — le motif exact
+  // qui avait produit 402 rendus sur le board de compo (lot D42).
+  const homeCounters = useMemo(() => normalizeHomeCounters(homeSummary), [homeSummary]);
   const homeAlerts = useMemo(() => selectHomeAlerts(homeCounters), [homeCounters]);
 
   const headBanner = useMemo(() => {

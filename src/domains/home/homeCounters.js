@@ -1,24 +1,21 @@
 // D72 — LES COMPTEURS DE L'ACCUEIL (pack accueil, tache 4).
 //
-// 🔎 ETAT MESURE LE 2026-08-11, ET C'EST LE POINT IMPORTANT DU LOT :
-// l'endpoint qui alimente ces compteurs **n'existe pas**. Verifie des deux cotes :
-//   · `app`   : aucun service ne cite `home-summary` (grep sur `src/services/`) ;
-//   · `admin` : aucune entree `home-summary` dans `src/api/` (lecture seule).
-// L'appel deja fait par l'app au demarrage (`GET /app/bootstrap`) ne porte que
-// `unreadNotificationsCount`, `pendingLeagueActionSummary`, `pendingMatchStatsSummary`
-// et `userSummary` — AUCUN des sept compteurs demandes.
+// ⚠️ L'ETAT DECRIT ICI LE 2026-08-11 (« l'endpoint n'existe pas ») EST PERIME.
+// Corrige le 2026-08-12 par le lot D78, apres mesure : le lot serveur D76 a
+// livre `GET /app/home-summary`, et l'accueil le lit desormais.
 //
-// ⇒ Le pack tranche lui-meme ce cas : « cabler les compteurs deja disponibles,
-//   laisser les autres a 0 — une valeur a zero fait simplement disparaitre la
-//   pastille et la ligne de bandeau. » Aucun n'etant disponible, TOUT vaut 0
-//   aujourd'hui : zero pastille, aucun bandeau, et l'accueil est exactement
-//   celui d'avant le lot. C'est le critere de recette 3, obtenu par construction.
+// 🔎 ETAT MESURE LE 2026-08-12 :
+//   · `admin` : `src/api/app-home-summary/` — route, controleur, service ;
+//   · `app`   : `src/services/home/homeSummaryService.js`, lu par `useHomeSummary`
+//               et cable UNE SEULE FOIS, dans `HomeHub.js` (au focus de l'ecran).
 //
-// ⛔ AUCUN endpoint n'a ete cree : ce serait un lot serveur.
-// 🔌 LA COUTURE POUR CE LOT SERVEUR TIENT EN UN ENDROIT : quand
-//    `GET /app/home-summary` existera, il suffira de le lire dans `useHomeCounters`
-//    (HomeHub.js) et de passer sa reponse a `normalizeHomeCounters`. Rien d'autre
-//    ne bouge : tout ce qui suit est deja ecrit pour des valeurs non nulles.
+// ⛔ CE QUI RESTE A 0, ET CE N'EST PAS UN OUBLI DE BRANCHEMENT : `reservations`.
+//   Aucune table ne porte cette file — decision assumee de D76. Le pack l'autorise
+//   explicitement : « une valeur a zero fait simplement disparaitre la pastille et
+//   la ligne de bandeau. »
+// ⚠️ `prochaineSeance.team` et `.opponent` arrivent en CHAINE VIDE : D76 a refuse
+//   une jointure de plus par ouverture d'accueil. Le bandeau entraineur s'affiche
+//   donc sans nom d'equipe ni adversaire tant qu'un lot ne les alimente pas.
 //
 // ⚠️ ECART AVEC LE PACK, A ARBITRER : la forme de reponse donnee par le pack
 //    (tache 4) ne contient AUCUN des quatre compteurs du bandeau super admin
