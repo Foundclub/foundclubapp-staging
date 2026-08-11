@@ -717,11 +717,20 @@ jobs:
 
 
           def detail(payload) -> str:
-              """Message d'erreur d'Apple, lisible et sans secret."""
+              """Message d'erreur d'Apple, lisible et sans secret.
+
+              Le `code` est repris EN PLUS du titre : c'est lui qui distingue une
+              adresse ou un identifiant faux (NOT_FOUND) d'un droit manquant sur la
+              clef (FORBIDDEN_ERROR). Sans lui, les deux se ressemblent -- Apple
+              repond souvent 404 sur une ressource qu'on n'a pas le droit de voir.
+              Aucun secret ici : Apple ne renvoie ni jeton ni clef dans ses erreurs.
+              """
               errors = payload.get("errors") if isinstance(payload, dict) else None
               if errors:
                   return " | ".join(
-                      "{}: {}".format(e.get("title", "?"), e.get("detail", "")).strip()
+                      "[{}] {}: {}".format(
+                          e.get("code", "?"), e.get("title", "?"), e.get("detail", "")
+                      ).strip()
                       for e in errors
                   )
               return str(payload.get("raw", "")) if isinstance(payload, dict) else ""
@@ -933,12 +942,56 @@ jobs:
                       "non distribuee ({} groupes possibles, aucun designe)".format(len(groupes)))
               raise SystemExit(0)
 
-          # 3. Rattacher. 204 = c'est fait (« Add Builds to a Beta Group »).
-          status, payload = asc.request(
-              "POST",
-              "/v1/betaGroups/{}/relationships/builds".format(cible["id"]),
-              {"data": [{"type": "builds", "id": build_id}]},
+          # 3. Rattacher. 204 = c'est fait.
+          #
+          # ┌─ D74 — POURQUOI LA 2.6.15 (961) A RENDU 404 ICI ─────────────────────┐
+          # L'API expose DEUX chemins pour le MEME lien, et ils ne se valent pas :
+          #   (a) POST /v1/builds/{build}/relationships/betaGroups   <- on prend celui-la
+          #   (b) POST /v1/betaGroups/{groupe}/relationships/builds  <- rendait 404
+          # Les deux sont documentes par Apple. Mais (a) est le seul que
+          # fastlane/spaceship emploie (`add_beta_groups_to_build`), c'est-a-dire le
+          # seul des deux qui soit reellement eprouve sur des millions de livraisons.
+          # ⚠️ LE CORPS CHANGE AVEC LE SENS : ce qu'on met dans `data` est TOUJOURS
+          # l'autre bout du lien. En (a) on liste des `betaGroups`, en (b) des `builds`.
+          # Recopier le chemin sans recopier le corps donnerait un 409, pas un 204.
+          # └──────────────────────────────────────────────────────────────────────┘
+          #
+          # On imprime les deux identifiants et l'adresse appelee AVANT l'appel : sans
+          # eux, un echec ne dit pas QUI est introuvable, et l'enquete recommence a
+          # zero -- au prix d'une build (~35 min de runner, et une vraie version chez
+          # Apple). Ce ne sont pas des secrets : ce sont des references de ressources,
+          # lisibles dans App Store Connect. La clef et le jeton, eux, n'apparaissent
+          # jamais -- ils vivent dans l'entete Authorization, qui n'est pas imprime.
+          print("Identifiants utilises — app : {} | build : {} | groupe « {} » : {}"
+                .format(app_id, build_id, cible["nom"], cible["id"]))
+
+
+          def tenter(chemin, corps):
+              """Un rattachement. Imprime l'adresse, le code, et le corps si ca rate."""
+              print("POST {}{}".format(asc.API_ROOT, chemin))
+              status, payload = asc.request("POST", chemin, corps)
+              if status in (200, 201, 204):
+                  print("  -> HTTP {} : accepte.".format(status))
+              else:
+                  print("  -> HTTP {} : REFUSE par Apple. {}".format(status, asc.detail(payload)))
+              return status, payload
+
+
+          status, payload = tenter(
+              "/v1/builds/{}/relationships/betaGroups".format(build_id),
+              {"data": [{"type": "betaGroups", "id": cible["id"]}]},
           )
+
+          # Repli sur l'ancien sens. Il coute UN appel HTTP et fait l'economie d'un
+          # aller-retour complet si c'etait (b) le bon chemin pour cette app.
+          if status not in (200, 201, 204):
+              print("Le sens « depuis la build » n'a pas abouti : seconde tentative par "
+                    "l'autre sens de la meme relation, pour ne rien laisser au hasard.")
+              status, payload = tenter(
+                  "/v1/betaGroups/{}/relationships/builds".format(cible["id"]),
+                  {"data": [{"type": "builds", "id": build_id}]},
+              )
+
           if status in (200, 201, 204):
               print("Build {} rattachee au groupe « {} » (HTTP {})."
                     .format(build_id, cible["nom"], status))
@@ -954,6 +1007,21 @@ jobs:
                     "L'envoi du binaire reste un succes ; le rattachement peut se faire "
                     "a la main dans App Store Connect."
                     .format(cible["nom"], status, asc.detail(payload)))
+              # LES DEUX SENS ONT ETE REFUSES. Les adresses sont alors hors de cause :
+              # il reste le DROIT de la clef. Apple repond 404 -- et non 403 -- sur une
+              # ressource qu'on n'a pas le droit de modifier, pour ne pas reveler
+              # qu'elle existe. C'est coherent avec ce qu'on observe : cette clef LIT
+              # les groupes (la liste s'imprime plus haut) mais n'y ECRIT pas.
+              print("::warning::Les deux adresses possibles ont ete refusees. Ce n'est "
+                    "donc plus une affaire de chemin : la clef App Store Connect "
+                    "(APPSTORE_KEY_ID) n'a probablement pas le DROIT de distribuer. "
+                    "Apple exige le role « App Manager » (ou « Admin ») pour ajouter "
+                    "une build a un groupe de testeurs ; le role « Developer » donne "
+                    "un acces en LECTURE seule et suffit a envoyer le binaire, ce qui "
+                    "produit exactement ce qu'on voit. A verifier dans App Store "
+                    "Connect > Users and Access > Integrations > App Store Connect API, "
+                    "sur la clef portant cet identifiant. Ce reglage est un geste de "
+                    "compte Apple : il ne se corrige PAS dans ce fichier.")
               publier("TESTFLIGHT_DISTRIBUTION",
                       "non distribuee (rattachement refuse, HTTP {})".format(status))
           PY
