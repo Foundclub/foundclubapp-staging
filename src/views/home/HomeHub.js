@@ -22,6 +22,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import {
+  EMPTY_HOME_COUNTERS,
+  formatBannerShortTime,
+  formatBannerTitle,
+  selectBannerLines,
+  selectHomeAlerts,
+  selectModerationTotal,
+} from '@/domains/home/homeCounters';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
 import {
@@ -40,6 +48,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
+import HomeHeadBanner from '@/components/molecules/homeHeadBanner/HomeHeadBanner';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
@@ -163,8 +172,10 @@ function HomeSection({
           const body = (
             <HomeActionCard
               accentColor={card.accentColor}
+              badgeCount={card.badgeCount}
               disabled={card.disabled}
               emphasis={card.emphasis}
+              hasAlert={card.hasAlert}
               highlighted={card.highlighted}
               icon={card.icon}
               illustration={card.illustration}
@@ -368,7 +379,10 @@ function HomeHubContent({ auth, navigation, route }) {
   const roleKey = getUserRoleKey(roleName);
   const isCoach = roleKey === 'coach';
   const isPresident = roleKey === 'president';
-  const canShowSubscriptionExperience = isCoach || isPresident || roleKey === 'superAdmin';
+  const isSuperAdmin = roleKey === 'superAdmin';
+  // D72 — « Mon abonnement » et « Ma cotisation » sont RETIREES du super admin
+  // (pack accueil, tache 3) : il ne paie ni l'un ni l'autre.
+  const canShowSubscriptionExperience = isCoach || isPresident;
   const hasManageSection = isCoach || isPresident;
   const isGovernedNonPartnerCoach = nonPartnerCoachPublishingAccess?.isNonPartnerCoach === true;
   const isPublishingGovernedBlocked = isGovernedNonPartnerCoach
@@ -827,9 +841,8 @@ function HomeHubContent({ auth, navigation, route }) {
     scrollToTutorialTarget('homehub-profileView', 'profile')
   ), [scrollToTutorialTarget]);
 
-  const scrollToQuickSection = useCallback(() => (
-    scrollToTutorialTarget('homehub-quickPlanning', 'quick')
-  ), [scrollToTutorialTarget]);
+  // D72 — le raccourci de defilement vers « Navigation rapide » est retire avec
+  // la section : il visait la premiere etape du tour de ce rayon, disparue.
 
   const scrollToAccountSection = useCallback(() => (
     scrollToTutorialTarget('homehub-accountSwitch', 'account')
@@ -1373,13 +1386,9 @@ function HomeHubContent({ auth, navigation, route }) {
     navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.MyEventList });
   }, [navigation]);
 
-  const handleOpenMyTeams = useCallback(() => {
-    navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.MyTeamList });
-  }, [navigation]);
-
-  const handleOpenMessaging = useCallback(() => {
-    navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.Chat });
-  }, [navigation]);
+  // D72 — `handleOpenMyTeams` et `handleOpenMessaging` retires avec la section
+  // « Navigation rapide » : « Equipes » et « Messages » sont deux onglets de la
+  // barre du bas, ces deux raccourcis doublaient donc une destination existante.
 
   const handleOpenAccountSwitcher = useCallback(() => {
     navigation.navigate(RouteNames.ProfileStack, {
@@ -1412,8 +1421,20 @@ function HomeHubContent({ auth, navigation, route }) {
   const roleLabel = useMemo(() => {
     if (isCoach) return t('homeHub.roles.coach', 'Entraîneur');
     if (isPresident) return t('homeHub.roles.president', 'Dirigeant');
+    // D72 — le super admin lisait « JOUEUR » sous le titre : il n'avait aucun
+    // libelle de role. Le pack demande « ACCUEIL — SUPER ADMIN » (capture 04).
+    if (isSuperAdmin) return t('homeHub.roles.superAdmin', 'Super admin');
     return t('homeHub.roles.player', 'Joueur');
-  }, [isCoach, isPresident, t]);
+  }, [isCoach, isPresident, isSuperAdmin, t]);
+
+  // D72 — le rayon de tete change de nom avec le role : « Gerer mon club » pour
+  // le dirigeant, « Mon club » pour l'entraineur (il n'administre pas, il y
+  // travaille), « Administration » pour le super admin.
+  const manageSectionTitle = useMemo(() => {
+    if (isSuperAdmin) return t('homeHub.sections.administration', 'Administration');
+    if (isCoach) return t('homeHub.sections.myClub', 'Mon club');
+    return t('homeHub.sections.manageClub');
+  }, [isCoach, isSuperAdmin, t]);
 
   const tutorialOptions = useMemo(() => {
     /** @type {{ id: any; label: any }[]} */
@@ -1472,6 +1493,171 @@ function HomeHubContent({ auth, navigation, route }) {
     ? undefined
     : /** @type {'club'} */ ('club');
 
+  // D72 — LES COMPTEURS DE L'ACCUEIL (pack accueil, tache 4).
+  // ⛔ UN SEUL appel, au focus de l'ecran — jamais un par carte : l'accueil en
+  // porte jusqu'a 20.
+  //
+  // 🔎 MESURE DU 2026-08-11 : `GET /app/home-summary` N'EXISTE PAS, ni dans
+  // `app` ni dans `admin`. Le seul appel deja fait au demarrage (`/app/bootstrap`)
+  // ne porte AUCUN des sept compteurs. Le pack tranche ce cas lui-meme : « cabler
+  // les compteurs deja disponibles, laisser les autres a 0 ». Aucun ne l'etant,
+  // tout vaut 0 ⇒ zero pastille, aucun bandeau, accueil identique a l'actuel.
+  // C'est le critere de recette 3, obtenu par construction plutot que par test.
+  //
+  // 🔌 LA COUTURE DU LOT SERVEUR TIENT EN DEUX LIGNES, ET ELLES SONT ICI :
+  //   const { data } = useQuery({ enabled: isFocused, queryFn: getHomeSummary, ... });
+  //   const homeCounters = normalizeHomeCounters(data);
+  // Tout ce qui suit est deja ecrit pour des valeurs non nulles.
+  const homeCounters = EMPTY_HOME_COUNTERS;
+  const homeAlerts = useMemo(() => selectHomeAlerts(homeCounters), [homeCounters]);
+
+  const headBanner = useMemo(() => {
+    const descriptors = selectBannerLines(homeCounters, roleKey);
+    /**
+     * @param {string} screen
+     * @returns {() => void}
+     */
+    const openAdmin = (screen) => () => navigation.navigate(RouteNames.AdminStack, { screen });
+
+    if (isSuperAdmin) {
+      const meta = {
+        aLaUne: {
+          icon: 'bell',
+          label: t('homeHub.banner.superAdmin.featured', 'À la une — à valider'),
+          onPress: openAdmin(RouteNames.FeaturedRequestsList),
+        },
+        clubsAOnboarder: {
+          icon: 'users',
+          label: t('homeHub.banner.superAdmin.onboarding', 'Clubs à onboarder'),
+          onPress: openAdmin(RouteNames.AdminClubOnboardingList),
+        },
+        revendications: {
+          icon: 'shield',
+          label: t('homeHub.banner.superAdmin.claims', 'Revendications de club'),
+          onPress: openAdmin(RouteNames.AdminClaimList),
+        },
+        signalements: {
+          icon: 'flag',
+          label: t('homeHub.banner.superAdmin.reports', 'Signalements'),
+          onPress: openAdmin(RouteNames.AdminReports),
+        },
+      };
+      return {
+        label: t('homeHub.banner.superAdmin.label', 'À traiter'),
+        lines: descriptors.map((line) => ({
+          ...meta[line.key], hasAlert: line.hasAlert, key: line.key, value: String(line.value),
+        })),
+        tone: Colors.error500,
+        variant: 'list',
+      };
+    }
+
+    if (isPresident) {
+      const meta = {
+        demandes: {
+          icon: 'bell',
+          label: t('homeHub.banner.today.requests', 'Demandes en attente'),
+          onPress: () => handleOpenRequestsHub('all'),
+          value: String(homeCounters.demandes),
+        },
+        impayes: {
+          icon: 'euroCircle',
+          label: t('homeHub.banner.today.unpaid', 'Cotisations impayées'),
+          onPress: handleOpenClubLicenses,
+          // Seule ligne dont le glyphe quitte le `tone` du bandeau : le pack
+          // reserve l'orange a l'alerte financiere.
+          tone: Colors.warning500,
+          value: `${homeCounters.impayes.amount} €`,
+        },
+        prochainEvenement: {
+          icon: 'calendar',
+          label: homeCounters.prochainEvenement?.label,
+          onPress: handleOpenPlanning,
+          value: formatBannerShortTime(homeCounters.prochainEvenement?.startsAt),
+        },
+      };
+      return {
+        label: t('homeHub.banner.today.label', "Aujourd'hui"),
+        lines: descriptors.map((line) => ({
+          ...meta[line.key], hasAlert: line.hasAlert, key: line.key,
+        })),
+        variant: 'list',
+      };
+    }
+
+    if (isCoach) {
+      const seance = homeCounters.prochaineSeance;
+      if (!seance) return null;
+      return {
+        // ⚠️ NON CABLE : le pack veut que ce bouton ouvre la compo. La compo vit
+        // dans un onglet d'EventDetails ; on ouvre donc l'evenement. Rien de plus
+        // n'est fait ici — brancher l'onglet est le travail du lot qui livrera
+        // l'endpoint, seul moment ou ce bandeau pourra etre vu.
+        actions: [{
+          key: 'compo',
+          label: t('homeHub.banner.coach.action', 'Ouvrir la compo'),
+          onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId: seance.id }),
+        }],
+        label: t('homeHub.banner.coach.label', 'Ma prochaine séance'),
+        subtitle: seance.opponent,
+        tiles: [
+          {
+            key: 'convoques',
+            label: t('homeHub.banner.coach.called', 'convoquées'),
+            value: String(seance.convoques),
+          },
+          {
+            key: 'sansReponse',
+            label: t('homeHub.banner.coach.missing', 'réponses manquantes'),
+            tone: seance.sansReponse > 0 ? Colors.warning500 : undefined,
+            value: String(seance.sansReponse),
+          },
+        ],
+        title: formatBannerTitle(seance.startsAt),
+        titleSuffix: seance.team,
+        variant: 'event',
+      };
+    }
+
+    const evenement = homeCounters.prochainEvenement;
+    if (!evenement) return null;
+    return {
+      // ⚠️ NON CABLE, MEME RAISON : « Present » / « Absent » sont une mutation de
+      // participation, pas une navigation. Les deux ouvrent l'evenement, ou les
+      // vrais boutons de reponse existent deja. A brancher avec l'endpoint.
+      actions: [
+        {
+          key: 'present',
+          label: t('homeHub.banner.player.present', 'Présent'),
+          onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId: evenement.id }),
+        },
+        {
+          key: 'absent',
+          label: t('homeHub.banner.player.absent', 'Absent'),
+          onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId: evenement.id }),
+          variant: 'secondary',
+        },
+      ],
+      label: t('homeHub.banner.player.label', 'Ma semaine'),
+      subtitle: evenement.label,
+      title: formatBannerTitle(evenement.startsAt),
+      variant: 'event',
+    };
+  }, [
+    Colors.error500,
+    Colors.warning500,
+    handleOpenClubLicenses,
+    handleOpenPlanning,
+    handleOpenRequestsHub,
+    homeCounters,
+    isCoach,
+    isPresident,
+    isSuperAdmin,
+    navigation,
+    roleKey,
+    t,
+  ]);
+
   /** @type {HomeCard[]} */
   const manageSectionCards = useMemo(() => {
     if (isPresident) {
@@ -1489,6 +1675,7 @@ function HomeHubContent({ auth, navigation, route }) {
         },
         {
           accentColor: Colors.primary500,
+          hasAlert: homeAlerts['manage-requests'],
           icon: 'bell',
           key: 'manage-requests',
           onPress: () => handleOpenRequestsHub('all'),
@@ -1532,11 +1719,11 @@ function HomeHubContent({ auth, navigation, route }) {
             ? addAdLock.hint
             : t('homeHub.cards.manage.addAd.subtitle', 'Publie une offre de recrutement.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.addAd.title', 'Publier une offre'),
+          title: t('homeHub.cards.manage.addAd.title', 'Recruter'),
           tutorial: makeTutorial(
             'manageAddAd',
             5,
-            'Publier une offre',
+            'Recruter',
             'Publie une offre de recrutement pour cibler des profils précis.',
             {
               nextAction: 'scrollDown',
@@ -1548,6 +1735,7 @@ function HomeHubContent({ auth, navigation, route }) {
         },
         {
           accentColor: Colors.primary500,
+          hasAlert: homeAlerts['manage-my-ads'],
           icon: 'running',
           key: 'manage-my-ads',
           onPress: handleOpenMyRecruitmentAds,
@@ -1569,17 +1757,18 @@ function HomeHubContent({ auth, navigation, route }) {
         },
         {
           accentColor: Colors.primary500,
+          hasAlert: homeAlerts['manage-licenses'],
           icon: 'euroCircle',
           key: 'manage-licenses',
           onPress: handleOpenClubLicenses,
           premiumScope: clubCardPremiumScope,
           subtitle: t('homeHub.cards.manage.licenses.subtitle', 'Suis les statuts de tes membres.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.licenses.title', 'Cotisations'),
+          title: t('homeHub.cards.manage.licenses.title', 'Cotisations du club'),
           tutorial: makeTutorial(
             'manageLicenses',
             7,
-            'Cotisations',
+            'Cotisations du club',
             'Pilote les cotisations et relances depuis un tableau dédié.',
             {
               nextAction: 'scrollDown',
@@ -1600,17 +1789,24 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'users',
           key: 'manage-club',
           onPress: handleOpenManageClub,
-          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Ton espace club pour tout piloter.'),
+          // D72 — cote entraineur la section entiere s'appelle « Mon club » : il
+          // ne gere pas le club, il y travaille (pack accueil, tache 3).
+          subtitle: t(
+            'homeHub.cards.manage.manageClub.coachSubtitle',
+            'L\'espace de ton club et de tes équipes.',
+          ),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.manageClub.title', 'Gérer mon club'),
-          tutorial: makeTutorial('manageClub', 2, 'Gérer mon club', 'Accèdes à ton espace club pour piloter ton organisation.'),
+          title: t('homeHub.cards.manage.manageClub.coachTitle', 'Mon club'),
+          tutorial: makeTutorial('manageClub', 2, 'Mon club', 'Accèdes à ton espace club pour piloter ton organisation.'),
         },
         {
           accentColor: Colors.primary500,
+          hasAlert: homeAlerts['manage-requests'],
           icon: 'bell',
           key: 'manage-requests',
           onPress: () => handleOpenRequestsHub('all'),
-          subtitle: t('homeHub.cards.manage.requests.subtitle'),
+          // Sans l'onglet « Club », reserve au dirigeant.
+          subtitle: t('homeHub.cards.manage.requests.coachSubtitle', 'Équipes, événements, à la une.'),
           title: t('homeHub.cards.manage.requests.title'),
           tutorial: makeTutorial(
             'manageRequests',
@@ -1645,11 +1841,11 @@ function HomeHubContent({ auth, navigation, route }) {
             ? addAdLock.hint
             : t('homeHub.cards.manage.addAd.subtitle', 'Publie une offre de recrutement.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.addAd.title', 'Publier une offre'),
+          title: t('homeHub.cards.manage.addAd.title', 'Recruter'),
           tutorial: makeTutorial(
             'manageAddAd',
             5,
-            'Publier une offre',
+            'Recruter',
             'Publie une offre de recrutement pour cibler des profils précis.',
             {
               nextAction: 'scrollDown',
@@ -1661,6 +1857,7 @@ function HomeHubContent({ auth, navigation, route }) {
         },
         {
           accentColor: Colors.primary500,
+          hasAlert: homeAlerts['manage-my-ads'],
           icon: 'running',
           key: 'manage-my-ads',
           onPress: handleOpenMyRecruitmentAds,
@@ -1682,17 +1879,18 @@ function HomeHubContent({ auth, navigation, route }) {
         },
         {
           accentColor: Colors.primary500,
+          hasAlert: homeAlerts['manage-licenses'],
           icon: 'euroCircle',
           key: 'manage-licenses',
           onPress: handleOpenClubLicenses,
           premiumScope: clubCardPremiumScope,
-          subtitle: t('homeHub.cards.manage.licenses.subtitle', 'Suis les statuts de tes membres.'),
+          subtitle: t('homeHub.cards.manage.licenses.teamsSubtitle', 'Suis les paiements de tes équipes.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.licenses.title', 'Cotisations'),
+          title: t('homeHub.cards.manage.licenses.teamsTitle', 'Cotisations de mes équipes'),
           tutorial: makeTutorial(
             'manageLicenses',
             7,
-            'Cotisations',
+            'Cotisations de mes équipes',
             'Consulte les statuts de cotisation de tes équipes.',
             {
               nextAction: 'scrollDown',
@@ -1705,11 +1903,76 @@ function HomeHubContent({ auth, navigation, route }) {
       ];
     }
 
+    // D72 — LA SECTION « ADMINISTRATION » DU SUPER ADMIN (pack accueil, tache 3).
+    // Elle n'existait pas : le super admin tombait sur l'accueil d'un joueur, et
+    // ses ecrans d'administration n'etaient atteignables que par la page profil
+    // (Profile.js:624-637). Quatre cases, dans l'ordre du pack.
+    if (isSuperAdmin) {
+      const openAdminScreen = (/** @type {string} */ screen) => () => navigation.navigate(
+        RouteNames.AdminStack,
+        { screen },
+      );
+      return [
+        {
+          accentColor: Colors.primary500,
+          // ⚠️ SEULE CARTE DU LOT A PORTER UN CHIFFRE, et la seule dont la
+          // destination soit un choix par defaut : l'ecran « A traiter » qui
+          // agrege les 4 files N'EXISTE PAS. On ouvre donc la plus grosse,
+          // les signalements. Les 4 lignes du bandeau, elles, visent chacune
+          // leur ecran reel.
+          badgeCount: selectModerationTotal(homeCounters),
+          emphasis: 'primary',
+          icon: 'bell',
+          key: 'admin-triage',
+          layout: 'full',
+          onPress: openAdminScreen(RouteNames.AdminReports),
+          subtitle: t(
+            'homeHub.cards.admin.triage.subtitle',
+            'Signalements, revendications, à la une, clubs à onboarder.',
+          ),
+          subtitleLines: 1,
+          title: t('homeHub.cards.admin.triage.title', 'À traiter'),
+        },
+        {
+          accentColor: Colors.primary500,
+          icon: 'users',
+          key: 'admin-users-clubs',
+          onPress: openAdminScreen(RouteNames.AdminUserList),
+          subtitle: t('homeHub.cards.admin.users.subtitle', 'Recherche, modération, fiches.'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.admin.users.title', 'Utilisateurs et clubs'),
+        },
+        {
+          accentColor: Colors.primary500,
+          icon: 'chart',
+          key: 'admin-dashboard',
+          onPress: openAdminScreen(RouteNames.AdminDashboard),
+          subtitle: t('homeHub.cards.admin.dashboard.subtitle', 'Les 23 tuiles de suivi.'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.admin.dashboard.title', 'Dashboard complet'),
+        },
+        {
+          accentColor: Colors.gold500,
+          icon: 'flag',
+          key: 'admin-league',
+          onPress: openAdminScreen(RouteNames.SuperAdminHome),
+          subtitle: t('homeHub.cards.admin.league.subtitle', 'Saisons, divisions, classements.'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.admin.league.title', 'League'),
+        },
+      ];
+    }
+
     return [];
   }, [
     addAdLock,
     addEventLock,
     clubCardPremiumScope,
+    Colors.gold500,
+    homeAlerts,
+    homeCounters,
+    isSuperAdmin,
+    navigation,
     highlightAddEventCard,
     Colors.primary500,
     handleAddEvent,
@@ -1751,6 +2014,7 @@ function HomeHubContent({ auth, navigation, route }) {
       },
       {
         accentColor: Colors.primary500,
+        hasAlert: homeAlerts['search-reservations'],
         icon: 'stadium',
         key: 'search-reservations',
         onPress: () => navigation.navigate(RouteNames.SearchReservations),
@@ -1821,6 +2085,7 @@ function HomeHubContent({ auth, navigation, route }) {
       // `nextTargetStepId`, et s'inserer au milieu de cette chaine la casserait.
       cards.push({
         accentColor: Colors.primary500,
+        hasAlert: homeAlerts['search-my-activities'],
         icon: 'running',
         key: 'search-my-activities',
         onPress: () => navigation.navigate(RouteNames.MyActivities),
@@ -1835,6 +2100,7 @@ function HomeHubContent({ auth, navigation, route }) {
     // montree a tout le monde, connecte ou non.
     cards.push({
       accentColor: Colors.primary500,
+      hasAlert: homeAlerts['search-amicaux'],
       icon: 'flag',
       key: 'search-amicaux',
       onPress: () => navigation.navigate(RouteNames.SearchHub, { activeType: 'amicaux' }),
@@ -1849,7 +2115,17 @@ function HomeHubContent({ auth, navigation, route }) {
     });
 
     return cards;
-  }, [Colors.primary500, hasManageSection, makeTutorial, navigation, scrollDownLabel, scrollToLeagueSection, t, userData]);
+  }, [
+    Colors.primary500,
+    hasManageSection,
+    homeAlerts,
+    makeTutorial,
+    navigation,
+    scrollDownLabel,
+    scrollToLeagueSection,
+    t,
+    userData,
+  ]);
 
   /** @type {HomeCard[]} */
   const leagueCards = useMemo(() => ([
@@ -1890,15 +2166,6 @@ function HomeHubContent({ auth, navigation, route }) {
       },
       {
         accentColor: Colors.primary500,
-        icon: 'edit',
-        key: 'profile-edit',
-        onPress: handleEditProfile,
-        subtitle: t('homeHub.cards.profile.edit.subtitle'),
-        title: t('homeHub.cards.profile.edit.title'),
-        tutorial: makeTutorial('profileEdit', 31, 'Modifier mon profil', 'Modifie tes informations personnelles et sportives.'),
-      },
-      {
-        accentColor: Colors.primary500,
         icon: 'clock',
         key: 'profile-history',
         onPress: handleOpenHistory,
@@ -1921,12 +2188,46 @@ function HomeHubContent({ auth, navigation, route }) {
           {
             nextAction: 'scrollDown',
             nextLabel: scrollDownLabel,
-            nextTargetStepId: 'homehub-quickPlanning',
-            onNext: scrollToQuickSection,
+            // D72 — la section « Navigation rapide » est supprimee : la chaine du
+            // tour visait sa premiere case, une etape qui n'existe plus. Elle
+            // saute donc directement au rayon Compte, le suivant a l'ecran.
+            nextTargetStepId: 'homehub-accountSwitch',
+            onNext: scrollToAccountSection,
           },
         ),
       },
     ];
+
+    // D72 — « Modifier mon profil » disparait cote joueur : le crayon de la page
+    // profil la remplace (pack accueil, tache 3). Elle RESTE cote super admin,
+    // ou elle est la seule porte d'entree.
+    if (hasManageSection || isSuperAdmin) {
+      cards.splice(1, 0, {
+        accentColor: Colors.primary500,
+        icon: 'edit',
+        key: 'profile-edit',
+        onPress: handleEditProfile,
+        subtitle: t('homeHub.cards.profile.edit.subtitle'),
+        title: t('homeHub.cards.profile.edit.title'),
+        tutorial: makeTutorial('profileEdit', 31, 'Modifier mon profil', 'Modifie tes informations personnelles et sportives.'),
+      });
+    }
+
+    // D72 — « Ma cotisation » descend de « Navigation rapide » (supprimee) vers
+    // « Mon profil », en derniere position. Le super admin ne cotise pas.
+    // ⛔ Volontairement SANS `tutorial`, exactement comme la case « Mes reponses »
+    // posee par D57 : s'inserer au milieu d'une chaine deja liee la casserait.
+    if (!isSuperAdmin) {
+      cards.push({
+        accentColor: Colors.primary500,
+        hasAlert: homeAlerts['profile-license'],
+        icon: 'euroCircle',
+        key: 'profile-license',
+        onPress: handleOpenMyLicense,
+        subtitle: t('homeHub.cards.quick.license.subtitle', 'Ton statut et ton reste à payer.'),
+        title: t('homeHub.cards.quick.license.title', 'Ma cotisation'),
+      });
+    }
 
     if (canShowSubscriptionExperience) {
       const remainingFreeEvents = eventPublishQuotaItem?.remaining ?? 0;
@@ -1952,76 +2253,24 @@ function HomeHubContent({ auth, navigation, route }) {
     eventPublishQuotaItem,
     handleEditProfile,
     handleOpenHistory,
+    handleOpenMyLicense,
     handleOpenProfile,
     handleOpenSearchAlerts,
     handleOpenSubscriptionOverview,
+    hasManageSection,
+    homeAlerts,
+    isSuperAdmin,
     makeTutorial,
     scrollDownLabel,
-    scrollToQuickSection,
+    scrollToAccountSection,
     subscriptionStatusMeta.label,
     t,
   ]);
 
-  /** @type {HomeCard[]} */
-  const quickNavCards = useMemo(() => ([
-    {
-      accentColor: Colors.primary500,
-      icon: 'calendar',
-      key: 'quick-planning',
-      onPress: handleOpenPlanning,
-      subtitle: t('homeHub.cards.quick.planning.subtitle'),
-      title: t('homeHub.cards.quick.planning.title'),
-      tutorial: makeTutorial('quickPlanning', 40, 'Mon planning', 'Accèdes rapidement à ton planning personnel.'),
-    },
-    {
-      accentColor: Colors.primary500,
-      icon: 'strokeShield',
-      key: 'quick-teams',
-      onPress: handleOpenMyTeams,
-      subtitle: t('homeHub.cards.quick.teams.subtitle'),
-      title: t('homeHub.cards.quick.teams.title'),
-      tutorial: makeTutorial('quickTeams', 41, 'Mes équipes', 'Retrouve toutes tes équipes et leurs pages.'),
-    },
-    {
-      accentColor: Colors.primary500,
-      icon: 'euroCircle',
-      key: 'quick-license',
-      onPress: handleOpenMyLicense,
-      subtitle: t('homeHub.cards.quick.license.subtitle', 'Ton statut et ton reste à payer.'),
-      title: t('homeHub.cards.quick.license.title', 'Ma cotisation'),
-      tutorial: makeTutorial('quickLicense', 42, 'Ma cotisation', 'Suis ta cotisation et tes paiements depuis l accueil.'),
-    },
-    {
-      accentColor: Colors.primary500,
-      icon: 'envelope',
-      key: 'quick-chat',
-      onPress: handleOpenMessaging,
-      subtitle: t('homeHub.cards.quick.chat.subtitle'),
-      title: t('homeHub.cards.quick.chat.title'),
-      tutorial: makeTutorial(
-        'quickChat',
-        43,
-        'Messagerie',
-        'Ouvre ta messagerie et suis tes conversations.',
-        {
-          nextAction: 'scrollDown',
-          nextLabel: scrollDownLabel,
-          nextTargetStepId: 'homehub-accountSwitch',
-          onNext: scrollToAccountSection,
-        },
-      ),
-    },
-  ]), [
-    Colors.primary500,
-    handleOpenMyLicense,
-    handleOpenMessaging,
-    handleOpenMyTeams,
-    handleOpenPlanning,
-    makeTutorial,
-    scrollDownLabel,
-    scrollToAccountSection,
-    t,
-  ]);
+  // D72 — LA SECTION « NAVIGATION RAPIDE » EST SUPPRIMEE (pack accueil, tache 3).
+  // Mon planning, Mes equipes et Messagerie vivent deja dans la barre du bas :
+  // les rappeler ici doublait trois destinations sur les quatre. La quatrieme,
+  // « Ma cotisation », a ete deplacee dans « Mon profil ».
 
   /** @type {HomeCard[]} */
   const accountCards = useMemo(() => ([
@@ -2077,6 +2326,7 @@ function HomeHubContent({ auth, navigation, route }) {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
+        {headBanner ? <HomeHeadBanner {...headBanner} /> : null}
         <OnboardingWrapper
           description={t('homeHubTutorial.steps.header.description', 'Cette page te donne un accès rapide à toutes les fonctionnalités principales.')}
           id="homehub-header"
@@ -2123,7 +2373,7 @@ function HomeHubContent({ auth, navigation, route }) {
               </Text>
             </View>
           ) : null}
-          <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.manageClub')} />
+          <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={manageSectionTitle} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('search', event)} ref={(node) => registerSectionViewRef('search', node)}>
           <HomeSection Alignments={Alignments} cards={searchCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.search')} />
@@ -2133,9 +2383,6 @@ function HomeHubContent({ auth, navigation, route }) {
         </View>
         <View onLayout={(event) => registerSectionAnchor('profile', event)} ref={(node) => registerSectionViewRef('profile', node)}>
           <HomeSection Alignments={Alignments} cards={profileCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.profile')} />
-        </View>
-        <View onLayout={(event) => registerSectionAnchor('quick', event)} ref={(node) => registerSectionViewRef('quick', node)}>
-          <HomeSection Alignments={Alignments} cards={quickNavCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.quickNav')} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('account', event)} ref={(node) => registerSectionViewRef('account', node)}>
           <HomeSection Alignments={Alignments} cards={accountCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.account')} />

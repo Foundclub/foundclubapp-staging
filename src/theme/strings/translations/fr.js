@@ -1333,6 +1333,32 @@ export default {
         title: 'Aucune équipe disponible',
       },
     },
+    // D72 — le bandeau de tete de l'accueil, une variante par role.
+    banner: {
+      coach: {
+        action: 'Ouvrir la compo',
+        called: 'convoquées',
+        label: 'Ma prochaine séance',
+        missing: 'réponses manquantes',
+      },
+      player: {
+        absent: 'Absent',
+        label: 'Ma semaine',
+        present: 'Présent',
+      },
+      superAdmin: {
+        claims: 'Revendications de club',
+        featured: 'À la une — à valider',
+        label: 'À traiter',
+        onboarding: 'Clubs à onboarder',
+        reports: 'Signalements',
+      },
+      today: {
+        label: 'Aujourd’hui',
+        requests: 'Demandes en attente',
+        unpaid: 'Cotisations impayées',
+      },
+    },
     cards: {
       account: {
         logout: {
@@ -1348,6 +1374,25 @@ export default {
           title: 'Tutoriels et aide',
         },
       },
+      // D72 — le rayon « Administration », visible du seul super admin.
+      admin: {
+        dashboard: {
+          subtitle: 'Les 23 tuiles de suivi.',
+          title: 'Dashboard complet',
+        },
+        league: {
+          subtitle: 'Saisons, divisions, classements.',
+          title: 'League',
+        },
+        triage: {
+          subtitle: 'Signalements, revendications, à la une, clubs à onboarder.',
+          title: 'À traiter',
+        },
+        users: {
+          subtitle: 'Recherche, modération, fiches.',
+          title: 'Utilisateurs et clubs',
+        },
+      },
       league: {
         subtitle: 'Le mode compétitif de FoundClub.',
         title: 'FoundClub League',
@@ -1355,7 +1400,9 @@ export default {
       manage: {
         addAd: {
           subtitle: 'Publie une offre de recrutement.',
-          title: 'Publier une offre',
+          // D72 — « Publier une offre » devient « Recruter » : c'est le besoin,
+          // pas le geste. La clef ne bouge pas, seule sa valeur change.
+          title: 'Recruter',
         },
         addEvent: {
           subtitle: 'Crée un entraînement, un match\u2026',
@@ -1371,9 +1418,13 @@ export default {
         },
         licenses: {
           subtitle: 'Suis les statuts de tes membres.',
-          title: 'Cotisations',
+          teamsSubtitle: 'Suis les paiements de tes équipes.',
+          teamsTitle: 'Cotisations de mes équipes',
+          title: 'Cotisations du club',
         },
         manageClub: {
+          coachSubtitle: 'L’espace de ton club et de tes équipes.',
+          coachTitle: 'Mon club',
           subtitle: 'Ton espace club pour tout piloter.',
           title: 'Gérer mon club',
         },
@@ -1382,7 +1433,9 @@ export default {
           title: 'Mes activités',
         },
         requests: {
-          subtitle: 'Traite les demandes de ton organisation.',
+          // D72 — l'entraineur n'a pas l'onglet « Club », reserve au dirigeant.
+          coachSubtitle: 'Équipes, événements, à la une.',
+          subtitle: 'Club, équipes, événements, à la une.',
           title: 'Demandes',
         },
         teamRequests: {
@@ -1461,13 +1514,19 @@ export default {
       coach: 'Entraîneur',
       player: 'Joueur',
       president: 'Dirigeant',
+      superAdmin: 'Super admin',
     },
     sections: {
       account: 'Compte',
+      administration: 'Administration',
       league: 'FoundClub League',
       manageClub: 'Gérer mon club',
       manageTeams: 'Gérer mes équipes',
+      myClub: 'Mon club',
       profile: 'Mon profil',
+      // D72 — la section « Navigation rapide » n'est plus rendue par aucun ecran.
+      // La clef reste : ⛔ aucune suppression dans fr.js (le controle est la
+      // comparaison des ENSEMBLES de clefs, pas le compte de lignes).
       quickNav: 'Navigation rapide',
       search: 'Rechercher',
     },
