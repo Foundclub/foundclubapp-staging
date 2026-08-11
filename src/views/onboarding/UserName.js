@@ -38,13 +38,30 @@ import { isBirthdateUnderParentalAge } from '@/constants/parentalDeclaration';
 // dans authUseCases.js, a cote de la machine a etapes qui insere la declaration
 // parentale. Un test lie les deux pour qu'elles ne divergent jamais.
 
-const defaultValues = {
-  day: '',
+// D66 — le formulaire ne porte QUE les champs que l'ecran demande.
+//
+// Avant, `defaultValues` portait toujours day / month / year. Pour un role sans
+// date de naissance, ces trois clefs partaient quand meme au schema « nom
+// seul », qui ne les declare pas : Joi les refusait (`object.unknown`) et le
+// bouton restait grise sur des erreurs portant sur des champs QUI NE SONT PAS
+// RENDUS — donc invisibles et incorrigibles. Un dirigeant ne pouvait pas finir
+// son inscription (constate sur emulateur, commit fautif 7fe4959 du 06/08).
+const nameDefaultValues = {
   firstname: '',
   lastname: '',
+};
+
+const birthdateDefaultValues = {
+  day: '',
   month: '',
   year: '',
 };
+
+const buildDefaultValues = (/** @type {boolean} */ collectsBirthdate) => (
+  collectsBirthdate
+    ? { ...nameDefaultValues, ...birthdateDefaultValues }
+    : { ...nameDefaultValues }
+);
 
 const resolveAvailableRoute = (navigation, ...candidates) => {
   const routeNames = navigation?.getState?.()?.routeNames || [];
@@ -177,7 +194,7 @@ function UserName({ navigation }) {
     setFocus,
   } = useForm({
     defaultValues: {
-      ...defaultValues,
+      ...buildDefaultValues(collectsBirthdate),
       firstname: userData?.firstname || '',
       lastname: userData?.lastname || '',
     },
@@ -190,17 +207,21 @@ function UserName({ navigation }) {
     const parsedDate = userData?.birthdate ? new Date(userData.birthdate) : null;
     const hasParsedDate = parsedDate && !Number.isNaN(parsedDate.getTime());
 
+    // Le `collectsBirthdate` de la condition n'est PAS decoratif : un dirigeant
+    // qui porte deja une date en base (changement de role, compte migre) se
+    // verrait sinon reinjecter les trois clefs ici, et le defaut D66
+    // reviendrait par ce chemin-la.
     reset({
-      ...defaultValues,
+      ...buildDefaultValues(collectsBirthdate),
       firstname: userData?.firstname || '',
       lastname: userData?.lastname || '',
-      ...(hasParsedDate ? {
+      ...(collectsBirthdate && hasParsedDate ? {
         day: String(parsedDate.getUTCDate()).padStart(2, '0'),
         month: String(parsedDate.getUTCMonth() + 1).padStart(2, '0'),
         year: String(parsedDate.getUTCFullYear()),
       } : {}),
     });
-  }, [reset, userData?.birthdate, userData?.firstname, userData?.lastname]);
+  }, [collectsBirthdate, reset, userData?.birthdate, userData?.firstname, userData?.lastname]);
 
   if (userDataLoading) {
     return (
@@ -225,7 +246,10 @@ function UserName({ navigation }) {
 
   /**
    * Handle form submit
-   * @param {{firstname: string, lastname: string, day: string, month: string, year: string}} data
+   * Les trois champs de date sont OPTIONNELS depuis D66 : le formulaire ne les
+   * porte plus quand le role ne les demande pas.
+   * @param {{firstname: string, lastname: string, day?: string,
+   *   month?: string, year?: string}} data - Les valeurs du formulaire.
    */
   const handleFormSubmit = (data) => {
     if (!userData) return;
@@ -238,6 +262,28 @@ function UserName({ navigation }) {
         : {}),
     });
   };
+
+  // D66 — INVARIANT CONTRE LE CUL-DE-SAC : le bouton est grise SI ET SEULEMENT
+  // SI un message explique pourquoi. Un meme booleen commande les deux, donc
+  // aucune cause future ne peut plus rendre le bouton mort ET muet.
+  //
+  // Le cas des trois champs de date merite son propre message : ils s'affichent
+  // en rouge sans texte (`error={… ? ' ' : undefined}`, la convention du champ
+  // pour ne pas repeter trois fois la meme phrase sous JJ / MM / AAAA), donc
+  // sans cette ligne l'ecran ne dirait rien de lisible.
+  const blockingFields = Object.keys(formErrors);
+  const hasBlockingError = blockingFields.length > 0;
+  const blocksOnBirthdate = blockingFields
+    .some((field) => ['day', 'month', 'year'].includes(field));
+  const blockingMessage = blocksOnBirthdate
+    ? t(
+      'profile.errors.birthdateIncomplete',
+      'Renseigne une date de naissance valide pour continuer.',
+    )
+    : t(
+      'profile.errors.formIncomplete',
+      'Vérifie les informations saisies pour continuer.',
+    );
 
   return (
     <FormScreenContainer
@@ -419,13 +465,20 @@ function UserName({ navigation }) {
         </View>
       </View>
 
-      <Button
-        disabled={!!Object.keys(formErrors).length}
-        isLoading={updateUserMutation.isPending}
-        onPress={handleSubmit(handleFormSubmit)}
-        title={t('profile.actions.save')}
-        variant="Primary"
-      />
+      <View style={[Spaces.gap[8]]}>
+        {hasBlockingError ? (
+          <Text style={[Fonts.p2, Fonts.error300]}>
+            {blockingMessage}
+          </Text>
+        ) : null}
+        <Button
+          disabled={hasBlockingError}
+          isLoading={updateUserMutation.isPending}
+          onPress={handleSubmit(handleFormSubmit)}
+          title={t('profile.actions.save')}
+          variant="Primary"
+        />
+      </View>
     </FormScreenContainer>
   );
 }
