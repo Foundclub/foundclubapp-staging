@@ -263,6 +263,44 @@ describe('D79 ecran 4 — l ecran et ses 3 rangees', () => {
 
     expect(rangee(arbre, 'Dernier match').props.accessibilityState.disabled).toBe(false);
   });
+
+  // Le pack ecrit « Compo type · 4-3-3 » : le schema est une DONNEE du pack
+  // enregistre, pas un decor. Sans lui, la rangee garde son libelle general.
+  test('le schema de la compo type s affiche quand le pack le porte', async () => {
+    mockDefaultComposition = {
+      composition: {
+        teams: [{
+          placements: [{ playerId: 'p0', positionX: 50, positionY: 90 }],
+          presetLabel: '4-3-3',
+        }],
+      },
+    };
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).toContain('Compo type · 4-3-3');
+  });
+
+  test('sans schema enregistre, la rangee ne fabrique pas un « · » vide', async () => {
+    mockDefaultComposition = COMPO_TYPE;
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).toContain('Compo type');
+    expect(texteVisible(arbre)).not.toContain('Compo type · ');
+  });
+
+  test('« Dernier match » porte la DATE du match repris quand le serveur la joint', async () => {
+    const arbre = await rendre({
+      teamComposition: {
+        bootstrap: {
+          composition: { teams: [{ placements: [{ playerId: 'p0', positionX: 50, positionY: 90 }] }] },
+          event: { date: '2026-08-08T15:00:00.000Z' },
+          source: 'last_match',
+        },
+      },
+    });
+
+    expect(texteVisible(arbre)).toContain('La compo de samedi 8 août, telle quelle.');
+  });
 });
 
 describe('D79 ecran 4 — l aimantation suit le point de depart', () => {

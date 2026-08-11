@@ -67,6 +67,8 @@ export const START_FROM_LAST_MATCH = 'last_match';
 
 const clampPercent = (/** @type {any} */ value) => Math.max(0, Math.min(100, Number(value) || 0));
 
+const normalizeLabel = (/** @type {any} */ value) => String(value ?? '').trim();
+
 /**
  * La formation de depart de ce sport.
  * @param {string} [sport]
@@ -208,23 +210,38 @@ export const buildStartFromOptions = ({
     ? keepPlacementsOfCalledUpPlayers(readPlacementsFromPack(bootstrap?.composition), players)
     : [];
 
+  // Le pack ecrit « Compo type · 4-3-3 » et « La compo de samedi dernier » : ces
+  // deux precisions sont des DONNEES, pas du decor. Le schema vient du pack
+  // enregistre, la date de l'evenement que le serveur joint a sa reprise. Quand
+  // l'une manque, l'ecran retombe sur le libelle general — jamais sur un trou.
+  const defaultPack = defaultComposition?.composition || defaultComposition;
+  const presetLabel = normalizeLabel(
+    defaultPack?.teams?.[0]?.presetLabel || defaultPack?.presetLabel,
+  );
+  const lastMatchDate = bootstrapSource === START_FROM_LAST_MATCH
+    ? normalizeLabel(bootstrap?.event?.date)
+    : '';
+
   // Terrain vide : le seul point de depart qui n'a besoin d'aucune donnee, donc
   // le seul qui ne peut jamais etre grise.
   return [
     {
       available: true,
+      detail: '',
       key: START_FROM_EMPTY,
       placements: [],
       unavailableReason: null,
     },
     {
       available: defaultPlacements.length > 0,
+      detail: presetLabel,
       key: START_FROM_DEFAULT,
       placements: defaultPlacements,
       unavailableReason: defaultPlacements.length > 0 ? null : 'noDefaultComposition',
     },
     {
       available: lastMatchPlacements.length > 0,
+      detail: lastMatchDate,
       key: START_FROM_LAST_MATCH,
       placements: lastMatchPlacements,
       unavailableReason: lastMatchPlacements.length > 0 ? null : 'noLastMatch',

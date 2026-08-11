@@ -1,5 +1,7 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -31,6 +33,7 @@ import {
   buildStartFromOptions,
   getDefaultStartFromKey,
   START_FROM_EMPTY,
+  START_FROM_LAST_MATCH,
 } from './matchCompositionUtils';
 
 /**
@@ -136,6 +139,21 @@ function MatchCompositionStart() {
     t('matchComposition.start.calledUpCount', { count: selectedPlayers.length }),
   ].filter(Boolean).join(' · ');
 
+  // Le pack ecrit « La compo de samedi dernier ». La date vient du serveur, qui
+  // joint l'evenement a sa reprise ; sans elle on dit « du dernier match »,
+  // jamais une date inventee.
+  const optionSubtitle = (/** @type {any} */ option) => {
+    if (option.key === START_FROM_LAST_MATCH && option.detail) {
+      const parsed = new Date(option.detail);
+      if (!Number.isNaN(parsed.getTime())) {
+        return t('matchComposition.start.options.last_match.subtitleDated', {
+          date: format(parsed, 'EEEE d MMMM', { locale: fr }),
+        });
+      }
+    }
+    return t(`matchComposition.start.options.${option.key}.subtitle`, { teamName });
+  };
+
   const renderOption = (/** @type {any} */ option) => {
     const isActive = option.key === activeKey;
     const isDisabled = !option.available;
@@ -162,13 +180,16 @@ function MatchCompositionStart() {
         ]}
       >
         <View style={styles.optionTexts}>
+          {/* Le pack ecrit « Compo type · 4-3-3 » : le schema est une donnee, on
+              ne l'affiche que si le pack enregistre le porte vraiment. */}
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-            {t(`matchComposition.start.options.${option.key}.title`)}
+            {[t(`matchComposition.start.options.${option.key}.title`), option.detail]
+              .filter(Boolean).join(' · ')}
           </Text>
           <Text style={[Fonts.p3, styles.optionSubtitle, { color: Colors.neutral300 }]}>
             {isDisabled
               ? t(`matchComposition.start.unavailable.${option.unavailableReason}`)
-              : t(`matchComposition.start.options.${option.key}.subtitle`, { teamName })}
+              : optionSubtitle(option)}
           </Text>
         </View>
         <View

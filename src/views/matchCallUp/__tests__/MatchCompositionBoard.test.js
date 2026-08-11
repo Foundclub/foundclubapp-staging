@@ -356,6 +356,18 @@ describe('D79 ecran 5 — le terrain et son banc', () => {
     expect(texteVisible(await rendre({ magnetEnabled: true }))).toContain('Aimanté aux postes');
   });
 
+  // Le pack dit « bouton Modifier a droite (retour a la selection) » : c'est
+  // l'ecran 1 qu'on veut retrouver, pas l'ecran 4.
+  test('« Modifier » ramene a la SELECTION des convoques', async () => {
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Modifier');
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    const [nomEcran, parametres] = mockNavigate.mock.calls[0];
+    expect(nomEcran).toBe('MatchCallUpSelection');
+    expect(parametres.eventId).toBe('evt_1');
+  });
+
   test('les jetons du terrain et ceux du banc sont bien separes', async () => {
     const arbre = await rendre();
     const texte = texteVisible(arbre);

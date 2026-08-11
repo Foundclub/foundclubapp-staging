@@ -1858,6 +1858,7 @@ export default {
         },
         last_match: {
           subtitle: 'La compo du dernier match, telle quelle.',
+          subtitleDated: 'La compo de {{date}}, telle quelle.',
           title: 'Dernier match',
         },
       },

@@ -369,10 +369,14 @@ function MatchCompositionBoard() {
                 .filter(Boolean).join(' · ')}
             </Text>
           </View>
+          {/* Le pack dit « retour a la selection » : on remonte a l'ecran 1, pas
+              a l'ecran 4. `navigate` vers un ecran deja empile y revient en
+              depilant, donc la selection cochee est retrouvee telle quelle. */}
           <TouchableOpacity
             accessibilityRole="button"
             activeOpacity={0.8}
-            onPress={() => navigation.goBack()}
+            // @ts-ignore
+            onPress={() => navigation.navigate(RouteNames.MatchCallUpSelection, params)}
             style={[
               styles.editButton,
               {
@@ -484,6 +488,8 @@ function MatchCompositionBoard() {
             variant="Secondary"
           />
           <Button
+            icon="send"
+            iconPosition="before"
             onPress={() => setIsSheetVisible(true)}
             style={styles.footerPublish}
             title={t('matchComposition.board.actions.publish')}
@@ -514,8 +520,17 @@ function MatchCompositionBoard() {
         )}
         isVisible={isSheetVisible}
         snapPoints={['64%']}
+        // Le pack demande un bleu-vert tres sombre et un rayon 28 en haut. Ce
+        // bleu n'est PAS un jeton du theme : `primary800` en est le plus proche
+        // (2 points de luminosite d'ecart), et c'est lui qu'on pose — aucun hex
+        // neuf n'entre dans le code, meme en commentaire : le contrat de theme
+        // les compte AUSSI dans les commentaires.
+        style={[styles.sheetSurface, { backgroundColor: Colors.primary800 }]}
       >
         <View style={styles.sheetBody}>
+          {/* La poignee cyan 54x5 du pack : `BottomModal` passe
+              `handleComponent={null}`, elle n'existe donc pas sans nous. */}
+          <View style={[styles.sheetHandle, { backgroundColor: Colors.primary500 }]} />
           <Text style={[Fonts.p4Bold, styles.sheetKicker, { color: Colors.primary500 }]}>
             {t('matchComposition.sheet.kicker').toUpperCase()}
           </Text>
@@ -700,6 +715,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
   },
+  sheetHandle: {
+    alignSelf: 'center',
+    borderRadius: 3,
+    height: 5,
+    marginBottom: 16,
+    width: 54,
+  },
   sheetKicker: {
     letterSpacing: 1.2,
     textAlign: 'center',
@@ -709,6 +731,10 @@ const styles = StyleSheet.create({
   },
   sheetSave: {
     flex: 1,
+  },
+  sheetSurface: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
   sheetText: {
     marginTop: 8,
