@@ -25,7 +25,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -114,7 +114,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -203,7 +203,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -292,7 +292,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -381,7 +381,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -470,7 +470,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -559,7 +559,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -648,7 +648,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -737,7 +737,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -826,7 +826,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -915,7 +915,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -1004,7 +1004,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
@@ -1093,7 +1093,7 @@ exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changen
   <Image
     source={
       {
-        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+        "testUri": "../../../src/assets/icons/shield.png",
       }
     }
     style={
