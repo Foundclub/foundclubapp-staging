@@ -1,0 +1,1158 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas CMTeamsScreen — initiales + isSmall rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 60,
+        "width": 60,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#99e1fb",
+        },
+        {
+          "height": 60,
+          "position": "absolute",
+          "width": 60,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 3.5999999999999996,
+          "paddingHorizontal": 4.8,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#173844",
+          },
+          {
+            "fontSize": 16,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 18,
+            "maxWidth": 44.4,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      RC
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas ClubLogoMark — neutre, taille explicite rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 60,
+        "width": 60,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#d3d4d4",
+        },
+        {
+          "height": 60,
+          "position": "absolute",
+          "width": 60,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 3.5999999999999996,
+          "paddingHorizontal": 4.8,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#474b4c",
+          },
+          {
+            "fontSize": 13,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.8,
+            "lineHeight": 14,
+            "maxWidth": 44.4,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      USA
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas EndMatchScreen — dore, 60 rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 60,
+        "width": 60,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#FFD700",
+        },
+        {
+          "height": 60,
+          "position": "absolute",
+          "width": 60,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 3.5999999999999996,
+          "paddingHorizontal": 4.8,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#0c0c0d",
+          },
+          {
+            "fontSize": 16,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 18,
+            "maxWidth": 44.4,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      OM
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas LeagueDashboard — dore, 44 rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 44,
+        "width": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#FFD700",
+        },
+        {
+          "height": 44,
+          "position": "absolute",
+          "width": 44,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 2.6399999999999997,
+          "paddingHorizontal": 3.52,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#0c0c0d",
+          },
+          {
+            "fontSize": 11,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 12,
+            "maxWidth": 32.56,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      OM
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas LeagueMatchDetails — dore, 68 rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 68,
+        "width": 68,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#FFD700",
+        },
+        {
+          "height": 68,
+          "position": "absolute",
+          "width": 68,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 4.08,
+          "paddingHorizontal": 5.44,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#0c0c0d",
+          },
+          {
+            "fontSize": 18,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 20,
+            "maxWidth": 50.32,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      OM
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas MultisportSectionsList — initiales + isSmall rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 60,
+        "width": 60,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#99e1fb",
+        },
+        {
+          "height": 60,
+          "position": "absolute",
+          "width": 60,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 3.5999999999999996,
+          "paddingHorizontal": 4.8,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#173844",
+          },
+          {
+            "fontSize": 16,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 18,
+            "maxWidth": 44.4,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      US
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas NextMatchCard — dore, 50 rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 50,
+        "width": 50,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#FFD700",
+        },
+        {
+          "height": 50,
+          "position": "absolute",
+          "width": 50,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 3,
+          "paddingHorizontal": 4,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#0c0c0d",
+          },
+          {
+            "fontSize": 13,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 14,
+            "maxWidth": 37,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      OM
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas PastMatchDetails — dore, 62 rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 62,
+        "width": 62,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#FFD700",
+        },
+        {
+          "height": 62,
+          "position": "absolute",
+          "width": 62,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 3.7199999999999998,
+          "paddingHorizontal": 4.96,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#0c0c0d",
+          },
+          {
+            "fontSize": 16,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 18,
+            "maxWidth": 45.88,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      OM
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas RankingScreen — dore, 32 rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 32,
+        "width": 32,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#FFD700",
+        },
+        {
+          "height": 32,
+          "position": "absolute",
+          "width": 32,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 1.92,
+          "paddingHorizontal": 2.56,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#0c0c0d",
+          },
+          {
+            "fontSize": 10,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 11,
+            "maxWidth": 23.68,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      OM
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas SquadDetailsScreen — dore, 72 rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 72,
+        "width": 72,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#FFD700",
+        },
+        {
+          "height": 72,
+          "position": "absolute",
+          "width": 72,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 4.32,
+          "paddingHorizontal": 5.76,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#0c0c0d",
+          },
+          {
+            "fontSize": 19,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 21,
+            "maxWidth": 53.28,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      OM
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas TeamListContent — dore, 80 rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 80,
+        "width": 80,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#FFD700",
+        },
+        {
+          "height": 80,
+          "position": "absolute",
+          "width": 80,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 4.8,
+          "paddingHorizontal": 6.4,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#0c0c0d",
+          },
+          {
+            "fontSize": 21,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 23,
+            "maxWidth": 59.2,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      OM
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas trois lettres rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 90,
+        "width": 90,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#99e1fb",
+        },
+        {
+          "height": 90,
+          "position": "absolute",
+          "width": 90,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 5.3999999999999995,
+          "paddingHorizontal": 7.2,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#173844",
+          },
+          {
+            "fontSize": 20,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.8,
+            "lineHeight": 22,
+            "maxWidth": 66.6,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      USA
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`D70 · temoin 3 — les appelants qui ne passent PAS d'image ne changent pas une seule lettre rend exactement ce qu'il rendait 1`] = `
+<View
+  style={
+    [
+      {
+        "position": "relative",
+      },
+      {
+        "alignItems": "center",
+      },
+      {
+        "justifyContent": "center",
+      },
+      {
+        "flexShrink": 0,
+        "height": 90,
+        "width": 90,
+      },
+      undefined,
+    ]
+  }
+>
+  <Image
+    source={
+      {
+        "testUri": "../../../../.worktrees/D70-logo-du-club/src/assets/icons/shield.png",
+      }
+    }
+    style={
+      [
+        {
+          "tintColor": "#99e1fb",
+        },
+        {
+          "height": 90,
+          "position": "absolute",
+          "width": 90,
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "position": "absolute",
+        },
+        {
+          "alignItems": "center",
+        },
+        {
+          "justifyContent": "center",
+        },
+        {
+          "bottom": 0,
+          "left": 0,
+          "paddingBottom": 5.3999999999999995,
+          "paddingHorizontal": 7.2,
+          "right": 0,
+          "top": 0,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "color": "#173844",
+          },
+          {
+            "fontSize": 27,
+            "fontWeight": "900",
+            "includeFontPadding": false,
+            "letterSpacing": -0.2,
+            "lineHeight": 30,
+            "maxWidth": 66.6,
+            "textAlign": "center",
+          },
+          undefined,
+        ]
+      }
+    >
+      A
+    </Text>
+  </View>
+</View>
+`;

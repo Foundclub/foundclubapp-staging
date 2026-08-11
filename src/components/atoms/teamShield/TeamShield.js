@@ -1,11 +1,22 @@
 import { Image, Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+import { getImageUrl } from '@/utils/imageUrl';
 
 /**
- * Team shield component that displays initials on top of a shield image
+ * Team shield component: the team's own emblem when it has one, initials otherwise.
+ *
+ * D70 — `imageUrl` est OPTIONNELLE et sans defaut : les appelants qui ne la
+ * passent pas rendent exactement ce qu'ils rendaient (fige par snapshot dans
+ * `__tests__/TeamShield.test.js`). Le repli en initiales reste le cas NORMAL,
+ * pas le cas d'erreur : la plupart des equipes n'ont pas d'embleme.
+ *
+ * ⚠️ Ne pas confondre les deux objets : ceci est l'embleme de l'EQUIPE (le
+ * `crest` d'une squad). Le logo du CLUB reste l'affaire de `ClubLogoMark`, qui
+ * arbitre deja logo/ecusson pour les ecrans de club et de profil.
  * @param {object} props - Component props
  * @param {string} props.initials - Team initials (max 3 letters)
+ * @param {string} [props.imageUrl] - Team emblem URL. Falls back to initials when absent.
  * @param {boolean} [props.isSmall] - Size of the shield
  * @param {boolean} [props.isNeutral] - Colors
  * @param {boolean} [props.isGold] - League gold variant
@@ -15,6 +26,7 @@ import useTheme from '@/theme/themeContext';
  * @returns {import('react').ReactElement} TeamShield component
  */
 function TeamShield({
+  imageUrl,
   initials,
   isGold = false,
   isNeutral = false,
@@ -63,19 +75,35 @@ function TeamShield({
     initialsColorStyle = Fonts.neutral700;
   }
 
+  const rootStyle = [
+    Alignments.relative,
+    Alignments.alignCenter,
+    Alignments.justifyCenter,
+    {
+      flexShrink: 0,
+      height: shieldSize,
+      width: shieldSize,
+    },
+    style,
+  ];
+
+  // D70 — l'embleme de l'equipe s'il existe. `getImageUrl` est obligatoire :
+  // une URL relative (`/uploads/...`) ne charge pas telle quelle sur mobile.
+  const resolvedImageUrl = getImageUrl(imageUrl);
+  if (resolvedImageUrl) {
+    return (
+      <View style={rootStyle}>
+        <Image
+          resizeMode="contain"
+          source={{ uri: resolvedImageUrl }}
+          style={{ height: shieldSize, width: shieldSize }}
+        />
+      </View>
+    );
+  }
+
   return (
-    <View style={[
-      Alignments.relative,
-      Alignments.alignCenter,
-      Alignments.justifyCenter,
-      {
-        flexShrink: 0,
-        height: shieldSize,
-        width: shieldSize,
-      },
-      style,
-    ]}
-    >
+    <View style={rootStyle}>
       <Image
         source={Images.shield}
         style={[
