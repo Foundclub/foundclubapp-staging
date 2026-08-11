@@ -1,4 +1,6 @@
-import { Image, Pressable, Text, View } from 'react-native';
+import {
+  Image, Pressable, Text, View,
+} from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';

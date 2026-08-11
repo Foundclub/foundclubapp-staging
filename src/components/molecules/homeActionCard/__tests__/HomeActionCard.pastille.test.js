@@ -19,7 +19,7 @@ import HomeActionCard from '../HomeActionCard';
 // `theme/colors.js` n'importe rien : le charger pour de vrai est sans risque.
 
 jest.mock('@/theme/themeContext', () => {
-  const { colors } = jest.requireActual('@/theme/colors');
+  const { colors: vraiesCouleurs } = jest.requireActual('@/theme/colors');
   const styleLeaf = {};
   const makeRamp = () => new Proxy({}, { get: () => styleLeaf });
   return {
@@ -27,7 +27,7 @@ jest.mock('@/theme/themeContext', () => {
     default: () => ({
       Alignments: makeRamp(),
       ApplicationStyle: new Proxy({}, { get: () => makeRamp() }),
-      Colors: colors,
+      Colors: vraiesCouleurs,
       Fonts: makeRamp(),
       Images: new Proxy({}, { get: (/** @type {any} */ _t, /** @type {any} */ k) => `image-${String(k)}` }),
       Spaces: new Proxy({}, { get: () => makeRamp() }),
@@ -82,7 +82,9 @@ describe('D72 — la pastille rouge d une action en attente', () => {
 
   it('elle est collee en haut a droite du glyphe, et cerclee du fond de la carte', async () => {
     const [pastille] = pastilles(await monter({ hasAlert: true }));
-    const { borderColor, borderWidth, right, top } = pastille.props.style;
+    const {
+      borderColor, borderWidth, right, top,
+    } = pastille.props.style;
 
     expect({ right, top }).toEqual({ right: -5, top: -3 });
     // Le pack demande « la couleur de fond de la carte » : c'est primary700,

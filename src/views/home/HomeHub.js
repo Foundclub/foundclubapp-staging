@@ -2326,7 +2326,19 @@ function HomeHubContent({ auth, navigation, route }) {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
-        {headBanner ? <HomeHeadBanner {...headBanner} /> : null}
+        {headBanner ? (
+          <HomeHeadBanner
+            actions={headBanner.actions}
+            label={headBanner.label}
+            lines={headBanner.lines}
+            subtitle={headBanner.subtitle}
+            tiles={headBanner.tiles}
+            title={headBanner.title}
+            titleSuffix={headBanner.titleSuffix}
+            tone={headBanner.tone}
+            variant={headBanner.variant}
+          />
+        ) : null}
         <OnboardingWrapper
           description={t('homeHubTutorial.steps.header.description', 'Cette page te donne un accès rapide à toutes les fonctionnalités principales.')}
           id="homehub-header"

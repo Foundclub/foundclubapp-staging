@@ -17,7 +17,7 @@ import HomeHeadBanner from '../HomeHeadBanner';
 // preuve que le bandeau fonctionne, tant que le lot serveur n'est pas livre.
 
 jest.mock('@/theme/themeContext', () => {
-  const { colors } = jest.requireActual('@/theme/colors');
+  const { colors: vraiesCouleurs } = jest.requireActual('@/theme/colors');
   const styleLeaf = {};
   const makeRamp = () => new Proxy({}, { get: () => styleLeaf });
   return {
@@ -25,7 +25,7 @@ jest.mock('@/theme/themeContext', () => {
     default: () => ({
       Alignments: makeRamp(),
       ApplicationStyle: new Proxy({}, { get: () => makeRamp() }),
-      Colors: colors,
+      Colors: vraiesCouleurs,
       Fonts: makeRamp(),
       Images: new Proxy({}, { get: (/** @type {any} */ _t, /** @type {any} */ k) => `image-${String(k)}` }),
       Spaces: new Proxy({}, { get: () => makeRamp() }),
@@ -49,7 +49,10 @@ jest.mock('@/components/atoms/button/Button', () => {
  */
 const monter = async (props) => {
   let tree;
-  await act(async () => { tree = renderer.create(<HomeHeadBanner {...props} />); });
+  await act(async () => {
+    // eslint-disable-next-line react/jsx-props-no-spreading
+    tree = renderer.create(<HomeHeadBanner {...props} />);
+  });
   return tree;
 };
 
@@ -113,7 +116,9 @@ describe('D72 — la variante « liste » (dirigeant, super admin)', () => {
   it('une ligne sans retard n a pas de point', async () => {
     const tree = await monter({
       label: 'À traiter',
-      lines: [{ hasAlert: false, icon: 'bell', key: 'aLaUne', label: 'À la une', value: '2' }],
+      lines: [{
+        hasAlert: false, icon: 'bell', key: 'aLaUne', label: 'À la une', value: '2',
+      }],
       variant: 'list',
     });
     const points = tree.root.findAllByType(View).filter(
@@ -127,7 +132,9 @@ describe('D72 — la variante « liste » (dirigeant, super admin)', () => {
     const onPress = jest.fn();
     const tree = await monter({
       label: "Aujourd'hui",
-      lines: [{ icon: 'bell', key: 'demandes', label: 'Demandes', onPress, value: '3' }],
+      lines: [{
+        icon: 'bell', key: 'demandes', label: 'Demandes', onPress, value: '3',
+      }],
       variant: 'list',
     });
 
@@ -148,7 +155,9 @@ describe('D72 — la variante « evenement » (entraineur, joueur)', () => {
       subtitle: 'Istres Provence HB — déplacement, départ 13:15',
       tiles: [
         { key: 'convoques', label: 'convoquées', value: '16' },
-        { key: 'sansReponse', label: 'réponses manquantes', tone: colors.warning500, value: '7' },
+        {
+          key: 'sansReponse', label: 'réponses manquantes', tone: colors.warning500, value: '7',
+        },
       ],
       title: 'Samedi 15 · 15:00',
       titleSuffix: 'U17 F',
@@ -167,7 +176,9 @@ describe('D72 — la variante « evenement » (entraineur, joueur)', () => {
     const tree = await monter({
       actions: [
         { key: 'present', label: 'Présent', onPress: present },
-        { key: 'absent', label: 'Absent', onPress: jest.fn(), variant: 'secondary' },
+        {
+          key: 'absent', label: 'Absent', onPress: jest.fn(), variant: 'secondary',
+        },
       ],
       label: 'Ma semaine',
       subtitle: 'SMUC – Aubagne HB · RDV 13:00',

@@ -51,8 +51,8 @@ export const EMPTY_HOME_COUNTERS = {
   moderation: {
     aLaUne: 0, clubsAOnboarder: 0, revendications: 0, signalements: 0,
   },
-  prochainEvenement: null,
   prochaineSeance: null,
+  prochainEvenement: null,
   propositionsMatch: 0,
   reservations: 0,
 };
@@ -93,8 +93,8 @@ export const normalizeHomeCounters = (payload) => {
       revendications: toCount(moderation.revendications),
       signalements: toCount(moderation.signalements),
     },
-    prochainEvenement: payload.prochainEvenement || null,
     prochaineSeance: payload.prochaineSeance || null,
+    prochainEvenement: payload.prochainEvenement || null,
     propositionsMatch: toCount(payload.propositionsMatch),
     reservations: toCount(payload.reservations),
   };
