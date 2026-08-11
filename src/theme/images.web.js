@@ -60,6 +60,24 @@ export const images = {
   chart: createAssetSource('../assets/icons/filter.png'),
   trophy: createAssetSource('../assets/icons/flag.png'),
   whistle: createAssetSource('../assets/icons/stadium.png'),
+  // D75 — meme table que `images.js`, cote web. Le site compile physiquement les
+  // sources de `app` : une clef declaree ici seulement d'un cote casse l'autre EN
+  // SILENCE, et aucune porte de `app` ne le voit.
+  homeIllustrations: {
+    bell: createAssetSource('../assets/background-card-home/bell.png'),
+    calendar: createAssetSource('../assets/background-card-home/calendar.png'),
+    chart: createAssetSource('../assets/background-card-home/chart.png'),
+    clock: createAssetSource('../assets/background-card-home/clock.png'),
+    close: createAssetSource('../assets/background-card-home/close.png'),
+    edit: createAssetSource('../assets/background-card-home/edit.png'),
+    euroCircle: createAssetSource('../assets/background-card-home/euroCircle.png'),
+    flag: createAssetSource('../assets/background-card-home/flag.png'),
+    running: createAssetSource('../assets/background-card-home/running.png'),
+    shield: createAssetSource('../assets/background-card-home/shield.png'),
+    stadium: createAssetSource('../assets/background-card-home/stadium.png'),
+    trophy: createAssetSource('../assets/background-card-home/trophy.png'),
+    users: createAssetSource('../assets/background-card-home/users.png'),
+  },
 };
 
 const getThemeImages = (theme = null) => {

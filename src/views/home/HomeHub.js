@@ -145,6 +145,13 @@ function HomeSection({
   title,
 }) {
   const { width: screenWidth } = useWindowDimensions();
+  // D75 — `Images.homeIllustrations` EST la table de correspondance : ses clefs sont
+  // exactement les clefs d'icone des cartes. Pas de seconde table a tenir a jour, et
+  // une famille sans fichier retombe d'elle-meme sur le halo de HomeActionCard.
+  // ⚠️ Le type `Images` est un mappe « clef -> ImageSourcePropType » : il aplatit
+  // les tables imbriquees, donc indexer directement ajoute une erreur TS7053.
+  const { Images } = useTheme();
+  const illustrationsParFamille = /** @type {Record<string, any>} */ (Images.homeIllustrations);
   const tutorialTargetRefs = useRef(/** @type {Record<string, any>} */ ({}));
   if (!cards.length) return null;
   const isSingleCardSection = cards.length === 1;
@@ -178,7 +185,7 @@ function HomeSection({
               hasAlert={card.hasAlert}
               highlighted={card.highlighted}
               icon={card.icon}
-              illustration={card.illustration}
+              illustration={card.illustration || illustrationsParFamille[card.icon]}
               illustrationPlacement={card.illustrationPlacement}
               locked={card.locked}
               onPress={card.onPress}

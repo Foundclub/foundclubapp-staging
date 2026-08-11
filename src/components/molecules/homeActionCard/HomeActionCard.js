@@ -25,6 +25,17 @@ const DEFAULT_ILLUSTRATION_PLACEMENT = {
   width: 138,
 };
 
+// D75 — L'OPACITE VIT ICI, PAS DANS LES FICHIERS PNG.
+// Le pack livre les 13 illustrations a pleine intensite, volontairement : c'est
+// l'app qui attenue, donc le reglage se change sans relivrer une seule image.
+// Mesures du studio : 0.10 efface la trainee de pastilles, 0.24 fait passer le
+// trait devant le sous-titre gris. En dessous de 0.14 les alphas internes du
+// fichier (0.98 pour le sujet, 0.10 pour la trame) seraient a revoir.
+const ILLUSTRATION_OPACITY = 0.16;
+// Carte primaire (« Gerer mon club ») : sa bordure cyan pleine porte deja l'accent,
+// l'illustration se retire donc d'un cran pour ne pas doubler le signal.
+const ILLUSTRATION_OPACITY_PRIMARY = 0.14;
+
 // D59 ① — REPLI QUAND AUCUNE ILLUSTRATION N'EST FOURNIE.
 //
 // CE QUI ETAIT ICI : l'icone de la carte redessinee en geant (112 pt, opacite
@@ -129,6 +140,9 @@ function HomeActionCard({
     ...DEFAULT_ILLUSTRATION_PLACEMENT,
     ...(illustrationPlacement || {}),
   };
+  const illustrationOpacity = emphasis === 'primary'
+    ? ILLUSTRATION_OPACITY_PRIMARY
+    : ILLUSTRATION_OPACITY;
 
   // D72 — la pilule chiffree s'arrete a « 9+ » (pack accueil, tache 1). Au-dela
   // elle s'elargirait et pousserait la pastille fleche hors de la carte.
@@ -208,6 +222,7 @@ function HomeActionCard({
             style={{
               bottom: resolvedIllustrationPlacement.bottom,
               height: resolvedIllustrationPlacement.height,
+              opacity: illustrationOpacity,
               position: 'absolute',
               right: resolvedIllustrationPlacement.right,
               width: resolvedIllustrationPlacement.width,

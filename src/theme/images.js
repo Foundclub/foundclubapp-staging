@@ -64,6 +64,27 @@ export const images = {
   chart: require('../assets/icons/filter.png'), // Temp mapping
   trophy: require('../assets/icons/flag.png'), // Temp mapping
   whistle: require('../assets/icons/stadium.png'), // Temp mapping
+  // D75 — illustrations de fond des cartes d'accueil, une par famille d'icone.
+  // Dossier SEPARE de `icons/` et non renommable : 10 des 13 noms y existent deja
+  // (bell, calendar, clock, close, edit, flag, running, shield, stadium, users)
+  // avec un tout autre role — glyphe 96 px teinte a 18 pt contre trait 512 px a 138 pt.
+  // Livrees a PLEINE intensite : c'est HomeActionCard qui applique l'opacite,
+  // ce qui la garde reglable sans relivrer d'image.
+  homeIllustrations: {
+    bell: require('../assets/background-card-home/bell.png'),
+    calendar: require('../assets/background-card-home/calendar.png'),
+    chart: require('../assets/background-card-home/chart.png'),
+    clock: require('../assets/background-card-home/clock.png'),
+    close: require('../assets/background-card-home/close.png'),
+    edit: require('../assets/background-card-home/edit.png'),
+    euroCircle: require('../assets/background-card-home/euroCircle.png'),
+    flag: require('../assets/background-card-home/flag.png'),
+    running: require('../assets/background-card-home/running.png'),
+    shield: require('../assets/background-card-home/shield.png'),
+    stadium: require('../assets/background-card-home/stadium.png'),
+    trophy: require('../assets/background-card-home/trophy.png'),
+    users: require('../assets/background-card-home/users.png'),
+  },
 };
 
 const cachedThemeImages = new Map();
