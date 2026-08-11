@@ -158,17 +158,19 @@ const getConflictModeOption = (value) => (
   || FACILITY_CONFLICT_MODE_OPTIONS[0]
 );
 
-// Increment de capacite : carre de 30, assez large pour le pouce grace au
-// hitSlop du bouton, assez court pour tenir sur la meme ligne que le libelle.
+// D63 : 30 pt ne tenait que parce que le libelle occupait la meme ligne. La
+// maquette sort le libelle au-dessus, ce qui rend la rangee au nombre et a ses
+// deux boutons — assez de place pour la cible tactile de 44 pt du pack.
 const STEPPER_BUTTON_STYLE = {
-  borderRadius: 10,
-  height: 30,
+  borderRadius: 14,
+  height: 44,
   paddingHorizontal: 0,
-  width: 30,
+  width: 44,
 };
 
+// Le nombre occupe toute la place entre les deux boutons, avec son unite juste
+// dessous : c'est ce centrage qui fait lire « 1 equipe a la fois » d'un trait.
 const STEPPER_VALUE_STYLE = {
-  minWidth: 24,
   textAlign: /** @type {const} */ ('center'),
 };
 
@@ -189,10 +191,15 @@ const PLANNING_SWATCH_HIT_SLOP = {
   bottom: 5, left: 5, right: 5, top: 5,
 };
 
-const PLANNING_SWATCH_DOT_STYLE = {
+// D63 : la maquette detache l'anneau du rond (un ecart sombre entre les deux).
+// C'est ce qui le rend lisible sur une pastille deja coloree, la ou une bordure
+// collee au bord se confondait avec elle. L'anneau est porte par une enveloppe
+// de meme encombrement pour TOUTES les pastilles, sinon la grille sauterait a
+// chaque changement de couleur : 34 + 2 x (3 d'ecart + 2 de trait) = 44 pt.
+const PLANNING_SWATCH_RING_STYLE = {
   borderRadius: 999,
-  height: 12,
-  width: 12,
+  borderWidth: 2,
+  padding: 3,
 };
 
 const TYPE_CHIP_STYLE = {
@@ -293,12 +300,6 @@ function FacilityForm() {
     }
   }, [facility, isEdit, reset]);
 
-  const subtitle = useMemo(() => (
-    isEdit
-      ? t('facilityForm.subtitle.edit', 'Mets à jour les informations de cette installation.')
-      : t('facilityForm.subtitle.create', 'Configure une nouvelle installation pour ton club.')
-  ), [isEdit, t]);
-
   const conflictModeOptions = useMemo(() => FACILITY_CONFLICT_MODE_OPTIONS.map((option) => ({
     label: t(option.labelKey, option.labelFallback),
     value: option.value,
@@ -313,7 +314,10 @@ function FacilityForm() {
     'facilityForm.fields.planningColor',
     'Couleur dans le planning',
   );
-  const capacityUnitLabel = t('facilityForm.capacity.teamPlural', 'équipes simultanées');
+  const capacityFieldLabel = t(
+    'facilityForm.fields.capacity',
+    'Capacité — équipes simultanées',
+  );
   const planningColorHint = t(
     'facilityForm.hints.planningColor',
     'Elle sert à repérer l\'installation dans le planning — elle apparaît en pastille sur sa carte.',
@@ -464,7 +468,11 @@ function FacilityForm() {
         style={[Alignments.fill]}
       >
         <ScrollView
-          contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[24]]}
+          contentContainerStyle={[
+            Spaces.gap[12],
+            Spaces.paddingHorizontal[16],
+            Spaces.paddingBottom[24],
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* Pas de bouton retour ici : le navigateur en pose deja un juste
@@ -473,23 +481,27 @@ function FacilityForm() {
               ClubStack). En ajouter un second faisait deux fleches empilees —
               constate a l'ecran sur emulateur le 2026-08-05. */}
           <View>
+            {/* D63 : la maquette ne porte que le titre. Le sous-titre */}
+            {/* (« Configure une nouvelle installation pour ton club. ») */}
+            {/* redisait le titre en plus long, et poussait le premier champ */}
+            {/* vers le bas. Aucune clef de fr.js perdue : facilityForm.* n y */}
+            {/* figure pas, tout passait deja par les replis. */}
             <Text numberOfLines={1} style={[Fonts.h4Black, Fonts.neutral00]}>
               {isEdit
                 ? t('facilityForm.title.edit', 'Modifier l\'installation')
                 : t('facilityForm.title.create', 'Nouvelle installation')}
             </Text>
-            <Text numberOfLines={1} style={[Fonts.p3, Fonts.primary100]}>
-              {subtitle}
-            </Text>
           </View>
 
+          {/* D63 : ce conteneur etait une CARTE (fond, bordure, rayon 24) qui */}
+          {/* enfermait tout le formulaire. Or la rangee de capacite porte deja */}
+          {/* sa propre bordure : ca faisait une carte dans une carte, que le */}
+          {/* pack interdit. Il ne reste que le groupe d'espacement — la */}
+          {/* marge laterale est passee sur le defilement, ou elle aligne */}
+          {/* AUSSI le titre, qui vivait dehors et collait au bord. */}
           <View
             style={[
-              ApplicationStyle.backgroundColor.primary700,
-              ApplicationStyle.borderRadius24,
-              Spaces.padding[16],
               Spaces.gap[16],
-              { borderColor: `${Colors.primary500}33`, borderWidth: 1 },
             ]}
           >
             <Controller
@@ -577,8 +589,12 @@ function FacilityForm() {
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
                       {conflictModeFieldLabel}
                     </Text>
+                    {/* D63 : « Demande a valider » s'affichait « Demande a */}
+                    {/* valid... ». Ce sont des libelles SYSTEME — le pack les */}
+                    {/* veut entiers, l'ellipse est reservee aux donnees. */}
                     <SegmentedControl
                       centerContent
+                      fullLabels
                       onChange={onChange}
                       options={conflictModeOptions}
                       value={value}
@@ -606,46 +622,54 @@ function FacilityForm() {
               render={({ field: { onChange, value } }) => {
                 const safeValue = Number(value || 1);
                 return (
-                  <View style={[Spaces.gap[4]]}>
+                  <View style={[Spaces.gap[8]]}>
+                    {/* D63 : le libelle partageait la ligne des boutons, qui */}
+                    {/* devaient donc rester a 30 pt. Sorti au-dessus comme */}
+                    {/* les autres groupes de l'ecran, il rend la rangee au */}
+                    {/* nombre — gros, centre, son unite juste dessous. */}
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {capacityFieldLabel}
+                    </Text>
                     <View
                       style={[
                         Alignments.row,
                         Alignments.alignCenter,
-                        Alignments.justifySpaceBetween,
                         ApplicationStyle.backgroundColor.primary900,
                         ApplicationStyle.borderRadius16,
                         Spaces.paddingHorizontal[12],
                         Spaces.paddingVertical[8],
+                        Spaces.gap[12],
                         { borderColor: `${Colors.primary500}55`, borderWidth: 1 },
                       ]}
                     >
+                      <Button
+                        onPress={() => onChange(Math.max(1, safeValue - 1))}
+                        size="small"
+                        style={STEPPER_BUTTON_STYLE}
+                        title="-"
+                        variant="Secondary"
+                      />
                       <View style={[Alignments.fill]}>
-                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                          {t('facilityForm.fields.capacity', 'Capacité')}
-                        </Text>
-                        <Text style={[Fonts.small, Fonts.neutral300]}>
-                          {capacityUnitLabel}
-                        </Text>
-                      </View>
-                      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
-                        <Button
-                          onPress={() => onChange(Math.max(1, safeValue - 1))}
-                          size="small"
-                          style={STEPPER_BUTTON_STYLE}
-                          title="-"
-                          variant="Secondary"
-                        />
-                        <Text style={[Fonts.p1Bold, Fonts.neutral00, STEPPER_VALUE_STYLE]}>
+                        <Text
+                          style={[Fonts.h4Black, Fonts.neutral00, STEPPER_VALUE_STYLE]}
+                        >
                           {safeValue}
                         </Text>
-                        <Button
-                          onPress={() => onChange(Math.min(10, safeValue + 1))}
-                          size="small"
-                          style={STEPPER_BUTTON_STYLE}
-                          title="+"
-                          variant="Secondary"
-                        />
+                        <Text
+                          style={[Fonts.small, Fonts.neutral300, STEPPER_VALUE_STYLE]}
+                        >
+                          {safeValue > 1
+                            ? t('facilityForm.capacity.plural', 'équipes à la fois')
+                            : t('facilityForm.capacity.singular', 'équipe à la fois')}
+                        </Text>
                       </View>
+                      <Button
+                        onPress={() => onChange(Math.min(10, safeValue + 1))}
+                        size="small"
+                        style={STEPPER_BUTTON_STYLE}
+                        title="+"
+                        variant="Primary"
+                      />
                     </View>
                     {errors.maxSlots?.message ? (
                       <Text style={[Fonts.p3, Fonts.error700]}>
@@ -681,37 +705,37 @@ function FacilityForm() {
                       {FACILITY_PLANNING_PALETTE.map((color) => {
                         const isSelected = selectedColor === color;
                         return (
-                          <TouchableOpacity
-                            accessibilityLabel={t(
-                              'facilityForm.accessibility.planningColor',
-                              'Couleur de planning',
-                            )}
-                            accessibilityRole="radio"
-                            accessibilityState={{ selected: isSelected }}
-                            activeOpacity={0.85}
-                            hitSlop={PLANNING_SWATCH_HIT_SLOP}
+                          <View
                             key={color}
-                            onPress={() => onChange(color)}
                             style={[
-                              PLANNING_SWATCH_STYLE,
+                              PLANNING_SWATCH_RING_STYLE,
                               {
-                                backgroundColor: color,
                                 borderColor: isSelected
                                   ? Colors.neutral00
-                                  : `${Colors.neutral00}66`,
-                                borderWidth: isSelected ? 2 : 1,
+                                  : Colors.transparent,
                               },
                             ]}
                           >
-                            {isSelected ? (
-                              <View
-                                style={[
-                                  PLANNING_SWATCH_DOT_STYLE,
-                                  { backgroundColor: Colors.neutral00 },
-                                ]}
-                              />
-                            ) : null}
-                          </TouchableOpacity>
+                            <TouchableOpacity
+                              accessibilityLabel={t(
+                                'facilityForm.accessibility.planningColor',
+                                'Couleur de planning',
+                              )}
+                              accessibilityRole="radio"
+                              accessibilityState={{ selected: isSelected }}
+                              activeOpacity={0.85}
+                              hitSlop={PLANNING_SWATCH_HIT_SLOP}
+                              onPress={() => onChange(color)}
+                              style={[
+                                PLANNING_SWATCH_STYLE,
+                                {
+                                  backgroundColor: color,
+                                  borderColor: `${Colors.neutral00}66`,
+                                  borderWidth: 1,
+                                },
+                              ]}
+                            />
+                          </View>
                         );
                       })}
                     </View>

@@ -1,4 +1,4 @@
-import { Alert, Text } from 'react-native';
+import { Alert, ScrollView, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
@@ -30,6 +30,8 @@ const mockInputProps = [];
 const mockAddressProps = [];
 /** @type {any[]} */
 const mockPaywallProps = [];
+/** @type {any[]} */
+const mockSegmentedProps = [];
 
 /** @type {any} */
 let mockNavigation;
@@ -152,7 +154,9 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
     View: VueRN,
   } = jest.requireActual('react-native');
 
-  return function SegmentedControlMock(/** @type {any} */ { onChange, options, value }) {
+  return function SegmentedControlMock(/** @type {any} */ props) {
+    const { onChange, options, value } = props;
+    mockSegmentedProps.push(props);
     return reactActuel.createElement(
       VueRN,
       null,
@@ -168,6 +172,11 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
     );
   };
 });
+
+// Les VRAIES couleurs du theme, celles que l'ecran recoit : l'anneau de
+// selection se reconnait a sa teinte, pas a sa forme — toutes les pastilles
+// portent la meme enveloppe, seule la couleur du trait les distingue.
+const COULEURS = jest.requireActual('@/theme/colors').default();
 
 // Adresse telle que la rend reellement l'autocomplete BAN : les coordonnees
 // vivent dans `value`, sous la forme « lng|lat ».
@@ -192,6 +201,17 @@ const aplatirTexte = (enfants) => {
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatirTexte(enfants?.props?.children);
   return String(enfants);
+};
+
+/**
+ * Aplati un style RN (tableau imbrique, valeurs fausses) en un seul objet.
+ * @param {any} style
+ * @returns {any}
+ */
+const aplatirStyle = (style) => {
+  if (Array.isArray(style)) return Object.assign({}, ...style.map(aplatirStyle));
+  if (!style || typeof style !== 'object') return {};
+  return style;
 };
 
 /**
@@ -297,6 +317,7 @@ beforeEach(() => {
   mockInputProps.length = 0;
   mockAddressProps.length = 0;
   mockPaywallProps.length = 0;
+  mockSegmentedProps.length = 0;
 
   mockNavigation = { goBack: jest.fn(), navigate: jest.fn() };
   mockUserData = { club: { documentId: 'club-1' } };
@@ -685,5 +706,152 @@ describe('FacilityForm — refonte D51 ecran 04', () => {
     await appuyerSur(arbre, 'notifier');
 
     expect(texteDe(arbre.root)).toContain('Le créneau reste confirmé');
+  });
+});
+
+// D63 : Adel a compare l'ecran a la maquette sur l'emulateur le 2026-08-10.
+// Les portes de D51 etaient toutes vertes, et pourtant l'ecran ne ressemblait
+// pas au dessin. Ce bloc mesure la FORME, pas le comportement.
+describe('FacilityForm — D63 : l ecart entre la maquette et l ecran', () => {
+  it('les deux libelles de conflit sont demandes ENTIERS au controle segmente', async () => {
+    // Le texte, lui, a toujours ete complet dans l'arbre — c'est `numberOfLines`
+    // qui coupait a l'ecran. Le seul temoin honnete est donc la consigne passee
+    // au composant partage, pas le texte rendu.
+    await monterEcran();
+
+    const controle = dernieresProps(mockSegmentedProps);
+
+    expect(controle.fullLabels).toBe(true);
+    expect(controle.options.map((/** @type {any} */ option) => option.label)).toEqual([
+      'Demande à valider',
+      'Autoriser et notifier',
+    ]);
+  });
+
+  it('le formulaire n est plus enferme dans une carte', async () => {
+    // « Jamais de carte dans une carte » : les rangees portent deja leur propre
+    // bordure. Un conteneur borde autour en faisait une seconde.
+    const arbre = await monterEcran();
+
+    const cartes = arbre.root.findAll((/** @type {any} */ noeud) => {
+      const style = aplatirStyle(noeud.props?.style);
+      return style.borderWidth === 1 && style.borderRadius === 24;
+    });
+
+    expect(cartes).toHaveLength(0);
+  });
+
+  it('le contenu garde une marge laterale une fois la carte partie', async () => {
+    // C est la carte qui donnait sa marge au formulaire. Sans elle, les champs
+    // viennent se coller aux deux bords — et le titre y etait DEJA colle,
+    // puisqu il vivait en dehors de la carte.
+    const arbre = await monterEcran();
+
+    const marges = arbre.root.findAllByType(ScrollView)
+      .map((/** @type {any} */ noeud) => aplatirStyle(noeud.props?.contentContainerStyle))
+      .map((/** @type {any} */ style) => style.paddingHorizontal)
+      .filter((/** @type {any} */ marge) => typeof marge === 'number' && marge > 0);
+
+    expect(marges.length).toBeGreaterThan(0);
+  });
+
+  it('le titre est seul : plus de sous-titre sous « Nouvelle installation »', async () => {
+    const arbre = await monterEcran();
+
+    expect(texteDe(arbre.root)).toContain('Nouvelle installation');
+    expect(texteDe(arbre.root)).not.toContain('Configure une nouvelle installation');
+  });
+
+  it('en modification aussi, le titre est seul', async () => {
+    const arbre = await monterEcran({
+      facility: {
+        address: ADRESSE_GEOCODEE,
+        documentId: 'fac-42',
+        name: 'Gymnase Nord',
+        type: 'Gymnase',
+      },
+      params: { facilityId: 'fac-42' },
+    });
+
+    expect(texteDe(arbre.root)).toContain('Modifier l\'installation');
+    expect(texteDe(arbre.root)).not.toContain('Mets à jour les informations');
+  });
+
+  it('la capacite annonce son unite SOUS le nombre, et au singulier', async () => {
+    const arbre = await monterEcran();
+
+    expect(texteDe(arbre.root)).toContain('Capacité — équipes simultanées');
+    expect(texteDe(arbre.root)).toContain('équipe à la fois');
+  });
+
+  it('au-dela d une equipe, l unite passe au pluriel', async () => {
+    const arbre = await monterEcran();
+
+    await appuyerSur(arbre, '+');
+    await appuyerSur(arbre, '+');
+
+    expect(texteDe(arbre.root)).toContain('équipes à la fois');
+  });
+
+  it('les deux boutons du stepper atteignent la cible tactile de 44 pt', async () => {
+    // 30 pt a l ecran : le pack demande >= 44 pt, et la maquette les montre
+    // nettement plus grands que le texte qu ils encadrent.
+    await monterEcran();
+
+    // La doublure de Button ne transmet pas `style` au pressable : on lit donc
+    // les props recues, pas l arbre rendu.
+    const tailles = mockButtonProps
+      .filter((/** @type {any} */ props) => ['-', '+'].includes(props.title))
+      .map((/** @type {any} */ props) => aplatirStyle(props.style));
+
+    expect(tailles.length).toBeGreaterThanOrEqual(2);
+    tailles.forEach((/** @type {any} */ taille) => {
+      expect(taille.height).toBeGreaterThanOrEqual(44);
+      expect(taille.width).toBeGreaterThanOrEqual(44);
+    });
+  });
+
+  it('la couleur choisie porte un anneau, et elle seule', async () => {
+    // La maquette entoure la pastille choisie d un anneau blanc detache du
+    // rond. A l ecran, la selection se lisait a une bordure de 2 pt collee au
+    // bord de la pastille — sur une pastille deja coloree, ca se voit mal.
+    const arbre = await monterEcran();
+
+    const anneaux = arbre.root.findAll((/** @type {any} */ noeud) => {
+      const style = aplatirStyle(noeud.props?.style);
+      return style.borderRadius === 999
+        && style.borderWidth >= 2
+        && style.backgroundColor === undefined
+        && style.borderColor === COULEURS.neutral00;
+    });
+
+    // 2 et non 1 : un noeud RN se compte deux fois dans l arbre rendu (le
+    // composite et son hote), comme le note deja le test de palette de D51.
+    expect(anneaux).toHaveLength(2);
+  });
+
+  it('changer de couleur deplace l anneau, sans en ajouter un second', async () => {
+    const arbre = await monterEcran();
+
+    const pastilles = arbre.root.findAll((/** @type {any} */ noeud) => (
+      typeof noeud.props?.onPress === 'function'
+      && FACILITY_PLANNING_PALETTE.includes(noeud.props?.style?.[1]?.backgroundColor)
+    ));
+
+    await act(async () => {
+      pastilles[pastilles.length - 1].props.onPress();
+    });
+
+    const anneaux = arbre.root.findAll((/** @type {any} */ noeud) => {
+      const style = aplatirStyle(noeud.props?.style);
+      return style.borderRadius === 999
+        && style.borderWidth >= 2
+        && style.backgroundColor === undefined
+        && style.borderColor === COULEURS.neutral00;
+    });
+
+    // 2 et non 1 : un noeud RN se compte deux fois dans l arbre rendu (le
+    // composite et son hote), comme le note deja le test de palette de D51.
+    expect(anneaux).toHaveLength(2);
   });
 });

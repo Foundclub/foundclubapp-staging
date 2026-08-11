@@ -26,6 +26,8 @@ import AddCoach from '../AddCoach';
 /** @type {any[]} */
 const mockButtonProps = [];
 /** @type {any[]} */
+const mockScreenProps = [];
+/** @type {any[]} */
 const mockInputProps = [];
 /** @type {any[]} */
 const mockPhoneProps = [];
@@ -130,8 +132,9 @@ jest.mock('@/services/club/clubQueries', () => ({
 
 jest.mock(
   '@/components/templates/ScreenContainer',
-  () => function ScreenContainerMock(/** @type {any} */ { children }) {
-    return children;
+  () => function ScreenContainerMock(/** @type {any} */ props) {
+    mockScreenProps.push(props);
+    return props.children;
   },
 );
 
@@ -236,6 +239,17 @@ const aplatirTexte = (enfants) => {
 };
 
 /**
+ * Aplati un style RN (tableau imbrique, valeurs fausses) en un seul objet.
+ * @param {any} style
+ * @returns {any}
+ */
+const aplatirStyle = (style) => {
+  if (Array.isArray(style)) return Object.assign({}, ...style.map(aplatirStyle));
+  if (!style || typeof style !== 'object') return {};
+  return style;
+};
+
+/**
  * Texte visible sous un noeud de l'arbre rendu.
  * @param {any} noeud
  * @returns {string}
@@ -309,6 +323,7 @@ const saisirTelephone = async (valeur) => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockButtonProps.length = 0;
+  mockScreenProps.length = 0;
   mockInputProps.length = 0;
   mockPhoneProps.length = 0;
   mockPaywallProps.length = 0;
@@ -538,5 +553,34 @@ describe('AddCoach — refus d abonnement', () => {
 
     expect(dernieresProps(mockPaywallProps).isVisible).toBe(false);
     expect(Alert.alert).toHaveBeenCalled();
+  });
+});
+
+// D63 : meme ecart de forme que sur l ecran 04, que les portes de D51 ne
+// pouvaient pas voir — elles ne mesurent pas la conformite a une maquette.
+describe('AddCoach — D63 : l ecart entre la maquette et l ecran', () => {
+  it('le contenu ne colle plus aux deux bords de l ecran', async () => {
+    await monterEcran();
+
+    const marges = mockScreenProps
+      .map((/** @type {any} */ props) => aplatirStyle(props.contentContainerStyle))
+      .map((/** @type {any} */ style) => style.paddingHorizontal)
+      .filter((/** @type {any} */ marge) => typeof marge === 'number' && marge > 0);
+
+    expect(marges.length).toBeGreaterThan(0);
+  });
+
+  it('« Annuler » accompagne l envoi de l invitation', async () => {
+    const arbre = await monterEcran();
+
+    expect(texteDe(arbre.root)).toContain('Annuler');
+  });
+
+  it('« Annuler » revient en arriere sans envoyer d invitation', async () => {
+    const arbre = await monterEcran();
+
+    await appuyerSur(arbre, 'Annuler');
+
+    expect(mockNavigation.goBack).toHaveBeenCalled();
   });
 });

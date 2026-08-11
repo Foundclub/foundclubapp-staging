@@ -24,6 +24,8 @@ const mockButtonProps = [];
 const mockInputProps = [];
 /** @type {any[]} */
 const mockAvatarProps = [];
+/** @type {any[]} */
+const mockScreenProps = [];
 
 /** @type {any} */
 let mockNavigation;
@@ -113,8 +115,9 @@ jest.mock('@/services/multisportClub/multisportClubService', () => ({
 
 jest.mock(
   '@/components/templates/ScreenContainer',
-  () => function ScreenContainerMock(/** @type {any} */ { children }) {
-    return children;
+  () => function ScreenContainerMock(/** @type {any} */ props) {
+    mockScreenProps.push(props);
+    return props.children;
   },
 );
 
@@ -189,6 +192,17 @@ const aplatirTexte = (enfants) => {
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatirTexte(enfants?.props?.children);
   return String(enfants);
+};
+
+/**
+ * Aplati un style RN (tableau imbrique, valeurs fausses) en un seul objet.
+ * @param {any} style
+ * @returns {any}
+ */
+const aplatirStyle = (style) => {
+  if (Array.isArray(style)) return Object.assign({}, ...style.map(aplatirStyle));
+  if (!style || typeof style !== 'object') return {};
+  return style;
 };
 
 /**
@@ -277,6 +291,7 @@ beforeEach(() => {
   mockButtonProps.length = 0;
   mockInputProps.length = 0;
   mockAvatarProps.length = 0;
+  mockScreenProps.length = 0;
 
   mockNavigation = { goBack: jest.fn(), navigate: jest.fn() };
   mockClubQuery = {
@@ -445,5 +460,41 @@ describe('AddSponsor — aiguillage club / structure multisport', () => {
 
     expect(updateClub).not.toHaveBeenCalled();
     expect(updateMultisportClub).toHaveBeenCalledWith('cm-1', expect.anything());
+  });
+});
+
+// D63 : Adel a compare l'ecran 04 du meme pack a sa maquette et a vu un ecart
+// de FORME que toutes les portes de D51 avaient laisse passer. Les 3 autres
+// ecrans du lot portaient le meme genre d'ecart, celui-ci compris.
+describe('AddSponsor — D63 : l ecart entre la maquette et l ecran', () => {
+  it('le contenu ne colle plus aux deux bords de l ecran', async () => {
+    // Aucune marge laterale nulle part : ni sur le conteneur d ecran, ni sur
+    // le defilement. Les champs ET le bouton touchaient les bords.
+    await monterEcran();
+
+    const marges = mockScreenProps
+      .map((/** @type {any} */ props) => aplatirStyle(props.contentContainerStyle))
+      .map((/** @type {any} */ style) => style.paddingHorizontal)
+      .filter((/** @type {any} */ marge) => typeof marge === 'number' && marge > 0);
+
+    expect(marges.length).toBeGreaterThan(0);
+  });
+
+  it('« Annuler » accompagne le bouton d ajout, comme sur la maquette', async () => {
+    // La maquette pose « Annuler » en texte sous le CTA de chacun de ses
+    // formulaires. Sans lui, le seul retour en arriere est la fleche de
+    // l en-tete — et l ecran ne le dit pas.
+    const arbre = await monterEcran();
+
+    expect(texteDe(arbre.root)).toContain('Annuler');
+  });
+
+  it('« Annuler » revient a l ecran precedent sans rien envoyer', async () => {
+    const arbre = await monterEcran();
+
+    await appuyerSur(arbre, 'Annuler');
+
+    expect(mockNavigation.goBack).toHaveBeenCalled();
+    expect(updateClub).not.toHaveBeenCalled();
   });
 });
