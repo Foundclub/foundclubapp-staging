@@ -442,6 +442,19 @@ function MatchCallUpSelection() {
         </View>
       </View>
 
+      {/* Barre de progression 1/2 : convoquer, puis placer. Le 2e segment
+          s'allumera quand le lot suivant livrera l'ecran « Partir de… ». */}
+      <View
+        accessibilityLabel={t('matchCallUp.selection.progress', { current: 1, total: 2 })}
+        accessibilityRole="progressbar"
+        style={styles.progressRow}
+      >
+        <View style={[styles.progressSegment, { backgroundColor: Colors.primary500 }]} />
+        <View
+          style={[styles.progressSegment, { backgroundColor: withAlpha(Colors.neutral00, 0.12) }]}
+        />
+      </View>
+
       <View style={styles.tabsRow}>
         {tabs.map((tab) => {
           const isActive = tab.key === activeTab;
@@ -655,6 +668,17 @@ const styles = StyleSheet.create({
   playerTexts: {
     flex: 1,
     minWidth: 0,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    gap: 4,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+  },
+  progressSegment: {
+    borderRadius: 2,
+    flex: 1,
+    height: 4,
   },
   screen: {
     paddingHorizontal: 0,
