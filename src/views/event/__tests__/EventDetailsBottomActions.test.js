@@ -539,6 +539,22 @@ const scrollContentStyle = (/** @type {any} */ root) => {
   return StyleSheet.flatten(node.props.contentContainerStyle) || {};
 };
 
+/**
+ * Le bloc des participants — celui qui portait « Leo Diallo » a moitie cache
+ * sur la capture d'Adel. C'est le REPERE contre lequel on mesure, depuis D64,
+ * qu'aucun menu ne recouvre quoi que ce soit : on compare des positions dans
+ * l'ordre de rendu, pas des pixels.
+ * @param {any} root - Racine du rendu.
+ * @returns {any} - Le noeud de la doublure des participants.
+ */
+const participantsBlock = (/** @type {any} */ root) => {
+  const node = root
+    .findAllByType(Text)
+    .find((/** @type {any} */ item) => textOf(item) === 'DOUBLURE_EventParticipants');
+  if (!node) throw new Error('La liste des participants n est pas rendue');
+  return node;
+};
+
 const asOrganiser = (/** @type {any} */ extra = {}) => mountScreen({
   auth: {
     canEditClub: () => true,
@@ -803,6 +819,11 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
   // ancree au cadre, la pastille occupait ses 62 px du bas en permanence, et la
   // liste des participants est suivie des stats, des avis et des compositions.
   // Une marge en bas de liste ne protege pas le milieu d'une liste.
+  // ⚠️ ET LE TITRE DE CE BLOC EST HISTORIQUE, PLUS DESCRIPTIF : il nomme le lot
+  // D21 ②, pas l'etat courant. Le menu NE FLOTTE PLUS depuis D53, et depuis D64
+  // il n'est meme plus en bas — il ouvre le contenu, sous la carte de
+  // l'evenement. Les tests ci-dessous disent l'etat vrai ; le titre dit d'ou il
+  // vient.
   test('le menu ne flotte plus : aucune couche par-dessus la liste', () => {
     const root = asOrganiser();
     const couches = root.findAll((/** @type {any} */ node) => (
@@ -832,33 +853,40 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
   });
 
   // ⛔ LE GARDE-FOU DU LOT (D53), et il remplace la reserve de 80 px : plus rien
-  // ne peut recouvrir un participant, parce que le menu n'est plus AU-DESSUS de
-  // la liste mais APRES elle. C'est une propriete de structure, pas un nombre a
-  // regler — c'est ce qui la rend increvable la ou 80 px echouaient.
-  test('AUCUN participant ne peut etre recouvert : le menu suit la liste, il ne la surplombe pas', () => {
+  // ne peut recouvrir un participant. C'est une propriete de structure, pas un
+  // nombre a regler — c'est ce qui la rend increvable la ou 80 px echouaient.
+  //
+  // ⚠️ INVERSION VOLONTAIRE de D53 (D64), sur demande d'Adel du 2026-08-10 : le
+  // menu n'est plus le second enfant du cadre, POSE APRES la liste et hors du
+  // defilement ; il est le premier bloc DU CONTENU, pose AVANT elle. Motif : en
+  // pied de cadre, il restait plaque en bas (une ScrollView porte `flexGrow: 1`
+  // et remplit son cadre meme quand le contenu est court) et laissait un grand
+  // vide au-dessus de lui.
+  // ⇒ CE QUE D53 PROTEGEAIT EST INTACT, seule la preuve change de forme : la
+  // propriete qui interdit le recouvrement n'a jamais ete « pose apres », c'est
+  // « EN FLUX ». Un frere en flux repousse son voisin, il ne passe jamais
+  // dessus — que le menu vienne avant ou apres.
+  test('AUCUN participant ne peut etre recouvert : le menu est en flux, et il precede la liste', () => {
     const root = asOrganiser();
-    const [scroll] = root.findAll((/** @type {any} */ node) => Boolean(node.props?.refreshControl)
-      && Boolean(node.props?.contentContainerStyle));
     const panneau = byTestId(root, 'event-manage-panel')[0];
+    const participants = participantsBlock(root);
 
-    // 1. Le menu n'est pas DANS la liste : il ne defile pas avec elle.
-    expect(isUnder(panneau, scroll)).toBe(false);
-    // 2. La liste n'est pas DANS le menu non plus : ce sont deux freres.
-    expect(isUnder(scroll, panneau)).toBe(false);
-    // 3. ⛔ ET IL EST EN FLUX. Sans cette ligne, le test reste VERT alors que le
-    //    menu surplombe la liste : deux freres se recouvrent tres bien quand
-    //    l'un est en absolu. C'est le seul controle qui distingue « pose apres »
-    //    de « pose par-dessus ». (Verifie en retablissant la couche de D21 :
-    //    les points 1, 2 et 4 restaient verts, celui-ci tombe.)
+    // 1. ⛔ EN FLUX. Sans cette ligne, le test reste VERT alors que le menu
+    //    surplombe la liste : deux blocs se recouvrent tres bien quand l'un est
+    //    en absolu. C'est le seul controle qui distingue « pose a cote » de
+    //    « pose par-dessus ». (Verifie en retablissant la couche de D21 : les
+    //    points 2 et 3 restaient verts, celui-ci tombe.)
     expect(managePanelPosition(root)).not.toBe('absolute');
-    // 4. Et le menu vient APRES la liste dans le meme cadre : en flux, donc il
-    //    repousse le contenu au lieu de le masquer.
-    const cadre = root.findAll((/** @type {any} */ node) => isUnder(scroll, node)
-      && isUnder(panneau, node)).pop();
+    // 2. Les deux blocs sont distincts : la liste n'est pas rangee DANS le
+    //    menu, ni le menu dans la liste.
+    expect(isUnder(participants, panneau)).toBe(false);
+    expect(isUnder(panneau, participants)).toBe(false);
+    // 3. Et le menu vient AVANT la liste : en flux, donc il la repousse vers le
+    //    bas au lieu de la masquer.
     // `findAll` parcourt en profondeur d'abord : l'ordre du tableau EST l'ordre
     // de rendu, donc l'ordre d'empilement d'un conteneur en colonne.
-    const ordreDeRendu = cadre.findAll(() => true);
-    expect(ordreDeRendu.indexOf(panneau)).toBeGreaterThan(ordreDeRendu.indexOf(scroll));
+    const ordreDeRendu = root.findAll(() => true);
+    expect(ordreDeRendu.indexOf(panneau)).toBeLessThan(ordreDeRendu.indexOf(participants));
   });
 
   test('deplie, la grille de chips repousse la liste au lieu de la masquer', () => {
@@ -866,11 +894,13 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
     // plus que les 80 px reserves. En flux, elle ne peut plus rien couvrir.
     const root = asOrganiser();
     press(root, "Gérer l'événement");
-    const [scroll] = root.findAll((/** @type {any} */ node) => Boolean(node.props?.refreshControl)
-      && Boolean(node.props?.contentContainerStyle));
+    const grille = byTestId(root, 'event-manage-sheet')[0];
+    const participants = participantsBlock(root);
 
-    expect(byTestId(root, 'event-manage-sheet')[0]).toBeTruthy();
-    expect(isUnder(byTestId(root, 'event-manage-sheet')[0], scroll)).toBe(false);
+    expect(grille).toBeTruthy();
+    expect(flatStyle(grille).position).toBeUndefined();
+    const ordreDeRendu = root.findAll(() => true);
+    expect(ordreDeRendu.indexOf(grille)).toBeLessThan(ordreDeRendu.indexOf(participants));
   });
 
   test('le pied d ecran garde sa bande a lui, distincte de la liste et du menu', () => {
@@ -1030,5 +1060,103 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
 
     expect(inventory).not.toContain('poster');
     expect(inventory).toContain('edit');
+  });
+});
+
+// ── D64 — LE FILET, pose AVANT de deplacer le menu ──────────────────────────
+// Ces deux temoins ne disent RIEN de l'endroit ou le menu est pose : ils sont
+// verts avec le menu en pied de cadre (D53) comme en tete de contenu (D64).
+// C'est exactement ce qu'on demande a un filet — survivre au deplacement qu'il
+// protege, et ne tomber que si le deplacement casse quelque chose.
+describe('D64 — le filet : deux invariants qui ne dependent pas de l endroit', () => {
+  test('le panneau « Gerer l evenement » est atteignable, ou qu il soit pose', () => {
+    const root = asOrganiser();
+
+    expect(byTestId(root, PANEL_ID)[0]).toBeTruthy();
+
+    // Atteignable au DOIGT et au LECTEUR D'ECRAN : un role annonce, un libelle
+    // non vide, et une cible d'au moins 44 pt (le minimum tactile).
+    const bascule = pressableWithText(root, "Gérer l'événement");
+    expect(bascule).toBeTruthy();
+    expect(bascule.props.accessibilityRole).toBe('button');
+    expect(String(bascule.props.accessibilityLabel || '').length).toBeGreaterThan(0);
+    expect(Number(flatStyle(byTestId(root, PANEL_ROW_ID)[0]).height)).toBeGreaterThanOrEqual(44);
+
+    // Et il OUVRE : un seul appui suffit a faire apparaitre les chips.
+    press(root, "Gérer l'événement");
+    expect(byTestId(root, 'event-manage-chip').length).toBeGreaterThan(0);
+  });
+
+  // 🧨 DEUX ECRANS NE PEUVENT PAS COEXISTER DANS UN TEST DE CE FICHIER, et ca ne
+  // se voit pas : `mountScreen` ECRIT dans des mocks partages (`mockUseAuth`,
+  // `mockEventQuery`) et dans la variable `mounted`, unique. Monter un second
+  // ecran change donc l'identite lue par le PREMIER des qu'il se re-rend — un
+  // `press` sur l'organisateur le faisait relire l'auth du simple participant,
+  // le menu disparaissait, et l'echec accusait le code au lieu du montage.
+  // ⇒ On finit tout ce qu'on a a faire sur un arbre AVANT d'en monter un autre.
+  test('le dernier participant de la liste n est recouvert par rien', () => {
+    const organisateur = asOrganiser();
+
+    // 1. RIEN NE SURPLOMBE. Le menu est en flux, replie comme deplie : un frere
+    //    en flux repousse son voisin, il ne peut pas passer par-dessus.
+    expect(managePanelPosition(organisateur)).not.toBe('absolute');
+    press(organisateur, "Gérer l'événement");
+    expect(byTestId(organisateur, 'event-manage-sheet')[0]).toBeTruthy();
+    expect(managePanelPosition(organisateur)).not.toBe('absolute');
+
+    // 2. La liste des participants est bien rendue, et elle n'est pas rangee
+    //    DANS le menu : on ne l'a pas fait disparaitre en la deplacant.
+    expect(hasText(organisateur, 'DOUBLURE_EventParticipants')).toBe(true);
+
+    // 3. ET LA LISTE NE RESERVE RIEN POUR LE MENU : le meme terminateur, avec
+    //    ou sans actions d'organisation. C'est la disparition de la reserve
+    //    dite en COMPORTEMENT, pas en nom de constante — donc increvable a un
+    //    renommage. (Une reserve, par definition, ne s'applique que quand le
+    //    bouton existe : deux nombres egaux prouvent qu'il n'y en a plus.)
+    const avecMenu = scrollContentStyle(organisateur).paddingBottom;
+    const sansMenu = scrollContentStyle(mountScreen()).paddingBottom;
+
+    expect(avecMenu).toBe(sansMenu);
+  });
+
+  test('0, 1 ou 50 participants : le menu garde exactement la meme place', () => {
+    // C'EST LA PROPRIETE QUI FAIT DISPARAITRE LE VIDE. Avant D64, la place du
+    // menu dependait de la longueur de la page : plaque au bas d'un cadre plein
+    // ecran, il s'eloignait du contenu a mesure que la page etait courte. Pose
+    // dans le flux, il suit le contenu — donc plus rien a caler.
+    // ⚠️ Un arbre a la fois : on finit tout sur celui-ci avant de monter le
+    // suivant (mocks partages, cf. le temoin precedent).
+    [0, 1, 50].forEach((nombre) => {
+      const participations = Array.from({ length: nombre }, (_, index) => ({
+        documentId: `part-${index}`,
+        status: 'accepted',
+        user: { documentId: `joueur-${index}` },
+      }));
+      const root = asOrganiser({ event: buildEvent({ participations }) });
+      const panneau = byTestId(root, PANEL_ID)[0];
+      const ordreDeRendu = root.findAll(() => true);
+
+      expect(panneau).toBeTruthy();
+      expect(managePanelPosition(root)).not.toBe('absolute');
+      expect(ordreDeRendu.indexOf(panneau))
+        .toBeLessThan(ordreDeRendu.indexOf(participantsBlock(root)));
+    });
+  });
+
+  test('rien ne finit sous la barre systeme : le plancher du conteneur est intact', () => {
+    const root = asOrganiser();
+    const [conteneur] = root.findAll(
+      (/** @type {any} */ node) => node.type?.name === 'ScreenContainerDouble',
+    );
+
+    // Retirer la reserve du bouton n'est PAS mettre la marge basse a zero.
+    // `ScreenContainer` applique toujours `insets.bottom` (son mode par defaut,
+    // `none`, vaut « plancher systeme seul ») ; `edge-to-edge` est le SEUL mode
+    // qui y renonce, pour les ecrans qui gerent eux-memes leur retrait bas.
+    // Cet ecran ne le demande pas : c'est ce qui garantit que son dernier
+    // element ne passe pas sous la barre gestuelle, page vide comme page
+    // longue, et sans dependre d'une marge ecrite ici.
+    expect(conteneur).toBeTruthy();
+    expect(conteneur.props.bottomInsetMode).not.toBe('edge-to-edge');
   });
 });
