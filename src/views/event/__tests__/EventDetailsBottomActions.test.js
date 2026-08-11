@@ -22,6 +22,7 @@ const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
 const mockEventQuery = { data: null };
 const mockCampaignsQuery = { data: { data: [] }, isLoading: false };
+const mockMatchStatsQuery = { data: null, isFetching: false };
 const mockRouteParams = { params: { eventId: 'event-1' } };
 
 jest.mock('react-i18next', () => ({
@@ -121,8 +122,15 @@ jest.mock('@/services/license/licenseQueries', () => ({
   }),
 }));
 
+// D71 : pilotable, sur le MEME motif que les campagnes ci-dessus. Sans lui, un
+// match n'a jamais de score ni de droit de saisie, et la chip « stats du match »
+// ne se verifierait que dans son etat grise.
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
-  useGetEventMatchStats: () => emptyQuery(),
+  useGetEventMatchStats: () => ({
+    ...emptyQuery(),
+    data: mockMatchStatsQuery.data,
+    isFetching: mockMatchStatsQuery.isFetching,
+  }),
   useGetEventMyMatchResponse: () => emptyQuery(),
 }));
 
@@ -359,11 +367,13 @@ const EVENT_STACK_ROUTES = [
 ];
 
 const mountScreen = (/** @type {any} */ {
-  auth, campaigns, event, params, routeNames,
+  auth, campaigns, event, matchStats, params, routeNames,
 } = {}) => {
   mockEventQuery.data = event === undefined ? buildEvent() : event;
   mockCampaignsQuery.data = { data: campaigns || [] };
   mockCampaignsQuery.isLoading = false;
+  mockMatchStatsQuery.data = matchStats || null;
+  mockMatchStatsQuery.isFetching = false;
   mockRouteParams.params = { eventId: 'event-1', ...(params || {}) };
   mockUseAuth.mockReturnValue(defaultAuth(auth));
 
@@ -1173,5 +1183,131 @@ describe('D64 — le filet : deux invariants qui ne dependent pas de l endroit',
     // longue, et sans dependre d'une marge ecrite ici.
     expect(conteneur).toBeTruthy();
     expect(conteneur.props.bottomInsetMode).not.toBe('edge-to-edge');
+  });
+});
+
+// D71 : la regle qu'Adel enonce le 2026-08-11 — « le bas de la page d'un
+// evenement n'est plus un endroit ou l'on pose une action d'organisation ; il
+// n'y en a qu'un seul, et c'est le menu ». Les statistiques du match etaient le
+// DERNIER geste d'organisation qui y restait pour un organisateur.
+//
+// ⚠️ Ce qui NE bouge PAS, et ces temoins sont la pour l'empecher :
+//   - les gestes de PARTICIPATION restent immediatement visibles (les enfouir
+//     ferait chuter les reponses, et le menu n'est meme pas offert a un simple
+//     participant) ;
+//   - la carte « Stats du match » du CORPS reste ou elle est : elle s'affiche
+//     des `canView || isTeamMember`, donc a des gens qui n'ont PAS le menu.
+describe('D71 — les stats du match quittent le pied de page pour le menu', () => {
+  const MATCH = { endDate: '2099-01-01T12:00:00.000Z', type: { name: 'Match' } };
+  const MATCH_FINI = { endDate: '2020-01-01T12:00:00.000Z', type: { name: 'Match' } };
+
+  const asMatchOrganiser = (/** @type {any} */ extra = {}) => asOrganiser({
+    event: buildEvent(MATCH),
+    ...extra,
+  });
+
+  // ⚠️ `textOf` descend par `props.children`, or le libelle d'une chip vit dans
+  // `props.title` du bouton et n'existe qu'une fois RENDU. On cherche donc le
+  // texte parmi les `Text` produits, pas dans les enfants declares.
+  const chipWithLabel = (/** @type {any} */ root, /** @type {string} */ label) => byTestId(root, 'event-manage-chip')
+    .find((/** @type {any} */ node) => node
+      .findAllByType(Text)
+      .some((/** @type {any} */ item) => textOf(item).includes(label)));
+
+  test('le geste n est plus en pied de page : il faut ouvrir le menu pour l atteindre', () => {
+    const root = asMatchOrganiser();
+
+    // Menu REPLIE : plus aucun chemin vers les stats sur la page.
+    expect(pressableWithText(root, 'Stats du match')).toBeUndefined();
+
+    openManagePanel(root);
+    expect(pressableWithText(root, 'Stats du match')).toBeTruthy();
+  });
+
+  test('l inventaire du bas de page gagne les stats, et ne perd rien', () => {
+    const root = asMatchOrganiser();
+    openManagePanel(root);
+
+    expect(chipWithLabel(root, 'Stats du match')).toBeTruthy();
+    // Les gestes livres avant D71 sont tous encore la.
+    ['Modifier', 'À la une', 'Compo', 'Annuler'].forEach((label) => {
+      expect(pressableWithText(root, label)).toBeTruthy();
+    });
+  });
+
+  test('AUCUNE INFORMATION PERDUE : le sous-titre devient la note de la chip', () => {
+    const root = asMatchOrganiser();
+    openManagePanel(root);
+
+    // Le texte exact que le bouton du pied portait sous lui avant D71 — et il
+    // vit DESORMAIS dans la chip, pas ailleurs sur la page. Sans ce second
+    // controle, le temoin resterait vert avec le sous-titre reste en bas.
+    const chip = chipWithLabel(root, 'Stats du match');
+    expect(textOf(chip.findAllByType(Text).pop()))
+      .toBe('Les stats seront disponibles à la fin du match.');
+  });
+
+  test('avant la fin du match, la chip est grisee — comme le bouton l etait', () => {
+    const root = asMatchOrganiser();
+    openManagePanel(root);
+
+    const [bouton] = chipWithLabel(root, 'Stats du match').findAllByType(TouchableOpacity);
+    expect(bouton.props.disabled).toBe(true);
+  });
+
+  test('la chip porte la pleine largeur : sa note est une phrase, pas une etiquette', () => {
+    const root = asMatchOrganiser();
+    openManagePanel(root);
+
+    expect(flatStyle(chipWithLabel(root, 'Stats du match')).width).toBe('100%');
+  });
+
+  test('match fini : la chip devient active et ouvre le MEME editeur, en un tap', () => {
+    const root = asOrganiser({
+      event: buildEvent(MATCH_FINI),
+      matchStats: {
+        permissions: { canManage: true, canView: true },
+        score: { available: true },
+      },
+    });
+    openManagePanel(root);
+
+    press(root, 'Saisir les stats du match');
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('MatchStatsEditor', expect.objectContaining({
+      eventId: 'event-1',
+      sourceType: 'event',
+      teamId: TEAM_ID,
+    }));
+  });
+
+  test('TEMOIN NEGATIF : un participant n a toujours aucune action d organisation', () => {
+    const root = mountScreen({ event: buildEvent(MATCH) });
+
+    expect(bottomActionInventory(root)).toEqual([]);
+    expect(pressableWithText(root, 'Stats du match')).toBeUndefined();
+    // Son geste de participation, lui, reste immediatement visible.
+    expect(hasText(root, 'DOUBLURE_EventAnswerButtons')).toBe(true);
+  });
+
+  test('TEMOIN NEGATIF : sur un evenement qui n est pas un match, aucune chip stats', () => {
+    const root = asOrganiser();
+    openManagePanel(root);
+
+    expect(pressableWithText(root, 'Stats du match')).toBeUndefined();
+    expect(hasText(root, 'Les stats seront disponibles')).toBe(false);
+  });
+
+  test('le menu allonge reste atteignable : il defile avec la liste', () => {
+    const root = asMatchOrganiser();
+    openManagePanel(root);
+
+    // Rien n'est ancre : le menu est un enfant de la liste defilante, donc une
+    // 6e chip le fait grandir DANS le defilement au lieu de sortir du cadre.
+    const [panneau] = byTestId(root, PANEL_ID);
+    const [scroll] = root.findAll((/** @type {any} */ node) => Boolean(node.props?.refreshControl)
+      && Boolean(node.props?.contentContainerStyle));
+    expect(managePanelPosition(root)).not.toBe('absolute');
+    expect(isUnder(panneau, scroll)).toBe(true);
   });
 });

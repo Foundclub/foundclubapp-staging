@@ -3630,6 +3630,33 @@ function EventDetails({ navigation, route }) {
       });
     }
 
+    // D71 : les statistiques du match quittent le pied d'ecran pour ce menu.
+    // Demande d'Adel du 2026-08-11 : le bas de la page n'est plus un endroit ou
+    // l'on pose une action d'organisation — il n'y en a qu'un seul, et c'est
+    // ici. Les conditions de visibilite sont REPRISES TELLES QUELLES du bloc
+    // d'ou elle vient (`matchStatsNode`) : c'est un deplacement, pas un
+    // elargissement de droits. Le libelle reste celui que l'etat decide
+    // (« Stats du match », « Saisir les stats du match », « Enregistrer le
+    // score »…), et la destination reste `openMatchStatsEditor`.
+    //
+    // ⛔ AUCUNE INFORMATION PERDUE : le sous-titre qui vivait sous le bouton
+    // (« Les stats seront disponibles à la fin du match », « Le score officiel
+    // a changé »…) devient la NOTE de la chip. Sans lui, une chip grisee ne
+    // dirait plus POURQUOI elle l'est — et c'est justement son etat le plus
+    // frequent, avant la fin du match. La chip prend donc la pleine largeur :
+    // sa note est une phrase, pas une etiquette.
+    if (canEdit && supportsEventComposition && isMatchEvent) {
+      chips.push({
+        disabled: matchStatsPrimaryAction.disabled || isMatchStatsFetching,
+        fullWidth: true,
+        icon: 'running',
+        key: 'matchStats',
+        label: isMatchStatsFetching ? 'Chargement...' : matchStatsPrimaryAction.title,
+        note: matchStatsPrimaryAction.subtitle,
+        onPress: openMatchStatsEditor,
+      });
+    }
+
     if (options.includeTournamentSettings && canEdit) {
       chips.push({
         icon: 'filter',
@@ -3765,12 +3792,15 @@ function EventDetails({ navigation, route }) {
               {manageChips.map((chip, index) => {
                 // Une chip orpheline en fin de grille prend toute la largeur :
                 // une demi-chip seule au milieu se lit comme un bug d'affichage.
+                // D71 : une chip qui porte une NOTE la prend aussi — une phrase
+                // dans une demi-colonne se casse en quatre lignes illisibles.
                 const isLastAlone = manageChips.length % 2 === 1
                   && index === manageChips.length - 1;
+                const isFullWidth = isLastAlone || Boolean(chip.fullWidth);
                 const chipColor = chip.isDestructive ? Colors.error500 : Colors.primary500;
 
                 return (
-                  <View key={chip.key} style={{ width: isLastAlone ? '100%' : '48%' }} testID="event-manage-chip">
+                  <View key={chip.key} style={{ width: isFullWidth ? '100%' : '48%' }} testID="event-manage-chip">
                     <Button
                       disabled={chip.disabled}
                       icon={chip.icon}
@@ -3782,6 +3812,11 @@ function EventDetails({ navigation, route }) {
                       title={chip.label}
                       variant="Secondary"
                     />
+                    {chip.note ? (
+                      <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+                        {chip.note}
+                      </Text>
+                    ) : null}
                   </View>
                 );
               })}
@@ -4344,36 +4379,23 @@ function EventDetails({ navigation, route }) {
         participationFlow={tournamentAwareParticipationFlow}
       />
     );
-    // La composition passe dans la chip « Compo ». Les statistiques de match, qui
-    // vivaient imbriquees dans ce meme bloc, ne sont PAS une action
-    // d'organisation : elles restent un bouton a part, au-dessus du panneau.
-    const matchStatsNode = canEdit && supportsEventComposition && isMatchEvent ? (
-      <View>
-        <Button
-          disabled={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
-          onPress={openMatchStatsEditor}
-          title={isMatchStatsFetching ? 'Chargement...' : matchStatsPrimaryAction.title}
-          variant="Secondary"
-        />
-        {matchStatsPrimaryAction.subtitle ? (
-          <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 8, textAlign: 'center' }]}>
-            {matchStatsPrimaryAction.subtitle}
-          </Text>
-        ) : null}
-      </View>
-    ) : null;
-
+    // D71 : les statistiques de match ont quitte ce bloc pour la chip
+    // « matchStats » du menu « Gerer l'evenement ». C'etait le DERNIER geste
+    // d'organisation pose en pied d'ecran par un organisateur — celui qu'Adel
+    // cite le 2026-08-11. La condition de la branche perd donc `matchStatsNode`
+    // sans changer de comportement : la chip n'existe que si `canEdit`, et
+    // `canEdit` garantit deja `hasManageActions` par la chip « Modifier ».
+    //
     // Ce qui n'est pas une action d'organisation reste en pied d'ecran. Le menu,
     // lui, a quitte ce bloc (D21 ② pour flotter, D53 pour redescendre en flux,
     // D64 pour remonter en tete de contenu) — mais `hasManageActions` reste dans
-    // la condition, sinon un organisateur sans cotisation ni stats basculerait
-    // dans la branche du bas et recevrait les boutons de participation qu'il n'a
-    // jamais eus.
-    if (hasManageActions || eventLicenseCampaignActionsNode || matchStatsNode) {
+    // la condition, sinon un organisateur sans cotisation basculerait dans la
+    // branche du bas et recevrait les boutons de participation qu'il n'a jamais
+    // eus.
+    if (hasManageActions || eventLicenseCampaignActionsNode) {
       return (
         <View style={[Spaces.gap[12]]}>
           {eventLicenseCampaignActionsNode}
-          {matchStatsNode}
           {!canEdit ? eventAnswerButtonsNode : null}
           {pendingFeaturedActionNode}
         </View>
