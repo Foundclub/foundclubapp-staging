@@ -250,6 +250,11 @@ export const RouteNames = /** @type {const} */ ({
   MatchCallUpManualPlayer: 'MatchCallUpManualPlayer',
   MatchCallUpSelection: 'MatchCallUpSelection',
 
+  // Match — placer puis publier (D79, pack composition ecrans 4 a 6). L'ecran 6
+  // (la feuille) n'a PAS de route : le pack le dessine par-dessus le terrain.
+  MatchCompositionBoard: 'MatchCompositionBoard',
+  MatchCompositionStart: 'MatchCompositionStart',
+
   // Tactical
   TacticalBoardV2: 'TacticalBoardV2',
   TacticalSelectionV2: 'TacticalSelectionV2',

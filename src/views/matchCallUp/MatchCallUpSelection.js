@@ -250,8 +250,12 @@ function MatchCallUpSelection() {
     const selectedPlayers = [...squadPlayers, ...reinforcementPlayers, ...manualPlayers]
       .filter((player) => selectedIds.has(getCompositionPlayerId(player)));
 
+    // D79 — « Suivant » mene desormais a l'ecran 4 (« Partir de… »), qui ouvre
+    // ensuite le terrain de l'ecran 5. L'ancien board (`TacticalBoardV2`) reste
+    // debout et joignable par son propre chemin : le pack ne le supprime qu'une
+    // fois ses 17 ecrans livres.
     // @ts-ignore
-    navigation.navigate(RouteNames.TacticalBoardV2, {
+    navigation.navigate(RouteNames.MatchCompositionStart, {
       ...params,
       pendingManualPlayer: undefined,
       selectedPlayers,

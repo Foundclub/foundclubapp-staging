@@ -1768,6 +1768,110 @@ export default {
       },
     },
   },
+  matchComposition: {
+    board: {
+      actions: {
+        publish: 'Publier',
+        save: 'Enregistrer',
+      },
+      alerts: {
+        error: {
+          publish: 'Impossible de publier cette convocation.',
+          save: "Impossible d'enregistrer cette composition.",
+          title: 'Erreur',
+        },
+        published: {
+          message: 'La convocation est partie dans le canal de l’équipe.',
+          ok: 'OK',
+          title: 'Convocation publiée',
+        },
+        saved: {
+          message: 'Ta composition est gardée en brouillon. Personne n’a été prévenu.',
+          title: 'Composition enregistrée',
+        },
+      },
+      bench: {
+        empty: 'Tout le monde est sur le terrain.',
+        hint: 'Glisse un joueur sur le terrain',
+        title: 'Remplaçants · {{count}}',
+      },
+      chips: {
+        bench: 'Banc {{count}}',
+        freePlacement: 'Placement libre',
+        magnet: 'Aimanté aux postes',
+        placed: '{{placed}}/{{starters}} placés',
+      },
+      edit: 'Modifier',
+      title: 'Composition',
+      tokenOnBench: '{{name}}, sur le banc',
+      tokenOnField: '{{name}}, sur le terrain',
+    },
+    sheet: {
+      actions: {
+        publish: 'Publier la convocation',
+      },
+      description: 'La convocation part dans le canal {{teamName}} — seuls les joueurs retenus sont convoqués.',
+      kicker: 'Convocation',
+      requireResponse: {
+        subtitle: 'Présent / absent dans le canal',
+        title: 'Demander une réponse',
+      },
+      summary: {
+        offApp: 'Joueurs hors app',
+        offAppValue_one: '{{count}} ajouté à la main',
+        offAppValue_other: '{{count}} ajoutés à la main',
+        starters: 'Titulaires',
+        startersValue: '{{count}} sur le terrain',
+        substitutes: 'Remplaçants',
+        substitutesValue: '{{count}} sur le banc',
+      },
+      title: 'Publier la compo ?',
+    },
+    sports: {
+      basketball: 'Basketball',
+      football: 'Football',
+      generic: 'Terrain',
+      handball: 'Handball',
+      rugby: 'Rugby',
+      volleyball: 'Volleyball',
+    },
+    start: {
+      actions: {
+        openField: 'Ouvrir le terrain',
+      },
+      calledUpCount_one: '{{count}} convoqué',
+      calledUpCount_other: '{{count}} convoqués',
+      eventLabel: 'Match',
+      magnet: {
+        disabled: 'Disponible quand tu pars d’une formation.',
+        subtitle: 'Le jeton colle au poste le plus proche. Tu peux toujours le poser où tu veux.',
+        title: 'Aimanter aux postes',
+      },
+      options: {
+        default_composition: {
+          subtitle: 'Le modèle par défaut de {{teamName}}.',
+          title: 'Compo type',
+        },
+        empty: {
+          subtitle: 'Tout le monde part du banc.',
+          title: 'Terrain vide',
+        },
+        last_match: {
+          subtitle: 'La compo du dernier match, telle quelle.',
+          subtitleDated: 'La compo de {{date}}, telle quelle.',
+          title: 'Dernier match',
+        },
+      },
+      preview: 'Aperçu',
+      previewEmpty: 'Tout le monde part du banc.',
+      progress: '{{current}}/{{total}}',
+      title: 'Partir de…',
+      unavailable: {
+        noDefaultComposition: 'Cette équipe n’a pas encore de compo type.',
+        noLastMatch: 'Aucune compo déjà publiée à reprendre.',
+      },
+    },
+  },
   menu: {
     chat: 'Messagerie',
     home: 'Accueil',
