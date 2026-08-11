@@ -320,6 +320,24 @@ const defaultAuth = (/** @type {any} */ overrides = {}) => ({
 /** @type {any} */
 let mounted = null;
 
+// UN SEUL ARBRE VIVANT A LA FOIS, et ce n'est pas du confort.
+// `EventDetails` arme au montage une tache `InteractionManager.runAfterInteractions`
+// (EventDetails.js:736) qui rallume les requetes secondaires. L'ecran l'annule
+// proprement en se demontant (`return () => task.cancel?.()`, l. 743) — mais un
+// arbre ABANDONNE ne se demonte jamais, donc sa tache tire APRES la fin de la
+// suite : l'ecran se re-rend sur un environnement Jest deja demoli, les getters
+// paresseux de `react-native/index.js` levent « import after teardown », et jest
+// sort en 1 alors que les 38 temoins sont verts. Deux temoins montent plusieurs
+// arbres (le comparatif avec/sans menu, et la boucle 0/1/50 participants) :
+// c'est ici, dans le helper partage, que l'arbre precedent est rendu.
+const unmountScreen = () => {
+  if (!mounted) return;
+  act(() => {
+    mounted.unmount();
+  });
+  mounted = null;
+};
+
 // `hasRouteInNavigationTree` remonte l'arbre par `getState().routeNames` : sans
 // ces deux methodes, l'ecran conclut a raison que la route n'existe pas, et le
 // point d'entree vers l'affiche ne s'affiche pas. La doublure declare donc la
@@ -348,6 +366,8 @@ const mountScreen = (/** @type {any} */ {
   mockCampaignsQuery.isLoading = false;
   mockRouteParams.params = { eventId: 'event-1', ...(params || {}) };
   mockUseAuth.mockReturnValue(defaultAuth(auth));
+
+  unmountScreen();
 
   act(() => {
     mounted = renderer.create(
@@ -581,12 +601,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  if (mounted) {
-    act(() => {
-      mounted.unmount();
-    });
-    mounted = null;
-  }
+  unmountScreen();
   jest.restoreAllMocks();
 });
 
