@@ -1,0 +1,695 @@
+/* eslint-disable jsdoc/require-jsdoc */
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { format } from 'date-fns';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { withAlpha } from '@/theme/colors';
+import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
+import Checkbox from '@/components/atoms/checkbox/Checkbox';
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import Tag from '@/components/atoms/tag/Tag';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import ScreenContainer from '@/components/templates/ScreenContainer';
+import {
+  getCompositionPlayerId,
+  getCompositionPlayerLabel,
+} from '@/views/tactical_v2/multiTeamCompositionUtils';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetEvent } from '@/services/event/eventQueries';
+import { useGetTeams } from '@/services/team/teamQueries';
+
+import {
+  getCallUpCounters,
+  getPlayerUnavailability,
+  hasSilentCallUp,
+  isManualCallUpPlayer,
+} from './matchCallUpUtils';
+
+/**
+ * D77 — ECRANS 1 et 2 du pack composition : « Selection des convoques » et
+ * « Convoquer hors equipe ».
+ *
+ * Le pack dit « meme ecran » pour les deux : c'est donc UN seul ecran, avec
+ * 3 onglets. L'onglet 1 est l'ecran 1 (recherche + effectif), l'onglet 2 les
+ * renforts du club, l'onglet 3 les joueurs hors app.
+ *
+ * ⛔ Rien de neuf ne circule : la selection sort d'ici sous la forme
+ * `selectedPlayers`, exactement celle que `TacticalSelection` produit deja et
+ * que le board (`TacticalBoardV2`) sait lire.
+ */
+
+const TAB_SQUAD = 'squad';
+const TAB_OTHERS = 'others';
+const TAB_OFF_APP = 'offApp';
+
+/** @type {any[]} */
+const EMPTY_LIST = [];
+
+const capitalizeFirst = (/** @type {any} */ value) => {
+  const text = String(value || '');
+  return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : '';
+};
+
+const formatEventMoment = (/** @type {any} */ rawDate) => {
+  if (!rawDate) return '';
+  const parsed = new Date(rawDate);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return capitalizeFirst(format(parsed, "EEE. HH'h'mm"));
+};
+
+const normalizePlayer = (/** @type {any} */ player, /** @type {any} */ extra = {}) => {
+  const documentId = String(player?.documentId || player?.id || '').trim();
+  if (!documentId) return null;
+  return {
+    avatar: player?.avatar || null,
+    documentId,
+    firstname: player?.firstname || '',
+    id: documentId,
+    lastname: player?.lastname || '',
+    number: player?.number,
+    position: player?.position || player?.appliedPosition || '',
+    suspensionMatches: player?.suspensionMatches,
+    unavailabilityReason: player?.unavailabilityReason,
+    ...extra,
+  };
+};
+
+function MatchCallUpSelection() {
+  const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
+  const navigation = useNavigation();
+  const route = useRoute();
+  const insets = useSafeAreaInsets();
+
+  // Fige : `route.params || {}` fabriquerait un objet neuf a chaque rendu, et
+  // les rappels qui le transmettent (ecran 3, terrain) changeraient avec lui.
+  /** @type {any} */
+  const params = useMemo(() => route.params || {}, [route.params]);
+  const {
+    clubId: clubIdParam,
+    eventId,
+    eventTypeLabel = null,
+    existingComposition = null,
+    pendingManualPlayer = null,
+    players: playersParam = EMPTY_LIST,
+    sport = 'football',
+    teamId,
+    teamName = '',
+  } = params;
+
+  const shouldHydrateFromEvent = Boolean(eventId)
+    && (!Array.isArray(playersParam) || playersParam.length === 0 || !clubIdParam);
+  const { data: eventFromApi } = useGetEvent(eventId || '', {
+    enabled: shouldHydrateFromEvent,
+  });
+
+  const clubId = clubIdParam || eventFromApi?.team?.club?.documentId || '';
+
+  // Les renforts : les AUTRES equipes du club, avec leurs joueurs. C'est la
+  // seule requete neuve de l'ecran, et elle ne part que si le club est connu.
+  const { data: clubTeamsPages } = useGetTeams(
+    { clubId, pageSize: 50 },
+    { enabled: Boolean(clubId) },
+  );
+
+  const [selectedIds, setSelectedIds] = useState(() => /** @type {Set<string>} */ (new Set()));
+  const [manualPlayers, setManualPlayers] = useState(/** @type {any[]} */ (EMPTY_LIST));
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState(TAB_SQUAD);
+  const [bootstrapped, setBootstrapped] = useState(false);
+
+  const squadPlayers = useMemo(() => {
+    /** @type {any[]} */
+    const source = Array.isArray(playersParam) && playersParam.length > 0
+      ? playersParam
+      : (eventFromApi?.team?.players || EMPTY_LIST);
+    return source.map((player) => normalizePlayer(player)).filter(Boolean);
+  }, [eventFromApi?.team?.players, playersParam]);
+
+  const reinforcementPlayers = useMemo(() => {
+    /** @type {any[]} */
+    const teams = (clubTeamsPages?.pages || EMPTY_LIST)
+      .flatMap((/** @type {any} */ page) => page?.data || EMPTY_LIST);
+    const squadIds = new Set(squadPlayers.map(getCompositionPlayerId));
+
+    return teams
+      .filter((team) => String(team?.documentId || '') !== String(teamId || ''))
+      .flatMap((team) => (team?.players || EMPTY_LIST)
+        .map((/** @type {any} */ player) => normalizePlayer(player, {
+          fromTeamName: team?.name || '',
+        })))
+      .filter(Boolean)
+      .filter((player) => !squadIds.has(getCompositionPlayerId(player)));
+  }, [clubTeamsPages?.pages, squadPlayers, teamId]);
+
+  // Pre-cochage depuis la composition existante : meme lecture que
+  // `TacticalSelection` (placements + selectedPlayerIds + reservePlayerIds),
+  // pour qu'ouvrir l'un ou l'autre montre la meme selection.
+  useEffect(() => {
+    if (bootstrapped) return;
+    if (!existingComposition || typeof existingComposition !== 'object') return;
+
+    /** @type {any[]} */
+    const placements = existingComposition?.placements
+      || (existingComposition?.teams || EMPTY_LIST)
+        .flatMap((/** @type {any} */ team) => team?.placements || EMPTY_LIST);
+    /** @type {any[]} */
+    const selected = existingComposition?.selectedPlayerIds || EMPTY_LIST;
+    /** @type {any[]} */
+    const reserve = existingComposition?.reservePlayerIds || EMPTY_LIST;
+    const knownIds = [
+      ...placements.map((placement) => String(placement?.playerId || '').trim()),
+      ...selected.map((value) => String(value || '').trim()),
+      ...reserve.map((value) => String(value || '').trim()),
+    ].filter(Boolean);
+
+    setSelectedIds(new Set(knownIds));
+    setManualPlayers(existingComposition?.manualPlayers || EMPTY_LIST);
+    setBootstrapped(true);
+  }, [bootstrapped, existingComposition]);
+
+  // Retour de l'ecran 3 : le joueur hors app arrive par les parametres, on le
+  // range puis on efface le parametre pour qu'un re-rendu ne l'ajoute pas deux fois.
+  //
+  // 🧨 Le registre `consumedManualIds` n'est pas une precaution de style : sans
+  // lui, un objet `navigation` recree a chaque rendu relance cet effet en
+  // boucle, et `new Set(...)` fabrique un etat neuf a chaque tour — React
+  // s'arrete alors sur « Maximum update depth exceeded ».
+  const consumedManualIds = useRef(/** @type {Set<string>} */ (new Set()));
+  useEffect(() => {
+    if (!pendingManualPlayer) return;
+    const manualId = getCompositionPlayerId(pendingManualPlayer);
+    if (!manualId || consumedManualIds.current.has(manualId)) return;
+    consumedManualIds.current.add(manualId);
+
+    setManualPlayers((current) => (current.some(
+      (/** @type {any} */ player) => getCompositionPlayerId(player) === manualId,
+    )
+      ? current
+      : [...current, pendingManualPlayer]));
+    setSelectedIds((current) => new Set([manualId, ...current]));
+    setActiveTab(TAB_OFF_APP);
+    // @ts-ignore — `setParams` est bien la sur un ecran de pile.
+    navigation.setParams({ pendingManualPlayer: undefined });
+  }, [navigation, pendingManualPlayer]);
+
+  const toggleSelection = useCallback((/** @type {string} */ playerId) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(playerId)) next.delete(playerId);
+      else next.add(playerId);
+      return next;
+    });
+  }, []);
+
+  const counters = useMemo(
+    () => getCallUpCounters({
+      manualPlayers, reinforcementPlayers, selectedIds, sport,
+    }),
+    [manualPlayers, reinforcementPlayers, selectedIds, sport],
+  );
+
+  const openManualPlayerScreen = useCallback(() => {
+    // @ts-ignore
+    navigation.navigate(RouteNames.MatchCallUpManualPlayer, {
+      returnParams: params,
+      teamName,
+    });
+  }, [navigation, params, teamName]);
+
+  const handleNext = useCallback(() => {
+    if (selectedIds.size === 0) {
+      Alert.alert(
+        t('matchCallUp.selection.alerts.noneSelected.title'),
+        t('matchCallUp.selection.alerts.noneSelected.message'),
+      );
+      return;
+    }
+
+    const selectedPlayers = [...squadPlayers, ...reinforcementPlayers, ...manualPlayers]
+      .filter((player) => selectedIds.has(getCompositionPlayerId(player)));
+
+    // @ts-ignore
+    navigation.navigate(RouteNames.TacticalBoardV2, {
+      ...params,
+      pendingManualPlayer: undefined,
+      selectedPlayers,
+    });
+  }, [
+    manualPlayers,
+    navigation,
+    params,
+    reinforcementPlayers,
+    selectedIds,
+    squadPlayers,
+    t,
+  ]);
+
+  const subtitle = useMemo(() => [
+    eventTypeLabel || t('matchCallUp.selection.defaultEventType'),
+    teamName,
+    formatEventMoment(eventFromApi?.date),
+  ].filter(Boolean).join(' · '), [eventFromApi?.date, eventTypeLabel, t, teamName]);
+
+  const filterBySearch = useCallback((/** @type {any[]} */ players) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return players;
+    return players.filter((player) => getCompositionPlayerLabel(player)
+      .toLowerCase()
+      .includes(query)
+      || String(player?.number || '').includes(query));
+  }, [searchQuery]);
+
+  const renderMeta = (/** @type {any} */ player) => {
+    const unavailability = getPlayerUnavailability(player);
+    if (unavailability) {
+      // 🟡 On AVERTIT, on ne bloque pas : le motif remplace la meta, en jaune,
+      // et la case a cocher reste active juste a cote.
+      return (
+        <Text style={[Fonts.p3, styles.metaText, { color: Colors.warning500 }]}>
+          {t(`matchCallUp.selection.unavailability.${unavailability.reason}`, {
+            count: unavailability.count,
+          })}
+        </Text>
+      );
+    }
+
+    if (hasSilentCallUp(player)) {
+      return (
+        <Text style={[Fonts.p3, styles.metaText, { color: Colors.warning500 }]}>
+          {t('matchCallUp.selection.noSms')}
+        </Text>
+      );
+    }
+
+    const number = player?.number;
+    const position = player?.position;
+    const metaLabel = (() => {
+      if (number && position) {
+        return t('matchCallUp.selection.meta.numberAndPosition', { number, position });
+      }
+      if (number) return t('matchCallUp.selection.meta.number', { number });
+      return position || '';
+    })();
+
+    if (!metaLabel) return null;
+    return (
+      <Text style={[Fonts.p3, styles.metaText, { color: Colors.neutral300 }]}>{metaLabel}</Text>
+    );
+  };
+
+  const renderPlayerRow = (/** @type {any} */ player) => {
+    const playerId = getCompositionPlayerId(player);
+    const isSelected = selectedIds.has(playerId);
+    const label = getCompositionPlayerLabel(player);
+    const unavailability = getPlayerUnavailability(player);
+    const rawAvatar = typeof player?.avatar === 'string' ? player.avatar : player?.avatar?.url;
+
+    return (
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        activeOpacity={0.8}
+        key={playerId}
+        onPress={() => toggleSelection(playerId)}
+        style={[
+          styles.playerRow,
+          {
+            backgroundColor: isSelected
+              ? withAlpha(Colors.primary500, 0.1)
+              : withAlpha(Colors.neutral00, 0.035),
+            borderColor: isSelected
+              ? withAlpha(Colors.primary500, 0.45)
+              : withAlpha(Colors.neutral00, 0.09),
+            opacity: unavailability ? 0.62 : 1,
+          },
+        ]}
+      >
+        <ProfileAvatar
+          enablePreview={false}
+          imageUrl={isManualCallUpPlayer(player) ? null : rawAvatar}
+          name={label}
+          size={34}
+        />
+        <View style={styles.playerTexts}>
+          <View style={styles.playerNameRow}>
+            <Text
+              numberOfLines={1}
+              style={[Fonts.p2Bold, styles.playerName, { color: Colors.neutral00 }]}
+            >
+              {label}
+            </Text>
+            {isManualCallUpPlayer(player) ? (
+              <Tag text={t('matchCallUp.selection.offAppTag')} />
+            ) : null}
+            {player?.fromTeamName ? <Tag text={player.fromTeamName} /> : null}
+          </View>
+          {renderMeta(player)}
+        </View>
+        <Checkbox
+          disabled={false}
+          onValueChange={() => toggleSelection(playerId)}
+          value={isSelected}
+        />
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSectionTitle = (/** @type {string} */ label) => (
+    <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
+      {label.toUpperCase()}
+    </Text>
+  );
+
+  const renderEmpty = (/** @type {string} */ label) => (
+    <Text style={[Fonts.p3, styles.emptyText, { color: Colors.neutral300 }]}>{label}</Text>
+  );
+
+  const renderAddPlayerRow = () => (
+    <TouchableOpacity
+      accessibilityRole="button"
+      activeOpacity={0.8}
+      onPress={openManualPlayerScreen}
+      style={[
+        styles.addRow,
+        {
+          backgroundColor: withAlpha(Colors.primary500, 0.07),
+          borderColor: Colors.primary500,
+        },
+      ]}
+    >
+      <View style={[styles.addBadge, { backgroundColor: Colors.primary500 }]}>
+        <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>+</Text>
+      </View>
+      <View style={styles.playerTexts}>
+        <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+          {t('matchCallUp.selection.addPlayer.title')}
+        </Text>
+        <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+          {t('matchCallUp.selection.addPlayer.subtitle')}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const squadTabLabel = teamName || t('matchCallUp.selection.tabs.squad');
+  const tabs = [
+    { key: TAB_SQUAD, label: squadTabLabel },
+    { key: TAB_OTHERS, label: t('matchCallUp.selection.tabs.others') },
+    { key: TAB_OFF_APP, label: t('matchCallUp.selection.tabs.offApp') },
+  ];
+
+  const visibleSquad = filterBySearch(squadPlayers);
+
+  return (
+    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
+      <View style={styles.header}>
+        <HeaderBackButton onPress={() => navigation.goBack()} />
+        <View style={styles.headerTexts}>
+          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+            {t('matchCallUp.selection.title')}
+          </Text>
+          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>{subtitle}</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <View style={[styles.countPill, { backgroundColor: Colors.primary500 }]}>
+            <Text style={[Fonts.p3Bold, { color: Colors.primary900 }]}>{counters.calledUp}</Text>
+          </View>
+          <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+            {t('matchCallUp.selection.progress', { current: 1, total: 2 })}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.tabsRow}>
+        {tabs.map((tab) => {
+          const isActive = tab.key === activeTab;
+          return (
+            <TouchableOpacity
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              activeOpacity={0.8}
+              key={tab.key}
+              onPress={() => setActiveTab(tab.key)}
+              style={[
+                styles.tabButton,
+                {
+                  backgroundColor: isActive ? Colors.primary500 : Colors.transparent,
+                  borderColor: isActive ? Colors.primary500 : withAlpha(Colors.neutral00, 0.2),
+                },
+              ]}
+            >
+              <Text
+                numberOfLines={1}
+                style={[Fonts.p3Bold, { color: isActive ? Colors.primary900 : Colors.neutral300 }]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {activeTab === TAB_SQUAD ? (
+        <View style={styles.searchWrapper}>
+          <TextInput
+            accessibilityLabel={t('matchCallUp.selection.search')}
+            onChangeText={setSearchQuery}
+            placeholder={t('matchCallUp.selection.search')}
+            placeholderTextColor={Colors.neutral400}
+            style={[
+              styles.searchInput,
+              Fonts.p2,
+              {
+                backgroundColor: withAlpha(Colors.neutral00, 0.06),
+                borderColor: withAlpha(Colors.neutral00, 0.1),
+                color: Colors.neutral00,
+              },
+            ]}
+            value={searchQuery}
+          />
+        </View>
+      ) : null}
+
+      <ScrollView
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {activeTab === TAB_SQUAD ? (
+          <>
+            {renderAddPlayerRow()}
+            {renderSectionTitle(t('matchCallUp.selection.sections.squad', {
+              count: squadPlayers.length,
+              teamName: squadTabLabel,
+            }))}
+            {visibleSquad.length > 0
+              ? visibleSquad.map(renderPlayerRow)
+              : renderEmpty(searchQuery
+                ? t('matchCallUp.selection.empty.search')
+                : t('matchCallUp.selection.empty.squad'))}
+          </>
+        ) : null}
+
+        {activeTab === TAB_OTHERS ? (
+          <>
+            {renderSectionTitle(t('matchCallUp.selection.sections.reinforcements', {
+              count: reinforcementPlayers.length,
+            }))}
+            {reinforcementPlayers.length > 0
+              ? reinforcementPlayers.map(renderPlayerRow)
+              : renderEmpty(t('matchCallUp.selection.empty.reinforcements'))}
+          </>
+        ) : null}
+
+        {activeTab === TAB_OFF_APP ? (
+          <>
+            {renderAddPlayerRow()}
+            {renderSectionTitle(t('matchCallUp.selection.sections.offApp', {
+              count: manualPlayers.length,
+            }))}
+            {manualPlayers.length > 0
+              ? manualPlayers.map(renderPlayerRow)
+              : renderEmpty(t('matchCallUp.selection.empty.offApp'))}
+          </>
+        ) : null}
+      </ScrollView>
+
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={styles.footerTexts}>
+          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+            {t('matchCallUp.selection.footer.calledUp', { count: counters.calledUp })}
+          </Text>
+          {counters.calledUp > 0 ? (
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {t('matchCallUp.selection.footer.split', {
+                bench: counters.bench,
+                starters: counters.starters,
+              })}
+            </Text>
+          ) : null}
+          {counters.reinforcements > 0 || counters.offApp > 0 ? (
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {t('matchCallUp.selection.footer.extras', {
+                offApp: counters.offApp,
+                reinforcements: counters.reinforcements,
+              })}
+            </Text>
+          ) : null}
+        </View>
+        <Button
+          onPress={handleNext}
+          style={styles.footerCta}
+          title={t('matchCallUp.selection.footer.next')}
+          variant="Primary"
+        />
+      </View>
+    </ScreenContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  addBadge: {
+    alignItems: 'center',
+    borderRadius: 17,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  addRow: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderStyle: 'dashed',
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    minHeight: 44,
+    padding: 12,
+  },
+  countPill: {
+    alignItems: 'center',
+    borderRadius: 12,
+    justifyContent: 'center',
+    minWidth: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  emptyText: {
+    paddingVertical: 24,
+    textAlign: 'center',
+  },
+  footer: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  footerCta: {
+    width: 150,
+  },
+  footerTexts: {
+    flex: 1,
+  },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    paddingRight: 16,
+    paddingVertical: 8,
+  },
+  headerRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  headerTexts: {
+    flex: 1,
+  },
+  listContent: {
+    paddingBottom: 24,
+    paddingHorizontal: 16,
+  },
+  metaText: {
+    marginTop: 2,
+  },
+  playerName: {
+    flexShrink: 1,
+  },
+  playerNameRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  playerRow: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+    minHeight: 44,
+    padding: 12,
+  },
+  playerTexts: {
+    flex: 1,
+    minWidth: 0,
+  },
+  screen: {
+    paddingHorizontal: 0,
+  },
+  searchInput: {
+    borderRadius: 999,
+    borderWidth: 1,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+  },
+  searchWrapper: {
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    letterSpacing: 1,
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  tabButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 8,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+  },
+});
+
+export default MatchCallUpSelection;
