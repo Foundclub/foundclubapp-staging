@@ -200,6 +200,8 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.PublicLicensePayment]: '/licenses/pay/:token',
   [RouteNames.MatchCallUpSelection]: '/match/call-up/select',
   [RouteNames.MatchCallUpManualPlayer]: '/match/call-up/manual-player',
+  [RouteNames.MatchCompositionStart]: '/match/composition/start',
+  [RouteNames.MatchCompositionBoard]: '/match/composition/board',
   [RouteNames.TacticalBoardV2]: '/tactical/:teamId?',
   [RouteNames.TacticalSelectionV2]: '/tactical/select',
   [RouteNames.HistoryWizardCategory]: '/profile/history/category',
