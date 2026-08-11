@@ -37,6 +37,7 @@ import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchS
 
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
+import ClubFiltersSheet from '../filtersSheet/ClubFiltersSheet';
 import SearchComponent from '../searchComponent/searchComponent';
 
 function ClubsListSeparator() {
@@ -112,6 +113,7 @@ function ClubListContent({
   const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
 
   const [isMultisportDeferredEnabled, setIsMultisportDeferredEnabled] = useState(false);
+  const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
   const primaryQuerySignatureRef = useRef('');
   const firstResultsSignatureRef = useRef('');
   const secondaryQuerySignatureRef = useRef('');
@@ -479,12 +481,13 @@ function ClubListContent({
     }
   }, [navigation]);
 
+  // D69 — le bouton ouvre desormais la FEUILLE du pack (capture 05) au lieu de
+  // pousser l'ecran plein `ClubFilters`. L'ecran reste enregistre : le
+  // navigateur public et l'ecran de carte y mènent encore, donc sa route ne
+  // bouge pas.
   const handleOpenFilters = useCallback(() => {
-    navigateToStackScreenOrScreen(navigation, {
-      screen: RouteNames.ClubFilters,
-      stack: RouteNames.ClubStack,
-    });
-  }, [navigation]);
+    setFiltersSheetVisible(true);
+  }, []);
 
   const handleSearchField = useCallback((name) => {
     appDispatch({
@@ -680,6 +683,17 @@ function ClubListContent({
           scope="clubs"
         />
       ) : null}
+
+      {/* D69 — la feuille du pack. Le bouton et sa pastille, eux, n'ont pas
+          bouge : ils marchaient deja. */}
+      <ClubFiltersSheet
+        filters={clubFilters}
+        isVisible={filtersSheetVisible}
+        onApply={(filtresChoisis) => {
+          appDispatch({ payload: filtresChoisis, type: 'SET_CLUB_FILTERS' });
+        }}
+        onClose={() => setFiltersSheetVisible(false)}
+      />
     </View>
   );
 }

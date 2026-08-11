@@ -15,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
 import MercatoCard from '@/components/molecules/mercatoCard/MercatoCard';
+import ProfileFiltersSheet from '@/components/organisms/filtersSheet/ProfileFiltersSheet';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -46,6 +47,7 @@ function RecruitmentProfilesList({
   } = useTheme();
   const [{ mercatoFilters }, appDispatch] = useAppContext();
   const [searchValue, setSearchValue] = useState(String(mercatoFilters?.q || ''));
+  const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
   const recruitmentSurface = `${Colors.primary900}F0`;
   const recruitmentSurfaceStrong = `${Colors.primary700}70`;
   const recruitmentSurfaceSoft = `${Colors.primary500}14`;
@@ -211,10 +213,14 @@ function RecruitmentProfilesList({
         <Text style={[Fonts.p3, { color: recruitmentMutedText, marginBottom: 8 }]}>
           Recherche et filtres profils
         </Text>
+        {/* D69 — le bouton ouvre desormais la FEUILLE du pack (capture 05) au
+            lieu de pousser l'ecran plein `MercatoFilters`. Cet ecran reste
+            enregistre : il porte aussi la creation d'alertes, donc sa route ne
+            bouge pas. */}
         <SearchComponent
           filterNumber={filtersCount}
           handleSearchField={setSearchValue}
-          openFilters={() => navigation.navigate(RouteNames.MercatoFilters)}
+          openFilters={() => setFiltersSheetVisible(true)}
           placeholder="Rechercher un profil..."
           searchDefaultValue={searchValue}
         />
@@ -318,6 +324,16 @@ function RecruitmentProfilesList({
           style={{ flex: 1 }}
         />
       )}
+
+      {/* D69 — la feuille du pack. Le bouton et sa pastille n'ont pas bouge. */}
+      <ProfileFiltersSheet
+        filters={mercatoFilters}
+        isVisible={filtersSheetVisible}
+        onApply={(filtresChoisis) => {
+          appDispatch({ payload: filtresChoisis, type: 'SET_MERCATO_FILTERS' });
+        }}
+        onClose={() => setFiltersSheetVisible(false)}
+      />
     </View>
   );
 }

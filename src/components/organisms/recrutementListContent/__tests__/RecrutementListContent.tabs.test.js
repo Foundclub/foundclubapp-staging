@@ -27,6 +27,33 @@ import RecrutementListContent from '../RecrutementListContent';
 // rien.
 jest.setTimeout(30000);
 
+// D69 — depuis que le bouton de filtres des profils ouvre une FEUILLE au lieu
+// de pousser l'ecran plein, cette suite tire `AutocompleteSelect` et
+// `AutocompleteAddressInput`, qui descendent tous deux vers
+// `react-native-bouncy-checkbox` : publie en ESM pur et absent de
+// `transformIgnorePatterns`. Sans ces doublures, la suite ne se CHARGE pas —
+// elle ne rate pas un test, elle n'en execute aucun. Meme motif que les 4
+// filets de `views/profile`.
+jest.mock('@/components/molecules/autocompleteSelect/AutocompleteSelect', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ proprietes) => (
+      <TexteRN>{`CHAMP:${proprietes.label ?? ''}`}</TexteRN>
+    ),
+  };
+});
+
+jest.mock('@/components/organisms/autocompleteAddressInput/autocompleteAddressInput', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ proprietes) => (
+      <TexteRN>{`ADRESSE:${proprietes.label ?? ''}`}</TexteRN>
+    ),
+  };
+});
+
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   // useFocusEffect rejoue son rappel quand l'ecran prend le focus : au montage,
@@ -88,6 +115,12 @@ jest.mock('@/services/category/categoryQueries', () => ({
 }));
 jest.mock('@/services/level/levelQueries', () => ({
   useGetLevels: () => ({ data: [] }),
+}));
+// D69 — la feuille de filtres des profils lit les SECTIONS. Sans cette
+// doublure, le vrai module descend jusqu'au client HTTP, qui exige `API_URL`
+// et fait mourir la suite entiere au chargement.
+jest.mock('@/services/section/sectionQueries', () => ({
+  useGetSections: () => ({ data: [] }),
 }));
 
 /** @type {any} */
