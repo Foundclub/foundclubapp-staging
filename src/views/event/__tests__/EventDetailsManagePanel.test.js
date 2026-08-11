@@ -699,7 +699,7 @@ describe('EventDetails — ou menent les actions (inchange par la refonte)', () 
     expect(mockCancelEventMutate).not.toHaveBeenCalled();
   });
 
-  test('Compo ouvre le tableau de composition, sans passer par une action sheet', () => {
+  test('Compo ouvre la composition, sans passer par une action sheet', () => {
     const root = asOrganiser();
     openManagePanel(root);
     const lineup = pressableWithText(root, 'Compo')
@@ -710,8 +710,10 @@ describe('EventDetails — ou menent les actions (inchange par la refonte)', () 
       lineup.props.onPress();
     });
 
+    // D77 — un evenement qu'on peut modifier et qui n'est pas une detection
+    // commence par « Convoquer » (ecran 1 du pack), puis enchaine sur le terrain.
     expect(mockNavigate).toHaveBeenCalledWith(
-      'TacticalBoardV2',
+      'MatchCallUpSelection',
       expect.objectContaining({ eventId: 'event-1' }),
     );
   });
@@ -938,9 +940,14 @@ describe('D44 — l alerte « creation auto » n appartient qu a la detection', 
     });
   };
 
+  // D77 — la composition a maintenant DEUX portes d'entree, et elles portent la
+  // meme charge : `MatchCallUpSelection` (ecran « Convoquer », pour un match
+  // modifiable) et `TacticalBoardV2` (detection et lecture seule). Ce qui est
+  // verifie ici — l'intention et l'etiquette de type — vaut sur les deux.
+  const ROUTES_COMPOSITION = ['MatchCallUpSelection', 'TacticalBoardV2'];
   const lastBoardParams = () => {
     const call = [...mockNavigate.mock.calls].reverse()
-      .find((/** @type {any} */ entry) => entry[0] === 'TacticalBoardV2');
+      .find((/** @type {any} */ entry) => ROUTES_COMPOSITION.includes(entry[0]));
     return call ? call[1] : null;
   };
 

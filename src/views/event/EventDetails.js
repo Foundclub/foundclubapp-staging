@@ -3204,9 +3204,20 @@ function EventDetails({ navigation, route }) {
       playersForBoard = options.teamComposition.eligiblePlayers;
     }
 
-    navigation.navigate(RouteNames.TacticalBoardV2, {
+    // D77 — un MATCH commence par « Convoquer » (ecran 1 du pack composition),
+    // puis enchaine sur le terrain. La detection et les vues en lecture seule
+    // vont directement au board, comme avant : ni l'une ni les autres ne
+    // convoquent.
+    // @ts-ignore: FIXME: Baseline TS regression
+    const startsWithCallUp = !isDetectionEvent && Boolean(options.canEdit) && !options.readOnly;
+    const compositionRoute = startsWithCallUp
+      ? RouteNames.MatchCallUpSelection
+      : RouteNames.TacticalBoardV2;
+
+    navigation.navigate(compositionRoute, {
       // @ts-ignore: FIXME: Baseline TS regression
       canEdit: Boolean(options.canEdit),
+      clubId: event?.team?.club?.documentId || null,
       // @ts-ignore: FIXME: Baseline TS regression
       compositionIntent: options.compositionIntent || null,
       // @ts-ignore: FIXME: Baseline TS regression
@@ -3245,6 +3256,7 @@ function EventDetails({ navigation, route }) {
     compositionSport,
     compositionTeamId,
     compositionEventLabel,
+    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     isDetectionEvent,
