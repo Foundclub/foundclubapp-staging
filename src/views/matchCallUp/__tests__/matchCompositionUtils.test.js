@@ -1,9 +1,4 @@
 import {
-  MATCH_FORMATIONS,
-  MATCH_POSITION_LABELS,
-  START_FROM_DEFAULT,
-  START_FROM_EMPTY,
-  START_FROM_LAST_MATCH,
   buildFormationPlacements,
   buildFormationSlots,
   buildMatchCompositionPack,
@@ -13,10 +8,15 @@ import {
   getDefaultStartFromKey,
   getMatchFormation,
   keepPlacementsOfCalledUpPlayers,
+  MATCH_FORMATIONS,
+  MATCH_POSITION_LABELS,
   placePlayerAt,
   readPlacementsFromPack,
   removePlayerFromField,
   snapToNearestSlot,
+  START_FROM_DEFAULT,
+  START_FROM_EMPTY,
+  START_FROM_LAST_MATCH,
 } from '../matchCompositionUtils';
 
 // D79 — ECRANS 4 a 6 du pack composition : « Partir de… », le terrain + banc, et
@@ -90,7 +90,11 @@ describe('lire un pack, quelle que soit sa forme', () => {
   });
 
   test('forme ancienne : les placements vivent a la racine — c est celle de la compo type', () => {
-    const lus = readPlacementsFromPack({ placements: [{ playerId: 'p2', positionX: 10, positionY: 20, slotId: 's1' }] });
+    const lus = readPlacementsFromPack({
+      placements: [{
+        playerId: 'p2', positionX: 10, positionY: 20, slotId: 's1',
+      }],
+    });
     expect(lus).toEqual([{
       playerId: 'p2', positionX: 10, positionY: 20, slotId: 's1',
     }]);

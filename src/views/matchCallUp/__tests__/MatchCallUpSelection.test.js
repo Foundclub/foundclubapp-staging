@@ -328,7 +328,9 @@ describe('D77 ecran 1 — selection des convoques', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  test('« Suivant » passe la selection au terrain, dans la forme que le board lit', async () => {
+  // D79 — « Suivant » mene desormais a l'ecran 4 (« Partir de… »), qui ouvre
+  // ensuite le terrain. La FORME de la selection transmise, elle, n'a pas bouge.
+  test('« Suivant » passe la selection a l ecran 4, dans la forme que le board lit', async () => {
     const arbre = await rendre();
     await act(async () => {
       rangeeJoueur(arbre, 'Moussa Diallo').props.onPress();
@@ -337,7 +339,7 @@ describe('D77 ecran 1 — selection des convoques', () => {
 
     expect(mockNavigate).toHaveBeenCalledTimes(1);
     const [nomEcran, parametres] = mockNavigate.mock.calls[0];
-    expect(nomEcran).toBe('TacticalBoardV2');
+    expect(nomEcran).toBe('MatchCompositionStart');
     expect(parametres.selectedPlayers).toHaveLength(1);
     expect(parametres.selectedPlayers[0].documentId).toBe('p1');
     // Les parametres d'origine suivent : l'evenement, l'equipe, le sport.

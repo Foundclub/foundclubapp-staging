@@ -11,9 +11,9 @@
  * lit deja a la RACINE du pack.
  */
 
-import { getTacticalSportKey } from '@/utils/tacticalField';
-
 import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
+
+import { getTacticalSportKey } from '@/utils/tacticalField';
 
 import { getMatchSquadSizes } from './matchCallUpUtils';
 
@@ -191,14 +191,12 @@ export const keepPlacementsOfCalledUpPlayers = (placements, players = []) => {
  * @param {any} [input.bootstrap] `bootstrap` de `GET /events/:id/composition`.
  * @param {any} [input.defaultComposition] Charge de `GET /teams/:id/default-composition`.
  * @param {any[]} [input.players] Les convoques de l'ecran 1.
- * @param {string} [input.sport]
  * @returns {Array<{ available: boolean, key: string, placements: any[], unavailableReason: string | null }>}
  */
 export const buildStartFromOptions = ({
   bootstrap = null,
   defaultComposition = null,
   players = [],
-  sport,
 }) => {
   const defaultPlacements = keepPlacementsOfCalledUpPlayers(
     readPlacementsFromPack(defaultComposition?.composition || defaultComposition),
@@ -427,8 +425,8 @@ export const buildMatchCompositionPack = ({
     // n'est qu'une aide de saisie — elle a deja fait son travail au moment ou le
     // jeton s'est pose, elle n'a rien a dire au serveur.
     placementMode: 'free',
-    reservePlayerIds,
     requireResponse: requireResponse !== false,
+    reservePlayerIds,
     schemaVersion: 3,
     selectedPlayerIds: (Array.isArray(players) ? players : [])
       .map(getCompositionPlayerId)
