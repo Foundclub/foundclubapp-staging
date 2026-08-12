@@ -4,6 +4,7 @@ import {
   getConversationName,
   getLastReadMessageKey,
   getUnreadStatus,
+  isFriendlyMatchChat,
   isLeagueChat,
 } from './messagingUseCases';
 
@@ -63,6 +64,35 @@ describe('messagingUseCases', () => {
     test('should handle missing chat gracefully', () => {
       expect(isLeagueChat(null)).toBe(false);
       expect(isLeagueChat(undefined)).toBe(false);
+    });
+  });
+
+  /**
+   * D92 — le fil ouvert par une proposition de match etait en LECTURE SEULE.
+   * Ce n etait pas un choix : le serveur, lui, autorise l ecriture
+   * (chat-message.ensureUserCanWriteInChat ne restreint que `club` et
+   * `multisport`). C est l app qui oubliait `friendly_match` dans sa liste,
+   * la ou son jumeau `league_match` y figure. Un canal de negociation ou
+   * personne ne peut ecrire contredit tout ce que l ecran promet.
+   */
+  describe('isFriendlyMatchChat', () => {
+    test('reconnait le fil ouvert par une proposition de match amical', () => {
+      expect(isFriendlyMatchChat({ type: 'friendly_match' })).toBe(true);
+    });
+
+    // ⚠️ Contrairement a `league_match`, le schema serveur du chat n a AUCUNE
+    // relation inverse vers la candidature (chat/schema.json : `league_match`
+    // existe, `friendly_match_application` non). Le TYPE est donc la seule
+    // marque disponible — inutile de chercher une relation qui n existe pas.
+    test('ne se declenche pas sur les autres canaux', () => {
+      expect(isFriendlyMatchChat({ type: 'team' })).toBe(false);
+      expect(isFriendlyMatchChat({ type: 'club' })).toBe(false);
+      expect(isFriendlyMatchChat({ type: 'league_match' })).toBe(false);
+    });
+
+    test('supporte l absence de canal', () => {
+      expect(isFriendlyMatchChat(null)).toBe(false);
+      expect(isFriendlyMatchChat(undefined)).toBe(false);
     });
   });
 

@@ -259,6 +259,59 @@ describe('FriendlyMatchAdDetails — candidater ouvre la conversation (§4.3)', 
     mockGetFriendlyMatchApplications.mockResolvedValue([]);
   });
 
+  /**
+   * D92 — ce qu Adel a demande mot pour mot : « ca marque felicitations,
+   * proposition envoyee, on appuie sur OK, et ca envoie automatiquement un
+   * message dans le tchat avec la proposition de match ».
+   * Le message, lui, est deja poste par le SERVEUR au moment du apply : appuyer
+   * sur OK emmene le voir, ca ne l envoie pas depuis l app (un envoi cote app
+   * partirait en double, ou pas du tout si le reseau lache).
+   */
+  it('temoin 3 — l envoi felicite, et OK ouvre LA conversation, pas la liste', async () => {
+    mockGetFriendlyMatchAd
+      .mockResolvedValueOnce(AD_OPEN)
+      .mockResolvedValueOnce({
+        ...AD_OPEN,
+        applications: [{
+          chat: { documentId: CHAT_ID },
+          chosenHosting: 'AWAY',
+          documentId: 'app-1',
+          status: 'pending',
+          team: MY_TEAM,
+        }],
+      });
+    mockApplyToFriendlyMatchAd.mockResolvedValue({
+      chosenHosting: 'AWAY', documentId: 'app-1', status: 'pending',
+    });
+
+    const tree = await renderFor({
+      documentId: 'u-candidat',
+      role: { name: 'Entraineur' },
+      trainedTeams: [MY_TEAM],
+    });
+
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const sheet = findByProps(tree, (props) => typeof props?.onSubmitted === 'function');
+    await act(async () => {
+      await sheet.props.onSubmitted({ documentId: 'app-1', status: 'pending' });
+    });
+
+    // 1. On felicite AVANT de bouger : l envoi a reussi, ca se dit.
+    expect(alertSpy).toHaveBeenCalled();
+    const [title, message, buttons] = alertSpy.mock.calls[0];
+    expect(String(title)).toContain('élicitations');
+    expect(String(message)).toContain('discussion');
+
+    // 2. Rien n a bouge tant qu il n a pas appuye.
+    expect(navigation.navigate).not.toHaveBeenCalled();
+
+    // 3. OK emmene dans LE fil, avec son identifiant — jamais la racine.
+    await act(async () => { await buttons[0].onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('Conversation', { chatId: CHAT_ID });
+    expect(navigation.navigate).not.toHaveBeenCalledWith('Chat');
+    alertSpy.mockRestore();
+  });
+
   it('emmene dans le fil, avec l identifiant repris de l annonce RELUE', async () => {
     // 1er appel : l annonce vierge. 2e appel : la relecture, qui porte enfin le fil.
     mockGetFriendlyMatchAd
@@ -284,16 +337,26 @@ describe('FriendlyMatchAdDetails — candidater ouvre la conversation (§4.3)', 
       trainedTeams: [MY_TEAM],
     });
 
+    const alertSpy = jest.spyOn(Alert, 'alert');
     const sheet = findByProps(tree, (props) => typeof props?.onSubmitted === 'function');
     await act(async () => {
       await sheet.props.onSubmitted({ documentId: 'app-1', status: 'pending' });
     });
+    await act(async () => { await alertSpy.mock.calls[0][2][0].onPress(); });
 
     expect(mockGetFriendlyMatchAd).toHaveBeenCalledTimes(2);
     expect(navigation.navigate).toHaveBeenCalledWith('Conversation', { chatId: CHAT_ID });
+    alertSpy.mockRestore();
   });
 
-  it('fil introuvable : on renvoie vers la messagerie, jamais dans le vide', async () => {
+  /**
+   * D92 — avant ce lot, ce cas offrait un bouton « Ouvrir la messagerie » qui
+   * naviguait vers `RouteNames.Chat`, la RACINE de la messagerie : un ecran de
+   * l onglet, injoignable depuis cette pile, et qui de toute facon ne disait pas
+   * QUELLE conversation ouvrir. Adel l a constate : « le bouton ne s ouvre pas ».
+   * Un bouton inerte est pire qu un bouton absent (lot R06) : on le retire.
+   */
+  it('fil introuvable : on felicite quand meme, SANS bouton inerte', async () => {
     mockGetFriendlyMatchAd.mockResolvedValue(AD_OPEN);
 
     const tree = await renderFor({
@@ -302,14 +365,24 @@ describe('FriendlyMatchAdDetails — candidater ouvre la conversation (§4.3)', 
       trainedTeams: [MY_TEAM],
     });
 
+    const alertSpy = jest.spyOn(Alert, 'alert');
     const sheet = findByProps(tree, (props) => typeof props?.onSubmitted === 'function');
     await act(async () => {
       await sheet.props.onSubmitted({ documentId: 'app-1', status: 'pending' });
     });
 
-    // Pas de navigation muette vers un ecran sans identifiant.
-    expect(navigation.navigate).not.toHaveBeenCalledWith('Conversation', { chatId: '' });
+    // La proposition est partie : ca se dit, meme sans fil a ouvrir.
+    expect(String(alertSpy.mock.calls[0][0])).toContain('élicitations');
+    // Plus aucun bouton ne promet d ouvrir quoi que ce soit.
+    const buttons = alertSpy.mock.calls[0][2] || [];
+    expect(buttons.map((/** @type {any} */ button) => button.text))
+      .not.toContain('Ouvrir la messagerie');
+
+    await act(async () => { await buttons[0]?.onPress?.(); });
+    // Pas de navigation muette : ni vers un fil sans identifiant, ni vers la racine.
     expect(navigation.navigate).not.toHaveBeenCalledWith('Conversation', expect.anything());
+    expect(navigation.navigate).not.toHaveBeenCalledWith('Chat');
+    alertSpy.mockRestore();
   });
 
   it('une equipe qui a deja candidate voit sa proposition et le lien vers le fil', async () => {

@@ -42,6 +42,25 @@ export const isLeagueChat = (chat) => {
 };
 
 /**
+ * Checks whether a chat is the thread opened by a friendly match proposal.
+ *
+ * Le serveur ouvre ce fil au moment de la candidature pour que les DEUX staffs
+ * conviennent des modalites (friendly-match-workflow.ts, `applyToAd`), et il en
+ * autorise l ecriture : `ensureUserCanWriteInChat` ne restreint que `club` et
+ * `multisport`. L app, elle, l avait oublie de sa liste d ecriture — le fil
+ * s ouvrait donc en « lecture seule », ce qui contredisait tout ce que l ecran
+ * promet. Le type est la SEULE marque disponible : contrairement a
+ * `league_match`, le schema du chat n a pas de relation vers la candidature.
+ * @param {Chat | null | undefined | Record<string, any>} chat
+ * @returns {boolean}
+ */
+export const isFriendlyMatchChat = (chat) => {
+  if (!chat || typeof chat !== 'object') return false;
+
+  return String(chat.type || '').trim().toLowerCase() === 'friendly_match';
+};
+
+/**
  * Conversation name generator
  * @param {object} params - Parameters for generating the conversation name
  * @param {Club} [params.chatClub] - The chat club object

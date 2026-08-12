@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
@@ -73,7 +74,13 @@ function ShareCardModal({
 
     const canWriteInChat = (chat) => {
       if (!chat || !userData) return false;
-      if (chat.type === 'whisper' || chat.type === 'team' || chat.type === 'group') return true;
+      // D92 — le fil d un match amical s ecrit comme un fil d equipe (le serveur
+      // l autorise) : il doit donc pouvoir recevoir un partage, sinon il reste
+      // a moitie muet.
+      if (
+        chat.type === 'whisper' || chat.type === 'team' || chat.type === 'group'
+        || isFriendlyMatchChat(chat)
+      ) return true;
       if (chat.type === 'club') {
         return userData.role?.type === 'dirigeant' && userData.club?.documentId === chat.club?.documentId;
       }

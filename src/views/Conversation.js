@@ -45,6 +45,7 @@ import {
   getUserRoleKey,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
 import {
   applyOptimisticPollVote,
   createPollComposition,
@@ -5093,8 +5094,18 @@ function Conversation({ navigation, route }) {
     const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
     const isManagerRole = roleKey === 'president';
 
-    // Whisper, Team, and League Match chats: All participants can write
-    if (chatData.type === 'whisper' || chatData.type === 'team' || isLeagueConversation) return true;
+    // Whisper, Team, League Match and Friendly Match chats: all participants write.
+    // D92 — `friendly_match` manquait ici alors que son jumeau `league_match` y
+    // etait : le fil ouvert par une proposition tombait donc dans le `return
+    // false` du bas et s affichait « Canal d annonce (lecture seule) ». Ce
+    // n etait pas un choix — le serveur, lui, l autorise (chat-message.ts,
+    // `ensureUserCanWriteInChat` ne restreint que `club` et `multisport`).
+    if (
+      chatData.type === 'whisper'
+      || chatData.type === 'team'
+      || isLeagueConversation
+      || isFriendlyMatchChat(chatData)
+    ) return true;
 
     // Club Chat: Only section managers and parent multisport managers can write
     if (chatData.type === 'club') {

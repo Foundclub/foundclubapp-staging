@@ -76,6 +76,10 @@ const getActionLabel = (action, item, t) => {
       return t('common.accept', 'Accepter');
     case 'chat':
       return t('requestsHub.actions.openChat', 'Ouvrir chat');
+    // D92 — la proposition de match se traite sur l ecran de l annonce, la ou
+    // les modalites se lisent. Sans ce libelle, le bouton s appellerait « OK ».
+    case 'open':
+      return t('requestsHub.actions.open', 'Voir la proposition');
     case 'reject':
       return t('common.reject', 'Refuser');
     case 'respond':
