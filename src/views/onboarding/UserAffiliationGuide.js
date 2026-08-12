@@ -46,10 +46,31 @@ import { createClubRequest } from '@/services/clubRequest/clubRequestService';
 import { useGetTeams } from '@/services/team/teamQueries';
 
 import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
+import { getApiErrorTranslation } from '@/utils/errors/displayError';
 import {
   canUseSearchMapGeolocation,
   requestCurrentSearchMapLocation,
 } from '@/platform/maps/searchMapGeolocation';
+
+// D80 — le joueur tape UN champ libre, « téléphone ou e-mail ». Le serveur, lui,
+// attend deux champs séparés et exige qu'au moins un des deux soit rempli. Sans
+// cette bascule, le contact du coach n'arrivait dans AUCUN des deux : il restait
+// enfoui dans `searchContext`, que l'écran superadmin n'affiche pas.
+const COACH_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Range le contact du coach dans le champ que le serveur sait lire.
+ * @param {string} contact - Ce que le joueur a tapé, déjà débarrassé de ses bords.
+ * @returns {{ holderEmail?: string, holderPhone?: string }} Zéro ou un champ.
+ */
+const buildCoachContactFields = (contact) => {
+  if (!contact) return {};
+  if (COACH_EMAIL_PATTERN.test(contact)) return { holderEmail: contact.toLowerCase() };
+  // « 07 78 81 39 15 » et « 0778813915 » sont le même numéro : la mise en forme
+  // de saisie ne doit pas voyager. Le « + » de l'indicatif, lui, reste.
+  const dialableContact = contact.replace(/[^\d+]/g, '');
+  return dialableContact ? { holderPhone: dialableContact } : {};
+};
 
 const DEBOUNCE_MS = 300;
 const RESULT_CARD_MIN_HEIGHT = 96;
@@ -348,10 +369,19 @@ function UserAffiliationGuideContent({ navigation, route }) {
 
   const createNotFoundMutation = useMutation({
     mutationFn: createClubRequest,
+    // D80 — `error.message` était affiché tel quel, et le joueur lisait
+    // « holderEmail cannot be empty ». L'intercepteur HTTP rejette avec le
+    // contenu de `response.data.error` (`services/client.native.js:87-93`) :
+    // `error.response` est mort ici, et `error.message` EST la phrase du
+    // serveur. Or ce point d'entrée ne renvoie QUE des messages techniques en
+    // anglais (« clubName is required », « ... cannot be empty ») — aucun motif
+    // métier rédigé en français, contrairement aux annonces amicales. On ne
+    // recopie donc jamais le serveur : on traduit ce qui est traduisible, et le
+    // reste tombe sur une phrase écrite pour le joueur.
     onError: (error) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        error?.message || t(
+        getApiErrorTranslation(error) || t(
           'onboardingAffiliation.feedback.requestError',
           'Impossible d\'envoyer ta demande.',
         ),
@@ -648,6 +678,11 @@ function UserAffiliationGuideContent({ navigation, route }) {
       clubName: selectedClub?.name
         || searchValue.trim()
         || t('onboardingAffiliation.teamNotCreated.unknownClub', 'Club sans équipe'),
+      // D80 — le nom du coach n'est PAS découpé en prénom / nom : « jeze » est un
+      // seul mot, et le serveur exige les deux non vides. Les champs d'identité
+      // restent donc ceux du joueur (décision C02/D3), le nom du coach voyage
+      // entier dans `searchContext`, et seul son CONTACT alimente holder*.
+      ...buildCoachContactFields(trimmedCoachContact),
       requestKind: 'team_not_found',
       searchContext: {
         clubId: selectedClubId,
