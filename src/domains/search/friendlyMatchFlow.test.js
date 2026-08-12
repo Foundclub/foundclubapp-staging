@@ -2,6 +2,8 @@ import {
   canApplyToFriendlyMatchAd,
   canPublishFriendlyMatchAd,
   filterFriendlyMatchAds,
+  getAdCategories,
+  getAdLevels,
   getAllowedChosenHostings,
   getAllowedFriendlyMatchTabs,
   getDefaultFriendlyMatchTab,
@@ -10,6 +12,7 @@ import {
   getHostingSummary,
   getHostingTag,
   getNextCandidateDate,
+  getReferenceNames,
   isChosenHostingAllowed,
   matchesHostingIntent,
   normalizeCandidateDates,
@@ -218,6 +221,100 @@ describe('friendlyMatchFlow — le filtre masque, il n affiche pas d erreur (§3
     expect(filterFriendlyMatchAds(ads, { periodDays: 90 }, now).map((ad) => ad.id))
       .toEqual(['cette-semaine', 'plus-tard']);
     expect(filterFriendlyMatchAds(ads, {}, now)).toHaveLength(3);
+  });
+});
+
+describe('D90 — une annonce vise PLUSIEURS categories et PLUSIEURS niveaux', () => {
+  const U15 = { documentId: 'cat-u15', name: 'U15' };
+  const U17 = { documentId: 'cat-u17', name: 'U17' };
+  const U19 = { documentId: 'cat-u19', name: 'U19' };
+  const SENIOR = { documentId: 'cat-senior', name: 'Senior' };
+
+  it('une annonce a 3 categories est trouvee par une equipe de CHACUNE des 3', () => {
+    const ads = [buildAd({ categories: [U15, U17, U19], id: 'les-trois' })];
+
+    expect(filterFriendlyMatchAds(ads, { category: 'cat-u15' })).toHaveLength(1);
+    expect(filterFriendlyMatchAds(ads, { category: 'cat-u17' })).toHaveLength(1);
+    expect(filterFriendlyMatchAds(ads, { category: 'cat-u19' })).toHaveLength(1);
+  });
+
+  it('une annonce ANCIENNE, avec une seule categorie, est toujours trouvee', () => {
+    // 🔒 LE TEMOIN QUI COMPTE. Les annonces publiees avant D90 n ont que
+    // `category` : si la recherche ne lisait plus que `categories`, elles
+    // disparaitraient toutes, sans erreur et sans que personne le voie.
+    const ancienne = buildAd({ category: U15, id: 'avant-D90', level: { documentId: 'lvl-d2' } });
+
+    expect(filterFriendlyMatchAds([ancienne], { category: 'cat-u15' })).toHaveLength(1);
+    expect(filterFriendlyMatchAds([ancienne], { level: 'lvl-d2' })).toHaveLength(1);
+    expect(filterFriendlyMatchAds([ancienne], {})).toHaveLength(1);
+    // Meme chose quand le serveur rend une liste VIDE a cote du singulier :
+    // c est ce que Strapi renvoie des qu on peuple une relation multiple.
+    const peupleeVide = buildAd({ categories: [], category: U15, id: 'avant-D90-peuplee' });
+    expect(filterFriendlyMatchAds([peupleeVide], { category: 'cat-u15' })).toHaveLength(1);
+  });
+
+  it('une equipe hors des categories visees ne la trouve PAS', () => {
+    const ads = [buildAd({ categories: [U15, U17], id: 'jeunes' })];
+
+    expect(filterFriendlyMatchAds(ads, { category: 'cat-senior' })).toHaveLength(0);
+  });
+
+  it('les niveaux se cumulent exactement pareil', () => {
+    const ads = [buildAd({
+      id: 'deux-niveaux',
+      levels: [{ documentId: 'lvl-d1' }, { documentId: 'lvl-d2' }],
+    })];
+
+    expect(filterFriendlyMatchAds(ads, { level: 'lvl-d1' })).toHaveLength(1);
+    expect(filterFriendlyMatchAds(ads, { level: 'lvl-d2' })).toHaveLength(1);
+    expect(filterFriendlyMatchAds(ads, { level: 'lvl-d3' })).toHaveLength(0);
+  });
+
+  it('une annonce sans AUCUNE categorie est ouverte a toutes, comme l ecran le promet', () => {
+    // Le tunnel affiche « Rien de coché : toutes » et « Peu importe, je prends
+    // tout ». La recherche doit dire la meme chose, sinon l annonce est
+    // introuvable des qu un lecteur pose un filtre.
+    const ouverte = buildAd({ id: 'ouverte' });
+
+    expect(filterFriendlyMatchAds([ouverte], { category: 'cat-u15' })).toHaveLength(1);
+    expect(filterFriendlyMatchAds([ouverte], { level: 'lvl-d2' })).toHaveLength(1);
+  });
+
+  it('la liste l emporte sur la valeur unique quand les deux sont la', () => {
+    // Le tunnel envoie les DEUX : `categories` complet, et `category` = la
+    // premiere valeur, pour les apps restees en arriere. Le lecteur a jour doit
+    // voir les 3, pas seulement la premiere.
+    const ads = [buildAd({ categories: [U15, U17, U19], category: U15, id: 'les-deux' })];
+
+    expect(filterFriendlyMatchAds(ads, { category: 'cat-u19' })).toHaveLength(1);
+    expect(getAdCategories(ads[0])).toHaveLength(3);
+  });
+
+  it('rend TOUJOURS une liste, quelle que soit la forme recue', () => {
+    expect(getAdCategories({ categories: [U15, U17] })).toEqual([U15, U17]);
+    expect(getAdCategories({ category: SENIOR })).toEqual([SENIOR]);
+    expect(getAdCategories({ categories: [], category: SENIOR })).toEqual([SENIOR]);
+    expect(getAdCategories({})).toEqual([]);
+    expect(getAdCategories(undefined)).toEqual([]);
+    expect(getAdLevels({ levels: [{ documentId: 'lvl-d1' }] })).toHaveLength(1);
+    expect(getAdLevels({})).toEqual([]);
+  });
+
+  it('nomme toutes les categories a l ecran, et rien quand il n y en a pas', () => {
+    expect(getReferenceNames([U15, U17, U19])).toBe('U15, U17, U19');
+    expect(getReferenceNames([U15])).toBe('U15');
+    // '' et non 'undefined' : c est l appelant qui choisit son texte de repli
+    // (« Catégorie libre » sur la carte).
+    expect(getReferenceNames([])).toBe('');
+    expect(getReferenceNames([{ documentId: 'sans-nom' }])).toBe('');
+    expect(getReferenceNames(undefined)).toBe('');
+  });
+
+  it('le filtre par NOM marche aussi sur une liste', () => {
+    const ads = [buildAd({ categories: [U15, U17], id: 'par-nom' })];
+
+    expect(filterFriendlyMatchAds(ads, { category: 'U17' })).toHaveLength(1);
+    expect(filterFriendlyMatchAds(ads, { category: 'u17' })).toHaveLength(1);
   });
 });
 

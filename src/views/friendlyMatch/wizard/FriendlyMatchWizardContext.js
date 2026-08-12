@@ -27,7 +27,10 @@ const DEFAULT_TRAVEL_RADIUS_KM = 25;
 const createInitialState = () => ({
   activity: null, // Activity { documentId, name } — le sport, il commande le catalogue de formats
   candidateDates: [], // [{ date: 'AAAA-MM-JJ', start?: 'HH:MM', end?: 'HH:MM' }]
-  category: null, // Category { documentId, name }
+  // D90 — une annonce vise PLUSIEURS categories et PLUSIEURS niveaux. Les deux
+  // listes sont des tableaux d entites [{ documentId, name }], jamais null :
+  // une liste vide veut dire « toutes », et c est ce que l ecran annonce.
+  categories: [], // Category[]
   description: '',
   // D24 — la SEULE donnee de navigation du brouillon, et elle porte son nom :
   // le tunnel amical s ouvre soit depuis League, soit par la PORTE du tunnel
@@ -41,7 +44,7 @@ const createInitialState = () => ({
   formatOther: '', // Le texte libre quand format === 'Autre'
   hostingPreference: '', // HOST | AWAY | BOTH — jamais pre-rempli (Q1)
   installation: null, // Terrain propose, seulement si on recoit
-  level: null, // Level { documentId, name }
+  levels: [], // Level[] — voir `categories`
   location: null, // Objet localisation { label, city, lat, lng, ... }
   refereeing: '',
   section: null, // Section { documentId, name }
@@ -54,6 +57,26 @@ const canUseWizardStorage = () => (
   && typeof globalThis.sessionStorage !== 'undefined'
 );
 
+/**
+ * Ce qu on relit d un brouillon ecrit AVANT D90 : il porte `category` et
+ * `level` au singulier. Sans cette reprise, quelqu un qui avait le tunnel ouvert
+ * au moment de la mise a jour verrait ses choix disparaitre sans explication.
+ * @param {any} parsed
+ * @returns {any}
+ */
+const migrateLegacyDraft = (parsed) => {
+  const migrated = { ...parsed };
+  if (!Array.isArray(migrated.categories)) {
+    migrated.categories = migrated.category ? [migrated.category] : [];
+  }
+  if (!Array.isArray(migrated.levels)) {
+    migrated.levels = migrated.level ? [migrated.level] : [];
+  }
+  delete migrated.category;
+  delete migrated.level;
+  return migrated;
+};
+
 const loadPersistedState = () => {
   const initialState = createInitialState();
   if (!canUseWizardStorage()) return initialState;
@@ -65,7 +88,7 @@ const loadPersistedState = () => {
     const parsed = safeJsonParse(raw, null);
     if (!parsed || typeof parsed !== 'object') return initialState;
 
-    return { ...initialState, ...parsed };
+    return { ...initialState, ...migrateLegacyDraft(parsed) };
   } catch (_error) {
     return initialState;
   }
@@ -115,8 +138,10 @@ function friendlyMatchWizardReducer(state, action) {
     case 'SET_CANDIDATE_DATES':
       return { ...state, candidateDates: normalizeCandidateDates(action.payload) };
 
-    case 'SET_CATEGORY':
-      return { ...state, category: action.payload };
+    // D90 — la liste ENTIERE, pas une bascule : le reducteur range, l ecran
+    // decide ce qu il coche. Une liste vide est une valeur legitime (« toutes »).
+    case 'SET_CATEGORIES':
+      return { ...state, categories: Array.isArray(action.payload) ? action.payload : [] };
 
     case 'SET_DESCRIPTION':
       return { ...state, description: action.payload };
@@ -145,8 +170,8 @@ function friendlyMatchWizardReducer(state, action) {
     case 'SET_INSTALLATION':
       return { ...state, installation: action.payload };
 
-    case 'SET_LEVEL':
-      return { ...state, level: action.payload };
+    case 'SET_LEVELS':
+      return { ...state, levels: Array.isArray(action.payload) ? action.payload : [] };
 
     case 'SET_LOCATION_SELECTION':
       return {
@@ -162,15 +187,17 @@ function friendlyMatchWizardReducer(state, action) {
       // L equipe pre-remplit ce qu elle sait deja : sport, categorie, niveau,
       // section et adresse. Tout reste modifiable ensuite — c est un point de
       // depart, pas une contrainte.
+      // D90 — la categorie et le niveau de l equipe deviennent le PREMIER
+      // element d une liste qu on peut elargir : proposer, pas imposer.
       const team = action.payload;
       return {
         ...state,
         activity: team?.activities?.[0] || team?.sport || null,
-        category: team?.category || null,
+        categories: team?.category ? [team.category] : [],
         // Le sport change : un format de football n a rien a faire au handball.
         format: '',
         formatOther: '',
-        level: team?.level || null,
+        levels: team?.level ? [team.level] : [],
         location: state.location || team?.address || team?.club?.address || null,
         section: team?.section || null,
         team,

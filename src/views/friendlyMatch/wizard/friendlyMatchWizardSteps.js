@@ -192,12 +192,28 @@ export const buildFriendlyMatchAdPayload = (draft) => {
 
   [
     ['activity', draft?.activity],
-    ['category', draft?.category],
-    ['level', draft?.level],
     ['section', draft?.section],
   ].forEach(([field, value]) => {
     const documentId = getDocumentId(value);
     if (documentId) payload[/** @type {string} */ (field)] = documentId;
+  });
+
+  // D90 — categories et niveaux partent au PLURIEL, et leur premiere valeur
+  // repart AUSSI au singulier. Ce doublon est volontaire : une app restee en
+  // arriere ne connait que `category` / `level`, et une annonce qui arriverait
+  // sans eux s afficherait « Catégorie libre » chez elle. Rien coche = les deux
+  // champs sont ABSENTS du corps, donc l annonce est ouverte a tout le monde.
+  [
+    ['categories', 'category', draft?.categories],
+    ['levels', 'level', draft?.levels],
+  ].forEach(([pluralField, singularField, values]) => {
+    const documentIds = Array.from(new Set(
+      (Array.isArray(values) ? values : []).map(getDocumentId).filter(Boolean),
+    ));
+    if (documentIds.length === 0) return;
+    const [firstDocumentId] = documentIds;
+    payload[/** @type {string} */ (pluralField)] = documentIds;
+    payload[/** @type {string} */ (singularField)] = firstDocumentId;
   });
 
   // Un terrain n a de sens que si on recoit : une annonce « je me deplace »

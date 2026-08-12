@@ -23,9 +23,14 @@ const AD_CARD_POPULATE = [
   'team.club',
   'team.club.logo',
   'activity',
+  // D90 — le singulier ET le pluriel. Les annonces publiees avant D90 n ont que
+  // le singulier ; ne demander que le pluriel les afficherait « Catégorie libre »
+  // et, pire, les ferait disparaitre des filtres. Les deux voyagent ensemble.
   'category',
+  'categories',
   'section',
   'level',
+  'levels',
   'installation',
 ];
 

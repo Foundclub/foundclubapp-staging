@@ -434,3 +434,39 @@ describe('FriendlyMatchAdDetails — ce que l annonceur peut faire de son annonc
     expect(findButton(tree, 'Modifier ce qui est convenu')).toBeDefined();
   });
 });
+
+// D90 — le detail nomme TOUTES les categories et TOUS les niveaux vises.
+// L annonce est le seul endroit ou une equipe verifie qu elle est concernee :
+// n en afficher qu un ferait renoncer des equipes qui avaient le droit de venir.
+describe('D90 — le detail nomme toutes les categories et tous les niveaux', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetFriendlyMatchApplications.mockResolvedValue([]);
+  });
+
+  const LECTEUR = { documentId: 'u-joueur', role: { name: 'Joueur' } };
+
+  it('affiche les trois categories et les deux niveaux, pas seulement les premiers', async () => {
+    mockGetFriendlyMatchAd.mockResolvedValue({
+      ...AD_OPEN,
+      categories: [{ name: 'U15' }, { name: 'U17' }, { name: 'U19' }],
+      category: { name: 'U15' },
+      levels: [{ name: 'Départemental 1' }, { name: 'Départemental 2' }],
+    });
+
+    const rendered = allText(await renderFor(LECTEUR));
+
+    expect(rendered).toContain('U15, U17, U19');
+    expect(rendered).toContain('Départemental 1, Départemental 2');
+  });
+
+  // 🔒 Le temoin de compatibilite : AD_OPEN est une annonce d AVANT D90 — elle
+  // ne porte que `category`. Elle doit rester lisible telle quelle.
+  it('nomme encore la categorie unique d une annonce publiee avant D90', async () => {
+    mockGetFriendlyMatchAd.mockResolvedValue(AD_OPEN);
+
+    const rendered = allText(await renderFor(LECTEUR));
+
+    expect(rendered).toContain('U15');
+  });
+});
