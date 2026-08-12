@@ -1913,6 +1913,13 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   }, [navigation]);
   const goToCampaignOperations = useCallback((savedCampaignId) => {
     if (!savedCampaignId) return;
+    // D81 — LE LAISSEZ-PASSER, ET IL N'EST PAS COSMETIQUE. Le garde
+    // `beforeRemove` plus bas recule d'une etape des que l'ecran quitte la
+    // pile, et le routeur emet cet evenement sur TOUT retrait de route,
+    // `replace` compris. Sans cette ligne il ANNULE la sortie : le dirigeant
+    // qui vient de publier est redepose DANS son formulaire, bouton
+    // « Publier » sous le doigt — donc une campagne envoyee deux fois.
+    allowScreenExitRef.current = true;
     navigation.replace(RouteNames.ClubLicenseCampaignDetail, {
       campaign: undefined,
       campaignId: savedCampaignId,
