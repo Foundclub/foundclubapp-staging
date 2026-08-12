@@ -32,6 +32,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getEventShowcaseShareIntro } from '@/domains/visuals/eventShowcaseTemplate';
 import useVisualShowcase, { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEventShowcase';
 import useTheme from '@/theme/themeContext';
 
@@ -61,6 +62,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
     creationCelebration,
     editableFields: editableFieldsParam,
     eventId,
+    eventTypeName,
     shareIntro: shareIntroParam,
     shareLinkLabel: shareLinkLabelParam,
     shareUrl: shareUrlParam,
@@ -139,11 +141,17 @@ export default function EventPublishedShowcase({ navigation, route }) {
   // Texte qui ACCOMPAGNE l'affiche dans le partage. Le lien ne la remplace plus :
   // buildShareMessageWithUrl rend l'intro seule quand `url` est absent, donc un
   // appelant sans shareUrl envoie quand même l'affiche — plus de bouton muet.
+  // D94/C2 : pour un ÉVÉNEMENT, l'intro suit le TYPE — un match ne propose plus
+  // de venir essayer. Le gabarit garde son texte pour le club et l'annonce, et
+  // un lien profond sans type reçoit la phrase neutre plutôt qu'un mensonge.
+  const introTexts = subjectType === 'event'
+    ? getEventShowcaseShareIntro(eventTypeName)
+    : texts.shareIntro;
   const shareMessage = useMemo(() => buildShareMessageWithUrl({
-    intro: shareIntroParam || t(texts.shareIntro.key, texts.shareIntro.default),
+    intro: shareIntroParam || t(introTexts.key, introTexts.default),
     linkLabel: shareLinkLabelParam || t(texts.shareLinkLabel.key, texts.shareLinkLabel.default),
     url: shareUrl,
-  }), [shareIntroParam, shareLinkLabelParam, shareUrl, t, texts]);
+  }), [introTexts, shareIntroParam, shareLinkLabelParam, shareUrl, t, texts]);
 
   // Titre du sélecteur d'application Android. Sans lui, le système ouvre
   // directement l'application par défaut : l'utilisateur ne CHOISIT plus.

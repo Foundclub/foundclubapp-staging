@@ -764,6 +764,9 @@ function EventWizardRecap({ navigation }) {
           params: {
             creationCelebration,
             eventId: firstCreatedId,
+            // D94/C2 : le type voyage aussi — c'est lui qui decide le TEXTE du
+            // partage, pas seulement le gabarit.
+            eventTypeName: state.type?.name,
             template: getEventShowcaseTemplate(state.type?.name),
           },
         }],

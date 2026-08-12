@@ -855,3 +855,65 @@ describe('D28 — chaque type d evenement obtient une affiche, et on sait laquel
     expect(mockFetchRenderBase64).toHaveBeenCalledWith(expect.objectContaining({ template }));
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// D94/C2 — LE MESSAGE DE PARTAGE DIT LA VERITE SUR LES 7 TYPES.
+// D28 avait fait suivre le GABARIT au type ; le TEXTE, lui, etait reste unique :
+// « Viens participer a notre detection / seance d'essai ! » partait avec
+// l'affiche d'un match, d'un entrainement, d'un tournoi. Ce bloc fige les 7
+// phrases ET le repli neutre — un type ajoute demain sans phrase se voit ici.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('D94/C2 — le message de partage suit le type de l evenement', () => {
+  const messageDuPartage = async (extra) => {
+    const tree = await renderScreen(eventParams(extra));
+    await press(tree, 'Partager l’affiche');
+    return mockDownloadAndShareRender.mock.calls[0][0].message;
+  };
+
+  // Le defaut nomme, sur le type nomme : partager un MATCH ne propose plus de
+  // venir essayer. C'est LE temoin d'arret du lot.
+  it('partager un MATCH ne propose pas de venir essayer', async () => {
+    const message = await messageDuPartage({ eventTypeName: 'Match' });
+
+    expect(message).not.toContain('détection');
+    expect(message).not.toContain('essai');
+    expect(message).toContain('Viens nous encourager pour ce match !');
+  });
+
+  const PHRASES_ATTENDUES = [
+    ["Détection / Séance d'essai", 'Viens participer à notre détection / séance d’essai !'],
+    ['Match', 'Viens nous encourager pour ce match !'],
+    ['Entraînement', 'Rendez-vous à l’entraînement !'],
+    ['Tournoi', 'Viens vivre notre tournoi !'],
+    ['Stage', 'Découvre notre stage !'],
+    ['Réservation', 'Voici les infos de cette réservation.'],
+    ['Autre', 'Voici notre prochain événement !'],
+  ];
+
+  it.each(PHRASES_ATTENDUES)('« %s » partage « %s »', async (typeName, phrase) => {
+    expect(await messageDuPartage({ eventTypeName: typeName })).toContain(phrase);
+  });
+
+  // ⛔ JAMAIS de phrase vide, JAMAIS de plantage : un type que le serveur
+  // ajouterait demain, ou un lien profond qui n'en porte aucun, recoit une
+  // phrase qui n'affirme rien — pas celle d'une detection.
+  it.each([undefined, null, '', '   ', 'Barbecue du club'])(
+    'un type inconnu (%p) garde un message, neutre et jamais vide',
+    async (typeName) => {
+      const message = await messageDuPartage({ eventTypeName: typeName });
+
+      expect(message).toContain('Voici notre prochain événement !');
+      expect(message).not.toContain('détection');
+    },
+  );
+
+  // Le club et l'annonce ne sont PAS des evenements : leur texte de gabarit ne
+  // bouge pas (non-regression du chemin D28).
+  it('le club garde le message de son gabarit', async () => {
+    const tree = await renderScreen(clubParams());
+    await press(tree, 'Partager l’affiche');
+
+    expect(mockDownloadAndShareRender.mock.calls[0][0].message)
+      .toContain('Viens nous rejoindre au club !');
+  });
+});
