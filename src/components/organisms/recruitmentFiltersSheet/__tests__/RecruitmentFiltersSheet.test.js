@@ -22,7 +22,17 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
   const { View } = require('react-native');
   return {
     __esModule: true,
-    default: ({ children, isVisible }) => (isVisible ? <View>{children}</View> : null),
+    // D86 : la doublure rend l'entete et le pied, comme le vrai composant. Sans
+    // eux, elle effacerait en silence le titre et les deux actions.
+    default: ({
+      children, footerComponent, headerComponent, isVisible,
+    }) => (isVisible ? (
+      <View>
+        {headerComponent}
+        {children}
+        {footerComponent}
+      </View>
+    ) : null),
   };
 });
 

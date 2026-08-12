@@ -60,6 +60,17 @@ const premiereValeur = (valeur) => {
   return String(valeur || '');
 };
 
+// D86 — MEME CORRECTION QUE LE SOCLE `filtersSheet/FiltersSheet.js`, parce que
+// ce fichier en est une COPIE : meme feuille, meme titre, memes deux actions,
+// et c'est celui qui porte le PLUS de rangees (5). Sans `snapPoints`, la zone
+// defilante de `BottomModal` est plafonnee a 70 % de la hauteur d'ECRAN et rien
+// ne borne ce qui l'entoure (caracterise par D19 dans
+// `BottomModal.debordement.test.js`) : les deux actions, placees en dernier
+// dans le defilement, tombaient sous le bord.
+// 🧹 La duplication elle-meme reste a traiter : ce fichier devrait consommer le
+// socle au lieu de le recopier. C'est un lot a part, avec sa propre recette.
+const SNAP_POINTS = ['78%'];
+
 /**
  * @param {{
  *  audienceFilter?: string;
@@ -246,10 +257,41 @@ function RecruitmentFiltersSheet({
   );
 
   return (
-    <BottomModal close={onClose} isVisible={isVisible} webPresentation="dialog">
-      <View style={[Spaces.paddingBottom[24]]}>
-        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Filtrer</Text>
+    <BottomModal
+      close={onClose}
+      footerComponent={(
+        <View>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={appliquer}
+            style={[
+              Alignments.alignCenter,
+              Alignments.justifyCenter,
+              {
+                backgroundColor: Colors.primary500,
+                borderRadius: 999,
+                minHeight: 52,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>Voir les résultats</Text>
+          </TouchableOpacity>
 
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={reinitialiser}
+            style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44 }]}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>Réinitialiser</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      headerComponent={<Text style={[Fonts.h3Bold, Fonts.neutral00]}>Filtrer</Text>}
+      isVisible={isVisible}
+      snapPoints={SNAP_POINTS}
+      webPresentation="dialog"
+    >
+      <View>
         {rendreRangee(
           'sport',
           'Sport',
@@ -325,30 +367,6 @@ function RecruitmentFiltersSheet({
           rendreChoix(levelOptions, level, setLevel, TOUS),
         )}
 
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={appliquer}
-          style={[
-            Alignments.alignCenter,
-            Alignments.justifyCenter,
-            Spaces.marginTop[16],
-            {
-              backgroundColor: Colors.primary500,
-              borderRadius: 999,
-              minHeight: 52,
-            },
-          ]}
-        >
-          <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>Voir les résultats</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={reinitialiser}
-          style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44 }]}
-        >
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>Réinitialiser</Text>
-        </TouchableOpacity>
       </View>
     </BottomModal>
   );

@@ -15,16 +15,34 @@ import FiltersSheet from '../FiltersSheet';
 jest.setTimeout(30000);
 
 // BottomModal monte @gorhom/bottom-sheet, qui exige reanimated et un vrai
-// contexte de gestes : hors sujet ici. On garde la SEULE chose qui compte —
-// le contenu n'est rendu que si `isVisible`.
+// contexte de gestes : hors sujet ici. La doublure garde les DEUX choses qui
+// comptent : le contenu n'est rendu que si `isVisible`, et l'entete comme le
+// pied sont rendus a leur place — sinon elle effacerait en silence le titre et
+// les deux actions, et les tests de contenu passeraient au vert pour rien.
+//
+// Elle retient aussi les proprietes recues : le defaut de D86 est une question
+// de PLACE (« ou vit chaque morceau »), pas de texte, et cette place se lit sur
+// les proprietes passees a `BottomModal`.
+const proprietesRecues = { valeur: /** @type {any} */ (null) };
+
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
   // eslint-disable-next-line global-require
   const { View } = require('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { children, isVisible }) => (
-      isVisible ? <View>{children}</View> : null
-    ),
+    default: (/** @type {any} */ props) => {
+      proprietesRecues.valeur = props;
+      const {
+        children, footerComponent, headerComponent, isVisible,
+      } = props;
+      return isVisible ? (
+        <View>
+          {headerComponent}
+          {children}
+          {footerComponent}
+        </View>
+      ) : null;
+    },
   };
 });
 
@@ -218,5 +236,84 @@ describe('FiltersSheet — la forme que le pack impose', () => {
 
     expect(texte).toContain('Sport');
     expect(texte).not.toContain('Ville');
+  });
+});
+
+// D86 — LE BAS DE LA FEUILLE. Constat d'Adel du 2026-08-12 : « le padding du bas
+// de la feuille cache les boutons "Voir les resultats" et "Reinitialiser" ».
+//
+// La cause n'est pas une marge de trop, c'est la MISE EN PAGE choisie. D19 l'a
+// deja caracterisee dans `BottomModal.debordement.test.js` : sans `snapPoints`,
+// la zone defilante de `BottomModal` est plafonnee a 70 % de la hauteur d'ECRAN
+// et rien ne la borne a la place laissee autour d'elle — ce qui vient en dernier
+// sort par le bas. D69 avait mis les deux actions en dernier DANS cette zone.
+//
+// Ces tests figent la seule chose qui rend les actions inperdables : elles ne
+// sont plus dans le defilement. C'est une PROPRIETE DE STRUCTURE, pas un nombre
+// de pixels — Jest ne mesure aucun pixel (le rappel est de D19).
+describe('D86 — les deux actions ne peuvent plus passer sous le bord', () => {
+  /**
+   * Le texte porte par un ELEMENT React non rendu (une propriete comme
+   * `footerComponent`), par opposition a un noeud d'arbre deja rendu.
+   * @param {any} element L'element.
+   * @returns {string} Son texte.
+   */
+  const texteDeLElement = (element) => {
+    if (element === null || element === undefined || typeof element === 'boolean') return '';
+    if (typeof element === 'string' || typeof element === 'number') return String(element);
+    if (Array.isArray(element)) return element.map(texteDeLElement).join(' ');
+    return texteDeLElement(element.props?.children);
+  };
+
+  // Assez de rangees pour que la feuille doive defiler : c'est le cas d'Adel.
+  const RANGEES_LONGUES = Array.from({ length: 12 }, (_, index) => ({
+    content: <Text>{`le choix numero ${index}`}</Text>,
+    key: `filtre-${index}`,
+    label: `Filtre ${index}`,
+    value: `Valeur ${index}`,
+  }));
+
+  it('LE TEMOIN : liste LONGUE, les 2 actions sont dans le pied, hors du defilement', async () => {
+    await rendre({ rows: RANGEES_LONGUES });
+    const { children, footerComponent } = proprietesRecues.valeur;
+
+    // Elles sont dans le pied colle...
+    expect(texteDeLElement(footerComponent)).toContain('Voir les résultats');
+    expect(texteDeLElement(footerComponent)).toContain('Réinitialiser');
+
+    // ...et surtout PAS dans ce qui defile : c'est ce qui les rendait
+    // inatteignables des qu'une rangee depliee allongeait la liste.
+    expect(texteDeLElement(children)).not.toContain('Voir les résultats');
+    expect(texteDeLElement(children)).not.toContain('Réinitialiser');
+    // La liste longue, elle, est bien ce qui defile.
+    expect(texteDeLElement(children)).toContain('Filtre 11');
+  });
+
+  it('la feuille declare une hauteur fixe — c est CE choix qui colle le pied', async () => {
+    await rendre();
+    const { snapPoints } = proprietesRecues.valeur;
+
+    // Sans `snapPoints`, `BottomModal` repasse sur la mise en page qui plafonne
+    // la zone defilante a 70 % de l'ECRAN et laisse deborder ce qui l'entoure.
+    expect(Array.isArray(snapPoints)).toBe(true);
+    expect(snapPoints.length).toBeGreaterThan(0);
+  });
+
+  it('le titre tient dans l entete fixe : deplier une rangee ne l emporte pas', async () => {
+    await rendre({ rows: RANGEES_LONGUES });
+    const { children, headerComponent } = proprietesRecues.valeur;
+
+    expect(texteDeLElement(headerComponent)).toContain('Filtrer');
+    expect(texteDeLElement(children)).not.toContain('Filtrer');
+  });
+
+  it('la reserve du bas n est PAS remise a zero : elle est confiee a BottomModal', async () => {
+    await rendre();
+    const { useSafeAreaBottomInset } = proprietesRecues.valeur;
+
+    // `BottomModal` pose lui-meme `12 + insets.bottom` sous le pied, et un test
+    // de D19 le fige. La seule facon de casser ce plancher depuis ici serait de
+    // le desactiver : on verifie qu'on ne le fait pas.
+    expect(useSafeAreaBottomInset).not.toBe(false);
   });
 });
