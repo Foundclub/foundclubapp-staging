@@ -150,11 +150,22 @@ function AdminClubWizardRecap({ navigation }) {
       });
       const nextDocumentId = result?.data?.documentId || result?.documentId || null;
       reset();
+      // D81 — LES 8 ETAPES QUITTENT LA PILE. `replace` ne retirait QUE le
+      // recapitulatif : les 7 etapes precedentes restaient sous la fiche du
+      // club, et le premier « Retour » retombait sur « Sponsors ». On repose la
+      // liste des clubs sous la fiche : c'est de la qu'on entre dans ce tunnel,
+      // et c'est la que le retour doit ramener.
       if (nextDocumentId) {
-        navigation.replace(RouteNames.AdminClubDetail, { clubId: nextDocumentId });
+        navigation.reset({
+          index: 1,
+          routes: [
+            { name: RouteNames.AdminClubList },
+            { name: RouteNames.AdminClubDetail, params: { clubId: nextDocumentId } },
+          ],
+        });
         return;
       }
-      navigation.navigate(RouteNames.AdminClubList);
+      navigation.reset({ index: 0, routes: [{ name: RouteNames.AdminClubList }] });
     } catch (error) {
       Alert.alert('Création impossible', getErrorMessage(error, 'generic'));
     }
