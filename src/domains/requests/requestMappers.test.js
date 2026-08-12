@@ -200,9 +200,15 @@ describe('requestMappers', () => {
   });
 
   test('returns the team filter for training-team contexts', () => {
+    // D92 — « friendly » entre ici : une proposition de match amical se recoit
+    // et s envoie d equipe a equipe, jamais au nom d un club seul.
     expect(getAvailableRequestHubFilters({
       teamIds: ['team-1'],
-    })).toEqual(['all', 'team', 'interest']);
+    })).toEqual(['all', 'team', 'interest', 'friendly']);
+  });
+
+  test('D92 — sans equipe encadree, pas de filtre amical', () => {
+    expect(getAvailableRequestHubFilters({ clubId: 'club-1' })).not.toContain('friendly');
   });
 
   test('returns club and event filters only when a club context exists', () => {
@@ -219,6 +225,6 @@ describe('requestMappers', () => {
       canManageInstallationRequests: true,
       clubId: 'club-1',
       teamIds: ['team-1'],
-    })).toEqual(['all', 'team', 'interest', 'club', 'event', 'featured', 'installation']);
+    })).toEqual(['all', 'team', 'interest', 'friendly', 'club', 'event', 'featured', 'installation']);
   });
 });

@@ -160,26 +160,22 @@ function FriendlyMatchAdDetails({ navigation, route }) {
   }, [ad, adId, isAdSideStaff]);
 
   /**
-   * Emmene dans le fil de la candidature. Si l identifiant manque (relation non
-   * populée par le serveur), on ouvre la messagerie plutot que de ne rien faire :
-   * le fil existe, il est juste introuvable d ici.
+   * Emmene dans LE fil de la candidature.
+   *
+   * D92 — avant ce lot, quand l identifiant manquait, on proposait « Ouvrir la
+   * messagerie », qui naviguait vers `RouteNames.Chat` : la RACINE de la
+   * messagerie, un ecran de l onglet injoignable depuis cette pile, et qui de
+   * toute facon ne disait pas QUELLE conversation ouvrir. Adel l a constate :
+   * le bouton ne s ouvrait pas. Un bouton inerte est pire qu un bouton absent
+   * (lot R06) : on ne promet plus rien qu on ne sache tenir.
    * @param {any} application
-   * @returns {void}
+   * @returns {boolean} Vrai si on a pu emmener dans le fil.
    */
   const openConversation = useCallback((/** @type {any} */ application) => {
     const chatId = getFriendlyMatchChatId(application);
-    if (chatId) {
-      navigation.navigate(RouteNames.Conversation, { chatId });
-      return;
-    }
-    Alert.alert(
-      'Discussion ouverte',
-      'La discussion avec l’autre staff t’attend dans ta messagerie.',
-      [
-        { style: 'cancel', text: 'Plus tard' },
-        { onPress: () => navigation.navigate(RouteNames.Chat), text: 'Ouvrir la messagerie' },
-      ],
-    );
+    if (!chatId) return false;
+    navigation.navigate(RouteNames.Conversation, { chatId });
+    return true;
   }, [navigation]);
 
   const handleApplyPress = useCallback(() => {
@@ -194,8 +190,19 @@ function FriendlyMatchAdDetails({ navigation, route }) {
   }, [isAuthenticated, navigation]);
 
   /**
-   * Apres l envoi : on relit l annonce (le POST rend la candidature sans son
-   * fil) puis on emmene dans la discussion — c est tout l interet de candidater.
+   * Apres l envoi : on felicite, puis OK emmene dans la discussion.
+   *
+   * D92 — l ordre compte. Avant, on filait dans le fil sans rien dire : quand
+   * l identifiant manquait, l ecran ne bougeait pas et l envoi avait l air
+   * d avoir echoue alors qu il avait reussi. Maintenant la reussite se dit
+   * TOUJOURS, et la navigation n est qu une suite proposee.
+   *
+   * Le message de proposition, lui, est deja dans le fil : c est le SERVEUR qui
+   * l y poste au moment du `apply` (friendly-match-workflow, `postProposalSafely`).
+   * On ne l envoie surtout pas d ici — il partirait en double, ou pas du tout.
+   *
+   * On relit quand meme l annonce : elle porte le fil si jamais la reponse du
+   * POST ne le portait pas, et elle rafraichit l ecran derriere l alerte.
    * @param {any} application
    * @returns {Promise<void>}
    */
@@ -205,11 +212,25 @@ function FriendlyMatchAdDetails({ navigation, route }) {
     try {
       const freshAd = await getFriendlyMatchAd(adId);
       setAd(freshAd);
-      freshApplication = findMyApplicationOnAd(freshAd, managedTeamIds) || application;
+      freshApplication = findMyApplicationOnAd(freshAd, managedTeamIds)
+        || (getFriendlyMatchChatId(application) ? application : null)
+        || application;
     } catch (error) {
       logger.error('Relecture de l annonce apres candidature impossible', { error });
     }
-    openConversation(freshApplication);
+
+    const hasThread = Boolean(getFriendlyMatchChatId(freshApplication));
+    Alert.alert(
+      'Félicitations, proposition envoyée !',
+      hasThread
+        ? 'Elle vient d’être publiée dans la discussion avec l’autre staff.'
+          + ' À vous de convenir des détails.'
+        : 'L’autre staff vient d’être prévenu. Tu la retrouveras dans tes demandes.',
+      [{
+        onPress: () => { if (hasThread) openConversation(freshApplication); },
+        text: 'OK',
+      }],
+    );
   }, [adId, managedTeamIds, openConversation]);
 
   /**
@@ -464,11 +485,13 @@ function FriendlyMatchAdDetails({ navigation, route }) {
                   ? 'Elle a été acceptée : le match est dans le planning de ton équipe.'
                   : 'Elle est envoyée. La suite se joue dans la discussion.'}
               </Text>
-              <Button
-                onPress={() => openConversation(myApplication)}
-                title="Ouvrir la discussion"
-                variant="Primary"
-              />
+              {getFriendlyMatchChatId(myApplication) ? (
+                <Button
+                  onPress={() => openConversation(myApplication)}
+                  title="Ouvrir la discussion"
+                  variant="Primary"
+                />
+              ) : null}
               {myApplication.status === 'pending' ? (
                 <Button
                   onPress={handleWithdraw}

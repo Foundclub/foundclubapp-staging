@@ -2,6 +2,10 @@ import { getClubInterestRequests } from '@/services/clubInterestRequest/clubInte
 import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';
 import { getPendingFacilityOverrideRequests } from '@/services/facility/facilityService';
+import {
+  getMyFriendlyMatchAds,
+  getMyFriendlyMatchApplications,
+} from '@/services/friendlyMatch/friendlyMatchService';
 import { getTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import { getRequestsHubData } from './requestsHubService';
@@ -21,6 +25,11 @@ jest.mock('@/services/event/eventService', () => ({
 
 jest.mock('@/services/facility/facilityService', () => ({
   getPendingFacilityOverrideRequests: jest.fn(),
+}));
+
+jest.mock('@/services/friendlyMatch/friendlyMatchService', () => ({
+  getMyFriendlyMatchAds: jest.fn(),
+  getMyFriendlyMatchApplications: jest.fn(),
 }));
 
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
@@ -46,6 +55,8 @@ describe('requestsHubService', () => {
     getEvents.mockResolvedValue(emptyPaginatedResponse);
     getPendingFeaturedRequests.mockResolvedValue({ data: [] });
     getPendingFacilityOverrideRequests.mockResolvedValue({ data: [] });
+    getMyFriendlyMatchAds.mockResolvedValue([]);
+    getMyFriendlyMatchApplications.mockResolvedValue([]);
     getTeamMembershipRequests.mockResolvedValue(emptyPaginatedResponse);
   });
 
@@ -111,6 +122,7 @@ describe('requestsHubService', () => {
       club: 0,
       event: 0,
       featured: 0,
+      friendly: 0,
       installation: 0,
       interest: 0,
       team: 0,
@@ -210,5 +222,106 @@ describe('requestsHubService', () => {
 
     expect(result.errors).toEqual([]);
     expect(result.items).toEqual([]);
+  });
+});
+
+/**
+ * D92 — une proposition de match amical que personne ne voit est une
+ * fonctionnalite qui n existe pas. Avant ce lot, `RequestsHub` ne parlait JAMAIS
+ * des amicaux (`grep -ci friendly` rendait 0) : le destinataire recevait une
+ * notification push, et rien d autre — ni ligne dans « Demandes », ni compteur.
+ */
+describe('D92 — les propositions de match amical arrivent dans « Demandes »', () => {
+  const adWithPendingApplication = {
+    applications: [
+      {
+        createdAt: '2026-08-12T09:00:00.000Z',
+        documentId: 'application-1',
+        status: 'pending',
+        team: { club: { name: 'AS Voisine' }, documentId: 'team-adverse', name: 'U15 Voisine' },
+      },
+    ],
+    candidateDates: [],
+    documentId: 'ad-1',
+    status: 'open',
+    team: { documentId: 'team-1', name: 'U15 Maison' },
+  };
+
+  test('temoin 1 — le staff de l annonce VOIT la proposition recue', async () => {
+    getMyFriendlyMatchAds.mockResolvedValue([adWithPendingApplication]);
+
+    const result = await getRequestsHubData({ teamIds: ['team-1'] });
+
+    const received = result.items.find((item) => item?.meta?.applicationId === 'application-1');
+    expect(received).toBeDefined();
+    expect(received.type).toBe('friendly');
+    expect(received.meta.adId).toBe('ad-1');
+    // Elle se compte, sinon la pastille de « Demandes » reste a zero.
+    expect(result.counts.friendly).toBe(1);
+    expect(result.counts.total).toBe(1);
+  });
+
+  test('temoin 1 bis — le nom de l equipe qui propose est dit, pas « Utilisateur »', async () => {
+    getMyFriendlyMatchAds.mockResolvedValue([adWithPendingApplication]);
+
+    const result = await getRequestsHubData({ teamIds: ['team-1'] });
+
+    expect(result.items[0].subtitle).toContain('U15 Voisine');
+  });
+
+  test('une proposition deja traitee ne revient pas encombrer la liste', async () => {
+    getMyFriendlyMatchAds.mockResolvedValue([{
+      ...adWithPendingApplication,
+      applications: [{
+        ...adWithPendingApplication.applications[0],
+        status: 'declined',
+      }],
+    }]);
+
+    const result = await getRequestsHubData({ teamIds: ['team-1'] });
+
+    expect(result.items).toEqual([]);
+  });
+
+  test('temoin 4 — l expediteur voit SA proposition « en attente »', async () => {
+    getMyFriendlyMatchApplications.mockResolvedValue([{
+      ...adWithPendingApplication,
+      applicationStatus: 'pending',
+      myApplication: {
+        createdAt: '2026-08-12T10:00:00.000Z',
+        documentId: 'application-mine',
+        status: 'pending',
+        team: { documentId: 'team-1', name: 'U15 Maison' },
+      },
+      team: { documentId: 'team-adverse', name: 'U15 Voisine' },
+    }]);
+
+    const result = await getRequestsHubData({ teamIds: ['team-1'] });
+
+    const sent = result.items.find((item) => item?.meta?.applicationId === 'application-mine');
+    expect(sent).toBeDefined();
+    expect(sent.meta.isOutgoing).toBe(true);
+    // Elle s affiche, mais elle ne se repond pas : c est l autre staff qui tranche.
+    expect(sent.actions.primary).toBeUndefined();
+    expect(sent.subtitle).toContain('U15 Voisine');
+  });
+
+  test('une source amicale en panne n efface pas le reste des demandes', async () => {
+    getMyFriendlyMatchAds.mockRejectedValue(Object.assign(new Error('boom'), { status: 500 }));
+    getTeamMembershipRequests.mockResolvedValue({
+      ...emptyPaginatedResponse,
+      data: [{
+        createdAt: '2026-08-12T08:00:00.000Z',
+        documentId: 'team-request-1',
+        state: 'pending',
+        team: { documentId: 'team-1', name: 'U15 Maison' },
+        user: { documentId: 'user-9', firstname: 'Sam', lastname: 'Dupont' },
+      }],
+    });
+
+    const result = await getRequestsHubData({ teamIds: ['team-1'] });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.errors.map((error) => error.source)).toContain('friendly');
   });
 });

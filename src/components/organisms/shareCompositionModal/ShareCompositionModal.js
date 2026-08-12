@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
@@ -78,7 +79,11 @@ function ShareCompositionModal({
       if (!chat || !userData) return false;
 
       // Whisper and Team chats: All participants can write
-      if (chat.type === 'whisper' || chat.type === 'team' || chat.type === 'group') return true;
+      // D92 — voir ShareCardModal : le fil d un match amical accepte l ecriture.
+      if (
+        chat.type === 'whisper' || chat.type === 'team' || chat.type === 'group'
+        || isFriendlyMatchChat(chat)
+      ) return true;
 
       // Club Chat: Only Club Admins can write
       if (chat.type === 'club') {

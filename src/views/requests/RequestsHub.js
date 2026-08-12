@@ -294,6 +294,17 @@ function RequestsHub({ navigation, route }) {
     const featuredRequestId = item?.meta?.requestId;
     const participationRequestId = item?.meta?.participationRequestId;
 
+    // D92 — une proposition de match amical ne se tranche pas d ici : elle
+    // emmene sur l annonce, ou les modalites se lisent et ou les boutons
+    // « accepter / ajuster / refuser » existent deja. Rien a appeler, donc rien
+    // a invalider : on sort avant le bloc reseau.
+    if (action === 'open' && item?.type === 'friendly') {
+      const adId = String(item?.meta?.adId || '').trim();
+      if (!adId) return;
+      navigation.navigate(RouteNames.FriendlyMatchAdDetails, { adId });
+      return;
+    }
+
     if (action === 'reject' && item?.type === 'event' && actionPosition === 'secondary') {
       Alert.alert(
         t('requestsHub.rejectEventTitle', 'Refuser la demande ?'),
@@ -547,6 +558,7 @@ function RequestsHub({ navigation, route }) {
     { key: 'featured', label: t('requestsHub.filters.featured', 'À la une') },
     { key: 'installation', label: t('requestsHub.filters.installation', 'Installation') },
     { key: 'interest', label: t('requestsHub.filters.interest', 'Interets') },
+    { key: 'friendly', label: t('requestsHub.filters.friendly', 'Amicaux') },
   ]).filter((chip) => availableFilters.includes(/** @type {any} */ (chip.key))), [availableFilters, t]);
 
   const sourceErrors = requestsQuery?.data?.errors || [];

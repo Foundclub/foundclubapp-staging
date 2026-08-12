@@ -1,8 +1,8 @@
 /**
- * @typedef {'all' | 'team' | 'club' | 'event' | 'featured' | 'installation' | 'interest'} RequestHubFilter
- * @typedef {'team' | 'club' | 'event' | 'featured' | 'installation' | 'interest'} RequestHubType
+ * @typedef {'all' | 'team' | 'club' | 'event' | 'featured' | 'installation' | 'interest' | 'friendly'} RequestHubFilter
+ * @typedef {'team' | 'club' | 'event' | 'featured' | 'installation' | 'interest' | 'friendly'} RequestHubType
  * @typedef {'pending'} RequestHubStatus
- * @typedef {'accept' | 'reject' | 'validate' | 'respond' | 'chat'} RequestHubAction
+ * @typedef {'accept' | 'reject' | 'validate' | 'respond' | 'chat' | 'open'} RequestHubAction
  * @typedef {object} RequestHubItem
  * @property {string} id
  * @property {RequestHubType} type
@@ -14,7 +14,7 @@
  * @property {Record<string, any>} meta
  */
 
-export const REQUEST_HUB_FILTERS = /** @type {const} */ (['all', 'team', 'club', 'event', 'featured', 'installation', 'interest']);
+export const REQUEST_HUB_FILTERS = /** @type {const} */ (['all', 'team', 'club', 'event', 'featured', 'installation', 'interest', 'friendly']);
 
 /**
  * @param {{
@@ -38,6 +38,11 @@ export const getAvailableRequestHubFilters = (context = {}) => {
 
   if ((Array.isArray(teamIds) && teamIds.length > 0) || clubId) {
     filters.push('team', 'interest');
+  }
+  // D92 — les matchs amicaux se proposent d equipe a equipe : le filtre n a de
+  // sens que pour qui en encadre au moins une.
+  if (Array.isArray(teamIds) && teamIds.length > 0) {
+    filters.push('friendly');
   }
   if (clubId) {
     filters.push('club', 'event');
@@ -405,6 +410,74 @@ export const mapFacilityOverrideRequestToHubItem = (/** @type {Record<string, an
 };
 
 /**
+ * D92 — une proposition de match amical RECUE : une equipe a repondu a l annonce
+ * de la mienne, et j ai le dernier mot.
+ *
+ * Elle n embarque pas ses boutons « accepter / refuser » : l ecran de l annonce
+ * les porte deja, avec les modalites a convenir (FriendlyMatchApplicationCard).
+ * Deux jeux de boutons pour un meme geste, c est deux endroits ou se tromper.
+ * @param {Record<string, any>} ad
+ * @param {Record<string, any>} application
+ * @returns {RequestHubItem}
+ */
+export const mapFriendlyMatchApplicationToHubItem = (ad = {}, application = {}) => {
+  const applicationId = String(application?.documentId || application?.id || '');
+  const opponentName = normalizeString(application?.team?.name) || 'Une equipe';
+  const myTeamName = normalizeString(ad?.team?.name) || 'ton equipe';
+
+  return {
+    actions: { primary: 'open' },
+    createdAt: toIsoString(application?.createdAt),
+    id: `friendly:${applicationId}`,
+    meta: {
+      adId: String(ad?.documentId || ad?.id || ''),
+      applicationId,
+      isOutgoing: false,
+      opponentName,
+      raw: application,
+      teamName: myTeamName,
+    },
+    status: 'pending',
+    subtitle: `${opponentName} propose un match à ${myTeamName}.`,
+    title: 'Proposition de match amical',
+    type: 'friendly',
+  };
+};
+
+/**
+ * D92 — une proposition ENVOYEE, tant que personne n a repondu.
+ *
+ * Adel a demande exactement ca pour les demandes de club (lot D87) : ce qu on
+ * envoie doit rester visible quelque part, sinon on ne sait plus si c est parti.
+ * Elle est en lecture seule — c est l autre staff qui tranche, pas moi.
+ * @param {Record<string, any>} ad
+ * @returns {RequestHubItem}
+ */
+export const mapMyFriendlyMatchProposalToHubItem = (ad = {}) => {
+  const application = ad?.myApplication || {};
+  const applicationId = String(application?.documentId || application?.id || '');
+  const opponentName = normalizeString(ad?.team?.name) || 'Une equipe';
+
+  return {
+    actions: {},
+    createdAt: toIsoString(application?.createdAt),
+    id: `friendly-sent:${applicationId}`,
+    meta: {
+      adId: String(ad?.documentId || ad?.id || ''),
+      applicationId,
+      infoOnly: true,
+      isOutgoing: true,
+      opponentName,
+      raw: application,
+    },
+    status: 'pending',
+    subtitle: `Envoyée à ${opponentName}. En attente de sa réponse.`,
+    title: 'Ta proposition de match',
+    type: 'friendly',
+  };
+};
+
+/**
  * @param {RequestHubItem[]} items
  * @returns {RequestHubItem[]}
  */
@@ -422,10 +495,14 @@ export const sortRequestHubItems = (items = []) => (
  * @param {RequestHubItem[]} items
  */
 export const buildRequestHubCounts = (items = []) => {
+  // ⚠️ Un type absent de cette table est compte NULLE PART — pas meme dans
+  // `total` (voir le garde ci-dessous). Ajouter un type de demande sans ajouter
+  // sa ligne ici, c est le rendre invisible dans la pastille.
   const counts = {
     club: 0,
     event: 0,
     featured: 0,
+    friendly: 0,
     installation: 0,
     interest: 0,
     team: 0,

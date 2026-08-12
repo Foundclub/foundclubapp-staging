@@ -5,6 +5,8 @@ import {
   mapEventParticipationRequestToHubItem,
   mapFacilityOverrideRequestToHubItem,
   mapFeaturedRequestToHubItem,
+  mapFriendlyMatchApplicationToHubItem,
+  mapMyFriendlyMatchProposalToHubItem,
   mapTeamMembershipRequestToHubItem,
   sortRequestHubItems,
 } from '@/domains/requests/requestMappers';
@@ -13,6 +15,10 @@ import { getClubInterestRequests } from '@/services/clubInterestRequest/clubInte
 import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';
 import { getPendingFacilityOverrideRequests } from '@/services/facility/facilityService';
+import {
+  getMyFriendlyMatchAds,
+  getMyFriendlyMatchApplications,
+} from '@/services/friendlyMatch/friendlyMatchService';
 import { getTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 const toUniqueIds = (values = []) => (
@@ -177,6 +183,30 @@ const fetchFacilityRequests = async (clubId) => {
   return Array.isArray(response?.data) ? response.data : [];
 };
 
+/**
+ * D92 — les deux sens d une proposition de match amical, en un seul aller-retour.
+ *
+ * Cote RECU : mes annonces portent leurs candidatures (`applications`, populé
+ * par AD_OWNER_POPULATE) — inutile d appeler la route `/applications`, elle est
+ * reservee au staff de CHAQUE annonce et couterait un appel par annonce.
+ * Cote ENVOYE : les annonces des autres sur lesquelles mes equipes ont repondu.
+ * @param {{ teamIds?: string[] }} params
+ * @returns {Promise<{ received: any[], sent: any[] }>}
+ */
+const fetchFriendlyMatchProposals = async ({ teamIds = [] }) => {
+  if (!teamIds.length) return { received: [], sent: [] };
+
+  const [myAds, myApplications] = await Promise.all([
+    getMyFriendlyMatchAds({ teamIds }),
+    getMyFriendlyMatchApplications(teamIds),
+  ]);
+
+  return {
+    received: Array.isArray(myAds) ? myAds : [],
+    sent: Array.isArray(myApplications) ? myApplications : [],
+  };
+};
+
 const getPendingParticipationRequests = (event) => (
   Array.isArray(event?.participationRequests)
     ? event.participationRequests.filter(
@@ -230,6 +260,11 @@ export const getRequestsHubData = async (rawContext = {}) => {
       enabled: context.teamIds.length > 0 || Boolean(context.clubId),
       fetcher: () => fetchClubInterestRequests({ clubId: context.clubId, teamIds: context.teamIds }),
       key: 'interest',
+    },
+    {
+      enabled: context.teamIds.length > 0,
+      fetcher: () => fetchFriendlyMatchProposals({ teamIds: context.teamIds }),
+      key: 'friendly',
     },
   ];
 
@@ -298,6 +333,24 @@ export const getRequestsHubData = async (rawContext = {}) => {
           .filter((request) => request?.status === 'pending')
           .map(mapClubInterestRequestToHubItem),
       );
+    }
+
+    // D92 — seule source a rendre deux listes plutot qu une : une proposition se
+    // regarde des DEUX cotes (celle que je recois, celle que j ai envoyee).
+    if (source.key === 'friendly') {
+      const { received = [], sent = [] } = result.value || {};
+
+      received.forEach((ad) => {
+        (Array.isArray(ad?.applications) ? ad.applications : [])
+          .filter((application) => application?.status === 'pending')
+          .forEach((application) => {
+            items.push(mapFriendlyMatchApplicationToHubItem(ad, application));
+          });
+      });
+
+      sent
+        .filter((ad) => ad?.myApplication?.status === 'pending')
+        .forEach((ad) => items.push(mapMyFriendlyMatchProposalToHubItem(ad)));
     }
   });
 
