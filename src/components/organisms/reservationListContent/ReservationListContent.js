@@ -33,6 +33,7 @@ import SearchMapFab from '@/components/atoms/searchMapFab/SearchMapFab';
 import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import ReservationFiltersSheet from '@/components/organisms/filtersSheet/ReservationFiltersSheet';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
@@ -74,6 +75,7 @@ function ReservationListContent({
   } = useTheme();
   const { userData } = useAuth();
 
+  const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */ (undefined));
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -368,9 +370,11 @@ function ReservationListContent({
     setSelectedEvent(undefined);
   }, []);
 
+  // D82 — le bouton de filtres ouvre la FEUILLE du pack, plus l'ecran plein.
+  // L'ecran `ReservationFilters` reste enregistre : l'ecran de carte l'ouvre.
   const handleFilterPress = useCallback(() => {
-    navigation.navigate(RouteNames.ReservationFilters);
-  }, [navigation]);
+    setFiltersSheetVisible(true);
+  }, []);
 
   const handleSearchField = useCallback((/** @type {string} */ q) => {
     appDispatch({
@@ -628,6 +632,17 @@ function ReservationListContent({
           scope="reservations"
         />
       ) : null}
+
+      {/* D82 — la feuille du pack. Le bouton et sa pastille, eux, n'ont pas
+          bouge : ils marchaient deja. */}
+      <ReservationFiltersSheet
+        filters={reservationFilters}
+        isVisible={filtersSheetVisible}
+        onApply={(filtresChoisis) => {
+          appDispatch({ payload: filtresChoisis, type: 'SET_RESERVATION_FILTERS' });
+        }}
+        onClose={() => setFiltersSheetVisible(false)}
+      />
     </View>
   );
 }
