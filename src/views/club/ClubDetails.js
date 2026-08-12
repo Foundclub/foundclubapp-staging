@@ -204,6 +204,12 @@ function ClubDetails({ navigation, route }) {
   const [isClubPartnerRequestVisible, setIsClubPartnerRequestVisible] = useState(false);
   const [isClubInterestTeamPickerVisible, setIsClubInterestTeamPickerVisible] = useState(false);
   const [isPlayerTeamPickerVisible, setIsPlayerTeamPickerVisible] = useState(false);
+  // D95 — « ce club n'a pas encore d'equipe ». Les deux champs de contact sont
+  // FACULTATIFS : la demande part avec la seule identite du joueur si on les laisse
+  // vides (le serveur retombe alors sur ses propres coordonnees).
+  const [isPlayerNoTeamRequestVisible, setIsPlayerNoTeamRequestVisible] = useState(false);
+  const [playerNoTeamRequestPending, setPlayerNoTeamRequestPending] = useState(false);
+  const [playerNoTeamForm, setPlayerNoTeamForm] = useState({ coachContact: '', coachName: '' });
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const [activitySearch, setActivitySearch] = useState('');
   const [activitiesToAdd, setActivitiesToAdd] = useState(
@@ -511,6 +517,61 @@ function ClubDetails({ navigation, route }) {
           },
           text: t('common.actions.ok', 'OK'),
         }],
+      );
+    },
+  });
+
+  // D95 — mutation dediee : elle partage le meme endpoint que la demande de
+  // partenariat, mais pas ses messages. Un joueur qui fait venir son club ne lit
+  // pas « nous allons contacter le dirigeant », il lit ce qu'IL vient de faire.
+  const createPlayerNoTeamRequestMutation = useMutation({
+    mutationFn: createClubRequest,
+    onError: (mutationError) => {
+      // Le serveur dedoublonne (club-request.ts) : une 2e demande pour le meme
+      // club rend une erreur. Ce n'est PAS un echec pour le joueur — sa demande
+      // est deja partie. On bascule donc le bouton en « Demande en attente »
+      // plutot que de lui montrer un mur rouge.
+      const rawMessage = String(
+        mutationError?.response?.data?.error?.message
+        || mutationError?.message
+        || '',
+      ).toLowerCase();
+
+      if (rawMessage.includes('already exists')) {
+        setPlayerNoTeamRequestPending(true);
+        setIsPlayerNoTeamRequestVisible(false);
+        refetchPendingTeamNotFoundRequests();
+        Alert.alert(
+          t('clubDetails.alerts.playerNoTeamRequest.alreadySentTitle', 'Demande déjà envoyée'),
+          t(
+            'clubDetails.alerts.playerNoTeamRequest.alreadySentDescription',
+            'Tu attends déjà ce club. On te prévient dès qu’une équipe y est créée.',
+          ),
+        );
+        return;
+      }
+
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t(
+          'clubDetails.alerts.playerNoTeamRequest.error',
+          "Impossible d'envoyer ta demande pour le moment.",
+        ),
+      );
+    },
+    onSuccess: () => {
+      setPlayerNoTeamRequestPending(true);
+      setIsPlayerNoTeamRequestVisible(false);
+      setPlayerNoTeamForm({ coachContact: '', coachName: '' });
+      refetchPendingTeamNotFoundRequests();
+
+      Alert.alert(
+        t('clubDetails.alerts.playerNoTeamRequest.title', 'Demande envoyée'),
+        t(
+          'clubDetails.alerts.playerNoTeamRequest.description',
+          'On a bien noté que tu attends ce club. On te prévient dès qu’une équipe y est créée.',
+        ),
+        [{ text: t('common.actions.ok', 'OK') }],
       );
     },
   });
@@ -972,14 +1033,20 @@ function ClubDetails({ navigation, route }) {
 
   const isPlayerRole = userData?.role?.name === USER_ROLES.player;
   const isCoachRole = userData?.role?.name === USER_ROLES.coach;
+  // D95 — le JOUEUR sort de ce parcours. Il y entrait par la ligne
+  // `(isPlayerRole || isCoachRole)` et tombait sur un bouton « Je dirige ce club »
+  // qui lui demandait le telephone de son dirigeant : ce n'est ni ce qu'il vient
+  // faire, ni une affirmation qu'il peut tenir. Il a desormais sa propre action
+  // (`canPlayerSignalMissingTeam`). Le parcours de l'entraineur ne bouge pas :
+  // `isCoachRole && !(isCoachRole && !isPartnerClub(club))` == `isCoachRole && isPartnerClub(club)`.
   const canUseClubPartneringFlow = useMemo(() => (
     Boolean(club)
     && Boolean(clubId)
     && !isMember
     && clubHasNoTeams
-    && (isPlayerRole || isCoachRole)
-    && !(isCoachRole && !isPartnerClub(club))
-  ), [club, clubHasNoTeams, clubId, isCoachRole, isMember, isPlayerRole]);
+    && isCoachRole
+    && isPartnerClub(club)
+  ), [club, clubHasNoTeams, clubId, isCoachRole, isMember]);
 
   const {
     data: pendingClubCreationRequestsResponse,
@@ -1005,10 +1072,38 @@ function ClubDetails({ navigation, route }) {
 
   const hasPendingClubPartneringRequest = hasPendingClubCreationRequest || clubPartnerRequestPending;
 
+  // D95 — meme motif que juste au-dessus, pour la demande « ce club n'a pas
+  // d'equipe ». Adel : « quand on envoie une demande, elle doit apparaitre EN
+  // ATTENTE » — la source est le serveur, jamais un drapeau local seul.
+  const {
+    data: pendingTeamNotFoundResponse,
+    refetch: refetchPendingTeamNotFoundRequests,
+  } = useQuery({
+    enabled: isPlayerRole && clubHasNoTeams && !isMember && !!userData?.documentId,
+    queryFn: () => getPendingClubCreationRequests(userData?.documentId, {}, 'team_not_found'),
+    queryKey: ['clubRequests', 'pending', 'teamNotFound', userData?.documentId],
+  });
+
+  const hasPendingTeamNotFoundRequest = useMemo(() => {
+    const currentClubId = String(clubId || '').trim();
+    const currentClubName = normalizeComparableValue(club?.name);
+
+    return (pendingTeamNotFoundResponse?.data || []).some((requestItem) => {
+      const requestClubId = String(requestItem?.searchContext?.clubId || '').trim();
+      const requestClubName = normalizeComparableValue(requestItem?.clubName);
+      const matchesClubById = Boolean(currentClubId && requestClubId && currentClubId === requestClubId);
+      const matchesClubByName = Boolean(currentClubName && requestClubName === currentClubName);
+      return matchesClubById || matchesClubByName;
+    });
+  }, [club?.name, clubId, pendingTeamNotFoundResponse?.data]);
+
+  const hasPendingPlayerNoTeamRequest = hasPendingTeamNotFoundRequest || playerNoTeamRequestPending;
+
   useFocusEffect(
     useCallback(() => {
       setClubPartnerRequestPending(false);
       setJoinRequestPending(false);
+      setPlayerNoTeamRequestPending(false);
       refetch();
       if (canLoadFacilityContext) {
         refetchFacilities();
@@ -1016,12 +1111,19 @@ function ClubDetails({ navigation, route }) {
       if (canUseClubPartneringFlow) {
         refetchPendingClubCreationRequests();
       }
+      if (isPlayerRole && clubHasNoTeams && !isMember) {
+        refetchPendingTeamNotFoundRequests();
+      }
     }, [
       canLoadFacilityContext,
       canUseClubPartneringFlow,
+      clubHasNoTeams,
+      isMember,
+      isPlayerRole,
       refetch,
       refetchFacilities,
       refetchPendingClubCreationRequests,
+      refetchPendingTeamNotFoundRequests,
     ]),
   );
 
@@ -1083,6 +1185,14 @@ function ClubDetails({ navigation, route }) {
     && !isMember
     && !isPlayerAlreadyInViewedClub
     && clubTeamIds.length > 0
+  ), [USER_ROLES.player, clubTeamIds.length, isMember, isPlayerAlreadyInViewedClub, userData?.role?.name]);
+
+  // D95 — le miroir exact du precedent, pour le club qui n'a AUCUNE equipe.
+  const canPlayerSignalMissingTeam = useMemo(() => (
+    userData?.role?.name === USER_ROLES.player
+    && !isMember
+    && !isPlayerAlreadyInViewedClub
+    && clubTeamIds.length === 0
   ), [USER_ROLES.player, clubTeamIds.length, isMember, isPlayerAlreadyInViewedClub, userData?.role?.name]);
 
   const isUserAlreadyAttachedToViewedClub = useMemo(() => (
@@ -1241,6 +1351,7 @@ function ClubDetails({ navigation, route }) {
     showJoinClubAction,
     showLeaveClubAction,
     showPlayerClubAction,
+    showPlayerNoTeamAction,
     showPublicClaimLogin,
   } = useMemo(() => resolveClubDetailsActionMatrix({
     areClubMembersHidden,
@@ -1249,6 +1360,7 @@ function ClubDetails({ navigation, route }) {
     canJoinClub,
     canLeaveClub,
     canPlayerSignalClubTeam,
+    canPlayerSignalMissingTeam,
     canUseClubPartneringFlow,
     clubHasTeams: clubTeamIds.length > 0,
     hasParentMultisportClub,
@@ -1265,6 +1377,7 @@ function ClubDetails({ navigation, route }) {
     canJoinClub,
     canLeaveClub,
     canPlayerSignalClubTeam,
+    canPlayerSignalMissingTeam,
     canUseClubPartneringFlow,
     clubTeamIds.length,
     hasParentMultisportClub,
@@ -1331,6 +1444,7 @@ function ClubDetails({ navigation, route }) {
   const floatingClubActionsCount = [
     showPublicClaimLogin,
     showPlayerClubAction,
+    showPlayerNoTeamAction,
     showClubPartneringAction,
     showEmptyClubClaimAction,
     showClubInterestAction,
@@ -1498,6 +1612,67 @@ function ClubDetails({ navigation, route }) {
     clubId,
     clubPartnerForm,
     createClubRequestMutation,
+    t,
+    userData?.role?.name,
+  ]);
+
+  // D95 — les 3 gestes de « ce club n'a pas encore d'equipe ».
+  const handleOpenPlayerNoTeamRequest = useCallback(() => {
+    if (!isAuthenticated) {
+      openClubAuthFlow('club-no-team-request-login');
+      return;
+    }
+    if (hasPendingPlayerNoTeamRequest || createPlayerNoTeamRequestMutation.isPending) {
+      return;
+    }
+    setPlayerNoTeamForm({ coachContact: '', coachName: '' });
+    setIsPlayerNoTeamRequestVisible(true);
+  }, [
+    createPlayerNoTeamRequestMutation.isPending,
+    hasPendingPlayerNoTeamRequest,
+    isAuthenticated,
+    openClubAuthFlow,
+  ]);
+
+  const handleClosePlayerNoTeamRequest = useCallback(() => {
+    if (createPlayerNoTeamRequestMutation.isPending) return;
+    setIsPlayerNoTeamRequestVisible(false);
+  }, [createPlayerNoTeamRequestMutation.isPending]);
+
+  const handleChangePlayerNoTeamField = useCallback((field, value) => {
+    setPlayerNoTeamForm((currentValue) => ({ ...currentValue, [field]: value }));
+  }, []);
+
+  const handleSubmitPlayerNoTeamRequest = useCallback(() => {
+    const coachName = String(playerNoTeamForm?.coachName || '').trim();
+    const coachContact = String(playerNoTeamForm?.coachContact || '').trim();
+
+    // 🔒 Les champs de contact sont FACULTATIFS et ne partent QUE dans
+    // `searchContext`. Les champs d'identite de la demande (`holder*`) restent
+    // ceux du joueur : le serveur les remplit avec son propre profil quand on ne
+    // les envoie pas (club-request.ts:175-186). C'est le meme contrat que le
+    // parcours d'onboarding (decision C02/D3, UserAffiliationGuide.js:660-698),
+    // a une difference assumee : ici on n'exige rien, pour qu'aucun joueur ne
+    // reste bloque faute de connaitre le numero de son coach.
+    createPlayerNoTeamRequestMutation.mutate({
+      clubName: club?.name || t('common.club', 'Club'),
+      requestKind: 'team_not_found',
+      searchContext: {
+        clubId,
+        coachContact: coachContact || undefined,
+        coachName: coachName || undefined,
+        reason: 'club_without_team',
+        role: userData?.role?.name || 'unknown',
+        screen: RouteNames.Club,
+        target: 'club_without_team',
+      },
+      source: 'manual',
+    });
+  }, [
+    club?.name,
+    clubId,
+    createPlayerNoTeamRequestMutation,
+    playerNoTeamForm,
     t,
     userData?.role?.name,
   ]);
@@ -2903,6 +3078,105 @@ function ClubDetails({ navigation, route }) {
         </View>
       </BottomModal>
       <BottomModal
+        close={handleClosePlayerNoTeamRequest}
+        headerComponent={(
+          <View style={[Alignments.row, Alignments.alignCenter]}>
+            <Text numberOfLines={2} style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginRight[16], { flex: 1 }]}>
+              {t(
+                'clubDetails.playerNoTeamRequest.title',
+                'Ce club n’a pas encore d’équipe sur FoundClub',
+              )}
+            </Text>
+          </View>
+        )}
+        hideCloseButton
+        isVisible={isPlayerNoTeamRequestVisible}
+        scrollable
+        snapPoints={['82%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[24]]}>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t(
+              'clubDetails.playerNoTeamRequest.description',
+              'Ton club est bien là, mais personne n’y a encore créé d’équipe. Dis-nous que tu l’attends : on contacte le club pour qu’il rejoigne FoundClub, et on te prévient dès qu’une équipe existe.',
+            )}
+          </Text>
+
+          <View
+            style={[
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.backgroundColor.primary700,
+              Spaces.padding[16],
+              Spaces.gap[8],
+            ]}
+          >
+            <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+              {t('clubDetails.playerNoTeamRequest.clubLabel', 'Club que tu attends')}
+            </Text>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {club?.name || t('common.club', 'Club')}
+            </Text>
+          </View>
+
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t(
+              'clubDetails.playerNoTeamRequest.coachSectionTitle',
+              'Tu connais ton coach ou un dirigeant ? (facultatif)',
+            )}
+          </Text>
+          {/* 🔒 D95 — la phrase qui rend la collecte indirecte loyale : elle dit ce
+              qu'on fait du contact ET d'ou il vient. Sans elle, on stockerait la
+              donnee d'un tiers qui n'a rien demande, sans qu'il puisse le savoir. */}
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {t(
+              'clubDetails.playerNoTeamRequest.coachSectionNotice',
+              'Tu peux laisser vide : ta demande part quand même. Si tu donnes un contact, on le prévient que c’est toi qui nous as transmis ses coordonnées, et on l’efface s’il nous le demande.',
+            )}
+          </Text>
+
+          <Input
+            accessibilityLabel={t(
+              'clubDetails.playerNoTeamRequest.fields.coachName',
+              'Nom de ton coach ou dirigeant',
+            )}
+            label={t(
+              'clubDetails.playerNoTeamRequest.fields.coachName',
+              'Nom de ton coach ou dirigeant',
+            )}
+            onChangeText={(value) => handleChangePlayerNoTeamField('coachName', value)}
+            placeholder={t(
+              'clubDetails.playerNoTeamRequest.fields.coachNamePlaceholder',
+              'Ex: Karim Benali',
+            )}
+            value={playerNoTeamForm.coachName}
+          />
+          <Input
+            accessibilityLabel={t(
+              'clubDetails.playerNoTeamRequest.fields.coachContact',
+              'Contact du coach (téléphone ou e-mail)',
+            )}
+            autoCapitalize="none"
+            label={t(
+              'clubDetails.playerNoTeamRequest.fields.coachContact',
+              'Contact du coach (téléphone ou e-mail)',
+            )}
+            onChangeText={(value) => handleChangePlayerNoTeamField('coachContact', value)}
+            placeholder={t(
+              'clubDetails.playerNoTeamRequest.fields.coachContactPlaceholder',
+              'Ex: 06 12 34 56 78 ou coach@club.fr',
+            )}
+            value={playerNoTeamForm.coachContact}
+          />
+
+          <Button
+            isLoading={createPlayerNoTeamRequestMutation.isPending}
+            onPress={handleSubmitPlayerNoTeamRequest}
+            title={t('clubDetails.playerNoTeamRequest.submit', 'Faire venir mon club')}
+            variant="Primary"
+          />
+        </View>
+      </BottomModal>
+      <BottomModal
         close={handleCloseClubPartnerRequest}
         headerComponent={(
           <View style={[Alignments.row, Alignments.alignCenter]}>
@@ -3202,6 +3476,23 @@ function ClubDetails({ navigation, route }) {
               title={hasPendingViewedClubTeamRequest
                 ? t('clubDetails.actions.requestPending', 'Demande en attente')
                 : t('clubDetails.actions.joinClubMember', 'Je fais partie de ce club')}
+              variant="Primary"
+            />
+          ) : null}
+
+          {showPlayerNoTeamAction ? (
+            <Button
+              disabled={hasPendingPlayerNoTeamRequest || createPlayerNoTeamRequestMutation.isPending}
+              onPress={handleOpenPlayerNoTeamRequest}
+              style={[
+                floatingClubActionButtonStyle,
+                (hasPendingPlayerNoTeamRequest || createPlayerNoTeamRequestMutation.isPending)
+                  ? { opacity: 0.7 }
+                  : null,
+              ]}
+              title={hasPendingPlayerNoTeamRequest
+                ? t('clubDetails.actions.requestPending', 'Demande en attente')
+                : t('clubDetails.actions.bringClubOver', 'Faire venir mon club')}
               variant="Primary"
             />
           ) : null}

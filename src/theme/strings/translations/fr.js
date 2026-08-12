@@ -244,6 +244,7 @@ export default {
   },
   clubDetails: {
     actions: {
+      bringClubOver: 'Faire venir mon club',
       claimClub: "C'est mon club",
       contactTrainers: 'Contacter les entraîneur·e·s',
       delete: 'Supprimer',
@@ -303,6 +304,27 @@ export default {
         description: 'Contacte nos équipes pour accéder aux fonctionnalités réservées aux dirigeant·e·s et aux entraîneur·e·s du club.',
         title: 'Tu es dirigeant·e de ce club ?',
       },
+      playerNoTeamRequest: {
+        alreadySentDescription: 'Tu attends déjà ce club. On te prévient dès qu’une équipe y est créée.',
+        alreadySentTitle: 'Demande déjà envoyée',
+        description: 'On a bien noté que tu attends ce club. On te prévient dès qu’une équipe y est créée.',
+        error: "Impossible d'envoyer ta demande pour le moment.",
+        title: 'Demande envoyée',
+      },
+    },
+    playerNoTeamRequest: {
+      clubLabel: 'Club que tu attends',
+      coachSectionNotice: 'Tu peux laisser vide : ta demande part quand même. Si tu donnes un contact, on le prévient que c’est toi qui nous as transmis ses coordonnées, et on l’efface s’il nous le demande.',
+      coachSectionTitle: 'Tu connais ton coach ou un dirigeant ? (facultatif)',
+      description: 'Ton club est bien là, mais personne n’y a encore créé d’équipe. Dis-nous que tu l’attends : on contacte le club pour qu’il rejoigne FoundClub, et on te prévient dès qu’une équipe existe.',
+      fields: {
+        coachContact: 'Contact du coach (téléphone ou e-mail)',
+        coachContactPlaceholder: 'Ex: 06 12 34 56 78 ou coach@club.fr',
+        coachName: 'Nom de ton coach ou dirigeant',
+        coachNamePlaceholder: 'Ex: Karim Benali',
+      },
+      submit: 'Faire venir mon club',
+      title: 'Ce club n’a pas encore d’équipe sur FoundClub',
     },
     titles: {
       activities: 'Sports',

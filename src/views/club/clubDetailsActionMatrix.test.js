@@ -60,4 +60,50 @@ describe('resolveClubDetailsActionMatrix', () => {
       showPlayerClubAction: false,
     });
   });
+
+  // D95 — temoin principal. 222 287 clubs sur 222 294 n'ont aucune equipe : le
+  // joueur qui en ouvre un doit repartir avec un geste fait, pas avec un mur.
+  // Avant D95 il ne voyait que « Je dirige ce club » (showClubPartneringAction).
+  it('offers to bring the club over when a player opens a club without any team', () => {
+    expect(resolveClubDetailsActionMatrix({
+      canPlayerSignalMissingTeam: true,
+      clubHasTeams: false,
+      isAuthenticated: true,
+      isPlayerRole: true,
+    })).toMatchObject({
+      showClubInterestAction: false,
+      showClubPartneringAction: false,
+      showEmptyClubClaimAction: false,
+      showPlayerClubAction: false,
+      showPlayerNoTeamAction: true,
+    });
+  });
+
+  // D95 — non-regression. Un club QUI A une equipe ne bouge pas d'un pixel.
+  it('leaves a club with teams exactly as it was for a player', () => {
+    expect(resolveClubDetailsActionMatrix({
+      canPlayerSignalClubTeam: true,
+      canPlayerSignalMissingTeam: false,
+      clubHasTeams: true,
+      isAuthenticated: true,
+      isPlayerRole: true,
+    })).toMatchObject({
+      showClubInterestAction: false,
+      showClubPartneringAction: false,
+      showPlayerClubAction: true,
+      showPlayerNoTeamAction: false,
+    });
+  });
+
+  // D95 — le coach garde son parcours « club partenaire » sur un club sans equipe.
+  it('keeps the partnering flow for a coach on a club without teams', () => {
+    expect(resolveClubDetailsActionMatrix({
+      canUseClubPartneringFlow: true,
+      clubHasTeams: false,
+      isAuthenticated: true,
+    })).toMatchObject({
+      showClubPartneringAction: true,
+      showPlayerNoTeamAction: false,
+    });
+  });
 });
