@@ -17,7 +17,7 @@ export const TEAM_NOT_FOUND_KIND = 'team_not_found';
  * La clef qui identifie « le meme club » entre deux demandes.
  * L'identifiant prime ; le nom normalise n'est le repli que s'il n'y en a pas
  * (les demandes venues de l'onboarding sont une recherche en texte libre).
- * @param {object} item
+ * @param {any} item
  * @returns {string}
  */
 const buildWaitedClubKey = (item = {}) => {
@@ -33,8 +33,8 @@ const buildWaitedClubKey = (item = {}) => {
  * decroche ; « un joueur a demande » ne l'est pas. On compte des JOUEURS
  * DISTINCTS, pas des demandes : les doublons deja en base gonfleraient le
  * chiffre a vide.
- * @param {object[]} items demandes deja annotees de `__requestType`
- * @returns {object[]} les memes items, annotes de `__waitingPlayersCount`
+ * @param {any[]} items demandes deja annotees de `__requestType`
+ * @returns {any[]} les memes items, annotes de `__waitingPlayersCount`
  */
 export const annotateWaitingPlayersPerClub = (items = []) => {
   const requestersByClub = new Map();
