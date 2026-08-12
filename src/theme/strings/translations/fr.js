@@ -3097,6 +3097,23 @@ export default {
       section: 'Section',
     },
     noData: 'Aucune équipe trouvée.',
+    pendingNotice: {
+      claim: {
+        unblocks: 'Une fois acceptée, tu deviens dirigeant·e du club et tu peux créer tes équipes.',
+        waiting: 'Ta demande pour diriger ce club',
+        who: 'FoundClub vérifie que tu diriges bien ce club. Tu n\'as rien à faire de ton côté.',
+      },
+      clubJoin: {
+        unblocks: 'Une fois acceptée, tu fais partie du club.',
+        waiting: 'Ta demande pour rejoindre ce club',
+        who: 'Un·e dirigeant·e du club doit l\'accepter.',
+      },
+      teamJoin: {
+        unblocks: 'Une fois acceptée, tu rejoins l\'effectif.',
+        waiting: 'Ta demande pour rejoindre cette équipe',
+        who: 'Le staff de l\'équipe doit l\'accepter.',
+      },
+    },
     searchPlaceholder: 'Mes équipes',
     stats: {
       members: 'Membres',

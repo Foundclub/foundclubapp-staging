@@ -693,4 +693,119 @@ describe('TeamListContent — les 4 sections (filet E6)', () => {
       expect(rendu).toContain('U15 Filles');
     });
   });
+
+  // D83 — « EN ATTENTE » ne disait de QUOI ni pour DEBLOQUER quoi. Les trois
+  // demandes possibles n'ont ni le meme valideur ni le meme effet, verifie dans
+  // le serveur avant d'ecrire un mot :
+  //  · revendication de club  -> `admin/src/api/club/controllers/club.ts:619`
+  //    cree la demande SANS toucher l'utilisateur, et
+  //    `club-membership-request.ts:745` refuse la validation a tout autre qu'un
+  //    superadmin. L'acceptation seule donne club + role Dirigeant
+  //    (`services/club-membership-request.ts:276`).
+  //  · adhesion a un club     -> route `accept` sous police `is-club-manager`.
+  //  · adhesion a une equipe  -> route `accept` sous police `is-team-manager`.
+  // Le serveur rend deja `type` dans le profil
+  // (`admin/src/api/firebase-auth/constants.ts:135`) : rien a ajouter cote API.
+  describe('D83 — la carte en attente dit QUOI, QUI et CE QUE ça debloque', () => {
+    const CLUB_REVENDIQUE = { activities: [], documentId: 'c-83', name: '& DANSE ENCORPS' };
+
+    /**
+     * Un profil dont la seule demande en attente est celle fournie.
+     * @param {any} demandeClub - Demande d'adhesion/revendication de club.
+     * @param {any[]} [demandesEquipe] - Demandes d'adhesion a une equipe.
+     * @returns {any} - Profil utilisateur.
+     */
+    const profilAvec = (demandeClub, demandesEquipe = []) => ({
+      ...UTILISATEUR,
+      clubMembershipRequests: demandeClub ? [demandeClub] : [],
+      teamMembershipRequests: demandesEquipe,
+    });
+
+    it('dit qu une revendication attend FoundClub, et ce qu elle debloque', async () => {
+      const tree = await renderList({
+        auth: {
+          userData: profilAvec({
+            club: CLUB_REVENDIQUE,
+            documentId: 'creq-83',
+            state: 'pending',
+            type: 'claim',
+          }),
+        },
+      });
+      const carte = cardTexts(findCard(tree, '& DANSE ENCORPS')).join(' | ');
+
+      expect(carte).toContain('Ta demande pour diriger ce club');
+      expect(carte).toContain('FoundClub vérifie que tu diriges bien ce club');
+      expect(carte).toContain('Tu n\'as rien à faire de ton côté');
+      expect(carte).toContain('tu deviens dirigeant·e du club');
+      expect(carte).toContain('créer tes équipes');
+    });
+
+    it('ne montre plus « 0 Membres » sur un club qu on attend de diriger', async () => {
+      const tree = await renderList({
+        auth: {
+          userData: profilAvec({
+            club: CLUB_REVENDIQUE,
+            documentId: 'creq-83',
+            state: 'pending',
+            type: 'claim',
+          }),
+        },
+      });
+      const carte = findCard(tree, '& DANSE ENCORPS');
+
+      expect(carte.findAllByProps({ testID: 'team-card-stats' })).toHaveLength(0);
+      expect(cardTexts(carte)).not.toContain('Entraîneur·e·s');
+    });
+
+    it('dit qu une adhesion a un club attend un dirigeant du club', async () => {
+      const tree = await renderList({
+        auth: {
+          userData: profilAvec({
+            club: CLUB_DEMANDE,
+            documentId: 'creq-84',
+            state: 'pending',
+            type: 'join',
+          }),
+        },
+      });
+      const carte = cardTexts(findCard(tree, 'US Demande')).join(' | ');
+
+      expect(carte).toContain('Ta demande pour rejoindre ce club');
+      expect(carte).toContain('Un·e dirigeant·e du club doit l\'accepter');
+      expect(carte).toContain('tu fais partie du club');
+    });
+
+    it('dit qu une adhesion a une equipe attend son staff', async () => {
+      const tree = await renderList({
+        auth: {
+          userData: profilAvec(null, [
+            { documentId: 'req-83', state: 'pending', team: TEAM_ATTENTE },
+          ]),
+        },
+      });
+      const carte = cardTexts(findCard(tree, 'U11 Mixte')).join(' | ');
+
+      expect(carte).toContain('Ta demande pour rejoindre cette équipe');
+      expect(carte).toContain('Le staff de l\'équipe doit l\'accepter');
+      expect(carte).toContain('tu rejoins l\'effectif');
+    });
+
+    it('garde le badge orange EN ATTENTE et n ecrit rien sur les autres cartes', async () => {
+      const tree = await renderList({
+        auth: {
+          userData: profilAvec({
+            club: CLUB_REVENDIQUE,
+            documentId: 'creq-83',
+            state: 'pending',
+            type: 'claim',
+          }),
+        },
+      });
+
+      expect(cardTexts(findCard(tree, '& DANSE ENCORPS'))).toContain('EN ATTENTE');
+      expect(surfaceStyle(findCard(tree, '& DANSE ENCORPS')).borderColor).toBe('couleur-alerte');
+      expect(cardTexts(findCard(tree, 'U15 Masculins')).join(' | ')).not.toContain('Ta demande');
+    });
+  });
 });
