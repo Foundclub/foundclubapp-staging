@@ -39,10 +39,10 @@ import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import SearchResultsLoadingState from '@/components/molecules/searchResultsLoadingState/SearchResultsLoadingState';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import EventFiltersSheet from '@/components/organisms/filtersSheet/EventFiltersSheet';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
-import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -166,6 +166,7 @@ function EventListContent({
   screenActive = true,
   showFilters = false,
 }) {
+  const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [joinModalError, setJoinModalError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
@@ -813,12 +814,12 @@ function EventListContent({
     });
   }, [navigation]);
 
+  // D82 — le bouton de filtres ouvre la FEUILLE du pack, plus l'ecran plein.
+  // L'ecran `EventFilters` reste enregistre : il porte encore la creation et la
+  // modification des alertes (`SearchAlerts`) et l'ecran de carte l'ouvre.
   const handleOpenFilters = useCallback(() => {
-    navigateToStackScreenOrScreen(navigation, {
-      screen: RouteNames.EventFilters,
-      stack: RouteNames.EventStack,
-    });
-  }, [navigation]);
+    setFiltersSheetVisible(true);
+  }, []);
 
   const handleFindEvent = () => {
     // @ts-expect-error because of react navigation type definitions
@@ -1417,6 +1418,17 @@ function EventListContent({
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
         onConfirm={handleConfirmJoinEvent}
+      />
+
+      {/* D82 — la feuille du pack. Le bouton et sa pastille, eux, n'ont pas
+          bouge : ils marchaient deja. */}
+      <EventFiltersSheet
+        filters={eventFilters}
+        isVisible={filtersSheetVisible}
+        onApply={(filtresChoisis) => {
+          appDispatch({ payload: filtresChoisis, type: 'SET_EVENT_FILTERS' });
+        }}
+        onClose={() => setFiltersSheetVisible(false)}
       />
     </View>
   );
