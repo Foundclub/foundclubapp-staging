@@ -51,6 +51,7 @@ jest.mock('@/components/molecules/input/Input', () => {
   const { View } = require('react-native');
   return {
     __esModule: true,
+    // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
     default: (/** @type {any} */ props) => <View testID="saisie" {...props} />,
   };
 });
@@ -60,6 +61,7 @@ jest.mock('@/components/molecules/autocompleteSelect/AutocompleteSelect', () => 
   const { View } = require('react-native');
   return {
     __esModule: true,
+    // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
     default: (/** @type {any} */ props) => <View testID="select" {...props} />,
   };
 });
@@ -69,6 +71,7 @@ jest.mock('@/components/organisms/autocompleteAddressInput/autocompleteAddressIn
   const { View } = require('react-native');
   return {
     __esModule: true,
+    // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
     default: (/** @type {any} */ props) => <View testID="adresse" {...props} />,
   };
 });
@@ -78,6 +81,7 @@ jest.mock('@react-native-community/slider', () => {
   const { View } = require('react-native');
   return {
     __esModule: true,
+    // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
     default: (/** @type {any} */ props) => <View testID="rayon" {...props} />,
   };
 });
@@ -254,12 +258,11 @@ const selecteur = (tree, label) => tree.root.findAll(
  * @returns {Promise<any>} L'arbre rendu.
  */
 const rendre = async () => {
+  const navigation = /** @type {any} */ ({ goBack: jest.fn(), setOptions: jest.fn() });
   /** @type {any} */
   let tree;
   await act(async () => {
-    tree = renderer.create(
-      <EventFilters navigation={/** @type {any} */ ({ goBack: jest.fn(), setOptions: jest.fn() })} />,
-    );
+    tree = renderer.create(<EventFilters navigation={navigation} />);
   });
   return tree;
 };
@@ -288,6 +291,16 @@ describe('EventFilters (ecran plein) — les criteres qu il propose, au 2026-08-
       { deep: false },
     )).toHaveLength(1);
     expect(texte).toContain('Dans un rayon autour de : 20km');
+
+    // La rampe du rayon est PROPRE A CE MARCHE : la recopier d'un autre
+    // ecran changerait un filtre sans que personne le voie.
+    const curseur = tree.root.findAll(
+      (/** @type {any} */ node) => node.props?.testID === 'rayon',
+      { deep: false },
+    )[0];
+    expect(curseur.props.minimumValue).toBe(5);
+    expect(curseur.props.maximumValue).toBe(50);
+    expect(curseur.props.step).toBe(2);
 
     expect(texte).toContain('Effacer les filtres');
     expect(texte).toContain('Appliquer les filtres');

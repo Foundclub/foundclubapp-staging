@@ -290,6 +290,19 @@ describe('EventFiltersSheet — la forme du pack', () => {
     );
     expect(rangees.some((/** @type {string} */ l) => l.startsWith('Rayon'))).toBe(false);
   });
+
+  it('la rampe du rayon est celle de l ecran plein : 5 a 50 km, de 2 en 2', async () => {
+    // Chaque marche a la sienne (le club va au kilometre pres depuis 2 km).
+    // La copier d'une feuille a l'autre changerait un filtre en silence.
+    const { tree } = await rendre({ filters: { city: MARSEILLE } });
+
+    await ouvrirRangee(tree, 'Ville');
+    const curseur = trouver(tree, 'rayon');
+
+    expect(curseur.props.minimumValue).toBe(5);
+    expect(curseur.props.maximumValue).toBe(50);
+    expect(curseur.props.step).toBe(2);
+  });
 });
 
 describe('EventFiltersSheet — ce qu elle envoie a la recherche', () => {

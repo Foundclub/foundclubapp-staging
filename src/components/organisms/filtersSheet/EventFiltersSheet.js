@@ -287,7 +287,9 @@ function EventFiltersSheet({
           />
           {/* Le rayon n'est plus un reglage a part : le pack le lit dans la
               rangee Ville (« Marseille · 25 km »). Il reste REGLABLE ici, sur
-              la meme rampe que la feuille des clubs (2 a 50 km). */}
+              la rampe PROPRE A CE MARCHE — 5 a 50 km, de 2 en 2. Chaque marche
+              a la sienne (le club va de 2 en 2 au kilometre pres) : la copier
+              d'une feuille a l'autre changerait un filtre en silence. */}
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
             {`${t('clubFilters.fields.radius.label', 'Dans un rayon autour de : ')}${String(radius)} km`}
           </Text>
@@ -297,9 +299,9 @@ function EventFiltersSheet({
             maximumTrackTintColor={Colors.primary700}
             maximumValue={50}
             minimumTrackTintColor={Colors.primary500}
-            minimumValue={2}
+            minimumValue={5}
             onValueChange={setRadius}
-            step={1}
+            step={2}
             style={{ height: 44, width: '100%' }}
             tapToSeek
             thumbTintColor={Colors.primary500}
