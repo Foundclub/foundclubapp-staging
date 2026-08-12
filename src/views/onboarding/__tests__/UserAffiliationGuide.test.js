@@ -1,5 +1,5 @@
 import {
-  Text, TextInput, TouchableOpacity, View,
+  Alert, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -29,8 +29,20 @@ const mockRequestLocation = jest.fn();
 const mockCanUseGeolocation = jest.fn(() => true);
 const mockRoleKey = { current: 'player' };
 
+// D80 — la demande envoyée au serveur doit être INSPECTABLE. L'ancien double
+// fabriquait un `jest.fn()` neuf à chaque rendu : le corps de la requête était
+// donc invisible. On garde le même comportement (rien n'est en cours d'envoi,
+// `mutate` ne fait rien) mais avec une sonde stable, plus les options passées à
+// `useMutation` pour pouvoir déclencher `onError` comme le ferait le serveur.
+const mockMutate = jest.fn();
+/** @type {{ current: any }} */
+const mockMutationOptions = { current: null };
+
 jest.mock('@tanstack/react-query', () => ({
-  useMutation: () => ({ isPending: false, mutate: jest.fn() }),
+  useMutation: (/** @type {any} */ options) => {
+    mockMutationOptions.current = options;
+    return { isPending: false, mutate: mockMutate };
+  },
 }));
 
 jest.mock('react-i18next', () => ({
@@ -860,5 +872,155 @@ describe('D23 ⑦ — sauter le club saute l\'équipe', () => {
       },
       screen: RouteNames.TeamDetails,
     });
+  });
+});
+
+// D80 — le joueur dont l'équipe n'existe pas encore est dans un CUL-DE-SAC :
+// laisser le contact de son coach est le SEUL geste que l'écran lui propose, et
+// il échouait avec « holderEmail cannot be empty ».
+//
+// La chaîne exacte, mesurée le 2026-08-12 :
+//   1. l'inscription par SMS crée l'utilisateur SANS e-mail
+//      (`admin/.../firebase-auth.ts` findOrCreateUser : ni clé `email`, et
+//      `user.add` passe par le moteur de requêtes, qui ne valide rien) ;
+//   2. le contrôleur remplit `holderEmail` depuis l'utilisateur, donc `''` ;
+//   3. Strapi valide le type `email` avec `.min(1, '${path} cannot be empty')` ;
+//   4. l'intercepteur HTTP rejette avec `response.data.error`, donc
+//      `error.message` EST la phrase brute du serveur, affichée telle quelle.
+//
+// L'app ne peut pas réparer le point 2 (le contrôleur écrit `''` quoi qu'elle
+// envoie). Ce qu'elle doit faire, et que ces tests figent :
+//   · envoyer le contact du coach dans le BON champ, `holderPhone` ou
+//     `holderEmail` — ce qui suffit à faire passer le cas e-mail ;
+//   · ne jamais laisser une phrase technique anglaise atteindre le joueur.
+describe('D80 — laisser le contact de son coach', () => {
+  /**
+   * Amène l'écran là où le joueur voit le formulaire coach : un club choisi,
+   * aucune équipe, aucune recherche en cours.
+   * @returns {{ tree: any, headerNodes: () => any[], navigation: any }} Le rendu.
+   */
+  const renderCoachForm = () => {
+    const rendered = renderScreen();
+    const card = rendered.tree.root
+      .findAll((node) => typeof node.props?.accessibilityLabel === 'string'
+        && node.props.accessibilityLabel.includes('FC Fuveau')
+        && typeof node.props?.onPress === 'function')[0];
+    act(() => { card.props.onPress(); });
+    return rendered;
+  };
+
+  /**
+   * Saisit un champ repéré par son libellé d'accessibilité.
+   * @param {any} rendered - Le rendu de l'écran.
+   * @param {string} label - Le libellé d'accessibilité du champ.
+   * @param {string} value - Ce que le joueur tape.
+   * @returns {void}
+   */
+  const typeInto = (rendered, label, value) => {
+    const field = rendered.tree.root
+      .findAllByType(TextInput)
+      .find((/** @type {any} */ node) => node.props?.accessibilityLabel === label);
+    expect(field).toBeDefined();
+    act(() => { field.props.onChangeText(value); });
+  };
+
+  /**
+   * Appuie sur « Envoyer au club ».
+   * @param {any} rendered - Le rendu de l'écran.
+   * @returns {void}
+   */
+  const pressSend = (rendered) => {
+    const send = rendered.tree.root
+      .findAll((node) => node.props?.accessibilityLabel === 'Envoyer au club'
+        && typeof node.props?.onPress === 'function')[0];
+    expect(send).toBeDefined();
+    act(() => { send.props.onPress(); });
+  };
+
+  const COACH_NAME_LABEL = 'Nom de ton coach ou dirigeant';
+  const COACH_CONTACT_LABEL = 'Contact du coach (téléphone ou e-mail)';
+
+  it('un joueur qui laisse un NUMÉRO comme contact de coach voit sa demande partir', () => {
+    const rendered = renderCoachForm();
+    typeInto(rendered, COACH_NAME_LABEL, 'jeze');
+    typeInto(rendered, COACH_CONTACT_LABEL, '0778813915');
+    pressSend(rendered);
+
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+    // Le numéro part dans `holderPhone` — le champ que le serveur sait lire et
+    // que l'écran superadmin affiche. Et surtout PAS dans `holderEmail` : le
+    // serveur y applique un validateur d'e-mail.
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({ holderPhone: '0778813915' });
+    expect(mockMutate.mock.calls[0][0].holderEmail).toBeUndefined();
+    rendered.tree.unmount();
+  });
+
+  it('un joueur qui laisse un E-MAIL voit sa demande partir', () => {
+    const rendered = renderCoachForm();
+    typeInto(rendered, COACH_NAME_LABEL, 'Karim Benali');
+    typeInto(rendered, COACH_CONTACT_LABEL, 'coach@club.fr');
+    pressSend(rendered);
+
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({ holderEmail: 'coach@club.fr' });
+    expect(mockMutate.mock.calls[0][0].holderPhone).toBeUndefined();
+    rendered.tree.unmount();
+  });
+
+  // La question posée par le lot : « jeze » est UN SEUL MOT. Le serveur exige
+  // `holderFirstname` ET `holderLastname` non vides — un découpage en deux
+  // rendrait le nom de famille vide et fabriquerait un NOUVEAU refus. On ne
+  // découpe donc pas : le nom du coach voyage entier dans `searchContext`, et
+  // les champs d'identité restent ceux du joueur, comme la décision C02/D3.
+  it('un nom de coach en UN SEUL MOT part sans être découpé', () => {
+    const rendered = renderCoachForm();
+    typeInto(rendered, COACH_NAME_LABEL, 'jeze');
+    typeInto(rendered, COACH_CONTACT_LABEL, '0778813915');
+    pressSend(rendered);
+
+    const payload = mockMutate.mock.calls[0][0];
+    expect(payload.searchContext).toMatchObject({ coachName: 'jeze' });
+    expect(payload.holderFirstname).toBeUndefined();
+    expect(payload.holderLastname).toBeUndefined();
+    rendered.tree.unmount();
+  });
+
+  // Le contact du coach doit rester lisible tel qu'il a été tapé, en plus
+  // d'alimenter le bon champ : c'est lui que le superadmin recopie pour inviter
+  // le coach.
+  it('le contact tapé reste dans le contexte, en plus du champ serveur', () => {
+    const rendered = renderCoachForm();
+    typeInto(rendered, COACH_CONTACT_LABEL, '07 78 81 39 15');
+    pressSend(rendered);
+
+    const payload = mockMutate.mock.calls[0][0];
+    expect(payload.searchContext).toMatchObject({ coachContact: '07 78 81 39 15' });
+    // Les espaces de saisie ne doivent pas voyager dans le champ serveur.
+    expect(payload.holderPhone).toBe('0778813915');
+    rendered.tree.unmount();
+  });
+
+  it('aucun message technique anglais du serveur n\'atteint le joueur', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const rendered = renderCoachForm();
+
+    // Ce que l'intercepteur HTTP livre vraiment : le contenu de
+    // `response.data.error`, pas une AxiosError. `error.response` est mort ici.
+    act(() => {
+      mockMutationOptions.current.onError({
+        details: {},
+        message: 'holderEmail cannot be empty',
+        name: 'ValidationError',
+        status: 400,
+      });
+    });
+
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    const shown = String(alertSpy.mock.calls[0][1]);
+    expect(shown).not.toContain('holderEmail');
+    expect(shown).not.toContain('cannot be empty');
+    expect(shown).toContain('demande');
+    alertSpy.mockRestore();
+    rendered.tree.unmount();
   });
 });
