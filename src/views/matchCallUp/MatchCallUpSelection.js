@@ -509,10 +509,17 @@ function MatchCallUpSelection() {
         </View>
       ) : null}
 
+      {/* D84 — `styles.list` (flex: 1) BORNE la zone qui defile. Sans lui, React
+          Native mesure un ScrollView a la hauteur de ses enfants (son
+          `flexShrink` vaut 0 par defaut) : la liste poussait la barre du bas
+          hors de l'ecran des 6 joueurs, et le CTA « Suivant » devenait
+          totalement inatteignable des 7. La barre, elle, etait deja au bon
+          endroit — c'est bien le conteneur qui debordait, pas elle qui defilait. */}
       <ScrollView
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        style={styles.list}
       >
         {activeTab === TAB_SQUAD ? (
           <>
@@ -642,6 +649,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   headerTexts: {
+    flex: 1,
+  },
+  list: {
     flex: 1,
   },
   listContent: {
