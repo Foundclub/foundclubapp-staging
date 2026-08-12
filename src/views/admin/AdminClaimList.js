@@ -130,6 +130,13 @@ function AdminClaimList() {
       }
     }
 
+    // D95 — l'argument d'approche. « 12 joueurs de votre club vous attendent »
+    // est un appel qui se decroche ; « un joueur a demande » ne l'est pas.
+    const waitingPlayersCount = Number(item?.__waitingPlayersCount || 0);
+    const waitingLabel = waitingPlayersCount > 1
+      ? `${waitingPlayersCount} joueurs attendent ce club`
+      : null;
+
     return (
       <View
         style={[
@@ -178,6 +185,24 @@ function AdminClaimList() {
             <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[6]]}>
               {subtitle}
             </Text>
+            {waitingLabel ? (
+              <View
+                style={[
+                  Alignments.selfStart,
+                  Spaces.marginTop[8],
+                  {
+                    backgroundColor: Colors.primary700,
+                    borderRadius: 999,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, { color: Colors.primary200 }]}>
+                  {waitingLabel}
+                </Text>
+              </View>
+            ) : null}
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
               {date}
             </Text>
