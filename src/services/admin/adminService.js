@@ -1,3 +1,4 @@
+import { annotateWaitingPlayersPerClub } from '@/services/admin/adminWaitingPlayers';
 import client from '@/services/client';
 import {
   getClubRequestById,
@@ -486,7 +487,14 @@ export const getClubClaimsRequestList = async (params = {}) => {
   ]);
 
   const claimItems = (claimsResult?.data || []).map(mapClaimRequestToAdminItem);
-  const helpItems = (helpResult?.data || []).map(mapHelpRequestToAdminItem);
+  // ponytail: le compteur « N joueurs attendent ce club » est calcule sur la
+  // page deja chargee (plafond 200 demandes en attente, voir pageSize ci-dessus)
+  // plutot que par une agregation serveur. Au-dela de 200 demandes en attente
+  // simultanees, le chiffre sous-estime. Voie de sortie : un endpoint
+  // `/club-requests/waiting-clubs` qui groupe en SQL.
+  const helpItems = annotateWaitingPlayersPerClub(
+    (helpResult?.data || []).map(mapHelpRequestToAdminItem),
+  );
 
   const merged = [...claimItems, ...helpItems].sort(sortByCreatedAtDesc);
   const total = merged.length;

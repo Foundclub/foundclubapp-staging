@@ -45,9 +45,16 @@ export const getPendingAffiliationHelpRequests = async (params = {}) => {
  * Get pending club onboarding requests created by the current user.
  * @param {string} userDocumentId
  * @param {object} [params]
+ * @param {'club_creation'|'club_not_found'|'team_not_found'} [requestKind]
+ *   D95 — le defaut garde le comportement d'origine (aucun appelant a changer) ;
+ *   la fiche club s'en sert avec `team_not_found` pour afficher « Demande en attente ».
  * @returns {Promise<any>}
  */
-export const getPendingClubCreationRequests = async (userDocumentId, params = {}) => {
+export const getPendingClubCreationRequests = async (
+  userDocumentId,
+  params = {},
+  requestKind = 'club_creation',
+) => {
   if (!userDocumentId) {
     return {
       data: [],
@@ -69,7 +76,7 @@ export const getPendingClubCreationRequests = async (userDocumentId, params = {}
           { state: 'En attente' },
           { state: 'pending' },
         ],
-        requestKind: 'club_creation',
+        requestKind,
         user: {
           documentId: {
             $eq: userDocumentId,
