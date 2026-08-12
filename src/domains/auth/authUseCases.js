@@ -573,6 +573,42 @@ export const resolveAffiliationOriginRoute = (routeParams) => {
 };
 
 /**
+ * Les rôles À QUI l'offre d'abonnement s'adresse, en fin d'inscription.
+ *
+ * D89 — la règle n'est pas inventée ici, elle est RELEVÉE : `SubscriptionOffers`
+ * (l. 164) et `Welcome` (l. 46) portent déjà la même, mot pour mot. L'écran
+ * d'offres rend `null` pour tout autre rôle ⇒ y envoyer un joueur en fin
+ * d'inscription lui afficherait une PAGE BLANCHE, c'est-à-dire exactement le
+ * cul-de-sac que ce lot doit éviter.
+ * @type {string[]}
+ */
+const ONBOARDING_SUBSCRIPTION_OFFER_ROLES = ['coach', 'president'];
+
+// Le seul niveau d'accès à qui l'on a quelque chose à vendre. Tout le reste —
+// `TEAM`, `CLUB`, `CLUB_UNVERIFIED` — a déjà payé (`getSubscriptionAccessLevel`,
+// subscriptionDecision.js:18).
+const ONBOARDING_SUBSCRIPTION_FREE_LEVEL = 'FREE';
+
+/**
+ * L'OFFRE EST-ELLE POUR CETTE PERSONNE ? — la décision du sas D89.
+ *
+ * Un niveau d'abonnement ABSENT ou inconnu répond NON, et c'est délibéré : dans
+ * le doute on ne vend pas. C'est aussi ce qui garde le contrat de D23 intact —
+ * `authUseCases.welcome.test.js` appelle la sortie de tunnel sans rien dire de
+ * l'abonnement et attend `Welcome`.
+ * @param {object} params - Les entrées de la décision.
+ * @param {string} [params.roleKey] - Le rôle, tel que rendu par `getUserRoleKey`.
+ * @param {string} [params.subscriptionAccessLevel] - Le niveau d'accès (`getSubscriptionAccessLevel`).
+ * @returns {boolean} `true` si l'offre doit être proposée avant la bienvenue.
+ */
+export const canShowOnboardingSubscriptionOffer = ({ roleKey, subscriptionAccessLevel }) => {
+  if (!ONBOARDING_SUBSCRIPTION_OFFER_ROLES.includes(String(roleKey || ''))) return false;
+
+  return String(subscriptionAccessLevel || '').trim().toUpperCase()
+    === ONBOARDING_SUBSCRIPTION_FREE_LEVEL;
+};
+
+/**
  * LE SAS D'ARRIVÉE — quelle route après la dernière étape comptée ?
  *
  * D16 : `Welcome` n'est plus une étape numérotée des parcours joueur,
@@ -584,13 +620,29 @@ export const resolveAffiliationOriginRoute = (routeParams) => {
  * d'un test. Elle est extraite telle quelle — même ordre, mêmes sorties — pour
  * que « Welcome est bien ATTEINT en fin de parcours » soit une chose qu'on
  * mesure, et non qu'on suppose.
+ *
+ * D89 : le sas compte désormais DEUX marches — l'offre, puis la bienvenue
+ * (demande d'Adel du 2026-08-12 : « à la fin de l'onboarding, AVANT l'écran de
+ * bienvenue »). L'offre n'est PAS une étape : aucun compteur ne bouge, aucune
+ * étape existante n'est déplacée. C'est la même grammaire que `Welcome` — une
+ * marche du sas, qui se saute quand elle n'a rien à dire.
+ * `SubscriptionOffers` rend la main à `Welcome` lui-même : les deux sorties de
+ * cet écran (passer, acheter) y mènent, il n'y a donc pas d'impasse possible.
  * @param {object} params - Les entrées de la décision.
  * @param {boolean} params.hasSeenWelcome - L'écran a déjà été vu par cet utilisateur.
+ * @param {string} [params.roleKey] - Le rôle, tel que rendu par `getUserRoleKey`.
+ * @param {string} [params.subscriptionAccessLevel] - Le niveau d'accès (`getSubscriptionAccessLevel`).
  * @param {string} [params.userDocumentId] - L'identifiant de l'utilisateur.
  * @param {{ canShow: boolean, index: number, route: string }[]} [params.views] - Le parcours.
  * @returns {string | undefined} La route du sas, ou `undefined` s'il n'y a pas de sas.
  */
-export const resolveOnboardingExitRoute = ({ hasSeenWelcome, userDocumentId, views }) => {
+export const resolveOnboardingExitRoute = ({
+  hasSeenWelcome,
+  roleKey,
+  subscriptionAccessLevel,
+  userDocumentId,
+  views,
+}) => {
   // Tunnel déjà fini (`views` vide) : on ne repousse personne vers l'accueil
   // des inscrits. Un utilisateur qui revient n'a rien à y faire.
   if (!Array.isArray(views) || views.length === 0) return undefined;
@@ -599,6 +651,10 @@ export const resolveOnboardingExitRoute = ({ hasSeenWelcome, userDocumentId, vie
   if (views.some((view) => view.route === RouteNames.Welcome)) return undefined;
   if (!userDocumentId) return undefined;
   if (hasSeenWelcome) return undefined;
+
+  if (canShowOnboardingSubscriptionOffer({ roleKey, subscriptionAccessLevel })) {
+    return RouteNames.SubscriptionOffers;
+  }
 
   return RouteNames.Welcome;
 };
