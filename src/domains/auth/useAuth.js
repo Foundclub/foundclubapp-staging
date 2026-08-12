@@ -541,42 +541,6 @@ const useAuth = () => {
     }).catch(() => undefined);
   };
 
-  const getNextOnboardingRoute = useCallback((/** @type {string} */currentRoute) => {
-    // D33 - la recherche elle-meme vit desormais dans `resolveNextOnboardingRoute`
-    // (`authUseCases.js`), ou elle est TESTABLE : le trajet club -> equipe -> sas
-    // se mesure sans monter un ecran. Meme code, meme ordre, memes sorties.
-    const nextRoute = resolveNextOnboardingRoute({
-      currentRoute,
-      views: onboardingViews?.views,
-    });
-    if (nextRoute) return nextRoute;
-
-    // D16 - LE SAS D'ARRIVEE.
-    //
-    // `Welcome` n'est plus une etape COMPTEE des parcours joueur, entraineur
-    // et dirigeant (decision Adel du 2026-08-06) - mais il n'est pas
-    // supprime : il reste l'ecran qui lance le tour guide et montre les trois
-    // offres. Il est donc rebranche ici, en SORTIE de tunnel.
-    //
-    // Pourquoi ici et pas dans `getPostOnboardingHomeRoute` : `Welcome.js`
-    // appelle cette derniere pour PARTIR (l. 87, 196, 207). L'y brancher
-    // ferait boucler l'ecran sur lui-meme. `Welcome` n'appelle jamais
-    // `getNextOnboardingRoute` - la boucle est donc impossible par
-    // construction, pas par precaution.
-    //
-    // D23 - la decision elle-meme vit desormais dans `resolveOnboardingExitRoute`
-    // (`authUseCases.js`), ou elle est TESTABLE : « Welcome est atteint en
-    // sortie de tunnel » etait suppose, il est maintenant mesure.
-    const onboardingUserId = userData?.documentId;
-    return resolveOnboardingExitRoute({
-      hasSeenWelcome: Boolean(
-        onboardingUserId && storage.getBoolean(`hasSeenWelcome_${onboardingUserId}`),
-      ),
-      userDocumentId: onboardingUserId,
-      views: onboardingViews?.views,
-    });
-  }, [onboardingViews, userData?.documentId]);
-
   const getPostOnboardingHomeRoute = useCallback(
     () => (isGold ? RouteNames.LeagueHomeTab : RouteNames.HomeTab),
     [isGold],
@@ -718,6 +682,57 @@ const useAuth = () => {
     subscriptionSummary,
     userData?.club,
   ]);
+
+  // D89 - DESCENDU ICI, ET LA RAISON EST MECANIQUE, PAS ESTHETIQUE.
+  //
+  // Le sas lit desormais `userRoleKey` (l. 567) et `subscriptionAccessLevel`
+  // (l. 676), tous deux declares plus bas que sa position d'origine. Un `const`
+  // cite dans un tableau de dependances est evalue AU MONTAGE, pas a l'appel :
+  // laisser ce bloc au-dessus levait une `ReferenceError` (zone morte
+  // temporelle) des le premier rendu. Le corps du callback, lui, n'a pas bouge
+  // d'une ligne.
+  const getNextOnboardingRoute = useCallback((/** @type {string} */currentRoute) => {
+    // D33 - la recherche elle-meme vit desormais dans `resolveNextOnboardingRoute`
+    // (`authUseCases.js`), ou elle est TESTABLE : le trajet club -> equipe -> sas
+    // se mesure sans monter un ecran. Meme code, meme ordre, memes sorties.
+    const nextRoute = resolveNextOnboardingRoute({
+      currentRoute,
+      views: onboardingViews?.views,
+    });
+    if (nextRoute) return nextRoute;
+
+    // D16 - LE SAS D'ARRIVEE.
+    //
+    // `Welcome` n'est plus une etape COMPTEE des parcours joueur, entraineur
+    // et dirigeant (decision Adel du 2026-08-06) - mais il n'est pas
+    // supprime : il reste l'ecran qui lance le tour guide et montre les trois
+    // offres. Il est donc rebranche ici, en SORTIE de tunnel.
+    //
+    // Pourquoi ici et pas dans `getPostOnboardingHomeRoute` : `Welcome.js`
+    // appelle cette derniere pour PARTIR (l. 87, 196, 207). L'y brancher
+    // ferait boucler l'ecran sur lui-meme. `Welcome` n'appelle jamais
+    // `getNextOnboardingRoute` - la boucle est donc impossible par
+    // construction, pas par precaution.
+    //
+    // D23 - la decision elle-meme vit desormais dans `resolveOnboardingExitRoute`
+    // (`authUseCases.js`), ou elle est TESTABLE : « Welcome est atteint en
+    // sortie de tunnel » etait suppose, il est maintenant mesure.
+    //
+    // D89 - le sas commence par l'OFFRE quand elle s'adresse a cette personne
+    // (entraineur ou dirigeant, encore en gratuit). Les deux entrees de cette
+    // decision sont lues ici parce que c'est ici qu'elles vivent ; la regle,
+    // elle, reste dans `authUseCases.js` avec le reste du sas.
+    const onboardingUserId = userData?.documentId;
+    return resolveOnboardingExitRoute({
+      hasSeenWelcome: Boolean(
+        onboardingUserId && storage.getBoolean(`hasSeenWelcome_${onboardingUserId}`),
+      ),
+      roleKey: userRoleKey,
+      subscriptionAccessLevel,
+      userDocumentId: onboardingUserId,
+      views: onboardingViews?.views,
+    });
+  }, [onboardingViews, subscriptionAccessLevel, userData?.documentId, userRoleKey]);
 
   const isNonPartnerCoach = nonPartnerCoachPublishingAccess?.isNonPartnerCoach === true;
 

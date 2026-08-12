@@ -901,6 +901,57 @@ function PrivateNavigator() {
         ) : null}
 
         {/*
+          D89 - LA PREMIERE MARCHE DU SAS : L'OFFRE, AVANT LA BIENVENUE.
+          (demande d'Adel du 2026-08-12)
+
+          POURQUOI L'ECRAN EST DECLARE ICI ALORS QU'IL VIT DANS `ProfileStack` :
+          les 13 ecrans du tunnel sortent tous par `navigation.navigate(<nom>)`,
+          avec un nom NU. Or `SubscriptionOffers` est une feuille de
+          `ProfileStack` : un nom nu ne la trouve pas depuis cette pile-ci, et
+          `navigate` echoue EN SILENCE - le piege R06 deja paye et documente
+          dans `SubscriptionSuccess.js:95`. Le meme ecran est donc declare une
+          seconde fois ICI, sous LE MEME nom de route : aucune route neuve,
+          aucun ecran recree, et les deux appelants existants
+          (`navigate(ProfileStack, { screen })` depuis l'accueil, nom nu depuis
+          le profil) continuent de resoudre chez eux, comme avant.
+
+          MONTE SANS CONDITION, pour la meme raison que `Welcome` juste en
+          dessous : le sas n'est pas une etape comptee, `canShowView` rendrait
+          donc `false` et l'ecran deviendrait injoignable.
+
+          `initialParams` EST LE COLIS DU SAS (motif L40) : c'est la porte qui
+          dit ou l'on va, l'ecran ne le devine jamais.
+          - `skipRouteName` : ou va celui qui PASSE. Sa seule presence fait
+            apparaitre le bouton de sortie - pas de destination, pas de bouton.
+          - `resumeRouteName` : ou va celui qui ACHETE, apres l'ecran de succes.
+          Les deux visent la BIENVENUE : c'est elle qui termine l'inscription
+          (`hasSeenWelcome_` + `markOnboardingComplete`) et lance le tour guide.
+          Un acheteur qui l'aurait sautee serait le seul inscrit a ne jamais
+          finir son inscription.
+        */}
+        <Stack.Screen
+          getComponent={() => require('@/views/profile/SubscriptionOffers').default}
+          initialParams={{
+            resumeCtaLabel: 'Continuer',
+            resumeRouteName: RouteNames.Welcome,
+            skipRouteName: RouteNames.Welcome,
+          }}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.SubscriptionOffers}
+          options={{
+            ...commonOptions,
+            // Aucun stepper : le sas n'est une etape comptee d'aucun parcours,
+            // les deux renderers rendraient donc `null` a tous les coups.
+            // Le titre, lui, est POSE : sans lui l'entete retomberait sur le
+            // logo FOUNDCLUB de `commonOptions`, qui est aussi la bascule vers
+            // LEAGUE - un interrupteur de mode n'a rien a faire ici. Et le
+            // titre de `ProfileStack` (« Changer d'offre ») serait faux : cette
+            // personne n'a pas d'offre a changer, elle vient de s'inscrire.
+            headerTitle: t('profile.subscription.onboardingHeaderTitle', 'Choisis ton offre'),
+          }}
+        />
+
+        {/*
           D16 - MONTE SANS CONDITION, ET C'EST VOULU.
           `Welcome` n'est plus une etape comptee des parcours joueur,
           entraineur et dirigeant : `canShowView` rendrait `false` et l'ecran

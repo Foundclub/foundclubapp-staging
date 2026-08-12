@@ -70,6 +70,25 @@ const POINTS_D_ENTREE = [
     fichier: 'views/subscription/SubscriptionSuccess.js',
     pourquoi: 'elle vient d acheter',
   },
+  // D89 — les 8e et 9e points d'entree, et la decision qui va avec : le sas de
+  // fin d'inscription VEND, il vise donc le carrousel. Le hub serait le mauvais
+  // ecran deux fois — il ne vend rien, et il n'a rien a gerer pour quelqu'un qui
+  // n'a jamais eu d'offre.
+  //
+  // Ils vont par PAIRE et ne voyagent pas separement : `authUseCases.js` NOMME
+  // la route de sortie, `PrivateNavigator.js` la MONTE dans la pile du tunnel.
+  // Sans le second, le premier envoie vers un nom que cette pile ne connait pas,
+  // et `navigate` echoue en silence (piege R06).
+  {
+    attendu: 'SubscriptionOffers',
+    fichier: 'domains/auth/authUseCases.js',
+    pourquoi: 'la sortie de tunnel propose l offre avant la bienvenue',
+  },
+  {
+    attendu: 'SubscriptionOffers',
+    fichier: 'navigation/private/PrivateNavigator.js',
+    pourquoi: 'le sas d inscription monte le carrousel dans la pile du tunnel',
+  },
 ];
 
 describe('Points d\'entree de l\'abonnement — chacun atterrit au bon endroit', () => {
@@ -107,6 +126,12 @@ describe('Points d\'entree de l\'abonnement — chacun atterrit au bon endroit',
         if (entree.isDirectory()) {
           return entree.name === '__tests__' ? [] : parcourir(chemin);
         }
+        // D89 — les tests ne sont pas des points d'entree, et tous ne vivent pas
+        // dans un dossier `__tests__` : `src/domains/` les pose A COTE de leur
+        // source (`authUseCases.welcome.test.js`). Sans cette seconde exclusion,
+        // le premier test qui NOMME une route d'abonnement se declarait lui-meme
+        // appelant coupable.
+        if (/\.test\.jsx?$/.test(entree.name)) return [];
         return entree.isFile() && /\.jsx?$/.test(entree.name) ? [chemin] : [];
       });
 
@@ -138,7 +163,21 @@ describe('L40 — une porte dit d ou elle part, ou assume l accueil', () => {
     // Les deux entrees volontaires du hub.
     ['views/profile/SubscriptionCompare.js', false],
     ['views/profile/SubscriptionOverview.js', false],
+    // D89 — le sas d'inscription transporte DEUX destinations, et il le doit :
+    // sans elles, la personne qui vient de remplir 4 a 8 ecrans repartirait a
+    // l'accueil sans jamais finir son inscription.
+    ['navigation/private/PrivateNavigator.js', true],
   ])('%s transporte une origine : %s', (fichier, transporteUneOrigine) => {
     expect(lireSource(fichier).includes('resumeRouteName')).toBe(transporteUneOrigine);
+  });
+
+  // D89 — la SECONDE moitie du colis, celle qui interdit le cul-de-sac. Une
+  // origine sans destination de passage laisserait la personne enfermee sur le
+  // paywall : c'est le seul risque grave de ce lot, il a donc son propre temoin.
+  it('le sas d inscription nomme AUSSI la sortie de celui qui ne paie pas', () => {
+    const source = lireSource('navigation/private/PrivateNavigator.js');
+
+    expect(source).toContain('skipRouteName: RouteNames.Welcome');
+    expect(source).toContain('resumeRouteName: RouteNames.Welcome');
   });
 });

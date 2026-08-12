@@ -179,6 +179,19 @@ function SubscriptionOffers({ navigation, route }) {
   const resumeRouteName = String(route?.params?.resumeRouteName || '').trim();
   const resumeRouteParams = route?.params?.resumeRouteParams;
 
+  // D89 — MEME COLIS, DEUX CHAMPS DE PLUS, POUR LE SAS DE FIN D'INSCRIPTION.
+  //
+  // `skipRouteName` = ou va celui qui PASSE sans acheter. C'est lui, et lui
+  // seul, qui fait de cet ecran un sas : un mur payant transporte deja une
+  // origine (`resumeRouteName`) sans etre un sas pour autant.
+  // La porte de sortie n'existe que si une destination est nommee ⇒ un bouton
+  // mort est impossible par construction, pas par precaution.
+  const skipRouteName = String(route?.params?.skipRouteName || '').trim();
+  const isOnboardingExit = Boolean(skipRouteName);
+  // « Reprendre » promet une tache interrompue. En fin d'inscription il n'y a
+  // rien a reprendre : le libelle du bouton de succes voyage donc avec le colis.
+  const resumeCtaLabel = String(route?.params?.resumeCtaLabel || '').trim();
+
   const scrollRef = useRef(/** @type {any} */ (null));
   const [activeIndex, setActiveIndex] = useState(focusCardIndex);
   const [billingPeriod, setBillingPeriod] = useState('yearly');
@@ -282,6 +295,22 @@ function SubscriptionOffers({ navigation, route }) {
     [teamEntry],
   );
 
+  // D89 — QUITTER CET ECRAN. Depuis le sas d'inscription on REMPLACE : le
+  // paywall ne doit rien laisser derriere lui, sinon le retour depuis la
+  // bienvenue le rouvrirait (c'est exactement le defaut que D81 vient de
+  // corriger sur les autres tunnels). Depuis le profil, on navigue comme avant :
+  // la pile du profil, elle, doit rester intacte.
+  // Le `typeof` n'est pas decoratif — la doublure de navigation d'un test, ou un
+  // navigateur sans `replace`, ne doit pas transformer la porte de sortie en
+  // bouton mort.
+  const leaveOffers = useCallback((/** @type {string} */ routeName, /** @type {any} */ params) => {
+    if (isOnboardingExit && typeof navigation?.replace === 'function') {
+      navigation.replace(routeName, params);
+      return;
+    }
+    navigation.navigate(routeName, params);
+  }, [isOnboardingExit, navigation]);
+
   const closeTeamPlanModal = useCallback(() => {
     setTeamPlanModalState({
       actionMode: 'purchase',
@@ -345,12 +374,14 @@ function SubscriptionOffers({ navigation, route }) {
       // « C'est parti ! » promet l'accueil, « Reprendre » promet la tache
       // interrompue. Un libelle qui se trompe de destination est un defaut a
       // part entiere.
-      resumeCtaLabel: resumeRouteName ? 'Reprendre' : 'C\'est parti !',
+      // D89 — un libelle FOURNI par la porte gagne : le sas d'inscription ne
+      // reprend aucune tache, il continue vers la bienvenue.
+      resumeCtaLabel: resumeCtaLabel || (resumeRouteName ? 'Reprendre' : 'C\'est parti !'),
       resumeMode: resumeRouteName ? 'route' : 'home',
       resumeRouteName: resumeRouteName || undefined,
       resumeRouteParams: resumeRouteName ? resumeRouteParams : undefined,
     };
-  }, [currentClubDocumentId, resumeRouteName, resumeRouteParams]);
+  }, [currentClubDocumentId, resumeCtaLabel, resumeRouteName, resumeRouteParams]);
 
   /**
    * @param {object} params
@@ -376,7 +407,7 @@ function SubscriptionOffers({ navigation, route }) {
       // c'est la reassignation de creneaux, sans passage store ni facturation
       // (subscriptionPurchaseRail.js:241). L'ecran de succes ne doit alors
       // annoncer aucune nouvelle echeance.
-      navigation.navigate(RouteNames.SubscriptionSuccess, buildPurchaseSuccessParams(catalogEntry, {
+      leaveOffers(RouteNames.SubscriptionSuccess, buildPurchaseSuccessParams(catalogEntry, {
         isTeamSlotUpdate: action === 'change'
           && String(input?.currentPlanCode || '') === String(catalogEntry?.planCode || ''),
       }));
@@ -393,7 +424,7 @@ function SubscriptionOffers({ navigation, route }) {
   }, [
     buildPurchaseSuccessParams,
     closeTeamPlanModal,
-    navigation,
+    leaveOffers,
     refreshSubscriptionContext,
     subscriptionMutation,
   ]);
@@ -609,6 +640,21 @@ function SubscriptionOffers({ navigation, route }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // D89 — LE FILET ANTI-CUL-DE-SAC, et c'est le seul risque grave de ce lot.
+  //
+  // Cet ecran rend `null` pour tout role autre qu'entraineur / dirigeant /
+  // super-admin (l. 164) : une PAGE BLANCHE, sans un bouton. En fin
+  // d'inscription, ce serait une porte fermee sur quelqu'un qui vient de remplir
+  // 4 a 8 ecrans. `resolveOnboardingExitRoute` n'y envoie deja que les roles
+  // servis — mais depuis ce lot la route est montee dans la pile du tunnel, donc
+  // JOIGNABLE ; ce filet garantit que meme un appelant futur ne peut enfermer
+  // personne. On ne bloque pas, on fait avancer : direction la bienvenue.
+  useEffect(() => {
+    if (isOnboardingExit && !canShowSubscriptionExperience) {
+      leaveOffers(skipRouteName, undefined);
+    }
+  }, [canShowSubscriptionExperience, isOnboardingExit, leaveOffers, skipRouteName]);
 
   if (!canShowSubscriptionExperience) {
     return null;
@@ -1035,6 +1081,21 @@ function SubscriptionOffers({ navigation, route }) {
             variant="Primary"
           />
           <Text style={[Fonts.p4, Fonts.neutral300, Fonts.textCenter]}>{activeCta.sub}</Text>
+          {/* D89 — LA PORTE DE SORTIE DU SAS D'INSCRIPTION.
+              Un paywall obligatoire a la fin d'une inscription est un
+              cul-de-sac : la personne vient de remplir 4 a 8 ecrans, et si elle
+              ne peut pas fermer celui-ci, elle n'entre JAMAIS dans l'app. C'est
+              donc un BOUTON pleine largeur, juste sous celui qui vend — pas un
+              lien gris en pied de page. Il n'apparait que dans le sas
+              (`skipRouteName` nomme sa destination) : la surface du profil, elle,
+              ne change pas. */}
+          {isOnboardingExit ? (
+            <Button
+              onPress={() => leaveOffers(skipRouteName, undefined)}
+              title={t('profile.subscription.offers.skip', 'Continuer gratuitement')}
+              variant="SecondaryLight"
+            />
+          ) : null}
           <LegalFooter restore={false} />
         </View>
       </View>

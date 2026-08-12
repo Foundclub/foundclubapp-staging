@@ -102,6 +102,12 @@ const RESUME_ROOT_ROUTES = new Set([
   RouteNames.EventStack,
   RouteNames.HomeTab,
   RouteNames.TeamStack,
+  // D89 — le sas de fin d'inscription. La bienvenue est bien une route de CE
+  // navigateur (PrivateNavigator.js), elle satisfait donc le contrat ci-dessus.
+  // C'est elle qui TERMINE l'inscription (`hasSeenWelcome_` +
+  // `markOnboardingComplete`) et lance le tour guide : y ramener l'acheteur
+  // evite qu'il soit le seul inscrit a ne jamais finir son inscription.
+  RouteNames.Welcome,
 ]);
 
 /** @type {Record<string, string>} */
