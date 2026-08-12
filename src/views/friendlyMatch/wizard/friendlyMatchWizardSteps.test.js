@@ -15,13 +15,15 @@ import {
 const makeDraft = (overrides = {}) => ({
   activity: { documentId: 'act-1', name: 'Football' },
   candidateDates: [{ date: '2099-05-12', end: '20:00', start: '18:00' }],
-  category: { documentId: 'cat-1', name: 'U15' },
+  // D90 — le brouillon porte des LISTES depuis que l annonce peut viser
+  // plusieurs categories et plusieurs niveaux (FriendlyMatchWizardContext).
+  categories: [{ documentId: 'cat-1', name: 'U15' }],
   description: 'On cherche un match sympa.',
   format: '7v7',
   formatOther: '',
   hostingPreference: 'HOST',
   installation: { documentId: 'inst-1', name: 'Stade Nord' },
-  level: { documentId: 'lvl-1', name: 'Departemental' },
+  levels: [{ documentId: 'lvl-1', name: 'Departemental' }],
   location: { city: 'Marseille', lat: 43.3, lng: 5.4 },
   refereeing: 'Arbitre fourni',
   section: { documentId: 'sec-1', name: 'Masculine' },
@@ -187,10 +189,10 @@ describe('friendlyMatchWizardSteps — le corps envoye au serveur', () => {
 
   test('les champs vides sont absents du corps, pas envoyes a chaine vide', () => {
     const payload = buildFriendlyMatchAdPayload(makeDraft({
-      category: null,
+      categories: [],
       description: '   ',
       format: '',
-      level: null,
+      levels: [],
       refereeing: '',
     }));
     expect(payload).not.toHaveProperty('description');
@@ -203,5 +205,62 @@ describe('friendlyMatchWizardSteps — le corps envoye au serveur', () => {
   test('le rayon part en entier, meme saisi en texte', () => {
     const payload = buildFriendlyMatchAdPayload(makeDraft({ travelRadiusKm: '45' }));
     expect(payload.travelRadiusKm).toBe(45);
+  });
+});
+
+describe('D90 — le corps porte les categories et les niveaux au PLURIEL', () => {
+  test('les 3 categories cochees partent toutes les 3, en documentId', () => {
+    const payload = buildFriendlyMatchAdPayload(makeDraft({
+      categories: [
+        { documentId: 'cat-u15' },
+        { documentId: 'cat-u17' },
+        { documentId: 'cat-u19' },
+      ],
+      levels: [{ documentId: 'lvl-d1' }, { documentId: 'lvl-d2' }],
+    }));
+
+    expect(payload.categories).toEqual(['cat-u15', 'cat-u17', 'cat-u19']);
+    expect(payload.levels).toEqual(['lvl-d1', 'lvl-d2']);
+  });
+
+  // 🔒 Le doublon est VOLONTAIRE. Une app restee en arriere ne connait que
+  // `category` : sans lui elle afficherait « Catégorie libre » sur une annonce
+  // qui vise pourtant U15. Supprimer ces deux lignes casserait ces lecteurs-la
+  // sans qu aucune porte s en apercoive.
+  test('la premiere valeur repart AUSSI au singulier, pour les lecteurs d avant D90', () => {
+    const payload = buildFriendlyMatchAdPayload(makeDraft({
+      categories: [{ documentId: 'cat-u15' }, { documentId: 'cat-u17' }],
+      levels: [{ documentId: 'lvl-d1' }],
+    }));
+
+    expect(payload.category).toBe('cat-u15');
+    expect(payload.level).toBe('lvl-d1');
+  });
+
+  test('rien de coche : les QUATRE champs sont absents, l annonce est ouverte a tous', () => {
+    const payload = buildFriendlyMatchAdPayload(makeDraft({ categories: [], levels: [] }));
+
+    expect(payload).not.toHaveProperty('categories');
+    expect(payload).not.toHaveProperty('category');
+    expect(payload).not.toHaveProperty('levels');
+    expect(payload).not.toHaveProperty('level');
+  });
+
+  test('la meme categorie cochee deux fois ne part qu une fois', () => {
+    const payload = buildFriendlyMatchAdPayload(makeDraft({
+      categories: [{ documentId: 'cat-u15' }, { documentId: 'cat-u15' }, null],
+    }));
+
+    expect(payload.categories).toEqual(['cat-u15']);
+  });
+
+  test('un brouillon abime (liste absente, valeurs vides) ne fabrique pas de champ vide', () => {
+    const payload = buildFriendlyMatchAdPayload(makeDraft({
+      categories: undefined,
+      levels: [{ name: 'sans identifiant' }],
+    }));
+
+    expect(payload).not.toHaveProperty('categories');
+    expect(payload).not.toHaveProperty('levels');
   });
 });

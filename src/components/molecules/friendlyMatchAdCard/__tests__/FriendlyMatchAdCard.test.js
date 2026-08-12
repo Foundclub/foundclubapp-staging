@@ -577,3 +577,40 @@ describe('D41 ② — la copy de la carte vit dans fr.js, mot pour mot', () => {
     });
   });
 });
+
+// D90 — une annonce peut viser PLUSIEURS categories et PLUSIEURS niveaux.
+// La carte doit les NOMMER TOUTES : n en montrer qu une ferait croire aux
+// autres equipes qu elles ne sont pas concernees, alors que c est l inverse que
+// l annonceur a demande.
+describe('D90 — la carte nomme toutes les categories visees', () => {
+  it('ecrit les trois categories dans la sous-ligne, pas seulement la premiere', () => {
+    const affiches = textesVisibles(rendre({
+      ad: annonce({
+        categories: [{ name: 'U15' }, { name: 'U17' }, { name: 'U19' }],
+        category: { name: 'U15' },
+      }),
+    })).join(' ');
+
+    expect(affiches).toContain('U15, U17, U19');
+  });
+
+  // 🔒 Le temoin de compatibilite : les annonces publiees AVANT D90 n ont que
+  // `category`. La carte doit continuer de les nommer.
+  it('nomme encore la categorie unique d une annonce publiee avant D90', () => {
+    const affiches = textesVisibles(rendre({
+      ad: annonce({ category: { name: 'Sénior +18' } }),
+    })).join(' ');
+
+    expect(affiches).toContain('Sénior +18');
+  });
+
+  it('retombe sur « Catégorie libre » quand l annonce ne vise personne en particulier', () => {
+    const affiches = textesVisibles(rendre({
+      ad: annonce({
+        categories: [], category: null, level: null, levels: [],
+      }),
+    })).join(' ');
+
+    expect(affiches).toContain('Catégorie libre');
+  });
+});

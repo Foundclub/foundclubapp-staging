@@ -34,11 +34,51 @@ const findByDocumentId = (collection, documentId) => (
 ).find((/** @type {any} */ item) => item?.documentId === documentId) || null;
 
 /**
+ * Coche ou decoche une reference dans la liste deja choisie (D90).
+ *
+ * La pastille « Toutes » porte la valeur vide : l appuyer VIDE la liste au lieu
+ * de s y ajouter — c est ce qui donne un moyen de tout relacher en un geste,
+ * y compris ce que l equipe avait pre-rempli.
+ * @param {any[]} selected
+ * @param {any} collection
+ * @param {any} documentId
+ * @returns {any[]}
+ */
+const toggleReference = (selected, collection, documentId) => {
+  const current = Array.isArray(selected) ? selected : [];
+  if (!documentId) return [];
+
+  const kept = current.filter((/** @type {any} */ item) => item?.documentId !== documentId);
+  if (kept.length !== current.length) return kept;
+
+  const entity = findByDocumentId(collection, documentId);
+  return entity ? [...current, entity] : current;
+};
+
+/**
+ * Les identifiants a passer aux pastilles. Liste vide → on coche « Toutes » :
+ * l ecran doit MONTRER ce que « rien de choisi » veut dire, pas le sous-entendre.
+ * @param {any[]} selected
+ * @returns {string[]}
+ */
+const getSelectedChipValues = (selected) => {
+  const documentIds = (Array.isArray(selected) ? selected : [])
+    .map((/** @type {any} */ item) => String(item?.documentId || '').trim())
+    .filter(Boolean);
+  return documentIds.length > 0 ? documentIds : [''];
+};
+
+/**
  * Etape 5/7 — « Qui je cherche » (§4.1).
  *
  * Les trois champs sont FACULTATIFS et c est voulu : une annonce ouverte
  * (« n importe quel adversaire du coin ») est parfaitement legitime, et le
  * schema serveur ne les exige pas. Ils servent surtout aux filtres de la liste.
+ *
+ * D90 — categories et niveaux se cochent au PLURIEL : une equipe qui cherche un
+ * match accepte souvent U15 ET U17. Rien de coche veut dire « toutes », et
+ * l ecran le dit deux fois plutot qu une (la pastille « Toutes » reste allumee,
+ * et l aide sous les pastilles l ecrit en toutes lettres).
  *
  * Le catalogue de formats depend du SPORT de l equipe (§3.4) : c est ce qui
  * evite une liste 11v11/7v7/5v5 qui serait du football deguise.
@@ -56,7 +96,7 @@ function FriendlyMatchWizardOpponent({ navigation }) {
   const sportName = state.activity?.name || '';
 
   const categoryOptions = useMemo(() => [
-    { label: 'Peu importe', value: '' },
+    { label: 'Toutes', value: '' },
     ...(categories || []).map((/** @type {any} */ category) => ({
       label: category.name,
       value: category.documentId || '',
@@ -64,7 +104,7 @@ function FriendlyMatchWizardOpponent({ navigation }) {
   ], [categories]);
 
   const levelOptions = useMemo(() => [
-    { label: 'Peu importe', value: '' },
+    { label: 'Tous', value: '' },
     ...(levels || []).map((/** @type {any} */ level) => ({
       label: level.name,
       value: level.documentId || '',
@@ -91,23 +131,25 @@ function FriendlyMatchWizardOpponent({ navigation }) {
     >
       <View style={[Spaces.gap[24]]}>
         <ChoiceChipGroup
+          hint="Coche autant de catégories que tu veux. Rien de coché : toutes."
           onSelect={(value) => dispatch({
-            payload: findByDocumentId(categories, value),
-            type: 'SET_CATEGORY',
+            payload: toggleReference(state.categories, categories, value),
+            type: 'SET_CATEGORIES',
           })}
           options={categoryOptions}
-          selectedValue={state.category?.documentId || ''}
-          title="Catégorie"
+          selectedValues={getSelectedChipValues(state.categories)}
+          title="Catégories"
         />
 
         <ChoiceChipGroup
+          hint="Coche autant de niveaux que tu veux. Rien de coché : tous."
           onSelect={(value) => dispatch({
-            payload: findByDocumentId(levels, value),
-            type: 'SET_LEVEL',
+            payload: toggleReference(state.levels, levels, value),
+            type: 'SET_LEVELS',
           })}
           options={levelOptions}
-          selectedValue={state.level?.documentId || ''}
-          title="Niveau"
+          selectedValues={getSelectedChipValues(state.levels)}
+          title="Niveaux"
         />
 
         <ChoiceChipGroup

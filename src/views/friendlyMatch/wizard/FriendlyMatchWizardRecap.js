@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { getHostingSummary } from '@/domains/search/friendlyMatchFlow';
+import {
+  getAdCategories,
+  getAdLevels,
+  getHostingSummary,
+  getReferenceNames,
+} from '@/domains/search/friendlyMatchFlow';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -218,8 +223,11 @@ function FriendlyMatchWizardRecap({ navigation }) {
         )}
         {renderRow(
           'Adversaire',
-          [state.category?.name, state.level?.name, formatLabel]
-            .filter(Boolean).join(' · ') || 'Peu importe',
+          [
+            getReferenceNames(getAdCategories(state)),
+            getReferenceNames(getAdLevels(state)),
+            formatLabel,
+          ].filter(Boolean).join(' · ') || 'Peu importe',
           'opponent',
         )}
         {renderRow('Un mot', state.description || '', 'description')}

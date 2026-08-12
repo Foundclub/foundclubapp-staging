@@ -11,7 +11,10 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import {
   canApplyToFriendlyMatchAd,
+  getAdCategories,
+  getAdLevels,
   getHostingSummary,
+  getReferenceNames,
   normalizeCandidateDates,
 } from '@/domains/search/friendlyMatchFlow';
 import { withAlpha } from '@/theme/colors';
@@ -339,8 +342,11 @@ function FriendlyMatchAdDetails({ navigation, route }) {
             {ad.team?.name || 'Une équipe'}
           </Text>
           <Text style={[Fonts.p2, { color: withAlpha(Colors.neutral100, 0.63) }]}>
-            {[ad.team?.club?.name, ad.category?.name, ad.level?.name]
-              .filter(Boolean).join(' · ')}
+            {[
+              ad.team?.club?.name,
+              getReferenceNames(getAdCategories(ad)),
+              getReferenceNames(getAdLevels(ad)),
+            ].filter(Boolean).join(' · ')}
           </Text>
         </View>
 

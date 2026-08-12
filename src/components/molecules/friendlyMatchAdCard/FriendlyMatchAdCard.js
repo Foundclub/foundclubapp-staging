@@ -11,7 +11,13 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { getHostingTag, normalizeCandidateDates } from '@/domains/search/friendlyMatchFlow';
+import {
+  getAdCategories,
+  getAdLevels,
+  getHostingTag,
+  getReferenceNames,
+  normalizeCandidateDates,
+} from '@/domains/search/friendlyMatchFlow';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -98,10 +104,14 @@ function FriendlyMatchAdCard({
     || team?.name
     || t('friendlyMatch.adCard.fallback.club', 'Club inconnu');
   const clubLogo = getImageUrl(club?.logo?.url);
-  const categoryName = ad?.category?.name
+  // D90 — une annonce peut viser plusieurs categories : on les nomme TOUTES.
+  // N en montrer qu une ferait croire que les autres equipes ne sont pas
+  // concernees, et c est justement l inverse que l annonceur a demande.
+  const categoryName = getReferenceNames(getAdCategories(ad))
     || t('friendlyMatch.adCard.fallback.category', 'Catégorie libre');
   const sectionName = ad?.section?.name || '';
-  const levelName = ad?.level?.name || t('friendlyMatch.adCard.fallback.level', 'Niveau libre');
+  const levelName = getReferenceNames(getAdLevels(ad))
+    || t('friendlyMatch.adCard.fallback.level', 'Niveau libre');
   const formatLabel = ad?.format || t('friendlyMatch.adCard.fallback.format', 'Format à convenir');
   const sportName = ad?.activity?.name
     || team?.sport

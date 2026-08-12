@@ -399,22 +399,86 @@ const matchesPeriod = (ad, periodDays, now) => {
 };
 
 /**
- * Compare une relation de l annonce a une valeur attendue, par documentId, id
- * ou nom. Un filtre vide laisse tout passer.
+ * Les references portees par une annonce pour un critere donne : la LISTE si
+ * elle porte quelque chose, sinon la valeur unique d avant (D90).
+ *
+ * 🔒 C est ce repli qui garde trouvables les annonces publiees AVANT D90.
+ * Elles n ont que `category` / `level` ; lire seulement `categories` / `levels`
+ * les ferait disparaitre de la recherche sans le moindre message.
+ * ⚠️ Une liste VIDE et une liste ABSENTE se lisent pareil, et c est voulu :
+ * Strapi rend `[]` des qu on peuple une relation multiple vide, on ne peut donc
+ * pas distinguer « annonce d avant » de « annonce neuve sans choix ». Les deux
+ * retombent sur le singulier, puis sur « ouverte a tous » — le comportement le
+ * plus large, jamais celui qui cache.
+ * @param {any} ad
+ * @param {string} pluralKey
+ * @param {string} singularKey
+ * @returns {any[]}
+ */
+const getAdReferences = (ad, pluralKey, singularKey) => {
+  const many = ad?.[pluralKey];
+  if (Array.isArray(many)) {
+    const kept = many.filter(Boolean);
+    if (kept.length > 0) return kept;
+  }
+  const one = ad?.[singularKey];
+  return one ? [one] : [];
+};
+
+/**
+ * Les categories visees par une annonce (ou par le brouillon du tunnel, qui
+ * porte les memes cles). Toujours une liste, jamais null.
+ * @param {any} ad
+ * @returns {any[]}
+ */
+export const getAdCategories = (ad) => getAdReferences(ad, 'categories', 'category');
+
+/**
+ * Les niveaux vises par une annonce. Toujours une liste, jamais null.
+ * @param {any} ad
+ * @returns {any[]}
+ */
+export const getAdLevels = (ad) => getAdReferences(ad, 'levels', 'level');
+
+/**
+ * Les noms d une liste de references, en une seule phrase lisible. Rend '' quand
+ * il n y a rien : l appelant choisit alors son propre texte de repli.
+ * @param {any[]} references
+ * @returns {string}
+ */
+export const getReferenceNames = (references) => (Array.isArray(references) ? references : [])
+  .map((reference) => String(reference?.name || '').trim())
+  .filter(Boolean)
+  .join(', ');
+
+/**
+ * Une reference de l annonce correspond-elle a la valeur attendue ? On compare
+ * par documentId, id ou nom : le filtre peut porter l un ou l autre.
  * @param {any} adValue
+ * @param {string} wanted
+ * @returns {boolean}
+ */
+const referenceEquals = (adValue, wanted) => {
+  const candidates = typeof adValue === 'object'
+    ? [adValue?.documentId, adValue?.id, adValue?.name]
+    : [adValue];
+  return candidates.some((candidate) => normalizeText(candidate) === wanted);
+};
+
+/**
+ * Compare les references d une annonce a la valeur demandee par le filtre.
+ * Un filtre vide laisse tout passer, et une annonce qui ne vise RIEN passe
+ * aussi : ne rien cocher veut dire « je prends tout » (c est ce que le tunnel
+ * promet a l ecran), pas « je ne veux personne ».
+ * @param {any[]} adValues
  * @param {any} expected
  * @returns {boolean}
  */
-const matchesReference = (adValue, expected) => {
+const matchesReference = (adValues, expected) => {
   const wanted = normalizeText(expected);
   if (!wanted) return true;
-  if (!adValue) return false;
-
-  const candidates = typeof adValue === 'object'
-    ? [adValue.documentId, adValue.id, adValue.name]
-    : [adValue];
-
-  return candidates.some((candidate) => normalizeText(candidate) === wanted);
+  if (adValues.length === 0) return true;
+  return adValues.some((adValue) => referenceEquals(adValue, wanted));
 };
 
 /**
@@ -437,8 +501,8 @@ export const filterFriendlyMatchAds = (ads, filters = {}, now = new Date()) => {
 
   return ads.filter((ad) => {
     if (!matchesHostingIntent(ad, filters.hostingIntent)) return false;
-    if (!matchesReference(ad?.category, filters.category)) return false;
-    if (!matchesReference(ad?.level, filters.level)) return false;
+    if (!matchesReference(getAdCategories(ad), filters.category)) return false;
+    if (!matchesReference(getAdLevels(ad), filters.level)) return false;
     if (filters.format && normalizeText(ad?.format) !== normalizeText(filters.format)) return false;
     if (!matchesPeriod(ad, filters.periodDays, now)) return false;
 
