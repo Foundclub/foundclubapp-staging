@@ -1,5 +1,7 @@
 import Slider from '@react-native-community/slider';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 

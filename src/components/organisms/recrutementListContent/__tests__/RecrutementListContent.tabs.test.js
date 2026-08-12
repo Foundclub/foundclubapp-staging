@@ -104,7 +104,9 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
     // D86 : la doublure rend l'entete et le pied, comme le vrai composant. Sans
     // eux, elle effacerait en silence le titre et les deux actions — et ce test,
     // qui les cherche par leur texte, tomberait pour une raison FAUSSE.
-    default: (/** @type {any} */ { children, footerComponent, headerComponent, isVisible }) => (
+    default: (/** @type {any} */ {
+      children, footerComponent, headerComponent, isVisible,
+    }) => (
       isVisible ? (
         <View testID="sheet">
           {headerComponent}

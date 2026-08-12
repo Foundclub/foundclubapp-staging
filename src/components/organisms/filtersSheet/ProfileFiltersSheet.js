@@ -1,5 +1,7 @@
 import Slider from '@react-native-community/slider';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { Text, View } from 'react-native';
 
 import usePlaces from '@/domains/places/usePlaces';
@@ -12,7 +14,6 @@ import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 
 import { getPositionValuesForSport } from '@/constants/positions';
-
 import coordonneesDeLaVille from './cityCoordinates';
 import FiltersSheet from './FiltersSheet';
 
