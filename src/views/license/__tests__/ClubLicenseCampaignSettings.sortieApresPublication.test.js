@@ -74,6 +74,8 @@ const simulerRetraitDeLEcran = (action) => {
 
 const navigationFigee = {
   /**
+   * Range l'ecouteur `beforeRemove` de l'ecran, et ignore tous les autres
+   * evenements de navigation.
    * @param {string} nom - Le nom de l'evenement ecoute.
    * @param {any} ecouteur - La fonction a rappeler.
    * @returns {() => void} Le desabonnement.
@@ -87,7 +89,8 @@ const navigationFigee = {
     };
   },
   /**
-   *
+   * La fleche de retour et le geste du telephone : la sortie passe d'abord par
+   * les ecouteurs `beforeRemove`, qui peuvent l'annuler.
    */
   goBack: () => {
     if (simulerRetraitDeLEcran({ type: 'GO_BACK' })) {
@@ -98,6 +101,8 @@ const navigationFigee = {
   },
   navigate: jest.fn(),
   /**
+   * Remplace l'ecran courant — un retrait de route, donc lui aussi soumis aux
+   * ecouteurs `beforeRemove`.
    * @param {string} nom - L'ecran vise.
    * @param {any} params - Ses parametres.
    */
@@ -181,13 +186,19 @@ jest.mock('@/services/level/levelQueries', () => ({
   useGetLevels: () => mockRequeteListeVide,
 }));
 
-jest.mock('@/components/templates/ScreenContainer', () => function ScreenContainerMock({ children }) {
-  return children;
-});
+jest.mock(
+  '@/components/templates/ScreenContainer',
+  () => function ScreenContainerMock({ children }) {
+    return children;
+  },
+);
 
-jest.mock('@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet', () => function PaywallMock() {
-  return null;
-});
+jest.mock(
+  '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet',
+  () => function PaywallMock() {
+    return null;
+  },
+);
 
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock() {
   return null;
@@ -197,18 +208,24 @@ jest.mock('@/components/molecules/inputStepper/InputStepper', () => function Inp
   return null;
 });
 
-jest.mock('@/components/molecules/dateTimeSelector/DateTimeSelector', () => function DateTimeSelectorMock() {
-  return null;
-});
+jest.mock(
+  '@/components/molecules/dateTimeSelector/DateTimeSelector',
+  () => function DateTimeSelectorMock() {
+    return null;
+  },
+);
 
 jest.mock('@/components/atoms/button/Button', () => function ButtonMock() {
   return null;
 });
 
-jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => function WizardStepLayoutMock(/** @type {any} */ props) {
-  mockWizardProps.push(props);
-  return null;
-});
+jest.mock(
+  '@/components/molecules/wizardStepLayout/WizardStepLayout',
+  () => function WizardStepLayoutMock(/** @type {any} */ props) {
+    mockWizardProps.push(props);
+    return null;
+  },
+);
 
 /**
  * La campagne la plus permissive possible : aucune validation ne peut bloquer
@@ -235,7 +252,10 @@ const campagneFranchissable = Object.freeze({
   targetConfig: { includeAllMembers: true },
 });
 
-/** @returns {any} Les dernieres props recues par la mise en page du tunnel. */
+/**
+ * Relit le dernier rendu de l'etape courante, capture par la doublure.
+ * @returns {any} Les dernieres props recues par la mise en page du tunnel.
+ */
 const dernieresProps = () => mockWizardProps[mockWizardProps.length - 1];
 
 /**
@@ -244,7 +264,9 @@ const dernieresProps = () => mockWizardProps[mockWizardProps.length - 1];
  * @returns {Promise<any>} L'arbre monte, a demonter par l'appelant.
  */
 const publierPuisAccepterLAlerte = async () => {
-  const route = { params: { campaign: campagneFranchissable, clubId: 'club-D81', createNew: true } };
+  const route = {
+    params: { campaign: campagneFranchissable, clubId: 'club-D81', createNew: true },
+  };
   /** @type {any} */
   let arbre;
   await act(async () => {
@@ -314,7 +336,9 @@ describe('D81 — le tunnel de cotisation se referme apres publication', () => {
   });
 
   it('AVANT publication, le retour ramene toujours a l etape precedente', async () => {
-    const route = { params: { campaign: campagneFranchissable, clubId: 'club-D81', createNew: true } };
+    const route = {
+      params: { campaign: campagneFranchissable, clubId: 'club-D81', createNew: true },
+    };
     /** @type {any} */
     let arbre;
     await act(async () => {

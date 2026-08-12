@@ -10,7 +10,8 @@ import useTheme from '@/theme/themeContext';
 
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
-import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import AutocompleteAddressInput
+  from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 
@@ -44,6 +45,8 @@ const SANS_LIMITE = 'Sans limite';
 const RAYON_PAR_DEFAUT = 20;
 
 /**
+ * Assemble les rangees du marche « Reservation » et les confie a la coquille
+ * commune `FiltersSheet`.
  * @param {{
  *  filters?: Record<string, any>;
  *  isVisible: boolean;
@@ -173,7 +176,10 @@ function ReservationFiltersSheet({
               rangee Ville (« Marseille · 30 km »). Il reste REGLABLE ici, sur
               la rampe PROPRE A CE MARCHE — 20 a 50 km, de 2 en 2. */}
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {`${t('clubFilters.fields.radius.label', 'Dans un rayon autour de : ')}${String(radius)} km`}
+            {`${t(
+              'clubFilters.fields.radius.label',
+              'Dans un rayon autour de : ',
+            )}${String(radius)} km`}
           </Text>
           <Slider
             accessibilityLabel={t('clubFilters.fields.radius.label', 'Dans un rayon autour de : ')}

@@ -153,6 +153,7 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 /**
+ * Ramasse toutes les chaines d'un arbre rendu, en descendant ses enfants.
  * @param {any} node Le noeud.
  * @returns {string[]} Les chaines qu'il porte.
  */
@@ -166,6 +167,7 @@ const collecterTexte = (node) => {
 const texteVisible = (/** @type {any} */ tree) => collecterTexte(tree.toJSON()).join(' | ');
 
 /**
+ * Recolle en une seule chaine le texte d'un noeud et de ses descendants.
  * @param {any} node Le noeud.
  * @returns {string} Son texte.
  */
@@ -176,6 +178,8 @@ const texteDuNoeud = (node) => {
 };
 
 /**
+ * Appuie sur le premier element pressable dont le texte est exactement ce
+ * libelle, et jette si aucun ne porte ce mot.
  * @param {any} tree L'arbre rendu.
  * @param {string} libelle Le texte du bouton.
  * @returns {Promise<void>} Rien.
@@ -206,6 +210,7 @@ const trouver = (tree, testID) => tree.root.findAll(
 )[0];
 
 /**
+ * Monte l'ecran plein des filtres de reservation avec une navigation espionnee.
  * @returns {Promise<any>} L'arbre rendu.
  */
 const rendre = async () => {

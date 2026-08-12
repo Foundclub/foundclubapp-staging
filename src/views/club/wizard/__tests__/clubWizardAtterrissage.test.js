@@ -57,7 +57,9 @@ jest.mock('@tanstack/react-query', () => ({
 }));
 
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (/** @type {string} */ cle, /** @type {string} */ repli) => repli || cle }),
+  useTranslation: () => ({
+    t: (/** @type {string} */ cle, /** @type {string} */ repli) => repli || cle,
+  }),
 }));
 
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -112,10 +114,13 @@ jest.mock('@/components/molecules/wizardOptionCard/WizardOptionCard', () => func
 
 // La doublure capture les props et rend `null` : on pilote le tunnel par ses
 // boutons (`onNext`, `onBack`), pas par la forme de son arbre.
-jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => function EtapeMock(/** @type {any} */ props) {
-  mockProprietesEtape.push(props);
-  return null;
-});
+jest.mock(
+  '@/components/molecules/wizardStepLayout/WizardStepLayout',
+  () => function EtapeMock(/** @type {any} */ props) {
+    mockProprietesEtape.push(props);
+    return null;
+  },
+);
 
 /**
  * Une pile minimale batie sur le routeur reel. Elle rend TOUS ses ecrans, comme
@@ -146,17 +151,28 @@ const Ecran = (nom) => function EcranTemoin() {
   return createElement(Text, null, nom);
 };
 
-/** Les 5 etapes du tunnel, plus la liste et la fiche de club de `ClubStack`. */
+/**
+ * Les 5 etapes du tunnel, plus la liste et la fiche de club de `ClubStack`.
+ * @returns {any} La pile de navigation du club.
+ */
 function PileClub() {
   return createElement(
     Pile.Navigator,
     { id: undefined, initialRouteName: 'ClubList' },
     createElement(Pile.Screen, { component: Ecran('ClubList'), key: 'liste', name: 'ClubList' }),
     createElement(Pile.Screen, { component: Ecran('Club'), key: 'fiche', name: 'Club' }),
-    createElement(Pile.Screen, { component: Ecran('ClubWizardName'), key: 'e1', name: 'ClubWizardName' }),
-    createElement(Pile.Screen, { component: Ecran('ClubWizardAddress'), key: 'e2', name: 'ClubWizardAddress' }),
-    createElement(Pile.Screen, { component: Ecran('ClubWizardActivities'), key: 'e3', name: 'ClubWizardActivities' }),
-    createElement(Pile.Screen, { component: Ecran('ClubWizardContact'), key: 'e4', name: 'ClubWizardContact' }),
+    createElement(Pile.Screen, {
+      component: Ecran('ClubWizardName'), key: 'e1', name: 'ClubWizardName',
+    }),
+    createElement(Pile.Screen, {
+      component: Ecran('ClubWizardAddress'), key: 'e2', name: 'ClubWizardAddress',
+    }),
+    createElement(Pile.Screen, {
+      component: Ecran('ClubWizardActivities'), key: 'e3', name: 'ClubWizardActivities',
+    }),
+    createElement(Pile.Screen, {
+      component: Ecran('ClubWizardContact'), key: 'e4', name: 'ClubWizardContact',
+    }),
     createElement(Pile.Screen, { component: ClubWizardRecap, key: 'e5', name: 'ClubWizardRecap' }),
   );
 }
@@ -180,19 +196,27 @@ const entrerDansLeTunnel = () => {
       createElement(
         Racine.Navigator,
         { id: undefined, initialRouteName: 'SearchStack' },
-        createElement(Racine.Screen, { component: Ecran('SearchStack'), key: 'recherche', name: 'SearchStack' }),
+        createElement(Racine.Screen, {
+          component: Ecran('SearchStack'), key: 'recherche', name: 'SearchStack',
+        }),
         createElement(Racine.Screen, { component: PileClub, key: 'club', name: 'ClubStack' }),
       ),
     ));
   });
 
-  ['ClubWizardName', 'ClubWizardAddress', 'ClubWizardActivities', 'ClubWizardContact', 'ClubWizardRecap']
+  [
+    'ClubWizardName', 'ClubWizardAddress', 'ClubWizardActivities',
+    'ClubWizardContact', 'ClubWizardRecap',
+  ]
     .forEach((etape) => {
       act(() => conteneur.navigate('ClubStack', { screen: etape }));
     });
 };
 
-/** @returns {string[]} Les routes de `ClubStack`, dans l'ordre de la pile. */
+/**
+ * Lit la pile du club telle que le routeur la connait.
+ * @returns {string[]} Les routes de `ClubStack`, dans l'ordre de la pile.
+ */
 const pileClub = () => {
   const racine = conteneur.getRootState().routes
     .find((/** @type {any} */ route) => route.name === 'ClubStack');
@@ -201,11 +225,17 @@ const pileClub = () => {
     : [];
 };
 
-/** @returns {string[]} Les routes de la pile racine. */
+/**
+ * Lit la pile du dessus : c'est elle qui dit si on a quitte `ClubStack`.
+ * @returns {string[]} Les routes de la pile racine.
+ */
 const pileRacine = () => conteneur.getRootState().routes
   .map((/** @type {any} */ route) => route.name);
 
-/** @returns {any} Les dernieres props recues par la mise en page du tunnel. */
+/**
+ * Relit le dernier rendu de l'etape courante, capture par la doublure.
+ * @returns {any} Les dernieres props recues par la mise en page du tunnel.
+ */
 const dernieresProps = () => mockProprietesEtape[mockProprietesEtape.length - 1];
 
 /**

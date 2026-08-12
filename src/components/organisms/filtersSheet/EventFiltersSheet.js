@@ -9,7 +9,8 @@ import usePlaces from '@/domains/places/usePlaces';
 import useTheme from '@/theme/themeContext';
 
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
-import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import AutocompleteAddressInput
+  from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
@@ -64,6 +65,8 @@ const enTableau = (valeur) => {
 };
 
 /**
+ * Resume une selection en un seul libelle : les noms retenus colles par « · »,
+ * ou le mot de repli quand rien n'est coche.
  * @param {any[]} options Les options connues.
  * @param {string[]} valeurs Les identifiants retenus.
  * @param {string} repli Le mot affiche quand rien n'est retenu.
@@ -79,6 +82,8 @@ const libelleDeLaSelection = (options, valeurs, repli) => {
 };
 
 /**
+ * Assemble les rangees du marche « Evenement » et les confie a la coquille
+ * commune `FiltersSheet`.
  * @param {{
  *  filters?: Record<string, any>;
  *  isVisible: boolean;
@@ -152,6 +157,7 @@ function EventFiltersSheet({
   );
 
   /**
+   * Convertit une collection du serveur en options `{ label, value }`.
    * @param {any} collection La reponse du service.
    * @returns {Option[]} Les options.
    */
@@ -174,6 +180,8 @@ function EventFiltersSheet({
   );
 
   /**
+   * Ne garde que les options dont le libelle contient le texte tape, sans
+   * tenir compte de la casse.
    * @param {Option[]} options Les options.
    * @param {string} terme Le texte tape.
    * @returns {Option[]} Les options retenues.
@@ -291,7 +299,10 @@ function EventFiltersSheet({
               a la sienne (le club va de 2 en 2 au kilometre pres) : la copier
               d'une feuille a l'autre changerait un filtre en silence. */}
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {`${t('clubFilters.fields.radius.label', 'Dans un rayon autour de : ')}${String(radius)} km`}
+            {`${t(
+              'clubFilters.fields.radius.label',
+              'Dans un rayon autour de : ',
+            )}${String(radius)} km`}
           </Text>
           <Slider
             accessibilityLabel={t('clubFilters.fields.radius.label', 'Dans un rayon autour de : ')}

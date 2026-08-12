@@ -85,10 +85,13 @@ jest.mock('@/components/molecules/input/Input', () => function InputMock() {
 
 // La doublure capture les props et rend `null` : on pilote le tunnel par ses
 // boutons (`onNext`, `onBack`), pas par la forme de son arbre.
-jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => function EtapeMock(/** @type {any} */ props) {
-  mockProprietesEtape.push(props);
-  return null;
-});
+jest.mock(
+  '@/components/molecules/wizardStepLayout/WizardStepLayout',
+  () => function EtapeMock(/** @type {any} */ props) {
+    mockProprietesEtape.push(props);
+    return null;
+  },
+);
 
 /**
  * Une pile minimale batie sur le routeur reel. Motif repris du filet D24.
@@ -127,13 +130,20 @@ const LES_SEPT_PREMIERES = [
   'AdminClubWizardSponsors',
 ];
 
-/** La console SuperAdmin, reduite a la liste, la fiche et les 8 etapes. */
+/**
+ * La console SuperAdmin, reduite a la liste, la fiche et les 8 etapes.
+ * @returns {any} La pile de navigation de la console.
+ */
 function PileAdmin() {
   return createElement(
     Pile.Navigator,
     { id: undefined, initialRouteName: 'AdminClubList' },
-    createElement(Pile.Screen, { component: Ecran('AdminClubList'), key: 'liste', name: 'AdminClubList' }),
-    createElement(Pile.Screen, { component: Ecran('AdminClubDetail'), key: 'fiche', name: 'AdminClubDetail' }),
+    createElement(Pile.Screen, {
+      component: Ecran('AdminClubList'), key: 'liste', name: 'AdminClubList',
+    }),
+    createElement(Pile.Screen, {
+      component: Ecran('AdminClubDetail'), key: 'fiche', name: 'AdminClubDetail',
+    }),
     ...LES_SEPT_PREMIERES.map((nom) => createElement(Pile.Screen, {
       component: Ecran(nom),
       key: nom,
@@ -165,7 +175,9 @@ const entrerDansLeTunnel = () => {
       createElement(
         Racine.Navigator,
         { id: undefined, initialRouteName: 'SuperAdminHome' },
-        createElement(Racine.Screen, { component: Ecran('SuperAdminHome'), key: 'accueil', name: 'SuperAdminHome' }),
+        createElement(Racine.Screen, {
+          component: Ecran('SuperAdminHome'), key: 'accueil', name: 'SuperAdminHome',
+        }),
         createElement(Racine.Screen, { component: PileAdmin, key: 'admin', name: 'AdminStack' }),
       ),
     ));
@@ -176,7 +188,10 @@ const entrerDansLeTunnel = () => {
   });
 };
 
-/** @returns {string[]} Les routes de `AdminStack`, dans l'ordre de la pile. */
+/**
+ * Lit la pile de la console SuperAdmin telle que le routeur la connait.
+ * @returns {string[]} Les routes de `AdminStack`, dans l'ordre de la pile.
+ */
 const pileAdmin = () => {
   const racine = conteneur.getRootState().routes
     .find((/** @type {any} */ route) => route.name === 'AdminStack');
@@ -185,7 +200,10 @@ const pileAdmin = () => {
     : [];
 };
 
-/** @returns {any} Les dernieres props recues par la mise en page du tunnel. */
+/**
+ * Relit le dernier rendu de l'etape courante, capture par la doublure.
+ * @returns {any} Les dernieres props recues par la mise en page du tunnel.
+ */
 const dernieresProps = () => mockProprietesEtape[mockProprietesEtape.length - 1];
 
 describe('D81 — apres la creation du club SuperAdmin, le tunnel quitte la pile', () => {
