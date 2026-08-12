@@ -1,4 +1,6 @@
-import { Alert, Text, TextInput } from 'react-native';
+import {
+  Alert, ScrollView, StyleSheet, Text, TextInput,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import MatchCallUpSelection from '../MatchCallUpSelection';
@@ -500,5 +502,156 @@ describe('D77 — le joueur hors app et son etiquette', () => {
     expect(parametres.selectedPlayers).toHaveLength(1);
     expect(parametres.selectedPlayers[0].id).toBe('manual_1700000000000');
     expect(parametres.selectedPlayers[0].isManual).toBe(true);
+  });
+});
+
+// D84 — « On ne peut pas faire Suivant quand on a trop de joueurs » (Adel, 12/08).
+//
+// 🧨 CE QUE LA MESURE A CONTREDIT : la barre du bas etait DEJA hors du
+// ScrollView. Le defaut n'etait pas sa place dans l'arbre, c'est que le
+// conteneur defilant n'etait pas BORNE : sans `flex: 1`, React Native mesure un
+// ScrollView a la hauteur de ses enfants (le defaut de `flexShrink` y vaut 0),
+// donc la liste POUSSAIT la barre hors de l'ecran au lieu de defiler dessous.
+// Mesure (iPhone 14, 844 pt) : la barre deborde des 6 joueurs, et le bouton
+// « Suivant » est ENTIEREMENT hors ecran des 7.
+describe('D84 — la barre du bas reste atteignable, quel que soit l effectif', () => {
+  const EFFECTIF_LONG = Array.from({ length: 25 }, (_, index) => joueur(
+    `long_${index}`,
+    `Prenom${index}`,
+    `Nom${index}`,
+    { number: index + 1, position: 'DC' },
+  ));
+
+  /**
+   * Tout le texte porte par un noeud de l'arbre JSON, enfants compris.
+   * @param {any} noeud
+   * @returns {string}
+   */
+  const texteDuNoeud = (noeud) => {
+    if (noeud === null || noeud === undefined || typeof noeud === 'boolean') return '';
+    if (typeof noeud !== 'object') return String(noeud);
+    return (noeud.children || []).map(texteDuNoeud).join(' ');
+  };
+
+  /**
+   * Le noeud hote du conteneur defilant, dans l'arbre JSON.
+   * @param {any} noeud
+   * @returns {any}
+   */
+  const noeudDefilant = (noeud) => {
+    if (!noeud || typeof noeud !== 'object') return null;
+    if (String(noeud.type).includes('ScrollView')) return noeud;
+    return (noeud.children || []).reduce(
+      (/** @type {any} */ trouve, /** @type {any} */ enfant) => trouve || noeudDefilant(enfant),
+      null,
+    );
+  };
+
+  test('🥇 LE CONTENEUR DEFILANT EST BORNE — il ne se mesure pas sur son contenu', async () => {
+    const arbre = await rendre({ players: EFFECTIF_LONG });
+    const style = StyleSheet.flatten(arbre.root.findByType(ScrollView).props.style) || {};
+
+    // `flex: 1` = il grandit ET il retrecit, en partant de ZERO et non de la
+    // hauteur de la liste. C'est LA propriete qui garantit que 25 joueurs
+    // defilent au lieu de pousser la barre dehors.
+    expect(style.flex).toBe(1);
+  });
+
+  test('la barre du bas est HORS du conteneur defilant, avec ses compteurs', async () => {
+    const arbre = await rendre({ players: EFFECTIF_LONG });
+    const racine = arbre.toJSON();
+    const defilant = noeudDefilant(racine);
+
+    expect(defilant).not.toBeNull();
+    // Le CTA et les compteurs vivent en dehors : ils ne defilent jamais.
+    expect(texteDuNoeud(defilant)).not.toContain('Suivant');
+    expect(texteDuNoeud(defilant)).not.toContain('convoqués');
+    expect(texteDuNoeud(racine)).toContain('Suivant');
+    expect(texteDuNoeud(racine)).toContain('0 convoqués');
+  });
+
+  test('⛔ la barre n est PAS une surimpression, et son plancher bas n est pas zero', async () => {
+    const arbre = await rendre({ players: EFFECTIF_LONG });
+    const racine = arbre.toJSON();
+    const barre = racine.children[racine.children.length - 1];
+    const style = StyleSheet.flatten(barre.props.style) || {};
+
+    expect(texteDuNoeud(barre)).toContain('Suivant');
+    // Posee dans le flux, elle ne peut PAS manger le dernier joueur : rien ne
+    // passe dessous. Une barre `absolute` le pourrait — c'est le defaut inverse.
+    expect(style.position).not.toBe('absolute');
+    // 🛟 Le plancher systeme reste un plancher (l'ecran est `edge-to-edge` :
+    // c'est la barre qui porte le retrait bas, personne d'autre).
+    expect(style.paddingBottom).toBeGreaterThanOrEqual(12);
+  });
+
+  test('le dernier joueur garde sa reserve en bas de la liste', async () => {
+    const arbre = await rendre({ players: EFFECTIF_LONG });
+    const contenu = StyleSheet.flatten(
+      arbre.root.findByType(ScrollView).props.contentContainerStyle,
+    ) || {};
+
+    expect(contenu.paddingBottom).toBeGreaterThan(0);
+    expect(texteDuNoeud(arbre.toJSON())).toContain('Nom24');
+  });
+
+  test('⌨️ CLAVIER : la barre ne peut ni sauter, ni recouvrir le champ de recherche', async () => {
+    const arbre = await rendre({ players: EFFECTIF_LONG });
+    const blocs = arbre.toJSON().children;
+    const rang = (/** @type {(n: any) => boolean} */ predicat) => blocs
+      .findIndex((/** @type {any} */ bloc) => predicat(bloc));
+
+    /**
+     * Ce bloc porte-t-il le champ de saisie, a n'importe quelle profondeur ?
+     * @param {any} noeud
+     * @returns {boolean}
+     */
+    const porteLaRecherche = (noeud) => {
+      if (!noeud || typeof noeud !== 'object') return false;
+      if (noeud.props?.accessibilityLabel === 'Rechercher un joueur') return true;
+      return (noeud.children || []).some(porteLaRecherche);
+    };
+
+    const rangRecherche = rang(porteLaRecherche);
+    const rangDefilement = rang((bloc) => String(bloc.type).includes('ScrollView'));
+    const rangBarre = rang((bloc) => texteDuNoeud(bloc).includes('Suivant'));
+
+    // Champ AU-DESSUS, liste au milieu, barre EN DESSOUS : trois freres d'une
+    // meme colonne. Ils ne peuvent pas se recouvrir, clavier ouvert ou non.
+    expect(rangRecherche).toBeGreaterThanOrEqual(0);
+    expect(rangRecherche).toBeLessThan(rangDefilement);
+    expect(rangDefilement).toBeLessThan(rangBarre);
+
+    // Quand le clavier retracte la fenetre, c'est la LISTE qui cede — elle seule
+    // retrecit. Le champ et la barre gardent le `flexShrink: 0` de React Native,
+    // donc ils ne sont ni comprimes ni deplaces : la barre ne saute pas.
+    const styleBarre = StyleSheet.flatten(blocs[rangBarre].props.style) || {};
+    const styleRecherche = StyleSheet.flatten(blocs[rangRecherche].props.style) || {};
+    expect(styleBarre.flexShrink ?? 0).toBe(0);
+    expect(styleRecherche.flexShrink ?? 0).toBe(0);
+    expect(StyleSheet.flatten(arbre.root.findByType(ScrollView).props.style).flex).toBe(1);
+  });
+
+  test('📑 les compteurs restent justes sur les 3 onglets, effectif long', async () => {
+    const arbre = await rendre({ players: EFFECTIF_LONG });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Prenom0 Nom0').props.onPress();
+    });
+
+    // Onglet 1 : 1 coche au football = 1 titulaire, JAMAIS 11.
+    expect(texteVisible(arbre)).toContain('1 convoqué');
+    expect(texteVisible(arbre)).toContain('1 titulaires · 0 sur le banc');
+
+    await appuyerSur(arbre, 'Autres équipes');
+    await act(async () => {
+      rangeeJoueur(arbre, 'Bilal Lopez').props.onPress();
+    });
+    expect(texteVisible(arbre)).toContain('2 convoqués');
+    expect(texteVisible(arbre)).toContain('dont 1 renforts · 0 hors app');
+
+    await appuyerSur(arbre, 'Hors app');
+    // La barre suit sur le 3e onglet : meme compteur, meme CTA.
+    expect(texteVisible(arbre)).toContain('2 convoqués');
+    expect(texteVisible(arbre)).toContain('Suivant');
   });
 });

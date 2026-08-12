@@ -1,5 +1,5 @@
 import {
-  Alert, Switch, Text, TextInput,
+  Alert, ScrollView, StyleSheet, Switch, Text, TextInput,
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -301,5 +301,58 @@ describe('D77 ecran 3 — ajouter un joueur hors app', () => {
 
     expect(mockGoBack).toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});
+
+// D84 — LE VOISIN AVAIT LE MEME DEFAUT, et il est mesure, pas suppose.
+//
+// Meme cause exactement qu'a l'ecran 1 : un ScrollView non borne se mesure a la
+// hauteur de ses enfants et pousse le pied de page dehors. Ici le formulaire
+// pese 696 pt a lui seul (58 d'en-tete + 567 de contenu + 71 de pied, mesure sur
+// l'arbre rendu) : il DEBORDE deja sur un petit telephone (iPhone SE : 647 pt
+// utiles) et il deborde sur TOUS des que le clavier retracte la fenetre — or
+// c'est un formulaire, le clavier y est ouvert presque tout le temps.
+describe('D84 — les 2 boutons du bas restent atteignables', () => {
+  test('🥇 LE CONTENEUR DEFILANT EST BORNE — il ne se mesure pas sur son contenu', async () => {
+    const arbre = await rendre();
+    const style = StyleSheet.flatten(arbre.root.findByType(ScrollView).props.style) || {};
+
+    expect(style.flex).toBe(1);
+  });
+
+  test('⛔ le pied est hors du defilement, sans surimpression ni marge basse a zero', async () => {
+    const arbre = await rendre();
+    const racine = arbre.toJSON();
+    const pied = racine.children[racine.children.length - 1];
+    const style = StyleSheet.flatten(pied.props.style) || {};
+
+    /**
+     * Tout le texte porte par un noeud de l'arbre JSON, enfants compris.
+     * @param {any} noeud
+     * @returns {string}
+     */
+    const texteDuNoeud = (noeud) => {
+      if (noeud === null || noeud === undefined || typeof noeud === 'boolean') return '';
+      if (typeof noeud !== 'object') return String(noeud);
+      return (noeud.children || []).map(texteDuNoeud).join(' ');
+    };
+
+    expect(texteDuNoeud(pied)).toContain('Annuler');
+    expect(texteDuNoeud(pied)).toContain('Ajouter au groupe');
+    expect(String(pied.type)).not.toContain('ScrollView');
+    expect(style.position).not.toBe('absolute');
+    // 🛟 L'ecran est `edge-to-edge` : ce pied est le seul a porter le retrait bas.
+    expect(style.paddingBottom).toBeGreaterThanOrEqual(12);
+  });
+
+  test('le dernier champ garde sa reserve en bas du formulaire', async () => {
+    const arbre = await rendre();
+    const contenu = StyleSheet.flatten(
+      arbre.root.findByType(ScrollView).props.contentContainerStyle,
+    ) || {};
+
+    expect(contenu.paddingBottom).toBeGreaterThan(0);
+    // ⌨️ Le champ le plus bas, celui que le clavier menace, reste dans l'arbre.
+    expect(champ(arbre, 'Téléphone')).toBeDefined();
   });
 });

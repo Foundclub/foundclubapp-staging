@@ -141,10 +141,16 @@ function MatchCallUpManualPlayer() {
         </View>
       </View>
 
+      {/* D84 — meme correctif qu'a l'ecran 1, et pour la meme cause mesuree : un
+          ScrollView sans `flex: 1` se mesure a la hauteur de ses enfants et
+          pousse le pied de page dehors. Le formulaire pese 696 pt : il debordait
+          deja sur un petit telephone, et sur tous des que le clavier retracte la
+          fenetre — or c'est ici qu'on tape, le clavier y est presque toujours la. */}
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        style={styles.list}
       >
         <View
           style={[
@@ -308,6 +314,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 16,
     padding: 16,
+  },
+  list: {
+    flex: 1,
   },
   screen: {
     paddingHorizontal: 0,
