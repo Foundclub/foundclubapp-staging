@@ -2078,6 +2078,9 @@ function EventDetails({ navigation, route }) {
     if (!eventId) return;
     navigation.navigate(RouteNames.EventPublishedShowcase, {
       eventId,
+      // D94/C2 : le type voyage aussi, pour que le TEXTE du partage le suive
+      // comme le gabarit — sans lui, un match repartait avec « viens essayer ».
+      eventTypeName: event?.type?.name,
       template: getEventShowcaseTemplate(event?.type?.name),
     });
   }, [event?.type?.name, eventId, navigation]);

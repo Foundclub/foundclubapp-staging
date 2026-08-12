@@ -2612,6 +2612,17 @@ export default {
     share: 'Envoyer l’affiche',
     shareHint: 'L’image part telle que tu la vois. Dans la fenêtre de partage, tu peux aussi l’enregistrer dans ton téléphone.',
     shareIntro: 'Viens participer à notre détection / séance d’essai !',
+    // D94/C2 : le message de partage suit le TYPE de l'événement. `shareIntro`
+    // ci-dessus reste le défaut du gabarit (club, annonce, lien profond sans type).
+    shareIntroByType: {
+      detection: 'Viens participer à notre détection / séance d’essai !',
+      entrainement: 'Rendez-vous à l’entraînement !',
+      match: 'Viens nous encourager pour ce match !',
+      neutre: 'Voici notre prochain événement !',
+      reservation: 'Voici les infos de cette réservation.',
+      stage: 'Découvre notre stage !',
+      tournoi: 'Viens vivre notre tournoi !',
+    },
     shareLabel: 'Voir l’événement',
     story: 'Version story 9:16',
     storyHint: 'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',

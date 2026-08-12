@@ -50,6 +50,8 @@ export const isStageEventType = (typeName = '') => normalizeEventTypeLabel(typeN
 export const isTournamentEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('tournoi');
 export const isDetectionEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('detection');
 export const isTrainingEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('entrainement');
+export const isMatchEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('match');
+export const isBookingEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('reservation');
 
 const normalizeValidationModeValue = (value, fallbackValue = null) => {
   const normalized = String(value || '').trim().toLowerCase();

@@ -1033,13 +1033,18 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
   // gabarit d'entrainement n'existe — mais la valeur est desormais DECIDEE et
   // elle voyage. Le resolveur est importe et non recopie : les deux ne peuvent
   // pas diverger.
-  test('l affiche redevient atteignable, avec son eventId ET son gabarit', () => {
+  // ⚠️ MIS A JOUR le 2026-08-13 (D94/C2) — le filet a REJOUE son role : il est
+  // redevenu ROUGE quand l'ecran s'est mis a passer AUSSI le type. Le gabarit ne
+  // suffisait pas : c'est le TYPE qui decide le TEXTE du partage, et sans lui un
+  // match repartait avec « viens participer a notre detection ».
+  test('l affiche redevient atteignable, avec son eventId, son gabarit ET son type', () => {
     const root = asOrganiser();
     press(root, "Gérer l'événement");
     press(root, "Voir l'affiche");
 
     expect(mockNavigate).toHaveBeenCalledWith('EventPublishedShowcase', {
       eventId: 'event-1',
+      eventTypeName: 'Entrainement',
       template: getEventShowcaseTemplate('Entrainement'),
     });
   });

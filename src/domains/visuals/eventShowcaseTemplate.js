@@ -32,7 +32,10 @@
  * est deja exporte par le domaine evenement (§1 bis, barreau 2).
  */
 
-import { isDetectionEventType } from '@/domains/event/eventUseCases';
+import {
+  isBookingEventType, isDetectionEventType, isMatchEventType, isStageEventType,
+  isTournamentEventType, isTrainingEventType,
+} from '@/domains/event/eventUseCases';
 
 /**
  * Le gabarit servi aux types qui n'ont pas encore le leur.
@@ -63,4 +66,44 @@ export const getEventShowcaseTemplate = (typeName) => {
   // Match · Entrainement · Tournoi · Stage · Autre · Reservation, et tout type
   // que le serveur ajouterait demain : aucun gabarit dedie n'existe encore.
   return EVENT_SHOWCASE_FALLBACK_TEMPLATE;
+};
+
+/**
+ * Le message qui ACCOMPAGNE l'affiche dans le partage (D94/C2, 2026-08-13).
+ *
+ * 🧨 LE DEFAUT CORRIGE : il n'y avait qu'UNE phrase pour les 7 types — « Viens
+ * participer a notre detection / seance d'essai ! » (`useEventShowcase.js`,
+ * texts.shareIntro du gabarit `affiche-detection`). Un entraineur qui partageait
+ * l'affiche de son MATCH envoyait donc une invitation a une DETECTION. Le
+ * gabarit, lui, suivait deja le type depuis D28 : le texte ne suivait pas.
+ *
+ * ⛔ Ce n'est PAS un repli comme le gabarit : ici, chaque type a sa vraie phrase.
+ * Le repli neutre ne sert qu'a « Autre » et aux types inconnus — et il n'affirme
+ * rien, plutot que d'inventer une promesse (meme regle que D94/C4 sur le niveau).
+ * @param {string} [typeName] Nom du type tel que le serveur le sert.
+ * @returns {{ default: string, key: string }} Meme forme que `texts.shareIntro`.
+ */
+export const getEventShowcaseShareIntro = (typeName) => {
+  if (isDetectionEventType(typeName)) {
+    return { default: 'Viens participer à notre détection / séance d’essai !', key: 'showcase.shareIntroByType.detection' };
+  }
+  if (isMatchEventType(typeName)) {
+    return { default: 'Viens nous encourager pour ce match !', key: 'showcase.shareIntroByType.match' };
+  }
+  if (isTrainingEventType(typeName)) {
+    return { default: 'Rendez-vous à l’entraînement !', key: 'showcase.shareIntroByType.entrainement' };
+  }
+  if (isTournamentEventType(typeName)) {
+    return { default: 'Viens vivre notre tournoi !', key: 'showcase.shareIntroByType.tournoi' };
+  }
+  if (isStageEventType(typeName)) {
+    return { default: 'Découvre notre stage !', key: 'showcase.shareIntroByType.stage' };
+  }
+  if (isBookingEventType(typeName)) {
+    return { default: 'Voici les infos de cette réservation.', key: 'showcase.shareIntroByType.reservation' };
+  }
+
+  // « Autre », un type absent, ou un type que le serveur ajouterait demain :
+  // on annonce un evenement, on ne promet rien de plus.
+  return { default: 'Voici notre prochain événement !', key: 'showcase.shareIntroByType.neutre' };
 };
