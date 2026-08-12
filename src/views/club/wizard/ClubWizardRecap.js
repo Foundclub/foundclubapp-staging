@@ -96,11 +96,22 @@ function ClubWizardRecap({ navigation, route }) {
       return;
     }
 
+    // D81 — LES 5 ETAPES QUITTENT LA PILE. `navigate` posait la fiche du club
+    // PAR-DESSUS elles : un seul « Retour » ramenait sur le recapitulatif d'un
+    // club deja cree, bouton « Creer mon club » sous le doigt. Le retour depuis
+    // la fiche ressort maintenant du tunnel, la ou l'utilisateur etait avant
+    // d'y entrer. Meme motif que `TeamWizardRecap` et `EventWizardRecap`.
     if (clubDocumentId) {
-      navigation.navigate(RouteNames.Club, { clubId: clubDocumentId });
-    } else {
-      navigation.goBack();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: RouteNames.Club, params: { clubId: clubDocumentId } }],
+      });
+      return;
     }
+
+    // Club cree mais sans identifiant : on referme quand meme le tunnel.
+    // `goBack` y revenait etape par etape, donc permettait de le creer deux fois.
+    navigation.reset({ index: 0, routes: [{ name: RouteNames.ClubList }] });
   };
 
   const submit = async ({ forceCreate = false } = {}) => {
