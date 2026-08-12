@@ -310,12 +310,17 @@ function TeamListContent({
     const clubRequests = userData.clubMembershipRequests || [];
     const pendingClubs = clubRequests
       .filter((/** @type {{ state?: string; club?: any }} */ r) => r.state === 'pending' && r.club)
-      .map((/** @type {{ club?: any }} */ r) => ({
+      .map((/** @type {{ club?: any; type?: string }} */ r) => ({
         ...r.club,
         activities: r.club.activities || [],
         club: r.club,
         documentId: r.club.documentId,
         name: r.club.name,
+        // D83 : `type` porte deja la nature de la CARTE ('club'), qui decide de
+        // la navigation. La nature de la DEMANDE voyage donc a part. Le serveur
+        // la rend deja (`admin/src/api/firebase-auth/constants.ts:135`), il n'y
+        // a rien a ajouter cote API.
+        requestType: r.type === 'claim' ? 'claim' : 'join',
         type: 'club',
       }));
 
@@ -610,6 +615,68 @@ function TeamListContent({
         ? item.club.sponsor.filter(Boolean)
         : [];
 
+      // D83 — « EN ATTENTE » ne disait ni de QUOI, ni pour debloquer QUOI. Les
+      // trois demandes possibles n'ont ni le meme valideur ni le meme effet, et
+      // c'est lu dans le serveur, pas suppose :
+      //  · revendiquer un club  : `admin/src/api/club/controllers/club.ts:619`
+      //    cree la demande sans toucher l'utilisateur — il n'est donc PAS encore
+      //    affilie — et `club-membership-request.ts:745` refuse la validation a
+      //    tout autre qu'un superadmin FoundClub. L'acceptation seule donne le
+      //    club ET le role Dirigeant (`services/club-membership-request.ts:276`).
+      //  · rejoindre un club    : accept sous police `is-club-manager`.
+      //  · rejoindre une equipe : accept sous police `is-team-manager`.
+      const isClubRequestCard = isPending && item?.type === 'club';
+      let noticeKind = null;
+      if (isPending) {
+        if (!isClubRequestCard) {
+          noticeKind = 'teamJoin';
+        } else {
+          noticeKind = item?.requestType === 'claim' ? 'claim' : 'clubJoin';
+        }
+      }
+      const notices = {
+        claim: {
+          unblocks: t(
+            'teamList.pendingNotice.claim.unblocks',
+            'Une fois acceptée, tu deviens dirigeant·e du club et tu peux créer tes équipes.',
+          ),
+          waiting: t('teamList.pendingNotice.claim.waiting', 'Ta demande pour diriger ce club'),
+          who: t(
+            'teamList.pendingNotice.claim.who',
+            'FoundClub vérifie que tu diriges bien ce club. Tu n\'as rien à faire de ton côté.',
+          ),
+        },
+        clubJoin: {
+          unblocks: t(
+            'teamList.pendingNotice.clubJoin.unblocks',
+            'Une fois acceptée, tu fais partie du club.',
+          ),
+          waiting: t(
+            'teamList.pendingNotice.clubJoin.waiting',
+            'Ta demande pour rejoindre ce club',
+          ),
+          who: t(
+            'teamList.pendingNotice.clubJoin.who',
+            'Un·e dirigeant·e du club doit l\'accepter.',
+          ),
+        },
+        teamJoin: {
+          unblocks: t(
+            'teamList.pendingNotice.teamJoin.unblocks',
+            'Une fois acceptée, tu rejoins l\'effectif.',
+          ),
+          waiting: t(
+            'teamList.pendingNotice.teamJoin.waiting',
+            'Ta demande pour rejoindre cette équipe',
+          ),
+          who: t(
+            'teamList.pendingNotice.teamJoin.who',
+            'Le staff de l\'équipe doit l\'accepter.',
+          ),
+        },
+      };
+      const pendingNotice = noticeKind ? notices[noticeKind] : null;
+
       return (
         <>
           <View style={styles.identityRow}>
@@ -659,28 +726,53 @@ function TeamListContent({
             </View>
           ) : null}
 
-          <View
-            style={[styles.statsBand, { backgroundColor: withAlpha(Colors.neutral00, 0.05) }]}
-            testID="team-card-stats"
-          >
-            <View style={styles.statCell}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{memberCount}</Text>
-              <Text style={[Fonts.p4, Fonts.neutral300]}>
-                {t('teamList.stats.members', 'Membres')}
-              </Text>
-            </View>
+          {pendingNotice ? (
             <View
               style={[
-                styles.statCell,
-                { borderLeftColor: withAlpha(Colors.neutral00, 0.1), borderLeftWidth: 1 },
+                styles.pendingNotice,
+                {
+                  backgroundColor: withAlpha(Colors.warning500, 0.08),
+                  borderLeftColor: Colors.warning500,
+                },
               ]}
+              testID="team-card-pending-notice"
             >
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{trainerCount}</Text>
-              <Text style={[Fonts.p4, Fonts.neutral300]}>
-                {t('teamList.stats.trainers', 'Entraîneur·e·s')}
-              </Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{pendingNotice.waiting}</Text>
+              <Text style={[Fonts.p4, Fonts.neutral200]}>{pendingNotice.who}</Text>
+              <Text style={[Fonts.p4, Fonts.neutral200]}>{pendingNotice.unblocks}</Text>
             </View>
-          </View>
+          ) : null}
+
+          {/*
+            Un club n'a ni joueurs ni entraineurs : la grille y affichait
+            « 0 Membres / 0 Entraineur·e·s », deux zeros qui ne disent rien et
+            qui contredisent l'explication juste au-dessus. Les equipes, elles,
+            gardent leurs vrais compteurs, en attente comme ailleurs.
+          */}
+          {isClubRequestCard ? null : (
+            <View
+              style={[styles.statsBand, { backgroundColor: withAlpha(Colors.neutral00, 0.05) }]}
+              testID="team-card-stats"
+            >
+              <View style={styles.statCell}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{memberCount}</Text>
+                <Text style={[Fonts.p4, Fonts.neutral300]}>
+                  {t('teamList.stats.members', 'Membres')}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.statCell,
+                  { borderLeftColor: withAlpha(Colors.neutral00, 0.1), borderLeftWidth: 1 },
+                ]}
+              >
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{trainerCount}</Text>
+                <Text style={[Fonts.p4, Fonts.neutral300]}>
+                  {t('teamList.stats.trainers', 'Entraîneur·e·s')}
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/*
             Le defilement de sponsors du depot (L03/L23) : il se masque tout seul
@@ -1196,6 +1288,15 @@ const styles = StyleSheet.create({
   identityText: {
     flex: 1,
     minWidth: 0,
+  },
+  // D83 : le liseré reprend l'orange du badge « EN ATTENTE » de la meme carte.
+  // Orange = « il se passe quelque chose », jamais rouge : rien n'est casse.
+  pendingNotice: {
+    borderLeftWidth: 3,
+    borderRadius: 12,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   // Le fond degrade, la bordure et la decoupe des coins viennent de
   // ClubCardSurface : ici, uniquement les cotes propres a la carte d'equipe.
