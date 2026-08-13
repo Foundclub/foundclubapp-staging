@@ -42,6 +42,7 @@ import { connectLicenseHelloAsso } from '@/services/license/licenseService';
 import {
   createHelloAssoDraft,
   describeHelloAssoReadiness,
+  formatLicenseMoney,
   getHelloAssoSnapshot,
   isHelloAssoReadyForCampaign,
   LicenseEmptyState,
@@ -1552,6 +1553,74 @@ function ClubLicenses({ navigation, route }) {
     ]);
   }, [deleteMutation]);
 
+  // R01 (2026-08-13) — SUPPRIMER UNE CAMPAGNE, EN DISANT CE QU ON PERD.
+  //
+  // Adel en recette : « impossible de supprimer une campagne volontairement, il
+  // n y a pas de bouton prevu ». Il n y en avait qu un, « Supprimer le brouillon »,
+  // reserve aux campagnes non lancees — donc jamais celle qu on veut retirer.
+  //
+  // Deux chemins, et le premier est un REFUS :
+  //   * la campagne a deja encaisse -> on ne supprime pas, on propose d ARCHIVER ;
+  //   * sinon -> on demande confirmation en NOMMANT le nombre de cotisations qui
+  //     partent avec elle.
+  // Les chiffres viennent de `item.totals`, que la liste porte deja (le serveur
+  // les calcule dans listCampaigns) : aucun appel de plus pour poser la question.
+  // Le serveur reste l arbitre — s il refuse, on reaffiche SON message, qui nomme
+  // lui aussi ce qui bloque.
+  const handleDeleteCampaign = useCallback((item) => {
+    const totals = item?.totals || {};
+    const nom = item?.name || 'Cette campagne';
+    const nombreCotisations = Number(totals.total) || 0;
+    const nombreMembresAyantPaye = (Number(totals.paidCount) || 0) + (Number(totals.partialCount) || 0);
+    const montantEncaisseCents = Number(totals.paidCents) || 0;
+    const identifiant = item?.documentId || item?.id;
+
+    if (montantEncaisseCents > 0 || nombreMembresAyantPaye > 0) {
+      const lifecycle = lifecycleForCampaign(item);
+      const peutArchiverMaintenant = lifecycle?.action === 'archive';
+      Alert.alert(
+        'Suppression impossible',
+        `« ${nom} » a déjà encaissé ${formatLicenseMoney(montantEncaisseCents)} auprès de `
+        + `${nombreMembresAyantPaye} membre${nombreMembresAyantPaye > 1 ? 's' : ''}. `
+        + 'On ne supprime pas une campagne qui porte de l\'argent.\n\n'
+        + (peutArchiverMaintenant
+          ? 'Tu peux l\'archiver : elle sort de la liste, et rien n\'est perdu.'
+          : 'Clos-la d\'abord, puis archive-la : elle sortira de la liste sans rien perdre.'),
+        [
+          { style: 'cancel', text: 'Annuler' },
+          ...(lifecycle ? [{
+            onPress: () => handleLifecycleCampaign(item, lifecycle.action),
+            text: peutArchiverMaintenant ? 'Archiver' : lifecycle.label,
+          }] : []),
+        ],
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Supprimer cette campagne ?',
+      `« ${nom} » sera définitivement supprimée`
+      + (nombreCotisations > 0
+        ? `, avec ses ${nombreCotisations} cotisation${nombreCotisations > 1 ? 's' : ''}.`
+        : '.')
+      + '\n\nAucun paiement n\'a été encaissé : rien d\'autre ne sera perdu. '
+      + 'Cette action est irréversible.',
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: () => deleteMutation.mutate(identifiant, {
+            onError: (error) => Alert.alert(
+              'Suppression impossible',
+              error?.message || 'La suppression a échoué.',
+            ),
+          }),
+          style: 'destructive',
+          text: 'Supprimer',
+        },
+      ],
+    );
+  }, [deleteMutation, handleLifecycleCampaign]);
+
   const retryData = useCallback(() => {
     campaignQuery.refetch();
     campaignsQuery.refetch();
@@ -2380,8 +2449,9 @@ function ClubLicenses({ navigation, route }) {
       action();
     };
 
+    // 50 % et non 40 % : la feuille porte un bouton de plus depuis R01.
     return (
-      <BottomModal close={fermer} isVisible snapPoints={['40%']}>
+      <BottomModal close={fermer} isVisible snapPoints={['50%']}>
         <View style={Spaces.gap[12]}>
           <View style={Spaces.gap[4]}>
             <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{campaignActionsFor?.name || 'Campagne'}</Text>
@@ -2410,6 +2480,16 @@ function ClubLicenses({ navigation, route }) {
               clubId,
             }))}
             title="Modifier"
+            variant="Secondary"
+          />
+          {/*
+            R01 — le geste explicite qui manquait. En dernier, et separe des
+            autres : c'est le seul de cette feuille qui detruit quelque chose.
+          */}
+          <Button
+            isLoading={deleteMutation.isPending}
+            onPress={fermerPuis(() => handleDeleteCampaign(campaignActionsFor))}
+            title="Supprimer"
             variant="Secondary"
           />
         </View>
