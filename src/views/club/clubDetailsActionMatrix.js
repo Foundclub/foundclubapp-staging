@@ -20,6 +20,12 @@ export const resolveClubDetailsActionMatrix = ({
   const canShowAffiliationAction = isAuthenticated && !showLeaveClubAction;
 
   const showPublicClaimLogin = !isAuthenticated;
+  // D98 — la fiche club est la principale porte d'entree du produit (~28 500 pages
+  // indexables), et elle n'offrait au visiteur anonyme que « Je dirige ce club ».
+  // Un joueur, ou le parent d'un joueur, ne peut pas signer cette phrase : il
+  // repartait. Les deux portes menent a la meme connexion, aucune n'envoie quoi
+  // que ce soit sans compte (temoin « never exposes a sending action »).
+  const showPublicPlayerLogin = !isAuthenticated;
   const showPlayerClubAction = Boolean(
     canShowAffiliationAction && canPlayerSignalClubTeam,
   );
@@ -85,5 +91,6 @@ export const resolveClubDetailsActionMatrix = ({
     showPlayerClubAction,
     showPlayerNoTeamAction,
     showPublicClaimLogin,
+    showPublicPlayerLogin,
   };
 };

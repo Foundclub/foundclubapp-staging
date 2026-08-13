@@ -253,6 +253,7 @@ export default {
       joinAsMyClub: "C'est mon club !",
       leave: 'Quitter le club',
       manageJoinRequests: 'Voir les demandes d\'affiliation',
+      playAtClub: 'Je joue dans ce club',
       requestJoin: 'Demander à rejoindre ce club',
       requestPending: 'Demande en attente',
     },

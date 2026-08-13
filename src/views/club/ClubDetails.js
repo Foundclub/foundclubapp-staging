@@ -1353,6 +1353,7 @@ function ClubDetails({ navigation, route }) {
     showPlayerClubAction,
     showPlayerNoTeamAction,
     showPublicClaimLogin,
+    showPublicPlayerLogin,
   } = useMemo(() => resolveClubDetailsActionMatrix({
     areClubMembersHidden,
     canContactAdmin,
@@ -1442,6 +1443,7 @@ function ClubDetails({ navigation, route }) {
   }, [clubId, navigation]);
 
   const floatingClubActionsCount = [
+    showPublicPlayerLogin,
     showPublicClaimLogin,
     showPlayerClubAction,
     showPlayerNoTeamAction,
@@ -3454,12 +3456,26 @@ function ClubDetails({ navigation, route }) {
             },
           ]}
         >
+          {/* D98 — le joueur passe EN PREMIER et en Primary : c'est le cas
+              majoritaire d'une fiche club trouvee depuis Google. « Je dirige ce
+              club » reste, en Secondary, parce qu'un dirigeant sait ce qu'il
+              cherche alors qu'un joueur, lui, repartait faute de porte.
+              Les deux motifs entrent dans le MEME parcours de connexion. */}
+          {showPublicPlayerLogin ? (
+            <Button
+              onPress={() => openClubAuthFlow('club-public-player-login')}
+              style={floatingClubActionButtonStyle}
+              title={t('clubDetails.actions.playAtClub', 'Je joue dans ce club')}
+              variant="Primary"
+            />
+          ) : null}
+
           {showPublicClaimLogin ? (
             <Button
               onPress={() => openClubAuthFlow('club-public-claim-login')}
               style={floatingClubActionButtonStyle}
               title={t('clubDetails.actions.manageClub', 'Je dirige ce club')}
-              variant="Primary"
+              variant="Secondary"
             />
           ) : null}
 
