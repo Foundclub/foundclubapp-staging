@@ -231,7 +231,20 @@ const campagneAvecRelances = Object.freeze({
  */
 const monterTunnel = (campagne) => {
   mockWizardProps.length = 0;
-  const route = { params: { campaign: campagne, clubId: 'club-D18', createNew: true } };
+  // R01 (2026-08-13) — une campagne RELUE est une campagne que la route NOMME.
+  // Auparavant ce montage ne passait que l objet `campaign` et s appuyait sur le
+  // repli qui devinait la cible depuis la campagne courante : c est precisement
+  // ce repli qui faisait ECRASER la campagne en cours par « + Nouvelle campagne ».
+  // L intention du fichier est inchangee — elle est ecrite deux tests plus bas :
+  // « `campaignId` absent = creation ».
+  const route = {
+    params: {
+      campaign: campagne,
+      campaignId: campagne ? (campagne.documentId || campagne.id) : undefined,
+      clubId: 'club-D18',
+      createNew: true,
+    },
+  };
   /** @type {any} */
   let arbre;
   act(() => {

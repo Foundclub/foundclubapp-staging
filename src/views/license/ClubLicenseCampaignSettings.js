@@ -1361,7 +1361,17 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const routeEventId = String(route?.params?.eventId || '').trim();
   const routeEvent = route?.params?.event || null;
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
-  const createNewCampaign = Boolean(route?.params?.createNew || (routeEventId && !routeCampaignId));
+  // R01 — LA CAMPAGNE MODIFIEE VIENT DE LA ROUTE, ELLE NE SE DEDUIT JAMAIS.
+  //
+  // Avant le 2026-08-13, l intention se lisait sur `createNew` : sans lui, cet
+  // ecran allait chercher LA CAMPAGNE COURANTE du club et enregistrait par-dessus
+  // (l. 1895). Le hub club ne l a jamais passe (ClubLicenses.js:2190) : « + Nouvelle
+  // campagne » ECRASAIT donc la campagne en cours au lieu d en creer une. Constate
+  // par Adel en recette — il l a vu comme une suppression.
+  // `createNew` reste accepte par compatibilite avec les appelants qui le passent
+  // deja (EventDetails.js:2584), mais il ne decide plus rien : seule l absence de
+  // `campaignId` dans la route decide, et elle veut dire « on cree ».
+  const createNewCampaign = !routeCampaignId;
   const todayIsoDateValue = useMemo(() => getTodayIsoDateValue(), []);
   const eventCampaignDefaults = useMemo(() => buildEventCampaignDefaults({
     event: routeEvent,
@@ -1378,7 +1388,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const levelsQuery = useGetLevels();
   const campaignIsLoading = routeCampaignId ? !campaign && campaignByIdQuery.isLoading : (!createNewCampaign && campaignQuery.isLoading);
   const campaignHasError = routeCampaignId ? !campaign && campaignByIdQuery.isError : (!createNewCampaign && campaignQuery.isError);
-  const campaignId = routeCampaignId || campaign?.documentId || campaign?.id;
+  // R01 — LA CIBLE DE L ENREGISTREMENT, elle aussi, ne vient que de la route.
+  // Un `campaign` passe en parametre sans `campaignId` sert alors de PRE-REMPLISSAGE
+  // et rien de plus : on part de ses valeurs, on enregistre une campagne NEUVE.
+  const campaignId = routeCampaignId || null;
   const club = clubQuery.data;
   const clubMembers = useMemo(() => [...(club?.members || [])].sort((left, right) => (
     `${left?.firstname || ''} ${left?.lastname || ''}`.localeCompare(`${right?.firstname || ''} ${right?.lastname || ''}`, 'fr', {
