@@ -118,14 +118,20 @@ jest.mock('@/services/license/licenseService', () => ({
   connectLicenseHelloAsso: jest.fn(),
 }));
 
-jest.mock('@/components/templates/ScreenContainer', () => function ScreenContainerMock({ children }) {
-  return children;
-});
+jest.mock(
+  '@/components/templates/ScreenContainer',
+  () => function ScreenContainerMock({ children }) {
+    return children;
+  },
+);
 
 // ⚠️ LA DIFFERENCE AVEC ClubLicenses.test.js : ici la feuille rend ses enfants.
-jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock({ children }) {
-  return children;
-});
+jest.mock(
+  '@/components/molecules/bottomModal/BottomModal',
+  () => function BottomModalMock({ children }) {
+    return children;
+  },
+);
 
 jest.mock('@/components/molecules/clubSelector/ClubSelector', () => function ClubSelectorMock() {
   return null;
@@ -135,9 +141,12 @@ jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => function P
   return null;
 });
 
-jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => function SegmentedControlMock() {
-  return null;
-});
+jest.mock(
+  '@/components/molecules/segmentedControl/SegmentedControl',
+  () => function SegmentedControlMock() {
+    return null;
+  },
+);
 
 jest.mock('../MyLicense', () => function MyLicenseMock() {
   return null;
@@ -203,7 +212,10 @@ const ouvrirLaFeuilleDActions = (campagne) => {
   let arbre;
   act(() => {
     arbre = renderer.create(
-      <ClubLicenses navigation={navigation} route={{ name: 'ClubLicenses', params: { clubId: 'club-hub' } }} />,
+      <ClubLicenses
+        navigation={navigation}
+        route={{ name: 'ClubLicenses', params: { clubId: 'club-hub' } }}
+      />,
     );
   });
   arbreCourant = arbre;
@@ -221,6 +233,7 @@ const ouvrirLaFeuilleDActions = (campagne) => {
 };
 
 /**
+ * Retrouve un bouton par son intitule exact.
  * @param {any[]} boutons - Les props de boutons recoltees.
  * @param {string} titre - Le titre exact recherche.
  * @returns {any} Le bouton, ou `undefined`.
@@ -283,7 +296,10 @@ describe('R01 — supprimer une campagne depuis le hub', () => {
     const [titre, corps, actions] = Alert.alert.mock.calls[0];
     expect(titre).toBe('Suppression impossible');
     // Le montant est nomme, pas seulement le fait qu'il existe.
-    expect(corps.replace(/[  ]/g, ' ')).toContain('240,00 €');
+    // `\s` plutot qu'un espace insecable ecrit en clair : `Intl` glisse un
+    // U+202F devant le « € » en francais, invisible a l'oeil et interdit par
+    // la porte lint. En JS, `\s` couvre U+00A0 comme U+202F.
+    expect(corps.replace(/\s/g, ' ')).toContain('240,00 €');
     expect(corps).toContain('2 membres');
     expect(corps).toMatch(/archive/i);
     // ⛔ AUCUNE suppression proposee, et surtout aucune envoyee.

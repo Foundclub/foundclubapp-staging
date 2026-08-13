@@ -1501,7 +1501,14 @@ function ClubLicenses({ navigation, route }) {
     ]);
   }, [duplicateMutation]);
 
-  const handleLifecycleCampaign = useCallback((item, forcedAction = null) => {
+  // `forcedAction` force l'etape du cycle de vie plutot que de la deduire du
+  // statut. R01 s'en sert pour proposer « Archiver » quand une suppression est
+  // refusee — sans le type explicite, il serait infere `null` et refuserait
+  // toute chaine.
+  const handleLifecycleCampaign = useCallback((
+    /** @type {any} */ item,
+    /** @type {string|null} */ forcedAction = null,
+  ) => {
     const lifecycle = forcedAction ? { action: forcedAction, label: forcedAction } : lifecycleForCampaign(item);
     if (!lifecycle) return;
     const copyByAction = {
@@ -1567,7 +1574,8 @@ function ClubLicenses({ navigation, route }) {
   // les calcule dans listCampaigns) : aucun appel de plus pour poser la question.
   // Le serveur reste l arbitre — s il refuse, on reaffiche SON message, qui nomme
   // lui aussi ce qui bloque.
-  const handleDeleteCampaign = useCallback((item) => {
+  // `item` est la campagne de la liste, avec ses `totals`.
+  const handleDeleteCampaign = useCallback((/** @type {any} */ item) => {
     const totals = item?.totals || {};
     const nom = item?.name || 'Cette campagne';
     const nombreCotisations = Number(totals.total) || 0;

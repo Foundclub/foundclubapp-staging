@@ -231,7 +231,7 @@ describe('R01 — creer une campagne n en detruit aucune autre', () => {
     updateLicenseCampaign.mockClear();
   });
 
-  it("temoin 1 — « + Nouvelle campagne » depuis le hub CREE, il n ecrase pas la campagne en cours", async () => {
+  it('temoin 1 — « + Nouvelle campagne » CREE, il n ecrase pas la campagne en cours', async () => {
     // Les parametres du hub, mot pour mot : le club, et rien d'autre.
     const arbre = await monterPuisEnregistrer({ clubId: 'club-R01' });
 
@@ -241,7 +241,7 @@ describe('R01 — creer une campagne n en detruit aucune autre', () => {
     arbre.unmount();
   });
 
-  it("temoin 1 bis — la campagne existante n est JAMAIS la cible d un PUT quand la route ne la nomme pas", async () => {
+  it('temoin 1 bis — la campagne existante n est JAMAIS la cible d un PUT non nomme', async () => {
     const arbre = await monterPuisEnregistrer({ clubId: 'club-R01' });
 
     // Formulation complementaire : meme si un PUT partait, il ne devrait en
@@ -254,7 +254,7 @@ describe('R01 — creer une campagne n en detruit aucune autre', () => {
     arbre.unmount();
   });
 
-  it("non-regression — quand la route NOMME une campagne, on la modifie bien (pas de creation parasite)", async () => {
+  it('non-regression — quand la route NOMME une campagne, on la modifie bien', async () => {
     const arbre = await monterPuisEnregistrer({ campaignId: 'camp-DEJA-LA', clubId: 'club-R01' });
 
     expect(createLicenseCampaign).not.toHaveBeenCalled();
