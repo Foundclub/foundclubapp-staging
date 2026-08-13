@@ -22,7 +22,7 @@ import {
   extractSubscriptionDecisionFromError,
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
-import { getEventShowcaseTemplate } from '@/domains/visuals/eventShowcaseTemplate';
+import { getEventShowcaseTemplate, isEventShowcaseOffered } from '@/domains/visuals/eventShowcaseTemplate';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -737,25 +737,35 @@ function EventWizardRecap({ navigation }) {
     if (firstCreatedId) {
       // Pile [EventDetails, EventPublishedShowcase] : l'utilisateur voit d'abord
       // l'atelier « fais voir ton événement » ; fermer révèle EventDetails préchargé.
-      navigation.reset({
-        index: 1,
-        routes: [{
-          name: RouteNames.EventDetails,
-          params: {
-            creationCelebration,
-            eventCampaignCreationSuggested: true,
-            eventId: firstCreatedId,
-            fromEventCreation: true,
-            subscriptionFollowUp: eventQuotaSnapshot && subscriptionAccessLevel === 'FREE'
-              ? {
-                beforeRemaining: eventQuotaSnapshot.beforeRemaining,
-                consumedCount: Math.max(1, created.length),
-                quotaType: eventQuotaSnapshot.quotaType,
-                total: eventQuotaSnapshot.total,
-              }
-              : null,
-          },
-        }, {
+      //
+      // D99 (2026-08-13) — SAUF POUR UN ENTRAÎNEMENT, qui n'a plus d'affiche
+      // (décision d'Adel ; le pourquoi est écrit dans `eventShowcaseTemplate.js`).
+      // ⚠️ C'est le point d'entrée le plus DISCRET des deux : ici personne ne
+      // demande à voir l'affiche, elle s'ouvre toute seule. Fermer la chip du
+      // menu « Gérer » sans fermer celui-ci n'aurait rien protégé.
+      // ⛔ L'organisateur ne perd RIEN : il atterrit sur le détail de son
+      // entraînement, célébration de création comprise, et le chemin vers une
+      // détection l'attend dans « Gérer l'événement ».
+      const routes = [{
+        name: RouteNames.EventDetails,
+        params: {
+          creationCelebration,
+          eventCampaignCreationSuggested: true,
+          eventId: firstCreatedId,
+          fromEventCreation: true,
+          subscriptionFollowUp: eventQuotaSnapshot && subscriptionAccessLevel === 'FREE'
+            ? {
+              beforeRemaining: eventQuotaSnapshot.beforeRemaining,
+              consumedCount: Math.max(1, created.length),
+              quotaType: eventQuotaSnapshot.quotaType,
+              total: eventQuotaSnapshot.total,
+            }
+            : null,
+        },
+      }];
+
+      if (isEventShowcaseOffered(state.type?.name)) {
+        routes.push({
           name: RouteNames.EventPublishedShowcase,
           // D28 : le gabarit voyage avec l'evenement qu'on vient de publier.
           // `state` est celui de la fermeture de rendu — le `dispatch RESET`
@@ -769,8 +779,12 @@ function EventWizardRecap({ navigation }) {
             eventTypeName: state.type?.name,
             template: getEventShowcaseTemplate(state.type?.name),
           },
-        }],
-      });
+        });
+      }
+
+      // L'index SUIT la pile : figé à 1, il viserait un écran absent le jour où
+      // la pile n'en compte qu'un.
+      navigation.reset({ index: routes.length - 1, routes });
       if (firstCreatedItem) {
         InteractionManager.runAfterInteractions(() => {
           preloadCreatedEventDetail({

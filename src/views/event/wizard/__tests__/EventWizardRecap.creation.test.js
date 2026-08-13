@@ -200,9 +200,15 @@ beforeEach(() => {
 
 /**
  * Appuie sur « Creer » et chronometre jusqu'au changement d'ecran.
+ *
+ * D99 : `surcharges` permet de publier un autre TYPE que la detection de
+ * `ETAT_COMPLET` — c'est lui, et lui seul, qui decide si l'ecran d'affiche est
+ * empile derriere le detail. Le defaut ne bouge pas : les temoins ecrits avant
+ * ce lot mesurent exactement ce qu'ils mesuraient.
+ * @param {any} [surcharges] Champs de l'etat du tunnel a remplacer.
  * @returns {Promise<{ msJusquALEcranSuivant: number, reset: any[] }>} La mesure.
  */
-const chronometrerLaCreation = async () => {
+const chronometrerLaCreation = async (surcharges = {}) => {
   /** @type {any[]} */
   const reset = [];
   const navigation = {
@@ -226,7 +232,7 @@ const chronometrerLaCreation = async () => {
   /** @type {any} */
   let arbre;
   act(() => { arbre = renderer.create(rendre(null)); });
-  act(() => semer({ payload: ETAT_COMPLET, type: 'SET_META' }));
+  act(() => semer({ payload: { ...ETAT_COMPLET, ...surcharges }, type: 'SET_META' }));
   act(() => {
     arbre.update(rendre(createElement(EventWizardRecap, {
       navigation,
@@ -269,6 +275,59 @@ describe('D19 — le cout de « Creer », mesure en millisecondes', () => {
       .find((/** @type {any} */ route) => route.name === RouteNames.EventPublishedShowcase);
     expect(ecranAffiche.params.template).toBe(getEventShowcaseTemplate('Detection'));
     expect(ecranAffiche.params.eventId).toBeTruthy();
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // D99 — LE DEUXIEME POINT D'ENTREE VERS L'AFFICHE, et le plus discret : ici,
+  // personne ne demande a la voir, elle S'OUVRE TOUTE SEULE apres la creation.
+  // Fermer la chip du menu « Gerer » sans fermer celle-ci n'aurait rien protege
+  // — c'est exactement le defaut que le prompt du lot nomme : « retirer un seul
+  // bouton et en laisser trois ne protege rien ».
+  // ───────────────────────────────────────────────────────────────────────────
+  test('D99 — un ENTRAINEMENT publie n ouvre plus l ecran d affiche', async () => {
+    const { reset } = await chronometrerLaCreation({
+      type: { documentId: 'type-entrainement', name: 'Entrainement' },
+    });
+
+    expect(reset).toHaveLength(1);
+    expect(reset[0].routes.map((/** @type {any} */ route) => route.name)).toEqual([
+      RouteNames.EventDetails,
+    ]);
+    // ⛔ L'index doit suivre la pile : laisse a 1 sur une pile d'une seule
+    // route, React Navigation viserait un ecran qui n'existe pas.
+    expect(reset[0].index).toBe(0);
+  });
+
+  // Ce que l'organisateur voit a la place n'est PAS un ecran vide : il atterrit
+  // sur le detail de son entrainement, avec sa celebration de creation. Rien ne
+  // se perd, seule l'affiche disparait.
+  test('D99 — et il atterrit bien sur son evenement, celebration comprise', async () => {
+    const { reset } = await chronometrerLaCreation({
+      type: { documentId: 'type-entrainement', name: 'Entrainement' },
+    });
+
+    const [detail] = reset[0].routes;
+    expect(detail.name).toBe(RouteNames.EventDetails);
+    expect(detail.params.eventId).toBeTruthy();
+    expect(detail.params.creationCelebration).toBeTruthy();
+  });
+
+  // 🔒 LA NON-REGRESSION, au meme endroit. Les autres types gardent l'ecran
+  // d'affiche juste apres publication — c'est la ou une detection recrute.
+  test.each([
+    ['Match'],
+    ['Tournoi'],
+    ['Stage'],
+  ])('🔒 D99 — un « %s » publie ouvre TOUJOURS son affiche', async (nomDuType) => {
+    const { reset } = await chronometrerLaCreation({
+      type: { documentId: `type-${nomDuType}`, name: nomDuType },
+    });
+
+    expect(reset[0].routes.map((/** @type {any} */ route) => route.name)).toEqual([
+      RouteNames.EventDetails,
+      RouteNames.EventPublishedShowcase,
+    ]);
+    expect(reset[0].index).toBe(1);
   });
 
   test('les six caches sont rafraichis, aucun n est perdu en route', async () => {
