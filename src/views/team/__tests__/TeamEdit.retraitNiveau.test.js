@@ -255,6 +255,7 @@ const setValueDu = (champ) => {
 };
 
 /**
+ * Selectionne une valeur dans le champ nomme.
  * @param {string} champ Le nom du champ.
  * @returns {any} Ce que le selecteur affiche pour ce champ.
  */
@@ -345,7 +346,7 @@ describe('R03 · TeamEdit — retirer le niveau de l equipe', () => {
   //
   // Ces deux temoins figent l'etat REEL du jour. Si quelqu'un ouvre la question,
   // c'est le temoin 6 qui devra changer, et on verra pourquoi.
-  it('temoin 6 — sans niveau, « Enregistrer » n envoie RIEN (Joi le declare obligatoire)', async () => {
+  it('temoin 6 — sans niveau, « Enregistrer » n envoie RIEN (Joi l exige)', async () => {
     const arbre = monter();
 
     act(() => {

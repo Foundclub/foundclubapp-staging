@@ -74,7 +74,7 @@ describe('R02 — la source « match amical » de l ecran Demandes', () => {
     mockGetMyFriendlyMatchApplications.mockResolvedValue([]);
   });
 
-  it('temoin — un dirigeant SANS equipe entrainee n a AUCUNE proposition, et rien n est meme demande au serveur', async () => {
+  it('temoin — sans equipe entrainee : aucune proposition, rien demande', async () => {
     const data = await getRequestsHubData({
       clubId: 'club-1',
       teamIds: [],
@@ -87,7 +87,7 @@ describe('R02 — la source « match amical » de l ecran Demandes', () => {
     expect(data.errors).toHaveLength(0);
   });
 
-  it('temoin de controle — avec une equipe entrainee, la meme proposition arrive bien', async () => {
+  it('temoin de controle — avec une equipe entrainee, la proposition arrive', async () => {
     const data = await getRequestsHubData({
       clubId: 'club-1',
       teamIds: ['team-1'],
@@ -97,7 +97,7 @@ describe('R02 — la source « match amical » de l ecran Demandes', () => {
     expect(data.items.filter((item) => item.type === 'friendly')).toHaveLength(1);
   });
 
-  it('temoin — une source en echec est nommee par sa clef, jamais fondue dans les autres', async () => {
+  it('temoin — une source en echec est nommee par sa clef', async () => {
     const failure = Object.assign(new Error('Forbidden'), { status: 403 });
     mockGetMyFriendlyMatchAds.mockRejectedValue(failure);
 

@@ -130,7 +130,7 @@ const monterEtOuvrir = (props = {}) => {
   // Ouvrir la feuille : le pressable ferme, puis les 80 ms d'attente du champ
   // de recherche (le composant les pose pour laisser le clavier se ranger).
   const pressableFerme = arbre.root.findAll(
-    (noeud) => noeud.props.accessibilityRole === 'button' && typeof noeud.props.onPress === 'function',
+    (n) => n.props.accessibilityRole === 'button' && typeof n.props.onPress === 'function',
   )[0];
 
   act(() => {
@@ -144,6 +144,7 @@ const monterEtOuvrir = (props = {}) => {
 };
 
 /**
+ * Trouve un bouton dans l'arbre rendu.
  * @param {any} arbre L'arbre monte.
  * @param {string} testID L'identifiant du pressable a actionner.
  * @returns {void}
@@ -175,8 +176,8 @@ describe('R03 · AutocompleteSelect — ce qu il rend quand on DESELECTIONNE', (
     const { arbre, setValue } = monterEtOuvrir({ value: 'niveau-2' });
 
     // L'option deja choisie est bien cochee a l'ouverture.
-    const optionChoisie = arbre.root.findAll((noeud) => noeud.props.testID === 'option-Regional')[0];
-    expect(optionChoisie.props.accessibilityState.checked).toBe(true);
+    const opt = arbre.root.findAll((n) => n.props.testID === 'option-Regional')[0];
+    expect(opt.props.accessibilityState.checked).toBe(true);
 
     // On la retire, puis on valide : c'est le geste exact d'Adel.
     appuyerSur(arbre, 'option-Regional');
