@@ -691,6 +691,33 @@ describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
     expect(renderedText(tree)).toContain('C’est enregistré dans ta galerie photo.');
   });
 
+  // R05 : sur Android la phrase de partage voyage par le presse-papiers, faute
+  // d'ACTION_SEND. Copiee sans le dire, elle serait un geste invisible : personne
+  // ne pense a coller un texte dont on ne lui a pas parle.
+  it('quand la phrase est copiee, l ecran le DIT', async () => {
+    mockDownloadAndShareRender.mockResolvedValue({
+      fileUri: 'file:///cache/affiche.png', messageCopied: true, opened: true, outcome: 'gallery',
+    });
+    const tree = await renderScreen(eventParams());
+    await press(tree, 'Partager l’affiche');
+
+    const text = renderedText(tree);
+    expect(text).toContain('C’est enregistré dans ta galerie photo.');
+    expect(text).toContain('Le texte est copié : colle-le avec l’image.');
+  });
+
+  // ⛔ Le contraire compte autant : iOS transporte deja le texte dans sa feuille.
+  // Annoncer une copie qui n a pas eu lieu enverrait coller du vide.
+  it('quand rien n est copie, l ecran n en parle pas', async () => {
+    mockDownloadAndShareRender.mockResolvedValue({
+      fileUri: 'file:///cache/affiche.png', messageCopied: false, opened: true, outcome: 'gallery',
+    });
+    const tree = await renderScreen(eventParams());
+    await press(tree, 'Partager l’affiche');
+
+    expect(renderedText(tree)).not.toContain('Le texte est copié');
+  });
+
   it('un PDF range dans les telechargements le dit aussi', async () => {
     mockDownloadAndShareRender.mockResolvedValue({
       fileUri: 'file:///cache/affiche.pdf', opened: false, outcome: 'downloads',

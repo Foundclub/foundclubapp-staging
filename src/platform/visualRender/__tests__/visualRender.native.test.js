@@ -12,6 +12,7 @@
  * downloadAndShareRender -> shareLocalFile -> OS est donc reellement observe.
  */
 
+import Clipboard from '@react-native-clipboard/clipboard';
 import { PermissionsAndroid, Platform, Share } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -38,6 +39,11 @@ jest.mock('react-native-blob-util', () => ({
     fs: { dirs: { CacheDir: '/data/cache' }, writeFile: jest.fn() },
     MediaCollection: { copyToMediaStore: jest.fn() },
   },
+}));
+
+jest.mock('@react-native-clipboard/clipboard', () => ({
+  __esModule: true,
+  default: { setString: jest.fn() },
 }));
 
 jest.mock('@/domains/auth/authUseCases', () => ({ getAuthTokens: () => ({ token: 'jeton' }) }));
@@ -235,5 +241,85 @@ describe('TEMOIN POSITIF — iOS ne change pas', () => {
     expect(ReactNativeBlobUtil.MediaCollection.copyToMediaStore).not.toHaveBeenCalled();
     expect(ReactNativeBlobUtil.android.actionViewIntent).not.toHaveBeenCalled();
     expect(PermissionsAndroid.request).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// R05 — LA PHRASE DE PARTAGE N ARRIVAIT JAMAIS SUR ANDROID.
+//
+// 🧨 CE QUE LA MESURE A TROUVE : D94 a ecrit 7 phrases, une par type d evenement,
+// et elles traversent correctement tout le chemin app — EventPublishedShowcase
+// les calcule, shareVisual les transporte, shareLocalFile les RECOIT. Puis, sur
+// le chemin Android (`save-then-open`), `message` n est simplement JAMAIS LU :
+// le fichier est enregistre par MediaStore et ouvert par un ACTION_VIEW, qui ne
+// transporte aucun texte. Le parametre entrait et mourait la, sans erreur.
+//
+// ⛔ UN VRAI ACTION_SEND est hors de portee : ni React Native ni
+// `react-native-blob-util` ne le fournissent (note L20), et l ajouter voudrait
+// dire une dependance de plus — geste a GO. Le presse-papiers, LUI, est deja
+// installe (`@react-native-clipboard/clipboard`, deja employe par Conversation.js
+// et SuperAdminEntryList.js) : la phrase devient collable en un geste au lieu
+// d etre perdue. C est le barreau le plus bas qui tient (§1 bis).
+// ─────────────────────────────────────────────────────────────────────────────
+describe('R05 — sur Android, la phrase de partage atteint l utilisateur', () => {
+  beforeEach(() => {
+    Platform.OS = 'android';
+    Platform.Version = 34;
+  });
+
+  it('partager un MATCH emporte SA phrase, pas celle d une detection', async () => {
+    await downloadAndShareRender({
+      ...PNG_PARAMS,
+      message: 'Viens nous encourager pour ce match !\n\nVoir l’événement :\nhttps://foundclub.app/e/1',
+    });
+
+    expect(Clipboard.setString).toHaveBeenCalledTimes(1);
+    const copie = Clipboard.setString.mock.calls[0][0];
+    expect(copie).toContain('Viens nous encourager pour ce match !');
+    expect(copie).not.toContain('détection');
+    expect(copie).not.toContain('essai');
+  });
+
+  it('partager une DETECTION dit toujours la bonne phrase (non-regression)', async () => {
+    await downloadAndShareRender({
+      ...PNG_PARAMS,
+      message: 'Viens participer à notre détection / séance d’essai !',
+    });
+
+    expect(Clipboard.setString).toHaveBeenCalledWith(
+      expect.stringContaining('Viens participer à notre détection / séance d’essai !'),
+    );
+  });
+
+  it('l ecran peut le DIRE : le resultat porte que la phrase est copiee', async () => {
+    const result = await downloadAndShareRender({ ...PNG_PARAMS, message: 'Viens voir le match !' });
+
+    expect(result).toMatchObject({ messageCopied: true, outcome: 'gallery' });
+  });
+
+  it('sans phrase a joindre, rien n est copie et rien ne se dit', async () => {
+    const result = await downloadAndShareRender({ ...PNG_PARAMS, message: undefined });
+
+    expect(Clipboard.setString).not.toHaveBeenCalled();
+    expect(result.messageCopied).toBe(false);
+  });
+
+  // ⛔ Le presse-papiers est un BONUS : l affiche est deja a l abri quand on y
+  // arrive. Un module absent (build sans la dependance) ne doit pas transformer
+  // un enregistrement reussi en echec.
+  it('un presse-papiers indisponible n annule pas l enregistrement', async () => {
+    Clipboard.setString.mockImplementationOnce(() => { throw new Error('indisponible'); });
+
+    const result = await downloadAndShareRender({ ...PNG_PARAMS, message: 'Viens voir le match !' });
+
+    expect(result).toMatchObject({ messageCopied: false, outcome: 'gallery' });
+  });
+
+  it('rien n est copie sur iOS — la feuille de partage porte deja le texte', async () => {
+    Platform.OS = 'ios';
+
+    await downloadAndShareRender(PNG_PARAMS);
+
+    expect(Clipboard.setString).not.toHaveBeenCalled();
   });
 });

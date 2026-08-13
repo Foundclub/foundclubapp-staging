@@ -159,12 +159,19 @@ export default function EventPublishedShowcase({ navigation, route }) {
 
   // Un fichier rangé hors de l'écran (galerie, téléchargements) sans un mot est
   // indiscernable d'un échec : l'écran dit OÙ il est parti.
-  const savedNotice = (outcome) => {
+  // R05 : sur Android, l'affiche part par « ouvrir avec », qui ne transporte
+  // AUCUN texte — la phrase de partage est donc mise dans le presse-papiers
+  // (shareLocalFile.native.js). Une phrase copiée sans le dire est un geste
+  // invisible : l'écran l'annonce, sinon personne ne pense à coller.
+  const savedNotice = (outcome, messageCopied) => {
+    const collable = messageCopied
+      ? ` ${t('showcase.messageCopied', 'Le texte est copié : colle-le avec l’image.')}`
+      : '';
     if (outcome === FILE_SHARE_OUTCOMES.GALLERY) {
-      return t('showcase.savedGallery', 'C’est enregistré dans ta galerie photo.');
+      return `${t('showcase.savedGallery', 'C’est enregistré dans ta galerie photo.')}${collable}`;
     }
     if (outcome === FILE_SHARE_OUTCOMES.DOWNLOADS) {
-      return t('showcase.savedDownloads', 'C’est enregistré dans tes téléchargements.');
+      return `${t('showcase.savedDownloads', 'C’est enregistré dans tes téléchargements.')}${collable}`;
     }
     // Feuille de partage (iOS) ou téléchargement navigateur (web) : le système a
     // déjà montré ce qu'il faisait, un message de plus serait du bruit.
@@ -208,7 +215,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
       // Le web résout l'URL objet du téléchargement (une chaîne) : `outcome` y est
       // absent, et savedNotice retombe alors sur null. Rien à changer côté web.
       const result = await fn();
-      setDownloadNotice(savedNotice(result?.outcome));
+      setDownloadNotice(savedNotice(result?.outcome, result?.messageCopied));
     } catch (e) {
       setDownloadError(downloadErrorText(e));
     } finally {

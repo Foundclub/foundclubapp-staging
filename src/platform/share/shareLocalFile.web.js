@@ -40,7 +40,10 @@ export const shareLocalFile = async ({ fileUri, message, title }) => {
     ...(title ? { title } : {}),
     url: fileUri,
   });
-  return { opened: true, outcome: FILE_SHARE_OUTCOMES.SHARE_SHEET };
+  // R05 : meme forme de retour que le jumeau natif. Le web n'a pas besoin du
+  // presse-papiers (navigator.share porte le texte, le telechargement n'en a pas),
+  // mais un contrat identique evite un `undefined` qui se lit comme un oubli.
+  return { messageCopied: false, opened: true, outcome: FILE_SHARE_OUTCOMES.SHARE_SHEET };
 };
 
 export default {
