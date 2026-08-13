@@ -6,6 +6,7 @@ import renderer, { act } from 'react-test-renderer';
 import {
   EVENT_SHOWCASE_FALLBACK_TEMPLATE,
   getEventShowcaseTemplate,
+  isEventShowcaseOffered,
 } from '@/domains/visuals/eventShowcaseTemplate';
 import { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEventShowcase';
 
@@ -853,6 +854,51 @@ describe('D28 — chaque type d evenement obtient une affiche, et on sait laquel
       titleText: 'Détection ouverte — viens montrer ce que tu vaux',
     }));
     expect(mockFetchRenderBase64).toHaveBeenCalledWith(expect.objectContaining({ template }));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// D99 — L'ENTRAINEMENT N'A PLUS D'AFFICHE. Decision d'Adel du 2026-08-13.
+//
+// 🧨 CE QUE MESURAIT D88 : l'affiche d'un entrainement etait celle d'une
+// detection, elle etait PARTAGEABLE PUBLIQUEMENT, et elle portait l'heure et le
+// lieu RECURRENTS d'un groupe — souvent des mineurs. Les personnes concernees
+// recoivent deja une notification a la publication et un rappel a H-24 : cette
+// affiche ne prevenait donc personne qui ne le soit deja. Elle publiait une
+// HABITUDE, et c'est tout ce qu'elle faisait.
+//
+// ⛔ CE BLOC NE TOUCHE PAS AU GABARIT : les tests ci-dessus restent vrais et
+// verts. L'ecran, SI on l'atteint, sait toujours fabriquer une affiche pour les
+// 7 types — c'est volontaire. D99 ferme les PORTES qui y menent, il ne casse
+// pas le moteur. La regle vit ici, en un seul endroit, parce que deux appelants
+// la posent (le menu « Gerer » et la fin du tunnel de creation) et qu'une regle
+// recopiee deux fois diverge un jour.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('D99 — a qui l affiche est-elle proposee', () => {
+  it('un ENTRAINEMENT ne se voit plus proposer d affiche', () => {
+    // Les trois orthographes que le serveur, l'app et la saisie produisent.
+    ['Entraînement', 'Entrainement', 'ENTRAINEMENT'].forEach((typeName) => {
+      expect(isEventShowcaseOffered(typeName)).toBe(false);
+    });
+  });
+
+  // 🔒 LE TEMOIN QUI COMPTE — la non-regression. Un lot qui elargirait la
+  // fermeture d'un cran (a « toute seance recurrente », a « tout ce qui a une
+  // equipe ») retirerait l'affiche a des evenements qui en VIVENT : une
+  // detection sans affiche ne recrute plus personne.
+  it('🔒 match, detection, tournoi et stage la proposent TOUJOURS', () => {
+    ["Détection / Séance d'essai", 'Match', 'Tournoi', 'Stage'].forEach((typeName) => {
+      expect(isEventShowcaseOffered(typeName)).toBe(true);
+    });
+  });
+
+  // « Autre » et « Reservation » ne sont pas des entrainements : rien ne change
+  // pour eux. Et un type absent ou inconnu garde son affiche — fermer sur un
+  // doute retirerait un geste a des evenements qu'on n'a pas su nommer.
+  it('un type inconnu, vide ou absent garde son affiche', () => {
+    [undefined, null, '', '   ', 'Autre', 'Réservation', 'Barbecue du club'].forEach((typeName) => {
+      expect(isEventShowcaseOffered(/** @type {any} */ (typeName))).toBe(true);
+    });
   });
 });
 
