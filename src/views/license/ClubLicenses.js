@@ -1576,24 +1576,28 @@ function ClubLicenses({ navigation, route }) {
   // lui aussi ce qui bloque.
   // `item` est la campagne de la liste, avec ses `totals`.
   const handleDeleteCampaign = useCallback((/** @type {any} */ item) => {
-    const totals = item?.totals || {};
+    // `compteurs` et non `totals` : le nom court est deja pris par la synthese
+    // du hub (l. 1097), et le masquer rendrait les deux illisibles.
+    const compteurs = item?.totals || {};
     const nom = item?.name || 'Cette campagne';
-    const nombreCotisations = Number(totals.total) || 0;
-    const nombreMembresAyantPaye = (Number(totals.paidCount) || 0) + (Number(totals.partialCount) || 0);
-    const montantEncaisseCents = Number(totals.paidCents) || 0;
+    const nombreCotisations = Number(compteurs.total) || 0;
+    const nombreMembresAyantPaye = (Number(compteurs.paidCount) || 0)
+      + (Number(compteurs.partialCount) || 0);
+    const montantEncaisseCents = Number(compteurs.paidCents) || 0;
     const identifiant = item?.documentId || item?.id;
 
     if (montantEncaisseCents > 0 || nombreMembresAyantPaye > 0) {
       const lifecycle = lifecycleForCampaign(item);
       const peutArchiverMaintenant = lifecycle?.action === 'archive';
+      const pluriel = nombreMembresAyantPaye > 1 ? 's' : '';
+      const sortie = peutArchiverMaintenant
+        ? 'Tu peux l\'archiver : elle sort de la liste, et rien n\'est perdu.'
+        : 'Clos-la d\'abord, puis archive-la : elle sortira de la liste sans rien perdre.';
       Alert.alert(
         'Suppression impossible',
-        `« ${nom} » a déjà encaissé ${formatLicenseMoney(montantEncaisseCents)} auprès de `
-        + `${nombreMembresAyantPaye} membre${nombreMembresAyantPaye > 1 ? 's' : ''}. `
-        + 'On ne supprime pas une campagne qui porte de l\'argent.\n\n'
-        + (peutArchiverMaintenant
-          ? 'Tu peux l\'archiver : elle sort de la liste, et rien n\'est perdu.'
-          : 'Clos-la d\'abord, puis archive-la : elle sortira de la liste sans rien perdre.'),
+        `« ${nom} » a déjà encaissé ${formatLicenseMoney(montantEncaisseCents)} `
+        + `auprès de ${nombreMembresAyantPaye} membre${pluriel}. `
+        + `On ne supprime pas une campagne qui porte de l'argent.\n\n${sortie}`,
         [
           { style: 'cancel', text: 'Annuler' },
           ...(lifecycle ? [{
@@ -1605,12 +1609,12 @@ function ClubLicenses({ navigation, route }) {
       return;
     }
 
+    const cotisationsPerdues = nombreCotisations > 0
+      ? `, avec ses ${nombreCotisations} cotisation${nombreCotisations > 1 ? 's' : ''}.`
+      : '.';
     Alert.alert(
       'Supprimer cette campagne ?',
-      `« ${nom} » sera définitivement supprimée`
-      + (nombreCotisations > 0
-        ? `, avec ses ${nombreCotisations} cotisation${nombreCotisations > 1 ? 's' : ''}.`
-        : '.')
+      `« ${nom} » sera définitivement supprimée${cotisationsPerdues}`
       + '\n\nAucun paiement n\'a été encaissé : rien d\'autre ne sera perdu. '
       + 'Cette action est irréversible.',
       [
