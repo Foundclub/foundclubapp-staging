@@ -23,7 +23,14 @@ import Input from '../input/Input';
  * @typedef {object} SelectProps
  * @property {Array<Option>} options - The options of the select.
  * @property {string | string[]} value - The select options
- * @property {Function} setValue - The function to set the selected value.
+ * @property {Function} setValue - Appelee A LA FERMETURE de la feuille avec
+ *  `Option` (mono-selection), `Option[]` (multi-selection), ou **`undefined`
+ *  quand plus rien n'est choisi** : deselection, ou validation sans avoir rien
+ *  coche. ⚠️ R03, 2026-08-13 : neuf appelants lisaient `option.value` sans
+ *  garde et fermaient l'app d'Adel. **Toujours ecrire `option?.value`.**
+ *  Le contrat est verrouille par `__tests__/AutocompleteSelect.deselection.test.js`.
+ *  (Type laisse a `Function` a dessein : le declarer precisement ajoute 22
+ *  erreurs de variance chez des appelants sains — cliquet interdit, R6.)
  * @property {boolean} [isMulti] - Whether multiple options can be selected.
  * @property {boolean} [isSearchable] - The flag to know if the select is searchable or not.
  * @property {boolean} [disabled] - The flag to know if the select is searchable or not.

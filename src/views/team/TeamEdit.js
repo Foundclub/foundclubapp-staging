@@ -696,8 +696,8 @@ function TeamEdit({ navigation, route }) {
                   ref={ref}
                   searchValue={activitySearch}
                   setSearchValue={setActivitySearch}
-                  setValue={(/** @type {Option} */ option) => onChange(
-                    option.value || '',
+                  setValue={(/** @type {Option | undefined} */ option) => onChange(
+                    option?.value || '',
                   )}
                   value={activities?.find((opt) => opt.documentId === value)?.name || ''}
                 />
@@ -722,8 +722,8 @@ function TeamEdit({ navigation, route }) {
                   ref={ref}
                   searchValue={categorySearch}
                   setSearchValue={setCategorySearch}
-                  setValue={(/** @type {Option} */ option) => onChange(
-                    option.value || '',
+                  setValue={(/** @type {Option | undefined} */ option) => onChange(
+                    option?.value || '',
                   )}
                   value={categories?.find((opt) => opt.documentId === value)?.name || ''}
                 />
@@ -748,8 +748,8 @@ function TeamEdit({ navigation, route }) {
                   ref={ref}
                   searchValue={levelSearch}
                   setSearchValue={setLevelSearch}
-                  setValue={(/** @type {Option} */ option) => onChange(
-                    option.value || '',
+                  setValue={(/** @type {Option | undefined} */ option) => onChange(
+                    option?.value || '',
                   )}
                   value={levels?.find((opt) => opt.documentId === value)?.name || ''}
                 />

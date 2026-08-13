@@ -291,7 +291,7 @@ function RecruitmentAdEdit({ navigation, route }) {
                 label="Rôle entraîneur"
                 options={COACH_ROLE_OPTIONS}
                 placeholder="Sélectionner un rôle"
-                setValue={(option) => setValue('coachRole', option.value)}
+                setValue={(option) => setValue('coachRole', option?.value || '')}
                 value={COACH_ROLE_OPTIONS.find((option) => option.value === watchedCoachRole)?.label || ''}
               />
             </View>
@@ -318,7 +318,7 @@ function RecruitmentAdEdit({ navigation, route }) {
                 label="Expérience attendue"
                 options={COACH_EXPERIENCE_OPTIONS}
                 placeholder="Sélectionner un niveau"
-                setValue={(option) => setValue('coachExperienceLevel', option.value)}
+                setValue={(option) => setValue('coachExperienceLevel', option?.value || '')}
                 value={COACH_EXPERIENCE_OPTIONS.find((option) => option.value === watchedCoachExperienceLevel)?.label || ''}
               />
             </View>
@@ -328,7 +328,7 @@ function RecruitmentAdEdit({ navigation, route }) {
                 label="Type d'engagement"
                 options={ENGAGEMENT_OPTIONS}
                 placeholder="Sélectionner un cadre"
-                setValue={(option) => setValue('engagementType', option.value)}
+                setValue={(option) => setValue('engagementType', option?.value || '')}
                 value={ENGAGEMENT_OPTIONS.find((option) => option.value === watchedEngagementType)?.label || ''}
               />
             </View>
@@ -352,8 +352,8 @@ function RecruitmentAdEdit({ navigation, route }) {
             options={levelOptions}
             placeholder="Sélectionner un niveau"
             setValue={(option) => {
-              const levelObj = allLevels?.find((level) => level.documentId === option.value);
-              setValue('level', levelObj || option);
+              const levelObj = allLevels?.find((level) => level.documentId === option?.value);
+              setValue('level', levelObj || option || null);
             }}
             value={watchedLevel?.name || levelOptions.find((option) => option.value === watchedLevel)?.label || ''}
           />
@@ -365,8 +365,8 @@ function RecruitmentAdEdit({ navigation, route }) {
             options={categoryOptions}
             placeholder="Sélectionner une catégorie"
             setValue={(option) => {
-              const categoryObj = allCategories?.find((category) => category.documentId === option.value);
-              setValue('category', categoryObj || option);
+              const categoryObj = allCategories?.find((category) => category.documentId === option?.value);
+              setValue('category', categoryObj || option || null);
             }}
             value={watchedCategory?.name || categoryOptions.find((option) => option.value === watchedCategory)?.label || ''}
           />
@@ -378,8 +378,8 @@ function RecruitmentAdEdit({ navigation, route }) {
             options={sectionOptions}
             placeholder="Sélectionner une section"
             setValue={(option) => {
-              const sectionObj = allSections?.find((section) => section.documentId === option.value);
-              setValue('section', sectionObj || option);
+              const sectionObj = allSections?.find((section) => section.documentId === option?.value);
+              setValue('section', sectionObj || option || null);
             }}
             value={watchedSection?.name || sectionOptions.find((option) => option.value === watchedSection)?.label || ''}
           />

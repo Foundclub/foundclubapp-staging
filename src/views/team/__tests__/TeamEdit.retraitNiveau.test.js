@@ -260,6 +260,20 @@ const setValueDu = (champ) => {
  */
 const valeurAfficheeDu = (champ) => mockSelecteurs.get(`teamEdit.fields.${champ}.label`).value;
 
+/**
+ * Appuie sur « Enregistrer » et laisse la validation Joi se terminer.
+ * @param {any} arbre L'arbre monte.
+ * @returns {Promise<void>} Rien.
+ */
+const appuyerSurEnregistrer = async (arbre) => {
+  const bouton = arbre.root.findAll(
+    (noeud) => noeud.props.testID === 'bouton-teamEdit.actions.save',
+  )[0];
+  await act(async () => {
+    await bouton.props.onPress();
+  });
+};
+
 describe('R03 · TeamEdit — retirer le niveau de l equipe', () => {
   beforeEach(() => {
     mockSelecteurs.clear();
@@ -319,6 +333,41 @@ describe('R03 · TeamEdit — retirer le niveau de l equipe', () => {
     }).not.toThrow();
 
     expect(valeurAfficheeDu(champ)).toBe('');
+  });
+
+  // ⚠️ CE QUE CES DEUX TEMOINS CONSTATENT — ils ne le corrigent pas.
+  //
+  // Le crash repare, « retirer le niveau » ne ferme plus l'app, mais le retrait
+  // ne s'ENREGISTRE toujours pas : le schema Joi de l'ecran declare `level`
+  // obligatoire, donc le formulaire refuse d'envoyer. C'est une question de
+  // produit (« une equipe a-t-elle le droit de n'avoir aucun niveau ? »), pas un
+  // crash — elle est remontee au chef d'orchestre, pas tranchee ici.
+  //
+  // Ces deux temoins figent l'etat REEL du jour. Si quelqu'un ouvre la question,
+  // c'est le temoin 6 qui devra changer, et on verra pourquoi.
+  it('temoin 6 — sans niveau, « Enregistrer » n envoie RIEN (Joi le declare obligatoire)', async () => {
+    const arbre = monter();
+
+    act(() => {
+      setValueDu('level')(undefined);
+    });
+    await appuyerSurEnregistrer(arbre);
+
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it('temoin 7 — avec son niveau, « Enregistrer » envoie bien le niveau', async () => {
+    const arbre = monter();
+
+    await appuyerSurEnregistrer(arbre);
+
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({
+      category: 'categorie-1',
+      documentId: 'equipe-1',
+      level: 'niveau-2',
+      section: 'section-1',
+    });
   });
 
   it('temoin 5 — le champ voisin deja protege (section) se comporte pareil', () => {
