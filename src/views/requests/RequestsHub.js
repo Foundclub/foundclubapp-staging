@@ -78,6 +78,11 @@ const getSourceErrorLabel = (source, t) => {
       return t('requestsHub.types.event', 'Événement');
     case 'featured':
       return t('requestsHub.types.featured', 'À la une');
+    // R02 — la source des propositions de match amical (D92) n'avait pas de
+    // libelle : elle tombait sur « Demande », et une section en echec devenait
+    // impossible a nommer depuis l'ecran.
+    case 'friendly':
+      return t('requestsHub.types.friendly', 'Match amical');
     case 'installation':
       return t('requestsHub.types.installation', 'Installation');
     case 'interest':

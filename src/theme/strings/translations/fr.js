@@ -2586,6 +2586,12 @@ export default {
       club: 'Club',
       event: 'Événement',
       featured: 'À la une',
+      // R02 — ces trois-la manquaient : la banniere d'erreur les nommait
+      // « Demande », le libelle fourre-tout. Une section indisponible qui ne dit
+      // pas laquelle ne se diagnostique pas.
+      friendly: 'Match amical',
+      installation: 'Installation',
+      interest: 'Intérêt',
       team: 'Équipe',
       unknown: 'Demande',
     },
