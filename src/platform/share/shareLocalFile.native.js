@@ -43,6 +43,53 @@ import SharePlatform from './share';
 /** Sous-dossier des affiches dans la galerie / les telechargements du telephone. */
 const MEDIA_PARENT_FOLDER = 'FoundClub';
 
+/**
+ * Presse-papiers, charge a la demande — MEME motif que `Conversation.js:300` et
+ * `SuperAdminEntryList.js:44`, qui le font deja pour la meme raison : la
+ * dependance est facultative, un build sans elle ne doit pas casser l ecran.
+ * @returns {any | null}
+ */
+let clipboardModule;
+const getClipboardModule = () => {
+  if (clipboardModule !== undefined) return clipboardModule;
+  try {
+    // eslint-disable-next-line global-require
+    const maybeModule = require('@react-native-clipboard/clipboard');
+    clipboardModule = maybeModule?.default || maybeModule;
+    return clipboardModule;
+  } catch (_error) {
+    clipboardModule = null;
+    return null;
+  }
+};
+
+/**
+ * R05 : SAUVE LA PHRASE QUE `actionViewIntent` NE SAIT PAS TRANSPORTER.
+ *
+ * 🧨 Le defaut mesure : sur Android, `message` arrivait jusqu ici et n etait
+ * JAMAIS LU. Un ACTION_VIEW ouvre un fichier, il ne porte aucun texte — les
+ * 7 phrases par type d evenement (D94) mouraient donc a cette ligne, sans
+ * erreur. Un vrai ACTION_SEND demanderait une dependance de plus (note L20) ;
+ * le presse-papiers, lui, est deja la.
+ *
+ * ⛔ TOUJOURS un BONUS : quand on arrive ici le fichier est deja a l abri. Un
+ * presse-papiers absent ou en echec ne transforme pas un enregistrement reussi
+ * en echec — il rend seulement `false`, et l ecran se tait.
+ * @param {string} [message]
+ * @returns {boolean} La phrase est-elle collable ?
+ */
+const copyMessageToClipboard = (message) => {
+  if (!message) return false;
+  try {
+    const clipboard = getClipboardModule();
+    if (!clipboard?.setString) return false;
+    clipboard.setString(message);
+    return true;
+  } catch (_error) {
+    return false;
+  }
+};
+
 /** Android 10 (API 29) : MediaStore ecrit sans permission. En deca, il en faut une. */
 const ANDROID_SCOPED_STORAGE_VERSION = 29;
 
@@ -142,7 +189,9 @@ export const shareLocalFile = async ({
       ...(title ? { title } : {}),
       url: fileUri,
     });
-    return { opened: true, outcome: FILE_SHARE_OUTCOMES.SHARE_SHEET };
+    // `messageCopied: false` et c'est VOULU : la feuille de partage transporte
+    // deja le texte, doubler par le presse-papiers ne ferait qu'ajouter du bruit.
+    return { messageCopied: false, opened: true, outcome: FILE_SHARE_OUTCOMES.SHARE_SHEET };
   }
 
   const path = stripFileScheme(fileUri);
@@ -156,6 +205,10 @@ export const shareLocalFile = async ({
     fileName, isImage, mimeType, path,
   });
 
+  // R05 : la phrase AVANT l'ouverture — elle doit etre collable au moment ou
+  // l'utilisateur arrive dans l'application qu'il a choisie.
+  const messageCopied = copyMessageToClipboard(message);
+
   // Le fichier est deja a l'abri : proposer une application est un BONUS.
   // Aucune application pour ce type (ENOAPP) ou retour en arriere de l'utilisateur
   // n'annule un enregistrement reussi — sinon l'ecran afficherait un echec faux.
@@ -167,7 +220,7 @@ export const shareLocalFile = async ({
     opened = false;
   }
 
-  return { opened, outcome };
+  return { messageCopied, opened, outcome };
 };
 
 export default {

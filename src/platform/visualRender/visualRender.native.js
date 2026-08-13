@@ -93,14 +93,18 @@ export const downloadAndShareRender = async (params) => {
   const message = typeof params.message === 'string' ? params.message : '';
   // Le type MIME décrit le fichier RÉELLEMENT écrit (l'extension), pas l'en-tête
   // serveur, qui peut porter un charset et ferait échouer l'intent Android.
-  const { opened, outcome } = await shareLocalFile({
+  const { messageCopied, opened, outcome } = await shareLocalFile({
     dialogTitle: params.dialogTitle,
     fileName,
     fileUri,
     message,
     mimeType: ext === 'pdf' ? 'application/pdf' : 'image/png',
   });
-  return { fileUri, opened, outcome };
+  // R05 : `messageCopied` remonte jusqu'a l'ecran, sinon la phrase serait copiee
+  // en silence — un geste invisible ne vaut pas mieux qu'un geste absent.
+  return {
+    fileUri, messageCopied, opened, outcome,
+  };
 };
 
 export default {

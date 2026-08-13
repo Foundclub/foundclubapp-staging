@@ -2612,6 +2612,9 @@ export default {
     fieldTitreAccent: 'Accroche',
     generating: 'Génération du visuel…',
     later: 'Plus tard',
+    // R05 : sur Android, « ouvrir avec » ne transporte que l'image — le texte est
+    // mis dans le presse-papiers. On le DIT, sinon personne ne pense à le coller.
+    messageCopied: 'Le texte est copié : colle-le avec l’image.',
     // Android : la feuille de partage de React Native jette le fichier (cf. L20).
     // Le geste devient « enregistrer, puis ouvrir avec » — les libellés le disent.
     openWith: 'Ouvrir l’affiche avec…',
