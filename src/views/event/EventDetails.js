@@ -31,7 +31,7 @@ import {
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
 import { getSubscriptionQuotaItem } from '@/domains/subscription/subscriptionDecision';
-import { getEventShowcaseTemplate } from '@/domains/visuals/eventShowcaseTemplate';
+import { getEventShowcaseTemplate, isEventShowcaseOffered } from '@/domains/visuals/eventShowcaseTemplate';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -2085,6 +2085,23 @@ function EventDetails({ navigation, route }) {
     });
   }, [event?.type?.name, eventId, navigation]);
 
+  // D99 : L'AIGUILLAGE qui remplace l'affiche sur un entrainement. On ouvre la
+  // 1re etape du tunnel de creation — le choix du type — parce que c'est la que
+  // « Detection / Seance d'essai » se choisit, et que sa ligne d'explication y
+  // dit deja « Ouvre ton equipe a de nouveaux joueurs » (EventWizardType.js).
+  //
+  // ⛔ ON N'AMORCE PAS LE TYPE A LA PLACE DE L'ORGANISATEUR : `SET_TYPE` est
+  // pose par l'ecran au toucher, et c'est lui qui calcule la suite de la chaine
+  // (une detection gagne ses postes). Sauter l'etape le priverait de ce calcul.
+  //
+  // Le motif de navigation est celui que 5 appelants emploient deja pour ouvrir
+  // ce tunnel de l'exterieur (HomeHub, TeamDetails, ParticipantEventList,
+  // MultisportClubDetails, CMDashboard) : la pile, puis l'ecran (§1 bis,
+  // barreau 2 — on ne reinvente pas un chemin qui existe).
+  const handleCreateDetection = useCallback(() => {
+    navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType });
+  }, [navigation]);
+
   // @ts-ignore: FIXME: Baseline TS regression
   const handleRespondTournamentPresence = useCallback((status) => {
     if (!currentUserTournamentTeam?.documentId) return;
@@ -3687,13 +3704,41 @@ function EventDetails({ navigation, route }) {
     // ⚠️ Il ne s'affiche QUE la ou la route est reellement enregistree : depuis
     // la pile PUBLIQUE, `EventPublishedShowcase` n'existe pas, et le bouton y
     // serait muet — un bouton qui ne fait rien est pire que pas de bouton.
-    if (canEdit && eventId
+    // D99 — L'ENTRAINEMENT N'A PLUS D'AFFICHE, ET IL REPART AVEC UN CHEMIN.
+    // Decision d'Adel du 2026-08-13. Le pourquoi (heure et lieu recurrents d'un
+    // groupe souvent mineur, deja notifie par ailleurs) est ecrit une seule
+    // fois, la ou la regle vit : `eventShowcaseTemplate.js`.
+    // ⚠️ Les DEUX chips sont exclusives et couvrent tous les cas : on ne ferme
+    // jamais la porte sans poser le panneau a cote.
+    if (canEdit && eventId && isEventShowcaseOffered(event?.type?.name)
       && hasRouteInNavigationTree(navigation, RouteNames.EventPublishedShowcase)) {
       chips.push({
         icon: 'camera',
         key: 'poster',
         label: t('eventDetails.managePanel.poster', "Voir l'affiche"),
         onPress: handleOpenEventPoster,
+      });
+    }
+
+    // Meme garde-fou que la chip ci-dessus, mais sur SA destination a elle : la
+    // ou le tunnel n'est pas enregistre (pile publique), l'aiguillage serait un
+    // bouton muet — et un bouton muet est pire que pas de bouton.
+    // La chip prend la pleine largeur : sa note est une phrase, pas une
+    // etiquette (meme motif que « Stats du match », D71).
+    if (canEdit && eventId && !isEventShowcaseOffered(event?.type?.name)
+      && hasRouteInNavigationTree(navigation, RouteNames.EventWizardType)) {
+      chips.push({
+        fullWidth: true,
+        icon: 'camera',
+        key: 'detectionSwitch',
+        label: t('eventDetails.managePanel.detectionSwitch', 'Faire venir des joueurs'),
+        note: t(
+          'eventDetails.managePanel.detectionSwitchNote',
+          'L’affiche sert à attirer des gens de l’extérieur : on ne publie donc pas '
+          + 'l’heure et le lieu d’un entraînement. Pour ouvrir une séance à de '
+          + 'nouveaux joueurs, crée une détection / séance d’essai.',
+        ),
+        onPress: handleCreateDetection,
       });
     }
 

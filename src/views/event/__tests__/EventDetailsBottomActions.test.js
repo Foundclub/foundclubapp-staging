@@ -364,6 +364,11 @@ const EVENT_STACK_ROUTES = [
   'EventEdit',
   'EventPublishedShowcase',
   'TournamentSettingsEdit',
+  // D99 : la vraie pile enregistre aussi le tunnel de creation
+  // (`EventStack.js:169`, `name={RouteNames.EventWizardType}`). Sans lui ici, la
+  // doublure etait PLUS PAUVRE que le reel : l'aiguillage vers la detection s'y
+  // taisait a raison, et le temoin lisait ce silence comme un bouton manquant.
+  'EventWizardType',
 ];
 
 const mountScreen = (/** @type {any} */ {
@@ -468,6 +473,12 @@ const bottomActionInventory = (/** @type {any} */ root) => {
   collect('Créer une autre campagne', 'campaign-more');
   collect('Ouvrir', 'campaign-open');
   collect('affiche', 'poster');
+  // D99 — l'AIGUILLAGE qui remplace l'affiche sur un entrainement. Il porte sa
+  // propre cle : « plus d'affiche » et « un chemin vers la detection » sont deux
+  // constats distincts, et un seul repere ne saurait pas dire lequel a lache.
+  // ⚠️ Le repere est le LIBELLE du bouton, pas sa note : `textOf` ne descend que
+  // dans le pressable, et la note est rendue a cote de lui (EventDetails.js).
+  collect('Faire venir', 'detection-switch');
   collect('Modifier', 'edit');
   collect('la une', 'featured');
   collect('Annuler', 'cancel');
@@ -960,7 +971,12 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
       .map((/** @type {any} */ node) => flatStyle(node).width);
     // Une chip orpheline en fin de grille prend toute la largeur : regle
     // inchangee, seul le nombre de chips a bouge (D21 ③ ajoute « Voir l'affiche »).
-    expect(widths).toEqual(['48%', '48%', '48%', '48%', '100%']);
+    // D99 : le compte est le MEME (5), mais l'evenement par defaut est un
+    // entrainement, dont la chip d'aiguillage porte une PHRASE — elle prend donc
+    // la ligne entiere, par la meme regle que « Stats du match » (D71). La
+    // derniere chip se retrouve orpheline et passe a 100 % : c'est la regle
+    // existante qui s'applique, pas une exception ecrite pour ce lot.
+    expect(widths).toEqual(['48%', '48%', '48%', '100%', '100%']);
 
     press(root, 'Modifier');
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -999,8 +1015,12 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
     });
 
     expect(hasText(root, 'Valider')).toBe(true);
+    // D99 : l'evenement par defaut de ce fichier est un ENTRAINEMENT, qui n'a
+    // plus d'affiche. La preuve la plus utile de ce lot est ici, dans l'echange
+    // UN POUR UN : `poster` s'en va, `detection-switch` prend sa place, et les
+    // quatre autres actions ne bougent pas. Rien n'a ete perdu en chemin.
     expect(bottomActionInventory(root)).toEqual([
-      'cancel', 'edit', 'featured', 'lineup', 'poster',
+      'cancel', 'detection-switch', 'edit', 'featured', 'lineup',
     ]);
   });
 
@@ -1037,15 +1057,21 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
   // redevenu ROUGE quand l'ecran s'est mis a passer AUSSI le type. Le gabarit ne
   // suffisait pas : c'est le TYPE qui decide le TEXTE du partage, et sans lui un
   // match repartait avec « viens participer a notre detection ».
+  // ⚠️ MIS A JOUR le 2026-08-13 (D99) — et le filet a rejoue son role une
+  // TROISIEME fois. L'evenement par defaut de ce fichier est un « Entrainement »
+  // (cf. buildEvent), qui n'a plus d'affiche du tout : ce temoin aurait vire au
+  // rouge en affirmant l'inverse de la decision. Il porte desormais sur un
+  // MATCH — un type qui garde son affiche — et ce qu'il verifie n'a pas bouge :
+  // l'identifiant, le gabarit et le type voyagent ensemble.
   test('l affiche redevient atteignable, avec son eventId, son gabarit ET son type', () => {
-    const root = asOrganiser();
+    const root = asOrganiser({ event: buildEvent({ type: { name: 'Match' } }) });
     press(root, "Gérer l'événement");
     press(root, "Voir l'affiche");
 
     expect(mockNavigate).toHaveBeenCalledWith('EventPublishedShowcase', {
       eventId: 'event-1',
-      eventTypeName: 'Entrainement',
-      template: getEventShowcaseTemplate('Entrainement'),
+      eventTypeName: 'Match',
+      template: getEventShowcaseTemplate('Match'),
     });
   });
 
@@ -1060,8 +1086,10 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
     expect(params.template).toBe(getEventShowcaseTemplate("Détection / Séance d'essai"));
   });
 
+  // D99 : sur un MATCH desormais — l'entrainement par defaut n'ouvre plus cet
+  // ecran. Ce que le temoin mesure est inchange.
   test('aucune celebration rejouee : on consulte, on ne re-publie pas', () => {
-    const root = asOrganiser();
+    const root = asOrganiser({ event: buildEvent({ type: { name: 'Match' } }) });
     press(root, "Gérer l'événement");
     press(root, "Voir l'affiche");
 
@@ -1070,8 +1098,11 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
     expect(params).not.toHaveProperty('creationCelebration');
   });
 
+  // D99 : sur un MATCH. Sur l'entrainement par defaut, ce temoin serait devenu
+  // TAUTOLOGIQUE — vert parce que plus personne n'a d'affiche, et non parce
+  // qu'un participant n'y a pas droit. Il ne mesurerait plus le droit.
   test('TEMOIN NEGATIF : un participant n a pas d entree vers l affiche', () => {
-    const root = mountScreen();
+    const root = mountScreen({ event: buildEvent({ type: { name: 'Match' } }) });
 
     expect(bottomActionInventory(root)).not.toContain('poster');
   });
@@ -1085,11 +1116,113 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
   test('TEMOIN NEGATIF : la ou la route n existe pas, aucune chip muette', () => {
     // Le meme organisateur, mais dans un arbre de navigation ou
     // `EventPublishedShowcase` n'est pas enregistree (pile publique).
-    const root = asOrganiser({ routeNames: ['EventDetails', 'EventEdit'] });
+    // D99 : sur un MATCH, sinon le vert viendrait de la fermeture D99 et non de
+    // l'absence de route — le temoin ne mesurerait plus son sujet.
+    const root = asOrganiser({
+      event: buildEvent({ type: { name: 'Match' } }),
+      routeNames: ['EventDetails', 'EventEdit'],
+    });
     const inventory = bottomActionInventory(root);
 
     expect(inventory).not.toContain('poster');
     expect(inventory).toContain('edit');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// D99 — L'ENTRAINEMENT PERD SON AFFICHE, ET REPART AVEC UN CHEMIN.
+// Decision d'Adel du 2026-08-13, reponse « C » : on la retire ET on redirige.
+//
+// 🧨 CE QUE MESURAIT D88 : l'affiche d'un entrainement est celle d'une detection,
+// elle est partageable publiquement, et elle porte l'heure et le lieu RECURRENTS
+// d'un groupe — souvent des mineurs. Les concernes recoivent deja une
+// notification et un rappel a H-24 : elle ne prevenait personne, elle publiait
+// une habitude.
+//
+// 🧭 ET POURQUOI PAS « RETIRER » TOUT COURT : un club qui affichait ses creneaux
+// pour recruter perdrait son chemin. « Detection / seance d'essai » est
+// exactement le mot pour ca, et son affiche existe deja. On ne retire pas une
+// possibilite, on la remet au bon endroit — une porte fermee sans panneau est le
+// defaut que ce projet paie en boucle.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('D99 — un entrainement ne propose plus d affiche, il propose une detection', () => {
+  const entrainement = () => asOrganiser({ event: buildEvent({ type: { name: 'Entrainement' } }) });
+
+  test('① plus aucune entree vers l affiche sur un entrainement', () => {
+    const root = entrainement();
+
+    expect(bottomActionInventory(root)).not.toContain('poster');
+    // Et le libelle lui-meme a disparu : l'inventaire pourrait rater une chip
+    // renommee, un pressable absent ne ment pas.
+    expect(pressableWithText(root, "Voir l'affiche")).toBeUndefined();
+  });
+
+  test('③ l entrainement propose de creer une detection a la place', () => {
+    const root = entrainement();
+
+    expect(bottomActionInventory(root)).toContain('detection-switch');
+  });
+
+  // ⛔ LE CŒUR DU LOT : le bouton doit MENER quelque part. Un aiguillage qui
+  // n'ouvre rien est pire que pas d'aiguillage — c'est l'impasse polie.
+  // La cible est la 1re etape du tunnel de creation, atteinte par le motif deja
+  // employe par 5 appelants (HomeHub, TeamDetails, ParticipantEventList,
+  // MultisportClubDetails, CMDashboard) : la pile evenement, puis l'etape.
+  test('③ bis — et l aiguillage ouvre REELLEMENT le choix du type', () => {
+    const root = entrainement();
+    openManagePanel(root);
+    press(root, 'Faire venir');
+
+    expect(mockNavigate).toHaveBeenCalledWith('EventStack', {
+      screen: 'EventWizardType',
+    });
+  });
+
+  // L'organisateur doit comprendre POURQUOI sans avoir a appuyer. Le mot
+  // « detection » est le seul terme du produit qui compte ici : c'est celui
+  // qu'il retrouvera dans la liste des types, a l'ecran suivant.
+  test('③ ter — la raison est ecrite a cote du bouton, pas cachee derriere', () => {
+    const root = entrainement();
+    openManagePanel(root);
+
+    expect(hasText(root, 'de l’extérieur')).toBe(true);
+    expect(hasText(root, 'détection')).toBe(true);
+  });
+
+  // 🔒 LE TEMOIN QUI COMPTE — LA NON-REGRESSION. Les quatre autres types gardent
+  // leur affiche, et n'heritent PAS de l'aiguillage : une detection a qui on
+  // proposerait de creer une detection serait absurde.
+  test.each([
+    ['Match'],
+    ["Détection / Séance d'essai"],
+    ['Tournoi'],
+    ['Stage'],
+  ])('🔒 « %s » propose TOUJOURS son affiche, et aucun aiguillage', (typeName) => {
+    const root = asOrganiser({ event: buildEvent({ type: { name: typeName } }) });
+    const inventory = bottomActionInventory(root);
+
+    expect(inventory).toContain('poster');
+    expect(inventory).not.toContain('detection-switch');
+  });
+
+  // Meme regle que la chip d'affiche (l. ~3690) : la ou le tunnel n'est pas
+  // enregistre — la pile publique — l'aiguillage serait un bouton muet.
+  test('TEMOIN NEGATIF : sans le tunnel dans l arbre, aucun aiguillage muet', () => {
+    const root = asOrganiser({
+      event: buildEvent({ type: { name: 'Entrainement' } }),
+      routeNames: ['EventDetails', 'EventEdit'],
+    });
+    const inventory = bottomActionInventory(root);
+
+    expect(inventory).not.toContain('detection-switch');
+    expect(inventory).not.toContain('poster');
+    expect(inventory).toContain('edit');
+  });
+
+  test('TEMOIN NEGATIF : un participant n a pas non plus l aiguillage', () => {
+    const root = mountScreen({ event: buildEvent({ type: { name: 'Entrainement' } }) });
+
+    expect(bottomActionInventory(root)).not.toContain('detection-switch');
   });
 });
 

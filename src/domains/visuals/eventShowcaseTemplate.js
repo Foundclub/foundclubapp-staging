@@ -69,6 +69,41 @@ export const getEventShowcaseTemplate = (typeName) => {
 };
 
 /**
+ * L'affiche est-elle PROPOSEE pour ce type d'evenement ? (D99, 2026-08-13)
+ *
+ * 🧨 CE QUE MESURE CE LOT, ET POURQUOI L'ENTRAINEMENT SORT : l'affiche d'un
+ * entrainement est celle d'une detection (le repli ci-dessus), elle est
+ * PARTAGEABLE PUBLIQUEMENT, et elle porte l'heure et le lieu RECURRENTS d'un
+ * groupe — souvent des mineurs. Or les personnes concernees recoivent deja une
+ * notification a la publication et un rappel automatique a H-24. ⇒ Cette
+ * affiche ne prevenait personne qui ne le soit deja ; elle publiait une
+ * HABITUDE. Decision d'Adel du 2026-08-13.
+ *
+ * 🧭 ET POURQUOI UNE REDIRECTION PLUTOT QU'UN RETRAIT SEC : un club qui
+ * affichait ses creneaux pour recruter perdrait son chemin. « Detection /
+ * seance d'essai » est litteralement le bon mot pour ca, et son affiche existe
+ * deja. On ne retire pas une possibilite, on la remet au bon endroit —
+ * l'aiguillage vit dans `EventDetails` (menu « Gerer »), pas ici.
+ *
+ * ⛔ CE QUE CETTE REGLE NE FAIT PAS : elle ne casse pas le moteur d'affiches.
+ * `getEventShowcaseTemplate` sait toujours servir les 7 types, et
+ * `EventPublishedShowcase` fabrique toujours l'image si on l'atteint — c'est
+ * VOULU, aucune affiche deja generee n'est detruite ni rendue illisible. D99
+ * ferme les PORTES qui menent a la generation, en amont.
+ *
+ * ⚠️ Elle vit ICI, avec les deux autres decisions prises sur le type, parce que
+ * DEUX appelants la posent — le menu « Gerer » (`EventDetails.js`) et la fin du
+ * tunnel de creation (`EventWizardRecap.js`). Une regle recopiee aux deux
+ * endroits diverge le jour ou l'un des deux bouge (§1 bis : la fonction
+ * partagee se corrige UNE fois).
+ * @param {string} [typeName] Nom du type tel que le serveur le sert.
+ * @returns {boolean} `false` pour un entrainement, `true` pour tous les autres
+ *   — y compris un type absent, vide ou inconnu : fermer sur un doute retirerait
+ *   un geste a des evenements qu'on n'a pas su nommer.
+ */
+export const isEventShowcaseOffered = (typeName) => !isTrainingEventType(typeName);
+
+/**
  * Le message qui ACCOMPAGNE l'affiche dans le partage (D94/C2, 2026-08-13).
  *
  * 🧨 LE DEFAUT CORRIGE : il n'y avait qu'UNE phrase pour les 7 types — « Viens
