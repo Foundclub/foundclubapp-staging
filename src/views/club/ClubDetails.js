@@ -183,6 +183,7 @@ function ClubDetails({ navigation, route }) {
     getPostOnboardingHomeRoute,
     hasClubAccess,
     inviteTrainer,
+    isClubMember,
     refetchUserData,
     USER_ROLES,
     userData,
@@ -1010,26 +1011,20 @@ function ClubDetails({ navigation, route }) {
     }
   };
 
-  const relatedTeams = useMemo(() => ([
-    ...(Array.isArray(userData?.myTeams) ? userData.myTeams : []),
-    ...(Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : []),
-    ...(Array.isArray(userData?.teams) ? userData.teams : []),
-  ]), [userData?.myTeams, userData?.teams, userData?.trainedTeams]);
-
   const isMember = useMemo(() => {
     if (!userData) return false;
     const roleName = String(userData.role?.name || '').toLowerCase();
     const roleType = String(userData.role?.type || '').toLowerCase();
     if (roleName === 'superadmin' || roleType === 'superadmin' || roleType === 'admin') return true;
 
-    if (clubId && hasClubAccess(clubId)) return true;
-
-    // Check team membership
-    return relatedTeams.some((team) => {
-      const teamClubId = team.club?.documentId || team.club?.id;
-      return teamClubId === clubId;
-    });
-  }, [clubId, hasClubAccess, relatedTeams, userData]);
+    // C3 : la meme regle vivait ici en double — `hasClubAccess` PUIS un balayage
+    // maison de `myTeams`/`trainedTeams`/`teams`. Elle porte desormais un nom,
+    // `isClubMember`, et un seul exemplaire : c'est ce doublon qui faisait que
+    // le 2e club d'un joueur etait reconnu SUR CETTE FICHE et nulle part
+    // ailleurs. Meme sortie qu'avant, aux identifiants numeriques pres, que la
+    // fonction partagee compare desormais en texte.
+    return Boolean(clubId) && isClubMember(clubId);
+  }, [clubId, isClubMember, userData]);
 
   const isPlayerRole = userData?.role?.name === USER_ROLES.player;
   const isCoachRole = userData?.role?.name === USER_ROLES.coach;

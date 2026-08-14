@@ -52,6 +52,7 @@ import {
   getOnboardingViews,
   getUserRoleKey,
   hasClubAccess as hasClubAccessForUser,
+  isClubMember as isClubMemberForUser,
   profileFieldToDisplay,
   resolveNextOnboardingRoute,
   resolveOnboardingExitRoute,
@@ -557,6 +558,15 @@ const useAuth = () => {
     [userData],
   );
 
+  // C3 — « ce club fait-il partie des miens ? », equipes comprises. A ne pas
+  // confondre avec `hasClubAccess` juste au-dessus, qui est la porte des droits
+  // (edition du club, moderation, « quitter le club ») : celle-ci n'en ouvre
+  // aucun. Voir le commentaire de `getClubIds` dans authUseCases.js.
+  const isClubMember = useCallback(
+    (/** @type {string} */ clubId) => isClubMemberForUser(userData, clubId),
+    [userData],
+  );
+
   const canEditClub = useCallback(
     (/** @type {string} */clubId) => canUserEditClub(userData, clubId),
     [userData],
@@ -829,6 +839,7 @@ const useAuth = () => {
       || !auth?.token
       || isAddingAccount
       || Boolean(bootstrapData?.serverTime || bootstrapError),
+    isClubMember,
     isCurrentClubPartner,
     isCurrentClubVerified,
     isLoading: otpMutation.isPending || loginMutation.isPending,

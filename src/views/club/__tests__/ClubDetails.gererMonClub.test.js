@@ -116,6 +116,11 @@ jest.mock('@/domains/auth/useAuth', () => ({
     getPostOnboardingHomeRoute: () => null,
     hasClubAccess: mockHasClubAccess,
     inviteTrainer: jest.fn(),
+    // C3 : `isClubMember` repond vrai partout ou `hasClubAccess` repond vrai,
+    // PLUS les clubs atteints par une equipe. Aucun profil de ce fichier n'a
+    // d'equipe : les deux rendent donc exactement la meme chose ici, et la
+    // doublure le dit plutot que de le supposer.
+    isClubMember: (/** @type {string} */ id) => mockHasClubAccess(id),
     refetchUserData: jest.fn(),
     USER_ROLES: { coach: 'coach', player: 'player', president: 'president' },
     userData: mockUserData,
