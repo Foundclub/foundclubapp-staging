@@ -340,6 +340,12 @@ function AdWizardRecap({ navigation }) {
   // ⚠️ `RecruitmentAdDetails` et `AdWizardStack` sont FRERES a la racine
   // (`PrivateNavigator.js`, l. 311 et 594) : c'est donc la pile du PARENT
   // qu'il faut refaire, jamais celle du tunnel.
+  /**
+   * @param {string} adDocumentId - L'identifiant de l'annonce a montrer. VIDE
+   *   quand le serveur n'en a rendu aucun : on retombe alors sur l'accueil
+   *   plutot que d'ouvrir une fiche sans contenu.
+   * @returns {void}
+   */
   const resetToPublishedAd = (adDocumentId) => {
     const routes = adDocumentId
       ? [
