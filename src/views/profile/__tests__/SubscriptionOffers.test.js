@@ -870,6 +870,7 @@ describe('Carrousel d\'offres — la carte Gratuit dit la verite sur les compteu
    « Mettre à jour mes équipes couvertes » ne pouvait s'afficher nulle part. */
 describe('L40 — un abonne Équipe peut rouvrir ses equipes couvertes', () => {
   /**
+   * Construit un resume d abonnement de test.
    * @param {Record<string, any>} [surcharges]
    * @returns {Record<string, any>}
    */
@@ -1030,7 +1031,9 @@ describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
     // (« jusqu'a 3 equipes du club » pour Club S) au lieu du vague « toutes les
     // equipes du club ». Ce que ce temoin garde, lui, est inchange : la carte
     // Club n'affiche que le DELTA sur l'offre Equipe.
-    expect(texte).toContain("Tout ce que fait l'offre Équipe, pour jusqu'à 3 équipes du club, plus :");
+    expect(texte).toContain(
+      "Tout ce que fait l'offre Équipe, pour jusqu'à 3 équipes du club, plus :",
+    );
     expect(texte).toContain('Fiche club complète');
     expect(texte).toContain('Installations');
     expect(texte).toContain('Cotisations du club');

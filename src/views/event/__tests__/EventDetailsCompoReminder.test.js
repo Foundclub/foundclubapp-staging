@@ -538,7 +538,7 @@ describe('C2 — temoin 2 : un match AVEC une compo ne l affiche pas', () => {
     expect(rappelVisible(root)).toBe(false);
   });
 
-  test('🔒 « ABSENT » N EST PAS « VIDE » : un brouillon sans joueur coche reste un brouillon', () => {
+  test('🔒 « ABSENT » N EST PAS « VIDE » : un brouillon sans joueur reste un brouillon', () => {
     // Le piege que ce temoin interdit : lire le CONTENU (`selectedPlayerIds`)
     // au lieu de l'EXISTENCE. Un coach qui a ouvert la convocation et n'a
     // encore coche personne A commence sa compo — lui redire « tu n'as pas

@@ -483,7 +483,9 @@ describe('D79 ecran 6 — la feuille enregistrer / publier', () => {
     const horsApp = {
       documentId: 'manual_1', firstname: 'Yanis', isManual: true, lastname: 'Bertrand',
     };
-    const arbre = await rendre({ selectedPlayers: [...ONZE, horsApp], startPlacements: placementsDeDepart });
+    const arbre = await rendre({
+      selectedPlayers: [...ONZE, horsApp], startPlacements: placementsDeDepart,
+    });
     await appuyerSur(arbre, 'Publier');
 
     expect(texteVisible(arbre)).toContain('1 ajouté à la main');
@@ -540,7 +542,7 @@ describe('D79 — enregistrer et publier', () => {
     expect(charge.draft.selectedPlayerIds).toHaveLength(12);
   });
 
-  test('« Publier » ENREGISTRE d abord : publier un etat non enregistre enverrait l ancien', async () => {
+  test('« Publier » ENREGISTRE d abord, sinon il enverrait l ancien etat', async () => {
     const arbre = await rendre();
     await appuyerSur(arbre, 'Publier');
     await appuyerSur(arbre, 'Publier la convocation');
