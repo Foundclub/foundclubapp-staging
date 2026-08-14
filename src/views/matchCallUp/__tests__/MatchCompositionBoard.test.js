@@ -169,6 +169,18 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
   };
 });
 
+// C-A — le mur payant. Comme `BottomModal`, il ne rend son contenu que quand il
+// est ouvert : c'est ce qui permet de prouver qu'un refus l'ouvre VRAIMENT.
+jest.mock('@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { decision, isVisible }) => (
+      isVisible ? <TexteRN>{`FEUILLE_OFFRE:${decision?.reason || ''}`}</TexteRN> : null
+    ),
+  };
+});
+
 jest.mock('@/views/tactical_v2/DraggableToken', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   return {
@@ -547,5 +559,103 @@ describe('D79 — enregistrer et publier', () => {
 
     expect(mockAlert).toHaveBeenCalledWith('Erreur', 'Impossible de publier cette convocation.');
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C-A (💰) LE MUR PAYANT — la seule fuite d'argent mesuree du pack
+// ---------------------------------------------------------------------------
+//
+// Mesure du lot C1 : publier sans offre etait refuse par une ALERTE GENERIQUE.
+// Le serveur repond pourtant 403 EN JOIGNANT la decision d'abonnement
+// (event.ts:3203 -> buildSubscriptionPermissionDeniedDetails), et l'app sait
+// deja l'extraire. Le mur payant n'etait branche que sur l'ANCIEN terrain
+// (TacticalBoard, MultiTeamCompositionBoard) : sur le neuf, le coach etait
+// refuse SANS qu'on lui montre l'offre qui debloque son geste. Chaque
+// publication refusee etait donc une vente perdue en silence.
+//
+// ♻️ Rien n'est invente ici : c'est le motif exact de RequestsHub et des 11
+// autres ecrans qui l'utilisent deja (§1 bis, barreau 2).
+//
+// La forme de l'erreur est celle que l'ecran RECOIT vraiment : l'intercepteur
+// HTTP rejette la charge Strapi DEBALLEE (client.native.js:93), pas l'erreur
+// axios. C'est ce qui rend `details.decision` lisible.
+const refusAvecOffre = () => ({
+  details: {
+    code: 'SUBSCRIPTION_PERMISSION_DENIED',
+    decision: {
+      action: 'composition.manage',
+      allowed: false,
+      clubDocumentId: 'club_1',
+      paywall: 'composition-required',
+      reason: 'PLAN_REQUIRED',
+      remainingFreeUses: 0,
+      requiredPlan: ['TEAM'],
+      teamDocumentId: 'team_1',
+    },
+  },
+  message: 'Cette fonctionnalite necessite une offre FoundClub active.',
+  name: 'ForbiddenError',
+  status: 403,
+});
+
+describe('C-A — publier sans abonnement ouvre la FEUILLE D OFFRE, pas une alerte', () => {
+  test('🥇 le refus 403 qui porte une decision ouvre le mur payant', async () => {
+    publishEventConvocation.mockRejectedValue(refusAvecOffre());
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Publier');
+    await appuyerSur(arbre, 'Publier la convocation');
+
+    expect(texteVisible(arbre)).toContain('FEUILLE_OFFRE:PLAN_REQUIRED');
+  });
+
+  test('⛔ et l alerte generique ne s affiche PLUS : elle cachait l offre', async () => {
+    publishEventConvocation.mockRejectedValue(refusAvecOffre());
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Publier');
+    await appuyerSur(arbre, 'Publier la convocation');
+
+    expect(mockAlert).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test('la feuille de publication se referme, sinon elle masquerait l offre', async () => {
+    publishEventConvocation.mockRejectedValue(refusAvecOffre());
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Publier');
+    await appuyerSur(arbre, 'Publier la convocation');
+
+    expect(texteVisible(arbre)).not.toContain('Publier la convocation');
+  });
+
+  test('🔎 le refus peut aussi venir de l ENREGISTREMENT : publier enregistre d abord', async () => {
+    // `handlePublish` appelle saveEventCompositionDraft AVANT publish. Ne
+    // brancher que le second laisserait ce chemin-la sur l'alerte generique.
+    saveEventCompositionDraft.mockRejectedValue(refusAvecOffre());
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Publier');
+    await appuyerSur(arbre, 'Publier la convocation');
+
+    expect(texteVisible(arbre)).toContain('FEUILLE_OFFRE:PLAN_REQUIRED');
+    expect(publishEventConvocation).not.toHaveBeenCalled();
+  });
+
+  test('« Enregistrer » seul ouvre aussi l offre au lieu de son alerte', async () => {
+    saveEventCompositionDraft.mockRejectedValue(refusAvecOffre());
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(texteVisible(arbre)).toContain('FEUILLE_OFFRE:PLAN_REQUIRED');
+    expect(mockAlert).not.toHaveBeenCalled();
+  });
+
+  test('⛔ NON-REGRESSION : un echec SANS decision garde son alerte', async () => {
+    publishEventConvocation.mockRejectedValue(new Error('coupure reseau'));
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Publier');
+    await appuyerSur(arbre, 'Publier la convocation');
+
+    expect(mockAlert).toHaveBeenCalledWith('Erreur', 'Impossible de publier cette convocation.');
+    expect(texteVisible(arbre)).not.toContain('FEUILLE_OFFRE');
   });
 });
