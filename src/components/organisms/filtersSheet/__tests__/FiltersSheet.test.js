@@ -317,3 +317,63 @@ describe('D86 — les deux actions ne peuvent plus passer sous le bord', () => {
     expect(useSafeAreaBottomInset).not.toBe(false);
   });
 });
+
+// R07 point 1 — LE DERNIER FILTRE RESPIRE AVANT LE PIED. Constat d'Adel du
+// 2026-08-13 : « il faut rajouter un peu de padding entre le dernier filtre
+// "Equipe" et le bouton "Voir les resultats" ».
+//
+// D86 avait sorti les actions du defilement ; il restait que le contenu
+// s'arretait juste au-dessus du trait du pied. La reserve se pose sur la
+// DERNIERE rangee, dans le contenu defilant : `BottomModal` sert une trentaine
+// d'autres feuilles et son `contentBottomPadding` n'est pas a nous.
+//
+// ⚠️ Comme en D19 et D86 : Jest ne mesure aucun pixel. Ce filet lit la
+// CONTRAINTE posee sur l'arbre, et le rendu se constate sur un telephone.
+describe('R07 — le dernier filtre respire avant le pied colle', () => {
+  /**
+   * Aplatit un style RN (tableau, valeurs nulles) en un seul objet.
+   * @param {any} style Le style tel que pose sur l'element.
+   * @returns {Record<string, any>} Le style resolu.
+   */
+  const styleAplati = (style) => (Array.isArray(style)
+    ? style.filter(Boolean).reduce((acc, part) => ({ ...acc, ...styleAplati(part) }), {})
+    : (style || {}));
+
+  const TROIS_RANGEES = [
+    { content: <Text>choix A</Text>, key: 'a', label: 'Sport', value: 'Tous' },
+    { content: <Text>choix B</Text>, key: 'b', label: 'Ville', value: 'Toutes' },
+    { content: <Text>choix C</Text>, key: 'c', label: 'Équipe', value: 'Toutes' },
+  ];
+
+  it('LE TEMOIN : la derniere rangee porte la reserve, les autres non', async () => {
+    await rendre({ rows: TROIS_RANGEES });
+    const rangees = proprietesRecues.valeur.children;
+
+    expect(rangees).toHaveLength(3);
+    // La rangee « Equipe », celle qu'Adel voyait collee au bouton.
+    expect(styleAplati(rangees[2].props.style).marginBottom).toBe(16);
+    // Les rangees du milieu gardent leur seul espacement d'origine : la reserve
+    // est une fin de liste, pas un ecartement general des filtres.
+    expect(styleAplati(rangees[0].props.style).marginBottom).toBeUndefined();
+    expect(styleAplati(rangees[1].props.style).marginBottom).toBeUndefined();
+  });
+
+  it('elle suit la liste : une seule rangee, c est elle qui la porte', async () => {
+    await rendre({ rows: [TROIS_RANGEES[0]] });
+    const rangees = proprietesRecues.valeur.children;
+
+    expect(rangees).toHaveLength(1);
+    expect(styleAplati(rangees[0].props.style).marginBottom).toBe(16);
+  });
+
+  it('l espacement d origine entre rangees n a pas bouge', async () => {
+    await rendre({ rows: TROIS_RANGEES });
+    const rangees = proprietesRecues.valeur.children;
+
+    // Le `marginTop` de 8 est ce qui separe deux filtres depuis D69. La reserve
+    // du bas s'AJOUTE, elle ne le remplace pas.
+    rangees.forEach((/** @type {any} */ rangee) => {
+      expect(styleAplati(rangee.props.style).marginTop).toBe(8);
+    });
+  });
+});
