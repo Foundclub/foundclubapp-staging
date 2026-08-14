@@ -3079,7 +3079,26 @@ function ClubDetails({ navigation, route }) {
           </View>
         </View>
       </BottomModal>
+      {/* R07 point 3 — « le clavier passe devant l'ecran, on ne voit pas ce
+          qu'on ecrit » (constat d'Adel du 2026-08-13, sur cette feuille).
+          Les deux champs « coach » sont en BAS du contenu : c'est exactement
+          eux que le clavier recouvre.
+
+          ⚠️ RIEN DE NEUF ICI : c'est le motif que D31 a deja etabli sur
+          `SelfProfileUnified.js` (l. 734) puis reutilise par `FiltersSheet`
+          (l. 92). Le defaut est un enchainement de DEUX renoncements :
+            1. `@gorhom/bottom-sheet` refuse deliberement de deplacer la
+               feuille quand la plateforme est Android ET le mode
+               `adjustResize` — il fait confiance a Android pour
+               redimensionner la fenetre a sa place ;
+            2. or `adjustResize` n'agit plus depuis qu'Android 15 impose le
+               bord-a-bord (targetSdk 35).
+          Personne ne remontait donc la feuille. `adjustPan` rend la main a
+          l'evitement que la bibliotheque sait deja faire.
+          ⚠️ Prop ANDROID uniquement : iOS passe par `keyboardBehavior`
+          (« interactive » par defaut), qui fonctionne deja. */}
       <BottomModal
+        androidKeyboardInputMode="adjustPan"
         close={handleClosePlayerNoTeamRequest}
         headerComponent={(
           <View style={[Alignments.row, Alignments.alignCenter]}>

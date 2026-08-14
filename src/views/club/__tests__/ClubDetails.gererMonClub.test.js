@@ -282,9 +282,18 @@ jest.mock('@/components/atoms/teamShield/TeamShield', () => function TeamShieldM
   return null;
 });
 
+// R07 — la doublure RETIENT desormais les proprietes recues, en plus de ne rien
+// rendre. Le defaut du clavier (point 3) est une question de PROPRIETE passee a
+// la feuille, pas de texte affiche : sans cette collecte, il serait invisible.
+// Elle n'change rien pour les tests deja en place — la doublure rend toujours
+// `null`.
+/** @type {any[]} */
+const mockFeuillesRendues = [];
+
 jest.mock(
   '@/components/molecules/bottomModal/BottomModal',
-  () => function BottomModalMock() {
+  () => function BottomModalMock(/** @type {any} */ props) {
+    mockFeuillesRendues.push(props);
     return null;
   },
 );
@@ -846,5 +855,76 @@ describe('ClubDetails — D62 : les equipes portent le meme ecusson que partout 
 
     expect(premier.props.club?.logo?.url).toBe('/uploads/smuc.png');
     expect(premier.props.name).toBe('Stade Marseillais Université Club');
+  });
+});
+
+// R07 point 3 — LE CLAVIER NE DOIT PLUS CACHER CE QU'ON ECRIT.
+//
+// Constat d'Adel du 2026-08-13, sur la feuille « Ce club n'a pas encore
+// d'equipe » : « le clavier passe devant l'ecran, on ne voit pas ce qu'on
+// ecrit ». Ses deux champs « coach » sont en BAS du contenu — ce sont eux que
+// le clavier recouvre.
+//
+// La cause est connue et deja documentee par D31 (`SelfProfileUnified.js`) :
+// `@gorhom/bottom-sheet` refuse de deplacer la feuille quand la plateforme est
+// Android ET le mode `adjustResize`, et `adjustResize` n'agit plus depuis
+// qu'Android 15 impose le bord-a-bord. Le correctif est UNE propriete.
+//
+// ⚠️ Comme en D19/D86 : Jest ne mesure aucun pixel et ne simule aucun clavier.
+// Ce filet lit la PROPRIETE passee a la feuille — c'est-a-dire exactement la
+// chose qui manquait. Le rendu, lui, se constate sur un telephone Android.
+describe('R07 — la feuille du club sans equipe remonte au-dessus du clavier', () => {
+  /**
+   * Le texte porte par un element React non rendu (ici `headerComponent`).
+   * @param {any} element L'element.
+   * @returns {string} Son texte.
+   */
+  const texteDeLElement = (element) => {
+    if (element === null || element === undefined || typeof element === 'boolean') return '';
+    if (typeof element === 'string' || typeof element === 'number') return String(element);
+    if (Array.isArray(element)) return element.map(texteDeLElement).join(' ');
+    return texteDeLElement(element.props?.children);
+  };
+
+  /**
+   * La feuille dont l'entete parle du club sans equipe.
+   * @returns {any} Ses proprietes.
+   */
+  const feuilleDuClubSansEquipe = () => {
+    mockFeuillesRendues.length = 0;
+    monter();
+    return mockFeuillesRendues.find(
+      (props) => texteDeLElement(props?.headerComponent).includes('pas encore d’équipe'),
+    );
+  };
+
+  it('LE TEMOIN : elle demande `adjustPan`, le seul mode qui la remonte sur Android', () => {
+    const feuille = feuilleDuClubSansEquipe();
+
+    expect(feuille).toBeDefined();
+    // `adjustResize` est le defaut de `BottomModal`, et c'est LUI qui laissait
+    // le clavier passer devant : la bibliotheque ne bouge pas la feuille dans
+    // ce mode, et Android 15 ne redimensionne plus la fenetre a sa place.
+    expect(feuille.androidKeyboardInputMode).toBe('adjustPan');
+  });
+
+  it('le bouton d envoi reste atteignable : il defile avec le contenu', () => {
+    const feuille = feuilleDuClubSansEquipe();
+
+    // Il n'est PAS dans un pied colle : il vit dans le contenu defilant, donc
+    // un doigt peut toujours aller le chercher clavier ouvert. `BottomModal`
+    // pose `keyboardShouldPersistTaps="handled"` sur cette zone, si bien que
+    // l'appui n'est pas avale par la fermeture du clavier.
+    expect(feuille.footerComponent).toBeUndefined();
+    expect(feuille.scrollable).toBe(true);
+  });
+
+  it('elle garde sa hauteur fixe : la remontee ne doit pas la faire deborder', () => {
+    const feuille = feuilleDuClubSansEquipe();
+
+    // Acquis D19/D86 : sans `snapPoints`, la zone defilante est plafonnee a
+    // 70 % de l'ECRAN et ce qui vient en dernier sort par le bas.
+    expect(Array.isArray(feuille.snapPoints)).toBe(true);
+    expect(feuille.snapPoints.length).toBeGreaterThan(0);
   });
 });
