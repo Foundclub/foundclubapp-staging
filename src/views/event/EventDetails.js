@@ -30,7 +30,7 @@ import {
   getParticipationErrorMessage,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
-import { getSubscriptionQuotaItem } from '@/domains/subscription/subscriptionDecision';
+import { getSubscriptionQuotaItem, hasActiveClubOffer } from '@/domains/subscription/subscriptionDecision';
 import { getEventShowcaseTemplate, isEventShowcaseOffered } from '@/domains/visuals/eventShowcaseTemplate';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -3037,6 +3037,63 @@ function EventDetails({ navigation, route }) {
     ), 0),
     [convocationBranches],
   );
+  // ==========================================================================
+  // C2 — LE RAPPEL DE COMPO. Un bandeau, jamais une fenetre.
+  //
+  // Demande d'Adel : « apres la creation d'un MATCH, proposer de creer la
+  // composition ». L'etude D88 (docs/REFLEXION_AFFICHES_ET_POPUP_COMPO.md
+  // §2.6-2.7) a mesure pourquoi une fenetre serait le mauvais objet :
+  //   · l'apres-creation porte DEJA 4 sollicitations (atelier d'affiche,
+  //     confettis, fenetre d'abonnement, pastille cotisation) ;
+  //   · un match est cree 4 jours (mediane) avant sa date, et 14 sur 35 plus
+  //     d'une semaine avant ⇒ a la creation, il est trop tot pour 40 % d'entre
+  //     eux. Un bandeau, lui, se revoit a chaque ouverture du match — donc
+  //     aussi la veille, quand la compo se prepare vraiment.
+  //
+  // ⛔ AUCUN COMPTEUR, AUCUNE MEMOIRE « deja vu », rien a purger : l'ETAT fait
+  // tout le travail. Le bandeau existe tant que la compo n'existe pas, et
+  // disparait tout seul le jour ou elle existe.
+  //
+  // 🔒 « PAS DE COMPO » SE LIT SUR L'EXISTENCE, JAMAIS SUR LE CONTENU. Un
+  // brouillon dont la selection de joueurs est vide (`[]`) reste un brouillon :
+  // le coach a commence, lui redire « tu n'as pas encore de compo » serait faux.
+  // Et `bootstrap` n'est PAS une compo — le serveur le rend toujours (source
+  // `empty`), c'est une proposition de depart.
+  const hasTeamComposition = Boolean(
+    staffCompositionPayload?.draft || staffCompositionPayload?.published,
+  );
+
+  // La composition fait partie des offres Equipe et Club — c'est la matrice du
+  // serveur (`composition.manage: ['TEAM', 'CLUB']`,
+  // admin/src/api/subscription/services/subscription-permission.ts:80).
+  // `hasActiveClubOffer` couvre CLUB **et** CLUB_UNVERIFIED : depuis la decision
+  // produit du 2026-07-17, un entitlement Club actif ouvre l'acces meme sans
+  // club verifie. Recopier la condition a la main ici reviendrait a revendre
+  // l'offre Club a quelqu'un qui l'a deja payee.
+  const canManageComposition = subscriptionAccessLevel === 'TEAM'
+    || hasActiveClubOffer(subscriptionAccessLevel);
+
+  // 🚪 Le rappel ne parait QUE la ou il y a quelque chose a preparer, et il se
+  // tait partout ailleurs :
+  //   · ce n'est pas un match, ou le match est deja joue → plus rien a preparer ;
+  //   · la personne n'organise pas, ou aucune equipe n'est rattachee → il n'y a
+  //     aucune porte a montrer (un bandeau qui mene a un ecran vide est pire
+  //     que pas de bandeau) ;
+  //   · la reponse du serveur n'est pas encore la → on ne SAIT pas. Se taire
+  //     evite le rappel qui s'affiche puis disparait a chaque ouverture ;
+  //   · le niveau d'abonnement n'est pas encore connu → aucun argument de vente,
+  //     meme garde-fou que SubscriptionQuotaBanner.js:96.
+  const isCompoReminderVisible = Boolean(
+    isMatchEvent
+    && canEdit
+    && supportsEventComposition
+    && compositionTeamId
+    && !isMatchFinished
+    && subscriptionAccessLevel
+    && staffCompositionPayload
+    && !hasTeamComposition,
+  );
+
   // D4 : `compositionPrimaryAction` decrivait le titre et le sous-titre du gros
   // bouton de composition (« Brouillon enregistre le ... »). Ce bouton est
   // devenu la chip « Compo » ; le bloc n'avait plus aucun lecteur.
@@ -3823,6 +3880,63 @@ function EventDetails({ navigation, route }) {
    * colonnes 48 % / 100 %, memes handlers, un seul tap.
    * @returns {any} - Le bloc du menu, ou null si aucune action n'est ouverte.
    */
+  // C2 — LE BANDEAU LUI-MEME. Il se pose SOUS « Gerer l'evenement », c'est-a-dire
+  // juste a cote de la porte qu'il designe : la chip « Compo » vit dans ce menu,
+  // et ce menu est REPLIE par defaut (`useState(false)`) — le rappel est donc le
+  // seul endroit de la page ou le geste se voit sans deplier quoi que ce soit.
+  //
+  // 🧷 C'est un MORCEAU D'ECRAN, jamais une route de plus : D81 a mesure qu'un
+  // `navigate` vers un ecran absent de la pile l'y empile, et que la fleche
+  // retour y redescend. Le bandeau reutilise `handleManageComposition`, la
+  // destination exacte de la chip « Compo ».
+  //
+  // 💳 ET LE PRIX EST SUR LA PROPOSITION, PAS AU BOUT. Aujourd'hui la chip
+  // « Compo » s'affiche sans aucun controle d'abonnement et le refus tombe en
+  // 403 AU MOMENT DE PUBLIER (D88 §2.2) — apres que le coach a coche et place
+  // ses joueurs. Un rappel muet laisserait ce mur entier ; un rappel qui dirait
+  // « prepare ta compo » le mettrait en vitrine a zero clic. Il annonce donc
+  // l'offre, et il mene aux offres — il ne promet aucun travail qui finira
+  // refuse.
+  const renderCompoReminder = () => {
+    if (!isCompoReminderVisible) return null;
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderRadius16,
+          ApplicationStyle.borderWidth1,
+          Spaces.padding[12],
+          Spaces.gap[4],
+          // Pas de marge propre : le conteneur de contenu porte deja `gap: 24`
+          // (`WithDataWrapper wrapperStyle`), et une marge en plus ferait 36 pt
+          // de vide entre le menu de gestion et le rappel.
+          {
+            backgroundColor: withAlpha(Colors.primary500, 0.08),
+            borderColor: withAlpha(Colors.primary500, 0.24),
+          },
+        ]}
+        testID="event-compo-reminder"
+      >
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {canManageComposition
+            ? t('eventDetails.compoReminder.title', 'Ce match n’a pas encore de compo')
+            : t('eventDetails.compoReminder.offerTitle', 'La compo est incluse dans l’offre Équipe')}
+        </Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={canManageComposition ? handleManageComposition : handleOpenSubscriptionOverview}
+          style={[Spaces.paddingVertical[12], { alignSelf: 'flex-start' }]}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+            {canManageComposition
+              ? t('eventDetails.compoReminder.action', 'Préparer la compo')
+              : t('eventDetails.compoReminder.offerAction', 'Voir l’offre Équipe')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   const renderManagePanel = () => {
     if (!hasManageActions) return null;
 
@@ -4668,6 +4782,7 @@ function EventDetails({ navigation, route }) {
             <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
             {renderTournamentActionsPanel()}
             {renderManagePanel()}
+            {renderCompoReminder()}
             <View style={[Spaces.gap[24]]}>
 
               {isStageParentEvent ? (
