@@ -232,6 +232,19 @@ const lastBoardParams = () => {
   return call ? call[1] : null;
 };
 
+/** Les parametres du dernier envoi vers le NOUVEAU parcours (ecran 1 du pack). */
+const lastCallUpParams = () => {
+  const call = [...mockNavigate.mock.calls].reverse()
+    .find((/** @type {any} */ entry) => entry[0] === 'MatchCallUpSelection');
+  return call ? call[1] : null;
+};
+
+/** Le nom de la route empruntee au dernier appui. */
+const lastRoute = () => {
+  const call = [...mockNavigate.mock.calls].pop();
+  return call ? call[0] : null;
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockEventQuery.data = null;
@@ -248,13 +261,18 @@ afterEach(() => {
 });
 
 describe('le site ouvre la composition comme le telephone', () => {
-  test('« Gerer la composition d equipes » mene bien au board', () => {
+  // ⚠️ CE TEMOIN A CHANGE DE DESTINATION LE 2026-08-14, ET C EST LE SUJET DU LOT.
+  // Il verrouillait « le site mene au board ». Le board vise ici est l ANCIEN
+  // terrain : le site y allait TOUJOURS, alors que le telephone passe par le
+  // nouveau parcours depuis D77. Ce qu il protege reellement — « le bouton mene
+  // quelque part, avec le bon evenement et la bonne equipe » — est conserve.
+  test('« Gerer la composition d equipes » mene bien a la composition', () => {
     const root = mountScreen();
 
     click(root, "Gérer la composition d'équipes");
 
     expect(mockNavigate).toHaveBeenCalledWith(
-      'TacticalBoardV2',
+      'MatchCallUpSelection',
       expect.objectContaining({ eventId: 'event-1', teamId: TEAM_ID }),
     );
   });
@@ -264,7 +282,7 @@ describe('le site ouvre la composition comme le telephone', () => {
 
     click(root, "Gérer la composition d'équipes");
 
-    expect(lastBoardParams()).toEqual(
+    expect(lastCallUpParams()).toEqual(
       expect.objectContaining({ eventKind: 'match' }),
     );
   });
@@ -305,5 +323,64 @@ describe('le site ouvre la composition comme le telephone', () => {
     expect(lastBoardParams()).toEqual(
       expect.objectContaining({ eventKind: 'detection', readOnly: true }),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C-A (🚪) LA PORTE WEB DES 4 ECRANS NEUFS
+// ---------------------------------------------------------------------------
+//
+// Mesure du lot C1 : les 4 ecrans du pack composition sont ecrits, testes et
+// ROUTES (webRoutes.js:201-204, montes dans web/src/routes/screenRegistry.tsx),
+// mais AUCUN bouton du site n y menait — on ne pouvait les atteindre qu en
+// tapant l URL a la main. La moitie web d un travail deja paye etait invisible,
+// et rien sur le telephone ne pouvait le faire voir.
+//
+// La regle recopiee du natif (EventDetails.js:3232) est exactement celle-ci :
+//   startsWithCallUp = !isDetectionEvent && canEdit && !readOnly
+// Une DETECTION et une LECTURE SEULE continuent d aller a l ancien terrain :
+// ni l une ni l autre ne convoque.
+describe('C-A — depuis le site, la page d un match mene au NOUVEAU terrain', () => {
+  test('🥇 un match modifiable ouvre l ecran de convocation, plus l ancien terrain', () => {
+    const root = mountScreen();
+
+    click(root, "Gérer la composition d'équipes");
+
+    expect(lastRoute()).toBe('MatchCallUpSelection');
+    expect(lastBoardParams()).toBeNull();
+  });
+
+  test('⛔ une DETECTION reste sur l ancien terrain : elle ne convoque pas', () => {
+    const root = mountScreen({ event: buildEvent({ type: { name: 'Détection' } }) });
+
+    click(root, "Gérer la composition d'équipes");
+
+    expect(lastRoute()).toBe('TacticalBoardV2');
+  });
+
+  test('⛔ la LECTURE SEULE reste sur l ancien terrain', () => {
+    const root = mountScreen({
+      convocation: {
+        published: { schemaVersion: 3, teams: [{ documentId: 'branch-1', placements: [] }] },
+        team: { documentId: TEAM_ID, name: 'U15' },
+      },
+    });
+
+    click(root, 'Voir la composition publiée');
+
+    expect(lastRoute()).toBe('TacticalBoardV2');
+  });
+
+  test('l ecran 1 recoit de quoi travailler : evenement, equipe, sport et effectif', () => {
+    const root = mountScreen();
+
+    click(root, "Gérer la composition d'équipes");
+
+    expect(lastCallUpParams()).toEqual(expect.objectContaining({
+      canEdit: true,
+      eventId: 'event-1',
+      teamId: TEAM_ID,
+    }));
+    expect(Array.isArray(lastCallUpParams()?.players)).toBe(true);
   });
 });

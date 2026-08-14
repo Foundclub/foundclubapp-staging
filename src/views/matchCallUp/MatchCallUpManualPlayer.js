@@ -6,7 +6,6 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -27,14 +26,21 @@ import { buildManualCallUpPlayer, hasSilentCallUp } from './matchCallUpUtils';
 /**
  * D77 — ECRAN 3 : « Ajouter un joueur hors app ».
  *
- * Un ECRAN PLEIN, jamais une feuille : la saisie a 4 champs et un interrupteur,
- * une feuille la ferait passer sous le clavier.
+ * Un ECRAN PLEIN, jamais une feuille : la saisie passerait sous le clavier.
  *
  * 🔒 La regle du pack qui commande cet ecran : le joueur hors app ne doit JAMAIS
- * recevoir une promesse fausse. Sans telephone (ou SMS refuse), le bandeau jaune
- * est obligatoire, et l'etiquette « Pas de SMS » le suit partout ensuite —
- * c'est `hasSilentCallUp` qui decide des deux, pour qu'ils ne puissent pas
- * se contredire.
+ * recevoir une promesse fausse. Le bandeau jaune est donc PERMANENT, et
+ * l'etiquette qui suit le joueur dit la meme chose — c'est `hasSilentCallUp`
+ * qui decide des deux, pour qu'ils ne puissent pas se contredire.
+ *
+ * 🗑️ C-A (2026-08-14, decision d'Adel) — l'interrupteur « Le prevenir par SMS »
+ * et le champ Telephone ont ete RETIRES. Mesure du lot C1 : aucun service
+ * d'envoi n'existe cote serveur (0 occurrence de sendSms/twilio/brevo/vonage),
+ * l'interrupteur promettait donc « un lien consultable sans compte » qui
+ * n'existait pas, et le numero d'une personne SANS COMPTE etait conserve puis
+ * livre a tout le canal de l'equipe. Le joueur reste ajoutable : c'est son NOM
+ * qui sert. La voie de sortie, le jour ou un vrai envoi existera, est de
+ * remettre le champ ici et dans `buildManualCallUpPlayer`.
  */
 
 function MatchCallUpManualPlayer() {
@@ -51,16 +57,12 @@ function MatchCallUpManualPlayer() {
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
   const [jerseyNumber, setJerseyNumber] = useState('');
-  const [phone, setPhone] = useState('');
-  const [notifyBySms, setNotifyBySms] = useState(false);
 
   // Le joueur tel qu'il sera cree : le bandeau d'avertissement et l'etiquette
   // qui le suivra lisent EXACTEMENT le meme objet, donc la meme verite.
   const previewPlayer = useMemo(
-    () => buildManualCallUpPlayer({
-      firstname, jerseyNumber, lastname, notifyBySms, phone,
-    }),
-    [firstname, jerseyNumber, lastname, notifyBySms, phone],
+    () => buildManualCallUpPlayer({ firstname, jerseyNumber, lastname }),
+    [firstname, jerseyNumber, lastname],
   );
   const willBeSilent = hasSilentCallUp(previewPlayer);
 
@@ -79,17 +81,13 @@ function MatchCallUpManualPlayer() {
     // @ts-ignore
     navigation.navigate(RouteNames.MatchCallUpSelection, {
       ...returnParams,
-      pendingManualPlayer: buildManualCallUpPlayer({
-        firstname, jerseyNumber, lastname, notifyBySms, phone,
-      }),
+      pendingManualPlayer: buildManualCallUpPlayer({ firstname, jerseyNumber, lastname }),
     });
   }, [
     firstname,
     jerseyNumber,
     lastname,
     navigation,
-    notifyBySms,
-    phone,
     returnParams,
     t,
   ]);
@@ -189,41 +187,6 @@ function MatchCallUpManualPlayer() {
         })}
 
         <View style={[styles.separator, { backgroundColor: withAlpha(Colors.neutral00, 0.1) }]} />
-
-        {renderField({
-          keyboardType: 'phone-pad',
-          label: t('matchCallUp.manualPlayer.fields.phone.label'),
-          onChangeText: setPhone,
-          optional: true,
-          placeholder: t('matchCallUp.manualPlayer.fields.phone.placeholder'),
-          value: phone,
-        })}
-
-        <View
-          style={[
-            styles.smsCard,
-            {
-              backgroundColor: withAlpha(Colors.neutral00, 0.04),
-              borderColor: withAlpha(Colors.neutral00, 0.1),
-            },
-          ]}
-        >
-          <View style={styles.smsTexts}>
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-              {t('matchCallUp.manualPlayer.sms.title')}
-            </Text>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              {t('matchCallUp.manualPlayer.sms.subtitle')}
-            </Text>
-          </View>
-          <Switch
-            accessibilityLabel={t('matchCallUp.manualPlayer.sms.title')}
-            onValueChange={setNotifyBySms}
-            thumbColor={Colors.neutral00}
-            trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
-            value={notifyBySms}
-          />
-        </View>
 
         {willBeSilent ? (
           <View
@@ -325,17 +288,6 @@ const styles = StyleSheet.create({
     height: 1,
     marginBottom: 16,
     marginTop: 4,
-  },
-  smsCard: {
-    alignItems: 'center',
-    borderRadius: 20,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    padding: 16,
-  },
-  smsTexts: {
-    flex: 1,
   },
   warningCard: {
     borderRadius: 16,

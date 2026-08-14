@@ -55,9 +55,7 @@ describe('matchCallUpUtils — joueur hors app', () => {
       firstname: ' Yanis ',
       jerseyNumber: '23',
       lastname: 'Bertrand',
-      notifyBySms: true,
       now: 1700000000000,
-      phone: '0612345678',
     });
 
     expect(player.id).toBe('manual_1700000000000');
@@ -65,39 +63,38 @@ describe('matchCallUpUtils — joueur hors app', () => {
     expect(player.isManual).toBe(true);
     expect(player.firstname).toBe('Yanis');
     expect(player.number).toBe('23');
-    expect(player.phone).toBe('0612345678');
-    expect(player.notifyBySms).toBe(true);
   });
 
-  test('SANS telephone, l interrupteur SMS ne peut pas rester allume', () => {
-    // 🔒 « Le joueur hors app ne doit jamais recevoir une promesse fausse. »
+  // ⚠️ C-A (2026-08-14) — ces 2 temoins verrouillaient le calcul « SMS promis ou
+  // non ». Il n'y a plus rien a calculer : aucun service d'envoi n'existe cote
+  // serveur, donc la promesse fausse est impossible PAR CONSTRUCTION.
+  test('🔒 le telephone d un tiers ne peut plus entrer, meme s il est passe', () => {
     const player = buildManualCallUpPlayer({
       firstname: 'Yanis',
+      jerseyNumber: '23',
       lastname: 'Bertrand',
       notifyBySms: true,
       now: 1700000000001,
-      phone: '   ',
+      phone: '0612345678',
     });
 
-    expect(player.notifyBySms).toBe(false);
     expect(player.phone).toBeUndefined();
-    expect(hasSilentCallUp(player)).toBe(true);
+    expect(player.notifyBySms).toBeUndefined();
+    expect(player.lastname).toBe('Bertrand');
   });
 
-  test('l etiquette « pas de SMS » suit le joueur sans numero ET celui qui refuse', () => {
+  test('l etiquette suit TOUT joueur hors app, sans exception', () => {
     const sansNumero = buildManualCallUpPlayer({
       firstname: 'Yanis', lastname: 'Bertrand', now: 1,
     });
-    const smsRefuse = buildManualCallUpPlayer({
-      firstname: 'Yanis', lastname: 'Bertrand', notifyBySms: false, now: 2, phone: '0612345678',
-    });
-    const smsAccepte = buildManualCallUpPlayer({
-      firstname: 'Yanis', lastname: 'Bertrand', notifyBySms: true, now: 3, phone: '0612345678',
-    });
+    // Un joueur venu de la base avec les anciens champs : il ne sera pas
+    // prevenu davantage, l'etiquette ne doit donc pas disparaitre.
+    const ancienAvecSms = {
+      documentId: 'manual_2', isManual: true, notifyBySms: true, phone: '0612345678',
+    };
 
     expect(hasSilentCallUp(sansNumero)).toBe(true);
-    expect(hasSilentCallUp(smsRefuse)).toBe(true);
-    expect(hasSilentCallUp(smsAccepte)).toBe(false);
+    expect(hasSilentCallUp(ancienAvecSms)).toBe(true);
     // Un joueur de l'effectif n'est jamais concerne : il a l'app.
     expect(hasSilentCallUp({ documentId: 'p1' })).toBe(false);
   });

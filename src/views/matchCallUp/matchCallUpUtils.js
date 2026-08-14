@@ -75,30 +75,29 @@ export const getPlayerUnavailability = (player) => {
 };
 
 /**
- * Ce joueur ne recevra AUCUNE notification : il n'a pas l'app, et soit il n'a
- * pas de telephone, soit le SMS a ete refuse.
+ * Ce joueur ne recevra AUCUNE notification : il n'a pas l'app.
  *
  * 🔒 Regle du pack : « le joueur hors app ne doit jamais recevoir une promesse
- * fausse ». Partout ou son nom apparait, il porte l'etiquette « Pas de SMS ».
+ * fausse ». Partout ou son nom apparait, il porte l'etiquette qui le rappelle.
+ *
+ * 🗑️ C-A (2026-08-14) — la condition portait aussi sur `phone` / `notifyBySms`.
+ * Ces 2 champs ont disparu : aucun service d'envoi n'existe cote serveur, donc
+ * un joueur hors app est TOUJOURS silencieux. Le calcul serait non seulement
+ * inutile, il serait FAUX sur les convocations deja en base — celles qui
+ * portent encore un ancien `notifyBySms: true` diraient « il sera prevenu »
+ * alors que rien ne partira jamais.
  * @param {any} [player]
  * @returns {boolean}
  */
-export const hasSilentCallUp = (player) => {
-  if (!isManualCallUpPlayer(player)) return false;
-  return !normalizeText(player?.phone) || player?.notifyBySms !== true;
-};
+export const hasSilentCallUp = (player) => isManualCallUpPlayer(player);
 
 /**
  * Fabrique un joueur hors app, dans la forme EXACTE que le board et le serveur
  * connaissent deja (`manual_<horodatage>` partage par `id` et `documentId`).
- * `phone` et `notifyBySms` sont les 2 champs neufs du lot serveur D73 ; ils
- * voyagent dans le meme objet, sans mecanisme a part.
  * @param {object} input
  * @param {string} input.firstname
  * @param {string} input.lastname
  * @param {string} [input.jerseyNumber]
- * @param {string} [input.phone]
- * @param {boolean} [input.notifyBySms]
  * @param {number} [input.now] Horodatage injectable, pour les tests.
  * @returns {any}
  */
@@ -106,13 +105,10 @@ export const buildManualCallUpPlayer = ({
   firstname,
   jerseyNumber,
   lastname,
-  notifyBySms = false,
   now,
-  phone,
 }) => {
   const stamp = Number.isFinite(now) ? now : Date.now();
   const manualId = `manual_${stamp}`;
-  const cleanPhone = normalizeText(phone);
 
   return {
     avatar: null,
@@ -121,11 +117,7 @@ export const buildManualCallUpPlayer = ({
     id: manualId,
     isManual: true,
     lastname: normalizeText(lastname),
-    // Promettre un SMS sans numero serait la promesse fausse que le pack
-    // interdit : sans telephone, l'interrupteur ne vaut rien.
-    notifyBySms: Boolean(notifyBySms) && Boolean(cleanPhone),
     number: normalizeText(jerseyNumber) || undefined,
-    phone: cleanPhone || undefined,
   };
 };
 

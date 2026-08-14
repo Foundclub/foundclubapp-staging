@@ -27,12 +27,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import DraggableToken from '@/views/tactical_v2/DraggableToken';
@@ -116,6 +118,7 @@ function MatchCompositionBoard() {
   const [requireResponse, setRequireResponse] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [activeDragPlayer, setActiveDragPlayer] = useState(null);
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   const slots = useMemo(() => buildFormationSlots(sport), [sport]);
   // Le parametre `sport` arrive parfois ecrit a la main (« Football à 11 ») : la
@@ -272,6 +275,41 @@ function MatchCompositionBoard() {
     teamName,
   ]);
 
+  /**
+   * C-A — un refus du serveur montre l'OFFRE quand il en porte une.
+   *
+   * 💰 Le serveur repond 403 en JOIGNANT la decision d'abonnement
+   * (`details.decision`, pose par `buildSubscriptionPermissionDeniedDetails`).
+   * Jusqu'ici cet ecran affichait une alerte generique : le coach etait refuse
+   * sans qu'on lui montre ce qui debloquerait son geste. C'est le motif deja
+   * utilise par RequestsHub et 11 autres ecrans, repris tel quel.
+   *
+   * 🧨 La feuille de publication doit se REFERMER : posee par-dessus, elle
+   * masquerait le mur payant.
+   *
+   * Les 2 gestes de l'ecran passent par ici — publier commence par enregistrer,
+   * et c'est cet enregistrement-la qui est refuse en premier.
+   * @param {any} error - L'erreur rejetee par le service.
+   * @param {string} messageKey - La cle du message d'erreur ordinaire.
+   * @returns {void}
+   */
+  const handleActionError = useCallback((
+    /** @type {any} */ error,
+    /** @type {string} */ messageKey,
+  ) => {
+    const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+    if (subscriptionDecision) {
+      setIsSheetVisible(false);
+      setSubscriptionPaywallDecision(subscriptionDecision);
+      return;
+    }
+
+    Alert.alert(
+      t('matchComposition.board.alerts.error.title'),
+      t(messageKey),
+    );
+  }, [t]);
+
   const handleSave = useCallback(async () => {
     if (!eventId || !teamId || isBusy) return;
     setIsBusy(true);
@@ -283,14 +321,11 @@ function MatchCompositionBoard() {
         t('matchComposition.board.alerts.saved.message'),
       );
     } catch (error) {
-      Alert.alert(
-        t('matchComposition.board.alerts.error.title'),
-        t('matchComposition.board.alerts.error.save'),
-      );
+      handleActionError(error, 'matchComposition.board.alerts.error.save');
     } finally {
       setIsBusy(false);
     }
-  }, [buildPack, eventId, isBusy, t, teamId]);
+  }, [buildPack, eventId, handleActionError, isBusy, t, teamId]);
 
   const handlePublish = useCallback(async () => {
     if (!eventId || !teamId || isBusy) return;
@@ -313,14 +348,11 @@ function MatchCompositionBoard() {
         }],
       );
     } catch (error) {
-      Alert.alert(
-        t('matchComposition.board.alerts.error.title'),
-        t('matchComposition.board.alerts.error.publish'),
-      );
+      handleActionError(error, 'matchComposition.board.alerts.error.publish');
     } finally {
       setIsBusy(false);
     }
-  }, [buildPack, eventId, isBusy, navigation, t, teamId]);
+  }, [buildPack, eventId, handleActionError, isBusy, navigation, t, teamId]);
 
   const renderChip = (/** @type {string} */ label, /** @type {boolean} */ isOn) => (
     <View
@@ -593,6 +625,16 @@ function MatchCompositionBoard() {
           <DraggableToken isGhost player={activeDragPlayer} />
         </Animated.View>
       ) : null}
+
+      {/* C-A — le mur payant. Le club vient de la decision elle-meme : le
+          serveur le joint a son refus, cet ecran ne le recoit pas en parametre. */}
+      <SubscriptionPaywallSheet
+        close={() => setSubscriptionPaywallDecision(null)}
+        clubDocumentId={subscriptionPaywallDecision?.clubDocumentId || null}
+        decision={subscriptionPaywallDecision}
+        isVisible={Boolean(subscriptionPaywallDecision)}
+        navigation={navigation}
+      />
     </GestureHandlerRootView>
   );
 }

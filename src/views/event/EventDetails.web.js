@@ -386,7 +386,21 @@ function EventDetails({ navigation, route }) {
     }
 
     const openBoard = (composition, options = {}) => {
-      navigation.navigate(RouteNames.TacticalBoardV2, {
+      // C-A — LA PORTE DES 4 ECRANS NEUFS SUR LE SITE.
+      //
+      // Les routes du pack composition existent et sont montees depuis D77/D79,
+      // mais le site envoyait TOUJOURS vers l'ancien terrain : on ne pouvait les
+      // atteindre qu'en tapant l'URL. La condition est celle du fichier natif
+      // (EventDetails.js:3232), a l'identique — une divergence entre les deux
+      // jumeaux vit indefiniment, aucune porte de `app` ne la voit.
+      //
+      // Une detection et une lecture seule vont au board comme avant : ni l'une
+      // ni l'autre ne convoque.
+      const startsWithCallUp = !isDetectionEvent && Boolean(options.canEdit) && !options.readOnly;
+
+      navigation.navigate(startsWithCallUp
+        ? RouteNames.MatchCallUpSelection
+        : RouteNames.TacticalBoardV2, {
         aggregateBranches: Array.isArray(options.aggregateBranches) ? options.aggregateBranches : undefined,
         canEdit: Boolean(options.canEdit),
         compositionIntent: options.compositionIntent || null,
