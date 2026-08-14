@@ -187,8 +187,20 @@ afterEach(async () => {
   mockAlert.mockRestore();
 });
 
+// ⚠️ CE FICHIER A CHANGE DE VERDICT LE 2026-08-14 — decision d Adel, option B.
+//
+// D77 avait dessine un interrupteur « Le prevenir par SMS » et un champ
+// Telephone. Mesure du lot C1 : AUCUN service SMS n existe dans `admin`
+// (0 occurrence de sendSms/twilio/brevo/vonage). L interrupteur promettait
+// « Un lien vers la convocation, consultable sans compte » — une promesse
+// fausse, precisement ce que la regle du pack interdit — et le numero d une
+// personne sans compte etait conserve, puis livre a tout le canal de l equipe.
+//
+// Adel a tranche : on retire les DEUX. Le joueur reste ajoutable, c est son NOM
+// qui sert. Le bandeau jaune, lui, devient PERMANENT : il ne depend plus d un
+// interrupteur, donc il ne peut plus se contredire.
 describe('D77 ecran 3 — ajouter un joueur hors app', () => {
-  test('l ecran porte l encart cyan, les 4 champs et l interrupteur SMS', async () => {
+  test('l ecran porte l encart cyan et les 3 champs, sans plus rien promettre', async () => {
     const arbre = await rendre();
     const texte = texteVisible(arbre);
 
@@ -198,30 +210,43 @@ describe('D77 ecran 3 — ajouter un joueur hors app', () => {
     expect(texte).toContain('Prénom');
     expect(texte).toContain('Nom');
     expect(texte).toContain('Numéro de maillot');
-    expect(texte).toContain('Téléphone');
-    expect(texte).toContain('Le prévenir par SMS');
     expect(texte).toContain('Annuler');
     expect(texte).toContain('Ajouter au groupe');
   });
 
-  test('le mot OPTIONNEL n apparait QUE sur les champs optionnels', async () => {
+  test('🥇 PLUS AUCUNE PROMESSE D ENVOI SMS A L ECRAN', async () => {
+    const arbre = await rendre();
+    const texte = texteVisible(arbre);
+
+    expect(texte).not.toContain('SMS');
+    expect(texte).not.toContain('Téléphone');
+    expect(texte).not.toContain('consultable sans compte');
+  });
+
+  test('⛔ et il n y a plus AUCUN interrupteur a actionner', async () => {
+    const arbre = await rendre();
+
+    expect(arbre.root.findAllByType(Switch)).toHaveLength(0);
+  });
+
+  test('le mot OPTIONNEL n apparait QUE sur le champ optionnel', async () => {
     const arbre = await rendre();
     const optionnels = arbre.root
       .findAllByType(Text)
       .filter((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children) === 'OPTIONNEL');
 
-    // Numero de maillot + Telephone. Prenom et Nom sont requis.
-    expect(optionnels).toHaveLength(2);
+    // Le numero de maillot, seul. Prenom et Nom sont requis.
+    expect(optionnels).toHaveLength(1);
   });
 
-  test('INTERRUPTEUR ETEINT : le bandeau jaune est la, et il nomme le joueur', async () => {
+  test('le bandeau jaune est la d entree de jeu, et il nomme le joueur', async () => {
     const arbre = await rendre();
     await act(async () => {
       champ(arbre, 'Prénom').props.onChangeText('Yanis');
     });
 
     const texte = texteVisible(arbre);
-    expect(texte).toContain('Sans téléphone, Yanis ne recevra');
+    expect(texte).toContain('Yanis ne recevra');
     expect(texte).toContain('aucune notification');
     expect(texte).toContain('. Ce sera à toi de le prévenir.');
   });
@@ -238,25 +263,17 @@ describe('D77 ecran 3 — ajouter un joueur hors app', () => {
       .toBe(true);
   });
 
-  test('SMS ALLUME SANS NUMERO : le bandeau RESTE, la promesse serait fausse', async () => {
+  test('🔒 le bandeau ne peut PLUS disparaitre : rien ne peut le contredire', async () => {
+    // Avant, un numero + l interrupteur le faisaient disparaitre — donc l ecran
+    // affirmait que le joueur serait prevenu, alors qu aucun envoi n existait.
     const arbre = await rendre();
     await act(async () => {
       champ(arbre, 'Prénom').props.onChangeText('Yanis');
-      arbre.root.findByType(Switch).props.onValueChange(true);
+      champ(arbre, 'Nom').props.onChangeText('Bertrand');
+      champ(arbre, 'Numéro de maillot').props.onChangeText('23');
     });
 
     expect(texteVisible(arbre)).toContain('aucune notification');
-  });
-
-  test('NUMERO + INTERRUPTEUR ALLUME : le bandeau disparait', async () => {
-    const arbre = await rendre();
-    await act(async () => {
-      champ(arbre, 'Prénom').props.onChangeText('Yanis');
-      champ(arbre, 'Téléphone').props.onChangeText('0612345678');
-      arbre.root.findByType(Switch).props.onValueChange(true);
-    });
-
-    expect(texteVisible(arbre)).not.toContain('aucune notification');
   });
 
   test('sans prenom ni nom, on avertit et on ne navigue pas', async () => {
@@ -267,14 +284,12 @@ describe('D77 ecran 3 — ajouter un joueur hors app', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  test('le joueur revient a l ecran 1 avec telephone, SMS et TOUS les parametres', async () => {
+  test('le joueur revient a l ecran 1 avec TOUS les parametres, sans telephone', async () => {
     const arbre = await rendre({ returnParams: { eventId: 'evt_1', sport: 'football' } });
     await act(async () => {
       champ(arbre, 'Prénom').props.onChangeText('Yanis');
       champ(arbre, 'Nom').props.onChangeText('Bertrand');
       champ(arbre, 'Numéro de maillot').props.onChangeText('23');
-      champ(arbre, 'Téléphone').props.onChangeText('0612345678');
-      arbre.root.findByType(Switch).props.onValueChange(true);
     });
     await appuyerSur(arbre, 'Ajouter au groupe');
 
@@ -288,10 +303,10 @@ describe('D77 ecran 3 — ajouter un joueur hors app', () => {
       firstname: 'Yanis',
       isManual: true,
       lastname: 'Bertrand',
-      notifyBySms: true,
       number: '23',
-      phone: '0612345678',
     }));
+    expect(parametres.pendingManualPlayer.phone).toBeUndefined();
+    expect(parametres.pendingManualPlayer.notifyBySms).toBeUndefined();
     expect(String(parametres.pendingManualPlayer.id)).toMatch(/^manual_\d+$/);
   });
 
@@ -353,6 +368,7 @@ describe('D84 — les 2 boutons du bas restent atteignables', () => {
 
     expect(contenu.paddingBottom).toBeGreaterThan(0);
     // ⌨️ Le champ le plus bas, celui que le clavier menace, reste dans l'arbre.
-    expect(champ(arbre, 'Téléphone')).toBeDefined();
+    // C-A : c'etait « Telephone » avant son retrait, c'est le maillot depuis.
+    expect(champ(arbre, 'Numéro de maillot')).toBeDefined();
   });
 });

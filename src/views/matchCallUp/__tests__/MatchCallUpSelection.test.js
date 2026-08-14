@@ -468,30 +468,34 @@ describe('D77 — le joueur hors app et son etiquette', () => {
     expect(mockSetParams).toHaveBeenCalledWith({ pendingManualPlayer: undefined });
   });
 
-  test('SANS SMS, son nom porte « Pas de SMS — préviens-le toi-même », en jaune', async () => {
+  test('son nom porte « Préviens-le toi-même », en jaune', async () => {
     const arbre = await rendre({ pendingManualPlayer: horsApp });
     const texte = texteVisible(arbre);
 
     expect(texte).toContain('Hors app');
-    expect(texte).toContain('Pas de SMS — préviens-le toi-même');
+    expect(texte).toContain('Préviens-le toi-même');
 
     const etiquette = arbre.root
       .findAllByType(Text)
       .find((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children)
-        === 'Pas de SMS — préviens-le toi-même');
+        === 'Préviens-le toi-même');
     const styles = [etiquette.props.style].flat(Infinity).filter(Boolean);
     expect(styles.some((/** @type {any} */ style) => style?.color === couleursReelles.warning500))
       .toBe(true);
   });
 
-  test('AVEC SMS accepte, l etiquette disparait et le numero revient', async () => {
+  // ⚠️ C-A (2026-08-14) — ce temoin disait l'inverse : « AVEC SMS accepte,
+  // l etiquette disparait ». C'etait le defaut, pas la regle. Un ancien joueur
+  // encore porteur de `notifyBySms: true` en base ne sera JAMAIS prevenu :
+  // aucun service d'envoi n'existe. L'etiquette doit donc rester.
+  test('🔒 un ancien joueur marque « SMS accepte » garde son etiquette', async () => {
     const arbre = await rendre({
       pendingManualPlayer: { ...horsApp, notifyBySms: true, phone: '0612345678' },
     });
     const texte = texteVisible(arbre);
 
-    expect(texte).not.toContain('Pas de SMS');
-    expect(texte).toContain('N°23');
+    expect(texte).toContain('Préviens-le toi-même');
+    expect(texte).not.toContain('0612345678');
   });
 
   test('il voyage avec les autres convoques, dans la MEME liste', async () => {
