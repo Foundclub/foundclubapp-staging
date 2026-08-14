@@ -291,7 +291,12 @@ function RecruitmentFiltersSheet({
       snapPoints={SNAP_POINTS}
       webPresentation="dialog"
     >
-      <View>
+      {/* R07 — MEME RESERVE QUE LE SOCLE `filtersSheet/FiltersSheet.js`, et pour
+          la meme raison qu'en D86 : cette feuille est une JUMELLE RECOPIEE du
+          socle, elle ne l'importe pas. Sans ce `marginBottom`, une rangee
+          depliee s'arrete a 16 pt du trait du pied et « Voir les resultats »
+          parait colle au dernier filtre. */}
+      <View style={Spaces.marginBottom[16]}>
         {rendreRangee(
           'sport',
           'Sport',

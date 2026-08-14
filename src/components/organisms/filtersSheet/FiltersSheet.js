@@ -123,8 +123,21 @@ function FiltersSheet({
       snapPoints={SNAP_POINTS}
       webPresentation="dialog"
     >
-      {rows.map((rangee) => (
-        <View key={rangee.key} style={[Spaces.marginTop[8]]}>
+      {rows.map((rangee, index) => (
+        <View
+          key={rangee.key}
+          style={[
+            Spaces.marginTop[8],
+            // R07 — la DERNIERE rangee respire avant le pied colle. Sans elle,
+            // une rangee depliee s'arrete a 16 pt du trait du pied (le
+            // `contentBottomPadding` de `BottomModal`), et « Voir les
+            // resultats » parait colle au dernier filtre (constat d'Adel du
+            // 2026-08-13, rangee « Equipe »). La reserve se pose ICI, dans le
+            // contenu defilant, et pas dans `BottomModal` : le meme calcul sert
+            // une trentaine d'autres feuilles qui n'ont rien demande.
+            index === rows.length - 1 ? Spaces.marginBottom[16] : null,
+          ]}
+        >
           <TouchableOpacity
             accessibilityLabel={`${rangee.label} : ${rangee.value}`}
             accessibilityRole="button"

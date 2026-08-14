@@ -277,3 +277,49 @@ describe('RecruitmentFiltersSheet — ce qu elle renvoie a la recherche', () => 
     expect(filtres.audienceType).toBeUndefined();
   });
 });
+
+// R07 point 1 — LE DERNIER FILTRE RESPIRE AVANT LE PIED, ici aussi.
+//
+// ⚠️ CETTE FEUILLE EST UNE JUMELLE RECOPIEE du socle `filtersSheet/FiltersSheet`
+// — elle ne l'importe PAS, elle monte `BottomModal` elle-meme. C'est deja ce qui
+// a oblige D86 a faire deux fois la meme correction. Ce filet existe pour que la
+// prochaine fois, l'oubli soit ROUGE au lieu d'etre invisible.
+describe('R07 — le dernier filtre respire avant le pied colle', () => {
+  /**
+   * Aplatit un style RN (tableau, valeurs nulles) en un seul objet.
+   * @param {any} style Le style tel que pose sur l'element.
+   * @returns {Record<string, any>} Le style resolu.
+   */
+  const styleAplati = (style) => (Array.isArray(style)
+    ? style.filter(Boolean).reduce((acc, part) => ({ ...acc, ...styleAplati(part) }), {})
+    : (style || {}));
+
+  it('LE TEMOIN : la reserve du bas enveloppe les rangees, la derniere comprise', async () => {
+    const { tree } = await rendre();
+
+    const reserves = tree.root.findAll(
+      (/** @type {any} */ node) => styleAplati(node.props?.style).marginBottom === 16,
+      { deep: true },
+    );
+
+    expect(reserves.length).toBeGreaterThan(0);
+    // Et elle porte bien la liste : « Niveau » est la derniere rangee du pack,
+    // celle qui touchait « Voir les resultats ».
+    expect(texteDuNoeud(reserves[0]) || texteVisible(tree)).toContain('Niveau');
+  });
+
+  it('les 2 actions restent DEHORS de cette reserve : elles vivent dans le pied', async () => {
+    const { tree } = await rendre();
+
+    const reserve = tree.root.findAll(
+      (/** @type {any} */ node) => styleAplati(node.props?.style).marginBottom === 16,
+      { deep: true },
+    )[0];
+
+    // Le pied est un frere de la liste, jamais son enfant : c'est l'acquis D86
+    // et la reserve du bas ne doit pas l'avoir avale.
+    expect(texteDuNoeud(reserve)).not.toContain('Voir les résultats');
+    expect(texteDuNoeud(reserve)).not.toContain('Réinitialiser');
+    expect(texteVisible(tree)).toContain('Voir les résultats');
+  });
+});

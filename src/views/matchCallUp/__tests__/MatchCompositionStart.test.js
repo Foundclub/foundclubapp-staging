@@ -1,4 +1,6 @@
-import { Switch, Text } from 'react-native';
+import {
+  ScrollView, StyleSheet, Switch, Text,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import MatchCompositionStart from '../MatchCompositionStart';
@@ -389,5 +391,60 @@ describe('D79 ecran 4 — l apercu et le passage au terrain', () => {
     const [, parametres] = mockNavigate.mock.calls[0];
     expect(parametres.startPlacements).toHaveLength(1);
     expect(parametres.startPlacements[0].playerId).toBe('p0');
+  });
+});
+
+// R07 point 7 — « G.20 non pas bon » (Adel, 2026-08-13) : sur cet ecran 4, le
+// bouton « Ouvrir le terrain » est colle au bord.
+//
+// 🧨 CE QUE LA MESURE A CONTREDIT : la reserve basse du pied etait DEJA la
+// (`Math.max(insets.bottom, 12)`). Ce n'est pas elle qui manquait — c'est le
+// conteneur defilant qui n'etait pas BORNE. Sans `flex: 1`, React Native mesure
+// un ScrollView a la hauteur de ses enfants (le defaut de `flexShrink` y vaut
+// 0) : le contenu POUSSE la barre du bas hors de l'ecran au lieu de defiler
+// dessous. C'est mot pour mot le defaut que D84 a corrige sur les ecrans 2 et 3
+// du MEME pack.
+//
+// ⚠️ ET POURQUOI D84 L'AVAIT MANQUE, parce que la raison resservira : il avait
+// CONTROLE cet ecran et l'avait juge sain sur une mesure de 494 pt pour 797
+// disponibles. Mais l'apercu du terrain porte
+// `aspectRatio: 1 / getTacticalFieldAspectRatio(sport)` : sa hauteur DEPEND du
+// sport et de la largeur de l'ecran. Une hauteur mesuree une fois n'est pas une
+// hauteur fixe.
+describe('R07 — la barre du bas ne peut plus sortir de l ecran', () => {
+  test('🥇 LE CONTENEUR DEFILANT EST BORNE — il ne se mesure pas sur son contenu', async () => {
+    const arbre = await rendre();
+    const style = StyleSheet.flatten(arbre.root.findByType(ScrollView).props.style) || {};
+
+    // `flex: 1` = il grandit ET il retrecit, en partant de ZERO et non de la
+    // hauteur du contenu. C'est LA propriete qui garantit que l'apercu du
+    // terrain defile au lieu de pousser la barre dehors.
+    expect(style.flex).toBe(1);
+  });
+
+  test('la barre du bas est HORS du conteneur defilant', async () => {
+    const arbre = await rendre();
+    const defilant = arbre.root.findByType(ScrollView);
+
+    // Le CTA vit en dehors : il ne defile jamais.
+    const texteDuDefilant = defilant.findAllByType(Text)
+      .map((/** @type {any} */ noeud) => String(noeud.props.children))
+      .join(' | ');
+    expect(texteDuDefilant).not.toContain('Ouvrir le terrain');
+  });
+
+  test('⛔ et sa reserve basse n est PAS remise a zero', async () => {
+    const arbre = await rendre();
+    // Le pied garde un plancher : sans lui, le bouton passerait sous la barre
+    // de gestes. La corriger a zero « reglerait » le debordement en creant un
+    // defaut pire.
+    const pieds = arbre.root.findAll((/** @type {any} */ noeud) => {
+      const style = StyleSheet.flatten(noeud.props?.style) || {};
+      return typeof style.paddingBottom === 'number' && style.paddingTop === 12;
+    });
+
+    expect(pieds.length).toBeGreaterThan(0);
+    expect(StyleSheet.flatten(pieds[pieds.length - 1].props.style).paddingBottom)
+      .toBeGreaterThanOrEqual(12);
   });
 });

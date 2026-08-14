@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -105,6 +106,12 @@ const BILLING_PERIOD_OPTIONS = [
   { id: 'yearly', label: 'Annuel' },
 ];
 
+// R07 point 6 — la reserve posee SOUS le CTA collant, en plus du retrait
+// systeme. C'est le meme nombre que le `bottomInsetExtra` par defaut de
+// `ScreenContainer` (12) et que la reserve du pied de `BottomModal` : l'ecran
+// garde donc exactement la hauteur qu'il avait, il change seulement de porteur.
+const CTA_BOTTOM_RESERVE = 12;
+
 const CARD_MAX_WIDTH = 306;
 const CARD_GAP = 10;
 // Une cle stable par carte : `key={index}` ferait rerendre toute la rangee des
@@ -150,6 +157,9 @@ function SubscriptionOffers({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { width: windowWidth } = useWindowDimensions();
+  // R07 point 6 — le retrait bas du telephone (barre de gestes / barre de
+  // navigation). Il n'est JAMAIS ecrit en dur : il change d'un modele a l'autre.
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const {
     allMyTeams,
@@ -274,6 +284,25 @@ function SubscriptionOffers({ navigation, route }) {
     : (clubTiers[0]?.id || 0);
   const teamEntry = teamTiers.find((option) => option.id === resolvedTeamTier)?.entry || null;
   const clubEntry = clubTiers.find((option) => option.id === resolvedClubTier)?.entry || null;
+
+  // R07 point 5 — COMBIEN D'EQUIPES COMPREND LA TAILLE CHOISIE.
+  //
+  // Constat d'Adel du 2026-08-13 : « il faut mieux expliquer l'offre Club :
+  // dire que c'est la meme chose que l'offre Equipe, en indiquant selon
+  // l'offre que tu choisis le nombre d'equipes que ca comprend ». La carte
+  // n'affichait que les lettres S / M / L : un palier sans critere de choix.
+  //
+  // ⚠️ LE NOMBRE N'EST PAS UNE CONSTANTE DE L'APP : il vient du catalogue
+  // SERVEUR (`maxTeams` de l'entree). Rien ici ne code en dur « S = 3 ». On
+  // l'affiche donc tel que le catalogue le donne — et « illimitees » quand il
+  // ne borne rien.
+  // Phrase reprise MOT POUR MOT de `SubscriptionPaywallSheet.js` (l. 439-445),
+  // qui la sert deja : deux surfaces de vente ne doivent pas dire la meme
+  // chose de deux facons.
+  const clubMaxTeams = Number(clubEntry?.maxTeams);
+  const clubCoverageLabel = Number.isFinite(clubMaxTeams) && clubMaxTeams > 0
+    ? `jusqu'à ${clubMaxTeams} équipes du club`
+    : 'toutes les équipes du club';
 
   /**
    * Badge de remise d'une carte : calcule sur SES deux prix, jamais global.
@@ -867,7 +896,18 @@ function SubscriptionOffers({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      // R07 point 6 — « il y a un probleme de padding en bas » (Adel,
+      // 2026-08-13). Le mode `screen` reservait `insets.bottom + 12` SOUS le
+      // CTA collant : ce panneau a sa propre couleur et son trait du haut, il
+      // s'arretait donc au-dessus du bord et laissait une bande d'image de
+      // fond en dessous — d'autant plus visible que le telephone a une encoche.
+      // `edge-to-edge` est le mode prevu pour ca, et son contrat est ecrit dans
+      // `ScreenContainer` : « pour les ecrans qui appliquent deja eux-memes
+      // `insets.bottom` a leur contenu (sinon il serait compte deux fois) ».
+      // C'est exactement ce que fait le panneau du CTA plus bas.
+      // ⚠️ Le pendant HORIZONTAL existait deja (`marginHorizontal: -24`) : le
+      // panneau touchait les bords gauche et droit, mais pas le bas.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[Spaces.paddingBottom[0], Spaces.paddingTop[0]]}
     >
       <View style={[Alignments.fill, { marginHorizontal: -24 }]}>
@@ -1006,7 +1046,7 @@ function SubscriptionOffers({ navigation, route }) {
                 })}
               </View>
               <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[4]]}>
-                Pour les dirigeants — tout le club
+                {`Pour les dirigeants — ${clubCoverageLabel}`}
               </Text>
               {clubEntry ? renderPrice(clubEntry) : (
                 <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[12]]}>
@@ -1019,9 +1059,22 @@ function SubscriptionOffers({ navigation, route }) {
                 options: clubTiers,
                 value: resolvedClubTier,
               })}
+              {/* R07 point 5 — l'amorce dit ce que l'offre Club EST : l'offre
+                  Equipe, appliquee a plusieurs equipes, plus des capacites de
+                  club. Les capacites en dessous viennent du catalogue serveur
+                  (sponsors, cotisations, installations...) : on n'en invente
+                  aucune ici, et une capacite deja couverte par Equipe est
+                  retiree de la liste pour que « plus : » reste vrai. */}
               {renderBenefits({
-                items: getEntryFeatureLabels(clubEntry, teamFeatureKeys),
-                lead: 'Tout Équipe, pour toutes les équipes du club, plus :',
+                // `club.multi_teams` est RETIRE de la liste, et ce n'est pas un
+                // oubli : son libelle « Toutes les equipes du club » CONTREDISAIT
+                // la couverture reelle des qu'elle est bornee. La carte annoncait
+                // « jusqu'a 3 equipes du club » et, deux lignes plus bas,
+                // « Toutes les equipes du club ». La couverture est desormais dite
+                // deux fois et avec precision au-dessus : la repeter en plus vague
+                // n'ajoutait rien et semait le doute.
+                items: getEntryFeatureLabels(clubEntry, [...teamFeatureKeys, 'club.multi_teams']),
+                lead: `Tout ce que fait l'offre Équipe, pour ${clubCoverageLabel}, plus :`,
               })}
             </View>
           </ScrollView>
@@ -1069,6 +1122,11 @@ function SubscriptionOffers({ navigation, route }) {
               borderTopColor: withAlpha(Colors.neutral00, 0.08),
               borderTopWidth: 1,
               paddingHorizontal: 24,
+              // R07 point 6 — le panneau porte LUI-MEME le retrait systeme,
+              // maintenant qu'il descend jusqu'au bord. Le plancher est donc
+              // toujours la (le dernier bouton ne passe pas sous la barre de
+              // gestes), mais il est DEDANS : plus de bande de fond en dessous.
+              paddingBottom: insets.bottom + CTA_BOTTOM_RESERVE,
             },
           ]}
         >

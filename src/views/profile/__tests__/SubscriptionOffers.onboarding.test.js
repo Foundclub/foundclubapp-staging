@@ -33,6 +33,18 @@ const mockReplace = jest.fn();
 const mockPerformPurchase = jest.fn();
 const mockPerformPlanChange = jest.fn();
 
+// R07 point 6 — l'ecran lit desormais le retrait bas du telephone pour le
+// confier au panneau du CTA. Sans ce double, `useSafeAreaInsets` cherche un
+// fournisseur absent et la suite entiere tombe AVANT le premier rendu.
+// 🧨 C'est le defaut « deux lots verts, une recolte rouge » : ce fichier-ci et
+// `SubscriptionOffers.test.js` montent le MEME ecran, et seul le second avait
+// ete relance apres le correctif.
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 47,
+  }),
+}));
+
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
     isPending: false,

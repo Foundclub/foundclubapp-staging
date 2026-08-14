@@ -244,7 +244,7 @@ export default {
   },
   clubDetails: {
     actions: {
-      bringClubOver: 'Faire venir mon club',
+      bringClubOver: 'Me prévenir dès qu’une équipe existe',
       claimClub: "C'est mon club",
       contactTrainers: 'Contacter les entraîneur·e·s',
       delete: 'Supprimer',
@@ -324,7 +324,7 @@ export default {
         coachName: 'Nom de ton coach ou dirigeant',
         coachNamePlaceholder: 'Ex: Karim Benali',
       },
-      submit: 'Faire venir mon club',
+      submit: 'Me prévenir dès qu’une équipe existe',
       title: 'Ce club n’a pas encore d’équipe sur FoundClub',
     },
     titles: {

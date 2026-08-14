@@ -30,6 +30,18 @@ const mockInvalidate = jest.fn();
 const mockScheduleRefresh = jest.fn();
 const mockNavigate = jest.fn();
 
+// R07 point 6 — un telephone A ENCOCHE. La valeur compte : c'est elle qui
+// separe « le plancher systeme est respecte » de « il a disparu ». 34 est le
+// retrait bas d'un iPhone moderne, la meme valeur que le filet D19 de
+// `BottomModal.debordement.test.js`.
+const INSET_BAS = 34;
+
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 47,
+  }),
+}));
+
 // L39 — DEUX requetes vivent desormais derriere le catalogue : celle du serveur
 // et celle des prix du STORE. La doublure les distingue par leur cle, sinon la
 // seconde recevrait le catalogue de la premiere.
@@ -130,11 +142,22 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// R07 — la doublure RETIENT desormais les proprietes recues, en plus de rendre
+// ses enfants. Le mode de retrait bas (`bottomInsetMode`) est la MOITIE du
+// correctif du point 6 : sans cette collecte, un retour a `screen` ramenerait la
+// bande de fond sans qu'aucun temoin ne bronche. Rien ne change pour les tests
+// deja en place — la doublure rend toujours le meme arbre.
+/** @type {any[]} */
+const mockCadresRendus = [];
+
 jest.mock('@/components/templates/ScreenContainer', () => {
   const { View } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { children }) => <View>{children}</View>,
+    default: (/** @type {any} */ props) => {
+      mockCadresRendus.push(props);
+      return <View>{props.children}</View>;
+    },
   };
 });
 
@@ -1003,7 +1026,11 @@ describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
     await allerALaCarte(arbre, 2);
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('Tout Équipe, pour toutes les équipes du club, plus :');
+    // R07 — l'amorce nomme desormais la COUVERTURE de la taille choisie
+    // (« jusqu'a 3 equipes du club » pour Club S) au lieu du vague « toutes les
+    // equipes du club ». Ce que ce temoin garde, lui, est inchange : la carte
+    // Club n'affiche que le DELTA sur l'offre Equipe.
+    expect(texte).toContain("Tout ce que fait l'offre Équipe, pour jusqu'à 3 équipes du club, plus :");
     expect(texte).toContain('Fiche club complète');
     expect(texte).toContain('Installations');
     expect(texte).toContain('Cotisations du club');
@@ -1019,5 +1046,177 @@ describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
     });
 
     expect(arbre.toJSON()).toBeNull();
+  });
+});
+
+// R07 point 5 — L'OFFRE CLUB DIT ENFIN CE QU'ELLE CONTIENT.
+//
+// Constat d'Adel du 2026-08-13 : « il faut mieux expliquer l'offre Club : dire
+// que c'est la meme chose que l'offre Equipe (en indiquant selon l'offre que tu
+// choisis le nombre d'equipes que ca comprend), mais en plus : sponsors
+// visibles, gestion cotisations, gestion des installations, etc. »
+//
+// La carte n'affichait que les lettres S / M / L. Un palier sans critere de
+// choix : rien ne disait ce qu'on achetait de plus en montant de taille.
+//
+// ⚠️ LE NOMBRE N'EST PAS UNE CONSTANTE DE L'APP, et c'est le point a retenir :
+// il vient du catalogue SERVEUR (`maxTeams`). Ces temoins le prouvent en
+// faisant varier le catalogue, jamais en figeant un chiffre dans le code.
+// ⛔ Aucun prix, aucun palier, aucune regle d'abonnement touches : du TEXTE.
+describe('R07 — la carte Club nomme ce qu\'elle couvre', () => {
+  it('LE TEMOIN : la taille choisie annonce SON nombre d\'equipes', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+
+    // Club S, `maxTeams: 3` au catalogue.
+    expect(texteVisible(arbre)).toContain("jusqu'à 3 équipes du club");
+  });
+
+  it('changer de taille change le nombre annonce', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    await appuyerSur(arbre, 'M');
+
+    // Club M, `maxTeams: 8` au catalogue.
+    expect(texteVisible(arbre)).toContain("jusqu'à 8 équipes du club");
+    expect(texteVisible(arbre)).not.toContain("jusqu'à 3 équipes du club");
+  });
+
+  it('une taille SANS borne au catalogue ne va pas inventer un chiffre', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    await appuyerSur(arbre, 'L');
+
+    // Club L, `maxTeams: null` au catalogue : aucune borne a annoncer.
+    expect(texteVisible(arbre)).toContain('toutes les équipes du club');
+    expect(texteVisible(arbre)).not.toContain("jusqu'à null");
+  });
+
+  it('elle dit que c\'est l\'offre Équipe, appliquee a ces equipes-la', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+
+    expect(texteVisible(arbre)).toContain("Tout ce que fait l'offre Équipe");
+  });
+
+  it('et les capacites EN PLUS sont nommees, telles que le catalogue les donne', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    const texte = texteVisible(arbre);
+
+    // Les trois qu'Adel cite. Elles viennent des `featureKeys` du catalogue :
+    // aucune n'est ecrite en dur dans la carte.
+    expect(texte).toContain('Sponsors et partenaires');
+    expect(texte).toContain('Cotisations du club');
+    expect(texte).toContain('Installations');
+  });
+
+  it('⛔ et « plus : » reste vrai : ce qu\'Équipe couvre deja n\'est pas recompte', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    // ⚠️ `texteVisible` rend TOUT l'ecran, les 3 cartes comprises : la carte
+    // Équipe y porte legitimement « Cotisations de l'équipe ». On ne lit donc
+    // que ce qui SUIT l'amorce de la carte Club.
+    const apresAmorce = texteVisible(arbre).split('plus :')[1] || '';
+
+    // `dues.team` et `composition` sont dans les DEUX listes du catalogue. La
+    // carte Club ne doit lister que le supplement, sinon « plus : » ment.
+    expect(apresAmorce).not.toContain('Cotisations de l\'équipe');
+    expect(apresAmorce).not.toContain('Composition d\'équipe');
+    expect(apresAmorce).toContain('Cotisations du club');
+  });
+
+  it('⛔ ET AUCUNE CONTRADICTION : la couverture bornee ne cotoie pas « toutes »', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    const apresAmorce = texteVisible(arbre).split('plus :')[1] || '';
+
+    // Club S couvre 3 equipes. Le libelle « Toutes les équipes du club » de
+    // `club.multi_teams` disait litteralement l'inverse, deux lignes plus bas.
+    expect(apresAmorce).not.toContain('Toutes les équipes du club');
+  });
+});
+
+// R07 point 6 — LE BAS DE L'ECRAN « CHOISIS TON OFFRE ».
+//
+// Constat d'Adel du 2026-08-13 : « il y a un probleme de padding en bas ».
+//
+// LA CAUSE, mesuree : `ScreenContainer` etait en mode `screen`, qui reserve
+// `insets.bottom + 12` SOUS son contenu. Or le CTA collant est un PANNEAU : il a
+// sa propre couleur de fond et un trait en haut. Il s'arretait donc au-dessus du
+// bord de l'ecran et laissait une bande d'image de fond en dessous — d'autant
+// plus large que le telephone a une encoche (34 pt sur un iPhone moderne, plus
+// les 12 de reserve : 46 pt de bande).
+//
+// LE CORRECTIF est un DEPLACEMENT, pas une suppression : le plancher systeme
+// existe toujours, il est simplement porte par le panneau lui-meme. C'est le
+// contrat que `ScreenContainer` ecrit noir sur blanc pour son mode
+// `edge-to-edge` : « pour les ecrans qui appliquent deja eux-memes
+// `insets.bottom` a leur contenu ».
+//
+// ⚠️ Jest ne mesure aucun pixel (rappel D19). Ces temoins lisent les
+// CONTRAINTES posees sur l'arbre — et le defaut EST une contrainte.
+describe('R07 — le bas de l\'ecran des offres', () => {
+  /**
+   * Aplatit un style RN (tableau, valeurs nulles) en un seul objet.
+   * @param {any} style Le style tel que pose sur l'element.
+   * @returns {Record<string, any>} Le style resolu.
+   */
+  const styleAplati = (style) => (Array.isArray(style)
+    ? style.filter(Boolean).reduce((acc, part) => ({ ...acc, ...styleAplati(part) }), {})
+    : (style || {}));
+
+  /**
+   * Le panneau du CTA collant : celui qui porte le bouton d'achat ET un trait
+   * en haut. On le vise par cette bordure, pas par sa position dans l'arbre.
+   * @param {any} arbre L'arbre rendu.
+   * @returns {any} Le panneau.
+   */
+  // ⚠️ On le cherche par son STYLE et non par `findAllByType(View)` : importer
+  // `View` ici masquerait celui que les doublures de ce fichier tirent de
+  // `requireActual`, et la porte lint tombe sur `no-shadow`.
+  const panneauDuCta = (arbre) => arbre.root
+    .findAll((/** @type {any} */ noeud) => styleAplati(noeud.props?.style).borderTopWidth === 1)
+    .pop();
+
+  it('LE TEMOIN : le panneau du CTA porte lui-meme le retrait systeme', async () => {
+    const arbre = await rendre();
+    const panneau = panneauDuCta(arbre);
+
+    expect(panneau).toBeDefined();
+    // Le plancher n'a pas disparu, il a change de porteur : il vaut au moins le
+    // retrait de l'OS, sinon le dernier bouton passerait sous la barre de
+    // gestes. C'est exactement ce que le mode `screen` garantissait avant.
+    expect(styleAplati(panneau.props.style).paddingBottom).toBeGreaterThanOrEqual(INSET_BAS);
+  });
+
+  it('⛔ et il n est pas mis a ZERO pour « regler » la bande de fond', async () => {
+    const arbre = await rendre();
+    const panneau = panneauDuCta(arbre);
+
+    // La tentation etait de retirer la reserve. Elle rendrait le bouton
+    // intouchable sur un telephone a barre gestuelle.
+    expect(styleAplati(panneau.props.style).paddingBottom).toBe(INSET_BAS + 12);
+  });
+
+  it('le retrait SUIT le telephone : rien n est ecrit en dur', async () => {
+    const arbre = await rendre();
+    const panneau = panneauDuCta(arbre);
+
+    // 34 est la valeur du double de `useSafeAreaInsets`. Si la reserve etait
+    // codee en dur, elle ne dependrait pas de lui et ce calcul tomberait a
+    // cote sur tout autre telephone.
+    expect(styleAplati(panneau.props.style).paddingBottom - INSET_BAS).toBe(12);
+  });
+
+  it('🔒 L AUTRE MOITIE : le cadre ne reserve plus rien sous le panneau', async () => {
+    mockCadresRendus.length = 0;
+    await rendre();
+    const cadre = mockCadresRendus[mockCadresRendus.length - 1];
+
+    // Les deux vont ENSEMBLE. Le panneau porte le retrait ; si le cadre le
+    // reservait encore (mode `screen`), il serait compte DEUX FOIS et la bande
+    // de fond reviendrait — c'est le defaut qu'Adel a vu.
+    expect(cadre.bottomInsetMode).toBe('edge-to-edge');
   });
 });
