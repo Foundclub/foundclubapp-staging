@@ -68,6 +68,25 @@ export const getActiveClubId = (/** @type {any} */ userData) => (
   ).trim() || null
 );
 
+/**
+ * LES CLUBS DE RATTACHEMENT ADMINISTRATIF — a ne pas confondre avec
+ * `getMemberClubIds` ci-dessous, et la confusion coute cher.
+ *
+ * ⛔ C3 (2026-08-13) : ne PAS y ajouter `myTeams[].club`. Trois de ses lecteurs
+ * demandent de l'AUTORITE, pas de l'appartenance, et deux cassent dans des sens
+ * opposes :
+ *   · `canUserEditClub` (l.121) et `ClubDetails.js:1329/1334/1342` — un dirigeant
+ *     qui joue dans l'equipe d'un autre club pourrait EDITER ce club ;
+ *   · `useAuth.js:761` `canSendMessageToUser` — des que deux comptes
+ *     « partagent un club », la fonction renvoie `role === president` et ne
+ *     teste plus jamais les equipes communes. En production `user.club` est vide
+ *     pour les joueurs (ils entrent par l'equipe, `team-membership-request.accept`
+ *     n'ecrit jamais `user.club`) : l'elargir ferait perdre a deux joueurs de la
+ *     MEME equipe le droit de s'ecrire.
+ * Pour « ce club fait-il partie des miens ? », utiliser `isClubMember`.
+ * @param {any} userData - Le profil, tel que `sanitizeUser` le rend.
+ * @returns {string[]} Les identifiants des clubs de rattachement.
+ */
 export const getClubIds = (/** @type {any} */ userData) => {
   const clubIds = new Set();
   const addId = (value) => {
@@ -97,6 +116,61 @@ export const hasClubAccess = (/** @type {any} */ userData, /** @type {string} */
   }
 
   return getManagedMultisportSectionIds(userData).has(normalizedClubId);
+};
+
+/**
+ * LES CLUBS D'UN UTILISATEUR, EQUIPES COMPRISES — la reponse a la question
+ * d'Adel du 2026-08-13 : « est-ce que ca marche d'avoir deux equipes dans
+ * 2 clubs differents ? »
+ *
+ * Le modele dit oui (`team.players` est `manyToMany`), le serveur dit oui
+ * (`accept` fait `connect`, jamais `set`), et il envoie deja le club de chaque
+ * equipe (`myTeams.club` est dans les trois `populate` de
+ * `firebase-auth/constants.ts`, et `authSanitizer.js:122` le conserve). Seule
+ * l'app ne regardait pas : le 2e club existait en base sans jamais s'afficher.
+ *
+ * La verite se DEDUIT donc des equipes — aucune ecriture en base, rien a
+ * migrer, et surtout rien qui depende de `club_affiliations`, table mesuree
+ * VIDE en production le 2026-08-13 (elle existe au schema, l'app la lit, et
+ * `team-membership-request.accept` n'en cree aucune).
+ * @param {any} userData - Le profil, tel que `sanitizeUser` le rend.
+ * @returns {string[]} Le rattachement administratif PLUS les clubs des equipes.
+ */
+export const getMemberClubIds = (/** @type {any} */ userData) => {
+  const clubIds = new Set(getClubIds(userData));
+
+  [
+    ...(Array.isArray(userData?.myTeams) ? userData.myTeams : []),
+    ...(Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : []),
+    ...(Array.isArray(userData?.teams) ? userData.teams : []),
+  ].forEach((team) => {
+    const teamClubId = String(team?.club?.documentId || team?.club?.id || '').trim();
+    if (teamClubId) {
+      clubIds.add(teamClubId);
+    }
+  });
+
+  return [...clubIds];
+};
+
+/**
+ * CE CLUB FAIT-IL PARTIE DES MIENS ? — la question d'APPARTENANCE, celle qui
+ * n'accorde aucun droit.
+ *
+ * Elle repond vrai partout ou `hasClubAccess` repond vrai : le lot C3 ne peut
+ * donc retirer un club a personne, c'est vrai par construction et non par
+ * relecture. Ce qu'elle ajoute, ce sont les clubs atteints par une equipe.
+ * @param {any} userData - Le profil, tel que `sanitizeUser` le rend.
+ * @param {string} clubId - Le club regarde.
+ * @returns {boolean} Vrai si l'utilisateur appartient a ce club.
+ */
+export const isClubMember = (/** @type {any} */ userData, /** @type {string} */ clubId) => {
+  const normalizedClubId = String(clubId || '').trim();
+  if (!normalizedClubId) return false;
+
+  if (hasClubAccess(userData, normalizedClubId)) return true;
+
+  return getMemberClubIds(userData).includes(normalizedClubId);
 };
 
 export const canUserEditClub = (/** @type {any} */ userData, /** @type {string} */ clubId) => {
