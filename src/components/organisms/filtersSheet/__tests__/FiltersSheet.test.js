@@ -340,9 +340,15 @@ describe('R07 — le dernier filtre respire avant le pied colle', () => {
     : (style || {}));
 
   const TROIS_RANGEES = [
-    { content: <Text>choix A</Text>, key: 'a', label: 'Sport', value: 'Tous' },
-    { content: <Text>choix B</Text>, key: 'b', label: 'Ville', value: 'Toutes' },
-    { content: <Text>choix C</Text>, key: 'c', label: 'Équipe', value: 'Toutes' },
+    {
+      content: <Text>choix A</Text>, key: 'a', label: 'Sport', value: 'Tous',
+    },
+    {
+      content: <Text>choix B</Text>, key: 'b', label: 'Ville', value: 'Toutes',
+    },
+    {
+      content: <Text>choix C</Text>, key: 'c', label: 'Équipe', value: 'Toutes',
+    },
   ];
 
   it('LE TEMOIN : la derniere rangee porte la reserve, les autres non', async () => {
