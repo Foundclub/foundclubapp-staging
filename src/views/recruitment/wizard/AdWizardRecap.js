@@ -323,18 +323,43 @@ function AdWizardRecap({ navigation }) {
     </Text>
   );
 
-  const resetToHome = () => {
-    const parentNavigation = navigation.getParent?.();
+  // R07 point 4 — ON ATTERRIT SUR L'ANNONCE QU'ON VIENT D'ECRIRE.
+  //
+  // Constat d'Adel du 2026-08-13 : « ce n'est pas intuitif d'appuyer sur la
+  // fleche retour en haut a gauche pour fermer la page. Il faudrait qu'une
+  // fois le recap valide, cela amene a l'endroit de mon annonce publiee ».
+  //
+  // La pile est reconstruite avec DEUX routes, et les deux comptent :
+  //   · `HomeTab` en dessous  -> la fleche retour a une destination. Une pile
+  //     reduite a la seule annonce laisserait un ecran dont on ne sort plus.
+  //   · l'annonce au-dessus   -> c'est elle qu'on voit en arrivant.
+  // Et le tunnel, lui, QUITTE la pile : c'est l'acquis D81. Sans ca, un seul
+  // « Retour » reposait le doigt sur « Publier l'annonce » d'une annonce deja
+  // publiee.
+  //
+  // ⚠️ `RecruitmentAdDetails` et `AdWizardStack` sont FRERES a la racine
+  // (`PrivateNavigator.js`, l. 311 et 594) : c'est donc la pile du PARENT
+  // qu'il faut refaire, jamais celle du tunnel.
+  const resetToPublishedAd = (adDocumentId) => {
+    const routes = adDocumentId
+      ? [
+        { name: RouteNames.HomeTab },
+        { name: RouteNames.RecruitmentAdDetails, params: { adId: adDocumentId } },
+      ]
+      : [{ name: RouteNames.HomeTab }];
+    const rootNavigation = navigation.getParent?.();
 
-    if (parentNavigation?.dispatch) {
-      parentNavigation.dispatch(CommonActions.reset({
-        index: 0,
-        routes: [{ name: RouteNames.HomeTab }],
-      }));
+    // Forme reprise TELLE QUELLE de `TeamWizardRecap.js` (l. 144-158), qui fait
+    // deja exactement ca en production : `getParent()` puis `reset`. On ne
+    // reinvente pas un troisieme mecanisme (§1 bis, barreau 2).
+    if (rootNavigation?.reset) {
+      rootNavigation.reset({ index: routes.length - 1, routes });
       return;
     }
 
-    navigation.navigate(RouteNames.HomeTab);
+    // Dernier recours, et c'est l'ANCIEN comportement : mieux vaut l'accueil
+    // qu'un ecran fige.
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: RouteNames.HomeTab }] }));
   };
 
   const handleSubmit = async () => {
@@ -363,8 +388,16 @@ function AdWizardRecap({ navigation }) {
         type: state.event && !isCoachAd ? 'ponctuel' : 'saison',
       };
 
+      // R07 — les annonces creees sont RETENUES : c'est leur identifiant qui
+      // permet d'atterrir dessus. Un brief a plusieurs postes en cree une PAR
+      // poste ; il n'existe pas d'ecran « mes annonces » dans `routeNames.js`,
+      // on montre donc la premiere. Ca vaut toujours mieux que de renvoyer a
+      // l'accueil sans rien montrer.
+      /** @type {any[]} */
+      let createdAds = [];
+
       if (isCoachAd) {
-        await createAdMutation.mutateAsync({
+        createdAds = [await createAdMutation.mutateAsync({
           ...sharedData,
           availabilityText: state.availabilityText || undefined,
           certificationsWanted: state.certificationsWanted || [],
@@ -375,15 +408,16 @@ function AdWizardRecap({ navigation }) {
           missions: state.missions || undefined,
           quantity: totalCoachOpenings,
           validationMode: 'manual',
-        });
+        })];
       } else {
-        await Promise.all(state.positions.map((position) => createAdMutation.mutateAsync({
-          ...sharedData,
-          event: state.event?.documentId || state.event?.id,
-          position: position.name,
-          quantity: position.quantity,
-          validationMode: state.event ? state.validationMode : 'auto',
-        })));
+        createdAds = await Promise.all(state.positions.map((position) => createAdMutation
+          .mutateAsync({
+            ...sharedData,
+            event: state.event?.documentId || state.event?.id,
+            position: position.name,
+            quantity: position.quantity,
+            validationMode: state.event ? state.validationMode : 'auto',
+          })));
       }
 
       await Promise.all([
@@ -391,8 +425,14 @@ function AdWizardRecap({ navigation }) {
         queryClient.invalidateQueries({ queryKey: ['myRecruitmentAds'] }),
       ]);
 
+      // Le serveur pourrait ne rien renvoyer d'exploitable : dans ce cas
+      // `resetToPublishedAd` retombe sur l'accueil, l'ancien comportement.
+      // ⛔ Jamais d'ecran blanc : `RecruitmentAdDetails` sans identifiant
+      // n'afficherait rien du tout.
+      const publishedAd = createdAds.find((ad) => ad?.documentId || ad?.id);
+
       dispatch({ type: 'RESET' });
-      resetToHome();
+      resetToPublishedAd(publishedAd?.documentId || publishedAd?.id || '');
     } catch (error) {
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);
       if (subscriptionDecision) {
