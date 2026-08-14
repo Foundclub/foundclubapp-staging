@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -105,6 +106,12 @@ const BILLING_PERIOD_OPTIONS = [
   { id: 'yearly', label: 'Annuel' },
 ];
 
+// R07 point 6 — la reserve posee SOUS le CTA collant, en plus du retrait
+// systeme. C'est le meme nombre que le `bottomInsetExtra` par defaut de
+// `ScreenContainer` (12) et que la reserve du pied de `BottomModal` : l'ecran
+// garde donc exactement la hauteur qu'il avait, il change seulement de porteur.
+const CTA_BOTTOM_RESERVE = 12;
+
 const CARD_MAX_WIDTH = 306;
 const CARD_GAP = 10;
 // Une cle stable par carte : `key={index}` ferait rerendre toute la rangee des
@@ -150,6 +157,9 @@ function SubscriptionOffers({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { width: windowWidth } = useWindowDimensions();
+  // R07 point 6 — le retrait bas du telephone (barre de gestes / barre de
+  // navigation). Il n'est JAMAIS ecrit en dur : il change d'un modele a l'autre.
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const {
     allMyTeams,
@@ -886,7 +896,18 @@ function SubscriptionOffers({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      // R07 point 6 — « il y a un probleme de padding en bas » (Adel,
+      // 2026-08-13). Le mode `screen` reservait `insets.bottom + 12` SOUS le
+      // CTA collant : ce panneau a sa propre couleur et son trait du haut, il
+      // s'arretait donc au-dessus du bord et laissait une bande d'image de
+      // fond en dessous — d'autant plus visible que le telephone a une encoche.
+      // `edge-to-edge` est le mode prevu pour ca, et son contrat est ecrit dans
+      // `ScreenContainer` : « pour les ecrans qui appliquent deja eux-memes
+      // `insets.bottom` a leur contenu (sinon il serait compte deux fois) ».
+      // C'est exactement ce que fait le panneau du CTA plus bas.
+      // ⚠️ Le pendant HORIZONTAL existait deja (`marginHorizontal: -24`) : le
+      // panneau touchait les bords gauche et droit, mais pas le bas.
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[Spaces.paddingBottom[0], Spaces.paddingTop[0]]}
     >
       <View style={[Alignments.fill, { marginHorizontal: -24 }]}>
@@ -1101,6 +1122,11 @@ function SubscriptionOffers({ navigation, route }) {
               borderTopColor: withAlpha(Colors.neutral00, 0.08),
               borderTopWidth: 1,
               paddingHorizontal: 24,
+              // R07 point 6 — le panneau porte LUI-MEME le retrait systeme,
+              // maintenant qu'il descend jusqu'au bord. Le plancher est donc
+              // toujours la (le dernier bouton ne passe pas sous la barre de
+              // gestes), mais il est DEDANS : plus de bande de fond en dessous.
+              paddingBottom: insets.bottom + CTA_BOTTOM_RESERVE,
             },
           ]}
         >

@@ -30,6 +30,18 @@ const mockInvalidate = jest.fn();
 const mockScheduleRefresh = jest.fn();
 const mockNavigate = jest.fn();
 
+// R07 point 6 — un telephone A ENCOCHE. La valeur compte : c'est elle qui
+// separe « le plancher systeme est respecte » de « il a disparu ». 34 est le
+// retrait bas d'un iPhone moderne, la meme valeur que le filet D19 de
+// `BottomModal.debordement.test.js`.
+const INSET_BAS = 34;
+
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 47,
+  }),
+}));
+
 // L39 — DEUX requetes vivent desormais derriere le catalogue : celle du serveur
 // et celle des prix du STORE. La doublure les distingue par leur cle, sinon la
 // seconde recevrait le catalogue de la premiere.
@@ -130,11 +142,22 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// R07 — la doublure RETIENT desormais les proprietes recues, en plus de rendre
+// ses enfants. Le mode de retrait bas (`bottomInsetMode`) est la MOITIE du
+// correctif du point 6 : sans cette collecte, un retour a `screen` ramenerait la
+// bande de fond sans qu'aucun temoin ne bronche. Rien ne change pour les tests
+// deja en place — la doublure rend toujours le meme arbre.
+/** @type {any[]} */
+const mockCadresRendus = [];
+
 jest.mock('@/components/templates/ScreenContainer', () => {
   const { View } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { children }) => <View>{children}</View>,
+    default: (/** @type {any} */ props) => {
+      mockCadresRendus.push(props);
+      return <View>{props.children}</View>;
+    },
   };
 });
 
@@ -1111,5 +1134,89 @@ describe('R07 — la carte Club nomme ce qu\'elle couvre', () => {
     // Club S couvre 3 equipes. Le libelle « Toutes les équipes du club » de
     // `club.multi_teams` disait litteralement l'inverse, deux lignes plus bas.
     expect(apresAmorce).not.toContain('Toutes les équipes du club');
+  });
+});
+
+// R07 point 6 — LE BAS DE L'ECRAN « CHOISIS TON OFFRE ».
+//
+// Constat d'Adel du 2026-08-13 : « il y a un probleme de padding en bas ».
+//
+// LA CAUSE, mesuree : `ScreenContainer` etait en mode `screen`, qui reserve
+// `insets.bottom + 12` SOUS son contenu. Or le CTA collant est un PANNEAU : il a
+// sa propre couleur de fond et un trait en haut. Il s'arretait donc au-dessus du
+// bord de l'ecran et laissait une bande d'image de fond en dessous — d'autant
+// plus large que le telephone a une encoche (34 pt sur un iPhone moderne, plus
+// les 12 de reserve : 46 pt de bande).
+//
+// LE CORRECTIF est un DEPLACEMENT, pas une suppression : le plancher systeme
+// existe toujours, il est simplement porte par le panneau lui-meme. C'est le
+// contrat que `ScreenContainer` ecrit noir sur blanc pour son mode
+// `edge-to-edge` : « pour les ecrans qui appliquent deja eux-memes
+// `insets.bottom` a leur contenu ».
+//
+// ⚠️ Jest ne mesure aucun pixel (rappel D19). Ces temoins lisent les
+// CONTRAINTES posees sur l'arbre — et le defaut EST une contrainte.
+describe('R07 — le bas de l\'ecran des offres', () => {
+  /**
+   * Aplatit un style RN (tableau, valeurs nulles) en un seul objet.
+   * @param {any} style Le style tel que pose sur l'element.
+   * @returns {Record<string, any>} Le style resolu.
+   */
+  const styleAplati = (style) => (Array.isArray(style)
+    ? style.filter(Boolean).reduce((acc, part) => ({ ...acc, ...styleAplati(part) }), {})
+    : (style || {}));
+
+  /**
+   * Le panneau du CTA collant : celui qui porte le bouton d'achat ET un trait
+   * en haut. On le vise par cette bordure, pas par sa position dans l'arbre.
+   * @param {any} arbre L'arbre rendu.
+   * @returns {any} Le panneau.
+   */
+  // ⚠️ On le cherche par son STYLE et non par `findAllByType(View)` : importer
+  // `View` ici masquerait celui que les doublures de ce fichier tirent de
+  // `requireActual`, et la porte lint tombe sur `no-shadow`.
+  const panneauDuCta = (arbre) => arbre.root
+    .findAll((/** @type {any} */ noeud) => styleAplati(noeud.props?.style).borderTopWidth === 1)
+    .pop();
+
+  it('LE TEMOIN : le panneau du CTA porte lui-meme le retrait systeme', async () => {
+    const arbre = await rendre();
+    const panneau = panneauDuCta(arbre);
+
+    expect(panneau).toBeDefined();
+    // Le plancher n'a pas disparu, il a change de porteur : il vaut au moins le
+    // retrait de l'OS, sinon le dernier bouton passerait sous la barre de
+    // gestes. C'est exactement ce que le mode `screen` garantissait avant.
+    expect(styleAplati(panneau.props.style).paddingBottom).toBeGreaterThanOrEqual(INSET_BAS);
+  });
+
+  it('⛔ et il n est pas mis a ZERO pour « regler » la bande de fond', async () => {
+    const arbre = await rendre();
+    const panneau = panneauDuCta(arbre);
+
+    // La tentation etait de retirer la reserve. Elle rendrait le bouton
+    // intouchable sur un telephone a barre gestuelle.
+    expect(styleAplati(panneau.props.style).paddingBottom).toBe(INSET_BAS + 12);
+  });
+
+  it('le retrait SUIT le telephone : rien n est ecrit en dur', async () => {
+    const arbre = await rendre();
+    const panneau = panneauDuCta(arbre);
+
+    // 34 est la valeur du double de `useSafeAreaInsets`. Si la reserve etait
+    // codee en dur, elle ne dependrait pas de lui et ce calcul tomberait a
+    // cote sur tout autre telephone.
+    expect(styleAplati(panneau.props.style).paddingBottom - INSET_BAS).toBe(12);
+  });
+
+  it('🔒 L AUTRE MOITIE : le cadre ne reserve plus rien sous le panneau', async () => {
+    mockCadresRendus.length = 0;
+    await rendre();
+    const cadre = mockCadresRendus[mockCadresRendus.length - 1];
+
+    // Les deux vont ENSEMBLE. Le panneau porte le retrait ; si le cadre le
+    // reservait encore (mode `screen`), il serait compte DEUX FOIS et la bande
+    // de fond reviendrait — c'est le defaut qu'Adel a vu.
+    expect(cadre.bottomInsetMode).toBe('edge-to-edge');
   });
 });
