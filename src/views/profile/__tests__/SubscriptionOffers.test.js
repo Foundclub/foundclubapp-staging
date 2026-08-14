@@ -1003,7 +1003,11 @@ describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
     await allerALaCarte(arbre, 2);
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('Tout Équipe, pour toutes les équipes du club, plus :');
+    // R07 — l'amorce nomme desormais la COUVERTURE de la taille choisie
+    // (« jusqu'a 3 equipes du club » pour Club S) au lieu du vague « toutes les
+    // equipes du club ». Ce que ce temoin garde, lui, est inchange : la carte
+    // Club n'affiche que le DELTA sur l'offre Equipe.
+    expect(texte).toContain("Tout ce que fait l'offre Équipe, pour jusqu'à 3 équipes du club, plus :");
     expect(texte).toContain('Fiche club complète');
     expect(texte).toContain('Installations');
     expect(texte).toContain('Cotisations du club');
@@ -1019,5 +1023,93 @@ describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
     });
 
     expect(arbre.toJSON()).toBeNull();
+  });
+});
+
+// R07 point 5 — L'OFFRE CLUB DIT ENFIN CE QU'ELLE CONTIENT.
+//
+// Constat d'Adel du 2026-08-13 : « il faut mieux expliquer l'offre Club : dire
+// que c'est la meme chose que l'offre Equipe (en indiquant selon l'offre que tu
+// choisis le nombre d'equipes que ca comprend), mais en plus : sponsors
+// visibles, gestion cotisations, gestion des installations, etc. »
+//
+// La carte n'affichait que les lettres S / M / L. Un palier sans critere de
+// choix : rien ne disait ce qu'on achetait de plus en montant de taille.
+//
+// ⚠️ LE NOMBRE N'EST PAS UNE CONSTANTE DE L'APP, et c'est le point a retenir :
+// il vient du catalogue SERVEUR (`maxTeams`). Ces temoins le prouvent en
+// faisant varier le catalogue, jamais en figeant un chiffre dans le code.
+// ⛔ Aucun prix, aucun palier, aucune regle d'abonnement touches : du TEXTE.
+describe('R07 — la carte Club nomme ce qu\'elle couvre', () => {
+  it('LE TEMOIN : la taille choisie annonce SON nombre d\'equipes', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+
+    // Club S, `maxTeams: 3` au catalogue.
+    expect(texteVisible(arbre)).toContain("jusqu'à 3 équipes du club");
+  });
+
+  it('changer de taille change le nombre annonce', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    await appuyerSur(arbre, 'M');
+
+    // Club M, `maxTeams: 8` au catalogue.
+    expect(texteVisible(arbre)).toContain("jusqu'à 8 équipes du club");
+    expect(texteVisible(arbre)).not.toContain("jusqu'à 3 équipes du club");
+  });
+
+  it('une taille SANS borne au catalogue ne va pas inventer un chiffre', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    await appuyerSur(arbre, 'L');
+
+    // Club L, `maxTeams: null` au catalogue : aucune borne a annoncer.
+    expect(texteVisible(arbre)).toContain('toutes les équipes du club');
+    expect(texteVisible(arbre)).not.toContain("jusqu'à null");
+  });
+
+  it('elle dit que c\'est l\'offre Équipe, appliquee a ces equipes-la', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+
+    expect(texteVisible(arbre)).toContain("Tout ce que fait l'offre Équipe");
+  });
+
+  it('et les capacites EN PLUS sont nommees, telles que le catalogue les donne', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    const texte = texteVisible(arbre);
+
+    // Les trois qu'Adel cite. Elles viennent des `featureKeys` du catalogue :
+    // aucune n'est ecrite en dur dans la carte.
+    expect(texte).toContain('Sponsors et partenaires');
+    expect(texte).toContain('Cotisations du club');
+    expect(texte).toContain('Installations');
+  });
+
+  it('⛔ et « plus : » reste vrai : ce qu\'Équipe couvre deja n\'est pas recompte', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    // ⚠️ `texteVisible` rend TOUT l'ecran, les 3 cartes comprises : la carte
+    // Équipe y porte legitimement « Cotisations de l'équipe ». On ne lit donc
+    // que ce qui SUIT l'amorce de la carte Club.
+    const apresAmorce = texteVisible(arbre).split('plus :')[1] || '';
+
+    // `dues.team` et `composition` sont dans les DEUX listes du catalogue. La
+    // carte Club ne doit lister que le supplement, sinon « plus : » ment.
+    expect(apresAmorce).not.toContain('Cotisations de l\'équipe');
+    expect(apresAmorce).not.toContain('Composition d\'équipe');
+    expect(apresAmorce).toContain('Cotisations du club');
+  });
+
+  it('⛔ ET AUCUNE CONTRADICTION : la couverture bornee ne cotoie pas « toutes »', async () => {
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    const apresAmorce = texteVisible(arbre).split('plus :')[1] || '';
+
+    // Club S couvre 3 equipes. Le libelle « Toutes les équipes du club » de
+    // `club.multi_teams` disait litteralement l'inverse, deux lignes plus bas.
+    expect(apresAmorce).not.toContain('Toutes les équipes du club');
   });
 });

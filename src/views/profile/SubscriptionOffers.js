@@ -275,6 +275,25 @@ function SubscriptionOffers({ navigation, route }) {
   const teamEntry = teamTiers.find((option) => option.id === resolvedTeamTier)?.entry || null;
   const clubEntry = clubTiers.find((option) => option.id === resolvedClubTier)?.entry || null;
 
+  // R07 point 5 — COMBIEN D'EQUIPES COMPREND LA TAILLE CHOISIE.
+  //
+  // Constat d'Adel du 2026-08-13 : « il faut mieux expliquer l'offre Club :
+  // dire que c'est la meme chose que l'offre Equipe, en indiquant selon
+  // l'offre que tu choisis le nombre d'equipes que ca comprend ». La carte
+  // n'affichait que les lettres S / M / L : un palier sans critere de choix.
+  //
+  // ⚠️ LE NOMBRE N'EST PAS UNE CONSTANTE DE L'APP : il vient du catalogue
+  // SERVEUR (`maxTeams` de l'entree). Rien ici ne code en dur « S = 3 ». On
+  // l'affiche donc tel que le catalogue le donne — et « illimitees » quand il
+  // ne borne rien.
+  // Phrase reprise MOT POUR MOT de `SubscriptionPaywallSheet.js` (l. 439-445),
+  // qui la sert deja : deux surfaces de vente ne doivent pas dire la meme
+  // chose de deux facons.
+  const clubMaxTeams = Number(clubEntry?.maxTeams);
+  const clubCoverageLabel = Number.isFinite(clubMaxTeams) && clubMaxTeams > 0
+    ? `jusqu'à ${clubMaxTeams} équipes du club`
+    : 'toutes les équipes du club';
+
   /**
    * Badge de remise d'une carte : calcule sur SES deux prix, jamais global.
    * L38 — la recherche de la jumelle mensuelle est partie dans
@@ -1006,7 +1025,7 @@ function SubscriptionOffers({ navigation, route }) {
                 })}
               </View>
               <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[4]]}>
-                Pour les dirigeants — tout le club
+                {`Pour les dirigeants — ${clubCoverageLabel}`}
               </Text>
               {clubEntry ? renderPrice(clubEntry) : (
                 <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[12]]}>
@@ -1019,9 +1038,22 @@ function SubscriptionOffers({ navigation, route }) {
                 options: clubTiers,
                 value: resolvedClubTier,
               })}
+              {/* R07 point 5 — l'amorce dit ce que l'offre Club EST : l'offre
+                  Equipe, appliquee a plusieurs equipes, plus des capacites de
+                  club. Les capacites en dessous viennent du catalogue serveur
+                  (sponsors, cotisations, installations...) : on n'en invente
+                  aucune ici, et une capacite deja couverte par Equipe est
+                  retiree de la liste pour que « plus : » reste vrai. */}
               {renderBenefits({
-                items: getEntryFeatureLabels(clubEntry, teamFeatureKeys),
-                lead: 'Tout Équipe, pour toutes les équipes du club, plus :',
+                // `club.multi_teams` est RETIRE de la liste, et ce n'est pas un
+                // oubli : son libelle « Toutes les equipes du club » CONTREDISAIT
+                // la couverture reelle des qu'elle est bornee. La carte annoncait
+                // « jusqu'a 3 equipes du club » et, deux lignes plus bas,
+                // « Toutes les equipes du club ». La couverture est desormais dite
+                // deux fois et avec precision au-dessus : la repeter en plus vague
+                // n'ajoutait rien et semait le doute.
+                items: getEntryFeatureLabels(clubEntry, [...teamFeatureKeys, 'club.multi_teams']),
+                lead: `Tout ce que fait l'offre Équipe, pour ${clubCoverageLabel}, plus :`,
               })}
             </View>
           </ScrollView>
