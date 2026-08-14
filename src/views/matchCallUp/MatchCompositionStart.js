@@ -231,7 +231,25 @@ function MatchCompositionStart() {
         <View style={[styles.progressSegment, { backgroundColor: Colors.primary500 }]} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {/* R07 point 7 — `styles.list` (flex: 1) BORNE la zone qui defile. C'est
+          EXACTEMENT le correctif de D84 sur les ecrans 2 et 3 du meme pack :
+          sans lui, React Native mesure un ScrollView a la hauteur de ses
+          enfants (son `flexShrink` vaut 0 par defaut), et le contenu POUSSE la
+          barre du bas hors de l'ecran au lieu de defiler dessous.
+          ⚠️ D84 avait CONTROLE cet ecran-ci et l'avait laisse intact, sur une
+          mesure de 494 pt pour 797 disponibles. La mesure etait juste pour le
+          sport mesure — mais l'apercu du terrain porte
+          `aspectRatio: 1 / getTacticalFieldAspectRatio(sport)` : sa hauteur
+          DEPEND du sport et de la largeur de l'ecran. Le contenu de cet ecran
+          n'est donc pas d'une hauteur fixe, et c'est ce qui a rattrape Adel
+          (« G.20 non pas bon », le bouton « Ouvrir le terrain » colle au bord).
+          La reserve basse du pied, elle, etait DEJA la : ce n'est pas elle qui
+          manquait, c'est le conteneur qui debordait. */}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        style={styles.list}
+      >
         {options.map(renderOption)}
 
         <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
@@ -333,6 +351,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   headerTexts: {
+    flex: 1,
+  },
+  // R07 — meme nom et meme valeur que dans `MatchCallUpSelection` et
+  // `MatchCallUpManualPlayer` (D84) : un seul idiome pour tout le pack.
+  list: {
     flex: 1,
   },
   magnetCard: {
