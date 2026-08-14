@@ -3173,7 +3173,10 @@ function ClubDetails({ navigation, route }) {
           <Button
             isLoading={createPlayerNoTeamRequestMutation.isPending}
             onPress={handleSubmitPlayerNoTeamRequest}
-            title={t('clubDetails.playerNoTeamRequest.submit', 'Faire venir mon club')}
+            title={t(
+              'clubDetails.playerNoTeamRequest.submit',
+              'Me prévenir dès qu’une équipe existe',
+            )}
             variant="Primary"
           />
         </View>
@@ -3508,7 +3511,10 @@ function ClubDetails({ navigation, route }) {
               ]}
               title={hasPendingPlayerNoTeamRequest
                 ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t('clubDetails.actions.bringClubOver', 'Faire venir mon club')}
+                : t(
+                  'clubDetails.actions.bringClubOver',
+                  'Me prévenir dès qu’une équipe existe',
+                )}
               variant="Primary"
             />
           ) : null}
