@@ -235,7 +235,7 @@ export const startNextRound = (split, {
   startedAt = null,
 } = {}) => {
   const rounds = Array.isArray(split?.rounds) ? split.rounds : [];
-  const closed = rounds.map((round, index) => (
+  const closed = rounds.map((/** @type {any} */ round, /** @type {number} */ index) => (
     index === rounds.length - 1 ? closeRound(round, onFieldIds, elapsedMinutes) : round
   ));
 

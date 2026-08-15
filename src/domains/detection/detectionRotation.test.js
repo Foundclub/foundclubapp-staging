@@ -1,5 +1,4 @@
 import {
-  PLAYTIME_FLOOR_MINUTES,
   addTeam,
   closeRound,
   getCumulativePlaytime,
@@ -7,6 +6,7 @@ import {
   getUnassignedIds,
   isUnderPlaytimeFloor,
   movePlayerToTeam,
+  PLAYTIME_FLOOR_MINUTES,
   readTeamLineup,
   startNextRound,
 } from './detectionRotation';
@@ -21,8 +21,12 @@ import {
  */
 
 const makeTeams = () => ([
-  { bibColor: 'jaune', name: 'Jaune', players: ['p1', 'p2', 'p3'], rotation: ['p3'], terrain: null },
-  { bibColor: 'rouge', name: 'Rouge', players: ['p4', 'p5'], rotation: [], terrain: null },
+  {
+    bibColor: 'jaune', name: 'Jaune', players: ['p1', 'p2', 'p3'], rotation: ['p3'], terrain: null,
+  },
+  {
+    bibColor: 'rouge', name: 'Rouge', players: ['p4', 'p5'], rotation: [], terrain: null,
+  },
 ]);
 
 describe('detectionRotation — lecture d une equipe', () => {

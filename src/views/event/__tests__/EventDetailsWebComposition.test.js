@@ -239,7 +239,10 @@ const lastCallUpParams = () => {
   return call ? call[1] : null;
 };
 
-/** C-E — les parametres du dernier envoi vers l ecran 13 (detection). */
+/**
+ * C-E — les parametres du dernier envoi vers l ecran 13 (detection).
+ * @returns {any} - Les parametres de route, ou null.
+ */
 const lastSquadSetupParams = () => {
   const call = [...mockNavigate.mock.calls].reverse()
     .find((/** @type {any} */ entry) => entry[0] === 'DetectionSquadSetup');

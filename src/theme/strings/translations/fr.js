@@ -730,10 +730,19 @@ export default {
     // une detection produit une REPARTITION.
     alerts: {
       error: {
+        publish: 'Impossible de publier cette répartition.',
         save: 'Impossible d’enregistrer cette répartition.',
         title: 'Erreur',
       },
       ok: 'OK',
+      published: {
+        // ⚠️ Le mot « convocation » est interdit en détection (règle du pack §6),
+        // et une détection ne passe JAMAIS par le canal d’une équipe : ses
+        // candidats n’y sont pas. Chacun reçoit une notification personnelle.
+        message: 'Chaque joueur est prévenu de son équipe.',
+        ok: 'Voir la détection',
+        title: 'Équipes publiées',
+      },
       saved: {
         message: 'Les équipes sont gardées en brouillon. Personne n’a été prévenu.',
         title: 'Répartition enregistrée',
@@ -826,6 +835,32 @@ export default {
         teamCount: 'équipes',
         title: 'Répartition',
       },
+      board: {
+        actions: {
+          publish_one: 'Publier l’équipe',
+          publish_other: 'Publier les {{count}} équipes',
+          rotation: 'Faire tourner',
+          save: 'Enregistrer',
+        },
+        addTeam: '+ Équipe',
+        chips: {
+          placed: '{{placed}}/{{slots}} placés',
+          splitByPosition: 'Par poste recherché',
+          swap: 'Glisse pour échanger',
+        },
+        relaunch: 'Relancer',
+        subtitle_one: '{{count}} équipe générée · {{sport}}',
+        subtitle_other: '{{count}} équipes générées · {{sport}}',
+        teamTab: '{{name}} · {{count}}',
+        title: 'Détection',
+        tokenOnField: '{{name}}, sur le terrain de {{team}}',
+        tokenUnassigned: '{{name}}, non affecté',
+        unassigned: {
+          empty: 'Tout le monde a une équipe.',
+          hint: 'Glisse pour placer',
+          title: 'Non affectés · {{count}}',
+        },
+      },
       manual: {
         actions: {
           auto: 'Auto',
@@ -844,6 +879,33 @@ export default {
         subtitle: 'Détection · {{count}} présents',
         title: 'Équipes à la main',
         unassigned: 'Non affectés · {{count}}',
+      },
+      rotation: {
+        actions: {
+          nextRound: 'Lancer la manche {{count}}',
+          teams_one: 'Voir l’équipe',
+          teams_other: 'Voir les {{count}} équipes',
+        },
+        bib: 'Chasuble {{bib}}',
+        chips: {
+          onField: '{{count}} sur le terrain',
+          round: 'Manche {{current}} / {{total}}',
+        },
+        // Le pack veut « qui n’a pas assez joué » lisible d’un coup d’œil :
+        // c’est la raison d’être d’une détection, chaque joueur doit avoir eu
+        // sa chance.
+        lowPlaytime: '{{name}} n’a joué que {{count}} minutes',
+        playtime: '{{count}} min',
+        rotationBand: {
+          empty: 'Toute l’équipe est sur le terrain.',
+          hint: 'Temps de jeu cumulé',
+          title: 'Rotation · {{count}}',
+        },
+        subtitle: 'Détection · {{sport}}',
+        subtitleWithField: 'Détection · {{sport}} · {{field}}',
+        title: 'Équipe {{bib}}',
+        tokenInRotation: '{{name}}, en rotation, {{count}} minutes de jeu',
+        tokenOnField: '{{name}}, sur le terrain, {{count}} minutes de jeu',
       },
     },
   },
