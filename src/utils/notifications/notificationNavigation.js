@@ -305,6 +305,31 @@ const eventLineupDestination = (eventId) => {
 };
 
 /**
+ * C-C — ECRAN 10 du pack composition : ou atterrit une convocation publiee.
+ *
+ * 🎯 Avant ce lot, elle atterrissait sur la page-fleuve de l'evenement : le
+ * joueur devait deviner qu'il etait convoque, et sa place n'etait lisible que
+ * dans l'ancien terrain en lecture seule.
+ *
+ * ⚠️ Le serveur envoie cette notification a TOUTE l'equipe — entraineurs,
+ * organisateur et absents compris (`notification.ts:2054-2062`). L'ecran d'arrivee
+ * le sait : il repose sur la page de l'evenement quiconque n'est pas convoque.
+ * @param {unknown} eventId
+ * @param {unknown} teamId
+ */
+const playerConvocationDestination = (eventId, teamId) => {
+  const safeEventId = normalizeEntityId(eventId);
+  if (!safeEventId) return null;
+  return {
+    params: {
+      params: { eventId: safeEventId, teamId: normalizeEntityId(teamId) || undefined },
+      screen: RouteNames.PlayerConvocation,
+    },
+    route: RouteNames.EventStack,
+  };
+};
+
+/**
  * @param {NotificationPayload} payload
  */
 const notificationDetailsDestination = (payload) => {
@@ -624,6 +649,16 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.RESERVATION_SOS_ALERT:
       if (type === NOTIFICATION_TYPES.COACH_REPORT_PUBLISHED) {
         return adaptDestinationForCurrentPlatform(payload, coachReportPublishedDestination(payload));
+      }
+      // C-C — la convocation publiee ouvre l'ecran du joueur (ecran 10), pas la
+      // page de l'evenement. Sans identifiant d'evenement, on retombe sur le
+      // comportement d'avant plutot que sur un ecran vide.
+      if (type === NOTIFICATION_TYPES.EVENT_CONVOCATION_PUBLISHED) {
+        return adaptDestinationForCurrentPlatform(
+          payload,
+          playerConvocationDestination(payload.eventId, payload.teamId)
+            || eventDetailsDestination(payload.eventId),
+        );
       }
       if (type === NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER) {
         return adaptDestinationForCurrentPlatform(

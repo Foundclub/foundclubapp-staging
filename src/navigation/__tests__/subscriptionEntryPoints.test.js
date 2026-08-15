@@ -89,6 +89,16 @@ const POINTS_D_ENTREE = [
     fichier: 'navigation/private/PrivateNavigator.js',
     pourquoi: 'le sas d inscription monte le carrousel dans la pile du tunnel',
   },
+  // C-C — le 10e point d'entree : l'ECRAN 12 du pack composition, le mur payant
+  // de la composition en ecran plein. La decision est la meme que celle de la
+  // feuille dont il reprend le role : il VEND, il vise donc le carrousel. Le hub
+  // serait le mauvais ecran — quelqu'un qui vient d'etre refuse doit trouver
+  // quoi payer, et le hub ne porte aucun catalogue (L33).
+  {
+    attendu: 'SubscriptionOffers',
+    fichier: 'views/subscription/CompositionPaywallScreen.js',
+    pourquoi: 'elle vient de buter sur le mur payant de la composition',
+  },
 ];
 
 describe('Points d\'entree de l\'abonnement — chacun atterrit au bon endroit', () => {
@@ -167,6 +177,9 @@ describe('L40 — une porte dit d ou elle part, ou assume l accueil', () => {
     // sans elles, la personne qui vient de remplir 4 a 8 ecrans repartirait a
     // l'accueil sans jamais finir son inscription.
     ['navigation/private/PrivateNavigator.js', true],
+    // C-C — l'ecran 12 interrompt une tache (un enregistrement de compo type
+    // refuse) : il transporte donc l'origine, comme la feuille qu'il remplace.
+    ['views/subscription/CompositionPaywallScreen.js', true],
   ])('%s transporte une origine : %s', (fichier, transporteUneOrigine) => {
     expect(lireSource(fichier).includes('resumeRouteName')).toBe(transporteUneOrigine);
   });

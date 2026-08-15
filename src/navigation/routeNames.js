@@ -258,6 +258,10 @@ export const RouteNames = /** @type {const} */ ({
   // Match — apres la publication (C-B, pack composition ecrans 7 et 8).
   MatchCompositionAmend: 'MatchCompositionAmend',
   MatchConvocationPublished: 'MatchConvocationPublished',
+  // Match — cote joueur et modeles (C-C, pack composition ecrans 10 a 12).
+  CompositionPaywall: 'CompositionPaywall',
+  PlayerConvocation: 'PlayerConvocation',
+  TeamCompoTemplate: 'TeamCompoTemplate',
 
   // Tactical
   TacticalBoardV2: 'TacticalBoardV2',

@@ -31,6 +31,7 @@ import MatchConvocationPublished from '@/views/matchCallUp/MatchConvocationPubli
 import MatchStatsEditor from '@/views/matchStats/MatchStatsEditor';
 import PendingMatchStatsScreen from '@/views/matchStats/PendingMatchStatsScreen';
 import PlayerMatchResponseScreen from '@/views/matchStats/PlayerMatchResponseScreen';
+import PlayerConvocationScreen from '@/views/playerConvocation/PlayerConvocationScreen';
 import TacticalBoardV2 from '@/views/tactical_v2/TacticalBoardEntry';
 import TacticalSelectionV2 from '@/views/tactical_v2/TacticalSelection';
 
@@ -148,6 +149,13 @@ function EventStack() {
         <Stack.Screen
           component={MatchCompositionAmend}
           name={RouteNames.MatchCompositionAmend}
+          options={{ headerShown: false }}
+        />
+        {/* Match — cote joueur (C-C) : ecran 10 du pack. C'est ici que la
+            notification de convocation publiee atterrit desormais. */}
+        <Stack.Screen
+          component={PlayerConvocationScreen}
+          name={RouteNames.PlayerConvocation}
           options={{ headerShown: false }}
         />
         {/* Tactical V2 Screens */}

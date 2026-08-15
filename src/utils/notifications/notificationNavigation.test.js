@@ -130,4 +130,59 @@ describe('notificationNavigation', () => {
       })).toBeNull();
     });
   });
+
+  // C-C — ECRAN 10 du pack composition.
+  //
+  // 🎯 C'est ICI que se joue « la moitie que le joueur voit ». Une convocation
+  // publiee atterrissait sur la page-fleuve de l'evenement : le joueur devait
+  // deviner qu'il etait convoque. Elle atterrit desormais sur SON ecran, qui le
+  // repose sur la page de l'evenement s'il n'est finalement pas convoque
+  // (le serveur envoie la meme notification a toute l'equipe).
+  describe('convocation publiee', () => {
+    test('elle ouvre l ecran du joueur, en emportant l equipe concernee', () => {
+      expect(resolveNotificationDestination({
+        eventId: 'evt-1',
+        teamId: 'team-7',
+        type: NOTIFICATION_TYPES.EVENT_CONVOCATION_PUBLISHED,
+      })).toEqual({
+        params: {
+          params: { eventId: 'evt-1', teamId: 'team-7' },
+          screen: RouteNames.PlayerConvocation,
+        },
+        route: RouteNames.EventStack,
+      });
+    });
+
+    test('sans equipe, elle ouvre quand meme l ecran du joueur', () => {
+      expect(resolveNotificationDestination({
+        eventId: 'evt-1',
+        type: NOTIFICATION_TYPES.EVENT_CONVOCATION_PUBLISHED,
+      })).toEqual({
+        params: {
+          params: { eventId: 'evt-1', teamId: undefined },
+          screen: RouteNames.PlayerConvocation,
+        },
+        route: RouteNames.EventStack,
+      });
+    });
+
+    test('sans evenement, on retombe sur le comportement d avant, pas sur un ecran vide', () => {
+      expect(resolveNotificationDestination({
+        type: NOTIFICATION_TYPES.EVENT_CONVOCATION_PUBLISHED,
+      })).toBeNull();
+    });
+
+    test('🔒 les AUTRES notifications d evenement gardent leur destination', () => {
+      expect(resolveNotificationDestination({
+        eventId: 'evt-1',
+        type: NOTIFICATION_TYPES.EVENT_PUBLISHED,
+      })).toEqual({
+        params: {
+          params: { eventId: 'evt-1' },
+          screen: RouteNames.EventDetails,
+        },
+        route: RouteNames.EventStack,
+      });
+    });
+  });
 });
