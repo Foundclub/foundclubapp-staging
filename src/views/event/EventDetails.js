@@ -3341,6 +3341,52 @@ function EventDetails({ navigation, route }) {
     staffCompositionPayload,
   ]);
 
+  // C-B — ECRAN 7 du pack : « Convocation publiee », la vue du COACH.
+  //
+  // 🔒 Reserve a `canEdit`, et ce n'est pas une precaution de style : l'ecran 7
+  // lit `GET /events/:id/composition`, que le serveur ferme par
+  // `ensureCanManageTeam` (`event-composition.ts`). Un joueur ou un simple
+  // membre d'equipe — que `canViewPublishedComposition` laisse pourtant entrer
+  // dans ce bloc — y recevrait un 403. Il garde donc la vue en lecture seule
+  // qu'il avait deja : c'est l'ecran 10 du pack qui la remplacera (lot C-C).
+  const openPublishedConvocation = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+
+    if (!canEdit) {
+      openCompositionBoard(convocationBranches[0]?.published || null, {
+        aggregateBranches: convocationBranches,
+        canEdit: false,
+        editorSource: 'published',
+        editorSourceLabel: getCompositionSourceLabel('published'),
+        readOnly: true,
+      });
+      return;
+    }
+
+    navigation.navigate(RouteNames.MatchConvocationPublished, {
+      clubId: event?.team?.club?.documentId || null,
+      eventId,
+      eventLabel: compositionEventLabel,
+      players: compositionEditorPlayers,
+      sport: compositionSport,
+      teamId: compositionTeamId,
+      teamName: compositionEditorTeam?.name || null,
+    });
+  }, [
+    canEdit,
+    compositionEditorPlayers,
+    compositionEditorTeam?.name,
+    compositionEventLabel,
+    compositionSport,
+    compositionTeamId,
+    convocationBranches,
+    event?.team?.club?.documentId,
+    eventId,
+    getCompositionSourceLabel,
+    navigation,
+    openCompositionBoard,
+  ]);
+
   const handleManageComposition = useCallback(() => {
     if (!eventId || !compositionTeamId) return;
 
@@ -5506,14 +5552,10 @@ function EventDetails({ navigation, route }) {
                       ) : null}
                       {publishedCompositionTeamCount > 0 ? (
                         <Button
-                          onPress={() => openCompositionBoard(convocationBranches[0]?.published || null, {
-                            aggregateBranches: convocationBranches,
-                            canEdit: false,
-                            editorSource: 'published',
-                            editorSourceLabel: getCompositionSourceLabel('published'),
-                            readOnly: true,
-                          })}
-                          title="Voir la composition d'équipes"
+                          onPress={openPublishedConvocation}
+                          title={canEdit
+                            ? t('matchConvocation.published.openCta')
+                            : "Voir la composition d'équipes"}
                           variant="Secondary"
                         />
                       ) : null}

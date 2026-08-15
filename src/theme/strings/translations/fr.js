@@ -1896,6 +1896,122 @@ export default {
       },
     },
   },
+  matchConvocation: {
+    amend: {
+      actions: {
+        cancel: 'Annuler',
+        republish: 'Republier',
+      },
+      alerts: {
+        error: {
+          message: 'Impossible de republier cette composition.',
+          title: 'Erreur',
+        },
+        republished: {
+          message: 'Ta composition est à jour et tes joueurs viennent d’être prévenus.',
+          title: 'Composition republiée',
+        },
+      },
+      badges: {
+        entering: 'entre',
+        leaving: 'sort',
+      },
+      empty: {
+        message: 'Personne ne s’est désisté.',
+        title: 'Rien à modifier pour l’instant',
+      },
+      moves: {
+        benchToStarter: 'Banc → titulaire',
+        starterToAbsent: 'Titulaire → absent',
+      },
+      noReplacement: 'Aucun remplaçant disponible sur le banc. Reprends la composition à la main.',
+      resend: {
+        body: 'Même canal {{teamName}}, même notification individuelle, même demande de '
+          + 'réponse. Les joueurs qui avaient déjà répondu gardent leur réponse.',
+        title: 'La convocation repart comme la première fois.',
+      },
+      sections: {
+        changes: 'Ce qui change',
+        resend: 'Renvoyer la convocation',
+      },
+      title: 'Compo modifiée',
+      unknownPlayer: 'Joueur',
+      versionChip: 'Version {{version}}',
+      withdrawal: {
+        hint_one: 'Sa place de titulaire est vide. Le premier remplaçant disponible est proposé.',
+        hint_other: 'Leurs places de titulaires sont vides. Les premiers remplaçants '
+          + 'disponibles sont proposés.',
+        label: 'Désistement',
+        message_one: '{{name}} s’est déclaré·e absent·e après la publication.',
+        message_other: '{{count}} titulaires se sont déclarés absents après la publication.',
+      },
+    },
+    published: {
+      actions: {
+        edit: 'Modifier la composition',
+        resend: 'Relancer',
+      },
+      alerts: {
+        error: {
+          resend: 'Impossible de renvoyer cette convocation.',
+          title: 'Erreur',
+        },
+        resendConfirm: {
+          cancel: 'Annuler',
+          confirm: 'Renvoyer',
+          message: 'La convocation repart dans le canal {{teamName}}, avec une notification '
+            + 'à chaque convoqué. Les réponses déjà données sont conservées.',
+          title: 'Renvoyer la convocation ?',
+        },
+        resent: {
+          message: 'Tes convoqués viennent d’être prévenus à nouveau.',
+          title: 'Convocation renvoyée',
+        },
+      },
+      counts: {
+        absent_one: '{{count}} absent',
+        absent_other: '{{count}} absents',
+        pending_one: '{{count}} en attente',
+        pending_other: '{{count}} en attente',
+        present_one: '{{count}} présent',
+        present_other: '{{count}} présents',
+      },
+      empty: 'Personne n’est encore convoqué.',
+      loading: 'Chargement des réponses…',
+      meta: {
+        roleAndNumber: '{{role}} · N°{{number}}',
+      },
+      offAppNote: 'Hors app — il ne peut pas répondre',
+      openCta: 'Voir la convocation et les réponses',
+      recap: {
+        calledUp: 'Joueurs convoqués',
+        sent: 'Envoyée dans le canal {{teamName}}',
+        sentAt: 'Envoyée dans le canal {{teamName}} · {{time}}',
+        title: 'Convocation publiée',
+      },
+      responses: {
+        absent: 'Absent·e',
+        pending: 'Participation en attente',
+        present: 'Présent·e',
+      },
+      roles: {
+        starter: 'Titulaire',
+        substitute: 'Remplaçant',
+      },
+      sections: {
+        responses: 'Réponses',
+      },
+      stateChip: 'Publiée',
+      title: 'Convocation',
+      unknownPlayer: 'Joueur',
+      withdrawal: {
+        cta: 'Remplacer',
+        label: 'Désistement',
+        message_one: 'Un titulaire s’est déclaré absent.',
+        message_other: '{{count}} titulaires se sont déclarés absents.',
+      },
+    },
+  },
   menu: {
     chat: 'Messagerie',
     home: 'Accueil',

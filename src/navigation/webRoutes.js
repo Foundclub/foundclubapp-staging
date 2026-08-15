@@ -202,6 +202,8 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.MatchCallUpManualPlayer]: '/match/call-up/manual-player',
   [RouteNames.MatchCompositionStart]: '/match/composition/start',
   [RouteNames.MatchCompositionBoard]: '/match/composition/board',
+  [RouteNames.MatchConvocationPublished]: '/match/convocation/published',
+  [RouteNames.MatchCompositionAmend]: '/match/composition/amend',
   [RouteNames.TacticalBoardV2]: '/tactical/:teamId?',
   [RouteNames.TacticalSelectionV2]: '/tactical/select',
   [RouteNames.HistoryWizardCategory]: '/profile/history/category',

@@ -24,8 +24,10 @@ import EventWizardTournamentStructure from '@/views/event/wizard/EventWizardTour
 import EventWizardType from '@/views/event/wizard/EventWizardType';
 import MatchCallUpManualPlayer from '@/views/matchCallUp/MatchCallUpManualPlayer';
 import MatchCallUpSelection from '@/views/matchCallUp/MatchCallUpSelection';
+import MatchCompositionAmend from '@/views/matchCallUp/MatchCompositionAmend';
 import MatchCompositionBoard from '@/views/matchCallUp/MatchCompositionBoard';
 import MatchCompositionStart from '@/views/matchCallUp/MatchCompositionStart';
+import MatchConvocationPublished from '@/views/matchCallUp/MatchConvocationPublished';
 import MatchStatsEditor from '@/views/matchStats/MatchStatsEditor';
 import PendingMatchStatsScreen from '@/views/matchStats/PendingMatchStatsScreen';
 import PlayerMatchResponseScreen from '@/views/matchStats/PlayerMatchResponseScreen';
@@ -134,6 +136,18 @@ function EventStack() {
         <Stack.Screen
           component={MatchCompositionBoard}
           name={RouteNames.MatchCompositionBoard}
+          options={{ headerShown: false }}
+        />
+        {/* Match — apres la publication (C-B) : ecran 7 du pack. */}
+        <Stack.Screen
+          component={MatchConvocationPublished}
+          name={RouteNames.MatchConvocationPublished}
+          options={{ headerShown: false }}
+        />
+        {/* Match — apres la publication (C-B) : ecran 8, le desistement. */}
+        <Stack.Screen
+          component={MatchCompositionAmend}
+          name={RouteNames.MatchCompositionAmend}
           options={{ headerShown: false }}
         />
         {/* Tactical V2 Screens */}
