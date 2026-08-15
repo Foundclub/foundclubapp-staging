@@ -1,6 +1,9 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
+import DetectionSquadSetup from '@/views/detection/DetectionSquadSetup';
+import DetectionTeamsAuto from '@/views/detection/DetectionTeamsAuto';
+import DetectionTeamsManual from '@/views/detection/DetectionTeamsManual';
 import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
@@ -156,6 +159,26 @@ function EventStack() {
         <Stack.Screen
           component={PlayerConvocationScreen}
           name={RouteNames.PlayerConvocation}
+          options={{ headerShown: false }}
+        />
+        {/* Detection — constituer les equipes (C-D) : ecrans 13 a 15 du pack.
+            ⚠️ Ces 3 ecrans n'ont pas encore de PORTE : `EventDetails` envoie
+            toujours une detection sur `TacticalBoardV2` (`:3289-3292`). Ouvrir
+            cette porte est une ligne, mais elle vit dans un fichier tenu par une
+            autre session — elle est nommee dans le compte rendu du lot. */}
+        <Stack.Screen
+          component={DetectionSquadSetup}
+          name={RouteNames.DetectionSquadSetup}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={DetectionTeamsManual}
+          name={RouteNames.DetectionTeamsManual}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={DetectionTeamsAuto}
+          name={RouteNames.DetectionTeamsAuto}
           options={{ headerShown: false }}
         />
         {/* Tactical V2 Screens */}

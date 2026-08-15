@@ -723,6 +723,130 @@ export default {
     },
     title: 'Ajouter un club',
   },
+  detection: {
+    // Les 3 ecrans empruntaient `matchComposition.board.alerts.*`, dont les textes
+    // disent « convocation » et « composition » — deux mots que le pack interdit
+    // en detection (§6). Elle a donc ses propres alertes, et son propre mot :
+    // une detection produit une REPARTITION.
+    alerts: {
+      error: {
+        save: 'Impossible d’enregistrer cette répartition.',
+        title: 'Erreur',
+      },
+      ok: 'OK',
+      saved: {
+        message: 'Les équipes sont gardées en brouillon. Personne n’a été prévenu.',
+        title: 'Répartition enregistrée',
+      },
+    },
+    squad: {
+      actions: {
+        manual: 'Manuel',
+        next: 'Continuer',
+      },
+      checkIn: {
+        empty: 'Personne d’inscrit à pointer pour le moment.',
+        subtitle: 'Sur {{count}} inscrits, rarement {{count}} se présentent. '
+          + 'Générer avant le pointage produit des équipes fausses.',
+        title: 'Pointer les présents d’abord',
+      },
+      checkInList: {
+        markAll: 'Tout pointer',
+        markNone: 'Tout dépointer',
+        title: 'Pointage · {{present}}/{{total}}',
+      },
+      intro: {
+        subtitle: 'Choisis comment ils entrent dans la répartition — '
+          + 'c’est ce qui change le plus le résultat.',
+        title_one: '{{count}} joueur de {{teamName}} est inscrit à cette détection.',
+        title_other: '{{count}} joueurs de {{teamName}} sont inscrits à cette détection.',
+      },
+      meta: {
+        member: 'Membre de {{teamName}}',
+        positionToDefine: 'Poste à définir',
+        requestedPosition: 'Demande : {{position}}',
+      },
+      modes: {
+        excluded: {
+          subtitle: 'Ils ne sont pas répartis du tout. Utile quand ils encadrent la séance.',
+          title: 'Les sortir de la répartition',
+        },
+        grouped: {
+          subtitle: 'Les membres de l’équipe forment une équipe verrouillée. '
+            + 'Les candidats sont répartis dans les autres.',
+          title: 'Garder l’équipe groupée',
+        },
+        mix: {
+          subtitle: 'Membres et candidats sont mélangés dans toutes les équipes.',
+          title: 'Mélanger tout le monde',
+        },
+      },
+      next: 'Ensuite',
+      preview: {
+        excluded: '{{candidates}} candidats répartis. '
+          + 'Les {{members}} membres de {{teamName}} restent en dehors.',
+        grouped: '{{members}} membres de {{teamName}} forment une équipe. '
+          + 'Les {{candidates}} candidats se répartissent dans les autres.',
+        mix: '{{total}} joueurs mélangés, membres et candidats confondus.',
+        withCheckIn: 'Seuls les joueurs pointés à l’arrivée seront répartis.',
+      },
+      previewTitle: 'Aperçu',
+      progress: 'Étape {{current}}/{{total}}',
+      sectionTitle: 'Comment les traiter',
+      subtitle: 'Détection · {{registered}} inscrits · {{members}} de {{teamName}}',
+      title: 'Membres de l’équipe',
+    },
+    teams: {
+      auto: {
+        actions: {
+          generate: 'Générer la répartition',
+          manual: 'Manuel',
+        },
+        chip: 'Auto',
+        perTeam: '{{registered}} inscrits · ~{{perTeam}} joueurs par équipe',
+        positions: {
+          candidates_one: '{{count}} candidat',
+          candidates_other: '{{count}} candidats',
+          missing_one: '{{count}} manquant',
+          missing_other: '{{count}} manquants',
+          onePerTeam: '1 par équipe',
+          title: 'Postes recherchés · {{count}}',
+        },
+        preview: {
+          empty: 'Personne à répartir : pointe d’abord les présents.',
+          text: '{{teams}} équipes de ~{{perTeam}} joueurs. {{unassigned}} non affectés.',
+        },
+        previewTitle: 'Aperçu',
+        splitBy: {
+          subtitle: 'Chaque joueur est placé sur le poste '
+            + 'qu’il a demandé en candidatant à la détection.',
+          title: 'Séparer par poste recherché',
+        },
+        subtitle: 'Détection · {{sport}} · {{registered}} inscrits',
+        teamCount: 'équipes',
+        title: 'Répartition',
+      },
+      manual: {
+        actions: {
+          auto: 'Auto',
+          field: 'Placer sur le terrain',
+        },
+        bibs: {
+          bleu: 'Bleu',
+          jaune: 'Jaune',
+          rouge: 'Rouge',
+          vert: 'Vert',
+        },
+        empty: 'Personne à répartir : pointe d’abord les présents.',
+        hint: 'Appuie sur un joueur pour l’ajouter à {{bib}}. Appuie encore pour le retirer.',
+        remaining_one: '{{count}} restant',
+        remaining_other: '{{count}} restants',
+        subtitle: 'Détection · {{count}} présents',
+        title: 'Équipes à la main',
+        unassigned: 'Non affectés · {{count}}',
+      },
+    },
+  },
   errorPage: {
     action: 'Recharger la page',
     subtitle: 'Une erreur est survenue.',
