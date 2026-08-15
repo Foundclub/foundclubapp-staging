@@ -255,6 +255,13 @@ export const RouteNames = /** @type {const} */ ({
   MatchCompositionBoard: 'MatchCompositionBoard',
   MatchCompositionStart: 'MatchCompositionStart',
 
+  // Detection — constituer les equipes (C-D, pack composition ecrans 13 a 15).
+  // ⚠️ Match et detection ne partagent AUCUN ecran (regle du pack §6) : ces
+  // routes ne reutilisent donc rien de `MatchCallUp*`, c'est voulu.
+  DetectionSquadSetup: 'DetectionSquadSetup',
+  DetectionTeamsAuto: 'DetectionTeamsAuto',
+  DetectionTeamsManual: 'DetectionTeamsManual',
+
   // Tactical
   TacticalBoardV2: 'TacticalBoardV2',
   TacticalSelectionV2: 'TacticalSelectionV2',

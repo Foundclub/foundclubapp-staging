@@ -4,6 +4,7 @@ import {
   MEMBER_MODES,
   SPLIT_BY,
   buildDetectionSplitPayload,
+  buildDraftPayloadWithSplit,
   countRequestedPositions,
   splitIntoTeams,
 } from './detectionSplit';
@@ -265,6 +266,31 @@ describe('C-D · repartition d une detection', () => {
 
       expect(payload.teams.slice(0, 4).map((team) => team.bibColor)).toEqual(BIB_COLORS);
       expect(payload.teams.slice(4).map((team) => team.bibColor)).toEqual([null, null]);
+    });
+
+    // 🧨 `saveDraft` REMPLACE le brouillon de l'equipe par ce qu'on lui envoie
+    // (admin `event-composition.ts:1818-1835`). Ranger la repartition ne doit
+    // jamais coûter la composition deja posee.
+    it('n efface pas le brouillon existant en y accrochant la repartition', () => {
+      const existingDraft = {
+        mode: 'manual',
+        reservePlayerIds: ['p9'],
+        schemaVersion: 3,
+        teams: [{ id: 'team_1', placements: [{ playerId: 'p1', slotId: 's1' }] }],
+      };
+
+      const payload = buildDraftPayloadWithSplit(existingDraft, { teamCount: 2 });
+
+      expect(payload.teams).toEqual(existingDraft.teams);
+      expect(payload.reservePlayerIds).toEqual(['p9']);
+      expect(payload.mode).toBe('manual');
+      expect(payload.detectionSplit).toEqual({ teamCount: 2 });
+    });
+
+    it('accepte un brouillon absent sans fabriquer de pack fantome', () => {
+      expect(buildDraftPayloadWithSplit(null, { teamCount: 3 })).toEqual({
+        detectionSplit: { teamCount: 3 },
+      });
     });
 
     it('reconduit les manches sans y toucher : ce lot ne fait pas tourner les equipes', () => {

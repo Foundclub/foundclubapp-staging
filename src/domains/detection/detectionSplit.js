@@ -262,3 +262,20 @@ export const buildDetectionSplitPayload = ({
     })),
   };
 };
+
+/**
+ * La charge complete de `POST /events/:id/composition/draft`.
+ *
+ * 🧨 LE PIEGE QUI JUSTIFIE CETTE FONCTION — mesure du 2026-08-14 sur
+ * `saveDraft` (admin `event-composition.ts:1818-1835`) : la route REMPLACE
+ * toujours le brouillon de l'equipe par la charge recue. Envoyer un
+ * `{ detectionSplit }` tout seul EFFACERAIT donc la composition deja posee —
+ * silencieusement, et sans qu'aucune porte ne le voie.
+ *
+ * ⇒ On renvoie TOUJOURS le brouillon existant tel quel, et on ne fait
+ * qu'y accrocher la repartition.
+ */
+export const buildDraftPayloadWithSplit = (existingDraft, detectionSplit) => ({
+  ...(existingDraft && typeof existingDraft === 'object' ? existingDraft : {}),
+  detectionSplit,
+});
