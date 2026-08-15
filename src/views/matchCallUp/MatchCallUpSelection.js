@@ -32,7 +32,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   getCompositionPlayerId,
   getCompositionPlayerLabel,
-} from '@/views/tactical_v2/multiTeamCompositionUtils';
+} from '@/utils/compositionPlayer';
 
 import { RouteNames } from '@/navigation/routeNames';
 

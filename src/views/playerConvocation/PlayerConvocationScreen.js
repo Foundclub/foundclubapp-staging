@@ -22,7 +22,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import { getCompositionPlayerInitials } from '@/views/tactical_v2/multiTeamCompositionUtils';
+import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
 
 import { RouteNames } from '@/navigation/routeNames';
 

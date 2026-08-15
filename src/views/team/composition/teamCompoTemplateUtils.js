@@ -18,7 +18,7 @@ import {
   keepPlacementsOfCalledUpPlayers,
   readPlacementsFromPack,
 } from '@/views/matchCallUp/matchCompositionUtils';
-import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
+import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 
 import { RouteNames } from '@/navigation/routeNames';
 

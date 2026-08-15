@@ -210,7 +210,7 @@ jest.mock('@/components/tactical/RenderedTacticalField', () => {
   };
 });
 
-jest.mock('./DraggableToken', () => ({
+jest.mock('@/components/tactical/DraggableToken', () => ({
   __esModule: true,
   default: () => null,
 }));

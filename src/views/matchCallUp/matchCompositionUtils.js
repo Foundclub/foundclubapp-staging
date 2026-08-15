@@ -11,7 +11,7 @@
  * lit deja a la RACINE du pack.
  */
 
-import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
+import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 
 import { getTacticalSportKey } from '@/utils/tacticalField';
 

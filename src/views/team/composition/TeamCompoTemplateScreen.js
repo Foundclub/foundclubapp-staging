@@ -42,7 +42,7 @@ import {
   removePlayerFromField,
 } from '@/views/matchCallUp/matchCompositionUtils';
 import DraggableToken from '@/components/tactical/DraggableToken';
-import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
+import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 
 import { RouteNames } from '@/navigation/routeNames';
 

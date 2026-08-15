@@ -21,7 +21,7 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import { getCompositionPlayerInitials } from '@/views/tactical_v2/multiTeamCompositionUtils';
+import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
