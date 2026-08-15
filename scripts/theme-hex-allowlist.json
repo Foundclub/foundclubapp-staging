@@ -45,7 +45,7 @@
     "src/views/profile/ProfileEdit.js",
     "src/views/recruitment/RecruitmentAdDetails.js",
     "src/views/reservation/MissingPlayersView.js",
-    "src/views/tactical_v2/DraggableToken.js",
+    "src/components/tactical/DraggableToken.js",
     "src/views/tactical_v2/TacticalBoard.js",
     "src/views/tactical_v2/TacticalSelection.js",
     "src/views/team/TeamDetails.js",

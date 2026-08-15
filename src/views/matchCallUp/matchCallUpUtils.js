@@ -10,7 +10,7 @@
  * `MultiTeamCompositionBoard` fabriquent deja, et que le serveur lit deja.
  */
 
-import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
+import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 
 /**
  * Effectifs par sport, repris tels quels de `design_reference/fields.jsx` :

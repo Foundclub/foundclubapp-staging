@@ -166,7 +166,7 @@ jest.mock('@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSh
   };
 });
 
-jest.mock('@/views/tactical_v2/DraggableToken', () => {
+jest.mock('@/components/tactical/DraggableToken', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   return {
     __esModule: true,

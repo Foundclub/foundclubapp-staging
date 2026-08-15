@@ -18,10 +18,10 @@ import {
   keepPlacementsOfCalledUpPlayers,
   readPlacementsFromPack,
 } from '@/views/matchCallUp/matchCompositionUtils';
-import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 import { getTacticalSportKey } from '@/utils/tacticalField';
 
 const ensureList = (/** @type {any} */ value) => (Array.isArray(value) ? value : []);

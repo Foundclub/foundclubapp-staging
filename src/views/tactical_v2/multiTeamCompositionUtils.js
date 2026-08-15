@@ -1,26 +1,13 @@
 // @ts-nocheck
 /* eslint-disable no-nested-ternary */
-const MAX_COMPOSITION_TEAMS = 8;
+import {
+  getCompositionPlayerId,
+  getCompositionPlayerInitials,
+  getCompositionPlayerLabel,
+  sanitizeCompositionText,
+} from '@/utils/compositionPlayer';
 
-const repairCommonMojibake = (value) => String(value || '')
-  .replace(/Ã‰/g, 'E')
-  .replace(/Ã©/g, 'e')
-  .replace(/Ã¨/g, 'e')
-  .replace(/Ãª/g, 'e')
-  .replace(/Ã«/g, 'e')
-  .replace(/Ã€/g, 'A')
-  .replace(/Ã /g, 'a')
-  .replace(/Ã¢/g, 'a')
-  .replace(/Ã¹/g, 'u')
-  .replace(/Ã»/g, 'u')
-  .replace(/Ã´/g, 'o')
-  .replace(/Ã®/g, 'i')
-  .replace(/Ã¯/g, 'i')
-  .replace(/â€™/g, "'")
-  .replace(/â€œ/g, '"')
-  .replace(/â€\x9d/g, '"')
-  .replace(/â€“/g, '-')
-  .replace(/â€”/g, '-');
+const MAX_COMPOSITION_TEAMS = 8;
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -34,30 +21,22 @@ const normalizePlacementMode = (value) => (
   String(value || '').trim().toLowerCase() === 'free' ? 'free' : 'slots'
 );
 
-export const sanitizeCompositionText = (value) => repairCommonMojibake(value).trim();
-
 const normalizeText = (value) => sanitizeCompositionText(value);
 
 const uniqueIds = (values = []) => Array.from(
   new Set(values.map((value) => normalizeText(value)).filter(Boolean)),
 );
 
-export const getCompositionPlayerId = (player) => normalizeText(player?.documentId || player?.id || '');
-
-export const getCompositionPlayerLabel = (player) => (
-  `${normalizeText(player?.firstname)} ${normalizeText(player?.lastname)}`.trim()
-  || normalizeText(player?.name)
-  || 'Joueur'
-);
-
-export const getCompositionPlayerInitials = (player) => {
-  const label = getCompositionPlayerLabel(player);
-  return label
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || '')
-    .join('') || '?';
+// C-F — les 4 fonctions ci-dessus ont demenage dans `utils/compositionPlayer`.
+// Elles sont RE-EXPORTEES ici parce que l'ancien systeme s'en sert encore
+// (MultiTeamCompositionBoard les importe depuis ce fichier) : les repointer une
+// par une dans du code condamne serait un diff pour rien. Les appelants du
+// NOUVEAU systeme, eux, vont chercher la source directement.
+export {
+  getCompositionPlayerId,
+  getCompositionPlayerInitials,
+  getCompositionPlayerLabel,
+  sanitizeCompositionText,
 };
 
 export const normalizeAvailablePresets = (presets = []) => (

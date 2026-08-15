@@ -17,7 +17,6 @@
  *   - views/search/SearchEventsScreen.js               SearchReservations/SearchRecruitment
  *   - views/search/SearchRecruitmentScreen.js          montent toutes SearchHubRouteAlias,
  *   - views/search/SearchReservationsScreen.js         jamais ces 4 ecrans dedies)
- *   - views/tactical_v2/index.js
  *   - views/TestScreen.js                             (ecran de test, a supprimer ?)
  *
  * TODO(nav-sans-porte) ECRANS SANS PORTE D'ENTREE — enregistres dans un navigateur, donc

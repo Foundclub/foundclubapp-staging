@@ -33,6 +33,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import DraggableToken from '@/components/tactical/DraggableToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
@@ -41,14 +42,13 @@ import {
   placePlayerAt,
   removePlayerFromField,
 } from '@/views/matchCallUp/matchCompositionUtils';
-import DraggableToken from '@/views/tactical_v2/DraggableToken';
-import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetTeamDefaultComposition } from '@/services/team/teamQueries';
 import { saveTeamDefaultComposition } from '@/services/team/teamService';
 
+import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 
 import {

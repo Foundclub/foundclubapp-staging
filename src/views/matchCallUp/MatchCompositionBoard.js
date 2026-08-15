@@ -35,10 +35,9 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import DraggableToken from '@/components/tactical/DraggableToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import DraggableToken from '@/views/tactical_v2/DraggableToken';
-import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -47,6 +46,7 @@ import {
   saveEventCompositionDraft,
 } from '@/services/event/eventService';
 
+import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 import { getTacticalFieldAspectRatio, getTacticalSportKey } from '@/utils/tacticalField';
 
 import { isManualCallUpPlayer } from './matchCallUpUtils';

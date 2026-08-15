@@ -61,7 +61,7 @@ import {
 
 import { useTour } from '@/context/TourContext';
 // eslint-disable-next-line perfectionist/sort-imports
-import DraggableToken from './DraggableToken';
+import DraggableToken from '@/components/tactical/DraggableToken';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -167,8 +167,8 @@ const serializeCompositionState = (payload, mode = 'event') => {
 };
 
 /**
- * @typedef {import('./types').TacticalPlayer} TacticalPlayer
- * @typedef {import('./types').FieldPlayer} FieldPlayer
+ * @typedef {import('@/components/tactical/types').TacticalPlayer} TacticalPlayer
+ * @typedef {import('@/components/tactical/types').FieldPlayer} FieldPlayer
  */
 
 /**

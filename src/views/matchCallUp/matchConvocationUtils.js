@@ -23,7 +23,7 @@
  * `__tests__/matchConvocationUtils.test.js`.
  */
 
-import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
+import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 
 /** Le joueur est sur le terrain de la compo. */
 export const CONVOCATION_ROLE_STARTER = 'starter';

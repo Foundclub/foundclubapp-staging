@@ -7,8 +7,7 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
-import { getCompositionPlayerInitials } from '@/views/tactical_v2/multiTeamCompositionUtils';
-
+import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
 import { getImageUrl } from '@/utils/imageUrl';
 
 import ProfilePicturePreviewOverlay from '../profilePicturePreviewOverlay/ProfilePicturePreviewOverlay';

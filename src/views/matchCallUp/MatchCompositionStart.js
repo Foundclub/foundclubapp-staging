@@ -21,12 +21,12 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import { getCompositionPlayerInitials } from '@/views/tactical_v2/multiTeamCompositionUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetTeamDefaultComposition } from '@/services/team/teamQueries';
 
+import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 
 import {

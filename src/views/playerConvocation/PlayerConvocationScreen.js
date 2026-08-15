@@ -22,13 +22,13 @@ import Loader from '@/components/atoms/loader/Loader';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import { getCompositionPlayerInitials } from '@/views/tactical_v2/multiTeamCompositionUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvent, useGetEventConvocation } from '@/services/event/eventQueries';
 import { respondToEventRsvp } from '@/services/event/eventService';
 
+import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 
