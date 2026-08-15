@@ -32,7 +32,7 @@ import { useGetTeamDefaultComposition } from '@/services/team/teamQueries';
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
- * @typedef {import('./types').TacticalPlayer} TacticalPlayer
+ * @typedef {import('@/components/tactical/types').TacticalPlayer} TacticalPlayer
  */
 
 const normalizeMatchLabel = (value) => {

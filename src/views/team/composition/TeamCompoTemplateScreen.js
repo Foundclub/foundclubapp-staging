@@ -41,7 +41,7 @@ import {
   placePlayerAt,
   removePlayerFromField,
 } from '@/views/matchCallUp/matchCompositionUtils';
-import DraggableToken from '@/views/tactical_v2/DraggableToken';
+import DraggableToken from '@/components/tactical/DraggableToken';
 import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
 
 import { RouteNames } from '@/navigation/routeNames';

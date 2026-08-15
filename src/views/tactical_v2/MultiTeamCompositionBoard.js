@@ -48,7 +48,7 @@ import {
   publishEventConvocation,
   saveEventCompositionDraft,
 } from '@/services/event/eventService';
-import DraggableToken from './DraggableToken';
+import DraggableToken from '@/components/tactical/DraggableToken';
 
 import {
   MAX_COMPOSITION_TEAMS,

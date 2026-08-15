@@ -37,7 +37,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import DraggableToken from '@/views/tactical_v2/DraggableToken';
+import DraggableToken from '@/components/tactical/DraggableToken';
 import { getCompositionPlayerId } from '@/views/tactical_v2/multiTeamCompositionUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
