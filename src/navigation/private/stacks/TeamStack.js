@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import SquadDetailsScreen from '@/views/league/details/SquadDetailsScreen';
 import SquadEditScreen from '@/views/league/edit/SquadEditScreen';
+import CompositionPaywallScreen from '@/views/subscription/CompositionPaywallScreen';
+import TeamCompoTemplateScreen from '@/views/team/composition/TeamCompoTemplateScreen';
 import CreateSquadWizard from '@/views/team/createSquad/CreateSquadWizard';
 import MyTeamList from '@/views/team/MyTeamList';
 import TeamDetails from '@/views/team/TeamDetails';
@@ -86,6 +88,18 @@ function TeamStack() {
             ...commonOptions,
             headerTitle: t('teamMembershipRequestList.title'),
           }}
+        />
+        {/* C-C — ecrans 11 et 12 du pack composition : la compo type d'une
+            equipe, et le mur payant de la composition en ecran plein. */}
+        <Stack.Screen
+          component={TeamCompoTemplateScreen}
+          name={RouteNames.TeamCompoTemplate}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={CompositionPaywallScreen}
+          name={RouteNames.CompositionPaywall}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           component={TeamEdit}

@@ -202,6 +202,10 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.MatchCallUpManualPlayer]: '/match/call-up/manual-player',
   [RouteNames.MatchCompositionStart]: '/match/composition/start',
   [RouteNames.MatchCompositionBoard]: '/match/composition/board',
+  // C-C — ecrans 10 a 12 du pack composition.
+  [RouteNames.PlayerConvocation]: '/match/convocation/me',
+  [RouteNames.TeamCompoTemplate]: '/team/composition/template',
+  [RouteNames.CompositionPaywall]: '/match/composition/offer',
   [RouteNames.TacticalBoardV2]: '/tactical/:teamId?',
   [RouteNames.TacticalSelectionV2]: '/tactical/select',
   [RouteNames.HistoryWizardCategory]: '/profile/history/category',

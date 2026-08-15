@@ -51,6 +51,7 @@ import CreateTrainerModal from '@/components/organisms/createTrainerModal/Create
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
+import { buildCompoTemplateDestination } from '@/views/team/composition/teamCompoTemplateUtils';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -1668,20 +1669,21 @@ function TeamDetails({ navigation, route }) {
     }
   };
 
+  // C-C — ECRAN 11 du pack composition. La porte ne bouge pas : ni son libelle,
+  // ni son cadenas, ni ses conditions d'affichage. Seule sa DESTINATION change —
+  // elle ouvrait l'ANCIEN parcours (`TacticalSelectionV2` en mode `team-default`).
+  // La decision vit dans `teamCompoTemplateUtils` parce que ce fichier fait
+  // 5 484 lignes et n'a aucun test (E6) : c'est l'idiome deja employe par
+  // `views/event/ownAnswerAction.js` pour la meme raison.
   const handleManageDefaultComposition = useCallback(() => {
-    if (!team?.documentId) return;
-
-    navigation.navigate(RouteNames.EventStack, {
-      params: {
-        editorMode: 'team-default',
-        players: filteredPlayers,
-        sport: team?.activities?.[0]?.name || 'football',
-        teamId: team.documentId,
-        teamName: team.name || 'Equipe',
-      },
-      screen: RouteNames.TacticalSelectionV2,
+    const destination = buildCompoTemplateDestination({
+      players: filteredPlayers,
+      team,
     });
-  }, [filteredPlayers, navigation, team?.activities, team?.documentId, team?.name]);
+    if (!destination) return;
+
+    navigation.navigate(destination.screen, destination.params);
+  }, [filteredPlayers, navigation, team]);
 
   const handleSyncStandings = useCallback(() => {
     if (!teamId || refreshScrapingMutation.isPending || isExternalCompetitionPhaseActive) return;

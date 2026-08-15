@@ -468,6 +468,69 @@ export default {
     skip: 'Passer',
     view: 'Voir',
   },
+  // C-C — ECRAN 11 du pack composition : la compo type d'une équipe.
+  compoTemplate: {
+    actions: {
+      duplicate: 'Dupliquer',
+      save: 'Enregistrer la compo type',
+    },
+    alerts: {
+      error: {
+        save: 'Impossible d’enregistrer la compo type.',
+        title: 'Erreur',
+      },
+      saved: {
+        message: 'La compo type pré-remplira le terrain à la prochaine convocation.',
+        title: 'Compo type enregistrée',
+      },
+    },
+    apply: {
+      subtitle: 'La compo type pré-remplit le terrain — il ne reste '
+        + 'qu’à ajuster les convoqués du jour.',
+      title: 'Appliquer à un match',
+    },
+    bench: {
+      empty: 'Tout le monde est sur le terrain.',
+      title: 'Non placés · {{count}}',
+    },
+    defaultChip: 'Par défaut',
+    emptyField: 'Glisse un joueur sur le terrain pour commencer.',
+    sources: {
+      last: 'Dernier',
+      new: 'Nouvelle compo',
+      template: 'Compo type',
+    },
+    subtitle: 'modèle réutilisable',
+    title: 'Compo type',
+    tokenOnBench: '{{name}}, pas encore placé',
+    tokenOnField: '{{name}}, sur le terrain',
+    unavailable: {
+      // ⚠️ Mesuré le 2026-08-15 : aucune route d'équipe ne rend la dernière
+      // composition publiée. La cascade du serveur est attachée à un ÉVÉNEMENT.
+      noLastMatch: 'La compo du dernier match se retrouve depuis '
+        + 'l’événement, pas depuis l’équipe.',
+      noTemplate: 'Cette équipe n’a pas encore de compo type.',
+    },
+  },
+  // C-C — ECRAN 12 du pack composition : le mur payant, en écran plein.
+  compositionPaywall: {
+    actions: {
+      compare: 'Comparer les offres',
+      subscribe: 'Passer à l’offre Équipe',
+    },
+    benefits: {
+      autoSplit: 'Répartition automatique sur les détections',
+      field: 'Terrain interactif sur les 5 sports',
+      responses: 'Réponses présent / absent centralisées',
+      template: 'Compo type réutilisable par équipe',
+      twoTaps: 'Composition et convocations en 2 taps',
+    },
+    subtitle: 'Composition réservée',
+    text: 'Prépare tes compos, convoque tes joueurs et suis leurs réponses '
+      + '— sans quitter FOUNDCLUB.',
+    title: 'Offre Équipe',
+    wall: 'La composition d’équipe est réservée à l’offre Équipe.',
+  },
   conversation: {
     actions: {
       copy: 'Copier',
@@ -2356,6 +2419,39 @@ export default {
     rosterEmpty: 'Effectif à compléter',
     rosterField: 'Effectif',
     teamChip: 'ÉQUIPE',
+  },
+  // C-C — ECRAN 10 du pack composition : la vue du joueur convoqué.
+  playerConvocation: {
+    actions: {
+      absent: 'Absent',
+      present: 'Présent',
+    },
+    alerts: {
+      error: {
+        message: 'Impossible d’enregistrer ta réponse. Réessaie dans un instant.',
+        title: 'Erreur',
+      },
+    },
+    card: {
+      calledUpBy: 'Convoqué par {{name}}',
+      number: 'N°{{number}}',
+      position: 'Poste : {{position}}',
+    },
+    columns: {
+      kickOff: 'Coup d’envoi',
+      meeting: 'RDV',
+      // ⚠️ Le modèle serveur n'a AUCUN champ d'heure de rendez-vous
+      // (mesuré le 2026-08-15 sur `event/schema.json`). On le dit, on ne
+      // l'invente pas — le pack interdit les promesses fausses.
+      notSpecified: 'Non précisé',
+      place: 'Lieu',
+    },
+    compositionTitle: 'La composition',
+    roles: {
+      starter: 'Titulaire',
+      substitute: 'Remplaçant',
+    },
+    title: 'Tu es convoqué',
   },
   profile: {
     accountSwitcher: {

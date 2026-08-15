@@ -199,6 +199,18 @@ const renderFieldLines = (sportKey, palette) => {
   }
 };
 
+/**
+ * Les traces d'un terrain, et ce qu'on pose dessus.
+ *
+ * 🧾 Le JSDoc est ARRIVE APRES le composant : sans lui, TypeScript deduisait le
+ * type de `children` de sa valeur par defaut (`null`) et refusait tout jeton
+ * pose sur le terrain. Aucun comportement ne change ici.
+ * @param {object} props
+ * @param {any} [props.children] Ce qu'on pose sur le terrain (les jetons).
+ * @param {string} [props.sport]
+ * @param {any} [props.style]
+ * @returns {import('react').ReactElement}
+ */
 function RenderedTacticalField({
   children = null,
   sport = 'generic',
