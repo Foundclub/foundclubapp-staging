@@ -3282,14 +3282,25 @@ function EventDetails({ navigation, route }) {
     }
 
     // D77 — un MATCH commence par « Convoquer » (ecran 1 du pack composition),
-    // puis enchaine sur le terrain. La detection et les vues en lecture seule
-    // vont directement au board, comme avant : ni l'une ni les autres ne
-    // convoquent.
+    // puis enchaine sur le terrain.
+    //
+    // C-E (🚪) — ET UNE DETECTION COMMENCE PAR « MEMBRES DE L'EQUIPE » (ecran 13).
+    // Le lot C-D a livre les ecrans 13, 14 et 15 et l'a dit lui-meme : aucun
+    // bouton ne les atteignait, parce que cette ligne envoyait TOUTE detection
+    // sur l'ancien terrain. Trois ecrans qu'aucun bouton n'atteint n'existent
+    // pas. ⚠️ Le MATCH ne change pas de destination : seule la branche detection
+    // bouge (temoin de non-regression dedie dans `EventDetailsManagePanel`).
+    //
+    // La LECTURE SEULE reste sur l'ancien terrain dans les deux cas : ni l'une
+    // ni l'autre ne compose, et c'est le lot C-F qui la reprendra.
     // @ts-ignore: FIXME: Baseline TS regression
-    const startsWithCallUp = !isDetectionEvent && Boolean(options.canEdit) && !options.readOnly;
-    const compositionRoute = startsWithCallUp
-      ? RouteNames.MatchCallUpSelection
-      : RouteNames.TacticalBoardV2;
+    const canComposeNow = Boolean(options.canEdit) && !options.readOnly;
+    let compositionRoute = RouteNames.TacticalBoardV2;
+    if (canComposeNow) {
+      compositionRoute = isDetectionEvent
+        ? RouteNames.DetectionSquadSetup
+        : RouteNames.MatchCallUpSelection;
+    }
 
     navigation.navigate(compositionRoute, {
       // @ts-ignore: FIXME: Baseline TS regression
@@ -3430,40 +3441,23 @@ function EventDetails({ navigation, route }) {
       });
     };
 
-    // D44 — cette alerte propose de creer PLUSIEURS equipes automatiquement :
-    // c'est le systeme de la detection, pas celui d'un match (un match, c'est une
-    // equipe). `availablePresets` ne suffit pas a la declencher, parce que cette
-    // liste ne decrit QUE le sport — le football a 3 schemas, donc tout match de
-    // football sans composition voyait la question.
+    // C-E — L'ALERTE « Creation auto / Faire a la main » A ETE RETIREE, ET C'EST
+    // UNE CONSEQUENCE DE LA PORTE, PAS UN CHOIX DE STYLE.
     //
-    // Le predicat est `isDetectionEvent`, celui-la meme qui fabrique `eventKind`
-    // ligne 3197. Pas `!isMatchEvent` : un entrainement n'est ni l'un ni l'autre,
-    // il part donc avec `eventKind: 'match'`, et l'alerte lui aurait promis une
-    // creation automatique que le board refuse ensuite d'ouvrir.
-    const hasAutoPresets = isDetectionEvent
-      && Array.isArray(staffCompositionPayload?.availablePresets)
-      && staffCompositionPayload.availablePresets.length > 0;
-
-    if (!hasAutoPresets) {
-      openNewComposition('manual');
-      return;
-    }
-
-    Alert.alert(
-      "Composition d'équipes",
-      'Choisis si tu veux créer les équipes automatiquement ou les faire à la main.',
-      [
-        { style: 'cancel', text: 'Annuler' },
-        { onPress: () => openNewComposition('auto'), text: 'Création auto' },
-        { onPress: () => openNewComposition('manual'), text: 'Faire à la main' },
-      ],
-    );
+    // D44 l'avait reservee a la detection (elle promettait a tout match de
+    // football une creation automatique d'equipes). Depuis que la detection
+    // ouvre l'ecran 13, ses DEUX chemins menent au meme endroit — l'ecran 13
+    // POSE LUI-MEME la question, avec ses CTA `Manuel` et `Continuer`, et il la
+    // pose apres avoir montre les inscrits et le pointage. La garder ici, c'est
+    // demander deux fois la meme chose, la premiere fois sans rien montrer.
+    // ⚠️ `compositionIntent` continue de voyager : l'ancien terrain le lit encore
+    // sur les vues en lecture seule.
+    openNewComposition('manual');
   }, [
     compositionEditorPlayers,
     compositionTeamId,
     eventId,
     getCompositionSourceLabel,
-    isDetectionEvent,
     isStaffCompositionFetching,
     openCompositionBoard,
     staffCompositionPayload,

@@ -239,6 +239,13 @@ const lastCallUpParams = () => {
   return call ? call[1] : null;
 };
 
+/** C-E — les parametres du dernier envoi vers l ecran 13 (detection). */
+const lastSquadSetupParams = () => {
+  const call = [...mockNavigate.mock.calls].reverse()
+    .find((/** @type {any} */ entry) => entry[0] === 'DetectionSquadSetup');
+  return call ? call[1] : null;
+};
+
 /** Le nom de la route empruntee au dernier appui. */
 const lastRoute = () => {
   const call = [...mockNavigate.mock.calls].pop();
@@ -292,7 +299,7 @@ describe('le site ouvre la composition comme le telephone', () => {
 
     click(root, "Gérer la composition d'équipes");
 
-    expect(lastBoardParams()).toEqual(
+    expect(lastSquadSetupParams()).toEqual(
       expect.objectContaining({ eventKind: 'detection' }),
     );
   });
@@ -302,7 +309,7 @@ describe('le site ouvre la composition comme le telephone', () => {
 
     click(root, "Gérer la composition d'équipes");
 
-    expect(lastBoardParams()).toEqual(
+    expect(lastSquadSetupParams()).toEqual(
       expect.objectContaining({ eventTypeLabel: 'Détection' }),
     );
   });
@@ -350,12 +357,19 @@ describe('C-A — depuis le site, la page d un match mene au NOUVEAU terrain', (
     expect(lastBoardParams()).toBeNull();
   });
 
-  test('⛔ une DETECTION reste sur l ancien terrain : elle ne convoque pas', () => {
+  // ⚠️ CE TEMOIN A CHANGE DE DESTINATION LE 2026-08-15, ET C'EST LE SUJET DU LOT
+  // C-E. Il verrouillait « une detection reste sur l ancien terrain », ce qui
+  // etait juste tant que les ecrans 13 a 15 n existaient pas. Ils existent
+  // depuis C-D, et rien ne les atteignait. Ce qu'il protege reellement — une
+  // detection ne passe JAMAIS par l ecran de convocation d un match — est
+  // conserve, et meme renforce.
+  test('🚪 une DETECTION ouvre l ecran 13, et ne convoque toujours pas', () => {
     const root = mountScreen({ event: buildEvent({ type: { name: 'Détection' } }) });
 
     click(root, "Gérer la composition d'équipes");
 
-    expect(lastRoute()).toBe('TacticalBoardV2');
+    expect(lastRoute()).toBe('DetectionSquadSetup');
+    expect(lastCallUpParams()).toBeNull();
   });
 
   test('⛔ la LECTURE SEULE reste sur l ancien terrain', () => {
