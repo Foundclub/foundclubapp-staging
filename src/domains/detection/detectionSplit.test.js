@@ -1,11 +1,11 @@
 import {
   BIB_COLORS,
-  MAX_DETECTION_TEAMS,
-  MEMBER_MODES,
-  SPLIT_BY,
   buildDetectionSplitPayload,
   buildDraftPayloadWithSplit,
   countRequestedPositions,
+  MAX_DETECTION_TEAMS,
+  MEMBER_MODES,
+  SPLIT_BY,
   splitIntoTeams,
 } from './detectionSplit';
 
@@ -22,7 +22,10 @@ const makePlayer = (id, extra = {}) => ({
   ...extra,
 });
 
-const makeMember = (id, extra = {}) => makePlayer(id, { participantSource: 'team_player', ...extra });
+const makeMember = (id, extra = {}) => makePlayer(
+  id,
+  { participantSource: 'team_player', ...extra },
+);
 
 // Tous les joueurs ranges quelque part, equipes ET non affectes confondus.
 const collectAll = (result) => [
@@ -76,7 +79,8 @@ describe('C-D · repartition d une detection', () => {
     it('repartit equitablement : jamais plus d un joueur d ecart entre deux equipes', () => {
       const players = Array.from({ length: 17 }, (_, index) => makePlayer(`p${index + 1}`));
 
-      const sizes = splitIntoTeams({ players, teamCount: 3 }).teams.map((team) => team.playerIds.length);
+      const sizes = splitIntoTeams({ players, teamCount: 3 })
+        .teams.map((team) => team.playerIds.length);
 
       expect(Math.max(...sizes) - Math.min(...sizes)).toBeLessThanOrEqual(1);
     });
@@ -125,12 +129,14 @@ describe('C-D · repartition d une detection', () => {
       const result = splitIntoTeams({ memberMode: MEMBER_MODES.GROUPED, players, teamCount: 3 });
 
       const teamsHoldingMembers = result.teams.filter(
-        (team) => team.playerIds.some((playerId) => playerId.startsWith('m'))
+        (team) => team.playerIds.some((playerId) => playerId.startsWith('m')),
       );
       expect(teamsHoldingMembers).toHaveLength(1);
       expect(teamsHoldingMembers[0].playerIds.sort()).toEqual(['m1', 'm2', 'm3', 'm4']);
       // Et les candidats ne rentrent jamais dans l'equipe verrouillee.
-      expect(teamsHoldingMembers[0].playerIds.every((playerId) => playerId.startsWith('m'))).toBe(true);
+      const allAreMembers = teamsHoldingMembers[0].playerIds
+        .every((playerId) => playerId.startsWith('m'));
+      expect(allAreMembers).toBe(true);
     });
   });
 
@@ -160,11 +166,19 @@ describe('C-D · repartition d une detection', () => {
 
     it('separe par poste recherche : chaque poste est etale sur les equipes', () => {
       const players = [
-        ...Array.from({ length: 3 }, (_, index) => makePlayer(`gb${index + 1}`, { appliedPosition: 'Gardien' })),
-        ...Array.from({ length: 6 }, (_, index) => makePlayer(`at${index + 1}`, { appliedPosition: 'Attaquant' })),
+        ...Array.from({ length: 3 }, (_, index) => makePlayer(
+          `gb${index + 1}`,
+          { appliedPosition: 'Gardien' },
+        )),
+        ...Array.from({ length: 6 }, (_, index) => makePlayer(
+          `at${index + 1}`,
+          { appliedPosition: 'Attaquant' },
+        )),
       ];
 
-      const result = splitIntoTeams({ players, splitBy: SPLIT_BY.REQUESTED_POSITION, teamCount: 3 });
+      const result = splitIntoTeams({
+        players, splitBy: SPLIT_BY.REQUESTED_POSITION, teamCount: 3,
+      });
 
       result.teams.forEach((team) => {
         const keepers = team.playerIds.filter((playerId) => playerId.startsWith('gb'));
@@ -185,8 +199,12 @@ describe('C-D · repartition d une detection', () => {
       const rows = countRequestedPositions(players, 3);
 
       expect(rows).toEqual([
-        { count: 3, missing: 0, onePerTeam: true, position: 'Attaquant' },
-        { count: 1, missing: 2, onePerTeam: false, position: 'Gardien' },
+        {
+          count: 3, missing: 0, onePerTeam: true, position: 'Attaquant',
+        },
+        {
+          count: 1, missing: 2, onePerTeam: false, position: 'Gardien',
+        },
       ]);
     });
   });
@@ -225,7 +243,9 @@ describe('C-D · repartition d une detection', () => {
     it('pointage actif mais personne de pointe : aucune equipe peuplee, personne perdu', () => {
       const players = Array.from({ length: 5 }, (_, index) => makePlayer(`p${index + 1}`));
 
-      const result = splitIntoTeams({ checkInFirst: true, players, presentIds: [], teamCount: 3 });
+      const result = splitIntoTeams({
+        checkInFirst: true, players, presentIds: [], teamCount: 3,
+      });
 
       expect(result.teams.flatMap((team) => team.playerIds)).toHaveLength(0);
       expect(result.unassignedIds).toHaveLength(5);
@@ -255,11 +275,12 @@ describe('C-D · repartition d une detection', () => {
         'teams',
       ]);
       payload.teams.forEach((team) => {
-        expect(Object.keys(team).sort()).toEqual(['bibColor', 'name', 'players', 'rotation', 'terrain']);
+        expect(Object.keys(team).sort())
+          .toEqual(['bibColor', 'name', 'players', 'rotation', 'terrain']);
       });
     });
 
-    it('n attribue une chasuble qu aux 4 premieres equipes — au dela le serveur rendrait null', () => {
+    it('n attribue une chasuble qu aux 4 premieres equipes (au dela : null)', () => {
       const players = Array.from({ length: 12 }, (_, index) => makePlayer(`p${index + 1}`));
 
       const payload = buildDetectionSplitPayload({ players, teamCount: 6 });
@@ -294,9 +315,13 @@ describe('C-D · repartition d une detection', () => {
     });
 
     it('reconduit les manches sans y toucher : ce lot ne fait pas tourner les equipes', () => {
-      const rounds = [{ index: 1, playtimeByPlayer: { p1: 12 }, startedAt: '2026-08-14T10:00:00.000Z' }];
+      const rounds = [{
+        index: 1, playtimeByPlayer: { p1: 12 }, startedAt: '2026-08-14T10:00:00.000Z',
+      }];
 
-      const payload = buildDetectionSplitPayload({ players: [makePlayer('p1')], rounds, teamCount: 1 });
+      const payload = buildDetectionSplitPayload({
+        players: [makePlayer('p1')], rounds, teamCount: 1,
+      });
 
       expect(payload.rounds).toEqual(rounds);
     });

@@ -661,6 +661,21 @@ export default {
     title: 'Ajouter un club',
   },
   detection: {
+    // Les 3 ecrans empruntaient `matchComposition.board.alerts.*`, dont les textes
+    // disent « convocation » et « composition » — deux mots que le pack interdit
+    // en detection (§6). Elle a donc ses propres alertes, et son propre mot :
+    // une detection produit une REPARTITION.
+    alerts: {
+      error: {
+        save: 'Impossible d’enregistrer cette répartition.',
+        title: 'Erreur',
+      },
+      ok: 'OK',
+      saved: {
+        message: 'Les équipes sont gardées en brouillon. Personne n’a été prévenu.',
+        title: 'Répartition enregistrée',
+      },
+    },
     squad: {
       actions: {
         manual: 'Manuel',
@@ -668,7 +683,8 @@ export default {
       },
       checkIn: {
         empty: 'Personne d’inscrit à pointer pour le moment.',
-        subtitle: 'Sur {{count}} inscrits, rarement {{count}} se présentent. Générer avant le pointage produit des équipes fausses.',
+        subtitle: 'Sur {{count}} inscrits, rarement {{count}} se présentent. '
+          + 'Générer avant le pointage produit des équipes fausses.',
         title: 'Pointer les présents d’abord',
       },
       checkInList: {
@@ -677,12 +693,14 @@ export default {
         title: 'Pointage · {{present}}/{{total}}',
       },
       intro: {
-        subtitle: 'Choisis comment ils entrent dans la répartition — c’est ce qui change le plus le résultat.',
+        subtitle: 'Choisis comment ils entrent dans la répartition — '
+          + 'c’est ce qui change le plus le résultat.',
         title_one: '{{count}} joueur de {{teamName}} est inscrit à cette détection.',
         title_other: '{{count}} joueurs de {{teamName}} sont inscrits à cette détection.',
       },
       meta: {
         member: 'Membre de {{teamName}}',
+        positionToDefine: 'Poste à définir',
         requestedPosition: 'Demande : {{position}}',
       },
       modes: {
@@ -691,7 +709,8 @@ export default {
           title: 'Les sortir de la répartition',
         },
         grouped: {
-          subtitle: 'Les membres de l’équipe forment une équipe verrouillée. Les candidats sont répartis dans les autres.',
+          subtitle: 'Les membres de l’équipe forment une équipe verrouillée. '
+            + 'Les candidats sont répartis dans les autres.',
           title: 'Garder l’équipe groupée',
         },
         mix: {
@@ -701,8 +720,10 @@ export default {
       },
       next: 'Ensuite',
       preview: {
-        excluded: '{{candidates}} candidats répartis. Les {{members}} membres de {{teamName}} restent en dehors.',
-        grouped: '{{members}} membres de {{teamName}} forment une équipe. Les {{candidates}} candidats se répartissent dans les autres.',
+        excluded: '{{candidates}} candidats répartis. '
+          + 'Les {{members}} membres de {{teamName}} restent en dehors.',
+        grouped: '{{members}} membres de {{teamName}} forment une équipe. '
+          + 'Les {{candidates}} candidats se répartissent dans les autres.',
         mix: '{{total}} joueurs mélangés, membres et candidats confondus.',
         withCheckIn: 'Seuls les joueurs pointés à l’arrivée seront répartis.',
       },
@@ -734,7 +755,8 @@ export default {
         },
         previewTitle: 'Aperçu',
         splitBy: {
-          subtitle: 'Chaque joueur est placé sur le poste qu’il a demandé en candidatant à la détection.',
+          subtitle: 'Chaque joueur est placé sur le poste '
+            + 'qu’il a demandé en candidatant à la détection.',
           title: 'Séparer par poste recherché',
         },
         subtitle: 'Détection · {{sport}} · {{registered}} inscrits',

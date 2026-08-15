@@ -40,25 +40,33 @@ export const BIB_COLORS = ['jaune', 'rouge', 'bleu', 'vert'];
 // parcours n'a pas a en dependre une 6e fois.
 export const MAX_DETECTION_TEAMS = 8;
 
-const getPlayerId = (player) => {
+const getPlayerId = (/** @type {any} */ player) => {
   const id = player?.documentId || player?.id;
   return id ? String(id) : '';
 };
 
-/** Un joueur de l'equipe organisatrice, par opposition a un candidat a la detection. */
+/**
+ * Un joueur de l'equipe organisatrice, par opposition a un candidat a la detection.
+ * @param {any} player
+ * @returns {boolean} vrai si le joueur appartient a l equipe organisatrice.
+ */
 export const isTeamMember = (player) => player?.participantSource === 'team_player';
 
-/** Le poste demande en candidatant (admin le calcule deja : `appliedPosition`). */
+/**
+ * Le poste demande en candidatant (admin le calcule deja : `appliedPosition`).
+ * @param {any} player
+ * @returns {string|null} le poste demande, ou null s il n y en a pas.
+ */
 export const getRequestedPosition = (player) => {
   const position = player?.appliedPosition;
   return typeof position === 'string' && position.trim() ? position.trim() : null;
 };
 
-const toIdSet = (value) => new Set(
-  (Array.isArray(value) ? value : []).map((entry) => String(entry || '')).filter(Boolean)
+const toIdSet = (/** @type {any} */ value) => new Set(
+  (Array.isArray(value) ? value : []).map((entry) => String(entry || '')).filter(Boolean),
 );
 
-const clampTeamCount = (value) => {
+const clampTeamCount = (/** @type {any} */ value) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 1;
   return Math.max(1, Math.min(MAX_DETECTION_TEAMS, Math.floor(parsed)));
@@ -69,6 +77,8 @@ const clampTeamCount = (value) => {
  * meme detection produisent le meme decoupage. Le tri suit celui du serveur
  * (`buildComparablePlayerLabel`) : nom, puis prenom, puis identifiant en dernier
  * recours — sans quoi deux homonymes rendraient l'ordre dependant de l'entree.
+ * @param {any[]} players
+ * @returns {any[]} les joueurs dedupliques et tries.
  */
 const toOrderedUniquePlayers = (players) => {
   const seen = new Set();
@@ -80,9 +90,11 @@ const toOrderedUniquePlayers = (players) => {
       return true;
     })
     .sort((left, right) => {
-      const byLastname = String(left?.lastname || '').localeCompare(String(right?.lastname || ''), 'fr');
+      const byLastname = String(left?.lastname || '')
+        .localeCompare(String(right?.lastname || ''), 'fr');
       if (byLastname !== 0) return byLastname;
-      const byFirstname = String(left?.firstname || '').localeCompare(String(right?.firstname || ''), 'fr');
+      const byFirstname = String(left?.firstname || '')
+        .localeCompare(String(right?.firstname || ''), 'fr');
       if (byFirstname !== 0) return byFirstname;
       return getPlayerId(left).localeCompare(getPlayerId(right));
     });
@@ -93,6 +105,10 @@ const toOrderedUniquePlayers = (players) => {
  * entre les appels successifs : c'est ce qui garde l'equilibre quand on distribue
  * poste par poste (3 groupes d'un seul joueur finiraient tous dans l'equipe 1 si
  * chaque groupe repartait de zero).
+ * @param {any[]} queue
+ * @param {any[]} targetTeams
+ * @param {number} cursorStart
+ * @returns {number} la position du curseur apres distribution.
  */
 const dealRoundRobin = (queue, targetTeams, cursorStart = 0) => {
   if (!targetTeams.length) return cursorStart;
@@ -106,7 +122,6 @@ const dealRoundRobin = (queue, targetTeams, cursorStart = 0) => {
 
 /**
  * Constitue les equipes d'une detection.
- *
  * @param {object} options
  * @param {boolean} [options.checkInFirst] Ecran 13 — « Pointer les presents d'abord ».
  *   Actif, un joueur non pointe n'est PAS reparti : il ressort non affecte.
@@ -136,12 +151,14 @@ export const splitIntoTeams = ({
   const teams = Array.from({ length: normalizedCount }, (_, index) => ({
     bibColor: BIB_COLORS[index] || null,
     index,
-    playerIds: [],
+    playerIds: /** @type {string[]} */ ([]),
   }));
 
   // Les 3 portes qui sortent un joueur de la repartition. Elles s'additionnent, et
   // aucune ne le fait disparaitre : il ressort toujours en NON AFFECTE.
+  /** @type {string[]} */
   const unassigned = [];
+  /** @type {any[]} */
   const distributable = [];
   ordered.forEach((player) => {
     const playerId = getPlayerId(player);
@@ -158,7 +175,9 @@ export const splitIntoTeams = ({
   // d'etre melanges a une equipe que le coach a demande de garder intacte.
   const isGrouped = memberMode === MEMBER_MODES.GROUPED;
   const members = isGrouped ? distributable.filter(isTeamMember) : [];
-  const toDeal = isGrouped ? distributable.filter((player) => !isTeamMember(player)) : distributable;
+  const toDeal = isGrouped
+    ? distributable.filter((player) => !isTeamMember(player))
+    : distributable;
   let openTeams = teams;
 
   if (isGrouped && members.length) {
@@ -199,6 +218,9 @@ export const splitIntoTeams = ({
  * Ecran 15 — la liste `POSTES RECHERCHES · N`. Une rangee par poste demande, avec de
  * quoi peindre `1 par equipe` (cyan) ou `N manquants` (jaune). Les joueurs qui n'ont
  * demande aucun poste ne font pas de rangee : le pack masque les compteurs a zero.
+ * @param {any[]} players
+ * @param {number} teamCount
+ * @returns {any[]} une ligne par poste demande.
  */
 export const countRequestedPositions = (players = [], teamCount = 1) => {
   const normalizedCount = clampTeamCount(teamCount);
@@ -227,6 +249,18 @@ export const countRequestedPositions = (players = [], teamCount = 1) => {
  * ce qu'il sait relire — et `presentIds` n'en fait partie qu'a partir du lot C-D cote
  * admin. Tant que ce serveur-la n'est pas deploye, le pointage retombe simplement en
  * transitoire : rien ne casse, rien ne ment.
+ * @param {object} root0
+ * @param {boolean} [root0.checkInFirst]
+ * @param {string[]} [root0.excludedIds]
+ * @param {string} [root0.memberMode]
+ * @param {any[]} [root0.players]
+ * @param {string[]} [root0.presentIds]
+ * @param {any[]} [root0.rounds]
+ * @param {string} [root0.splitBy]
+ * @param {number} [root0.teamCount]
+ * @param {string[]} [root0.teamNames]
+ * @param {any[]|null} [root0.teams]
+ * @returns {object} la charge `detectionSplit` prete a envoyer.
  */
 export const buildDetectionSplitPayload = ({
   checkInFirst = false,
@@ -242,7 +276,9 @@ export const buildDetectionSplitPayload = ({
 } = {}) => {
   const split = precomputedTeams
     ? { teams: precomputedTeams }
-    : splitIntoTeams({ checkInFirst, excludedIds, memberMode, players, presentIds, splitBy, teamCount });
+    : splitIntoTeams({
+      checkInFirst, excludedIds, memberMode, players, presentIds, splitBy, teamCount,
+    });
 
   return {
     checkInFirst: Boolean(checkInFirst),
@@ -274,6 +310,9 @@ export const buildDetectionSplitPayload = ({
  *
  * ⇒ On renvoie TOUJOURS le brouillon existant tel quel, et on ne fait
  * qu'y accrocher la repartition.
+ * @param {any} existingDraft
+ * @param {any} detectionSplit
+ * @returns {object} le brouillon existant, augmente de la repartition.
  */
 export const buildDraftPayloadWithSplit = (existingDraft, detectionSplit) => ({
   ...(existingDraft && typeof existingDraft === 'object' ? existingDraft : {}),

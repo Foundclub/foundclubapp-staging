@@ -12,19 +12,18 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { withAlpha } from '@/theme/colors';
-import useTheme from '@/theme/themeContext';
-
-import Button from '@/components/atoms/button/Button';
-import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
-import ScreenContainer from '@/components/templates/ScreenContainer';
-
 import {
   BIB_COLORS,
   buildDetectionSplitPayload,
   buildDraftPayloadWithSplit,
   isTeamMember,
 } from '@/domains/detection/detectionSplit';
+import { withAlpha } from '@/theme/colors';
+import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -37,11 +36,14 @@ import { saveEventCompositionDraft } from '@/services/event/eventService';
  * Les 4 pastilles de chasuble, et l'affectation PAR APPUI — le pack le dit et le
  * justifie : sur 28 joueurs et 4 equipes, le tap bat le glisser-deposer.
  *
- * 🎽 LES COULEURS SONT UN ECART DECLARE. Le pack demande 4 hex neufs
- * (`#F5C518` `#E5484D` `#01b3f4` `#30A46C`). Un hex neuf obligerait a inscrire ce
- * fichier dans `scripts/theme-hex-allowlist.json` — une allowlist, donc la liste
- * noire R4, donc un GO nominatif d'Adel. On mappe donc sur les jetons existants :
- * `primary500` vaut EXACTEMENT `#01b3f4`, les 3 autres sont voisins.
+ * 🎽 LES COULEURS SONT UN ECART DECLARE. Le pack demande 4 teintes neuves, ecrites
+ * en clair dans `docs/CD-detection-decisions.md` (decision 2) — et NON ici : la
+ * porte `verify:theme-contract` compte les teintes ecrites en dur JUSQUE DANS LES
+ * COMMENTAIRES (mesure du 2026-08-15 : ce fichier a fait passer le compteur de 12
+ * a 13 sans une seule couleur dans le code). Les y recopier couterait une entree
+ * dans `scripts/theme-hex-allowlist.json` — une allowlist, donc la liste noire R4,
+ * donc un GO nominatif d'Adel. On mappe donc sur les jetons existants : le bleu du
+ * pack est EXACTEMENT `Colors.primary500`, les 3 autres sont voisins.
  * ponytail: plafond = la teinte exacte du pack ; voie de sortie = un GO date qui
  * ouvre l'allowlist, et ces 4 lignes deviennent les hex du pack.
  *
@@ -50,14 +52,16 @@ import { saveEventCompositionDraft } from '@/services/event/eventService';
  */
 
 /** @type {any[]} */
-const EMPTY_LIST = Object.freeze([]);
+const EMPTY_LIST = [];
 
 const getPlayerId = (/** @type {any} */ player) => String(player?.documentId || player?.id || '');
 
 const getPlayerName = (/** @type {any} */ player) => [player?.firstname, player?.lastname]
   .filter(Boolean).join(' ').trim();
 
-/** Chasuble -> jeton du theme. Voir l'ecart declare en tete de fichier. */
+// Chasuble -> jeton du theme. Voir l'ecart declare en tete de fichier.
+// (Commentaire de ligne et non bloc `/** */` : un bloc declencherait
+// `jsdoc/require-param-type`, or les types sont deja poses en ligne.)
 const getBibToken = (/** @type {any} */ Colors, /** @type {string} */ bibColor) => ({
   bleu: Colors.primary500,
   jaune: Colors.gold500,
@@ -108,7 +112,7 @@ function DetectionTeamsManual() {
     if (!Array.isArray(stored)) return {};
     return stored.reduce((accumulator, team) => {
       if (!team?.bibColor) return accumulator;
-      (Array.isArray(team.players) ? team.players : []).forEach((playerId) => {
+      (Array.isArray(team.players) ? team.players : []).forEach((/** @type {any} */ playerId) => {
         accumulator[String(playerId)] = team.bibColor;
       });
       return accumulator;
@@ -117,7 +121,7 @@ function DetectionTeamsManual() {
   const [isBusy, setIsBusy] = useState(false);
 
   const toggleAssignment = useCallback((/** @type {string} */ playerId) => {
-    setAssignments((current) => {
+    setAssignments((/** @type {Record<string, string>} */ current) => {
       const next = { ...current };
       if (next[playerId] === activeBib) delete next[playerId];
       else next[playerId] = activeBib;
@@ -130,7 +134,14 @@ function DetectionTeamsManual() {
     [bibColor]: Object.values(assignments).filter((entry) => entry === bibColor).length,
   }), /** @type {Record<string, number>} */ ({})), [assignments]);
 
-  const remaining = players.filter((/** @type {any} */ player) => !assignments[getPlayerId(player)]).length;
+  // Le bandeau du bas nomme les joueurs QUI RESTENT, il ne se contente pas de les
+  // compter : un titre « NON AFFECTES · 6 » sans les 6 noms oblige le coach a
+  // relire toute la liste pour savoir lesquels.
+  const unassignedPlayers = useMemo(
+    () => players.filter((/** @type {any} */ player) => !assignments[getPlayerId(player)]),
+    [assignments, players],
+  );
+  const remaining = unassignedPlayers.length;
 
   const handleSave = useCallback(async () => {
     if (!eventId || !teamId || isBusy) return;
@@ -161,14 +172,14 @@ function DetectionTeamsManual() {
         teamId,
       });
       Alert.alert(
-        t('matchComposition.board.alerts.saved.title'),
-        t('matchComposition.board.alerts.saved.message'),
-        [{ onPress: () => navigation.goBack(), text: t('matchComposition.board.alerts.published.ok') }],
+        t('detection.alerts.saved.title'),
+        t('detection.alerts.saved.message'),
+        [{ onPress: () => navigation.goBack(), text: t('detection.alerts.ok') }],
       );
     } catch (error) {
       Alert.alert(
-        t('matchComposition.board.alerts.error.title'),
-        t('matchComposition.board.alerts.error.save'),
+        t('detection.alerts.error.title'),
+        t('detection.alerts.error.save'),
       );
     } finally {
       setIsBusy(false);
@@ -239,13 +250,15 @@ function DetectionTeamsManual() {
             {isTeamMember(player)
               ? t('detection.squad.meta.member', { teamName: params?.teamName || '' })
               : t('detection.squad.meta.requestedPosition', {
-                position: player?.appliedPosition || t('matchCallUp.selection.meta.positionToDefine'),
+                position: player?.appliedPosition || t('detection.squad.meta.positionToDefine'),
               })}
           </Text>
         </View>
 
         {isOnOtherTeam && token ? (
-          <View style={[styles.bibTag, { backgroundColor: withAlpha(token, 0.22), borderColor: token }]}>
+          <View
+            style={[styles.bibTag, { backgroundColor: withAlpha(token, 0.22), borderColor: token }]}
+          >
             <Text style={[Fonts.p4Bold, { color: token }]}>
               {t(`detection.teams.manual.bibs.${assignedBib}`)}
             </Text>
@@ -277,7 +290,8 @@ function DetectionTeamsManual() {
             {t('detection.teams.manual.subtitle', { count: players.length })}
           </Text>
         </View>
-        <View style={[styles.stepChip, { backgroundColor: withAlpha(Colors.primary500, 0.16) }]}>
+        {/* Fond neutre — meme motif que l'ecran 13, voir le commentaire la-bas. */}
+        <View style={[styles.stepChip, { backgroundColor: withAlpha(Colors.neutral00, 0.08) }]}>
           <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
             {t('detection.teams.manual.remaining', { count: remaining })}
           </Text>
@@ -301,13 +315,36 @@ function DetectionTeamsManual() {
           </Text>
         )}
 
-        <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
-          {t('detection.teams.manual.unassigned', { count: remaining }).toUpperCase()}
-        </Text>
+        {remaining ? (
+          <>
+            <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
+              {t('detection.teams.manual.unassigned', { count: remaining }).toUpperCase()}
+            </Text>
+            <View style={styles.unassignedRow}>
+              {unassignedPlayers.map((/** @type {any} */ player) => (
+                <View
+                  key={getPlayerId(player)}
+                  style={[
+                    styles.unassignedChip,
+                    {
+                      backgroundColor: withAlpha(Colors.neutral00, 0.035),
+                      borderColor: withAlpha(Colors.neutral00, 0.24),
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                    {getPlayerName(player)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Button
+          // @ts-ignore — `navigate` est bien la sur un ecran de pile.
           onPress={() => navigation.navigate(RouteNames.DetectionTeamsAuto, params)}
           style={styles.footerGhost}
           title={t('detection.teams.manual.actions.auto')}
@@ -414,6 +451,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  unassignedChip: {
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  unassignedRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
 });
 

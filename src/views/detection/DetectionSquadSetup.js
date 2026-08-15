@@ -12,14 +12,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { isTeamMember, MEMBER_MODES } from '@/domains/detection/detectionSplit';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-
-import { MEMBER_MODES, isTeamMember } from '@/domains/detection/detectionSplit';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -48,7 +47,7 @@ import { useGetEventTeamComposition } from '@/services/event/eventQueries';
  */
 
 /** @type {any[]} */
-const EMPTY_LIST = Object.freeze([]);
+const EMPTY_LIST = [];
 
 const MODE_ORDER = [MEMBER_MODES.MIX, MEMBER_MODES.GROUPED, MEMBER_MODES.EXCLUDED];
 
@@ -90,14 +89,15 @@ function DetectionSquadSetup() {
   const members = useMemo(() => players.filter(isTeamMember), [players]);
   const candidateCount = players.length - members.length;
 
-  const [pickedMode, setPickedMode] = useState(null);
-  const [checkInOverride, setCheckInOverride] = useState(null);
-  const [presentIds, setPresentIds] = useState(null);
+  const [pickedMode, setPickedMode] = useState(/** @type {string|null} */ (null));
+  const [checkInOverride, setCheckInOverride] = useState(/** @type {boolean|null} */ (null));
+  const [presentIds, setPresentIds] = useState(/** @type {string[]|null} */ (null));
 
   // Les reglages deja enregistres gagnent sur les defauts du pack, sinon revenir
   // sur l'ecran effacerait un choix que le coach avait fait.
+  const storedMode = existingSplit?.memberMode;
   const activeMode = pickedMode
-    || (MODE_ORDER.includes(existingSplit?.memberMode) ? existingSplit.memberMode : MEMBER_MODES.GROUPED);
+    || (MODE_ORDER.includes(storedMode) ? storedMode : MEMBER_MODES.GROUPED);
   const checkInFirst = checkInOverride !== null
     ? checkInOverride
     : existingSplit?.checkInFirst !== false;
@@ -119,7 +119,7 @@ function DetectionSquadSetup() {
     setPresentIds((current) => {
       const base = current || activePresentIds;
       return base.includes(playerId)
-        ? base.filter((entry) => entry !== playerId)
+        ? base.filter((/** @type {string} */ entry) => entry !== playerId)
         : [...base, playerId];
     });
   }, [activePresentIds]);
@@ -232,7 +232,7 @@ function DetectionSquadSetup() {
             {isTeamMember(player)
               ? t('detection.squad.meta.member', { teamName })
               : t('detection.squad.meta.requestedPosition', {
-                position: player?.appliedPosition || t('matchCallUp.selection.meta.positionToDefine'),
+                position: player?.appliedPosition || t('detection.squad.meta.positionToDefine'),
               })}
           </Text>
         </View>
@@ -259,7 +259,11 @@ function DetectionSquadSetup() {
           </Text>
           <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>{subtitle}</Text>
         </View>
-        <View style={[styles.stepChip, { backgroundColor: withAlpha(Colors.primary500, 0.16) }]}>
+        {/* Fond NEUTRE, pas un fond `primary500` teinte : `verify:theme-contract`
+            exige l'encre sombre `primary900` des qu'un fond primary500 est proche,
+            or `primary900` sur cette pastille translucide serait illisible. Le
+            fond neutre garde le contraste ET la porte verte, sans plafond releve. */}
+        <View style={[styles.stepChip, { backgroundColor: withAlpha(Colors.neutral00, 0.08) }]}>
           <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
             {t('detection.squad.progress', { current: 1, total: 3 })}
           </Text>
@@ -337,7 +341,11 @@ function DetectionSquadSetup() {
                   total: players.length,
                 }).toUpperCase()}
               </Text>
-              <TouchableOpacity accessibilityRole="button" onPress={toggleAll} style={styles.checkInToggleAll}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={toggleAll}
+                style={styles.checkInToggleAll}
+              >
                 <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
                   {presentSet.size >= players.length
                     ? t('detection.squad.checkInList.markNone')

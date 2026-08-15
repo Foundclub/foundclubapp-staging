@@ -13,21 +13,20 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  buildDetectionSplitPayload,
+  buildDraftPayloadWithSplit,
+  countRequestedPositions,
+  MAX_DETECTION_TEAMS,
+  SPLIT_BY,
+  splitIntoTeams,
+} from '@/domains/detection/detectionSplit';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-
-import {
-  MAX_DETECTION_TEAMS,
-  SPLIT_BY,
-  buildDetectionSplitPayload,
-  buildDraftPayloadWithSplit,
-  countRequestedPositions,
-  splitIntoTeams,
-} from '@/domains/detection/detectionSplit';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -55,7 +54,7 @@ import { saveEventCompositionDraft } from '@/services/event/eventService';
  */
 
 /** @type {any[]} */
-const EMPTY_LIST = Object.freeze([]);
+const EMPTY_LIST = [];
 
 const getPlayerId = (/** @type {any} */ player) => String(player?.documentId || player?.id || '');
 
@@ -94,7 +93,7 @@ function DetectionTeamsAuto() {
     return Number.isFinite(stored) && stored >= 2 ? Math.min(stored, MAX_DETECTION_TEAMS) : 2;
   });
   const [splitByPosition, setSplitByPosition] = useState(
-    () => storedSplit?.splitBy === SPLIT_BY.REQUESTED_POSITION
+    () => storedSplit?.splitBy === SPLIT_BY.REQUESTED_POSITION,
   );
   const [isBusy, setIsBusy] = useState(false);
 
@@ -116,7 +115,7 @@ function DetectionTeamsAuto() {
 
   const positionRows = useMemo(
     () => countRequestedPositions(players, teamCount),
-    [players, teamCount]
+    [players, teamCount],
   );
 
   const handleGenerate = useCallback(async () => {
@@ -139,14 +138,14 @@ function DetectionTeamsAuto() {
         teamId,
       });
       Alert.alert(
-        t('matchComposition.board.alerts.saved.title'),
-        t('matchComposition.board.alerts.saved.message'),
-        [{ onPress: () => navigation.goBack(), text: t('matchComposition.board.alerts.published.ok') }],
+        t('detection.alerts.saved.title'),
+        t('detection.alerts.saved.message'),
+        [{ onPress: () => navigation.goBack(), text: t('detection.alerts.ok') }],
       );
     } catch (error) {
       Alert.alert(
-        t('matchComposition.board.alerts.error.title'),
-        t('matchComposition.board.alerts.error.save'),
+        t('detection.alerts.error.title'),
+        t('detection.alerts.error.save'),
       );
     } finally {
       setIsBusy(false);
@@ -201,7 +200,8 @@ function DetectionTeamsAuto() {
             {t('detection.teams.auto.subtitle', { registered: players.length, sport })}
           </Text>
         </View>
-        <View style={[styles.stepChip, { backgroundColor: withAlpha(Colors.primary500, 0.16) }]}>
+        {/* Fond neutre — meme motif que l'ecran 13, voir le commentaire la-bas. */}
+        <View style={[styles.stepChip, { backgroundColor: withAlpha(Colors.neutral00, 0.08) }]}>
           <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
             {t('detection.teams.auto.chip')}
           </Text>
@@ -246,7 +246,10 @@ function DetectionTeamsAuto() {
               accessibilityRole="button"
               activeOpacity={0.8}
               onPress={() => setTeamCount((current) => Math.min(MAX_DETECTION_TEAMS, current + 1))}
-              style={[styles.counterButton, { backgroundColor: Colors.primary500, borderColor: Colors.primary500 }]}
+              style={[
+                styles.counterButton,
+                { backgroundColor: Colors.primary500, borderColor: Colors.primary500 },
+              ]}
             >
               <Text style={[Fonts.h3Bold, { color: Colors.primary900 }]}>+</Text>
             </TouchableOpacity>
@@ -284,7 +287,9 @@ function DetectionTeamsAuto() {
         {positionRows.length ? (
           <>
             <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
-              {t('detection.teams.auto.positions.title', { count: positionRows.length }).toUpperCase()}
+              {t('detection.teams.auto.positions.title', {
+                count: positionRows.length,
+              }).toUpperCase()}
             </Text>
             {positionRows.map(renderPositionRow)}
           </>
@@ -308,6 +313,7 @@ function DetectionTeamsAuto() {
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Button
+          // @ts-ignore — `navigate` est bien la sur un ecran de pile.
           onPress={() => navigation.navigate(RouteNames.DetectionTeamsManual, params)}
           style={styles.footerGhost}
           title={t('detection.teams.auto.actions.manual')}
