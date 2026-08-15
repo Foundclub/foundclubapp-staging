@@ -262,11 +262,14 @@ export const RouteNames = /** @type {const} */ ({
   CompositionPaywall: 'CompositionPaywall',
   PlayerConvocation: 'PlayerConvocation',
   TeamCompoTemplate: 'TeamCompoTemplate',
-  // Detection — constituer les equipes (C-D, pack composition ecrans 13 a 15).
+  // Detection — constituer les equipes (C-D, ecrans 13 a 15) puis les faire
+  // TOURNER (C-E, ecrans 16 et 17).
   // ⚠️ Match et detection ne partagent AUCUN ecran (regle du pack §6) : ces
   // routes ne reutilisent donc rien de `MatchCallUp*`, c'est voulu.
+  DetectionRotation: 'DetectionRotation',
   DetectionSquadSetup: 'DetectionSquadSetup',
   DetectionTeamsAuto: 'DetectionTeamsAuto',
+  DetectionTeamsBoard: 'DetectionTeamsBoard',
   DetectionTeamsManual: 'DetectionTeamsManual',
 
   // Tactical

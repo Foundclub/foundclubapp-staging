@@ -211,6 +211,8 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.DetectionSquadSetup]: '/detection/squad',
   [RouteNames.DetectionTeamsManual]: '/detection/teams/manual',
   [RouteNames.DetectionTeamsAuto]: '/detection/teams/auto',
+  [RouteNames.DetectionTeamsBoard]: '/detection/teams/board',
+  [RouteNames.DetectionRotation]: '/detection/teams/rotation',
   [RouteNames.TacticalBoardV2]: '/tactical/:teamId?',
   [RouteNames.TacticalSelectionV2]: '/tactical/select',
   [RouteNames.HistoryWizardCategory]: '/profile/history/category',

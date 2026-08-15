@@ -394,13 +394,21 @@ function EventDetails({ navigation, route }) {
       // (EventDetails.js:3232), a l'identique — une divergence entre les deux
       // jumeaux vit indefiniment, aucune porte de `app` ne la voit.
       //
-      // Une detection et une lecture seule vont au board comme avant : ni l'une
-      // ni l'autre ne convoque.
-      const startsWithCallUp = !isDetectionEvent && Boolean(options.canEdit) && !options.readOnly;
+      // C-E (🚪) — LA PORTE DES 3 ECRANS DE DETECTION, SUR LE SITE AUSSI.
+      // Le lot C-D a livre les ecrans 13, 14 et 15 ; rien n'y menait. La regle
+      // est identique a celle du natif (`EventDetails.js`), volontairement :
+      // une divergence entre les deux jumeaux vit indefiniment, aucune porte de
+      // `app` ne la voit. La LECTURE SEULE reste sur l'ancien terrain des deux
+      // cotes — elle ne compose pas, c'est le lot C-F qui la reprendra.
+      const canComposeNow = Boolean(options.canEdit) && !options.readOnly;
+      let compositionRoute = RouteNames.TacticalBoardV2;
+      if (canComposeNow) {
+        compositionRoute = isDetectionEvent
+          ? RouteNames.DetectionSquadSetup
+          : RouteNames.MatchCallUpSelection;
+      }
 
-      navigation.navigate(startsWithCallUp
-        ? RouteNames.MatchCallUpSelection
-        : RouteNames.TacticalBoardV2, {
+      navigation.navigate(compositionRoute, {
         aggregateBranches: Array.isArray(options.aggregateBranches) ? options.aggregateBranches : undefined,
         canEdit: Boolean(options.canEdit),
         compositionIntent: options.compositionIntent || null,

@@ -293,8 +293,12 @@ export const buildDetectionSplitPayload = ({
       // un ecart ici ferait diverger le nom selon qui a ecrit en dernier.
       name: teamNames[index] || `Equipe ${index + 1}`,
       players: [...team.playerIds],
-      rotation: [],
-      terrain: null,
+      // C-E — `rotation` et `terrain` etaient figes a `[]` et `null` tant que
+      // personne ne les calculait. L'ecran 17 les remplit desormais : qui attend
+      // son tour, et sur quel terrain joue l'equipe. Les ecrans 13 a 15
+      // n'envoient pas ces clefs et retombent donc sur les memes valeurs qu'avant.
+      rotation: Array.isArray(team.rotationIds) ? [...team.rotationIds] : [],
+      terrain: team.terrain || null,
     })),
   };
 };

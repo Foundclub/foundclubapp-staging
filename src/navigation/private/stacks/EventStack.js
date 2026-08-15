@@ -1,8 +1,10 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
+import DetectionRotationBoard from '@/views/detection/DetectionRotationBoard';
 import DetectionSquadSetup from '@/views/detection/DetectionSquadSetup';
 import DetectionTeamsAuto from '@/views/detection/DetectionTeamsAuto';
+import DetectionTeamsBoard from '@/views/detection/DetectionTeamsBoard';
 import DetectionTeamsManual from '@/views/detection/DetectionTeamsManual';
 import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
@@ -161,11 +163,12 @@ function EventStack() {
           name={RouteNames.PlayerConvocation}
           options={{ headerShown: false }}
         />
-        {/* Detection — constituer les equipes (C-D) : ecrans 13 a 15 du pack.
-            ⚠️ Ces 3 ecrans n'ont pas encore de PORTE : `EventDetails` envoie
-            toujours une detection sur `TacticalBoardV2` (`:3289-3292`). Ouvrir
-            cette porte est une ligne, mais elle vit dans un fichier tenu par une
-            autre session — elle est nommee dans le compte rendu du lot. */}
+        {/* Detection — constituer les equipes (C-D, ecrans 13 a 15) puis les
+            faire TOURNER (C-E, ecrans 16 et 17).
+            ✅ LA PORTE EST OUVERTE depuis le lot C-E : `EventDetails` envoie
+            une detection MODIFIABLE sur `DetectionSquadSetup` (dans
+            `EventDetails.js` ET son jumeau `.web.js`). Seule la LECTURE SEULE
+            reste sur `TacticalBoardV2`, que le lot C-F reprendra. */}
         <Stack.Screen
           component={DetectionSquadSetup}
           name={RouteNames.DetectionSquadSetup}
@@ -179,6 +182,16 @@ function EventStack() {
         <Stack.Screen
           component={DetectionTeamsAuto}
           name={RouteNames.DetectionTeamsAuto}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={DetectionTeamsBoard}
+          name={RouteNames.DetectionTeamsBoard}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={DetectionRotationBoard}
+          name={RouteNames.DetectionRotation}
           options={{ headerShown: false }}
         />
         {/* Tactical V2 Screens */}

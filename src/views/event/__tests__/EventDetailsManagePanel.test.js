@@ -888,22 +888,28 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
 });
 
 // ============================================================================
-// D44 — LE TYPE DE L'EVENEMENT COMMANDE LA COMPOSITION. Temoins ROUGES avant.
+// D44 puis C-E — LE TYPE DE L'EVENEMENT COMMANDE LA COMPOSITION.
 //
-// Defaut mesure : l'alerte « Creation auto ou a la main » ne dependait que de
-// `availablePresets`, une liste qui ne parle QUE du sport (le football en a
-// trois : 4-3-3, 4-4-2, 4-2-3-1). Resultat : tout match de football sans
-// composition proposait de creer plusieurs equipes automatiquement — un systeme
-// qui n'a de sens que pour une detection.
+// D44 (histoire, conservee) : l'alerte « Creation auto ou a la main » ne
+// dependait que de `availablePresets`, une liste qui ne parle QUE du sport (le
+// football en a trois : 4-3-3, 4-4-2, 4-2-3-1). Resultat : tout match de
+// football sans composition proposait de creer plusieurs equipes
+// automatiquement — un systeme qui n'a de sens que pour une detection. Le
+// predicat retenu fut `isDetectionEvent`, celui-la meme qui fabrique `eventKind`.
 //
-// Le predicat retenu est `isDetectionEvent`, celui-la meme qui fabrique
-// `eventKind`. Prendre `!isMatchEvent` fabriquerait une incoherence : un
-// entrainement n'est ni un match ni une detection, il partirait donc avec
-// `eventKind: 'match'` — et l'alerte lui aurait promis une creation automatique
-// que le board refuse ensuite d'ouvrir.
+// C-E (🚪 le sujet du lot) : la detection ouvre desormais l'ECRAN 13 du pack
+// (`DetectionSquadSetup`), livre par C-D et qu'aucun bouton n'atteignait. Cet
+// ecran POSE LUI-MEME la question de D44, avec ses CTA `Manuel` et `Continuer`,
+// et il la pose apres avoir montre les inscrits et le pointage. L'alerte est
+// donc retiree : deux chemins qui menaient au meme endroit, la premiere fois
+// sans rien montrer.
+//
+// ⚠️ CE QUI NE BOUGE PAS, ET C'EST TESTE CI-DESSOUS : un MATCH va exactement ou
+// il allait (`MatchCallUpSelection`), un ENTRAINEMENT aussi, et la LECTURE SEULE
+// reste sur l'ancien terrain.
 // ============================================================================
 
-describe('D44 — l alerte « creation auto » n appartient qu a la detection', () => {
+describe('C-E — le type de l evenement decide de la porte de composition', () => {
   const PRESETS_FOOTBALL = [
     { key: '4-3-3', label: '4-3-3', slots: [] },
     { key: '4-4-2', label: '4-4-2', slots: [] },
@@ -940,65 +946,72 @@ describe('D44 — l alerte « creation auto » n appartient qu a la detection', 
     });
   };
 
-  // D77 — la composition a maintenant DEUX portes d'entree, et elles portent la
-  // meme charge : `MatchCallUpSelection` (ecran « Convoquer », pour un match
-  // modifiable) et `TacticalBoardV2` (detection et lecture seule). Ce qui est
-  // verifie ici — l'intention et l'etiquette de type — vaut sur les deux.
-  const ROUTES_COMPOSITION = ['MatchCallUpSelection', 'TacticalBoardV2'];
+  // La composition a maintenant TROIS portes d'entree, et elles portent la meme
+  // charge : `MatchCallUpSelection` (ecran 1, match modifiable),
+  // `DetectionSquadSetup` (ecran 13, detection modifiable) et `TacticalBoardV2`
+  // (lecture seule). Ce qui est verifie ici — l'intention et l'etiquette de
+  // type — vaut sur les trois.
+  const ROUTES_COMPOSITION = ['MatchCallUpSelection', 'DetectionSquadSetup', 'TacticalBoardV2'];
   const lastBoardParams = () => {
     const call = [...mockNavigate.mock.calls].reverse()
       .find((/** @type {any} */ entry) => ROUTES_COMPOSITION.includes(entry[0]));
     return call ? call[1] : null;
   };
+  const lastRoute = () => {
+    const call = [...mockNavigate.mock.calls].reverse()
+      .find((/** @type {any} */ entry) => ROUTES_COMPOSITION.includes(entry[0]));
+    return call ? call[0] : null;
+  };
 
-  test('TEMOIN 1 — sur un MATCH, aucune alerte : la composition s ouvre directement', () => {
+  // 🔒 LE TEMOIN DE NON-REGRESSION DU LOT C-E : un MATCH doit continuer d'aller
+  // exactement ou il allait. C'est la seule chose que la porte neuve pouvait
+  // casser, et c'est donc la premiere qu'on verrouille.
+  test('🔒 NON-REGRESSION — un MATCH va toujours a l ecran « Convoquer »', () => {
     const root = asOrganiserOf('Match');
     pressCompo(root);
 
+    expect(lastRoute()).toBe('MatchCallUpSelection');
     expect(alertOptionLabels()).not.toContain('Création auto');
-    expect(lastBoardParams()).toBeTruthy();
     expect(lastBoardParams().compositionIntent).toBe('manual');
+    expect(lastBoardParams().eventKind).toBe('match');
   });
 
-  test('TEMOIN 2 — sur une DETECTION, l alerte garde ses deux chemins', () => {
+  test('🚪 une DETECTION ouvre l ecran 13, plus l ancien terrain', () => {
     const root = asOrganiserOf('Detection');
     pressCompo(root);
 
-    expect(alertOptionLabels()).toEqual(['Annuler', 'Création auto', 'Faire à la main']);
-
-    pressAlertOption('Création auto');
-    expect(lastBoardParams().compositionIntent).toBe('auto');
+    expect(lastRoute()).toBe('DetectionSquadSetup');
     expect(lastBoardParams().eventKind).toBe('detection');
   });
 
-  test('un ENTRAINEMENT n est pas une detection non plus : pas d alerte', () => {
-    const root = asOrganiserOf('Entrainement');
+  test('🚪 l ecran 13 recoit de quoi travailler : evenement, equipe, sport, effectif', () => {
+    const root = asOrganiserOf('Detection de joueurs');
+    pressCompo(root);
+
+    expect(lastBoardParams()).toEqual(expect.objectContaining({
+      canEdit: true,
+      eventId: 'event-1',
+      teamId: 'team-1',
+    }));
+    expect(Array.isArray(lastBoardParams().players)).toBe(true);
+    expect(lastBoardParams().sport).toBeTruthy();
+  });
+
+  test('plus aucune alerte ne s interpose : l ecran 13 pose lui-meme la question', () => {
+    const root = asOrganiserOf('Detection');
     pressCompo(root);
 
     expect(alertOptionLabels()).not.toContain('Création auto');
-    expect(lastBoardParams().compositionIntent).toBe('manual');
+    expect(alertOptionLabels()).not.toContain('Faire à la main');
   });
 
-  test('l etiquette de type descend jusqu au board, et elle dit la verite', () => {
-    const surMatch = asOrganiserOf('Match');
-    pressCompo(surMatch);
-    expect(lastBoardParams().eventKind).toBe('match');
+  test('🔒 NON-REGRESSION — un ENTRAINEMENT reste un match, et n a pas d alerte', () => {
+    const root = asOrganiserOf('Entrainement');
+    pressCompo(root);
 
-    act(() => {
-      mounted.unmount();
-      mounted = null;
-    });
-    mockNavigate.mockClear();
-
-    // Sur une detection, l'alerte s'interpose : c'est en choisissant un de ses
-    // deux chemins qu'on arrive au board. Ici « Faire a la main », pour prouver
-    // que l'etiquette est juste sur les DEUX chemins de l'alerte.
-    const surDetection = asOrganiserOf('Detection de joueurs');
-    pressCompo(surDetection);
-    expect(lastBoardParams()).toBeNull();
-
-    pressAlertOption('Faire à la main');
-    expect(lastBoardParams().eventKind).toBe('detection');
+    expect(lastRoute()).toBe('MatchCallUpSelection');
+    expect(alertOptionLabels()).not.toContain('Création auto');
     expect(lastBoardParams().compositionIntent).toBe('manual');
+    expect(lastBoardParams().eventKind).toBe('match');
   });
 });
