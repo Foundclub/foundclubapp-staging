@@ -186,6 +186,65 @@ export const getWithdrawnStarters = (roster = []) => asArray(roster)
     && row?.response === CONVOCATION_RESPONSE_ABSENT);
 
 /**
+ * LE REMPLACEMENT PROPOSE de l'ecran 8 : « Le premier remplacant disponible est
+ * propose. » Un titulaire qui se desiste laisse sa place VIDE — ce calcul prend
+ * le premier joueur du banc qui n'a pas lui-meme dit non, et le pose SUR LA
+ * MEME POSITION du terrain.
+ *
+ * 🔒 « Disponible » exclut deux cas, et l'ordre des deux compte :
+ *   · celui qui s'est declare ABSENT — le proposer serait absurde ;
+ *   · celui qui est HORS APP (`isManual`) — il ne peut pas repondre, donc on ne
+ *     peut pas savoir s'il vient. Le pack le laisse au banc.
+ * Un remplacant « en attente » reste proposable : ne pas avoir repondu n'est pas
+ * un refus.
+ *
+ * ⚠️ Le calcul ne PUBLIE rien. Il rend une proposition que le coach voit avant
+ * de trancher — c'est l'ecran 8 tout entier, et c'est pourquoi il est ici et
+ * non dans le rendu.
+ * @param {object} input
+ * @param {ReturnType<typeof buildConvocationRoster>} [input.roster]
+ * @returns {Array<{ inRow: any, outRow: any }>}
+ */
+export const proposeReplacements = ({ roster = [] } = {}) => {
+  // Le banc, dans l'ordre du pack. On y puise sans jamais reprendre le meme.
+  const bench = asArray(roster).filter((row) => row?.role === CONVOCATION_ROLE_SUBSTITUTE
+    && !row?.isManual
+    && row?.response !== CONVOCATION_RESPONSE_ABSENT);
+
+  const used = new Set();
+  return getWithdrawnStarters(roster).map((outRow) => {
+    const inRow = bench.find((row) => !used.has(row.playerId)) || null;
+    if (inRow) used.add(inRow.playerId);
+    return { inRow, outRow };
+  }).filter((pair) => Boolean(pair.inRow));
+};
+
+/**
+ * Les placements du pack REPUBLIE : chaque remplacant propose prend la position
+ * exacte du titulaire qui se desiste.
+ *
+ * 🎯 Reprendre la position plutot que d'en inventer une est ce qui rend la
+ * republication lisible pour le coach : son 4-3-3 reste un 4-3-3, une seule
+ * tete change.
+ * @param {object} input
+ * @param {any} [input.published] Le pack publie.
+ * @param {Array<{ inRow: any, outRow: any }>} [input.replacements]
+ * @returns {Array<any>}
+ */
+export const buildAmendedPlacements = ({ published = null, replacements = [] } = {}) => {
+  const swap = new Map(
+    asArray(replacements).map((pair) => [toId(pair?.outRow?.playerId), toId(pair?.inRow?.playerId)]),
+  );
+
+  return asArray(published?.teams)
+    .flatMap((/** @type {any} */ team) => asArray(team?.placements))
+    .map((/** @type {any} */ placement) => {
+      const next = swap.get(toId(placement?.playerId));
+      return next ? { ...placement, playerId: next } : placement;
+    });
+};
+
+/**
  * CE QUI CHANGE entre la compo publiee et celle que le coach vient de modifier —
  * les 2 rangees de diff de l'ecran 8.
  *

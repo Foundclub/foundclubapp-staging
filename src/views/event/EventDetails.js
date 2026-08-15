@@ -3382,6 +3382,7 @@ function EventDetails({ navigation, route }) {
     convocationBranches,
     event?.team?.club?.documentId,
     eventId,
+    getCompositionSourceLabel,
     navigation,
     openCompositionBoard,
   ]);

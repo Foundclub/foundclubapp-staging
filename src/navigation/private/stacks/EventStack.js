@@ -25,6 +25,7 @@ import EventWizardType from '@/views/event/wizard/EventWizardType';
 import MatchCallUpManualPlayer from '@/views/matchCallUp/MatchCallUpManualPlayer';
 import MatchCallUpSelection from '@/views/matchCallUp/MatchCallUpSelection';
 import MatchCompositionBoard from '@/views/matchCallUp/MatchCompositionBoard';
+import MatchCompositionAmend from '@/views/matchCallUp/MatchCompositionAmend';
 import MatchCompositionStart from '@/views/matchCallUp/MatchCompositionStart';
 import MatchConvocationPublished from '@/views/matchCallUp/MatchConvocationPublished';
 import MatchStatsEditor from '@/views/matchStats/MatchStatsEditor';
@@ -141,6 +142,12 @@ function EventStack() {
         <Stack.Screen
           component={MatchConvocationPublished}
           name={RouteNames.MatchConvocationPublished}
+          options={{ headerShown: false }}
+        />
+        {/* Match — apres la publication (C-B) : ecran 8, le desistement. */}
+        <Stack.Screen
+          component={MatchCompositionAmend}
+          name={RouteNames.MatchCompositionAmend}
           options={{ headerShown: false }}
         />
         {/* Tactical V2 Screens */}

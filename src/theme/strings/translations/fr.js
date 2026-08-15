@@ -1888,6 +1888,53 @@ export default {
     },
   },
   matchConvocation: {
+    amend: {
+      actions: {
+        cancel: 'Annuler',
+        republish: 'Republier',
+      },
+      alerts: {
+        error: {
+          message: 'Impossible de republier cette composition.',
+          title: 'Erreur',
+        },
+        republished: {
+          message: 'Ta composition est à jour et tes joueurs viennent d’être prévenus.',
+          title: 'Composition republiée',
+        },
+      },
+      badges: {
+        entering: 'entre',
+        leaving: 'sort',
+      },
+      empty: {
+        message: 'Personne ne s’est désisté.',
+        title: 'Rien à modifier pour l’instant',
+      },
+      moves: {
+        benchToStarter: 'Banc → titulaire',
+        starterToAbsent: 'Titulaire → absent',
+      },
+      noReplacement: 'Aucun remplaçant disponible sur le banc. Reprends la composition à la main.',
+      resend: {
+        body: 'Même canal {{teamName}}, même notification individuelle, même demande de réponse. Les joueurs qui avaient déjà répondu gardent leur réponse.',
+        title: 'La convocation repart comme la première fois.',
+      },
+      sections: {
+        changes: 'Ce qui change',
+        resend: 'Renvoyer la convocation',
+      },
+      title: 'Compo modifiée',
+      unknownPlayer: 'Joueur',
+      versionChip: 'Version {{version}}',
+      withdrawal: {
+        hint_one: 'Sa place de titulaire est vide. Le premier remplaçant disponible est proposé.',
+        hint_other: 'Leurs places de titulaires sont vides. Les premiers remplaçants disponibles sont proposés.',
+        label: 'Désistement',
+        message_one: '{{name}} s’est déclaré·e absent·e après la publication.',
+        message_other: '{{count}} titulaires se sont déclarés absents après la publication.',
+      },
+    },
     published: {
       actions: {
         edit: 'Modifier la composition',
@@ -1945,6 +1992,12 @@ export default {
       stateChip: 'Publiée',
       title: 'Convocation',
       unknownPlayer: 'Joueur',
+      withdrawal: {
+        cta: 'Remplacer',
+        label: 'Désistement',
+        message_one: 'Un titulaire s’est déclaré absent.',
+        message_other: '{{count}} titulaires se sont déclarés absents.',
+      },
     },
   },
   menu: {

@@ -2,7 +2,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, ScrollView, StyleSheet, Text, View,
+  Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +31,7 @@ import {
   CONVOCATION_RESPONSE_PRESENT,
   CONVOCATION_ROLE_STARTER,
   getConvocationCounts,
+  getWithdrawnStarters,
 } from './matchConvocationUtils';
 
 /**
@@ -87,6 +88,10 @@ function MatchConvocationPublished() {
     () => getConvocationCounts({ responses, roster }),
     [responses, roster],
   );
+  // 🚪 LA PORTE DE L'ECRAN 8. Elle n'apparait QUE s'il y a un desistement :
+  // proposer « remplacer l'absent » quand personne n'est absent ouvrirait un
+  // ecran qui n'aurait rien a montrer.
+  const withdrawn = useMemo(() => getWithdrawnStarters(roster), [roster]);
 
   const resolvedTeamName = composition?.team?.name || teamName || '';
 
@@ -144,6 +149,14 @@ function MatchConvocationPublished() {
   // « Modifier la composition » — le CTA principal du pack. Il rouvre le
   // parcours a l'ecran 1, la ou le coach choisit ses convoques : c'est le meme
   // chemin que la premiere fois, la compo publiee servant de point de depart.
+  // « Remplacer » — l'ecran 8, le chemin GUIDE. Il ne remplace pas « Modifier
+  // la composition » : celui-la rouvre tout le parcours, celui-ci ne traite que
+  // le desistement.
+  const handleAmend = useCallback(() => {
+    // @ts-ignore
+    navigation.navigate(RouteNames.MatchCompositionAmend, params);
+  }, [navigation, params]);
+
   const handleEdit = useCallback(() => {
     // @ts-ignore
     navigation.navigate(RouteNames.MatchCallUpSelection, {
@@ -323,6 +336,32 @@ function MatchConvocationPublished() {
           </View>
         </LinearGradient>
 
+        {withdrawn.length > 0 ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleAmend}
+            style={[
+              styles.withdrawalBanner,
+              {
+                backgroundColor: withAlpha(Colors.warning500, 0.09),
+                borderColor: withAlpha(Colors.warning500, 0.34),
+              },
+            ]}
+          >
+            <View style={styles.withdrawalTexts}>
+              <Text style={[Fonts.p4Bold, styles.cardLabel, { color: Colors.warning500 }]}>
+                {t('matchConvocation.published.withdrawal.label').toUpperCase()}
+              </Text>
+              <Text style={[Fonts.p2Bold, styles.cardTitle, { color: Colors.neutral00 }]}>
+                {t('matchConvocation.published.withdrawal.message', { count: withdrawn.length })}
+              </Text>
+            </View>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+              {t('matchConvocation.published.withdrawal.cta')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         <Text style={[Fonts.p4Bold, styles.sectionLabel, { color: Colors.neutral300 }]}>
           {t('matchConvocation.published.sections.responses').toUpperCase()}
         </Text>
@@ -366,6 +405,12 @@ function MatchConvocationPublished() {
 }
 
 const styles = StyleSheet.create({
+  cardLabel: {
+    letterSpacing: 1,
+  },
+  cardTitle: {
+    marginTop: 4,
+  },
   countChip: {
     borderRadius: 999,
     borderWidth: 1,
@@ -490,6 +535,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 4,
+  },
+  withdrawalBanner: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  withdrawalTexts: {
+    flex: 1,
   },
 });
 

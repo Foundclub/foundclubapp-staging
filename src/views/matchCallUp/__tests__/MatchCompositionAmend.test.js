@@ -1,17 +1,18 @@
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import MatchConvocationPublished from '../MatchConvocationPublished';
+import MatchCompositionAmend from '../MatchCompositionAmend';
 
-// C-B — ECRAN 7 du pack composition : « Convocation publiee », vue du coach.
+// C-B — ECRAN 8 du pack composition : « Modifier une compo publiee ».
 //
-// 🥇 LE TEMOIN D ARRET DU LOT est ici : « le coach voit combien de convoques ont
-// repondu ». Avant ce lot, le serveur calculait ces chiffres, les envoyait, et
-// AUCUN fichier de l app ne les lisait.
+// 🔒 LE TEMOIN QUI COMPTE est ici : republier n'efface AUCUNE reponse deja
+// donnee. Il est verifie SUR LA CHARGE REELLEMENT ENVOYEE au serveur — pas sur
+// une intention, sur les octets qui partent.
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 const mockPublish = jest.fn();
+const mockSaveDraft = jest.fn();
 /** @type {any} */
 let mockRouteParams = {};
 /** @type {any} */
@@ -58,20 +59,13 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
-jest.mock('react-native-linear-gradient', () => {
-  const { View } = jest.requireActual('react-native');
-  return {
-    __esModule: true,
-    default: (/** @type {any} */ { children }) => <View>{children}</View>,
-  };
-});
-
 jest.mock('@/services/event/eventQueries', () => ({
   useGetEventTeamComposition: () => ({ data: mockComposition, isFetching: false }),
 }));
 
 jest.mock('@/services/event/eventService', () => ({
   publishEventConvocation: (/** @type {any} */ ...args) => mockPublish(...args),
+  saveEventCompositionDraft: (/** @type {any} */ ...args) => mockSaveDraft(...args),
 }));
 
 jest.mock('@/theme/themeContext', () => {
@@ -130,16 +124,75 @@ jest.mock('@/components/atoms/button/Button', () => {
   const { Text: TexteRN, TouchableOpacity } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { onPress, title }) => (
-      <TouchableOpacity onPress={onPress}>
+    default: (/** @type {any} */ { disabled, onPress, title }) => (
+      <TouchableOpacity accessibilityState={{ disabled: Boolean(disabled) }} onPress={onPress}>
         <TexteRN>{title}</TexteRN>
       </TouchableOpacity>
     ),
   };
 });
 
+/** 2 titulaires, 1 remplacant. p1 s'est desiste, p3 est disponible. */
+const PACK_PUBLIE = {
+  manualPlayers: [],
+  reservePlayerIds: ['p3'],
+  requireResponse: true,
+  snapshotPlayers: [
+    {
+      documentId: 'p1', firstname: 'Karim', lastname: 'Sylla', number: 9,
+    },
+    {
+      documentId: 'p2', firstname: 'Yanis', lastname: 'Bertrand', number: 4,
+    },
+    {
+      documentId: 'p3', firstname: 'Malik', lastname: 'Cisse', number: 7,
+    },
+  ],
+  sportContext: 'football',
+  teams: [{
+    id: 'team_1',
+    placements: [
+      { playerId: 'p1', positionX: 50, positionY: 90 },
+      { playerId: 'p2', positionX: 50, positionY: 60 },
+    ],
+  }],
+  version: 1,
+  visibility: 'team',
+};
+
+const REPONSES = {
+  byPlayerId: { p1: 'absent', p2: 'present', p3: 'pending' },
+  counts: { absent: 1, pending: 1, present: 1 },
+};
+
+/** @type {any[]} */
+const arbresMontes = [];
+
 /**
- * Aplati les enfants React en une chaine, pour lire le texte rendu.
+ * Monte l'ecran.
+ * @param {any} [parametres]
+ * @returns {Promise<any>}
+ */
+const rendre = async (parametres = {}) => {
+  mockRouteParams = {
+    eventId: 'evt_1',
+    eventLabel: 'Match',
+    sport: 'football',
+    teamId: 'team_1',
+    teamName: 'Senior 1',
+    ...parametres,
+  };
+  /** @type {any} */
+  let arbre;
+  await act(async () => {
+    arbre = renderer.create(<MatchCompositionAmend />);
+  });
+  arbresMontes.push(arbre);
+  return arbre;
+};
+
+/**
+ * Le texte d'un noeud, quelle que soit sa profondeur.
  * @param {any} enfants
  * @returns {string}
  */
@@ -174,66 +227,13 @@ const appuyerSur = async (arbre, libelle) => {
   await act(async () => { cible.props.onPress(); });
 };
 
-const PACK_PUBLIE = {
-  manualPlayers: [],
-  publishedAt: '2026-08-14T16:02:00.000Z',
-  reservePlayerIds: ['p3'],
-  snapshotPlayers: [
-    {
-      documentId: 'p1', firstname: 'Karim', lastname: 'Sylla', number: 9,
-    },
-    {
-      documentId: 'p2', firstname: 'Yanis', lastname: 'Bertrand', number: 4,
-    },
-    {
-      documentId: 'p3', firstname: 'Malik', lastname: 'Cisse', number: 7,
-    },
-  ],
-  teams: [{
-    id: 'team_1',
-    placements: [
-      { playerId: 'p1', positionX: 50, positionY: 90 },
-      { playerId: 'p2', positionX: 50, positionY: 60 },
-    ],
-  }],
-  version: 1,
-};
-
-const REPONSES = {
-  byPlayerId: { p1: 'absent', p2: 'present', p3: 'pending' },
-  counts: { absent: 1, pending: 1, present: 1 },
-};
-
-/** @type {any[]} */
-const arbresMontes = [];
-
-/**
- * Monte l'ecran.
- * @param {any} [parametres]
- * @returns {Promise<any>}
- */
-const rendre = async (parametres = {}) => {
-  mockRouteParams = {
-    eventId: 'evt_1',
-    eventLabel: 'Match',
-    teamId: 'team_1',
-    teamName: 'Senior 1',
-    ...parametres,
-  };
-  /** @type {any} */
-  let arbre;
-  await act(async () => {
-    arbre = renderer.create(<MatchConvocationPublished />);
-  });
-  arbresMontes.push(arbre);
-  return arbre;
-};
-
 beforeEach(() => {
   mockNavigate.mockClear();
   mockGoBack.mockClear();
   mockPublish.mockReset();
   mockPublish.mockResolvedValue({});
+  mockSaveDraft.mockReset();
+  mockSaveDraft.mockResolvedValue({});
   mockComposition = {
     published: PACK_PUBLIE,
     responses: REPONSES,
@@ -249,141 +249,117 @@ afterEach(async () => {
   });
 });
 
-describe('C-B ecran 7 — le coach voit les reponses de ses convoques', () => {
-  test('🥇 LE TEMOIN D ARRET : les 3 pastilles de comptage sont a l ecran', async () => {
+describe('C-B ecran 8 — le desistement, et ce qui change', () => {
+  test('🥇 l encart « Desistement » nomme le titulaire qui s est declare absent', async () => {
     const texte = texteVisible(await rendre());
 
-    expect(texte).toContain('1 présent');
-    expect(texte).toContain('1 en attente');
-    expect(texte).toContain('1 absent');
-  });
-
-  test('🥇 et la reponse de CHAQUE convoque est lisible, joueur par joueur', async () => {
-    const texte = texteVisible(await rendre());
-
+    expect(texte).toContain('DÉSISTEMENT');
     expect(texte).toContain('Karim Sylla');
-    expect(texte).toContain('Absent·e');
-    expect(texte).toContain('Yanis Bertrand');
-    expect(texte).toContain('Présent·e');
+  });
+
+  test('🥇 « Ce qui change » montre QUI SORT et QUI ENTRE, avec leurs 2 pastilles', async () => {
+    const texte = texteVisible(await rendre());
+
+    expect(texte).toContain('Ce qui change'.toUpperCase());
+    expect(texte).toContain('sort');
+    expect(texte).toContain('entre');
+    expect(texte).toContain('Titulaire → absent');
+    expect(texte).toContain('Banc → titulaire');
+    // Le remplacant propose est bien le joueur du banc.
     expect(texte).toContain('Malik Cisse');
-    expect(texte).toContain('Participation en attente');
   });
 
-  test('l en-tete, la chip « Publiee » et la carte de recap sont la', async () => {
+  test('la chip porte la version SUIVANTE — republier incremente', async () => {
+    expect(texteVisible(await rendre())).toContain('Version 2');
+  });
+
+  test('la carte « Renvoyer » PROMET que les reponses sont conservees', async () => {
     const texte = texteVisible(await rendre());
 
-    expect(texte).toContain('Convocation');
-    expect(texte).toContain('Publiée');
-    expect(texte).toContain('Convocation publiée');
+    expect(texte).toContain('gardent leur réponse');
     expect(texte).toContain('Senior 1');
-    expect(texte).toContain('JOUEURS CONVOQUÉS');
   });
 
-  test('le grand nombre compte les VRAIS convoques, terrain + banc', async () => {
+  test('les 2 CTA du pack sont la', async () => {
     const texte = texteVisible(await rendre());
 
-    expect(texte).toContain('| 3 |');
+    expect(texte).toContain('Annuler');
+    expect(texte).toContain('Republier');
+  });
+});
+
+describe('🔒 C-B ecran 8 — REPUBLIER N EFFACE AUCUNE REPONSE', () => {
+  test('🥇 LE TEMOIN D ARRET : la charge envoyee ne porte AUCUN champ de reponse', async () => {
+    await appuyerSur(await rendre(), 'Republier');
+
+    expect(mockSaveDraft).toHaveBeenCalledTimes(1);
+    const envoye = JSON.stringify(mockSaveDraft.mock.calls[0][1]);
+    ['present', 'absent', 'pending', 'byPlayerId', 'participations', 'missings']
+      .forEach((mot) => expect(envoye).not.toContain(mot));
   });
 
-  test('chaque rangee dit le role et le numero', async () => {
-    const texte = texteVisible(await rendre());
+  test('🔒 le joueur qui SORT quitte le terrain, celui qui ENTRE prend SA position', async () => {
+    await appuyerSur(await rendre(), 'Republier');
 
-    expect(texte).toContain('Titulaire · N°9');
-    expect(texte).toContain('Remplaçant · N°7');
+    const { draft } = mockSaveDraft.mock.calls[0][1];
+    expect(draft.teams[0].placements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ playerId: 'p3', positionX: 50, positionY: 90 }),
+    ]));
+    expect(JSON.stringify(draft.teams[0].placements)).not.toContain('p1');
   });
 
-  test('les 2 CTA du pack sont la, « Modifier la composition » en principal', async () => {
-    const texte = texteVisible(await rendre());
+  test('🧨 enregistrer PUIS publier — le serveur publie ce qu il a en brouillon', async () => {
+    await appuyerSur(await rendre(), 'Republier');
 
-    expect(texte).toContain('Relancer');
-    expect(texte).toContain('Modifier la composition');
+    expect(mockSaveDraft).toHaveBeenCalledWith('evt_1', expect.objectContaining({ teamId: 'team_1' }));
+    expect(mockPublish).toHaveBeenCalledWith('evt_1', { teamId: 'team_1' });
+    expect(mockSaveDraft.mock.invocationCallOrder[0])
+      .toBeLessThan(mockPublish.mock.invocationCallOrder[0]);
   });
 
-  test('« Modifier la composition » rouvre le parcours a la SELECTION', async () => {
-    const arbre = await rendre();
-    await appuyerSur(arbre, 'Modifier la composition');
+  test('⛔ un echec d enregistrement ne publie RIEN', async () => {
+    mockSaveDraft.mockRejectedValue(new Error('refus'));
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      'MatchCallUpSelection',
-      expect.objectContaining({ eventId: 'evt_1', teamId: 'team_1' }),
-    );
+    await appuyerSur(await rendre(), 'Republier');
+
+    expect(mockPublish).not.toHaveBeenCalled();
   });
+});
 
-  test('🔒 la compo publiee descend a l ecran 1 : on repart de ce qui est publie', async () => {
-    const arbre = await rendre();
-    await appuyerSur(arbre, 'Modifier la composition');
-
-    expect(mockNavigate.mock.calls[0][1].publishedComposition).toBe(PACK_PUBLIE);
-  });
-
-  test('🚪 LA PORTE DE L ECRAN 8 : un desistement ouvre « Remplacer »', async () => {
-    const arbre = await rendre();
-
-    expect(texteVisible(arbre)).toContain('DÉSISTEMENT');
-
-    await appuyerSur(arbre, 'Remplacer');
-    expect(mockNavigate).toHaveBeenCalledWith(
-      'MatchCompositionAmend',
-      expect.objectContaining({ eventId: 'evt_1', teamId: 'team_1' }),
-    );
-  });
-
-  test('⛔ sans desistement, aucune porte vers l ecran 8 — il n aurait rien a dire', async () => {
+describe('C-B ecran 8 — ce qu il refuse de faire', () => {
+  test('⛔ sans desistement, l ecran le DIT et ne propose aucun echange', async () => {
     mockComposition = {
       ...mockComposition,
       responses: { byPlayerId: { p1: 'present', p2: 'present' }, counts: {} },
     };
+    const arbre = await rendre();
+    const texte = texteVisible(arbre);
 
-    expect(texteVisible(await rendre())).not.toContain('DÉSISTEMENT');
+    expect(texte).toContain('Personne ne s’est désisté.');
+    expect(texte).not.toContain('sort');
+
+    await appuyerSur(arbre, 'Republier');
+    expect(mockSaveDraft).not.toHaveBeenCalled();
   });
 
-  test('🔒 un joueur hors app porte sa note, et AUCUNE pastille de reponse', async () => {
+  test('⛔ desistement SANS remplacant disponible : on le dit, on ne publie pas', async () => {
     mockComposition = {
-      published: {
-        ...PACK_PUBLIE,
-        manualPlayers: [{ documentId: 'm1', firstname: 'Sofiane', lastname: 'Dib' }],
-        reservePlayerIds: ['p3', 'm1'],
-        snapshotPlayers: [
-          ...PACK_PUBLIE.snapshotPlayers,
-          {
-            documentId: 'm1', firstname: 'Sofiane', isManual: true, lastname: 'Dib',
-          },
-        ],
-      },
-      responses: REPONSES,
-      team: { documentId: 'team_1', name: 'Senior 1' },
+      ...mockComposition,
+      responses: { byPlayerId: { p1: 'absent', p3: 'absent' }, counts: {} },
     };
-    const texte = texteVisible(await rendre());
-
-    expect(texte).toContain('Sofiane Dib');
-    expect(texte).toContain('Hors app — il ne peut pas répondre');
-  });
-
-  test('sans compo publiee, l ecran le dit au lieu d afficher des zeros muets', async () => {
-    mockComposition = { published: null, responses: null, team: null };
-    const texte = texteVisible(await rendre());
-
-    expect(texte).toContain('Personne n’est encore convoqué.');
-  });
-});
-
-describe('C-B ecran 7 — « Relancer » dit ce qu il fait avant de le faire', () => {
-  test('⛔ il ne renvoie RIEN sans confirmation', async () => {
     const arbre = await rendre();
-    await appuyerSur(arbre, 'Relancer');
 
+    expect(texteVisible(arbre)).toContain('Aucun remplaçant disponible');
+
+    await appuyerSur(arbre, 'Republier');
+    expect(mockSaveDraft).not.toHaveBeenCalled();
+  });
+
+  test('« Annuler » ne publie rien et rend la main', async () => {
+    await appuyerSur(await rendre(), 'Annuler');
+
+    expect(mockSaveDraft).not.toHaveBeenCalled();
     expect(mockPublish).not.toHaveBeenCalled();
-  });
-
-  test('🔒 et la confirmation PROMET que les reponses sont conservees', async () => {
-    const alerte = jest.spyOn(
-      jest.requireActual('react-native').Alert,
-      'alert',
-    ).mockImplementation(() => {});
-    const arbre = await rendre();
-    await appuyerSur(arbre, 'Relancer');
-
-    expect(alerte.mock.calls[0][1]).toContain('Les réponses déjà données sont conservées.');
-    alerte.mockRestore();
+    expect(mockGoBack).toHaveBeenCalled();
   });
 });

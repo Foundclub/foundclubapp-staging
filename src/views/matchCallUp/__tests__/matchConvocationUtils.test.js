@@ -1,10 +1,12 @@
 import { buildMatchCompositionPack } from '../matchCompositionUtils';
 import {
+  buildAmendedPlacements,
   buildCompositionDiff,
   buildConvocationRoster,
   getConvocationCounts,
   getPlayerRoleInPack,
   getWithdrawnStarters,
+  proposeReplacements,
 } from '../matchConvocationUtils';
 
 // C-B — le calcul des ecrans 7 et 8 du pack composition.
@@ -279,5 +281,118 @@ describe('C-B ecran 8 — CE QUI CHANGE : qui sort, qui entre', () => {
     expect(getPlayerRoleInPack(packPublie, 'p3')).toBe('substitute');
     expect(getPlayerRoleInPack(packPublie, 'inconnu')).toBe('none');
     expect(getPlayerRoleInPack(null, 'p1')).toBe('none');
+  });
+});
+
+describe('C-B ecran 8 — le remplacant propose, et la place qu il prend', () => {
+  const rosterDesistement = () => buildConvocationRoster({
+    published: packPublie,
+    responses: reponsesServeur,
+  });
+
+  test('🥇 le premier remplacant DISPONIBLE est propose au titulaire qui sort', () => {
+    const paires = proposeReplacements({ roster: rosterDesistement() });
+
+    expect(paires).toHaveLength(1);
+    expect(paires[0].outRow.playerId).toBe('p1');
+    expect(paires[0].inRow.playerId).toBe('p3');
+  });
+
+  test('🔒 « en attente » reste proposable — ne pas avoir repondu n est pas un refus', () => {
+    const paires = proposeReplacements({
+      roster: buildConvocationRoster({
+        published: packPublie,
+        responses: { byPlayerId: { p1: 'absent', p3: 'pending' } },
+      }),
+    });
+
+    expect(paires[0].inRow.playerId).toBe('p3');
+  });
+
+  test('⛔ un remplacant qui s est declare ABSENT n est jamais propose', () => {
+    const paires = proposeReplacements({
+      roster: buildConvocationRoster({
+        published: packPublie,
+        responses: { byPlayerId: { p1: 'absent', p3: 'absent' } },
+      }),
+    });
+
+    expect(paires).toEqual([]);
+  });
+
+  test('⛔ un remplacant HORS APP n est pas propose : il ne peut pas repondre', () => {
+    const packAvecManuel = {
+      ...packPublie,
+      manualPlayers: [{ documentId: 'p3', firstname: 'Malik', lastname: 'Cisse' }],
+    };
+    const paires = proposeReplacements({
+      roster: buildConvocationRoster({
+        published: packAvecManuel,
+        responses: { byPlayerId: { p1: 'absent' } },
+      }),
+    });
+
+    expect(paires).toEqual([]);
+  });
+
+  test('aucun desistement : aucune proposition, et surtout aucun echange fabrique', () => {
+    const paires = proposeReplacements({
+      roster: buildConvocationRoster({
+        published: packPublie,
+        responses: { byPlayerId: { p1: 'present', p2: 'present' } },
+      }),
+    });
+
+    expect(paires).toEqual([]);
+  });
+
+  test('🎯 le remplacant prend la POSITION EXACTE du titulaire qui sort', () => {
+    const replacements = proposeReplacements({ roster: rosterDesistement() });
+    const placements = buildAmendedPlacements({ published: packPublie, replacements });
+
+    // p1 sortait de (50, 90) : c'est p3 qui s y pose, au pixel pres.
+    expect(placements).toEqual([
+      { playerId: 'p3', positionX: 50, positionY: 90 },
+      { playerId: 'p2', positionX: 50, positionY: 60 },
+    ]);
+  });
+
+  test('⛔ sans remplacement, les placements publies ressortent INTACTS', () => {
+    expect(buildAmendedPlacements({ published: packPublie, replacements: [] }))
+      .toEqual(packPublie.teams[0].placements);
+  });
+
+  test('🔒 LE TEMOIN QUI COMPTE : le pack republie ne porte AUCUNE reponse', () => {
+    const replacements = proposeReplacements({ roster: rosterDesistement() });
+    const placements = buildAmendedPlacements({ published: packPublie, replacements });
+    const pack = buildMatchCompositionPack({
+      basePack: packPublie,
+      placements,
+      players: packPublie.snapshotPlayers.filter((joueur) => joueur.documentId !== 'p1'),
+      sport: 'football',
+      teamName: 'Senior 1',
+    });
+
+    // Ce que le serveur recevra ne contient aucun champ de reponse : republier
+    // n ecrit que la composition, jamais les participations.
+    const serialise = JSON.stringify(pack);
+    ['present', 'absent', 'pending', 'byPlayerId', 'participations', 'missings']
+      .forEach((mot) => expect(serialise).not.toContain(mot));
+  });
+
+  test('🔒 et le joueur qui SORT disparait bien du terrain republie', () => {
+    const replacements = proposeReplacements({ roster: rosterDesistement() });
+    const placements = buildAmendedPlacements({ published: packPublie, replacements });
+
+    expect(placements.map((placement) => placement.playerId)).not.toContain('p1');
+  });
+
+  test('le diff de l ecran 8 se lit sur le pack propose : p1 sort, p3 entre', () => {
+    const replacements = proposeReplacements({ roster: rosterDesistement() });
+    const nextPack = { ...packPublie, reservePlayerIds: [], teams: [{ id: 'team_1', placements: buildAmendedPlacements({ published: packPublie, replacements }) }] };
+    const { entering, leaving } = buildCompositionDiff({ nextPack, publishedPack: packPublie });
+
+    expect(leaving.map((row) => row.playerId)).toEqual(['p1']);
+    expect(entering.map((row) => row.playerId)).toEqual(['p3']);
   });
 });
