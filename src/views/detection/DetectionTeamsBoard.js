@@ -47,9 +47,9 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import DraggableToken from '@/components/tactical/DraggableToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import DraggableToken from '@/components/tactical/DraggableToken';
 // ♻️ Les coordonnees de depart des 5 sports, reprises TELLES QUELLES : le pack
 // dit « ce sont les placements valides, reprends-les tels quels ». Les recopier
 // ici en ferait une seconde verite qui divergerait au premier ajustement.

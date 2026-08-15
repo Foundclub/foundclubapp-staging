@@ -65,7 +65,8 @@ export const getCompositionPlayerId = (player) => sanitizeCompositionText(
  * @returns {string} « Joueur » quand rien n'est renseigne.
  */
 export const getCompositionPlayerLabel = (player) => (
-  `${sanitizeCompositionText(player?.firstname)} ${sanitizeCompositionText(player?.lastname)}`.trim()
+  [sanitizeCompositionText(player?.firstname), sanitizeCompositionText(player?.lastname)]
+    .filter(Boolean).join(' ')
   || sanitizeCompositionText(player?.name)
   || 'Joueur'
 );

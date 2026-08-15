@@ -12,7 +12,6 @@
  */
 
 import { getCompositionPlayerId } from '@/utils/compositionPlayer';
-
 import { getTacticalSportKey } from '@/utils/tacticalField';
 
 import { getMatchSquadSizes } from './matchCallUpUtils';

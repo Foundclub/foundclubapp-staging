@@ -43,7 +43,8 @@ describe("getCompositionPlayerId — l'identifiant qui sert de cle partout", () 
 
 describe('getCompositionPlayerLabel — le nom affiche', () => {
   it('assemble prenom et nom', () => {
-    expect(getCompositionPlayerLabel({ firstname: 'Jean', lastname: 'Dupont' })).toBe('Jean Dupont');
+    const nom = getCompositionPlayerLabel({ firstname: 'Jean', lastname: 'Dupont' });
+    expect(nom).toBe('Jean Dupont');
   });
 
   it('prenom seul : pas d espace en trop derriere', () => {
@@ -74,7 +75,9 @@ describe("getCompositionPlayerInitials — ce qui remplit l'avatar sans photo", 
   });
 
   it('trois mots : on s arrete a DEUX initiales', () => {
-    expect(getCompositionPlayerInitials({ firstname: 'Jean Pierre', lastname: 'Dupont' })).toBe('JP');
+    const joueur = { firstname: 'Jean Pierre', lastname: 'Dupont' };
+    const initiales = getCompositionPlayerInitials(joueur);
+    expect(initiales).toBe('JP');
   });
 
   it('personne : le repli est « ? » — c est le repli de `Joueur`, donc « J »', () => {

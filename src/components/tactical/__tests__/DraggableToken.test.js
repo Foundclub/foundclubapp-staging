@@ -105,11 +105,13 @@ describe("DraggableToken — un joueur ajoute A LA MAIN n'a jamais de photo", ()
 
 describe('DraggableToken — les 3 formes d avatar que le serveur envoie', () => {
   it('avatar en chaine de caracteres', () => {
-    expect(urlsDe(rendre({ player: { ...JOUEUR, avatar: '/direct.jpg' } }))).toEqual(['/direct.jpg']);
+    const arbre = rendre({ player: { ...JOUEUR, avatar: '/direct.jpg' } });
+    expect(urlsDe(arbre)).toEqual(['/direct.jpg']);
   });
 
   it('avatar en objet, champ `url`', () => {
-    expect(urlsDe(rendre({ player: { ...JOUEUR, avatar: { url: '/objet.jpg' } } }))).toEqual(['/objet.jpg']);
+    const arbre = rendre({ player: { ...JOUEUR, avatar: { url: '/objet.jpg' } } });
+    expect(urlsDe(arbre)).toEqual(['/objet.jpg']);
   });
 
   it('avatar en objet, vignette `formats.thumbnail.url`', () => {
@@ -137,7 +139,7 @@ describe('DraggableToken — les 3 apparences', () => {
     expect(textesDe(rendre({ player: JOUEUR }))).not.toContain('10');
   });
 
-  it('terrain (isOnField) : le prenom seul — le nom de famille ne descend pas sur le terrain', () => {
+  it('terrain : le prenom seul — le nom de famille ne descend pas sur le terrain', () => {
     const textes = textesDe(rendre({ isOnField: true, player: JOUEUR }));
     expect(textes).toContain('Jean');
     expect(textes).not.toContain('Dupont');
@@ -155,6 +157,7 @@ describe('DraggableToken — les 3 apparences', () => {
 
   it('banc et terrain, eux, captent les touchers : le fantome est le seul inerte', () => {
     expect(rendre({ player: JOUEUR }).toJSON().props.pointerEvents).toBeUndefined();
-    expect(rendre({ isOnField: true, player: JOUEUR }).toJSON().props.pointerEvents).toBeUndefined();
+    const terrain = rendre({ isOnField: true, player: JOUEUR });
+    expect(terrain.toJSON().props.pointerEvents).toBeUndefined();
   });
 });

@@ -8,7 +8,6 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
-
 import { getImageUrl } from '@/utils/imageUrl';
 
 import ProfilePicturePreviewOverlay from '../profilePicturePreviewOverlay/ProfilePicturePreviewOverlay';

@@ -29,15 +29,16 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import Tag from '@/components/atoms/tag/Tag';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import {
-  getCompositionPlayerId,
-  getCompositionPlayerLabel,
-} from '@/utils/compositionPlayer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvent } from '@/services/event/eventQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
+
+import {
+  getCompositionPlayerId,
+  getCompositionPlayerLabel,
+} from '@/utils/compositionPlayer';
 
 import {
   getCallUpCounters,
