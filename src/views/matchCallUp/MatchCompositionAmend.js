@@ -170,7 +170,10 @@ function MatchCompositionAmend() {
         key={`${isLeaving ? 'out' : 'in'}-${row.playerId}`}
         style={[
           styles.moveRow,
-          { backgroundColor: withAlpha(Colors.neutral00, 0.035), borderColor: withAlpha(tone, 0.4) },
+          {
+            backgroundColor: withAlpha(Colors.neutral00, 0.035),
+            borderColor: withAlpha(tone, 0.4),
+          },
         ]}
       >
         <ProfileAvatar
@@ -399,11 +402,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
-  moveTexts: {
-    flex: 1,
-  },
   moves: {
     gap: 8,
+  },
+  moveTexts: {
+    flex: 1,
   },
   screen: {
     paddingHorizontal: 0,

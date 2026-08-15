@@ -24,8 +24,8 @@ import EventWizardTournamentStructure from '@/views/event/wizard/EventWizardTour
 import EventWizardType from '@/views/event/wizard/EventWizardType';
 import MatchCallUpManualPlayer from '@/views/matchCallUp/MatchCallUpManualPlayer';
 import MatchCallUpSelection from '@/views/matchCallUp/MatchCallUpSelection';
-import MatchCompositionBoard from '@/views/matchCallUp/MatchCompositionBoard';
 import MatchCompositionAmend from '@/views/matchCallUp/MatchCompositionAmend';
+import MatchCompositionBoard from '@/views/matchCallUp/MatchCompositionBoard';
 import MatchCompositionStart from '@/views/matchCallUp/MatchCompositionStart';
 import MatchConvocationPublished from '@/views/matchCallUp/MatchConvocationPublished';
 import MatchStatsEditor from '@/views/matchStats/MatchStatsEditor';

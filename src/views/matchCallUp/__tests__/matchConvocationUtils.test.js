@@ -389,7 +389,14 @@ describe('C-B ecran 8 — le remplacant propose, et la place qu il prend', () =>
 
   test('le diff de l ecran 8 se lit sur le pack propose : p1 sort, p3 entre', () => {
     const replacements = proposeReplacements({ roster: rosterDesistement() });
-    const nextPack = { ...packPublie, reservePlayerIds: [], teams: [{ id: 'team_1', placements: buildAmendedPlacements({ published: packPublie, replacements }) }] };
+    const nextPack = {
+      ...packPublie,
+      reservePlayerIds: [],
+      teams: [{
+        id: 'team_1',
+        placements: buildAmendedPlacements({ published: packPublie, replacements }),
+      }],
+    };
     const { entering, leaving } = buildCompositionDiff({ nextPack, publishedPack: packPublie });
 
     expect(leaving.map((row) => row.playerId)).toEqual(['p1']);

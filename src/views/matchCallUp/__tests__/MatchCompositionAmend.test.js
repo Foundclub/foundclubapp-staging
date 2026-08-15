@@ -135,8 +135,8 @@ jest.mock('@/components/atoms/button/Button', () => {
 /** 2 titulaires, 1 remplacant. p1 s'est desiste, p3 est disponible. */
 const PACK_PUBLIE = {
   manualPlayers: [],
-  reservePlayerIds: ['p3'],
   requireResponse: true,
+  reservePlayerIds: ['p3'],
   snapshotPlayers: [
     {
       documentId: 'p1', firstname: 'Karim', lastname: 'Sylla', number: 9,
@@ -311,7 +311,8 @@ describe('🔒 C-B ecran 8 — REPUBLIER N EFFACE AUCUNE REPONSE', () => {
   test('🧨 enregistrer PUIS publier — le serveur publie ce qu il a en brouillon', async () => {
     await appuyerSur(await rendre(), 'Republier');
 
-    expect(mockSaveDraft).toHaveBeenCalledWith('evt_1', expect.objectContaining({ teamId: 'team_1' }));
+    expect(mockSaveDraft)
+      .toHaveBeenCalledWith('evt_1', expect.objectContaining({ teamId: 'team_1' }));
     expect(mockPublish).toHaveBeenCalledWith('evt_1', { teamId: 'team_1' });
     expect(mockSaveDraft.mock.invocationCallOrder[0])
       .toBeLessThan(mockPublish.mock.invocationCallOrder[0]);

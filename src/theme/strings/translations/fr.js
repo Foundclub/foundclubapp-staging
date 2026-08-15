@@ -1917,7 +1917,8 @@ export default {
       },
       noReplacement: 'Aucun remplaçant disponible sur le banc. Reprends la composition à la main.',
       resend: {
-        body: 'Même canal {{teamName}}, même notification individuelle, même demande de réponse. Les joueurs qui avaient déjà répondu gardent leur réponse.',
+        body: 'Même canal {{teamName}}, même notification individuelle, même demande de '
+          + 'réponse. Les joueurs qui avaient déjà répondu gardent leur réponse.',
         title: 'La convocation repart comme la première fois.',
       },
       sections: {
@@ -1929,7 +1930,8 @@ export default {
       versionChip: 'Version {{version}}',
       withdrawal: {
         hint_one: 'Sa place de titulaire est vide. Le premier remplaçant disponible est proposé.',
-        hint_other: 'Leurs places de titulaires sont vides. Les premiers remplaçants disponibles sont proposés.',
+        hint_other: 'Leurs places de titulaires sont vides. Les premiers remplaçants '
+          + 'disponibles sont proposés.',
         label: 'Désistement',
         message_one: '{{name}} s’est déclaré·e absent·e après la publication.',
         message_other: '{{count}} titulaires se sont déclarés absents après la publication.',
@@ -1948,7 +1950,8 @@ export default {
         resendConfirm: {
           cancel: 'Annuler',
           confirm: 'Renvoyer',
-          message: 'La convocation repart dans le canal {{teamName}}, avec une notification à chaque convoqué. Les réponses déjà données sont conservées.',
+          message: 'La convocation repart dans le canal {{teamName}}, avec une notification '
+            + 'à chaque convoqué. Les réponses déjà données sont conservées.',
           title: 'Renvoyer la convocation ?',
         },
         resent: {

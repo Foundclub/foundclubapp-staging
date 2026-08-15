@@ -233,7 +233,8 @@ export const proposeReplacements = ({ roster = [] } = {}) => {
  */
 export const buildAmendedPlacements = ({ published = null, replacements = [] } = {}) => {
   const swap = new Map(
-    asArray(replacements).map((pair) => [toId(pair?.outRow?.playerId), toId(pair?.inRow?.playerId)]),
+    asArray(replacements)
+      .map((pair) => [toId(pair?.outRow?.playerId), toId(pair?.inRow?.playerId)]),
   );
 
   return asArray(published?.teams)
