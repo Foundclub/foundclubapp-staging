@@ -1318,6 +1318,15 @@ export default {
         subtitle: 'C’est ce qui décide où le match se jouera.',
         title: 'Tu peux recevoir ?',
       },
+      location: {
+        facilities: {
+          hint: 'Choisis-en une et l’adresse se remplit toute seule.'
+            + ' Sinon, tape une ville ci-dessous.',
+          info: 'Le terrain exact reste modifiable : il se convient dans la discussion'
+            + ' qui s’ouvre quand une équipe te répond.',
+          title: 'Une installation de ton club',
+        },
+      },
     },
   },
   home: {
