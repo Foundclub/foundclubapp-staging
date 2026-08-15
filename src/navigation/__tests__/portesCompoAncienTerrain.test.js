@@ -24,8 +24,10 @@
 
 import renderer, { act } from 'react-test-renderer';
 
-import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
 import { TOUR_PROFILES } from '@/domains/tour/tourCatalog';
+
+import BulleCompo from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 const mockNavigate = jest.fn();
@@ -58,7 +60,11 @@ jest.mock('@/theme/themeContext', () => {
 const findStep = (profileKey, stepId) => TOUR_PROFILES[profileKey].steps
   .find((step) => step.id === stepId);
 
-/** Retrouve le premier noeud portant un `onPress`, quelle que soit sa place. */
+/**
+ * Retrouve le premier noeud portant un `onPress`, quelle que soit sa place.
+ * @param {any} node Racine de l'arbre rendu.
+ * @returns {any} Le noeud touchable, ou `null` s'il n'y en a aucun.
+ */
 const findPressable = (node) => {
   if (!node || typeof node !== 'object') return null;
   if (typeof node.props?.onPress === 'function') return node;
@@ -110,7 +116,7 @@ describe('C-F temoin 2 — la BULLE COMPO d un canal reste ouvrable', () => {
   const ouvrirLaBulle = (composition) => {
     let arbre;
     act(() => {
-      arbre = renderer.create(<CompositionMessageBubble composition={composition} />);
+      arbre = renderer.create(<BulleCompo composition={composition} />);
     });
     const pressable = findPressable(arbre.root);
     expect(pressable).not.toBeNull();
@@ -121,7 +127,7 @@ describe('C-F temoin 2 — la BULLE COMPO d un canal reste ouvrable', () => {
   it('sans composition : la bulle ne rend rien, et ne plante pas', () => {
     let arbre;
     act(() => {
-      arbre = renderer.create(<CompositionMessageBubble composition={null} />);
+      arbre = renderer.create(<BulleCompo composition={null} />);
     });
     expect(arbre.toJSON()).toBeNull();
   });
@@ -175,7 +181,7 @@ describe('C-F temoin 2 — la BULLE COMPO d un canal reste ouvrable', () => {
     const dossards = (composition) => {
       let arbre;
       act(() => {
-        arbre = renderer.create(<CompositionMessageBubble composition={composition} />);
+        arbre = renderer.create(<BulleCompo composition={composition} />);
       });
       return JSON.stringify(arbre.toJSON() || {}).includes('AL');
     };
@@ -199,7 +205,7 @@ describe('C-F temoin 2 — la BULLE COMPO d un canal reste ouvrable', () => {
     let arbre;
     act(() => {
       arbre = renderer.create(
-        <CompositionMessageBubble composition={compositionAncienneForme} />,
+        <BulleCompo composition={compositionAncienneForme} />,
       );
     });
 
