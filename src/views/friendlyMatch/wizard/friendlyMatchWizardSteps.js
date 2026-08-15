@@ -4,6 +4,8 @@ import {
   normalizeCandidateDates,
 } from '@/domains/search/friendlyMatchFlow';
 
+import { normalizeLocationInput } from '@/utils/location';
+
 /**
  * La carte des 7 etapes de l assistant de publication (spec §4.1) et le corps
  * envoye au serveur.
@@ -160,6 +162,57 @@ export const getFriendlyMatchWizardBlockingStep = (draft, now = new Date()) => (
     .filter((stepKey) => stepKey !== 'recap')
     .find((stepKey) => getFriendlyMatchWizardStepIssue(stepKey, draft, now) !== null) || null
 );
+
+/**
+ * Ce qu une installation du club apporte a l etape 4 : le terrain propose ET le
+ * lieu de l annonce, prets a etre ranges par `SET_LOCATION_SELECTION`.
+ *
+ * 🧨 La traduction n est PAS decorative. Le serveur derive `city` et `geohash`
+ * de `location` (lifecycles.ts:62-91) : il lit `city || label` d un cote, et
+ * `lat` / `lng` de l autre. Or une adresse d installation est rangee en base
+ * sous la forme `{ description, geometry: { coordinates: [lng, lat] } }`
+ * (FacilityForm.js:102-117) — qui ne repond a NI l un NI l autre. L envoyer
+ * telle quelle publierait une annonce sans ville et sans geohash, donc absente
+ * de tous les tris par distance, et sans le moindre message d erreur.
+ * On rend donc EXACTEMENT la forme de la saisie libre (autocompleteAddressInput
+ * .js:141-155), et rien d autre : un format a nous serait un troisieme dialecte.
+ *
+ * Rendre `null` est un resultat utile : c est ce qui permet a l ecran de ne pas
+ * proposer une installation qu il ne saurait pas transformer en lieu.
+ * @param {any} facility
+ * @returns {{ installation: { documentId: string, name: string }, location: any } | null}
+ */
+export const buildFriendlyMatchFacilitySelection = (facility) => {
+  const documentId = getDocumentId(facility);
+  if (!documentId) return null;
+
+  const address = facility?.address;
+  const normalized = normalizeLocationInput(
+    address && typeof address === 'object' && !Array.isArray(address)
+      ? { ...address, label: address.label || address.description || '' }
+      : address,
+  );
+  if (!normalized || !Number.isFinite(normalized.lat) || !Number.isFinite(normalized.lng)) {
+    return null;
+  }
+
+  const name = trimmed(facility?.name);
+
+  return {
+    installation: { documentId, name },
+    location: {
+      city: normalized.city || '',
+      context: normalized.context || '',
+      // Une installation sans adresse lisible garde au moins son nom : mieux
+      // vaut « Terrain synthetique » qu une annonce dont le lieu est vide.
+      label: normalized.label || name,
+      lat: normalized.lat,
+      lng: normalized.lng,
+      postcode: normalized.postcode || '',
+      value: normalized.value,
+    },
+  };
+};
 
 /**
  * Le corps de `POST /friendly-match-ads`.

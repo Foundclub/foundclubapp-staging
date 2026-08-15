@@ -1,5 +1,6 @@
 import {
   buildFriendlyMatchAdPayload,
+  buildFriendlyMatchFacilitySelection,
   FRIENDLY_MATCH_WIZARD_STEPS,
   getFriendlyMatchWizardBlockingStep,
   getFriendlyMatchWizardStepCount,
@@ -262,5 +263,115 @@ describe('D90 — le corps porte les categories et les niveaux au PLURIEL', () =
 
     expect(payload).not.toHaveProperty('categories');
     expect(payload).not.toHaveProperty('levels');
+  });
+});
+
+// C-G — « choisir les installations du club ici » (demande d'Adel du 2026-08-13).
+// L'installation etait deja PORTEE par le corps de la requete ; ce qui manquait,
+// c'est de quoi la traduire en LIEU. Ces temoins fixent la traduction, parce que
+// c'est elle qui decide si l'annonce publiee est trouvable ou muette.
+describe('C-G — une installation du club devient le lieu de l annonce', () => {
+  /** L'adresse telle que FacilityForm l'ecrit en base (FacilityForm.js:102-117). */
+  const INSTALLATION = {
+    address: {
+      description: '3 Boulevard Michelet 13008 Marseille (13008)',
+      geometry: { coordinates: [5.3959, 43.2699], type: 'Point' },
+    },
+    documentId: 'inst-velodrome',
+    name: 'Stade Vélodrome',
+  };
+
+  test('elle rend le terrain propose ET le lieu, prets a etre ranges dans le brouillon', () => {
+    const selection = buildFriendlyMatchFacilitySelection(INSTALLATION);
+
+    expect(selection.installation).toEqual({
+      documentId: 'inst-velodrome',
+      name: 'Stade Vélodrome',
+    });
+    expect(selection.location).toEqual({
+      city: '',
+      context: '',
+      label: '3 Boulevard Michelet 13008 Marseille (13008)',
+      lat: 43.2699,
+      lng: 5.3959,
+      postcode: '',
+      value: '5.3959|43.2699',
+    });
+  });
+
+  // 🧨 Le serveur derive `geohash` de `location.lat` / `location.lng`, et `city`
+  // de `location.city || location.label` (lifecycles.ts:62-91). La forme de la
+  // base — `{ description, geometry }` — ne repond a NI l'un NI l'autre.
+  test('elle ne laisse passer NI description NI geometry : le serveur ne sait pas les lire', () => {
+    const { location } = buildFriendlyMatchFacilitySelection(INSTALLATION);
+
+    expect(location).not.toHaveProperty('description');
+    expect(location).not.toHaveProperty('geometry');
+  });
+
+  test('elle relit aussi une adresse deja au format de la saisie libre', () => {
+    const selection = buildFriendlyMatchFacilitySelection({
+      address: {
+        city: 'Marseille', label: 'Stade Nord', lat: 43.3, lng: 5.4, value: '5.4|43.3',
+      },
+      documentId: 'inst-2',
+      name: 'Stade Nord',
+    });
+
+    expect(selection.location.city).toBe('Marseille');
+    expect(selection.location.lat).toBe(43.3);
+    expect(selection.location.lng).toBe(5.4);
+  });
+
+  test('sans le nom de l installation, le lieu porte au moins ce nom-la', () => {
+    const selection = buildFriendlyMatchFacilitySelection({
+      address: { geometry: { coordinates: [5.4, 43.3], type: 'Point' } },
+      documentId: 'inst-3',
+      name: 'Terrain synthétique',
+    });
+
+    expect(selection.location.label).toBe('Terrain synthétique');
+  });
+
+  // Une installation sans coordonnees ne peut pas remplir le lieu : rendre `null`
+  // est ce qui permet a l'ecran de ne pas la proposer du tout.
+  test.each([
+    ['rien du tout', null],
+    ['une adresse absente', { address: null, documentId: 'i', name: 'Sans adresse' }],
+    ['une adresse en texte libre', { address: 'Quelque part', documentId: 'i', name: 'Texte' }],
+    ['une adresse sans coordonnees', {
+      address: { description: 'Marseille' }, documentId: 'i', name: 'X',
+    }],
+    ['une installation sans documentId', { address: { lat: 43.3, lng: 5.4 }, name: 'X' }],
+  ])('%s ne fabrique pas un lieu vide : elle ne rend rien', (_cas, entree) => {
+    expect(buildFriendlyMatchFacilitySelection(entree)).toBeNull();
+  });
+
+  // ④ Le temoin d'arret : l'annonce PUBLIEE porte bien l'adresse de l'installation.
+  test('l annonce publiee porte l adresse de l installation et son documentId', () => {
+    const selection = buildFriendlyMatchFacilitySelection(INSTALLATION);
+    const payload = buildFriendlyMatchAdPayload(makeDraft({
+      installation: selection.installation,
+      location: selection.location,
+    }));
+
+    expect(payload.installation).toBe('inst-velodrome');
+    expect(payload.location.label).toBe('3 Boulevard Michelet 13008 Marseille (13008)');
+    expect(payload.location.lat).toBe(43.2699);
+    expect(payload.location.lng).toBe(5.3959);
+  });
+
+  // 🔒 La regle d'avant ne bouge pas : « je me deplace » n'emporte aucun terrain,
+  // meme choisi a l'etape 4 — mais le LIEU, lui, reste (c'est le point de depart).
+  test('« je me deplace » garde le lieu de l installation mais pas l installation', () => {
+    const selection = buildFriendlyMatchFacilitySelection(INSTALLATION);
+    const payload = buildFriendlyMatchAdPayload(makeDraft({
+      hostingPreference: 'AWAY',
+      installation: selection.installation,
+      location: selection.location,
+    }));
+
+    expect(payload).not.toHaveProperty('installation');
+    expect(payload.location.label).toBe('3 Boulevard Michelet 13008 Marseille (13008)');
   });
 });
