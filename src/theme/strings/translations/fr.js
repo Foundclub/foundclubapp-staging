@@ -1887,6 +1887,66 @@ export default {
       },
     },
   },
+  matchConvocation: {
+    published: {
+      actions: {
+        edit: 'Modifier la composition',
+        resend: 'Relancer',
+      },
+      alerts: {
+        error: {
+          resend: 'Impossible de renvoyer cette convocation.',
+          title: 'Erreur',
+        },
+        resendConfirm: {
+          cancel: 'Annuler',
+          confirm: 'Renvoyer',
+          message: 'La convocation repart dans le canal {{teamName}}, avec une notification à chaque convoqué. Les réponses déjà données sont conservées.',
+          title: 'Renvoyer la convocation ?',
+        },
+        resent: {
+          message: 'Tes convoqués viennent d’être prévenus à nouveau.',
+          title: 'Convocation renvoyée',
+        },
+      },
+      counts: {
+        absent_one: '{{count}} absent',
+        absent_other: '{{count}} absents',
+        pending_one: '{{count}} en attente',
+        pending_other: '{{count}} en attente',
+        present_one: '{{count}} présent',
+        present_other: '{{count}} présents',
+      },
+      empty: 'Personne n’est encore convoqué.',
+      loading: 'Chargement des réponses…',
+      meta: {
+        roleAndNumber: '{{role}} · N°{{number}}',
+      },
+      offAppNote: 'Hors app — il ne peut pas répondre',
+      openCta: 'Voir la convocation et les réponses',
+      recap: {
+        calledUp: 'Joueurs convoqués',
+        sent: 'Envoyée dans le canal {{teamName}}',
+        sentAt: 'Envoyée dans le canal {{teamName}} · {{time}}',
+        title: 'Convocation publiée',
+      },
+      responses: {
+        absent: 'Absent·e',
+        pending: 'Participation en attente',
+        present: 'Présent·e',
+      },
+      roles: {
+        starter: 'Titulaire',
+        substitute: 'Remplaçant',
+      },
+      sections: {
+        responses: 'Réponses',
+      },
+      stateChip: 'Publiée',
+      title: 'Convocation',
+      unknownPlayer: 'Joueur',
+    },
+  },
   menu: {
     chat: 'Messagerie',
     home: 'Accueil',

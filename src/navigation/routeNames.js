@@ -255,6 +255,9 @@ export const RouteNames = /** @type {const} */ ({
   MatchCompositionBoard: 'MatchCompositionBoard',
   MatchCompositionStart: 'MatchCompositionStart',
 
+  // Match — apres la publication (C-B, pack composition ecrans 7 et 8).
+  MatchConvocationPublished: 'MatchConvocationPublished',
+
   // Tactical
   TacticalBoardV2: 'TacticalBoardV2',
   TacticalSelectionV2: 'TacticalSelectionV2',
