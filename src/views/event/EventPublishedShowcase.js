@@ -144,14 +144,27 @@ export default function EventPublishedShowcase({ navigation, route }) {
   // D94/C2 : pour un ÉVÉNEMENT, l'intro suit le TYPE — un match ne propose plus
   // de venir essayer. Le gabarit garde son texte pour le club et l'annonce, et
   // un lien profond sans type reçoit la phrase neutre plutôt qu'un mensonge.
-  const introTexts = subjectType === 'event'
+  //
+  // S05 (2026-08-16) — ET POUR UN ÉVÉNEMENT, LE TYPE GAGNE CONTRE LE PARAMÈTRE.
+  // 🧨 `intro: shareIntroParam || …` faisait passer le paramètre AVANT le type :
+  // un appelant qui aurait passé `shareIntro` aurait fait mentir un match sans
+  // aucune erreur, et aucune porte de qualité ne l'aurait vu. Mesuré le
+  // 2026-08-16 : les 4 portes de cet écran (EventDetails, EventWizardRecap,
+  // ClubDetails, RecruitmentAdDetails) n'en passent AUCUN — c'est un piège armé,
+  // pas un défaut vivant. ⛔ On ne le supprime pas pour autant : le club et
+  // l'annonce n'ont aucun type d'où dériver une phrase, le paramètre reste leur
+  // seule personnalisation possible. Il perd seulement là où une source plus
+  // sûre existe. Le filet : `EventShowcaseShareIntroPortes.test.js` (témoin ⑤).
+  const isSubjectEvent = subjectType === 'event';
+  const introTexts = isSubjectEvent
     ? getEventShowcaseShareIntro(eventTypeName)
     : texts.shareIntro;
   const shareMessage = useMemo(() => buildShareMessageWithUrl({
-    intro: shareIntroParam || t(introTexts.key, introTexts.default),
+    intro: (!isSubjectEvent && shareIntroParam)
+      || t(introTexts.key, introTexts.default),
     linkLabel: shareLinkLabelParam || t(texts.shareLinkLabel.key, texts.shareLinkLabel.default),
     url: shareUrl,
-  }), [introTexts, shareIntroParam, shareLinkLabelParam, shareUrl, t, texts]);
+  }), [introTexts, isSubjectEvent, shareIntroParam, shareLinkLabelParam, shareUrl, t, texts]);
 
   // Titre du sélecteur d'application Android. Sans lui, le système ouvre
   // directement l'application par défaut : l'utilisateur ne CHOISIT plus.
