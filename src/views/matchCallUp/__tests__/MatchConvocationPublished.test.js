@@ -1,4 +1,5 @@
-import { Text } from 'react-native';
+import { Children } from 'react';
+import { StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import MatchConvocationPublished from '../MatchConvocationPublished';
@@ -58,13 +59,10 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
-jest.mock('react-native-linear-gradient', () => {
-  const { View } = jest.requireActual('react-native');
-  return {
-    __esModule: true,
-    default: (/** @type {any} */ { children }) => <View>{children}</View>,
-  };
-});
+// S04 — le degrade est rendu TEL QUEL (composant hote nomme), et pas remplace
+// par une `View` qui jetterait son `style` : c'est justement le style qu'on doit
+// pouvoir mesurer. Meme idiome que `ClubCard.test.js:18`.
+jest.mock('react-native-linear-gradient', () => 'LinearGradient');
 
 jest.mock('@/services/event/eventQueries', () => ({
   useGetEventTeamComposition: () => ({ data: mockComposition, isFetching: false }),
@@ -385,5 +383,41 @@ describe('C-B ecran 7 — « Relancer » dit ce qu il fait avant de le faire', (
 
     expect(alerte.mock.calls[0][1]).toContain('Les réponses déjà données sont conservées.');
     alerte.mockRestore();
+  });
+});
+
+// S04 defaut 2 — Adel : « Bug d'affichage avec le carré "convocation publiée",
+// à cause du style gradient sur iPhone, comme on a pu avoir sur les cartes
+// événement et club. »
+//
+// 🧨 CE QUI CASSAIT : le degrade ETAIT la carte — il portait lui-meme l arrondi,
+// la bordure et les marges, donc il devait se dimensionner sur ses enfants. Sur
+// iOS, `react-native-linear-gradient` mesure sa couche de dessin AVANT cette
+// mise en page : la carte se retrouve tranchee.
+//
+// ♻️ LE MOTIF REPRIS, sans en inventer un troisieme : `ClubCardSurface.js:37-51`,
+// « POINT DE VERITE UNIQUE » des cartes club. Le meme invariant est gele ici,
+// dans les memes termes que `ClubCard.test.js:212`.
+describe('S04 — le carre « convocation publiee » (R07 gele)', () => {
+  test('🥇 le degrade est un FOND, jamais le conteneur', async () => {
+    const arbre = await rendre();
+    const degrades = arbre.root.findAllByType('LinearGradient');
+    expect(degrades).toHaveLength(1);
+
+    expect(Children.count(degrades[0].props.children)).toBe(0);
+    expect(StyleSheet.flatten(degrades[0].props.style)).toMatchObject({ position: 'absolute' });
+    expect(degrades[0].props.pointerEvents).toBe('none');
+  });
+
+  test('un conteneur ordinaire porte la taille et decoupe les coins arrondis', async () => {
+    const arbre = await rendre();
+    const decoupe = arbre.root.findAll((/** @type {any} */ noeud) => (
+      typeof noeud.type === 'string'
+      && StyleSheet.flatten(noeud.props?.style)?.overflow === 'hidden'
+    ));
+
+    expect(decoupe.length).toBeGreaterThan(0);
+    expect(decoupe[0].type).toBe('View');
+    expect(StyleSheet.flatten(decoupe[0].props.style).borderRadius).toBe(24);
   });
 });

@@ -13,6 +13,7 @@ import {
   placePlayerAt,
   readPlacementsFromPack,
   removePlayerFromField,
+  resumeFieldForSelection,
   snapToNearestSlot,
   START_FROM_DEFAULT,
   START_FROM_EMPTY,
@@ -310,5 +311,130 @@ describe('ecran 6 — la charge envoyee au serveur', () => {
 
   test('le pack part en placement libre : l aimantation est une aide de saisie, pas une regle serveur', () => {
     expect(buildMatchCompositionPack({ placements, players: ONZE, sport: 'football' }).placementMode).toBe('free');
+  });
+});
+
+// S04 — 🔴 LE DEFAUT LE PLUS CHER DU PACK : modifier la liste des convoques
+// effacait le placement de TOUT LE MONDE.
+//
+// « Imaginons que je retire un joueur de la liste : ça doit JUSTE retirer le
+// joueur de la compo et GARDER LE RESTE A SA PLACE. » (Adel, 2026-08-16)
+//
+// Un entraineur pose 11 jetons a la main. Il en retire un. Il en reperdait 10.
+describe('S04 — retirer un convoque ne deplace personne d autre', () => {
+  // 11 jetons poses A LA MAIN : aucun ne tombe sur un poste de la formation,
+  // c'est ce qui rend la preuve lisible — si un seul bouge, c'est qu'il a ete
+  // RECALCULE depuis une rangee de depart au lieu d'etre repris.
+  const AJAMAIN = ONZE.map((joueurPose, index) => ({
+    playerId: joueurPose.documentId,
+    positionX: 7 + (index * 3),
+    positionY: 11 + (index * 5),
+    slotId: null,
+  }));
+
+  test('🥇 LE TEMOIN : retirer UN convoque laisse les 10 autres a leur place EXACTE', () => {
+    const restants = ONZE.filter((joueurReste) => joueurReste.documentId !== 'p4');
+    const { placements } = resumeFieldForSelection({
+      players: restants, startPlacements: AJAMAIN,
+    });
+
+    expect(placements).toHaveLength(10);
+    // Chaque jeton restant a EXACTEMENT les coordonnees qu'il avait.
+    restants.forEach((joueurReste) => {
+      const avant = AJAMAIN.find((pose) => pose.playerId === joueurReste.documentId);
+      const apres = placements.find((pose) => pose.playerId === joueurReste.documentId);
+      expect(apres).toEqual(avant);
+    });
+  });
+
+  test('le joueur retire n est plus sur le terrain', () => {
+    const { placements } = resumeFieldForSelection({
+      players: ONZE.filter((joueurReste) => joueurReste.documentId !== 'p4'),
+      startPlacements: AJAMAIN,
+    });
+    expect(placements.some((pose) => pose.playerId === 'p4')).toBe(false);
+  });
+
+  test('ajouter un convoque ne deplace personne — et il arrive au BANC, pas sur le terrain', () => {
+    const renfort = joueur('renfort', 'Bilal', 'Lopez');
+    const { placements } = resumeFieldForSelection({
+      players: [...ONZE, renfort], startPlacements: AJAMAIN,
+    });
+
+    expect(placements).toEqual(AJAMAIN);
+    expect(placements.some((pose) => pose.playerId === 'renfort')).toBe(false);
+    expect(getBenchPlayers([...ONZE, renfort], placements)).toEqual([renfort]);
+  });
+
+  test('🔒 vider le terrain a la main reste vide — on ne ressuscite pas le pack publie', () => {
+    const publie = { teams: [{ placements: AJAMAIN }] };
+    const { placements, shouldResume } = resumeFieldForSelection({
+      existingComposition: publie, players: ONZE, startPlacements: [],
+    });
+
+    expect(placements).toHaveLength(0);
+    // On revient quand meme au terrain : le coach l'a vide EXPRES.
+    expect(shouldResume).toBe(true);
+  });
+});
+
+// 🔒 LE POINT 20 DU PLAN DE RECETTE : « les reponses deja donnees ne doivent PAS
+// etre effacees. Un joueur qui avait confirme reste confirme. » Le correctif
+// ci-dessus ne doit pas casser ça — temoin de non-regression obligatoire.
+describe('S04 — quitter le terrain et y revenir le retrouve tel qu il etait', () => {
+  const PUBLIEE = {
+    manualPlayers: [],
+    reservePlayerIds: ['p9', 'p10'],
+    schemaVersion: 3,
+    selectedPlayerIds: ONZE.map((unJoueur) => unJoueur.documentId),
+    teams: [{
+      id: 'team_1',
+      placements: [
+        {
+          playerId: 'p0', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+        },
+        {
+          playerId: 'p1', positionX: 13, positionY: 41, slotId: null,
+        },
+      ],
+    }],
+  };
+
+  test('🥇 la compo DEJA PUBLIEE est reprise telle quelle — elle voyageait deja ici', () => {
+    const { placements, shouldResume } = resumeFieldForSelection({
+      existingComposition: PUBLIEE, players: ONZE,
+    });
+
+    expect(shouldResume).toBe(true);
+    expect(placements).toHaveLength(2);
+    expect(placements[1]).toEqual({
+      playerId: 'p1', positionX: 13, positionY: 41, slotId: null,
+    });
+  });
+
+  test('sans compo enregistree, il n y a rien a reprendre : l ecran 4 garde son role', () => {
+    expect(resumeFieldForSelection({ players: ONZE })).toEqual({
+      placements: [], shouldResume: false,
+    });
+    expect(resumeFieldForSelection({
+      existingComposition: { selectedPlayerIds: ['p0'] }, players: ONZE,
+    }).shouldResume).toBe(false);
+  });
+
+  test('🔒 LE TEMOIN DE NON-REGRESSION : le pack reconstruit ne porte AUCUNE reponse', () => {
+    const { placements } = resumeFieldForSelection({
+      existingComposition: PUBLIEE,
+      players: ONZE.filter((unJoueur) => unJoueur.documentId !== 'p0'),
+    });
+    const pack = buildMatchCompositionPack({
+      basePack: PUBLIEE, placements, players: ONZE, sport: 'football',
+    });
+
+    // Republier ecrit `event.composition` ; les reponses vivent dans
+    // `event.participations` / `event.missings`. Une seule cle de reponse dans
+    // cette charge et un « je viens » deja donne serait ecrase.
+    const charge = JSON.stringify(pack);
+    ['participations', 'missings', 'responses', 'present', 'absent', 'pending']
+      .forEach((interdit) => expect(charge).not.toContain(interdit));
   });
 });

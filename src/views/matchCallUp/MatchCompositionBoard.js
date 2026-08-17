@@ -403,12 +403,19 @@ function MatchCompositionBoard() {
           </View>
           {/* Le pack dit « retour a la selection » : on remonte a l'ecran 1, pas
               a l'ecran 4. `navigate` vers un ecran deja empile y revient en
-              depilant, donc la selection cochee est retrouvee telle quelle. */}
+              depilant, donc la selection cochee est retrouvee telle quelle.
+              🧨 S04 — ET LE TERRAIN PART AVEC. Depiler cet ecran DETRUIT son
+              `useState` : sans ce parametre, les jetons poses a la main
+              n'existent plus nulle part, et le retour les reconstruisait depuis
+              une rangee de depart. */}
           <TouchableOpacity
             accessibilityRole="button"
             activeOpacity={0.8}
             // @ts-ignore
-            onPress={() => navigation.navigate(RouteNames.MatchCallUpSelection, params)}
+            onPress={() => navigation.navigate(RouteNames.MatchCallUpSelection, {
+              ...params,
+              startPlacements: placements,
+            })}
             style={[
               styles.editButton,
               {

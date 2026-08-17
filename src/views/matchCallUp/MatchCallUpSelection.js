@@ -46,6 +46,7 @@ import {
   hasSilentCallUp,
   isManualCallUpPlayer,
 } from './matchCallUpUtils';
+import { resumeFieldForSelection } from './matchCompositionUtils';
 
 /**
  * D77 — ECRANS 1 et 2 du pack composition : « Selection des convoques » et
@@ -251,17 +252,33 @@ function MatchCallUpSelection() {
     const selectedPlayers = [...squadPlayers, ...reinforcementPlayers, ...manualPlayers]
       .filter((player) => selectedIds.has(getCompositionPlayerId(player)));
 
-    // D79 — « Suivant » mene desormais a l'ecran 4 (« Partir de… »), qui ouvre
-    // ensuite le terrain de l'ecran 5. L'ancien board (`TacticalBoardV2`) reste
-    // debout et joignable par son propre chemin : le pack ne le supprime qu'une
-    // fois ses 17 ecrans livres.
-    // @ts-ignore
-    navigation.navigate(RouteNames.MatchCompositionStart, {
-      ...params,
-      pendingManualPlayer: undefined,
-      selectedPlayers,
+    // S04 — 🎯 UNE COMPO DEJA PLACEE NE REPASSE PAS PAR « Partir de… ».
+    // Redemander « d'ou veux-tu partir ? » a quelqu'un qui a deja pose ses
+    // 11 jetons, c'est exactement ce qui les effaçait : l'ecran 4 repartait
+    // d'une rangee (terrain vide ou compo type) et ecrasait le travail a la
+    // main. On rouvre donc le terrain tel qu'il etait, moins les decoches.
+    const { placements, shouldResume } = resumeFieldForSelection({
+      existingComposition,
+      players: selectedPlayers,
+      startPlacements: params.startPlacements ?? null,
     });
+
+    // D79 — sans rien de place, « Suivant » mene bien a l'ecran 4
+    // (« Partir de… »), qui ouvre ensuite le terrain de l'ecran 5. L'ancien
+    // board (`TacticalBoardV2`) reste debout et joignable par son propre
+    // chemin : le pack ne le supprime qu'une fois ses 17 ecrans livres.
+    // @ts-ignore
+    navigation.navigate(
+      shouldResume ? RouteNames.MatchCompositionBoard : RouteNames.MatchCompositionStart,
+      {
+        ...params,
+        pendingManualPlayer: undefined,
+        selectedPlayers,
+        ...(shouldResume ? { startPlacements: placements } : {}),
+      },
+    );
   }, [
+    existingComposition,
     manualPlayers,
     navigation,
     params,

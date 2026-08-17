@@ -300,13 +300,22 @@ function MatchConvocationPublished() {
         style={styles.scroll}
       >
         {/* La carte de recap. Le degrade cyan du pack est rendu par le meme
-            composant que les cartes d'evenement — aucun hex neuf. */}
-        <LinearGradient
-          colors={[withAlpha(Colors.primary500, 0.16), withAlpha(Colors.primary900, 0.6)]}
-          end={{ x: 1, y: 1 }}
-          start={{ x: 0, y: 0 }}
-          style={[styles.recapCard, { borderColor: withAlpha(Colors.primary500, 0.3) }]}
-        >
+            composant que les cartes d'evenement — aucun hex neuf.
+            🧨 S04 — ET LE DEGRADE N'EST PAS LA CARTE. Il l'etait : il portait
+            l'arrondi, la bordure et les marges, donc il devait se dimensionner
+            sur ses enfants, et iOS tranchait le carre (le meme defaut deja paye
+            sur les cartes evenement et club). Motif repris tel quel de
+            `ClubCardSurface.js:37-51`, POINT DE VERITE UNIQUE des cartes club :
+            un conteneur ordinaire porte la taille et decoupe les coins, le
+            degrade est POSE DERRIERE en `absoluteFill`, sans enfant. */}
+        <View style={[styles.recapCard, { borderColor: withAlpha(Colors.primary500, 0.3) }]}>
+          <LinearGradient
+            colors={[withAlpha(Colors.primary500, 0.16), withAlpha(Colors.primary900, 0.6)]}
+            end={{ x: 1, y: 1 }}
+            pointerEvents="none"
+            start={{ x: 0, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={[styles.recapBadge, { backgroundColor: Colors.primary500 }]}>
             <Image
               source={Images.check}
@@ -334,7 +343,7 @@ function MatchConvocationPublished() {
             {renderCountChip('pending', counts.pending)}
             {renderCountChip(CONVOCATION_RESPONSE_ABSENT, counts.absent)}
           </View>
-        </LinearGradient>
+        </View>
 
         {withdrawn.length > 0 ? (
           <TouchableOpacity
@@ -478,6 +487,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 24,
     borderWidth: 1,
+    // Le degrade est en absoluteFill DERRIERE le contenu : sans cette decoupe
+    // il deborderait des coins arrondis (`ClubCardSurface.js:62`).
+    overflow: 'hidden',
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
