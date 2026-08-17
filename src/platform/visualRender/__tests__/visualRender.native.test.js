@@ -245,6 +245,63 @@ describe('TEMOIN POSITIF — iOS ne change pas', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// T04 — ON NE REDEMANDE PAS AU SERVEUR CE QU ON A DEJA SOUS LES YEUX.
+//
+// Adel, recette du 2026-08-17, point 14 : « pourquoi, quand on appuie sur
+// PARTAGER, ca refait un decompte et ca regenere ? ». La cause etait ICI :
+// `downloadAndShareRender` appelait `fetchRenderBase64` SANS CONDITION, avec des
+// parametres identiques a ceux de l apercu deja affiche.
+//
+// 📏 CE QUE CE 2e ALLER-RETOUR COUTAIT, mesure du 2026-08-17 (22 rendus par
+// format, chaine de rendu reelle rejouee, i7-11800H 16 coeurs) : **mediane 3,7 a
+// 5,2 s, pire cas 13,0 s** et **1,29 Mo** — pour une image identique au pixel
+// pres. Et meme quand le cache du serveur repond, il n evite QUE Chromium :
+// la requete Strapi, le telechargement du logo du club et le transport des
+// 1,29 Mo, eux, sont repayes en entier (`visual-asset.ts:375`, avant le cache).
+//
+// ⚠️ LA DECISION NE SE PREND PAS ICI. C est `useEventShowcase` qui sait si son
+// cache d apercu contient EXACTEMENT ce format-la ; cette couche se contente
+// d honorer ce qu on lui tend. Une story demandee depuis un apercu `post` n a
+// rien a tendre — et le serveur travaille, comme il le doit.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('T04 — les octets deja a l ecran ne sont pas redemandes', () => {
+  it('🔒 avec l affiche deja en main, AUCUN appel au serveur', async () => {
+    const result = await downloadAndShareRender({
+      ...PNG_PARAMS, cachedBase64: 'REVKQQ==', cachedContentType: 'image/png',
+    });
+
+    expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+    // Ce sont bien CES octets-la qui sont ecrits, pas ceux d un rendu fantome.
+    expect(ReactNativeBlobUtil.fs.writeFile)
+      .toHaveBeenCalledWith(PNG_PATH, 'REVKQQ==', 'base64');
+    expect(result.outcome).toBe('shareSheet');
+  });
+
+  // Le type MIME voyage avec les octets : sans lui, un PDF deja en main
+  // partirait avec une extension .png et aucune application ne l ouvrirait.
+  it('le type MIME des octets tendus decide de l extension ecrite', async () => {
+    await downloadAndShareRender({
+      ...PDF_PARAMS, cachedBase64: 'JVBERi0=', cachedContentType: 'application/pdf',
+    });
+
+    expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+    expect(ReactNativeBlobUtil.fs.writeFile)
+      .toHaveBeenCalledWith(PDF_PATH, 'JVBERi0=', 'base64');
+  });
+
+  // 🔒 LE PENDANT INDISPENSABLE : sans octets tendus, le serveur est appele.
+  // Sans ce temoin, une regression qui avalerait `cachedBase64` a tort ferait
+  // partir un fichier VIDE, en silence.
+  it('🔒 sans octets en main, le serveur est appele comme avant', async () => {
+    await downloadAndShareRender(PNG_PARAMS);
+
+    expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+    expect(ReactNativeBlobUtil.fs.writeFile)
+      .toHaveBeenCalledWith(PNG_PATH, 'QUJD', 'base64');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // R05 — LA PHRASE DE PARTAGE N ARRIVAIT JAMAIS SUR ANDROID.
 //
 // 🧨 CE QUE LA MESURE A TROUVE : D94 a ecrit 7 phrases, une par type d evenement,

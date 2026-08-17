@@ -72,7 +72,17 @@ export const fetchRenderBase64 = async (params) => {
  *   fois dans `@/platform/share/fileShareContract` et exécutée par `shareLocalFile`.
  *   Sur Android l'affiche est désormais ENREGISTRÉE (galerie / téléchargements)
  *   puis une application est proposée pour l'ouvrir.
+ * T04 (2026-08-17) — ET ON NE REDEMANDE PAS CE QU'ON A DÉJÀ. Quand l'appelant
+ * joint `cachedBase64` (l'aperçu affiché, même sujet / gabarit / style / format),
+ * ces octets SONT le fichier : aucun aller-retour. Mesuré le 2026-08-17 en
+ * rejouant `admin/src/api/visual-asset/services/visual-renderer.ts` : le repayer
+ * coûtait **3,7 à 5,2 s de médiane** et **1,29 Mo**, pour une image identique.
+ * ⚠️ La décision ne se prend PAS ici : c'est `useEventShowcase` qui sait si son
+ * cache contient exactement ce format-là. Un `story` demandé depuis un aperçu
+ * `post` n'a rien à joindre — et le serveur travaille, comme il le doit.
  * @param {object} params
+ * @param {string} [params.cachedBase64] - Octets déjà à l'écran, s'ils existent.
+ * @param {string} [params.cachedContentType] - Type MIME de ces octets.
  * @param {string} [params.dialogTitle] - Titre du sélecteur d'application (Android).
  * @param {string} params.format
  * @param {string} [params.message] - Texte joint au fichier (lien public).
@@ -82,7 +92,9 @@ export const fetchRenderBase64 = async (params) => {
  *   du téléchargement navigateur : un appelant partagé lit `result?.outcome`.
  */
 export const downloadAndShareRender = async (params) => {
-  const { base64, contentType } = await fetchRenderBase64(params);
+  const { base64, contentType } = params.cachedBase64
+    ? { base64: params.cachedBase64, contentType: params.cachedContentType || 'image/png' }
+    : await fetchRenderBase64(params);
   const ext = contentType.includes('pdf') ? 'pdf' : 'png';
   const dir = ReactNativeBlobUtil.fs.dirs.CacheDir;
   const variant = params.variant || 'defaut';

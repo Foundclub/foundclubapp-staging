@@ -33,7 +33,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getEventShowcaseShareIntro } from '@/domains/visuals/eventShowcaseTemplate';
-import { getRenderProgress } from '@/domains/visuals/renderProgress';
+import { isLongWait } from '@/domains/visuals/renderProgress';
 import useVisualShowcase, { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEventShowcase';
 import useTheme from '@/theme/themeContext';
 
@@ -237,19 +237,23 @@ export default function EventPublishedShowcase({ navigation, route }) {
     }
   };
 
-  // CE QU'ON ATTEND, ET COMBIEN DE TEMPS ÇA DEMANDE. Deux attentes distinctes
-  // mènent ici, et c'était la MÊME attente muette : fabriquer l'aperçu
-  // (`isLoading`) et retélécharger un format pour l'enregistrer ou le partager
-  // (`busyAction` — un aller-retour serveur complet, constat figé dans
-  // EventPublishedShowcase.test.js « enregistrer le format déjà affiché repaie un
-  // aller-retour »). Le format décide du coût : `story` fait rendre 8,3 Mpx au
-  // serveur contre 5,8 pour l'aperçu — voir renderProgress.js pour les mesures.
+  // CE QU'ON ATTEND — et T04 (2026-08-17) a réduit la liste. Il restait deux
+  // attentes muettes : fabriquer l'aperçu (`isLoading`) et retélécharger un
+  // format (`busyAction`). Partager et « dans mes photos » ne retéléchargent
+  // PLUS RIEN : ils partent avec les octets affichés (useEventShowcase, T04 ⑧).
+  // Ce qui attend encore, ce sont les formats qui sont VRAIMENT d'autres images
+  // — `story` (8,3 Mpx contre 5,8) et l'A4 en PDF — et l'écran le dit avec ses
+  // mots, au lieu de laisser croire à une régénération inutile.
   const formats = templateConfig.formats || {};
   const waitingFormat = isLoading
     ? formats.preview
     : formats[BUSY_ACTION_FORMAT_SLOTS[busyAction]];
   const elapsedMs = useElapsedMs(waitingFormat);
-  const progress = getRenderProgress({ elapsedMs, format: waitingFormat });
+  // ⛔ Aucune durée annoncée : la mesure du 2026-08-17 va de 3,1 s à 22,9 s selon
+  // la charge du serveur (renderProgress.js). Seul le temps DÉJÀ écoulé est su.
+  const longWait = isLongWait(elapsedMs);
+  // Un AUTRE format que celui à l'écran : l'attente est légitime, on la nomme.
+  const preparingOtherFormat = !isLoading && (busyAction === 'story' || busyAction === 'poster');
 
   // Tant qu'aucune affiche n'existe (première génération, ou génération en échec),
   // le bouton principal n'aurait rien à envoyer : il est GRISÉ, pas muet. En
@@ -328,8 +332,9 @@ export default function EventPublishedShowcase({ navigation, route }) {
                 <View style={styles.skeletonQr} />
                 <View style={styles.skeletonFooter} />
               </SkeletonLoader>
-              <GenerationProgress
-                progress={progress}
+              <GenerationNotice
+                color={Colors.primary500}
+                longWait={longWait}
                 reduceMotion={reduceMotion}
                 styles={styles}
                 t={t}
@@ -343,8 +348,9 @@ export default function EventPublishedShowcase({ navigation, route }) {
               style={[styles.previewLoading, styles.previewOverlay]}
               testID="showcase-preview-veil"
             >
-              <GenerationProgress
-                progress={progress}
+              <GenerationNotice
+                color={Colors.primary500}
+                longWait={longWait}
                 reduceMotion={reduceMotion}
                 styles={styles}
                 t={t}
@@ -466,13 +472,19 @@ export default function EventPublishedShowcase({ navigation, route }) {
             variant="secondary"
           />
 
-          {/* Enregistrer ou partager refabrique l'image côté serveur : la même
-              attente, donc le même repère. Il vit ICI, sous les boutons, là où se
-              lisent déjà le résultat (« C'est enregistré… ») et l'échec — et il
-              disparaît avec `busyAction`, y compris quand ça rate. */}
-          {busyAction && !isLoading ? (
-            <GenerationProgress
-              progress={progress}
+          {/* T04 : ce repère ne s'allume plus que pour ce qui TRAVAILLE VRAIMENT.
+              Partager et « dans mes photos » partent avec l'image affichée : le
+              geste est immédiat, il n'a plus rien à annoncer. Restent story et
+              A4, d'autres images — et là, l'écran dit qu'il les PRÉPARE, au lieu
+              de laisser croire qu'il refait ce qu'on a déjà sous les yeux. Il
+              vit ICI, sous les boutons, là où se lisent déjà le résultat
+              (« C'est enregistré… ») et l'échec — et il disparaît avec
+              `busyAction`, y compris quand ça rate. */}
+          {preparingOtherFormat ? (
+            <GenerationNotice
+              color={Colors.primary500}
+              longWait={longWait}
+              otherFormat
               reduceMotion={reduceMotion}
               styles={styles}
               t={t}
@@ -632,56 +644,64 @@ const useElapsedMs = (activeKey) => {
 };
 
 /**
- * LE REPÈRE D'ATTENTE — ce qui remplace l'attente muette (S07, demande d'Adel du
- * 2026-08-16). Une attente sans repère se ressent deux fois plus longue, et une
- * attente MUETTE ressemble à une panne : c'est ce qui pousse à appuyer deux fois.
+ * LE REPÈRE D'ATTENTE — il dit qu'on travaille, il ne dit PAS combien de temps.
  *
- * Trois garde-fous, et chacun ferme un mensonge possible :
- *   · la barre s'arrête AVANT le bout (`PROGRESS_CAP`, renderProgress.js) — le
- *     bout est réservé à l'affiche qui existe. Et l'arrivée de l'image fait
- *     DISPARAÎTRE ce bloc au lieu de le faire courir jusqu'à 100 % : rien ne
- *     clignote quand c'est plus rapide que prévu ;
- *   · passé l'estimation, la PHRASE change au lieu de se figer sur « 0 s » — un
- *     compteur bloqué à zéro transforme une attente normale en panne apparente ;
- *   · « réduire les animations » retire la barre et GARDE le texte : c'est
- *     l'information qui compte, pas le mouvement.
+ * S07 (2026-08-16) y annonçait « encore N s environ ». T04 (2026-08-17) a mesuré :
+ * de 3,1 s à 22,9 s selon la charge du serveur (les chiffres sont dans
+ * `renderProgress.js`). Adel, recette du 17/08 : « ça finit TOUJOURS avec le
+ * message [de dépassement] ». Un garde-fou qui se déclenche à tous les coups
+ * n'est plus un garde-fou, c'est le comportement normal — et un compteur qui se
+ * trompe toujours apprend à ne plus être lu.
+ *
+ * ⛔ CE QU'IL N'Y A PLUS, ET IL NE FAUT PAS LE REMETTRE :
+ *   · aucun compte à rebours — on ne connaît pas la durée, donc on ne l'annonce
+ *     pas ;
+ *   · aucune barre qui se remplit — une barre qui avance pendant qu'on ne sait
+ *     rien de l'avancement est une fausse progression, exactement le défaut
+ *     qu'on répare ailleurs. `ActivityIndicator` (le repère de toute l'app) ne
+ *     promet rien : il tourne tant que ça travaille.
+ * ✅ CE QUI RESTE VRAI, et se mesure :
+ *   · le temps DÉJÀ écoulé — au-delà du pire cas observé, la phrase change ;
+ *   · « réduire les animations » retire le mouvement et GARDE le texte : c'est
+ *     l'information qui compte.
  * @param {object} props
- * @param {{ overrun: boolean, ratio: number, remainingSeconds: number|null }} props.progress
+ * @param {string} props.color - Encre de l'indicateur (le thème vit dans l'écran,
+ *   pas ici : même motif que `ShowcaseAction.busyColor`).
+ * @param {boolean} props.longWait - L'attente a dépassé tout ce qui a été mesuré.
+ * @param {boolean} [props.otherFormat] - On prépare une AUTRE image que l'aperçu.
  * @param {boolean} props.reduceMotion - Réglage système « réduire les animations ».
  * @param {Record<string, object>} props.styles
  * @param {(key: string, fallback: string, vars?: object) => string} props.t
  * @returns {import('react').ReactElement}
  */
-function GenerationProgress({
-  progress, reduceMotion, styles, t,
+function GenerationNotice({
+  color, longWait, otherFormat, reduceMotion, styles, t,
 }) {
-  const message = progress.overrun
-    ? t(
+  let message;
+  if (longWait) {
+    message = t(
       'showcase.generatingLonger',
-      'Ton affiche se fabrique toujours — c’est plus long que prévu.',
-    )
-    : t(
-      'showcase.generating',
-      'Ton affiche se fabrique — encore {{seconds}} s environ.',
-      { seconds: progress.remainingSeconds },
+      'Ton affiche se fabrique toujours — c’est plus long que d’habitude.',
     );
+  } else if (otherFormat) {
+    // Ici l'attente est LÉGITIME : ce format est une autre image que celle à
+    // l'écran. Le dire évite de faire passer un vrai travail pour un bug.
+    message = t(
+      'showcase.preparingOtherFormat',
+      'On prépare la version à partager — c’est une autre image que celle à l’écran.',
+    );
+  } else {
+    message = t('showcase.generating', 'Ton affiche se fabrique…');
+  }
 
   return (
-    <View style={styles.progressBlock}>
-      {reduceMotion ? null : (
-        <View
-          accessibilityRole="progressbar"
-          accessibilityValue={{ max: 100, min: 0, now: Math.round(progress.ratio * 100) }}
-          style={styles.progressTrack}
-        >
-          <View style={[styles.progressFill, { width: `${progress.ratio * 100}%` }]} />
-        </View>
-      )}
-      {/* La zone vive n'est ARMÉE qu'au dépassement : le compte à rebours change
-          chaque seconde, et un lecteur d'écran qui le relit chaque seconde
-          couvrirait tout le reste. Ainsi, une seule annonce — celle qui compte. */}
+    <View style={styles.progressBlock} testID="showcase-working">
+      {reduceMotion ? null : <ActivityIndicator color={color} size="small" />}
+      {/* La zone vive n'est ARMÉE qu'au dépassement : c'est le seul moment où le
+          texte change, et donc le seul qui mérite d'interrompre un lecteur
+          d'écran. Ainsi, une seule annonce — celle qui compte. */}
       <Text
-        accessibilityLiveRegion={progress.overrun ? 'polite' : 'none'}
+        accessibilityLiveRegion={longWait ? 'polite' : 'none'}
         style={styles.progressText}
       >
         {message}
@@ -848,21 +868,10 @@ const makeStyles = (Colors) => StyleSheet.create({
   progressBlock: {
     alignItems: 'center', gap: 8, paddingHorizontal: 16, width: '100%',
   },
-  // Le remplissage : primary500, la meme encre que les actions de l'ecran.
-  progressFill: { backgroundColor: Colors.primary500, borderRadius: 999, height: '100%' },
   // Sur fond primary800 (cadre d'apercu) comme sur primary900 (bas d'ecran) :
   // neutral300 reste au-dessus de 6,7:1.
   progressText: {
     color: Colors.neutral300, fontSize: 13, lineHeight: 18, textAlign: 'center',
-  },
-  // Le rail : primary700 sur primary800 — visible sans attirer l'oeil plus que
-  // l'affiche elle-meme. 8 pt de haut : lisible sans devenir un element de plus.
-  progressTrack: {
-    backgroundColor: Colors.primary700,
-    borderRadius: 999,
-    height: 8,
-    overflow: 'hidden',
-    width: '100%',
   },
   resetBtn: { alignItems: 'center', paddingVertical: 8 },
   // Sur fond sombre primary900 : primary500 = ~7,3:1.

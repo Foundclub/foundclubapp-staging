@@ -1,17 +1,31 @@
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import { LONG_WAIT_MS } from '@/domains/visuals/renderProgress';
 
 import EventPublishedShowcase from '../EventPublishedShowcase';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// S07 (2026-08-16) — FILET (E6). Demande d'Adel : « pendant qu'une affiche se
-// fabrique, l'écran ne dit pas combien de temps il reste ».
+// T04 (2026-08-17) — FILET (E6). CE FICHIER A ÉTÉ RETOURNÉ, et il faut savoir
+// pourquoi avant de le lire.
 //
-// 🧨 CE QUI REND CE LOT DÉLICAT, et pourquoi ces témoins existent : une affiche
-// coûte 1,6 à 2,3 s (mesuré le 2026-08-07). Un compte à rebours sur 2 secondes
-// n'a presque rien à compter — et un compteur qui reste BLOQUÉ sur « 0 s » parce
-// que le réseau traîne est PIRE que pas de compteur du tout : il transforme une
-// attente normale en panne apparente.
+// S07 (2026-08-16) y verrouillait un compte à rebours (« encore N s environ »),
+// bâti sur une estimation de 3,5 à 4,5 s SUPPOSÉE, jamais mesurée. Adel, recette
+// du 2026-08-17, point 11 : « le décompte n'est vraiment pas réaliste, et ça
+// finit TOUJOURS avec le message [de dépassement] ».
+//
+// 📏 LA MESURE LUI DONNE RAISON (2026-08-17, 22 rendus par format, chaîne de
+// rendu réelle rejouée sur un i7-11800H 16 cœurs, Chromium chaud) : le format
+// `post` — celui de l'aperçu — met **3,7 à 5,2 s de médiane** et jusqu'à
+// **13,0 s**, hors requêtes Strapi, hors logo distant, hors transport des
+// 1,29 Mo, et sur une machine PLUS RAPIDE que le serveur (6 vCPU Haswell). Le
+// dépassement ne pouvait donc pas ne pas se déclencher.
+//
+// 🎯 CE QUI A CHANGÉ ICI : on ne vérifie plus qu'un nombre est JUSTE, on vérifie
+// qu'il n'y en a AUCUN. Entre 3,1 s et 22,9 s selon la charge, aucune valeur
+// n'était vraie une fois sur deux — et un compteur qui se trompe toujours
+// apprend à ne plus être lu. Ce que S07 protégeait vraiment (⛔ jamais « 0 s »,
+// ⛔ jamais de barre pleine) est désormais vrai PAR CONSTRUCTION.
 //
 // ⚠️ Fichier séparé de `EventPublishedShowcase.test.js` À DESSEIN : le TEXTE du
 // partage est retravaillé en parallèle dans ce même écran (session S05). Deux
@@ -155,11 +169,24 @@ const progressBars = (tree) => tree.root.findAll(
 );
 
 /**
- * Pourcentage annoncé par la barre — c'est CE nombre qu'un lecteur d'écran lit.
+ * Les repères d'attente affichés (le bloc « ça travaille »). T04 : c'est LUI
+ * qu'on compte désormais, la barre de progression ayant disparu.
  * @param {any} tree
- * @returns {number}
+ * @returns {any[]}
  */
-const announcedPercent = (tree) => progressBars(tree)[0].props.accessibilityValue.now;
+const reperes = (tree) => tree.root.findAll(
+  (/** @type {any} */ node) => node.props && node.props.testID === 'showcase-working',
+);
+
+/**
+ * Les indicateurs qui TOURNENT à l'intérieur des repères d'attente. Portée
+ * volontairement restreinte au repère : les boutons ont le leur, et le réglage
+ * « animations réduites » ne parle que de celui-ci.
+ * @param {any} tree
+ * @returns {any[]}
+ */
+const indicateursQuiTournent = (tree) => reperes(tree)
+  .flatMap((/** @type {any} */ repere) => repere.findAllByType(ActivityIndicator));
 
 /**
  * Presse le bouton portant ce libellé d'accessibilité.
@@ -226,45 +253,41 @@ afterEach(() => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TÉMOIN 1 — pendant la génération, un temps estimé est affiché.
+// TÉMOIN ① — l'attente dit qu'elle travaille, elle n'annonce AUCUNE durée.
 // ─────────────────────────────────────────────────────────────────────────────
-describe('S07 — ① l attente annonce un temps, et elle dit que c est une estimation', () => {
-  it('la première fabrication montre une barre ET un temps estimé', async () => {
+describe('T04 — ① l attente dit qu elle travaille, sans promettre de durée', () => {
+  it('la première fabrication montre un repère qui tourne ET une phrase', async () => {
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
     const tree = await renderScreen(clubParams());
 
-    expect(progressBars(tree).length).toBeGreaterThan(0);
-    // Le mot « environ » n'est pas décoratif : l'écran ne promet pas une durée,
-    // il annonce une estimation. C'est ce qui le garde honnête à la 10e seconde.
-    expect(renderedText(tree)).toContain('environ');
-    expect(renderedText(tree)).toContain('encore 4 s environ');
+    expect(reperes(tree).length).toBeGreaterThan(0);
+    expect(indicateursQuiTournent(tree).length).toBeGreaterThan(0);
+    expect(renderedText(tree)).toContain('Ton affiche se fabrique');
   });
 
-  it('le temps annoncé décroît pendant que ça travaille', async () => {
+  // 🔒 LE TÉMOIN D'ARRÊT DU LOT (①). Le chiffre annoncé par S07 était faux : la
+  // mesure du 2026-08-17 donne 3,1 s à 22,9 s selon la charge, alors que l'écran
+  // promettait 3,5 s. Ici, on ne vérifie plus qu'un nombre est JUSTE — on vérifie
+  // qu'il n'y en a AUCUN, ce qui est la seule chose qu'on puisse tenir.
+  it('🔒 aucune seconde n est annoncée, à aucun moment des 60 premières', async () => {
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
     const tree = await renderScreen(clubParams());
-    expect(renderedText(tree)).toContain('encore 4 s environ');
 
-    await avancerDe(1000);
-    expect(renderedText(tree)).toContain('encore 3 s environ');
-
-    await avancerDe(1000);
-    expect(renderedText(tree)).toContain('encore 2 s environ');
+    for (let i = 0; i < 240; i += 1) {
+      // eslint-disable-next-line no-await-in-loop -- l'ordre des ticks EST le sujet
+      await avancerDe(250);
+      const text = renderedText(tree);
+      expect(text).not.toContain('environ');
+      expect(text).not.toContain('NaN');
+      // Aucune durée, sous aucune forme : « 4 s », « 0 s », « 12 secondes »…
+      expect(text).not.toMatch(/\d+\s*(s\b|secondes?)/);
+    }
   });
 
-  it('la barre avance tant que ça travaille (elle ne reste pas à zéro)', async () => {
-    mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
-    const tree = await renderScreen(clubParams());
-    expect(announcedPercent(tree)).toBe(0);
-
-    await avancerDe(1750);
-    expect(announcedPercent(tree)).toBeGreaterThan(30);
-  });
-
-  // Changer de style refabrique l'affiche : la MÊME attente, donc le MÊME repère.
+  // Changer de style refabrique VRAIMENT l'affiche : la même attente, le même repère.
   it('changer de style annonce aussi son attente', async () => {
     const tree = await renderScreen(clubParams());
-    expect(progressBars(tree).length).toBe(0); // l'affiche est là : rien à attendre
+    expect(reperes(tree).length).toBe(0); // l'affiche est là : rien à attendre
 
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
     const chips = tree.root.findAll(
@@ -274,148 +297,154 @@ describe('S07 — ① l attente annonce un temps, et elle dit que c est une esti
     );
     await act(async () => { chips[chips.length - 1].props.onPress(); });
 
-    expect(progressBars(tree).length).toBeGreaterThan(0);
-    expect(renderedText(tree)).toContain('environ');
+    expect(reperes(tree).length).toBeGreaterThan(0);
+    expect(renderedText(tree)).toContain('Ton affiche se fabrique');
   });
 
-  // Enregistrer / partager repaie un aller-retour serveur complet (constat figé
-  // dans EventPublishedShowcase.test.js) : c'était la MÊME attente muette.
-  it('enregistrer un format annonce aussi son attente', async () => {
+  // 🔒 CE TÉMOIN CONTREDIT S07 (« enregistrer un format annonce aussi son
+  // attente »), et c'est le point 14 de la recette du 17/08. L'affiche partagée
+  // est celle qu'on regarde : il n'y a plus de fabrication, donc plus rien à
+  // annoncer. Le bouton, lui, garde son indicateur — le geste reste visible.
+  it('🔒 « Partager » n annonce PLUS de fabrication : il n y en a plus', async () => {
     mockDownloadAndShareRender.mockReturnValue(new Promise(() => {}));
     const tree = await renderScreen(clubParams());
     await pressSansAttendre(tree, 'Partager l’affiche');
 
-    expect(progressBars(tree).length).toBeGreaterThan(0);
-    expect(renderedText(tree)).toContain('environ');
+    expect(reperes(tree).length).toBe(0);
+    expect(renderedText(tree)).not.toContain('se fabrique');
+  });
+
+  // Le pendant : story et A4 sont d'AUTRES images. Là, le serveur travaille
+  // vraiment — et l'écran le DIT, au lieu de laisser croire à une régénération.
+  it('story et A4 annoncent leur attente, et disent que c est une autre image', async () => {
+    mockDownloadAndShareRender.mockReturnValue(new Promise(() => {}));
+    const tree = await renderScreen(clubParams());
+    await pressSansAttendre(tree, 'Enregistrer l’image');
+    await pressSansAttendre(tree, 'Version story 9:16');
+
+    expect(reperes(tree).length).toBeGreaterThan(0);
+    expect(renderedText(tree)).toContain('une autre image que celle à l’écran');
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TÉMOIN 2 — 🔒 quand l'estimation est dépassée, le message CHANGE.
-// C'est le point le plus important du lot.
+// TÉMOIN ② — 🔒 au-delà du PIRE CAS MESURÉ, le message change. C'est un constat
+// sur le temps déjà écoulé, jamais une prédiction.
 // ─────────────────────────────────────────────────────────────────────────────
-describe('S07 — ② 🔒 au dépassement, le message change et ne dit jamais 0 s', () => {
-  it('🔒 passé le temps annoncé, la phrase devient « c’est plus long que prévu »', async () => {
+describe('T04 — ② 🔒 l attente anormale se dit, sans jamais annoncer de durée', () => {
+  it('🔒 pendant tout ce que la mesure a observé, la phrase reste ordinaire', async () => {
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
     const tree = await renderScreen(clubParams());
 
-    await avancerDe(4000); // post = 3 500 ms annoncées
+    // 13,0 s = le pire rendu mesuré le 2026-08-17 pour le format `post`.
+    await avancerDe(13000);
+    expect(renderedText(tree)).not.toContain('plus long que d’habitude');
+  });
+
+  it('🔒 au-delà du pire cas mesuré, la phrase bascule', async () => {
+    mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
+    const tree = await renderScreen(clubParams());
+
+    await avancerDe(LONG_WAIT_MS);
     const text = renderedText(tree);
 
-    expect(text).toContain('plus long que prévu');
+    expect(text).toContain('plus long que d’habitude');
     expect(text).toContain('se fabrique toujours');
-    // L'ancienne phrase a bien LAISSÉ LA PLACE : elle ne coexiste pas.
-    expect(text).not.toContain('encore 1 s environ');
   });
 
-  it('🔒 aucun « 0 s » n apparaît, à aucun moment de l attente', async () => {
-    mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
-    const tree = await renderScreen(clubParams());
-
-    // 20 secondes de réseau qui traîne, échantillonnées toutes les 250 ms.
-    for (let i = 0; i < 80; i += 1) {
-      // eslint-disable-next-line no-await-in-loop -- l'ordre des ticks EST le sujet
-      await avancerDe(250);
-      const text = renderedText(tree);
-      expect(text).not.toContain('encore 0 s');
-      expect(text).not.toContain('0 seconde');
-      expect(text).not.toContain('NaN');
-    }
-  });
-
-  it('🔒 le message de dépassement reste vrai à la 60e seconde', async () => {
+  it('🔒 le message d attente anormale reste vrai à la 60e seconde', async () => {
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
     const tree = await renderScreen(clubParams());
 
     await avancerDe(60000);
-    expect(renderedText(tree)).toContain('plus long que prévu');
+    expect(renderedText(tree)).toContain('plus long que d’habitude');
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TÉMOIN 3 — la barre n'atteint jamais le bout avant que l'affiche existe.
+// TÉMOIN ③ — 🔒 aucune barre ne se remplit. C'était le témoin « la barre
+// n'atteint jamais le bout » de S07 ; il est désormais tenu PAR CONSTRUCTION,
+// et ce qui est vérifié ici est plus fort : il n'y a pas de barre du tout.
 // ─────────────────────────────────────────────────────────────────────────────
-describe('S07 — ③ la barre ne mente pas en atteignant le bout', () => {
-  it('même après une minute d attente, elle reste sous 100 %', async () => {
+describe('T04 — ③ 🔒 aucune fausse progression : l écran n annonce aucun pourcentage', () => {
+  it('🔒 même après une minute, aucun nœud ne se déclare barre de progression', async () => {
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
-    const tree = await renderScreen(clubParams());
-
-    await avancerDe(60000);
-    expect(announcedPercent(tree)).toBeLessThan(100);
-    expect(announcedPercent(tree)).toBeGreaterThan(80);
-  });
-
-  // « Si c'est plus rapide que prévu, rien ne clignote » : la barre ne court pas
-  // jusqu'au bout à l'arrivée de l'image — elle DISPARAÎT, remplacée par l'affiche.
-  it('quand l affiche arrive plus vite que prévu, la barre s en va sans sauter', async () => {
     const tree = await renderScreen(clubParams());
 
     expect(progressBars(tree).length).toBe(0);
-    expect(renderedText(tree)).not.toContain('environ');
-    expect(renderedText(tree)).not.toContain('plus long que prévu');
+    await avancerDe(60000);
+    expect(progressBars(tree).length).toBe(0);
+  });
+
+  // L'arrivée de l'image fait DISPARAÎTRE le repère au lieu de le faire courir
+  // jusqu'au bout : rien ne clignote quand c'est plus rapide que d'habitude.
+  it('quand l affiche arrive, le repère s en va sans sauter', async () => {
+    const tree = await renderScreen(clubParams());
+
+    expect(reperes(tree).length).toBe(0);
+    expect(renderedText(tree)).not.toContain('se fabrique');
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TÉMOIN 4 — « animations réduites » : le texte reste, l'animation non.
+// TÉMOIN ④ — « animations réduites » : le texte reste, l'animation non.
+// NON-RÉGRESSION : ce témoin de S07 survit tel quel, seul son objet change
+// (l'indicateur qui tourne a remplacé la barre).
 // ─────────────────────────────────────────────────────────────────────────────
-describe('S07 — ④ réglage « animations réduites » : l information ne se perd pas', () => {
-  it('la barre ne s affiche pas, mais le temps estimé reste écrit', async () => {
+describe('T04 — ④ réglage « animations réduites » : l information ne se perd pas', () => {
+  it('rien ne tourne, mais la phrase reste écrite', async () => {
     /** @type {any} */ (AccessibilityInfo.isReduceMotionEnabled).mockResolvedValueOnce(true);
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
 
     const tree = await renderScreen(clubParams());
 
-    expect(progressBars(tree).length).toBe(0);
-    expect(renderedText(tree)).toContain('encore 4 s environ');
+    expect(indicateursQuiTournent(tree).length).toBe(0);
+    expect(renderedText(tree)).toContain('Ton affiche se fabrique');
   });
 
-  it('le dépassement se dit aussi, sans barre', async () => {
+  it('l attente anormale se dit aussi, sans rien faire tourner', async () => {
     /** @type {any} */ (AccessibilityInfo.isReduceMotionEnabled).mockResolvedValueOnce(true);
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
 
     const tree = await renderScreen(clubParams());
-    await avancerDe(4000);
+    await avancerDe(LONG_WAIT_MS);
 
-    expect(progressBars(tree).length).toBe(0);
-    expect(renderedText(tree)).toContain('plus long que prévu');
+    expect(indicateursQuiTournent(tree).length).toBe(0);
+    expect(renderedText(tree)).toContain('plus long que d’habitude');
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TÉMOIN 5 — 🔒 une génération qui ÉCHOUE efface la barre et dit pourquoi.
-// ⛔ Une barre qui tourne sur un échec est un mensonge qui dure pour toujours.
+// TÉMOIN ⑤ — 🔒 une génération qui ÉCHOUE efface le repère et dit pourquoi.
+// ⛔ Un indicateur qui tourne sur un échec est un mensonge qui dure pour toujours.
 // ─────────────────────────────────────────────────────────────────────────────
-describe('S07 — ⑤ 🔒 un échec efface la barre et nomme sa cause', () => {
-  it('🔒 la première fabrication échoue : plus de barre, et l écran dit pourquoi', async () => {
+describe('T04 — ⑤ 🔒 un échec efface le repère et nomme sa cause', () => {
+  it('🔒 la première fabrication échoue : plus de repère, et l écran dit pourquoi', async () => {
     mockFetchRenderBase64.mockRejectedValue(new Error('reseau'));
     const tree = await renderScreen(clubParams());
 
-    expect(progressBars(tree).length).toBe(0);
+    expect(reperes(tree).length).toBe(0);
     const text = renderedText(tree);
-    expect(text).not.toContain('environ');
-    expect(text).not.toContain('plus long que prévu');
+    expect(text).not.toContain('se fabrique');
     expect(text).toContain('Le visuel n’a pas pu être généré.');
     expect(text).toContain('Réessayer');
   });
 
-  it('🔒 le temps qui passe après l échec ne ressuscite pas la barre', async () => {
+  it('🔒 le temps qui passe après l échec ne ressuscite pas le repère', async () => {
     mockFetchRenderBase64.mockRejectedValue(new Error('reseau'));
     const tree = await renderScreen(clubParams());
 
-    await avancerDe(10000);
-    expect(progressBars(tree).length).toBe(0);
-    expect(renderedText(tree)).not.toContain('plus long que prévu');
+    await avancerDe(60000);
+    expect(reperes(tree).length).toBe(0);
+    expect(renderedText(tree)).not.toContain('plus long que d’habitude');
   });
 
-  it('🔒 un enregistrement qui échoue efface la barre et nomme sa cause', async () => {
+  it('🔒 un partage qui échoue le dit, et ne laisse rien tourner', async () => {
     mockDownloadAndShareRender.mockRejectedValue(new Error('reseau'));
     const tree = await renderScreen(clubParams());
     await press(tree, 'Partager l’affiche');
 
-    expect(progressBars(tree).length).toBe(0);
-    const text = renderedText(tree);
-    expect(text).not.toContain('environ');
-    expect(text).toContain('Le téléchargement a échoué');
+    expect(reperes(tree).length).toBe(0);
+    expect(renderedText(tree)).toContain('Le téléchargement a échoué');
   });
 });

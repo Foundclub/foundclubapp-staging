@@ -75,6 +75,18 @@ const renderKey = ({
   Object.keys(overrides || {}).sort().map((key) => [key, overrides[key]]),
 ]);
 
+/**
+ * Sépare une entrée du cache d'aperçu (`data:image/png;base64,…`) en ce que la
+ * couche plateforme sait consommer. Le cache est le SEUL à connaître cet
+ * emballage : la plateforme, elle, reçoit des octets et un type, rien de plus.
+ * @param {string} dataUri
+ * @returns {{ cachedBase64: string, cachedContentType: string }|null}
+ */
+const splitDataUri = (dataUri) => {
+  const found = /^data:([^;]+);base64,(.*)$/s.exec(String(dataUri || ''));
+  return found ? { cachedBase64: found[2], cachedContentType: found[1] } : null;
+};
+
 // Référence vide partagée pour l'état initial des surcharges : `overrides` et son miroir
 // temporisé démarrent sur le MÊME objet, si bien que le premier tick du debounce appelle
 // setDebouncedOverrides avec la même référence — React court-circuite (pas de re-rendu,
@@ -426,9 +438,25 @@ export default function useVisualShowcase({
   const shareFile = useCallback(async ({
     dialogTitle, format, message, template: tpl, variant: v,
   }) => {
+    // Téléchargements : on utilise les surcharges VIVES (le fichier reflète le texte
+    // courant même si l'aperçu temporisé n'a pas encore rattrapé la dernière frappe).
+    const params = {
+      format,
+      overrides: cleanOverrides(overrides),
+      template: tpl,
+      variant: v,
+      ...subject,
+    };
+    // T04 (⑧) — L'AFFICHE QU'ON PARTAGE EST CELLE QU'ON REGARDE.
+    // La MÊME clé que l'aperçu : si elle est là, ces octets SONT l'image
+    // affichée. Partager les redemandait au serveur — mesuré le 2026-08-17 en
+    // rejouant la chaîne de rendu : médiane 3,7 à 5,2 s et **1,29 Mo** repayés
+    // pour un résultat identique au pixel près. Le format décide tout seul :
+    // `story` et `a4` sont d'AUTRES images, leur clé n'est pas dans le cache,
+    // et le serveur travaille — comme il le doit.
+    const known = previewCache.current.get(renderKey(params));
+    const dejaLa = known ? splitDataUri(known) : null;
     try {
-      // Téléchargements : on utilise les surcharges VIVES (le fichier reflète le texte
-      // courant même si l'aperçu temporisé n'a pas encore rattrapé la dernière frappe).
       // Le téléchargement/partage réel est délégué à la couche plateforme :
       // natif = fichier cache + partage système ; web = fetch Blob + <a download>.
       // `message` (optionnel) accompagne le fichier dans le même partage, et
@@ -436,12 +464,9 @@ export default function useVisualShowcase({
       // constat iOS/Android consigné dans visualRender.native.js.
       return await downloadAndShareRender({
         dialogTitle,
-        format,
         message,
-        overrides: cleanOverrides(overrides),
-        template: tpl,
-        variant: v,
-        ...subject,
+        ...params,
+        ...(dejaLa || {}),
       });
     } catch (e) {
       logger.warn(`partage fichier ${tpl}/${format} échoué: ${e?.message}`);

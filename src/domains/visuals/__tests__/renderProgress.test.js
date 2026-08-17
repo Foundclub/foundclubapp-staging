@@ -1,97 +1,61 @@
-import {
-  DEFAULT_RENDER_ESTIMATE_MS,
-  getRenderEstimateMs,
-  getRenderProgress,
-  PROGRESS_CAP,
-  RENDER_ESTIMATE_MS,
-} from '../renderProgress';
+import * as renderProgress from '../renderProgress';
 
-// S07 (2026-08-16) — LES DEUX MENSONGES QU'ON INTERDIT ICI, chiffres à l'appui.
-// Une barre pleine devant un écran vide, et un compteur figé sur « 0 s », sont
-// tous les deux PIRES que pas de compteur du tout : ils transforment une attente
-// normale (1,6 à 2,3 s mesurées le 2026-08-07) en panne apparente.
+const { isLongWait, LONG_WAIT_MS } = renderProgress;
 
-describe('renderProgress — l estimation suit le format demandé', () => {
-  it('chaque format servi par l app a son estimation, et story coûte plus que post', () => {
-    expect(getRenderEstimateMs('post')).toBe(RENDER_ESTIMATE_MS.post);
-    expect(getRenderEstimateMs('story')).toBe(RENDER_ESTIMATE_MS.story);
-    expect(getRenderEstimateMs('a4')).toBe(RENDER_ESTIMATE_MS.a4);
-    // La capture est proportionnelle aux pixels : story (8,3 Mpx) > post (5,8 Mpx).
-    expect(RENDER_ESTIMATE_MS.story).toBeGreaterThan(RENDER_ESTIMATE_MS.post);
+// T04 (2026-08-17) — CE FICHIER A ÉTÉ RETOURNÉ, ET C'EST VOULU.
+//
+// S07 y verrouillait un compte à rebours (« encore N s environ ») bâti sur une
+// estimation SUPPOSÉE de 3,5 à 4,5 s. La mesure du 2026-08-17 (22 rendus par
+// format, chaîne de rendu réelle rejouée sur un i7-11800H 16 cœurs, Chromium
+// chaud) a donné : `post` médiane 3,7 à 5,2 s, pire 13,0 s · `a4` pire 22,9 s —
+// et ces chiffres EXCLUENT les requêtes Strapi, le logo distant et le transport
+// des 1,29 Mo vers le téléphone, sur un serveur 6 vCPU Haswell plus lent.
+//
+// ⇒ Les témoins de S07 sur `getRenderEstimateMs`, `PROGRESS_CAP` et
+//   `remainingSeconds` ne pouvaient pas survivre : ils gardaient la cohérence
+//   INTERNE d'un modèle dont la mesure a montré qu'il était faux dehors. Ce qu'ils
+//   protégeaient vraiment — ⛔ jamais de « 0 s », ⛔ jamais de barre pleine — est
+//   désormais garanti par construction : il n'y a plus ni compteur ni barre.
+//
+// Ce qui reste à verrouiller tient en une phrase : le seul nombre qui subsiste
+// parle du PASSÉ (le temps déjà écoulé), jamais de l'avenir.
+
+describe('renderProgress — 🔒 aucune durée n est promise', () => {
+  // LE TÉMOIN D'ARRÊT DU LOT : si un jour quelqu'un rajoute une estimation, une
+  // barre proportionnelle ou un compte à rebours, ce fichier doit le voir passer.
+  it('🔒 le module n exporte AUCUNE estimation, AUCUN plafond de barre', () => {
+    // `__esModule` est le drapeau posé par Babel, pas une exportation du fichier.
+    const exportes = Object.keys(renderProgress).filter((nom) => nom !== '__esModule');
+    expect(exportes.sort()).toEqual(['LONG_WAIT_MS', 'isLongWait'].sort());
   });
 
-  // Un format ajouté demain au serveur sans passer ici ne doit pas rendre `NaN`
-  // (« encore NaN s environ ») ni 0 : il retombe sur la référence mesurée.
-  it('un format inconnu, vide ou absent retombe sur la référence mesurée', () => {
-    [undefined, null, '', '   ', 'a3', 'webp-du-futur'].forEach((format) => {
-      expect(getRenderEstimateMs(/** @type {any} */ (format)))
-        .toBe(DEFAULT_RENDER_ESTIMATE_MS);
-    });
-  });
-});
-
-describe('renderProgress — 🔒 la barre n atteint JAMAIS le bout', () => {
-  it('au tout début, elle est à zéro (rien n est encore fait)', () => {
-    expect(getRenderProgress({ elapsedMs: 0, format: 'post' }).ratio).toBe(0);
-  });
-
-  it('à la moitié du temps annoncé, elle est à la moitié du plafond', () => {
-    const { ratio } = getRenderProgress({
-      elapsedMs: RENDER_ESTIMATE_MS.post / 2,
-      format: 'post',
-    });
-    expect(ratio).toBeCloseTo(PROGRESS_CAP / 2, 5);
-  });
-
-  // LE TÉMOIN D'ARRÊT : même après une minute, le bout reste réservé à l'affiche
-  // qui existe. C'est la seule chose qui empêche la barre de mentir.
-  it('🔒 même très en retard, elle plafonne sous 100 % — jamais pleine', () => {
-    [3500, 5000, 30000, 600000].forEach((elapsedMs) => {
-      const { ratio } = getRenderProgress({ elapsedMs, format: 'post' });
-      expect(ratio).toBe(PROGRESS_CAP);
-      expect(ratio).toBeLessThan(1);
-    });
-    expect(PROGRESS_CAP).toBeLessThan(1);
-  });
-
-  // Un temps écoulé négatif ou absurde (horloge du téléphone recalée pendant
-  // l'attente) ne doit pas produire une barre à l'envers.
-  it('un temps écoulé absurde ne fabrique pas de barre négative', () => {
-    [-1, -10000, NaN, undefined, null].forEach((absurde) => {
-      const { ratio } = getRenderProgress({
-        elapsedMs: /** @type {any} */ (absurde),
-        format: 'post',
-      });
-      expect(ratio).toBe(0);
-    });
+  // Le seuil n'est pas un chiffre de confort : il est posé JUSTE AU-DESSUS du
+  // pire cas mesuré (12 989 ms pour `post`). En dessous, l'écran crierait au loup
+  // pour une attente que la mesure a vue arriver normalement.
+  it('le seuil d attente anormale dépasse le pire cas mesuré le 2026-08-17', () => {
+    expect(LONG_WAIT_MS).toBeGreaterThan(12989);
   });
 });
 
-describe('renderProgress — 🔒 le compteur ne se fige JAMAIS sur 0 seconde', () => {
-  it('il décroît par secondes entières pendant le temps annoncé', () => {
-    // post = 3 500 ms annoncées.
-    expect(getRenderProgress({ elapsedMs: 0, format: 'post' }).remainingSeconds).toBe(4);
-    expect(getRenderProgress({ elapsedMs: 1000, format: 'post' }).remainingSeconds).toBe(3);
-    expect(getRenderProgress({ elapsedMs: 2000, format: 'post' }).remainingSeconds).toBe(2);
-    expect(getRenderProgress({ elapsedMs: 3000, format: 'post' }).remainingSeconds).toBe(1);
-  });
-
-  // 🔒 LE POINT LE PLUS IMPORTANT DU LOT : la dernière seconde annonce « 1 »,
-  // puis la valeur DISPARAÎT (null) — l'écran change alors de phrase. Aucune
-  // valeur 0 n'existe, donc aucun écran ne peut en afficher une.
-  it('🔒 la dernière seconde dit « 1 », puis il n y a plus de nombre du tout', () => {
-    expect(getRenderProgress({ elapsedMs: 3499, format: 'post' }).remainingSeconds).toBe(1);
-    [3500, 3501, 10000, 600000].forEach((elapsedMs) => {
-      const { overrun, remainingSeconds } = getRenderProgress({ elapsedMs, format: 'post' });
-      expect(overrun).toBe(true);
-      expect(remainingSeconds).toBeNull();
+describe('renderProgress — 🔒 la phrase ne change qu après le pire cas mesuré', () => {
+  it('pendant tout ce que la mesure a observé, l attente reste ordinaire', () => {
+    // 3,1 s (le rendu le plus rapide mesuré) ... 13,0 s (le pire) : rien d anormal.
+    [0, 3100, 5200, 8407, 12989, LONG_WAIT_MS - 1].forEach((elapsedMs) => {
+      expect(isLongWait(elapsedMs)).toBe(false);
     });
   });
 
-  it('avant le dépassement, il n annonce jamais 0 ni un nombre négatif', () => {
-    for (let elapsedMs = 0; elapsedMs < RENDER_ESTIMATE_MS.story; elapsedMs += 97) {
-      const { remainingSeconds } = getRenderProgress({ elapsedMs, format: 'story' });
-      expect(remainingSeconds).toBeGreaterThanOrEqual(1);
-    }
+  it('au-delà, elle bascule — et elle y reste', () => {
+    [LONG_WAIT_MS, LONG_WAIT_MS + 1, 22937, 60000, 600000].forEach((elapsedMs) => {
+      expect(isLongWait(elapsedMs)).toBe(true);
+    });
+  });
+
+  // L'horloge du téléphone peut être recalée PENDANT l'attente : un temps écoulé
+  // négatif ou absurde ne doit pas déclencher un message d'alerte.
+  it('une horloge recalée ne fabrique pas une fausse alerte', () => {
+    [-1, -600000, NaN, Infinity, undefined, null, '15000'].forEach((absurde) => {
+      expect(isLongWait(/** @type {any} */ (absurde))).toBe(false);
+    });
   });
 });
