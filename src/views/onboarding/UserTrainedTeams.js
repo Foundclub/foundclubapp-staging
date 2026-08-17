@@ -23,6 +23,18 @@ import {
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 /**
+ * T10 — le club NOMME arrive par la navigation : frontiere de confiance. Sur le
+ * web, un `:clubId` non substitue ferait filtrer les equipes sur un gabarit de
+ * route ; motif deja paye par `TeamWizardName.sanitizeRouteParam`.
+ * @param {any} value - Ce que le parametre de navigation contient.
+ * @returns {string} Un identifiant utilisable, ou une chaine vide.
+ */
+const sanitizeClubId = (value) => {
+  const normalized = String(value || '').trim();
+  return !normalized || normalized.startsWith(':') ? '' : normalized;
+};
+
+/**
  * D16 - « Quelles equipes entraines-tu ? », derniere etape du parcours
  * entraineur. C'est ICI que la branche staff se dedouble : le dirigeant
  * s'arrete au club (il le couvre en entier), l'entraineur declare les equipes
@@ -33,7 +45,7 @@ import {
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  * @returns {import('react').ReactElement} L'etape « equipes entrainees ».
  */
-function UserTrainedTeams({ navigation }) {
+function UserTrainedTeams({ navigation, route }) {
   const [selectedTeamIds, setSelectedTeamIds] = useState(/** @type {string[]} */([]));
 
   const {
@@ -50,17 +62,27 @@ function UserTrainedTeams({ navigation }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
+  // T10 — UN CLUB NOMME PASSE DEVANT LES TROIS DEVINETTES.
+  // Les trois sources ci-dessous DEDUISENT « mon club » du profil, et la
+  // troisieme prend une simple demande d'adhesion `pending`. C'est juste quand
+  // personne ne connait la reponse ; c'est faux quand l'ecran precedent, lui,
+  // la connait : un entraineur qui vient de CREER son club se voyait proposer
+  // les equipes du club qu'il avait seulement consulte (constat d'Adel du
+  // 2026-08-17). La devinette reste, elle ne passe plus devant la verite.
+  const namedClubId = sanitizeClubId(route?.params?.clubId);
+
   // Le club de l'entraineur n'est PAS encore une adhesion a ce stade : il vient
   // d'envoyer une demande au club (`createClubMembershipRequest`), qui reste
   // `pending` jusqu'a validation. On lit donc les trois sources, de la plus
   // sure a la plus recente.
   const clubId = useMemo(() => (
-    userData?.club?.documentId
+    namedClubId
+    || userData?.club?.documentId
     || userData?.clubs?.[0]?.documentId
     || (userData?.clubMembershipRequests || [])
       .find((request) => request?.state === 'pending')?.club?.documentId
     || undefined
-  ), [userData?.club, userData?.clubs, userData?.clubMembershipRequests]);
+  ), [namedClubId, userData?.club, userData?.clubs, userData?.clubMembershipRequests]);
 
   const teamsQuery = useGetTeams({ clubId, pageSize: 50 }, { enabled: !!clubId });
   const teams = useMemo(() => (

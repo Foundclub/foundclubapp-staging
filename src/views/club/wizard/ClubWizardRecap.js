@@ -85,7 +85,25 @@ function ClubWizardRecap({ navigation, route }) {
         ? getNextOnboardingRoute(RouteNames.UserAffiliationGuide)
         : null;
       if (nextRoute) {
-        parentNavigation.navigate(nextRoute);
+        // T10 ① — L'ETAPE SUIVANTE DOIT SAVOIR DE QUEL CLUB ON PARLE.
+        // `navigate(nextRoute)` ne transmettait RIEN : l'etape suivante devait
+        // deviner « mon club » depuis le profil, et sa 3e devinette est la
+        // demande d'adhesion `pending` — donc le club consulte pendant la
+        // recherche. Constat d'Adel du 2026-08-17 : « ca m'a propose de
+        // rejoindre une equipe DU PREMIER CLUB sur lequel j'avais clique ».
+        parentNavigation.navigate(
+          nextRoute,
+          clubDocumentId ? { clubId: clubDocumentId } : undefined,
+        );
+
+        // T10 ② — ET LE TUNNEL QUITTE SA PILE, meme motif que la branche
+        // voisine (D81) : les 5 etapes restaient empilees SOUS l'etape
+        // suivante, donc un seul « Retour » reposait le doigt sur « Creer mon
+        // club ». On vide la pile du club APRES le depart, sur la pile qu'on
+        // possede — un `reset` sur la pile PARENTE depuis une sous-pile est
+        // servi par la sous-pile et la renvoie a son ecran initial (mesure du
+        // 2026-08-17, filet `clubWizardOnboardingAtterrissage`).
+        navigation.reset({ index: 0, routes: [{ name: RouteNames.ClubList }] });
         return;
       }
       markOnboardingComplete(userData?.documentId);
