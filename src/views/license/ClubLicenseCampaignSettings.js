@@ -1917,6 +1917,33 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   }, []);
 
   const providerMutation = useLicenseMutation(async () => true, campaignId);
+
+  // S06 — LE VERROU DU BOUTON FINAL, ET IL NE COUVRE PAS SEULEMENT L APPEL.
+  //
+  // Adel en recette de la `2.6.19` (point 10) : « j'ai du appuyer DEUX FOIS sur
+  // le bouton "creer la campagne" ». Le premier appui PARTAIT — `isNextLoading`
+  // recevait deja `saveMutation.isPending` et `Button` rend son touchable inerte
+  // quand il charge (Button.js:75, 98). Ce qui manquait, c'est la SUITE :
+  // `@tanstack/query-core` remet `isPending` a `false` AVANT de jouer le
+  // `onSuccess` passe a `mutate(...)` (mutationObserver.js:43-46 puis 81), et
+  // c'est dans ce `onSuccess` que l'ecran enchaine jusqu'a cinq allers-retours
+  // de plus (documents, regles tarifaires, provider) sans rien afficher.
+  // ⇒ le bouton redevenait vivant pendant une fenetre muette, et un second
+  //   appui repartait en `createLicenseCampaign` — `campaignId` etant encore
+  //   vide. Deux campagnes.
+  //
+  // Le motif est celui des tunnels voisins qui portent le meme gabarit
+  // (`ClubWizardRecap`, `EventWizardRecap`, `FriendlyMatchWizardRecap`) : un
+  // `isSubmitting` pose avant la chaine, rendu au bouton par `isNextLoading`.
+  // Le `ref` s'y ajoute pour une seule raison : deux appuis dans la MEME image
+  // passeraient tous les deux avant le re-rendu qui desactive le bouton.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const finirEnvoi = useCallback(() => {
+    isSubmittingRef.current = false;
+    setIsSubmitting(false);
+  }, []);
+
   const syncSavedCampaignParams = useCallback((savedCampaignId) => {
     if (!savedCampaignId) return;
     navigation.setParams({
@@ -1941,6 +1968,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   }, [clubId, navigation]);
 
   const persistCampaign = useCallback((options = {}) => {
+    // S06 — un envoi deja en vol ne se relance pas. Le `ref` tranche AVANT tout
+    // rendu : c'est lui qui rend le double appui inoffensif quel que soit le
+    // rythme.
+    if (isSubmittingRef.current) return;
     const requestedStatus = options.status || campaign?.status || 'draft';
     if (requestedStatus !== 'draft' && paymentModes.external_link && !String(externalUrl || '').trim()) {
       Alert.alert('Lien manquant', 'Ajoute le lien externe du club avant publication.');
@@ -1967,8 +1998,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       Alert.alert('Règle tarifaire incomplète', 'Complète chaque règle de prix avant de sauvegarder la campagne.');
       return;
     }
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
     saveMutation.mutate({ status: requestedStatus }, {
       onError: (error) => {
+        finirEnvoi();
         const subscriptionDecision = extractSubscriptionDecisionFromError(error);
         if (subscriptionDecision) {
           setSubscriptionPaywallDecision(subscriptionDecision);
@@ -2051,15 +2085,20 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           successTitle = 'Campagne programmee';
           successMessage = 'La campagne est publiée et s ouvrira automatiquement à sa date de début.';
         }
+        // ⛔ ON NE REND PAS LE BOUTON : la campagne EXISTE desormais, un appui de
+        // plus n'aurait rien de bon a faire. `cancelable: false` supprime le seul
+        // cas ou l'utilisateur pourrait rester devant un formulaire verrouille —
+        // le rejet de la fenetre par un appui a cote sur Android. Meme reglage
+        // que `ClubWizardRecap`.
         Alert.alert(successTitle, successMessage, [
           {
             onPress: () => goToCampaignOperations(savedCampaignId),
             text: 'OK',
           },
-        ]);
+        ], { cancelable: false });
       },
     });
-  }, [campaign?.status, campaignId, documentRequests, externalUrl, goToCampaignOperations, helloAssoIsPublishReady, helloAssoStatusMessage, paymentModes.external_link, paymentModes.helloasso, pricingRules, providerMutation, queryClient, removedDocumentRequestIds, removedPricingRuleIds, routeEventId, saveMutation, syncSavedCampaignParams]);
+  }, [campaign?.status, campaignId, documentRequests, externalUrl, finirEnvoi, goToCampaignOperations, helloAssoIsPublishReady, helloAssoStatusMessage, paymentModes.external_link, paymentModes.helloasso, pricingRules, providerMutation, queryClient, removedDocumentRequestIds, removedPricingRuleIds, routeEventId, saveMutation, syncSavedCampaignParams]);
 
   const save = useCallback(() => {
     persistCampaign({ status: canPublishFromWizard ? 'draft' : (campaign?.status || 'draft') });
@@ -2982,7 +3021,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         collapsibleHeader
         headerVariant="focus"
         isNextDisabled={isWizardNextDisabled}
-        isNextLoading={saveMutation.isPending}
+        isNextLoading={saveMutation.isPending || isSubmitting}
         nextLabel={finalSaveLabel}
         onBack={handleWizardBack}
         onNext={handleWizardNext}
