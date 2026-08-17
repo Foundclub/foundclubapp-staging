@@ -68,13 +68,30 @@ function ClubWizardRecap({ navigation, route }) {
       .map((activity) => activity.name);
   }, [activities, state.activityDocumentIds]);
 
-  const resumeAfterSuccess = (createdClub) => {
+  const resumeAfterSuccess = async (createdClub) => {
     dispatch({ type: 'RESET' });
+
+    // Les invalidations, elles, ne s'attendent PAS : `invalidateQueries` marque
+    // les requetes perimees de facon SYNCHRONE, et le `queryClient` est un
+    // singleton qui survit a cet ecran. Attendre ne ferait que faire patienter
+    // — decision mesuree au lot D19 (`EventWizardRecap.creation.test.js`).
     queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
     queryClient.invalidateQueries({ queryKey: ['get-me'] });
     queryClient.invalidateQueries({ queryKey: ['clubs'] });
+
+    // T10 — MAIS LE PROFIL, SI : la navigation ne part plus devant lui.
+    // `refetchUserData()` partait sans `await`, donc l'etape suivante se montait
+    // sur l'ANCIEN profil — celui d'avant la creation. Or c'est le profil qui
+    // decide quelles etapes du tunnel existent encore (`PrivateNavigator`), et
+    // c'est lui que l'etape suivante lit. Elle annoncait le contraire de ce qui
+    // venait de se passer. Un echec de rafraichissement ne doit pas retenir
+    // quelqu'un dans un tunnel dont le club EST cree : on repart quand meme.
     if (typeof refetchUserData === 'function') {
-      refetchUserData();
+      try {
+        await refetchUserData();
+      } catch {
+        // Le club est cree : on continue, l'ecran suivant se rafraichira seul.
+      }
     }
 
     const clubDocumentId = createdClub?.documentId;
@@ -85,7 +102,25 @@ function ClubWizardRecap({ navigation, route }) {
         ? getNextOnboardingRoute(RouteNames.UserAffiliationGuide)
         : null;
       if (nextRoute) {
-        parentNavigation.navigate(nextRoute);
+        // T10 ① — L'ETAPE SUIVANTE DOIT SAVOIR DE QUEL CLUB ON PARLE.
+        // `navigate(nextRoute)` ne transmettait RIEN : l'etape suivante devait
+        // deviner « mon club » depuis le profil, et sa 3e devinette est la
+        // demande d'adhesion `pending` — donc le club consulte pendant la
+        // recherche. Constat d'Adel du 2026-08-17 : « ca m'a propose de
+        // rejoindre une equipe DU PREMIER CLUB sur lequel j'avais clique ».
+        parentNavigation.navigate(
+          nextRoute,
+          clubDocumentId ? { clubId: clubDocumentId } : undefined,
+        );
+
+        // T10 ② — ET LE TUNNEL QUITTE SA PILE, meme motif que la branche
+        // voisine (D81) : les 5 etapes restaient empilees SOUS l'etape
+        // suivante, donc un seul « Retour » reposait le doigt sur « Creer mon
+        // club ». On vide la pile du club APRES le depart, sur la pile qu'on
+        // possede — un `reset` sur la pile PARENTE depuis une sous-pile est
+        // servi par la sous-pile et la renvoie a son ecran initial (mesure du
+        // 2026-08-17, filet `clubWizardOnboardingAtterrissage`).
+        navigation.reset({ index: 0, routes: [{ name: RouteNames.ClubList }] });
         return;
       }
       markOnboardingComplete(userData?.documentId);
