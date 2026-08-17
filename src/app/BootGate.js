@@ -4,6 +4,7 @@ import ErrorScreen from '@/views/Error';
 
 import { persistDiagnosticError } from '@/utils/bootDiagnostics';
 
+import AppUpdateGate from '@/app/AppUpdateGate';
 import {
   getRuntimeEndpointsLog,
   resolveRuntimeEndpoints,
@@ -13,6 +14,13 @@ const buildConfigError = (errors) => new Error(
   `[CONFIG][runtime-endpoints] ${errors.join(' ')}`,
 );
 
+/**
+ * Les deux portes du demarrage : configuration reseau valide, puis version de
+ * l'app encore acceptee par le serveur.
+ * @param {object} root0
+ * @param {import('react').ReactNode} root0.children
+ * @returns {import('react').ReactElement}
+ */
 function BootGate({ children }) {
   const runtimeEndpoints = useMemo(() => resolveRuntimeEndpoints(), []);
   const errors = useMemo(
@@ -48,7 +56,12 @@ function BootGate({ children }) {
     );
   }
 
-  return children;
+  // S09 — la seconde porte, au meme etage que celle-ci et juste apres elle :
+  // la configuration est valide, on peut demander au serveur si cette version
+  // de l'app est encore acceptee. Elle laisse passer par defaut (voir
+  // `AppUpdateGate`) ; quand elle bloque, `children` n'est jamais monte, donc
+  // aucune pile de navigation n'existe derriere l'ecran.
+  return <AppUpdateGate>{children}</AppUpdateGate>;
 }
 
 export default BootGate;

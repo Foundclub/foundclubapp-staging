@@ -222,6 +222,24 @@ export default {
     unknown: 'Une erreur inconnue est survenue.',
     USER_NOT_FOUND_POLICY_ERROR: 'Violation de la politique concernant les utilisateurs introuvables.',
   },
+  appUpdateGate: {
+    a11y: {
+      contactHint: "Ouvre le site FoundClub pour joindre l'équipe.",
+      updateHint: "Ouvre la boutique d'applications de ce téléphone.",
+    },
+    actions: {
+      contact: 'Un problème ? Nous contacter',
+      update: 'Mettre à jour',
+    },
+    installedVersion: 'Version installée : {{version}}',
+    requiredVersion: 'Version demandée : {{version}}',
+    title: 'Mise à jour nécessaire',
+    what: 'Installe la dernière version depuis la boutique, puis rouvre FoundClub. '
+      + 'Tes données et ton compte sont intacts.',
+    why: 'Cette version de FoundClub est trop ancienne. Des corrections importantes '
+      + "sont arrivées depuis, et l'application ne peut plus fonctionner correctement "
+      + 'avec celle-ci.',
+  },
   club: {
     fields: {
       address: {
