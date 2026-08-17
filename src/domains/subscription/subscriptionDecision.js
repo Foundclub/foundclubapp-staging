@@ -41,7 +41,9 @@ export const getSubscriptionAccessLevel = ({
 const DEFAULT_REASON_LABELS = {
   AUTH_REQUIRED: 'Connexion requise',
   CLUB_TIER_LIMIT_REACHED: 'Limite d équipes de ton offre Club atteinte',
-  FREE_INCLUDED: 'Inclus dans le plan gratuit',
+  // T09 — « offre » partout : c'est le mot des trois ecrans du parcours
+  // (« Changer d'offre », « Comparer les offres », « Ton offre actuelle »).
+  FREE_INCLUDED: 'Inclus dans l offre gratuite',
   FREE_QUOTA_AVAILABLE: 'Quota gratuit disponible',
   FREE_QUOTA_EXHAUSTED: 'Quota gratuit épuisé',
   SUBSCRIPTION_REQUIRED: 'Abonnement requis',
@@ -113,10 +115,24 @@ const RECOMMENDED_PLAN_CODES = {
   TEAM: 'fc_team_1_yearly',
 };
 
+// T09 — ces libelles sont lus par le CLIENT (« Offre conseillée: … »), pas par le
+// code : ils portent donc le nom sous lequel l'offre est VENDUE. Le catalogue
+// serveur vend « Équipe » (subscription-catalog.ts:61) ; « Team » etait le seul
+// endroit de l'app a nommer ce produit en anglais.
 /** @type {Record<string, string>} */
 const REQUIRED_PLAN_LABELS = {
   CLUB: 'Club',
-  TEAM: 'Team',
+  TEAM: 'Équipe',
+};
+
+// Lettre de palier Club, telle que le catalogue serveur la vend : « Club S » /
+// « Club M » / « Club L » (subscription-catalog.ts:26-28). Le code de palier
+// (1/2/3) ne sort jamais a l'ecran.
+/** @type {Record<number, string>} */
+const CLUB_TIER_LETTERS = {
+  1: 'S',
+  2: 'M',
+  3: 'L',
 };
 
 /** @type {Record<string, string>} */
@@ -165,8 +181,8 @@ const SUBSCRIPTION_STATUS_META = {
     label: 'Gratuit',
   },
   TEAM: {
-    description: 'Les droits Team sont ouverts sur les équipes couvertes.',
-    label: 'Team',
+    description: 'Les droits Équipe sont ouverts sur les équipes couvertes.',
+    label: 'Équipe',
   },
 };
 
@@ -626,21 +642,28 @@ export const getSubscriptionStatusMeta = (subscriptionAccessLevel) => (
 export const formatSubscriptionPlanLabel = (planCode) => {
   const normalizedPlanCode = String(planCode || '').trim().toLowerCase();
   if (!normalizedPlanCode) {
-    return 'Aucun plan actif';
+    return 'Aucune offre active';
   }
 
+  // T09 — c'est le SEUL nom que connaisse l'ecran « Mon abonnement » : il ne
+  // recoit qu'un planCode (SubscriptionOverview.js:239), jamais le displayName du
+  // catalogue. Il doit donc reconstruire mot pour mot le nom sous lequel l'offre
+  // a ete vendue, sans quoi le client ne reconnait pas ce qu'il paie.
   const teamMatch = normalizedPlanCode.match(/^fc_team_(\d+)_(monthly|yearly)$/);
   if (teamMatch) {
     const slotCount = Number(teamMatch[1] || 0);
     const period = PLAN_PERIOD_LABELS[teamMatch[2]] || teamMatch[2];
-    return `Team ${slotCount} equipe${slotCount > 1 ? 's' : ''} / ${period}`;
+    return `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''} / ${period}`;
   }
 
   const clubMatch = normalizedPlanCode.match(/^fc_club(?:_tier_(\d+))?_(monthly|yearly)$/);
   if (clubMatch) {
     const tier = Number(clubMatch[1] || 0);
     const period = PLAN_PERIOD_LABELS[clubMatch[2]] || clubMatch[2];
-    return tier > 0 ? `Club tier ${tier} / ${period}` : `Club / ${period}`;
+    // Un palier inconnu retombe sur « Club » nu plutot que d'inventer une
+    // lettre : mieux vaut un nom incomplet qu'un nom faux.
+    const tierLetter = CLUB_TIER_LETTERS[tier] || '';
+    return tierLetter ? `Club ${tierLetter} / ${period}` : `Club / ${period}`;
   }
 
   return normalizedPlanCode

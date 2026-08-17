@@ -61,7 +61,7 @@ describe('getSubscriptionStatusMeta — ne promet plus un blocage qui n existe p
   });
 
   it('les autres etats sont inchanges', () => {
-    expect(getSubscriptionStatusMeta('TEAM').label).toBe('Team');
+    expect(getSubscriptionStatusMeta('TEAM').label).toBe('Équipe');
     expect(getSubscriptionStatusMeta('FREE').label).toBe('Gratuit');
     expect(getSubscriptionStatusMeta(undefined).label).toBe('Gratuit');
   });

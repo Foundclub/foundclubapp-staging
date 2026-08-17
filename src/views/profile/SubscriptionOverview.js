@@ -121,7 +121,7 @@ function SubscriptionTrialBanner({ trialSubscription }) {
         {`Aperçu ${getTrialScopeLabel(trialSubscription?.planCode)} · J-${remainingDays}`}
       </Text>
       <Text style={[Fonts.p2, Fonts.primary700]}>
-        Aucune carte requise. Retour au plan gratuit ensuite.
+        Aucune carte requise. Retour à l&apos;offre gratuite ensuite.
       </Text>
     </View>
   );
@@ -503,7 +503,7 @@ function SubscriptionOverview({ navigation }) {
 
           {planLabels.length > 1 ? (
             <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[4]]}>
-              {`Autres plans actifs : ${planLabels.slice(1).join(' · ')}`}
+              {`Autres offres actives : ${planLabels.slice(1).join(' · ')}`}
             </Text>
           ) : null}
 

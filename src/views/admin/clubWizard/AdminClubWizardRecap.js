@@ -115,7 +115,7 @@ function AdminClubWizardRecap({ navigation }) {
         state.clubPartner ? 'Club partenaire' : 'Club standard',
         state.clubVerified ? 'Club certifié' : 'Club non certifié',
         state.isReservationProvider ? 'Réservation active' : 'Pas réservation',
-        'Abonnements et capacité Team geres depuis les opérations abonnements',
+        'Abonnements et capacité Équipe geres depuis les opérations abonnements',
       ],
       title: 'Statut',
     },

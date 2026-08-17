@@ -69,7 +69,7 @@ describe('subscriptionDecision', () => {
     expect(mapSubscriptionDecisionToPaywall(decision).paywallKey).toBe('composition-required');
     expect(getSubscriptionPaywallContent(decision)).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La composition d équipe est réservée a l offre Équipe. Offre conseillée: Team ou Club.',
+      description: 'La composition d équipe est réservée a l offre Équipe. Offre conseillée: Équipe ou Club.',
       title: 'Composition réservée',
     });
     expect(getSubscriptionQuotaSheetContent(decision)).toMatchObject({
@@ -91,7 +91,7 @@ describe('subscriptionDecision', () => {
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
       description: 'La création de campagnes de cotisation demande une offre active.'
-        + ' Offre conseillée: Team ou Club.',
+        + ' Offre conseillée: Équipe ou Club.',
       title: 'Cotisations réservées',
     });
     expect(getSubscriptionPaywallContent({
@@ -189,8 +189,8 @@ describe('subscriptionDecision', () => {
   });
 
   test('formats plan requirements and paywall copy for reusable mobile sheets', () => {
-    expect(getSubscriptionRequiredPlanLabels(['TEAM', 'CLUB', 'TEAM'])).toEqual(['Team', 'Club']);
-    expect(formatSubscriptionRequiredPlanText(['TEAM', 'CLUB'])).toBe('Team ou Club');
+    expect(getSubscriptionRequiredPlanLabels(['TEAM', 'CLUB', 'TEAM'])).toEqual(['Équipe', 'Club']);
+    expect(formatSubscriptionRequiredPlanText(['TEAM', 'CLUB'])).toBe('Équipe ou Club');
     expect(getSubscriptionPaywallContent({
       allowed: false,
       paywall: 'EVENT_LIMIT',
@@ -198,13 +198,13 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['TEAM', 'CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'Tu as atteint la limite gratuite de publication d événements. Offre conseillée: Team ou Club.',
+      description: 'Tu as atteint la limite gratuite de publication d événements. Offre conseillée: Équipe ou Club.',
       title: 'Publication d événement limitée',
     });
   });
 
   test('formats plan labels and team coverage summaries for the profile UI', () => {
-    expect(formatSubscriptionPlanLabel('fc_team_2_yearly')).toBe('Team 2 equipes / an');
+    expect(formatSubscriptionPlanLabel('fc_team_2_yearly')).toBe('Équipe · 2 équipes / an');
     expect(getSubscriptionPlanLabels({
       activePlanCodes: ['fc_team_2_yearly', 'fc_club_tier_1_monthly'],
       teamSlotSummary: {
@@ -213,7 +213,7 @@ describe('subscriptionDecision', () => {
         coveredTeamDocumentIds: ['team-1'],
         total: 2,
       },
-    })).toEqual(['Team 2 equipes / an', 'Club tier 1 / mois']);
+    })).toEqual(['Équipe · 2 équipes / an', 'Club S / mois']);
     expect(getSubscriptionTeamSlotSummary({
       teamSlotSummary: {
         assigned: 1,

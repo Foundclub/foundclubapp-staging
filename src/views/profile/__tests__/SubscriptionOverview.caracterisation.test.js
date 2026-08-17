@@ -321,7 +321,7 @@ describe('Hub Abonnement — ce que voit un dirigeant abonne CLUB', () => {
       },
     });
 
-    expect(texteVisible(arbre)).toContain('Autres plans actifs : Team 2 equipes / an');
+    expect(texteVisible(arbre)).toContain('Autres offres actives : Équipe · 2 équipes / an');
   });
 
   it('restaure les achats et relit le contexte apres coup (L08)', async () => {

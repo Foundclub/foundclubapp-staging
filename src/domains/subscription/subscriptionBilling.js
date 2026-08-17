@@ -373,7 +373,7 @@ export const getSubscriptionCatalogEntryMeta = (entry) => {
   if (scopeType === TEAM_SCOPE) {
     const slotsLabel = `${slotCount} équipe${slotCount > 1 ? 's' : ''} couverte${slotCount > 1 ? 's' : ''}`;
     return {
-      description: 'Publie et gère les équipes couvertes par tes slots Team.',
+      description: 'Publie et gère les équipes couvertes par ton offre Équipe.',
       label: displayName || formatSubscriptionPlanLabel(entry?.planCode),
       priceLabel,
       secondaryLabel: [slotsLabel, periodLabel, priceLabel].filter(Boolean).join(' - '),
@@ -554,12 +554,15 @@ export const getSubscriptionBillingErrorMessage = (error) => {
       || '',
   ).trim();
 
+  // T09 — « slot » est le mot du code ; celui du client est « place », qu'il lit
+  // deja sur « Mon abonnement » (« 1/2 place attribuée »,
+  // SubscriptionOverview.js:288). Et l'offre s'appelle « Équipe », jamais « Team ».
   if (message === 'TEAM_SLOT_DUPLICATE_TEAM') {
-    return 'Une même équipe ne peut pas être attribuée deux fois à la même offre Team.';
+    return 'Une même équipe ne peut pas être attribuée deux fois à la même offre Équipe.';
   }
 
   if (message === 'TEAM_SLOT_COUNT_EXCEEDED') {
-    return 'Cette offre n a pas assez de slots pour couvrir autant d équipes. Ajuste la sélection avant de continuer.';
+    return 'Cette offre n a pas assez de places pour couvrir autant d équipes. Ajuste la sélection avant de continuer.';
   }
 
   if (message === 'CLUB_ALREADY_COVERED') {
@@ -567,7 +570,7 @@ export const getSubscriptionBillingErrorMessage = (error) => {
   }
 
   if (message === 'TEAM_ALREADY_COVERED') {
-    return 'Cette équipe est déjà couverte par une autre offre active. Choisis une équipe non couverte ou libere son slot actuel.';
+    return 'Cette équipe est déjà couverte par une autre offre active. Choisis une équipe non couverte ou libere sa place actuelle.';
   }
 
   if (message === 'clubDocumentId obligatoire pour une offre CLUB.' || message === 'Club introuvable pour entitlement CLUB.') {

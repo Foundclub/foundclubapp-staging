@@ -79,7 +79,7 @@ function AdminClubWizardBusiness({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardMultisport)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={5}
-      subtitle="On fixe ici le partenariat, la vérification et la réservation. Les abonnements et la capacité Team se pilotent ensuite depuis les opérations abonnements."
+      subtitle="On fixe ici le partenariat, la vérification et la réservation. Les abonnements et la capacité Équipe se pilotent ensuite depuis les opérations abonnements."
       title="Statut et gouvernance"
     >
       <View style={[Spaces.gap[18]]}>

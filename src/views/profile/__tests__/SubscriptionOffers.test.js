@@ -804,7 +804,9 @@ describe('Carrousel d\'offres — la carte Gratuit dit la verite sur les compteu
     const arbre = await rendre();
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('Ton plan actuel');
+    // T09 — la carte Gratuit disait « plan » pendant que les cartes Équipe et
+    // Club, juste a cote sur le meme carrousel, disaient « offre ».
+    expect(texte).toContain('Ton offre actuelle');
     expect(texte).toContain('Événements');
     expect(texte).toContain('2 offerts restants');
   });
