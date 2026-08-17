@@ -1438,7 +1438,27 @@ function ClubLicenses({ navigation, route }) {
   const handleBulkReminder = useCallback(() => {
     Alert.alert('Relancer les non-payeurs', 'Envoyer une relance aux cotisations en attente, partielles ou en retard ?', [
       { style: 'cancel', text: 'Annuler' },
-      { onPress: () => reminderMutation.mutate({ statuses: ['pending', 'partial', 'overdue'] }), text: 'Relancer' },
+      {
+        onPress: () => reminderMutation.mutate(
+          { statuses: ['pending', 'partial', 'overdue'] },
+          {
+            onError: (error) => Alert.alert(
+              'Relance impossible',
+              error?.message || 'Les relances n\'ont pas pu être envoyées.',
+            ),
+            // S06 — meme famille que la pause et la suppression : la relance
+            // INDIVIDUELLE annoncait deja son envoi (l. 1480 avant ce lot), la
+            // relance groupee non. Elle le dit maintenant, en nommant QUI a
+            // recu — c'est ce que le dirigeant a besoin de savoir avant de
+            // recommencer.
+            onSuccess: () => Alert.alert(
+              'Relances envoyées',
+              'Les membres en attente, en paiement partiel ou en retard ont reçu une relance.',
+            ),
+          },
+        ),
+        text: 'Relancer',
+      },
     ]);
   }, [reminderMutation]);
 
@@ -1489,13 +1509,31 @@ function ClubLicenses({ navigation, route }) {
 
   const handleDuplicateCampaign = useCallback((item) => {
     const nextSeason = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
+    const nom = item?.name || 'Campagne';
+    const nomDeLaCopie = `${nom} - copie`;
     Alert.alert('Dupliquer la campagne', 'Créer une copie en brouillon avec les mêmes réglages ?', [
       { style: 'cancel', text: 'Annuler' },
       {
-        onPress: () => duplicateMutation.mutate({
-          id: item.documentId || item.id,
-          payload: { name: `${item.name || 'Campagne'} - copie`, seasonLabel: nextSeason },
-        }),
+        onPress: () => duplicateMutation.mutate(
+          {
+            id: item.documentId || item.id,
+            payload: { name: nomDeLaCopie, seasonLabel: nextSeason },
+          },
+          {
+            onError: (error) => Alert.alert(
+              'Duplication impossible',
+              error?.message || 'La copie n\'a pas pu être créée.',
+            ),
+            // S06 — ce que ca change vraiment : une copie EN BROUILLON, et
+            // l'originale intacte. Les deux valent d'etre dits : c'est ce qui
+            // evite de chercher la copie parmi les campagnes ouvertes.
+            onSuccess: () => Alert.alert(
+              'Copie créée',
+              `« ${nomDeLaCopie} » t'attend en brouillon, à ouvrir quand tu veux. `
+              + `« ${nom} » n'a pas bougé.`,
+            ),
+          },
+        ),
         text: 'Dupliquer',
       },
     ]);
@@ -1511,52 +1549,108 @@ function ClubLicenses({ navigation, route }) {
   ) => {
     const lifecycle = forcedAction ? { action: forcedAction, label: forcedAction } : lifecycleForCampaign(item);
     if (!lifecycle) return;
+    // S06 — CHAQUE ETAPE PORTE MAINTENANT TROIS TEXTES, PAS UN.
+    // `title`/`description`/`confirm` : ce qu'on demande AVANT.
+    // `doneTitle`/`doneDescription` : ce qui a CHANGE, dit apres la reponse du
+    // serveur — jamais « c'est fait », toujours l'effet reel sur les joueurs.
+    // `failedTitle` : l'echec, sous le nom du geste tente, avec le message du
+    // serveur en corps (c'est lui qui sait ce qui bloque).
     const copyByAction = {
       archive: {
         confirm: 'Archiver',
         description: 'La campagne restera consultable dans les archives.',
+        doneDescription: 'sort de la liste. Rien n\'est perdu : elle reste consultable '
+          + 'dans les archives.',
+        doneTitle: 'Campagne archivée',
+        failedTitle: 'Archivage impossible',
         title: 'Archiver la campagne',
       },
       close: {
         confirm: 'Clore',
         description: 'Les relances et les paiements resteront visibles, mais la campagne passe en fin de cycle.',
+        doneDescription: 'passe en fin de cycle. Plus aucun membre n\'y sera ajouté ; '
+          + 'les paiements déjà encaissés et les relances restent consultables.',
+        doneTitle: 'Campagne close',
+        failedTitle: 'Clôture impossible',
         title: 'Clore la campagne',
       },
       launch: {
         confirm: 'Ouvrir',
         description: 'La campagne devient active et synchronise automatiquement les membres concernés.',
+        doneDescription: 'est ouverte. Les joueurs peuvent payer, et les membres concernés '
+          + 'y sont ajoutés automatiquement.',
+        doneTitle: 'Campagne ouverte',
+        failedTitle: 'Ouverture impossible',
         title: 'Ouvrir la campagne',
       },
       pause: {
         confirm: 'Mettre en pause',
         description: 'La campagne reste visible, mais bloque les ajouts auto, les relances et les paiements membres.',
+        doneDescription: 'est en pause : les joueurs ne peuvent plus payer, les relances '
+          + 'automatiques s\'arrêtent et aucun membre n\'y sera ajouté. '
+          + 'Tu peux la reprendre quand tu veux.',
+        doneTitle: 'Campagne en pause',
+        failedTitle: 'Mise en pause impossible',
         title: 'Mettre la campagne en pause',
       },
       reopen: {
         confirm: 'Reouvrir',
         description: 'La campagne redevient active et resynchronise les membres concernés.',
+        doneDescription: 'est de nouveau ouverte. Les joueurs peuvent payer, et les membres '
+          + 'concernés y sont rajoutés automatiquement.',
+        doneTitle: 'Campagne réouverte',
+        failedTitle: 'Réouverture impossible',
         title: 'Reouvrir la campagne',
       },
       resume: {
         confirm: 'Reprendre',
         description: 'La campagne redevient active et resynchronise automatiquement les membres éligibles.',
+        doneDescription: 'est de nouveau ouverte. Les joueurs peuvent payer, et les membres '
+          + 'éligibles y sont rajoutés automatiquement.',
+        doneTitle: 'Campagne reprise',
+        failedTitle: 'Reprise impossible',
         title: 'Reprendre la campagne',
       },
     };
     const copy = copyByAction[lifecycle.action];
+    const nom = item?.name || 'Cette campagne';
     Alert.alert(copy.title, copy.description, [
       { style: 'cancel', text: 'Annuler' },
       {
-        onPress: () => transitionMutation.mutate({ action: lifecycle.action, id: item.documentId || item.id }),
+        onPress: () => transitionMutation.mutate(
+          { action: lifecycle.action, id: item.documentId || item.id },
+          {
+            onError: (error) => Alert.alert(
+              copy.failedTitle,
+              error?.message || 'Le serveur a refusé ce changement.',
+            ),
+            onSuccess: () => Alert.alert(copy.doneTitle, `« ${nom} » ${copy.doneDescription}`),
+          },
+        ),
         text: copy.confirm,
       },
     ]);
   }, [transitionMutation]);
 
   const handleDeleteDraft = useCallback((item) => {
+    const nom = item?.name || 'Ce brouillon';
     Alert.alert('Supprimer le brouillon', 'Supprimer definitivement cette campagne non lancée ?', [
       { style: 'cancel', text: 'Annuler' },
-      { onPress: () => deleteMutation.mutate(item.documentId || item.id), style: 'destructive', text: 'Supprimer' },
+      {
+        onPress: () => deleteMutation.mutate(item.documentId || item.id, {
+          onError: (error) => Alert.alert(
+            'Suppression impossible',
+            error?.message || 'La suppression a échoué.',
+          ),
+          onSuccess: () => Alert.alert(
+            'Brouillon supprimé',
+            `« ${nom} » est supprimé. Un brouillon n'ayant jamais été ouvert, `
+            + 'aucune cotisation ne disparaît avec lui.',
+          ),
+        }),
+        style: 'destructive',
+        text: 'Supprimer',
+      },
     ]);
   }, [deleteMutation]);
 
@@ -1624,6 +1718,17 @@ function ClubLicenses({ navigation, route }) {
             onError: (error) => Alert.alert(
               'Suppression impossible',
               error?.message || 'La suppression a échoué.',
+            ),
+            // S06 — LE MESSAGE QUI MANQUAIT (point 12 de la recette). Il
+            // REUTILISE le chiffre que la confirmation vient d'afficher : c'est
+            // le meme `item.totals.total`, aucun appel de plus, et l'utilisateur
+            // retrouve donc exactement le nombre qu'il a accepte de perdre.
+            onSuccess: () => Alert.alert(
+              'Campagne supprimée',
+              nombreCotisations > 0
+                ? `« ${nom} » est supprimée, avec ses ${nombreCotisations} `
+                  + `cotisation${nombreCotisations > 1 ? 's' : ''}.`
+                : `« ${nom} » est supprimée. Elle ne portait aucune cotisation.`,
             ),
           }),
           style: 'destructive',

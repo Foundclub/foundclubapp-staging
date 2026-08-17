@@ -1391,8 +1391,31 @@ function HomeHubContent({ auth, navigation, route }) {
     navigation.navigate(RouteNames.SearchAlerts);
   }, [navigation]);
 
-  const handleOpenPlanning = useCallback(() => {
-    navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.MyEventList });
+  // S06 — OUVRIR L'EVENEMENT QUE LE BANDEAU VIENT DE NOMMER.
+  //
+  // Adel en recette de la `2.6.19` : « dans le bandeau, quand on clique dessus,
+  // ca nous renvoie sur le PLANNING alors que ca devrait nous renvoyer sur les
+  // details de l'evenement ». La ligne « prochain evenement » du dirigeant
+  // appelait `handleOpenPlanning` — l'onglet du calendrier — alors qu'elle
+  // affiche le nom et l'heure d'UN evenement precis, dont l'identifiant est deja
+  // en main (`homeCounters.js` : `prochainEvenement` porte `{ id, label,
+  // startsAt }`).
+  //
+  // ⚠️ `EventDetails` n'est PAS une route de la barre d'onglets : elle vit dans
+  // `EventStack`. C'est pour ca que cette fonction existe une seule fois et que
+  // les trois variantes du bandeau l'empruntent — les deux autres visaient bien
+  // l'evenement, mais par un `navigate(EventDetails, …)` que le navigateur de
+  // l'accueil ne sait pas resoudre. Le motif retenu est celui des six appelants
+  // deja en place dans l'app (`EventListContent`, `PersonalPlanningContainer`,
+  // `CMPlanningContent`, `FeaturedEvents`, `ReservationListContent`,
+  // `EventMessageBubble`) — §1 bis, barreau 2 : on ne reinvente pas un chemin
+  // qui existe.
+  const handleOpenEvent = useCallback((eventId) => {
+    if (!eventId) return;
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId },
+      screen: RouteNames.EventDetails,
+    });
   }, [navigation]);
 
   // D72 — `handleOpenMyTeams` et `handleOpenMessaging` retires avec la section
@@ -1587,7 +1610,7 @@ function HomeHubContent({ auth, navigation, route }) {
         prochainEvenement: {
           icon: 'calendar',
           label: homeCounters.prochainEvenement?.label,
-          onPress: handleOpenPlanning,
+          onPress: () => handleOpenEvent(homeCounters.prochainEvenement?.id),
           value: formatBannerShortTime(homeCounters.prochainEvenement?.startsAt),
         },
       };
@@ -1611,7 +1634,7 @@ function HomeHubContent({ auth, navigation, route }) {
         actions: [{
           key: 'compo',
           label: t('homeHub.banner.coach.action', 'Ouvrir la compo'),
-          onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId: seance.id }),
+          onPress: () => handleOpenEvent(seance.id),
         }],
         label: t('homeHub.banner.coach.label', 'Ma prochaine séance'),
         subtitle: seance.opponent,
@@ -1644,12 +1667,12 @@ function HomeHubContent({ auth, navigation, route }) {
         {
           key: 'present',
           label: t('homeHub.banner.player.present', 'Présent'),
-          onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId: evenement.id }),
+          onPress: () => handleOpenEvent(evenement.id),
         },
         {
           key: 'absent',
           label: t('homeHub.banner.player.absent', 'Absent'),
-          onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId: evenement.id }),
+          onPress: () => handleOpenEvent(evenement.id),
           variant: 'secondary',
         },
       ],
@@ -1662,7 +1685,7 @@ function HomeHubContent({ auth, navigation, route }) {
     Colors.error500,
     Colors.warning500,
     handleOpenClubLicenses,
-    handleOpenPlanning,
+    handleOpenEvent,
     handleOpenRequestsHub,
     homeCounters,
     isCoach,
