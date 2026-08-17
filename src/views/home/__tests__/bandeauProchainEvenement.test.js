@@ -82,16 +82,22 @@ describe('S06 — le bandeau de l accueil mene a l evenement, jamais au planning
     expect(ligne).toContain('prochainEvenement?.id');
   });
 
-  it('temoin 5 bis — les trois variantes du bandeau passent par LE MEME chemin', () => {
+  it('temoin 5 bis — tout ce qui OUVRE un evenement passe par LE MEME chemin', () => {
     const bandeau = corpsDuBandeau();
 
-    // Coach (« Ouvrir la compo ») et joueur (« Présent » / « Absent ») : plus
-    // aucune route d'evenement ecrite a la main dans le bandeau. Les navigations
-    // du super-admin (`openAdmin`) ne sont pas concernees : elles ne visent pas
-    // un evenement.
+    // Coach (« Ouvrir la compo ») et dirigeant (ligne « prochain evenement ») :
+    // plus aucune route d'evenement ecrite a la main dans le bandeau. Les
+    // navigations du super-admin (`openAdmin`) ne sont pas concernees : elles ne
+    // visent pas un evenement.
     expect(compter(bandeau, 'RouteNames.EventDetails')).toBe(0);
-    // 1 pour le dirigeant, 1 pour le coach, 2 pour le joueur.
-    expect(compter(bandeau, 'handleOpenEvent(')).toBe(4);
+    // ⚠️ CE COMPTE EST PASSE DE 4 A 2 LE 2026-08-17, ET C'EST VOULU (lot T02).
+    // S06 avait ramene les TROIS variantes a une seule ecriture, dont les deux
+    // boutons du joueur. T02 change leur INTENTION : « Présent » / « Absent »
+    // repondent maintenant sur place et n'ouvrent plus rien (constat d'Adel :
+    // « ça doit envoyer la réponse DIRECT »). Restent donc 1 pour le dirigeant et
+    // 1 pour le coach — leurs boutons, eux, ouvrent toujours l'evenement, et
+    // `reponseDepuisAccueil.test.js` (temoin 5) le verifie nommement.
+    expect(compter(bandeau, 'handleOpenEvent(')).toBe(2);
   });
 
   it('temoin 5 ter — « ouvrir un evenement » emprunte le chemin que l app emploie deja', () => {

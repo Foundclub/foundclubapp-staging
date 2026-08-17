@@ -83,6 +83,52 @@ export const getCurrentUserEventParticipationState = ({
   };
 };
 
+/**
+ * Les trois etats qu'un joueur peut voir sur SA propre reponse a un evenement.
+ * @type {Readonly<Record<string, string>>}
+ */
+export const RsvpAnswer = Object.freeze({
+  absent: 'absent',
+  pending: 'pending',
+  present: 'present',
+});
+
+/**
+ * MA reponse a un evenement, telle qu'un bouton doit l'afficher.
+ *
+ * T02 — cette echelle existait deja, ecrite a la main dans `EventAnswerButtons`
+ * (le composant des deux cartes et de la fiche d'evenement). Le bandeau de
+ * l'accueil devait la relire : au lieu d'en ecrire une seconde — « deux regles
+ * qui divergent, c'est le defaut le plus cher a retrouver » — elle est nommee ici,
+ * a cote de `getCurrentUserEventParticipationState` qui produit son entree, et les
+ * DEUX lecteurs l'appellent. C'est ce qui rend impossible que le bandeau et la
+ * fiche affichent des etats differents.
+ *
+ * ⚠️ L'ORDRE EST LE DEFAUT, PAS UN DETAIL : `isMissing` passe en premier. Un
+ * joueur peut rester liste dans `participations` alors qu'il vient de repondre
+ * « absent » (les relations de l'evenement sont resynchronisees apres coup cote
+ * serveur) — sa derniere reponse doit gagner.
+ * @param {{
+ *   hasAcceptedRequest?: boolean;
+ *   hasPendingRequest?: boolean;
+ *   isMissing?: boolean;
+ *   isParticipating?: boolean;
+ * }} [participationState] - La sortie de `getCurrentUserEventParticipationState`.
+ * @returns {string | null} `absent`, `present`, `pending`, ou `null` si rien n'a
+ *   ete repondu.
+ */
+export const resolveRsvpAnswer = (participationState) => {
+  if (!participationState) return null;
+  const {
+    hasAcceptedRequest, hasPendingRequest, isMissing, isParticipating,
+  } = participationState;
+
+  if (isMissing) return RsvpAnswer.absent;
+  if (isParticipating || hasAcceptedRequest) return RsvpAnswer.present;
+  if (hasPendingRequest) return RsvpAnswer.pending;
+  return null;
+};
+
 export {
   compareParticipationsByRecency,
   doesEntityBelongToUser,

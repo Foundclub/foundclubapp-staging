@@ -4785,8 +4785,16 @@ function EventDetails({ navigation, route }) {
     );
   };
 
+  // T02 — PLUS DE MARGE BASSE SUR LE CONTENEUR. Adel, le 2026-08-17 :
+  // « supprimer le padding en bas des pages détails événement ». Elle
+  // s'AJOUTAIT au plancher systeme au lieu de le porter : `ScreenContainer` pose
+  // deja `insets.bottom` sur son cadre exterieur, et `contentContainerStyle`
+  // habille un cadre INTERIEUR — mesure du jour, 12 px de vide en trop sous les
+  // boutons de reponse. Le degagement de la barre systeme, lui, ne bouge pas
+  // (mode `none` = plancher seul) et deux temoins le gardent dans
+  // `EventDetailsBottomActions.test.js`.
   return (
-    <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingBottom[12], Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
+    <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
       <View style={[Spaces.gap[8], Alignments.alignCenter]}>
         <Tag style={{}} text={event?.type?.name?.toUpperCase() || ''} textStyle={Fonts.p2} />
       </View>

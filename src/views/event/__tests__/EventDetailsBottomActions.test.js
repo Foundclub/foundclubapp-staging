@@ -1322,6 +1322,25 @@ describe('D64 — le filet : deux invariants qui ne dependent pas de l endroit',
     expect(conteneur).toBeTruthy();
     expect(conteneur.props.bottomInsetMode).not.toBe('edge-to-edge');
   });
+
+  test('T02 — le vide sous les boutons disparait, SANS toucher au plancher', () => {
+    const root = asOrganiser();
+    const [conteneur] = root.findAll(
+      (/** @type {any} */ node) => node.type?.name === 'ScreenContainerDouble',
+    );
+
+    // Adel, le 2026-08-17 : « supprimer le padding en bas des pages détails
+    // événement ». 🔬 CE QUE LA MESURE A MONTRE : cette marge s'EMPILAIT sur le
+    // plancher systeme, elle ne le remplacait pas. `ScreenContainer` pose
+    // `insets.bottom` sur son cadre EXTERIEUR, tandis que `contentContainerStyle`
+    // habille un cadre INTERIEUR (`ScreenContainer.js` : `containerSpaces` d'un
+    // cote, `safeContentContainerStyle` de l'autre) — les deux s'additionnaient
+    // sous les boutons de reponse.
+    // ⇒ La couche du dessus part ; le plancher, lui, reste, et c'est le temoin
+    //   juste au-dessus qui le garde.
+    expect(StyleSheet.flatten(conteneur.props.contentContainerStyle)?.paddingBottom)
+      .toBeUndefined();
+  });
 });
 
 // D71 : la regle qu'Adel enonce le 2026-08-11 — « le bas de la page d'un

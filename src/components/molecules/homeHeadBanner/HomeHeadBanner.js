@@ -28,6 +28,16 @@ import Button from '@/components/atoms/button/Button';
 
 const EMPTY_LIST = [];
 
+// T02 — LES VARIANTES DE BOUTON QUE LE BANDEAU SAIT PORTER.
+// `secondaryLight` marque LA REPONSE DEJA DONNEE : c'est le motif que la fiche de
+// l'evenement emploie deja pour le meme sens (`EventAnswerButtons.js`, la rangee
+// « Présent » / « Absent » des journees de stage), ou le choix en cours passe en
+// clair et se fige.
+const ACTION_VARIANTS = {
+  secondary: 'Secondary',
+  secondaryLight: 'SecondaryLight',
+};
+
 /**
  * Une ligne de la variante « liste ».
  * @typedef {object} HomeHeadBannerLine
@@ -43,7 +53,8 @@ const EMPTY_LIST = [];
 /**
  * Bandeau de tete de l'accueil.
  * @param {object} props
- * @param {{ key: string, label: string, onPress?: () => void, variant?: string }[]} [props.actions]
+ * @param {{ disabled?: boolean, isLoading?: boolean, key: string, label: string,
+ *   onPress?: () => void, variant?: string }[]} [props.actions]
  *   Boutons pleine largeur de la variante « evenement ».
  * @param {string} props.label - Etiquette au-dessus du cadre (ex. « Aujourd'hui »).
  * @param {HomeHeadBannerLine[]} [props.lines] - Variante « liste ».
@@ -241,11 +252,13 @@ function HomeHeadBanner({
               <View style={[Alignments.row, { gap: 8 }]}>
                 {actions.map((action) => (
                   <Button
+                    disabled={action.disabled}
+                    isLoading={action.isLoading}
                     key={action.key}
                     onPress={action.onPress}
                     style={{ flex: 1, minHeight: 46 }}
                     title={action.label}
-                    variant={action.variant === 'secondary' ? 'Secondary' : 'Primary'}
+                    variant={ACTION_VARIANTS[action.variant] || 'Primary'}
                   />
                 ))}
               </View>

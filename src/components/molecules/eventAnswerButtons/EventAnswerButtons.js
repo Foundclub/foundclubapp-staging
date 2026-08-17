@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
+import { getCurrentUserEventParticipationState, resolveRsvpAnswer } from '@/domains/event/participationState';
 import useEvent from '@/domains/event/useEvent';
 import { resolveParticipationFlow } from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
@@ -78,14 +78,17 @@ function EventAnswerButtons({
   });
   const declinedAnswer = ownAnswer?.requestStatus === 'declined' ? ownAnswer.activeRequest : null;
   const isStageDayEvent = String(event?.eventFormat || '').trim().toLowerCase() === 'stage_day';
-  let dailyRsvpStatus = null;
-  if (alreadyMissing) {
-    dailyRsvpStatus = 'absent';
-  } else if (alreadyJoined || hasAcceptedRequest) {
-    dailyRsvpStatus = 'present';
-  } else if (hasPendingRequest) {
-    dailyRsvpStatus = 'pending';
-  }
+  // T02 — CETTE ECHELLE A DEUX LECTEURS DEPUIS LE 2026-08-17, elle ne vit donc
+  // plus ici : le bandeau de l'accueil doit afficher le meme etat que cette
+  // fiche, et deux echelles ecrites separement finissent toujours par diverger.
+  // Les entrees sont RIGOUREUSEMENT celles d'avant — meme ordre, memes quatre
+  // drapeaux : le rendu ne bouge pas d'un pixel.
+  const dailyRsvpStatus = resolveRsvpAnswer({
+    hasAcceptedRequest,
+    hasPendingRequest,
+    isMissing: alreadyMissing,
+    isParticipating: alreadyJoined,
+  });
 
   // If user is a player, show appropriate participation buttons
   if (userData?.role?.name === USER_ROLES.player) {

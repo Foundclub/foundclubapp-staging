@@ -58,6 +58,7 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -1549,6 +1550,18 @@ function HomeHubContent({ auth, navigation, route }) {
   const homeCounters = useMemo(() => normalizeHomeCounters(homeSummary), [homeSummary]);
   const homeAlerts = useMemo(() => selectHomeAlerts(homeCounters), [homeCounters]);
 
+  // T02 — MA REPONSE AU PROCHAIN EVENEMENT, pour le bandeau du JOUEUR.
+  //
+  // ⛔ Le dirigeant et l'entraineur n'en ont pas besoin : leurs boutons OUVRENT
+  // l'evenement (travail de S06), ils ne repondent pas. Sans identifiant,
+  // `useGetEvent` ne lance aucun appel — ils ne paient donc pas la relecture.
+  const isPlayerBanner = !isCoach && !isPresident && !isSuperAdmin;
+  const {
+    answer: myAnswer,
+    isAnswering,
+    submit: submitMyAnswer,
+  } = useHomeEventAnswer(isPlayerBanner ? homeCounters.prochainEvenement?.id : '');
+
   const headBanner = useMemo(() => {
     const descriptors = selectBannerLines(homeCounters, roleKey);
     /**
@@ -1659,26 +1672,50 @@ function HomeHubContent({ auth, navigation, route }) {
 
     const evenement = homeCounters.prochainEvenement;
     if (!evenement) return null;
+    // T02 — ICI, « Présent » et « Absent » REPONDENT. Ils n'emmenent plus nulle
+    // part (constat d'Adel du 2026-08-17). Ce sont les deux seules reponses que le
+    // serveur accepte : `POST /events/:id/rsvp` refuse tout le reste
+    // (`event-rsvp.ts`, `ensureValidAnswer`).
+    //
+    // 🚨 L'ETAT AFFICHE VIENT DU SERVEUR, JAMAIS DU GESTE. `myAnswer` est relu sur
+    // l'evenement apres la reponse ; un echec le laisse donc exactement ou il
+    // etait, et le refus se dit dans une alerte (`useHomeEventAnswer`).
+    //
+    // ⏳ « En attente » COMPTE COMME UNE REPONSE DONNEE : sur un evenement a
+    // validation manuelle — le DEFAUT cote serveur — repondre « Présent » cree une
+    // demande `pending`. Laisser le bouton comme si de rien n'etait ferait
+    // exactement le mal qu'on repare : croire qu'on a repondu sans l'avoir fait.
+    const answeredPresent = myAnswer === 'present' || myAnswer === 'pending';
+    const answeredAbsent = myAnswer === 'absent';
+    const answerLabels = {
+      absent: t('eventList.info.alreadyMissing'),
+      pending: t('eventList.info.pendingRequest'),
+      present: t('eventList.info.alreadyJoined'),
+    };
     return {
-      // ⚠️ NON CABLE, MEME RAISON : « Present » / « Absent » sont une mutation de
-      // participation, pas une navigation. Les deux ouvrent l'evenement, ou les
-      // vrais boutons de reponse existent deja. A brancher avec l'endpoint.
       actions: [
         {
+          disabled: isAnswering || answeredPresent,
           key: 'present',
           label: t('homeHub.banner.player.present', 'Présent'),
-          onPress: () => handleOpenEvent(evenement.id),
+          onPress: () => submitMyAnswer('present'),
+          variant: answeredPresent ? 'secondaryLight' : undefined,
         },
         {
+          disabled: isAnswering || answeredAbsent,
           key: 'absent',
           label: t('homeHub.banner.player.absent', 'Absent'),
-          onPress: () => handleOpenEvent(evenement.id),
-          variant: 'secondary',
+          onPress: () => submitMyAnswer('absent'),
+          variant: answeredAbsent ? 'secondaryLight' : 'secondary',
         },
       ],
       label: t('homeHub.banner.player.label', 'Ma semaine'),
       subtitle: evenement.label,
       title: formatBannerTitle(evenement.startsAt),
+      // ⛔ AUCUN LIBELLE NEUF : ce sont les trois phrases que la fiche de
+      // l'evenement affiche deja pour les memes trois etats — un joueur lit le
+      // meme mot aux deux endroits.
+      titleSuffix: myAnswer ? answerLabels[myAnswer] : undefined,
       variant: 'event',
     };
   }, [
@@ -1688,11 +1725,14 @@ function HomeHubContent({ auth, navigation, route }) {
     handleOpenEvent,
     handleOpenRequestsHub,
     homeCounters,
+    isAnswering,
     isCoach,
     isPresident,
     isSuperAdmin,
+    myAnswer,
     navigation,
     roleKey,
+    submitMyAnswer,
     t,
   ]);
 
