@@ -567,8 +567,10 @@ function SubscriptionOffers({ navigation, route }) {
 
       const slotCount = Number(currentState.catalogEntry?.slotCount || 0);
       if (currentSelection.length >= slotCount) {
+        // T09 — « places » et « Équipe » : les mots de la carte d'offre juste
+        // derriere cette alerte, jamais ceux du code.
         Alert.alert(
-          'Slots Team atteints',
+          'Toutes les places sont prises',
           `Cette offre couvre ${slotCount} équipe${slotCount > 1 ? 's' : ''} maximum.`,
         );
         return currentState;
@@ -587,7 +589,7 @@ function SubscriptionOffers({ navigation, route }) {
     if (teamOptions.length === 0) {
       Alert.alert(
         'Équipe requise',
-        'Ajoute ou rattache d abord une équipe avant de prendre une offre Team.',
+        'Ajoute ou rattache d abord une équipe avant de prendre une offre Équipe.',
       );
       return;
     }
@@ -595,7 +597,7 @@ function SubscriptionOffers({ navigation, route }) {
     if (!hasAtLeastOneSelectedTeam) {
       Alert.alert(
         'Équipe requise',
-        'Sélectionne au moins une équipe à couvrir avec cette offre Team.',
+        'Sélectionne au moins une équipe à couvrir avec cette offre Équipe.',
       );
       return;
     }
@@ -831,7 +833,7 @@ function SubscriptionOffers({ navigation, route }) {
       return {
         disabled: true,
         entry: null,
-        label: isFreeLevel ? 'Ton plan actuel' : 'Gérer dans le store',
+        label: isFreeLevel ? 'Ton offre actuelle' : 'Gérer dans le store',
         sub: isFreeLevel
           ? 'Publie en quantité limitée, sans carte bancaire.'
           : 'Le retour au gratuit se gère dans ton store.',
@@ -957,7 +959,7 @@ function SubscriptionOffers({ navigation, route }) {
             >
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
                 <Text style={[Fonts.h4Black, Fonts.neutral00]}>Gratuit</Text>
-                {isFreeLevel ? renderChip({ label: 'Ton plan actuel', tone: 'neutral' }) : null}
+                {isFreeLevel ? renderChip({ label: 'Ton offre actuelle', tone: 'neutral' }) : null}
               </View>
               <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[4]]}>
                 Pour découvrir FoundClub
