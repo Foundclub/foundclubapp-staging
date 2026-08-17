@@ -707,28 +707,20 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     }, 60);
   }, [measureField]);
 
-  const resetGhost = useCallback(() => {
-    ghostScale.value = withSpring(0, DRAG_SPRING);
-    ghostOpacity.value = withTiming(0, { duration: 140 });
+  // 🧵 T01 — la position de l'apercu ne passe PLUS par le fil JS.
+  // Meme defaut, meme correctif que `matchCallUp/MatchCompositionBoard.js` : voir
+  // le commentaire detaille la-bas. Ici le glissement est en plus interdit en
+  // lecture seule, et cette garde reste posee des le worklet.
+  const clearDragPlayer = useCallback(() => {
     setActiveDragPlayer(null);
-  }, [ghostOpacity, ghostScale]);
+  }, []);
 
-  const startDrag = useCallback((player, pageX, pageY) => {
-    if (readOnly || !player || typeof pageX !== 'number' || typeof pageY !== 'number') return;
+  const beginDrag = useCallback((player) => {
+    if (readOnly || !player) return;
     measureAllFields();
     Vibration.vibrate(8);
     setActiveDragPlayer(player);
-    ghostX.value = pageX - (GHOST_W / 2);
-    ghostY.value = pageY - (GHOST_H / 2);
-    ghostScale.value = withSpring(1, DRAG_SPRING);
-    ghostOpacity.value = withTiming(1, { duration: 90 });
-  }, [ghostOpacity, ghostScale, ghostX, ghostY, measureAllFields, readOnly]);
-
-  const updateDrag = useCallback((pageX, pageY) => {
-    if (typeof pageX !== 'number' || typeof pageY !== 'number') return;
-    ghostX.value = pageX - (GHOST_W / 2);
-    ghostY.value = pageY - (GHOST_H / 2);
-  }, [ghostX, ghostY]);
+  }, [measureAllFields, readOnly]);
 
   const dropPlayerOnTeam = useCallback((playerId, targetTeamEntryId, xPct, yPct) => {
     updateDraftPack((currentPack) => {
@@ -820,12 +812,19 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     .onStart((event) => {
       'worklet';
 
-      runOnJS(startDrag)(player, event.absoluteX, event.absoluteY);
+      if (readOnly) return;
+      ghostX.value = event.absoluteX - (GHOST_W / 2);
+      ghostY.value = event.absoluteY - (GHOST_H / 2);
+      ghostScale.value = withSpring(1, DRAG_SPRING);
+      ghostOpacity.value = withTiming(1, { duration: 90 });
+      runOnJS(beginDrag)(player);
     })
     .onUpdate((event) => {
       'worklet';
 
-      runOnJS(updateDrag)(event.absoluteX, event.absoluteY);
+      if (readOnly) return;
+      ghostX.value = event.absoluteX - (GHOST_W / 2);
+      ghostY.value = event.absoluteY - (GHOST_H / 2);
     })
     .onEnd((event) => {
       'worklet';
@@ -835,8 +834,19 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     .onFinalize(() => {
       'worklet';
 
-      runOnJS(resetGhost)();
-    }), [endDrag, resetGhost, startDrag, updateDrag]);
+      ghostScale.value = withSpring(0, DRAG_SPRING);
+      ghostOpacity.value = withTiming(0, { duration: 140 });
+      runOnJS(clearDragPlayer)();
+    }), [
+    beginDrag,
+    clearDragPlayer,
+    endDrag,
+    ghostOpacity,
+    ghostScale,
+    ghostX,
+    ghostY,
+    readOnly,
+  ]);
 
   const ghostAnimatedStyle = useAnimatedStyle(() => ({
     opacity: ghostOpacity.value,
@@ -1788,12 +1798,12 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
         />
       </ImageBackground>
 
-      {/* Jeton fantôme qui suit le doigt pendant le drag (au-dessus de tout). */}
-      {activeDragPlayer ? (
-        <Animated.View pointerEvents="none" style={[styles.dragGhost, ghostAnimatedStyle]}>
-          <DraggableToken isGhost player={activeDragPlayer} />
-        </Animated.View>
-      ) : null}
+      {/* Jeton fantôme qui suit le doigt pendant le drag (au-dessus de tout).
+          🧨 T01 — le contenant reste monté : né avec `activeDragPlayer`, il
+          apparaissait au coin haut-gauche le temps que le fil JS réponde. */}
+      <Animated.View pointerEvents="none" style={[styles.dragGhost, ghostAnimatedStyle]}>
+        {activeDragPlayer ? <DraggableToken isGhost player={activeDragPlayer} /> : null}
+      </Animated.View>
     </GestureHandlerRootView>
   );
 }

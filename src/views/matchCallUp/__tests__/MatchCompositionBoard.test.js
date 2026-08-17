@@ -110,6 +110,16 @@ jest.mock('@/services/event/eventService', () => ({
   saveEventCompositionDraft: jest.fn(),
 }));
 
+// T01 — l'ecran retrouve le fil de l'equipe apres publication. Le module est
+// double ENTIEREMENT : `useMessaging` tire `useAuth`, donc le client HTTP, qui
+// refuse de se charger sans `API_URL` et ferait tomber la suite AVANT le premier
+// rendu. Aucun temoin de ce fichier n'appuie sur le bouton de l'alerte de
+// reussite, donc ce double n'a jamais a rendre de fil.
+jest.mock('@/domains/messaging/useMessaging', () => ({
+  __esModule: true,
+  default: () => ({ startTeamChat: jest.fn().mockResolvedValue(null) }),
+}));
+
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;
   const genererPolices = jest.requireActual('@/theme/fonts').default;

@@ -27,6 +27,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import useMessaging from '@/domains/messaging/useMessaging';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -97,6 +98,8 @@ function MatchCompositionBoard() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
+  // Sert a retrouver le fil de l'equipe apres publication (voir `handlePublish`).
+  const { startTeamChat } = /** @type {any} */ (useMessaging());
 
   /** @type {any} */
   const params = useMemo(() => route.params || {}, [route.params]);
@@ -171,27 +174,29 @@ function MatchCompositionBoard() {
     });
   }, []);
 
-  const startDrag = useCallback((player, pageX, pageY) => {
+  // 🧵 T01 — CE QUI RESTE SUR LE FIL JS, ET CE QUI N'Y VA PLUS.
+  //
+  // Constat iPhone du 2026-08-17 : l'apercu restait colle au coin en haut a
+  // gauche pendant tout le glissement, alors que le LACHER tombait juste. La
+  // cause n'est pas dans le calcul — c'est que la position de l'apercu faisait
+  // l'aller-retour fil UI -> `runOnJS` -> fil JS -> fil UI a CHAQUE mouvement de
+  // doigt. Or ce meme geste declenche `setActiveDragPlayer`, donc un rendu de
+  // tout cet ecran : le fil JS est occupe exactement quand le doigt bouge, les
+  // rappels s'entassent, et l'apercu ne recoit jamais sa position.
+  //
+  // ⇒ La position vit maintenant DANS le worklet (fil UI), la ou le doigt est
+  // deja. Ne reste sur le fil JS que ce qui en a vraiment besoin : mesurer le
+  // terrain, vibrer, et dire QUI on traine.
+  const beginDrag = useCallback((player) => {
     if (!player) return;
     measureField();
     Vibration.vibrate(8);
     setActiveDragPlayer(player);
-    ghostX.value = pageX - (GHOST_SIZE / 2);
-    ghostY.value = pageY - (GHOST_SIZE / 2);
-    ghostScale.value = withSpring(1, DRAG_SPRING);
-    ghostOpacity.value = withTiming(1, { duration: 90 });
-  }, [ghostOpacity, ghostScale, ghostX, ghostY, measureField]);
+  }, [measureField]);
 
-  const updateDrag = useCallback((pageX, pageY) => {
-    ghostX.value = pageX - (GHOST_SIZE / 2);
-    ghostY.value = pageY - (GHOST_SIZE / 2);
-  }, [ghostX, ghostY]);
-
-  const resetGhost = useCallback(() => {
-    ghostScale.value = withSpring(0, DRAG_SPRING);
-    ghostOpacity.value = withTiming(0, { duration: 140 });
+  const clearDragPlayer = useCallback(() => {
     setActiveDragPlayer(null);
-  }, [ghostOpacity, ghostScale]);
+  }, []);
 
   const endDrag = useCallback((player, source, pageX, pageY) => {
     const playerId = getCompositionPlayerId(player);
@@ -228,12 +233,19 @@ function MatchCompositionBoard() {
       .onStart((event) => {
         'worklet';
 
-        runOnJS(startDrag)(player, event.absoluteX, event.absoluteY);
+        // La position d'abord, sur ce fil-ci : l'apercu est sous le doigt des la
+        // premiere image, meme si le fil JS met du temps a repondre.
+        ghostX.value = event.absoluteX - (GHOST_SIZE / 2);
+        ghostY.value = event.absoluteY - (GHOST_SIZE / 2);
+        ghostScale.value = withSpring(1, DRAG_SPRING);
+        ghostOpacity.value = withTiming(1, { duration: 90 });
+        runOnJS(beginDrag)(player);
       })
       .onUpdate((event) => {
         'worklet';
 
-        runOnJS(updateDrag)(event.absoluteX, event.absoluteY);
+        ghostX.value = event.absoluteX - (GHOST_SIZE / 2);
+        ghostY.value = event.absoluteY - (GHOST_SIZE / 2);
       })
       .onEnd((event) => {
         'worklet';
@@ -243,9 +255,19 @@ function MatchCompositionBoard() {
       .onFinalize(() => {
         'worklet';
 
-        runOnJS(resetGhost)();
+        ghostScale.value = withSpring(0, DRAG_SPRING);
+        ghostOpacity.value = withTiming(0, { duration: 140 });
+        runOnJS(clearDragPlayer)();
       })
-  ), [endDrag, resetGhost, startDrag, updateDrag]);
+  ), [
+    beginDrag,
+    clearDragPlayer,
+    endDrag,
+    ghostOpacity,
+    ghostScale,
+    ghostX,
+    ghostY,
+  ]);
 
   const ghostStyle = useAnimatedStyle(() => ({
     opacity: ghostOpacity.value,
@@ -335,14 +357,37 @@ function MatchCompositionBoard() {
       // enregistre publierait l'etat precedent.
       await saveEventCompositionDraft(eventId, { draft: buildPack(), teamId });
       await publishEventConvocation(eventId, { teamId });
+
+      // 🧩 Le serveur vient de poster la bulle de composition dans le fil de
+      // l'equipe (`publishLineupShareToTeamChat`) — mais il ne rend PAS l'id du
+      // fil dans sa reponse. On le retrouve donc par le helper partage du depot,
+      // celui qu'emploie deja `TeamDetails` : il cherche le fil existant avant
+      // d'en creer un, et ici il existe forcement, la publication vient de le
+      // creer au besoin.
+      const teamChat = await startTeamChat(teamId).catch(() => null);
+
       setIsSheetVisible(false);
       Alert.alert(
         t('matchComposition.board.alerts.published.title'),
         t('matchComposition.board.alerts.published.message'),
         [{
           onPress: () => {
+            // 🚪 T01 — DEPILER AVANT DE PARTIR, et c'est ce qui repare le retour.
+            // Le fil de l'equipe ne vit pas dans cette pile mais dans
+            // `PrivateNavigator` : y aller laisse les 3 ecrans de composition
+            // DESSOUS, et le bouton retour retombe sur l'ecran de publication —
+            // une compo publiee se reproposait ainsi a la republication.
+            // `popTo` est l'idiome du depot (`FriendlyMatchWizardRecap`) ; on
+            // n'emploie pas `reset`, qui ecrase la pile entiere (defaut deja paye
+            // par `HistoryWizardSingle`).
             // @ts-ignore
-            navigation.navigate(RouteNames.EventDetails, { eventId });
+            navigation.popTo(RouteNames.EventDetails, { eventId });
+            // Sans fil trouve, on s'arrete a l'evenement : jamais bloque, et
+            // jamais de retour vers l'ecran de publication.
+            if (teamChat?.documentId) {
+              // @ts-ignore
+              navigation.navigate(RouteNames.Conversation, { chatId: teamChat.documentId });
+            }
           },
           text: t('matchComposition.board.alerts.published.ok'),
         }],
@@ -352,7 +397,16 @@ function MatchCompositionBoard() {
     } finally {
       setIsBusy(false);
     }
-  }, [buildPack, eventId, handleActionError, isBusy, navigation, t, teamId]);
+  }, [
+    buildPack,
+    eventId,
+    handleActionError,
+    isBusy,
+    navigation,
+    startTeamChat,
+    t,
+    teamId,
+  ]);
 
   const renderChip = (/** @type {string} */ label, /** @type {boolean} */ isOn) => (
     <View
@@ -626,12 +680,17 @@ function MatchCompositionBoard() {
         </View>
       </BottomModal>
 
-      {/* Jeton fantome qui suit le doigt, au-dessus de tout. */}
-      {activeDragPlayer ? (
-        <Animated.View pointerEvents="none" style={[styles.dragGhost, ghostStyle]}>
-          <DraggableToken isGhost player={activeDragPlayer} />
-        </Animated.View>
-      ) : null}
+      {/* Jeton fantome qui suit le doigt, au-dessus de tout.
+          🧨 T01 — LE CONTENANT RESTE MONTE, TOUJOURS. Avant, il naissait avec
+          `activeDragPlayer`, qui arrive par le fil JS : le temps qu'il arrive, le
+          doigt avait deja parcouru la moitie de l'ecran et l'apercu apparaissait
+          a `top: 0, left: 0` — le coin en haut a gauche qu'Adel a vu. Monte des
+          le depart, il est deplace par le fil UI sans attendre personne.
+          Il ne coute rien tant qu'il est vide : `opacity` vaut 0 et
+          `pointerEvents="none"` l'empeche d'intercepter le moindre appui. */}
+      <Animated.View pointerEvents="none" style={[styles.dragGhost, ghostStyle]}>
+        {activeDragPlayer ? <DraggableToken isGhost player={activeDragPlayer} /> : null}
+      </Animated.View>
 
       {/* C-A — le mur payant. Le club vient de la decision elle-meme : le
           serveur le joint a son refus, cet ecran ne le recoit pas en parametre. */}
