@@ -215,6 +215,31 @@ const getPendingParticipationRequests = (event) => (
     : []
 );
 
+/**
+ * T05 — une annonce dont la derniere date candidate est passee ne peut plus
+ * aboutir, mais elle reste 90 jours en base : le menage serveur
+ * (`cleanupExpiredAds`) la passe en `expired` et laisse ses candidatures en
+ * `pending`. Sans ce filtre, « Demandes » propose un match pour une date
+ * revolue.
+ *
+ * ⚠️ On enumere les statuts MORTS, jamais les statuts vivants : un statut qu'on
+ * ne sait pas lire — vide, ou ajoute demain au schema — laisse la demande a
+ * l'ecran. Se tromper en AFFICHANT une demande morte coute une seconde ; se
+ * tromper en CACHANT une demande vraie la fait perdre. C'est le piege deja paye
+ * sur la purge des demandes de club.
+ */
+const CLOSED_FRIENDLY_AD_STATUSES = new Set(['cancelled', 'expired', 'matched']);
+
+const isFriendlyAdStillOpen = (ad) => {
+  const status = String(ad?.status || '').trim().toLowerCase();
+  if (!status) return true;
+  return !CLOSED_FRIENDLY_AD_STATUSES.has(status);
+};
+
+const getApplicationIdentity = (application) => (
+  String(application?.documentId || application?.id || '').trim()
+);
+
 export const EMPTY_REQUESTS_HUB_DATA = {
   counts: buildRequestHubCounts([]),
   errors: [],
@@ -339,17 +364,32 @@ export const getRequestsHubData = async (rawContext = {}) => {
     // regarde des DEUX cotes (celle que je recois, celle que j ai envoyee).
     if (source.key === 'friendly') {
       const { received = [], sent = [] } = result.value || {};
+      const emittedApplicationIds = new Set();
 
-      received.forEach((ad) => {
-        (Array.isArray(ad?.applications) ? ad.applications : [])
-          .filter((application) => application?.status === 'pending')
-          .forEach((application) => {
-            items.push(mapFriendlyMatchApplicationToHubItem(ad, application));
-          });
-      });
+      received
+        .filter(isFriendlyAdStillOpen)
+        .forEach((ad) => {
+          (Array.isArray(ad?.applications) ? ad.applications : [])
+            .filter((application) => application?.status === 'pending')
+            .forEach((application) => {
+              const applicationId = getApplicationIdentity(application);
+              if (applicationId) emittedApplicationIds.add(applicationId);
+              items.push(mapFriendlyMatchApplicationToHubItem(ad, application));
+            });
+        });
 
+      // T05 — quand les DEUX equipes sont a moi (mon annonce, ma soeur qui
+      // candidate), la MEME candidature arrive par les deux bouts, sous deux
+      // identifiants differents : `mergeRequestsById` ne peut donc rien.
+      // On garde la ligne qui porte la DECISION (le cote recu) et on laisse
+      // tomber l accuse de reception, jamais l inverse.
       sent
+        .filter(isFriendlyAdStillOpen)
         .filter((ad) => ad?.myApplication?.status === 'pending')
+        .filter((ad) => {
+          const applicationId = getApplicationIdentity(ad?.myApplication);
+          return !applicationId || !emittedApplicationIds.has(applicationId);
+        })
         .forEach((ad) => items.push(mapMyFriendlyMatchProposalToHubItem(ad)));
     }
   });
