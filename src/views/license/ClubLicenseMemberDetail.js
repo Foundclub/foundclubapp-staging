@@ -19,6 +19,7 @@ import {
   rejectExternalLicensePayment,
   reviewLicenseDocument,
   sendLicenseReminder,
+  unwaiveLicenseAssignment,
   updateLicenseAssignmentAmount,
   uploadOfficialLicenseDocument,
   useLicenseAssignment,
@@ -211,6 +212,11 @@ function ClubLicenseMemberDetail({ route }) {
   const amountMutation = useLicenseMutation((payload) => updateLicenseAssignmentAmount(assignmentId, payload), campaignId);
   const waiveMutation = useLicenseMutation((payload) => waiveLicenseAssignment(assignmentId, payload), campaignId);
   const reminderMutation = useLicenseMutation((payload) => sendLicenseReminder(assignmentId, payload), campaignId);
+  // T03 — le miroir d « Exempter la cotisation ». Cote serveur, `waived` etait
+  // une porte a sens unique : `status()` (license.ts:811) le rend tel quel avant
+  // tout calcul, donc ni « Modifier le montant » ni un encaissement n en
+  // sortaient. Le geste s appuie sur une action neuve, `unwaive`.
+  const unwaiveMutation = useLicenseMutation((payload) => unwaiveLicenseAssignment(assignmentId, payload), campaignId);
 
   const memberName = [assignment?.user?.firstname, assignment?.user?.lastname].filter(Boolean).join(' ') || assignment?.user?.username || 'Membre';
   const modalType = modal?.type;
@@ -272,6 +278,52 @@ function ClubLicenseMemberDetail({ route }) {
   const remind = useCallback(() => {
     reminderMutation.mutate({}, { onSuccess: () => Alert.alert('Relance envoyée') });
   }, [reminderMutation]);
+
+  // T03 — REMETTRE LA COTISATION A PAYER.
+  //
+  // Adel, recette du 2026-08-17 : « sur les fiches joueurs, ou tu vois
+  // "relancer", il faut aussi le bouton pour dire "a payer" ».
+  //
+  // On DEMANDE avant : annuler une exemption remet de l argent a la charge de
+  // quelqu un, et la personne recoit une notification. La question nomme donc le
+  // membre ET le montant — pas « confirmer ? ».
+  // ⛔ Aucun message de succes avant la reponse du serveur.
+  const setBackToDue = useCallback(() => {
+    if (!canUseSensitiveActions) return;
+    Alert.alert(
+      'Remettre cette cotisation à payer ?',
+      `${memberName} devra régler ${formatLicenseMoney(assignment?.amountDueCents, currency)}. `
+      + 'L exemption est annulée, les relances redeviennent possibles, '
+      + 'et la personne en est prévenue.',
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: () => unwaiveMutation.mutate({}, {
+            onError: (error) => Alert.alert(
+              'Remise à payer impossible',
+              error?.message || 'Le serveur a refusé ce changement.',
+            ),
+            onSuccess: () => {
+              query.refetch();
+              Alert.alert(
+                'Cotisation à payer',
+                `${memberName} n est plus exempté·e : le reste à payer est rétabli `
+                + 'et tu peux de nouveau relancer.',
+              );
+            },
+          }),
+          text: 'À payer',
+        },
+      ],
+    );
+  }, [
+    assignment?.amountDueCents,
+    canUseSensitiveActions,
+    currency,
+    memberName,
+    query,
+    unwaiveMutation,
+  ]);
 
   const approvePayment = useCallback((paymentId) => {
     if (!canUseSensitiveActions) return;
@@ -657,6 +709,21 @@ function ClubLicenseMemberDetail({ route }) {
           <>
             <LicenseSectionHeader title="Actions" />
             {canSendReminder ? <Button isLoading={reminderMutation.isPending} onPress={remind} title="Relancer" variant="Secondary" /> : null}
+            {/*
+              T03 — « A payer », le miroir d « Exempter la cotisation », et il se
+              tient juste a cote de « Relancer » comme Adel l a demande.
+              ⛔ AUCUN BOUTON INERTE : il n apparait que sur une cotisation
+              EXEMPTEE. Ailleurs il n aurait rien a faire — une cotisation en
+              attente est deja a payer — et le serveur refuserait.
+            */}
+            {canUseSensitiveActions && assignment?.status === 'waived' ? (
+              <Button
+                isLoading={unwaiveMutation.isPending}
+                onPress={setBackToDue}
+                title="À payer"
+                variant="Secondary"
+              />
+            ) : null}
             {canUseSensitiveActions ? (
               <>
                 <Button onPress={() => setModal({ type: 'payment' })} title="Valider un paiement" />

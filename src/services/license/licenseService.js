@@ -74,6 +74,11 @@ export const getCMLicensePaymentReviews = async (/** @type {any} */ cmId, params
 export const getLicenseAssignment = async (/** @type {any} */ assignmentId) => unwrap(await client.get(`/licenses/assignments/${assignmentId}`));
 export const updateLicenseAssignmentAmount = async (/** @type {any} */ assignmentId, /** @type {any} */ payload) => unwrap(await client.put(`/licenses/assignments/${assignmentId}/amount`, payload));
 export const waiveLicenseAssignment = async (/** @type {any} */ assignmentId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/assignments/${assignmentId}/waive`, payload));
+// T03 — le retour en arriere d une exemption (« A payer » sur la fiche joueur).
+// Cote serveur, `waived` etait une porte a sens unique : `status()` le rend tel
+// quel avant tout calcul, donc ni un changement de montant ni un encaissement
+// n en sortaient.
+export const unwaiveLicenseAssignment = async (/** @type {any} */ assignmentId, payload = {}) => unwrap(await client.post(`/licenses/assignments/${assignmentId}/unwaive`, payload));
 export const addManualLicensePayment = async (/** @type {any} */ assignmentId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/assignments/${assignmentId}/payments/manual`, payload));
 export const submitLicenseDocument = async (/** @type {any} */ assignmentId, /** @type {any} */ payload = {}) => {
   const apiBaseUrl = getApiBaseUrl();
@@ -97,6 +102,40 @@ export const submitLicenseDocument = async (/** @type {any} */ assignmentId, /**
 
   const token = getAuthTokens()?.token;
   const response = await fetch(`${apiBaseUrl}/licenses/assignments/${assignmentId}/documents`, {
+    body: formData,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    method: 'POST',
+  });
+
+  return unwrapFetchJson(response);
+};
+// T03 — LE MODELE PARTAGE D UN DOCUMENT DEMANDE.
+//
+// ⛔ AUCUN SECOND MECANISME DE TELEVERSEMENT : c est le meme `FormData` et le
+// meme `normalizePickedFile` que le depot du joueur juste au-dessus. Seule la
+// cible change, et elle change de TABLE : le modele se pose sur la DEMANDE
+// (`license-document-request`), la piece personnelle sur le DEPOT
+// (`license-document-submission`). Sans fichier, la route RETIRE le modele.
+export const uploadLicenseDocumentRequestTemplate = async (/** @type {any} */ documentRequestId, /** @type {any} */ payload = {}) => {
+  const apiBaseUrl = getApiBaseUrl();
+  if (!apiBaseUrl) throw new Error('API FoundClub indisponible pour envoyer le modèle.');
+
+  const file = normalizePickedFile(payload.file || payload.template);
+  const formData = new FormData();
+  if (file) {
+    if (typeof File !== 'undefined' && file instanceof File) {
+      formData.append('file', file, file.name || `modele-${Date.now()}`);
+    } else {
+      formData.append('file', /** @type {any} */ ({
+        name: file.name,
+        type: file.type,
+        uri: file.uri,
+      }));
+    }
+  }
+
+  const token = getAuthTokens()?.token;
+  const response = await fetch(`${apiBaseUrl}/licenses/document-requests/${documentRequestId}/template`, {
     body: formData,
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     method: 'POST',

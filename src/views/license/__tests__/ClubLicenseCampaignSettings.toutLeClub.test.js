@@ -113,6 +113,8 @@ jest.mock('@/services/license/licenseQueries', () => ({
   }),
 }));
 
+jest.mock('@/platform/media', () => ({ __esModule: true, default: { pickDocument: jest.fn() } }));
+
 jest.mock('@/services/license/licenseService', () => ({
   connectLicenseHelloAsso: jest.fn(),
 }));

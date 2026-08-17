@@ -139,6 +139,7 @@ jest.mock('@/services/license/licenseQueries', () => ({
   deleteLicenseDocumentRequest: jest.fn(() => mockAppelReseau('suppression document')),
   deleteLicensePricingRule: jest.fn(() => mockAppelReseau('suppression regle')),
   updateLicenseCampaign: jest.fn(() => mockAppelReseau('mise a jour campagne', { documentId: 'camp-T03' })),
+  uploadLicenseDocumentRequestTemplate: jest.fn(() => mockAppelReseau('envoi modele')),
   upsertLicenseDocumentRequest: jest.fn(() => mockAppelReseau('remontee document')),
   upsertLicensePricingRule: jest.fn(() => mockAppelReseau('remontee regle')),
   useCurrentLicenseCampaign: () => mockRequeteVide,
@@ -172,6 +173,8 @@ jest.mock('@/services/license/licenseQueries', () => ({
     return { isPending, mutate, mutateAsync };
   },
 }));
+
+jest.mock('@/platform/media', () => ({ __esModule: true, default: { pickDocument: jest.fn() } }));
 
 jest.mock('@/services/license/licenseService', () => ({
   connectLicenseHelloAsso: jest.fn(),
@@ -341,6 +344,35 @@ describe('T03 — l attente de la creation, mesuree en allers-retours', () => {
     await act(async () => {
       libererLaSuite();
     });
+    arbre.unmount();
+  }, 30000);
+});
+
+// T03 — LE MODELE PARTAGE : IL NE COUTE RIEN A QUI N EN DEPOSE PAS.
+//
+// L envoi du modele est une vague de plus, et elle est INCOMPRESSIBLE : une
+// demande neuve n a pas d identifiant tant qu elle n est pas remontee, on ne
+// peut donc rien y accrocher avant. Ce qu on verifie ici, c est qu elle ne part
+// QUE si un modele a ete choisi — une campagne ordinaire garde sa profondeur 2.
+describe('T03 — le modele a telecharger ne rallonge que ceux qui en posent un', () => {
+  beforeEach(() => {
+    propsDuTunnel = null;
+    mockJournalReseau.length = 0;
+    mockProfondeurTerminee = 0;
+  });
+
+  it('temoin 3 — sans modele, aucun appel de televersement ne part', async () => {
+    const arbre = await monterSurLaDerniereEtape();
+    const { uploadLicenseDocumentRequestTemplate } = require('@/services/license/licenseQueries');
+    uploadLicenseDocumentRequestTemplate.mockClear();
+
+    await act(async () => {
+      propsDuTunnel.onSkip();
+    });
+
+    expect(uploadLicenseDocumentRequestTemplate).not.toHaveBeenCalled();
+    expect(mesurerLaChaine().profondeur).toBe(2);
+
     arbre.unmount();
   }, 30000);
 });

@@ -23,6 +23,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import MediaPlatform from '@/platform/media';
+
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { compareCategories } from '@/services/category/categoryService';
 import { useGetClub } from '@/services/club/clubQueries';
@@ -32,6 +34,7 @@ import {
   deleteLicenseDocumentRequest,
   deleteLicensePricingRule,
   updateLicenseCampaign,
+  uploadLicenseDocumentRequestTemplate,
   upsertLicenseDocumentRequest,
   upsertLicensePricingRule,
   useCurrentLicenseCampaign,
@@ -249,6 +252,9 @@ const defaultPaymentModes = {
   helloasso: false,
   stripe: false,
 };
+const isPickerCancelError = (error) => String(error?.code || error?.message || '')
+  .toLowerCase()
+  .includes('cancel');
 const createDocumentRequestDraft = (documentRequest = {}) => ({
   acceptedMimeTypesText: Array.isArray(documentRequest.acceptedMimeTypes)
     ? documentRequest.acceptedMimeTypes.join(', ')
@@ -262,9 +268,17 @@ const createDocumentRequestDraft = (documentRequest = {}) => ({
     || `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   ),
   name: documentRequest.name || '',
+  // T03 — LE MODELE PARTAGE, celui que les membres telechargent.
+  // `pickedTemplateFile` est le fichier choisi mais PAS ENCORE envoye : une
+  // demande neuve n a pas d identifiant tant que la campagne n est pas
+  // enregistree, on ne peut donc rien y accrocher avant. `templateRemoved` porte
+  // le geste inverse.
+  pickedTemplateFile: null,
+  removedTemplate: false,
   required: documentRequest.required !== false,
   requiresManualValidation: documentRequest.requiresManualValidation !== false,
   requiresSignature: documentRequest.requiresSignature === true,
+  templateFileName: documentRequest.templateFile?.name || '',
 });
 const referenceKey = (value) => String(value?.documentId || value?.id || value || '');
 const createPricingRuleDraft = (pricingRule = {}) => ({
@@ -1155,6 +1169,68 @@ function SelectionGroup({
 }
 
 /**
+ * T03 — L ESPACE « MODELE A TELECHARGER » d un document demande.
+ *
+ * 🔒 Le fichier depose ici est visible par TOUS les membres du club. Il ne doit
+ * donc jamais pouvoir etre confondu avec la piece qu un joueur depose : c est
+ * pourquoi il vit dans les REGLAGES du document (ici), et pas dans la liste des
+ * depots — et pourquoi le libelle rappelle, a l ecran, qui va le voir.
+ *
+ * Le fichier choisi est GARDE ici tant que la campagne n est pas enregistree :
+ * une demande neuve n a pas encore d identifiant cote serveur, on ne peut donc
+ * rien y accrocher. `persistCampaign` l envoie juste apres, en le disant.
+ * @param {object} root0
+ * @param {any} root0.item - Le brouillon du document demande.
+ * @param {(patch: any) => void} root0.onChange
+ * @returns {import('react').ReactElement}
+ */
+function TemplateFileRow({ item, onChange }) {
+  const { Colors, Fonts, Spaces } = useTheme();
+  const nomDuModele = item.pickedTemplateFile?.name
+    || (item.removedTemplate ? '' : item.templateFileName);
+
+  const choisirLeModele = useCallback(async () => {
+    try {
+      const picked = await MediaPlatform.pickDocument({ accept: '*/*', mode: 'open', type: ['*/*'] });
+      const file = Array.isArray(picked) ? picked[0] : picked;
+      if (!file) return;
+      onChange({ pickedTemplateFile: file, removedTemplate: false });
+    } catch (error) {
+      if (isPickerCancelError(error)) return;
+      Alert.alert('Modèle indisponible', error?.message || 'Ce fichier n a pas pu être lu.');
+    }
+  }, [onChange]);
+
+  return (
+    <View style={Spaces.gap[8]}>
+      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>MODÈLE À TÉLÉCHARGER</Text>
+      <Text style={[Fonts.p3, Fonts.neutral300]}>
+        Facultatif. Ce fichier est visible et téléchargeable par tous les membres
+        concernés par la campagne — n y mets aucune pièce personnelle.
+      </Text>
+      <Text
+        style={[Fonts.p3, nomDuModele ? { color: Colors.primary500 } : Fonts.neutral300]}
+        testID="license-modele-nom"
+      >
+        {nomDuModele || 'Aucun modèle'}
+      </Text>
+      <Button
+        onPress={choisirLeModele}
+        title={nomDuModele ? 'Remplacer le modèle' : 'Ajouter un modèle'}
+        variant="Secondary"
+      />
+      {nomDuModele ? (
+        <Button
+          onPress={() => onChange({ pickedTemplateFile: null, removedTemplate: true })}
+          title="Retirer le modèle"
+          variant="Secondary"
+        />
+      ) : null}
+    </View>
+  );
+}
+
+/**
  *
  * @param root0
  * @param root0.canRemove
@@ -1220,6 +1296,17 @@ function DocumentRequestEditor({
         enabled={item.requiresSignature}
         label="Signature demandée"
         onChange={(value) => onChange({ requiresSignature: value })}
+      />
+      {/*
+        T03 — « UN ESPACE TELECHARGER LE MODELE » (Adel, recette du 2026-08-17).
+        🔒 Ce fichier est vu par TOUS les membres du club : le libelle le dit, et
+        il est pose sous les reglages du document, jamais a cote d un depot de
+        joueur. Cote serveur, il vit sur une AUTRE table que les pieces
+        personnelles (voir uploadDocumentRequestTemplate).
+      */}
+      <TemplateFileRow
+        item={item}
+        onChange={onChange}
       />
       {canRemove ? <Button onPress={onRemove} title="Retirer ce document" variant="Secondary" /> : null}
     </View>
@@ -2032,19 +2119,27 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       },
       onSuccess: async (saved) => {
         const savedCampaignId = saved?.documentId || saved?.id || campaignId;
-        const activeDocumentRequests = documentRequests
+        // T03 — le MODELE voyage a cote de la charge utile, jamais dedans : c est
+        // un fichier, la remontee du document est du JSON. Les deux restent
+        // alignes parce qu ils sortent du MEME filtre.
+        const documentsAEnvoyer = documentRequests
           .map((item, index) => ({
-            acceptedMimeTypes: parseAcceptedMimeTypes(item.acceptedMimeTypesText),
-            description: item.description.trim(),
-            dueDate: item.dueDate.trim() || null,
-            id: item.documentId,
-            name: item.name.trim(),
-            required: item.required !== false,
-            requiresManualValidation: item.requiresManualValidation !== false,
-            requiresSignature: item.requiresSignature === true,
-            sortOrder: index + 1,
+            modele: item.pickedTemplateFile || null,
+            modeleRetire: item.removedTemplate === true,
+            payload: {
+              acceptedMimeTypes: parseAcceptedMimeTypes(item.acceptedMimeTypesText),
+              description: item.description.trim(),
+              dueDate: item.dueDate.trim() || null,
+              id: item.documentId,
+              name: item.name.trim(),
+              required: item.required !== false,
+              requiresManualValidation: item.requiresManualValidation !== false,
+              requiresSignature: item.requiresSignature === true,
+              sortOrder: index + 1,
+            },
           }))
-          .filter((item) => item.name);
+          .filter((item) => item.payload.name);
+        const activeDocumentRequests = documentsAEnvoyer.map((item) => item.payload);
         const activePricingRules = pricingRules
           .map((item) => ({
             amountCents: euroToCents(item.amount),
@@ -2092,12 +2187,40 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             // ⇒ un seul lot, une seule vague : profondeur **2**, quoi qu il
             //   arrive. Ce qui reste est le minimum incompressible — il faut
             //   l identifiant de la campagne pour y accrocher ses annexes.
-            await Promise.all([
-              ...removedDocumentRequestIds.map((documentRequestId) => deleteLicenseDocumentRequest(documentRequestId)),
-              ...activeDocumentRequests.map((item) => upsertLicenseDocumentRequest(savedCampaignId, item)),
-              ...removedPricingRuleIds.map((pricingRuleId) => deleteLicensePricingRule(pricingRuleId)),
-              ...activePricingRules.map((item) => upsertLicensePricingRule(savedCampaignId, item)),
+            // Les `Promise.all` imbriques partent TOUS dans la meme vague : le
+            // niveau du dessus ne fait que garder les documents remontes a part,
+            // parce que ce sont eux qui portent l identifiant auquel accrocher un
+            // modele.
+            const [documentsRemontes] = await Promise.all([
+              Promise.all(activeDocumentRequests.map((item) => upsertLicenseDocumentRequest(savedCampaignId, item))),
+              Promise.all(removedDocumentRequestIds.map((documentRequestId) => deleteLicenseDocumentRequest(documentRequestId))),
+              Promise.all(removedPricingRuleIds.map((pricingRuleId) => deleteLicensePricingRule(pricingRuleId))),
+              Promise.all(activePricingRules.map((item) => upsertLicensePricingRule(savedCampaignId, item))),
             ]);
+
+            // T03 — LE MODELE PARTAGE, en DERNIER et seulement s il y en a un.
+            //
+            // Cette vague-la est INCOMPRESSIBLE, pas de la file gratuite : une
+            // demande neuve n a pas d identifiant tant qu elle n est pas
+            // remontee, on ne peut donc rien y accrocher avant. Elle ne part que
+            // si un modele a ete choisi ou retire — une campagne sans modele
+            // garde exactement sa profondeur 2.
+            const modeles = documentsAEnvoyer
+              .map((item, index) => ({
+                fichier: item.modele,
+                identifiant: documentsRemontes[index]?.documentId
+                  || documentsRemontes[index]?.id
+                  || item.payload.id,
+                retire: item.modeleRetire,
+              }))
+              .filter((item) => item.identifiant && (item.fichier || item.retire));
+            if (modeles.length) {
+              setEtapeEnvoi('Envoi du modèle à télécharger...');
+              await Promise.all(modeles.map((item) => uploadLicenseDocumentRequestTemplate(
+                item.identifiant,
+                item.fichier ? { file: item.fichier } : {},
+              )));
+            }
           }
           await providerMutation.mutateAsync();
         } catch (error) {
