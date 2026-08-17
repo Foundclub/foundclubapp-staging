@@ -71,21 +71,27 @@ function ClubWizardRecap({ navigation, route }) {
   const resumeAfterSuccess = async (createdClub) => {
     dispatch({ type: 'RESET' });
 
-    // T10 — LA NAVIGATION ATTEND LE PROFIL, elle ne part plus devant.
-    // Ces quatre rafraichissements partaient sans `await` : l'ecran suivant se
-    // montait sur l'ANCIEN profil, celui d'avant la creation, et annoncait donc
-    // le contraire de ce qui venait de se passer. Un echec de rafraichissement
-    // ne doit pas retenir quelqu'un dans un tunnel dont le club est deja cree :
-    // on repart quand meme, avec l'identifiant qu'on tient (T10 ① ci-dessous).
-    try {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] }),
-        queryClient.invalidateQueries({ queryKey: ['get-me'] }),
-        queryClient.invalidateQueries({ queryKey: ['clubs'] }),
-        typeof refetchUserData === 'function' ? refetchUserData() : null,
-      ]);
-    } catch {
-      // Le club EST cree : on continue, l'ecran suivant se rafraichira seul.
+    // Les invalidations, elles, ne s'attendent PAS : `invalidateQueries` marque
+    // les requetes perimees de facon SYNCHRONE, et le `queryClient` est un
+    // singleton qui survit a cet ecran. Attendre ne ferait que faire patienter
+    // — decision mesuree au lot D19 (`EventWizardRecap.creation.test.js`).
+    queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
+    queryClient.invalidateQueries({ queryKey: ['get-me'] });
+    queryClient.invalidateQueries({ queryKey: ['clubs'] });
+
+    // T10 — MAIS LE PROFIL, SI : la navigation ne part plus devant lui.
+    // `refetchUserData()` partait sans `await`, donc l'etape suivante se montait
+    // sur l'ANCIEN profil — celui d'avant la creation. Or c'est le profil qui
+    // decide quelles etapes du tunnel existent encore (`PrivateNavigator`), et
+    // c'est lui que l'etape suivante lit. Elle annoncait le contraire de ce qui
+    // venait de se passer. Un echec de rafraichissement ne doit pas retenir
+    // quelqu'un dans un tunnel dont le club EST cree : on repart quand meme.
+    if (typeof refetchUserData === 'function') {
+      try {
+        await refetchUserData();
+      } catch {
+        // Le club est cree : on continue, l'ecran suivant se rafraichira seul.
+      }
     }
 
     const clubDocumentId = createdClub?.documentId;
