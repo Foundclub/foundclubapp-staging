@@ -58,10 +58,16 @@ const buildTimeLabel = (item) => {
 
 export const getPlanningTimeLabel = (item) => buildTimeLabel(item);
 
-const buildWindowFromTimes = (startAt, endTime) => {
-  if (!startAt || !endTime) return null;
+/**
+ * Pose une horloge « HH:mm » sur le JOUR d'une date, sans rien inventer.
+ * @param {Date | null} baseDate
+ * @param {string | null | undefined} clock
+ * @returns {Date | null}
+ */
+const applyClockToDay = (baseDate, clock) => {
+  if (!baseDate) return null;
 
-  const [hours, minutes] = String(endTime || '')
+  const [hours, minutes] = String(clock || '')
     .split(':')
     .slice(0, 2)
     .map((value) => Number.parseInt(value, 10));
@@ -70,8 +76,15 @@ const buildWindowFromTimes = (startAt, endTime) => {
     return null;
   }
 
-  const resolvedEnd = new Date(startAt);
-  resolvedEnd.setHours(hours, minutes, 0, 0);
+  const resolved = new Date(baseDate);
+  resolved.setHours(hours, minutes, 0, 0);
+  return resolved;
+};
+
+const buildWindowFromTimes = (startAt, endTime) => {
+  const resolvedEnd = applyClockToDay(startAt, endTime);
+  if (!resolvedEnd) return null;
+
   if (resolvedEnd.getTime() <= startAt.getTime()) {
     resolvedEnd.setDate(resolvedEnd.getDate() + 1);
   }
@@ -251,16 +264,27 @@ export const getPlanningItemDate = (item) => {
   return date && !Number.isNaN(date.getTime()) ? date : null;
 };
 
+// T06 (2026-08-17) — UN EVENEMENT PORTE DEUX DEBUTS, ET ILS NE DISENT PAS LA
+// MEME HEURE. L'instant (`startAt`, colonne `date`) et l'horloge (`startTime`,
+// colonne `start_time`) divergent en base : 14 lignes sur 27 en staging (5 h
+// d'ecart), 89 sur 241 en production (1 h ou 2 h). Le libelle de la carte,
+// l'ecran de l'evenement et la vue mois lisent l'HORLOGE ; ce calcul lisait
+// l'INSTANT, d'ou un bloc trace de 13h a 19h sous un libelle « 18:00 - 19:00 ».
+// L'horloge fait donc foi pour l'HEURE ; l'instant garde le JOUR (c'est lui qui
+// place la carte dans sa colonne). Quand l'horloge manque, on retombe sur
+// l'instant : on ne fabrique aucune heure.
 export const getPlanningItemWindow = (item) => {
-  const startAt = getPlanningItemDate(item);
-  if (!startAt) return null;
+  const itemDate = getPlanningItemDate(item);
+  if (!itemDate) return null;
 
-  let endAt = item?.endAt ? toDeviceDateFromParisInstant(item.endAt) : null;
-  if (!endAt || Number.isNaN(endAt.getTime()) || endAt.getTime() <= startAt.getTime()) {
-    endAt = buildWindowFromTimes(startAt, item?.endTime);
+  const startAt = applyClockToDay(itemDate, item?.startTime) || itemDate;
+
+  let endAt = buildWindowFromTimes(startAt, item?.endTime);
+  if (!endAt) {
+    endAt = item?.endAt ? toDeviceDateFromParisInstant(item.endAt) : null;
   }
 
-  if (!endAt || Number.isNaN(endAt.getTime())) {
+  if (!endAt || Number.isNaN(endAt.getTime()) || endAt.getTime() <= startAt.getTime()) {
     endAt = new Date(startAt.getTime() + (90 * 60 * 1000));
   }
 
