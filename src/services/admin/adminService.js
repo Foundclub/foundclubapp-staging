@@ -1,6 +1,11 @@
-import { annotateWaitingPlayersPerClub, buildClubArrivalInterestRows } from '@/services/admin/adminWaitingPlayers';
+import {
+  annotateWaitingPlayersPerClub,
+  buildClubArrivalInterestRows,
+} from '@/services/admin/adminWaitingPlayers';
 import client from '@/services/client';
-import { getPendingClubArrivalInterests } from '@/services/clubInterestRequest/clubInterestRequestService';
+import {
+  getPendingClubArrivalInterests,
+} from '@/services/clubInterestRequest/clubInterestRequestService';
 import {
   getClubRequestById,
   getPendingAffiliationHelpRequests,

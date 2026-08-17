@@ -16,7 +16,6 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { CLUB_ARRIVAL_INTEREST_KIND } from '@/services/admin/adminWaitingPlayers';
 import {
   useApproveClubClaim,
   useGetClubClaimsRequestList,
@@ -24,6 +23,7 @@ import {
   useRefuseAffiliationHelpRequest,
   useRefuseClubClaim,
 } from '@/services/admin/adminQueries';
+import { CLUB_ARRIVAL_INTEREST_KIND } from '@/services/admin/adminWaitingPlayers';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
@@ -139,7 +139,14 @@ function AdminClaimList() {
           },
         ]}
       >
-        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+        <View
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Alignments.justifySpaceBetween,
+            Spaces.gap[12],
+          ]}
+        >
           <Text numberOfLines={2} style={[Fonts.h4Black, { color: Colors.neutral00, flex: 1 }]}>
             {item?.clubName || 'Club inconnu'}
           </Text>

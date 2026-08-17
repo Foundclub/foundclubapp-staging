@@ -176,7 +176,12 @@ export const getClubInterestRequests = async (params = {}) => {
  * @returns {Promise<any>}
  */
 export const getPendingClubArrivalInterests = async (params = {}) => (
-  getClubInterestRequests({ page: 1, pageSize: 200, ...params, withoutTeam: true })
+  getClubInterestRequests({
+    page: 1,
+    pageSize: 200,
+    ...params,
+    withoutTeam: true,
+  })
 );
 
 export const getMyClubInterestRequests = async (params = {}) => {

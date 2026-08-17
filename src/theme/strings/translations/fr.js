@@ -272,9 +272,11 @@ export default {
       // personne, et le club voit combien de gens l'attendent. Rien n'est promis
       // d'autre : elle n'est rattachee a rien, et le texte le dit.
       clubArrivalInterest: {
-        alreadySentDescription: 'On sait déjà que tu attends ce club. On te prévient dès qu’il arrive.',
+        alreadySentDescription: 'On sait déjà que tu attends ce club.'
+          + ' On te prévient dès qu’il arrive.',
         alreadySentTitle: 'Tu es déjà sur la liste',
-        description: 'On te prévient dès que ce club arrive sur FoundClub. Tu n’es rattaché·e à rien pour le moment.',
+        description: 'On te prévient dès que ce club arrive sur FoundClub.'
+          + ' Tu n’es rattaché·e à rien pour le moment.',
         error: 'Impossible d’enregistrer ton intérêt pour le moment.',
         title: 'C’est noté',
       },

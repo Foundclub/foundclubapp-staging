@@ -1358,7 +1358,8 @@ function ClubDetails({ navigation, route }) {
         t('clubDetails.alerts.clubArrivalInterest.title', 'C’est noté'),
         t(
           'clubDetails.alerts.clubArrivalInterest.description',
-          'On te prévient dès que ce club arrive sur FoundClub. Tu n’es rattaché·e à rien pour le moment.',
+          'On te prévient dès que ce club arrive sur FoundClub.'
+          + ' Tu n’es rattaché·e à rien pour le moment.',
         ),
         [{ text: t('common.actions.ok', 'OK') }],
       );
@@ -1500,6 +1501,9 @@ function ClubDetails({ navigation, route }) {
     }
     navigation.navigate(RouteNames.Club, params);
   }, [clubId, navigation]);
+
+  const clubArrivalInterestIsBusy = hasPendingClubArrivalInterest
+    || createClubArrivalInterestMutation.isPending;
 
   const floatingClubActionsCount = [
     showPublicPlayerLogin,
@@ -3669,7 +3673,7 @@ function ClubDetails({ navigation, route }) {
               mon club » dit ce qu'on DECLARE ; celle-ci dit ce qu'on OBTIENT. */}
           {showClubArrivalInterestAction ? (
             <Button
-              disabled={hasPendingClubArrivalInterest || createClubArrivalInterestMutation.isPending}
+              disabled={clubArrivalInterestIsBusy}
               isLoading={createClubArrivalInterestMutation.isPending}
               onPress={handlePressClubArrivalInterest}
               style={[
@@ -3679,7 +3683,10 @@ function ClubDetails({ navigation, route }) {
               ]}
               title={hasPendingClubArrivalInterest
                 ? t('clubDetails.actions.clubArrivalInterestPending', 'Tu seras prévenu·e')
-                : t('clubDetails.actions.clubArrivalInterest', 'Prévenez-moi quand ce club arrive')}
+                : t(
+                  'clubDetails.actions.clubArrivalInterest',
+                  'Prévenez-moi quand ce club arrive',
+                )}
               variant="Secondary"
             />
           ) : null}

@@ -1,7 +1,9 @@
 import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import { createClubInterestRequest } from '@/services/clubInterestRequest/clubInterestRequestService';
+import {
+  createClubInterestRequest,
+} from '@/services/clubInterestRequest/clubInterestRequestService';
 import { createClubRequest } from '@/services/clubRequest/clubRequestService';
 
 import ClubDetails from '../ClubDetails';
@@ -101,7 +103,9 @@ jest.mock('@/domains/auth/useAuth', () => ({
 
 jest.mock('@/domains/club/useClub', () => ({
   __esModule: true,
-  default: () => ({ getClubInitials: (/** @type {string} */ nom) => String(nom || '').slice(0, 2) }),
+  default: () => ({
+    getClubInitials: (/** @type {string} */ nom) => String(nom || '').slice(0, 2),
+  }),
 }));
 
 jest.mock('@/domains/messaging/useMessaging', () => ({
@@ -326,7 +330,11 @@ const CLUB_AVEC_EQUIPE = {
   members: [{ documentId: 'u-9', role: { name: 'president' } }],
   name: 'AS Avec Equipe',
   teams: [{
-    category: 'Sénior', documentId: 't-1', level: 'National', name: 'Seniors A', section: 'Masculine',
+    category: 'Sénior',
+    documentId: 't-1',
+    level: 'National',
+    name: 'Seniors A',
+    section: 'Masculine',
   }],
 };
 
