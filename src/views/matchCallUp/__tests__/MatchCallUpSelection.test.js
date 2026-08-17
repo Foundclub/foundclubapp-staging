@@ -349,6 +349,80 @@ describe('D77 ecran 1 — selection des convoques', () => {
     expect(parametres.teamId).toBe('team_1');
   });
 
+  // S04 — 🔴 LE DEFAUT QU ADEL A VU : « Nul, car ça ne garde pas les joueurs qui
+  // sont sur le terrain. Imaginons que je retire un joueur de la liste : ça doit
+  // JUSTE retirer le joueur de la compo et GARDER LE RESTE A SA PLACE. »
+  //
+  // Une compo deja placee (publiee, enregistree, ou en cours a l'ecran 5) ne
+  // repasse plus par « Partir de… » : ce serait redemander d'ou partir alors
+  // qu'on part de ce qui est deja pose.
+  describe('S04 — modifier la liste ne rebat pas le terrain', () => {
+    const COMPO_PLACEE = {
+      schemaVersion: 3,
+      selectedPlayerIds: ['p1', 'p2', 'p3'],
+      teams: [{
+        id: 'team_1',
+        placements: [
+          {
+            playerId: 'p1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+          },
+          {
+            playerId: 'p2', positionX: 11, positionY: 22, slotId: null,
+          },
+          {
+            playerId: 'p3', positionX: 33, positionY: 44, slotId: null,
+          },
+        ],
+      }],
+    };
+
+    test('🥇 TEMOIN D ARRET : retirer un convoque rouvre LE TERRAIN, chacun en place', async () => {
+      const arbre = await rendre({ existingComposition: COMPO_PLACEE });
+      await act(async () => {
+        rangeeJoueur(arbre, 'Théo Marchal').props.onPress();
+      });
+      await appuyerSur(arbre, 'Suivant');
+
+      const [nomEcran, parametres] = mockNavigate.mock.calls[0];
+      // ⛔ PAS « MatchCompositionStart » : on ne redemande pas d'ou partir.
+      expect(nomEcran).toBe('MatchCompositionBoard');
+      expect(parametres.selectedPlayers).toHaveLength(2);
+      expect(parametres.startPlacements).toEqual([
+        {
+          playerId: 'p1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+        },
+        {
+          playerId: 'p2', positionX: 11, positionY: 22, slotId: null,
+        },
+      ]);
+    });
+
+    test('le terrain rendu par l ecran 5 l emporte sur le pack enregistre', async () => {
+      const arbre = await rendre({
+        existingComposition: COMPO_PLACEE,
+        startPlacements: [{
+          playerId: 'p2', positionX: 7, positionY: 8, slotId: null,
+        }],
+      });
+      await appuyerSur(arbre, 'Suivant');
+
+      const [nomEcran, parametres] = mockNavigate.mock.calls[0];
+      expect(nomEcran).toBe('MatchCompositionBoard');
+      expect(parametres.startPlacements).toEqual([{
+        playerId: 'p2', positionX: 7, positionY: 8, slotId: null,
+      }]);
+    });
+
+    test('⛔ NON-REGRESSION : sans aucun placement, on passe TOUJOURS par l ecran 4', async () => {
+      const arbre = await rendre({
+        existingComposition: { schemaVersion: 3, selectedPlayerIds: ['p1'] },
+      });
+      await appuyerSur(arbre, 'Suivant');
+
+      expect(mockNavigate.mock.calls[0][0]).toBe('MatchCompositionStart');
+    });
+  });
+
   test('une composition existante pre-coche les joueurs deja convoques', async () => {
     const arbre = await rendre({
       existingComposition: { schemaVersion: 3, selectedPlayerIds: ['p1', 'p3'] },

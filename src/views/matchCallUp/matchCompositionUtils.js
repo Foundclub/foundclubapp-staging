@@ -349,6 +349,46 @@ export const removePlayerFromField = (placements, playerId) => {
 };
 
 /**
+ * S04 — LE TERRAIN A REPRENDRE quand le coach revient sur sa selection.
+ *
+ * 🎯 CE QUE ÇA REPARE, EN UNE PHRASE : retirer un convoque doit JUSTE retirer ce
+ * joueur — les autres jetons ne bougent pas d'un pixel.
+ *
+ * 🚨 LE DEFAUT MESURE (2026-08-16) : `keepPlacementsOfCalledUpPlayers` n'etait
+ * appelee qu'au DEMARRAGE d'une compo (`buildStartFromOptions`), pour choisir un
+ * point de depart. Des que la liste des convoques changeait, l'ecran 4 refaisait
+ * son calcul depuis une RANGEE DE DEPART (terrain vide ou compo type) : les
+ * 11 jetons poses a la main etaient remplaces. Et le pack deja publie, lui,
+ * voyageait pourtant jusque-la dans `params.existingComposition` — il etait
+ * transmis, mais jamais relu.
+ *
+ * ♻️ Rien de neuf ici : c'est l'assemblage des deux fonctions qui existaient
+ * deja — `readPlacementsFromPack` pour la forme, `keepPlacementsOfCalledUpPlayers`
+ * pour le tri (§1 bis, barreau 2).
+ *
+ * 🔒 `startPlacements` est prioritaire sur le pack DES QU'IL EST UN TABLEAU,
+ * meme vide : un coach qui vide son terrain a la main l'a fait expres, et
+ * retomber sur le pack publie le lui ressusciterait sous les doigts.
+ * @param {object} input
+ * @param {any} [input.existingComposition] Le pack deja publie ou enregistre.
+ * @param {any[]} [input.players] Les convoques APRES modification de la liste.
+ * @param {any[] | null} [input.startPlacements] Le terrain en cours, rendu par
+ *   l'ecran 5 quand le coach remonte a la selection. `null` = on n'en vient pas.
+ * @returns {{ placements: any[], shouldResume: boolean }} `shouldResume` dit s'il
+ *   y a un terrain a rouvrir — sinon l'ecran 4 « Partir de… » garde son role.
+ */
+export const resumeFieldForSelection = ({
+  existingComposition = null, players = [], startPlacements = null,
+}) => {
+  const comesFromField = Array.isArray(startPlacements);
+  const placements = keepPlacementsOfCalledUpPlayers(
+    comesFromField ? startPlacements : readPlacementsFromPack(existingComposition),
+    players,
+  );
+  return { placements, shouldResume: comesFromField || placements.length > 0 };
+};
+
+/**
  * Les joueurs restes au banc : les convoques que le terrain ne porte pas.
  * @param {any[]} [players] Les convoques.
  * @param {any[]} [placements]

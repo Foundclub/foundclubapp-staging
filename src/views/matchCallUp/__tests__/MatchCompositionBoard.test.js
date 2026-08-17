@@ -380,6 +380,23 @@ describe('D79 ecran 5 — le terrain et son banc', () => {
     expect(parametres.eventId).toBe('evt_1');
   });
 
+  // S04 — 🥇 ET IL Y EMMENE LE TERRAIN TEL QU IL EST. Sans ça, l'etat du board
+  // (un `useState`) meurt avec l'ecran depile, et le coach retrouve un terrain
+  // reconstruit depuis une rangee de depart : ses 11 jetons poses a la main
+  // sont perdus des qu'il touche a sa liste de convoques.
+  test('🥇 « Modifier » emmene le terrain EN COURS, pas celui du depart', async () => {
+    const arbre = await rendre();
+    await glisser(arbre, 'Nom0', HORS_TERRAIN);
+    await appuyerSur(arbre, 'Modifier');
+
+    const [, parametres] = mockNavigate.mock.calls[0];
+    expect(parametres.startPlacements).toHaveLength(10);
+    expect(parametres.startPlacements.some((/** @type {any} */ pose) => pose.playerId === 'p0'))
+      .toBe(false);
+    // Et les 10 autres n'ont pas bouge d'un pixel.
+    expect(parametres.startPlacements[0]).toEqual(placementsDeDepart[1]);
+  });
+
   test('les jetons du terrain et ceux du banc sont bien separes', async () => {
     const arbre = await rendre();
     const texte = texteVisible(arbre);
