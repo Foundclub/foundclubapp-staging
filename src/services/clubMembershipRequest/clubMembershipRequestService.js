@@ -2,7 +2,11 @@ import Joi from 'joi';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 
+import { createLogger } from '@/utils/logger/logger';
+
 import client from '../client';
+
+const clubMembershipRequestLogger = createLogger('club-membership-request');
 
 const clubMembershipRequestSchema = Joi.object({
   club: Joi.object().required(),
@@ -45,6 +49,75 @@ const toFlatUser = (user) => {
 
   return null;
 };
+
+const clubMembershipRequestsMetaSchema = Joi.object({
+  pagination: Joi.object({
+    page: Joi.number().required(),
+    pageCount: Joi.number().required(),
+    pageSize: Joi.number().required(),
+    total: Joi.number().required(),
+  }).required(),
+}).required();
+
+/**
+ * S01 — la validation se fait LIGNE PAR LIGNE, jamais sur le lot entier.
+ *
+ * `club` est nullable cote serveur : une demande dont le club a disparu faisait
+ * tomber TOUTE la section « Club » de l'ecran « Demandes », avec un 200 cote
+ * serveur — donc sans trace dans son journal. Meme defaut, meme correctif que
+ * `teamMembershipRequestService`.
+ * @param {any} responseData
+ * @returns {Promise<{ data: any[], meta: any }>}
+ */
+const selectValidClubMembershipRequests = async (responseData) => {
+  const meta = await clubMembershipRequestsMetaSchema.validateAsync(responseData?.meta, {
+    allowUnknown: true,
+  });
+
+  const entries = Array.isArray(responseData?.data) ? responseData.data : [];
+  /** @type {any[]} */
+  const data = [];
+  /** @type {string[]} */
+  const rejectedIds = [];
+
+  await Promise.all(entries.map(async (/** @type {any} */ entry) => {
+    try {
+      data.push(await clubMembershipRequestSchema.validateAsync(entry, { allowUnknown: true }));
+    } catch {
+      rejectedIds.push(String(entry?.documentId || 'sans-identifiant'));
+    }
+  }));
+
+  if (rejectedIds.length) {
+    clubMembershipRequestLogger.warn('demande(s) illisible(s) ecartee(s)', {
+      documentIds: rejectedIds,
+      rejected: rejectedIds.length,
+    });
+  }
+
+  return { data, meta };
+};
+
+/**
+ * Traduit une erreur HTTP en erreur lisible QUI GARDE SON STATUT — sans lui,
+ * l'ecran ne peut plus distinguer un refus (403) d'un incident (500).
+ * @param {any} error
+ * @param {string} fallbackMessage
+ * @returns {Error & { status: number | null }}
+ */
+const toReadableError = (error, fallbackMessage) => {
+  const requestError = /** @type {any} */ (error);
+  const responseError = requestError?.response?.data?.error;
+  const nextError = /** @type {any} */ (new Error(
+    responseError?.message
+    || requestError?.response?.data?.message
+    || requestError?.message
+    || fallbackMessage,
+  ));
+  nextError.status = Number(requestError?.response?.status || requestError?.status || 0) || null;
+  return nextError;
+};
+
 /**
  * Create a new club membership request
  * @param {{user: string, club: string}} clubMembershipRequestData
@@ -86,26 +159,23 @@ export const getClubMembershipRequests = async (clubId, params = {}) => {
       page: page || 1,
       pageSize: pageSize || 10,
     },
-    populate: ['user', 'user.avatar'],
+    // ⛔ AUCUN `populate` ici, et c'est deliberé : le controleur serveur
+    // (club-membership-request.ts:466-474) appelle `validateQuery(ctx)` — donc il
+    // VALIDE ce que l'app demande — puis impose son propre populate ET son propre
+    // filtre de club. Nommer `user` exigeait
+    // `plugin::users-permissions.user.find`, action qu'AUCUN role ne declare :
+    // Strapi 5 rend alors 400 « Invalid key user ». Voir S01.
   };
 
-  const response = await client.get('/club-membership-requests', { params: filters });
+  let response;
   try {
-    const schema = Joi.object({
-      data: Joi.array().items(clubMembershipRequestSchema).empty(Joi.array().length(0)),
-      meta: Joi.object({
-        pagination: Joi.object({
-          page: Joi.number().required(),
-          pageCount: Joi.number().required(),
-          pageSize: Joi.number().required(),
-          total: Joi.number().required(),
-        }).required(),
-      }).required(),
-    }).required();
+    response = await client.get('/club-membership-requests', { params: filters });
+  } catch (error) {
+    throw toReadableError(error, 'Failed to fetch club membership requests');
+  }
 
-    const validationResult = await schema.validateAsync(response.data, {
-      allowUnknown: true,
-    });
+  try {
+    const validationResult = await selectValidClubMembershipRequests(response.data);
 
     const normalizedData = (validationResult?.data || []).map((item) => {
       const rawRequester = item?.requester && typeof item.requester === 'object'
@@ -115,8 +185,14 @@ export const getClubMembershipRequests = async (clubId, params = {}) => {
       const requester = {
         ...flatRequester,
         displayName: flatRequester?.displayName || item?.requesterDisplayName || '',
-        firstname: flatRequester?.firstname || flatRequester?.firstName || item?.requesterFirstname || '',
-        lastname: flatRequester?.lastname || flatRequester?.lastName || item?.requesterLastname || '',
+        firstname: flatRequester?.firstname
+          || flatRequester?.firstName
+          || item?.requesterFirstname
+          || '',
+        lastname: flatRequester?.lastname
+          || flatRequester?.lastName
+          || item?.requesterLastname
+          || '',
         phoneNumber: flatRequester?.phoneNumber || flatRequester?.phone || '',
         username: flatRequester?.username || '',
       };
@@ -142,7 +218,9 @@ export const getClubMembershipRequests = async (clubId, params = {}) => {
       data: normalizedData,
     };
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error
+      ? error.message
+      : error;
     throw new Error(`Failed to fetch club membership requests: ${errorToDisplay}`);
   }
 };
