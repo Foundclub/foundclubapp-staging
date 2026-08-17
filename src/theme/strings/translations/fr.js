@@ -3052,13 +3052,15 @@ export default {
     fieldQrLabel: 'Texte sous le QR code',
     fieldTitre: 'Titre',
     fieldTitreAccent: 'Accroche',
-    // S07 : « Génération du visuel… » ne disait pas combien de temps il restait, et
-    // une attente muette ressemble à une panne. Le nombre vient d'une ESTIMATION
-    // (renderProgress.js) — d'où « environ », qui n'est pas décoratif.
-    generating: 'Ton affiche se fabrique — encore {{seconds}} s environ.',
-    // 🔒 S07 : la phrase du DÉPASSEMENT. Elle remplace le compteur au lieu de le
-    // laisser se figer sur « 0 s », et elle reste vraie à la 60e seconde.
-    generatingLonger: 'Ton affiche se fabrique toujours — c’est plus long que prévu.',
+    // T04 : le « encore {{seconds}} s environ » de S07 est PARTI. La mesure du
+    // 2026-08-17 va de 3,1 s à 22,9 s selon la charge du serveur (renderProgress.js) :
+    // aucun nombre n'était vrai, et le dépassement se déclenchait à tous les coups.
+    // La phrase dit qu'on travaille, elle ne promet plus de durée.
+    generating: 'Ton affiche se fabrique…',
+    // 🔒 La phrase de l'attente ANORMALE — au-delà du pire cas mesuré (13 s). Elle
+    // parle du temps DÉJÀ écoulé, la seule chose que le téléphone sache vraiment,
+    // et elle reste vraie à la 60e seconde.
+    generatingLonger: 'Ton affiche se fabrique toujours — c’est plus long que d’habitude.',
     later: 'Plus tard',
     // R05 : sur Android, « ouvrir avec » ne transporte que l'image — le texte est
     // mis dans le presse-papiers. On le DIT, sinon personne ne pense à le coller.
@@ -3076,6 +3078,11 @@ export default {
     posterHint: 'Fichier PDF, prêt pour l’imprimante du club.',
     posterHintSave: 'Fichier PDF enregistré dans tes téléchargements, '
       + 'prêt pour l’imprimante du club.',
+    // T04 : la story (9:16) et l'A4 sont d'AUTRES images que l'aperçu 4:5 — le
+    // serveur DOIT les fabriquer. Sans cette phrase, l'attente ressemblait à une
+    // régénération inutile de ce qu'on a déjà sous les yeux, donc à un bug.
+    preparingOtherFormat: 'On prépare la version à partager — '
+      + 'c’est une autre image que celle à l’écran.',
     reset: 'Réinitialiser',
     retry: 'Réessayer',
     save: 'Enregistrer l’affiche',

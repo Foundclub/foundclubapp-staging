@@ -438,17 +438,22 @@ describe('D20 — ⑥ ce que coute une fabrication d affiche', () => {
     }
   });
 
-  // NON CORRIGE, et c'est volontaire : `downloadAndShareRender` refait
-  // `fetchRenderBase64` en interne (visualRender.native.js l.86) avec les MEMES
-  // parametres que l'apercu deja affiche. Le corriger demande de changer la
-  // signature de la couche plateforme — hors du perimetre de ce lot. Ce test
-  // FIGE le fait que ce 2e aller-retour existe encore, pour qu'il ne se perde pas.
-  it('CONNU : enregistrer le format deja affiche repaie un aller-retour', async () => {
+  // 🔁 CE TEMOIN A ETE RETOURNE PAR T04 (2026-08-17), et c'est le point 14 de la
+  // recette d'Adel. Il FIGEAIT le defaut sous le nom « CONNU : enregistrer le
+  // format deja affiche repaie un aller-retour », avec pour motif : « le corriger
+  // demande de changer la signature de la couche plateforme — hors du perimetre
+  // de ce lot ». C'est exactement ce que T04 a fait : `downloadAndShareRender`
+  // accepte desormais les octets deja a l'ecran (`cachedBase64`).
+  // Ce que ca evite, mesure du 2026-08-17 : **3,7 a 5,2 s de mediane** et
+  // **1,29 Mo** repayes a chaque partage, pour une image identique au pixel pres.
+  it('partager le format deja affiche ne repaie PLUS d aller-retour', async () => {
     const tree = await renderScreen(clubParams());
     await press(tree, 'Partager l’affiche');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
-      format: 'post', template: 'affiche-club', variant: 'ecusson',
+      cachedBase64: 'QUJD', format: 'post', template: 'affiche-club', variant: 'ecusson',
     }));
+    // Un seul rendu serveur depuis le montage : celui de l'apercu.
+    expect(mockFetchRenderBase64).toHaveBeenCalledTimes(1);
   });
 });
 

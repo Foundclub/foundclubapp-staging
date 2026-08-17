@@ -63,8 +63,28 @@ export const fetchRenderBase64 = async (params) => {
   return { base64, contentType };
 };
 
+/**
+ * Reconstruit un Blob depuis des octets déjà en mémoire. Pendant web de la même
+ * décision que `visualRender.native.js` (T04) : l'affiche affichée EST le
+ * fichier à télécharger, on ne la redemande pas.
+ * @param {string} base64
+ * @param {string} contentType
+ * @returns {Blob}
+ */
+const base64ToBlob = (base64, contentType) => {
+  const binaire = atob(base64);
+  const octets = new Uint8Array(binaire.length);
+  for (let i = 0; i < binaire.length; i += 1) octets[i] = binaire.charCodeAt(i);
+  return new Blob([octets], { type: contentType });
+};
+
 export const downloadAndShareRender = async (params) => {
-  const { blob, contentType } = await requestRender(params);
+  const { blob, contentType } = params.cachedBase64
+    ? {
+      blob: base64ToBlob(params.cachedBase64, params.cachedContentType || 'image/png'),
+      contentType: params.cachedContentType || 'image/png',
+    }
+    : await requestRender(params);
   const ext = contentType.includes('pdf') ? 'pdf' : 'png';
   const filename = `foundclub-${params.template}-${params.variant || 'defaut'}-${params.format}-${params.subjectId}.${ext}`;
   const objectUrl = URL.createObjectURL(blob);
